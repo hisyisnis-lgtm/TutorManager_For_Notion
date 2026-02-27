@@ -96,8 +96,8 @@ async function syncTitles() {
     // 수업 단가 title (비고)
     const unitPriceName = await getPageTitle(unitPriceRels[0].id);
 
-    // 수업 시간(분)
-    const minutes = props['수업 시간(분)']?.number ?? 0;
+    // 수업 시간(분) (select 타입)
+    const minutes = props['수업 시간(분)']?.select?.name ?? '0';
 
     // 타이틀 조합: [단가명_학생명_60분]
     const newTitle = `${unitPriceName}_${studentName}_${minutes}분`;
