@@ -1,11 +1,19 @@
-const TOKEN = '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';
-const CLASS_DB = '314838fa-f2a6-81bc-8b67-d9e1c8fb7ecb';
+// 수업 캘린더 충돌 감지 스크립트
+// GitHub Actions에서 10분마다 자동 실행됨
 
-async function api(method, path, body) {
+const TOKEN = process.env.NOTION_TOKEN;
+const DB_ID = '314838fa-f2a6-81bc-8b67-d9e1c8fb7ecb';
+
+if (!TOKEN) {
+  console.error('NOTION_TOKEN 환경변수가 설정되지 않았습니다.');
+  process.exit(1);
+}
+
+async function notion(method, path, body) {
   const res = await fetch(`https://api.notion.com/v1${path}`, {
     method,
     headers: {
-      Authorization: `Bearer ${TOKEN}`,
+      'Authorization': `Bearer ${TOKEN}`,
       'Notion-Version': '2022-06-28',
       'Content-Type': 'application/json',
     },
@@ -16,60 +24,61 @@ async function api(method, path, body) {
   return data;
 }
 
-async function queryAll(dbId, filter) {
+async function getAllPages() {
   const pages = [];
-  let cursor;
+  let cursor = undefined;
+
   while (true) {
-    const res = await api('POST', `/databases/${dbId}/query`, {
-      ...(filter && { filter }),
-      ...(cursor && { start_cursor: cursor }),
-      page_size: 100,
+    const res = await notion('POST', `/databases/${DB_ID}/query`, {
+      start_cursor: cursor,
+      filter: {
+        property: '수업 일시',
+        date: { is_not_empty: true },
+      },
     });
     pages.push(...res.results);
     if (!res.has_more) break;
     cursor = res.next_cursor;
   }
+
   return pages;
 }
 
-async function checkConflicts() {
-  const now = new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
-  console.log(`\n[수업 충돌 체크] ${now}`);
+async function main() {
+  console.log(`[${new Date().toISOString()}] 충돌 감지 시작`);
 
-  // 한국 시간 기준 오늘 날짜 이후 수업만 조회 (과거 수업 무시)
-  const todayKST = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' });
-  const pages = await queryAll(CLASS_DB, {
-    and: [
-      { property: '상태', select: { does_not_equal: '🚫 취소' } },
-      { property: '수업 일시', date: { on_or_after: todayKST } },
-    ],
-  });
+  const pages = await getAllPages();
+  console.log(`전체 수업 ${pages.length}개 조회`);
 
-  // 수업 정보 파싱
+  // 취소된 수업 제외하고 파싱
   const classes = pages
     .map(p => {
-      const props = p.properties;
-      const dateStart = props['수업 일시']?.date?.start;
-      const minutesStr = props['수업 시간(분)']?.select?.name;
-      const title = props['제목']?.title?.map(t => t.plain_text).join('') || '(제목 없음)';
+      const dateVal = p.properties['수업 일시']?.date;
+      const duration = p.properties['수업 시간(분)']?.select?.name;
+      const 특이사항 = p.properties['특이사항']?.select?.name;
+      const currentConflict = p.properties['충돌']?.checkbox ?? false;
 
-      if (!dateStart || !minutesStr) return null;
+      if (!dateVal?.start || !duration) return null;
+      if (특이사항 === '🚫 취소') return null;
 
-      const start = new Date(dateStart);
-      const minutes = parseInt(minutesStr, 10);
-      if (isNaN(minutes)) return null;
-      const end = new Date(start.getTime() + minutes * 60 * 1000);
+      const start = new Date(dateVal.start);
+      const end = new Date(start.getTime() + parseInt(duration) * 60 * 1000);
 
-      return { id: p.id, title, start, end };
+      return { id: p.id, start, end, currentConflict };
     })
     .filter(Boolean);
 
-  // 충돌하는 ID 집합
+  console.log(`유효 수업 ${classes.length}개 (취소 제외)`);
+
+  // 충돌 감지
   const conflictIds = new Set();
+
   for (let i = 0; i < classes.length; i++) {
     for (let j = i + 1; j < classes.length; j++) {
       const a = classes[i];
       const b = classes[j];
+
+      // A.start < B.end && B.start < A.end → 겹침
       if (a.start < b.end && b.start < a.end) {
         conflictIds.add(a.id);
         conflictIds.add(b.id);
@@ -77,32 +86,26 @@ async function checkConflicts() {
     }
   }
 
-  // 모든 수업의 충돌 체크박스 업데이트
-  for (const c of classes) {
-    const hasConflict = conflictIds.has(c.id);
-    await api('PATCH', `/pages/${c.id}`, {
-      properties: { '충돌': { checkbox: hasConflict } },
-    });
-  }
+  // 변경이 필요한 항목만 업데이트
+  let updated = 0;
+  for (const cls of classes) {
+    const shouldConflict = conflictIds.has(cls.id);
 
-  if (conflictIds.size === 0) {
-    console.log('충돌하는 수업 없음');
-  } else {
-    const fmt = d =>
-      d.toLocaleString('ko-KR', {
-        timeZone: 'Asia/Seoul',
-        month: 'numeric',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
+    if (shouldConflict !== cls.currentConflict) {
+      await notion('PATCH', `/pages/${cls.id}`, {
+        properties: {
+          '충돌': { checkbox: shouldConflict },
+        },
       });
-    console.log(`[WARNING] 충돌 표시된 수업: ${conflictIds.size}건`);
-    for (const c of classes) {
-      if (conflictIds.has(c.id)) {
-        console.log(`  !! ${c.title} (${fmt(c.start)} ~ ${fmt(c.end)})`);
-      }
+      console.log(`  ${cls.id}: 충돌 ${shouldConflict ? '✅ 표시' : '⬜ 해제'} (${cls.start.toISOString()})`);
+      updated++;
     }
   }
+
+  console.log(`완료: ${conflictIds.size}개 충돌 감지, ${updated}개 업데이트`);
 }
 
-checkConflicts().catch(console.error);
+main().catch(err => {
+  console.error('오류:', err.message);
+  process.exit(1);
+});
