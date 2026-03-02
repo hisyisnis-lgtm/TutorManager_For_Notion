@@ -1,0 +1,22 @@
+name: 월별 수납 현황 갱신
+
+on:
+  schedule:
+    - cron: '0 15 * * *'  # 매일 자정 KST (UTC 15:00)
+  workflow_dispatch:        # 수동 실행 가능
+
+jobs:
+  sync-summary:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 월별 수납 현황 갱신
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+        run: node sync_monthly_summary.mjs
