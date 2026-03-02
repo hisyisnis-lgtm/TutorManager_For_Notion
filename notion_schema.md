@@ -1,6 +1,6 @@
 # Notion DB 스키마
 
-> 조회 시각: 2026. 3. 2.
+> 조회 시각: 2026. 3. 2. (상태 formula 업데이트 반영)
 
 ---
 
@@ -39,8 +39,9 @@
 | 수업 시간(분) | select (60 / 90 / 120 / 150 / 180) |
 | 특이사항 | select (🔴 결석 / 🟠 보강 / 🚫 취소) |
 | 메모 | formula |
-| 충돌 | checkbox |
-| 상태 | formula |
+| 충돌_감지 | checkbox (GitHub Actions 자동 기입, 직접 수정 금지) |
+| 충돌 | formula (⚠️ 충돌 / 빈값) |
+| 상태 | formula (🔴미입력 / 🔵예정 / 🟢완료) |
 | 수업 종료 시간 | formula |
 | 수업 회차 | formula |
 | 시간 회차 | formula |

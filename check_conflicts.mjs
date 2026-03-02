@@ -71,7 +71,7 @@ async function main() {
       const dateVal = p.properties['수업 일시']?.date;
       const duration = p.properties['수업 시간(분)']?.select?.name;
       const 특이사항 = p.properties['특이사항']?.select?.name;
-      const currentConflict = p.properties['충돌']?.checkbox ?? false;
+      const currentConflict = p.properties['충돌_감지']?.checkbox ?? false;
 
       if (!dateVal?.start || !duration) return null;
       if (특이사항 === '🚫 취소') return null;
@@ -111,7 +111,7 @@ async function main() {
       if (shouldConflict) newConflicts++;
       await notion('PATCH', `/pages/${cls.id}`, {
         properties: {
-          '충돌': { checkbox: shouldConflict },
+          '충돌_감지': { checkbox: shouldConflict },
         },
       });
       console.log(`  ${cls.id}: 충돌 ${shouldConflict ? '✅ 표시' : '⬜ 해제'} (${cls.start.toISOString()})`);
