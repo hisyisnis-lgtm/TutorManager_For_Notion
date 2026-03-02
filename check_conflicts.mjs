@@ -2,11 +2,26 @@
 // GitHub Actions에서 10분마다 자동 실행됨
 
 const TOKEN = process.env.NOTION_TOKEN;
+const NTFY_TOPIC = process.env.NTFY_TOPIC;
 const DB_ID = '314838fa-f2a6-81bc-8b67-d9e1c8fb7ecb';
 
 if (!TOKEN) {
   console.error('NOTION_TOKEN 환경변수가 설정되지 않았습니다.');
   process.exit(1);
+}
+
+async function sendNtfy(title, message, priority = 3) {
+  if (!NTFY_TOPIC) return;
+  try {
+    await fetch('https://ntfy.sh/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ topic: NTFY_TOPIC, title, message, priority }),
+    });
+    console.log(`ntfy 알림 전송 완료: ${title}`);
+  } catch (e) {
+    console.error('ntfy 전송 실패:', e.message);
+  }
 }
 
 async function notion(method, path, body) {
@@ -88,10 +103,12 @@ async function main() {
 
   // 변경이 필요한 항목만 업데이트
   let updated = 0;
+  let newConflicts = 0;
   for (const cls of classes) {
     const shouldConflict = conflictIds.has(cls.id);
 
     if (shouldConflict !== cls.currentConflict) {
+      if (shouldConflict) newConflicts++;
       await notion('PATCH', `/pages/${cls.id}`, {
         properties: {
           '충돌': { checkbox: shouldConflict },
@@ -103,6 +120,14 @@ async function main() {
   }
 
   console.log(`완료: ${conflictIds.size}개 충돌 감지, ${updated}개 업데이트`);
+
+  if (newConflicts > 0) {
+    await sendNtfy(
+      '⚠️ 수업 충돌 감지',
+      `충돌 수업 ${newConflicts}건이 새로 발견되었습니다.\n노션에서 확인해 주세요.`,
+      4
+    );
+  }
 }
 
 main().catch(err => {
