@@ -1,0 +1,22 @@
+name: 학생 이름 이모지 동기화
+
+on:
+  schedule:
+    - cron: '0 * * * *'  # 매시간 실행
+  workflow_dispatch:       # 수동 실행 가능
+
+jobs:
+  sync-emoji:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 학생 이름 이모지 동기화 실행
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+        run: node sync_student_emoji.mjs
