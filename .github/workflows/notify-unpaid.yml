@@ -1,0 +1,23 @@
+name: 미수금 알림
+
+on:
+  schedule:
+    - cron: '0 1 25,27,29 * *'  # 매월 25, 27, 29일 10:00 KST (= 01:00 UTC)
+  workflow_dispatch:               # 수동 실행 가능
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 미수금 학생 알림 전송
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+        run: node notify_unpaid.mjs
