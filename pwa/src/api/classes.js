@@ -1,0 +1,90 @@
+import { queryPage, createPage, updatePage } from './notionClient.js';
+
+export const CLASSES_DB = '314838fa-f2a6-81bc-8b67-d9e1c8fb7ecb';
+
+export const DURATION_OPTIONS = ['60', '90', '120', '150', '180'];
+export const NOTES_OPTIONS = ['🔴 결석', '🟠 보강', '🚫 취소'];
+
+/** 수업 목록 조회 */
+export async function fetchClassesPage(opts = {}) {
+  const { dateFrom, dateTo, studentId, cursor } = opts;
+  const filters = [];
+
+  if (dateFrom) filters.push({ property: '수업 일시', date: { on_or_after: dateFrom } });
+  if (dateTo) filters.push({ property: '수업 일시', date: { on_or_before: dateTo } });
+  if (studentId) filters.push({ property: '학생', relation: { contains: studentId } });
+
+  const filter =
+    filters.length > 1
+      ? { and: filters }
+      : filters.length === 1
+      ? filters[0]
+      : undefined;
+
+  return queryPage(
+    CLASSES_DB,
+    filter,
+    [{ property: '수업 일시', direction: 'descending' }],
+    cursor
+  );
+}
+
+/** 수업 생성 */
+export async function createClass({ studentIds, classTypeId, datetime, duration, notes }) {
+  const properties = {
+    학생: { relation: studentIds.map((id) => ({ id })) },
+    '수업 유형': { relation: [{ id: classTypeId }] },
+    '수업 일시': { date: { start: datetime } },
+    '수업 시간(분)': { select: { name: String(duration) } },
+  };
+  if (notes) {
+    properties['특이사항'] = { select: { name: notes } };
+  }
+  return createPage(CLASSES_DB, properties);
+}
+
+/** 수업 수정 (충돌_감지 checkbox는 건드리지 않음) */
+export async function updateClass(pageId, { studentIds, classTypeId, datetime, duration, notes }) {
+  const properties = {};
+  if (studentIds) properties['학생'] = { relation: studentIds.map((id) => ({ id })) };
+  if (classTypeId) properties['수업 유형'] = { relation: [{ id: classTypeId }] };
+  if (datetime) properties['수업 일시'] = { date: { start: datetime } };
+  if (duration) properties['수업 시간(분)'] = { select: { name: String(duration) } };
+  // notes가 null이면 특이사항 제거, 값이 있으면 설정
+  properties['특이사항'] = notes ? { select: { name: notes } } : { select: null };
+
+  return updatePage(pageId, properties);
+}
+
+/** Notion 페이지 → 수업 객체 변환 */
+export function parseClass(page) {
+  const p = page.properties;
+  return {
+    id: page.id,
+    title: p['제목']?.title?.[0]?.plain_text ?? '',
+    studentIds: p['학생']?.relation?.map((r) => r.id) ?? [],
+    classTypeId: p['수업 유형']?.relation?.[0]?.id ?? null,
+    datetime: p['수업 일시']?.date?.start ?? null,
+    duration: p['수업 시간(분)']?.select?.name ?? null,
+    status: p['상태']?.formula?.string ?? '',
+    notes: p['특이사항']?.select?.name ?? null,
+    sessionShortage: p['시간 회차 부족']?.formula?.string ?? '',
+    conflictDetected: p['충돌_감지']?.checkbox ?? false,
+    endTime: p['수업 종료 시간']?.formula?.date?.start ?? null,
+  };
+}
+
+export function classStatusColor(status) {
+  if (status?.includes('🟢')) return { bg: 'bg-green-100', text: 'text-green-700' };
+  if (status?.includes('🔵')) return { bg: 'bg-blue-100', text: 'text-blue-700' };
+  if (status?.includes('🔴')) return { bg: 'bg-red-100', text: 'text-red-600' };
+  return { bg: 'bg-gray-100', text: 'text-gray-500' };
+}
+
+export function notesColor(notes) {
+  if (!notes) return null;
+  if (notes.includes('결석')) return { bg: 'bg-red-50', text: 'text-red-600' };
+  if (notes.includes('보강')) return { bg: 'bg-orange-50', text: 'text-orange-600' };
+  if (notes.includes('취소')) return { bg: 'bg-gray-100', text: 'text-gray-500' };
+  return null;
+}

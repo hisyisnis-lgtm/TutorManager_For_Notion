@@ -1,0 +1,9 @@
+name = "tutor-manager-proxy"
+main = "src/index.js"
+compatibility_date = "2024-09-23"
+
+[vars]
+ALLOWED_ORIGIN = "https://hisyisnis-lgtm.github.io"
+
+# NOTION_TOKEN은 아래 명령으로 등록 (이 파일에 직접 기입 금지)
+# npx wrangler secret put NOTION_TOKEN

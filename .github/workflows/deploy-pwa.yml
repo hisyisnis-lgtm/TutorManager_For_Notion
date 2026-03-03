@@ -1,0 +1,60 @@
+name: PWA 배포 (GitHub Pages)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'pwa/**'
+      - '.github/workflows/deploy-pwa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: pwa/package-lock.json
+
+      - name: 의존성 설치
+        run: npm ci
+        working-directory: pwa
+
+      - name: 아이콘 생성
+        run: npm run generate-icons
+        working-directory: pwa
+
+      - name: PWA 빌드
+        env:
+          VITE_WORKER_URL: ${{ secrets.VITE_WORKER_URL }}
+        run: npm run build
+        working-directory: pwa
+
+      - name: GitHub Pages 아티팩트 업로드
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: pwa/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: GitHub Pages 배포
+        id: deployment
+        uses: actions/deploy-pages@v4

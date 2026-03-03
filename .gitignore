@@ -1,2 +1,10 @@
 .claude/
 *.env
+.env.local
+
+# PWA 빌드 산출물 (GitHub Actions에서 자동 생성)
+pwa/dist/
+pwa/node_modules/
+
+# Worker
+worker/node_modules/
