@@ -18,7 +18,7 @@ import { useData } from '../context/DataContext.jsx';
 export default function PaymentFormPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { students, classTypes, discounts } = useData();
+  const { students, classTypes, discounts, refresh: refreshAll } = useData();
   const isEdit = Boolean(id);
 
   const [form, setForm] = useState({
@@ -127,6 +127,7 @@ export default function PaymentFormPage() {
       } else {
         await createPayment(payload);
       }
+      refreshAll();
       navigate(-1);
     } catch (e) {
       setError(e.message);

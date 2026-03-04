@@ -26,9 +26,7 @@ export async function updateLessonLog(pageId, { content, homework, nextPrepare, 
     '다음 수업 준비': { rich_text: [{ text: { content: nextPrepare || '' } }] },
   };
 
-  if (engagement) {
-    properties['학생 참여도'] = { select: { name: engagement } };
-  }
+  properties['학생 참여도'] = engagement ? { select: { name: engagement } } : { select: null };
   if (memo !== undefined) {
     properties['메모'] = { rich_text: [{ text: { content: memo || '' } }] };
   }

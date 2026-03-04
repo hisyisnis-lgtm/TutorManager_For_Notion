@@ -51,7 +51,7 @@ function formatDateLabel(date) {
 export default function ClassFormPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { students, classTypes } = useData();
+  const { students, classTypes, refresh: refreshAll } = useData();
   const isEdit = Boolean(id);
 
   const [studentSearch, setStudentSearch] = useState('');
@@ -197,6 +197,7 @@ export default function ClassFormPage() {
           await createClass(payload);
         }
       }
+      refreshAll();
       navigate(-1);
     } catch (e) {
       setError(e.message);

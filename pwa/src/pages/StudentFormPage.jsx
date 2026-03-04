@@ -66,6 +66,7 @@ export default function StudentFormPage() {
         navigate(-1);
       } else {
         await createStudent({ ...form, name: form.name.trim() });
+        refreshAll();
         navigate('/students');
       }
     } catch (e) {
