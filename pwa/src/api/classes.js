@@ -7,12 +7,14 @@ export const NOTES_OPTIONS = ['🔴 결석', '🟠 보강', '🚫 취소'];
 
 /** 수업 목록 조회 */
 export async function fetchClassesPage(opts = {}) {
-  const { dateFrom, dateTo, studentId, cursor } = opts;
+  const { dateFrom, dateTo, studentId, cursor, completedOnly, excludeCompleted } = opts;
   const filters = [];
 
   if (dateFrom) filters.push({ property: '수업 일시', date: { on_or_after: dateFrom } });
   if (dateTo) filters.push({ property: '수업 일시', date: { on_or_before: dateTo } });
   if (studentId) filters.push({ property: '학생', relation: { contains: studentId } });
+  if (completedOnly) filters.push({ property: '상태', formula: { string: { equals: '🟢완료' } } });
+  if (excludeCompleted) filters.push({ property: '상태', formula: { string: { does_not_equal: '🟢완료' } } });
 
   const filter =
     filters.length > 1
@@ -21,12 +23,11 @@ export async function fetchClassesPage(opts = {}) {
       ? filters[0]
       : undefined;
 
-  return queryPage(
-    CLASSES_DB,
-    filter,
-    [{ property: '수업 일시', direction: 'ascending' }],
-    cursor
-  );
+  const sorts = completedOnly
+    ? [{ property: '수업 일시', direction: 'descending' }]
+    : [{ property: '수업 일시', direction: 'ascending' }];
+
+  return queryPage(CLASSES_DB, filter, sorts, cursor);
 }
 
 /** 수업 생성 */

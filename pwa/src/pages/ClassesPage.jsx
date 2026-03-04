@@ -15,11 +15,13 @@ const PERIOD_TABS = [
   { key: 'week', label: '이번 주' },
   { key: 'month', label: '이번 달' },
   { key: 'all', label: '전체' },
+  { key: 'completed', label: '완료' },
 ];
 
 function getDateFrom(period) {
   if (period === 'week') return getWeekStart();
   if (period === 'month') return getMonthStart();
+  if (period === 'completed') return null;
   return getTodayStart(); // '전체' 탭도 오늘부터 다가오는 수업 순으로
 }
 
@@ -37,7 +39,9 @@ export default function ClassesPage() {
     setError(null);
     try {
       const dateFrom = getDateFrom(period);
-      const data = await fetchClassesPage({ dateFrom, cursor: nextCursor });
+      const completedOnly = period === 'completed';
+      const excludeCompleted = !completedOnly;
+      const data = await fetchClassesPage({ dateFrom, cursor: nextCursor, completedOnly, excludeCompleted });
       const parsed = data.results.map(parseClass);
       setClasses((prev) => (reset ? parsed : [...prev, ...parsed]));
       setHasMore(data.has_more);
