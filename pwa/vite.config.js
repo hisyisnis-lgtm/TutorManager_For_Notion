@@ -8,10 +8,10 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['icon.svg', 'apple-touch-icon-180x180.png', 'pwa-*.png', 'maskable-icon-512x512.png'],
+      includeAssets: ['symbol-red.png', 'icon.svg', 'apple-touch-icon-180x180.png', 'pwa-*.png', 'maskable-icon-512x512.png'],
       manifest: {
-        name: '하늘하늘 중국어',
-        short_name: '하늘하늘',
+        name: '하늘하늘중국어',
+        short_name: '하늘하늘중국어',
         description: '중국어 튜터링 관리 시스템',
         theme_color: '#830009',
         background_color: '#F9FAFB',

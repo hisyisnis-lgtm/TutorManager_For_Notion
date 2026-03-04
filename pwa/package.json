@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "generate-icons": "pwa-assets-generator --preset minimal-2023 public/icon.svg"
+    "generate-icons": "pwa-assets-generator --preset minimal-2023 public/symbol-red.png"
   },
   "dependencies": {
     "react": "^18.3.1",
