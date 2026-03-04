@@ -8,7 +8,7 @@
 
 | 항목 | 값 |
 |---|---|
-| 통합 토큰 | `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` |
+| 통합 토큰 | `ntn_xxxx...` (GitHub Secret / Cloudflare Workers Secret에 저장) |
 | 부모 페이지 ID | `314838faf2a680cd9228ed96590fffe7` |
 
 ### DB ID 목록
