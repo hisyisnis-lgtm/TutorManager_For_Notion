@@ -130,7 +130,8 @@ async function main() {
   }
 }
 
-main().catch(err => {
+main().catch(async err => {
   console.error('오류:', err.message);
+  await sendNtfy('❌ 충돌 감지 스크립트 오류', err.message, 4);
   process.exit(1);
 });

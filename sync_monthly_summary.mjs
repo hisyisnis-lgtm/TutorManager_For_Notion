@@ -2,12 +2,27 @@
 // 결제 상태가 "완료" 또는 "초과금"인 항목의 실제 결제 금액을 월별로 집계
 
 const TOKEN = process.env.NOTION_TOKEN;
+const NTFY_TOPIC = process.env.NTFY_TOPIC;
 const PAYMENT_DB_ID = '314838fa-f2a6-8154-935b-edd3d2fbea83';
 const SUMMARY_PAGE_ID = '316838fa-f2a6-810b-a382-c567536334de';
 
 if (!TOKEN) {
   console.error('NOTION_TOKEN 환경변수가 설정되지 않았습니다.');
   process.exit(1);
+}
+
+async function sendNtfy(title, message, priority = 3) {
+  if (!NTFY_TOPIC) return;
+  try {
+    await fetch('https://ntfy.sh/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ topic: NTFY_TOPIC, title, message, priority }),
+    });
+    console.log(`ntfy 알림 전송 완료: ${title}`);
+  } catch (e) {
+    console.error('ntfy 전송 실패:', e.message);
+  }
 }
 
 async function api(method, path, body) {
@@ -50,7 +65,13 @@ async function clearPageBlocks() {
 
 (async () => {
   console.log('결제 내역 조회 중...');
-  const records = await getAllPayments();
+  let records;
+  try {
+    records = await getAllPayments();
+  } catch (e) {
+    await sendNtfy('❌ 수납 현황 갱신 실패', `결제 내역 조회 오류: ${e.message}`, 4);
+    throw e;
+  }
   console.log(`총 ${records.length}건 조회`);
 
   // 결제일 기준 실제 결제 금액 월별 집계 (결제 상태 무관, 전체 포함)
@@ -127,5 +148,14 @@ async function clearPageBlocks() {
     }]
   });
 
+  const summary = months.map(m => {
+    const mo = m.split('-')[1];
+    return `${parseInt(mo)}월 ${monthly[m].toLocaleString('ko-KR')}원`;
+  }).join(' / ');
+  await sendNtfy('✅ 월별 수납 현황 갱신 완료', summary || '집계 데이터 없음', 2);
   console.log('✅ 월별 수납 현황 업데이트 완료');
-})();
+})().catch(async (e) => {
+  console.error('오류:', e.message);
+  await sendNtfy('❌ 수납 현황 갱신 실패', e.message, 4);
+  process.exit(1);
+});

@@ -2,22 +2,36 @@ import { useState } from 'react';
 import PageHeader from '../components/layout/PageHeader.jsx';
 
 const STORAGE_KEY = 'instructor_name';
+const NTFY_TOPIC_KEY = 'ntfy_topic';
 
 export function getInstructorName() {
   return localStorage.getItem(STORAGE_KEY) || '강사님';
 }
 
+export function getNtfyTopic() {
+  return localStorage.getItem(NTFY_TOPIC_KEY) || '';
+}
+
 export default function SettingsPage() {
   const [name, setName] = useState(() => localStorage.getItem(STORAGE_KEY) || '');
+  const [ntfyTopic, setNtfyTopic] = useState(() => localStorage.getItem(NTFY_TOPIC_KEY) || '');
   const [saved, setSaved] = useState(false);
 
   const handleSave = () => {
-    const trimmed = name.trim();
-    if (trimmed) {
-      localStorage.setItem(STORAGE_KEY, trimmed);
+    const trimmedName = name.trim();
+    if (trimmedName) {
+      localStorage.setItem(STORAGE_KEY, trimmedName);
     } else {
       localStorage.removeItem(STORAGE_KEY);
     }
+
+    const trimmedTopic = ntfyTopic.trim();
+    if (trimmedTopic) {
+      localStorage.setItem(NTFY_TOPIC_KEY, trimmedTopic);
+    } else {
+      localStorage.removeItem(NTFY_TOPIC_KEY);
+    }
+
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };
@@ -37,6 +51,23 @@ export default function SettingsPage() {
             maxLength={20}
           />
           <p className="text-xs text-gray-400 mt-1.5">홈 화면 인사말에 표시됩니다.</p>
+        </div>
+
+        <div>
+          <label className="label">ntfy 토픽</label>
+          <input
+            type="text"
+            value={ntfyTopic}
+            onChange={(e) => { setNtfyTopic(e.target.value); setSaved(false); }}
+            placeholder="예) tutor-alerts"
+            className="input-field"
+            maxLength={64}
+            autoCapitalize="none"
+            autoCorrect="off"
+          />
+          <p className="text-xs text-gray-400 mt-1.5">
+            ntfy.sh/<span className="font-mono">{ntfyTopic || '토픽명'}</span> 으로 알림을 받습니다.
+          </p>
         </div>
 
         <button

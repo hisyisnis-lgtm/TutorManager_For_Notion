@@ -19,4 +19,5 @@ jobs:
       - name: 월별 수납 현황 갱신
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
         run: node sync_monthly_summary.mjs

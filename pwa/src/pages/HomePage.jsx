@@ -6,7 +6,7 @@ import { CLASSES_DB, parseClass } from '../api/classes.js';
 import { formatShort, formatDateTime, formatTime } from '../utils/dateUtils.js';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import PullToRefresh from '../components/ui/PullToRefresh.jsx';
-import { getInstructorName } from './SettingsPage.jsx';
+import { getInstructorName, getNtfyTopic } from './SettingsPage.jsx';
 
 const KST = 'Asia/Seoul';
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
@@ -35,6 +35,16 @@ export default function HomePage() {
   const [instructorName, setInstructorName] = useState(getInstructorName);
 
   const today = getKSTToday();
+  const [unreadCount, setUnreadCount] = useState(() => {
+    try {
+      const notifications = JSON.parse(localStorage.getItem('ntfy_notifications') || '[]');
+      const lastRead = parseInt(localStorage.getItem('ntfy_last_read') || '0', 10);
+      return notifications.filter((n) => n.time > lastRead).length;
+    } catch {
+      return 0;
+    }
+  });
+
   const [calYear, setCalYear] = useState(today.year);
   const [calMonth, setCalMonth] = useState(today.month); // 0-indexed
   const [calClasses, setCalClasses] = useState([]);
@@ -87,9 +97,14 @@ export default function HomePage() {
   useEffect(() => { loadUpcoming(); }, []);
   useEffect(() => { loadCalendar(calYear, calMonth); }, [calYear, calMonth, loadCalendar]);
 
-  // 설정 페이지에서 돌아올 때 이름 갱신
+  // 설정/알림 페이지에서 돌아올 때 이름 및 뱃지 갱신
   useEffect(() => {
     setInstructorName(getInstructorName());
+    try {
+      const notifications = JSON.parse(localStorage.getItem('ntfy_notifications') || '[]');
+      const lastRead = parseInt(localStorage.getItem('ntfy_last_read') || '0', 10);
+      setUnreadCount(notifications.filter((n) => n.time > lastRead).length);
+    } catch {}
   });
 
   const handleRefresh = async () => {
@@ -139,6 +154,23 @@ export default function HomePage() {
           안녕하세요<br />
           <span className="text-brand-600">{instructorName}</span> 강사님
         </h1>
+        <div className="flex items-center gap-0.5">
+        {/* 알림 버튼 */}
+        <button
+          onClick={() => { setUnreadCount(0); navigate('/notifications'); }}
+          className="p-2 relative text-gray-400 active:text-gray-600"
+          aria-label="알림"
+        >
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+          </svg>
+          {unreadCount > 0 && (
+            <span className="absolute top-1.5 right-1.5 min-w-[14px] h-3.5 px-0.5 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center leading-none">
+              {unreadCount > 99 ? '99+' : unreadCount}
+            </span>
+          )}
+        </button>
+        {/* 설정 버튼 */}
         <button
           onClick={() => navigate('/settings')}
           className="p-2 -mr-1 text-gray-400 active:text-gray-600"
@@ -149,6 +181,7 @@ export default function HomePage() {
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>
         </button>
+        </div>
       </div>
 
       {/* 월별 캘린더 */}
