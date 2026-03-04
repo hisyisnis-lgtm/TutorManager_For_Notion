@@ -13,6 +13,8 @@ export default function ClassFormPage() {
   const { students, classTypes } = useData();
   const isEdit = Boolean(id);
 
+  const [studentSearch, setStudentSearch] = useState('');
+
   const [form, setForm] = useState({
     studentIds: [],
     classTypeId: '',
@@ -110,26 +112,38 @@ export default function ClassFormPage() {
         {/* 학생 선택 (멀티 - 2:1 수업 지원) */}
         <div>
           <label className="label">학생 선택 (2:1 수업 시 두 명 선택)</label>
-          <div className="space-y-2">
-            {students.map((s) => (
-              <label
-                key={s.id}
-                className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
-                  form.studentIds.includes(s.id)
-                    ? 'border-brand-500 bg-brand-50'
-                    : 'border-gray-200 bg-white'
-                }`}
-              >
-                <input
-                  type="checkbox"
-                  checked={form.studentIds.includes(s.id)}
-                  onChange={() => toggleStudent(s.id)}
-                  className="w-4 h-4 accent-brand-600"
-                />
-                <span className="text-sm font-medium text-gray-800">{s.name}</span>
-                <span className="text-xs text-gray-400 ml-auto">{s.status}</span>
-              </label>
-            ))}
+          <input
+            type="text"
+            placeholder="학생 이름 검색..."
+            value={studentSearch}
+            onChange={(e) => setStudentSearch(e.target.value)}
+            className="input-field mb-2"
+          />
+          <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+            {students
+              .filter((s) => s.name.includes(studentSearch))
+              .map((s) => (
+                <label
+                  key={s.id}
+                  className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
+                    form.studentIds.includes(s.id)
+                      ? 'border-brand-500 bg-brand-50'
+                      : 'border-gray-200 bg-white'
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={form.studentIds.includes(s.id)}
+                    onChange={() => toggleStudent(s.id)}
+                    className="w-4 h-4 accent-brand-600"
+                  />
+                  <span className="text-sm font-medium text-gray-800">{s.name}</span>
+                  <span className="text-xs text-gray-400 ml-auto">{s.status}</span>
+                </label>
+              ))}
+            {students.filter((s) => s.name.includes(studentSearch)).length === 0 && (
+              <p className="text-sm text-gray-400 text-center py-3">검색 결과 없음</p>
+            )}
           </div>
         </div>
 
