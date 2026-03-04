@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { DataProvider } from './context/DataContext.jsx';
 import BottomNav from './components/layout/BottomNav.jsx';
 import LoginPage from './pages/LoginPage.jsx';
@@ -15,6 +15,12 @@ import LessonLogsPage from './pages/LessonLogsPage.jsx';
 import LessonLogFormPage from './pages/LessonLogFormPage.jsx';
 import HomePage from './pages/HomePage.jsx';
 
+function ScrollToTop() {
+  const { pathname } = useLocation();
+  useEffect(() => { window.scrollTo(0, 0); }, [pathname]);
+  return null;
+}
+
 function checkAuth() {
   return !!(sessionStorage.getItem('auth_token') || localStorage.getItem('auth_token'));
 }
@@ -23,12 +29,20 @@ export default function App() {
   const [authed, setAuthed] = useState(checkAuth);
 
   if (!authed) {
-    return <LoginPage onSuccess={() => setAuthed(true)} />;
+    return (
+      <LoginPage
+        onSuccess={() => {
+          window.location.hash = '#/home';
+          setAuthed(true);
+        }}
+      />
+    );
   }
 
   return (
     <DataProvider>
       <HashRouter>
+        <ScrollToTop />
         <div className="page-container">
           <Routes>
             <Route path="/" element={<Navigate to="/home" replace />} />
