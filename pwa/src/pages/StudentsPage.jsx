@@ -49,7 +49,7 @@ export default function StudentsPage() {
         action={
           <button
             onClick={() => navigate('/students/new')}
-            className="flex items-center gap-1 px-3 py-1.5 bg-brand-600 text-white text-sm font-medium rounded-lg active:bg-brand-700 transition-colors"
+            className="flex items-center gap-1 px-3 py-1.5 bg-brand-50 text-brand-600 text-sm font-semibold rounded-lg active:bg-brand-100 transition-colors"
           >
             <span className="text-base leading-none">+</span> 학생 추가
           </button>
@@ -74,7 +74,7 @@ export default function StudentsPage() {
             onClick={() => setFilter(tab)}
             className={`flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
               filter === tab
-                ? 'bg-brand-600 text-white'
+                ? 'bg-gray-800 text-white'
                 : 'bg-gray-100 text-gray-600'
             }`}
           >

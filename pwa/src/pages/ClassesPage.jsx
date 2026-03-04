@@ -58,7 +58,7 @@ export default function ClassesPage() {
         action={
           <Link
             to="/classes/new"
-            className="flex items-center gap-1 text-sm font-semibold text-brand-600 bg-brand-50 px-3 py-1.5 rounded-lg active:bg-brand-100"
+            className="flex items-center gap-1 text-sm font-semibold text-brand-600 bg-brand-50 px-3 py-1.5 rounded-lg active:bg-brand-100 transition-colors"
           >
             <span>+</span> 수업 추가
           </Link>
@@ -72,7 +72,7 @@ export default function ClassesPage() {
             key={key}
             onClick={() => setPeriod(key)}
             className={`flex-1 py-2 rounded-xl text-sm font-medium transition-colors ${
-              period === key ? 'bg-brand-600 text-white' : 'bg-gray-100 text-gray-600'
+              period === key ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600'
             }`}
           >
             {label}

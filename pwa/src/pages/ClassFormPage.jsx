@@ -214,10 +214,10 @@ export default function ClassFormPage() {
                 key={d}
                 type="button"
                 onClick={() => setForm((f) => ({ ...f, duration: d }))}
-                className={`py-2.5 rounded-xl text-sm font-medium border transition-colors ${
+                className={`py-2.5 rounded-xl text-sm font-medium border-2 transition-colors ${
                   form.duration === d
-                    ? 'bg-brand-600 text-white border-brand-600'
-                    : 'bg-white text-gray-600 border-gray-200'
+                    ? 'border-brand-600 bg-brand-50 text-brand-700'
+                    : 'border-gray-200 bg-white text-gray-600'
                 }`}
               >
                 {d}분
@@ -233,10 +233,10 @@ export default function ClassFormPage() {
             <button
               type="button"
               onClick={() => setForm((f) => ({ ...f, notes: '' }))}
-              className={`py-2.5 rounded-xl text-sm font-medium border transition-colors ${
+              className={`py-2.5 rounded-xl text-sm font-medium border-2 transition-colors ${
                 !form.notes
-                  ? 'bg-gray-700 text-white border-gray-700'
-                  : 'bg-white text-gray-600 border-gray-200'
+                  ? 'border-gray-700 bg-gray-100 text-gray-800'
+                  : 'border-gray-200 bg-white text-gray-600'
               }`}
             >
               없음
@@ -246,10 +246,10 @@ export default function ClassFormPage() {
                 key={n}
                 type="button"
                 onClick={() => setForm((f) => ({ ...f, notes: n }))}
-                className={`py-2.5 rounded-xl text-sm font-medium border transition-colors ${
+                className={`py-2.5 rounded-xl text-sm font-medium border-2 transition-colors ${
                   form.notes === n
-                    ? 'bg-gray-700 text-white border-gray-700'
-                    : 'bg-white text-gray-600 border-gray-200'
+                    ? 'border-gray-700 bg-gray-100 text-gray-800'
+                    : 'border-gray-200 bg-white text-gray-600'
                 }`}
               >
                 {n}
@@ -266,7 +266,7 @@ export default function ClassFormPage() {
           <button
             type="button"
             onClick={() => setShowDeleteConfirm(true)}
-            className="w-full py-3 rounded-xl text-sm font-medium text-red-500 border border-red-200 bg-white active:bg-red-50 mt-1"
+            className="btn-danger mt-1"
           >
             수업 삭제
           </button>

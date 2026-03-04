@@ -110,10 +110,10 @@ export default function StudentFormPage() {
                 key={s}
                 type="button"
                 onClick={() => setForm((f) => ({ ...f, status: s }))}
-                className={`px-3 py-2 rounded-xl text-sm font-medium border transition-colors ${
+                className={`px-3 py-2 rounded-xl text-sm font-medium border-2 transition-colors ${
                   form.status === s
-                    ? 'bg-brand-600 text-white border-brand-600'
-                    : 'bg-white text-gray-600 border-gray-200'
+                    ? 'border-brand-600 bg-brand-50 text-brand-700'
+                    : 'border-gray-200 bg-white text-gray-600'
                 }`}
               >
                 {s}

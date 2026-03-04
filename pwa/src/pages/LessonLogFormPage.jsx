@@ -144,10 +144,10 @@ export default function LessonLogFormPage() {
                 key={opt}
                 type="button"
                 onClick={() => setForm((f) => ({ ...f, engagement: opt }))}
-                className={`py-3 rounded-xl text-sm font-medium border transition-colors ${
+                className={`py-3 rounded-xl text-sm font-medium border-2 transition-colors ${
                   form.engagement === opt
-                    ? 'bg-brand-600 text-white border-brand-600'
-                    : 'bg-white text-gray-600 border-gray-200'
+                    ? 'border-brand-600 bg-brand-50 text-brand-700'
+                    : 'border-gray-200 bg-white text-gray-600'
                 }`}
               >
                 {opt}
@@ -174,7 +174,7 @@ export default function LessonLogFormPage() {
         <button
           type="button"
           onClick={() => setShowDeleteConfirm(true)}
-          className="w-full py-3 rounded-xl text-sm font-medium text-red-500 border border-red-200 bg-white active:bg-red-50 mt-1"
+          className="btn-danger mt-1"
         >
           수업 일지 삭제
         </button>

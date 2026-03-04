@@ -228,7 +228,7 @@ export default function StudentDetailPage() {
         <button
           type="button"
           onClick={() => setShowDeleteConfirm(true)}
-          className="w-full py-3 rounded-xl text-sm font-medium text-red-500 border border-red-200 bg-white active:bg-red-50"
+          className="btn-danger"
         >
           학생 삭제
         </button>

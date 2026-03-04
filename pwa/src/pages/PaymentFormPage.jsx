@@ -338,7 +338,7 @@ export default function PaymentFormPage() {
           <button
             type="button"
             onClick={() => setShowDeleteConfirm(true)}
-            className="w-full py-3 rounded-xl text-sm font-medium text-red-500 border border-red-200 bg-white active:bg-red-50 mt-1"
+            className="btn-danger mt-1"
           >
             결제 내역 삭제
           </button>

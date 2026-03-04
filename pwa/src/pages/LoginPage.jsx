@@ -42,7 +42,7 @@ export default function LoginPage({ onSuccess }) {
       {/* 상단 로고 영역 */}
       <div className="flex-1 flex flex-col items-center justify-center px-8 pt-16 pb-10">
         <img
-          src="/logo/logo-white.png"
+          src={`${import.meta.env.BASE_URL}logo/logo-white.png`}
           alt="하늘하늘 중국어"
           className="w-64 object-contain drop-shadow-sm"
         />
