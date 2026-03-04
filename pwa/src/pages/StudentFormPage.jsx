@@ -3,8 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import { createStudent, STATUS_OPTIONS } from '../api/students.js';
 
-const LEVEL_OPTIONS = ['입문', '초급', '중급', '고급'];
-
 export default function StudentFormPage() {
   const navigate = useNavigate();
 
@@ -112,33 +110,13 @@ export default function StudentFormPage() {
         {/* 레벨 */}
         <div>
           <label className="label">레벨 (선택)</label>
-          <div className="flex gap-2 flex-wrap">
-            <button
-              type="button"
-              onClick={() => setForm((f) => ({ ...f, level: '' }))}
-              className={`px-3 py-2 rounded-xl text-sm font-medium border transition-colors ${
-                !form.level
-                  ? 'bg-gray-700 text-white border-gray-700'
-                  : 'bg-white text-gray-600 border-gray-200'
-              }`}
-            >
-              미지정
-            </button>
-            {LEVEL_OPTIONS.map((lv) => (
-              <button
-                key={lv}
-                type="button"
-                onClick={() => setForm((f) => ({ ...f, level: lv }))}
-                className={`px-3 py-2 rounded-xl text-sm font-medium border transition-colors ${
-                  form.level === lv
-                    ? 'bg-brand-600 text-white border-brand-600'
-                    : 'bg-white text-gray-600 border-gray-200'
-                }`}
-              >
-                {lv}
-              </button>
-            ))}
-          </div>
+          <input
+            type="text"
+            value={form.level}
+            onChange={set('level')}
+            placeholder="예: 초급, 중급, 고급"
+            className="input-field"
+          />
         </div>
 
         {/* 목표 */}
