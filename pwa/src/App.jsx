@@ -13,6 +13,7 @@ import PaymentsPage from './pages/PaymentsPage.jsx';
 import PaymentFormPage from './pages/PaymentFormPage.jsx';
 import LessonLogsPage from './pages/LessonLogsPage.jsx';
 import LessonLogFormPage from './pages/LessonLogFormPage.jsx';
+import HomePage from './pages/HomePage.jsx';
 
 function checkAuth() {
   return !!(sessionStorage.getItem('auth_token') || localStorage.getItem('auth_token'));
@@ -30,7 +31,8 @@ export default function App() {
       <HashRouter>
         <div className="page-container">
           <Routes>
-            <Route path="/" element={<Navigate to="/students" replace />} />
+            <Route path="/" element={<Navigate to="/home" replace />} />
+            <Route path="/home" element={<HomePage />} />
 
             <Route path="/students" element={<StudentsPage />} />
             <Route path="/students/new" element={<StudentFormPage />} />

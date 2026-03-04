@@ -2,6 +2,7 @@ import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 
 const TABS = [
+  { to: '/home', label: '홈', icon: '🏠' },
   { to: '/students', label: '학생', icon: '👥' },
   { to: '/classes', label: '수업', icon: '📅' },
   { to: '/payments', label: '결제', icon: '💰' },
