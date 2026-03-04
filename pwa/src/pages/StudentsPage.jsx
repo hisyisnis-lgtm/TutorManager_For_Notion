@@ -7,6 +7,7 @@ import ErrorMessage from '../components/ui/ErrorMessage.jsx';
 import EmptyState from '../components/ui/EmptyState.jsx';
 import { fetchAllStudents, parseStudent, statusColor, STATUS_OPTIONS } from '../api/students.js';
 import { formatKRW } from '../utils/dateUtils.js';
+import PullToRefresh from '../components/ui/PullToRefresh.jsx';
 
 const FILTER_TABS = ['전체', '🟢 수강중', '🟡 일시중단', '⚫ 수강종료'];
 
@@ -40,7 +41,7 @@ export default function StudentsPage() {
   });
 
   return (
-    <>
+    <PullToRefresh onRefresh={load}>
       <PageHeader
         title="학생 관리"
         action={
@@ -96,7 +97,7 @@ export default function StudentsPage() {
           )}
         </>
       )}
-    </>
+    </PullToRefresh>
   );
 }
 

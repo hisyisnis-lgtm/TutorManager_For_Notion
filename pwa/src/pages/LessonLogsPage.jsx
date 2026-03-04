@@ -6,6 +6,7 @@ import ErrorMessage from '../components/ui/ErrorMessage.jsx';
 import EmptyState from '../components/ui/EmptyState.jsx';
 import { fetchLessonLogsPage, parseLessonLog, isEmpty } from '../api/lessonLogs.js';
 import { useData } from '../context/DataContext.jsx';
+import PullToRefresh from '../components/ui/PullToRefresh.jsx';
 
 export default function LessonLogsPage() {
   const { students, studentNameMap } = useData();
@@ -41,7 +42,7 @@ export default function LessonLogsPage() {
   });
 
   return (
-    <>
+    <PullToRefresh onRefresh={load}>
       <PageHeader title="수업 일지" />
 
       {/* 학생 검색 */}
@@ -85,7 +86,7 @@ export default function LessonLogsPage() {
           )}
         </>
       )}
-    </>
+    </PullToRefresh>
   );
 }
 

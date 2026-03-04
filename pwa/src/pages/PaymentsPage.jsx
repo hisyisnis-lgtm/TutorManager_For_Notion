@@ -8,6 +8,7 @@ import EmptyState from '../components/ui/EmptyState.jsx';
 import { fetchPaymentsPage, parsePayment, paymentStatusColor } from '../api/payments.js';
 import { formatKRW } from '../utils/dateUtils.js';
 import { useData } from '../context/DataContext.jsx';
+import PullToRefresh from '../components/ui/PullToRefresh.jsx';
 
 const STATUS_FILTERS = ['전체', '🟢완료', '🔴미완료', '⬛미결제', '⚠️초과금'];
 
@@ -49,7 +50,7 @@ export default function PaymentsPage() {
       : payments.filter((p) => p.paymentStatus?.startsWith(statusFilter));
 
   return (
-    <>
+    <PullToRefresh onRefresh={load}>
       <PageHeader
         title="결제 내역"
         action={
@@ -157,7 +158,7 @@ export default function PaymentsPage() {
           )}
         </>
       )}
-    </>
+    </PullToRefresh>
   );
 }
 

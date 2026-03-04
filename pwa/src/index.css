@@ -11,6 +11,8 @@
     @apply bg-gray-50 text-gray-900 antialiased;
     /* 안전 영역 (노치, 홈바) 대응 */
     padding-bottom: env(safe-area-inset-bottom);
+    /* 브라우저 기본 pull-to-refresh 비활성화 */
+    overscroll-behavior-y: contain;
   }
 
   * {

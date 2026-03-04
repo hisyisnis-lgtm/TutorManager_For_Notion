@@ -9,6 +9,7 @@ import { fetchClassesPage, parseClass, classStatusColor, notesColor } from '../a
 import { formatDateTime } from '../utils/dateUtils.js';
 import { getWeekStart, getMonthStart } from '../utils/dateUtils.js';
 import { useData } from '../context/DataContext.jsx';
+import PullToRefresh from '../components/ui/PullToRefresh.jsx';
 
 const PERIOD_TABS = [
   { key: 'week', label: '이번 주' },
@@ -51,7 +52,7 @@ export default function ClassesPage() {
   useEffect(() => { load(true); }, [load]);
 
   return (
-    <>
+    <PullToRefresh onRefresh={load}>
       <PageHeader
         title="수업 캘린더"
         action={
@@ -105,7 +106,7 @@ export default function ClassesPage() {
           )}
         </>
       )}
-    </>
+    </PullToRefresh>
   );
 }
 
