@@ -43,6 +43,16 @@ export async function createClass({ studentIds, classTypeId, datetime, duration,
   return createPage(CLASSES_DB, properties);
 }
 
+/** 반복 수업 일괄 생성 */
+export async function bulkCreateClasses(items) {
+  // items: Array<{ studentIds, classTypeId, datetime (ISO string), duration, notes }>
+  const results = [];
+  for (const item of items) {
+    results.push(await createClass(item));
+  }
+  return results;
+}
+
 /** 수업 수정 (충돌_감지 checkbox는 건드리지 않음) */
 export async function updateClass(pageId, { studentIds, classTypeId, datetime, duration, notes }) {
   const properties = {};
