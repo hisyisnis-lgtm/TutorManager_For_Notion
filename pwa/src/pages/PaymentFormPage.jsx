@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
@@ -32,11 +32,19 @@ export default function PaymentFormPage() {
     paymentDate: new Date().toISOString().split('T')[0],
   });
   const [studentSearch, setStudentSearch] = useState('');
+  const selectedStudentRef = useRef(null);
   const [loading, setLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [error, setError] = useState(null);
+
+  // 편집 모드: 선택된 학생 항목이 스크롤 뷰 안에 오도록 스크롤
+  useEffect(() => {
+    if (!loading && students.length > 0 && selectedStudentRef.current) {
+      selectedStudentRef.current.scrollIntoView({ block: 'nearest' });
+    }
+  }, [loading, students]);
 
   useEffect(() => {
     if (!isEdit) return;
@@ -165,11 +173,14 @@ export default function PaymentFormPage() {
           <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
             {students
               .filter((s) => s.name.includes(studentSearch))
-              .map((s) => (
+              .map((s) => {
+                const isSelected = form.studentId === s.id;
+                return (
                 <label
                   key={s.id}
+                  ref={isSelected ? selectedStudentRef : null}
                   className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
-                    form.studentId === s.id
+                    isSelected
                       ? 'border-brand-500 bg-brand-50'
                       : 'border-gray-200 bg-white'
                   }`}
@@ -178,14 +189,15 @@ export default function PaymentFormPage() {
                     type="radio"
                     name="studentId"
                     value={s.id}
-                    checked={form.studentId === s.id}
+                    checked={isSelected}
                     onChange={() => setForm((f) => ({ ...f, studentId: s.id }))}
                     className="w-4 h-4 accent-brand-600"
                   />
                   <span className="text-sm font-medium text-gray-800">{s.name}</span>
                   <span className="text-xs text-gray-400 ml-auto">{s.status}</span>
                 </label>
-              ))}
+                );
+              })}
             {students.filter((s) => s.name.includes(studentSearch)).length === 0 && (
               <p className="text-sm text-gray-400 text-center py-3">검색 결과 없음</p>
             )}

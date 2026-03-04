@@ -10,10 +10,10 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['icon.svg', 'apple-touch-icon-180x180.png', 'pwa-*.png', 'maskable-icon-512x512.png'],
       manifest: {
-        name: '튜터 관리',
-        short_name: '튜터관리',
+        name: '하늘하늘 중국어',
+        short_name: '하늘하늘',
         description: '중국어 튜터링 관리 시스템',
-        theme_color: '#4F46E5',
+        theme_color: '#830009',
         background_color: '#F9FAFB',
         display: 'standalone',
         orientation: 'portrait',

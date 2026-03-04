@@ -38,41 +38,52 @@ export default function LoginPage({ onSuccess }) {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <div className="w-full max-w-sm">
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-brand-600 rounded-2xl mx-auto mb-4 flex items-center justify-center">
-            <span className="text-white text-2xl">📚</span>
-          </div>
-          <h1 className="text-2xl font-bold text-gray-900">TutorManager</h1>
-          <p className="text-gray-500 text-sm mt-1">비밀번호를 입력하세요</p>
-        </div>
+    <div className="min-h-screen flex flex-col bg-brand-600">
+      {/* 상단 로고 영역 */}
+      <div className="flex-1 flex flex-col items-center justify-center px-8 pt-16 pb-10">
+        <img
+          src="/logo/logo-white.png"
+          alt="하늘하늘 중국어"
+          className="w-64 object-contain drop-shadow-sm"
+        />
+        <p className="text-white/70 text-sm mt-4 tracking-wide">수업 관리 시스템</p>
+      </div>
 
-        <form onSubmit={handleSubmit} className="card space-y-4">
+      {/* 하단 폼 카드 */}
+      <div className="bg-gray-50 rounded-t-3xl px-6 pt-8 pb-10 shadow-2xl">
+        <h2 className="text-lg font-bold text-gray-800 mb-6 text-center">로그인</h2>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <input
               type="password"
               value={pin}
               onChange={e => { setPin(e.target.value); setError(''); }}
-              placeholder="비밀번호"
-              className="w-full px-4 py-3 border border-gray-200 rounded-xl text-center text-lg tracking-widest focus:outline-none focus:ring-2 focus:ring-brand-500"
+              placeholder="비밀번호를 입력하세요"
+              className="w-full px-4 py-3.5 border border-gray-200 rounded-xl text-center text-lg tracking-widest focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white"
               autoFocus
               disabled={loading}
             />
-            {error && <p className="text-red-500 text-sm mt-2 text-center">{error}</p>}
+            {error && (
+              <p className="text-red-500 text-sm mt-2 text-center">{error}</p>
+            )}
           </div>
 
-          <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none">
+          <label className="flex items-center gap-2.5 text-sm text-gray-600 cursor-pointer select-none px-1">
             <input
               type="checkbox"
               checked={remember}
               onChange={e => setRemember(e.target.checked)}
-              className="rounded accent-brand-600"
+              className="w-4 h-4 rounded accent-brand-600"
             />
             30일 동안 로그인 유지
           </label>
 
-          <button type="submit" className="btn-primary w-full py-3" disabled={loading}>
+          <button
+            type="submit"
+            className="btn-primary w-full py-3.5 text-base"
+            disabled={loading}
+          >
             {loading ? '확인 중...' : '로그인'}
           </button>
         </form>
