@@ -8,3 +8,4 @@ pwa/node_modules/
 
 # Worker
 worker/node_modules/
+worker/.wrangler/

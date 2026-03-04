@@ -1,0 +1,21 @@
+name: Check Session Shortage
+
+on:
+  repository_dispatch:
+    types: [session-shortage-check]
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Check session shortage
+        run: node check_session_shortage.mjs
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
