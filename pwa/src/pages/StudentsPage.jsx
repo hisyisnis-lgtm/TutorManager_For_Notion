@@ -34,11 +34,13 @@ export default function StudentsPage() {
 
   useEffect(() => { load(); }, []);
 
-  const filtered = students.filter((s) => {
-    const matchStatus = filter === '전체' || s.status === filter;
-    const matchSearch = !search || s.name.includes(search);
-    return matchStatus && matchSearch;
-  });
+  const filtered = students
+    .filter((s) => {
+      const matchStatus = filter === '전체' || s.status === filter;
+      const matchSearch = !search || s.name.includes(search);
+      return matchStatus && matchSearch;
+    })
+    .sort((a, b) => b.remainingSessions - a.remainingSessions);
 
   return (
     <PullToRefresh onRefresh={load}>

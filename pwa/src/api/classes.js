@@ -24,7 +24,7 @@ export async function fetchClassesPage(opts = {}) {
   return queryPage(
     CLASSES_DB,
     filter,
-    [{ property: '수업 일시', direction: 'descending' }],
+    [{ property: '수업 일시', direction: 'ascending' }],
     cursor
   );
 }

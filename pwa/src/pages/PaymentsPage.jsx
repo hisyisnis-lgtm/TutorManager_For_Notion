@@ -44,10 +44,19 @@ export default function PaymentsPage() {
 
   useEffect(() => { load(true); }, [load]);
 
-  const filtered =
+  const sortByDate = (arr) =>
+    [...arr].sort((a, b) => {
+      if (!a.paymentDate && !b.paymentDate) return 0;
+      if (!a.paymentDate) return 1;
+      if (!b.paymentDate) return -1;
+      return b.paymentDate.localeCompare(a.paymentDate);
+    });
+
+  const filtered = sortByDate(
     statusFilter === '전체'
       ? payments
-      : payments.filter((p) => p.paymentStatus?.startsWith(statusFilter));
+      : payments.filter((p) => p.paymentStatus?.startsWith(statusFilter))
+  );
 
   return (
     <PullToRefresh onRefresh={load}>

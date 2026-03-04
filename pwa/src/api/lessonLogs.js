@@ -13,7 +13,7 @@ export async function fetchLessonLogsPage(opts = {}) {
   return queryPage(
     LESSON_LOGS_DB,
     filter,
-    [{ property: '제목', direction: 'descending' }],
+    [{ timestamp: 'created_time', direction: 'descending' }],
     cursor
   );
 }
