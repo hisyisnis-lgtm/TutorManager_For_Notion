@@ -29,7 +29,7 @@ export default function PaymentFormPage() {
     sessionCount: '',
     actualAmount: '',
     paymentMethod: '',
-    paymentDate: new Date().toISOString().split('T')[0],
+    paymentDate: new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' }),
   });
   const [studentSearch, setStudentSearch] = useState('');
   const selectedStudentRef = useRef(null);
@@ -60,7 +60,7 @@ export default function PaymentFormPage() {
           sessionCount: String(p.sessionCount),
           actualAmount: String(p.actualAmount),
           paymentMethod: p.paymentMethod || '',
-          paymentDate: p.paymentDate || new Date().toISOString().split('T')[0],
+          paymentDate: p.paymentDate || new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' }),
         });
       } catch (e) {
         setError(e.message);
@@ -104,8 +104,14 @@ export default function PaymentFormPage() {
     if (!form.sessionCount || isNaN(parseFloat(form.sessionCount))) {
       setError('시간 회차를 입력하세요.'); return;
     }
+    if (parseFloat(form.sessionCount) <= 0) {
+      setError('시간 회차는 0보다 커야 합니다.'); return;
+    }
     if (form.actualAmount === '' || isNaN(parseFloat(form.actualAmount))) {
       setError('실제 결제 금액을 입력하세요.'); return;
+    }
+    if (parseFloat(form.actualAmount) < 0) {
+      setError('결제 금액은 0 이상이어야 합니다.'); return;
     }
 
     setSaving(true);

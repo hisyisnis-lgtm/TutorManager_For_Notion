@@ -79,30 +79,27 @@ export function toNotionDateOnly(dateLocal) {
 
 /** 오늘 날짜의 이번 주 월요일 ISO 문자열 (KST) */
 export function getWeekStart() {
-  const now = new Date();
-  const kstNow = new Date(now.toLocaleString('en-US', { timeZone: KST }));
-  const day = kstNow.getDay(); // 0=일, 1=월...
-  const diff = day === 0 ? -6 : 1 - day;
-  const monday = new Date(kstNow);
-  monday.setDate(kstNow.getDate() + diff);
-  monday.setHours(0, 0, 0, 0);
-  return monday.toISOString();
+  const dateStr = new Date().toLocaleDateString('en-CA', { timeZone: KST }); // "YYYY-MM-DD"
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const tempDate = new Date(year, month - 1, day);
+  const dayOfWeek = tempDate.getDay(); // 0=일, 1=월...
+  const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  const monday = new Date(year, month - 1, day + diff);
+  const mondayStr = `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, '0')}-${String(monday.getDate()).padStart(2, '0')}`;
+  return `${mondayStr}T00:00:00+09:00`;
 }
 
 /** 오늘 00:00 KST ISO 문자열 */
 export function getTodayStart() {
-  const now = new Date();
-  const kstNow = new Date(now.toLocaleString('en-US', { timeZone: KST }));
-  const today = new Date(kstNow.getFullYear(), kstNow.getMonth(), kstNow.getDate());
-  return today.toISOString();
+  const dateStr = new Date().toLocaleDateString('en-CA', { timeZone: KST }); // "YYYY-MM-DD"
+  return `${dateStr}T00:00:00+09:00`;
 }
 
 /** 이번 달 1일 ISO 문자열 */
 export function getMonthStart() {
-  const now = new Date();
-  const kstNow = new Date(now.toLocaleString('en-US', { timeZone: KST }));
-  const first = new Date(kstNow.getFullYear(), kstNow.getMonth(), 1);
-  return first.toISOString();
+  const dateStr = new Date().toLocaleDateString('en-CA', { timeZone: KST }); // "YYYY-MM-DD"
+  const [year, month] = dateStr.split('-');
+  return `${year}-${month}-01T00:00:00+09:00`;
 }
 
 /** 숫자 금액 → 한국식 포맷 (₩100,000) */

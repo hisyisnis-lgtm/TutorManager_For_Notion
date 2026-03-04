@@ -72,7 +72,7 @@ export default function ClassFormPage() {
     // 반복
     recurDays: [],        // JS 요일 숫자 배열 (0=일 ~ 6=토)
     recurTime: '10:00',
-    recurStartDate: new Date().toISOString().slice(0, 10),
+    recurStartDate: new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' }),
     recurEndDate: '',
   });
 
