@@ -15,17 +15,18 @@ import {
 import { toDatetimeLocal, toNotionDate } from '../utils/dateUtils.js';
 import { useData } from '../context/DataContext.jsx';
 
-const DAY_LABELS = ['월', '화', '수', '목', '금'];
+const DAY_LABELS = ['일', '월', '화', '수', '목', '금', '토'];
 // JS getDay(): 0=일,1=월,2=화,3=수,4=목,5=금,6=토
-const DAY_JS = [1, 2, 3, 4, 5];
+const DAY_JS = [0, 1, 2, 3, 4, 5, 6];
 
-/** 반복 수업 날짜 목록 생성 */
-function generateRecurringDates(startDate, selectedDays, count, time) {
-  if (!selectedDays.length || !count || count <= 0) return [];
+/** 반복 수업 날짜 목록 생성 (시작일~종료일 범위) */
+function generateRecurringDates(startDate, endDate, selectedDays, time) {
+  if (!selectedDays.length || !startDate || !endDate) return [];
   const [h, m] = time.split(':').map(Number);
   const dates = [];
   const cur = new Date(startDate + 'T00:00:00');
-  while (dates.length < count) {
+  const end = new Date(endDate + 'T23:59:59');
+  while (cur <= end) {
     if (selectedDays.includes(cur.getDay())) {
       const d = new Date(cur);
       d.setHours(h, m, 0, 0);
@@ -69,9 +70,10 @@ export default function ClassFormPage() {
     // 일회성
     datetime: '',
     // 반복
-    recurDays: [],        // JS 요일 숫자 배열 (1=월 ~ 5=금)
+    recurDays: [],        // JS 요일 숫자 배열 (0=일 ~ 6=토)
     recurTime: '10:00',
     recurStartDate: new Date().toISOString().slice(0, 10),
+    recurEndDate: '',
   });
 
   const [loading, setLoading] = useState(isEdit);
@@ -137,10 +139,11 @@ export default function ClassFormPage() {
 
   const canRecur = form.studentIds.length > 0 && Boolean(form.classTypeId);
   const sessionsPerLesson = parseInt(form.duration) / 60;
-  const recurCount = Math.floor(minRemaining / sessionsPerLesson);
+  const maxCount = Math.floor(minRemaining / sessionsPerLesson);
   const recurDates = recurring
-    ? generateRecurringDates(form.recurStartDate, form.recurDays, recurCount, form.recurTime)
+    ? generateRecurringDates(form.recurStartDate, form.recurEndDate, form.recurDays, form.recurTime)
     : [];
+  const recurCount = recurDates.length;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -164,8 +167,23 @@ export default function ClassFormPage() {
           setSaving(false);
           return;
         }
+        if (!form.recurEndDate) {
+          setError('종료일을 입력하세요.');
+          setSaving(false);
+          return;
+        }
+        if (form.recurEndDate < form.recurStartDate) {
+          setError('종료일은 시작일 이후여야 합니다.');
+          setSaving(false);
+          return;
+        }
         if (recurCount <= 0) {
-          setError('잔여 시간 회차가 부족하여 등록할 수업이 없습니다.');
+          setError('선택한 날짜 범위에 해당 요일 수업이 없습니다.');
+          setSaving(false);
+          return;
+        }
+        if (recurCount * sessionsPerLesson > minRemaining) {
+          setError(`잔여 회차(${minRemaining})가 부족합니다. 최대 ${maxCount}개 수업 등록 가능합니다.`);
           setSaving(false);
           return;
         }
@@ -356,7 +374,7 @@ export default function ClassFormPage() {
             {/* 요일 선택 */}
             <div>
               <label className="label">수업 요일 (복수 선택 가능)</label>
-              <div className="grid grid-cols-5 gap-2">
+              <div className="grid grid-cols-7 gap-1.5">
                 {DAY_LABELS.map((label, i) => {
                   const day = DAY_JS[i];
                   const active = form.recurDays.includes(day);
@@ -389,40 +407,70 @@ export default function ClassFormPage() {
               />
             </div>
 
-            {/* 시작일 */}
-            <div>
-              <label className="label">첫 수업 시작일</label>
-              <input
-                type="date"
-                value={form.recurStartDate}
-                onChange={(e) => setForm((f) => ({ ...f, recurStartDate: e.target.value }))}
-                className="input-field"
-              />
+            {/* 시작일 / 종료일 */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="label">시작일</label>
+                <input
+                  type="date"
+                  value={form.recurStartDate}
+                  onChange={(e) => setForm((f) => ({ ...f, recurStartDate: e.target.value }))}
+                  className="input-field"
+                />
+              </div>
+              <div>
+                <label className="label">종료일</label>
+                <input
+                  type="date"
+                  value={form.recurEndDate}
+                  min={form.recurStartDate}
+                  onChange={(e) => setForm((f) => ({ ...f, recurEndDate: e.target.value }))}
+                  className="input-field"
+                />
+              </div>
             </div>
 
             {/* 등록 예정 수업 수 안내 */}
-            <div className={`p-3 rounded-xl text-sm ${recurCount > 0 ? 'bg-blue-50 text-blue-700' : 'bg-yellow-50 text-yellow-700'}`}>
-              {selectedStudents.length === 0 ? (
-                '학생을 선택하면 등록 가능한 수업 수가 표시됩니다.'
-              ) : recurCount <= 0 ? (
-                `잔여 시간 회차 ${minRemaining}회차 — ${form.duration}분 수업 기준 등록 가능한 수업이 없습니다.`
-              ) : (
-                <>
-                  잔여 {minRemaining}회차 기준 →{' '}
-                  <span className="font-semibold">수업 {recurCount}개</span> 등록 예정
-                  {form.recurDays.length > 0 && recurDates.length > 0 && (
-                    <div className="mt-2 text-xs text-blue-600 space-y-0.5">
-                      {recurDates.slice(0, 5).map((d, i) => (
-                        <div key={i}>{formatDateLabel(d)} {form.recurTime}</div>
-                      ))}
-                      {recurDates.length > 5 && (
-                        <div className="text-blue-400">... 외 {recurDates.length - 5}개</div>
+            {(() => {
+              const overLimit = recurCount > 0 && recurCount * sessionsPerLesson > minRemaining;
+              const boxColor = !form.recurEndDate || recurCount === 0
+                ? 'bg-gray-50 text-gray-500'
+                : overLimit
+                ? 'bg-yellow-50 text-yellow-700'
+                : 'bg-blue-50 text-blue-700';
+              return (
+                <div className={`p-3 rounded-xl text-sm ${boxColor}`}>
+                  {selectedStudents.length === 0 ? (
+                    '학생을 선택하면 등록 가능한 수업 수가 표시됩니다.'
+                  ) : !form.recurEndDate ? (
+                    '종료일을 선택하면 등록 예정 수업 수가 표시됩니다.'
+                  ) : recurCount === 0 ? (
+                    '선택한 날짜 범위에 해당 요일 수업이 없습니다.'
+                  ) : overLimit ? (
+                    <>
+                      범위 내 수업 <span className="font-semibold">{recurCount}개</span>
+                      {' '}({recurCount * sessionsPerLesson}회차) — 잔여 {minRemaining}회차 초과!{' '}
+                      최대 <span className="font-semibold">{maxCount}개</span> 등록 가능
+                    </>
+                  ) : (
+                    <>
+                      잔여 {minRemaining}회차 충분 →{' '}
+                      <span className="font-semibold">수업 {recurCount}개</span> 등록 예정
+                      {form.recurDays.length > 0 && recurDates.length > 0 && (
+                        <div className="mt-2 text-xs text-blue-600 space-y-0.5">
+                          {recurDates.slice(0, 5).map((d, i) => (
+                            <div key={i}>{formatDateLabel(d)} {form.recurTime}</div>
+                          ))}
+                          {recurDates.length > 5 && (
+                            <div className="text-blue-400">... 외 {recurDates.length - 5}개</div>
+                          )}
+                        </div>
                       )}
-                    </div>
+                    </>
                   )}
-                </>
-              )}
-            </div>
+                </div>
+              );
+            })()}
           </div>
         )}
 
