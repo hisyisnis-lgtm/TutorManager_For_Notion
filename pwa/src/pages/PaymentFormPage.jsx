@@ -31,6 +31,7 @@ export default function PaymentFormPage() {
     paymentMethod: '',
     paymentDate: new Date().toISOString().split('T')[0],
   });
+  const [studentSearch, setStudentSearch] = useState('');
   const [loading, setLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -154,17 +155,41 @@ export default function PaymentFormPage() {
         {/* 1. 학생 선택 */}
         <div>
           <label className="label">① 학생</label>
-          <select
-            value={form.studentId}
-            onChange={set('studentId')}
-            className="select-field"
-            required
-          >
-            <option value="">선택하세요</option>
-            {students.map((s) => (
-              <option key={s.id} value={s.id}>{s.name}</option>
-            ))}
-          </select>
+          <input
+            type="text"
+            placeholder="학생 이름 검색..."
+            value={studentSearch}
+            onChange={(e) => setStudentSearch(e.target.value)}
+            className="input-field mb-2"
+          />
+          <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+            {students
+              .filter((s) => s.name.includes(studentSearch))
+              .map((s) => (
+                <label
+                  key={s.id}
+                  className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
+                    form.studentId === s.id
+                      ? 'border-brand-500 bg-brand-50'
+                      : 'border-gray-200 bg-white'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="studentId"
+                    value={s.id}
+                    checked={form.studentId === s.id}
+                    onChange={() => setForm((f) => ({ ...f, studentId: s.id }))}
+                    className="w-4 h-4 accent-brand-600"
+                  />
+                  <span className="text-sm font-medium text-gray-800">{s.name}</span>
+                  <span className="text-xs text-gray-400 ml-auto">{s.status}</span>
+                </label>
+              ))}
+            {students.filter((s) => s.name.includes(studentSearch)).length === 0 && (
+              <p className="text-sm text-gray-400 text-center py-3">검색 결과 없음</p>
+            )}
+          </div>
         </div>
 
         {/* 2. 수업 종류 선택 */}
