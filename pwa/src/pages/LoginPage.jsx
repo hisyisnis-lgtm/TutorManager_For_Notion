@@ -38,19 +38,19 @@ export default function LoginPage({ onSuccess }) {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-brand-600">
+    <div className="h-screen overflow-hidden flex flex-col bg-brand-600">
       {/* 상단 로고 영역 */}
-      <div className="flex-1 flex flex-col items-center justify-center px-8 pt-16 pb-10">
+      <div className="flex-1 flex flex-col items-center justify-center px-8 pb-6">
         <img
           src={`${import.meta.env.BASE_URL}logo/logo-white.png`}
           alt="하늘하늘 중국어"
-          className="w-64 object-contain drop-shadow-sm"
+          className="w-56 object-contain drop-shadow-sm"
         />
-        <p className="text-white/70 text-sm mt-4 tracking-wide">수업 관리 시스템</p>
+        <p className="text-white/70 text-sm mt-3 tracking-wide">수업 관리 시스템</p>
       </div>
 
       {/* 하단 폼 카드 */}
-      <div className="bg-gray-50 rounded-t-3xl px-6 pt-8 pb-10 shadow-2xl">
+      <div className="bg-gray-50 rounded-t-3xl px-6 pt-7 pb-8 shadow-2xl">
         <h2 className="text-lg font-bold text-gray-800 mb-6 text-center">로그인</h2>
 
         <form onSubmit={handleSubmit} className="space-y-4">

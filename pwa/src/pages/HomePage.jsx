@@ -27,7 +27,7 @@ function getClassDay(isoString) {
 }
 
 export default function HomePage() {
-  const { studentNameMap } = useData();
+  const { studentNameMap, classTypeMap } = useData();
   const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -170,6 +170,8 @@ export default function HomePage() {
                     className={`text-xs w-6 h-6 flex items-center justify-center rounded-full font-medium ${
                       isToday
                         ? 'bg-brand-600 text-white'
+                        : count > 0
+                        ? 'bg-green-100 text-green-700'
                         : dow === 0
                         ? 'text-red-400'
                         : dow === 6
@@ -208,13 +210,19 @@ export default function HomePage() {
                   .filter(Boolean)
                   .join(', ');
                 const title = cls.title || names || '수업';
+                const classType = classTypeMap[cls.classTypeId]?.classType ?? '';
                 return (
                   <li key={cls.id}>
                     <Link
                       to="/classes"
                       className="card flex items-center justify-between px-4 py-2.5 active:bg-gray-50"
                     >
-                      <span className="text-sm font-medium text-gray-800 truncate">{title}</span>
+                      <div className="flex-1 min-w-0">
+                        <span className="text-sm font-medium text-gray-800 truncate block">{title}</span>
+                        {classType && (
+                          <span className="text-xs text-gray-400">{classType}</span>
+                        )}
+                      </div>
                       <span className="text-xs text-gray-400 ml-3 shrink-0">
                         {formatShort(cls.datetime)}
                       </span>
