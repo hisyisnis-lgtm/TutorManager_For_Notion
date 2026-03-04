@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { DataProvider } from './context/DataContext.jsx';
 import BottomNav from './components/layout/BottomNav.jsx';
+import LoginPage from './pages/LoginPage.jsx';
 
 import StudentsPage from './pages/StudentsPage.jsx';
 import StudentDetailPage from './pages/StudentDetailPage.jsx';
@@ -12,7 +13,17 @@ import PaymentFormPage from './pages/PaymentFormPage.jsx';
 import LessonLogsPage from './pages/LessonLogsPage.jsx';
 import LessonLogFormPage from './pages/LessonLogFormPage.jsx';
 
+function checkAuth() {
+  return !!(sessionStorage.getItem('auth_token') || localStorage.getItem('auth_token'));
+}
+
 export default function App() {
+  const [authed, setAuthed] = useState(checkAuth);
+
+  if (!authed) {
+    return <LoginPage onSuccess={() => setAuthed(true)} />;
+  }
+
   return (
     <DataProvider>
       <HashRouter>

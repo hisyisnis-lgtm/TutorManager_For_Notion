@@ -4,12 +4,26 @@ if (!WORKER_URL) {
   console.warn('[notionClient] VITE_WORKER_URL이 설정되지 않았습니다. .env.local 파일을 확인하세요.');
 }
 
+function getToken() {
+  return sessionStorage.getItem('auth_token') || localStorage.getItem('auth_token') || '';
+}
+
 async function notionFetch(method, path, body) {
   const res = await fetch(`${WORKER_URL}${path}`, {
     method,
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${getToken()}`,
+    },
     body: body ? JSON.stringify(body) : undefined,
   });
+
+  if (res.status === 401) {
+    sessionStorage.removeItem('auth_token');
+    localStorage.removeItem('auth_token');
+    window.location.reload();
+    return;
+  }
 
   const data = await res.json().catch(() => ({}));
 
