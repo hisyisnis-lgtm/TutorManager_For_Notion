@@ -114,12 +114,7 @@ export default function PaymentFormPage() {
       };
 
       if (isEdit) {
-        await updatePayment(id, {
-          actualAmount: payload.actualAmount,
-          paymentMethod: payload.paymentMethod,
-          paymentDate: payload.paymentDate,
-          note: payload.note,
-        });
+        await updatePayment(id, payload);
       } else {
         await createPayment(payload);
       }
@@ -163,7 +158,6 @@ export default function PaymentFormPage() {
             value={form.studentId}
             onChange={set('studentId')}
             className="select-field"
-            disabled={isEdit}
             required
           >
             <option value="">선택하세요</option>
@@ -180,7 +174,6 @@ export default function PaymentFormPage() {
             value={form.classTypeId}
             onChange={set('classTypeId')}
             className="select-field"
-            disabled={isEdit}
             required
           >
             <option value="">선택하세요</option>
@@ -204,7 +197,6 @@ export default function PaymentFormPage() {
             value={form.discountEventId}
             onChange={set('discountEventId')}
             className="select-field"
-            disabled={isEdit}
           >
             <option value="">없음</option>
             {discounts.map((d) => (
@@ -231,7 +223,6 @@ export default function PaymentFormPage() {
             min="0"
             placeholder="예: 8 (8회 60분 수업)"
             className="input-field"
-            disabled={isEdit}
             required
           />
           {sessionCount > 0 && unitPrice > 0 && (

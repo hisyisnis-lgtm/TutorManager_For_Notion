@@ -87,6 +87,13 @@ export default function StudentDetailPage() {
         title={student.name}
         back
         action={
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => navigate(`/students/${id}/edit`)}
+              className="text-sm font-medium text-gray-600 px-3 py-1.5 bg-gray-100 rounded-lg active:bg-gray-200"
+            >
+              수정
+            </button>
           <div className="relative">
             <button
               onClick={() => setShowStatusMenu((v) => !v)}
@@ -108,6 +115,7 @@ export default function StudentDetailPage() {
                 ))}
               </div>
             )}
+          </div>
           </div>
         }
       />

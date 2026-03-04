@@ -55,10 +55,26 @@ export async function createPayment({
   return createPage(PAYMENTS_DB, properties);
 }
 
-export async function updatePayment(pageId, { actualAmount, paymentMethod, paymentDate, note }) {
+export async function updatePayment(pageId, {
+  studentId,
+  classTypeId,
+  discountEventId,
+  sessionCount,
+  actualAmount,
+  paymentMethod,
+  paymentDate,
+  note,
+}) {
   const properties = {};
+  if (studentId) properties['학생'] = { relation: [{ id: studentId }] };
+  if (classTypeId) properties['수업 종류'] = { relation: [{ id: classTypeId }] };
+  if (discountEventId !== undefined) {
+    properties['할인 적용'] = discountEventId ? { relation: [{ id: discountEventId }] } : { relation: [] };
+  }
+  if (sessionCount !== undefined) properties['시간 회차'] = { number: sessionCount };
   if (actualAmount !== undefined) properties['실제 결제 금액'] = { number: actualAmount };
   if (paymentMethod) properties['결제수단'] = { select: { name: paymentMethod } };
+  else if (paymentMethod === '') properties['결제수단'] = { select: null };
   if (paymentDate) properties['결제일'] = { date: { start: paymentDate } };
   if (note !== undefined) properties['비고'] = { title: [{ text: { content: note } }] };
 

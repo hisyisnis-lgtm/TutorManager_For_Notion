@@ -12,7 +12,7 @@ export default function LessonLogsPage() {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [studentFilter, setStudentFilter] = useState('');
+  const [search, setSearch] = useState('');
   const [hasMore, setHasMore] = useState(false);
   const [cursor, setCursor] = useState(null);
 
@@ -20,10 +20,7 @@ export default function LessonLogsPage() {
     if (reset) setLoading(true);
     setError(null);
     try {
-      const data = await fetchLessonLogsPage({
-        studentId: studentFilter || undefined,
-        cursor: nextCursor,
-      });
+      const data = await fetchLessonLogsPage({ cursor: nextCursor });
       const parsed = data.results.map(parseLessonLog);
       setLogs((prev) => (reset ? parsed : [...prev, ...parsed]));
       setHasMore(data.has_more);
@@ -33,28 +30,29 @@ export default function LessonLogsPage() {
     } finally {
       setLoading(false);
     }
-  }, [studentFilter]);
+  }, []);
 
   useEffect(() => { load(true); }, [load]);
 
-  const activeStudents = students.filter((s) => s.status === '🟢 수강중');
+  const filteredLogs = logs.filter((log) => {
+    if (!search.trim()) return true;
+    const names = log.studentIds.map((sid) => studentNameMap[sid] || '').join(' ');
+    return names.toLowerCase().includes(search.trim().toLowerCase());
+  });
 
   return (
     <>
       <PageHeader title="수업 일지" />
 
-      {/* 학생 필터 */}
+      {/* 학생 검색 */}
       <div className="px-4 pt-3 pb-3">
-        <select
-          value={studentFilter}
-          onChange={(e) => setStudentFilter(e.target.value)}
-          className="select-field"
-        >
-          <option value="">전체 학생</option>
-          {students.map((s) => (
-            <option key={s.id} value={s.id}>{s.name}</option>
-          ))}
-        </select>
+        <input
+          type="search"
+          placeholder="학생 이름으로 검색"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="input-field"
+        />
       </div>
 
       {loading && <LoadingSpinner />}
@@ -62,7 +60,7 @@ export default function LessonLogsPage() {
 
       {!loading && !error && (
         <>
-          {logs.length === 0 ? (
+          {filteredLogs.length === 0 ? (
             <EmptyState
               icon="📝"
               title="수업 일지가 없습니다"
@@ -70,7 +68,7 @@ export default function LessonLogsPage() {
             />
           ) : (
             <ul className="px-4 space-y-3 pb-4">
-              {logs.map((log) => (
+              {filteredLogs.map((log) => (
                 <LogCard key={log.id} log={log} studentNameMap={studentNameMap} />
               ))}
             </ul>

@@ -31,6 +31,19 @@ export async function updateStudentStatus(pageId, status) {
   });
 }
 
+/** 학생 정보 수정 */
+export async function updateStudent(pageId, { name, phone, email, level, goal, status, memo }) {
+  const properties = {};
+  if (name) properties['이름'] = { title: [{ text: { content: name } }] };
+  if (status) properties['상태'] = { select: { name: status } };
+  properties['전화번호'] = phone ? { phone_number: phone } : { phone_number: null };
+  properties['이메일'] = email ? { email } : { email: null };
+  properties['레벨'] = { rich_text: level ? [{ text: { content: level } }] : [] };
+  properties['목표'] = { rich_text: goal ? [{ text: { content: goal } }] : [] };
+  properties['메모'] = { rich_text: memo ? [{ text: { content: memo } }] : [] };
+  return updatePage(pageId, properties);
+}
+
 /** 학생 생성 */
 export async function createStudent({ name, phone, email, level, goal, status, memo }) {
   const properties = {

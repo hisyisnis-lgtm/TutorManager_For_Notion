@@ -80,7 +80,7 @@ export default function PaymentsPage() {
             <button
               key={f}
               onClick={() => setStatusFilter(f)}
-              className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+              className={`flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
                 statusFilter === f ? 'bg-brand-600 text-white' : 'bg-gray-100 text-gray-600'
               }`}
             >

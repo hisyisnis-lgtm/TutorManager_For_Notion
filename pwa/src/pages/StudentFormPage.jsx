@@ -1,10 +1,16 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import PageHeader from '../components/layout/PageHeader.jsx';
-import { createStudent, STATUS_OPTIONS } from '../api/students.js';
+import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
+import { createStudent, updateStudent, parseStudent, STATUS_OPTIONS } from '../api/students.js';
+import { getPage } from '../api/notionClient.js';
+import { useData } from '../context/DataContext.jsx';
 
 export default function StudentFormPage() {
   const navigate = useNavigate();
+  const { id } = useParams();
+  const isEdit = Boolean(id);
+  const { refresh: refreshAll } = useData();
 
   const [form, setForm] = useState({
     name: '',
@@ -15,8 +21,33 @@ export default function StudentFormPage() {
     status: '🟢 수강중',
     memo: '',
   });
+  const [loading, setLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (!isEdit) return;
+    const load = async () => {
+      try {
+        const page = await getPage(id);
+        const s = parseStudent(page);
+        setForm({
+          name: s.name,
+          phone: s.phone || '',
+          email: s.email || '',
+          level: s.level || '',
+          goal: s.goal || '',
+          status: s.status || '🟢 수강중',
+          memo: s.memo || '',
+        });
+      } catch (e) {
+        setError(e.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, [id, isEdit]);
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
 
@@ -29,8 +60,14 @@ export default function StudentFormPage() {
     setSaving(true);
     setError(null);
     try {
-      await createStudent({ ...form, name: form.name.trim() });
-      navigate('/students');
+      if (isEdit) {
+        await updateStudent(id, { ...form, name: form.name.trim() });
+        refreshAll();
+        navigate(-1);
+      } else {
+        await createStudent({ ...form, name: form.name.trim() });
+        navigate('/students');
+      }
     } catch (e) {
       setError(e.message);
     } finally {
@@ -38,9 +75,11 @@ export default function StudentFormPage() {
     }
   };
 
+  if (loading) return <><PageHeader title="학생 수정" back /><LoadingSpinner /></>;
+
   return (
     <>
-      <PageHeader title="학생 추가" back />
+      <PageHeader title={isEdit ? '학생 수정' : '학생 추가'} back />
 
       <form onSubmit={handleSubmit} className="px-4 pt-4 pb-8 space-y-5">
         {error && (
@@ -144,7 +183,7 @@ export default function StudentFormPage() {
         </div>
 
         <button type="submit" disabled={saving} className="btn-primary w-full mt-2">
-          {saving ? '저장 중...' : '학생 추가'}
+          {saving ? '저장 중...' : isEdit ? '수정 완료' : '학생 추가'}
         </button>
       </form>
     </>

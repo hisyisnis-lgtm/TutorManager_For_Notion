@@ -111,10 +111,14 @@ function StudentCard({ student }) {
         </div>
         <div className="flex gap-2 flex-wrap mb-3">
           {student.level && (
-            <span className="text-xs text-gray-500 bg-gray-50 px-2 py-0.5 rounded-full">{student.level}</span>
+            <span className="text-xs text-gray-500 bg-gray-50 px-2 py-0.5 rounded-full">
+              <span className="text-gray-400 mr-0.5">레벨</span>{student.level}
+            </span>
           )}
           {student.goal && (
-            <span className="text-xs text-gray-500 bg-gray-50 px-2 py-0.5 rounded-full">{student.goal}</span>
+            <span className="text-xs text-gray-500 bg-gray-50 px-2 py-0.5 rounded-full">
+              <span className="text-gray-400 mr-0.5">목표</span>{student.goal}
+            </span>
           )}
         </div>
         <div className="flex gap-4 text-sm">
