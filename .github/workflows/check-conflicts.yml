@@ -1,6 +1,8 @@
 name: 수업 충돌 감지
 
 on:
+  repository_dispatch:
+    types: [conflict-check]
   schedule:
     - cron: '*/30 * * * *'  # 30분마다 실행
   workflow_dispatch:          # 수동 실행 가능

@@ -88,6 +88,7 @@ export function parseClass(page) {
     sessionShortage: p['시간 회차 부족']?.formula?.string ?? '',
     conflictDetected: p['충돌_감지']?.checkbox ?? false,
     endTime: p['수업 종료 시간']?.formula?.date?.start ?? null,
+    lessonLogIds: p['수업 일지']?.relation?.map((r) => r.id) ?? [],
   };
 }
 

@@ -84,7 +84,7 @@ async function handleNotionWebhook(request, env, ctx) {
 
   // GitHub Actions repository_dispatch 트리거 (백그라운드)
   if (env.GITHUB_PAT) {
-    ctx.waitUntil(
+    const dispatch = (event_type) =>
       fetch('https://api.github.com/repos/hisyisnis-lgtm/TutorManager_For_Notion/dispatches', {
         method: 'POST',
         headers: {
@@ -93,9 +93,10 @@ async function handleNotionWebhook(request, env, ctx) {
           'Content-Type': 'application/json',
           'User-Agent': 'tutor-manager-proxy',
         },
-        body: JSON.stringify({ event_type: 'session-shortage-check' }),
-      }),
-    );
+        body: JSON.stringify({ event_type }),
+      });
+    ctx.waitUntil(dispatch('session-shortage-check'));
+    ctx.waitUntil(dispatch('conflict-check'));
   }
 
   // Notion은 빠른 200 응답 필요

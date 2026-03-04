@@ -46,6 +46,7 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        navigateFallback: '/TutorManager_For_Notion/index.html',
         runtimeCaching: [
           {
             // Cloudflare Worker API는 항상 네트워크에서 가져옴 (최신 데이터)

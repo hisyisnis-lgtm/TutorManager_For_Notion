@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { createLessonLog } from '../api/lessonLogs.js';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import Badge from '../components/ui/Badge.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
@@ -133,12 +134,42 @@ export default function ClassesPage() {
 }
 
 function ClassCard({ cls, studentNameMap }) {
+  const navigate = useNavigate();
   const { bg, text } = classStatusColor(cls.status);
   const studentNames = cls.studentIds.map((id) => studentNameMap[id] || '(알 수 없음)').join(', ');
+  const isCompleted = cls.datetime && new Date(cls.datetime) <= new Date();
+  const logId = cls.lessonLogIds?.[0];
+  const [creatingLog, setCreatingLog] = useState(false);
+
+  const handleLogClick = async (e) => {
+    e.stopPropagation();
+    if (logId) {
+      navigate(`/logs/${logId}/edit`);
+      return;
+    }
+    setCreatingLog(true);
+    try {
+      const names = cls.studentIds.map((id) => studentNameMap[id]).filter(Boolean).join(', ');
+      const dateStr = cls.datetime
+        ? new Date(cls.datetime).toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul', month: 'numeric', day: 'numeric' })
+        : '';
+      const created = await createLessonLog({
+        title: `${names} ${dateStr}`.trim(),
+        classId: cls.id,
+        studentIds: cls.studentIds,
+      });
+      navigate(`/logs/${created.id}/edit`);
+    } catch {
+      setCreatingLog(false);
+    }
+  };
 
   return (
     <li>
-      <Link to={`/classes/${cls.id}/edit`} className="card block p-4 active:bg-gray-50">
+      <div
+        onClick={() => navigate(`/classes/${cls.id}/edit`)}
+        className="card block p-4 active:bg-gray-50 cursor-pointer"
+      >
         <div className="flex items-start justify-between mb-2">
           <div className="flex-1 min-w-0">
             <p className="text-base font-bold text-gray-900 truncate">
@@ -169,7 +200,22 @@ function ClassCard({ cls, studentNameMap }) {
             )}
           </div>
         )}
-      </Link>
+        {isCompleted && (
+          <div className="mt-2.5 pt-2.5 border-t border-gray-100 flex justify-end">
+            <button
+              onClick={handleLogClick}
+              disabled={creatingLog}
+              className={`text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors ${
+                logId
+                  ? 'text-brand-600 bg-brand-50 active:bg-brand-100'
+                  : 'text-gray-500 bg-gray-100 active:bg-gray-200'
+              } disabled:opacity-50`}
+            >
+              {creatingLog ? '생성 중...' : logId ? '📝 일지 보기' : '📝 일지 작성'}
+            </button>
+          </div>
+        )}
+      </div>
     </li>
   );
 }

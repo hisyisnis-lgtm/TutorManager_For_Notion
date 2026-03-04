@@ -14,6 +14,7 @@ import PaymentFormPage from './pages/PaymentFormPage.jsx';
 import LessonLogsPage from './pages/LessonLogsPage.jsx';
 import LessonLogFormPage from './pages/LessonLogFormPage.jsx';
 import HomePage from './pages/HomePage.jsx';
+import SettingsPage from './pages/SettingsPage.jsx';
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -63,6 +64,8 @@ export default function App() {
 
             <Route path="/logs" element={<LessonLogsPage />} />
             <Route path="/logs/:id/edit" element={<LessonLogFormPage />} />
+
+            <Route path="/settings" element={<SettingsPage />} />
           </Routes>
         </div>
         <BottomNav />
