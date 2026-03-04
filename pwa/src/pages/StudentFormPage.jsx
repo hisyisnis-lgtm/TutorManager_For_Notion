@@ -149,24 +149,24 @@ export default function StudentFormPage() {
         {/* 레벨 */}
         <div>
           <label className="label">레벨 (선택)</label>
-          <input
-            type="text"
+          <textarea
             value={form.level}
             onChange={set('level')}
             placeholder="예: 초급, 중급, 고급"
-            className="input-field"
+            rows={5}
+            className="input-field resize-none"
           />
         </div>
 
         {/* 목표 */}
         <div>
           <label className="label">목표 (선택)</label>
-          <input
-            type="text"
+          <textarea
             value={form.goal}
             onChange={set('goal')}
             placeholder="예: 수능 1등급, 회화 향상"
-            className="input-field"
+            rows={5}
+            className="input-field resize-none"
           />
         </div>
 
@@ -177,7 +177,7 @@ export default function StudentFormPage() {
             value={form.memo}
             onChange={set('memo')}
             placeholder="특이사항, 참고 정보 등"
-            rows={3}
+            rows={5}
             className="input-field resize-none"
           />
         </div>
