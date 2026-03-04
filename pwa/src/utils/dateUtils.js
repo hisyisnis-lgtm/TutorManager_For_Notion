@@ -26,6 +26,17 @@ export function formatDate(iso) {
   });
 }
 
+/** ISO 문자열 → "HH:MM" 시간만 표시 */
+export function formatTime(iso) {
+  if (!iso) return '';
+  return new Date(iso).toLocaleTimeString('ko-KR', {
+    timeZone: KST,
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+}
+
 /** ISO 문자열 → "M/D HH:MM" 짧은 형식 */
 export function formatShort(iso) {
   if (!iso) return '';

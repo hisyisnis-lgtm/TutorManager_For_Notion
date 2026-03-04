@@ -7,7 +7,7 @@ import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import ErrorMessage from '../components/ui/ErrorMessage.jsx';
 import EmptyState from '../components/ui/EmptyState.jsx';
 import { fetchClassesPage, parseClass, classStatusColor, notesColor } from '../api/classes.js';
-import { formatDateTime } from '../utils/dateUtils.js';
+import { formatDateTime, formatTime } from '../utils/dateUtils.js';
 import { getWeekStart, getMonthStart, getTodayStart } from '../utils/dateUtils.js';
 import { useData } from '../context/DataContext.jsx';
 import PullToRefresh from '../components/ui/PullToRefresh.jsx';
@@ -177,6 +177,7 @@ function ClassCard({ cls, studentNameMap }) {
             </p>
             <p className="text-sm text-gray-500 mt-0.5">
               {cls.datetime ? formatDateTime(cls.datetime) : '일시 미정'}
+              {cls.endTime && ` ~ ${formatTime(cls.endTime)}`}
               {cls.duration && ` · ${cls.duration}분`}
             </p>
           </div>

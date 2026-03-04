@@ -9,7 +9,7 @@ import ConfirmDialog from '../components/ui/ConfirmDialog.jsx';
 import { parseStudent, statusColor, STATUS_OPTIONS, updateStudentStatus } from '../api/students.js';
 import { fetchClassesPage, parseClass, classStatusColor } from '../api/classes.js';
 import { fetchPaymentsPage, parsePayment, paymentStatusColor } from '../api/payments.js';
-import { formatDateTime, formatKRW } from '../utils/dateUtils.js';
+import { formatDateTime, formatTime, formatKRW } from '../utils/dateUtils.js';
 import { useData } from '../context/DataContext.jsx';
 
 export default function StudentDetailPage() {
@@ -190,6 +190,7 @@ export default function StudentDetailPage() {
                   <div>
                     <p className="text-sm font-medium text-gray-800">
                       {cls.datetime ? formatDateTime(cls.datetime) : '일시 미정'}
+                      {cls.endTime && ` ~ ${formatTime(cls.endTime)}`}
                     </p>
                     {cls.notes && (
                       <p className="text-xs text-gray-400 mt-0.5">{cls.notes}</p>

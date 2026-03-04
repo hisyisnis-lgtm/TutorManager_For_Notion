@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useData } from '../context/DataContext.jsx';
 import { queryPage } from '../api/notionClient.js';
 import { CLASSES_DB, parseClass } from '../api/classes.js';
-import { formatShort, formatDateTime } from '../utils/dateUtils.js';
+import { formatShort, formatDateTime, formatTime } from '../utils/dateUtils.js';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import PullToRefresh from '../components/ui/PullToRefresh.jsx';
 import { getInstructorName } from './SettingsPage.jsx';
@@ -255,13 +255,16 @@ export default function HomePage() {
                           timeZone: KST, hour: '2-digit', minute: '2-digit', hour12: false,
                         })
                       : '';
+                    const endTimeStr = cls.endTime ? formatTime(cls.endTime) : '';
                     return (
                       <li key={cls.id}>
                         <Link
                           to={`/classes/${cls.id}/edit`}
                           className="flex items-center gap-3 px-3 py-2 rounded-xl bg-gray-50 active:bg-gray-100"
                         >
-                          <span className="text-xs font-semibold text-brand-600 w-10 shrink-0">{timeStr}</span>
+                          <span className="text-xs font-semibold text-brand-600 shrink-0">
+                            {timeStr}{endTimeStr && `~${endTimeStr}`}
+                          </span>
                           <div className="flex-1 min-w-0">
                             <span className="text-sm font-medium text-gray-800 truncate block">
                               {names || '학생 미정'}
@@ -315,7 +318,7 @@ export default function HomePage() {
                         )}
                       </div>
                       <span className="text-xs text-gray-400 ml-3 shrink-0">
-                        {formatShort(cls.datetime)}
+                        {formatShort(cls.datetime)}{cls.endTime && `~${formatTime(cls.endTime)}`}
                       </span>
                     </Link>
                   </li>
