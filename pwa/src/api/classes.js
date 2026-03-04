@@ -9,12 +9,18 @@ export const NOTES_OPTIONS = ['🔴 결석', '🟠 보강', '🚫 취소'];
 export async function fetchClassesPage(opts = {}) {
   const { dateFrom, dateTo, studentId, cursor, completedOnly, excludeCompleted } = opts;
   const filters = [];
+  const nowIso = new Date().toISOString();
 
-  if (dateFrom) filters.push({ property: '수업 일시', date: { on_or_after: dateFrom } });
-  if (dateTo) filters.push({ property: '수업 일시', date: { on_or_before: dateTo } });
+  // formula 필터 미지원 → 수업 일시 기준으로 완료/예정 구분
+  // 완료: 수업 일시 <= now, 예정: 수업 일시 >= now
+  if (completedOnly) {
+    filters.push({ property: '수업 일시', date: { on_or_before: nowIso } });
+  } else {
+    const effectiveDateFrom = excludeCompleted ? nowIso : dateFrom;
+    if (effectiveDateFrom) filters.push({ property: '수업 일시', date: { on_or_after: effectiveDateFrom } });
+    if (dateTo) filters.push({ property: '수업 일시', date: { on_or_before: dateTo } });
+  }
   if (studentId) filters.push({ property: '학생', relation: { contains: studentId } });
-  if (completedOnly) filters.push({ property: '상태', formula: { string: { equals: '🟢완료' } } });
-  if (excludeCompleted) filters.push({ property: '상태', formula: { string: { does_not_equal: '🟢완료' } } });
 
   const filter =
     filters.length > 1
