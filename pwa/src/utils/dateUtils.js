@@ -89,6 +89,14 @@ export function getWeekStart() {
   return monday.toISOString();
 }
 
+/** 오늘 00:00 KST ISO 문자열 */
+export function getTodayStart() {
+  const now = new Date();
+  const kstNow = new Date(now.toLocaleString('en-US', { timeZone: KST }));
+  const today = new Date(kstNow.getFullYear(), kstNow.getMonth(), kstNow.getDate());
+  return today.toISOString();
+}
+
 /** 이번 달 1일 ISO 문자열 */
 export function getMonthStart() {
   const now = new Date();

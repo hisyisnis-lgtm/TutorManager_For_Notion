@@ -7,7 +7,7 @@ import ErrorMessage from '../components/ui/ErrorMessage.jsx';
 import EmptyState from '../components/ui/EmptyState.jsx';
 import { fetchClassesPage, parseClass, classStatusColor, notesColor } from '../api/classes.js';
 import { formatDateTime } from '../utils/dateUtils.js';
-import { getWeekStart, getMonthStart } from '../utils/dateUtils.js';
+import { getWeekStart, getMonthStart, getTodayStart } from '../utils/dateUtils.js';
 import { useData } from '../context/DataContext.jsx';
 import PullToRefresh from '../components/ui/PullToRefresh.jsx';
 
@@ -20,7 +20,7 @@ const PERIOD_TABS = [
 function getDateFrom(period) {
   if (period === 'week') return getWeekStart();
   if (period === 'month') return getMonthStart();
-  return null;
+  return getTodayStart(); // '전체' 탭도 오늘부터 다가오는 수업 순으로
 }
 
 export default function ClassesPage() {
