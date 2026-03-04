@@ -5,7 +5,7 @@ const ALLOWED_ORIGINS = new Set([
   'http://localhost:4173',
 ]);
 
-// HMAC-SHA256 토큰 생성 (exp: Unix 초 단위)
+// HMAC-SHA256 서명 생성 → base64 (토큰용)
 async function createToken(secret, expSeconds) {
   const payload = btoa(JSON.stringify({ exp: Math.floor(Date.now() / 1000) + expSeconds }));
   const key = await crypto.subtle.importKey(
@@ -43,8 +43,74 @@ async function verifyToken(token, secret) {
   }
 }
 
+// HMAC-SHA256 서명 생성 → hex (Notion 웹훅 검증용)
+async function hmacSha256Hex(secret, message) {
+  const key = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  );
+  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(message));
+  return Array.from(new Uint8Array(sig))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+// Notion 웹훅 처리 → GitHub Actions repository_dispatch 트리거
+async function handleNotionWebhook(request, env, ctx) {
+  const body = await request.text();
+
+  // Notion 구독 인증 챌린지 처리 (verification_token 포함 시 즉시 응답)
+  let parsed = null;
+  try { parsed = JSON.parse(body); } catch {}
+  if (parsed?.verification_token) {
+    console.log('Notion verification_token:', parsed.verification_token);
+    return new Response(JSON.stringify({ challenge: parsed.verification_token }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  // Notion HMAC-SHA256 서명 검증 (X-Notion-Signature: v0=<hex>)
+  if (env.NOTION_WEBHOOK_SECRET) {
+    const sigHeader = request.headers.get('X-Notion-Signature') || '';
+    const expected = 'v0=' + (await hmacSha256Hex(env.NOTION_WEBHOOK_SECRET, body));
+    if (expected !== sigHeader) {
+      return new Response('Unauthorized', { status: 401 });
+    }
+  }
+
+  // GitHub Actions repository_dispatch 트리거 (백그라운드)
+  if (env.GITHUB_PAT) {
+    ctx.waitUntil(
+      fetch('https://api.github.com/repos/hisyisnis-lgtm/TutorManager_For_Notion/dispatches', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${env.GITHUB_PAT}`,
+          Accept: 'application/vnd.github.v3+json',
+          'Content-Type': 'application/json',
+          'User-Agent': 'tutor-manager-proxy',
+        },
+        body: JSON.stringify({ event_type: 'session-shortage-check' }),
+      }),
+    );
+  }
+
+  // Notion은 빠른 200 응답 필요
+  return new Response('OK', { status: 200 });
+}
+
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
+    const url = new URL(request.url);
+
+    // Notion 웹훅은 CORS/인증 체크 없이 별도 처리
+    if (url.pathname === '/notion-webhook' && request.method === 'POST') {
+      return handleNotionWebhook(request, env, ctx);
+    }
+
     const origin = request.headers.get('Origin') || '';
     const allowed = ALLOWED_ORIGINS.has(origin) || (env.ALLOWED_ORIGIN && origin === env.ALLOWED_ORIGIN);
 
@@ -66,8 +132,6 @@ export default {
         headers: { 'Content-Type': 'application/json' },
       });
     }
-
-    const url = new URL(request.url);
 
     // 로그인 엔드포인트: POST /auth/login
     if (url.pathname === '/auth/login' && request.method === 'POST') {
