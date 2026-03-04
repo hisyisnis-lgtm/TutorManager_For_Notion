@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
-import { getPage, createPage, updatePage } from '../api/notionClient.js';
+import { getPage, createPage, updatePage, deletePage } from '../api/notionClient.js';
+import ConfirmDialog from '../components/ui/ConfirmDialog.jsx';
 import { parseClass, createClass, updateClass, DURATION_OPTIONS, NOTES_OPTIONS, CLASSES_DB } from '../api/classes.js';
 import { toDatetimeLocal, toNotionDate } from '../utils/dateUtils.js';
 import { useData } from '../context/DataContext.jsx';
@@ -24,6 +25,8 @@ export default function ClassFormPage() {
   });
   const [loading, setLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [error, setError] = useState(null);
 
   useEffect(() => {
@@ -93,6 +96,18 @@ export default function ClassFormPage() {
       setError(e.message);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      await deletePage(id);
+      navigate(-1);
+    } catch (e) {
+      setError(e.message);
+      setShowDeleteConfirm(false);
+      setDeleting(false);
     }
   };
 
@@ -233,7 +248,27 @@ export default function ClassFormPage() {
         <button type="submit" disabled={saving} className="btn-primary w-full mt-2">
           {saving ? '저장 중...' : isEdit ? '수정하기' : '수업 추가'}
         </button>
+
+        {isEdit && (
+          <button
+            type="button"
+            onClick={() => setShowDeleteConfirm(true)}
+            className="w-full py-3 rounded-xl text-sm font-medium text-red-500 border border-red-200 bg-white active:bg-red-50 mt-1"
+          >
+            수업 삭제
+          </button>
+        )}
       </form>
+
+      {showDeleteConfirm && (
+        <ConfirmDialog
+          title="수업을 삭제하시겠습니까?"
+          message="삭제한 데이터는 복구할 수 없습니다."
+          onConfirm={handleDelete}
+          onCancel={() => setShowDeleteConfirm(false)}
+          loading={deleting}
+        />
+      )}
     </>
   );
 }

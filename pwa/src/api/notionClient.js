@@ -78,3 +78,7 @@ export async function createPage(databaseId, properties) {
 export async function updatePage(pageId, properties) {
   return notionFetch('PATCH', `/v1/pages/${pageId}`, { properties });
 }
+
+export async function deletePage(pageId) {
+  return notionFetch('PATCH', `/v1/pages/${pageId}`, { archived: true });
+}

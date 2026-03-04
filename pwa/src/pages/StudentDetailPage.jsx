@@ -4,7 +4,8 @@ import PageHeader from '../components/layout/PageHeader.jsx';
 import Badge from '../components/ui/Badge.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import ErrorMessage from '../components/ui/ErrorMessage.jsx';
-import { getPage, updatePage } from '../api/notionClient.js';
+import { getPage, updatePage, deletePage } from '../api/notionClient.js';
+import ConfirmDialog from '../components/ui/ConfirmDialog.jsx';
 import { parseStudent, statusColor, STATUS_OPTIONS, updateStudentStatus } from '../api/students.js';
 import { fetchClassesPage, parseClass, classStatusColor } from '../api/classes.js';
 import { fetchPaymentsPage, parsePayment, paymentStatusColor } from '../api/payments.js';
@@ -23,6 +24,8 @@ export default function StudentDetailPage() {
   const [error, setError] = useState(null);
   const [updating, setUpdating] = useState(false);
   const [showStatusMenu, setShowStatusMenu] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -56,6 +59,19 @@ export default function StudentDetailPage() {
       alert(`상태 변경 실패: ${e.message}`);
     } finally {
       setUpdating(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      await deletePage(id);
+      refreshAll();
+      navigate(-1);
+    } catch (e) {
+      alert(`삭제 실패: ${e.message}`);
+      setShowDeleteConfirm(false);
+      setDeleting(false);
     }
   };
 
@@ -199,7 +215,26 @@ export default function StudentDetailPage() {
             })}
           </Section>
         )}
+
+        {/* 학생 삭제 */}
+        <button
+          type="button"
+          onClick={() => setShowDeleteConfirm(true)}
+          className="w-full py-3 rounded-xl text-sm font-medium text-red-500 border border-red-200 bg-white active:bg-red-50"
+        >
+          학생 삭제
+        </button>
       </div>
+
+      {showDeleteConfirm && (
+        <ConfirmDialog
+          title="학생을 삭제하시겠습니까?"
+          message="삭제한 데이터는 복구할 수 없습니다."
+          onConfirm={handleDelete}
+          onCancel={() => setShowDeleteConfirm(false)}
+          loading={deleting}
+        />
+      )}
     </>
   );
 }
