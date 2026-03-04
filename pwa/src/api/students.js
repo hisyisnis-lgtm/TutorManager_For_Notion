@@ -1,4 +1,4 @@
-import { queryAll, queryPage, updatePage } from './notionClient.js';
+import { queryAll, queryPage, updatePage, createPage } from './notionClient.js';
 
 export const STUDENTS_DB = '314838fa-f2a6-8143-a6c7-e59c50f3bbdb';
 
@@ -29,6 +29,20 @@ export async function updateStudentStatus(pageId, status) {
   return updatePage(pageId, {
     상태: { select: { name: status } },
   });
+}
+
+/** 학생 생성 */
+export async function createStudent({ name, phone, email, level, goal, status, memo }) {
+  const properties = {
+    이름: { title: [{ text: { content: name } }] },
+    상태: { select: { name: status || '🟢 수강중' } },
+  };
+  if (phone) properties['전화번호'] = { phone_number: phone };
+  if (email) properties['이메일'] = { email };
+  if (level) properties['레벨'] = { rich_text: [{ text: { content: level } }] };
+  if (goal) properties['목표'] = { rich_text: [{ text: { content: goal } }] };
+  if (memo) properties['메모'] = { rich_text: [{ text: { content: memo } }] };
+  return createPage(STUDENTS_DB, properties);
 }
 
 /** Notion 페이지 → 학생 객체 변환 */

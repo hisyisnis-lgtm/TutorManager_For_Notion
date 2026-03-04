@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import Badge from '../components/ui/Badge.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
@@ -11,6 +11,7 @@ import { formatKRW } from '../utils/dateUtils.js';
 const FILTER_TABS = ['전체', '🟢 수강중', '🟡 일시중단', '⚫ 수강종료'];
 
 export default function StudentsPage() {
+  const navigate = useNavigate();
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -40,7 +41,17 @@ export default function StudentsPage() {
 
   return (
     <>
-      <PageHeader title="학생 관리" />
+      <PageHeader
+        title="학생 관리"
+        action={
+          <button
+            onClick={() => navigate('/students/new')}
+            className="flex items-center gap-1 px-3 py-1.5 bg-brand-600 text-white text-sm font-medium rounded-lg active:bg-brand-700 transition-colors"
+          >
+            <span className="text-base leading-none">+</span> 학생 추가
+          </button>
+        }
+      />
 
       <div className="px-4 pt-3 pb-2">
         <input

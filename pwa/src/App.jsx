@@ -6,6 +6,7 @@ import LoginPage from './pages/LoginPage.jsx';
 
 import StudentsPage from './pages/StudentsPage.jsx';
 import StudentDetailPage from './pages/StudentDetailPage.jsx';
+import StudentFormPage from './pages/StudentFormPage.jsx';
 import ClassesPage from './pages/ClassesPage.jsx';
 import ClassFormPage from './pages/ClassFormPage.jsx';
 import PaymentsPage from './pages/PaymentsPage.jsx';
@@ -32,6 +33,7 @@ export default function App() {
             <Route path="/" element={<Navigate to="/students" replace />} />
 
             <Route path="/students" element={<StudentsPage />} />
+            <Route path="/students/new" element={<StudentFormPage />} />
             <Route path="/students/:id" element={<StudentDetailPage />} />
 
             <Route path="/classes" element={<ClassesPage />} />
