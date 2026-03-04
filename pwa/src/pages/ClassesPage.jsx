@@ -33,6 +33,7 @@ export default function ClassesPage() {
   const [period, setPeriod] = useState('week');
   const [hasMore, setHasMore] = useState(false);
   const [cursor, setCursor] = useState(null);
+  const [search, setSearch] = useState('');
 
   const load = useCallback(async (reset = true, nextCursor = null) => {
     if (reset) setLoading(true);
@@ -54,6 +55,12 @@ export default function ClassesPage() {
   }, [period]);
 
   useEffect(() => { load(true); }, [load]);
+
+  const filteredClasses = classes.filter((cls) => {
+    if (!search.trim()) return true;
+    const names = cls.studentIds.map((id) => studentNameMap[id] || '').join(' ');
+    return names.toLowerCase().includes(search.trim().toLowerCase());
+  });
 
   return (
     <PullToRefresh onRefresh={load}>
@@ -84,21 +91,32 @@ export default function ClassesPage() {
         ))}
       </div>
 
+      {/* 학생 검색 */}
+      <div className="px-4 pb-3">
+        <input
+          type="search"
+          placeholder="학생 이름으로 검색"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="input-field"
+        />
+      </div>
+
       {loading && <LoadingSpinner />}
       {error && <ErrorMessage message={error} onRetry={() => load(true)} />}
 
       {!loading && !error && (
         <>
-          {classes.length === 0 ? (
-            <EmptyState icon="📅" title="수업이 없습니다" description="+ 수업 추가로 새 수업을 등록하세요." />
+          {filteredClasses.length === 0 ? (
+            <EmptyState icon="📅" title="수업이 없습니다" description={search.trim() ? '검색 결과가 없습니다.' : '+ 수업 추가로 새 수업을 등록하세요.'} />
           ) : (
             <ul className="px-4 space-y-3 pb-4">
-              {classes.map((cls) => (
+              {filteredClasses.map((cls) => (
                 <ClassCard key={cls.id} cls={cls} studentNameMap={studentNameMap} />
               ))}
             </ul>
           )}
-          {hasMore && (
+          {hasMore && !search.trim() && (
             <div className="px-4 pb-4">
               <button
                 onClick={() => load(false, cursor)}
