@@ -97,7 +97,7 @@ export default function HomePage() {
   useEffect(() => { loadUpcoming(); }, []);
   useEffect(() => { loadCalendar(calYear, calMonth); }, [calYear, calMonth, loadCalendar]);
 
-  // 설정/알림 페이지에서 돌아올 때 이름 및 뱃지 갱신
+  // 설정/알림 페이지에서 돌아올 때 이름 및 뱃지 갱신 (마운트 시 1회)
   useEffect(() => {
     setInstructorName(getInstructorName());
     try {
@@ -105,7 +105,7 @@ export default function HomePage() {
       const lastRead = parseInt(localStorage.getItem('ntfy_last_read') || '0', 10);
       setUnreadCount(notifications.filter((n) => n.time > lastRead).length);
     } catch {}
-  });
+  }, []);
 
   const handleRefresh = async () => {
     await Promise.all([loadUpcoming(), loadCalendar(calYear, calMonth)]);

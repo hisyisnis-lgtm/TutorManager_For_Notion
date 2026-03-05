@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
@@ -25,8 +25,8 @@ function generateRecurringDates(startDate, endDate, selectedDays, time) {
   if (!selectedDays.length || !startDate || !endDate) return [];
   const [h, m] = time.split(':').map(Number);
   const dates = [];
-  const cur = new Date(startDate + 'T00:00:00');
-  const end = new Date(endDate + 'T23:59:59');
+  const cur = new Date(startDate + 'T00:00:00+09:00');
+  const end = new Date(endDate + 'T23:59:59+09:00');
   while (cur <= end) {
     if (selectedDays.includes(cur.getDay())) {
       const d = new Date(cur);
