@@ -2,8 +2,10 @@ name: 수업 제목 자동 동기화
 
 on:
   schedule:
-    - cron: '*/30 * * * *'  # 30분마다 실행
+    - cron: '*/30 * * * *'  # 30분마다 실행 (웹훅 누락 대비 fallback)
   workflow_dispatch:          # 수동 실행 가능
+  repository_dispatch:
+    types: [sync-class-titles]  # Worker 웹훅 핸들러에서 직접 실행 (미래 확장용)
 
 jobs:
   sync:

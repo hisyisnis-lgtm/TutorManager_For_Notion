@@ -4,6 +4,7 @@ export const CLASSES_DB = '314838fa-f2a6-81bc-8b67-d9e1c8fb7ecb';
 
 export const DURATION_OPTIONS = ['60', '90', '120', '150', '180'];
 export const NOTES_OPTIONS = ['🔴 결석', '🟠 보강', '🚫 취소'];
+export const LOCATION_OPTIONS = ['강남사무실', '온라인 (Zoom/화상)', '학생 자택 방문', '카페 / 외부 장소'];
 
 /** 수업 목록 조회 */
 export async function fetchClassesPage(opts = {}) {
@@ -37,7 +38,7 @@ export async function fetchClassesPage(opts = {}) {
 }
 
 /** 수업 생성 */
-export async function createClass({ studentIds, classTypeId, datetime, duration, notes }) {
+export async function createClass({ studentIds, classTypeId, datetime, duration, notes, location, locationMemo }) {
   const properties = {
     학생: { relation: studentIds.map((id) => ({ id })) },
     '수업 유형': { relation: [{ id: classTypeId }] },
@@ -47,6 +48,12 @@ export async function createClass({ studentIds, classTypeId, datetime, duration,
   if (notes) {
     properties['특이사항'] = { select: { name: notes } };
   }
+  if (location) {
+    properties['수업 장소'] = { select: { name: location } };
+  }
+  properties['수업 장소 메모'] = locationMemo
+    ? { rich_text: [{ text: { content: locationMemo } }] }
+    : { rich_text: [] };
   return createPage(CLASSES_DB, properties);
 }
 
@@ -61,7 +68,7 @@ export async function bulkCreateClasses(items) {
 }
 
 /** 수업 수정 (충돌_감지 checkbox는 건드리지 않음) */
-export async function updateClass(pageId, { studentIds, classTypeId, datetime, duration, notes }) {
+export async function updateClass(pageId, { studentIds, classTypeId, datetime, duration, notes, location, locationMemo }) {
   const properties = {};
   if (studentIds) properties['학생'] = { relation: studentIds.map((id) => ({ id })) };
   if (classTypeId) properties['수업 유형'] = { relation: [{ id: classTypeId }] };
@@ -69,6 +76,11 @@ export async function updateClass(pageId, { studentIds, classTypeId, datetime, d
   if (duration) properties['수업 시간(분)'] = { select: { name: String(duration) } };
   // notes가 null이면 특이사항 제거, 값이 있으면 설정
   properties['특이사항'] = notes ? { select: { name: notes } } : { select: null };
+  // location이 null이면 제거, 값이 있으면 설정
+  properties['수업 장소'] = location ? { select: { name: location } } : { select: null };
+  properties['수업 장소 메모'] = locationMemo
+    ? { rich_text: [{ text: { content: locationMemo } }] }
+    : { rich_text: [] };
 
   return updatePage(pageId, properties);
 }
@@ -89,6 +101,8 @@ export function parseClass(page) {
     conflictDetected: p['충돌_감지']?.checkbox ?? false,
     endTime: p['수업 종료 시간']?.formula?.date?.start ?? null,
     lessonLogIds: p['수업 일지']?.relation?.map((r) => r.id) ?? [],
+    location: p['수업 장소']?.select?.name ?? null,
+    locationMemo: p['수업 장소 메모']?.rich_text?.[0]?.plain_text ?? '',
   };
 }
 

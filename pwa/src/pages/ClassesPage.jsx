@@ -180,6 +180,11 @@ function ClassCard({ cls, studentNameMap }) {
               {cls.endTime && ` ~ ${formatTime(cls.endTime)}`}
               {cls.duration && ` · ${cls.duration}분`}
             </p>
+            {cls.location && (
+              <p className="text-xs text-gray-400 mt-0.5">
+                📍 {cls.location}{cls.locationMemo && ` — ${cls.locationMemo}`}
+              </p>
+            )}
           </div>
           <div className="flex flex-col gap-1 items-end ml-3">
             <Badge label={cls.status} bg={bg} text={text} />

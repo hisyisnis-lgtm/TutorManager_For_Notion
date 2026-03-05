@@ -302,8 +302,11 @@ export default function HomePage() {
                             <span className="text-sm font-medium text-gray-800 truncate block">
                               {names || '학생 미정'}
                             </span>
-                            {classType && (
-                              <span className="text-xs text-gray-400">{classType} · {cls.duration}분</span>
+                            {(classType || cls.location) && (
+                              <span className="text-xs text-gray-400">
+                                {classType && `${classType} · `}{cls.duration}분
+                                {cls.location && ` · 📍${cls.location}${cls.locationMemo ? ` — ${cls.locationMemo}` : ''}`}
+                              </span>
                             )}
                           </div>
                           {cls.notes && (
@@ -346,8 +349,10 @@ export default function HomePage() {
                     >
                       <div className="flex-1 min-w-0">
                         <span className="text-sm font-medium text-gray-800 truncate block">{title}</span>
-                        {classType && (
-                          <span className="text-xs text-gray-400">{classType}</span>
+                        {(classType || cls.location) && (
+                          <span className="text-xs text-gray-400">
+                            {[classType, cls.location && `📍${cls.location}${cls.locationMemo ? ` — ${cls.locationMemo}` : ''}`].filter(Boolean).join(' · ')}
+                          </span>
                         )}
                       </div>
                       <span className="text-xs text-gray-400 ml-3 shrink-0">

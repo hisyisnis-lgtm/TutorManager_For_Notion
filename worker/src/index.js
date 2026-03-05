@@ -1,3 +1,88 @@
+const CLASS_DB_ID = '314838fa-f2a6-81bc-8b67-d9e1c8fb7ecb';
+const STUDENT_DB_ID = '314838fa-f2a6-8143-a6c7-e59c50f3bbdb';
+
+// 학생 이름 앞 상태 이모지(🟢🟡⚫) 제거
+const STATUS_EMOJIS = ['🟢', '🟡', '⚫'];
+function stripEmoji(name) {
+  for (const emoji of STATUS_EMOJIS) {
+    if (name.startsWith(emoji + ' ')) return name.slice(emoji.length + 1);
+  }
+  return name;
+}
+
+// Notion ID 정규화 (웹훅은 하이픈 없이 보낼 수 있음)
+function normalizeId(id) {
+  return (id || '').replace(/-/g, '');
+}
+
+// 수업 페이지 제목이 비어있고 학생이 연결돼 있으면 제목 자동 설정
+async function syncClassTitle(pageId, notionToken) {
+  const notionFetch = (method, path, body) =>
+    fetch(`https://api.notion.com/v1${path}`, {
+      method,
+      headers: {
+        Authorization: `Bearer ${notionToken}`,
+        'Notion-Version': '2022-06-28',
+        'Content-Type': 'application/json',
+      },
+      body: body ? JSON.stringify(body) : undefined,
+    }).then(r => r.json());
+
+  const page = await notionFetch('GET', `/pages/${pageId}`);
+  const studentRelation = page.properties?.['학생']?.relation ?? [];
+  if (studentRelation.length === 0) return;
+
+  const names = [];
+  for (const { id } of studentRelation) {
+    const student = await notionFetch('GET', `/pages/${id}`);
+    const raw = student.properties?.['이름']?.title?.[0]?.plain_text ?? '?';
+    names.push(stripEmoji(raw));
+  }
+
+  const newTitle = names.join(', ');
+  await notionFetch('PATCH', `/pages/${pageId}`, {
+    properties: { 제목: { title: [{ text: { content: newTitle } }] } },
+  });
+  console.log(`제목 설정: ${pageId} → "${newTitle}"`);
+}
+
+// 학생 이름 변경 시 → 해당 학생이 포함된 모든 수업 제목 강제 갱신
+async function updateClassesByStudent(studentPageId, notionToken) {
+  const notionFetch = (method, path, body) =>
+    fetch(`https://api.notion.com/v1${path}`, {
+      method,
+      headers: {
+        Authorization: `Bearer ${notionToken}`,
+        'Notion-Version': '2022-06-28',
+        'Content-Type': 'application/json',
+      },
+      body: body ? JSON.stringify(body) : undefined,
+    }).then(r => r.json());
+
+  const res = await notionFetch('POST', `/databases/${CLASS_DB_ID}/query`, {
+    filter: { property: '학생', relation: { contains: studentPageId } },
+    page_size: 100,
+  });
+
+  for (const classPage of (res.results || [])) {
+    const studentRelation = classPage.properties?.['학생']?.relation ?? [];
+    if (studentRelation.length === 0) continue;
+
+    const names = [];
+    for (const { id } of studentRelation) {
+      const student = await notionFetch('GET', `/pages/${id}`);
+      const raw = student.properties?.['이름']?.title?.[0]?.plain_text ?? '?';
+      names.push(stripEmoji(raw));
+    }
+
+    const newTitle = names.join(', ');
+    await notionFetch('PATCH', `/pages/${classPage.id}`, {
+      properties: { 제목: { title: [{ text: { content: newTitle } }] } },
+    });
+    console.log(`제목 갱신 (학생명 변경): ${classPage.id} → "${newTitle}"`);
+  }
+}
+
 const ALLOWED_ORIGINS = new Set([
   'https://hisyisnis-lgtm.github.io',
   'https://tutor-manager-pwa.pages.dev', // Cloudflare Pages (프로젝트명 변경 시 수정)
@@ -80,6 +165,31 @@ async function handleNotionWebhook(request, env, ctx) {
     if (expected !== sigHeader) {
       return new Response('Unauthorized', { status: 401 });
     }
+  }
+
+  // 수업 캘린더 DB 페이지 생성/속성 변경 시 → 제목 즉시 동기화 (백그라운드)
+  const eventType = parsed?.type;
+  const parentId = parsed?.data?.parent?.id;
+  const pageId = parsed?.entity?.id;
+  console.log(`[webhook] type=${eventType} parentId=${parentId} pageId=${pageId}`);
+
+  if (
+    pageId &&
+    normalizeId(parentId) === normalizeId(CLASS_DB_ID) &&
+    (eventType === 'page.created' || eventType === 'page.properties_updated')
+  ) {
+    console.log('[webhook] → 수업 제목 동기화 시작');
+    ctx.waitUntil(syncClassTitle(pageId, env.NOTION_TOKEN));
+  }
+
+  // 학생 DB 이름 변경 시 → 연결된 수업 제목 갱신 (백그라운드)
+  if (
+    pageId &&
+    eventType === 'page.properties_updated' &&
+    normalizeId(parentId) === normalizeId(STUDENT_DB_ID)
+  ) {
+    console.log('[webhook] → 학생명 변경, 수업 제목 갱신 시작');
+    ctx.waitUntil(updateClassesByStudent(pageId, env.NOTION_TOKEN));
   }
 
   // GitHub Actions repository_dispatch 트리거 (백그라운드)
