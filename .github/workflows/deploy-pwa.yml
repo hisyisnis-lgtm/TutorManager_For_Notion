@@ -2,10 +2,8 @@ name: PWA 배포 (GitHub Pages)
 
 on:
   push:
-    branches: [main]
-    paths:
-      - 'pwa/**'
-      - '.github/workflows/deploy-pwa.yml'
+    tags:
+      - 'v*.*.*'
   workflow_dispatch:
 
 permissions:

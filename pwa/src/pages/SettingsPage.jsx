@@ -76,6 +76,8 @@ export default function SettingsPage() {
         >
           {saved ? '저장됨 ✓' : '저장'}
         </button>
+
+        <p className="text-center text-xs text-gray-300 pt-4">v{__APP_VERSION__}</p>
       </div>
     </>
   );
