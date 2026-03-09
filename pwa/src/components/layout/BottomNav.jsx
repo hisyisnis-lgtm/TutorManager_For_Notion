@@ -5,8 +5,8 @@ const TABS = [
   { to: '/home', label: '홈', icon: '🏠' },
   { to: '/students', label: '학생', icon: '👥' },
   { to: '/classes', label: '수업', icon: '📅' },
+  { to: '/bookings', label: '예약', icon: '🗓️' },
   { to: '/payments', label: '결제', icon: '💰' },
-  { to: '/logs', label: '일지', icon: '📝' },
 ];
 
 export default function BottomNav() {
