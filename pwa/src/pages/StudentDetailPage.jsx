@@ -195,6 +195,11 @@ export default function StudentDetailPage() {
                     {cls.notes && (
                       <p className="text-xs text-gray-400 mt-0.5">{cls.notes}</p>
                     )}
+                    {cls.location && (
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        📍 {cls.location}{cls.locationMemo && ` — ${cls.locationMemo}`}
+                      </p>
+                    )}
                   </div>
                   <Badge label={cls.status} bg={sbg} text={st} />
                 </div>

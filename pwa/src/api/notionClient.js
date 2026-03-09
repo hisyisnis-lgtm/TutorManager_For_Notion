@@ -22,7 +22,7 @@ async function notionFetch(method, path, body) {
     sessionStorage.removeItem('auth_token');
     localStorage.removeItem('auth_token');
     window.location.reload();
-    return;
+    return new Promise(() => {}); // reload 완료 전까지 pending 유지 (undefined 반환 방지)
   }
 
   const data = await res.json().catch(() => ({}));

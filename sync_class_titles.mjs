@@ -25,11 +25,23 @@ async function notion(method, path, body) {
   return data;
 }
 
+// 학생 이름 앞 상태 이모지(🟢🟡⚫) 제거
+const STATUS_EMOJIS = ['🟢', '🟡', '⚫'];
+function stripEmoji(name) {
+  for (const emoji of STATUS_EMOJIS) {
+    if (name.startsWith(emoji + ' ')) {
+      return name.slice(emoji.length + 1);
+    }
+  }
+  return name;
+}
+
 const studentCache = {};
 async function getStudentName(id) {
   if (studentCache[id]) return studentCache[id];
   const page = await notion('GET', `/pages/${id}`);
-  studentCache[id] = page.properties['이름']?.title?.[0]?.plain_text ?? '?';
+  const raw = page.properties['이름']?.title?.[0]?.plain_text ?? '?';
+  studentCache[id] = stripEmoji(raw);
   return studentCache[id];
 }
 

@@ -97,7 +97,7 @@ export default function HomePage() {
   useEffect(() => { loadUpcoming(); }, []);
   useEffect(() => { loadCalendar(calYear, calMonth); }, [calYear, calMonth, loadCalendar]);
 
-  // 설정/알림 페이지에서 돌아올 때 이름 및 뱃지 갱신
+  // 설정/알림 페이지에서 돌아올 때 이름 및 뱃지 갱신 (마운트 시 1회)
   useEffect(() => {
     setInstructorName(getInstructorName());
     try {
@@ -105,7 +105,7 @@ export default function HomePage() {
       const lastRead = parseInt(localStorage.getItem('ntfy_last_read') || '0', 10);
       setUnreadCount(notifications.filter((n) => n.time > lastRead).length);
     } catch {}
-  });
+  }, []);
 
   const handleRefresh = async () => {
     await Promise.all([loadUpcoming(), loadCalendar(calYear, calMonth)]);
@@ -302,8 +302,11 @@ export default function HomePage() {
                             <span className="text-sm font-medium text-gray-800 truncate block">
                               {names || '학생 미정'}
                             </span>
-                            {classType && (
-                              <span className="text-xs text-gray-400">{classType} · {cls.duration}분</span>
+                            {(classType || cls.location) && (
+                              <span className="text-xs text-gray-400">
+                                {classType && `${classType} · `}{cls.duration}분
+                                {cls.location && ` · 📍${cls.location}${cls.locationMemo ? ` — ${cls.locationMemo}` : ''}`}
+                              </span>
                             )}
                           </div>
                           {cls.notes && (
@@ -346,8 +349,10 @@ export default function HomePage() {
                     >
                       <div className="flex-1 min-w-0">
                         <span className="text-sm font-medium text-gray-800 truncate block">{title}</span>
-                        {classType && (
-                          <span className="text-xs text-gray-400">{classType}</span>
+                        {(classType || cls.location) && (
+                          <span className="text-xs text-gray-400">
+                            {[classType, cls.location && `📍${cls.location}${cls.locationMemo ? ` — ${cls.locationMemo}` : ''}`].filter(Boolean).join(' · ')}
+                          </span>
                         )}
                       </div>
                       <span className="text-xs text-gray-400 ml-3 shrink-0">

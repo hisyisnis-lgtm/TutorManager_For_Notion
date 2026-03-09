@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
@@ -11,6 +11,7 @@ import {
   bulkCreateClasses,
   DURATION_OPTIONS,
   NOTES_OPTIONS,
+  LOCATION_OPTIONS,
 } from '../api/classes.js';
 import { toDatetimeLocal, toNotionDate } from '../utils/dateUtils.js';
 import { useData } from '../context/DataContext.jsx';
@@ -24,8 +25,8 @@ function generateRecurringDates(startDate, endDate, selectedDays, time) {
   if (!selectedDays.length || !startDate || !endDate) return [];
   const [h, m] = time.split(':').map(Number);
   const dates = [];
-  const cur = new Date(startDate + 'T00:00:00');
-  const end = new Date(endDate + 'T23:59:59');
+  const cur = new Date(startDate + 'T00:00:00+09:00');
+  const end = new Date(endDate + 'T23:59:59+09:00');
   while (cur <= end) {
     if (selectedDays.includes(cur.getDay())) {
       const d = new Date(cur);
@@ -67,6 +68,8 @@ export default function ClassFormPage() {
     classTypeId: '',
     duration: '60',
     notes: '',
+    location: '강남사무실',
+    locationMemo: '',
     // 일회성
     datetime: '',
     // 반복
@@ -102,6 +105,8 @@ export default function ClassFormPage() {
           datetime: toDatetimeLocal(cls.datetime),
           duration: cls.duration || '60',
           notes: cls.notes || '',
+          location: cls.location || '강남사무실',
+          locationMemo: cls.locationMemo || '',
         }));
       } catch (e) {
         setError(e.message);
@@ -193,6 +198,8 @@ export default function ClassFormPage() {
           datetime: toISOLocal(date),
           duration: form.duration,
           notes: form.notes || null,
+          location: form.location || null,
+          locationMemo: form.locationMemo || '',
         }));
         await bulkCreateClasses(items);
       } else {
@@ -208,6 +215,8 @@ export default function ClassFormPage() {
           datetime: toNotionDate(form.datetime),
           duration: form.duration,
           notes: form.notes || null,
+          location: form.location || null,
+          locationMemo: form.locationMemo || '',
         };
         if (isEdit) {
           await updateClass(id, payload);
@@ -487,6 +496,34 @@ export default function ClassFormPage() {
             />
           </div>
         )}
+
+        {/* 수업 장소 */}
+        <div>
+          <label className="label">수업 장소</label>
+          <div className="grid grid-cols-2 gap-2">
+            {LOCATION_OPTIONS.map((loc) => (
+              <button
+                key={loc}
+                type="button"
+                onClick={() => setForm((f) => ({ ...f, location: loc }))}
+                className={`py-2.5 rounded-xl text-sm font-medium border-2 transition-colors ${
+                  form.location === loc
+                    ? 'border-brand-600 bg-brand-50 text-brand-700'
+                    : 'border-gray-200 bg-white text-gray-600'
+                }`}
+              >
+                {loc}
+              </button>
+            ))}
+          </div>
+          <input
+            type="text"
+            placeholder="상세 장소 메모 (예: 스타벅스 강남역점)"
+            value={form.locationMemo}
+            onChange={(e) => setForm((f) => ({ ...f, locationMemo: e.target.value }))}
+            className="input-field mt-2"
+          />
+        </div>
 
         {/* 특이사항 */}
         <div>
