@@ -35,10 +35,8 @@ jobs:
             echo "✅ 스키마 변경 없음 - 커밋 생략"
           else
             CHANGED=$(git diff --cached --name-only | tr '\n' ' ')
-            git commit -m "chore: 노션 스키마 스냅샷 갱신
-
-변경된 파일: $CHANGED
-스냅샷 시각: $(date -u '+%Y-%m-%d %H:%M UTC')"
+            TIMESTAMP=$(date -u '+%Y-%m-%d %H:%M UTC')
+            git commit -m "chore: 노션 스키마 스냅샷 갱신 - ${TIMESTAMP} - ${CHANGED}"
             git push
             echo "✅ 스키마 변경 커밋 완료"
           fi
