@@ -1,0 +1,44 @@
+name: 노션 스키마 스냅샷
+
+on:
+  schedule:
+    - cron: '0 15 * * 0'  # 매주 일요일 KST 00:00 (UTC 15:00)
+  workflow_dispatch:       # 수동 실행 가능
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write  # git push 권한
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 스키마 스냅샷 실행
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+        run: node snapshot_schema.mjs
+
+      - name: 변경 사항 확인 및 커밋
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add notion_schema/
+
+          if git diff --cached --quiet; then
+            echo "✅ 스키마 변경 없음 - 커밋 생략"
+          else
+            CHANGED=$(git diff --cached --name-only | tr '\n' ' ')
+            git commit -m "chore: 노션 스키마 스냅샷 갱신
+
+변경된 파일: $CHANGED
+스냅샷 시각: $(date -u '+%Y-%m-%d %H:%M UTC')"
+            git push
+            echo "✅ 스키마 변경 커밋 완료"
+          fi
