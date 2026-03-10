@@ -269,11 +269,11 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
   };
 
   // GET /booking/slots?from=YYYY-MM-DD&to=YYYY-MM-DD
+  // 예약 불가 날짜(BLOCKED_DATES_DB)만 제외하고 오늘+2일 ~ 오늘+90일 범위 전부 반환
   if (url.pathname === '/booking/slots' && request.method === 'GET') {
-    // KST 기준 오늘 (UTC+9)
     const nowKST = new Date(Date.now() + 9 * 60 * 60 * 1000);
     const minDate = new Date(nowKST);
-    minDate.setUTCDate(minDate.getUTCDate() + 2); // 오늘+2일부터 예약 가능
+    minDate.setUTCDate(minDate.getUTCDate() + 2);
     const minDateStr = minDate.toISOString().slice(0, 10);
 
     const fromParam = url.searchParams.get('from');
@@ -281,76 +281,22 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
     const from = !fromParam || fromParam < minDateStr ? minDateStr : fromParam;
     const to = toParam || (() => {
       const d = new Date(minDate);
-      d.setUTCDate(d.getUTCDate() + 30);
+      d.setUTCDate(d.getUTCDate() + 90);
       return d.toISOString().slice(0, 10);
     })();
 
-    const [slotsRes, blockedRes, bookingsRes] = await Promise.all([
-      n('POST', `/databases/${SLOTS_DB_ID}/query`, {
-        filter: { property: '활성화', checkbox: { equals: true } },
-        page_size: 100,
-      }),
-      n('POST', `/databases/${BLOCKED_DATES_DB_ID}/query`, { page_size: 100 }),
-      n('POST', `/databases/${BOOKINGS_DB_ID}/query`, {
-        filter: {
-          and: [
-            { property: '예약 날짜', date: { on_or_after: from } },
-            { property: '예약 날짜', date: { on_or_before: to } },
-            { property: '상태', select: { equals: '확정' } },
-          ],
-        },
-        page_size: 100,
-      }),
-    ]);
-
-    const slots = slotsRes.results ?? [];
-
-    // 예약 불가 날짜 파싱 (일회성 날짜범위 + 반복 요일 모두 지원)
+    const blockedRes = await n('POST', `/databases/${BLOCKED_DATES_DB_ID}/query`, { page_size: 100 });
     const isBlocked = buildIsBlocked(blockedRes.results);
 
-    // 이미 확정된 예약 (날짜|시간 키)
-    const bookedKeys = new Set(
-      (bookingsRes.results ?? []).map(p => {
-        const d = p.properties?.['예약 날짜']?.date?.start;
-        const t = p.properties?.['시작 시간']?.rich_text?.[0]?.plain_text;
-        return d && t ? `${d}|${t}` : null;
-      }).filter(Boolean)
-    );
-
-    // 날짜 범위 순회하며 슬롯 생성
     const result = [];
     const cur = new Date(from + 'T00:00:00Z');
     const end = new Date(to + 'T00:00:00Z');
 
     while (cur <= end) {
       const dateStr = cur.toISOString().slice(0, 10);
-      const dayKr = DAY_KR[cur.getUTCDay()];
-
-      if (!isBlocked(dateStr)) {
-        for (const slot of slots) {
-          const props = slot.properties;
-          const type = props?.['슬롯 유형']?.select?.name;
-          const startTime = props?.['시작 시간']?.rich_text?.[0]?.plain_text;
-          const durationMin = props?.['수업 시간(분)']?.select?.name;
-
-          if (!startTime || !durationMin) continue;
-
-          const matches =
-            type === '정기'
-              ? props?.['요일']?.select?.name === dayKr
-              : type === '일회성'
-                ? props?.['날짜']?.date?.start === dateStr
-                : false;
-
-          if (matches && !bookedKeys.has(`${dateStr}|${startTime}`)) {
-            result.push({ date: dateStr, startTime, durationMin: Number(durationMin) });
-          }
-        }
-      }
+      if (!isBlocked(dateStr)) result.push({ date: dateStr });
       cur.setUTCDate(cur.getUTCDate() + 1);
     }
-
-    result.sort((a, b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime));
 
     return new Response(JSON.stringify(result), {
       status: 200,
@@ -379,14 +325,12 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
       });
     }
 
-    const dayKR = DAY_KR[new Date(date + 'T00:00:00+09:00').getDay()];
-
-    const [slotsRes2, blockedRes2, bookingsRes2] = await Promise.all([
-      n('POST', `/databases/${SLOTS_DB_ID}/query`, {
-        filter: { property: '활성화', checkbox: { equals: true } },
+    const [blockedRes2, classRes, bookingsRes2] = await Promise.all([
+      n('POST', `/databases/${BLOCKED_DATES_DB_ID}/query`, { page_size: 100 }),
+      n('POST', `/databases/${CLASS_DB_ID}/query`, {
+        filter: { property: '수업 일시', date: { equals: date } },
         page_size: 100,
       }),
-      n('POST', `/databases/${BLOCKED_DATES_DB_ID}/query`, { page_size: 100 }),
       n('POST', `/databases/${BOOKINGS_DB_ID}/query`, {
         filter: {
           and: [
@@ -405,40 +349,33 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
       });
     }
 
-    // SLOTS_DB 항목으로 이용 가능한 30분 원자 슬롯 생성
-    const availableSet = new Set();
-    for (const slot of slotsRes2.results ?? []) {
-      const props = slot.properties;
-      const type = props?.['슬롯 유형']?.select?.name;
-      const st = props?.['시작 시간']?.rich_text?.[0]?.plain_text;
+    // 09:00 ~ 22:00 전체 30분 슬롯 생성 (SLOTS_DB 불필요)
+    const allSlots = new Set();
+    for (let m = 9 * 60; m <= 22 * 60; m += 30) allSlots.add(minToTime(m));
+
+    // 기존 수업(CLASS_DB) 점유 슬롯 제거
+    const busySet = new Set();
+    for (const p of classRes.results ?? []) {
+      const props = p.properties;
+      const dtStr = props?.['수업 일시']?.date?.start;
       const dur = Number(props?.['수업 시간(분)']?.select?.name);
-      if (!st || !dur) continue;
-      const matches =
-        type === '정기' ? props?.['요일']?.select?.name === dayKR :
-        type === '일회성' ? props?.['날짜']?.date?.start === date : false;
-      if (!matches) continue;
-      let elapsed = 0;
-      while (elapsed < dur) {
-        availableSet.add(addMinutes(st, elapsed));
-        elapsed += 30;
-      }
+      if (!dtStr || !dur) continue;
+      const timeMatch = dtStr.match(/T(\d{2}):(\d{2})/);
+      if (!timeMatch) continue;
+      const classStartMin = Number(timeMatch[1]) * 60 + Number(timeMatch[2]);
+      for (let elapsed = 0; elapsed < dur; elapsed += 30) busySet.add(minToTime(classStartMin + elapsed));
     }
 
-    // 이미 확정된 예약의 시간 슬롯 제거
-    const bookedSet = new Set();
+    // 확정 예약(BOOKINGS_DB) 점유 슬롯 제거
     for (const p of bookingsRes2.results ?? []) {
       const props = p.properties;
       const bt = props?.['시작 시간']?.rich_text?.[0]?.plain_text;
       const bd = Number(props?.['수업 시간(분)']?.select?.name);
       if (!bt || !bd) continue;
-      let elapsed = 0;
-      while (elapsed < bd) {
-        bookedSet.add(addMinutes(bt, elapsed));
-        elapsed += 30;
-      }
+      for (let elapsed = 0; elapsed < bd; elapsed += 30) busySet.add(addMinutes(bt, elapsed));
     }
 
-    const available = [...availableSet].filter(t => !bookedSet.has(t)).sort();
+    const available = [...allSlots].filter(t => !busySet.has(t)).sort();
     return new Response(JSON.stringify(available), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
