@@ -33,9 +33,14 @@ export async function fetchAvailableSlots(from, to) {
   return bookingFetch('GET', `/booking/slots?${params}`);
 }
 
+/** 날짜별 예약 가능 시간 슬롯 조회 (공개, 30분 단위) */
+export async function fetchTimeSlots(date) {
+  return bookingFetch('GET', `/booking/time-slots?date=${date}`);
+}
+
 /** 예약 신청 (공개) → 즉시 확정 */
-export async function reserveSlot({ date, startTime, durationMin, studentName, phone }) {
-  return bookingFetch('POST', '/booking/reserve', { date, startTime, durationMin, studentName, phone });
+export async function reserveSlot({ date, startTime, endTime, studentName, phone }) {
+  return bookingFetch('POST', '/booking/reserve', { date, startTime, endTime, studentName, phone });
 }
 
 /** 예약 상태 조회 (공개, 토큰 기반) */
