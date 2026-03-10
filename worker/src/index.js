@@ -385,14 +385,33 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
   // POST /booking/reserve
   if (url.pathname === '/booking/reserve' && request.method === 'POST') {
     const body = await request.json().catch(() => ({}));
-    const { date, startTime, endTime, studentName, phone } = body;
+    const { date, startTime, endTime, studentToken, mode } = body;
 
-    if (!date || !startTime || !endTime || !studentName || !phone) {
+    if (!date || !startTime || !endTime || !studentToken) {
       return new Response(JSON.stringify({ error: '필수 항목이 누락되었습니다.' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    // 학생 코드로 학생 조회
+    const studentRes = await n('POST', `/databases/${STUDENT_DB_ID}/query`, {
+      filter: { property: '예약 코드', rich_text: { equals: studentToken } },
+      page_size: 1,
+    });
+    const studentPage = studentRes.results?.[0];
+    if (!studentPage) {
+      return new Response(JSON.stringify({ error: '등록된 학생이 아닙니다. 예약 코드를 확인해주세요.' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const sProps = studentPage.properties;
+    const rawName = sProps?.['이름']?.title?.[0]?.plain_text ?? '';
+    const studentName = stripEmoji(rawName);
+    const phone = sProps?.['전화번호']?.phone_number ?? '';
+    const remainingSessions = sProps?.['잔여 시간 회차']?.formula?.number ?? 0;
 
     const durationMin = timeToMin(endTime) - timeToMin(startTime);
 
@@ -404,6 +423,15 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
     }
     if (durationMin % 30 !== 0) {
       return new Response(JSON.stringify({ error: '30분 단위로만 예약 가능합니다.' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // 잔여 시간 회차 체크 (60분=1회차, 90분=1.5회차 등)
+    const requiredSessions = durationMin / 60;
+    if (remainingSessions < requiredSessions) {
+      return new Response(JSON.stringify({ error: `잔여 시간이 부족합니다. (잔여: ${remainingSessions}회차, 필요: ${requiredSessions}회차)` }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -441,47 +469,40 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
     const token = crypto.randomUUID();
 
     // 예약 DB에 저장
+    const bookingProps = {
+      '제목': { title: [{ text: { content: `${date} ${startTime} - ${studentName}` } }] },
+      '학생 이름': { rich_text: [{ text: { content: studentName } }] },
+      '연락처': { phone_number: phone },
+      '예약 날짜': { date: { start: date } },
+      '시작 시간': { rich_text: [{ text: { content: startTime } }] },
+      '수업 시간(분)': { select: { name: String(durationMin) } },
+      '상태': { select: { name: '확정' } },
+      '예약 토큰': { rich_text: [{ text: { content: token } }] },
+      '학생': { relation: [{ id: studentPage.id }] },
+    };
+    if (mode) bookingProps['수업 장소'] = { select: { name: mode } };
+
     await n('POST', '/pages', {
       parent: { database_id: BOOKINGS_DB_ID },
-      properties: {
-        '제목': { title: [{ text: { content: `${date} ${startTime} - ${studentName}` } }] },
-        '학생 이름': { rich_text: [{ text: { content: studentName } }] },
-        '연락처': { phone_number: phone },
-        '예약 날짜': { date: { start: date } },
-        '시작 시간': { rich_text: [{ text: { content: startTime } }] },
-        '수업 시간(분)': { select: { name: String(durationMin) } },
-        '상태': { select: { name: '확정' } },
-        '예약 토큰': { rich_text: [{ text: { content: token } }] },
-      },
+      properties: bookingProps,
     });
 
-    // 수업 캘린더 DB에도 등록 (학생 이름으로 학생 DB 검색 후 relation 연결)
+    // 수업 캘린더 DB에도 등록
     try {
-      const studentRes = await n('POST', `/databases/${STUDENT_DB_ID}/query`, {
-        filter: { property: '이름', title: { contains: studentName } },
-        page_size: 5,
-      });
-      const studentPage = (studentRes.results ?? []).find(p => {
-        const raw = p.properties?.['이름']?.title?.[0]?.plain_text ?? '';
-        return stripEmoji(raw) === studentName;
-      });
-
       const classDatetime = `${date}T${startTime}:00+09:00`;
       const classProps = {
         '제목': { title: [{ text: { content: `${studentName} ${date}` } }] },
         '수업 일시': { date: { start: classDatetime } },
         '수업 시간(분)': { select: { name: String(durationMin) } },
+        '학생': { relation: [{ id: studentPage.id }] },
       };
-      if (studentPage) {
-        classProps['학생'] = { relation: [{ id: studentPage.id }] };
-      }
+      if (mode) classProps['수업 장소'] = { select: { name: mode } };
       await n('POST', '/pages', {
         parent: { database_id: CLASS_DB_ID },
         properties: classProps,
       });
     } catch (e) {
       console.error('[reserve] 수업 캘린더 등록 실패:', e);
-      // 수업 캘린더 등록 실패해도 예약 자체는 성공으로 처리
     }
 
     await sendAlimtalk(env, {
@@ -490,8 +511,36 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
       variables: { name: studentName, date, startTime },
     });
 
-    return new Response(JSON.stringify({ token, date, startTime, endTime, durationMin }), {
+    return new Response(JSON.stringify({ token, date, startTime, endTime, durationMin, studentName }), {
       status: 201,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
+  // GET /booking/student/:token (공개, 학생 예약 코드로 학생 정보 조회)
+  const studentLookupMatch = url.pathname.match(/^\/booking\/student\/([^/]+)$/);
+  if (studentLookupMatch && request.method === 'GET') {
+    const token = decodeURIComponent(studentLookupMatch[1]);
+    const res = await n('POST', `/databases/${STUDENT_DB_ID}/query`, {
+      filter: { property: '예약 코드', rich_text: { equals: token } },
+      page_size: 1,
+    });
+    const page = res.results?.[0];
+    if (!page) {
+      return new Response(JSON.stringify({ error: '등록된 학생이 아닙니다.' }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    const props = page.properties;
+    const rawName = props?.['이름']?.title?.[0]?.plain_text ?? '';
+    return new Response(JSON.stringify({
+      id: page.id,
+      name: stripEmoji(rawName),
+      phone: props?.['전화번호']?.phone_number ?? '',
+      remainingSessions: props?.['잔여 시간 회차']?.formula?.number ?? 0,
+    }), {
+      status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
@@ -556,6 +605,133 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
     });
 
     return new Response(JSON.stringify(bookings), {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
+  // GET /booking/my-bookings/:token (공개, 학생 본인 예약 목록 조회)
+  const myBookingsMatch = url.pathname.match(/^\/booking\/my-bookings\/([^/]+)$/);
+  if (myBookingsMatch && request.method === 'GET') {
+    const token = decodeURIComponent(myBookingsMatch[1]);
+    const studentRes = await n('POST', `/databases/${STUDENT_DB_ID}/query`, {
+      filter: { property: '예약 코드', rich_text: { equals: token } },
+      page_size: 1,
+    });
+    const studentPage = studentRes.results?.[0];
+    if (!studentPage) {
+      return new Response(JSON.stringify({ error: '등록된 학생이 아닙니다.' }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    const res = await n('POST', `/databases/${BOOKINGS_DB_ID}/query`, {
+      filter: { property: '학생', relation: { contains: studentPage.id } },
+      sorts: [{ property: '예약 날짜', direction: 'descending' }],
+      page_size: 50,
+    });
+    const bookings = (res.results ?? []).map(p => {
+      const props = p.properties;
+      return {
+        id: p.id,
+        date: props['예약 날짜']?.date?.start,
+        startTime: props['시작 시간']?.rich_text?.[0]?.plain_text,
+        durationMin: Number(props['수업 시간(분)']?.select?.name),
+        status: props['상태']?.select?.name,
+        location: props['수업 장소']?.select?.name ?? null,
+      };
+    });
+    return new Response(JSON.stringify(bookings), {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
+  // DELETE /booking/my/:id?token=:token (학생 본인 취소, 당일 취소 불가)
+  const myDeleteMatch = url.pathname.match(/^\/booking\/my\/([^/]+)$/);
+  if (myDeleteMatch && request.method === 'DELETE') {
+    const bookingId = myDeleteMatch[1];
+    const studentToken = url.searchParams.get('token') || '';
+    if (!studentToken) {
+      return new Response(JSON.stringify({ error: '인증이 필요합니다.' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    const studentRes2 = await n('POST', `/databases/${STUDENT_DB_ID}/query`, {
+      filter: { property: '예약 코드', rich_text: { equals: studentToken } },
+      page_size: 1,
+    });
+    const studentPage2 = studentRes2.results?.[0];
+    if (!studentPage2) {
+      return new Response(JSON.stringify({ error: '인증 실패.' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    const pageRes = await n('GET', `/pages/${bookingId}`);
+    if (!pageRes || pageRes.object === 'error') {
+      return new Response(JSON.stringify({ error: '예약을 찾을 수 없습니다.' }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    const bProps = pageRes.properties;
+    // 소유자 확인
+    const bookingStudentIds = (bProps?.['학생']?.relation ?? []).map(r => r.id);
+    if (!bookingStudentIds.includes(studentPage2.id)) {
+      return new Response(JSON.stringify({ error: '이 예약을 취소할 권한이 없습니다.' }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    // 당일 취소 불가
+    const bookingDate = bProps?.['예약 날짜']?.date?.start;
+    const todayKST = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    if (!bookingDate || bookingDate <= todayKST) {
+      return new Response(JSON.stringify({ error: '당일 취소는 불가합니다. 강사에게 직접 연락해주세요.' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    if (bProps?.['상태']?.select?.name === '취소') {
+      return new Response(JSON.stringify({ error: '이미 취소된 예약입니다.' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    // 예약 취소
+    await n('PATCH', `/pages/${bookingId}`, {
+      properties: { '상태': { select: { name: '취소' } } },
+    });
+    // CLASS_DB 수업 🚫 취소 처리
+    const bookStartTime = bProps?.['시작 시간']?.rich_text?.[0]?.plain_text;
+    try {
+      const classRes2 = await n('POST', `/databases/${CLASS_DB_ID}/query`, {
+        filter: {
+          and: [
+            { property: '수업 일시', date: { equals: bookingDate } },
+            { property: '학생', relation: { contains: studentPage2.id } },
+          ],
+        },
+        page_size: 10,
+      });
+      for (const cp of classRes2.results ?? []) {
+        const dtStr = cp.properties?.['수업 일시']?.date?.start;
+        if (!dtStr) continue;
+        const tm = dtStr.match(/T(\d{2}):(\d{2})/);
+        if (!tm) continue;
+        if (`${tm[1]}:${tm[2]}` === bookStartTime) {
+          await n('PATCH', `/pages/${cp.id}`, {
+            properties: { '특이사항': { select: { name: '🚫 취소' } } },
+          });
+          break;
+        }
+      }
+    } catch (e) {
+      console.error('[my-cancel] CLASS_DB 취소 처리 실패:', e);
+    }
+    return new Response(JSON.stringify({ ok: true }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

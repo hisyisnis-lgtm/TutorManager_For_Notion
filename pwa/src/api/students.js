@@ -32,7 +32,7 @@ export async function updateStudentStatus(pageId, status) {
 }
 
 /** 학생 정보 수정 */
-export async function updateStudent(pageId, { name, phone, email, level, goal, status, memo }) {
+export async function updateStudent(pageId, { name, phone, email, level, goal, status, memo, bookingCode }) {
   const properties = {};
   if (name) properties['이름'] = { title: [{ text: { content: name } }] };
   if (status) properties['상태'] = { select: { name: status } };
@@ -41,11 +41,12 @@ export async function updateStudent(pageId, { name, phone, email, level, goal, s
   properties['레벨'] = { rich_text: level ? [{ text: { content: level } }] : [] };
   properties['목표'] = { rich_text: goal ? [{ text: { content: goal } }] : [] };
   properties['메모'] = { rich_text: memo ? [{ text: { content: memo } }] : [] };
+  properties['예약 코드'] = { rich_text: bookingCode ? [{ text: { content: bookingCode } }] : [] };
   return updatePage(pageId, properties);
 }
 
 /** 학생 생성 */
-export async function createStudent({ name, phone, email, level, goal, status, memo }) {
+export async function createStudent({ name, phone, email, level, goal, status, memo, bookingCode }) {
   const properties = {
     이름: { title: [{ text: { content: name } }] },
     상태: { select: { name: status || '🟢 수강중' } },
@@ -55,6 +56,7 @@ export async function createStudent({ name, phone, email, level, goal, status, m
   if (level) properties['레벨'] = { rich_text: [{ text: { content: level } }] };
   if (goal) properties['목표'] = { rich_text: [{ text: { content: goal } }] };
   if (memo) properties['메모'] = { rich_text: [{ text: { content: memo } }] };
+  if (bookingCode) properties['예약 코드'] = { rich_text: [{ text: { content: bookingCode } }] };
   return createPage(STUDENTS_DB, properties);
 }
 
@@ -72,6 +74,7 @@ export function parseStudent(page) {
     remainingSessions: p['잔여 시간 회차']?.formula?.number ?? 0,
     unpaidAmount: p['미수금 합계']?.rollup?.number ?? 0,
     memo: p['메모']?.rich_text?.[0]?.plain_text ?? '',
+    bookingCode: p['예약 코드']?.rich_text?.[0]?.plain_text ?? '',
     createdAt: p['등록일']?.created_time ?? '',
   };
 }

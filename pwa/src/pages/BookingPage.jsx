@@ -1,8 +1,16 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { fetchAvailableSlots, fetchTimeSlots, reserveSlot } from '../api/bookingApi.js';
+import { useNavigate, useParams } from 'react-router-dom';
+import {
+  fetchStudentByToken,
+  fetchAvailableSlots,
+  fetchTimeSlots,
+  reserveSlot,
+  fetchMyBookings,
+  cancelMyBooking,
+} from '../api/bookingApi.js';
 
 const DAY_KR = ['일', '월', '화', '수', '목', '금', '토'];
+const LOCATION_OPTIONS = ['강남사무실', '온라인 (Zoom/화상)'];
 
 function timeToMin(t) {
   const [h, m] = t.split(':').map(Number);
@@ -13,6 +21,11 @@ function formatDuration(min) {
   const m = min % 60;
   if (m === 0) return `${h}시간`;
   return `${h}시간 ${m}분`;
+}
+function formatDate(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr + 'T00:00:00+09:00');
+  return `${d.getMonth() + 1}/${d.getDate()}(${DAY_KR[d.getDay()]})`;
 }
 
 // ===== 달력 컴포넌트 =====
@@ -95,7 +108,6 @@ function TimeRangePicker({ availableTimes, startTime, endTime, onStartSelect, on
 
   const startMin = startTime ? timeToMin(startTime) : null;
 
-  // startTime 이후 연속된 슬롯 계산
   const validEndTimes = (() => {
     if (startMin === null) return new Set();
     const valid = new Set();
@@ -178,9 +190,108 @@ function TimeRangePicker({ availableTimes, startTime, endTime, onStartSelect, on
   );
 }
 
+// ===== 내 예약 이력 탭 =====
+function MyBookingsTab({ studentToken }) {
+  const [bookings, setBookings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [cancellingId, setCancellingId] = useState(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await fetchMyBookings(studentToken);
+      setBookings(data);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [studentToken]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const todayStr = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+  const handleCancel = async (booking) => {
+    if (!window.confirm(`${formatDate(booking.date)} ${booking.startTime} 수업을 취소하시겠습니까?`)) return;
+    setCancellingId(booking.id);
+    try {
+      await cancelMyBooking(booking.id, studentToken);
+      setBookings(prev => prev.map(b => b.id === booking.id ? { ...b, status: '취소' } : b));
+    } catch (e) {
+      alert(e.message);
+    } finally {
+      setCancellingId(null);
+    }
+  };
+
+  if (loading) return <div className="text-center py-12 text-gray-400 text-sm">불러오는 중...</div>;
+  if (error) return <div className="mx-4 bg-red-50 text-red-500 rounded-xl p-4 text-sm mt-4">{error}</div>;
+  if (bookings.length === 0) {
+    return (
+      <div className="text-center py-12 text-gray-400">
+        <div className="text-4xl mb-3">📋</div>
+        <div className="text-sm">예약 이력이 없습니다</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="px-4 py-4 space-y-2">
+      {bookings.map(booking => {
+        const canCancel = booking.status === '확정' && booking.date > todayStr;
+        const isPast = booking.date < todayStr;
+        const LOCATION_LABEL = { '강남사무실': '강남', '온라인 (Zoom/화상)': 'Zoom' };
+        return (
+          <div
+            key={booking.id}
+            className={`bg-white rounded-xl shadow-sm p-4 flex items-center gap-3 ${isPast ? 'opacity-60' : ''}`}
+          >
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                  booking.status === '확정' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-400'
+                }`}>
+                  {booking.status}
+                </span>
+                <span className="text-xs text-gray-400">{formatDate(booking.date)}</span>
+              </div>
+              <div className="text-sm text-gray-700 font-medium">
+                {booking.startTime} · {formatDuration(booking.durationMin)}
+              </div>
+              {booking.location && (
+                <div className="text-xs text-gray-400 mt-0.5">
+                  {LOCATION_LABEL[booking.location] ?? booking.location}
+                </div>
+              )}
+            </div>
+            {canCancel && (
+              <button
+                onClick={() => handleCancel(booking)}
+                disabled={cancellingId === booking.id}
+                className="shrink-0 text-sm text-red-500 border border-red-200 rounded-lg px-3 py-1.5 disabled:opacity-40 active:bg-red-50"
+              >
+                {cancellingId === booking.id ? '취소 중...' : '취소'}
+              </button>
+            )}
+          </div>
+        );
+      })}
+      <p className="text-xs text-center text-gray-400 pt-2">당일 취소는 강사에게 직접 연락해주세요</p>
+    </div>
+  );
+}
+
 // ===== 메인 페이지 =====
 export default function BookingPage() {
   const navigate = useNavigate();
+  const { studentToken } = useParams();
+
+  const [student, setStudent] = useState(null);
+  const [studentError, setStudentError] = useState(null);
+  const [tab, setTab] = useState('예약하기');
 
   const nowKST = new Date(Date.now() + 9 * 60 * 60 * 1000);
   const [calYear, setCalYear] = useState(nowKST.getUTCFullYear());
@@ -194,10 +305,21 @@ export default function BookingPage() {
   const [timesLoading, setTimesLoading] = useState(false);
   const [startTime, setStartTime] = useState(null);
   const [endTime, setEndTime] = useState(null);
+  const [location, setLocation] = useState(LOCATION_OPTIONS[0]);
 
-  const [form, setForm] = useState({ studentName: '', phone: '' });
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
+
+  // 학생 정보 로드
+  useEffect(() => {
+    if (!studentToken) {
+      navigate('/book', { replace: true });
+      return;
+    }
+    fetchStudentByToken(studentToken).then(setStudent).catch(e => {
+      setStudentError(e.status === 404 ? '등록된 예약 코드가 아닙니다.' : e.message);
+    });
+  }, [studentToken, navigate]);
 
   const loadSlots = useCallback(async () => {
     setSlotsLoading(true);
@@ -251,16 +373,16 @@ export default function BookingPage() {
     setSubmitError(null);
     try {
       const result = await reserveSlot({
+        studentToken,
         date: selectedDate,
         startTime,
         endTime,
-        studentName: form.studentName.trim(),
-        phone: form.phone.trim(),
+        location,
       });
       navigate(`/book/status/${encodeURIComponent(result.token)}`, { replace: true });
-    } catch (e) {
-      setSubmitError(e.message);
-      if (e.status === 409) {
+    } catch (err) {
+      setSubmitError(err.message);
+      if (err.status === 409) {
         setStartTime(null);
         setEndTime(null);
         const times = await fetchTimeSlots(selectedDate).catch(() => []);
@@ -281,133 +403,195 @@ export default function BookingPage() {
   };
 
   const durationMin = startTime && endTime ? timeToMin(endTime) - timeToMin(startTime) : 0;
+  const requiredSessions = durationMin / 60;
+  const hasEnoughTime = !student || student.remainingSessions >= requiredSessions;
   const MONTHS = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+
+  if (studentError) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center px-4">
+        <div className="bg-white rounded-xl shadow-sm p-6 max-w-sm w-full text-center space-y-4">
+          <div className="text-4xl">⚠️</div>
+          <p className="text-red-500 text-sm">{studentError}</p>
+          <button
+            onClick={() => navigate('/book')}
+            className="w-full bg-blue-600 text-white rounded-lg py-2.5 text-sm font-semibold"
+          >
+            다시 입력
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!student) {
+    return <div className="min-h-screen bg-gray-50 flex items-center justify-center text-gray-400 text-sm">불러오는 중...</div>;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-lg mx-auto">
-        <div className="bg-white px-4 pt-12 pb-4 border-b border-gray-100">
+        {/* 헤더 */}
+        <div className="bg-white px-4 pt-12 pb-3 border-b border-gray-100">
           <h1 className="text-xl font-bold text-gray-900">수업 예약</h1>
-          <p className="text-sm text-gray-500 mt-1">날짜를 선택하고 원하는 시간대를 골라주세요</p>
+          <div className="flex items-center justify-between mt-1">
+            <p className="text-sm text-gray-500">{student.name}님</p>
+            <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+              student.remainingSessions > 0 ? 'bg-blue-50 text-blue-600' : 'bg-red-50 text-red-500'
+            }`}>
+              잔여 {student.remainingSessions}회차
+            </span>
+          </div>
         </div>
 
-        <div className="px-4 py-4 space-y-4">
-          {/* 달력 */}
-          <div className="bg-white rounded-xl shadow-sm p-4">
-            <div className="flex items-center justify-between mb-3">
-              <button
-                type="button"
-                onClick={prevMonth}
-                className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500 text-lg"
-              >
-                ‹
-              </button>
-              <span className="font-semibold text-gray-800">{calYear}년 {MONTHS[calMonth]}</span>
-              <button
-                type="button"
-                onClick={nextMonth}
-                className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500 text-lg"
-              >
-                ›
-              </button>
-            </div>
+        {/* 탭 */}
+        <div className="flex border-b border-gray-100 bg-white px-4">
+          {['예약하기', '내 예약'].map(t => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={`mr-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+                tab === t ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-400'
+              }`}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
 
-            {slotsLoading ? (
-              <div className="text-center py-8 text-gray-400 text-sm">불러오는 중...</div>
-            ) : (
-              <Calendar
-                year={calYear}
-                month={calMonth}
-                availableDates={availableDates}
-                selectedDate={selectedDate}
-                onSelect={handleDateSelect}
-              />
+        {tab === '내 예약' ? (
+          <MyBookingsTab studentToken={studentToken} />
+        ) : (
+          <div className="px-4 py-4 space-y-4">
+            {/* 잔여 시간 없을 때 안내 */}
+            {student.remainingSessions <= 0 && (
+              <div className="bg-red-50 rounded-xl p-4 text-sm text-red-600 text-center">
+                잔여 시간이 없습니다. 결제 후 예약이 가능합니다.
+              </div>
             )}
-          </div>
 
-          {/* 시간 선택 */}
-          {selectedDate && (
+            {/* 달력 */}
             <div className="bg-white rounded-xl shadow-sm p-4">
-              {(() => {
-                const d = new Date(selectedDate + 'T00:00:00+09:00');
-                return (
-                  <h2 className="font-semibold text-gray-800 mb-3">
-                    {d.getMonth() + 1}월 {d.getDate()}일 ({DAY_KR[d.getDay()]}) 시간 선택
-                  </h2>
-                );
-              })()}
+              <div className="flex items-center justify-between mb-3">
+                <button
+                  type="button"
+                  onClick={prevMonth}
+                  className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500 text-lg"
+                >
+                  ‹
+                </button>
+                <span className="font-semibold text-gray-800">{calYear}년 {MONTHS[calMonth]}</span>
+                <button
+                  type="button"
+                  onClick={nextMonth}
+                  className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500 text-lg"
+                >
+                  ›
+                </button>
+              </div>
 
-              {timesLoading ? (
-                <div className="text-center py-6 text-gray-400 text-sm">불러오는 중...</div>
+              {slotsLoading ? (
+                <div className="text-center py-8 text-gray-400 text-sm">불러오는 중...</div>
               ) : (
-                <TimeRangePicker
-                  availableTimes={availableTimes}
-                  startTime={startTime}
-                  endTime={endTime}
-                  onStartSelect={handleStartSelect}
-                  onEndSelect={handleEndSelect}
+                <Calendar
+                  year={calYear}
+                  month={calMonth}
+                  availableDates={availableDates}
+                  selectedDate={selectedDate}
+                  onSelect={handleDateSelect}
                 />
               )}
             </div>
-          )}
 
-          {/* 예약 폼 */}
-          {selectedDate && startTime && endTime && durationMin >= 60 && (
-            <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-sm p-4 space-y-3">
-              <div className="bg-blue-50 rounded-lg px-3 py-2.5 text-sm text-blue-700">
+            {/* 시간 선택 */}
+            {selectedDate && (
+              <div className="bg-white rounded-xl shadow-sm p-4">
                 {(() => {
                   const d = new Date(selectedDate + 'T00:00:00+09:00');
                   return (
-                    <>
-                      <span className="font-semibold">
-                        {d.getMonth() + 1}/{d.getDate()}({DAY_KR[d.getDay()]}) {startTime} ~ {endTime}
-                      </span>
-                      <span className="ml-2 text-blue-500">({formatDuration(durationMin)})</span>
-                    </>
+                    <h2 className="font-semibold text-gray-800 mb-3">
+                      {d.getMonth() + 1}월 {d.getDate()}일 ({DAY_KR[d.getDay()]}) 시간 선택
+                    </h2>
                   );
                 })()}
+
+                {timesLoading ? (
+                  <div className="text-center py-6 text-gray-400 text-sm">불러오는 중...</div>
+                ) : (
+                  <TimeRangePicker
+                    availableTimes={availableTimes}
+                    startTime={startTime}
+                    endTime={endTime}
+                    onStartSelect={handleStartSelect}
+                    onEndSelect={handleEndSelect}
+                  />
+                )}
               </div>
+            )}
 
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">이름</label>
-                <input
-                  type="text"
-                  required
-                  value={form.studentName}
-                  onChange={e => setForm(f => ({ ...f, studentName: e.target.value }))}
-                  placeholder="홍길동"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-blue-400"
-                />
-              </div>
+            {/* 예약 폼 */}
+            {selectedDate && startTime && endTime && durationMin >= 60 && (
+              <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-sm p-4 space-y-3">
+                {/* 선택 요약 */}
+                <div className="bg-blue-50 rounded-lg px-3 py-2.5 text-sm text-blue-700">
+                  {(() => {
+                    const d = new Date(selectedDate + 'T00:00:00+09:00');
+                    return (
+                      <>
+                        <span className="font-semibold">
+                          {d.getMonth() + 1}/{d.getDate()}({DAY_KR[d.getDay()]}) {startTime} ~ {endTime}
+                        </span>
+                        <span className="ml-2 text-blue-500">({formatDuration(durationMin)})</span>
+                      </>
+                    );
+                  })()}
+                </div>
 
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">연락처</label>
-                <input
-                  type="tel"
-                  required
-                  value={form.phone}
-                  onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
-                  placeholder="010-0000-0000"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-blue-400"
-                />
-              </div>
+                {/* 수업 장소 선택 */}
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1.5">수업 장소</label>
+                  <div className="flex gap-2">
+                    {LOCATION_OPTIONS.map(opt => (
+                      <button
+                        key={opt}
+                        type="button"
+                        onClick={() => setLocation(opt)}
+                        className={`flex-1 py-2.5 rounded-lg text-sm font-medium border transition-colors ${
+                          location === opt
+                            ? 'bg-blue-600 text-white border-blue-600'
+                            : 'bg-white text-gray-600 border-gray-200 hover:border-blue-300'
+                        }`}
+                      >
+                        {opt === '강남사무실' ? '강남사무실' : 'Zoom (온라인)'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
-              {submitError && (
-                <div className="text-red-500 text-sm bg-red-50 rounded-lg px-3 py-2">{submitError}</div>
-              )}
+                {/* 잔여 시간 부족 경고 */}
+                {!hasEnoughTime && (
+                  <div className="text-red-500 text-sm bg-red-50 rounded-lg px-3 py-2">
+                    잔여 시간이 부족합니다. (잔여 {student.remainingSessions}회차, 필요 {requiredSessions}회차)
+                  </div>
+                )}
 
-              <button
-                type="submit"
-                disabled={submitting}
-                className="w-full bg-blue-600 text-white rounded-lg py-3 text-sm font-semibold disabled:opacity-50 active:bg-blue-700"
-              >
-                {submitting ? '예약 중...' : '예약 확정하기'}
-              </button>
-            </form>
-          )}
+                {submitError && (
+                  <div className="text-red-500 text-sm bg-red-50 rounded-lg px-3 py-2">{submitError}</div>
+                )}
 
-          <div className="pb-8" />
-        </div>
+                <button
+                  type="submit"
+                  disabled={submitting || !hasEnoughTime}
+                  className="w-full bg-blue-600 text-white rounded-lg py-3 text-sm font-semibold disabled:opacity-50 active:bg-blue-700"
+                >
+                  {submitting ? '예약 중...' : '예약 확정하기'}
+                </button>
+              </form>
+            )}
+
+            <div className="pb-8" />
+          </div>
+        )}
       </div>
     </div>
   );

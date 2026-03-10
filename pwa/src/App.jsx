@@ -16,6 +16,7 @@ import LessonLogFormPage from './pages/LessonLogFormPage.jsx';
 import HomePage from './pages/HomePage.jsx';
 import SettingsPage from './pages/SettingsPage.jsx';
 import NotificationsPage from './pages/NotificationsPage.jsx';
+import BookEntryPage from './pages/BookEntryPage.jsx';
 import BookingPage from './pages/BookingPage.jsx';
 import BookingStatusPage from './pages/BookingStatusPage.jsx';
 import BookingsManagePage from './pages/BookingsManagePage.jsx';
@@ -45,8 +46,9 @@ export default function App() {
       <HashRouter>
         <ScrollToTop />
         <Routes>
-          <Route path="/book" element={<BookingPage />} />
+          <Route path="/book" element={<BookEntryPage />} />
           <Route path="/book/status/:token" element={<BookingStatusPage />} />
+          <Route path="/book/:studentToken" element={<BookingPage />} />
         </Routes>
       </HashRouter>
     );

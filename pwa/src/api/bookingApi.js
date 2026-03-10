@@ -38,9 +38,24 @@ export async function fetchTimeSlots(date) {
   return bookingFetch('GET', `/booking/time-slots?date=${date}`);
 }
 
+/** 학생 예약 코드로 학생 정보 조회 (공개) */
+export async function fetchStudentByToken(token) {
+  return bookingFetch('GET', `/booking/student/${encodeURIComponent(token)}`);
+}
+
 /** 예약 신청 (공개) → 즉시 확정 */
-export async function reserveSlot({ date, startTime, endTime, studentName, phone }) {
-  return bookingFetch('POST', '/booking/reserve', { date, startTime, endTime, studentName, phone });
+export async function reserveSlot({ studentToken, date, startTime, endTime, location }) {
+  return bookingFetch('POST', '/booking/reserve', { studentToken, date, startTime, endTime, mode: location });
+}
+
+/** 학생 본인 예약 목록 조회 (공개, 학생 토큰 기반) */
+export async function fetchMyBookings(studentToken) {
+  return bookingFetch('GET', `/booking/my-bookings/${encodeURIComponent(studentToken)}`);
+}
+
+/** 학생 본인 예약 취소 (공개, 당일 취소 불가) */
+export async function cancelMyBooking(bookingId, studentToken) {
+  return bookingFetch('DELETE', `/booking/my/${bookingId}?token=${encodeURIComponent(studentToken)}`);
 }
 
 /** 예약 상태 조회 (공개, 토큰 기반) */

@@ -153,6 +153,26 @@ export default function StudentDetailPage() {
               <p className="text-sm text-gray-700">{student.memo}</p>
             </div>
           )}
+          {student.bookingCode && (
+            <div className="pt-2 border-t border-gray-50">
+              <p className="text-xs text-gray-400 mb-1">예약 링크</p>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-500 font-mono truncate flex-1">
+                  /book/{student.bookingCode}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const url = `${window.location.origin}${window.location.pathname}#/book/${encodeURIComponent(student.bookingCode)}`;
+                    navigator.clipboard.writeText(url).then(() => alert('링크가 복사되었습니다.'));
+                  }}
+                  className="shrink-0 text-xs text-blue-600 border border-blue-200 rounded-lg px-2.5 py-1 active:bg-blue-50"
+                >
+                  복사
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* 잔여 회차 / 미수금 */}

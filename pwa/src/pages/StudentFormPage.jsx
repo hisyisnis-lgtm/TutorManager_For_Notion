@@ -20,6 +20,7 @@ export default function StudentFormPage() {
     goal: '',
     status: '🟢 수강중',
     memo: '',
+    bookingCode: '',
   });
   const [loading, setLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
@@ -39,6 +40,7 @@ export default function StudentFormPage() {
           goal: s.goal || '',
           status: s.status || '🟢 수강중',
           memo: s.memo || '',
+          bookingCode: s.bookingCode || '',
         });
       } catch (e) {
         setError(e.message);
@@ -181,6 +183,19 @@ export default function StudentFormPage() {
             rows={5}
             className="input-field resize-none"
           />
+        </div>
+
+        {/* 예약 코드 */}
+        <div>
+          <label className="label">예약 코드 (선택)</label>
+          <input
+            type="text"
+            value={form.bookingCode}
+            onChange={set('bookingCode')}
+            placeholder="학생 예약 링크용 고유 코드"
+            className="input-field"
+          />
+          <p className="text-xs text-gray-400 mt-1">입력 시 학생이 /book/[코드] 로 예약 가능</p>
         </div>
 
         <button type="submit" disabled={saving} className="btn-primary w-full mt-2">
