@@ -52,3 +52,18 @@ export async function fetchBookingList() {
 export async function cancelBooking(bookingId) {
   return bookingFetch('DELETE', `/booking/${bookingId}`, undefined, { auth: true });
 }
+
+/** 예약 불가 날짜 목록 조회 (강사 인증 필요) */
+export async function fetchBlockedDates() {
+  return bookingFetch('GET', '/booking/blocked', undefined, { auth: true });
+}
+
+/** 예약 불가 날짜 추가 (강사 인증 필요) */
+export async function createBlockedDate({ type, days, start, end, memo }) {
+  return bookingFetch('POST', '/booking/blocked', { type, days, start, end, memo }, { auth: true });
+}
+
+/** 예약 불가 날짜 삭제 (강사 인증 필요) */
+export async function deleteBlockedDate(id) {
+  return bookingFetch('DELETE', `/booking/blocked/${id}`, undefined, { auth: true });
+}

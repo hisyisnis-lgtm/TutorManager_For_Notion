@@ -277,14 +277,27 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
 
     const slots = slotsRes.results ?? [];
 
-    // 예약 불가 날짜 파싱 (단일 날짜 또는 범위)
-    const blockedRanges = (blockedRes.results ?? []).map(p => {
-      const d = p.properties?.['날짜']?.date;
-      return { start: d?.start, end: d?.end || d?.start };
-    }).filter(b => b.start);
+    // 예약 불가 날짜 파싱 (일회성 날짜범위 + 반복 요일 모두 지원)
+    const blockedDates = (blockedRes.results ?? []).map(p => {
+      const props = p.properties;
+      const d = props?.['날짜']?.date;
+      const type = props?.['반복 유형']?.select?.name;
+      const days = (props?.['반복 요일']?.multi_select ?? []).map(o => o.name);
+      return { type, days, start: d?.start, end: d?.end || d?.start };
+    }).filter(b => b.type === '반복' ? b.days.length > 0 : b.start);
 
-    const isBlocked = (dateStr) =>
-      blockedRanges.some(b => dateStr >= b.start && dateStr <= b.end);
+    const isBlocked = (dateStr) => {
+      const dayKR = DAY_KR[new Date(dateStr + 'T00:00:00+09:00').getDay()];
+      return blockedDates.some(b => {
+        if (b.type === '반복') {
+          if (!b.days.includes(dayKR)) return false;
+          if (b.start && dateStr < b.start) return false;
+          if (b.end && dateStr > b.end) return false;
+          return true;
+        }
+        return b.start && dateStr >= b.start && dateStr <= (b.end || b.start);
+      });
+    };
 
     // 이미 확정된 예약 (날짜|시간 키)
     const bookedKeys = new Set(
@@ -455,6 +468,114 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
     });
 
     return new Response(JSON.stringify(bookings), {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
+  // ===== 예약 불가 날짜 관리 (강사용, 인증 필요) =====
+
+  // GET /booking/blocked
+  if (url.pathname === '/booking/blocked' && request.method === 'GET') {
+    const authHeader = request.headers.get('Authorization') || '';
+    const jwtToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+    if (!(await verifyToken(jwtToken, env.JWT_SECRET || env.AUTH_PASSWORD))) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const res = await n('POST', `/databases/${BLOCKED_DATES_DB_ID}/query`, {
+      sorts: [{ timestamp: 'created_time', direction: 'ascending' }],
+      page_size: 100,
+    });
+
+    const blocked = (res.results ?? []).map(p => {
+      const props = p.properties;
+      const d = props?.['날짜']?.date;
+      return {
+        id: p.id,
+        type: props?.['반복 유형']?.select?.name || '일회성',
+        days: (props?.['반복 요일']?.multi_select ?? []).map(o => o.name),
+        start: d?.start,
+        end: d?.end,
+        memo: props?.['메모']?.title?.[0]?.plain_text || '',
+      };
+    });
+
+    return new Response(JSON.stringify(blocked), {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
+  // POST /booking/blocked
+  if (url.pathname === '/booking/blocked' && request.method === 'POST') {
+    const authHeader = request.headers.get('Authorization') || '';
+    const jwtToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+    if (!(await verifyToken(jwtToken, env.JWT_SECRET || env.AUTH_PASSWORD))) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const body = await request.json().catch(() => ({}));
+    const { type, days, start, end, memo } = body;
+
+    if (type === '반복' && (!days || days.length === 0)) {
+      return new Response(JSON.stringify({ error: '반복 요일을 선택해주세요.' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    if (type !== '반복' && !start) {
+      return new Response(JSON.stringify({ error: '날짜를 선택해주세요.' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const autoMemo = type === '반복' ? `매주 ${(days ?? []).join('·')}` : start;
+    const properties = {
+      '메모': { title: [{ text: { content: memo || autoMemo } }] },
+      '반복 유형': { select: { name: type || '일회성' } },
+    };
+
+    if (type === '반복' && days?.length > 0) {
+      properties['반복 요일'] = { multi_select: days.map(d => ({ name: d })) };
+    }
+    if (start) {
+      properties['날짜'] = { date: { start, ...(end && end !== start ? { end } : {}) } };
+    }
+
+    const created = await n('POST', '/pages', {
+      parent: { database_id: BLOCKED_DATES_DB_ID },
+      properties,
+    });
+
+    return new Response(JSON.stringify({ id: created.id }), {
+      status: 201,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
+  // DELETE /booking/blocked/:id
+  const blockedDeleteMatch = url.pathname.match(/^\/booking\/blocked\/([^/]+)$/);
+  if (blockedDeleteMatch && request.method === 'DELETE') {
+    const authHeader = request.headers.get('Authorization') || '';
+    const jwtToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+    if (!(await verifyToken(jwtToken, env.JWT_SECRET || env.AUTH_PASSWORD))) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    await n('PATCH', `/pages/${blockedDeleteMatch[1]}`, { archived: true });
+
+    return new Response(JSON.stringify({ ok: true }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
