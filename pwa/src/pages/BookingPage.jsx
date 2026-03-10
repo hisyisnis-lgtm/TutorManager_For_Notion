@@ -5,8 +5,8 @@ import {
   fetchAvailableSlots,
   fetchTimeSlots,
   reserveSlot,
-  fetchMyBookings,
-  cancelMyBooking,
+  fetchMyClasses,
+  cancelMyClass,
 } from '../api/bookingApi.js';
 
 const DAY_KR = ['일', '월', '화', '수', '목', '금', '토'];
@@ -190,9 +190,9 @@ function TimeRangePicker({ availableTimes, startTime, endTime, onStartSelect, on
   );
 }
 
-// ===== 내 예약 이력 탭 =====
-function MyBookingsTab({ studentToken }) {
-  const [bookings, setBookings] = useState([]);
+// ===== 내 수업 탭 =====
+function MyClassesTab({ studentToken }) {
+  const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [cancellingId, setCancellingId] = useState(null);
@@ -201,8 +201,8 @@ function MyBookingsTab({ studentToken }) {
     setLoading(true);
     setError(null);
     try {
-      const data = await fetchMyBookings(studentToken);
-      setBookings(data);
+      const data = await fetchMyClasses(studentToken);
+      setClasses(data);
     } catch (e) {
       setError(e.message);
     } finally {
@@ -214,12 +214,12 @@ function MyBookingsTab({ studentToken }) {
 
   const todayStr = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
-  const handleCancel = async (booking) => {
-    if (!window.confirm(`${formatDate(booking.date)} ${booking.startTime} 수업을 취소하시겠습니까?`)) return;
-    setCancellingId(booking.id);
+  const handleCancel = async (cls) => {
+    if (!window.confirm(`${formatDate(cls.date)} ${cls.startTime} 수업을 취소하시겠습니까?`)) return;
+    setCancellingId(cls.id);
     try {
-      await cancelMyBooking(booking.id, studentToken);
-      setBookings(prev => prev.map(b => b.id === booking.id ? { ...b, status: '취소' } : b));
+      await cancelMyClass(cls.id, studentToken);
+      setClasses(prev => prev.map(c => c.id === cls.id ? { ...c, isCancelled: true } : c));
     } catch (e) {
       alert(e.message);
     } finally {
@@ -229,51 +229,56 @@ function MyBookingsTab({ studentToken }) {
 
   if (loading) return <div className="text-center py-12 text-gray-400 text-sm">불러오는 중...</div>;
   if (error) return <div className="mx-4 bg-red-50 text-red-500 rounded-xl p-4 text-sm mt-4">{error}</div>;
-  if (bookings.length === 0) {
+  if (classes.length === 0) {
     return (
       <div className="text-center py-12 text-gray-400">
-        <div className="text-4xl mb-3">📋</div>
-        <div className="text-sm">예약 이력이 없습니다</div>
+        <div className="text-4xl mb-3">📚</div>
+        <div className="text-sm">수업 이력이 없습니다</div>
       </div>
     );
   }
 
+  const LOCATION_LABEL = { '강남사무실': '강남', '온라인 (Zoom/화상)': 'Zoom' };
+
   return (
     <div className="px-4 py-4 space-y-2">
-      {bookings.map(booking => {
-        const canCancel = booking.status === '확정' && booking.date > todayStr;
-        const isPast = booking.date < todayStr;
-        const LOCATION_LABEL = { '강남사무실': '강남', '온라인 (Zoom/화상)': 'Zoom' };
+      {classes.map(cls => {
+        const isPast = cls.date < todayStr;
+        const canCancel = !cls.isCancelled && cls.date > todayStr;
+        const statusLabel = cls.isCancelled ? '취소' : isPast ? '완료' : '예정';
+        const statusStyle = cls.isCancelled
+          ? 'bg-gray-100 text-gray-400'
+          : isPast
+            ? 'bg-blue-50 text-blue-500'
+            : 'bg-green-100 text-green-700';
         return (
           <div
-            key={booking.id}
-            className={`bg-white rounded-xl shadow-sm p-4 flex items-center gap-3 ${isPast ? 'opacity-60' : ''}`}
+            key={cls.id}
+            className={`bg-white rounded-xl shadow-sm p-4 flex items-center gap-3 ${isPast || cls.isCancelled ? 'opacity-60' : ''}`}
           >
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
-                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                  booking.status === '확정' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-400'
-                }`}>
-                  {booking.status}
+                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusStyle}`}>
+                  {statusLabel}
                 </span>
-                <span className="text-xs text-gray-400">{formatDate(booking.date)}</span>
+                <span className="text-xs text-gray-400">{formatDate(cls.date)}</span>
               </div>
               <div className="text-sm text-gray-700 font-medium">
-                {booking.startTime} · {formatDuration(booking.durationMin)}
+                {cls.startTime} · {formatDuration(cls.durationMin)}
               </div>
-              {booking.location && (
+              {cls.location && (
                 <div className="text-xs text-gray-400 mt-0.5">
-                  {LOCATION_LABEL[booking.location] ?? booking.location}
+                  {LOCATION_LABEL[cls.location] ?? cls.location}
                 </div>
               )}
             </div>
             {canCancel && (
               <button
-                onClick={() => handleCancel(booking)}
-                disabled={cancellingId === booking.id}
+                onClick={() => handleCancel(cls)}
+                disabled={cancellingId === cls.id}
                 className="shrink-0 text-sm text-red-500 border border-red-200 rounded-lg px-3 py-1.5 disabled:opacity-40 active:bg-red-50"
               >
-                {cancellingId === booking.id ? '취소 중...' : '취소'}
+                {cancellingId === cls.id ? '취소 중...' : '취소'}
               </button>
             )}
           </div>
@@ -446,7 +451,7 @@ export default function BookingPage() {
 
         {/* 탭 */}
         <div className="flex border-b border-gray-100 bg-white px-4">
-          {['예약하기', '내 예약'].map(t => (
+          {['예약하기', '내 수업'].map(t => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -459,8 +464,8 @@ export default function BookingPage() {
           ))}
         </div>
 
-        {tab === '내 예약' ? (
-          <MyBookingsTab studentToken={studentToken} />
+        {tab === '내 수업' ? (
+          <MyClassesTab studentToken={studentToken} />
         ) : (
           <div className="px-4 py-4 space-y-4">
             {/* 잔여 시간 없을 때 안내 */}

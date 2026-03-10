@@ -58,6 +58,16 @@ export async function cancelMyBooking(bookingId, studentToken) {
   return bookingFetch('DELETE', `/booking/my/${bookingId}?token=${encodeURIComponent(studentToken)}`);
 }
 
+/** 학생 본인 수업 목록 조회 - CLASS_DB 기반 (공개) */
+export async function fetchMyClasses(studentToken) {
+  return bookingFetch('GET', `/booking/my-classes/${encodeURIComponent(studentToken)}`);
+}
+
+/** 학생 본인 수업 취소 - CLASS_DB ID 기반 (공개, 당일 취소 불가) */
+export async function cancelMyClass(classId, studentToken) {
+  return bookingFetch('DELETE', `/booking/my-class/${classId}?token=${encodeURIComponent(studentToken)}`);
+}
+
 /** 예약 상태 조회 (공개, 토큰 기반) */
 export async function fetchBookingStatus(token) {
   return bookingFetch('GET', `/booking/status/${encodeURIComponent(token)}`);

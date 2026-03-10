@@ -737,6 +737,137 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
     });
   }
 
+  // GET /booking/my-classes/:token (공개, 학생 본인 수업 목록)
+  const myClassesMatch = url.pathname.match(/^\/booking\/my-classes\/([^/]+)$/);
+  if (myClassesMatch && request.method === 'GET') {
+    const token = decodeURIComponent(myClassesMatch[1]);
+    const studentRes = await n('POST', `/databases/${STUDENT_DB_ID}/query`, {
+      filter: { property: '예약 코드', rich_text: { equals: token } },
+      page_size: 1,
+    });
+    const studentPage = studentRes.results?.[0];
+    if (!studentPage) {
+      return new Response(JSON.stringify({ error: '등록된 학생이 아닙니다.' }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    const res = await n('POST', `/databases/${CLASS_DB_ID}/query`, {
+      filter: { property: '학생', relation: { contains: studentPage.id } },
+      sorts: [{ property: '수업 일시', direction: 'descending' }],
+      page_size: 50,
+    });
+    const classes = (res.results ?? []).map(p => {
+      const props = p.properties;
+      const dtStr = props['수업 일시']?.date?.start ?? '';
+      const date = dtStr.slice(0, 10);
+      const tm = dtStr.match(/T(\d{2}):(\d{2})/);
+      const startTime = tm ? `${tm[1]}:${tm[2]}` : '';
+      return {
+        id: p.id,
+        date,
+        startTime,
+        durationMin: Number(props['수업 시간(분)']?.select?.name) || 0,
+        location: props['수업 장소']?.select?.name ?? null,
+        isCancelled: props['특이사항']?.select?.name === '🚫 취소',
+      };
+    });
+    return new Response(JSON.stringify(classes), {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
+  // DELETE /booking/my-class/:classId?token=:token (학생 본인 수업 취소, 당일 불가)
+  const myClassDeleteMatch = url.pathname.match(/^\/booking\/my-class\/([^/]+)$/);
+  if (myClassDeleteMatch && request.method === 'DELETE') {
+    const classId = myClassDeleteMatch[1];
+    const studentToken = url.searchParams.get('token') || '';
+    if (!studentToken) {
+      return new Response(JSON.stringify({ error: '인증이 필요합니다.' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    const sRes = await n('POST', `/databases/${STUDENT_DB_ID}/query`, {
+      filter: { property: '예약 코드', rich_text: { equals: studentToken } },
+      page_size: 1,
+    });
+    const sPage = sRes.results?.[0];
+    if (!sPage) {
+      return new Response(JSON.stringify({ error: '인증 실패.' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    const classPageRes = await n('GET', `/pages/${classId}`);
+    if (!classPageRes || classPageRes.object === 'error') {
+      return new Response(JSON.stringify({ error: '수업을 찾을 수 없습니다.' }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    const cProps = classPageRes.properties;
+    // 소유자 확인
+    const classStudentIds = (cProps?.['학생']?.relation ?? []).map(r => r.id);
+    if (!classStudentIds.includes(sPage.id)) {
+      return new Response(JSON.stringify({ error: '이 수업을 취소할 권한이 없습니다.' }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    if (cProps?.['특이사항']?.select?.name === '🚫 취소') {
+      return new Response(JSON.stringify({ error: '이미 취소된 수업입니다.' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    // 당일 취소 불가
+    const dtStr = cProps?.['수업 일시']?.date?.start ?? '';
+    const classDate = dtStr.slice(0, 10);
+    const todayKST2 = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    if (!classDate || classDate <= todayKST2) {
+      return new Response(JSON.stringify({ error: '당일 취소는 불가합니다. 강사에게 직접 연락해주세요.' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    const tmMatch = dtStr.match(/T(\d{2}):(\d{2})/);
+    const startTime = tmMatch ? `${tmMatch[1]}:${tmMatch[2]}` : '';
+    // CLASS_DB 취소 처리
+    await n('PATCH', `/pages/${classId}`, {
+      properties: { '특이사항': { select: { name: '🚫 취소' } } },
+    });
+    // BOOKINGS_DB 연동 취소 (있으면)
+    try {
+      const bookRes = await n('POST', `/databases/${BOOKINGS_DB_ID}/query`, {
+        filter: {
+          and: [
+            { property: '예약 날짜', date: { equals: classDate } },
+            { property: '학생', relation: { contains: sPage.id } },
+            { property: '상태', select: { equals: '확정' } },
+          ],
+        },
+        page_size: 10,
+      });
+      for (const bp of bookRes.results ?? []) {
+        const bStartTime = bp.properties?.['시작 시간']?.rich_text?.[0]?.plain_text;
+        if (bStartTime === startTime) {
+          await n('PATCH', `/pages/${bp.id}`, {
+            properties: { '상태': { select: { name: '취소' } } },
+          });
+          break;
+        }
+      }
+    } catch (e) {
+      console.error('[my-class-cancel] BOOKINGS_DB 취소 처리 실패:', e);
+    }
+    return new Response(JSON.stringify({ ok: true }), {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
   // ===== 예약 불가 날짜 관리 (강사용, 인증 필요) =====
 
   // GET /booking/blocked
