@@ -6,6 +6,14 @@ import { createStudent, updateStudent, parseStudent, STATUS_OPTIONS } from '../a
 import { getPage } from '../api/notionClient.js';
 import { useData } from '../context/DataContext.jsx';
 
+// 0/O, 1/I/l 제외 — 혼동 없는 대문자+숫자 32자
+const CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+function generateCode() {
+  const buf = new Uint8Array(12);
+  crypto.getRandomValues(buf);
+  return Array.from(buf, (b) => CODE_CHARS[b % CODE_CHARS.length]).join('');
+}
+
 export default function StudentFormPage() {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -20,7 +28,7 @@ export default function StudentFormPage() {
     goal: '',
     status: '🟢 수강중',
     memo: '',
-    bookingCode: '',
+    bookingCode: isEdit ? '' : generateCode(),
   });
   const [loading, setLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
@@ -187,15 +195,24 @@ export default function StudentFormPage() {
 
         {/* 예약 코드 */}
         <div>
-          <label className="label">예약 코드 (선택)</label>
-          <input
-            type="text"
-            value={form.bookingCode}
-            onChange={set('bookingCode')}
-            placeholder="학생 예약 링크용 고유 코드"
-            className="input-field"
-          />
-          <p className="text-xs text-gray-400 mt-1">입력 시 학생이 /book/[코드] 로 예약 가능</p>
+          <label className="label">예약 코드</label>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={form.bookingCode}
+              onChange={set('bookingCode')}
+              placeholder="자동 생성됩니다"
+              className="input-field flex-1"
+            />
+            <button
+              type="button"
+              onClick={() => setForm((f) => ({ ...f, bookingCode: generateCode() }))}
+              className="px-3 py-2 rounded-xl text-sm font-medium border-2 border-gray-200 bg-white text-gray-600 whitespace-nowrap"
+            >
+              재생성
+            </button>
+          </div>
+          <p className="text-xs text-gray-400 mt-1">학생이 /book/[코드] 로 예약 가능 · 직접 입력도 가능</p>
         </div>
 
         <button type="submit" disabled={saving} className="btn-primary w-full mt-2">
