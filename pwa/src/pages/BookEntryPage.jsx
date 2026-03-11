@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchStudentByToken } from '../api/bookingApi.js';
-import { usePullToRefresh, PullIndicator } from '../hooks/usePullToRefresh.js';
+import { usePullToRefresh, PullIndicator } from '../hooks/usePullToRefresh.jsx';
 
 export default function BookEntryPage() {
   const navigate = useNavigate();

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { usePullToRefresh, PullIndicator } from '../hooks/usePullToRefresh.js';
+import { usePullToRefresh, PullIndicator } from '../hooks/usePullToRefresh.jsx';
 import {
   fetchStudentByToken,
   fetchAvailableSlots,
