@@ -442,7 +442,15 @@ export default function BookingPage() {
         <div className="bg-white px-4 pt-12 pb-3 border-b border-gray-100">
           <h1 className="text-xl font-bold text-gray-900">수업 예약</h1>
           <div className="flex items-center justify-between mt-1">
-            <p className="text-sm text-gray-500">{student.name}님</p>
+            <div className="flex items-center gap-2">
+              <p className="text-sm text-gray-500">{student.name}님</p>
+              <button
+                onClick={() => navigate('/book')}
+                className="text-xs text-gray-400 hover:text-gray-600"
+              >
+                로그아웃
+              </button>
+            </div>
             <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
               student.remainingSessions > 0 ? 'bg-blue-50 text-blue-600' : 'bg-red-50 text-red-500'
             }`}>
