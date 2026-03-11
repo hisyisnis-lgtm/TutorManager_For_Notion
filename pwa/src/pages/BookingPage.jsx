@@ -12,6 +12,16 @@ import {
 const DAY_KR = ['일', '월', '화', '수', '목', '금', '토'];
 const LOCATION_OPTIONS = ['강남사무실', '온라인 (Zoom/화상)'];
 
+const ALL_TIME_SLOTS = (() => {
+  const slots = [];
+  for (let m = 9 * 60; m <= 22 * 60; m += 30) {
+    const h = String(Math.floor(m / 60)).padStart(2, '0');
+    const min = String(m % 60).padStart(2, '0');
+    slots.push(`${h}:${min}`);
+  }
+  return slots;
+})();
+
 function timeToMin(t) {
   const [h, m] = t.split(':').map(Number);
   return h * 60 + m;
@@ -102,20 +112,17 @@ function Calendar({ year, month, availableDates, selectedDate, onSelect }) {
 
 // ===== 시간 범위 선택 컴포넌트 =====
 function TimeRangePicker({ availableTimes, startTime, endTime, onStartSelect, onEndSelect }) {
-  if (availableTimes.length === 0) {
-    return <div className="text-center py-6 text-gray-400 text-sm">예약 가능한 시간이 없습니다</div>;
-  }
-
+  const availableSet = new Set(availableTimes);
   const startMin = startTime ? timeToMin(startTime) : null;
 
   const validEndTimes = (() => {
     if (startMin === null) return new Set();
     const valid = new Set();
     let prev = startMin;
-    for (const t of availableTimes) {
+    for (const t of ALL_TIME_SLOTS) {
       const tm = timeToMin(t);
       if (tm <= startMin) continue;
-      if (tm !== prev + 30) break;
+      if (!availableSet.has(t) || tm !== prev + 30) break;
       if (tm - startMin >= 60) valid.add(t);
       prev = tm;
     }
@@ -126,21 +133,25 @@ function TimeRangePicker({ availableTimes, startTime, endTime, onStartSelect, on
     <div>
       <p className="text-xs text-gray-500 mb-2">시작 시간 선택</p>
       <div className="flex flex-wrap gap-2 mb-4">
-        {availableTimes.map(t => {
+        {ALL_TIME_SLOTS.map(t => {
           const tm = timeToMin(t);
           const isSelected = t === startTime;
           const inRange = startMin !== null && endTime && tm >= startMin && tm < timeToMin(endTime);
+          const canSelect = availableSet.has(t);
           return (
             <button
               key={t}
               type="button"
-              onClick={() => onStartSelect(t)}
+              disabled={!canSelect}
+              onClick={() => canSelect && onStartSelect(t)}
               className={`px-3 py-2 rounded-lg text-sm font-medium border transition-colors ${
                 isSelected
                   ? 'bg-blue-600 text-white border-blue-600'
                   : inRange
                     ? 'bg-blue-50 text-blue-600 border-blue-200'
-                    : 'bg-white text-gray-700 border-gray-200 hover:border-blue-300'
+                    : canSelect
+                      ? 'bg-white text-gray-700 border-gray-200 hover:border-blue-300'
+                      : 'bg-gray-50 text-gray-300 border-gray-100 cursor-not-allowed line-through'
               }`}
             >
               {t}
@@ -155,7 +166,7 @@ function TimeRangePicker({ availableTimes, startTime, endTime, onStartSelect, on
             종료 시간 선택 <span className="text-gray-400">(최소 1시간 이상)</span>
           </p>
           <div className="flex flex-wrap gap-2">
-            {availableTimes
+            {ALL_TIME_SLOTS
               .filter(t => timeToMin(t) > (startMin ?? 0))
               .map(t => {
                 const tm = timeToMin(t);
@@ -173,7 +184,7 @@ function TimeRangePicker({ availableTimes, startTime, endTime, onStartSelect, on
                         ? 'bg-blue-600 text-white border-blue-600'
                         : canSelect
                           ? 'bg-white text-gray-700 border-gray-200 hover:border-blue-300'
-                          : 'bg-gray-50 text-gray-300 border-gray-100 cursor-not-allowed'
+                          : 'bg-gray-50 text-gray-300 border-gray-100 cursor-not-allowed line-through'
                     }`}
                   >
                     {t}
