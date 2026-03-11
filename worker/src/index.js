@@ -478,6 +478,7 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
       '수업 일시': { date: { start: classDatetime } },
       '수업 시간(분)': { select: { name: String(durationMin) } },
       '학생': { relation: [{ id: studentPage.id }] },
+      '수업 유형': { relation: [{ id: '314838fa-f2a6-8070-82ad-e2494a9d7281' }] },
       '예약 토큰': { rich_text: [{ text: { content: token } }] },
     };
     if (mode) classProps['수업 장소'] = { select: { name: mode } };
