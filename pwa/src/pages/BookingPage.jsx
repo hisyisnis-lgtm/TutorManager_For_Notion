@@ -7,6 +7,7 @@ import {
   reserveSlot,
   fetchMyClasses,
   cancelMyClass,
+  restoreMyClass,
 } from '../api/bookingApi.js';
 
 const DAY_KR = ['일', '월', '화', '수', '목', '금', '토'];
@@ -207,6 +208,7 @@ function MyClassesTab({ studentToken }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [cancellingId, setCancellingId] = useState(null);
+  const [restoringId, setRestoringId] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -238,6 +240,19 @@ function MyClassesTab({ studentToken }) {
     }
   };
 
+  const handleRestore = async (cls) => {
+    if (!window.confirm(`${formatDate(cls.date)} ${cls.startTime} 수업을 복구하시겠습니까?`)) return;
+    setRestoringId(cls.id);
+    try {
+      await restoreMyClass(cls.id, studentToken);
+      setClasses(prev => prev.map(c => c.id === cls.id ? { ...c, isCancelled: false } : c));
+    } catch (e) {
+      alert(e.message);
+    } finally {
+      setRestoringId(null);
+    }
+  };
+
   if (loading) return <div className="text-center py-12 text-gray-400 text-sm">불러오는 중...</div>;
   if (error) return <div className="mx-4 bg-red-50 text-red-500 rounded-xl p-4 text-sm mt-4">{error}</div>;
   if (classes.length === 0) {
@@ -256,6 +271,7 @@ function MyClassesTab({ studentToken }) {
       {classes.map(cls => {
         const isPast = cls.date < todayStr;
         const canCancel = !cls.isCancelled && cls.date > todayStr;
+        const canRestore = cls.isCancelled && cls.date > todayStr;
         const statusLabel = cls.isCancelled ? '취소' : isPast ? '완료' : '예정';
         const statusStyle = cls.isCancelled
           ? 'bg-gray-100 text-gray-400'
@@ -292,6 +308,15 @@ function MyClassesTab({ studentToken }) {
                 className="shrink-0 text-sm text-red-500 border border-red-200 rounded-lg px-3 py-1.5 disabled:opacity-40 active:bg-red-50"
               >
                 {cancellingId === cls.id ? '취소 중...' : '취소'}
+              </button>
+            )}
+            {canRestore && (
+              <button
+                onClick={() => handleRestore(cls)}
+                disabled={restoringId === cls.id}
+                className="shrink-0 text-sm text-blue-500 border border-blue-200 rounded-lg px-3 py-1.5 disabled:opacity-40 active:bg-blue-50"
+              >
+                {restoringId === cls.id ? '복구 중...' : '복구'}
               </button>
             )}
           </div>

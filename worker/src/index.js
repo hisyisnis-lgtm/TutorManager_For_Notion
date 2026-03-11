@@ -681,6 +681,67 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
     });
   }
 
+  // POST /booking/my-class/:classId/restore?token=:token (학생 본인 취소 수업 복구)
+  const myClassRestoreMatch = url.pathname.match(/^\/booking\/my-class\/([^/]+)\/restore$/);
+  if (myClassRestoreMatch && request.method === 'POST') {
+    const classId = myClassRestoreMatch[1];
+    const studentToken = url.searchParams.get('token') || '';
+    if (!studentToken) {
+      return new Response(JSON.stringify({ error: '인증이 필요합니다.' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    const sRes = await n('POST', `/databases/${STUDENT_DB_ID}/query`, {
+      filter: { property: '예약 코드', rich_text: { equals: studentToken } },
+      page_size: 1,
+    });
+    const sPage = sRes.results?.[0];
+    if (!sPage) {
+      return new Response(JSON.stringify({ error: '인증 실패.' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    const classPageRes = await n('GET', `/pages/${classId}`);
+    if (!classPageRes || classPageRes.object === 'error') {
+      return new Response(JSON.stringify({ error: '수업을 찾을 수 없습니다.' }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    const cProps = classPageRes.properties;
+    const classStudentIds = (cProps?.['학생']?.relation ?? []).map(r => r.id);
+    if (!classStudentIds.includes(sPage.id)) {
+      return new Response(JSON.stringify({ error: '이 수업을 복구할 권한이 없습니다.' }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    if (cProps?.['특이사항']?.select?.name !== '🚫 취소') {
+      return new Response(JSON.stringify({ error: '취소된 수업이 아닙니다.' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    const dtStr = cProps?.['수업 일시']?.date?.start ?? '';
+    const classDate = dtStr.slice(0, 10);
+    const todayKST = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    if (!classDate || classDate <= todayKST) {
+      return new Response(JSON.stringify({ error: '과거 수업은 복구할 수 없습니다.' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    await n('PATCH', `/pages/${classId}`, {
+      properties: { '특이사항': { select: null } },
+    });
+    return new Response(JSON.stringify({ ok: true }), {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
   // ===== 예약 불가 날짜 관리 (강사용, 인증 필요) =====
 
   // GET /booking/blocked

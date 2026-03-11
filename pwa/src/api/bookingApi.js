@@ -58,6 +58,11 @@ export async function cancelMyClass(classId, studentToken) {
   return bookingFetch('DELETE', `/booking/my-class/${classId}?token=${encodeURIComponent(studentToken)}`);
 }
 
+/** 학생 본인 취소 수업 복구 (공개, 과거 수업 불가) */
+export async function restoreMyClass(classId, studentToken) {
+  return bookingFetch('POST', `/booking/my-class/${classId}/restore?token=${encodeURIComponent(studentToken)}`);
+}
+
 /** 예약 상태 조회 (공개, 토큰 기반) */
 export async function fetchBookingStatus(token) {
   return bookingFetch('GET', `/booking/status/${encodeURIComponent(token)}`);
