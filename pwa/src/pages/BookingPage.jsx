@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { usePullToRefresh, PullIndicator } from '../hooks/usePullToRefresh.js';
 import {
   fetchStudentByToken,
   fetchAvailableSlots,
@@ -353,16 +354,25 @@ export default function BookingPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
 
+  const [classRefreshKey, setClassRefreshKey] = useState(0);
+
   // 학생 정보 로드
+  const loadStudent = useCallback(async () => {
+    try {
+      const data = await fetchStudentByToken(studentToken);
+      setStudent(data);
+    } catch (e) {
+      setStudentError(e.status === 404 ? '등록된 예약 코드가 아닙니다.' : e.message);
+    }
+  }, [studentToken]);
+
   useEffect(() => {
     if (!studentToken) {
       navigate('/book', { replace: true });
       return;
     }
-    fetchStudentByToken(studentToken).then(setStudent).catch(e => {
-      setStudentError(e.status === 404 ? '등록된 예약 코드가 아닙니다.' : e.message);
-    });
-  }, [studentToken, navigate]);
+    loadStudent();
+  }, [studentToken, navigate, loadStudent]);
 
   const loadSlots = useCallback(async () => {
     setSlotsLoading(true);
@@ -381,6 +391,13 @@ export default function BookingPage() {
     const id = setInterval(loadSlots, 60000);
     return () => clearInterval(id);
   }, [loadSlots]);
+
+  const handlePullRefresh = useCallback(async () => {
+    setClassRefreshKey(k => k + 1);
+    await Promise.all([loadStudent(), loadSlots()]);
+  }, [loadStudent, loadSlots]);
+
+  const { pullY, refreshing: pullRefreshing } = usePullToRefresh(handlePullRefresh);
 
   const handleDateSelect = async (date) => {
     setSelectedDate(date);
@@ -474,6 +491,7 @@ export default function BookingPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-lg mx-auto">
+        <PullIndicator pullY={pullY} refreshing={pullRefreshing} />
         {/* 헤더 */}
         <div className="bg-white px-4 pt-12 pb-3 border-b border-gray-100">
           <h1 className="text-xl font-bold text-gray-900">수업 예약</h1>
@@ -511,7 +529,7 @@ export default function BookingPage() {
         </div>
 
         {tab === '내 수업' ? (
-          <MyClassesTab studentToken={studentToken} />
+          <MyClassesTab key={classRefreshKey} studentToken={studentToken} />
         ) : (
           <div className="px-4 py-4 space-y-4">
             {/* 잔여 시간 없을 때 안내 */}

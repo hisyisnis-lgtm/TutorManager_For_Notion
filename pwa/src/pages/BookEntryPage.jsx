@@ -1,12 +1,15 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchStudentByToken } from '../api/bookingApi.js';
+import { usePullToRefresh, PullIndicator } from '../hooks/usePullToRefresh.js';
 
 export default function BookEntryPage() {
   const navigate = useNavigate();
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  const { pullY, refreshing } = usePullToRefresh(useCallback(() => window.location.reload(), []));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -27,6 +30,7 @@ export default function BookEntryPage() {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <div className="max-w-lg mx-auto w-full flex-1 flex flex-col">
+        <PullIndicator pullY={pullY} refreshing={refreshing} />
         <div className="bg-white px-4 pt-12 pb-4 border-b border-gray-100">
           <h1 className="text-xl font-bold text-gray-900">수업 예약</h1>
           <p className="text-sm text-gray-500 mt-1">예약 코드를 입력해주세요</p>
