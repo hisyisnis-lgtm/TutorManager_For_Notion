@@ -12,6 +12,7 @@ async function bookingFetch(method, path, body, { auth = false } = {}) {
     method,
     headers,
     body: body ? JSON.stringify(body) : undefined,
+    cache: 'no-store',
   });
 
   const data = await res.json().catch(() => ({}));
