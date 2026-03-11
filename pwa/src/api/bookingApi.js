@@ -48,16 +48,6 @@ export async function reserveSlot({ studentToken, date, startTime, endTime, loca
   return bookingFetch('POST', '/booking/reserve', { studentToken, date, startTime, endTime, mode: location });
 }
 
-/** 학생 본인 예약 목록 조회 (공개, 학생 토큰 기반) */
-export async function fetchMyBookings(studentToken) {
-  return bookingFetch('GET', `/booking/my-bookings/${encodeURIComponent(studentToken)}`);
-}
-
-/** 학생 본인 예약 취소 (공개, 당일 취소 불가) */
-export async function cancelMyBooking(bookingId, studentToken) {
-  return bookingFetch('DELETE', `/booking/my/${bookingId}?token=${encodeURIComponent(studentToken)}`);
-}
-
 /** 학생 본인 수업 목록 조회 - CLASS_DB 기반 (공개) */
 export async function fetchMyClasses(studentToken) {
   return bookingFetch('GET', `/booking/my-classes/${encodeURIComponent(studentToken)}`);
@@ -73,24 +63,14 @@ export async function fetchBookingStatus(token) {
   return bookingFetch('GET', `/booking/status/${encodeURIComponent(token)}`);
 }
 
-/** 예약 목록 조회 (강사 인증 필요) */
-export async function fetchBookingList() {
-  return bookingFetch('GET', '/booking/list', undefined, { auth: true });
-}
-
-/** 예약 취소 (강사 인증 필요) */
-export async function cancelBooking(bookingId) {
-  return bookingFetch('DELETE', `/booking/${bookingId}`, undefined, { auth: true });
-}
-
 /** 예약 불가 날짜 목록 조회 (강사 인증 필요) */
 export async function fetchBlockedDates() {
   return bookingFetch('GET', '/booking/blocked', undefined, { auth: true });
 }
 
 /** 예약 불가 날짜 추가 (강사 인증 필요) */
-export async function createBlockedDate({ type, days, start, end, memo }) {
-  return bookingFetch('POST', '/booking/blocked', { type, days, start, end, memo }, { auth: true });
+export async function createBlockedDate({ type, days, start, end, memo, blockedTimes }) {
+  return bookingFetch('POST', '/booking/blocked', { type, days, start, end, memo, blockedTimes }, { auth: true });
 }
 
 /** 예약 불가 날짜 삭제 (강사 인증 필요) */

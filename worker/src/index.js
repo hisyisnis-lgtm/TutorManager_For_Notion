@@ -2,9 +2,7 @@ const CLASS_DB_ID = '314838fa-f2a6-81bc-8b67-d9e1c8fb7ecb';
 const STUDENT_DB_ID = '314838fa-f2a6-8143-a6c7-e59c50f3bbdb';
 
 // ===== 예약 시스템 DB =====
-const SLOTS_DB_ID = '31e838fa-f2a6-814e-8ee5-d5774366964e';
 const BLOCKED_DATES_DB_ID = '31e838fa-f2a6-81d3-b034-c47a4f0e5f3e';
-const BOOKINGS_DB_ID = '31e838fa-f2a6-813b-ada3-ffb8961f5a5a';
 
 const DAY_KR = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -221,7 +219,7 @@ async function handleNotionWebhook(request, env, ctx) {
 }
 
 // ===== 알림톡 발송 (Solapi 준비 전 no-op placeholder) =====
-async function sendAlimtalk(env, { to, templateCode, variables }) {
+async function sendAlimtalk(_env, { to, templateCode, variables }) {
   // TODO: Solapi API 키 준비되면 구현
   // env.SOLAPI_API_KEY, env.SOLAPI_API_SECRET, env.KAKAO_CHANNEL_ID 필요
   console.log(`[알림톡 placeholder] to=${to} template=${templateCode}`, JSON.stringify(variables));
@@ -243,33 +241,51 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
   // 시간 관련 유틸
   const timeToMin = (t) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
   const minToTime = (m) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
-  const addMinutes = (t, min) => minToTime(timeToMin(t) + min);
 
-  // 예약 불가 날짜 파싱 & isBlocked 함수 생성 (공통)
-  const buildIsBlocked = (blockedResults) => {
-    const blockedDates = (blockedResults ?? []).map(p => {
+  // 예약 불가 날짜 파싱 & isBlocked / getBlockedTimes 함수 생성 (공통)
+  // 날짜 요일 계산: 'T12:00:00Z' 기준으로 UTC 정오에 getDay() → 모든 타임존에서 정확
+  const buildBlockedData = (blockedResults) => {
+    const entries = (blockedResults ?? []).map(p => {
       const props = p.properties;
       const d = props?.['날짜']?.date;
       const type = props?.['반복 유형']?.select?.name;
       const days = (props?.['반복 요일']?.multi_select ?? []).map(o => o.name);
-      return { type, days, start: d?.start, end: d?.end || d?.start };
+      const timesStr = props?.['차단 시간']?.rich_text?.[0]?.plain_text || '';
+      const blockedTimes = timesStr ? timesStr.split(',').map(t => t.trim()).filter(Boolean) : [];
+      return { type, days, start: d?.start, end: d?.end || d?.start, blockedTimes };
     }).filter(b => b.type === '반복' ? b.days.length > 0 : b.start);
-    return (dateStr) => {
-      const dayKR = DAY_KR[new Date(dateStr + 'T00:00:00+09:00').getDay()];
-      return blockedDates.some(b => {
-        if (b.type === '반복') {
-          if (!b.days.includes(dayKR)) return false;
-          if (b.start && dateStr < b.start) return false;
-          if (b.end && dateStr > b.end) return false;
-          return true;
-        }
-        return b.start && dateStr >= b.start && dateStr <= (b.end || b.start);
-      });
+
+    const matchesDateRange = (b, dateStr) => {
+      if (b.type === '반복') {
+        const dayKR = DAY_KR[new Date(dateStr + 'T12:00:00Z').getDay()];
+        if (!b.days.includes(dayKR)) return false;
+        if (b.start && dateStr < b.start) return false;
+        if (b.end && dateStr > b.end) return false;
+        return true;
+      }
+      return b.start && dateStr >= b.start && dateStr <= (b.end || b.start);
     };
+
+    // 전일 차단 (차단 시간 미설정)
+    const isBlocked = (dateStr) =>
+      entries.some(b => b.blockedTimes.length === 0 && matchesDateRange(b, dateStr));
+
+    // 개별 차단 시간 슬롯 집합 반환
+    const getBlockedTimes = (dateStr) => {
+      const times = new Set();
+      for (const b of entries) {
+        if (b.blockedTimes.length > 0 && matchesDateRange(b, dateStr)) {
+          for (const t of b.blockedTimes) times.add(t);
+        }
+      }
+      return times;
+    };
+
+    return { isBlocked, getBlockedTimes };
   };
 
   // GET /booking/slots?from=YYYY-MM-DD&to=YYYY-MM-DD
-  // 예약 불가 날짜(BLOCKED_DATES_DB)만 제외하고 오늘+2일 ~ 오늘+90일 범위 전부 반환
+  // 전일 차단된 날짜만 제외하고 오늘+2일 ~ 오늘+90일 범위 전부 반환
   if (url.pathname === '/booking/slots' && request.method === 'GET') {
     const nowKST = new Date(Date.now() + 9 * 60 * 60 * 1000);
     const minDate = new Date(nowKST);
@@ -286,7 +302,7 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
     })();
 
     const blockedRes = await n('POST', `/databases/${BLOCKED_DATES_DB_ID}/query`, { page_size: 100 });
-    const isBlocked = buildIsBlocked(blockedRes.results);
+    const { isBlocked } = buildBlockedData(blockedRes.results);
 
     const result = [];
     const cur = new Date(from + 'T00:00:00Z');
@@ -325,38 +341,32 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
       });
     }
 
-    const [blockedRes2, classRes, bookingsRes2] = await Promise.all([
+    const [blockedRes2, classRes] = await Promise.all([
       n('POST', `/databases/${BLOCKED_DATES_DB_ID}/query`, { page_size: 100 }),
       n('POST', `/databases/${CLASS_DB_ID}/query`, {
         filter: { property: '수업 일시', date: { equals: date } },
         page_size: 100,
       }),
-      n('POST', `/databases/${BOOKINGS_DB_ID}/query`, {
-        filter: {
-          and: [
-            { property: '예약 날짜', date: { equals: date } },
-            { property: '상태', select: { equals: '확정' } },
-          ],
-        },
-        page_size: 100,
-      }),
     ]);
 
-    if (buildIsBlocked(blockedRes2.results)(date)) {
+    const { isBlocked, getBlockedTimes } = buildBlockedData(blockedRes2.results);
+
+    if (isBlocked(date)) {
       return new Response(JSON.stringify([]), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // 09:00 ~ 22:00 전체 30분 슬롯 생성 (SLOTS_DB 불필요)
+    // 09:00 ~ 22:00 전체 30분 슬롯 생성
     const allSlots = new Set();
     for (let m = 9 * 60; m <= 22 * 60; m += 30) allSlots.add(minToTime(m));
 
-    // 기존 수업(CLASS_DB) 점유 슬롯 제거
+    // 기존 수업(CLASS_DB) 점유 슬롯 제거 (취소 제외)
     const busySet = new Set();
     for (const p of classRes.results ?? []) {
       const props = p.properties;
+      if (props?.['특이사항']?.select?.name === '🚫 취소') continue;
       const dtStr = props?.['수업 일시']?.date?.start;
       const dur = Number(props?.['수업 시간(분)']?.select?.name);
       if (!dtStr || !dur) continue;
@@ -366,14 +376,8 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
       for (let elapsed = 0; elapsed < dur; elapsed += 30) busySet.add(minToTime(classStartMin + elapsed));
     }
 
-    // 확정 예약(BOOKINGS_DB) 점유 슬롯 제거
-    for (const p of bookingsRes2.results ?? []) {
-      const props = p.properties;
-      const bt = props?.['시작 시간']?.rich_text?.[0]?.plain_text;
-      const bd = Number(props?.['수업 시간(분)']?.select?.name);
-      if (!bt || !bd) continue;
-      for (let elapsed = 0; elapsed < bd; elapsed += 30) busySet.add(addMinutes(bt, elapsed));
-    }
+    // 개별 차단 시간 슬롯 제거
+    for (const t of getBlockedTimes(date)) busySet.add(t);
 
     const available = [...allSlots].filter(t => !busySet.has(t)).sort();
     return new Response(JSON.stringify(available), {
@@ -437,27 +441,26 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
       });
     }
 
-    // Race condition 방지: 같은 날짜의 확정 예약과 시간 겹침 확인
-    const existingRes = await n('POST', `/databases/${BOOKINGS_DB_ID}/query`, {
-      filter: {
-        and: [
-          { property: '예약 날짜', date: { equals: date } },
-          { property: '상태', select: { equals: '확정' } },
-        ],
-      },
+    // Race condition 방지: 같은 날짜의 수업(CLASS_DB)과 시간 겹침 확인
+    const classCheckRes = await n('POST', `/databases/${CLASS_DB_ID}/query`, {
+      filter: { property: '수업 일시', date: { equals: date } },
       page_size: 100,
     });
 
     const startMin = timeToMin(startTime);
     const endMin = timeToMin(endTime);
-    const hasOverlap = (existingRes.results ?? []).some(p => {
-      const bt = p.properties?.['시작 시간']?.rich_text?.[0]?.plain_text;
-      const bd = Number(p.properties?.['수업 시간(분)']?.select?.name);
-      if (!bt || !bd) return false;
-      const bStart = timeToMin(bt);
-      const bEnd = bStart + bd;
-      return startMin < bEnd && bStart < endMin;
-    });
+    const hasOverlap = (classCheckRes.results ?? [])
+      .filter(p => p.properties?.['특이사항']?.select?.name !== '🚫 취소')
+      .some(p => {
+        const dtStr = p.properties?.['수업 일시']?.date?.start;
+        const dur = Number(p.properties?.['수업 시간(분)']?.select?.name);
+        if (!dtStr || !dur) return false;
+        const tm = dtStr.match(/T(\d{2}):(\d{2})/);
+        if (!tm) return false;
+        const bStart = Number(tm[1]) * 60 + Number(tm[2]);
+        const bEnd = bStart + dur;
+        return startMin < bEnd && bStart < endMin;
+      });
 
     if (hasOverlap) {
       return new Response(JSON.stringify({ error: '방금 다른 분이 예약했습니다. 다른 시간을 선택해주세요.' }), {
@@ -468,42 +471,21 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
 
     const token = crypto.randomUUID();
 
-    // 예약 DB에 저장
-    const bookingProps = {
-      '제목': { title: [{ text: { content: `${date} ${startTime} - ${studentName}` } }] },
-      '학생 이름': { rich_text: [{ text: { content: studentName } }] },
-      '연락처': { phone_number: phone },
-      '예약 날짜': { date: { start: date } },
-      '시작 시간': { rich_text: [{ text: { content: startTime } }] },
+    // 수업 캘린더 DB에 등록 (예약 토큰 포함)
+    const classDatetime = `${date}T${startTime}:00+09:00`;
+    const classProps = {
+      '제목': { title: [{ text: { content: `${studentName} ${date}` } }] },
+      '수업 일시': { date: { start: classDatetime } },
       '수업 시간(분)': { select: { name: String(durationMin) } },
-      '상태': { select: { name: '확정' } },
-      '예약 토큰': { rich_text: [{ text: { content: token } }] },
       '학생': { relation: [{ id: studentPage.id }] },
+      '예약 토큰': { rich_text: [{ text: { content: token } }] },
     };
-    if (mode) bookingProps['수업 장소'] = { select: { name: mode } };
+    if (mode) classProps['수업 장소'] = { select: { name: mode } };
 
     await n('POST', '/pages', {
-      parent: { database_id: BOOKINGS_DB_ID },
-      properties: bookingProps,
+      parent: { database_id: CLASS_DB_ID },
+      properties: classProps,
     });
-
-    // 수업 캘린더 DB에도 등록
-    try {
-      const classDatetime = `${date}T${startTime}:00+09:00`;
-      const classProps = {
-        '제목': { title: [{ text: { content: `${studentName} ${date}` } }] },
-        '수업 일시': { date: { start: classDatetime } },
-        '수업 시간(분)': { select: { name: String(durationMin) } },
-        '학생': { relation: [{ id: studentPage.id }] },
-      };
-      if (mode) classProps['수업 장소'] = { select: { name: mode } };
-      await n('POST', '/pages', {
-        parent: { database_id: CLASS_DB_ID },
-        properties: classProps,
-      });
-    } catch (e) {
-      console.error('[reserve] 수업 캘린더 등록 실패:', e);
-    }
 
     await sendAlimtalk(env, {
       to: phone,
@@ -545,11 +527,11 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
     });
   }
 
-  // GET /booking/status/:token
+  // GET /booking/status/:token — CLASS_DB 기반
   const statusMatch = url.pathname.match(/^\/booking\/status\/([^/]+)$/);
   if (statusMatch && request.method === 'GET') {
     const token = decodeURIComponent(statusMatch[1]);
-    const res = await n('POST', `/databases/${BOOKINGS_DB_ID}/query`, {
+    const res = await n('POST', `/databases/${CLASS_DB_ID}/query`, {
       filter: { property: '예약 토큰', rich_text: { equals: token } },
       page_size: 1,
     });
@@ -563,175 +545,31 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
     }
 
     const props = page.properties;
+    const dtStr = props['수업 일시']?.date?.start ?? '';
+    const date = dtStr.slice(0, 10);
+    const tm = dtStr.match(/T(\d{2}):(\d{2})/);
+    const startTime = tm ? `${tm[1]}:${tm[2]}` : '';
+    const durationMin = Number(props['수업 시간(분)']?.select?.name) || 0;
+    const isCancelled = props['특이사항']?.select?.name === '🚫 취소';
+
+    // 학생 이름: 학생 relation에서 조회
+    let studentName = '';
+    const studentRelation = props['학생']?.relation ?? [];
+    if (studentRelation.length > 0) {
+      try {
+        const studentPage = await n('GET', `/pages/${studentRelation[0].id}`);
+        const rawName = studentPage.properties?.['이름']?.title?.[0]?.plain_text ?? '';
+        studentName = stripEmoji(rawName);
+      } catch {}
+    }
+
     return new Response(JSON.stringify({
-      status: props['상태']?.select?.name,
-      date: props['예약 날짜']?.date?.start,
-      startTime: props['시작 시간']?.rich_text?.[0]?.plain_text,
-      durationMin: Number(props['수업 시간(분)']?.select?.name),
-      studentName: props['학생 이름']?.rich_text?.[0]?.plain_text,
+      status: isCancelled ? '취소' : '확정',
+      date,
+      startTime,
+      durationMin,
+      studentName,
     }), {
-      status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  }
-
-  // GET /booking/list (강사용 예약 목록, 인증 필요)
-  if (url.pathname === '/booking/list' && request.method === 'GET') {
-    const authHeader = request.headers.get('Authorization') || '';
-    const jwtToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
-    if (!(await verifyToken(jwtToken, env.JWT_SECRET || env.AUTH_PASSWORD))) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    const res = await n('POST', `/databases/${BOOKINGS_DB_ID}/query`, {
-      sorts: [{ property: '예약 날짜', direction: 'ascending' }],
-      page_size: 100,
-    });
-
-    const bookings = (res.results ?? []).map(p => {
-      const props = p.properties;
-      return {
-        id: p.id,
-        studentName: props['학생 이름']?.rich_text?.[0]?.plain_text,
-        phone: props['연락처']?.phone_number,
-        date: props['예약 날짜']?.date?.start,
-        startTime: props['시작 시간']?.rich_text?.[0]?.plain_text,
-        durationMin: Number(props['수업 시간(분)']?.select?.name),
-        status: props['상태']?.select?.name,
-      };
-    });
-
-    return new Response(JSON.stringify(bookings), {
-      status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  }
-
-  // GET /booking/my-bookings/:token (공개, 학생 본인 예약 목록 조회)
-  const myBookingsMatch = url.pathname.match(/^\/booking\/my-bookings\/([^/]+)$/);
-  if (myBookingsMatch && request.method === 'GET') {
-    const token = decodeURIComponent(myBookingsMatch[1]);
-    const studentRes = await n('POST', `/databases/${STUDENT_DB_ID}/query`, {
-      filter: { property: '예약 코드', rich_text: { equals: token } },
-      page_size: 1,
-    });
-    const studentPage = studentRes.results?.[0];
-    if (!studentPage) {
-      return new Response(JSON.stringify({ error: '등록된 학생이 아닙니다.' }), {
-        status: 404,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-    const res = await n('POST', `/databases/${BOOKINGS_DB_ID}/query`, {
-      filter: { property: '학생', relation: { contains: studentPage.id } },
-      sorts: [{ property: '예약 날짜', direction: 'descending' }],
-      page_size: 50,
-    });
-    const bookings = (res.results ?? []).map(p => {
-      const props = p.properties;
-      return {
-        id: p.id,
-        date: props['예약 날짜']?.date?.start,
-        startTime: props['시작 시간']?.rich_text?.[0]?.plain_text,
-        durationMin: Number(props['수업 시간(분)']?.select?.name),
-        status: props['상태']?.select?.name,
-        location: props['수업 장소']?.select?.name ?? null,
-      };
-    });
-    return new Response(JSON.stringify(bookings), {
-      status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  }
-
-  // DELETE /booking/my/:id?token=:token (학생 본인 취소, 당일 취소 불가)
-  const myDeleteMatch = url.pathname.match(/^\/booking\/my\/([^/]+)$/);
-  if (myDeleteMatch && request.method === 'DELETE') {
-    const bookingId = myDeleteMatch[1];
-    const studentToken = url.searchParams.get('token') || '';
-    if (!studentToken) {
-      return new Response(JSON.stringify({ error: '인증이 필요합니다.' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-    const studentRes2 = await n('POST', `/databases/${STUDENT_DB_ID}/query`, {
-      filter: { property: '예약 코드', rich_text: { equals: studentToken } },
-      page_size: 1,
-    });
-    const studentPage2 = studentRes2.results?.[0];
-    if (!studentPage2) {
-      return new Response(JSON.stringify({ error: '인증 실패.' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-    const pageRes = await n('GET', `/pages/${bookingId}`);
-    if (!pageRes || pageRes.object === 'error') {
-      return new Response(JSON.stringify({ error: '예약을 찾을 수 없습니다.' }), {
-        status: 404,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-    const bProps = pageRes.properties;
-    // 소유자 확인
-    const bookingStudentIds = (bProps?.['학생']?.relation ?? []).map(r => r.id);
-    if (!bookingStudentIds.includes(studentPage2.id)) {
-      return new Response(JSON.stringify({ error: '이 예약을 취소할 권한이 없습니다.' }), {
-        status: 403,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-    // 당일 취소 불가
-    const bookingDate = bProps?.['예약 날짜']?.date?.start;
-    const todayKST = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
-    if (!bookingDate || bookingDate <= todayKST) {
-      return new Response(JSON.stringify({ error: '당일 취소는 불가합니다. 강사에게 직접 연락해주세요.' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-    if (bProps?.['상태']?.select?.name === '취소') {
-      return new Response(JSON.stringify({ error: '이미 취소된 예약입니다.' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-    // 예약 취소
-    await n('PATCH', `/pages/${bookingId}`, {
-      properties: { '상태': { select: { name: '취소' } } },
-    });
-    // CLASS_DB 수업 🚫 취소 처리
-    const bookStartTime = bProps?.['시작 시간']?.rich_text?.[0]?.plain_text;
-    try {
-      const classRes2 = await n('POST', `/databases/${CLASS_DB_ID}/query`, {
-        filter: {
-          and: [
-            { property: '수업 일시', date: { equals: bookingDate } },
-            { property: '학생', relation: { contains: studentPage2.id } },
-          ],
-        },
-        page_size: 10,
-      });
-      for (const cp of classRes2.results ?? []) {
-        const dtStr = cp.properties?.['수업 일시']?.date?.start;
-        if (!dtStr) continue;
-        const tm = dtStr.match(/T(\d{2}):(\d{2})/);
-        if (!tm) continue;
-        if (`${tm[1]}:${tm[2]}` === bookStartTime) {
-          await n('PATCH', `/pages/${cp.id}`, {
-            properties: { '특이사항': { select: { name: '🚫 취소' } } },
-          });
-          break;
-        }
-      }
-    } catch (e) {
-      console.error('[my-cancel] CLASS_DB 취소 처리 실패:', e);
-    }
-    return new Response(JSON.stringify({ ok: true }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
@@ -825,43 +663,17 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
     // 당일 취소 불가
     const dtStr = cProps?.['수업 일시']?.date?.start ?? '';
     const classDate = dtStr.slice(0, 10);
-    const todayKST2 = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
-    if (!classDate || classDate <= todayKST2) {
+    const todayKST = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    if (!classDate || classDate <= todayKST) {
       return new Response(JSON.stringify({ error: '당일 취소는 불가합니다. 강사에게 직접 연락해주세요.' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-    const tmMatch = dtStr.match(/T(\d{2}):(\d{2})/);
-    const startTime = tmMatch ? `${tmMatch[1]}:${tmMatch[2]}` : '';
     // CLASS_DB 취소 처리
     await n('PATCH', `/pages/${classId}`, {
       properties: { '특이사항': { select: { name: '🚫 취소' } } },
     });
-    // BOOKINGS_DB 연동 취소 (있으면)
-    try {
-      const bookRes = await n('POST', `/databases/${BOOKINGS_DB_ID}/query`, {
-        filter: {
-          and: [
-            { property: '예약 날짜', date: { equals: classDate } },
-            { property: '학생', relation: { contains: sPage.id } },
-            { property: '상태', select: { equals: '확정' } },
-          ],
-        },
-        page_size: 10,
-      });
-      for (const bp of bookRes.results ?? []) {
-        const bStartTime = bp.properties?.['시작 시간']?.rich_text?.[0]?.plain_text;
-        if (bStartTime === startTime) {
-          await n('PATCH', `/pages/${bp.id}`, {
-            properties: { '상태': { select: { name: '취소' } } },
-          });
-          break;
-        }
-      }
-    } catch (e) {
-      console.error('[my-class-cancel] BOOKINGS_DB 취소 처리 실패:', e);
-    }
     return new Response(JSON.stringify({ ok: true }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -889,6 +701,7 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
     const blocked = (res.results ?? []).map(p => {
       const props = p.properties;
       const d = props?.['날짜']?.date;
+      const timesStr = props?.['차단 시간']?.rich_text?.[0]?.plain_text || '';
       return {
         id: p.id,
         type: props?.['반복 유형']?.select?.name || '일회성',
@@ -896,6 +709,7 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
         start: d?.start,
         end: d?.end,
         memo: props?.['메모']?.title?.[0]?.plain_text || '',
+        blockedTimes: timesStr ? timesStr.split(',').map(t => t.trim()).filter(Boolean) : [],
       };
     });
 
@@ -917,7 +731,7 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
     }
 
     const body = await request.json().catch(() => ({}));
-    const { type, days, start, end, memo } = body;
+    const { type, days, start, end, memo, blockedTimes } = body;
 
     if (type === '반복' && (!days || days.length === 0)) {
       return new Response(JSON.stringify({ error: '반복 요일을 선택해주세요.' }), {
@@ -932,7 +746,11 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
       });
     }
 
-    const autoMemo = type === '반복' ? `매주 ${(days ?? []).join('·')}` : start;
+    const timeLabel = blockedTimes?.length > 0 ? ` (${blockedTimes.join(', ')})` : '';
+    const autoMemo = type === '반복'
+      ? `매주 ${(days ?? []).join('·')}${timeLabel}`
+      : `${start}${timeLabel}`;
+
     const properties = {
       '메모': { title: [{ text: { content: memo || autoMemo } }] },
       '반복 유형': { select: { name: type || '일회성' } },
@@ -943,6 +761,9 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
     }
     if (start) {
       properties['날짜'] = { date: { start, ...(end && end !== start ? { end } : {}) } };
+    }
+    if (blockedTimes?.length > 0) {
+      properties['차단 시간'] = { rich_text: [{ text: { content: blockedTimes.join(',') } }] };
     }
 
     const created = await n('POST', '/pages', {
@@ -969,44 +790,6 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
     }
 
     await n('PATCH', `/pages/${blockedDeleteMatch[1]}`, { archived: true });
-
-    return new Response(JSON.stringify({ ok: true }), {
-      status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  }
-
-  // DELETE /booking/:id (강사용 예약 취소, 인증 필요)
-  const cancelMatch = url.pathname.match(/^\/booking\/([^/]+)$/);
-  if (cancelMatch && request.method === 'DELETE') {
-    const authHeader = request.headers.get('Authorization') || '';
-    const jwtToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
-    if (!(await verifyToken(jwtToken, env.JWT_SECRET || env.AUTH_PASSWORD))) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    const bookingId = cancelMatch[1];
-    const pageRes = await n('GET', `/pages/${bookingId}`);
-    const props = pageRes.properties;
-    const phone = props?.['연락처']?.phone_number;
-    const studentName = props?.['학생 이름']?.rich_text?.[0]?.plain_text;
-    const date = props?.['예약 날짜']?.date?.start;
-    const startTime = props?.['시작 시간']?.rich_text?.[0]?.plain_text;
-
-    await n('PATCH', `/pages/${bookingId}`, {
-      properties: { '상태': { select: { name: '취소' } } },
-    });
-
-    if (phone) {
-      await sendAlimtalk(env, {
-        to: phone,
-        templateCode: 'BOOKING_CANCELLED',
-        variables: { name: studentName, date, startTime },
-      });
-    }
 
     return new Response(JSON.stringify({ ok: true }), {
       status: 200,

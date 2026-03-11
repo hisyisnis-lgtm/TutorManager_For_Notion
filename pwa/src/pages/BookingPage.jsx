@@ -257,20 +257,22 @@ function MyClassesTab({ studentToken }) {
             className={`bg-white rounded-xl shadow-sm p-4 flex items-center gap-3 ${isPast || cls.isCancelled ? 'opacity-60' : ''}`}
           >
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1">
+              <div className="text-base font-semibold text-gray-900 mb-0.5">
+                {formatDate(cls.date)}
+              </div>
+              <div className="flex items-center gap-2">
                 <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusStyle}`}>
                   {statusLabel}
                 </span>
-                <span className="text-xs text-gray-400">{formatDate(cls.date)}</span>
+                <span className="text-xs text-gray-500">
+                  {cls.startTime} · {formatDuration(cls.durationMin)}
+                </span>
+                {cls.location && (
+                  <span className="text-xs text-gray-400">
+                    {LOCATION_LABEL[cls.location] ?? cls.location}
+                  </span>
+                )}
               </div>
-              <div className="text-sm text-gray-700 font-medium">
-                {cls.startTime} · {formatDuration(cls.durationMin)}
-              </div>
-              {cls.location && (
-                <div className="text-xs text-gray-400 mt-0.5">
-                  {LOCATION_LABEL[cls.location] ?? cls.location}
-                </div>
-              )}
             </div>
             {canCancel && (
               <button
