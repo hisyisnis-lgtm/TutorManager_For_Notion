@@ -16,8 +16,8 @@ const LOCATION_OPTIONS = ['강남사무실', '온라인 (Zoom/화상)'];
 
 const ALL_TIME_SLOTS = (() => {
   const slots = [];
-  // 09:00 ~ 21:30: 시작 시간 표시용 (22:00은 종료 시간으로만 사용)
-  for (let m = 9 * 60; m < 22 * 60; m += 30) {
+  // 09:00 ~ 21:00: 시작 시간 표시용 (22:00은 종료 시간으로만 사용)
+  for (let m = 9 * 60; m <= 21 * 60; m += 30) {
     const h = String(Math.floor(m / 60)).padStart(2, '0');
     const min = String(m % 60).padStart(2, '0');
     slots.push(`${h}:${min}`);

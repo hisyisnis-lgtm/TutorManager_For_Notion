@@ -1,8 +1,8 @@
-name: 내일 수업 알림
+name: 학생 수업 전날 알림
 
 on:
   schedule:
-    - cron: '0 5 * * *'  # 매일 14:00 KST (= 05:00 UTC)
+    - cron: '0 11 * * *'  # 매일 20:00 KST (= 11:00 UTC)
   workflow_dispatch:          # 수동 실행 가능
 
 jobs:
@@ -16,13 +16,11 @@ jobs:
         with:
           node-version: '20'
 
-      - name: 내일 수업 알림 전송
+      - name: 학생 전날 수업 리마인더 발송
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
-          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
           SOLAPI_API_KEY: ${{ secrets.SOLAPI_API_KEY }}
           SOLAPI_API_SECRET: ${{ secrets.SOLAPI_API_SECRET }}
           KAKAO_PFID: ${{ secrets.KAKAO_PFID }}
-          MY_PHONE: ${{ secrets.MY_PHONE }}
-          KAKAO_TPL_UPCOMING: ${{ secrets.KAKAO_TPL_UPCOMING }}
-        run: node notify_upcoming_classes.mjs
+          KAKAO_TPL_STU_TOMORROW: ${{ secrets.KAKAO_TPL_STU_TOMORROW }}
+        run: node notify_student_tomorrow.mjs

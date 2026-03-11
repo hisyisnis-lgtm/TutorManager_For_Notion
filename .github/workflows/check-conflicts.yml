@@ -22,4 +22,9 @@ jobs:
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          SOLAPI_API_KEY: ${{ secrets.SOLAPI_API_KEY }}
+          SOLAPI_API_SECRET: ${{ secrets.SOLAPI_API_SECRET }}
+          KAKAO_PFID: ${{ secrets.KAKAO_PFID }}
+          MY_PHONE: ${{ secrets.MY_PHONE }}
+          KAKAO_TPL_CONFLICT: ${{ secrets.KAKAO_TPL_CONFLICT }}
         run: node check_conflicts.mjs

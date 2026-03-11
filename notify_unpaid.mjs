@@ -1,9 +1,17 @@
 // 미수금 알림 스크립트
 // GitHub Actions에서 매월 25, 27, 29일 10:00 KST (01:00 UTC)에 자동 실행됨
 
+import { createHmac } from 'crypto';
+
 const TOKEN = process.env.NOTION_TOKEN;
 const NTFY_TOPIC = process.env.NTFY_TOPIC;
 const STUDENT_DB_ID = '314838fa-f2a6-8143-a6c7-e59c50f3bbdb';
+
+const SOLAPI_API_KEY = process.env.SOLAPI_API_KEY;
+const SOLAPI_API_SECRET = process.env.SOLAPI_API_SECRET;
+const KAKAO_PFID = process.env.KAKAO_PFID;
+const MY_PHONE = process.env.MY_PHONE;
+const KAKAO_TPL_UNPAID = process.env.KAKAO_TPL_UNPAID;
 
 if (!TOKEN) {
   console.error('NOTION_TOKEN 환경변수가 설정되지 않았습니다.');
@@ -36,6 +44,28 @@ async function sendNtfy(title, message, priority = 4) {
     body: JSON.stringify({ topic: NTFY_TOPIC, title, message, priority }),
   });
   console.log(`ntfy 알림 전송 완료: ${title}`);
+}
+
+async function sendKakao(to, templateId, variables) {
+  if (!SOLAPI_API_KEY || !SOLAPI_API_SECRET || !KAKAO_PFID || !templateId || !to) return;
+  const date = new Date().toISOString();
+  const salt = Math.random().toString(36).substring(2, 18);
+  const signature = createHmac('sha256', SOLAPI_API_SECRET).update(date + salt).digest('hex');
+  try {
+    const res = await fetch('https://api.solapi.com/messages/v4/send', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `HMAC-SHA256 apiKey=${SOLAPI_API_KEY}, date=${date}, salt=${salt}, signature=${signature}`,
+      },
+      body: JSON.stringify({ message: { to, kakaoOptions: { pfId: KAKAO_PFID, templateId, variables } } }),
+    });
+    const data = await res.json();
+    if (!res.ok) console.error('카카오 발송 실패:', JSON.stringify(data));
+    else console.log(`카카오 알림톡 발송 완료: ${to}`);
+  } catch (e) {
+    console.error('카카오 발송 오류:', e.message);
+  }
 }
 
 function stripEmoji(name) {
@@ -98,6 +128,11 @@ async function main() {
   ].join('\n');
 
   await sendNtfy('💸 미수금 알림', message, 4);
+  await sendKakao(MY_PHONE, KAKAO_TPL_UNPAID, {
+    '#{건수}': String(students.length),
+    '#{합계}': totalUnpaid.toLocaleString('ko-KR'),
+    '#{목록}': lines.join('\n'),
+  });
 }
 
 main().catch(err => {
