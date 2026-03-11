@@ -164,12 +164,15 @@ async function handleNotionWebhook(request, env, ctx) {
   }
 
   // Notion HMAC-SHA256 서명 검증 (X-Notion-Signature: v0=<hex>)
-  if (env.NOTION_WEBHOOK_SECRET) {
-    const sigHeader = request.headers.get('X-Notion-Signature') || '';
-    const expected = 'v0=' + (await hmacSha256Hex(env.NOTION_WEBHOOK_SECRET, body));
-    if (expected !== sigHeader) {
-      return new Response('Unauthorized', { status: 401 });
-    }
+  // 시크릿 미설정 시 fail-closed: 요청을 거부해 인증 없는 접근 차단
+  if (!env.NOTION_WEBHOOK_SECRET) {
+    console.error('[webhook] NOTION_WEBHOOK_SECRET 미설정. npx wrangler secret put NOTION_WEBHOOK_SECRET 실행 필요.');
+    return new Response('Webhook secret not configured', { status: 500 });
+  }
+  const sigHeader = request.headers.get('X-Notion-Signature') || '';
+  const expected = 'v0=' + (await hmacSha256Hex(env.NOTION_WEBHOOK_SECRET, body));
+  if (expected !== sigHeader) {
+    return new Response('Unauthorized', { status: 401 });
   }
 
   // 수업 캘린더 DB 페이지 생성/속성 변경 시 → 제목 즉시 동기화 (백그라운드)
@@ -219,10 +222,10 @@ async function handleNotionWebhook(request, env, ctx) {
 }
 
 // ===== 알림톡 발송 (Solapi 준비 전 no-op placeholder) =====
-async function sendAlimtalk(_env, { to, templateCode, variables }) {
+async function sendAlimtalk(_env, { to: _to, templateCode, variables }) {
   // TODO: Solapi API 키 준비되면 구현
   // env.SOLAPI_API_KEY, env.SOLAPI_API_SECRET, env.KAKAO_CHANNEL_ID 필요
-  console.log(`[알림톡 placeholder] to=${to} template=${templateCode}`, JSON.stringify(variables));
+  console.log(`[알림톡 placeholder] template=${templateCode}`, JSON.stringify(variables));
 }
 
 // ===== 예약 시스템 라우트 처리 =====
@@ -301,7 +304,20 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
       return d.toISOString().slice(0, 10);
     })();
 
-    const blockedRes = await n('POST', `/databases/${BLOCKED_DATES_DB_ID}/query`, { page_size: 100 });
+    const blockedRes = await n('POST', `/databases/${BLOCKED_DATES_DB_ID}/query`, {
+      filter: {
+        or: [
+          { property: '반복 유형', select: { equals: '반복' } },
+          {
+            and: [
+              { property: '반복 유형', select: { equals: '일회성' } },
+              { property: '날짜', date: { on_or_after: from } },
+            ],
+          },
+        ],
+      },
+      page_size: 100,
+    });
     const { isBlocked } = buildBlockedData(blockedRes.results);
 
     const result = [];
@@ -342,7 +358,20 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
     }
 
     const [blockedRes2, classRes] = await Promise.all([
-      n('POST', `/databases/${BLOCKED_DATES_DB_ID}/query`, { page_size: 100 }),
+      n('POST', `/databases/${BLOCKED_DATES_DB_ID}/query`, {
+        filter: {
+          or: [
+            { property: '반복 유형', select: { equals: '반복' } },
+            {
+              and: [
+                { property: '반복 유형', select: { equals: '일회성' } },
+                { property: '날짜', date: { on_or_after: date } },
+              ],
+            },
+          ],
+        },
+        page_size: 100,
+      }),
       n('POST', `/databases/${CLASS_DB_ID}/query`, {
         filter: { property: '수업 일시', date: { equals: date } },
         page_size: 100,
@@ -358,9 +387,9 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
       });
     }
 
-    // 09:00 ~ 22:00 전체 30분 슬롯 생성
+    // 09:00 ~ 21:30 전체 30분 슬롯 생성 (22:00은 종료시간으로만 사용)
     const allSlots = new Set();
-    for (let m = 9 * 60; m <= 22 * 60; m += 30) allSlots.add(minToTime(m));
+    for (let m = 9 * 60; m < 22 * 60; m += 30) allSlots.add(minToTime(m));
 
     // 기존 수업(CLASS_DB) 점유 슬롯 제거 (취소 제외)
     const busySet = new Set();
@@ -576,10 +605,12 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
     });
   }
 
-  // GET /booking/my-classes/:token (공개, 학생 본인 수업 목록)
+  // GET /booking/my-classes/:token?month=YYYY-MM (공개, 학생 본인 수업 목록)
   const myClassesMatch = url.pathname.match(/^\/booking\/my-classes\/([^/]+)$/);
   if (myClassesMatch && request.method === 'GET') {
     const token = decodeURIComponent(myClassesMatch[1]);
+    const month = url.searchParams.get('month'); // "YYYY-MM" 형식
+
     const studentRes = await n('POST', `/databases/${STUDENT_DB_ID}/query`, {
       filter: { property: '예약 코드', rich_text: { equals: token } },
       page_size: 1,
@@ -591,10 +622,28 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    let classFilter;
+    if (month && /^\d{4}-\d{2}$/.test(month)) {
+      const [y, m] = month.split('-').map(Number);
+      const nextY = m === 12 ? y + 1 : y;
+      const nextM = m === 12 ? 1 : m + 1;
+      const nextMonthStart = `${nextY}-${String(nextM).padStart(2, '0')}-01`;
+      classFilter = {
+        and: [
+          { property: '학생', relation: { contains: studentPage.id } },
+          { property: '수업 일시', date: { on_or_after: `${month}-01` } },
+          { property: '수업 일시', date: { before: nextMonthStart } },
+        ],
+      };
+    } else {
+      classFilter = { property: '학생', relation: { contains: studentPage.id } };
+    }
+
     const res = await n('POST', `/databases/${CLASS_DB_ID}/query`, {
-      filter: { property: '학생', relation: { contains: studentPage.id } },
+      filter: classFilter,
       sorts: [{ property: '수업 일시', direction: 'descending' }],
-      page_size: 50,
+      page_size: 100,
     });
     const classes = (res.results ?? []).map(p => {
       const props = p.properties;
@@ -617,11 +666,13 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
     });
   }
 
-  // DELETE /booking/my-class/:classId?token=:token (학생 본인 수업 취소, 당일 불가)
+  // DELETE /booking/my-class/:classId (학생 본인 수업 취소, 당일 불가)
+  // 토큰은 body { token } 로 전달 (URL 쿼리 노출 방지)
   const myClassDeleteMatch = url.pathname.match(/^\/booking\/my-class\/([^/]+)$/);
   if (myClassDeleteMatch && request.method === 'DELETE') {
     const classId = myClassDeleteMatch[1];
-    const studentToken = url.searchParams.get('token') || '';
+    const deleteBody = await request.json().catch(() => ({}));
+    const studentToken = deleteBody.token || '';
     if (!studentToken) {
       return new Response(JSON.stringify({ error: '인증이 필요합니다.' }), {
         status: 401,
@@ -681,11 +732,13 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
     });
   }
 
-  // POST /booking/my-class/:classId/restore?token=:token (학생 본인 취소 수업 복구)
+  // POST /booking/my-class/:classId/restore (학생 본인 취소 수업 복구)
+  // 토큰은 body { token } 로 전달 (URL 쿼리 노출 방지)
   const myClassRestoreMatch = url.pathname.match(/^\/booking\/my-class\/([^/]+)\/restore$/);
   if (myClassRestoreMatch && request.method === 'POST') {
     const classId = myClassRestoreMatch[1];
-    const studentToken = url.searchParams.get('token') || '';
+    const restoreBody = await request.json().catch(() => ({}));
+    const studentToken = restoreBody.token || '';
     if (!studentToken) {
       return new Response(JSON.stringify({ error: '인증이 필요합니다.' }), {
         status: 401,
@@ -907,6 +960,9 @@ export default {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
+      if (!env.JWT_SECRET) {
+        console.warn('[보안 경고] JWT_SECRET 미설정. AUTH_PASSWORD를 JWT 서명 키로 사용 중. npx wrangler secret put JWT_SECRET 실행 권장.');
+      }
       const token = await createToken(env.JWT_SECRET || env.AUTH_PASSWORD, 30 * 24 * 60 * 60);
       return new Response(JSON.stringify({ token }), {
         status: 200,
@@ -921,6 +977,16 @@ export default {
     if (!valid) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Notion API 프록시 경로 화이트리스트 (실제 사용 경로만 허용)
+    const ALLOWED_NOTION_PATHS = ['/v1/databases/', '/v1/pages', '/v1/pages/'];
+    const isAllowedPath = ALLOWED_NOTION_PATHS.some(prefix => url.pathname === prefix || url.pathname.startsWith(prefix));
+    if (!isAllowedPath) {
+      return new Response(JSON.stringify({ error: 'Not allowed' }), {
+        status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }

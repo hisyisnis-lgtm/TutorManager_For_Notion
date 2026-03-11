@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { usePullToRefresh, PullIndicator } from '../hooks/usePullToRefresh.jsx';
 import {
   fetchStudentByToken,
@@ -16,13 +16,15 @@ const LOCATION_OPTIONS = ['강남사무실', '온라인 (Zoom/화상)'];
 
 const ALL_TIME_SLOTS = (() => {
   const slots = [];
-  for (let m = 9 * 60; m <= 22 * 60; m += 30) {
+  // 09:00 ~ 21:30: 시작 시간 표시용 (22:00은 종료 시간으로만 사용)
+  for (let m = 9 * 60; m < 22 * 60; m += 30) {
     const h = String(Math.floor(m / 60)).padStart(2, '0');
     const min = String(m % 60).padStart(2, '0');
     slots.push(`${h}:${min}`);
   }
   return slots;
 })();
+const ALL_END_SLOTS = [...ALL_TIME_SLOTS, '22:00'];
 
 function timeToMin(t) {
   const [h, m] = t.split(':').map(Number);
@@ -38,6 +40,17 @@ function formatDate(dateStr) {
   if (!dateStr) return '';
   const d = new Date(dateStr + 'T00:00:00+09:00');
   return `${d.getMonth() + 1}/${d.getDate()}(${DAY_KR[d.getDay()]})`;
+}
+function formatMonth(monthStr) {
+  const [y, m] = monthStr.split('-').map(Number);
+  return `${y}년 ${m}월`;
+}
+function shiftMonth(monthStr, delta) {
+  let [y, m] = monthStr.split('-').map(Number);
+  m += delta;
+  if (m > 12) { m = 1; y++; }
+  if (m < 1) { m = 12; y--; }
+  return `${y}-${String(m).padStart(2, '0')}`;
 }
 
 // ===== 달력 컴포넌트 =====
@@ -121,10 +134,13 @@ function TimeRangePicker({ availableTimes, startTime, endTime, onStartSelect, on
     if (startMin === null) return new Set();
     const valid = new Set();
     let prev = startMin;
-    for (const t of ALL_TIME_SLOTS) {
+    // ALL_END_SLOTS(~22:00)까지 순회하되, 가용 여부는 슬롯 시작(prev)으로 확인
+    for (const t of ALL_END_SLOTS) {
       const tm = timeToMin(t);
       if (tm <= startMin) continue;
-      if (!availableSet.has(t) || tm !== prev + 30) break;
+      if (tm !== prev + 30) break;
+      const ps = `${String(Math.floor(prev / 60)).padStart(2, '0')}:${String(prev % 60).padStart(2, '0')}`;
+      if (!availableSet.has(ps)) break;
       if (tm - startMin >= 60) valid.add(t);
       prev = tm;
     }
@@ -168,7 +184,7 @@ function TimeRangePicker({ availableTimes, startTime, endTime, onStartSelect, on
             종료 시간 선택 <span className="text-gray-400">(최소 1시간 이상)</span>
           </p>
           <div className="flex flex-wrap gap-2">
-            {ALL_TIME_SLOTS
+            {ALL_END_SLOTS
               .filter(t => timeToMin(t) > (startMin ?? 0))
               .map(t => {
                 const tm = timeToMin(t);
@@ -204,7 +220,7 @@ function TimeRangePicker({ availableTimes, startTime, endTime, onStartSelect, on
 }
 
 // ===== 내 수업 탭 =====
-function MyClassesTab({ studentToken }) {
+function MyClassesTab({ studentToken, month, onMonthChange }) {
   const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -215,14 +231,14 @@ function MyClassesTab({ studentToken }) {
     setLoading(true);
     setError(null);
     try {
-      const data = await fetchMyClasses(studentToken);
+      const data = await fetchMyClasses(studentToken, month);
       setClasses(data);
     } catch (e) {
       setError(e.message);
     } finally {
       setLoading(false);
     }
-  }, [studentToken]);
+  }, [studentToken, month]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -254,76 +270,97 @@ function MyClassesTab({ studentToken }) {
     }
   };
 
-  if (loading) return <div className="text-center py-12 text-gray-400 text-sm">불러오는 중...</div>;
-  if (error) return <div className="mx-4 bg-red-50 text-red-500 rounded-xl p-4 text-sm mt-4">{error}</div>;
-  if (classes.length === 0) {
-    return (
-      <div className="text-center py-12 text-gray-400">
-        <div className="text-4xl mb-3">📚</div>
-        <div className="text-sm">수업 이력이 없습니다</div>
-      </div>
-    );
-  }
-
   const LOCATION_LABEL = { '강남사무실': '강남', '온라인 (Zoom/화상)': 'Zoom' };
 
   return (
-    <div className="px-4 py-4 space-y-2">
-      {classes.map(cls => {
-        const isPast = cls.date < todayStr;
-        const canCancel = !cls.isCancelled && cls.date > todayStr;
-        const canRestore = cls.isCancelled && cls.date > todayStr;
-        const statusLabel = cls.isCancelled ? '취소' : isPast ? '완료' : '예정';
-        const statusStyle = cls.isCancelled
-          ? 'bg-gray-100 text-gray-400'
-          : isPast
-            ? 'bg-blue-50 text-blue-500'
-            : 'bg-green-100 text-green-700';
-        return (
-          <div
-            key={cls.id}
-            className={`bg-white rounded-xl shadow-sm p-4 flex items-center gap-3 ${isPast || cls.isCancelled ? 'opacity-60' : ''}`}
-          >
-            <div className="flex-1 min-w-0">
-              <div className="text-base font-semibold text-gray-900 mb-0.5">
-                {formatDate(cls.date)}
-              </div>
-              <div className="flex items-center gap-2">
-                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusStyle}`}>
-                  {statusLabel}
-                </span>
-                <span className="text-xs text-gray-500">
-                  {cls.startTime} · {formatDuration(cls.durationMin)}
-                </span>
-                {cls.location && (
-                  <span className="text-xs text-gray-400">
-                    {LOCATION_LABEL[cls.location] ?? cls.location}
-                  </span>
+    <div>
+      {/* 월 네비게이션 */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+        <button
+          type="button"
+          onClick={() => onMonthChange(shiftMonth(month, -1))}
+          className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500 text-lg"
+        >
+          ‹
+        </button>
+        <span className="font-semibold text-gray-800 text-sm">{formatMonth(month)}</span>
+        <button
+          type="button"
+          onClick={() => onMonthChange(shiftMonth(month, 1))}
+          className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500 text-lg"
+        >
+          ›
+        </button>
+      </div>
+
+      {loading && <div className="text-center py-12 text-gray-400 text-sm">불러오는 중...</div>}
+      {error && <div className="mx-4 bg-red-50 text-red-500 rounded-xl p-4 text-sm mt-4">{error}</div>}
+      {!loading && !error && classes.length === 0 && (
+        <div className="text-center py-12 text-gray-400">
+          <div className="text-4xl mb-3">📚</div>
+          <div className="text-sm">이 달에 수업이 없습니다</div>
+        </div>
+      )}
+
+      {!loading && !error && classes.length > 0 && (
+        <div className="px-4 py-4 space-y-2">
+          {classes.map(cls => {
+            const isPast = cls.date < todayStr;
+            const canCancel = !cls.isCancelled && cls.date > todayStr;
+            const canRestore = cls.isCancelled && cls.date > todayStr;
+            const statusLabel = cls.isCancelled ? '취소' : isPast ? '완료' : '예정';
+            const statusStyle = cls.isCancelled
+              ? 'bg-gray-100 text-gray-400'
+              : isPast
+                ? 'bg-blue-50 text-blue-500'
+                : 'bg-green-100 text-green-700';
+            return (
+              <div
+                key={cls.id}
+                className={`bg-white rounded-xl shadow-sm p-4 flex items-center gap-3 ${isPast || cls.isCancelled ? 'opacity-60' : ''}`}
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="text-base font-semibold text-gray-900 mb-0.5">
+                    {formatDate(cls.date)}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusStyle}`}>
+                      {statusLabel}
+                    </span>
+                    <span className="text-xs text-gray-500">
+                      {cls.startTime} · {formatDuration(cls.durationMin)}
+                    </span>
+                    {cls.location && (
+                      <span className="text-xs text-gray-400">
+                        {LOCATION_LABEL[cls.location] ?? cls.location}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                {canCancel && (
+                  <button
+                    onClick={() => handleCancel(cls)}
+                    disabled={cancellingId === cls.id}
+                    className="shrink-0 text-sm text-red-500 border border-red-200 rounded-lg px-3 py-1.5 disabled:opacity-40 active:bg-red-50"
+                  >
+                    {cancellingId === cls.id ? '취소 중...' : '취소'}
+                  </button>
+                )}
+                {canRestore && (
+                  <button
+                    onClick={() => handleRestore(cls)}
+                    disabled={restoringId === cls.id}
+                    className="shrink-0 text-sm text-blue-500 border border-blue-200 rounded-lg px-3 py-1.5 disabled:opacity-40 active:bg-blue-50"
+                  >
+                    {restoringId === cls.id ? '복구 중...' : '복구'}
+                  </button>
                 )}
               </div>
-            </div>
-            {canCancel && (
-              <button
-                onClick={() => handleCancel(cls)}
-                disabled={cancellingId === cls.id}
-                className="shrink-0 text-sm text-red-500 border border-red-200 rounded-lg px-3 py-1.5 disabled:opacity-40 active:bg-red-50"
-              >
-                {cancellingId === cls.id ? '취소 중...' : '취소'}
-              </button>
-            )}
-            {canRestore && (
-              <button
-                onClick={() => handleRestore(cls)}
-                disabled={restoringId === cls.id}
-                className="shrink-0 text-sm text-blue-500 border border-blue-200 rounded-lg px-3 py-1.5 disabled:opacity-40 active:bg-blue-50"
-              >
-                {restoringId === cls.id ? '복구 중...' : '복구'}
-              </button>
-            )}
-          </div>
-        );
-      })}
-      <p className="text-xs text-center text-gray-400 pt-2">당일 취소는 강사에게 직접 연락해주세요</p>
+            );
+          })}
+          <p className="text-xs text-center text-gray-400 pt-2">당일 취소는 강사에게 직접 연락해주세요</p>
+        </div>
+      )}
     </div>
   );
 }
@@ -332,10 +369,11 @@ function MyClassesTab({ studentToken }) {
 export default function BookingPage() {
   const navigate = useNavigate();
   const { studentToken } = useParams();
+  const routerLocation = useLocation();
 
   const [student, setStudent] = useState(null);
   const [studentError, setStudentError] = useState(null);
-  const [tab, setTab] = useState('예약하기');
+  const [tab, setTab] = useState(routerLocation.state?.tab ?? '예약하기');
 
   const nowKST = new Date(Date.now() + 9 * 60 * 60 * 1000);
   const [calYear, setCalYear] = useState(nowKST.getUTCFullYear());
@@ -355,6 +393,9 @@ export default function BookingPage() {
   const [submitError, setSubmitError] = useState(null);
 
   const [classRefreshKey, setClassRefreshKey] = useState(0);
+  const [myClassesMonth, setMyClassesMonth] = useState(() =>
+    new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 7)
+  );
 
   // 학생 정보 로드
   const loadStudent = useCallback(async () => {
@@ -439,7 +480,7 @@ export default function BookingPage() {
         endTime,
         location,
       });
-      navigate(`/book/status/${encodeURIComponent(result.token)}`, { replace: true });
+      navigate(`/book/status/${encodeURIComponent(result.token)}?st=${encodeURIComponent(studentToken)}`, { replace: true });
     } catch (err) {
       setSubmitError(err.message);
       if (err.status === 409) {
@@ -529,7 +570,12 @@ export default function BookingPage() {
         </div>
 
         {tab === '내 수업' ? (
-          <MyClassesTab key={classRefreshKey} studentToken={studentToken} />
+          <MyClassesTab
+            key={classRefreshKey}
+            studentToken={studentToken}
+            month={myClassesMonth}
+            onMonthChange={setMyClassesMonth}
+          />
         ) : (
           <div className="px-4 py-4 space-y-4">
             {/* 잔여 시간 없을 때 안내 */}

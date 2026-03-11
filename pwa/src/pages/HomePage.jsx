@@ -29,7 +29,7 @@ function getClassDay(isoString) {
 
 export default function HomePage() {
   const navigate = useNavigate();
-  const { studentNameMap, classTypeMap } = useData();
+  const { studentNameMap, classTypeMap, refresh: refreshData } = useData();
   const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [instructorName, setInstructorName] = useState(getInstructorName);
@@ -56,7 +56,12 @@ export default function HomePage() {
     try {
       const data = await queryPage(
         CLASSES_DB,
-        { property: '수업 일시', date: { on_or_after: new Date().toISOString() } },
+        {
+          and: [
+            { property: '수업 일시', date: { on_or_after: new Date().toISOString() } },
+            { property: '특이사항', select: { does_not_equal: '🚫 취소' } },
+          ],
+        },
         [{ property: '수업 일시', direction: 'ascending' }],
         undefined,
         5
@@ -108,7 +113,7 @@ export default function HomePage() {
   }, []);
 
   const handleRefresh = async () => {
-    await Promise.all([loadUpcoming(), loadCalendar(calYear, calMonth)]);
+    await Promise.all([loadUpcoming(), loadCalendar(calYear, calMonth), refreshData()]);
   };
 
   // 날짜별 수업 집계

@@ -27,6 +27,7 @@ export function usePullToRefresh(onRefresh) {
       if (dy > 0 && window.scrollY === 0) {
         pullYRef.current = Math.min(dy * 0.45, THRESHOLD * 1.4);
         setPullY(pullYRef.current);
+        e.preventDefault(); // 당기는 중 페이지 스크롤 방지
       } else {
         pullYRef.current = 0;
         setPullY(0);
@@ -52,11 +53,11 @@ export function usePullToRefresh(onRefresh) {
     };
 
     window.addEventListener('touchstart', onTouchStart, { passive: true });
-    window.addEventListener('touchmove', onTouchMove, { passive: true });
+    window.addEventListener('touchmove', onTouchMove, { passive: false });
     window.addEventListener('touchend', onTouchEnd);
     return () => {
       window.removeEventListener('touchstart', onTouchStart);
-      window.removeEventListener('touchmove', onTouchMove);
+      window.removeEventListener('touchmove', onTouchMove, { passive: false });
       window.removeEventListener('touchend', onTouchEnd);
     };
   }, []);

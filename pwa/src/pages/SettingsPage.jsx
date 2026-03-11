@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import PageHeader from '../components/layout/PageHeader.jsx';
+import ConfirmDialog from '../components/ui/ConfirmDialog.jsx';
 
 const STORAGE_KEY = 'instructor_name';
 const NTFY_TOPIC_KEY = 'ntfy_topic';
@@ -16,6 +17,7 @@ export default function SettingsPage() {
   const [name, setName] = useState(() => localStorage.getItem(STORAGE_KEY) || '');
   const [ntfyTopic, setNtfyTopic] = useState(() => localStorage.getItem(NTFY_TOPIC_KEY) || '');
   const [saved, setSaved] = useState(false);
+  const [confirmLogout, setConfirmLogout] = useState(false);
 
   const handleSave = () => {
     const trimmedName = name.trim();
@@ -77,8 +79,30 @@ export default function SettingsPage() {
           {saved ? '저장됨 ✓' : '저장'}
         </button>
 
+        <button
+          type="button"
+          onClick={() => setConfirmLogout(true)}
+          className="w-full py-3 rounded-xl text-sm font-medium border border-red-200 text-red-500 active:bg-red-50"
+        >
+          로그아웃
+        </button>
+
         <p className="text-center text-xs text-gray-300 pt-4">v{__APP_VERSION__}</p>
       </div>
+
+      {confirmLogout && (
+        <ConfirmDialog
+          title="로그아웃"
+          message="로그아웃하면 다시 비밀번호를 입력해야 합니다."
+          confirmLabel="로그아웃"
+          onConfirm={() => {
+            sessionStorage.removeItem('auth_token');
+            localStorage.removeItem('auth_token');
+            window.location.reload();
+          }}
+          onCancel={() => setConfirmLogout(false)}
+        />
+      )}
     </>
   );
 }

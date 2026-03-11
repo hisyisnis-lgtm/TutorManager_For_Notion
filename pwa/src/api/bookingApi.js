@@ -50,18 +50,19 @@ export async function reserveSlot({ studentToken, date, startTime, endTime, loca
 }
 
 /** 학생 본인 수업 목록 조회 - CLASS_DB 기반 (공개) */
-export async function fetchMyClasses(studentToken) {
-  return bookingFetch('GET', `/booking/my-classes/${encodeURIComponent(studentToken)}`);
+export async function fetchMyClasses(studentToken, month) {
+  const params = month ? `?month=${encodeURIComponent(month)}` : '';
+  return bookingFetch('GET', `/booking/my-classes/${encodeURIComponent(studentToken)}${params}`);
 }
 
 /** 학생 본인 수업 취소 - CLASS_DB ID 기반 (공개, 당일 취소 불가) */
 export async function cancelMyClass(classId, studentToken) {
-  return bookingFetch('DELETE', `/booking/my-class/${classId}?token=${encodeURIComponent(studentToken)}`);
+  return bookingFetch('DELETE', `/booking/my-class/${classId}`, { token: studentToken });
 }
 
 /** 학생 본인 취소 수업 복구 (공개, 과거 수업 불가) */
 export async function restoreMyClass(classId, studentToken) {
-  return bookingFetch('POST', `/booking/my-class/${classId}/restore?token=${encodeURIComponent(studentToken)}`);
+  return bookingFetch('POST', `/booking/my-class/${classId}/restore`, { token: studentToken });
 }
 
 /** 예약 상태 조회 (공개, 토큰 기반) */

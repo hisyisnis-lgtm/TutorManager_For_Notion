@@ -67,38 +67,28 @@ export default function PullToRefresh({ onRefresh, children }) {
     };
   }, []);
 
-  const progress = Math.min(pullY / THRESHOLD, 1);
-  const indicatorHeight = refreshing ? 48 : pullY > 0 ? pullY : 0;
-  const showIndicator = pullY > 0 || refreshing;
+  const ready = pullY >= THRESHOLD;
+  const indicatorHeight = refreshing ? 44 : pullY > 0 ? Math.round(pullY) : 0;
 
   return (
     <>
       <div
-        className="flex justify-center items-end overflow-hidden"
+        className="flex items-center justify-center overflow-hidden bg-gray-50"
         style={{
           height: indicatorHeight,
-          transition: pullY === 0 ? 'height 0.25s ease' : 'none',
+          transition: pullY === 0 ? 'height 0.2s ease' : 'none',
         }}
       >
-        {showIndicator && (
-          <div
-            className="mb-2"
-            style={{
-              opacity: refreshing ? 1 : progress,
-              transform: `scale(${0.4 + progress * 0.6})`,
-            }}
-          >
-            <svg
-              className={`w-6 h-6 text-brand-600 ${refreshing ? 'animate-spin' : ''}`}
-              style={!refreshing ? { transform: `rotate(${progress * 360}deg)` } : undefined}
-              fill="none"
-              viewBox="0 0 24 24"
-            >
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-            </svg>
+        {refreshing ? (
+          <div className="flex items-center gap-1.5 text-xs text-blue-500">
+            <div className="w-3.5 h-3.5 border-2 border-blue-200 border-t-blue-500 rounded-full animate-spin" />
+            새로고침 중...
           </div>
-        )}
+        ) : pullY > 0 ? (
+          <div className={`text-xs ${ready ? 'text-blue-500' : 'text-gray-400'}`}>
+            {ready ? '↑ 놓으면 새로고침' : '↓ 당겨서 새로고침'}
+          </div>
+        ) : null}
       </div>
       {children}
     </>

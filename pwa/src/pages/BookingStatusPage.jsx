@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { fetchBookingStatus } from '../api/bookingApi.js';
 
 const DAY_KR = ['일', '월', '화', '수', '목', '금', '토'];
@@ -13,6 +13,8 @@ function formatDate(dateStr) {
 export default function BookingStatusPage() {
   const { token } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const studentToken = new URLSearchParams(location.search).get('st') || location.state?.studentToken;
   const [booking, setBooking] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -107,14 +109,14 @@ export default function BookingStatusPage() {
             )}
 
             <button
-              onClick={() => navigate('/book')}
+              onClick={() => navigate(studentToken ? `/book/${studentToken}` : '/book', { state: { tab: isCancelled ? '예약하기' : '내 수업' } })}
               className={`w-full rounded-xl py-3 text-sm font-semibold ${
                 isCancelled
                   ? 'bg-blue-600 text-white'
                   : 'bg-gray-100 text-gray-600'
               }`}
             >
-              {isCancelled ? '새로 예약하기' : '예약 페이지로 돌아가기'}
+              {isCancelled ? '새로 예약하기' : '확인'}
             </button>
           </div>
         )}
