@@ -2,7 +2,7 @@ name: 학생 수업 전날 알림
 
 on:
   schedule:
-    - cron: '0 11 * * *'  # 매일 20:00 KST (= 11:00 UTC)
+    - cron: '0 10 * * *'  # 매일 19:00 KST (= 10:00 UTC)
   workflow_dispatch:          # 수동 실행 가능
 
 jobs:
