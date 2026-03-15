@@ -40,7 +40,7 @@ jobs:
         working-directory: pwa
 
       - name: Cloudflare Pages 배포
-        run: npx wrangler pages deploy dist --project-name=tiantian-chinese
+        run: npx wrangler pages deploy dist --project-name=tiantian-chinese --branch=main
         working-directory: pwa
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

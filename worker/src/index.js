@@ -93,7 +93,7 @@ async function updateClassesByStudent(studentPageId, notionToken) {
 
 const ALLOWED_ORIGINS = new Set([
   'https://hisyisnis-lgtm.github.io',
-  'https://tutor-manager-pwa.pages.dev', // Cloudflare Pages (프로젝트명 변경 시 수정)
+  'https://tiantian-chinese.pages.dev',
   'http://localhost:5173',
   'http://localhost:4173',
 ]);
@@ -227,8 +227,36 @@ async function handleNotionWebhook(request, env, ctx) {
 // ===== 알림톡 발송 (Solapi 준비 전 no-op placeholder) =====
 async function sendAlimtalk(_env, { to: _to, templateCode, variables }) {
   // TODO: Solapi API 키 준비되면 구현
-  // env.SOLAPI_API_KEY, env.SOLAPI_API_SECRET, env.KAKAO_CHANNEL_ID 필요
+  // env.SOLAPI_API_KEY, env.SOLAPI_API_SECRET, env.KAKAO_PFID 필요
   console.log(`[알림톡 placeholder] template=${templateCode}`, JSON.stringify(variables));
+}
+
+// ===== 카카오 알림톡 발송 (Solapi) — 강사 알림용 =====
+async function sendKakaoAlert(env, { to, templateId, variables }) {
+  if (!env.SOLAPI_API_KEY || !env.SOLAPI_API_SECRET || !env.KAKAO_PFID || !templateId || !to) return;
+  const date = new Date().toISOString();
+  const salt = crypto.randomUUID().replace(/-/g, '').slice(0, 16);
+  const signature = await hmacSha256Hex(env.SOLAPI_API_SECRET, date + salt);
+  try {
+    const res = await fetch('https://api.solapi.com/messages/v4/send', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `HMAC-SHA256 apiKey=${env.SOLAPI_API_KEY}, date=${date}, salt=${salt}, signature=${signature}`,
+      },
+      body: JSON.stringify({
+        message: { to, kakaoOptions: { pfId: env.KAKAO_PFID, templateId, variables } },
+      }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      console.error('[kakao] 발송 실패:', JSON.stringify(data));
+    } else {
+      console.log(`[kakao] 알림톡 발송 완료: ${to}`);
+    }
+  } catch (e) {
+    console.error('[kakao] 발송 오류:', e.message);
+  }
 }
 
 // ===== ntfy 강사 알림 발송 =====
@@ -328,6 +356,22 @@ async function handleConsultRequest(request, env, corsHeaders) {
   ].filter(Boolean).join('\n');
 
   await sendNtfy(env, ntfyMsg, '📩 무료상담 신청');
+
+  // 카카오 알림톡 발송 (강사에게)
+  if (env.KAKAO_TPL_CONSULT && env.MY_PHONE) {
+    await sendKakaoAlert(env, {
+      to: env.MY_PHONE,
+      templateId: env.KAKAO_TPL_CONSULT,
+      variables: {
+        name: name.trim(),
+        phone: phoneDigits,
+        level: level || '미기재',
+        days: daysText,
+        time: preferredTime || '미기재',
+        message: message?.trim() || '없음',
+      },
+    });
+  }
 
   return new Response(JSON.stringify({ ok: true }), {
     status: 200,
@@ -1032,7 +1076,7 @@ export default {
     }
 
     const origin = request.headers.get('Origin') || '';
-    const allowed = ALLOWED_ORIGINS.has(origin) || (env.ALLOWED_ORIGIN && origin === env.ALLOWED_ORIGIN);
+    const allowed = ALLOWED_ORIGINS.has(origin) || (env.ALLOWED_ORIGIN && origin === env.ALLOWED_ORIGIN) || /^https:\/\/[a-z0-9-]+\.tiantian-chinese\.pages\.dev$/.test(origin);
 
     const corsHeaders = {
       'Access-Control-Allow-Origin': allowed ? origin : '',
