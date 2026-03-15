@@ -60,17 +60,16 @@ export default function ConsultPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Hero */}
-      <div className="bg-gradient-to-b from-brand-700 to-brand-500 text-white px-6 pt-16 pb-12 text-center">
-        <img src="/TutorManager_For_Notion/logo-white.png" alt="하늘쌤 중국어" className="h-8 mx-auto mb-3 object-contain" />
-        <h1 className="text-3xl font-bold leading-tight mb-3">
+      <div className="bg-gradient-to-b from-brand-700 to-brand-500 text-white px-6 pt-14 pb-10 text-center">
+        <img src="/TutorManager_For_Notion/logo-white.png" alt="하늘쌤 중국어" className="h-9 mx-auto mb-6 object-contain" />
+        <h1 className="text-2xl font-bold leading-snug mb-5">
           중국어로 말하고 싶은 분,<br />여기서 시작하세요
         </h1>
-        <p className="text-brand-100 text-base leading-relaxed mb-2">
-          회화·발음 교정 전문 | 입문~초중급 특화
-        </p>
-        <p className="text-brand-200 text-sm leading-relaxed mb-8">
-          Zoom 30분, 완전 무료
-        </p>
+        <div className="flex flex-wrap justify-center gap-2 mb-7">
+          <span className="bg-white/20 text-white text-xs font-medium px-3 py-1 rounded-full">회화·발음 교정 전문</span>
+          <span className="bg-white/20 text-white text-xs font-medium px-3 py-1 rounded-full">입문~초중급 특화</span>
+          <span className="bg-white/20 text-white text-xs font-medium px-3 py-1 rounded-full">Zoom 30분 무료</span>
+        </div>
         <button
           onClick={() => formRef.current?.scrollIntoView({ behavior: 'smooth' })}
           className="bg-white text-brand-600 font-semibold px-8 py-3 rounded-full shadow-md active:scale-95 transition-transform"
