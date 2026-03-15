@@ -61,7 +61,7 @@ export default function ConsultPage() {
     <div className="min-h-screen bg-gray-50">
       {/* Hero */}
       <div className="bg-gradient-to-b from-brand-700 to-brand-500 text-white px-6 pt-16 pb-12 text-center">
-        <p className="text-brand-100 text-sm font-medium tracking-widest uppercase mb-3">Free Consultation</p>
+        <img src="/TutorManager_For_Notion/logo-white.png" alt="하늘쌤 중국어" className="h-8 mx-auto mb-3 object-contain" />
         <h1 className="text-3xl font-bold leading-tight mb-3">
           중국어로 말하고 싶은 분,<br />여기서 시작하세요
         </h1>
@@ -121,7 +121,11 @@ export default function ConsultPage() {
         {/* 이런 상담은 어려워요 */}
         <div className="bg-gray-100 rounded-2xl p-5 border border-gray-200">
           <p className="text-gray-600 font-semibold text-sm mb-2">신청 전에 확인해주세요</p>
-          <p className="text-gray-500 text-sm mb-3">저는 회화·발음 교정을 전문으로 합니다.<br />아래 분들은 제가 충분히 도움드리기 어려울 수 있어요.</p>
+          <p className="text-gray-500 text-sm mb-3">
+            하늘쌤은 10년차 중국어 회화·발음 교정 전문 강사입니다.<br />
+            입문부터 초중급 학습자의 말하기 능력 향상에 특화되어 있습니다.<br />
+            아래에 해당하는 분들은 제가 충분히 도움드리기 어려울 수 있어요.
+          </p>
           <ul className="space-y-1 text-sm text-gray-400">
             <li>· HSK 시험 준비</li>
             <li>· 작문·쓰기 집중 학습</li>
