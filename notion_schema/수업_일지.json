@@ -1,0 +1,55 @@
+{
+  "id": "318838fa-f2a6-81f1-9b9c-fd379b1026ed",
+  "title": "수업 일지",
+  "url": "https://www.notion.so/318838faf2a681f19b9cfd379b1026ed",
+  "properties": {
+    "메모": {
+      "type": "rich_text",
+      "id": "GKJK"
+    },
+    "수업": {
+      "type": "dual_property",
+      "id": "N%3EZM",
+      "database_id": "314838fa-f2a6-81bc-8b67-d9e1c8fb7ecb"
+    },
+    "학생": {
+      "type": "dual_property",
+      "id": "YkJU",
+      "database_id": "314838fa-f2a6-8143-a6c7-e59c50f3bbdb"
+    },
+    "다음 수업 준비": {
+      "type": "rich_text",
+      "id": "g%3F%7Bp"
+    },
+    "학생 참여도": {
+      "type": "select",
+      "id": "i%7DHb",
+      "options": [
+        {
+          "name": "😊 좋음",
+          "color": "green"
+        },
+        {
+          "name": "😐 보통",
+          "color": "yellow"
+        },
+        {
+          "name": "😞 저조",
+          "color": "red"
+        }
+      ]
+    },
+    "숙제": {
+      "type": "rich_text",
+      "id": "k%7C%3DV"
+    },
+    "오늘 내용": {
+      "type": "rich_text",
+      "id": "~tSd"
+    },
+    "제목": {
+      "type": "title",
+      "id": "title"
+    }
+  }
+}

@@ -1,0 +1,161 @@
+{
+  "id": "314838fa-f2a6-81bc-8b67-d9e1c8fb7ecb",
+  "title": "수업 캘린더",
+  "url": "https://www.notion.so/314838faf2a681bc8b67d9e1c8fb7ecb",
+  "properties": {
+    "학생 잔여 시간 회차": {
+      "type": "rollup",
+      "id": "%3Cm%5EO",
+      "relation_property_name": "학생",
+      "rollup_property_name": "잔여 시간 회차",
+      "function": "min"
+    },
+    "충돌_감지": {
+      "type": "checkbox",
+      "id": "Jcae"
+    },
+    "수업 일시": {
+      "type": "date",
+      "id": "KRV%7D"
+    },
+    "회차부족_감지": {
+      "type": "checkbox",
+      "id": "Q%5BJz"
+    },
+    "수업 장소": {
+      "type": "select",
+      "id": "YnG%3C",
+      "options": [
+        {
+          "name": "강남사무실",
+          "color": "blue"
+        },
+        {
+          "name": "온라인 (Zoom/화상)",
+          "color": "green"
+        },
+        {
+          "name": "학생 자택 방문",
+          "color": "purple"
+        },
+        {
+          "name": "카페 / 외부 장소",
+          "color": "orange"
+        }
+      ]
+    },
+    "특이사항": {
+      "type": "select",
+      "id": "%5ClQz",
+      "options": [
+        {
+          "name": "🔴 결석",
+          "color": "red"
+        },
+        {
+          "name": "🟠 보강",
+          "color": "orange"
+        },
+        {
+          "name": "🚫 취소",
+          "color": "gray"
+        }
+      ]
+    },
+    "수업 일지": {
+      "type": "dual_property",
+      "id": "c_c%3A",
+      "database_id": "318838fa-f2a6-81f1-9b9c-fd379b1026ed"
+    },
+    "시간 회차 부족": {
+      "type": "formula",
+      "id": "dDt%3F",
+      "expression": "if({{notion:block_property:Q%5BJz:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}}, \"⚠ 시간 회차 부족\", \"\")"
+    },
+    "수업 유형": {
+      "type": "single_property",
+      "id": "egNl",
+      "database_id": "314838fa-f2a6-81c3-b4e4-da87c48f9b43"
+    },
+    "무료 수업": {
+      "type": "rollup",
+      "id": "hil%7C",
+      "relation_property_name": "수업 유형",
+      "rollup_property_name": "1인 단가",
+      "function": "sum"
+    },
+    "수업 종료 시간": {
+      "type": "formula",
+      "id": "hx%7CI",
+      "expression": "dateAdd({{notion:block_property:KRV%7D:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}}, toNumber({{notion:block_property:t%5CHE:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}}), \"minutes\")"
+    },
+    "시간 회차": {
+      "type": "formula",
+      "id": "nKmm",
+      "expression": "if({{notion:block_property:hil%7C:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}} == 0, 0, if((!empty({{notion:block_property:KRV%7D:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}}) and ({{notion:block_property:%5ClQz:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}} != \"🟠 보강\")) and ({{notion:block_property:%5ClQz:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}} != \"🚫 취소\"), toNumber({{notion:block_property:t%5CHE:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}}) / 60, 0))"
+    },
+    "수업 시간(분)": {
+      "type": "select",
+      "id": "t%5CHE",
+      "options": [
+        {
+          "name": "60",
+          "color": "default"
+        },
+        {
+          "name": "90",
+          "color": "default"
+        },
+        {
+          "name": "120",
+          "color": "default"
+        },
+        {
+          "name": "150",
+          "color": "default"
+        },
+        {
+          "name": "180",
+          "color": "default"
+        }
+      ]
+    },
+    "예약 토큰": {
+      "type": "rich_text",
+      "id": "t%5Ed%3C"
+    },
+    "메모": {
+      "type": "formula",
+      "id": "tv%7DG",
+      "expression": ""
+    },
+    "수업 장소 메모": {
+      "type": "rich_text",
+      "id": "u%3DzK"
+    },
+    "수업 회차": {
+      "type": "formula",
+      "id": "vtoV",
+      "expression": "if((!empty({{notion:block_property:KRV%7D:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}}) and ({{notion:block_property:%5ClQz:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}} != \"🟠 보강\")) and ({{notion:block_property:%5ClQz:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}} != \"🚫 취소\"), 1, 0)"
+    },
+    "충돌": {
+      "type": "formula",
+      "id": "yE%7DP",
+      "expression": "if({{notion:block_property:Jcae:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}}, \"⚠️ 충돌\", \"\")"
+    },
+    "상태": {
+      "type": "formula",
+      "id": "ydSp",
+      "expression": "if(((empty({{notion:block_property:title:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}}) or empty(join(map({{notion:block_property:egNl:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}}, format(current)), \", \"))) or empty({{notion:block_property:KRV%7D:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}})) or empty({{notion:block_property:t%5CHE:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}}), \"🔴미입력\", if({{notion:block_property:KRV%7D:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}} > now(), \"🔵예정\", \"🟢완료\"))"
+    },
+    "학생": {
+      "type": "dual_property",
+      "id": "%7Cu%5CX",
+      "database_id": "314838fa-f2a6-8143-a6c7-e59c50f3bbdb"
+    },
+    "제목": {
+      "type": "title",
+      "id": "title"
+    }
+  }
+}

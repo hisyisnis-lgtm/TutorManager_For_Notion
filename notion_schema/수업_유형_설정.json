@@ -1,0 +1,54 @@
+{
+  "id": "314838fa-f2a6-81c3-b4e4-da87c48f9b43",
+  "title": "수업 유형 설정",
+  "url": "https://www.notion.so/314838faf2a681c3b4e4da87c48f9b43",
+  "properties": {
+    "수업 유형": {
+      "type": "select",
+      "id": "%3BMQF",
+      "options": [
+        {
+          "name": "1:1",
+          "color": "blue"
+        },
+        {
+          "name": "2:1",
+          "color": "green"
+        }
+      ]
+    },
+    "결제": {
+      "type": "dual_property",
+      "id": "%3Eipv",
+      "database_id": "314838fa-f2a6-8154-935b-edd3d2fbea83"
+    },
+    "학생 수": {
+      "type": "formula",
+      "id": "M~%3DW",
+      "expression": "if({{notion:block_property:%3BMQF:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}} == \"2:1\", 2, 1)"
+    },
+    "메모": {
+      "type": "rich_text",
+      "id": "eUIS"
+    },
+    "시간(분)": {
+      "type": "number",
+      "id": "tOt%5E",
+      "format": "number"
+    },
+    "1인 단가": {
+      "type": "number",
+      "id": "w%5EM%7B",
+      "format": "number"
+    },
+    "단가 안내": {
+      "type": "formula",
+      "id": "%7C%3C%40r",
+      "expression": "format({{notion:block_property:w%5EM%7B:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}}) + \"원\""
+    },
+    "타이틀": {
+      "type": "title",
+      "id": "title"
+    }
+  }
+}

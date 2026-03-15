@@ -1,0 +1,46 @@
+{
+  "id": "314838fa-f2a6-81d3-9ce4-c628edab065b",
+  "title": "할인 이벤트",
+  "url": "https://www.notion.so/314838faf2a681d39ce4c628edab065b",
+  "properties": {
+    "결제": {
+      "type": "dual_property",
+      "id": "%3Aj_%3B",
+      "database_id": "314838fa-f2a6-8154-935b-edd3d2fbea83"
+    },
+    "할인율(%)": {
+      "type": "number",
+      "id": "SN%7Ce",
+      "format": "number"
+    },
+    "메모": {
+      "type": "rich_text",
+      "id": "YxA%3B"
+    },
+    "종료일": {
+      "type": "date",
+      "id": "%5CKix"
+    },
+    "강제 OFF": {
+      "type": "checkbox",
+      "id": "oW%7C%5E"
+    },
+    "활성 여부": {
+      "type": "formula",
+      "id": "rDr~",
+      "expression": "if({{notion:block_property:t%3FJE:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}}, true, if({{notion:block_property:oW%7C%5E:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}}, false, if(empty({{notion:block_property:xr%3Cj:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}}) or empty({{notion:block_property:%5CKix:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}}), false, (dateBetween(now(), {{notion:block_property:xr%3Cj:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}}, \"days\") >= 0) and (dateBetween({{notion:block_property:%5CKix:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}}, now(), \"days\") >= 0))))"
+    },
+    "강제 ON": {
+      "type": "checkbox",
+      "id": "t%3FJE"
+    },
+    "시작일": {
+      "type": "date",
+      "id": "xr%3Cj"
+    },
+    "이벤트명": {
+      "type": "title",
+      "id": "title"
+    }
+  }
+}

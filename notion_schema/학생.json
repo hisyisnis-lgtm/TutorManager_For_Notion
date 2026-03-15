@@ -1,0 +1,116 @@
+{
+  "id": "314838fa-f2a6-8143-a6c7-e59c50f3bbdb",
+  "title": "학생",
+  "url": "https://www.notion.so/314838faf2a68143a6c7e59c50f3bbdb",
+  "properties": {
+    "날짜": {
+      "type": "date",
+      "id": "%3A%7DtL"
+    },
+    "총 수업 횟수": {
+      "type": "rollup",
+      "id": "%3CzGQ",
+      "relation_property_name": "수업 이력",
+      "rollup_property_name": "수업 회차",
+      "function": "sum"
+    },
+    "등록일": {
+      "type": "created_time",
+      "id": "LADg"
+    },
+    "결제 시간 회차 합계": {
+      "type": "rollup",
+      "id": "O%3EEL",
+      "relation_property_name": "결제",
+      "rollup_property_name": "유효 시간 회차",
+      "function": "sum"
+    },
+    "결제": {
+      "type": "dual_property",
+      "id": "SvI%5C",
+      "database_id": "314838fa-f2a6-8154-935b-edd3d2fbea83"
+    },
+    "총 결제 금액": {
+      "type": "rollup",
+      "id": "Wvx%7D",
+      "relation_property_name": "결제",
+      "rollup_property_name": "1인 결제 금액",
+      "function": "sum"
+    },
+    "수업 이력": {
+      "type": "dual_property",
+      "id": "%5B%7Bn%3D",
+      "database_id": "314838fa-f2a6-81bc-8b67-d9e1c8fb7ecb"
+    },
+    "잔여 시간 회차": {
+      "type": "formula",
+      "id": "%5EY%5E%3F",
+      "expression": "{{notion:block_property:O%3EEL:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}} - {{notion:block_property:u%3BJ%3C:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}}"
+    },
+    "수업 일지": {
+      "type": "dual_property",
+      "id": "ai%7B%7B",
+      "database_id": "318838fa-f2a6-81f1-9b9c-fd379b1026ed"
+    },
+    "예약 코드": {
+      "type": "rich_text",
+      "id": "b%7DZc"
+    },
+    "목표": {
+      "type": "rich_text",
+      "id": "e%3EPI"
+    },
+    "이메일": {
+      "type": "email",
+      "id": "jgP%3A"
+    },
+    "사용 시간 회차": {
+      "type": "rollup",
+      "id": "u%3BJ%3C",
+      "relation_property_name": "수업 이력",
+      "rollup_property_name": "시간 회차",
+      "function": "sum"
+    },
+    "상태": {
+      "type": "select",
+      "id": "wF%40q",
+      "options": [
+        {
+          "name": "🟢 수강중",
+          "color": "green"
+        },
+        {
+          "name": "🟡 일시중단",
+          "color": "yellow"
+        },
+        {
+          "name": "⚫ 수강종료",
+          "color": "default"
+        }
+      ]
+    },
+    "레벨": {
+      "type": "rich_text",
+      "id": "yjGp"
+    },
+    "전화번호": {
+      "type": "phone_number",
+      "id": "y%7BWn"
+    },
+    "미수금 합계": {
+      "type": "rollup",
+      "id": "%7D%3CM%3F",
+      "relation_property_name": "결제",
+      "rollup_property_name": "1인 미수금",
+      "function": "sum"
+    },
+    "메모": {
+      "type": "rich_text",
+      "id": "~Rww"
+    },
+    "이름": {
+      "type": "title",
+      "id": "title"
+    }
+  }
+}

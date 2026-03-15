@@ -1,0 +1,129 @@
+{
+  "id": "314838fa-f2a6-8154-935b-edd3d2fbea83",
+  "title": "수강료 결제 내역",
+  "url": "https://www.notion.so/314838faf2a68154935bedd3d2fbea83",
+  "properties": {
+    "메모": {
+      "type": "rich_text",
+      "id": "%3EF%3Ek"
+    },
+    "미수금": {
+      "type": "formula",
+      "id": "%3F_Xg",
+      "expression": "round(({{notion:block_property:CmmQ:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}} * {{notion:block_property:w%40%3F%40:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}}) * (1 - ({{notion:block_property:KJvP:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}} / 100))) - {{notion:block_property:A%5C~%5D:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}}"
+    },
+    "실제 결제 금액": {
+      "type": "number",
+      "id": "A%5C~%5D",
+      "format": "won"
+    },
+    "시간 회차": {
+      "type": "number",
+      "id": "CmmQ",
+      "format": "number"
+    },
+    "수업 종류": {
+      "type": "dual_property",
+      "id": "GDBY",
+      "database_id": "314838fa-f2a6-81c3-b4e4-da87c48f9b43"
+    },
+    "결제수단": {
+      "type": "select",
+      "id": "IiFe",
+      "options": [
+        {
+          "name": "카드",
+          "color": "purple"
+        },
+        {
+          "name": "계좌이체(현영O)",
+          "color": "orange"
+        },
+        {
+          "name": "계좌이체(현영X)",
+          "color": "gray"
+        },
+        {
+          "name": "현금(현영O)",
+          "color": "pink"
+        },
+        {
+          "name": "현금(현영X)",
+          "color": "brown"
+        }
+      ]
+    },
+    "적용 할인율(%)": {
+      "type": "rollup",
+      "id": "KJvP",
+      "relation_property_name": "할인 적용",
+      "rollup_property_name": "할인율(%)",
+      "function": "max"
+    },
+    "1인 결제 금액": {
+      "type": "formula",
+      "id": "K%7BQp",
+      "expression": "round(({{notion:block_property:CmmQ:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}} * {{notion:block_property:w%40%3F%40:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}}) * (1 - ({{notion:block_property:KJvP:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}} / 100)))"
+    },
+    "단가 안내": {
+      "type": "formula",
+      "id": "R%3E%3DL",
+      "expression": "if({{notion:block_property:KJvP:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}} > 0, ((((format({{notion:block_property:w%40%3F%40:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}}) + \"원  →  \") + format(round({{notion:block_property:w%40%3F%40:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}} * (1 - ({{notion:block_property:KJvP:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}} / 100))))) + \"원  (\") + format({{notion:block_property:KJvP:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}})) + \"% 할인)\", format({{notion:block_property:w%40%3F%40:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}}) + \"원\")"
+    },
+    "결제일": {
+      "type": "date",
+      "id": "ZBCi"
+    },
+    "시간 회차 금액": {
+      "type": "formula",
+      "id": "_%3DHD",
+      "expression": "round((({{notion:block_property:CmmQ:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}} * {{notion:block_property:w%40%3F%40:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}}) * (1 - ({{notion:block_property:KJvP:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}} / 100))))"
+    },
+    "미입력 항목": {
+      "type": "formula",
+      "id": "%60%5BuE",
+      "expression": "((if({{notion:block_property:fTqK:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}} == 0, \"🔴수업종류 \", \"\") + if({{notion:block_property:w%40%3F%40:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}} == 0, \"🔴수업종류 \", \"\")) + if(empty({{notion:block_property:CmmQ:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}}) or ({{notion:block_property:CmmQ:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}} == 0), \"🔴시간회차 \", \"\")) + if(empty({{notion:block_property:ZBCi:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}}), \"🔴결제일 \", \"\")"
+    },
+    "1인 미수금": {
+      "type": "formula",
+      "id": "%60yxR",
+      "expression": "round(({{notion:block_property:CmmQ:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}} * {{notion:block_property:w%40%3F%40:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}}) * (1 - ({{notion:block_property:KJvP:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}} / 100))) - {{notion:block_property:A%5C~%5D:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}}"
+    },
+    "할인 적용": {
+      "type": "dual_property",
+      "id": "agg%3A",
+      "database_id": "314838fa-f2a6-81d3-9ce4-c628edab065b"
+    },
+    "결제 금액": {
+      "type": "formula",
+      "id": "fXuU",
+      "expression": "round(({{notion:block_property:CmmQ:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}} * {{notion:block_property:w%40%3F%40:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}}) * (1 - ({{notion:block_property:KJvP:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}} / 100)))"
+    },
+    "학생": {
+      "type": "dual_property",
+      "id": "k%3EA%3E",
+      "database_id": "314838fa-f2a6-8143-a6c7-e59c50f3bbdb"
+    },
+    "시간당 단가": {
+      "type": "rollup",
+      "id": "w%40%3F%40",
+      "relation_property_name": "수업 종류",
+      "rollup_property_name": "1인 단가",
+      "function": "max"
+    },
+    "결제 상태": {
+      "type": "formula",
+      "id": "yMqM",
+      "expression": "if({{notion:block_property:A%5C~%5D:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}} > round(({{notion:block_property:CmmQ:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}} * {{notion:block_property:w%40%3F%40:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}}) * (1 - ({{notion:block_property:KJvP:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}} / 100))), (\"⚠️초과금 → \" + format({{notion:block_property:A%5C~%5D:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}} - round(({{notion:block_property:CmmQ:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}} * {{notion:block_property:w%40%3F%40:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}}) * (1 - ({{notion:block_property:KJvP:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}} / 100))))) + \"원\", if(round(({{notion:block_property:CmmQ:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}} * {{notion:block_property:w%40%3F%40:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}}) * (1 - ({{notion:block_property:KJvP:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}} / 100))) == {{notion:block_property:A%5C~%5D:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}}, \"🟢완료\", if({{notion:block_property:A%5C~%5D:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}} == 0, \"🔴미결제\", \"🔴미완료\")))"
+    },
+    "유효 시간 회차": {
+      "type": "formula",
+      "id": "%7C~~v",
+      "expression": "if({{notion:block_property:A%5C~%5D:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}} >= round(({{notion:block_property:CmmQ:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}} * {{notion:block_property:w%40%3F%40:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}}) * (1 - ({{notion:block_property:KJvP:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}} / 100))), {{notion:block_property:CmmQ:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}}, 0)"
+    },
+    "타이틀": {
+      "type": "title",
+      "id": "title"
+    }
+  }
+}
