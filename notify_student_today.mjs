@@ -11,7 +11,7 @@ const SOLAPI_API_KEY = process.env.SOLAPI_API_KEY;
 const SOLAPI_API_SECRET = process.env.SOLAPI_API_SECRET;
 const KAKAO_PFID = process.env.KAKAO_PFID;
 const KAKAO_TPL_STU_TODAY = process.env.KAKAO_TPL_STU_TODAY;
-const BOOKING_BASE_URL = 'https://hisyisnis-lgtm.github.io/TutorManager_For_Notion/#/book/';
+const BOOKING_BASE_URL = 'https://tiantian-chinese.pages.dev/#/book/';
 
 if (!TOKEN) {
   console.error('NOTION_TOKEN 환경변수가 설정되지 않았습니다.');

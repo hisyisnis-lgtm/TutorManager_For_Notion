@@ -5,6 +5,11 @@ import ConfirmDialog from '../components/ui/ConfirmDialog.jsx';
 const STORAGE_KEY = 'instructor_name';
 const NTFY_TOPIC_KEY = 'ntfy_topic';
 
+const SHARE_LINKS = [
+  { key: 'consult', label: '무료상담 신청', path: '/#/consult' },
+  { key: 'book', label: '학생 예약코드 입력', path: '/#/book' },
+];
+
 export function getInstructorName() {
   return localStorage.getItem(STORAGE_KEY) || '강사님';
 }
@@ -18,6 +23,15 @@ export default function SettingsPage() {
   const [ntfyTopic, setNtfyTopic] = useState(() => localStorage.getItem(NTFY_TOPIC_KEY) || '');
   const [saved, setSaved] = useState(false);
   const [confirmLogout, setConfirmLogout] = useState(false);
+  const [copiedKey, setCopiedKey] = useState('');
+
+  function copyLink(key, path) {
+    const url = `${window.location.origin}${path}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setCopiedKey(key);
+      setTimeout(() => setCopiedKey(''), 2000);
+    });
+  }
 
   const handleSave = () => {
     const trimmedName = name.trim();
@@ -70,6 +84,27 @@ export default function SettingsPage() {
           <p className="text-xs text-gray-400 mt-1.5">
             ntfy.sh/<span className="font-mono">{ntfyTopic || '토픽명'}</span> 으로 알림을 받습니다.
           </p>
+        </div>
+
+        <div>
+          <label className="label">공유 링크</label>
+          <div className="space-y-2">
+            {SHARE_LINKS.map(({ key, label, path }) => (
+              <div key={key} className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-2.5">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-gray-400 mb-0.5">{label}</p>
+                  <p className="text-xs text-gray-600 font-mono truncate">{window.location.origin}{path}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => copyLink(key, path)}
+                  className="shrink-0 text-xs text-blue-600 border border-blue-200 rounded-lg px-2.5 py-1 active:bg-blue-50"
+                >
+                  {copiedKey === key ? '복사됨 ✓' : '복사'}
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
 
         <button

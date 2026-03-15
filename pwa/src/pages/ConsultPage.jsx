@@ -61,7 +61,7 @@ export default function ConsultPage() {
     <div className="min-h-screen bg-gray-50">
       {/* Hero */}
       <div className="bg-gradient-to-b from-brand-700 to-brand-500 text-white px-6 pt-14 pb-10 text-center">
-        <img src="/TutorManager_For_Notion/logo-white.png" alt="하늘쌤 중국어" className="h-9 mx-auto mb-6 object-contain" />
+        <img src="/logo-white.png" alt="하늘쌤 중국어" className="h-9 mx-auto mb-6 object-contain" />
         <h1 className="text-2xl font-bold leading-snug mb-5">
           중국어로 말하고 싶은 분,<br />여기서 시작하세요
         </h1>
