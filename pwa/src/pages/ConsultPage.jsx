@@ -63,11 +63,13 @@ export default function ConsultPage() {
       <div className="bg-gradient-to-b from-brand-700 to-brand-500 text-white px-6 pt-16 pb-12 text-center">
         <p className="text-brand-100 text-sm font-medium tracking-widest uppercase mb-3">Free Consultation</p>
         <h1 className="text-3xl font-bold leading-tight mb-3">
-          중국어 무료 상담<br />30분
+          중국어로 말하고 싶은 분,<br />여기서 시작하세요
         </h1>
-        <p className="text-brand-100 text-base leading-relaxed mb-8">
-          Zoom으로 편하게 시작하세요.<br />
-          수준 진단부터 학습 방향까지 함께 이야기해요.
+        <p className="text-brand-100 text-base leading-relaxed mb-2">
+          회화·발음 교정 전문 | 입문~초중급 특화
+        </p>
+        <p className="text-brand-200 text-sm leading-relaxed mb-8">
+          Zoom 30분, 완전 무료
         </p>
         <button
           onClick={() => formRef.current?.scrollIntoView({ behavior: 'smooth' })}
@@ -77,33 +79,56 @@ export default function ConsultPage() {
         </button>
       </div>
 
-      {/* 혜택 섹션 */}
-      <div className="max-w-lg mx-auto px-6 py-10">
-        <h2 className="text-lg font-bold text-gray-800 mb-5 text-center">이런 분들께 추천해요</h2>
-        <div className="space-y-4">
-          {[
-            { icon: '🎯', title: '내 수준이 어느 정도인지 모르는 분', desc: '1:1 맞춤 레벨 진단으로 현재 위치를 확인해요.' },
-            { icon: '🗺️', title: '어떻게 공부해야 할지 막막한 분', desc: '목표와 상황에 맞는 학습 방향을 제안해드려요.' },
-            { icon: '💬', title: '실제로 말하는 연습이 필요한 분', desc: '회화·발음 교정 전문 수업으로 자신감을 키워요.' },
-          ].map(({ icon, title, desc }) => (
-            <div key={title} className="flex gap-4 bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-              <span className="text-2xl mt-0.5">{icon}</span>
-              <div>
-                <p className="font-semibold text-gray-800 text-sm">{title}</p>
-                <p className="text-gray-500 text-sm mt-0.5">{desc}</p>
+      <div className="max-w-lg mx-auto px-6 py-10 space-y-8">
+
+        {/* 이런 분께 딱 맞아요 */}
+        <div>
+          <h2 className="text-lg font-bold text-gray-800 mb-4 text-center">이런 분께 딱 맞아요</h2>
+          <div className="space-y-3">
+            {[
+              { icon: '🌱', title: '중국어를 처음 시작하고 싶은 분', desc: '어디서부터 시작해야 할지 같이 잡아드려요.' },
+              { icon: '😶', title: '배우긴 했는데 막상 말이 안 나오는 분', desc: '왜 입이 안 열리는지, 어떻게 바꿀 수 있는지 이야기해요.' },
+              { icon: '🔤', title: '발음이 자꾸 신경 쓰여 자신감이 없는 분', desc: '발음 교정 중심 수업으로 자연스럽게 말할 수 있게 도와드려요.' },
+              { icon: '📈', title: '초·중급인데 어떻게 올려야 할지 막막한 분', desc: '현재 수준을 진단하고 다음 단계 방향을 제안해드려요.' },
+            ].map(({ icon, title, desc }) => (
+              <div key={title} className="flex gap-4 bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+                <span className="text-2xl mt-0.5">{icon}</span>
+                <div>
+                  <p className="font-semibold text-gray-800 text-sm">{title}</p>
+                  <p className="text-gray-500 text-sm mt-0.5">{desc}</p>
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
 
-        <div className="mt-6 bg-brand-50 rounded-2xl p-5 border border-brand-100">
-          <p className="text-brand-700 font-semibold text-sm mb-2">상담 안내</p>
-          <ul className="space-y-1.5 text-sm text-brand-600">
-            <li>• Zoom 화상통화 30분 진행</li>
-            <li>• 신청 후 문자로 일정을 안내해드려요</li>
-            <li>• 완전 무료, 부담 없이 신청하세요</li>
+        {/* 상담에서 이런 걸 해드려요 */}
+        <div className="bg-brand-50 rounded-2xl p-5 border border-brand-100">
+          <p className="text-brand-700 font-semibold text-sm mb-3">상담에서 이런 걸 해드려요</p>
+          <ul className="space-y-2 text-sm text-brand-700">
+            <li className="flex gap-2"><span>📍</span><span>현재 수준 진단 (입문~초중급 기준)</span></li>
+            <li className="flex gap-2"><span>📍</span><span>회화 실력이 안 느는 이유 찾기</span></li>
+            <li className="flex gap-2"><span>📍</span><span>발음 교정 포인트 체크</span></li>
+            <li className="flex gap-2"><span>📍</span><span>나에게 맞는 학습 방향 제안</span></li>
+          </ul>
+          <div className="mt-4 pt-4 border-t border-brand-100 space-y-1.5 text-sm text-brand-600">
+            <p>• Zoom 화상통화 30분 진행</p>
+            <p>• 신청 후 문자로 일정을 안내해드려요</p>
+            <p>• 완전 무료, 부담 없이 신청하세요</p>
+          </div>
+        </div>
+
+        {/* 이런 상담은 어려워요 */}
+        <div className="bg-gray-100 rounded-2xl p-5 border border-gray-200">
+          <p className="text-gray-600 font-semibold text-sm mb-2">신청 전에 확인해주세요</p>
+          <p className="text-gray-500 text-sm mb-3">저는 회화·발음 교정을 전문으로 합니다.<br />아래 분들은 제가 충분히 도움드리기 어려울 수 있어요.</p>
+          <ul className="space-y-1 text-sm text-gray-400">
+            <li>· HSK 시험 준비</li>
+            <li>· 작문·쓰기 집중 학습</li>
+            <li>· 대학원 진학, 유학, 어학연수 준비</li>
           </ul>
         </div>
+
       </div>
 
       {/* 신청 폼 */}
