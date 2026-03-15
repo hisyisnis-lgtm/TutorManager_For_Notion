@@ -80,6 +80,15 @@ export default function ConsultPage() {
 
       <div className="max-w-lg mx-auto px-6 py-10 space-y-8">
 
+        {/* 강사 프로필 */}
+        <div className="flex flex-col items-center">
+          <img
+            src="/img/profile.jpg"
+            alt="하늘쌤"
+            className="w-32 h-32 rounded-full object-cover object-top ring-4 ring-white shadow-lg"
+          />
+        </div>
+
         {/* 이런 분께 딱 맞아요 */}
         <div>
           <h2 className="text-lg font-bold text-gray-800 mb-4 text-center">이런 분께 딱 맞아요</h2>
