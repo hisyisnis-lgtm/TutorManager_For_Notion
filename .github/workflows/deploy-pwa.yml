@@ -1,4 +1,4 @@
-name: PWA 배포 (GitHub Pages)
+name: PWA 배포 (Cloudflare Pages)
 
 on:
   push:
@@ -8,15 +8,13 @@ on:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
   group: pages
   cancel-in-progress: false
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -41,18 +39,9 @@ jobs:
         run: npm run build
         working-directory: pwa
 
-      - name: GitHub Pages 아티팩트 업로드
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: pwa/dist
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: GitHub Pages 배포
-        id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Cloudflare Pages 배포
+        run: npx wrangler pages deploy dist --project-name=tiantian-chinese
+        working-directory: pwa
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

@@ -6,7 +6,7 @@ import { readFileSync } from 'fs';
 const { version } = JSON.parse(readFileSync('./package.json', 'utf-8'));
 
 export default defineConfig({
-  base: '/TutorManager_For_Notion/',
+  base: '/',
   define: {
     __APP_VERSION__: JSON.stringify(version),
   },
@@ -23,8 +23,8 @@ export default defineConfig({
         background_color: '#F9FAFB',
         display: 'standalone',
         orientation: 'portrait',
-        start_url: '/TutorManager_For_Notion/',
-        scope: '/TutorManager_For_Notion/',
+        start_url: '/',
+        scope: '/',
         lang: 'ko',
         icons: [
           {
@@ -52,7 +52,7 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
-        navigateFallback: '/TutorManager_For_Notion/index.html',
+        navigateFallback: '/index.html',
         runtimeCaching: [
           {
             // Cloudflare Worker API는 항상 네트워크에서 가져옴 (최신 데이터)
