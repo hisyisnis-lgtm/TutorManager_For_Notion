@@ -4,6 +4,9 @@ const STUDENT_DB_ID = '314838fa-f2a6-8143-a6c7-e59c50f3bbdb';
 // ===== 예약 시스템 DB =====
 const BLOCKED_DATES_DB_ID = '31e838fa-f2a6-81d3-b034-c47a4f0e5f3e';
 
+// ===== 무료상담 신청 DB =====
+const CONSULT_DB_ID = '324838fa-f2a6-815d-99a7-ff165e8f78aa';
+
 const DAY_KR = ['일', '월', '화', '수', '목', '금', '토'];
 
 // 학생 이름 앞 상태 이모지(🟢🟡⚫) 제거
@@ -226,6 +229,110 @@ async function sendAlimtalk(_env, { to: _to, templateCode, variables }) {
   // TODO: Solapi API 키 준비되면 구현
   // env.SOLAPI_API_KEY, env.SOLAPI_API_SECRET, env.KAKAO_CHANNEL_ID 필요
   console.log(`[알림톡 placeholder] template=${templateCode}`, JSON.stringify(variables));
+}
+
+// ===== ntfy 강사 알림 발송 =====
+async function sendNtfy(env, message, title = '무료상담 신청') {
+  const topic = env.NTFY_TOPIC;
+  if (!topic) return;
+  await fetch(`https://ntfy.sh/${topic}`, {
+    method: 'POST',
+    headers: { Title: title, Priority: 'high', 'Content-Type': 'text/plain' },
+    body: message,
+  }).catch(() => {});
+}
+
+// ===== 무료상담 신청 처리 =====
+async function handleConsultRequest(request, env, corsHeaders) {
+  const body = await request.json().catch(() => null);
+  if (!body) {
+    return new Response(JSON.stringify({ error: '잘못된 요청입니다.' }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
+  const { name, phone, level, preferredDays, preferredTime, message } = body;
+
+  if (!name?.trim() || !phone?.trim()) {
+    return new Response(JSON.stringify({ error: '이름과 전화번호는 필수입니다.' }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
+  // 전화번호 형식 검증 (숫자만, 10~11자리)
+  const phoneDigits = phone.replace(/\D/g, '');
+  if (phoneDigits.length < 10 || phoneDigits.length > 11) {
+    return new Response(JSON.stringify({ error: '전화번호 형식이 올바르지 않습니다.' }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
+  const dbId = env.CONSULT_DB_ID || CONSULT_DB_ID;
+  if (!dbId) {
+    console.error('[consult] CONSULT_DB_ID 미설정');
+    return new Response(JSON.stringify({ error: '서버 설정 오류입니다. 잠시 후 다시 시도해주세요.' }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
+  const daysText = Array.isArray(preferredDays) && preferredDays.length > 0
+    ? preferredDays.join(', ')
+    : '미기재';
+
+  // Notion 페이지 생성
+  const notionRes = await fetch(`https://api.notion.com/v1/pages`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${env.NOTION_TOKEN}`,
+      'Notion-Version': '2022-06-28',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      parent: { database_id: dbId },
+      properties: {
+        '이름': { title: [{ text: { content: name.trim() } }] },
+        '전화번호': { rich_text: [{ text: { content: phoneDigits } }] },
+        '수준': level ? { select: { name: level } } : undefined,
+        '희망 요일': Array.isArray(preferredDays) && preferredDays.length > 0
+          ? { multi_select: preferredDays.map(d => ({ name: d })) }
+          : undefined,
+        '희망 시간대': preferredTime ? { select: { name: preferredTime } } : undefined,
+        '상담 내용': message?.trim()
+          ? { rich_text: [{ text: { content: message.trim() } }] }
+          : undefined,
+        '상태': { select: { name: '신청됨' } },
+      },
+    }),
+  }).then(r => r.json());
+
+  if (notionRes.object === 'error') {
+    console.error('[consult] Notion 오류:', JSON.stringify(notionRes));
+    return new Response(JSON.stringify({ error: '신청 저장 중 오류가 발생했습니다.' }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
+  // 강사에게 ntfy 알림
+  const ntfyMsg = [
+    `이름: ${name.trim()}`,
+    `전화: ${phoneDigits}`,
+    `수준: ${level || '미기재'}`,
+    `희망 요일: ${daysText}`,
+    `희망 시간대: ${preferredTime || '미기재'}`,
+    message?.trim() ? `내용: ${message.trim()}` : null,
+  ].filter(Boolean).join('\n');
+
+  await sendNtfy(env, ntfyMsg, '📩 무료상담 신청');
+
+  return new Response(JSON.stringify({ ok: true }), {
+    status: 200,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
 }
 
 // ===== 예약 시스템 라우트 처리 =====
@@ -949,6 +1056,11 @@ export default {
     // 예약 시스템 라우트 (공개 + 강사 인증 혼재, 내부에서 분기)
     if (url.pathname.startsWith('/booking')) {
       return handleBookingRoutes(request, env, corsHeaders, url);
+    }
+
+    // 무료상담 신청 (공개, 인증 불필요)
+    if (url.pathname === '/consult' && request.method === 'POST') {
+      return handleConsultRequest(request, env, corsHeaders);
     }
 
     // 로그인 엔드포인트: POST /auth/login
