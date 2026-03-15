@@ -282,8 +282,26 @@ async function handleConsultRequest(request, env, corsHeaders) {
 
   const { name, phone, level, preferredDays, preferredTime, message } = body;
 
+  const VALID_LEVELS = ['입문', '초급', '중급', '고급'];
+  const VALID_DAYS = ['월', '화', '수', '목', '금', '토', '일'];
+  const VALID_TIMES = ['오전 (9-12시)', '오후 (12-18시)', '저녁 (18-21시)'];
+
   if (!name?.trim() || !phone?.trim()) {
     return new Response(JSON.stringify({ error: '이름과 전화번호는 필수입니다.' }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
+  // 길이 제한
+  if (name.trim().length > 50) {
+    return new Response(JSON.stringify({ error: '이름이 너무 깁니다.' }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+  if (message && message.trim().length > 500) {
+    return new Response(JSON.stringify({ error: '상담 내용은 500자 이내로 입력해주세요.' }), {
       status: 400,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
@@ -293,6 +311,26 @@ async function handleConsultRequest(request, env, corsHeaders) {
   const phoneDigits = phone.replace(/\D/g, '');
   if (phoneDigits.length < 10 || phoneDigits.length > 11) {
     return new Response(JSON.stringify({ error: '전화번호 형식이 올바르지 않습니다.' }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
+  // 선택값 화이트리스트 검증
+  if (level && !VALID_LEVELS.includes(level)) {
+    return new Response(JSON.stringify({ error: '잘못된 수준 값입니다.' }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+  if (preferredTime && !VALID_TIMES.includes(preferredTime)) {
+    return new Response(JSON.stringify({ error: '잘못된 시간대 값입니다.' }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+  if (Array.isArray(preferredDays) && preferredDays.some(d => !VALID_DAYS.includes(d))) {
+    return new Response(JSON.stringify({ error: '잘못된 요일 값입니다.' }), {
       status: 400,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
