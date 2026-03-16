@@ -563,7 +563,7 @@ export default function LandingPage() {
   }
 
   return (
-    <div className="min-h-screen font-kjc" style={{ backgroundColor: '#f9fafb' }}>
+    <div className="min-h-screen font-sans" style={{ backgroundColor: '#f9fafb' }}>
       {/* Sticky header */}
       <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-gray-100">
         <div className="max-w-lg mx-auto px-5">
