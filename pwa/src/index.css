@@ -2,6 +2,28 @@
 @tailwind components;
 @tailwind utilities;
 
+@font-face {
+  font-family: 'KimjungchulGothic';
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+  src: url('/fonts/KimjungchulGothic-Light.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'KimjungchulGothic';
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  src: url('/fonts/KimjungchulGothic-Regular.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'KimjungchulGothic';
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+  src: url('/fonts/KimjungchulGothic-Bold.ttf') format('truetype');
+}
+
 @layer base {
   html {
     -webkit-tap-highlight-color: transparent;

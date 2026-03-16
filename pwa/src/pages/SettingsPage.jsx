@@ -6,6 +6,7 @@ const STORAGE_KEY = 'instructor_name';
 const NTFY_TOPIC_KEY = 'ntfy_topic';
 
 const SHARE_LINKS = [
+  { key: 'intro', label: '랜딩 페이지 (홍보용)', path: '/#/intro' },
   { key: 'consult', label: '무료상담 신청', path: '/#/consult' },
   { key: 'book', label: '학생 예약코드 입력', path: '/#/book' },
 ];

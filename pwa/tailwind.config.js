@@ -5,6 +5,7 @@ export default {
     extend: {
       fontFamily: {
         sans: ['Pretendard', 'system-ui', '-apple-system', 'sans-serif'],
+        kjc: ['KimjungchulGothic', 'Pretendard', 'system-ui', 'sans-serif'],
       },
       colors: {
         brand: {
