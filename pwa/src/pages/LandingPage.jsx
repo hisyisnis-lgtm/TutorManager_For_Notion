@@ -142,25 +142,23 @@ function LandingContent({ onConsult, onPricing }) {
       {/* 강사 프로필 */}
       <FadeUp>
         <section style={{ padding: '24px 20px 16px' }}>
-          <Card variant="borderless" style={{ borderRadius: 16 }}>
-            <Space size={20} align="start">
+          <Flex vertical align="center" gap={12} style={{ textAlign: 'center', padding: '8px 0' }}>
               <Avatar
-                src="/img/profile.jpg" size={72} shape="square"
-                style={{ borderRadius: 12, flexShrink: 0 }}
+                src="/img/profile.jpg" size={120}
+                style={{ flexShrink: 0, boxShadow: '0 4px 16px rgba(0,0,0,0.12)' }}
               />
               <div>
-                <Text style={{ fontSize: 13, fontWeight: 600, color: PRIMARY, letterSpacing: '0.05em', display: 'block', marginBottom: 4 }}>
-                  중국어 강사
+                <Title level={4} style={{ margin: '0 0 4px' }}>하늘쌤</Title>
+                <Text style={{ fontSize: 13, fontWeight: 600, color: PRIMARY, letterSpacing: '0.05em', display: 'block', marginBottom: 12 }}>
+                  대표 강사
                 </Text>
-                <Title level={4} style={{ margin: '0 0 8px' }}>하늘쌤</Title>
-                <Space size={6} wrap>
+                <Space size={6} wrap style={{ justifyContent: 'center' }}>
                   {['10년 경력', '회화 전문', '발음 교정'].map(tag => (
-                    <Tag key={tag} style={{ borderRadius: 20, margin: 0, fontSize: 13 }}>{tag}</Tag>
+                    <Tag key={tag} style={{ borderRadius: 20, margin: 0, fontSize: 13, backgroundColor: 'transparent', borderColor: '#d9d9d9', color: '#262626' }}>{tag}</Tag>
                   ))}
                 </Space>
               </div>
-            </Space>
-          </Card>
+          </Flex>
         </section>
       </FadeUp>
 
