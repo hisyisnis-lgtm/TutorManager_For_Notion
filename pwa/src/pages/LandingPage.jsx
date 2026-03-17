@@ -17,7 +17,9 @@ const PRIMARY = '#7f0005';
 const TABS = ['소개', '무료상담', '수강료'];
 const DAYS = ['월', '화', '수', '목', '금', '토', '일'];
 const TIME_OPTIONS = ['오전 (9-12시)', '오후 (12-18시)', '저녁 (18-21시)'];
-const LEVEL_OPTIONS = ['입문', '초급', '중급', '고급'];
+const LEVEL_OPTIONS = ['완전 처음이에요', '조금 배운 적 있어요', '어느 정도 배웠는데 막혀있어요'];
+const CONCERN_OPTIONS = ['발음이 이상한 것 같아요', '배웠는데 막상 말이 안 나와요', '방향을 못 잡겠어요'];
+const REASON_OPTIONS = ['여행', '드라마&콘텐츠', '업무&비즈니스', '중국인 지인&가족', '그냥 관심이 생겨서', '기타 (직접 입력)'];
 
 const theme = {
   token: {
@@ -260,6 +262,9 @@ function ConsultContent() {
   const [level, setLevel] = useState('');
   const [preferredDays, setPreferredDays] = useState([]);
   const [preferredTime, setPreferredTime] = useState('');
+  const [concerns, setConcerns] = useState([]);
+  const [reasons, setReasons] = useState([]);
+  const [reasonOther, setReasonOther] = useState('');
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -267,6 +272,12 @@ function ConsultContent() {
 
   function toggleDay(day) {
     setPreferredDays(prev => prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]);
+  }
+  function toggleConcern(opt) {
+    setConcerns(prev => prev.includes(opt) ? prev.filter(o => o !== opt) : [...prev, opt]);
+  }
+  function toggleReason(opt) {
+    setReasons(prev => prev.includes(opt) ? prev.filter(o => o !== opt) : [...prev, opt]);
   }
 
   function formatPhone(value) {
@@ -288,6 +299,8 @@ function ConsultContent() {
         name: name.trim(), phone: digits,
         level: level || null, preferredDays,
         preferredTime: preferredTime || null,
+        concerns, reasons,
+        reasonOther: reasons.includes('기타 (직접 입력)') ? reasonOther.trim() || null : null,
         message: message.trim() || null,
       });
       setDone(true);
@@ -372,15 +385,51 @@ function ConsultContent() {
         </Form.Item>
 
         <Form.Item label="현재 중국어 수준">
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+          <Flex vertical gap={8} style={{ width: '100%' }}>
             {LEVEL_OPTIONS.map(opt => (
               <ToggleButton
                 key={opt} label={opt}
                 selected={level === opt}
                 onClick={() => setLevel(prev => prev === opt ? '' : opt)}
+                fullWidth
+              />
+            ))}
+          </Flex>
+        </Form.Item>
+
+        <Form.Item label={
+          <span>가장 큰 고민 <Text type="secondary" style={{ fontSize: 13, fontWeight: 400 }}>(복수 선택)</Text></span>
+        }>
+          <Flex vertical gap={8} style={{ width: '100%' }}>
+            {CONCERN_OPTIONS.map(opt => (
+              <ToggleButton
+                key={opt} label={opt}
+                selected={concerns.includes(opt)}
+                onClick={() => toggleConcern(opt)}
+                fullWidth
+              />
+            ))}
+          </Flex>
+        </Form.Item>
+
+        <Form.Item label={
+          <span>중국어를 배우려는 이유 <Text type="secondary" style={{ fontSize: 13, fontWeight: 400 }}>(복수 선택)</Text></span>
+        }>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
+            {REASON_OPTIONS.map(opt => (
+              <ToggleButton
+                key={opt} label={opt}
+                selected={reasons.includes(opt)}
+                onClick={() => toggleReason(opt)}
               />
             ))}
           </div>
+          {reasons.includes('기타 (직접 입력)') && (
+            <Input
+              value={reasonOther} onChange={e => setReasonOther(e.target.value)}
+              placeholder="직접 입력해주세요" style={{ borderRadius: 12, marginTop: 8 }}
+            />
+          )}
         </Form.Item>
 
         <Form.Item label={

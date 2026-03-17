@@ -280,11 +280,13 @@ async function handleConsultRequest(request, env, corsHeaders) {
     });
   }
 
-  const { name, phone, level, preferredDays, preferredTime, message } = body;
+  const { name, phone, level, preferredDays, preferredTime, concerns, reasons, reasonOther, message } = body;
 
-  const VALID_LEVELS = ['입문', '초급', '중급', '고급'];
+  const VALID_LEVELS = ['완전 처음이에요', '조금 배운 적 있어요', '어느 정도 배웠는데 막혀있어요'];
   const VALID_DAYS = ['월', '화', '수', '목', '금', '토', '일'];
   const VALID_TIMES = ['오전 (9-12시)', '오후 (12-18시)', '저녁 (18-21시)'];
+  const VALID_CONCERNS = ['발음이 이상한 것 같아요', '배웠는데 막상 말이 안 나와요', '방향을 못 잡겠어요'];
+  const VALID_REASONS = ['여행', '드라마&콘텐츠', '업무&비즈니스', '중국인 지인&가족', '그냥 관심이 생겨서', '기타 (직접 입력)'];
 
   if (!name?.trim() || !phone?.trim()) {
     return new Response(JSON.stringify({ error: '이름과 전화번호는 필수입니다.' }), {
@@ -335,6 +337,18 @@ async function handleConsultRequest(request, env, corsHeaders) {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
+  if (Array.isArray(concerns) && concerns.some(c => !VALID_CONCERNS.includes(c))) {
+    return new Response(JSON.stringify({ error: '잘못된 고민 값입니다.' }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+  if (Array.isArray(reasons) && reasons.some(r => !VALID_REASONS.includes(r))) {
+    return new Response(JSON.stringify({ error: '잘못된 이유 값입니다.' }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
 
   const dbId = env.CONSULT_DB_ID || CONSULT_DB_ID;
   if (!dbId) {
@@ -348,6 +362,20 @@ async function handleConsultRequest(request, env, corsHeaders) {
   const daysText = Array.isArray(preferredDays) && preferredDays.length > 0
     ? preferredDays.join(', ')
     : '미기재';
+
+  // 고민/이유를 상담 내용에 포함
+  const structuredParts = [];
+  if (Array.isArray(concerns) && concerns.length > 0) {
+    structuredParts.push(`[고민] ${concerns.join(', ')}`);
+  }
+  if (Array.isArray(reasons) && reasons.length > 0) {
+    const reasonText = reasons.map(r =>
+      r === '기타 (직접 입력)' && reasonOther?.trim() ? `기타: ${reasonOther.trim()}` : r
+    ).join(', ');
+    structuredParts.push(`[이유] ${reasonText}`);
+  }
+  if (message?.trim()) structuredParts.push(`[상담 내용] ${message.trim()}`);
+  const fullContent = structuredParts.join('\n');
 
   // Notion 페이지 생성
   const notionRes = await fetch(`https://api.notion.com/v1/pages`, {
@@ -367,8 +395,8 @@ async function handleConsultRequest(request, env, corsHeaders) {
           ? { multi_select: preferredDays.map(d => ({ name: d })) }
           : undefined,
         '희망 시간대': preferredTime ? { select: { name: preferredTime } } : undefined,
-        '상담 내용': message?.trim()
-          ? { rich_text: [{ text: { content: message.trim() } }] }
+        '상담 내용': fullContent
+          ? { rich_text: [{ text: { content: fullContent } }] }
           : undefined,
         '상태': { select: { name: '신청됨' } },
       },
@@ -384,13 +412,19 @@ async function handleConsultRequest(request, env, corsHeaders) {
   }
 
   // 강사에게 ntfy 알림
+  const concernsText = Array.isArray(concerns) && concerns.length > 0 ? concerns.join(', ') : '미기재';
+  const reasonsText = Array.isArray(reasons) && reasons.length > 0
+    ? reasons.map(r => r === '기타 (직접 입력)' && reasonOther?.trim() ? `기타: ${reasonOther.trim()}` : r).join(', ')
+    : '미기재';
   const ntfyMsg = [
     `이름: ${name.trim()}`,
     `전화: ${phoneDigits}`,
     `수준: ${level || '미기재'}`,
+    `고민: ${concernsText}`,
+    `이유: ${reasonsText}`,
     `희망 요일: ${daysText}`,
     `희망 시간대: ${preferredTime || '미기재'}`,
-    message?.trim() ? `내용: ${message.trim()}` : null,
+    message?.trim() ? `상담 내용: ${message.trim()}` : null,
   ].filter(Boolean).join('\n');
 
   await sendNtfy(env, ntfyMsg, '📩 무료상담 신청');
