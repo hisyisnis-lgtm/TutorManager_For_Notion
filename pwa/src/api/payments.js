@@ -35,7 +35,7 @@ export async function createPayment({
   paymentDate,
 }) {
   const properties = {
-    비고: { title: [{ text: { content: note || '' } }] },
+    타이틀: { title: [{ text: { content: note || '' } }] },
     학생: { relation: [{ id: studentId }] },
     '수업 종류': { relation: [{ id: classTypeId }] },
     '시간 회차': { number: sessionCount },
@@ -76,7 +76,7 @@ export async function updatePayment(pageId, {
   if (paymentMethod) properties['결제수단'] = { select: { name: paymentMethod } };
   else if (paymentMethod === '') properties['결제수단'] = { select: null };
   if (paymentDate) properties['결제일'] = { date: { start: paymentDate } };
-  if (note !== undefined) properties['비고'] = { title: [{ text: { content: note } }] };
+  if (note !== undefined) properties['타이틀'] = { title: [{ text: { content: note } }] };
 
   return updatePage(pageId, properties);
 }
@@ -85,7 +85,7 @@ export function parsePayment(page) {
   const p = page.properties;
   return {
     id: page.id,
-    note: p['비고']?.title?.[0]?.plain_text ?? '',
+    note: p['타이틀']?.title?.[0]?.plain_text ?? '',
     studentIds: p['학생']?.relation?.map((r) => r.id) ?? [],
     classTypeId: p['수업 종류']?.relation?.[0]?.id ?? null,
     discountEventId: p['할인 적용']?.relation?.[0]?.id ?? null,

@@ -1,7 +1,7 @@
 {
   "name": "tutor-manager-pwa",
   "private": true,
-  "version": "1.88.0",
+  "version": "1.89.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,6 +10,8 @@
     "generate-icons": "pwa-assets-generator --preset minimal-2023 public/symbol-red.png"
   },
   "dependencies": {
+    "@ant-design/icons": "^6.1.0",
+    "antd": "^6.3.3",
     "lucide-react": "^0.577.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

@@ -1,155 +1,256 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
-  MessageCircle, BookOpen, Clock, MapPin, Users,
-  CheckCircle2, Volume2, TrendingUp, Sparkles,
-  ChevronRight, User, Gift, Calendar, CreditCard,
-} from 'lucide-react';
+  ConfigProvider, Button, Card, Flex, Form, Input,
+  Typography, Tag, Space, Avatar, Divider,
+} from 'antd';
+import {
+  CheckCircleOutlined, ClockCircleOutlined, EnvironmentOutlined,
+  ReadOutlined, TeamOutlined, UserOutlined, GiftOutlined,
+  CalendarOutlined, CreditCardOutlined, ArrowRightOutlined,
+  SoundOutlined, LineChartOutlined, BulbOutlined, MessageOutlined,
+} from '@ant-design/icons';
 import { submitConsultation } from '../api/consultApi';
 
+const { Title, Text, Paragraph } = Typography;
+
+const PRIMARY = '#7f0005';
 const TABS = ['소개', '무료상담', '수강료'];
 const DAYS = ['월', '화', '수', '목', '금', '토', '일'];
 const TIME_OPTIONS = ['오전 (9-12시)', '오후 (12-18시)', '저녁 (18-21시)'];
 const LEVEL_OPTIONS = ['입문', '초급', '중급', '고급'];
-const PRIMARY = '#7f0005';
+
+const theme = {
+  token: {
+    colorPrimary: PRIMARY,
+    borderRadius: 12,
+    colorBgContainer: '#ffffff',
+    fontFamily: 'inherit',
+  },
+};
+
+// ─── 스크롤 애니메이션 ────────────────────────────────────────
+function useInView(threshold = 0.12) {
+  const ref = useRef(null);
+  const [inView, setInView] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) { setInView(true); obs.disconnect(); }
+    }, { threshold });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [threshold]);
+  return [ref, inView];
+}
+
+function FadeUp({ children, delay = 0, style = {} }) {
+  const [ref, inView] = useInView();
+  return (
+    <div ref={ref} style={{
+      opacity: inView ? 1 : 0,
+      transform: inView ? 'translateY(0)' : 'translateY(24px)',
+      transition: `opacity 0.55s ease ${delay}ms, transform 0.55s ease ${delay}ms`,
+      ...style,
+    }}>
+      {children}
+    </div>
+  );
+}
+
+// ─── 아이콘 박스 헬퍼 ────────────────────────────────────────
+function IconBox({ icon, color = '#767676', bg = '#f9fafb' }) {
+  return (
+    <div style={{
+      width: 36, height: 36, borderRadius: 10,
+      backgroundColor: bg, display: 'flex',
+      alignItems: 'center', justifyContent: 'center',
+      flexShrink: 0, color, fontSize: 16,
+    }}>
+      {icon}
+    </div>
+  );
+}
+
+// ─── 선택 버튼 (레벨·요일·시간) ─────────────────────────────
+function ToggleButton({ label, selected, onClick, fullWidth = false, style = {} }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        width: fullWidth ? '100%' : undefined,
+        height: 44, borderRadius: 12, fontSize: 14, fontWeight: 500,
+        cursor: 'pointer', transition: 'all 0.2s',
+        border: `1px solid ${selected ? PRIMARY : '#d9d9d9'}`,
+        backgroundColor: selected ? PRIMARY : '#ffffff',
+        color: selected ? '#ffffff' : '#595959',
+        textAlign: fullWidth ? 'left' : 'center',
+        padding: fullWidth ? '0 16px' : '0',
+        ...style,
+      }}
+    >
+      {label}
+    </button>
+  );
+}
 
 // ─── 탭 1: 서비스 소개 ────────────────────────────────────────
 function LandingContent({ onConsult, onPricing }) {
   return (
-    <div className="pb-20">
+    <div style={{ paddingBottom: 80 }}>
       {/* Hero */}
-      <section style={{ backgroundColor: PRIMARY }} className="text-white px-6 pt-14 pb-12">
-        <span className="inline-block text-xs font-medium bg-white/20 px-3 py-1 rounded-full mb-5 tracking-wide">
-          회화 · 발음 교정 전문
-        </span>
-        <h1 className="text-[2rem] font-bold leading-tight tracking-tight mb-3">
-          중국어로<br />말하고 싶다면
-        </h1>
-        <p className="text-white/70 text-sm leading-relaxed mb-9">
-          10년 경력의 중국어 전문 강사와 함께<br />
-          입문부터 초중급까지 체계적으로.
-        </p>
-        <div className="flex gap-3">
-          <button
-            onClick={onConsult}
-            className="flex-1 bg-white font-bold py-3.5 rounded-xl text-sm active:opacity-80 transition-opacity"
-            style={{ color: PRIMARY }}
-          >
-            무료 상담 신청
-          </button>
-          <button
-            onClick={onPricing}
-            className="flex-1 bg-white/15 text-white font-semibold py-3.5 rounded-xl text-sm active:bg-white/25 transition-colors border border-white/25"
-          >
-            수강료 안내
-          </button>
-        </div>
-      </section>
-
-      {/* Instructor */}
-      <section className="px-5 py-8">
-        <div className="bg-white rounded-xl p-5 flex items-center gap-5">
-          <img
-            src="/img/profile.jpg"
-            alt="하늘쌤"
-            className="w-[72px] h-[72px] rounded-xl object-cover object-top shrink-0"
-          />
-          <div>
-            <p className="text-xs font-semibold mb-1 tracking-wide" style={{ color: PRIMARY }}>
-              중국어 강사
-            </p>
-            <h2 className="text-xl font-bold text-gray-900 mb-2">하늘쌤</h2>
-            <div className="flex flex-wrap gap-1.5">
-              {['10년 경력', '회화 전문', '발음 교정'].map(tag => (
-                <span key={tag} className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
-                  {tag}
-                </span>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* For whom */}
-      <section className="px-5 pb-8">
-        <h2 className="text-lg font-bold text-gray-900 mb-4">이런 분께 맞아요</h2>
-        <div className="space-y-2.5">
-          {[
-            { Icon: Sparkles, title: '중국어를 처음 시작하고 싶은 분', desc: '어디서부터 시작할지 같이 잡아드려요.' },
-            { Icon: Volume2, title: '발음 교정으로 자신감을 키우고 싶은 분', desc: '자연스럽게 말할 수 있도록 체계적으로 교정해드려요.' },
-            { Icon: MessageCircle, title: '배웠지만 막상 말이 안 나오는 분', desc: '왜 입이 안 열리는지, 어떻게 해결할지 이야기해요.' },
-            { Icon: TrendingUp, title: '초·중급인데 방향을 못 잡겠는 분', desc: '수준 진단 후 맞춤 방향을 제안해드려요.' },
-          ].map(({ Icon, title, desc }) => (
-            <div key={title} className="flex gap-4 bg-white rounded-xl p-4">
-              <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: '#fff0f1' }}>
-                <Icon className="w-4 h-4" style={{ color: PRIMARY }} />
-              </div>
-              <div>
-                <p className="font-semibold text-gray-800 text-sm">{title}</p>
-                <p className="text-gray-400 text-xs mt-0.5 leading-relaxed">{desc}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Lesson info */}
-      <section className="px-5 pb-8">
-        <h2 className="text-lg font-bold text-gray-900 mb-4">수업 안내</h2>
-        <div className="bg-white rounded-xl p-5 space-y-4">
-          {[
-            { Icon: Clock, label: '수업 시간', value: '50분 기준 (조정 가능)' },
-            { Icon: MapPin, label: '수업 장소', value: '강남 사무실 · Zoom 화상' },
-            { Icon: BookOpen, label: '수업 방식', value: '회화·발음 교정, 1:1 맞춤형' },
-            { Icon: Users, label: '수업 형태', value: '1:1 개인 과외' },
-          ].map(({ Icon, label, value }) => (
-            <div key={label} className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-gray-50 flex items-center justify-center shrink-0">
-                <Icon className="w-4 h-4 text-gray-400" />
-              </div>
-              <div>
-                <p className="text-xs text-gray-400">{label}</p>
-                <p className="text-sm text-gray-700 font-medium">{value}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Disclaimer */}
-      <section className="px-5 pb-8">
-        <div className="bg-gray-50 rounded-xl p-5">
-          <p className="text-sm font-semibold text-gray-600 mb-3">이런 상담은 어려워요</p>
-          <p className="text-sm text-gray-400 leading-relaxed mb-3">
-            하늘쌤은 입문~초중급 회화·발음 교정 전문입니다.<br />
-            아래 항목은 충분히 도움드리기 어려울 수 있어요.
+      <section style={{ backgroundColor: PRIMARY, padding: '56px 24px 48px', overflow: 'hidden' }}>
+        <FadeUp delay={0}>
+          <Tag style={{
+            backgroundColor: 'rgba(255,255,255,0.15)', color: 'white',
+            border: 'none', borderRadius: 20, fontSize: 13, fontWeight: 600,
+            marginBottom: 20, letterSpacing: '0.05em',
+          }}>
+            회화 · 발음 교정 전문
+          </Tag>
+        </FadeUp>
+        <FadeUp delay={100}>
+          <h1 style={{ color: 'white', fontSize: 32, fontWeight: 700, lineHeight: 1.3, margin: '0 0 12px' }}>
+            중국어로<br />말하고 싶다면
+          </h1>
+        </FadeUp>
+        <FadeUp delay={200}>
+          <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: 14, lineHeight: 1.6, margin: '0 0 36px' }}>
+            10년 경력의 중국어 전문 강사와 함께<br />
+            입문부터 초중급까지 체계적으로.
           </p>
-          <ul className="space-y-1 text-sm text-gray-400">
-            <li className="flex items-center gap-2">· HSK 시험 준비</li>
-            <li className="flex items-center gap-2">· 작문·쓰기 집중 학습</li>
-            <li className="flex items-center gap-2">· 대학원 진학, 유학, 어학연수 준비</li>
-          </ul>
-        </div>
+        </FadeUp>
+        <FadeUp delay={300}>
+          <div style={{ display: 'flex', gap: 12 }}>
+            <Button
+              size="large" onClick={onConsult}
+              style={{ flex: 1, backgroundColor: 'white', color: PRIMARY, fontWeight: 700, height: 48, borderRadius: 12, border: 'none' }}
+            >
+              무료 상담 신청
+            </Button>
+            <Button
+              size="large" onClick={onPricing}
+              style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.15)', color: 'white', fontWeight: 600, height: 48, borderRadius: 12, border: '1px solid rgba(255,255,255,0.25)' }}
+            >
+              수강료 안내
+            </Button>
+          </div>
+        </FadeUp>
       </section>
+
+      {/* 강사 프로필 */}
+      <FadeUp>
+        <section style={{ padding: '24px 20px 16px' }}>
+          <Card variant="borderless" style={{ borderRadius: 16 }}>
+            <Space size={20} align="start">
+              <Avatar
+                src="/img/profile.jpg" size={72} shape="square"
+                style={{ borderRadius: 12, flexShrink: 0 }}
+              />
+              <div>
+                <Text style={{ fontSize: 13, fontWeight: 600, color: PRIMARY, letterSpacing: '0.05em', display: 'block', marginBottom: 4 }}>
+                  중국어 강사
+                </Text>
+                <Title level={4} style={{ margin: '0 0 8px' }}>하늘쌤</Title>
+                <Space size={6} wrap>
+                  {['10년 경력', '회화 전문', '발음 교정'].map(tag => (
+                    <Tag key={tag} style={{ borderRadius: 20, margin: 0, fontSize: 13 }}>{tag}</Tag>
+                  ))}
+                </Space>
+              </div>
+            </Space>
+          </Card>
+        </section>
+      </FadeUp>
+
+      {/* 이런 분께 */}
+      <section style={{ padding: '8px 20px 16px' }}>
+        <FadeUp>
+          <Title level={5} style={{ marginBottom: 16 }}>이런 분께 맞아요</Title>
+        </FadeUp>
+        <Flex vertical gap={10} style={{ width: '100%' }}>
+          {[
+            { icon: <BulbOutlined />, title: '중국어를 처음 시작하고 싶은 분', desc: '어디서부터 시작할지 같이 잡아드려요.' },
+            { icon: <SoundOutlined />, title: '발음 교정으로 자신감을 키우고 싶은 분', desc: '자연스럽게 말할 수 있도록 체계적으로 교정해드려요.' },
+            { icon: <MessageOutlined />, title: '배웠지만 막상 말이 안 나오는 분', desc: '왜 입이 안 열리는지, 어떻게 해결할지 이야기해요.' },
+            { icon: <LineChartOutlined />, title: '초·중급인데 방향을 못 잡겠는 분', desc: '수준 진단 후 맞춤 방향을 제안해드려요.' },
+          ].map(({ icon, title, desc }, i) => (
+            <FadeUp key={title} delay={i * 80}>
+              <Card variant="borderless" style={{ borderRadius: 12 }} styles={{ body: { padding: 16 } }}>
+                <Space size={14} align="start">
+                  <IconBox icon={icon} color={PRIMARY} bg="#fff0f1" />
+                  <div>
+                    <Text strong style={{ fontSize: 14, display: 'block', marginBottom: 2 }}>{title}</Text>
+                    <Text type="secondary" style={{ fontSize: 13, lineHeight: 1.5 }}>{desc}</Text>
+                  </div>
+                </Space>
+              </Card>
+            </FadeUp>
+          ))}
+        </Flex>
+      </section>
+
+      {/* 수업 안내 */}
+      <FadeUp>
+        <section style={{ padding: '8px 20px 16px' }}>
+          <Title level={5} style={{ marginBottom: 16 }}>수업 안내</Title>
+          <Card variant="borderless" style={{ borderRadius: 16 }}>
+            <Flex vertical gap={16} style={{ width: '100%' }}>
+              {[
+                { icon: <ClockCircleOutlined />, label: '수업 시간', value: '60분 기준 (조정 가능)' },
+                { icon: <EnvironmentOutlined />, label: '수업 장소', value: '강남 사무실 · Zoom 화상' },
+                { icon: <ReadOutlined />, label: '수업 방식', value: '회화·발음 교정, 1:1 맞춤형' },
+                { icon: <UserOutlined />, label: '수업 형태', value: '1:1 개인 과외' },
+              ].map(({ icon, label, value }) => (
+                <Space key={label} size={12}>
+                  <IconBox icon={icon} />
+                  <div>
+                    <Text type="secondary" style={{ fontSize: 13, display: 'block' }}>{label}</Text>
+                    <Text strong style={{ fontSize: 14 }}>{value}</Text>
+                  </div>
+                </Space>
+              ))}
+            </Flex>
+          </Card>
+        </section>
+      </FadeUp>
+
+      {/* 어려운 상담 */}
+      <FadeUp>
+        <section style={{ padding: '0 20px 16px' }}>
+          <Card variant="borderless" style={{ borderRadius: 12, backgroundColor: '#fafafa' }} styles={{ body: { padding: 20 } }}>
+            <Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 8 }}>이런 상담은 어려워요</Text>
+            <Paragraph style={{ fontSize: 14, color: '#595959', marginBottom: 12, lineHeight: 1.6 }}>
+              하늘쌤은 입문~초중급 회화·발음 교정 전문입니다.<br />
+              아래 항목은 충분히 도움드리기 어려울 수 있어요.
+            </Paragraph>
+            <Flex vertical gap={4}>
+              {['HSK 시험 준비', '작문·쓰기 집중 학습', '대학원 진학, 유학, 어학연수 준비'].map(item => (
+                <Text key={item} type="secondary" style={{ fontSize: 14 }}>· {item}</Text>
+              ))}
+            </Flex>
+          </Card>
+        </section>
+      </FadeUp>
 
       {/* CTA */}
-      <section className="px-5">
-        <div className="rounded-xl p-6 text-center" style={{ backgroundColor: '#fff0f1' }}>
-          <p className="font-bold text-base mb-1.5" style={{ color: PRIMARY }}>
-            Zoom 30분 무료 상담
-          </p>
-          <p className="text-gray-500 text-sm mb-5 leading-relaxed">
-            부담 없이 신청하세요.<br />완전 무료, 신청 후 문자로 연락드립니다.
-          </p>
-          <button
-            onClick={onConsult}
-            className="text-white font-bold px-8 py-3.5 rounded-xl text-sm active:opacity-80 transition-opacity inline-flex items-center gap-2"
-            style={{ backgroundColor: PRIMARY }}
-          >
-            무료 상담 신청하기
-            <ChevronRight className="w-4 h-4" />
-          </button>
-        </div>
-      </section>
+      <FadeUp>
+        <section style={{ padding: '0 20px' }}>
+          <Card variant="borderless" style={{ borderRadius: 16, backgroundColor: '#fff0f1', textAlign: 'center' }}>
+            <Title level={5} style={{ color: PRIMARY, marginBottom: 6 }}>Zoom 30분 무료 상담</Title>
+            <Paragraph type="secondary" style={{ fontSize: 14, marginBottom: 20, lineHeight: 1.6 }}>
+              부담 없이 신청하세요.<br />완전 무료, 신청 후 문자로 연락드립니다.
+            </Paragraph>
+            <Button
+              type="primary" size="large" onClick={onConsult}
+              style={{ borderRadius: 12, fontWeight: 700, height: 48, paddingInline: 32 }}
+            >
+              무료 상담 신청하기 <ArrowRightOutlined />
+            </Button>
+          </Card>
+        </section>
+      </FadeUp>
     </div>
   );
 }
@@ -167,9 +268,7 @@ function ConsultContent() {
   const [done, setDone] = useState(false);
 
   function toggleDay(day) {
-    setPreferredDays(prev =>
-      prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]
-    );
+    setPreferredDays(prev => prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]);
   }
 
   function formatPhone(value) {
@@ -179,8 +278,7 @@ function ConsultContent() {
     return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`;
   }
 
-  async function handleSubmit(e) {
-    e.preventDefault();
+  async function handleSubmit() {
     setError('');
     if (!name.trim()) { setError('이름을 입력해주세요.'); return; }
     if (!phone.trim()) { setError('전화번호를 입력해주세요.'); return; }
@@ -202,151 +300,146 @@ function ConsultContent() {
     }
   }
 
-  const selectedStyle = { backgroundColor: PRIMARY, color: '#fff', borderColor: PRIMARY };
-  const unselectedStyle = {};
+  if (done) {
+    return (
+      <div style={{ padding: '40px 20px', textAlign: 'center' }}>
+        <Card variant="borderless" style={{ borderRadius: 16 }}>
+          <div style={{ padding: '20px 0' }}>
+            <div style={{
+              width: 56, height: 56, borderRadius: '50%',
+              backgroundColor: '#f6ffed', display: 'flex',
+              alignItems: 'center', justifyContent: 'center',
+              margin: '0 auto 16px', fontSize: 24, color: '#52c41a',
+            }}>
+              <CheckCircleOutlined />
+            </div>
+            <Title level={4} style={{ marginBottom: 8 }}>신청 완료!</Title>
+            <Text type="secondary" style={{ fontSize: 14, lineHeight: 1.6 }}>
+              신청해주셔서 감사합니다.<br />확인 후 문자로 연락드릴게요.
+            </Text>
+          </div>
+        </Card>
+      </div>
+    );
+  }
 
   return (
-    <div className="max-w-lg mx-auto px-5 py-8 pb-20">
-      <div className="mb-6">
-        <h2 className="text-xl font-bold text-gray-900 mb-1.5">무료 상담 신청</h2>
-        <p className="text-gray-400 text-sm">Zoom 화상통화 30분 · 완전 무료</p>
+    <div style={{ maxWidth: 480, margin: '0 auto', padding: '32px 20px 80px' }}>
+      <div style={{ marginBottom: 24 }}>
+        <Title level={4} style={{ marginBottom: 4 }}>무료 상담 신청</Title>
+        <Text type="secondary">Zoom 화상통화 30분 · 완전 무료</Text>
       </div>
 
-      {/* What you get */}
-      <div className="bg-white rounded-xl p-5 mb-6">
-        <p className="text-sm font-semibold text-gray-700 mb-3">상담에서 해드리는 것</p>
-        <div className="space-y-2">
+      {/* 상담 혜택 */}
+      <Card variant="borderless" style={{ borderRadius: 16, marginBottom: 24 }}>
+        <Text strong style={{ fontSize: 14, display: 'block', marginBottom: 12 }}>상담에서 해드리는 것</Text>
+        <Flex vertical gap={8} style={{ width: '100%' }}>
           {[
             '현재 수준 진단 (입문~초중급)',
             '회화 실력이 안 느는 이유 찾기',
             '발음 교정 포인트 체크',
             '나에게 맞는 학습 방향 제안',
           ].map(item => (
-            <div key={item} className="flex items-center gap-2.5">
-              <CheckCircle2 className="w-4 h-4 shrink-0" style={{ color: PRIMARY }} />
-              <span className="text-sm text-gray-600">{item}</span>
-            </div>
+            <Space key={item} size={10}>
+              <CheckCircleOutlined style={{ color: PRIMARY, fontSize: 14, flexShrink: 0 }} />
+              <Text style={{ fontSize: 14 }}>{item}</Text>
+            </Space>
           ))}
-        </div>
-        <div className="mt-4 pt-4 border-t border-gray-100 space-y-1 text-xs text-gray-400">
-          <p>· 신청 후 문자로 일정을 안내해드려요</p>
-          <p>· 완전 무료, 부담 없이 신청하세요</p>
-        </div>
-      </div>
+        </Flex>
+        <Divider style={{ margin: '16px 0 12px' }} />
+        <Flex vertical gap={4}>
+          <Text type="secondary" style={{ fontSize: 13 }}>· 신청 후 문자로 일정을 안내해드려요</Text>
+          <Text type="secondary" style={{ fontSize: 13 }}>· 완전 무료, 부담 없이 신청하세요</Text>
+        </Flex>
+      </Card>
 
-      {done ? (
-        <div className="bg-white rounded-xl p-10 text-center">
-          <div className="w-14 h-14 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-4">
-            <CheckCircle2 className="w-7 h-7 text-green-500" />
+      {/* 폼 */}
+      <Form layout="vertical" requiredMark={false}>
+        <Form.Item label={<span>이름 <span style={{ color: PRIMARY }}>*</span></span>}>
+          <Input
+            value={name} onChange={e => setName(e.target.value)}
+            placeholder="홍길동" size="large" autoComplete="name"
+            style={{ borderRadius: 12 }}
+          />
+        </Form.Item>
+
+        <Form.Item label={<span>전화번호 <span style={{ color: PRIMARY }}>*</span></span>}>
+          <Input
+            type="tel" value={phone}
+            onChange={e => setPhone(formatPhone(e.target.value))}
+            placeholder="010-0000-0000" size="large"
+            inputMode="numeric" autoComplete="tel"
+            style={{ borderRadius: 12 }}
+          />
+        </Form.Item>
+
+        <Form.Item label="현재 중국어 수준">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+            {LEVEL_OPTIONS.map(opt => (
+              <ToggleButton
+                key={opt} label={opt}
+                selected={level === opt}
+                onClick={() => setLevel(prev => prev === opt ? '' : opt)}
+              />
+            ))}
           </div>
-          <p className="text-lg font-bold text-gray-900 mb-2">신청 완료!</p>
-          <p className="text-gray-400 text-sm leading-relaxed">
-            신청해주셔서 감사합니다.<br />확인 후 문자로 연락드릴게요.
-          </p>
-        </div>
-      ) : (
-        <form onSubmit={handleSubmit} noValidate className="space-y-5">
-          <div>
-            <label className="label">이름 <span style={{ color: PRIMARY }}>*</span></label>
-            <input
-              type="text" value={name}
-              onChange={e => setName(e.target.value)}
-              placeholder="홍길동" className="input-field w-full" autoComplete="name"
-            />
+        </Form.Item>
+
+        <Form.Item label={
+          <span>희망 요일 <Text type="secondary" style={{ fontSize: 13, fontWeight: 400 }}>(복수 선택)</Text></span>
+        }>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 6 }}>
+            {DAYS.map(day => (
+              <ToggleButton
+                key={day} label={day}
+                selected={preferredDays.includes(day)}
+                onClick={() => toggleDay(day)}
+              />
+            ))}
           </div>
+        </Form.Item>
 
-          <div>
-            <label className="label">전화번호 <span style={{ color: PRIMARY }}>*</span></label>
-            <input
-              type="tel" value={phone}
-              onChange={e => setPhone(formatPhone(e.target.value))}
-              placeholder="010-0000-0000" className="input-field w-full"
-              inputMode="numeric" autoComplete="tel"
-            />
+        <Form.Item label="희망 시간대">
+          <Flex vertical gap={8} style={{ width: '100%' }}>
+            {TIME_OPTIONS.map(opt => (
+              <ToggleButton
+                key={opt} label={opt}
+                selected={preferredTime === opt}
+                onClick={() => setPreferredTime(prev => prev === opt ? '' : opt)}
+                fullWidth
+              />
+            ))}
+          </Flex>
+        </Form.Item>
+
+        <Form.Item label={
+          <span>상담 희망 내용 <Text type="secondary" style={{ fontSize: 13, fontWeight: 400 }}>(선택)</Text></span>
+        }>
+          <Input.TextArea
+            value={message} onChange={e => setMessage(e.target.value)}
+            placeholder="궁금한 점이나 학습 목표를 자유롭게 적어주세요."
+            rows={3} style={{ borderRadius: 12 }}
+          />
+        </Form.Item>
+
+        {error && (
+          <div style={{
+            marginBottom: 20, padding: '12px 16px',
+            backgroundColor: '#fff2f0', border: '1px solid #ffccc7',
+            borderRadius: 12, fontSize: 14, color: '#cf1322',
+          }}>
+            {error}
           </div>
+        )}
 
-          <div>
-            <label className="label">현재 중국어 수준</label>
-            <div className="grid grid-cols-4 gap-2">
-              {LEVEL_OPTIONS.map(opt => (
-                <button
-                  key={opt} type="button"
-                  onClick={() => setLevel(prev => prev === opt ? '' : opt)}
-                  style={level === opt ? selectedStyle : unselectedStyle}
-                  className={`py-2.5 rounded-xl text-sm font-medium border transition-colors ${
-                    level === opt ? '' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'
-                  }`}
-                >
-                  {opt}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <label className="label">
-              희망 요일 <span className="text-gray-400 font-normal">(복수 선택)</span>
-            </label>
-            <div className="grid grid-cols-7 gap-1.5">
-              {DAYS.map(day => (
-                <button
-                  key={day} type="button"
-                  onClick={() => toggleDay(day)}
-                  style={preferredDays.includes(day) ? selectedStyle : unselectedStyle}
-                  className={`py-2.5 rounded-xl text-sm font-medium border transition-colors ${
-                    preferredDays.includes(day) ? '' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'
-                  }`}
-                >
-                  {day}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <label className="label">희망 시간대</label>
-            <div className="space-y-2">
-              {TIME_OPTIONS.map(opt => (
-                <button
-                  key={opt} type="button"
-                  onClick={() => setPreferredTime(prev => prev === opt ? '' : opt)}
-                  style={preferredTime === opt ? selectedStyle : unselectedStyle}
-                  className={`w-full py-3 px-4 rounded-xl text-sm font-medium border text-left transition-colors ${
-                    preferredTime === opt ? '' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'
-                  }`}
-                >
-                  {opt}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <label className="label">
-              상담 희망 내용 <span className="text-gray-400 font-normal">(선택)</span>
-            </label>
-            <textarea
-              value={message} onChange={e => setMessage(e.target.value)}
-              placeholder="궁금한 점이나 학습 목표를 자유롭게 적어주세요."
-              rows={3} className="textarea-field w-full"
-            />
-          </div>
-
-          {error && (
-            <p className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl px-4 py-3">
-              {error}
-            </p>
-          )}
-
-          <button
-            type="submit" disabled={loading}
-            className="w-full text-white font-bold py-3.5 rounded-xl text-sm transition-opacity disabled:opacity-50"
-            style={{ backgroundColor: PRIMARY }}
-          >
-            {loading ? '신청 중...' : '무료 상담 신청하기'}
-          </button>
-        </form>
-      )}
+        <Button
+          type="primary" size="large" loading={loading}
+          onClick={handleSubmit} block
+          style={{ height: 52, borderRadius: 12, fontWeight: 700, fontSize: 15 }}
+        >
+          무료 상담 신청하기
+        </Button>
+      </Form>
     </div>
   );
 }
@@ -354,201 +447,248 @@ function ConsultContent() {
 // ─── 탭 3: 수강료 안내 ───────────────────────────────────────
 function PricingContent({ onConsult }) {
   return (
-    <div className="max-w-lg mx-auto px-5 py-8 pb-20 space-y-8">
-
-      {/* Header */}
-      <div>
-        <h2 className="text-xl font-bold text-gray-900 mb-1.5">수강료 안내</h2>
-        <p className="text-gray-400 text-sm">하늘하늘 중국어 · 회화·발음 교정 전문</p>
+    <div style={{ maxWidth: 480, margin: '0 auto', padding: '32px 20px 80px' }}>
+      <div style={{ marginBottom: 24 }}>
+        <Title level={4} style={{ marginBottom: 4 }}>수강료 안내</Title>
+        <Text type="secondary">하늘하늘 중국어 · 회화·발음 교정 전문</Text>
       </div>
 
-      {/* Value prop */}
-      <div className="bg-white rounded-xl p-5">
-        <p className="text-sm text-gray-500 leading-relaxed">
+      {/* 수업 철학 */}
+      <Card variant="borderless" style={{ borderRadius: 16, marginBottom: 24 }}>
+        <Paragraph style={{ fontSize: 14, color: '#595959', lineHeight: 1.7, margin: 0 }}>
           필기 시험이 아닌{' '}
-          <span className="font-semibold text-gray-700">'중국인처럼 자연스럽게 말하는 회화'</span>
+          <Text strong style={{ color: '#262626' }}>'중국인처럼 자연스럽게 말하는 회화'</Text>
           를 목표로 합니다. 발음, 억양, 리듬, 실전 표현을 중심으로
           개인의 말하기 습관에 맞춰 진행합니다.
-        </p>
-      </div>
+        </Paragraph>
+      </Card>
 
       {/* 수강 대상 */}
-      <div>
-        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">수강 대상</p>
-        <div className="bg-white rounded-xl p-5 space-y-2.5">
-          {[
-            '성인 학습자',
-            '왕초보 ~ 중급 회화 수준 (TSC 3–5급)',
-            '회화 및 발음 교정에 집중하고 싶은 분',
-          ].map(item => (
-            <div key={item} className="flex items-center gap-2.5">
-              <CheckCircle2 className="w-4 h-4 shrink-0" style={{ color: PRIMARY }} />
-              <span className="text-sm text-gray-600">{item}</span>
-            </div>
-          ))}
-          <p className="text-xs text-gray-300 pt-1">
-            ※ 고급 회화, 전문 번역, 비즈니스 중국어는 현재 운영하지 않습니다.
-          </p>
-        </div>
+      <div style={{ marginBottom: 24 }}>
+        <Text style={{ fontSize: 13, fontWeight: 600, color: '#595959', letterSpacing: '0.08em', textTransform: 'uppercase', display: 'block', marginBottom: 12 }}>
+          수강 대상
+        </Text>
+        <Card variant="borderless" style={{ borderRadius: 16 }}>
+          <Flex vertical gap={10} style={{ width: '100%' }}>
+            {[
+              '성인 학습자',
+              '왕초보 ~ 중급 회화 수준 (TSC 3–5급)',
+              '회화 및 발음 교정에 집중하고 싶은 분',
+            ].map(item => (
+              <Space key={item} size={10}>
+                <CheckCircleOutlined style={{ color: PRIMARY, fontSize: 14, flexShrink: 0 }} />
+                <Text style={{ fontSize: 14 }}>{item}</Text>
+              </Space>
+            ))}
+            <Text type="secondary" style={{ fontSize: 13, paddingTop: 4 }}>
+              ※ 고급 회화, 전문 번역, 비즈니스 중국어는 현재 운영하지 않습니다.
+            </Text>
+          </Flex>
+        </Card>
       </div>
 
       {/* 1:1 프라이빗 */}
-      <div>
-        <div className="flex items-center gap-2 mb-3">
-          <User className="w-4 h-4" style={{ color: PRIMARY }} />
-          <h3 className="text-base font-bold text-gray-900">1:1 프라이빗 수업</h3>
-        </div>
-        <div className="space-y-2.5">
-          <div className="rounded-xl p-5" style={{ backgroundColor: PRIMARY }}>
-            <span className="text-[10px] font-bold bg-white/20 text-white px-2 py-0.5 rounded-full tracking-wider">추천</span>
-            <div className="flex items-start justify-between mt-2.5">
+      <div style={{ marginBottom: 24 }}>
+        <Space size={8} style={{ marginBottom: 12 }}>
+          <UserOutlined style={{ color: PRIMARY }} />
+          <Title level={5} style={{ margin: 0 }}>1:1 프라이빗 수업</Title>
+        </Space>
+        <Flex vertical gap={10} style={{ width: '100%' }}>
+          {/* 추천 */}
+          <Card variant="borderless" style={{ borderRadius: 16, backgroundColor: PRIMARY }}>
+            <Tag style={{ backgroundColor: 'rgba(255,255,255,0.2)', color: 'white', border: 'none', borderRadius: 20, fontSize: 13, fontWeight: 700, marginBottom: 10 }}>
+              추천
+            </Tag>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <div>
-                <p className="font-bold text-white text-base">120분 집중 수업</p>
-                <p className="text-white/60 text-xs mt-0.5">개념 → 발음 → 문장 → 실전 말하기</p>
+                <Text strong style={{ color: 'white', fontSize: 15, display: 'block', marginBottom: 4 }}>90분 실속 수업</Text>
+                <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 13 }}>회화 연습 + 발음 교정 균형</Text>
               </div>
-              <div className="text-right shrink-0 ml-4">
-                <p className="font-bold text-white text-2xl leading-none">100,000원</p>
-                <p className="text-white/50 text-xs mt-1">1회 기준</p>
+              <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 16 }}>
+                <Text style={{ color: 'white', fontSize: 24, fontWeight: 700, display: 'block', lineHeight: 1 }}>75,000원</Text>
+                <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 13, marginTop: 4, display: 'block' }}>1회 기준</Text>
               </div>
             </div>
-            <p className="text-white/50 text-xs mt-3">빠르게 말하기 변화를 체감하고 싶은 분께 추천</p>
-          </div>
+            <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 13, display: 'block', marginTop: 12 }}>직장인·입문자께 추천</Text>
+          </Card>
 
-          <div className="bg-white rounded-xl p-5">
-            <div className="flex items-start justify-between">
+          <Card variant="borderless" style={{ borderRadius: 16 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <div>
-                <p className="font-bold text-gray-900 text-base">90분 실속 수업</p>
-                <p className="text-gray-400 text-xs mt-0.5">회화 연습 + 발음 교정 균형</p>
+                <Text strong style={{ fontSize: 15, display: 'block', marginBottom: 4 }}>120분 집중 수업</Text>
+                <Text type="secondary" style={{ fontSize: 13 }}>개념 → 발음 → 문장 → 실전 말하기</Text>
               </div>
-              <div className="text-right shrink-0 ml-4">
-                <p className="font-bold text-gray-900 text-2xl leading-none">75,000원</p>
-                <p className="text-gray-400 text-xs mt-1">1회 기준</p>
+              <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 16 }}>
+                <Text style={{ fontSize: 24, fontWeight: 700, display: 'block', lineHeight: 1 }}>100,000원</Text>
+                <Text type="secondary" style={{ fontSize: 13, marginTop: 4, display: 'block' }}>1회 기준</Text>
               </div>
             </div>
-            <p className="text-gray-400 text-xs mt-3">직장인·입문자께 추천</p>
-          </div>
+            <Text type="secondary" style={{ fontSize: 13, display: 'block', marginTop: 12 }}>빠르게 말하기 변화를 체감하고 싶은 분께 추천</Text>
+          </Card>
 
-          <div className="bg-gray-50 rounded-xl px-4 py-3 flex items-center justify-between">
-            <span className="text-sm text-gray-500">60분 기본 수업</span>
-            <span className="text-sm font-semibold text-gray-700">50,000원</span>
+          <div style={{ backgroundColor: '#fafafa', borderRadius: 12, padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Text style={{ fontSize: 14, color: '#595959' }}>60분 기본 수업</Text>
+            <Text strong style={{ fontSize: 14 }}>50,000원</Text>
           </div>
-        </div>
+        </Flex>
       </div>
 
       {/* 2:1 소그룹 */}
-      <div>
-        <div className="flex items-center gap-2 mb-3">
-          <Users className="w-4 h-4" style={{ color: PRIMARY }} />
-          <h3 className="text-base font-bold text-gray-900">2:1 소규모 그룹 수업</h3>
-          <span className="text-xs text-gray-400">1인 기준</span>
-        </div>
-        <div className="space-y-2.5">
-          <div className="bg-white rounded-xl p-5">
-            <div className="flex items-start justify-between">
+      <div style={{ marginBottom: 24 }}>
+        <Space size={8} align="center" style={{ marginBottom: 12 }}>
+          <TeamOutlined style={{ color: PRIMARY }} />
+          <Title level={5} style={{ margin: 0 }}>2:1 소규모 그룹 수업</Title>
+          <Text type="secondary" style={{ fontSize: 13 }}>1인 기준</Text>
+        </Space>
+        <Flex vertical gap={10} style={{ width: '100%' }}>
+          <Card variant="borderless" style={{ borderRadius: 16 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <div>
-                <p className="font-bold text-gray-900 text-base">120분 그룹 수업</p>
-                <p className="text-gray-400 text-xs mt-0.5">친구 · 동료 · 커플 수강 추천</p>
+                <Text strong style={{ fontSize: 15, display: 'block', marginBottom: 4 }}>120분 그룹 수업</Text>
+                <Text type="secondary" style={{ fontSize: 13 }}>친구 · 동료 · 커플 수강 추천</Text>
               </div>
-              <div className="text-right shrink-0 ml-4">
-                <p className="font-bold text-gray-900 text-2xl leading-none">80,000원</p>
-                <p className="text-gray-400 text-xs mt-1">1인 기준</p>
+              <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 16 }}>
+                <Text style={{ fontSize: 24, fontWeight: 700, display: 'block', lineHeight: 1 }}>80,000원</Text>
+                <Text type="secondary" style={{ fontSize: 13, marginTop: 4, display: 'block' }}>1인 기준</Text>
               </div>
             </div>
-            <p className="text-gray-400 text-xs mt-3">서로의 피드백으로 학습 효과를 높이는 구조</p>
-          </div>
+            <Text type="secondary" style={{ fontSize: 13, display: 'block', marginTop: 12 }}>서로의 피드백으로 학습 효과를 높이는 구조</Text>
+          </Card>
 
-          <div className="bg-white rounded-xl p-5">
-            <div className="flex items-start justify-between">
+          <Card variant="borderless" style={{ borderRadius: 16 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <div>
-                <p className="font-bold text-gray-900 text-base">90분 그룹 수업</p>
-                <p className="text-gray-400 text-xs mt-0.5">반복 말하기로 회화 자신감 형성</p>
+                <Text strong style={{ fontSize: 15, display: 'block', marginBottom: 4 }}>90분 그룹 수업</Text>
+                <Text type="secondary" style={{ fontSize: 13 }}>반복 말하기로 회화 자신감 형성</Text>
               </div>
-              <div className="text-right shrink-0 ml-4">
-                <p className="font-bold text-gray-900 text-2xl leading-none">60,000원</p>
-                <p className="text-gray-400 text-xs mt-1">1인 기준</p>
+              <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 16 }}>
+                <Text style={{ fontSize: 24, fontWeight: 700, display: 'block', lineHeight: 1 }}>60,000원</Text>
+                <Text type="secondary" style={{ fontSize: 13, marginTop: 4, display: 'block' }}>1인 기준</Text>
               </div>
             </div>
-          </div>
+          </Card>
 
-          <div className="bg-gray-50 rounded-xl px-4 py-3 flex items-center justify-between">
-            <span className="text-sm text-gray-500">60분 기본 수업</span>
-            <span className="text-sm font-semibold text-gray-700">40,000원 (1인)</span>
+          <div style={{ backgroundColor: '#fafafa', borderRadius: 12, padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Text style={{ fontSize: 14, color: '#595959' }}>60분 기본 수업</Text>
+            <Text strong style={{ fontSize: 14 }}>40,000원 (1인)</Text>
           </div>
-          <p className="text-xs text-gray-400 px-1">※ 3인 이상 그룹은 별도 상담 진행</p>
-        </div>
+          <Text type="secondary" style={{ fontSize: 13, paddingLeft: 4 }}>※ 3인 이상 그룹은 별도 상담 진행</Text>
+        </Flex>
       </div>
 
-      {/* 혜택 */}
-      <div>
-        <div className="flex items-center gap-2 mb-3">
-          <Gift className="w-4 h-4" style={{ color: PRIMARY }} />
-          <h3 className="text-base font-bold text-gray-900">수강 혜택</h3>
-        </div>
-        <div className="bg-white rounded-xl p-5 space-y-2.5">
-          {[
-            '주 N회 자유롭게 일정 조정 가능',
-            '하늘하늘 중국어 학습 굿즈 증정',
-            '패키지 등록 시 첫 교재 제공',
-            '대면 불가 시 Zoom 비대면 수업 (동일 가격)',
-          ].map(item => (
-            <div key={item} className="flex items-center gap-2.5">
-              <CheckCircle2 className="w-4 h-4 shrink-0" style={{ color: PRIMARY }} />
-              <span className="text-sm text-gray-600">{item}</span>
-            </div>
-          ))}
-        </div>
+      {/* 수강 혜택 */}
+      <div style={{ marginBottom: 24 }}>
+        <Space size={8} style={{ marginBottom: 12 }}>
+          <GiftOutlined style={{ color: PRIMARY }} />
+          <Title level={5} style={{ margin: 0 }}>수강 혜택</Title>
+        </Space>
+        <Card variant="borderless" style={{ borderRadius: 16 }}>
+          <Flex vertical gap={10} style={{ width: '100%' }}>
+            {[
+              '주 N회 자유롭게 일정 조정 가능',
+              '하늘하늘 중국어 학습 굿즈 증정',
+              '패키지 등록 시 첫 교재 제공',
+              '대면 불가 시 Zoom 비대면 수업 (동일 가격)',
+            ].map(item => (
+              <Space key={item} size={10}>
+                <CheckCircleOutlined style={{ color: PRIMARY, fontSize: 14, flexShrink: 0 }} />
+                <Text style={{ fontSize: 14 }}>{item}</Text>
+              </Space>
+            ))}
+          </Flex>
+        </Card>
       </div>
 
       {/* 수업 일정 */}
-      <div>
-        <div className="flex items-center gap-2 mb-3">
-          <Calendar className="w-4 h-4" style={{ color: PRIMARY }} />
-          <h3 className="text-base font-bold text-gray-900">수업 일정 안내</h3>
-        </div>
-        <div className="bg-white rounded-xl p-5 space-y-2 text-sm text-gray-500">
-          <p>월~금 수업 가능 · 토요일 제외</p>
-          <p>학습자와 협의 후 유연하게 일정 조율</p>
-          <p>사전 예약제 운영</p>
-          <p>주 고정 시간 확보 시 계획적인 학습에 유리</p>
-        </div>
+      <div style={{ marginBottom: 24 }}>
+        <Space size={8} style={{ marginBottom: 12 }}>
+          <CalendarOutlined style={{ color: PRIMARY }} />
+          <Title level={5} style={{ margin: 0 }}>수업 일정 안내</Title>
+        </Space>
+        <Card variant="borderless" style={{ borderRadius: 16 }}>
+          <Flex vertical gap={8} style={{ width: '100%' }}>
+            {[
+              '월~일 수업 가능 · 토요일 제외',
+              '학습자와 협의 후 유연하게 일정 조율',
+              '사전 예약제 운영',
+              '주 고정 시간 확보 시 계획적인 학습에 유리',
+            ].map(item => (
+              <Text key={item} type="secondary" style={{ fontSize: 14 }}>{item}</Text>
+            ))}
+          </Flex>
+        </Card>
       </div>
 
       {/* 결제·환불 */}
-      <div>
-        <div className="flex items-center gap-2 mb-3">
-          <CreditCard className="w-4 h-4" style={{ color: PRIMARY }} />
-          <h3 className="text-base font-bold text-gray-900">결제 및 환불 안내</h3>
-        </div>
-        <div className="bg-gray-50 rounded-xl p-5 space-y-2 text-sm text-gray-500">
-          <p>선결제 기준으로 진행</p>
-          <p>환불은 잔여 수업 횟수 기준으로 계산</p>
-          <p>당일 취소 및 무단결석 시 환불 어려움</p>
-          <p>일정 변경은 수업 시작 24시간 전까지 요청</p>
-        </div>
+      <div style={{ marginBottom: 24 }}>
+        <Space size={8} style={{ marginBottom: 12 }}>
+          <CreditCardOutlined style={{ color: PRIMARY }} />
+          <Title level={5} style={{ margin: 0 }}>결제 및 환불 안내</Title>
+        </Space>
+        <Card variant="borderless" style={{ borderRadius: 16, backgroundColor: '#fafafa' }}>
+          <Flex vertical gap={8} style={{ width: '100%' }}>
+            {[
+              '선결제 기준으로 진행',
+              '환불은 잔여 수업 횟수 기준으로 계산',
+              '당일 취소 및 무단결석 시 환불 어려움',
+              '일정 변경은 수업 시작 24시간 전까지 요청',
+            ].map(item => (
+              <Text key={item} type="secondary" style={{ fontSize: 14 }}>{item}</Text>
+            ))}
+          </Flex>
+        </Card>
       </div>
 
       {/* CTA */}
-      <div className="space-y-3 pb-4">
-        <div className="rounded-xl p-6 text-center" style={{ backgroundColor: '#fff0f1' }}>
-          <p className="font-bold text-sm leading-relaxed" style={{ color: PRIMARY }}>
-            빠르게 배우는 중국어보다,<br />오래 남는 중국어를 함께 만들어 갑니다.
-          </p>
-          <p className="text-gray-400 text-xs mt-2 mb-5">
-            정확한 일정·수업 방식은 무료 상담에서 안내드려요
-          </p>
-          <button
-            onClick={onConsult}
-            className="w-full text-white font-bold py-3.5 rounded-xl text-sm active:opacity-80 transition-opacity"
-            style={{ backgroundColor: PRIMARY }}
-          >
-            무료 상담 신청하기
-          </button>
-        </div>
-        <p className="text-center text-xs text-gray-400">
-          문의는 채널톡으로 편하게 연락주세요
-        </p>
-      </div>
+      <Card variant="borderless" style={{ borderRadius: 16, backgroundColor: '#fff0f1', textAlign: 'center', marginBottom: 12 }}>
+        <Text strong style={{ fontSize: 14, color: PRIMARY, lineHeight: 1.7, display: 'block', marginBottom: 8 }}>
+          빠르게 배우는 중국어보다,<br />오래 남는 중국어를 함께 만들어 갑니다.
+        </Text>
+        <Text type="secondary" style={{ fontSize: 13, display: 'block', marginBottom: 20 }}>
+          정확한 일정·수업 방식은 무료 상담에서 안내드려요
+        </Text>
+        <Button
+          type="primary" size="large" onClick={onConsult} block
+          style={{ height: 52, borderRadius: 12, fontWeight: 700, fontSize: 15 }}
+        >
+          무료 상담 신청하기
+        </Button>
+      </Card>
+      <a
+        href="https://pf.kakao.com/_jFnFn"
+        target="_blank" rel="noopener noreferrer"
+        style={{ display: 'block', textAlign: 'center', fontSize: 13, color: '#595959', textDecoration: 'underline', textDecorationColor: '#d9d9d9' }}
+      >
+        문의는 채널톡으로 편하게 연락주세요
+      </a>
+    </div>
+  );
+}
 
+// ─── 탭 패널 페이드인 래퍼 ───────────────────────────────────
+function TabPanel({ active, id, labelledBy, children }) {
+  const [visible, setVisible] = useState(active);
+  const [animKey, setAnimKey] = useState(0);
+
+  useEffect(() => {
+    if (active) {
+      setVisible(true);
+      setAnimKey(k => k + 1);
+    } else {
+      setVisible(false);
+    }
+  }, [active]);
+
+  return (
+    <div
+      role="tabpanel" id={id} aria-labelledby={labelledBy}
+      style={{ display: visible ? 'block' : 'none' }}
+    >
+      <div key={animKey} style={{
+        animation: active ? 'tabFadeIn 0.35s ease forwards' : 'none',
+      }}>
+        {children}
+      </div>
     </div>
   );
 }
@@ -563,43 +703,62 @@ export default function LandingPage() {
   }
 
   return (
-    <div className="min-h-screen font-sans" style={{ backgroundColor: '#f9fafb' }}>
-      {/* Sticky header */}
-      <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-gray-100">
-        <div className="max-w-lg mx-auto px-5">
-          <div className="flex items-center h-12">
-            <img src="/logo/logo-red.png" alt="하늘하늘 중국어" className="h-6 object-contain" />
+    <ConfigProvider theme={theme}>
+      <style>{`
+        @keyframes tabFadeIn {
+          from { opacity: 0; transform: translateY(12px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
+      <div style={{ minHeight: '100vh', backgroundColor: '#f5f5f5', fontFamily: 'inherit' }}>
+        {/* Sticky 헤더 */}
+        <header style={{
+          position: 'sticky', top: 0, zIndex: 50,
+          backgroundColor: 'rgba(255,255,255,0.92)',
+          backdropFilter: 'blur(8px)',
+          borderBottom: '1px solid #f0f0f0',
+        }}>
+          <div style={{ maxWidth: 480, margin: '0 auto', padding: '0 20px' }}>
+            <div style={{ height: 48, display: 'flex', alignItems: 'center' }}>
+              <img src="/logo/logo-red.png" alt="하늘하늘 중국어" style={{ height: 24, objectFit: 'contain' }} />
+            </div>
+            <div role="tablist" aria-label="페이지 섹션" style={{ display: 'flex', marginBottom: -1 }}>
+              {TABS.map(t => (
+                <button
+                  key={t}
+                  role="tab"
+                  aria-selected={tab === t}
+                  aria-controls={`panel-${t}`}
+                  id={`tab-${t}`}
+                  onClick={() => switchTab(t)}
+                  style={{
+                    minHeight: 44, marginRight: 24, paddingBottom: 10, paddingTop: 10,
+                    fontSize: 14, fontWeight: 500,
+                    border: 'none', background: 'none', cursor: 'pointer',
+                    borderBottom: `2px solid ${tab === t ? PRIMARY : 'transparent'}`,
+                    color: tab === t ? PRIMARY : '#595959',
+                    transition: 'color 0.2s, border-color 0.2s',
+                  }}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
           </div>
-          <div className="flex -mb-px">
-            {TABS.map(t => (
-              <button
-                key={t}
-                onClick={() => switchTab(t)}
-                className="mr-6 pb-2.5 text-sm font-medium border-b-2 transition-colors"
-                style={
-                  tab === t
-                    ? { borderColor: PRIMARY, color: PRIMARY }
-                    : { borderColor: 'transparent', color: '#9ca3af' }
-                }
-              >
-                {t}
-              </button>
-            ))}
-          </div>
-        </div>
-      </header>
+        </header>
 
-      <main className="max-w-lg mx-auto">
-        <div style={{ display: tab === '소개' ? 'block' : 'none' }}>
-          <LandingContent onConsult={() => switchTab('무료상담')} onPricing={() => switchTab('수강료')} />
-        </div>
-        <div style={{ display: tab === '무료상담' ? 'block' : 'none' }}>
-          <ConsultContent />
-        </div>
-        <div style={{ display: tab === '수강료' ? 'block' : 'none' }}>
-          <PricingContent onConsult={() => switchTab('무료상담')} />
-        </div>
-      </main>
-    </div>
+        <main style={{ maxWidth: 480, margin: '0 auto' }}>
+          <TabPanel active={tab === '소개'} id="panel-소개" labelledBy="tab-소개">
+            <LandingContent onConsult={() => switchTab('무료상담')} onPricing={() => switchTab('수강료')} />
+          </TabPanel>
+          <TabPanel active={tab === '무료상담'} id="panel-무료상담" labelledBy="tab-무료상담">
+            <ConsultContent />
+          </TabPanel>
+          <TabPanel active={tab === '수강료'} id="panel-수강료" labelledBy="tab-수강료">
+            <PricingContent onConsult={() => switchTab('무료상담')} />
+          </TabPanel>
+        </main>
+      </div>
+    </ConfigProvider>
   );
 }
