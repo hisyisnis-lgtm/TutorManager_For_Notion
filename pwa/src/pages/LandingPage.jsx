@@ -693,6 +693,41 @@ function TabPanel({ active, id, labelledBy, children }) {
   );
 }
 
+// ─── 공유 버튼 ───────────────────────────────────────────────
+function ShareButton() {
+  const [copied, setCopied] = useState(false);
+  const url = 'https://hisyisnis-lgtm.github.io/TutorManager_For_Notion/#/intro';
+
+  async function handleShare() {
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: '하늘하늘중국어', url });
+      } catch {}
+    } else {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  }
+
+  return (
+    <button
+      onClick={handleShare}
+      aria-label="공유하기"
+      style={{
+        display: 'flex', alignItems: 'center', gap: 4,
+        border: '1px solid #d9d9d9', borderRadius: 20,
+        background: 'none', cursor: 'pointer',
+        padding: '5px 12px',
+        fontSize: 12, fontWeight: 600, color: '#8c8c8c',
+        transition: 'background 0.15s',
+      }}
+    >
+      {copied ? '링크 복사됨 ✓' : '공유하기'}
+    </button>
+  );
+}
+
 // ─── 메인 랜딩 페이지 ─────────────────────────────────────────
 export default function LandingPage() {
   const [tab, setTab] = useState('소개');
@@ -719,8 +754,9 @@ export default function LandingPage() {
           borderBottom: '1px solid #f0f0f0',
         }}>
           <div style={{ maxWidth: 480, margin: '0 auto', padding: '0 20px' }}>
-            <div style={{ height: 48, display: 'flex', alignItems: 'center' }}>
+            <div style={{ height: 48, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <img src="/logo/logo-red.png" alt="하늘하늘 중국어" style={{ height: 24, objectFit: 'contain' }} />
+              <ShareButton />
             </div>
             <div role="tablist" aria-label="페이지 섹션" style={{ display: 'flex', marginBottom: -1 }}>
               {TABS.map(t => (
