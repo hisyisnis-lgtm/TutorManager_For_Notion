@@ -67,7 +67,6 @@ export default function PaymentsPage() {
           <Link to="/payments/new">
             <Button
               type="primary"
-              size="small"
               style={{ borderRadius: 8, fontWeight: 600 }}
             >
               + 결제 입력

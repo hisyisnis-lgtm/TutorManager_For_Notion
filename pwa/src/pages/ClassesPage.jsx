@@ -72,7 +72,6 @@ export default function ClassesPage() {
           <Link to="/classes/new">
             <Button
               type="primary"
-              size="small"
               style={{ borderRadius: 8, fontWeight: 600 }}
             >
               + 수업 추가
