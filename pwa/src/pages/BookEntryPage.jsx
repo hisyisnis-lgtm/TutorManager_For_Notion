@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchStudentByToken } from '../api/bookingApi.js';
 import { usePullToRefresh, PullIndicator } from '../hooks/usePullToRefresh.jsx';
+import { Card, Input, Button, Typography } from 'antd';
 
 export default function BookEntryPage() {
   const navigate = useNavigate();
@@ -37,30 +38,38 @@ export default function BookEntryPage() {
         </div>
 
         <div className="px-4 py-8 flex-1">
-          <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-sm p-5 space-y-4">
-            <div>
-              <label className="block text-xs text-gray-500 mb-1.5">예약 코드</label>
-              <input
-                type="text"
-                value={code}
-                onChange={e => { setCode(e.target.value); setError(null); }}
-                placeholder="강사에게 받은 코드를 입력하세요"
-                autoFocus
-                className="w-full border border-gray-200 rounded-lg px-3 py-3 text-sm focus:outline-none focus:border-blue-400"
-              />
-            </div>
+          <form onSubmit={handleSubmit}>
+            <Card variant="borderless" style={{ borderRadius: 16 }}>
+              <div style={{ marginBottom: 16 }}>
+                <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>
+                  예약 코드
+                </Typography.Text>
+                <Input
+                  size="large"
+                  style={{ borderRadius: 12 }}
+                  value={code}
+                  onChange={e => { setCode(e.target.value); setError(null); }}
+                  placeholder="강사에게 받은 코드를 입력하세요"
+                  autoFocus
+                />
+              </div>
 
-            {error && (
-              <div className="text-red-500 text-sm bg-red-50 rounded-lg px-3 py-2">{error}</div>
-            )}
+              {error && (
+                <div style={{ padding: '12px 16px', backgroundColor: '#fff2f0', border: '1px solid #ffccc7', borderRadius: 12, fontSize: 14, color: '#cf1322', marginBottom: 16 }}>
+                  {error}
+                </div>
+              )}
 
-            <button
-              type="submit"
-              disabled={loading || !code.trim()}
-              className="w-full bg-blue-600 text-white rounded-lg py-3 text-sm font-semibold disabled:opacity-50 active:bg-blue-700"
-            >
-              {loading ? '확인 중...' : '시작하기'}
-            </button>
+              <Button
+                type="primary"
+                block
+                htmlType="submit"
+                disabled={loading || !code.trim()}
+                style={{ borderRadius: 12, height: 44, fontWeight: 600 }}
+              >
+                {loading ? '확인 중...' : '시작하기'}
+              </Button>
+            </Card>
           </form>
         </div>
       </div>

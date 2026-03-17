@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Button } from 'antd';
 
 const WORKER_URL = import.meta.env.VITE_WORKER_URL;
 
@@ -79,13 +80,12 @@ export default function LoginPage({ onSuccess }) {
             30일 동안 로그인 유지
           </label>
 
-          <button
-            type="submit"
-            className="btn-primary w-full py-3.5 text-base"
-            disabled={loading}
+          <Button
+            type="primary" htmlType="submit" block loading={loading}
+            style={{ borderRadius: 12, height: 48, fontSize: 16, fontWeight: 600 }}
           >
             {loading ? '확인 중...' : '로그인'}
-          </button>
+          </Button>
         </form>
       </div>
     </div>

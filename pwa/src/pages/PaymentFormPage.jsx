@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { Button, Input, Select, Typography } from 'antd';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import { getPage, deletePage } from '../api/notionClient.js';
@@ -162,20 +163,23 @@ export default function PaymentFormPage() {
 
       <form onSubmit={handleSubmit} className="px-4 pt-4 pb-8 space-y-5">
         {error && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600">
+          <div style={{ padding: '12px 16px', backgroundColor: '#fff2f0', border: '1px solid #ffccc7', borderRadius: 12, fontSize: 14, color: '#cf1322' }}>
             {error}
           </div>
         )}
 
         {/* 1. 학생 선택 */}
         <div>
-          <label className="label">① 학생</label>
-          <input
+          <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>
+            ① 학생
+          </Typography.Text>
+          <Input
             type="text"
             placeholder="학생 이름 검색..."
             value={studentSearch}
             onChange={(e) => setStudentSearch(e.target.value)}
-            className="input-field mb-2"
+            size="large"
+            style={{ borderRadius: 12, marginBottom: 8 }}
           />
           <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
             {students
@@ -201,7 +205,7 @@ export default function PaymentFormPage() {
                     className="w-4 h-4 accent-brand-600"
                   />
                   <span className="text-sm font-medium text-gray-800">{s.name}</span>
-                  <span className="text-xs text-gray-400 ml-auto">{s.status}</span>
+                  <span className="text-xs text-gray-500 ml-auto">{s.status}</span>
                 </label>
                 );
               })}
@@ -213,22 +217,24 @@ export default function PaymentFormPage() {
 
         {/* 2. 수업 종류 선택 */}
         <div>
-          <label className="label">② 수업 종류</label>
-          <select
-            value={form.classTypeId}
-            onChange={set('classTypeId')}
-            className="select-field"
-            required
+          <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>
+            ② 수업 종류
+          </Typography.Text>
+          <Select
+            value={form.classTypeId || undefined}
+            onChange={(value) => setForm((f) => ({ ...f, classTypeId: value }))}
+            style={{ width: '100%' }}
+            size="large"
+            placeholder="선택하세요"
           >
-            <option value="">선택하세요</option>
             {classTypes.map((ct) => (
-              <option key={ct.id} value={ct.id}>
+              <Select.Option key={ct.id} value={ct.id}>
                 {ct.title} ({ct.unitPrice.toLocaleString()}원)
-              </option>
+              </Select.Option>
             ))}
-          </select>
+          </Select>
           {selectedClassType && (
-            <p className="text-xs text-gray-400 mt-1.5">
+            <p className="text-xs text-gray-500 mt-1.5">
               시간당 단가: <strong className="text-gray-700">{formatKRW(unitPrice)}</strong>
             </p>
           )}
@@ -236,19 +242,23 @@ export default function PaymentFormPage() {
 
         {/* 3. 할인 이벤트 */}
         <div>
-          <label className="label">③ 할인 이벤트 (선택)</label>
-          <select
-            value={form.discountEventId}
-            onChange={set('discountEventId')}
-            className="select-field"
+          <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>
+            ③ 할인 이벤트 (선택)
+          </Typography.Text>
+          <Select
+            value={form.discountEventId || undefined}
+            onChange={(value) => setForm((f) => ({ ...f, discountEventId: value || '' }))}
+            style={{ width: '100%' }}
+            size="large"
+            placeholder="없음"
+            allowClear
           >
-            <option value="">없음</option>
             {discounts.map((d) => (
-              <option key={d.id} value={d.id}>
+              <Select.Option key={d.id} value={d.id}>
                 {d.name} ({d.rate}% 할인)
-              </option>
+              </Select.Option>
             ))}
-          </select>
+          </Select>
           {discountRate > 0 && (
             <p className="text-xs text-green-600 mt-1.5">
               {discountRate}% 할인 적용 → {formatKRW(Math.round(unitPrice * (1 - discountRate / 100)))}원/회
@@ -258,15 +268,18 @@ export default function PaymentFormPage() {
 
         {/* 4. 시간 회차 */}
         <div>
-          <label className="label">④ 시간 회차</label>
-          <input
+          <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>
+            ④ 시간 회차
+          </Typography.Text>
+          <Input
             type="number"
             value={form.sessionCount}
             onChange={set('sessionCount')}
             step="0.5"
             min="0"
             placeholder="예: 8 (8회 60분 수업)"
-            className="input-field"
+            size="large"
+            style={{ borderRadius: 12 }}
             required
           />
           {sessionCount > 0 && unitPrice > 0 && (
@@ -278,15 +291,18 @@ export default function PaymentFormPage() {
 
         {/* 5. 실제 결제 금액 */}
         <div>
-          <label className="label">⑤ 실제 결제 금액</label>
-          <input
+          <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>
+            ⑤ 실제 결제 금액
+          </Typography.Text>
+          <Input
             type="number"
             value={form.actualAmount}
             onChange={set('actualAmount')}
             step="1000"
             min="0"
             placeholder="실제로 받은 금액"
-            className="input-field"
+            size="large"
+            style={{ borderRadius: 12 }}
             required
           />
           {/* 실시간 미수금 / 상태 표시 */}
@@ -295,7 +311,7 @@ export default function PaymentFormPage() {
               <span className="text-gray-500">결제 상태: </span>
               <strong className={status.color}>{status.label}</strong>
               {unpaid !== 0 && (
-                <span className="text-gray-400 ml-2">
+                <span className="text-gray-500 ml-2">
                   ({unpaid > 0 ? `미수금 ${formatKRW(unpaid)}` : `초과 ${formatKRW(-unpaid)}`})
                 </span>
               )}
@@ -305,50 +321,72 @@ export default function PaymentFormPage() {
 
         {/* 6. 결제 수단 */}
         <div>
-          <label className="label">⑥ 결제 수단</label>
-          <select value={form.paymentMethod} onChange={set('paymentMethod')} className="select-field">
-            <option value="">선택하세요</option>
+          <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>
+            ⑥ 결제 수단
+          </Typography.Text>
+          <Select
+            value={form.paymentMethod || undefined}
+            onChange={(value) => setForm((f) => ({ ...f, paymentMethod: value || '' }))}
+            style={{ width: '100%' }}
+            size="large"
+            placeholder="선택하세요"
+            allowClear
+          >
             {PAYMENT_METHODS.map((m) => (
-              <option key={m} value={m}>{m}</option>
+              <Select.Option key={m} value={m}>{m}</Select.Option>
             ))}
-          </select>
+          </Select>
         </div>
 
         {/* 7. 결제일 */}
         <div>
-          <label className="label">⑦ 결제일</label>
-          <input
+          <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>
+            ⑦ 결제일
+          </Typography.Text>
+          <Input
             type="date"
             value={form.paymentDate}
             onChange={set('paymentDate')}
-            className="input-field"
+            size="large"
+            style={{ borderRadius: 12 }}
           />
         </div>
 
         {/* 8. 비고 */}
         <div>
-          <label className="label">⑧ 비고 (선택)</label>
-          <input
+          <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>
+            ⑧ 비고 (선택)
+          </Typography.Text>
+          <Input
             type="text"
             value={form.note}
             onChange={set('note')}
             placeholder="메모"
-            className="input-field"
+            size="large"
+            style={{ borderRadius: 12 }}
           />
         </div>
 
-        <button type="submit" disabled={saving} className="btn-primary w-full mt-2">
+        <Button
+          type="primary"
+          block
+          htmlType="submit"
+          disabled={saving}
+          style={{ borderRadius: 12, height: 44, fontWeight: 600, marginTop: 8 }}
+        >
           {saving ? '저장 중...' : isEdit ? '수정하기' : '결제 저장'}
-        </button>
+        </Button>
 
         {isEdit && (
-          <button
-            type="button"
+          <Button
+            danger
+            block
+            type="primary"
             onClick={() => setShowDeleteConfirm(true)}
-            className="btn-danger mt-1"
+            style={{ borderRadius: 12, height: 44, marginTop: 4 }}
           >
             결제 내역 삭제
-          </button>
+          </Button>
         )}
       </form>
 

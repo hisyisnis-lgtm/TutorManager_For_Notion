@@ -1,5 +1,15 @@
 import { useState, useEffect } from 'react';
 import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { ConfigProvider } from 'antd';
+
+const antdTheme = {
+  token: {
+    colorPrimary: '#7f0005',
+    borderRadius: 12,
+    colorBgContainer: '#ffffff',
+    fontFamily: 'inherit',
+  },
+};
 import { DataProvider } from './context/DataContext.jsx';
 import BottomNav from './components/layout/BottomNav.jsx';
 import LoginPage from './pages/LoginPage.jsx';
@@ -20,7 +30,6 @@ import BookEntryPage from './pages/BookEntryPage.jsx';
 import BookingPage from './pages/BookingPage.jsx';
 import BookingStatusPage from './pages/BookingStatusPage.jsx';
 import BookingsManagePage from './pages/BookingsManagePage.jsx';
-import ConsultPage from './pages/ConsultPage.jsx';
 import LandingPage from './pages/LandingPage.jsx';
 
 function ScrollToTop() {
@@ -36,7 +45,7 @@ function checkAuth() {
 // 현재 hash가 공개 페이지인지 확인 (로그인 불필요)
 function isPublicBookingRoute() {
   const hash = window.location.hash;
-  return hash.startsWith('#/book') || hash.startsWith('#/consult') || hash.startsWith('#/intro');
+  return hash.startsWith('#/book') || hash.startsWith('#/intro');
 }
 
 export default function App() {
@@ -45,31 +54,35 @@ export default function App() {
   // 공개 예약 페이지는 로그인 없이 접근
   if (isPublicBookingRoute()) {
     return (
-      <HashRouter>
-        <ScrollToTop />
-        <Routes>
-          <Route path="/intro" element={<LandingPage />} />
-          <Route path="/book" element={<BookEntryPage />} />
-          <Route path="/book/status/:token" element={<BookingStatusPage />} />
-          <Route path="/book/:studentToken" element={<BookingPage />} />
-          <Route path="/consult" element={<ConsultPage />} />
-        </Routes>
-      </HashRouter>
+      <ConfigProvider theme={antdTheme}>
+        <HashRouter>
+          <ScrollToTop />
+          <Routes>
+            <Route path="/intro" element={<LandingPage />} />
+            <Route path="/book" element={<BookEntryPage />} />
+            <Route path="/book/status/:token" element={<BookingStatusPage />} />
+            <Route path="/book/:studentToken" element={<BookingPage />} />
+          </Routes>
+        </HashRouter>
+      </ConfigProvider>
     );
   }
 
   if (!authed) {
     return (
-      <LoginPage
-        onSuccess={() => {
-          window.location.hash = '#/home';
-          setAuthed(true);
-        }}
-      />
+      <ConfigProvider theme={antdTheme}>
+        <LoginPage
+          onSuccess={() => {
+            window.location.hash = '#/home';
+            setAuthed(true);
+          }}
+        />
+      </ConfigProvider>
     );
   }
 
   return (
+    <ConfigProvider theme={antdTheme}>
     <DataProvider>
       <HashRouter>
         <ScrollToTop />
@@ -103,5 +116,6 @@ export default function App() {
         <BottomNav />
       </HashRouter>
     </DataProvider>
+    </ConfigProvider>
   );
 }

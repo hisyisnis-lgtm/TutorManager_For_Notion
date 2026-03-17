@@ -1,5 +1,6 @@
-import React from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
+
+const PRIMARY = '#7f0005';
 
 const TABS = [
   { to: '/home', label: '홈', icon: '🏠' },
@@ -12,21 +13,31 @@ const TABS = [
 export default function BottomNav() {
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50"
-      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      style={{
+        position: 'fixed', bottom: 0, left: 0, right: 0,
+        backgroundColor: '#ffffff',
+        borderTop: '1px solid #f0f0f0',
+        zIndex: 50,
+        paddingBottom: 'env(safe-area-inset-bottom)',
+      }}
     >
-      <div className="max-w-lg mx-auto flex">
+      <div style={{ maxWidth: 512, margin: '0 auto', display: 'flex' }}>
         {TABS.map(({ to, label, icon }) => (
           <NavLink
             key={to}
             to={to}
-            className={({ isActive }) =>
-              `flex-1 flex flex-col items-center py-2.5 gap-0.5 text-xs font-medium transition-colors ${
-                isActive ? 'text-brand-600' : 'text-gray-400'
-              }`
-            }
+            style={({ isActive }) => ({
+              flex: 1, display: 'flex', flexDirection: 'column',
+              alignItems: 'center', justifyContent: 'center',
+              padding: '10px 0 8px',
+              gap: 2,
+              fontSize: 11, fontWeight: 500,
+              color: isActive ? PRIMARY : '#8c8c8c',
+              textDecoration: 'none',
+              transition: 'color 0.2s',
+            })}
           >
-            <span className="text-xl leading-none">{icon}</span>
+            <span style={{ fontSize: 20, lineHeight: 1 }}>{icon}</span>
             <span>{label}</span>
           </NavLink>
         ))}

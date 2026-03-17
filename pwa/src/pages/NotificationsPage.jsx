@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Button } from 'antd';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import { getNtfyTopic } from './SettingsPage.jsx';
 
@@ -143,15 +144,16 @@ export default function NotificationsPage() {
         <div className="flex flex-col items-center justify-center px-8 pt-24 gap-4 text-center">
           <span className="text-5xl">🔔</span>
           <p className="text-gray-700 font-medium">ntfy 토픽이 설정되지 않았어요</p>
-          <p className="text-sm text-gray-400">
+          <p className="text-sm text-gray-500">
             설정에서 ntfy 토픽을 입력하면<br />실시간 알림을 받을 수 있습니다.
           </p>
-          <button
+          <Button
+            type="primary"
             onClick={() => navigate('/settings')}
-            className="btn-primary mt-2"
+            style={{ borderRadius: 12, height: 44, fontWeight: 600, marginTop: 8 }}
           >
             설정으로 이동
-          </button>
+          </Button>
         </div>
       </>
     );
@@ -164,12 +166,13 @@ export default function NotificationsPage() {
         back
         action={
           notifications.length > 0 && (
-            <button
+            <Button
+              type="text"
               onClick={handleClearAll}
-              className="text-sm text-gray-400 active:text-gray-600 py-1 px-2"
+              style={{ fontSize: 14, color: '#9ca3af' }}
             >
               모두 지우기
-            </button>
+            </Button>
           )
         }
       />
@@ -206,7 +209,7 @@ export default function NotificationsPage() {
                     </p>
                     <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                       {tags.length > 0 && (
-                        <span className="text-xs text-gray-400">{tags.join(' · ')}</span>
+                        <span className="text-xs text-gray-500">{tags.join(' · ')}</span>
                       )}
                       <span className="text-xs text-gray-300 ml-auto shrink-0">
                         {relativeTime(n.time)}

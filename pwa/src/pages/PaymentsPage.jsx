@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
+import { Button, Input, Card } from 'antd';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import Badge from '../components/ui/Badge.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
@@ -63,11 +64,14 @@ export default function PaymentsPage() {
       <PageHeader
         title="결제 내역"
         action={
-          <Link
-            to="/payments/new"
-            className="flex items-center gap-1 text-sm font-semibold text-brand-600 bg-brand-50 px-3 py-1.5 rounded-lg active:bg-brand-100"
-          >
-            <span>+</span> 결제 입력
+          <Link to="/payments/new">
+            <Button
+              type="primary"
+              size="small"
+              style={{ borderRadius: 8, fontWeight: 600 }}
+            >
+              + 결제 입력
+            </Button>
           </Link>
         }
       />
@@ -75,7 +79,7 @@ export default function PaymentsPage() {
       <div className="px-4 pt-3 pb-2 space-y-2">
         {/* 학생 검색 필터 */}
         <div className="relative">
-          <input
+          <Input
             type="text"
             placeholder="학생 이름으로 검색"
             value={nameInput}
@@ -83,7 +87,8 @@ export default function PaymentsPage() {
               setNameInput(e.target.value);
               if (!e.target.value) setStudentFilter('');
             }}
-            className="input-field pr-8"
+            size="large"
+            style={{ borderRadius: 12, paddingRight: nameInput ? 32 : undefined }}
           />
           {nameInput && (
             <button
@@ -107,7 +112,7 @@ export default function PaymentsPage() {
                       className="w-full flex items-center justify-between px-4 py-2.5 text-sm text-gray-800 hover:bg-brand-50 active:bg-brand-100"
                     >
                       <span className="font-medium">{s.name}</span>
-                      <span className="text-xs text-gray-400">{s.status}</span>
+                      <span className="text-xs text-gray-500">{s.status}</span>
                     </button>
                   ))}
                 </div>
@@ -126,8 +131,8 @@ export default function PaymentsPage() {
             <button
               key={f}
               onClick={() => setStatusFilter(f)}
-              className={`flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                statusFilter === f ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600'
+              className={`flex-shrink-0 px-3 py-3 rounded-full text-sm font-medium transition-colors ${
+                statusFilter === f ? 'bg-brand-600 text-white' : 'bg-gray-100 text-gray-600'
               }`}
             >
               {f}
@@ -157,12 +162,13 @@ export default function PaymentsPage() {
           )}
           {hasMore && (
             <div className="px-4 pb-4">
-              <button
+              <Button
+                block
                 onClick={() => load(false, cursor)}
-                className="w-full py-3 text-sm font-medium text-gray-500 bg-gray-100 rounded-xl active:bg-gray-200"
+                style={{ borderRadius: 12 }}
               >
                 더 보기
-              </button>
+              </Button>
             </div>
           )}
         </>
@@ -179,35 +185,41 @@ function PaymentCard({ payment, studentNameMap, classTypeMap }) {
 
   return (
     <li>
-      <Link to={`/payments/${payment.id}/edit`} className="card block p-4 active:bg-gray-50">
-        <div className="flex items-start justify-between mb-2">
-          <div className="flex-1 min-w-0">
-            <p className="text-base font-bold text-gray-900">{studentName || '학생 없음'}</p>
-            {classTypeName && (
-              <p className="text-xs text-gray-400 mt-0.5">{classTypeName}</p>
+      <Link to={`/payments/${payment.id}/edit`}>
+        <Card
+          variant="borderless"
+          style={{ borderRadius: 16 }}
+          styles={{ body: { padding: 16 } }}
+        >
+          <div className="flex items-start justify-between mb-2">
+            <div className="flex-1 min-w-0">
+              <p className="text-base font-bold text-gray-900">{studentName || '학생 없음'}</p>
+              {classTypeName && (
+                <p className="text-xs text-gray-500 mt-0.5">{classTypeName}</p>
+              )}
+            </div>
+            <Badge label={payment.paymentStatus} bg={bg} text={text} />
+          </div>
+          <div className="flex gap-4 text-sm">
+            <div>
+              <span className="text-xs text-gray-500">시간 회차 </span>
+              <span className="font-semibold text-gray-800">{payment.sessionCount}회</span>
+            </div>
+            <div>
+              <span className="text-xs text-gray-500">결제 금액 </span>
+              <span className="font-semibold text-gray-800">{formatKRW(payment.paymentAmount)}</span>
+            </div>
+            {payment.unpaid > 0 && (
+              <div>
+                <span className="text-xs text-gray-500">미수금 </span>
+                <span className="font-semibold text-red-500">{formatKRW(payment.unpaid)}</span>
+              </div>
             )}
           </div>
-          <Badge label={payment.paymentStatus} bg={bg} text={text} />
-        </div>
-        <div className="flex gap-4 text-sm">
-          <div>
-            <span className="text-xs text-gray-400">시간 회차 </span>
-            <span className="font-semibold text-gray-800">{payment.sessionCount}회</span>
-          </div>
-          <div>
-            <span className="text-xs text-gray-400">결제 금액 </span>
-            <span className="font-semibold text-gray-800">{formatKRW(payment.paymentAmount)}</span>
-          </div>
-          {payment.unpaid > 0 && (
-            <div>
-              <span className="text-xs text-gray-400">미수금 </span>
-              <span className="font-semibold text-red-500">{formatKRW(payment.unpaid)}</span>
-            </div>
+          {payment.paymentDate && (
+            <p className="text-xs text-gray-500 mt-2">결제일 {payment.paymentDate}</p>
           )}
-        </div>
-        {payment.paymentDate && (
-          <p className="text-xs text-gray-400 mt-2">결제일 {payment.paymentDate}</p>
-        )}
+        </Card>
       </Link>
     </li>
   );

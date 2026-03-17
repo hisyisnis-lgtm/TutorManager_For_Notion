@@ -10,6 +10,7 @@ import {
   cancelMyClass,
   restoreMyClass,
 } from '../api/bookingApi.js';
+import { Card, Button } from 'antd';
 
 const DAY_KR = ['일', '월', '화', '수', '목', '금', '토'];
 const LOCATION_OPTIONS = ['강남사무실', '온라인 (Zoom/화상)'];
@@ -103,19 +104,19 @@ function Calendar({ year, month, availableDates, selectedDate, onSelect }) {
               onClick={() => onSelect(dateStr)}
               className={`relative flex items-center justify-center h-9 rounded-full text-sm font-medium transition-colors ${
                 isSelected
-                  ? 'bg-blue-600 text-white'
+                  ? 'bg-brand-600 text-white'
                   : disabled
                     ? 'text-gray-300 cursor-not-allowed'
                     : dow === 0
-                      ? 'text-red-500 hover:bg-blue-50 cursor-pointer'
+                      ? 'text-red-500 hover:bg-brand-50 cursor-pointer'
                       : dow === 6
-                        ? 'text-blue-500 hover:bg-blue-50 cursor-pointer'
-                        : 'text-gray-800 hover:bg-blue-50 cursor-pointer'
+                        ? 'text-blue-500 hover:bg-brand-50 cursor-pointer'
+                        : 'text-gray-800 hover:bg-brand-50 cursor-pointer'
               }`}
             >
               {d.getDate()}
               {isToday && !isSelected && (
-                <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-blue-400" />
+                <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-brand-400" />
               )}
             </button>
           );
@@ -164,11 +165,11 @@ function TimeRangePicker({ availableTimes, startTime, endTime, onStartSelect, on
               onClick={() => canSelect && onStartSelect(t)}
               className={`px-3 py-2 rounded-lg text-sm font-medium border transition-colors ${
                 isSelected
-                  ? 'bg-blue-600 text-white border-blue-600'
+                  ? 'bg-brand-600 text-white border-brand-600'
                   : inRange
-                    ? 'bg-blue-50 text-blue-600 border-blue-200'
+                    ? 'bg-brand-50 text-brand-600 border-brand-100'
                     : canSelect
-                      ? 'bg-white text-gray-700 border-gray-200 hover:border-blue-300'
+                      ? 'bg-white text-gray-700 border-gray-200 hover:border-brand-100'
                       : 'bg-gray-50 text-gray-300 border-gray-100 cursor-not-allowed line-through'
               }`}
             >
@@ -181,7 +182,7 @@ function TimeRangePicker({ availableTimes, startTime, endTime, onStartSelect, on
       {startTime && (
         <>
           <p className="text-xs text-gray-500 mb-2">
-            종료 시간 선택 <span className="text-gray-400">(최소 1시간 이상)</span>
+            종료 시간 선택 <span className="text-gray-500">(최소 1시간 이상)</span>
           </p>
           <div className="flex flex-wrap gap-2">
             {ALL_END_SLOTS
@@ -199,9 +200,9 @@ function TimeRangePicker({ availableTimes, startTime, endTime, onStartSelect, on
                     onClick={() => canSelect && onEndSelect(t)}
                     className={`px-3 py-2 rounded-lg text-sm font-medium border transition-colors ${
                       isSelected
-                        ? 'bg-blue-600 text-white border-blue-600'
+                        ? 'bg-brand-600 text-white border-brand-600'
                         : canSelect
-                          ? 'bg-white text-gray-700 border-gray-200 hover:border-blue-300'
+                          ? 'bg-white text-gray-700 border-gray-200 hover:border-brand-100'
                           : 'bg-gray-50 text-gray-300 border-gray-100 cursor-not-allowed line-through'
                     }`}
                   >
@@ -293,8 +294,12 @@ function MyClassesTab({ studentToken, month, onMonthChange }) {
         </button>
       </div>
 
-      {loading && <div className="text-center py-12 text-gray-400 text-sm">불러오는 중...</div>}
-      {error && <div className="mx-4 bg-red-50 text-red-500 rounded-xl p-4 text-sm mt-4">{error}</div>}
+      {loading && <div className="text-center py-12 text-gray-500 text-sm">불러오는 중...</div>}
+      {error && (
+        <div style={{ margin: '16px', padding: '12px 16px', backgroundColor: '#fff2f0', border: '1px solid #ffccc7', borderRadius: 12, fontSize: 14, color: '#cf1322' }}>
+          {error}
+        </div>
+      )}
       {!loading && !error && classes.length === 0 && (
         <div className="text-center py-12 text-gray-400">
           <div className="text-4xl mb-3">📚</div>
@@ -312,53 +317,56 @@ function MyClassesTab({ studentToken, month, onMonthChange }) {
             const statusStyle = cls.isCancelled
               ? 'bg-gray-100 text-gray-400'
               : isPast
-                ? 'bg-blue-50 text-blue-500'
+                ? 'bg-gray-100 text-gray-500'
                 : 'bg-green-100 text-green-700';
             return (
-              <div
+              <Card
                 key={cls.id}
-                className={`bg-white rounded-xl shadow-sm p-4 flex items-center gap-3 ${isPast || cls.isCancelled ? 'opacity-60' : ''}`}
+                variant="borderless"
+                style={{ borderRadius: 16, opacity: isPast || cls.isCancelled ? 0.6 : 1 }}
               >
-                <div className="flex-1 min-w-0">
-                  <div className="text-base font-semibold text-gray-900 mb-0.5">
-                    {formatDate(cls.date)}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusStyle}`}>
-                      {statusLabel}
-                    </span>
-                    <span className="text-xs text-gray-500">
-                      {cls.startTime} · {formatDuration(cls.durationMin)}
-                    </span>
-                    {cls.location && (
-                      <span className="text-xs text-gray-400">
-                        {LOCATION_LABEL[cls.location] ?? cls.location}
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-base font-semibold text-gray-900 mb-0.5">
+                      {formatDate(cls.date)}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusStyle}`}>
+                        {statusLabel}
                       </span>
-                    )}
+                      <span className="text-xs text-gray-500">
+                        {cls.startTime} · {formatDuration(cls.durationMin)}
+                      </span>
+                      {cls.location && (
+                        <span className="text-xs text-gray-500">
+                          {LOCATION_LABEL[cls.location] ?? cls.location}
+                        </span>
+                      )}
+                    </div>
                   </div>
+                  {canCancel && (
+                    <button
+                      onClick={() => handleCancel(cls)}
+                      disabled={cancellingId === cls.id}
+                      className="shrink-0 text-sm text-red-500 border border-red-200 rounded-lg px-3 py-1.5 disabled:opacity-40 active:bg-red-50"
+                    >
+                      {cancellingId === cls.id ? '취소 중...' : '취소'}
+                    </button>
+                  )}
+                  {canRestore && (
+                    <button
+                      onClick={() => handleRestore(cls)}
+                      disabled={restoringId === cls.id}
+                      className="shrink-0 text-sm text-brand-600 border border-brand-100 rounded-lg px-3 py-1.5 disabled:opacity-40 active:bg-brand-50"
+                    >
+                      {restoringId === cls.id ? '복구 중...' : '복구'}
+                    </button>
+                  )}
                 </div>
-                {canCancel && (
-                  <button
-                    onClick={() => handleCancel(cls)}
-                    disabled={cancellingId === cls.id}
-                    className="shrink-0 text-sm text-red-500 border border-red-200 rounded-lg px-3 py-1.5 disabled:opacity-40 active:bg-red-50"
-                  >
-                    {cancellingId === cls.id ? '취소 중...' : '취소'}
-                  </button>
-                )}
-                {canRestore && (
-                  <button
-                    onClick={() => handleRestore(cls)}
-                    disabled={restoringId === cls.id}
-                    className="shrink-0 text-sm text-blue-500 border border-blue-200 rounded-lg px-3 py-1.5 disabled:opacity-40 active:bg-blue-50"
-                  >
-                    {restoringId === cls.id ? '복구 중...' : '복구'}
-                  </button>
-                )}
-              </div>
+              </Card>
             );
           })}
-          <p className="text-xs text-center text-gray-400 pt-2">당일 취소는 강사에게 직접 연락해주세요</p>
+          <p className="text-xs text-center text-gray-500 pt-2">당일 취소는 강사에게 직접 연락해주세요</p>
         </div>
       )}
     </div>
@@ -511,22 +519,24 @@ export default function BookingPage() {
   if (studentError) {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center px-4">
-        <div className="bg-white rounded-xl shadow-sm p-6 max-w-sm w-full text-center space-y-4">
-          <div className="text-4xl">⚠️</div>
+        <Card variant="borderless" style={{ borderRadius: 16, maxWidth: 360, width: '100%', textAlign: 'center' }}>
+          <div style={{ fontSize: 36, marginBottom: 16 }}>⚠️</div>
           <p className="text-red-500 text-sm">{studentError}</p>
-          <button
+          <Button
+            type="primary"
+            block
             onClick={() => navigate('/book')}
-            className="w-full bg-blue-600 text-white rounded-lg py-2.5 text-sm font-semibold"
+            style={{ borderRadius: 12, height: 44, fontWeight: 600, marginTop: 16 }}
           >
             다시 입력
-          </button>
-        </div>
+          </Button>
+        </Card>
       </div>
     );
   }
 
   if (!student) {
-    return <div className="min-h-screen bg-gray-50 flex items-center justify-center text-gray-400 text-sm">불러오는 중...</div>;
+    return <div className="min-h-screen bg-gray-50 flex items-center justify-center text-gray-500 text-sm">불러오는 중...</div>;
   }
 
   return (
@@ -547,7 +557,7 @@ export default function BookingPage() {
               </button>
             </div>
             <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-              student.remainingSessions > 0 ? 'bg-blue-50 text-blue-600' : 'bg-red-50 text-red-500'
+              student.remainingSessions > 0 ? 'bg-brand-50 text-brand-600' : 'bg-red-50 text-red-500'
             }`}>
               잔여 {student.remainingSessions}회차
             </span>
@@ -555,13 +565,20 @@ export default function BookingPage() {
         </div>
 
         {/* 탭 */}
-        <div className="flex border-b border-gray-100 bg-white px-4">
-          {['예약하기', '내 수업'].map(t => (
+        <div
+          role="tablist"
+          className="flex border-b border-gray-100 bg-white px-4 sticky top-0 z-[100]"
+        >
+          {['예약하기', '내 수업'].map((t, i) => (
             <button
               key={t}
+              role="tab"
+              aria-selected={tab === t}
+              aria-controls={`tab-panel-${i}`}
+              id={`tab-${i}`}
               onClick={() => setTab(t)}
-              className={`mr-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-                tab === t ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-400'
+              className={`mr-4 py-3 text-sm font-medium border-b-2 transition-colors min-h-[44px] ${
+                tab === t ? 'border-brand-600 text-brand-600' : 'border-transparent text-gray-500'
               }`}
             >
               {t}
@@ -570,23 +587,25 @@ export default function BookingPage() {
         </div>
 
         {tab === '내 수업' ? (
+          <div role="tabpanel" id="tab-panel-1" aria-labelledby="tab-1">
           <MyClassesTab
             key={classRefreshKey}
             studentToken={studentToken}
             month={myClassesMonth}
             onMonthChange={setMyClassesMonth}
           />
+          </div>
         ) : (
-          <div className="px-4 py-4 space-y-4">
+          <div role="tabpanel" id="tab-panel-0" aria-labelledby="tab-0" className="px-4 py-4 space-y-4">
             {/* 잔여 시간 없을 때 안내 */}
             {student.remainingSessions <= 0 && (
-              <div className="bg-red-50 rounded-xl p-4 text-sm text-red-600 text-center">
+              <div style={{ padding: '12px 16px', backgroundColor: '#fff2f0', border: '1px solid #ffccc7', borderRadius: 12, fontSize: 14, color: '#cf1322', textAlign: 'center' }}>
                 잔여 시간이 없습니다. 결제 후 예약이 가능합니다.
               </div>
             )}
 
             {/* 달력 */}
-            <div className="bg-white rounded-xl shadow-sm p-4">
+            <Card variant="borderless" style={{ borderRadius: 16 }}>
               <div className="flex items-center justify-between mb-3">
                 <button
                   type="button"
@@ -606,7 +625,7 @@ export default function BookingPage() {
               </div>
 
               {slotsLoading ? (
-                <div className="text-center py-8 text-gray-400 text-sm">불러오는 중...</div>
+                <div className="text-center py-8 text-gray-500 text-sm">불러오는 중...</div>
               ) : (
                 <Calendar
                   year={calYear}
@@ -616,11 +635,11 @@ export default function BookingPage() {
                   onSelect={handleDateSelect}
                 />
               )}
-            </div>
+            </Card>
 
             {/* 시간 선택 */}
             {selectedDate && (
-              <div className="bg-white rounded-xl shadow-sm p-4">
+              <Card variant="borderless" style={{ borderRadius: 16 }}>
                 {(() => {
                   const d = new Date(selectedDate + 'T00:00:00+09:00');
                   return (
@@ -631,7 +650,7 @@ export default function BookingPage() {
                 })()}
 
                 {timesLoading ? (
-                  <div className="text-center py-6 text-gray-400 text-sm">불러오는 중...</div>
+                  <div className="text-center py-6 text-gray-500 text-sm">불러오는 중...</div>
                 ) : (
                   <TimeRangePicker
                     availableTimes={availableTimes}
@@ -641,66 +660,72 @@ export default function BookingPage() {
                     onEndSelect={handleEndSelect}
                   />
                 )}
-              </div>
+              </Card>
             )}
 
             {/* 예약 폼 */}
             {selectedDate && startTime && endTime && durationMin >= 60 && (
-              <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-sm p-4 space-y-3">
-                {/* 선택 요약 */}
-                <div className="bg-blue-50 rounded-lg px-3 py-2.5 text-sm text-blue-700">
-                  {(() => {
-                    const d = new Date(selectedDate + 'T00:00:00+09:00');
-                    return (
-                      <>
-                        <span className="font-semibold">
-                          {d.getMonth() + 1}/{d.getDate()}({DAY_KR[d.getDay()]}) {startTime} ~ {endTime}
-                        </span>
-                        <span className="ml-2 text-blue-500">({formatDuration(durationMin)})</span>
-                      </>
-                    );
-                  })()}
-                </div>
-
-                {/* 수업 장소 선택 */}
-                <div>
-                  <label className="block text-xs text-gray-500 mb-1.5">수업 장소</label>
-                  <div className="flex gap-2">
-                    {LOCATION_OPTIONS.map(opt => (
-                      <button
-                        key={opt}
-                        type="button"
-                        onClick={() => setLocation(opt)}
-                        className={`flex-1 py-2.5 rounded-lg text-sm font-medium border transition-colors ${
-                          location === opt
-                            ? 'bg-blue-600 text-white border-blue-600'
-                            : 'bg-white text-gray-600 border-gray-200 hover:border-blue-300'
-                        }`}
-                      >
-                        {opt === '강남사무실' ? '강남사무실' : 'Zoom (온라인)'}
-                      </button>
-                    ))}
+              <form onSubmit={handleSubmit}>
+                <Card variant="borderless" style={{ borderRadius: 16 }}>
+                  {/* 선택 요약 */}
+                  <div className="bg-brand-50 rounded-lg px-3 py-2.5 text-sm text-brand-600" style={{ marginBottom: 12 }}>
+                    {(() => {
+                      const d = new Date(selectedDate + 'T00:00:00+09:00');
+                      return (
+                        <>
+                          <span className="font-semibold">
+                            {d.getMonth() + 1}/{d.getDate()}({DAY_KR[d.getDay()]}) {startTime} ~ {endTime}
+                          </span>
+                          <span className="ml-2 opacity-70">({formatDuration(durationMin)})</span>
+                        </>
+                      );
+                    })()}
                   </div>
-                </div>
 
-                {/* 잔여 시간 부족 경고 */}
-                {!hasEnoughTime && (
-                  <div className="text-red-500 text-sm bg-red-50 rounded-lg px-3 py-2">
-                    잔여 시간이 부족합니다. (잔여 {student.remainingSessions}회차, 필요 {requiredSessions}회차)
+                  {/* 수업 장소 선택 */}
+                  <div style={{ marginBottom: 12 }}>
+                    <label className="block text-xs text-gray-500 mb-1.5">수업 장소</label>
+                    <div className="flex gap-2">
+                      {LOCATION_OPTIONS.map(opt => (
+                        <button
+                          key={opt}
+                          type="button"
+                          onClick={() => setLocation(opt)}
+                          className={`flex-1 py-3 rounded-lg text-sm font-medium border transition-colors ${
+                            location === opt
+                              ? 'bg-brand-600 text-white border-brand-600'
+                              : 'bg-white text-gray-600 border-gray-200 hover:border-brand-100'
+                          }`}
+                        >
+                          {opt === '강남사무실' ? '강남사무실' : 'Zoom (온라인)'}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                )}
 
-                {submitError && (
-                  <div className="text-red-500 text-sm bg-red-50 rounded-lg px-3 py-2">{submitError}</div>
-                )}
+                  {/* 잔여 시간 부족 경고 */}
+                  {!hasEnoughTime && (
+                    <div style={{ padding: '8px 12px', backgroundColor: '#fff2f0', border: '1px solid #ffccc7', borderRadius: 8, fontSize: 14, color: '#cf1322', marginBottom: 12 }}>
+                      잔여 시간이 부족합니다. (잔여 {student.remainingSessions}회차, 필요 {requiredSessions}회차)
+                    </div>
+                  )}
 
-                <button
-                  type="submit"
-                  disabled={submitting || !hasEnoughTime}
-                  className="w-full bg-blue-600 text-white rounded-lg py-3 text-sm font-semibold disabled:opacity-50 active:bg-blue-700"
-                >
-                  {submitting ? '예약 중...' : '예약 확정하기'}
-                </button>
+                  {submitError && (
+                    <div style={{ padding: '8px 12px', backgroundColor: '#fff2f0', border: '1px solid #ffccc7', borderRadius: 8, fontSize: 14, color: '#cf1322', marginBottom: 12 }}>
+                      {submitError}
+                    </div>
+                  )}
+
+                  <Button
+                    type="primary"
+                    block
+                    htmlType="submit"
+                    disabled={submitting || !hasEnoughTime}
+                    style={{ borderRadius: 12, height: 44, fontWeight: 600 }}
+                  >
+                    {submitting ? '예약 중...' : '예약 확정하기'}
+                  </Button>
+                </Card>
               </form>
             )}
 

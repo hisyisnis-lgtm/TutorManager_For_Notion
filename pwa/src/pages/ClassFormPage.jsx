@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { Button, Input, Select, Typography } from 'antd';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import { getPage, deletePage } from '../api/notionClient.js';
@@ -253,20 +254,23 @@ export default function ClassFormPage() {
 
       <form onSubmit={handleSubmit} className="px-4 pt-4 pb-8 space-y-5">
         {error && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600">
+          <div style={{ padding: '12px 16px', backgroundColor: '#fff2f0', border: '1px solid #ffccc7', borderRadius: 12, fontSize: 14, color: '#cf1322' }}>
             {error}
           </div>
         )}
 
         {/* 학생 선택 */}
         <div>
-          <label className="label">학생 선택 (2:1 수업 시 두 명 선택)</label>
-          <input
+          <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>
+            학생 선택 (2:1 수업 시 두 명 선택)
+          </Typography.Text>
+          <Input
             type="text"
             placeholder="학생 이름 검색..."
             value={studentSearch}
             onChange={(e) => setStudentSearch(e.target.value)}
-            className="input-field mb-2"
+            size="large"
+            style={{ borderRadius: 12, marginBottom: 8 }}
           />
           <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
             {students
@@ -291,7 +295,7 @@ export default function ClassFormPage() {
                       className="w-4 h-4 accent-brand-600"
                     />
                     <span className="text-sm font-medium text-gray-800">{s.name}</span>
-                    <span className="text-xs text-gray-400 ml-auto">{s.status}</span>
+                    <span className="text-xs text-gray-500 ml-auto">{s.status}</span>
                     {recurring && isSelected && (
                       <span className="text-xs text-brand-600 font-medium">
                         잔여 {s.remainingSessions ?? 0}회차
@@ -308,32 +312,36 @@ export default function ClassFormPage() {
 
         {/* 수업 유형 */}
         <div>
-          <label className="label">수업 유형</label>
-          <select
-            value={form.classTypeId}
-            onChange={(e) => setForm((f) => ({ ...f, classTypeId: e.target.value }))}
-            className="select-field"
-            required
+          <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>
+            수업 유형
+          </Typography.Text>
+          <Select
+            value={form.classTypeId || undefined}
+            onChange={(value) => setForm((f) => ({ ...f, classTypeId: value }))}
+            style={{ width: '100%' }}
+            size="large"
+            placeholder="선택하세요"
           >
-            <option value="">선택하세요</option>
             {classTypes.map((ct) => (
-              <option key={ct.id} value={ct.id}>
+              <Select.Option key={ct.id} value={ct.id}>
                 {ct.title} ({ct.classType} · {ct.unitPrice.toLocaleString()}원)
-              </option>
+              </Select.Option>
             ))}
-          </select>
+          </Select>
         </div>
 
         {/* 수업 시간 */}
         <div>
-          <label className="label">수업 시간</label>
+          <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>
+            수업 시간
+          </Typography.Text>
           <div className="grid grid-cols-5 gap-2">
             {DURATION_OPTIONS.map((d) => (
               <button
                 key={d}
                 type="button"
                 onClick={() => setForm((f) => ({ ...f, duration: d }))}
-                className={`py-2.5 rounded-xl text-sm font-medium border-2 transition-colors ${
+                className={`py-3 rounded-xl text-sm font-medium border-2 transition-colors ${
                   form.duration === d
                     ? 'border-brand-600 bg-brand-50 text-brand-700'
                     : 'border-gray-200 bg-white text-gray-600'
@@ -359,7 +367,7 @@ export default function ClassFormPage() {
           >
             <div>
               <p className="text-sm font-medium text-gray-800">반복 수업 등록</p>
-              <p className="text-xs text-gray-400 mt-0.5">
+              <p className="text-xs text-gray-500 mt-0.5">
                 {recurring ? '요일·시간 지정 → 잔여 회차만큼 자동 등록' : '매 주 같은 요일에 반복 등록'}
               </p>
             </div>
@@ -382,7 +390,9 @@ export default function ClassFormPage() {
           <div className="space-y-4 p-4 bg-gray-50 rounded-xl border border-gray-200">
             {/* 요일 선택 */}
             <div>
-              <label className="label">수업 요일 (복수 선택 가능)</label>
+              <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>
+                수업 요일 (복수 선택 가능)
+              </Typography.Text>
               <div className="grid grid-cols-7 gap-1.5">
                 {DAY_LABELS.map((label, i) => {
                   const day = DAY_JS[i];
@@ -392,7 +402,7 @@ export default function ClassFormPage() {
                       key={day}
                       type="button"
                       onClick={() => toggleDay(day)}
-                      className={`py-2.5 rounded-xl text-sm font-medium border-2 transition-colors ${
+                      className={`py-3 rounded-xl text-sm font-medium border-2 transition-colors ${
                         active
                           ? 'border-brand-600 bg-brand-50 text-brand-700'
                           : 'border-gray-200 bg-white text-gray-600'
@@ -407,34 +417,43 @@ export default function ClassFormPage() {
 
             {/* 시작 시간 */}
             <div>
-              <label className="label">수업 시작 시간</label>
-              <input
+              <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>
+                수업 시작 시간
+              </Typography.Text>
+              <Input
                 type="time"
                 value={form.recurTime}
                 onChange={(e) => setForm((f) => ({ ...f, recurTime: e.target.value }))}
-                className="input-field"
+                size="large"
+                style={{ borderRadius: 12 }}
               />
             </div>
 
             {/* 시작일 / 종료일 */}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="label">시작일</label>
-                <input
+                <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>
+                  시작일
+                </Typography.Text>
+                <Input
                   type="date"
                   value={form.recurStartDate}
                   onChange={(e) => setForm((f) => ({ ...f, recurStartDate: e.target.value }))}
-                  className="input-field"
+                  size="large"
+                  style={{ borderRadius: 12 }}
                 />
               </div>
               <div>
-                <label className="label">종료일</label>
-                <input
+                <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>
+                  종료일
+                </Typography.Text>
+                <Input
                   type="date"
                   value={form.recurEndDate}
                   min={form.recurStartDate}
                   onChange={(e) => setForm((f) => ({ ...f, recurEndDate: e.target.value }))}
-                  className="input-field"
+                  size="large"
+                  style={{ borderRadius: 12 }}
                 />
               </div>
             </div>
@@ -446,7 +465,7 @@ export default function ClassFormPage() {
                 ? 'bg-gray-50 text-gray-500'
                 : overLimit
                 ? 'bg-yellow-50 text-yellow-700'
-                : 'bg-blue-50 text-blue-700';
+                : 'bg-brand-50 text-brand-600';
               return (
                 <div className={`p-3 rounded-xl text-sm ${boxColor}`}>
                   {selectedStudents.length === 0 ? (
@@ -466,7 +485,7 @@ export default function ClassFormPage() {
                       잔여 {minRemaining}회차 충분 →{' '}
                       <span className="font-semibold">수업 {recurCount}개</span> 등록 예정
                       {form.recurDays.length > 0 && recurDates.length > 0 && (
-                        <div className="mt-2 text-xs text-blue-600 space-y-0.5">
+                        <div className="mt-2 text-xs text-brand-600 space-y-0.5">
                           {recurDates.slice(0, 5).map((d, i) => (
                             <div key={i}>{formatDateLabel(d)} {form.recurTime}</div>
                           ))}
@@ -486,12 +505,15 @@ export default function ClassFormPage() {
         {/* 일회성: 수업 일시 */}
         {!recurring && (
           <div>
-            <label className="label">수업 일시</label>
-            <input
+            <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>
+              수업 일시
+            </Typography.Text>
+            <Input
               type="datetime-local"
               value={form.datetime}
               onChange={(e) => setForm((f) => ({ ...f, datetime: e.target.value }))}
-              className="input-field"
+              size="large"
+              style={{ borderRadius: 12 }}
               required={!recurring}
             />
           </div>
@@ -499,14 +521,16 @@ export default function ClassFormPage() {
 
         {/* 수업 장소 */}
         <div>
-          <label className="label">수업 장소</label>
+          <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>
+            수업 장소
+          </Typography.Text>
           <div className="grid grid-cols-2 gap-2">
             {LOCATION_OPTIONS.map((loc) => (
               <button
                 key={loc}
                 type="button"
                 onClick={() => setForm((f) => ({ ...f, location: loc }))}
-                className={`py-2.5 rounded-xl text-sm font-medium border-2 transition-colors ${
+                className={`py-3 rounded-xl text-sm font-medium border-2 transition-colors ${
                   form.location === loc
                     ? 'border-brand-600 bg-brand-50 text-brand-700'
                     : 'border-gray-200 bg-white text-gray-600'
@@ -516,23 +540,26 @@ export default function ClassFormPage() {
               </button>
             ))}
           </div>
-          <input
+          <Input
             type="text"
             placeholder="상세 장소 메모 (예: 스타벅스 강남역점)"
             value={form.locationMemo}
             onChange={(e) => setForm((f) => ({ ...f, locationMemo: e.target.value }))}
-            className="input-field mt-2"
+            size="large"
+            style={{ borderRadius: 12, marginTop: 8 }}
           />
         </div>
 
         {/* 특이사항 */}
         <div>
-          <label className="label">특이사항 (선택)</label>
+          <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>
+            특이사항 (선택)
+          </Typography.Text>
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
               onClick={() => setForm((f) => ({ ...f, notes: '' }))}
-              className={`py-2.5 rounded-xl text-sm font-medium border-2 transition-colors ${
+              className={`py-3 rounded-xl text-sm font-medium border-2 transition-colors ${
                 !form.notes
                   ? 'border-gray-700 bg-gray-100 text-gray-800'
                   : 'border-gray-200 bg-white text-gray-600'
@@ -545,7 +572,7 @@ export default function ClassFormPage() {
                 key={n}
                 type="button"
                 onClick={() => setForm((f) => ({ ...f, notes: n }))}
-                className={`py-2.5 rounded-xl text-sm font-medium border-2 transition-colors ${
+                className={`py-3 rounded-xl text-sm font-medium border-2 transition-colors ${
                   form.notes === n
                     ? 'border-gray-700 bg-gray-100 text-gray-800'
                     : 'border-gray-200 bg-white text-gray-600'
@@ -557,7 +584,13 @@ export default function ClassFormPage() {
           </div>
         </div>
 
-        <button type="submit" disabled={saving} className="btn-primary w-full mt-2">
+        <Button
+          type="primary"
+          block
+          htmlType="submit"
+          disabled={saving}
+          style={{ borderRadius: 12, height: 44, fontWeight: 600, marginTop: 8 }}
+        >
           {saving
             ? '저장 중...'
             : recurring
@@ -565,16 +598,18 @@ export default function ClassFormPage() {
             : isEdit
             ? '수정하기'
             : '수업 추가'}
-        </button>
+        </Button>
 
         {isEdit && (
-          <button
-            type="button"
+          <Button
+            danger
+            block
+            type="primary"
             onClick={() => setShowDeleteConfirm(true)}
-            className="btn-danger mt-1"
+            style={{ borderRadius: 12, height: 44, marginTop: 4 }}
           >
             수업 삭제
-          </button>
+          </Button>
         )}
       </form>
 

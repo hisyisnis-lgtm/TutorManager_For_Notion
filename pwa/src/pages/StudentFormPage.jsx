@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { Button, Input, Typography } from 'antd';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import { createStudent, updateStudent, parseStudent, STATUS_OPTIONS } from '../api/students.js';
@@ -94,34 +95,38 @@ export default function StudentFormPage() {
 
       <form onSubmit={handleSubmit} className="px-4 pt-4 pb-8 space-y-5">
         {error && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600">
+          <div style={{ padding: '12px 16px', backgroundColor: '#fff2f0', border: '1px solid #ffccc7', borderRadius: 12, fontSize: 14, color: '#cf1322' }}>
             {error}
           </div>
         )}
 
         {/* 이름 */}
         <div>
-          <label className="label">이름 *</label>
-          <input
-            type="text"
+          <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>
+            이름 *
+          </Typography.Text>
+          <Input
+            size="large"
             value={form.name}
             onChange={set('name')}
             placeholder="홍길동"
-            className="input-field"
+            style={{ borderRadius: 12 }}
             required
           />
         </div>
 
         {/* 상태 */}
         <div>
-          <label className="label">상태</label>
+          <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>
+            상태
+          </Typography.Text>
           <div className="flex gap-2 flex-wrap">
             {STATUS_OPTIONS.map((s) => (
               <button
                 key={s}
                 type="button"
                 onClick={() => setForm((f) => ({ ...f, status: s }))}
-                className={`px-3 py-2 rounded-xl text-sm font-medium border-2 transition-colors ${
+                className={`px-3 py-3 rounded-xl text-sm font-medium border-2 transition-colors ${
                   form.status === s
                     ? 'border-brand-600 bg-brand-50 text-brand-700'
                     : 'border-gray-200 bg-white text-gray-600'
@@ -135,89 +140,109 @@ export default function StudentFormPage() {
 
         {/* 전화번호 */}
         <div>
-          <label className="label">전화번호 (선택)</label>
-          <input
+          <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>
+            전화번호 (선택)
+          </Typography.Text>
+          <Input
+            size="large"
             type="tel"
             value={form.phone}
             onChange={set('phone')}
             placeholder="010-0000-0000"
-            className="input-field"
+            style={{ borderRadius: 12 }}
           />
         </div>
 
         {/* 이메일 */}
         <div>
-          <label className="label">이메일 (선택)</label>
-          <input
+          <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>
+            이메일 (선택)
+          </Typography.Text>
+          <Input
+            size="large"
             type="email"
             value={form.email}
             onChange={set('email')}
             placeholder="example@email.com"
-            className="input-field"
+            style={{ borderRadius: 12 }}
           />
         </div>
 
         {/* 레벨 */}
         <div>
-          <label className="label">레벨 (선택)</label>
-          <textarea
+          <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>
+            레벨 (선택)
+          </Typography.Text>
+          <Input.TextArea
             value={form.level}
             onChange={set('level')}
             placeholder="예: 초급, 중급, 고급"
             rows={5}
-            className="input-field resize-none"
+            style={{ borderRadius: 12 }}
           />
         </div>
 
         {/* 목표 */}
         <div>
-          <label className="label">목표 (선택)</label>
-          <textarea
+          <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>
+            목표 (선택)
+          </Typography.Text>
+          <Input.TextArea
             value={form.goal}
             onChange={set('goal')}
             placeholder="예: 수능 1등급, 회화 향상"
             rows={5}
-            className="input-field resize-none"
+            style={{ borderRadius: 12 }}
           />
         </div>
 
         {/* 메모 */}
         <div>
-          <label className="label">메모 (선택)</label>
-          <textarea
+          <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>
+            메모 (선택)
+          </Typography.Text>
+          <Input.TextArea
             value={form.memo}
             onChange={set('memo')}
             placeholder="특이사항, 참고 정보 등"
             rows={5}
-            className="input-field resize-none"
+            style={{ borderRadius: 12 }}
           />
         </div>
 
         {/* 예약 코드 */}
         <div>
-          <label className="label">예약 코드</label>
+          <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>
+            예약 코드
+          </Typography.Text>
           <div className="flex gap-2">
-            <input
-              type="text"
+            <Input
+              size="large"
               value={form.bookingCode}
               onChange={set('bookingCode')}
               placeholder="자동 생성됩니다"
-              className="input-field flex-1"
+              style={{ borderRadius: 12, flex: 1 }}
             />
-            <button
-              type="button"
+            <Button
+              type="default"
               onClick={() => setForm((f) => ({ ...f, bookingCode: generateCode() }))}
-              className="px-3 py-2 rounded-xl text-sm font-medium border-2 border-gray-200 bg-white text-gray-600 whitespace-nowrap"
+              style={{ borderRadius: 12, height: 40, fontWeight: 500, whiteSpace: 'nowrap' }}
             >
               재생성
-            </button>
+            </Button>
           </div>
-          <p className="text-xs text-gray-400 mt-1">학생이 /book/[코드] 로 예약 가능 · 직접 입력도 가능</p>
+          <p className="text-xs text-gray-500 mt-1">학생이 /book/[코드] 로 예약 가능 · 직접 입력도 가능</p>
         </div>
 
-        <button type="submit" disabled={saving} className="btn-primary w-full mt-2">
+        <Button
+          type="primary"
+          htmlType="submit"
+          block
+          disabled={saving}
+          style={{ borderRadius: 12, height: 44, fontWeight: 600, marginTop: 8 }}
+        >
           {saving ? '저장 중...' : isEdit ? '수정 완료' : '학생 추가'}
-        </button>
+        </Button>
       </form>
     </>
   );

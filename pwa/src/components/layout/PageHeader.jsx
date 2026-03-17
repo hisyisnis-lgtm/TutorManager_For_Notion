@@ -1,25 +1,41 @@
-import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Flex, Typography } from 'antd';
+import { LeftOutlined } from '@ant-design/icons';
+
+const { Text } = Typography;
 
 export default function PageHeader({ title, back, action }) {
   const navigate = useNavigate();
 
   return (
-    <header className="sticky top-0 z-40 bg-white border-b border-gray-100">
-      <div className="max-w-lg mx-auto flex items-center h-14 px-4 gap-3">
-        {back && (
-          <button
-            onClick={() => navigate(-1)}
-            className="p-1 -ml-1 text-gray-500 active:text-gray-700"
-            aria-label="뒤로가기"
+    <header style={{
+      position: 'sticky', top: 0, zIndex: 40,
+      backgroundColor: '#ffffff',
+      borderBottom: '1px solid #f0f0f0',
+    }}>
+      <div style={{ maxWidth: 512, margin: '0 auto' }}>
+        <Flex align="center" gap={8} style={{ height: 56, padding: '0 16px' }}>
+          {back && (
+            <button
+              onClick={() => navigate(-1)}
+              aria-label="뒤로가기"
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                width: 32, height: 32, border: 'none', background: 'none',
+                cursor: 'pointer', color: '#595959', flexShrink: 0, marginLeft: -4,
+              }}
+            >
+              <LeftOutlined style={{ fontSize: 16 }} />
+            </button>
+          )}
+          <Text
+            strong
+            style={{ flex: 1, fontSize: 17, color: '#262626', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
           >
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
-        )}
-        <h1 className="flex-1 text-lg font-bold text-gray-900 truncate">{title}</h1>
-        {action && <div className="flex-shrink-0">{action}</div>}
+            {title}
+          </Text>
+          {action && <div style={{ flexShrink: 0 }}>{action}</div>}
+        </Flex>
       </div>
     </header>
   );

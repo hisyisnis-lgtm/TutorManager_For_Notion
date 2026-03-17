@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
+import { Button, Input, Card } from 'antd';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import ErrorMessage from '../components/ui/ErrorMessage.jsx';
@@ -47,12 +48,13 @@ export default function LessonLogsPage() {
 
       {/* 학생 검색 */}
       <div className="px-4 pt-3 pb-3">
-        <input
+        <Input
           type="search"
           placeholder="학생 이름으로 검색"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="input-field"
+          style={{ borderRadius: 12 }}
+          size="large"
         />
       </div>
 
@@ -76,12 +78,13 @@ export default function LessonLogsPage() {
           )}
           {hasMore && (
             <div className="px-4 pb-4">
-              <button
+              <Button
+                block
                 onClick={() => load(false, cursor)}
-                className="w-full py-3 text-sm font-medium text-gray-500 bg-gray-100 rounded-xl active:bg-gray-200"
+                style={{ borderRadius: 12, height: 44 }}
               >
                 더 보기
-              </button>
+              </Button>
             </div>
           )}
         </>
@@ -96,28 +99,35 @@ function LogCard({ log, studentNameMap }) {
 
   return (
     <li>
-      <Link to={`/logs/${log.id}/edit`} className="card block p-4 active:bg-gray-50">
-        <div className="flex items-start justify-between mb-1.5">
-          <span className="text-base font-bold text-gray-900">{log.title || '제목 없음'}</span>
-          {empty ? (
-            <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">
-              작성 필요
-            </span>
+      <Link to={`/logs/${log.id}/edit`}>
+        <Card
+          variant="borderless"
+          style={{ borderRadius: 16 }}
+          styles={{ body: { padding: 16 } }}
+          hoverable
+        >
+          <div className="flex items-start justify-between mb-1.5">
+            <span className="text-base font-bold text-gray-900">{log.title || '제목 없음'}</span>
+            {empty ? (
+              <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">
+                작성 필요
+              </span>
+            ) : (
+              <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">
+                작성 완료
+              </span>
+            )}
+          </div>
+          <p className="text-sm text-gray-500 mb-2">{studentNames}</p>
+          {log.content ? (
+            <p className="text-sm text-gray-600 line-clamp-2">{log.content}</p>
           ) : (
-            <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">
-              작성 완료
-            </span>
+            <p className="text-sm text-gray-300 italic">내용 없음</p>
           )}
-        </div>
-        <p className="text-sm text-gray-500 mb-2">{studentNames}</p>
-        {log.content ? (
-          <p className="text-sm text-gray-600 line-clamp-2">{log.content}</p>
-        ) : (
-          <p className="text-sm text-gray-300 italic">내용 없음</p>
-        )}
-        {log.engagement && (
-          <p className="text-xs text-gray-400 mt-2">참여도 {log.engagement}</p>
-        )}
+          {log.engagement && (
+            <p className="text-xs text-gray-500 mt-2">참여도 {log.engagement}</p>
+          )}
+        </Card>
       </Link>
     </li>
   );

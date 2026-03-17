@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { Button, Card } from 'antd';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import Badge from '../components/ui/Badge.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
@@ -88,97 +89,100 @@ export default function StudentDetailPage() {
         back
         action={
           <div className="flex items-center gap-2">
-            <button
+            <Button
               onClick={() => navigate(`/students/${id}/edit`)}
-              className="text-sm font-medium text-gray-600 px-3 py-1.5 bg-gray-100 rounded-lg active:bg-gray-200"
+              style={{ borderRadius: 8, fontWeight: 500 }}
             >
               수정
-            </button>
-          <div className="relative">
-            <button
-              onClick={() => setShowStatusMenu((v) => !v)}
-              disabled={updating}
-              className="text-sm font-medium text-brand-600 px-3 py-1.5 bg-brand-50 rounded-lg active:bg-brand-100"
-            >
-              상태 변경
-            </button>
-            {showStatusMenu && (
-              <div className="absolute right-0 top-9 bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden z-50 min-w-32">
-                {STATUS_OPTIONS.map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => handleStatusChange(s)}
-                    className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 active:bg-gray-100"
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+            </Button>
+            <div className="relative">
+              <Button
+                type="primary"
+                onClick={() => setShowStatusMenu((v) => !v)}
+                disabled={updating}
+                style={{ borderRadius: 8, fontWeight: 500 }}
+              >
+                상태 변경
+              </Button>
+              {showStatusMenu && (
+                <div className="absolute right-0 top-9 bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden z-50 min-w-32">
+                  {STATUS_OPTIONS.map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => handleStatusChange(s)}
+                      className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 active:bg-gray-100"
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         }
       />
 
       <div className="px-4 pt-4 space-y-4 pb-6">
         {/* 기본 정보 */}
-        <div className="card p-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-2xl font-bold text-gray-900">{student.name}</span>
-            <Badge label={student.status} bg={bg} text={text} />
-          </div>
-          <div className="grid grid-cols-2 gap-2 text-sm">
-            {student.level && <InfoRow label="레벨" value={student.level} />}
-            {student.goal && <InfoRow label="목표" value={student.goal} />}
-            {student.phone && (
-              <div className="col-span-2">
-                <span className="text-gray-400 text-xs">전화번호</span>
-                <a href={`tel:${student.phone}`} className="block text-brand-600 font-medium">
-                  {student.phone}
-                </a>
+        <Card variant="borderless" style={{ borderRadius: 16 }} styles={{ body: { padding: '16px' } }}>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-2xl font-bold text-gray-900">{student.name}</span>
+              <Badge label={student.status} bg={bg} text={text} />
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-sm">
+              {student.level && <InfoRow label="레벨" value={student.level} />}
+              {student.goal && <InfoRow label="목표" value={student.goal} />}
+              {student.phone && (
+                <div className="col-span-2">
+                  <span className="text-gray-500 text-xs">전화번호</span>
+                  <a href={`tel:${student.phone}`} className="block text-brand-600 font-medium">
+                    {student.phone}
+                  </a>
+                </div>
+              )}
+              {student.email && (
+                <div className="col-span-2">
+                  <span className="text-gray-500 text-xs">이메일</span>
+                  <a href={`mailto:${student.email}`} className="block text-brand-600 font-medium">
+                    {student.email}
+                  </a>
+                </div>
+              )}
+            </div>
+            {student.memo && (
+              <div className="pt-2 border-t border-gray-50">
+                <p className="text-xs text-gray-500 mb-1">메모</p>
+                <p className="text-sm text-gray-700">{student.memo}</p>
               </div>
             )}
-            {student.email && (
-              <div className="col-span-2">
-                <span className="text-gray-400 text-xs">이메일</span>
-                <a href={`mailto:${student.email}`} className="block text-brand-600 font-medium">
-                  {student.email}
-                </a>
+            {student.bookingCode && (
+              <div className="pt-2 border-t border-gray-50">
+                <p className="text-xs text-gray-500 mb-1">예약 링크</p>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-500 font-mono truncate flex-1">
+                    /book/{student.bookingCode}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const url = `${window.location.origin}${window.location.pathname}#/book/${encodeURIComponent(student.bookingCode)}`;
+                      navigator.clipboard.writeText(url).then(() => alert('링크가 복사되었습니다.'));
+                    }}
+                    className="shrink-0 text-xs text-brand-600 border border-brand-100 rounded-lg px-2.5 py-1 active:bg-brand-50"
+                  >
+                    복사
+                  </button>
+                </div>
               </div>
             )}
           </div>
-          {student.memo && (
-            <div className="pt-2 border-t border-gray-50">
-              <p className="text-xs text-gray-400 mb-1">메모</p>
-              <p className="text-sm text-gray-700">{student.memo}</p>
-            </div>
-          )}
-          {student.bookingCode && (
-            <div className="pt-2 border-t border-gray-50">
-              <p className="text-xs text-gray-400 mb-1">예약 링크</p>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-500 font-mono truncate flex-1">
-                  /book/{student.bookingCode}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const url = `${window.location.origin}${window.location.pathname}#/book/${encodeURIComponent(student.bookingCode)}`;
-                    navigator.clipboard.writeText(url).then(() => alert('링크가 복사되었습니다.'));
-                  }}
-                  className="shrink-0 text-xs text-blue-600 border border-blue-200 rounded-lg px-2.5 py-1 active:bg-blue-50"
-                >
-                  복사
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
+        </Card>
 
         {/* 잔여 회차 / 미수금 */}
         <div className="grid grid-cols-2 gap-3">
-          <div className="card p-4 text-center">
-            <p className="text-xs text-gray-400 mb-1">잔여 시간 회차</p>
+          <Card variant="borderless" style={{ borderRadius: 16 }} styles={{ body: { padding: '16px', textAlign: 'center' } }}>
+            <p className="text-xs text-gray-500 mb-1">잔여 시간 회차</p>
             <p
               className={`text-2xl font-bold ${
                 student.remainingSessions <= 1 ? 'text-red-500' : 'text-gray-900'
@@ -187,9 +191,9 @@ export default function StudentDetailPage() {
               {student.remainingSessions}
               <span className="text-sm font-normal text-gray-400 ml-1">회</span>
             </p>
-          </div>
-          <div className="card p-4 text-center">
-            <p className="text-xs text-gray-400 mb-1">미수금</p>
+          </Card>
+          <Card variant="borderless" style={{ borderRadius: 16 }} styles={{ body: { padding: '16px', textAlign: 'center' } }}>
+            <p className="text-xs text-gray-500 mb-1">미수금</p>
             <p
               className={`text-xl font-bold ${
                 student.unpaidAmount > 0 ? 'text-red-500' : 'text-gray-400'
@@ -197,7 +201,7 @@ export default function StudentDetailPage() {
             >
               {student.unpaidAmount > 0 ? formatKRW(student.unpaidAmount) : '없음'}
             </p>
-          </div>
+          </Card>
         </div>
 
         {/* 최근 수업 */}
@@ -213,10 +217,10 @@ export default function StudentDetailPage() {
                       {cls.endTime && ` ~ ${formatTime(cls.endTime)}`}
                     </p>
                     {cls.notes && (
-                      <p className="text-xs text-gray-400 mt-0.5">{cls.notes}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">{cls.notes}</p>
                     )}
                     {cls.location && (
-                      <p className="text-xs text-gray-400 mt-0.5">
+                      <p className="text-xs text-gray-500 mt-0.5">
                         📍 {cls.location}{cls.locationMemo && ` — ${cls.locationMemo}`}
                       </p>
                     )}
@@ -251,13 +255,14 @@ export default function StudentDetailPage() {
         )}
 
         {/* 학생 삭제 */}
-        <button
-          type="button"
+        <Button
+          danger
+          block
           onClick={() => setShowDeleteConfirm(true)}
-          className="btn-danger"
+          style={{ borderRadius: 12, height: 44, fontWeight: 500 }}
         >
           학생 삭제
-        </button>
+        </Button>
       </div>
 
       {showDeleteConfirm && (
@@ -276,7 +281,7 @@ export default function StudentDetailPage() {
 function InfoRow({ label, value }) {
   return (
     <div>
-      <span className="text-gray-400 text-xs">{label}</span>
+      <span className="text-gray-500 text-xs">{label}</span>
       <p className="text-sm font-medium text-gray-800">{value}</p>
     </div>
   );
@@ -284,11 +289,11 @@ function InfoRow({ label, value }) {
 
 function Section({ title, children }) {
   return (
-    <div className="card">
+    <Card variant="borderless" style={{ borderRadius: 16 }} styles={{ body: { padding: 0 } }}>
       <div className="px-4 py-3 border-b border-gray-50">
         <h2 className="text-sm font-bold text-gray-700">{title}</h2>
       </div>
       <div className="px-4">{children}</div>
-    </div>
+    </Card>
   );
 }

@@ -1,11 +1,19 @@
-import React from 'react';
+import { Flex, Typography } from 'antd';
+
+const { Text } = Typography;
 
 export default function EmptyState({ icon = '📭', title, description }) {
   return (
-    <div className="flex flex-col items-center justify-center py-20 gap-2 text-center px-6">
-      <span className="text-5xl">{icon}</span>
-      {title && <p className="text-base font-semibold text-gray-600 mt-2">{title}</p>}
-      {description && <p className="text-sm text-gray-400">{description}</p>}
-    </div>
+    <Flex vertical align="center" justify="center" gap={8} style={{ padding: '80px 24px', textAlign: 'center' }}>
+      <span style={{ fontSize: 48 }}>{icon}</span>
+      {title && (
+        <Text strong style={{ fontSize: 15, color: '#595959', marginTop: 8, display: 'block' }}>
+          {title}
+        </Text>
+      )}
+      {description && (
+        <Text type="secondary" style={{ fontSize: 14 }}>{description}</Text>
+      )}
+    </Flex>
   );
 }

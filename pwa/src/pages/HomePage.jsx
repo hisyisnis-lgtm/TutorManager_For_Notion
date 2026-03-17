@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { Card } from 'antd';
 import { useData } from '../context/DataContext.jsx';
 import { queryPage } from '../api/notionClient.js';
 import { CLASSES_DB, parseClass } from '../api/classes.js';
@@ -191,7 +192,7 @@ export default function HomePage() {
 
       {/* 월별 캘린더 */}
       <div className="px-4 pt-4 pb-2">
-        <div className="card p-4">
+        <Card variant="borderless" style={{ borderRadius: 16 }} styles={{ body: { padding: 16 } }}>
           {/* 헤더 */}
           <div className="flex items-center justify-between mb-3">
             <button
@@ -275,7 +276,7 @@ export default function HomePage() {
           {/* 선택된 날 수업 드릴다운 */}
           {selectedDay !== null && (
             <div className="mt-3 pt-3 border-t border-gray-100">
-              <p className="text-xs font-semibold text-gray-400 mb-2">
+              <p className="text-xs font-semibold text-gray-500 mb-2">
                 {calMonth + 1}월 {selectedDay}일 수업
               </p>
               {selectedDayClasses.length === 0 ? (
@@ -308,14 +309,14 @@ export default function HomePage() {
                               {names || '학생 미정'}
                             </span>
                             {(classType || cls.location) && (
-                              <span className="text-xs text-gray-400">
+                              <span className="text-xs text-gray-500">
                                 {classType && `${classType} · `}{cls.duration}분
                                 {cls.location && ` · 📍${cls.location}${cls.locationMemo ? ` — ${cls.locationMemo}` : ''}`}
                               </span>
                             )}
                           </div>
                           {cls.notes && (
-                            <span className="text-xs text-gray-400 shrink-0">{cls.notes}</span>
+                            <span className="text-xs text-gray-500 shrink-0">{cls.notes}</span>
                           )}
                         </Link>
                       </li>
@@ -325,12 +326,12 @@ export default function HomePage() {
               )}
             </div>
           )}
-        </div>
+        </Card>
       </div>
 
       {/* 다가오는 수업 */}
       <div className="px-4 pt-3 pb-24">
-        <p className="text-xs font-semibold text-gray-400 tracking-wider mb-3">다가오는 수업</p>
+        <p className="text-xs font-semibold text-gray-500 tracking-wider mb-3">다가오는 수업</p>
 
         {loading ? (
           <LoadingSpinner />
@@ -348,21 +349,27 @@ export default function HomePage() {
                 const classType = classTypeMap[cls.classTypeId]?.classType ?? '';
                 return (
                   <li key={cls.id}>
-                    <Link
-                      to="/classes"
-                      className="card flex items-center justify-between px-4 py-2.5 active:bg-gray-50"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <span className="text-sm font-medium text-gray-800 truncate block">{title}</span>
-                        {(classType || cls.location) && (
-                          <span className="text-xs text-gray-400">
-                            {[classType, cls.location && `📍${cls.location}${cls.locationMemo ? ` — ${cls.locationMemo}` : ''}`].filter(Boolean).join(' · ')}
+                    <Link to="/classes">
+                      <Card
+                        variant="borderless"
+                        style={{ borderRadius: 16 }}
+                        styles={{ body: { padding: '10px 16px' } }}
+                        hoverable
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1 min-w-0">
+                            <span className="text-sm font-medium text-gray-800 truncate block">{title}</span>
+                            {(classType || cls.location) && (
+                              <span className="text-xs text-gray-500">
+                                {[classType, cls.location && `📍${cls.location}${cls.locationMemo ? ` — ${cls.locationMemo}` : ''}`].filter(Boolean).join(' · ')}
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-xs text-gray-500 ml-3 shrink-0">
+                            {formatShort(cls.datetime)}{cls.endTime && `~${formatTime(cls.endTime)}`}
                           </span>
-                        )}
-                      </div>
-                      <span className="text-xs text-gray-400 ml-3 shrink-0">
-                        {formatShort(cls.datetime)}{cls.endTime && `~${formatTime(cls.endTime)}`}
-                      </span>
+                        </div>
+                      </Card>
                     </Link>
                   </li>
                 );

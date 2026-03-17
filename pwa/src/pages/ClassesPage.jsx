@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { Button, Input, Card } from 'antd';
 import { createLessonLog } from '../api/lessonLogs.js';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import Badge from '../components/ui/Badge.jsx';
@@ -68,11 +69,14 @@ export default function ClassesPage() {
       <PageHeader
         title="수업 캘린더"
         action={
-          <Link
-            to="/classes/new"
-            className="flex items-center gap-1 text-sm font-semibold text-brand-600 bg-brand-50 px-3 py-1.5 rounded-lg active:bg-brand-100 transition-colors"
-          >
-            <span>+</span> 수업 추가
+          <Link to="/classes/new">
+            <Button
+              type="primary"
+              size="small"
+              style={{ borderRadius: 8, fontWeight: 600 }}
+            >
+              + 수업 추가
+            </Button>
           </Link>
         }
       />
@@ -83,8 +87,8 @@ export default function ClassesPage() {
           <button
             key={key}
             onClick={() => setPeriod(key)}
-            className={`flex-1 py-2 rounded-xl text-sm font-medium transition-colors ${
-              period === key ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600'
+            className={`flex-1 py-3 rounded-xl text-sm font-medium transition-colors ${
+              period === key ? 'bg-brand-600 text-white' : 'bg-gray-100 text-gray-600'
             }`}
           >
             {label}
@@ -94,12 +98,13 @@ export default function ClassesPage() {
 
       {/* 학생 검색 */}
       <div className="px-4 pb-3">
-        <input
+        <Input
           type="search"
           placeholder="학생 이름으로 검색"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="input-field"
+          size="large"
+          style={{ borderRadius: 12 }}
         />
       </div>
 
@@ -119,12 +124,13 @@ export default function ClassesPage() {
           )}
           {hasMore && !search.trim() && (
             <div className="px-4 pb-4">
-              <button
+              <Button
+                block
                 onClick={() => load(false, cursor)}
-                className="w-full py-3 text-sm font-medium text-gray-500 bg-gray-100 rounded-xl active:bg-gray-200"
+                style={{ borderRadius: 12 }}
               >
                 더 보기
-              </button>
+              </Button>
             </div>
           )}
         </>
@@ -166,9 +172,11 @@ function ClassCard({ cls, studentNameMap }) {
 
   return (
     <li>
-      <div
+      <Card
+        variant="borderless"
+        style={{ borderRadius: 16, cursor: 'pointer' }}
+        styles={{ body: { padding: 16 } }}
         onClick={() => navigate(`/classes/${cls.id}/edit`)}
-        className="card block p-4 active:bg-gray-50 cursor-pointer"
       >
         <div className="flex items-start justify-between mb-2">
           <div className="flex-1 min-w-0">
@@ -181,7 +189,7 @@ function ClassCard({ cls, studentNameMap }) {
               {cls.duration && ` · ${cls.duration}분`}
             </p>
             {cls.location && (
-              <p className="text-xs text-gray-400 mt-0.5">
+              <p className="text-xs text-gray-500 mt-0.5">
                 📍 {cls.location}{cls.locationMemo && ` — ${cls.locationMemo}`}
               </p>
             )}
@@ -221,7 +229,7 @@ function ClassCard({ cls, studentNameMap }) {
             </button>
           </div>
         )}
-      </div>
+      </Card>
     </li>
   );
 }

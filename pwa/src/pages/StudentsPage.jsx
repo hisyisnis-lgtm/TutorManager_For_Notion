@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { Button, Input } from 'antd';
+import { SearchOutlined } from '@ant-design/icons';
+import Card from 'antd/es/card/Card';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import Badge from '../components/ui/Badge.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
@@ -47,22 +50,25 @@ export default function StudentsPage() {
       <PageHeader
         title="학생 관리"
         action={
-          <button
+          <Button
+            type="primary"
             onClick={() => navigate('/students/new')}
-            className="flex items-center gap-1 px-3 py-1.5 bg-brand-50 text-brand-600 text-sm font-semibold rounded-lg active:bg-brand-100 transition-colors"
+            style={{ borderRadius: 8, fontWeight: 600 }}
           >
-            <span className="text-base leading-none">+</span> 학생 추가
-          </button>
+            + 학생 추가
+          </Button>
         }
       />
 
       <div className="px-4 pt-3 pb-2">
-        <input
-          type="search"
+        <Input
+          size="large"
           placeholder="이름으로 검색"
+          prefix={<SearchOutlined style={{ color: '#767676' }} />}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="input-field"
+          style={{ borderRadius: 12 }}
+          allowClear
         />
       </div>
 
@@ -72,9 +78,9 @@ export default function StudentsPage() {
           <button
             key={tab}
             onClick={() => setFilter(tab)}
-            className={`flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+            className={`flex-shrink-0 px-3 py-3 rounded-full text-sm font-medium transition-colors ${
               filter === tab
-                ? 'bg-gray-800 text-white'
+                ? 'bg-brand-600 text-white'
                 : 'bg-gray-100 text-gray-600'
             }`}
           >
@@ -107,41 +113,48 @@ function StudentCard({ student }) {
   const { bg, text } = statusColor(student.status);
   return (
     <li>
-      <Link to={`/students/${student.id}`} className="card block p-4 active:bg-gray-50">
-        <div className="flex items-start justify-between mb-2">
-          <span className="text-base font-bold text-gray-900">{student.name}</span>
-          <Badge label={student.status} bg={bg} text={text} />
-        </div>
-        <div className="flex gap-2 flex-wrap mb-3">
-          {student.level && (
-            <span className="text-xs text-gray-500 bg-gray-50 px-2 py-0.5 rounded-full">
-              <span className="text-gray-400 mr-0.5">레벨</span>{student.level}
-            </span>
-          )}
-          {student.goal && (
-            <span className="text-xs text-gray-500 bg-gray-50 px-2 py-0.5 rounded-full">
-              <span className="text-gray-400 mr-0.5">목표</span>{student.goal}
-            </span>
-          )}
-        </div>
-        <div className="flex gap-4 text-sm">
-          <div>
-            <span className="text-gray-400 text-xs">잔여 회차 </span>
-            <span
-              className={`font-semibold ${
-                student.remainingSessions <= 1 ? 'text-red-500' : 'text-gray-800'
-              }`}
-            >
-              {student.remainingSessions}회
-            </span>
+      <Link to={`/students/${student.id}`}>
+        <Card
+          variant="borderless"
+          style={{ borderRadius: 16 }}
+          styles={{ body: { padding: '16px' } }}
+          className="active:bg-gray-50"
+        >
+          <div className="flex items-start justify-between mb-2">
+            <span className="text-base font-bold text-gray-900">{student.name}</span>
+            <Badge label={student.status} bg={bg} text={text} />
           </div>
-          {student.unpaidAmount > 0 && (
+          <div className="flex gap-2 flex-wrap mb-3">
+            {student.level && (
+              <span className="text-xs text-gray-500 bg-gray-50 px-2 py-0.5 rounded-full">
+                <span className="text-gray-500 mr-0.5">레벨</span>{student.level}
+              </span>
+            )}
+            {student.goal && (
+              <span className="text-xs text-gray-500 bg-gray-50 px-2 py-0.5 rounded-full">
+                <span className="text-gray-500 mr-0.5">목표</span>{student.goal}
+              </span>
+            )}
+          </div>
+          <div className="flex gap-4 text-sm">
             <div>
-              <span className="text-gray-400 text-xs">미수금 </span>
-              <span className="font-semibold text-red-500">{formatKRW(student.unpaidAmount)}</span>
+              <span className="text-gray-500 text-xs">잔여 회차 </span>
+              <span
+                className={`font-semibold ${
+                  student.remainingSessions <= 1 ? 'text-red-500' : 'text-gray-800'
+                }`}
+              >
+                {student.remainingSessions}회
+              </span>
             </div>
-          )}
-        </div>
+            {student.unpaidAmount > 0 && (
+              <div>
+                <span className="text-gray-500 text-xs">미수금 </span>
+                <span className="font-semibold text-red-500">{formatKRW(student.unpaidAmount)}</span>
+              </div>
+            )}
+          </div>
+        </Card>
       </Link>
     </li>
   );

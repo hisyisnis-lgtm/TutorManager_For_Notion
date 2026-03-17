@@ -1,11 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { Button, Input, Typography } from 'antd';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import { getPage, deletePage } from '../api/notionClient.js';
 import ConfirmDialog from '../components/ui/ConfirmDialog.jsx';
 import { parseLessonLog, updateLessonLog, ENGAGEMENT_OPTIONS } from '../api/lessonLogs.js';
 import { useData } from '../context/DataContext.jsx';
+
+const { Text } = Typography;
+
+const LABEL_STYLE = { fontSize: 14, color: '#595959', display: 'block', marginBottom: 6, fontWeight: 600 };
 
 export default function LessonLogFormPage() {
   const { id } = useParams();
@@ -85,50 +90,50 @@ export default function LessonLogFormPage() {
 
       <form onSubmit={handleSubmit} className="px-4 pt-4 pb-8 space-y-5">
         {studentNames && (
-          <p className="text-sm text-gray-500">학생: {studentNames}</p>
+          <Text type="secondary" style={{ fontSize: 14 }}>학생: {studentNames}</Text>
         )}
 
         {error && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600">
+          <div style={{ padding: '12px 16px', backgroundColor: '#fff2f0', border: '1px solid #ffccc7', borderRadius: 12, fontSize: 14, color: '#cf1322' }}>
             {error}
           </div>
         )}
 
         <div>
-          <label className="label">오늘 내용</label>
-          <textarea
+          <Text strong style={LABEL_STYLE}>오늘 내용</Text>
+          <Input.TextArea
             value={form.content}
             onChange={set('content')}
             rows={4}
             placeholder="이번 수업에서 다룬 내용을 입력하세요"
-            className="textarea-field"
+            style={{ borderRadius: 12 }}
           />
         </div>
 
         <div>
-          <label className="label">숙제</label>
-          <textarea
+          <Text strong style={LABEL_STYLE}>숙제</Text>
+          <Input.TextArea
             value={form.homework}
             onChange={set('homework')}
             rows={3}
             placeholder="내준 숙제를 입력하세요"
-            className="textarea-field"
+            style={{ borderRadius: 12 }}
           />
         </div>
 
         <div>
-          <label className="label">다음 수업 준비</label>
-          <textarea
+          <Text strong style={LABEL_STYLE}>다음 수업 준비</Text>
+          <Input.TextArea
             value={form.nextPrepare}
             onChange={set('nextPrepare')}
             rows={3}
             placeholder="다음 수업 계획을 입력하세요"
-            className="textarea-field"
+            style={{ borderRadius: 12 }}
           />
         </div>
 
         <div>
-          <label className="label">학생 참여도</label>
+          <Text strong style={LABEL_STYLE}>학생 참여도</Text>
           <div className="grid grid-cols-3 gap-2">
             <button
               type="button"
@@ -157,27 +162,30 @@ export default function LessonLogFormPage() {
         </div>
 
         <div>
-          <label className="label">메모 (특이사항)</label>
-          <textarea
+          <Text strong style={LABEL_STYLE}>메모 (특이사항)</Text>
+          <Input.TextArea
             value={form.memo}
             onChange={set('memo')}
             rows={2}
             placeholder="특이사항이 있으면 입력하세요"
-            className="textarea-field"
+            style={{ borderRadius: 12 }}
           />
         </div>
 
-        <button type="submit" disabled={saving} className="btn-primary w-full mt-2">
-          {saving ? '저장 중...' : '저장하기'}
-        </button>
+        <Button
+          type="primary" htmlType="submit" block loading={saving}
+          style={{ borderRadius: 12, height: 44, fontWeight: 600, marginTop: 8 }}
+        >
+          저장하기
+        </Button>
 
-        <button
-          type="button"
+        <Button
+          danger block
           onClick={() => setShowDeleteConfirm(true)}
-          className="btn-danger mt-1"
+          style={{ borderRadius: 12, height: 44, marginTop: 4 }}
         >
           수업 일지 삭제
-        </button>
+        </Button>
       </form>
 
       {showDeleteConfirm && (

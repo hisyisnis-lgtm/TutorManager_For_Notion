@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Button, Input, Typography } from 'antd';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import ConfirmDialog from '../components/ui/ConfirmDialog.jsx';
 
@@ -6,8 +7,7 @@ const STORAGE_KEY = 'instructor_name';
 const NTFY_TOPIC_KEY = 'ntfy_topic';
 
 const SHARE_LINKS = [
-  { key: 'intro', label: '랜딩 페이지 (홍보용)', path: '/#/intro' },
-  { key: 'consult', label: '무료상담 신청', path: '/#/consult' },
+  { key: 'intro', label: '홈페이지', path: '/#/intro' },
   { key: 'book', label: '학생 예약코드 입력', path: '/#/book' },
 ];
 
@@ -58,48 +58,50 @@ export default function SettingsPage() {
       <PageHeader title="설정" back />
       <div className="px-4 pt-6 pb-8 space-y-6">
         <div>
-          <label className="label">강사 이름</label>
-          <input
+          <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>강사 이름</Typography.Text>
+          <Input
             type="text"
             value={name}
             onChange={(e) => { setName(e.target.value); setSaved(false); }}
             placeholder="강사 이름 입력"
-            className="input-field"
+            style={{ borderRadius: 12 }}
+            size="large"
             maxLength={20}
           />
-          <p className="text-xs text-gray-400 mt-1.5">홈 화면 인사말에 표시됩니다.</p>
+          <p className="text-xs text-gray-500 mt-1.5">홈 화면 인사말에 표시됩니다.</p>
         </div>
 
         <div>
-          <label className="label">ntfy 토픽</label>
-          <input
+          <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>ntfy 토픽</Typography.Text>
+          <Input
             type="text"
             value={ntfyTopic}
             onChange={(e) => { setNtfyTopic(e.target.value); setSaved(false); }}
             placeholder="예) tutor-alerts"
-            className="input-field"
+            style={{ borderRadius: 12 }}
+            size="large"
             maxLength={64}
             autoCapitalize="none"
             autoCorrect="off"
           />
-          <p className="text-xs text-gray-400 mt-1.5">
+          <p className="text-xs text-gray-500 mt-1.5">
             ntfy.sh/<span className="font-mono">{ntfyTopic || '토픽명'}</span> 으로 알림을 받습니다.
           </p>
         </div>
 
         <div>
-          <label className="label">공유 링크</label>
+          <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>공유 링크</Typography.Text>
           <div className="space-y-2">
             {SHARE_LINKS.map(({ key, label, path }) => (
               <div key={key} className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-2.5">
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs text-gray-400 mb-0.5">{label}</p>
+                  <p className="text-xs text-gray-500 mb-0.5">{label}</p>
                   <p className="text-xs text-gray-600 font-mono truncate">{window.location.origin}{path}</p>
                 </div>
                 <button
                   type="button"
                   onClick={() => copyLink(key, path)}
-                  className="shrink-0 text-xs text-blue-600 border border-blue-200 rounded-lg px-2.5 py-1 active:bg-blue-50"
+                  className="shrink-0 text-xs text-brand-600 border border-brand-100 rounded-lg px-2.5 py-1 active:bg-brand-50"
                 >
                   {copiedKey === key ? '복사됨 ✓' : '복사'}
                 </button>
@@ -108,20 +110,28 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        <button
+        <Button
+          type="primary"
+          block
           onClick={handleSave}
-          className={`btn-primary w-full transition-all ${saved ? 'bg-green-600 active:bg-green-700' : ''}`}
+          style={{
+            borderRadius: 12,
+            height: 44,
+            fontWeight: 600,
+            ...(saved ? { backgroundColor: '#16a34a', borderColor: '#16a34a' } : {}),
+          }}
         >
           {saved ? '저장됨 ✓' : '저장'}
-        </button>
+        </Button>
 
-        <button
-          type="button"
+        <Button
+          danger
+          block
           onClick={() => setConfirmLogout(true)}
-          className="w-full py-3 rounded-xl text-sm font-medium border border-red-200 text-red-500 active:bg-red-50"
+          style={{ borderRadius: 12, height: 44, fontWeight: 500, border: '1px solid #ffccc7' }}
         >
           로그아웃
-        </button>
+        </Button>
 
         <p className="text-center text-xs text-gray-300 pt-4">v{__APP_VERSION__}</p>
       </div>
