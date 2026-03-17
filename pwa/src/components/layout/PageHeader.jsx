@@ -10,11 +10,14 @@ export default function PageHeader({ title, back, action }) {
   return (
     <header style={{
       position: 'sticky', top: 0, zIndex: 40,
-      backgroundColor: '#ffffff',
+      width: '100vw',
+      marginLeft: 'calc(50% - 50vw)',
+      backgroundColor: 'rgba(255,255,255,0.92)',
+      backdropFilter: 'blur(8px)',
       borderBottom: '1px solid #f0f0f0',
     }}>
       <div style={{ maxWidth: 512, margin: '0 auto' }}>
-        <Flex align="center" gap={8} style={{ height: 56, padding: '0 16px' }}>
+        <Flex align="center" gap={8} style={{ height: 48, padding: '0 16px' }}>
           {back && (
             <button
               onClick={() => navigate(-1)}
