@@ -758,6 +758,30 @@ export default function LandingPage() {
             <PricingContent onConsult={() => switchTab('무료상담')} />
           </TabPanel>
         </main>
+
+        <footer style={{ backgroundColor: '#1a1a1a', padding: '32px 24px 40px' }}>
+          <div style={{ maxWidth: 480, margin: '0 auto' }}>
+            <Text style={{ display: 'block', color: 'rgba(255,255,255,0.9)', fontSize: 15, fontWeight: 700, marginBottom: 16 }}>
+              하늘하늘중국어
+            </Text>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 20 }}>
+              {[
+                ['대표', '최하늘'],
+                ['사업자등록번호', '747-15-01965'],
+                ['이메일', 'tiantianchinese_@naver.com'],
+              ].map(([label, value]) => (
+                <Text key={label} style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)' }}>
+                  {label} : {value}
+                </Text>
+              ))}
+            </div>
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 16 }}>
+              <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>
+                Copyright © 2025 하늘하늘중국어. All rights reserved.
+              </Text>
+            </div>
+          </div>
+        </footer>
       </div>
     </ConfigProvider>
   );
