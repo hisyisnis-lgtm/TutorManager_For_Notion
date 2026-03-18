@@ -1147,6 +1147,32 @@ export default {
       return handleNotionWebhook(request, env, ctx);
     }
 
+    // OG 이미지 프록시 — <img src> 요청은 Origin 헤더가 없어서 CORS 체크 전에 처리
+    if (url.pathname === '/og-proxy/image' && request.method === 'GET') {
+      const imageUrl = url.searchParams.get('url');
+      const referer = url.searchParams.get('referer') || '';
+      if (!imageUrl) return new Response('url 파라미터 필요', { status: 400 });
+      try {
+        const res = await fetch(imageUrl, {
+          headers: {
+            'Referer': referer,
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          },
+        });
+        const contentType = res.headers.get('Content-Type') || 'image/jpeg';
+        const buffer = await res.arrayBuffer();
+        return new Response(buffer, {
+          headers: {
+            'Content-Type': contentType,
+            'Cache-Control': 'public, max-age=86400',
+            'Access-Control-Allow-Origin': '*',
+          },
+        });
+      } catch (e) {
+        return new Response('이미지 로드 실패', { status: 500 });
+      }
+    }
+
     const origin = request.headers.get('Origin') || '';
     const allowed = ALLOWED_ORIGINS.has(origin) || (env.ALLOWED_ORIGIN && origin === env.ALLOWED_ORIGIN) || /^https:\/\/[a-z0-9-]+\.tiantian-chinese\.pages\.dev$/.test(origin);
 
@@ -1177,6 +1203,65 @@ export default {
     // 무료상담 신청 (공개, 인증 불필요)
     if (url.pathname === '/consult' && request.method === 'POST') {
       return handleConsultRequest(request, env, corsHeaders);
+    }
+
+    // OG 메타태그 파싱 프록시 — GET /og-proxy?url=<encoded>
+    if (url.pathname === '/og-proxy' && request.method === 'GET') {
+      const targetUrl = url.searchParams.get('url');
+      if (!targetUrl) {
+        return new Response(JSON.stringify({ error: 'url 파라미터 필요' }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      try {
+        const res = await fetch(targetUrl, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
+            'Accept': 'text/html,application/xhtml+xml',
+            'Accept-Language': 'ko-KR,ko;q=0.9',
+          },
+          redirect: 'follow',
+        });
+        const html = await res.text();
+
+        function getOg(prop) {
+          return (
+            html.match(new RegExp(`<meta[^>]+property=["']og:${prop}["'][^>]+content=["']([^"']+)["']`, 'i'))?.[1] ||
+            html.match(new RegExp(`<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:${prop}["']`, 'i'))?.[1] ||
+            null
+          );
+        }
+        function getMeta(name) {
+          return (
+            html.match(new RegExp(`<meta[^>]+name=["']${name}["'][^>]+content=["']([^"']+)["']`, 'i'))?.[1] ||
+            html.match(new RegExp(`<meta[^>]+content=["']([^"']+)["'][^>]+name=["']${name}["']`, 'i'))?.[1] ||
+            null
+          );
+        }
+        const pageTitle = html.match(/<title[^>]*>([^<]+)<\/title>/i)?.[1]?.trim() || null;
+
+        const title = getOg('title') || getMeta('title') || pageTitle;
+        const description = getOg('description') || getMeta('description');
+        let image = getOg('image');
+
+        // 이미지가 있으면 Worker 이미지 프록시로 래핑 (hotlink 차단 우회)
+        if (image) {
+          const origin = new URL(request.url).origin;
+          image = `${origin}/og-proxy/image?url=${encodeURIComponent(image)}&referer=${encodeURIComponent(targetUrl)}`;
+        }
+
+        return new Response(JSON.stringify({ title, description, image, url: targetUrl }), {
+          headers: {
+            ...corsHeaders,
+            'Content-Type': 'application/json',
+            'Cache-Control': 'public, max-age=3600',
+          },
+        });
+      } catch (e) {
+        return new Response(JSON.stringify({ error: e.message }), {
+          status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
     }
 
     // 로그인 엔드포인트: POST /auth/login

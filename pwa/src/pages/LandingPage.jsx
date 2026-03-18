@@ -11,6 +11,14 @@ import {
 } from '@ant-design/icons';
 import { submitConsultation } from '../api/consultApi';
 
+const WORKER_URL = import.meta.env.VITE_WORKER_URL;
+
+// ─── 수강생 후기 블로그 링크 목록 ─────────────────────────────
+// 새 링크 추가 시 여기에만 추가하면 됩니다
+const REVIEW_URLS = [
+  'https://blog.naver.com/strolling-around/224202928037',
+];
+
 const { Title, Text, Paragraph } = Typography;
 
 const PRIMARY = '#7f0005';
@@ -97,12 +105,107 @@ function ToggleButton({ label, selected, onClick, fullWidth = false, style = {} 
   );
 }
 
+// ─── 수강생 후기 카드 (OG 메타태그 자동 파싱) ──────────────────
+function ReviewCard({ url }) {
+  const [og, setOg] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!WORKER_URL) return;
+    fetch(`${WORKER_URL}/og-proxy?url=${encodeURIComponent(url)}`)
+      .then(r => r.json())
+      .then(data => setOg(data))
+      .catch(() => setOg(null))
+      .finally(() => setLoading(false));
+  }, [url]);
+
+  if (loading) {
+    return (
+      <Card variant="borderless" style={{ borderRadius: 16, overflow: 'hidden' }} styles={{ body: { padding: 0 } }}>
+        <div style={{ height: 180, backgroundColor: '#f0f0f0' }} />
+        <div style={{ padding: '14px 16px 16px' }}>
+          <div style={{ height: 12, width: 80, backgroundColor: '#f0f0f0', borderRadius: 6, marginBottom: 10 }} />
+          <div style={{ height: 14, backgroundColor: '#f0f0f0', borderRadius: 6, marginBottom: 6 }} />
+          <div style={{ height: 14, width: '70%', backgroundColor: '#f0f0f0', borderRadius: 6 }} />
+        </div>
+      </Card>
+    );
+  }
+
+  if (!og || (!og.title && !og.image)) return null;
+
+  const hostname = (() => { try { return new URL(url).hostname.replace('www.', ''); } catch { return url; } })();
+
+  return (
+    <a href={url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none', display: 'block' }}>
+      <Card variant="borderless" hoverable style={{ borderRadius: 16, overflow: 'hidden' }} styles={{ body: { padding: 0 } }}>
+        {og.image && (
+          <img
+            src={og.image}
+            alt={og.title || '후기 썸네일'}
+            style={{ width: '100%', height: 180, objectFit: 'cover', display: 'block' }}
+          />
+        )}
+        <div style={{ padding: '14px 16px 16px' }}>
+          <Tag style={{ borderRadius: 20, marginBottom: 8, fontSize: 12, fontWeight: 600, backgroundColor: '#fff0f1', borderColor: '#ffccc7', color: PRIMARY }}>
+            {hostname}
+          </Tag>
+          {og.title && (
+            <Text strong style={{ fontSize: 14, display: 'block', lineHeight: 1.5, marginBottom: 6, color: '#262626' }}>
+              {og.title}
+            </Text>
+          )}
+          {og.description && (
+            <Text type="secondary" style={{ fontSize: 13, lineHeight: 1.6, display: 'block',
+              overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+            }}>
+              {og.description}
+            </Text>
+          )}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10 }}>
+            <Text style={{ fontSize: 12, color: PRIMARY, fontWeight: 600 }}>전체 보기 →</Text>
+          </div>
+        </div>
+      </Card>
+    </a>
+  );
+}
+
 // ─── 탭 1: 서비스 소개 ────────────────────────────────────────
-function LandingContent({ onConsult, onPricing }) {
+function LandingContent({ onConsult, onPricing, onFloatChange }) {
+  const heroRef = useRef(null);
+  const ctaRef = useRef(null);
+  const heroVisible = useRef(true);
+  const ctaVisible = useRef(false);
+
+  function update() {
+    onFloatChange(!heroVisible.current && !ctaVisible.current);
+  }
+
+  useEffect(() => {
+    const heroEl = heroRef.current;
+    const ctaEl = ctaRef.current;
+    if (!heroEl || !ctaEl) return;
+
+    const heroObs = new IntersectionObserver(([e]) => {
+      heroVisible.current = e.isIntersecting;
+      update();
+    }, { threshold: 0 });
+
+    const ctaObs = new IntersectionObserver(([e]) => {
+      ctaVisible.current = e.isIntersecting;
+      update();
+    }, { threshold: 0.2 });
+
+    heroObs.observe(heroEl);
+    ctaObs.observe(ctaEl);
+    return () => { heroObs.disconnect(); ctaObs.disconnect(); };
+  }, []);
+
   return (
     <div style={{ paddingBottom: 80 }}>
       {/* Hero */}
-      <section style={{ backgroundColor: PRIMARY, padding: '56px 24px 48px', overflow: 'hidden' }}>
+      <section ref={heroRef} style={{ backgroundColor: PRIMARY, padding: '56px 24px 48px', overflow: 'hidden' }}>
         <FadeUp delay={0}>
           <Tag style={{
             backgroundColor: 'rgba(255,255,255,0.15)', color: 'white',
@@ -141,31 +244,8 @@ function LandingContent({ onConsult, onPricing }) {
         </FadeUp>
       </section>
 
-      {/* 강사 프로필 */}
-      <FadeUp>
-        <section style={{ padding: '24px 20px 16px' }}>
-          <Flex vertical align="center" gap={12} style={{ textAlign: 'center', padding: '8px 0' }}>
-              <Avatar
-                src="/img/profile.jpg" size={120}
-                style={{ flexShrink: 0, boxShadow: '0 4px 16px rgba(0,0,0,0.12)' }}
-              />
-              <div>
-                <Title level={4} style={{ margin: '0 0 4px' }}>하늘쌤</Title>
-                <Text style={{ fontSize: 13, fontWeight: 600, color: PRIMARY, letterSpacing: '0.05em', display: 'block', marginBottom: 12 }}>
-                  대표 강사
-                </Text>
-                <Space size={6} wrap style={{ justifyContent: 'center' }}>
-                  {['10년 경력', '회화 전문', '발음 교정'].map(tag => (
-                    <Tag key={tag} style={{ borderRadius: 20, margin: 0, fontSize: 13, backgroundColor: 'transparent', borderColor: '#d9d9d9', color: '#262626' }}>{tag}</Tag>
-                  ))}
-                </Space>
-              </div>
-          </Flex>
-        </section>
-      </FadeUp>
-
       {/* 이런 분께 */}
-      <section style={{ padding: '8px 20px 16px' }}>
+      <section style={{ padding: '24px 20px 16px' }}>
         <FadeUp>
           <Title level={5} style={{ marginBottom: 16 }}>이런 분께 맞아요</Title>
         </FadeUp>
@@ -191,9 +271,50 @@ function LandingContent({ onConsult, onPricing }) {
         </Flex>
       </section>
 
+      {/* 어려운 상담 */}
+      <FadeUp>
+        <section style={{ padding: '24px 20px 16px' }}>
+          <Card variant="borderless" style={{ borderRadius: 12, backgroundColor: '#fafafa' }} styles={{ body: { padding: 20 } }}>
+            <Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 8 }}>이런 상담은 어려워요</Text>
+            <Paragraph style={{ fontSize: 14, color: '#595959', marginBottom: 12, lineHeight: 1.6 }}>
+              하늘쌤은 입문~초중급 회화·발음 교정 전문입니다.<br />
+              아래 항목은 충분히 도움드리기 어려울 수 있어요.
+            </Paragraph>
+            <Flex vertical gap={4}>
+              {['HSK 시험 준비', '작문·쓰기 집중 학습', '대학원 진학, 유학, 어학연수 준비'].map(item => (
+                <Text key={item} type="secondary" style={{ fontSize: 14 }}>· {item}</Text>
+              ))}
+            </Flex>
+          </Card>
+        </section>
+      </FadeUp>
+
+      {/* 강사 프로필 */}
+      <FadeUp>
+        <section style={{ padding: '24px 20px 16px' }}>
+          <Flex vertical align="center" gap={12} style={{ textAlign: 'center', padding: '0' }}>
+              <Avatar
+                src="/img/profile.jpg" size={120}
+                style={{ flexShrink: 0, boxShadow: '0 4px 16px rgba(0,0,0,0.12)' }}
+              />
+              <div>
+                <Title level={4} style={{ margin: '0 0 4px' }}>하늘쌤</Title>
+                <Text style={{ fontSize: 13, fontWeight: 600, color: PRIMARY, letterSpacing: '0.05em', display: 'block', marginBottom: 12 }}>
+                  대표 강사
+                </Text>
+                <Space size={6} wrap style={{ justifyContent: 'center' }}>
+                  {['10년 경력', '회화 전문', '발음 교정'].map(tag => (
+                    <Tag key={tag} style={{ borderRadius: 20, margin: 0, fontSize: 13, backgroundColor: 'transparent', borderColor: '#d9d9d9', color: '#262626' }}>{tag}</Tag>
+                  ))}
+                </Space>
+              </div>
+          </Flex>
+        </section>
+      </FadeUp>
+
       {/* 수업 안내 */}
       <FadeUp>
-        <section style={{ padding: '8px 20px 16px' }}>
+        <section style={{ padding: '24px 20px 16px' }}>
           <Title level={5} style={{ marginBottom: 16 }}>수업 안내</Title>
           <Card variant="borderless" style={{ borderRadius: 16 }}>
             <Flex vertical gap={16} style={{ width: '100%' }}>
@@ -216,27 +337,21 @@ function LandingContent({ onConsult, onPricing }) {
         </section>
       </FadeUp>
 
-      {/* 어려운 상담 */}
+      {/* 수강생 리뷰 */}
       <FadeUp>
-        <section style={{ padding: '0 20px 16px' }}>
-          <Card variant="borderless" style={{ borderRadius: 12, backgroundColor: '#fafafa' }} styles={{ body: { padding: 20 } }}>
-            <Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 8 }}>이런 상담은 어려워요</Text>
-            <Paragraph style={{ fontSize: 14, color: '#595959', marginBottom: 12, lineHeight: 1.6 }}>
-              하늘쌤은 입문~초중급 회화·발음 교정 전문입니다.<br />
-              아래 항목은 충분히 도움드리기 어려울 수 있어요.
-            </Paragraph>
-            <Flex vertical gap={4}>
-              {['HSK 시험 준비', '작문·쓰기 집중 학습', '대학원 진학, 유학, 어학연수 준비'].map(item => (
-                <Text key={item} type="secondary" style={{ fontSize: 14 }}>· {item}</Text>
-              ))}
-            </Flex>
-          </Card>
+        <section style={{ padding: '24px 20px 16px' }}>
+          <Title level={5} style={{ marginBottom: 16 }}>수강생 후기</Title>
+          <Flex vertical gap={12} style={{ width: '100%' }}>
+            {REVIEW_URLS.map(url => (
+              <ReviewCard key={url} url={url} />
+            ))}
+          </Flex>
         </section>
       </FadeUp>
 
       {/* CTA */}
       <FadeUp>
-        <section style={{ padding: '0 20px' }}>
+        <section ref={ctaRef} style={{ padding: '24px 20px' }}>
           <Card variant="borderless" style={{ borderRadius: 16, backgroundColor: '#fff0f1', textAlign: 'center' }}>
             <Title level={5} style={{ color: PRIMARY, marginBottom: 6 }}>Zoom 30분 무료 상담</Title>
             <Paragraph type="secondary" style={{ fontSize: 14, marginBottom: 20, lineHeight: 1.6 }}>
@@ -778,9 +893,11 @@ function ShareButton() {
 // ─── 메인 랜딩 페이지 ─────────────────────────────────────────
 export default function LandingPage() {
   const [tab, setTab] = useState('소개');
+  const [showFloat, setShowFloat] = useState(false);
 
   function switchTab(t) {
     setTab(t);
+    setShowFloat(false);
     window.scrollTo({ top: 0, behavior: 'instant' });
   }
 
@@ -792,6 +909,25 @@ export default function LandingPage() {
           to   { opacity: 1; transform: translateY(0); }
         }
       `}</style>
+      {/* 플로팅 무료상담 버튼 — TabPanel 애니메이션 바깥에 렌더링해야 position:fixed 정상 작동 */}
+      <div style={{
+        position: 'fixed', bottom: 24, left: '50%',
+        zIndex: 200,
+        transition: 'opacity 0.3s ease, transform 0.3s ease',
+        opacity: showFloat && tab === '소개' ? 1 : 0,
+        transform: showFloat && tab === '소개' ? 'translateX(-50%) translateY(0)' : 'translateX(-50%) translateY(16px)',
+        pointerEvents: showFloat && tab === '소개' ? 'auto' : 'none',
+      }}>
+        <Button
+          type="primary" size="large" onClick={() => switchTab('무료상담')}
+          style={{
+            height: 48, borderRadius: 24, fontWeight: 700, fontSize: 15,
+            paddingInline: 28, boxShadow: '0 4px 16px rgba(127,0,5,0.35)',
+          }}
+        >
+          무료 상담 신청 <ArrowRightOutlined />
+        </Button>
+      </div>
       <div style={{ minHeight: '100vh', backgroundColor: '#f5f5f5', fontFamily: 'inherit' }}>
         {/* Sticky 헤더 */}
         <header style={{
@@ -832,7 +968,7 @@ export default function LandingPage() {
 
         <main style={{ maxWidth: 480, margin: '0 auto' }}>
           <TabPanel active={tab === '소개'} id="panel-소개" labelledBy="tab-소개">
-            <LandingContent onConsult={() => switchTab('무료상담')} onPricing={() => switchTab('수강료')} />
+            <LandingContent onConsult={() => switchTab('무료상담')} onPricing={() => switchTab('수강료')} onFloatChange={setShowFloat} />
           </TabPanel>
           <TabPanel active={tab === '무료상담'} id="panel-무료상담" labelledBy="tab-무료상담">
             <ConsultContent />
