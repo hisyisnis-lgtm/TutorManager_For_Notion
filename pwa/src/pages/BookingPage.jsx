@@ -242,7 +242,9 @@ function MyClassesTab({ studentToken, month, onMonthChange }) {
 
   useEffect(() => { load(); }, [load]);
 
-  const todayStr = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const _nowKST = new Date(Date.now() + 9 * 60 * 60 * 1000);
+  const todayStr = _nowKST.toISOString().slice(0, 10);
+  const nowMin = _nowKST.getUTCHours() * 60 + _nowKST.getUTCMinutes();
 
   const handleCancel = async (cls) => {
     if (cancellingId || restoringId) return;
@@ -311,15 +313,20 @@ function MyClassesTab({ studentToken, month, onMonthChange }) {
       {!loading && !error && classes.length > 0 && (
         <div className="px-4 py-4 space-y-2">
           {classes.map(cls => {
+            const clsStartMin = timeToMin(cls.startTime);
+            const clsEndMin = clsStartMin + cls.durationMin;
+            const isOngoing = !cls.isCancelled && cls.date === todayStr && nowMin >= clsStartMin && nowMin < clsEndMin;
             const isPast = cls.date < todayStr;
             const canCancel = !cls.isCancelled && cls.date > todayStr;
             const canRestore = cls.isCancelled && cls.date > todayStr;
-            const statusLabel = cls.isCancelled ? '취소' : isPast ? '완료' : '예정';
+            const statusLabel = cls.isCancelled ? '취소' : isOngoing ? '수업중' : isPast ? '완료' : '예정';
             const statusStyle = cls.isCancelled
               ? 'bg-gray-100 text-gray-400'
-              : isPast
-                ? 'bg-gray-100 text-gray-500'
-                : 'bg-green-100 text-green-700';
+              : isOngoing
+                ? 'bg-blue-100 text-blue-700'
+                : isPast
+                  ? 'bg-gray-100 text-gray-500'
+                  : 'bg-green-100 text-green-700';
             return (
               <Card
                 key={cls.id}
