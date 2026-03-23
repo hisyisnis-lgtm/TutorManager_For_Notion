@@ -74,14 +74,16 @@ export default function App() {
   });
 
   useEffect(() => {
-    // 새 버전 감지 → 즉시 적용 (리로드됨)
-    if (needRefresh) {
-      updateServiceWorker(true);
-      return;
+    if (!needRefresh) {
+      // SW 미지원 환경 대비 최대 2초 후 강제 진행
+      const fallback = setTimeout(() => setSwReady(true), 2000);
+      return () => clearTimeout(fallback);
     }
-    // SW 미지원 환경 대비 최대 2초 후 강제 진행
-    const fallback = setTimeout(() => setSwReady(true), 2000);
-    return () => clearTimeout(fallback);
+    // 새 버전 감지 → skipWaiting 지시 후 controllerchange 이벤트에서 리로드
+    const handleControllerChange = () => window.location.reload();
+    navigator.serviceWorker?.addEventListener('controllerchange', handleControllerChange);
+    updateServiceWorker(true);
+    return () => navigator.serviceWorker?.removeEventListener('controllerchange', handleControllerChange);
   }, [needRefresh, updateServiceWorker]);
 
   // SW 준비 전 또는 업데이트 적용 중
