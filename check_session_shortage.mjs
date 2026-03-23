@@ -60,7 +60,7 @@ async function main() {
     undefined,
     [{ property: '수업 일시', direction: 'ascending' }]
   );
-  console.log(`수업 ${allSessions.size ?? allSessions.length}개 조회 완료`);
+  console.log(`수업 ${allSessions.length}개 조회 완료`);
 
   // 3. 학생별 세션 목록 구성 (학생 → 수업 목록)
   const studentSessions = new Map(); // studentId → Session[]

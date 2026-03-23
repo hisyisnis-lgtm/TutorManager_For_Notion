@@ -60,10 +60,11 @@ function Calendar({ year, month, availableDates, selectedDate, onSelect }) {
   const lastDate = new Date(year, month + 1, 0).getDate();
 
   const nowKST = new Date(Date.now() + 9 * 60 * 60 * 1000);
-  const todayStr = nowKST.toISOString().slice(0, 10);
+  const pad = n => String(n).padStart(2, '0');
+  const todayStr = `${nowKST.getUTCFullYear()}-${pad(nowKST.getUTCMonth() + 1)}-${pad(nowKST.getUTCDate())}`;
   const minDate = new Date(nowKST);
   minDate.setUTCDate(minDate.getUTCDate() + 2);
-  const minDateStr = minDate.toISOString().slice(0, 10);
+  const minDateStr = `${minDate.getUTCFullYear()}-${pad(minDate.getUTCMonth() + 1)}-${pad(minDate.getUTCDate())}`;
 
   const cells = [];
   for (let i = 0; i < firstDay; i++) cells.push(null);
@@ -401,9 +402,10 @@ export default function BookingPage() {
   const [submitError, setSubmitError] = useState(null);
 
   const [classRefreshKey, setClassRefreshKey] = useState(0);
-  const [myClassesMonth, setMyClassesMonth] = useState(() =>
-    new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 7)
-  );
+  const [myClassesMonth, setMyClassesMonth] = useState(() => {
+    const kst = new Date(Date.now() + 9 * 60 * 60 * 1000);
+    return `${kst.getUTCFullYear()}-${String(kst.getUTCMonth() + 1).padStart(2, '0')}`;
+  });
 
   // 학생 정보 로드
   const loadStudent = useCallback(async () => {
@@ -437,7 +439,7 @@ export default function BookingPage() {
 
   useEffect(() => {
     loadSlots();
-    const id = setInterval(loadSlots, 60000);
+    const id = setInterval(loadSlots, 5 * 60 * 1000);
     return () => clearInterval(id);
   }, [loadSlots]);
 
@@ -494,7 +496,10 @@ export default function BookingPage() {
       if (err.status === 409) {
         setStartTime(null);
         setEndTime(null);
-        const times = await fetchTimeSlots(selectedDate).catch(() => []);
+        const [times] = await Promise.all([
+          fetchTimeSlots(selectedDate).catch(() => []),
+          loadSlots(),
+        ]);
         setAvailableTimes(times);
       }
     } finally {
