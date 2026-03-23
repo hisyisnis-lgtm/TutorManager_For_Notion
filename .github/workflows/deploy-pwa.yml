@@ -47,7 +47,7 @@ jobs:
         working-directory: pwa
 
       - name: Cloudflare Pages 배포
-        run: npx wrangler pages deploy dist --project-name=tiantian-chinese --branch=main
+        run: npx wrangler pages deploy dist --project-name=tiantian-chinese --branch=main --commit-message="${GITHUB_REF_NAME:-$(git rev-parse --short HEAD)}"
         working-directory: pwa
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
