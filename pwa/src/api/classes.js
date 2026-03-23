@@ -13,11 +13,14 @@ export async function fetchClassesPage(opts = {}) {
   const nowIso = new Date().toISOString();
 
   // formula 필터 미지원 → 수업 일시 기준으로 완료/예정 구분
-  // 완료: 수업 일시 <= now, 예정: 수업 일시 >= now
+  // 완료: 수업 일시 <= now, 예정/수업중: 수업 일시 >= now - 최대수업시간(180분)
   if (completedOnly) {
     filters.push({ property: '수업 일시', date: { on_or_before: nowIso } });
   } else {
-    const effectiveDateFrom = excludeCompleted ? nowIso : dateFrom;
+    const ongoingCoverIso = excludeCompleted
+      ? new Date(Date.now() - 180 * 60 * 1000).toISOString()
+      : null;
+    const effectiveDateFrom = ongoingCoverIso ?? dateFrom;
     if (effectiveDateFrom) filters.push({ property: '수업 일시', date: { on_or_after: effectiveDateFrom } });
     if (dateTo) filters.push({ property: '수업 일시', date: { on_or_before: dateTo } });
   }

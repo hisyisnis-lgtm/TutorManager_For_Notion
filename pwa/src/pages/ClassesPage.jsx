@@ -140,7 +140,13 @@ export default function ClassesPage() {
 
 function ClassCard({ cls, studentNameMap }) {
   const navigate = useNavigate();
-  const { bg, text } = classStatusColor(cls.status);
+  const now = new Date();
+  const isOngoing = !cls.notes?.includes('취소')
+    && cls.datetime && cls.endTime
+    && now >= new Date(cls.datetime)
+    && now < new Date(cls.endTime);
+  const { bg, text } = isOngoing ? { bg: 'bg-blue-100', text: 'text-blue-700' } : classStatusColor(cls.status);
+  const statusLabel = isOngoing ? '수업중' : cls.status;
   const studentNames = cls.studentIds.map((id) => studentNameMap[id] || '(알 수 없음)').join(', ');
   const isCompleted = cls.datetime && new Date(cls.datetime) <= new Date();
   const logId = cls.lessonLogIds?.[0];
@@ -194,7 +200,7 @@ function ClassCard({ cls, studentNameMap }) {
             )}
           </div>
           <div className="flex flex-col gap-1 items-end ml-3">
-            <Badge label={cls.status} bg={bg} text={text} />
+            <Badge label={statusLabel} bg={bg} text={text} />
             {cls.notes && (() => {
               const nc = notesColor(cls.notes);
               return nc ? <Badge label={cls.notes} bg={nc.bg} text={nc.text} /> : null;
