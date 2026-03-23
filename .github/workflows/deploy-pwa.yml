@@ -25,6 +25,13 @@ jobs:
           cache: npm
           cache-dependency-path: pwa/package-lock.json
 
+      - name: 버전 동기화 (git 태그 → package.json)
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          VERSION=${GITHUB_REF_NAME#v}
+          npm version "$VERSION" --no-git-tag-version
+        working-directory: pwa
+
       - name: 의존성 설치
         run: npm ci
         working-directory: pwa
