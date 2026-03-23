@@ -26,6 +26,7 @@ export default function SettingsPage() {
   const [saved, setSaved] = useState(false);
   const [confirmLogout, setConfirmLogout] = useState(false);
   const [copiedKey, setCopiedKey] = useState('');
+  const [updating, setUpdating] = useState(false);
 
   function copyLink(key, path) {
     const url = `${window.location.origin}${path}`;
@@ -34,6 +35,22 @@ export default function SettingsPage() {
       setTimeout(() => setCopiedKey(''), 2000);
     });
   }
+
+  const handleUpdate = async () => {
+    setUpdating(true);
+    try {
+      if ('caches' in window) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map(k => caches.delete(k)));
+      }
+      if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(registrations.map(r => r.unregister()));
+      }
+    } finally {
+      window.location.reload();
+    }
+  };
 
   const handleSave = () => {
     const trimmedName = name.trim();
@@ -123,6 +140,15 @@ export default function SettingsPage() {
           }}
         >
           {saved ? '저장됨 ✓' : '저장'}
+        </Button>
+
+        <Button
+          block
+          onClick={handleUpdate}
+          loading={updating}
+          style={{ borderRadius: 12, height: 44, fontWeight: 500 }}
+        >
+          업데이트 (강력 새로고침)
         </Button>
 
         <Button
