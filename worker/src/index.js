@@ -9,13 +9,9 @@ const CONSULT_DB_ID = '324838fa-f2a6-815d-99a7-ff165e8f78aa';
 
 const DAY_KR = ['일', '월', '화', '수', '목', '금', '토'];
 
-// 학생 이름 앞 상태 이모지(🟢🟡⚫) 제거
-const STATUS_EMOJIS = ['🟢', '🟡', '⚫'];
+// 학생 이름 앞 상태 이모지(🟢🟡⚫) 제거 — 공백 0개 이상 허용
 function stripEmoji(name) {
-  for (const emoji of STATUS_EMOJIS) {
-    if (name.startsWith(emoji + ' ')) return name.slice(emoji.length + 1);
-  }
-  return name;
+  return name.replace(/^[🟢🟡⚫]\s*/, '');
 }
 
 // Notion ID 정규화 (웹훅은 하이픈 없이 보낼 수 있음)
@@ -735,16 +731,45 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
     };
     if (mode) classProps['수업 장소'] = { select: { name: mode } };
 
-    await n('POST', '/pages', {
+    const newPage = await n('POST', '/pages', {
       parent: { database_id: CLASS_DB_ID },
       properties: classProps,
     });
 
-    await sendAlimtalk(env, {
-      to: phone,
-      templateCode: 'BOOKING_CONFIRMED',
-      variables: { name: studentName, date, startTime },
+    // 레이스 컨디션 방지: 생성 직후 재확인 (동시 요청이 겹친 경우 롤백)
+    const postCheckRes = await n('POST', `/databases/${CLASS_DB_ID}/query`, {
+      filter: { property: '수업 일시', date: { equals: date } },
+      page_size: 100,
     });
+    const postConflicts = (postCheckRes.results ?? [])
+      .filter(p => p.id !== newPage.id && p.properties?.['특이사항']?.select?.name !== '🚫 취소')
+      .filter(p => {
+        const dtStr = p.properties?.['수업 일시']?.date?.start;
+        const dur = Number(p.properties?.['수업 시간(분)']?.select?.name);
+        if (!dtStr || !dur) return false;
+        const tm = dtStr.match(/T(\d{2}):(\d{2})/);
+        if (!tm) return false;
+        const bStart = Number(tm[1]) * 60 + Number(tm[2]);
+        const bEnd = bStart + dur;
+        return startMin < bEnd && bStart < endMin;
+      });
+    if (postConflicts.length > 0) {
+      await n('PATCH', `/pages/${newPage.id}`, { archived: true }).catch(() => {});
+      return new Response(JSON.stringify({ error: '방금 다른 분이 예약했습니다. 다른 시간을 선택해주세요.' }), {
+        status: 409,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    try {
+      await sendAlimtalk(env, {
+        to: phone,
+        templateCode: 'BOOKING_CONFIRMED',
+        variables: { name: studentName, date, startTime },
+      });
+    } catch (e) {
+      console.error('[알림톡] 발송 실패 (예약은 완료됨):', e.message);
+    }
 
     return new Response(JSON.stringify({ token, date, startTime, endTime, durationMin, studentName }), {
       status: 201,
@@ -937,7 +962,7 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
     // 당일 취소 불가
     const dtStr = cProps?.['수업 일시']?.date?.start ?? '';
     const classDate = dtStr.slice(0, 10);
-    const todayKST = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const todayKST = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(new Date());
     if (!classDate || classDate <= todayKST) {
       return new Response(JSON.stringify({ error: '당일 취소는 불가합니다. 강사에게 직접 연락해주세요.' }), {
         status: 400,
@@ -1001,7 +1026,7 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
     }
     const dtStr = cProps?.['수업 일시']?.date?.start ?? '';
     const classDate = dtStr.slice(0, 10);
-    const todayKST = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const todayKST = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(new Date());
     if (!classDate || classDate <= todayKST) {
       return new Response(JSON.stringify({ error: '과거 수업은 복구할 수 없습니다.' }), {
         status: 400,

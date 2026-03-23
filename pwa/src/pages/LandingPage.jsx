@@ -106,7 +106,10 @@ function ReviewCard({ url }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!WORKER_URL) return;
+    if (!WORKER_URL) {
+      setLoading(false);
+      return;
+    }
     fetch(`${WORKER_URL}/og-proxy?url=${encodeURIComponent(url)}`)
       .then(r => r.json())
       .then(data => setOg(data))

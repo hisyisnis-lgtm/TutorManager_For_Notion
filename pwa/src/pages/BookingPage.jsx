@@ -47,11 +47,9 @@ function formatMonth(monthStr) {
   return `${y}년 ${m}월`;
 }
 function shiftMonth(monthStr, delta) {
-  let [y, m] = monthStr.split('-').map(Number);
-  m += delta;
-  if (m > 12) { m = 1; y++; }
-  if (m < 1) { m = 12; y--; }
-  return `${y}-${String(m).padStart(2, '0')}`;
+  const date = new Date(monthStr + '-01T00:00:00Z');
+  date.setUTCMonth(date.getUTCMonth() + delta);
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
 }
 
 // ===== 달력 컴포넌트 =====
@@ -247,6 +245,7 @@ function MyClassesTab({ studentToken, month, onMonthChange }) {
   const todayStr = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
   const handleCancel = async (cls) => {
+    if (cancellingId || restoringId) return;
     if (!window.confirm(`${formatDate(cls.date)} ${cls.startTime} 수업을 취소하시겠습니까?`)) return;
     setCancellingId(cls.id);
     try {
@@ -260,6 +259,7 @@ function MyClassesTab({ studentToken, month, onMonthChange }) {
   };
 
   const handleRestore = async (cls) => {
+    if (restoringId || cancellingId) return;
     if (!window.confirm(`${formatDate(cls.date)} ${cls.startTime} 수업을 복구하시겠습니까?`)) return;
     setRestoringId(cls.id);
     try {
@@ -490,7 +490,7 @@ export default function BookingPage() {
         endTime,
         location,
       });
-      navigate(`/book/status/${encodeURIComponent(result.token)}?st=${encodeURIComponent(studentToken)}`, { replace: true });
+      navigate(`/book/status/${encodeURIComponent(result.token)}`, { replace: true, state: { studentToken } });
     } catch (err) {
       setSubmitError(err.message);
       if (err.status === 409) {

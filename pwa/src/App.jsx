@@ -69,8 +69,14 @@ export default function App() {
   const [swReady, setSwReady] = useState(false);
 
   const { needRefresh: [needRefresh], updateServiceWorker } = useRegisterSW({
-    onRegistered() { setSwReady(true); },
-    onRegisterError() { setSwReady(true); },  // SW 오류도 앱 진행
+    onRegistered(registration) {
+      setSwReady(true);
+      // 60초마다 새 버전 체크 (앱이 열린 상태에서 배포돼도 감지)
+      if (registration) {
+        setInterval(() => registration.update(), 60 * 1000);
+      }
+    },
+    onRegisterError() { setSwReady(true); },
   });
 
   useEffect(() => {

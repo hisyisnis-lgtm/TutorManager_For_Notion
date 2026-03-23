@@ -1,7 +1,7 @@
 // 수업 캘린더 충돌 감지 스크립트
 // GitHub Actions에서 10분마다 자동 실행됨
 
-import { createHmac } from 'crypto';
+import { createHmac, randomBytes } from 'crypto';
 
 const TOKEN = process.env.NOTION_TOKEN;
 const NTFY_TOPIC = process.env.NTFY_TOPIC;
@@ -35,7 +35,7 @@ async function sendNtfy(title, message, priority = 3) {
 async function sendKakao(to, templateId, variables) {
   if (!SOLAPI_API_KEY || !SOLAPI_API_SECRET || !KAKAO_PFID || !templateId || !to) return;
   const date = new Date().toISOString();
-  const salt = Math.random().toString(36).substring(2, 18);
+  const salt = randomBytes(8).toString('hex');
   const signature = createHmac('sha256', SOLAPI_API_SECRET).update(date + salt).digest('hex');
   try {
     const res = await fetch('https://api.solapi.com/messages/v4/send', {
@@ -76,9 +76,12 @@ async function getAllPages() {
   while (true) {
     const res = await notion('POST', `/databases/${DB_ID}/query`, {
       start_cursor: cursor,
+      page_size: 100,
       filter: {
-        property: '수업 일시',
-        date: { is_not_empty: true },
+        and: [
+          { property: '수업 일시', date: { is_not_empty: true } },
+          { property: '특이사항', select: { does_not_equal: '🚫 취소' } },
+        ],
       },
     });
     pages.push(...res.results);

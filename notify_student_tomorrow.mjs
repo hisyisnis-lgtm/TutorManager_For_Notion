@@ -1,7 +1,7 @@
 // 학생 수업 전날 리마인더 알림 스크립트
 // GitHub Actions에서 매일 20:00 KST (11:00 UTC)에 자동 실행됨
 
-import { createHmac } from 'crypto';
+import { createHmac, randomBytes } from 'crypto';
 
 const TOKEN = process.env.NOTION_TOKEN;
 const CLASS_DB_ID = '314838fa-f2a6-81bc-8b67-d9e1c8fb7ecb';
@@ -36,7 +36,7 @@ async function notion(method, path, body) {
 async function sendKakao(to, templateId, variables, buttons = []) {
   if (!SOLAPI_API_KEY || !SOLAPI_API_SECRET || !KAKAO_PFID || !templateId || !to) return;
   const date = new Date().toISOString();
-  const salt = Math.random().toString(36).substring(2, 18);
+  const salt = randomBytes(8).toString('hex');
   const signature = createHmac('sha256', SOLAPI_API_SECRET).update(date + salt).digest('hex');
   try {
     const res = await fetch('https://api.solapi.com/messages/v4/send', {
@@ -70,7 +70,7 @@ function getTomorrowKST() {
 }
 
 function stripEmoji(name) {
-  return name.replace(/^[🟢🟡⚫]\s/, '');
+  return name.replace(/^[🟢🟡⚫]\s*/, '');
 }
 
 const DAY_KR = ['일', '월', '화', '수', '목', '금', '토'];
@@ -114,6 +114,12 @@ async function main() {
     };
     return studentCache[id];
   }
+
+  // 중복 없는 학생 ID 수집 후 병렬 조회 (N+1 쿼리 최적화)
+  const allStudentIds = new Set(
+    classes.flatMap(p => p.properties['학생']?.relation?.map(r => r.id) ?? [])
+  );
+  await Promise.all([...allStudentIds].map(id => getStudent(id)));
 
   let sent = 0;
   for (const p of classes) {

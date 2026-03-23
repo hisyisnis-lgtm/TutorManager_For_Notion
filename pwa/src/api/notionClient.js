@@ -21,8 +21,10 @@ async function notionFetch(method, path, body) {
   if (res.status === 401) {
     sessionStorage.removeItem('auth_token');
     localStorage.removeItem('auth_token');
-    window.location.reload();
-    return new Promise(() => {}); // reload 완료 전까지 pending 유지 (undefined 반환 방지)
+    if (window.location.hash !== '#/login') {
+      window.location.hash = '#/login';
+    }
+    return new Promise(() => {}); // 이동 완료 전까지 pending 유지 (undefined 반환 방지)
   }
 
   const data = await res.json().catch(() => ({}));
