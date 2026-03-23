@@ -8,6 +8,7 @@ const NTFY_TOPIC_KEY = 'ntfy_topic';
 
 const SHARE_LINKS = [
   { key: 'intro', label: '홈페이지', path: '/#/intro' },
+  { key: 'pricing', label: '수강료 안내', path: '/#/pricing' },
   { key: 'book', label: '학생 예약코드 입력', path: '/#/book' },
 ];
 
