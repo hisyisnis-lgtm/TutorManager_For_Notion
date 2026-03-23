@@ -222,20 +222,19 @@ function LandingContent({ onConsult, onFloatChange }) {
           </p>
         </FadeUp>
         <FadeUp delay={300}>
-          <div style={{ display: 'flex', gap: 12 }}>
-            <Button
-              size="large" onClick={onConsult}
-              style={{ flex: 1, backgroundColor: 'white', color: PRIMARY, fontWeight: 700, height: 48, borderRadius: 12, border: 'none' }}
-            >
-              무료 상담 신청
-            </Button>
-            <Button
-              size="large" onClick={() => { window.location.hash = '#/pricing'; }}
-              style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.15)', color: 'white', fontWeight: 600, height: 48, borderRadius: 12, border: '1px solid rgba(255,255,255,0.25)' }}
-            >
-              수강료 안내
-            </Button>
-          </div>
+          <Button
+            size="large" onClick={onConsult} block
+            style={{ backgroundColor: 'white', color: PRIMARY, fontWeight: 700, height: 48, borderRadius: 12, border: 'none' }}
+          >
+            무료 상담 신청
+          </Button>
+          <p style={{ margin: '12px 0 0', fontSize: 13, color: 'rgba(255,255,255,0.7)', textAlign: 'center' }}>
+            수강료 문의는{' '}
+            <a href="https://pf.kakao.com/_jFnFn" target="_blank" rel="noopener noreferrer"
+              style={{ color: 'rgba(255,255,255,0.9)', textDecoration: 'underline', textDecorationColor: 'rgba(255,255,255,0.4)' }}
+            >채널톡</a>
+            으로 부탁드립니다.
+          </p>
         </FadeUp>
       </section>
 
