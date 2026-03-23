@@ -31,6 +31,7 @@ import BookingPage from './pages/BookingPage.jsx';
 import BookingStatusPage from './pages/BookingStatusPage.jsx';
 import BookingsManagePage from './pages/BookingsManagePage.jsx';
 import LandingPage from './pages/LandingPage.jsx';
+import PricingPage from './pages/PricingPage.jsx';
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -45,7 +46,7 @@ function checkAuth() {
 // 현재 hash가 공개 페이지인지 확인 (로그인 불필요)
 function isPublicBookingRoute() {
   const hash = window.location.hash;
-  return hash.startsWith('#/book') || hash.startsWith('#/intro');
+  return hash.startsWith('#/book') || hash.startsWith('#/intro') || hash.startsWith('#/pricing');
 }
 
 export default function App() {
@@ -59,6 +60,7 @@ export default function App() {
           <ScrollToTop />
           <Routes>
             <Route path="/intro" element={<LandingPage />} />
+            <Route path="/pricing" element={<PricingPage />} />
             <Route path="/book" element={<BookEntryPage />} />
             <Route path="/book/status/:token" element={<BookingStatusPage />} />
             <Route path="/book/:studentToken" element={<BookingPage />} />
