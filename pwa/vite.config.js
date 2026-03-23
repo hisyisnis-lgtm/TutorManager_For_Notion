@@ -13,7 +13,7 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
+      registerType: 'prompt',
       includeAssets: ['symbol-red.png', 'icon.svg', 'apple-touch-icon-180x180.png', 'pwa-*.png', 'maskable-icon-512x512.png'],
       manifest: {
         name: '하늘하늘중국어',
@@ -51,6 +51,7 @@ export default defineConfig({
         ],
       },
       workbox: {
+        clientsClaim: true,
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
         navigateFallback: '/index.html',
         runtimeCaching: [

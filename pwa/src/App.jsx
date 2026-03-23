@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { ConfigProvider } from 'antd';
+import { useRegisterSW } from 'virtual:pwa-register/react';
 
 const antdTheme = {
   token: {
@@ -33,6 +34,20 @@ import BookingsManagePage from './pages/BookingsManagePage.jsx';
 import LandingPage from './pages/LandingPage.jsx';
 import PricingPage from './pages/PricingPage.jsx';
 
+function SplashScreen({ updating }) {
+  return (
+    <div
+      style={{ background: '#7f0005' }}
+      className="fixed inset-0 flex flex-col items-center justify-center gap-5"
+    >
+      <img src="/logo-white.png" alt="하늘하늘중국어" className="h-10 w-auto" />
+      <p className="text-white/70 text-sm tracking-wide">
+        {updating ? '최신 버전으로 업데이트 중...' : '···'}
+      </p>
+    </div>
+  );
+}
+
 function ScrollToTop() {
   const { pathname } = useLocation();
   useEffect(() => { window.scrollTo(0, 0); }, [pathname]);
@@ -51,6 +66,28 @@ function isPublicBookingRoute() {
 
 export default function App() {
   const [authed, setAuthed] = useState(checkAuth);
+  const [swReady, setSwReady] = useState(false);
+
+  const { needRefresh: [needRefresh], updateServiceWorker } = useRegisterSW({
+    onRegistered() { setSwReady(true); },
+    onRegisterError() { setSwReady(true); },  // SW 오류도 앱 진행
+  });
+
+  useEffect(() => {
+    // 새 버전 감지 → 즉시 적용 (리로드됨)
+    if (needRefresh) {
+      updateServiceWorker(true);
+      return;
+    }
+    // SW 미지원 환경 대비 최대 2초 후 강제 진행
+    const fallback = setTimeout(() => setSwReady(true), 2000);
+    return () => clearTimeout(fallback);
+  }, [needRefresh, updateServiceWorker]);
+
+  // SW 준비 전 또는 업데이트 적용 중
+  if (!swReady || needRefresh) {
+    return <SplashScreen updating={needRefresh} />;
+  }
 
   // 공개 예약 페이지는 로그인 없이 접근
   if (isPublicBookingRoute()) {
