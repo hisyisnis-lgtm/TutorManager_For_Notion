@@ -83,10 +83,12 @@ function ToggleButton({ label, selected, onClick, fullWidth = false, style = {} 
     <button
       type="button"
       onClick={onClick}
+      aria-pressed={selected}
       style={{
         width: fullWidth ? '100%' : undefined,
         height: 44, borderRadius: 12, fontSize: 14, fontWeight: 500,
-        cursor: 'pointer', transition: 'all 0.2s',
+        cursor: 'pointer',
+        transition: 'background-color 0.2s, border-color 0.2s, color 0.2s, transform 0.1s',
         border: `1px solid ${selected ? PRIMARY : '#d9d9d9'}`,
         backgroundColor: selected ? PRIMARY : '#ffffff',
         color: selected ? '#ffffff' : '#595959',
@@ -203,7 +205,25 @@ function LandingContent({ onConsult, onFloatChange }) {
   return (
     <div style={{ paddingBottom: 80 }}>
       {/* Hero */}
-      <section ref={heroRef} style={{ backgroundColor: PRIMARY, padding: '56px 24px 48px', overflow: 'hidden' }}>
+      <section ref={heroRef} style={{
+        background: `linear-gradient(135deg, ${PRIMARY} 0%, #a00008 100%)`,
+        padding: '56px 24px 48px',
+        overflow: 'hidden',
+        position: 'relative',
+      }}>
+        {/* 배경 장식 */}
+        <div style={{
+          position: 'absolute', top: -60, right: -40,
+          width: 200, height: 200, borderRadius: '50%',
+          backgroundColor: 'rgba(255,255,255,0.05)',
+          pointerEvents: 'none',
+        }} />
+        <div style={{
+          position: 'absolute', bottom: -30, left: -30,
+          width: 120, height: 120, borderRadius: '50%',
+          backgroundColor: 'rgba(255,255,255,0.04)',
+          pointerEvents: 'none',
+        }} />
         <FadeUp delay={0}>
           <Tag style={{
             backgroundColor: 'rgba(255,255,255,0.15)', color: 'white',
@@ -214,7 +234,11 @@ function LandingContent({ onConsult, onFloatChange }) {
           </Tag>
         </FadeUp>
         <FadeUp delay={100}>
-          <h1 style={{ color: 'white', fontSize: 32, fontWeight: 700, lineHeight: 1.3, margin: '0 0 12px' }}>
+          <h1 style={{
+            color: 'white', fontSize: 32, fontWeight: 700,
+            lineHeight: 1.3, margin: '0 0 12px',
+            textWrap: 'balance',
+          }}>
             중국어로<br />말하고 싶다면
           </h1>
         </FadeUp>
@@ -292,7 +316,13 @@ function LandingContent({ onConsult, onFloatChange }) {
           <Flex vertical align="center" gap={12} style={{ textAlign: 'center', padding: '0' }}>
               <Avatar
                 src="/img/profile.jpg" size={120}
-                style={{ flexShrink: 0, boxShadow: '0 4px 16px rgba(0,0,0,0.12)' }}
+                alt="하늘쌤 프로필 사진"
+                style={{
+                  flexShrink: 0,
+                  boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
+                  outline: '1px solid rgba(0,0,0,0.08)',
+                  outlineOffset: 2,
+                }}
               />
               <div>
                 <Title level={4} style={{ margin: '0 0 4px' }}>하늘쌤</Title>

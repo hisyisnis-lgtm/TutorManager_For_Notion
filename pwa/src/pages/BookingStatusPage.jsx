@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { fetchBookingStatus } from '../api/bookingApi.js';
-import { Card, Tag, Button } from 'antd';
+import { Card, Button } from 'antd';
 
 const DAY_KR = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -9,6 +9,57 @@ function formatDate(dateStr) {
   if (!dateStr) return '';
   const d = new Date(dateStr + 'T00:00:00+09:00');
   return `${d.getMonth() + 1}월 ${d.getDate()}일 (${DAY_KR[d.getDay()]})`;
+}
+
+// 예약 확정 성공 아이콘 (애니메이션)
+function SuccessIcon() {
+  return (
+    <div style={{
+      width: 72, height: 72, borderRadius: '50%',
+      backgroundColor: '#f6ffed',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      margin: '0 auto 20px',
+      animation: 'successPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both',
+      fontSize: 32,
+    }}
+    role="img"
+    aria-label="예약 확정"
+    >
+      ✅
+    </div>
+  );
+}
+
+function CancelIcon() {
+  return (
+    <div style={{
+      width: 72, height: 72, borderRadius: '50%',
+      backgroundColor: '#fff2f0',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      margin: '0 auto 20px',
+      fontSize: 32,
+    }}
+    role="img"
+    aria-label="예약 취소됨"
+    >
+      ❌
+    </div>
+  );
+}
+
+// 예약 정보 행
+function InfoRow({ label, value }) {
+  return (
+    <div style={{
+      display: 'flex', justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: '10px 0',
+      borderBottom: '1px solid #f5f5f5',
+    }}>
+      <span style={{ fontSize: 13, color: '#8c8c8c' }}>{label}</span>
+      <span style={{ fontSize: 14, fontWeight: 600, color: '#262626' }}>{value}</span>
+    </div>
+  );
 }
 
 export default function BookingStatusPage() {
@@ -43,86 +94,113 @@ export default function BookingStatusPage() {
   const isCancelled = booking?.status === '취소';
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-start justify-center pt-16 px-4">
+    <div className="min-h-screen bg-gray-50 flex items-start justify-center pt-12 px-4">
       <div className="w-full max-w-sm">
+
+        {/* 로딩 */}
         {loading && (
-          <div className="text-center text-gray-400 py-12">불러오는 중...</div>
+          <div className="text-center text-gray-400 py-12" aria-live="polite" aria-busy="true">
+            불러오는 중...
+          </div>
         )}
 
+        {/* 오류 */}
         {error && (
-          <Card variant="borderless" style={{ borderRadius: 16, textAlign: 'center' }}>
-            <div style={{ fontSize: 36, marginBottom: 16 }}>❌</div>
+          <Card variant="borderless" style={{ borderRadius: 16, textAlign: 'center' }}
+            role="alert"
+          >
+            <div style={{ fontSize: 36, marginBottom: 16 }} aria-hidden="true">❌</div>
             <p className="text-gray-700 font-medium">예약 정보를 찾을 수 없습니다</p>
             <p className="text-sm text-gray-500 mt-2">{error}</p>
             <Button
               type="primary"
               block
               onClick={() => navigate('/book')}
-              style={{ borderRadius: 12, height: 44, fontWeight: 600, marginTop: 24 }}
+              style={{ borderRadius: 12, height: 48, fontWeight: 700, marginTop: 24 }}
             >
               예약 페이지로 돌아가기
             </Button>
           </Card>
         )}
 
+        {/* 예약 정보 */}
         {!loading && booking && (
-          <div className="space-y-4">
+          <div
+            className="space-y-4"
+            style={{ animation: 'fadeSlideUp 0.4s ease both' }}
+          >
             <Card
               variant="borderless"
-              style={{ borderRadius: 16, backgroundColor: isCancelled ? '#f5f5f5' : '#fff' }}
+              style={{ borderRadius: 16, textAlign: 'center' }}
             >
-              {/* 상태 뱃지 */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
-                {isCancelled ? (
-                  <Tag color="error" style={{ fontSize: 14, padding: '2px 12px', borderRadius: 20 }}>
-                    ❌ 취소됨
-                  </Tag>
-                ) : (
-                  <Tag color="success" style={{ fontSize: 14, padding: '2px 12px', borderRadius: 20 }}>
-                    ✅ 예약 확정
-                  </Tag>
-                )}
+              {/* 상태 아이콘 */}
+              {isCancelled ? <CancelIcon /> : <SuccessIcon />}
+
+              {/* 상태 텍스트 */}
+              <div
+                role="status"
+                aria-live="polite"
+                style={{ marginBottom: 24 }}
+              >
+                <h2 style={{
+                  fontSize: 20, fontWeight: 700,
+                  color: isCancelled ? '#cf1322' : '#262626',
+                  margin: '0 0 4px',
+                  textWrap: 'balance',
+                }}>
+                  {isCancelled ? '예약이 취소되었습니다' : '예약이 확정되었습니다!'}
+                </h2>
+                <p style={{ fontSize: 13, color: '#8c8c8c', margin: 0 }}>
+                  {isCancelled
+                    ? '새로 예약하시려면 아래 버튼을 눌러주세요'
+                    : '아래 예약 정보를 확인해주세요'}
+                </p>
               </div>
 
-              {/* 예약 정보 */}
-              <div className="space-y-3">
-                <div>
-                  <p className="text-xs text-gray-500 mb-0.5">예약자</p>
-                  <p className="font-semibold text-gray-800">{booking.studentName}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500 mb-0.5">날짜</p>
-                  <p className="font-semibold text-gray-800">{formatDate(booking.date)}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500 mb-0.5">시간</p>
-                  <p className="font-semibold text-gray-800">
-                    {booking.startTime} ({booking.durationMin}분)
-                  </p>
-                </div>
+              {/* 예약 상세 정보 */}
+              <div style={{ textAlign: 'left' }}>
+                <InfoRow label="예약자" value={booking.studentName} />
+                <InfoRow label="날짜" value={formatDate(booking.date)} />
+                <InfoRow
+                  label="시간"
+                  value={`${booking.startTime} (${booking.durationMin}분)`}
+                />
               </div>
 
+              {/* 취소 안내 */}
               {isCancelled && (
-                <div style={{ marginTop: 20, padding: '12px 16px', backgroundColor: '#fff2f0', border: '1px solid #ffccc7', borderRadius: 12, fontSize: 14, color: '#cf1322' }}>
-                  수업이 취소되었습니다. 새로 예약하시려면 아래 버튼을 눌러주세요.
+                <div style={{
+                  marginTop: 20, padding: '12px 16px',
+                  backgroundColor: '#fff2f0', border: '1px solid #ffccc7',
+                  borderRadius: 12, fontSize: 14, color: '#cf1322', textAlign: 'left',
+                }}>
+                  수업이 취소되었습니다. 새로 예약해주세요.
                 </div>
               )}
             </Card>
 
-            {/* 이 페이지 저장 안내 */}
+            {/* 페이지 저장 안내 */}
             {!isCancelled && (
-              <div style={{ backgroundColor: '#fff0f1', borderRadius: 12, padding: '16px', fontSize: 14, color: '#7f0005' }}>
-                이 페이지 링크를 저장해두시면 언제든지 예약 상태를 확인할 수 있습니다.
+              <div style={{
+                backgroundColor: '#fff0f1', borderRadius: 12,
+                padding: '14px 16px', fontSize: 13, color: '#7f0005',
+                display: 'flex', alignItems: 'flex-start', gap: 8,
+              }}>
+                <span aria-hidden="true" style={{ flexShrink: 0 }}>💡</span>
+                <span>이 페이지 링크를 저장해두시면 언제든지 예약 상태를 확인할 수 있습니다.</span>
               </div>
             )}
 
             <Button
               type={isCancelled ? 'primary' : 'default'}
               block
-              onClick={() => navigate(studentToken ? `/book/${studentToken}` : '/book', { state: { tab: isCancelled ? '예약하기' : '내 수업' } })}
-              style={{ borderRadius: 12, height: 44, fontWeight: 600 }}
+              onClick={() => navigate(
+                studentToken ? `/book/${studentToken}` : '/book',
+                { state: { tab: isCancelled ? '예약하기' : '내 수업' } }
+              )}
+              style={{ borderRadius: 12, height: 48, fontWeight: 700 }}
             >
-              {isCancelled ? '새로 예약하기' : '확인'}
+              {isCancelled ? '새로 예약하기' : '내 수업 확인'}
             </Button>
           </div>
         )}
