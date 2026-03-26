@@ -73,11 +73,12 @@ export default function StudentsPage() {
       </div>
 
       {/* 상태 필터 탭 */}
-      <div className="flex gap-2 px-4 pb-3 overflow-x-auto no-scrollbar">
+      <div role="group" aria-label="수강 상태 필터" className="flex gap-2 px-4 pb-3 overflow-x-auto no-scrollbar">
         {FILTER_TABS.map((tab) => (
           <button
             key={tab}
             onClick={() => setFilter(tab)}
+            aria-pressed={filter === tab}
             className={`flex-shrink-0 px-3 py-3 rounded-full text-sm font-medium transition-colors ${
               filter === tab
                 ? 'bg-brand-600 text-white'
@@ -140,7 +141,7 @@ function StudentCard({ student }) {
             <div>
               <span className="text-gray-500 text-xs">잔여 회차 </span>
               <span
-                className={`font-semibold ${
+                className={`font-semibold tabular-nums ${
                   student.remainingSessions <= 1 ? 'text-red-500' : 'text-gray-800'
                 }`}
               >
@@ -150,7 +151,7 @@ function StudentCard({ student }) {
             {student.unpaidAmount > 0 && (
               <div>
                 <span className="text-gray-500 text-xs">미수금 </span>
-                <span className="font-semibold text-red-500">{formatKRW(student.unpaidAmount)}</span>
+                <span className="font-semibold text-red-500 tabular-nums">{formatKRW(student.unpaidAmount)}</span>
               </div>
             )}
           </div>
