@@ -283,17 +283,21 @@ function MyClassesTab({ studentToken, month, onMonthChange }) {
         <button
           type="button"
           onClick={() => onMonthChange(shiftMonth(month, -1))}
+          aria-label="이전 달"
           className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500 text-lg"
         >
-          ‹
+          <span aria-hidden="true">‹</span>
         </button>
-        <span className="font-semibold text-gray-800 text-sm">{formatMonth(month)}</span>
+        <span className="font-semibold text-gray-800 text-sm" aria-live="polite" aria-atomic="true">
+          {formatMonth(month)}
+        </span>
         <button
           type="button"
           onClick={() => onMonthChange(shiftMonth(month, 1))}
+          aria-label="다음 달"
           className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500 text-lg"
         >
-          ›
+          <span aria-hidden="true">›</span>
         </button>
       </div>
 
@@ -563,14 +567,18 @@ export default function BookingPage() {
               <p className="text-sm text-gray-500">{student.name}님</p>
               <button
                 onClick={() => navigate('/book')}
+                aria-label="예약 코드 입력 화면으로 돌아가기"
                 className="text-xs text-gray-400 hover:text-gray-600"
               >
                 로그아웃
               </button>
             </div>
-            <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-              student.remainingSessions > 0 ? 'bg-brand-50 text-brand-600' : 'bg-red-50 text-red-500'
-            }`}>
+            <span
+              className={`text-xs font-medium px-2 py-0.5 rounded-full tabular-nums ${
+                student.remainingSessions > 0 ? 'bg-brand-50 text-brand-600' : 'bg-red-50 text-red-500'
+              }`}
+              aria-label={`잔여 ${student.remainingSessions}회차`}
+            >
               잔여 {student.remainingSessions}회차
             </span>
           </div>
@@ -611,7 +619,7 @@ export default function BookingPage() {
           <div role="tabpanel" id="tab-panel-0" aria-labelledby="tab-0" className="px-4 py-4 space-y-4">
             {/* 잔여 시간 없을 때 안내 */}
             {student.remainingSessions <= 0 && (
-              <div style={{ padding: '12px 16px', backgroundColor: '#fff2f0', border: '1px solid #ffccc7', borderRadius: 12, fontSize: 14, color: '#cf1322', textAlign: 'center' }}>
+              <div role="alert" style={{ padding: '12px 16px', backgroundColor: '#fff2f0', border: '1px solid #ffccc7', borderRadius: 12, fontSize: 14, color: '#cf1322', textAlign: 'center' }}>
                 잔여 시간이 없습니다. 결제 후 예약이 가능합니다.
               </div>
             )}
@@ -622,17 +630,21 @@ export default function BookingPage() {
                 <button
                   type="button"
                   onClick={prevMonth}
+                  aria-label="이전 달"
                   className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500 text-lg"
                 >
-                  ‹
+                  <span aria-hidden="true">‹</span>
                 </button>
-                <span className="font-semibold text-gray-800">{calYear}년 {MONTHS[calMonth]}</span>
+                <span className="font-semibold text-gray-800" aria-live="polite" aria-atomic="true">
+                  {calYear}년 {MONTHS[calMonth]}
+                </span>
                 <button
                   type="button"
                   onClick={nextMonth}
+                  aria-label="다음 달"
                   className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500 text-lg"
                 >
-                  ›
+                  <span aria-hidden="true">›</span>
                 </button>
               </div>
 
@@ -717,13 +729,22 @@ export default function BookingPage() {
 
                   {/* 잔여 시간 부족 경고 */}
                   {!hasEnoughTime && (
-                    <div style={{ padding: '8px 12px', backgroundColor: '#fff2f0', border: '1px solid #ffccc7', borderRadius: 8, fontSize: 14, color: '#cf1322', marginBottom: 12 }}>
-                      잔여 시간이 부족합니다. (잔여 {student.remainingSessions}회차, 필요 {requiredSessions}회차)
+                    <div
+                      role="alert"
+                      aria-live="assertive"
+                      style={{ padding: '8px 12px', backgroundColor: '#fff2f0', border: '1px solid #ffccc7', borderRadius: 8, fontSize: 14, color: '#cf1322', marginBottom: 12 }}
+                    >
+                      잔여 시간이 부족합니다.{' '}
+                      <span className="tabular-nums">(잔여 {student.remainingSessions}회차, 필요 {requiredSessions}회차)</span>
                     </div>
                   )}
 
                   {submitError && (
-                    <div style={{ padding: '8px 12px', backgroundColor: '#fff2f0', border: '1px solid #ffccc7', borderRadius: 8, fontSize: 14, color: '#cf1322', marginBottom: 12 }}>
+                    <div
+                      role="alert"
+                      aria-live="assertive"
+                      style={{ padding: '8px 12px', backgroundColor: '#fff2f0', border: '1px solid #ffccc7', borderRadius: 8, fontSize: 14, color: '#cf1322', marginBottom: 12 }}
+                    >
                       {submitError}
                     </div>
                   )}

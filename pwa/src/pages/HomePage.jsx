@@ -197,23 +197,25 @@ export default function HomePage() {
           <div className="flex items-center justify-between mb-3">
             <button
               onClick={prevMonth}
+              aria-label="이전 달"
               className="w-8 h-8 flex items-center justify-center rounded-lg active:bg-gray-100 text-gray-500 text-xl font-light"
             >
-              ‹
+              <span aria-hidden="true">‹</span>
             </button>
             <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold text-gray-800">
+              <span className="text-sm font-semibold text-gray-800" aria-live="polite" aria-atomic="true">
                 {calYear}년 {calMonth + 1}월
               </span>
               {calLoading && (
-                <span className="w-1.5 h-1.5 rounded-full bg-brand-400 animate-pulse" />
+                <span className="w-1.5 h-1.5 rounded-full bg-brand-400 animate-pulse" aria-hidden="true" />
               )}
             </div>
             <button
               onClick={nextMonth}
+              aria-label="다음 달"
               className="w-8 h-8 flex items-center justify-center rounded-lg active:bg-gray-100 text-gray-500 text-xl font-light"
             >
-              ›
+              <span aria-hidden="true">›</span>
             </button>
           </div>
 
@@ -243,6 +245,11 @@ export default function HomePage() {
               return (
                 <div
                   key={day}
+                  role={hasClass ? 'button' : undefined}
+                  tabIndex={hasClass ? 0 : undefined}
+                  aria-label={hasClass ? `${calMonth + 1}월 ${day}일, 수업 ${count}개` : undefined}
+                  aria-pressed={hasClass ? isSelected : undefined}
+                  onKeyDown={hasClass ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleDayClick(day); } } : undefined}
                   className={`flex flex-col items-center h-9 ${hasClass ? 'cursor-pointer' : ''}`}
                   onClick={() => handleDayClick(day)}
                 >

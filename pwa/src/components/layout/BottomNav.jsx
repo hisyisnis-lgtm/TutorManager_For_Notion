@@ -26,6 +26,7 @@ export default function BottomNav() {
           <NavLink
             key={to}
             to={to}
+            aria-label={label}
             style={({ isActive }) => ({
               flex: 1, display: 'flex', flexDirection: 'column',
               alignItems: 'center', justifyContent: 'center',
@@ -34,11 +35,12 @@ export default function BottomNav() {
               fontSize: 11, fontWeight: 500,
               color: isActive ? PRIMARY : '#8c8c8c',
               textDecoration: 'none',
-              transition: 'color 0.2s',
+              transitionProperty: 'color',
+              transitionDuration: '0.2s',
             })}
           >
-            <span style={{ fontSize: 20, lineHeight: 1 }}>{icon}</span>
-            <span>{label}</span>
+            <span style={{ fontSize: 20, lineHeight: 1 }} aria-hidden="true">{icon}</span>
+            <span aria-hidden="true">{label}</span>
           </NavLink>
         ))}
       </div>
