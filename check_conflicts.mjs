@@ -5,6 +5,7 @@ import { createHmac, randomBytes } from 'crypto';
 
 const TOKEN = process.env.NOTION_TOKEN;
 const NTFY_TOPIC = process.env.NTFY_TOPIC;
+const NTFY_TOKEN = process.env.NTFY_TOKEN;
 const DB_ID = '314838fa-f2a6-81bc-8b67-d9e1c8fb7ecb';
 
 const SOLAPI_API_KEY = process.env.SOLAPI_API_KEY;
@@ -20,15 +21,18 @@ if (!TOKEN) {
 
 async function sendNtfy(title, message, priority = 3) {
   if (!NTFY_TOPIC) return;
+  const headers = { 'Content-Type': 'application/json' };
+  if (NTFY_TOKEN) headers['Authorization'] = `Bearer ${NTFY_TOKEN}`;
   try {
-    await fetch('https://ntfy.sh/', {
+    const res = await fetch('https://ntfy.sh', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({ topic: NTFY_TOPIC, title, message, priority }),
     });
-    console.log(`ntfy 알림 전송 완료: ${title}`);
+    if (!res.ok) console.error(`ntfy 전송 실패 (${res.status}): ${await res.text()}`);
+    else console.log(`ntfy 알림 전송 완료: ${title}`);
   } catch (e) {
-    console.error('ntfy 전송 실패:', e.message);
+    console.error('ntfy 전송 오류:', e.message);
   }
 }
 

@@ -5,6 +5,7 @@ import { createHmac } from 'crypto';
 
 const TOKEN = process.env.NOTION_TOKEN;
 const NTFY_TOPIC = process.env.NTFY_TOPIC;
+const NTFY_TOKEN = process.env.NTFY_TOKEN;
 const STUDENT_DB_ID = '314838fa-f2a6-8143-a6c7-e59c50f3bbdb';
 
 const SOLAPI_API_KEY = process.env.SOLAPI_API_KEY;
@@ -15,10 +16,6 @@ const KAKAO_TPL_UNPAID = process.env.KAKAO_TPL_UNPAID;
 
 if (!TOKEN) {
   console.error('NOTION_TOKEN 환경변수가 설정되지 않았습니다.');
-  process.exit(1);
-}
-if (!NTFY_TOPIC) {
-  console.error('NTFY_TOPIC 환경변수가 설정되지 않았습니다.');
   process.exit(1);
 }
 
@@ -38,12 +35,20 @@ async function notion(method, path, body) {
 }
 
 async function sendNtfy(title, message, priority = 4) {
-  await fetch('https://ntfy.sh/', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ topic: NTFY_TOPIC, title, message, priority }),
-  });
-  console.log(`ntfy 알림 전송 완료: ${title}`);
+  if (!NTFY_TOPIC) return;
+  const headers = { 'Content-Type': 'application/json' };
+  if (NTFY_TOKEN) headers['Authorization'] = `Bearer ${NTFY_TOKEN}`;
+  try {
+    const res = await fetch('https://ntfy.sh', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ topic: NTFY_TOPIC, title, message, priority }),
+    });
+    if (!res.ok) console.error(`ntfy 전송 실패 (${res.status}): ${await res.text()}`);
+    else console.log(`ntfy 알림 전송 완료: ${title}`);
+  } catch (e) {
+    console.error('ntfy 전송 오류:', e.message);
+  }
 }
 
 async function sendKakao(to, templateId, variables) {
