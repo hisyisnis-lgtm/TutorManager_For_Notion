@@ -33,6 +33,7 @@ import BookingStatusPage from './pages/BookingStatusPage.jsx';
 import BookingsManagePage from './pages/BookingsManagePage.jsx';
 import LandingPage from './pages/LandingPage.jsx';
 import PricingPage from './pages/PricingPage.jsx';
+import ConsentPage from './pages/ConsentPage.jsx';
 
 function SplashScreen({ updating }) {
   return (
@@ -62,7 +63,7 @@ function checkAuth() {
 // 현재 hash가 공개 페이지인지 확인 (로그인 불필요)
 function isPublicBookingRoute() {
   const hash = window.location.hash;
-  return hash.startsWith('#/book') || hash.startsWith('#/intro') || hash.startsWith('#/pricing');
+  return hash.startsWith('#/book') || hash.startsWith('#/intro') || hash.startsWith('#/pricing') || hash.startsWith('#/consent');
 }
 
 export default function App() {
@@ -112,6 +113,7 @@ export default function App() {
           <Routes>
             <Route path="/intro" element={<LandingPage />} />
             <Route path="/pricing" element={<PricingPage />} />
+            <Route path="/consent" element={<ConsentPage />} />
             <Route path="/book" element={<BookEntryPage />} />
             <Route path="/book/status/:token" element={<BookingStatusPage />} />
             <Route path="/book/:studentToken" element={<BookingPage />} />

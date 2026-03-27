@@ -1,7 +1,7 @@
 import { ConfigProvider, Button, Card, Flex, Space, Tag, Typography } from 'antd';
 import {
   CheckCircleOutlined, UserOutlined, TeamOutlined, GiftOutlined,
-  CalendarOutlined, CreditCardOutlined, ArrowLeftOutlined,
+  CalendarOutlined, CreditCardOutlined,
 } from '@ant-design/icons';
 
 const { Title, Text, Paragraph } = Typography;
@@ -16,11 +16,6 @@ const theme = {
   },
 };
 
-function goBack() {
-  if (window.history.length > 1) window.history.back();
-  else window.location.hash = '#/intro';
-}
-
 export default function PricingPage() {
   return (
     <ConfigProvider theme={theme}>
@@ -33,18 +28,7 @@ export default function PricingPage() {
           borderBottom: '1px solid #f0f0f0',
         }}>
           <div style={{ maxWidth: 480, margin: '0 auto', padding: '0 20px' }}>
-            <div style={{ height: 48, display: 'flex', alignItems: 'center', gap: 12 }}>
-              <button
-                onClick={goBack}
-                aria-label="뒤로가기"
-                style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  width: 32, height: 32, border: 'none', background: 'none',
-                  cursor: 'pointer', color: '#262626', fontSize: 16, padding: 0,
-                }}
-              >
-                <ArrowLeftOutlined />
-              </button>
+            <div style={{ height: 48, display: 'flex', alignItems: 'center' }}>
               <img src="/logo/logo-red.png" alt="하늘하늘 중국어" style={{ height: 24, objectFit: 'contain' }} />
             </div>
           </div>
@@ -231,6 +215,7 @@ export default function PricingPage() {
               <Flex vertical gap={8} style={{ width: '100%' }}>
                 {[
                   '선결제 기준으로 진행',
+                  '결제는 카드 결제 및 현금영수증 발행 모두 가능하니 편하신 방법으로 진행해주시면 됩니다 :)',
                   '환불은 잔여 수업 횟수 기준으로 계산',
                   '당일 취소 및 무단결석 시 환불 어려움',
                   '일정 변경은 수업 시작 24시간 전까지 요청',
