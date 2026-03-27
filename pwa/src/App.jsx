@@ -31,6 +31,7 @@ import BookEntryPage from './pages/BookEntryPage.jsx';
 import BookingPage from './pages/BookingPage.jsx';
 import BookingStatusPage from './pages/BookingStatusPage.jsx';
 import BookingsManagePage from './pages/BookingsManagePage.jsx';
+import ConsultManagePage from './pages/ConsultManagePage.jsx';
 import LandingPage from './pages/LandingPage.jsx';
 import PricingPage from './pages/PricingPage.jsx';
 import ConsentPage from './pages/ConsentPage.jsx';
@@ -163,6 +164,7 @@ export default function App() {
             <Route path="/logs/:id/edit" element={<LessonLogFormPage />} />
 
             <Route path="/bookings" element={<BookingsManagePage />} />
+            <Route path="/consult" element={<ConsultManagePage />} />
 
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/notifications" element={<NotificationsPage />} />

@@ -256,14 +256,26 @@ async function sendKakaoAlert(env, { to, templateId, variables }) {
 }
 
 // ===== ntfy 강사 알림 발송 =====
-async function sendNtfy(env, message, title = '무료상담 신청') {
+async function sendNtfy(env, message, title = 'New Consultation') {
   const topic = env.NTFY_TOPIC;
-  if (!topic) return;
-  await fetch(`https://ntfy.sh/${topic}`, {
-    method: 'POST',
-    headers: { Title: title, Priority: 'high', 'Content-Type': 'text/plain' },
-    body: message,
-  }).catch(e => console.error('[ntfy] 알림 발송 실패:', e.message));
+  if (!topic) { console.error('[ntfy] NTFY_TOPIC 미설정'); return; }
+  try {
+    const headers = { 'Content-Type': 'application/json' };
+    if (env.NTFY_TOKEN) headers['Authorization'] = `Bearer ${env.NTFY_TOKEN}`;
+    const res = await fetch('https://ntfy.sh', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ topic, title, message, priority: 4 }),
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      console.error(`[ntfy] HTTP ${res.status}:`, text);
+    } else {
+      console.log('[ntfy] 발송 성공:', res.status);
+    }
+  } catch (e) {
+    console.error('[ntfy] 네트워크 오류:', e.message);
+  }
 }
 
 // ===== 무료상담 신청 처리 =====
@@ -395,6 +407,7 @@ async function handleConsultRequest(request, env, corsHeaders) {
           ? { rich_text: [{ text: { content: fullContent } }] }
           : undefined,
         '상태': { select: { name: '신청됨' } },
+        '신청 일시': { date: { start: new Date().toISOString() } },
       },
     }),
   }).then(r => r.json());
@@ -423,20 +436,18 @@ async function handleConsultRequest(request, env, corsHeaders) {
     message?.trim() ? `상담 내용: ${message.trim()}` : null,
   ].filter(Boolean).join('\n');
 
-  await sendNtfy(env, ntfyMsg, '📩 무료상담 신청');
-
   // 카카오 알림톡 발송 (강사에게)
   if (env.KAKAO_TPL_CONSULT && env.MY_PHONE) {
     await sendKakaoAlert(env, {
       to: env.MY_PHONE,
       templateId: env.KAKAO_TPL_CONSULT,
       variables: {
-        name: name.trim(),
-        phone: phoneDigits,
-        level: level || '미기재',
-        days: daysText,
-        time: preferredTime || '미기재',
-        message: message?.trim() || '없음',
+        '#{name}': name.trim(),
+        '#{phone}': phoneDigits,
+        '#{level}': level || '미기재',
+        '#{days}': daysText,
+        '#{time}': preferredTime || '미기재',
+        '#{message}': message?.trim() || '없음',
       },
     });
   }

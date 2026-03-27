@@ -129,10 +129,10 @@ async function main() {
 
   const message = `결제 요청이 필요한 학생 ${lowStudents.length}명\n\n${lines.join('\n')}`;
   await sendNtfy('💳 잔여 회차 부족 알림', message, 4);
-  await sendKakao(MY_PHONE, KAKAO_TPL_LOW_SESSIONS, {
-    '#{건수}': String(lowStudents.length),
-    '#{목록}': lines.join('\n'),
-  });
+  // await sendKakao(MY_PHONE, KAKAO_TPL_LOW_SESSIONS, {  // 비활성화
+  //   '#{건수}': String(lowStudents.length),
+  //   '#{목록}': lines.join('\n'),
+  // });
 }
 
 main().catch(err => {

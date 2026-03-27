@@ -4,6 +4,7 @@ import { Card } from 'antd';
 import { useData } from '../context/DataContext.jsx';
 import { queryPage } from '../api/notionClient.js';
 import { CLASSES_DB, parseClass } from '../api/classes.js';
+import { CONSULT_DB } from './ConsultManagePage.jsx';
 import { formatShort, formatDateTime, formatTime } from '../utils/dateUtils.js';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import PullToRefresh from '../components/ui/PullToRefresh.jsx';
@@ -33,6 +34,7 @@ export default function HomePage() {
   const { studentNameMap, classTypeMap, refresh: refreshData } = useData();
   const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [consultCount, setConsultCount] = useState(0);
   const [instructorName, setInstructorName] = useState(getInstructorName);
 
   const today = getKSTToday();
@@ -100,7 +102,22 @@ export default function HomePage() {
     }
   }, []);
 
-  useEffect(() => { loadUpcoming(); }, []);
+  const loadConsultCount = async () => {
+    try {
+      const data = await queryPage(
+        CONSULT_DB,
+        { property: '상태', select: { equals: '신청됨' } },
+        undefined,
+        undefined,
+        100
+      );
+      setConsultCount(data?.results?.length ?? 0);
+    } catch {
+      // silent
+    }
+  };
+
+  useEffect(() => { loadUpcoming(); loadConsultCount(); }, []);
   useEffect(() => { loadCalendar(calYear, calMonth); }, [calYear, calMonth, loadCalendar]);
 
   // 설정/알림 페이지에서 돌아올 때 이름 및 뱃지 갱신 (마운트 시 1회)
@@ -114,7 +131,7 @@ export default function HomePage() {
   }, []);
 
   const handleRefresh = async () => {
-    await Promise.all([loadUpcoming(), loadCalendar(calYear, calMonth), refreshData()]);
+    await Promise.all([loadUpcoming(), loadCalendar(calYear, calMonth), loadConsultCount(), refreshData()]);
   };
 
   // 날짜별 수업 집계
@@ -335,6 +352,30 @@ export default function HomePage() {
           )}
         </Card>
       </div>
+
+      {/* 미확인 무료상담 신청 */}
+      {consultCount > 0 && (
+        <div className="px-4 pt-3">
+          <Link to="/consult">
+            <Card
+              variant="borderless"
+              hoverable
+              style={{ borderRadius: 16, border: '1px solid #ffccc7', backgroundColor: '#fff1f0' }}
+              styles={{ body: { padding: '12px 16px' } }}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span aria-hidden="true" className="text-lg">📩</span>
+                  <span className="text-sm font-semibold" style={{ color: '#cf1322' }}>
+                    미확인 상담 신청 {consultCount}건
+                  </span>
+                </div>
+                <span className="text-xs text-gray-400">확인하기 ›</span>
+              </div>
+            </Card>
+          </Link>
+        </div>
+      )}
 
       {/* 다가오는 수업 */}
       <div className="px-4 pt-3 pb-24">
