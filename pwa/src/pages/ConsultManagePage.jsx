@@ -127,8 +127,9 @@ export default function ConsultManagePage() {
     }
   };
 
+  const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
   const pending = consults.filter(c => c.status === '신청됨');
-  const others = consults.filter(c => c.status !== '신청됨');
+  const others = consults.filter(c => c.status !== '신청됨' && new Date(c.appliedAt).getTime() > oneDayAgo);
 
   return (
     <PullToRefresh onRefresh={load}>
