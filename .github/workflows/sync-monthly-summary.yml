@@ -14,10 +14,11 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: 월별 수납 현황 갱신
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          NTFY_TOKEN: ${{ secrets.NTFY_TOKEN }}
         run: node sync_monthly_summary.mjs
