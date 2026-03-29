@@ -147,25 +147,25 @@ async function main() {
       }
 
       const bookingUrl = student.token ? `${BOOKING_BASE_URL}${student.token}` : BOOKING_BASE_URL;
-      // await sendKakao(  // 비활성화
-      //   student.phone,
-      //   KAKAO_TPL_STU_TOMORROW,
-      //   {
-      //     '#{이름}': student.name,
-      //     '#{날짜}': `${month}월 ${day}일`,
-      //     '#{요일}': dayOfWeek,
-      //     '#{시간}': timeStr,
-      //     '#{분}': duration,
-      //   },
-      //   [
-      //     {
-      //       buttonType: 'WL',
-      //       buttonName: '예약 페이지',
-      //       linkMo: bookingUrl,
-      //       linkPc: bookingUrl,
-      //     },
-      //   ]
-      // );
+      await sendKakao(
+        student.phone,
+        KAKAO_TPL_STU_TOMORROW,
+        {
+          '#{이름}': student.name,
+          '#{날짜}': `${month}월 ${day}일`,
+          '#{요일}': dayOfWeek,
+          '#{시간}': timeStr,
+          '#{분}': duration,
+        },
+        [
+          {
+            buttonType: 'WL',
+            buttonName: '예약 페이지',
+            linkMo: bookingUrl,
+            linkPc: bookingUrl,
+          },
+        ]
+      );
       sent++;
     }
   }

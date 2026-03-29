@@ -1,18 +1,10 @@
 // 내일 수업 알림 스크립트
 // GitHub Actions에서 매일 21:00 KST (12:00 UTC)에 자동 실행됨
 
-import { createHmac } from 'crypto';
-
 const TOKEN = process.env.NOTION_TOKEN;
 const NTFY_TOPIC = process.env.NTFY_TOPIC;
 const NTFY_TOKEN = process.env.NTFY_TOKEN;
 const CLASS_DB_ID = '314838fa-f2a6-81bc-8b67-d9e1c8fb7ecb';
-
-const SOLAPI_API_KEY = process.env.SOLAPI_API_KEY;
-const SOLAPI_API_SECRET = process.env.SOLAPI_API_SECRET;
-const KAKAO_PFID = process.env.KAKAO_PFID;
-const MY_PHONE = process.env.MY_PHONE;
-const KAKAO_TPL_UPCOMING = process.env.KAKAO_TPL_UPCOMING;
 
 if (!TOKEN) {
   console.error('NOTION_TOKEN 환경변수가 설정되지 않았습니다.');
@@ -48,28 +40,6 @@ async function sendNtfy(title, message, priority = 3) {
     else console.log(`ntfy 알림 전송 완료: ${title}`);
   } catch (e) {
     console.error('ntfy 전송 오류:', e.message);
-  }
-}
-
-async function sendKakao(to, templateId, variables) {
-  if (!SOLAPI_API_KEY || !SOLAPI_API_SECRET || !KAKAO_PFID || !templateId || !to) return;
-  const date = new Date().toISOString();
-  const salt = Math.random().toString(36).substring(2, 18);
-  const signature = createHmac('sha256', SOLAPI_API_SECRET).update(date + salt).digest('hex');
-  try {
-    const res = await fetch('https://api.solapi.com/messages/v4/send', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `HMAC-SHA256 apiKey=${SOLAPI_API_KEY}, date=${date}, salt=${salt}, signature=${signature}`,
-      },
-      body: JSON.stringify({ message: { to, kakaoOptions: { pfId: KAKAO_PFID, templateId, variables } } }),
-    });
-    const data = await res.json();
-    if (!res.ok) console.error('카카오 발송 실패:', JSON.stringify(data));
-    else console.log(`카카오 알림톡 발송 완료: ${to}`);
-  } catch (e) {
-    console.error('카카오 발송 오류:', e.message);
   }
 }
 
@@ -152,10 +122,6 @@ async function main() {
 
   const message = `총 ${classes.length}개 수업\n\n${lines.join('\n')}`;
   await sendNtfy('📅 내일 수업 안내', message, 3);
-  await sendKakao(MY_PHONE, KAKAO_TPL_UPCOMING, {
-    '#{건수}': String(classes.length),
-    '#{목록}': lines.join('\n'),
-  });
 }
 
 main().catch(err => {
