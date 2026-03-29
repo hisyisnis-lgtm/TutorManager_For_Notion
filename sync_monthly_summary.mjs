@@ -3,7 +3,6 @@
 
 const TOKEN = process.env.NOTION_TOKEN;
 const NTFY_TOPIC = process.env.NTFY_TOPIC;
-const NTFY_TOKEN = process.env.NTFY_TOKEN;
 const PAYMENT_DB_ID = '314838fa-f2a6-8154-935b-edd3d2fbea83';
 const SUMMARY_PAGE_ID = '316838fa-f2a6-810b-a382-c567536334de';
 
@@ -14,12 +13,10 @@ if (!TOKEN) {
 
 async function sendNtfy(title, message, priority = 3) {
   if (!NTFY_TOPIC) return;
-  const headers = { 'Content-Type': 'application/json' };
-  if (NTFY_TOKEN) headers['Authorization'] = `Bearer ${NTFY_TOKEN}`;
   try {
     const res = await fetch('https://ntfy.sh', {
       method: 'POST',
-      headers,
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ topic: NTFY_TOPIC, title, message, priority }),
     });
     if (!res.ok) console.error(`ntfy 전송 실패 (${res.status}): ${await res.text()}`);
