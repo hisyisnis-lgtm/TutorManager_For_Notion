@@ -212,15 +212,17 @@ export default function PricingPage() {
               <Title level={5} style={{ margin: 0 }}>결제 및 환불 안내</Title>
             </Space>
             <Card variant="borderless" style={{ borderRadius: 16, backgroundColor: '#fafafa' }}>
-              <Flex vertical gap={8} style={{ width: '100%' }}>
+              <Flex vertical gap={12} style={{ width: '100%' }}>
                 {[
-                  '선결제 기준으로 진행',
-                  '결제는 카드 결제 및 현금영수증 발행 모두 가능하니 편하신 방법으로 진행해주시면 됩니다 :)',
-                  '환불은 잔여 수업 횟수 기준으로 계산',
-                  '당일 취소 및 무단결석 시 환불 어려움',
-                  '일정 변경은 수업 시작 24시간 전까지 요청',
-                ].map(item => (
-                  <Text key={item} type="secondary" style={{ fontSize: 14 }}>{item}</Text>
+                  { label: '결제 방식', desc: '수업은 선결제 기준으로 진행됩니다. 카드 결제 및 현금영수증 발행 모두 가능하니 편하신 방법으로 연락 주세요.' },
+                  { label: '환불 기준', desc: '잔여 수업 횟수 기준으로 계산합니다. (이미 진행된 수업 금액 차감)' },
+                  { label: '취소·결석', desc: '당일 취소 및 무단결석 시 해당 회차 환불이 어렵습니다.' },
+                  { label: '일정 변경', desc: '수업 시작 최소 24시간 전까지 요청해주셔야 합니다.' },
+                ].map(({ label, desc }) => (
+                  <div key={label}>
+                    <Text strong style={{ fontSize: 13, color: '#262626', display: 'block', marginBottom: 2 }}>{label}</Text>
+                    <Text type="secondary" style={{ fontSize: 13, lineHeight: 1.6 }}>{desc}</Text>
+                  </div>
                 ))}
               </Flex>
             </Card>
