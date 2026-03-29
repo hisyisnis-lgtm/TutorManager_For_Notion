@@ -17,6 +17,17 @@ import {
 import { toDatetimeLocal, toNotionDate } from '../utils/dateUtils.js';
 import { useData } from '../context/DataContext.jsx';
 
+const WORKER_URL = import.meta.env.VITE_WORKER_URL;
+
+/** 강사용 충돌 검사: 기존 수업 ±30분 버퍼와 겹치면 { conflict: true, conflictTime } 반환 */
+async function checkConflict(date, startTime, duration, excludeId = '') {
+  const params = new URLSearchParams({ date, startTime, duration: String(duration) });
+  if (excludeId) params.set('excludeId', excludeId);
+  const res = await fetch(`${WORKER_URL}/booking/check-conflict?${params}`);
+  if (!res.ok) return { conflict: false };
+  return res.json();
+}
+
 const DAY_LABELS = ['일', '월', '화', '수', '목', '금', '토'];
 // JS getDay(): 0=일,1=월,2=화,3=수,4=목,5=금,6=토
 const DAY_JS = [0, 1, 2, 3, 4, 5, 6];
@@ -202,6 +213,20 @@ export default function ClassFormPage() {
           location: form.location || null,
           locationMemo: form.locationMemo || '',
         }));
+        // 반복 수업 충돌 검사
+        const pad = (n) => String(n).padStart(2, '0');
+        const conflicts = [];
+        for (const date of recurDates) {
+          const dateStr = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+          const timeStr = `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+          const result = await checkConflict(dateStr, timeStr, parseInt(form.duration));
+          if (result.conflict) conflicts.push(`${dateStr} ${timeStr} (기존 수업 ${result.conflictTime} 근접)`);
+        }
+        if (conflicts.length > 0) {
+          setError(`다음 날짜가 기존 수업과 30분 이내 겹칩니다:\n${conflicts.join('\n')}`);
+          setSaving(false);
+          return;
+        }
         await bulkCreateClasses(items);
       } else {
         // 일회성 수업 등록/수정
@@ -219,6 +244,14 @@ export default function ClassFormPage() {
           location: form.location || null,
           locationMemo: form.locationMemo || '',
         };
+        // 일회성 수업 충돌 검사
+        const [dateStr, timeStr] = form.datetime.split('T');
+        const conflictRes = await checkConflict(dateStr, timeStr.slice(0, 5), parseInt(form.duration), isEdit ? id : '');
+        if (conflictRes.conflict) {
+          setError(`기존 수업(${conflictRes.conflictTime})과 30분 이내 겹칩니다. 시간을 조정해주세요.`);
+          setSaving(false);
+          return;
+        }
         if (isEdit) {
           await updateClass(id, payload);
         } else {
