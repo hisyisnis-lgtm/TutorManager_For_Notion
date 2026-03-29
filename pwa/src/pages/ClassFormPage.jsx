@@ -453,13 +453,44 @@ export default function ClassFormPage() {
               <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>
                 수업 시작 시간
               </Typography.Text>
-              <Input
-                type="time"
-                value={form.recurTime}
-                onChange={(e) => setForm((f) => ({ ...f, recurTime: e.target.value }))}
-                size="large"
-                style={{ borderRadius: 12 }}
-              />
+              <div className="flex gap-2">
+                <Select
+                  value={form.recurTime ? form.recurTime.slice(0, 2) : undefined}
+                  onChange={(h) => {
+                    const min = form.recurTime ? form.recurTime.slice(3, 5) : '00';
+                    setForm((f) => ({ ...f, recurTime: `${h}:${min}` }));
+                  }}
+                  size="large"
+                  style={{ flex: 1 }}
+                  placeholder="시"
+                >
+                  {Array.from({ length: 17 }, (_, i) => i + 6).map((h) => (
+                    <Select.Option key={h} value={String(h).padStart(2, '0')}>
+                      {h}시
+                    </Select.Option>
+                  ))}
+                </Select>
+                {['00', '30'].map((min) => {
+                  const curMin = form.recurTime ? form.recurTime.slice(3, 5) : '00';
+                  return (
+                    <button
+                      key={min}
+                      type="button"
+                      onClick={() => {
+                        const hour = form.recurTime ? form.recurTime.slice(0, 2) : '10';
+                        setForm((f) => ({ ...f, recurTime: `${hour}:${min}` }));
+                      }}
+                      className={`px-4 rounded-xl text-sm font-medium border-2 transition-colors ${
+                        curMin === min
+                          ? 'border-brand-600 bg-brand-50 text-brand-700'
+                          : 'border-gray-200 bg-white text-gray-600'
+                      }`}
+                    >
+                      :{min}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             {/* 시작일 / 종료일 */}
@@ -541,14 +572,57 @@ export default function ClassFormPage() {
             <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>
               수업 일시
             </Typography.Text>
-            <Input
-              type="datetime-local"
-              value={form.datetime}
-              onChange={(e) => setForm((f) => ({ ...f, datetime: e.target.value }))}
-              size="large"
-              style={{ borderRadius: 12 }}
-              required={!recurring}
-            />
+            <div className="flex gap-2">
+              <Input
+                type="date"
+                value={form.datetime ? form.datetime.slice(0, 10) : ''}
+                onChange={(e) => {
+                  const date = e.target.value;
+                  const time = form.datetime ? form.datetime.slice(11) : '09:00';
+                  setForm((f) => ({ ...f, datetime: date ? `${date}T${time}` : '' }));
+                }}
+                size="large"
+                style={{ borderRadius: 12, flex: 1 }}
+              />
+              <Select
+                value={form.datetime ? form.datetime.slice(11, 13) : undefined}
+                onChange={(h) => {
+                  const date = form.datetime ? form.datetime.slice(0, 10) : '';
+                  const min = form.datetime ? form.datetime.slice(14, 16) : '00';
+                  setForm((f) => ({ ...f, datetime: `${date}T${h}:${min}` }));
+                }}
+                size="large"
+                style={{ width: 80 }}
+                placeholder="시"
+              >
+                {Array.from({ length: 17 }, (_, i) => i + 6).map((h) => (
+                  <Select.Option key={h} value={String(h).padStart(2, '0')}>
+                    {h}시
+                  </Select.Option>
+                ))}
+              </Select>
+              {['00', '30'].map((min) => {
+                const curMin = form.datetime ? form.datetime.slice(14, 16) : '00';
+                return (
+                  <button
+                    key={min}
+                    type="button"
+                    onClick={() => {
+                      const date = form.datetime ? form.datetime.slice(0, 10) : '';
+                      const hour = form.datetime ? form.datetime.slice(11, 13) : '09';
+                      setForm((f) => ({ ...f, datetime: `${date}T${hour}:${min}` }));
+                    }}
+                    className={`px-3 rounded-xl text-sm font-medium border-2 transition-colors ${
+                      curMin === min
+                        ? 'border-brand-600 bg-brand-50 text-brand-700'
+                        : 'border-gray-200 bg-white text-gray-600'
+                    }`}
+                  >
+                    :{min}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         )}
 
