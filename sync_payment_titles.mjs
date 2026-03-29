@@ -40,7 +40,7 @@ const studentCache = {};
 async function getStudentName(id) {
   if (studentCache[id]) return studentCache[id];
   const page = await notion('GET', `/pages/${id}`);
-  const raw = page.properties['타이틀']?.title?.[0]?.plain_text ?? '?';
+  const raw = page.properties['이름']?.title?.[0]?.plain_text ?? '?';
   studentCache[id] = stripEmoji(raw);
   return studentCache[id];
 }
