@@ -1209,7 +1209,7 @@ export default {
     }
 
     const origin = request.headers.get('Origin') || '';
-    const allowed = ALLOWED_ORIGINS.has(origin) || (env.ALLOWED_ORIGIN && origin === env.ALLOWED_ORIGIN) || /^https:\/\/[a-z0-9-]+\.tiantian-chinese\.pages\.dev$/.test(origin);
+    const allowed = ALLOWED_ORIGINS.has(origin) || (env.ALLOWED_ORIGIN && origin === env.ALLOWED_ORIGIN) || /^https:\/\/[a-z0-9-]+\.tiantian-chinese\.pages\.dev$/.test(origin) || /^http:\/\/localhost(:\d+)?$/.test(origin);
 
     const corsHeaders = {
       'Access-Control-Allow-Origin': allowed ? origin : '',

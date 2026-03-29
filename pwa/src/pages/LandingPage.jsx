@@ -7,6 +7,7 @@ import {
   CheckCircleOutlined, ClockCircleOutlined, EnvironmentOutlined,
   ReadOutlined, UserOutlined, ArrowRightOutlined,
   SoundOutlined, LineChartOutlined, BulbOutlined, MessageOutlined,
+  LeftOutlined, RightOutlined,
 } from '@ant-design/icons';
 import { submitConsultation } from '../api/consultApi';
 
@@ -16,6 +17,7 @@ const WORKER_URL = import.meta.env.VITE_WORKER_URL;
 // 새 링크 추가 시 여기에만 추가하면 됩니다
 const REVIEW_URLS = [
   'https://blog.naver.com/strolling-around/224202928037',
+  'https://m.blog.naver.com/naningumusme/224232796614',
 ];
 
 const { Title, Text, Paragraph } = Typography;
@@ -119,10 +121,13 @@ function ReviewCard({ url }) {
       .finally(() => setLoading(false));
   }, [url]);
 
+  const CARD_HEIGHT = 380;
+  const IMG_HEIGHT = 180;
+
   if (loading) {
     return (
-      <Card variant="borderless" style={{ borderRadius: 16, overflow: 'hidden' }} styles={{ body: { padding: 0 } }}>
-        <div style={{ height: 180, backgroundColor: '#f0f0f0' }} />
+      <Card variant="borderless" style={{ borderRadius: 16, overflow: 'hidden', height: CARD_HEIGHT }} styles={{ body: { padding: 0 } }}>
+        <div style={{ height: IMG_HEIGHT, backgroundColor: '#f0f0f0' }} />
         <div style={{ padding: '14px 16px 16px' }}>
           <div style={{ height: 12, width: 80, backgroundColor: '#f0f0f0', borderRadius: 6, marginBottom: 10 }} />
           <div style={{ height: 14, backgroundColor: '#f0f0f0', borderRadius: 6, marginBottom: 6 }} />
@@ -137,37 +142,102 @@ function ReviewCard({ url }) {
   const hostname = (() => { try { return new URL(url).hostname.replace('www.', ''); } catch { return url; } })();
 
   return (
-    <a href={url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none', display: 'block' }}>
-      <Card variant="borderless" hoverable style={{ borderRadius: 16, overflow: 'hidden' }} styles={{ body: { padding: 0 } }}>
+    <a href={url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none', display: 'block', height: CARD_HEIGHT }}>
+      <Card variant="borderless" hoverable style={{ borderRadius: 16, overflow: 'hidden', height: '100%' }} styles={{ body: { padding: 0, height: '100%', display: 'flex', flexDirection: 'column' } }}>
         {og.image && (
           <img
             src={og.image}
             alt={og.title || '후기 썸네일'}
-            style={{ width: '100%', height: 180, objectFit: 'cover', display: 'block' }}
+            style={{ width: '100%', height: IMG_HEIGHT, objectFit: 'cover', display: 'block', flexShrink: 0 }}
           />
         )}
-        <div style={{ padding: '14px 16px 16px' }}>
-          <Tag style={{ borderRadius: 20, marginBottom: 8, fontSize: 12, fontWeight: 600, backgroundColor: '#fff0f1', borderColor: '#ffccc7', color: PRIMARY }}>
+        <div style={{ padding: '14px 16px 16px', display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+          <Tag style={{ borderRadius: 20, marginBottom: 8, fontSize: 12, fontWeight: 600, backgroundColor: '#fff0f1', borderColor: '#ffccc7', color: PRIMARY, flexShrink: 0 }}>
             {hostname}
           </Tag>
           {og.title && (
-            <Text strong style={{ fontSize: 14, display: 'block', lineHeight: 1.5, marginBottom: 6, color: '#262626' }}>
+            <Text strong style={{
+              fontSize: 14, lineHeight: 1.5, marginBottom: 6, color: '#262626', flexShrink: 0,
+              overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+            }}>
               {og.title}
             </Text>
           )}
           {og.description && (
-            <Text type="secondary" style={{ fontSize: 13, lineHeight: 1.6, display: 'block',
-              overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+            <Text type="secondary" style={{
+              fontSize: 13, lineHeight: 1.6, flex: 1, minHeight: 0,
+              overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical',
             }}>
               {og.description}
             </Text>
           )}
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10 }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10, flexShrink: 0 }}>
             <Text style={{ fontSize: 12, color: PRIMARY, fontWeight: 600 }}>전체 보기 →</Text>
           </div>
         </div>
       </Card>
     </a>
+  );
+}
+
+// ─── 수강생 후기 스크롤 섹션 ─────────────────────────────────
+function ReviewScrollSection() {
+  const scrollRef = useRef(null);
+  const [index, setIndex] = useState(0);
+  const canLeft = index > 0;
+  const canRight = index < REVIEW_URLS.length - 1;
+
+  function scroll(dir) {
+    const el = scrollRef.current;
+    if (!el) return;
+    const next = Math.max(0, Math.min(REVIEW_URLS.length - 1, index + dir));
+    setIndex(next);
+    el.scrollBy({ left: dir * 292, behavior: 'smooth' });
+  }
+
+  const navBtnStyle = {
+    position: 'absolute', top: '50%', transform: 'translateY(-50%)',
+    width: 44, height: 44, borderRadius: '50%',
+    backgroundColor: 'white', border: '1px solid #e0e0e0',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    cursor: 'pointer', zIndex: 10, fontSize: 18, color: '#262626',
+  };
+
+  return (
+    <FadeUp>
+      <section style={{ padding: '24px 0 16px', position: 'relative' }}>
+        <Title level={5} style={{ marginBottom: 16, paddingLeft: 20 }}>수강생 후기</Title>
+        {/* 좌우 버튼 — 모바일에서는 숨김 */}
+        {canLeft && (
+          <div className="review-nav-btn" style={{ ...navBtnStyle, left: 4 }} onClick={() => scroll(-1)} aria-label="이전">
+            <LeftOutlined />
+          </div>
+        )}
+        {canRight && (
+          <div className="review-nav-btn" style={{ ...navBtnStyle, right: 4 }} onClick={() => scroll(1)} aria-label="다음">
+            <RightOutlined />
+          </div>
+        )}
+        <div ref={scrollRef} style={{
+          display: 'flex', alignItems: 'stretch', gap: 12, overflowX: 'auto',
+          paddingBottom: 4,
+          scrollSnapType: 'x mandatory',
+          scrollPaddingLeft: 20,
+          WebkitOverflowScrolling: 'touch',
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none',
+        }}>
+          <div style={{ minWidth: 20, flexShrink: 0 }} />
+          {REVIEW_URLS.map((url) => (
+            <div key={url} style={{ minWidth: 260, maxWidth: 280, flexShrink: 0, scrollSnapAlign: 'start' }}>
+              <ReviewCard url={url} />
+            </div>
+          ))}
+          <div style={{ minWidth: 8, flexShrink: 0 }} />
+        </div>
+      </section>
+    </FadeUp>
   );
 }
 
@@ -365,16 +435,7 @@ function LandingContent({ onConsult, onFloatChange }) {
       </FadeUp>
 
       {/* 수강생 리뷰 */}
-      <FadeUp>
-        <section style={{ padding: '24px 20px 16px' }}>
-          <Title level={5} style={{ marginBottom: 16 }}>수강생 후기</Title>
-          <Flex vertical gap={12} style={{ width: '100%' }}>
-            {REVIEW_URLS.map(url => (
-              <ReviewCard key={url} url={url} />
-            ))}
-          </Flex>
-        </section>
-      </FadeUp>
+      <ReviewScrollSection />
 
       {/* CTA */}
       <FadeUp>
@@ -633,6 +694,9 @@ export default function LandingPage() {
         @keyframes tabFadeIn {
           from { opacity: 0; transform: translateY(12px); }
           to   { opacity: 1; transform: translateY(0); }
+        }
+        @media (hover: none) {
+          .review-nav-btn { display: none !important; }
         }
       `}</style>
       {/* 플로팅 무료상담 버튼 — TabPanel 애니메이션 바깥에 렌더링해야 position:fixed 정상 작동 */}
