@@ -202,7 +202,7 @@ if(prop("강제 ON"), true,
 
 | 속성명 | 타입 | 설명 |
 |---|---|---|
-| 비고 | title | 메모용 제목 |
+| 타이틀 | title | 메모용 제목 |
 | 학생 | relation | → 학생 DB |
 | 수업 종류 | relation | → 수업 유형 설정 DB |
 | 할인 적용 | relation | → 할인 이벤트 DB |
