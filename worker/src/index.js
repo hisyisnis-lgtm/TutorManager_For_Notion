@@ -621,7 +621,7 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
     const allSlots = new Set();
     for (let m = 9 * 60; m < 22 * 60; m += 30) allSlots.add(minToTime(m));
 
-    // 기존 수업(CLASS_DB) 점유 슬롯 제거 (취소 제외)
+    // 기존 수업(CLASS_DB) 점유 슬롯 제거 (취소 제외) + 앞뒤 30분 버퍼
     const busySet = new Set();
     for (const p of classRes.results ?? []) {
       const props = p.properties;
@@ -633,6 +633,11 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
       if (!timeMatch) continue;
       const classStartMin = Number(timeMatch[1]) * 60 + Number(timeMatch[2]);
       for (let elapsed = 0; elapsed < dur; elapsed += 30) busySet.add(minToTime(classStartMin + elapsed));
+      // 앞 버퍼: 최소 60분 수업 기준, classStart-60(0갭)·classStart-30도 차단
+      busySet.add(minToTime(classStartMin - 60));
+      busySet.add(minToTime(classStartMin - 30));
+      // 뒤 30분 버퍼: 수업 종료 시각을 시작 슬롯으로 사용 불가
+      busySet.add(minToTime(classStartMin + dur));
     }
 
     // 개별 차단 시간 슬롯 제거
@@ -641,6 +646,50 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
     const available = [...allSlots].filter(t => !busySet.has(t)).sort();
     return new Response(JSON.stringify(available), {
       status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
+  // GET /booking/check-conflict?date=YYYY-MM-DD&startTime=HH:MM&duration=NNN&excludeId=pageId (강사용 충돌 검사)
+  if (url.pathname === '/booking/check-conflict' && request.method === 'GET') {
+    const date = url.searchParams.get('date');
+    const startTime = url.searchParams.get('startTime');
+    const duration = parseInt(url.searchParams.get('duration') ?? '0');
+    const excludeId = (url.searchParams.get('excludeId') ?? '').replace(/-/g, '');
+
+    if (!date || !startTime || !duration) {
+      return new Response(JSON.stringify({ conflict: false }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const classRes = await n('POST', `/databases/${CLASS_DB_ID}/query`, {
+      filter: { property: '수업 일시', date: { equals: date } },
+      page_size: 100,
+    });
+
+    const newStartMin = timeToMin(startTime);
+    const newEndMin = newStartMin + duration;
+
+    for (const p of classRes.results ?? []) {
+      if (p.id.replace(/-/g, '') === excludeId) continue;
+      const props = p.properties;
+      if (props?.['특이사항']?.select?.name === '🚫 취소') continue;
+      const dtStr = props?.['수업 일시']?.date?.start;
+      const dur = Number(props?.['수업 시간(분)']?.select?.name);
+      if (!dtStr || !dur) continue;
+      const timeMatch = dtStr.match(/T(\d{2}):(\d{2})/);
+      if (!timeMatch) continue;
+      const classStartMin = Number(timeMatch[1]) * 60 + Number(timeMatch[2]);
+      // 기존 수업 ± 30분 버퍼와 겹치는지 확인
+      if (newStartMin < classStartMin + dur + 30 && newEndMin > classStartMin - 30) {
+        return new Response(JSON.stringify({ conflict: true, conflictTime: minToTime(classStartMin) }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
+    return new Response(JSON.stringify({ conflict: false }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
@@ -718,11 +767,12 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
         if (!tm) return false;
         const bStart = Number(tm[1]) * 60 + Number(tm[2]);
         const bEnd = bStart + dur;
-        return startMin < bEnd && bStart < endMin;
+        // 수업 사이 30분 갭 필수: 기존 수업 종료 후 30분, 시작 전 30분 이내 불가
+        return startMin < bEnd + 30 && endMin > bStart - 30;
       });
 
     if (hasOverlap) {
-      return new Response(JSON.stringify({ error: '방금 다른 분이 예약했습니다. 다른 시간을 선택해주세요.' }), {
+      return new Response(JSON.stringify({ error: '해당 시간은 다른 수업과 30분 이내 겹칩니다. 다른 시간을 선택해주세요.' }), {
         status: 409,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
