@@ -48,6 +48,13 @@ async function getStudentName(id) {
 async function main() {
   console.log(`[${new Date().toISOString()}] 결제 내역 비고 동기화 시작`);
 
+  // DB 속성명 확인용 (디버그)
+  const db = await notion('GET', `/databases/${PAYMENT_DB_ID}`);
+  const propNames = Object.keys(db.properties);
+  const titleProp = propNames.find(k => db.properties[k].type === 'title');
+  console.log('DB 속성 목록:', propNames.join(', '));
+  console.log('타이틀 속성명:', titleProp);
+
   const pages = [];
   let cursor = undefined;
 
