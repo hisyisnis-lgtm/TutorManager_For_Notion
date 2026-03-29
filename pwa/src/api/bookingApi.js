@@ -39,6 +39,13 @@ export async function fetchTimeSlots(date) {
   return bookingFetch('GET', `/booking/time-slots?date=${date}`);
 }
 
+/** 강사용: 날짜별 예약 가능 시간 슬롯 조회 (날짜 제한 없음, excludeId로 자기 자신 제외) */
+export async function fetchTimeSlotsForTeacher(date, excludeId = '') {
+  const params = new URLSearchParams({ date, skipMinDate: '1' });
+  if (excludeId) params.set('excludeId', excludeId);
+  return bookingFetch('GET', `/booking/time-slots?${params}`);
+}
+
 /** 학생 예약 코드로 학생 정보 조회 (공개) */
 export async function fetchStudentByToken(token) {
   return bookingFetch('GET', `/booking/student/${encodeURIComponent(token)}`);

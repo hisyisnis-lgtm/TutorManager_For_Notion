@@ -576,16 +576,21 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
       });
     }
 
-    // 최소 예약 가능 날짜 (오늘+2) 체크
-    const nowKST2 = new Date(Date.now() + 9 * 60 * 60 * 1000);
-    const minDate2 = new Date(nowKST2);
-    minDate2.setUTCDate(minDate2.getUTCDate() + 2);
-    if (date < minDate2.toISOString().slice(0, 10)) {
-      return new Response(JSON.stringify([]), {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    // 최소 예약 가능 날짜 (오늘+2) 체크 — skipMinDate=1이면 강사용으로 건너뜀
+    const skipMinDate = url.searchParams.get('skipMinDate') === '1';
+    if (!skipMinDate) {
+      const nowKST2 = new Date(Date.now() + 9 * 60 * 60 * 1000);
+      const minDate2 = new Date(nowKST2);
+      minDate2.setUTCDate(minDate2.getUTCDate() + 2);
+      if (date < minDate2.toISOString().slice(0, 10)) {
+        return new Response(JSON.stringify([]), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
     }
+
+    const excludeSlotId = (url.searchParams.get('excludeId') ?? '').replace(/-/g, '');
 
     const [blockedRes2, classRes] = await Promise.all([
       n('POST', `/databases/${BLOCKED_DATES_DB_ID}/query`, {
@@ -624,6 +629,7 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
     // 기존 수업(CLASS_DB) 점유 슬롯 제거 (취소 제외) + 앞뒤 30분 버퍼
     const busySet = new Set();
     for (const p of classRes.results ?? []) {
+      if (p.id.replace(/-/g, '') === excludeSlotId) continue;
       const props = p.properties;
       if (props?.['특이사항']?.select?.name === '🚫 취소') continue;
       const dtStr = props?.['수업 일시']?.date?.start;

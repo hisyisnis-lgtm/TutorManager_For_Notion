@@ -16,6 +16,7 @@ import {
 } from '../api/classes.js';
 import { toDatetimeLocal, toNotionDate } from '../utils/dateUtils.js';
 import { useData } from '../context/DataContext.jsx';
+import { fetchTimeSlotsForTeacher } from '../api/bookingApi.js';
 
 const WORKER_URL = import.meta.env.VITE_WORKER_URL;
 
@@ -90,6 +91,33 @@ export default function ClassFormPage() {
     recurStartDate: new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' }),
     recurEndDate: '',
   });
+
+  const [availableSlots, setAvailableSlots] = useState(null); // null=미조회, []~[...]=조회완료
+
+  // 날짜 변경 시 가용 슬롯 조회 (일회성만)
+  const selectedDate = form.datetime ? form.datetime.slice(0, 10) : '';
+  useEffect(() => {
+    if (!selectedDate || recurring) { setAvailableSlots(null); return; }
+    let cancelled = false;
+    fetchTimeSlotsForTeacher(selectedDate, isEdit ? id : '')
+      .then(slots => { if (!cancelled) setAvailableSlots(slots); })
+      .catch(() => { if (!cancelled) setAvailableSlots(null); });
+    return () => { cancelled = true; };
+  }, [selectedDate, isEdit, id, recurring]);
+
+  const selectedHour = form.datetime ? form.datetime.slice(11, 13) : '';
+  const selectedMin = form.datetime ? form.datetime.slice(14, 16) : '00';
+
+  /** 해당 시(HH)에 가용 슬롯이 하나라도 있는지 */
+  const isHourAvailable = (h) => {
+    if (!availableSlots) return true;
+    return availableSlots.some(s => s.startsWith(h + ':'));
+  };
+  /** 선택된 시+분 조합이 가용한지 */
+  const isMinAvailable = (min) => {
+    if (!availableSlots || !selectedHour) return true;
+    return availableSlots.includes(`${selectedHour}:${min}`);
+  };
 
   const [loading, setLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
@@ -585,7 +613,7 @@ export default function ClassFormPage() {
                 style={{ borderRadius: 12, flex: 1 }}
               />
               <Select
-                value={form.datetime ? form.datetime.slice(11, 13) : undefined}
+                value={selectedHour || undefined}
                 onChange={(h) => {
                   const date = form.datetime ? form.datetime.slice(0, 10) : '';
                   const min = form.datetime ? form.datetime.slice(14, 16) : '00';
@@ -595,25 +623,32 @@ export default function ClassFormPage() {
                 style={{ width: 80 }}
                 placeholder="시"
               >
-                {Array.from({ length: 17 }, (_, i) => i + 6).map((h) => (
-                  <Select.Option key={h} value={String(h).padStart(2, '0')}>
-                    {h}시
-                  </Select.Option>
-                ))}
+                {Array.from({ length: 17 }, (_, i) => i + 6).map((h) => {
+                  const hStr = String(h).padStart(2, '0');
+                  const unavailable = !isHourAvailable(hStr);
+                  return (
+                    <Select.Option key={h} value={hStr} disabled={unavailable}>
+                      {h}시{unavailable ? ' ✕' : ''}
+                    </Select.Option>
+                  );
+                })}
               </Select>
               {['00', '30'].map((min) => {
-                const curMin = form.datetime ? form.datetime.slice(14, 16) : '00';
+                const unavailable = !isMinAvailable(min);
                 return (
                   <button
                     key={min}
                     type="button"
+                    disabled={unavailable}
                     onClick={() => {
                       const date = form.datetime ? form.datetime.slice(0, 10) : '';
                       const hour = form.datetime ? form.datetime.slice(11, 13) : '09';
                       setForm((f) => ({ ...f, datetime: `${date}T${hour}:${min}` }));
                     }}
                     className={`px-3 rounded-xl text-sm font-medium border-2 transition-colors ${
-                      curMin === min
+                      unavailable
+                        ? 'border-gray-100 bg-gray-50 text-gray-300 cursor-not-allowed'
+                        : selectedMin === min
                         ? 'border-brand-600 bg-brand-50 text-brand-700'
                         : 'border-gray-200 bg-white text-gray-600'
                     }`}
