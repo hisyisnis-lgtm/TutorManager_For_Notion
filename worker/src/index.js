@@ -622,12 +622,14 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
       });
     }
 
-    // 09:00 ~ 21:30 전체 30분 슬롯 생성 (22:00은 종료시간으로만 사용)
+    // 09:00 ~ 21:00 전체 30분 슬롯 생성 (22:00은 종료시간으로만 사용)
     const allSlots = new Set();
-    for (let m = 9 * 60; m < 22 * 60; m += 30) allSlots.add(minToTime(m));
+    for (let m = 9 * 60; m <= 21 * 60; m += 30) allSlots.add(minToTime(m));
 
-    // 기존 수업(CLASS_DB) 점유 슬롯 제거 (취소 제외) + 앞뒤 30분 버퍼
+    // busySet: 시작 불가 슬롯
+    // passableBlockSet: 종료 시간 범위 탐색 차단 슬롯 (pre-buffer 중 classStart-30만 차단)
     const busySet = new Set();
+    const passableBlockSet = new Set();
     for (const p of classRes.results ?? []) {
       if (p.id.replace(/-/g, '') === excludeSlotId) continue;
       const props = p.properties;
@@ -638,19 +640,31 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
       const timeMatch = dtStr.match(/T(\d{2}):(\d{2})/);
       if (!timeMatch) continue;
       const classStartMin = Number(timeMatch[1]) * 60 + Number(timeMatch[2]);
-      for (let elapsed = 0; elapsed < dur; elapsed += 30) busySet.add(minToTime(classStartMin + elapsed));
-      // 앞 버퍼: 최소 60분 수업 기준, classStart-60(0갭)·classStart-30도 차단
+      // 수업 점유 슬롯: 시작 불가 + 탐색 불가
+      for (let elapsed = 0; elapsed < dur; elapsed += 30) {
+        const slot = minToTime(classStartMin + elapsed);
+        busySet.add(slot);
+        passableBlockSet.add(slot);
+      }
+      // 앞 버퍼: classStart-60은 시작만 차단(탐색 가능), classStart-30은 탐색 한계도 차단
       busySet.add(minToTime(classStartMin - 60));
       busySet.add(minToTime(classStartMin - 30));
-      // 뒤 30분 버퍼: 수업 종료 시각을 시작 슬롯으로 사용 불가
-      busySet.add(minToTime(classStartMin + dur));
+      passableBlockSet.add(minToTime(classStartMin - 30));
+      // 뒤 버퍼: 시작 불가 + 탐색 불가
+      const postBuf = minToTime(classStartMin + dur);
+      busySet.add(postBuf);
+      passableBlockSet.add(postBuf);
     }
 
     // 개별 차단 시간 슬롯 제거
-    for (const t of getBlockedTimes(date)) busySet.add(t);
+    for (const t of getBlockedTimes(date)) {
+      busySet.add(t);
+      passableBlockSet.add(t);
+    }
 
     const available = [...allSlots].filter(t => !busySet.has(t)).sort();
-    return new Response(JSON.stringify(available), {
+    const passable = [...allSlots].filter(t => !passableBlockSet.has(t)).sort();
+    return new Response(JSON.stringify({ available, passable }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
@@ -821,7 +835,9 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
         return startMin < bEnd && bStart < endMin;
       });
     if (postConflicts.length > 0) {
-      await n('PATCH', `/pages/${newPage.id}`, { archived: true }).catch(() => {});
+      await n('PATCH', `/pages/${newPage.id}`, { archived: true }).catch(e => {
+        console.error('[예약 롤백 실패] 중복 수업 페이지 잔존:', newPage.id, e?.message);
+      });
       return new Response(JSON.stringify({ error: '방금 다른 분이 예약했습니다. 다른 시간을 선택해주세요.' }), {
         status: 409,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

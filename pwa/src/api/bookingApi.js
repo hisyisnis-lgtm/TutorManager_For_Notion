@@ -34,16 +34,18 @@ export async function fetchAvailableSlots(from, to) {
   return bookingFetch('GET', `/booking/slots?${params}`);
 }
 
-/** 날짜별 예약 가능 시간 슬롯 조회 (공개, 30분 단위) */
+/** 날짜별 예약 가능 시간 슬롯 조회 (공개, 30분 단위) → { available, passable } */
 export async function fetchTimeSlots(date) {
-  return bookingFetch('GET', `/booking/time-slots?date=${date}`);
+  const data = await bookingFetch('GET', `/booking/time-slots?date=${date}`);
+  return Array.isArray(data) ? { available: data, passable: data } : data;
 }
 
-/** 강사용: 날짜별 예약 가능 시간 슬롯 조회 (날짜 제한 없음, excludeId로 자기 자신 제외) */
+/** 강사용: 날짜별 예약 가능 시간 슬롯 조회 (날짜 제한 없음, excludeId로 자기 자신 제외) → { available, passable } */
 export async function fetchTimeSlotsForTeacher(date, excludeId = '') {
   const params = new URLSearchParams({ date, skipMinDate: '1' });
   if (excludeId) params.set('excludeId', excludeId);
-  return bookingFetch('GET', `/booking/time-slots?${params}`);
+  const data = await bookingFetch('GET', `/booking/time-slots?${params}`);
+  return Array.isArray(data) ? { available: data, passable: data } : data;
 }
 
 /** 학생 예약 코드로 학생 정보 조회 (공개) */
@@ -53,6 +55,7 @@ export async function fetchStudentByToken(token) {
 
 /** 예약 신청 (공개) → 즉시 확정 */
 export async function reserveSlot({ studentToken, date, startTime, endTime, location }) {
+  // Worker는 수업 장소를 'mode' 필드로 수신 (PWA 내부 명칭 'location'을 변환)
   return bookingFetch('POST', '/booking/reserve', { studentToken, date, startTime, endTime, mode: location });
 }
 

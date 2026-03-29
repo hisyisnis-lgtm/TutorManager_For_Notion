@@ -104,7 +104,7 @@ export default function ClassFormPage() {
     if (!selectedDate || recurring) { setAvailableSlots(null); return; }
     let cancelled = false;
     fetchTimeSlotsForTeacher(selectedDate, isEdit ? id : '')
-      .then(slots => { if (!cancelled) setAvailableSlots(slots); })
+      .then(data => { if (!cancelled) setAvailableSlots(data.available ?? data); })
       .catch(() => { if (!cancelled) setAvailableSlots(null); });
     return () => { cancelled = true; };
   }, [selectedDate, isEdit, id, recurring]);

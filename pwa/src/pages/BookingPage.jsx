@@ -126,21 +126,23 @@ function Calendar({ year, month, availableDates, selectedDate, onSelect }) {
 }
 
 // ===== 시간 범위 선택 컴포넌트 =====
-function TimeRangePicker({ availableTimes, startTime, endTime, onStartSelect, onEndSelect }) {
+function TimeRangePicker({ availableTimes, passableTimes, startTime, endTime, onStartSelect, onEndSelect }) {
   const availableSet = new Set(availableTimes);
+  // passableSet: pre-buffer(classStart-60) 통과 허용, classStart-30에서 차단
+  const passableSet = new Set(passableTimes ?? availableTimes);
   const startMin = startTime ? timeToMin(startTime) : null;
 
   const validEndTimes = (() => {
     if (startMin === null) return new Set();
     const valid = new Set();
     let prev = startMin;
-    // ALL_END_SLOTS(~22:00)까지 순회하되, 가용 여부는 슬롯 시작(prev)으로 확인
+    // ALL_END_SLOTS(~22:00)까지 순회하되, 탐색 가능 여부는 passableSet으로 확인
     for (const t of ALL_END_SLOTS) {
       const tm = timeToMin(t);
       if (tm <= startMin) continue;
       if (tm !== prev + 30) break;
       const ps = `${String(Math.floor(prev / 60)).padStart(2, '0')}:${String(prev % 60).padStart(2, '0')}`;
-      if (!availableSet.has(ps)) break;
+      if (!passableSet.has(ps)) break;
       if (tm - startMin >= 60) valid.add(t);
       prev = tm;
     }
@@ -404,6 +406,7 @@ export default function BookingPage() {
 
   const [selectedDate, setSelectedDate] = useState(null);
   const [availableTimes, setAvailableTimes] = useState([]);
+  const [passableTimes, setPassableTimes] = useState([]);
   const [timesLoading, setTimesLoading] = useState(false);
   const [startTime, setStartTime] = useState(null);
   const [endTime, setEndTime] = useState(null);
@@ -469,9 +472,11 @@ export default function BookingPage() {
     setTimesLoading(true);
     try {
       const times = await fetchTimeSlots(date);
-      setAvailableTimes(times);
+      setAvailableTimes(times.available);
+      setPassableTimes(times.passable);
     } catch {
       setAvailableTimes([]);
+      setPassableTimes([]);
     } finally {
       setTimesLoading(false);
     }
@@ -508,10 +513,11 @@ export default function BookingPage() {
         setStartTime(null);
         setEndTime(null);
         const [times] = await Promise.all([
-          fetchTimeSlots(selectedDate).catch(() => []),
+          fetchTimeSlots(selectedDate).catch(() => ({ available: [], passable: [] })),
           loadSlots(),
         ]);
-        setAvailableTimes(times);
+        setAvailableTimes(times.available ?? []);
+        setPassableTimes(times.passable ?? []);
       }
     } finally {
       setSubmitting(false);
@@ -678,6 +684,7 @@ export default function BookingPage() {
                 ) : (
                   <TimeRangePicker
                     availableTimes={availableTimes}
+                    passableTimes={passableTimes}
                     startTime={startTime}
                     endTime={endTime}
                     onStartSelect={handleStartSelect}
