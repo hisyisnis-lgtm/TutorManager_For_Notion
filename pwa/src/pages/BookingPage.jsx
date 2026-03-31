@@ -541,7 +541,7 @@ export default function BookingPage() {
   if (studentError) {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center px-4">
-        <Card variant="borderless" style={{ borderRadius: 16, maxWidth: 360, width: '100%', textAlign: 'center' }}>
+        <Card variant="borderless" style={{ borderRadius: 16, maxWidth: 360, width: '100%', textAlign: 'center', boxShadow: 'var(--shadow-card)' }}>
           <div style={{ fontSize: 36, marginBottom: 16 }}>⚠️</div>
           <p className="text-red-500 text-sm">{studentError}</p>
           <Button
@@ -631,7 +631,7 @@ export default function BookingPage() {
             )}
 
             {/* 달력 */}
-            <Card variant="borderless" style={{ borderRadius: 16 }}>
+            <Card variant="borderless" style={{ borderRadius: 16, boxShadow: 'var(--shadow-border)' }}>
               <div className="flex items-center justify-between mb-3">
                 <button
                   type="button"
@@ -669,7 +669,7 @@ export default function BookingPage() {
 
             {/* 시간 선택 */}
             {selectedDate && (
-              <Card variant="borderless" style={{ borderRadius: 16 }}>
+              <Card variant="borderless" style={{ borderRadius: 16, boxShadow: 'var(--shadow-border)' }}>
                 {(() => {
                   const d = new Date(selectedDate + 'T00:00:00+09:00');
                   return (
@@ -697,7 +697,7 @@ export default function BookingPage() {
             {/* 예약 폼 */}
             {selectedDate && startTime && endTime && durationMin >= 60 && (
               <form onSubmit={handleSubmit}>
-                <Card variant="borderless" style={{ borderRadius: 16 }}>
+                <Card variant="borderless" style={{ borderRadius: 16, boxShadow: 'var(--shadow-border)' }}>
                   {/* 선택 요약 */}
                   <div className="bg-brand-50 rounded-lg px-3 py-2.5 text-sm text-brand-600" style={{ marginBottom: 12 }}>
                     {(() => {

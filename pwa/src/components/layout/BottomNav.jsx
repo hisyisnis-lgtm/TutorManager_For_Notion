@@ -15,8 +15,9 @@ export default function BottomNav() {
     <nav
       style={{
         position: 'fixed', bottom: 0, left: 0, right: 0,
-        backgroundColor: '#ffffff',
-        borderTop: '1px solid #f0f0f0',
+        backgroundColor: 'rgba(255,255,255,0.95)',
+        backdropFilter: 'blur(10px)',
+        boxShadow: '0px -1px 0px 0px rgba(0,0,0,0.06), 0px -2px 8px 0px rgba(0,0,0,0.04)',
         zIndex: 50,
         paddingBottom: 'env(safe-area-inset-bottom)',
       }}
@@ -35,8 +36,10 @@ export default function BottomNav() {
               fontSize: 11, fontWeight: 500,
               color: isActive ? PRIMARY : '#8c8c8c',
               textDecoration: 'none',
-              transitionProperty: 'color',
-              transitionDuration: '0.2s',
+              transitionProperty: 'color, transform',
+              transitionDuration: '0.15s',
+              transitionTimingFunction: 'ease-out',
+              minHeight: 44,
             })}
           >
             <span style={{ fontSize: 20, lineHeight: 1 }} aria-hidden="true">{icon}</span>

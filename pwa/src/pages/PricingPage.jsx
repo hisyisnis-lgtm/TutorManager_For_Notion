@@ -35,13 +35,13 @@ export default function PricingPage() {
         </header>
 
         <main style={{ maxWidth: 480, margin: '0 auto', padding: '32px 20px 80px' }}>
-          <div style={{ marginBottom: 24 }}>
+          <div className="stagger-item" style={{ marginBottom: 24 }}>
             <Title level={4} style={{ marginBottom: 4 }}>수강료 안내</Title>
             <Text type="secondary">하늘하늘 중국어 · 회화·발음 교정 전문</Text>
           </div>
 
           {/* 수업 철학 */}
-          <Card variant="borderless" style={{ borderRadius: 16, marginBottom: 24 }}>
+          <Card variant="borderless" className="stagger-item" style={{ borderRadius: 16, marginBottom: 24, boxShadow: 'var(--shadow-border)' }}>
             <Paragraph style={{ fontSize: 14, color: '#595959', lineHeight: 1.7, margin: 0 }}>
               필기 시험이 아닌{' '}
               <Text strong style={{ color: '#262626' }}>'중국인처럼 자연스럽게 말하는 회화'</Text>
@@ -55,7 +55,7 @@ export default function PricingPage() {
             <Text style={{ fontSize: 13, fontWeight: 600, color: '#595959', letterSpacing: '0.08em', textTransform: 'uppercase', display: 'block', marginBottom: 12 }}>
               수강 대상
             </Text>
-            <Card variant="borderless" style={{ borderRadius: 16 }}>
+            <Card variant="borderless" style={{ borderRadius: 16, boxShadow: 'var(--shadow-border)' }}>
               <Flex vertical gap={10} style={{ width: '100%' }}>
                 {[
                   '성인 학습자',
@@ -81,7 +81,7 @@ export default function PricingPage() {
               <Title level={5} style={{ margin: 0 }}>1:1 프라이빗 수업</Title>
             </Space>
             <Flex vertical gap={10} style={{ width: '100%' }}>
-              <Card variant="borderless" style={{ borderRadius: 16, backgroundColor: PRIMARY }}>
+              <Card variant="borderless" style={{ borderRadius: 16, backgroundColor: PRIMARY, boxShadow: '0 4px 16px rgba(127,0,5,0.25)' }}>
                 <Tag style={{ backgroundColor: 'rgba(255,255,255,0.2)', color: 'white', border: 'none', borderRadius: 20, fontSize: 13, fontWeight: 700, marginBottom: 10 }}>
                   추천
                 </Tag>
@@ -91,30 +91,30 @@ export default function PricingPage() {
                     <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 13 }}>회화 연습 + 발음 교정 균형</Text>
                   </div>
                   <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 16 }}>
-                    <Text style={{ color: 'white', fontSize: 24, fontWeight: 700, display: 'block', lineHeight: 1 }}>75,000원</Text>
+                    <Text className="tabular-nums" style={{ color: 'white', fontSize: 24, fontWeight: 700, display: 'block', lineHeight: 1 }}>75,000원</Text>
                     <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 13, marginTop: 4, display: 'block' }}>1회 기준</Text>
                   </div>
                 </div>
                 <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 13, display: 'block', marginTop: 12 }}>직장인·입문자께 추천</Text>
               </Card>
 
-              <Card variant="borderless" style={{ borderRadius: 16 }}>
+              <Card variant="borderless" style={{ borderRadius: 16, boxShadow: 'var(--shadow-border)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <div>
                     <Text strong style={{ fontSize: 15, display: 'block', marginBottom: 4 }}>120분 집중 수업</Text>
                     <Text type="secondary" style={{ fontSize: 13 }}>개념 → 발음 → 문장 → 실전 말하기</Text>
                   </div>
                   <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 16 }}>
-                    <Text style={{ fontSize: 24, fontWeight: 700, display: 'block', lineHeight: 1 }}>100,000원</Text>
+                    <Text className="tabular-nums" style={{ fontSize: 24, fontWeight: 700, display: 'block', lineHeight: 1 }}>100,000원</Text>
                     <Text type="secondary" style={{ fontSize: 13, marginTop: 4, display: 'block' }}>1회 기준</Text>
                   </div>
                 </div>
                 <Text type="secondary" style={{ fontSize: 13, display: 'block', marginTop: 12 }}>빠르게 말하기 변화를 체감하고 싶은 분께 추천</Text>
               </Card>
 
-              <div style={{ backgroundColor: '#fafafa', borderRadius: 12, padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ backgroundColor: '#fafafa', borderRadius: 12, padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: 'var(--shadow-border)' }}>
                 <Text style={{ fontSize: 14, color: '#595959' }}>60분 기본 수업</Text>
-                <Text strong style={{ fontSize: 14 }}>50,000원</Text>
+                <Text className="tabular-nums" strong style={{ fontSize: 14 }}>50,000원</Text>
               </div>
             </Flex>
           </div>
@@ -127,36 +127,36 @@ export default function PricingPage() {
               <Text type="secondary" style={{ fontSize: 13 }}>1인 기준</Text>
             </Space>
             <Flex vertical gap={10} style={{ width: '100%' }}>
-              <Card variant="borderless" style={{ borderRadius: 16 }}>
+              <Card variant="borderless" style={{ borderRadius: 16, boxShadow: 'var(--shadow-border)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <div>
                     <Text strong style={{ fontSize: 15, display: 'block', marginBottom: 4 }}>120분 그룹 수업</Text>
                     <Text type="secondary" style={{ fontSize: 13 }}>친구 · 동료 · 커플 수강 추천</Text>
                   </div>
                   <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 16 }}>
-                    <Text style={{ fontSize: 24, fontWeight: 700, display: 'block', lineHeight: 1 }}>80,000원</Text>
+                    <Text className="tabular-nums" style={{ fontSize: 24, fontWeight: 700, display: 'block', lineHeight: 1 }}>80,000원</Text>
                     <Text type="secondary" style={{ fontSize: 13, marginTop: 4, display: 'block' }}>1인 기준</Text>
                   </div>
                 </div>
                 <Text type="secondary" style={{ fontSize: 13, display: 'block', marginTop: 12 }}>서로의 피드백으로 학습 효과를 높이는 구조</Text>
               </Card>
 
-              <Card variant="borderless" style={{ borderRadius: 16 }}>
+              <Card variant="borderless" style={{ borderRadius: 16, boxShadow: 'var(--shadow-border)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <div>
                     <Text strong style={{ fontSize: 15, display: 'block', marginBottom: 4 }}>90분 그룹 수업</Text>
                     <Text type="secondary" style={{ fontSize: 13 }}>반복 말하기로 회화 자신감 형성</Text>
                   </div>
                   <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 16 }}>
-                    <Text style={{ fontSize: 24, fontWeight: 700, display: 'block', lineHeight: 1 }}>60,000원</Text>
+                    <Text className="tabular-nums" style={{ fontSize: 24, fontWeight: 700, display: 'block', lineHeight: 1 }}>60,000원</Text>
                     <Text type="secondary" style={{ fontSize: 13, marginTop: 4, display: 'block' }}>1인 기준</Text>
                   </div>
                 </div>
               </Card>
 
-              <div style={{ backgroundColor: '#fafafa', borderRadius: 12, padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ backgroundColor: '#fafafa', borderRadius: 12, padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: 'var(--shadow-border)' }}>
                 <Text style={{ fontSize: 14, color: '#595959' }}>60분 기본 수업</Text>
-                <Text strong style={{ fontSize: 14 }}>40,000원 (1인)</Text>
+                <Text className="tabular-nums" strong style={{ fontSize: 14 }}>40,000원 (1인)</Text>
               </div>
               <Text type="secondary" style={{ fontSize: 13, paddingLeft: 4 }}>※ 3인 이상 그룹은 별도 상담 진행</Text>
             </Flex>
@@ -168,7 +168,7 @@ export default function PricingPage() {
               <GiftOutlined style={{ color: PRIMARY }} />
               <Title level={5} style={{ margin: 0 }}>수강 혜택</Title>
             </Space>
-            <Card variant="borderless" style={{ borderRadius: 16 }}>
+            <Card variant="borderless" style={{ borderRadius: 16, boxShadow: 'var(--shadow-border)' }}>
               <Flex vertical gap={10} style={{ width: '100%' }}>
                 {[
                   '주 N회 자유롭게 일정 조정 가능',
@@ -191,7 +191,7 @@ export default function PricingPage() {
               <CalendarOutlined style={{ color: PRIMARY }} />
               <Title level={5} style={{ margin: 0 }}>수업 일정 안내</Title>
             </Space>
-            <Card variant="borderless" style={{ borderRadius: 16 }}>
+            <Card variant="borderless" style={{ borderRadius: 16, boxShadow: 'var(--shadow-border)' }}>
               <Flex vertical gap={8} style={{ width: '100%' }}>
                 {[
                   '월~일 수업 가능 · 토요일 제외',
@@ -211,7 +211,7 @@ export default function PricingPage() {
               <CreditCardOutlined style={{ color: PRIMARY }} />
               <Title level={5} style={{ margin: 0 }}>결제 및 환불 안내</Title>
             </Space>
-            <Card variant="borderless" style={{ borderRadius: 16, backgroundColor: '#fafafa' }}>
+            <Card variant="borderless" style={{ borderRadius: 16, backgroundColor: '#fafafa', boxShadow: 'var(--shadow-border)' }}>
               <Flex vertical gap={12} style={{ width: '100%' }}>
                 {[
                   { label: '결제 방식', desc: '수업은 선결제 기준으로 진행됩니다. 카드 결제 및 현금영수증 발행 모두 가능하니 편하신 방법으로 연락 주세요.' },
@@ -229,7 +229,7 @@ export default function PricingPage() {
           </div>
 
           {/* CTA */}
-          <Card variant="borderless" style={{ borderRadius: 16, backgroundColor: '#fff0f1', textAlign: 'center', marginBottom: 12 }}>
+          <Card variant="borderless" style={{ borderRadius: 16, backgroundColor: '#fff0f1', textAlign: 'center', marginBottom: 12, boxShadow: 'var(--shadow-border)' }}>
             <Text strong style={{ fontSize: 14, color: PRIMARY, lineHeight: 1.7, display: 'block', marginBottom: 8 }}>
               빠르게 배우는 중국어보다,<br />오래 남는 중국어를 함께 만들어 갑니다.
             </Text>

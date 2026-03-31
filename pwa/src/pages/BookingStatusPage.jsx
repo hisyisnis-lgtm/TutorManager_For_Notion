@@ -106,7 +106,7 @@ export default function BookingStatusPage() {
 
         {/* 오류 */}
         {error && (
-          <Card variant="borderless" style={{ borderRadius: 16, textAlign: 'center' }}
+          <Card variant="borderless" style={{ borderRadius: 16, textAlign: 'center', boxShadow: 'var(--shadow-card)' }}
             role="alert"
           >
             <div style={{ fontSize: 36, marginBottom: 16 }} aria-hidden="true">❌</div>
@@ -131,7 +131,7 @@ export default function BookingStatusPage() {
           >
             <Card
               variant="borderless"
-              style={{ borderRadius: 16, textAlign: 'center' }}
+              style={{ borderRadius: 16, textAlign: 'center', boxShadow: 'var(--shadow-card)' }}
             >
               {/* 상태 아이콘 */}
               {isCancelled ? <CancelIcon /> : <SuccessIcon />}
@@ -160,10 +160,10 @@ export default function BookingStatusPage() {
               {/* 예약 상세 정보 */}
               <div style={{ textAlign: 'left' }}>
                 <InfoRow label="예약자" value={booking.studentName} />
-                <InfoRow label="날짜" value={formatDate(booking.date)} />
+                <InfoRow label="날짜" value={<span className="tabular-nums">{formatDate(booking.date)}</span>} />
                 <InfoRow
                   label="시간"
-                  value={`${booking.startTime} (${booking.durationMin}분)`}
+                  value={<span className="tabular-nums">{`${booking.startTime} (${booking.durationMin}분)`}</span>}
                 />
               </div>
 

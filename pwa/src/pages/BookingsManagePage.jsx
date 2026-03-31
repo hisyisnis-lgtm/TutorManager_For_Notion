@@ -135,7 +135,7 @@ export default function BookingsManagePage() {
       {/* 추가 폼 */}
       {showForm && (
         <form onSubmit={handleSave}>
-          <Card variant="borderless" style={{ margin: '0 16px 12px', borderRadius: 16 }}>
+          <Card variant="borderless" style={{ margin: '0 16px 12px', borderRadius: 16, boxShadow: 'var(--shadow-border)' }}>
             {/* 유형 선택 */}
             <div className="flex gap-2" style={{ marginBottom: 12 }}>
               {['일회성', '반복'].map(t => (

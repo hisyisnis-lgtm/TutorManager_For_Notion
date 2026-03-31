@@ -53,7 +53,7 @@ export default function StudentsPage() {
           <Button
             type="primary"
             onClick={() => navigate('/students/new')}
-            style={{ borderRadius: 8, fontWeight: 600 }}
+            style={{ borderRadius: 12, fontWeight: 600 }}
           >
             + 학생 추가
           </Button>
@@ -117,7 +117,7 @@ function StudentCard({ student }) {
       <Link to={`/students/${student.id}`}>
         <Card
           variant="borderless"
-          style={{ borderRadius: 16 }}
+          style={{ borderRadius: 16, boxShadow: 'var(--shadow-border)', transition: 'box-shadow 150ms ease-out' }}
           styles={{ body: { padding: '16px' } }}
           className="active:bg-gray-50"
         >

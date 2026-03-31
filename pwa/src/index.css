@@ -24,6 +24,23 @@
   src: url('/fonts/KimjungchulGothic-Bold.ttf') format('truetype');
 }
 
+/* ── 디자인 토큰 ─────────────────────────────── */
+:root {
+  /* 카드·버튼 섀도우 (border 대체용, 3겹 투명 레이어) */
+  --shadow-border:
+    0px 0px 0px 1px rgba(0, 0, 0, 0.06),
+    0px 1px 2px -1px rgba(0, 0, 0, 0.06),
+    0px 2px 4px 0px rgba(0, 0, 0, 0.04);
+  --shadow-border-hover:
+    0px 0px 0px 1px rgba(0, 0, 0, 0.08),
+    0px 1px 2px -1px rgba(0, 0, 0, 0.08),
+    0px 2px 4px 0px rgba(0, 0, 0, 0.06);
+  --shadow-card:
+    0px 0px 0px 1px rgba(0, 0, 0, 0.05),
+    0px 2px 8px -2px rgba(0, 0, 0, 0.08),
+    0px 4px 12px 0px rgba(0, 0, 0, 0.04);
+}
+
 @layer base {
   html {
     -webkit-tap-highlight-color: transparent;
@@ -51,6 +68,12 @@
     text-wrap: pretty;
   }
 
+  /* ── 이미지 미세 아웃라인 (일관된 깊이감) ── */
+  img {
+    outline: 1px solid rgba(0, 0, 0, 0.08);
+    outline-offset: -1px;
+  }
+
   /* ── 포커스 가시성 (WCAG 2.4.7) ──────────── */
   :focus {
     outline: none;
@@ -63,11 +86,15 @@
   }
 
   /* ── 버튼 누름 피드백 (scale on press) ───── */
+  /* transition은 base에 정의해야 release 시에도 부드럽게 복귀함 */
+  button:not([disabled]):not([aria-disabled="true"]) {
+    transition-property: transform, opacity;
+    transition-duration: 150ms;
+    transition-timing-function: ease-out;
+  }
+
   button:not([disabled]):not([aria-disabled="true"]):active {
     transform: scale(0.96);
-    transition-property: transform;
-    transition-duration: 100ms;
-    transition-timing-function: ease;
   }
 
   /* ── 숫자 레이아웃 안정성 ──────────────────── */
@@ -104,6 +131,52 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* ── no-scrollbar 유틸리티 ─────────────────── */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* ── 카드 섀도우 유틸리티 ──────────────────── */
+.shadow-border {
+  box-shadow: var(--shadow-border);
+  transition-property: box-shadow;
+  transition-duration: 150ms;
+  transition-timing-function: ease-out;
+}
+.shadow-border:hover {
+  box-shadow: var(--shadow-border-hover);
+}
+.shadow-card {
+  box-shadow: var(--shadow-card);
+  transition-property: box-shadow;
+  transition-duration: 150ms;
+  transition-timing-function: ease-out;
+}
+
+/* ── 페이지 진입 stagger 애니메이션 ─────────── */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+    filter: blur(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+.stagger-item {
+  opacity: 0;
+  animation: fadeInUp 380ms cubic-bezier(0.2, 0, 0, 1) forwards;
+}
+.stagger-item:nth-child(1) { animation-delay: 0ms; }
+.stagger-item:nth-child(2) { animation-delay: 80ms; }
+.stagger-item:nth-child(3) { animation-delay: 160ms; }
+.stagger-item:nth-child(4) { animation-delay: 240ms; }
+.stagger-item:nth-child(5) { animation-delay: 320ms; }
+.stagger-item:nth-child(6) { animation-delay: 400ms; }
 
 /* ── 예약 완료 성공 애니메이션 ──────────────── */
 @keyframes successPop {

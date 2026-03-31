@@ -24,8 +24,9 @@ export default function PageHeader({ title, back, action }) {
               aria-label="뒤로가기"
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                width: 32, height: 32, border: 'none', background: 'none',
-                cursor: 'pointer', color: '#595959', flexShrink: 0, marginLeft: -4,
+                width: 40, height: 40, border: 'none', background: 'none',
+                cursor: 'pointer', color: '#595959', flexShrink: 0, marginLeft: -8,
+                borderRadius: 8,
               }}
             >
               <LeftOutlined style={{ fontSize: 16 }} />

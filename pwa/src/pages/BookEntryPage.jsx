@@ -69,7 +69,7 @@ export default function BookEntryPage() {
 
         <div className="px-4 py-6 flex-1">
           <form onSubmit={handleSubmit} noValidate>
-            <Card variant="borderless" style={{ borderRadius: 16 }}>
+            <Card variant="borderless" style={{ borderRadius: 16, boxShadow: 'var(--shadow-card)' }}>
               <div style={{ marginBottom: 16 }}>
                 <label
                   htmlFor="booking-code"

@@ -209,18 +209,18 @@ export default function HomePage() {
 
       {/* 월별 캘린더 */}
       <div className="px-4 pt-4 pb-2">
-        <Card variant="borderless" style={{ borderRadius: 16 }} styles={{ body: { padding: 16 } }}>
+        <Card variant="borderless" style={{ borderRadius: 16, boxShadow: 'var(--shadow-card)' }} styles={{ body: { padding: 16 } }}>
           {/* 헤더 */}
           <div className="flex items-center justify-between mb-3">
             <button
               onClick={prevMonth}
               aria-label="이전 달"
-              className="w-8 h-8 flex items-center justify-center rounded-lg active:bg-gray-100 text-gray-500 text-xl font-light"
+              className="w-10 h-10 flex items-center justify-center rounded-lg active:bg-gray-100 text-gray-500 text-xl font-light"
             >
               <span aria-hidden="true">‹</span>
             </button>
             <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold text-gray-800" aria-live="polite" aria-atomic="true">
+              <span className="text-sm font-semibold tabular-nums text-gray-800" aria-live="polite" aria-atomic="true">
                 {calYear}년 {calMonth + 1}월
               </span>
               {calLoading && (
@@ -230,7 +230,7 @@ export default function HomePage() {
             <button
               onClick={nextMonth}
               aria-label="다음 달"
-              className="w-8 h-8 flex items-center justify-center rounded-lg active:bg-gray-100 text-gray-500 text-xl font-light"
+              className="w-10 h-10 flex items-center justify-center rounded-lg active:bg-gray-100 text-gray-500 text-xl font-light"
             >
               <span aria-hidden="true">›</span>
             </button>
@@ -360,7 +360,7 @@ export default function HomePage() {
             <Card
               variant="borderless"
               hoverable
-              style={{ borderRadius: 16, border: '1px solid #ffccc7', backgroundColor: '#fff1f0' }}
+              style={{ borderRadius: 16, backgroundColor: '#fff1f0', boxShadow: '0px 0px 0px 1px #ffccc7, 0px 2px 8px rgba(207,19,34,0.06)' }}
               styles={{ body: { padding: '12px 16px' } }}
             >
               <div className="flex items-center justify-between">
@@ -400,7 +400,7 @@ export default function HomePage() {
                     <Link to="/classes">
                       <Card
                         variant="borderless"
-                        style={{ borderRadius: 16 }}
+                        style={{ borderRadius: 16, boxShadow: 'var(--shadow-border)', transition: 'box-shadow 150ms ease-out' }}
                         styles={{ body: { padding: '10px 16px' } }}
                         hoverable
                       >

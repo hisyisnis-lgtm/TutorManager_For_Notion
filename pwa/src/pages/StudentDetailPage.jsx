@@ -124,7 +124,7 @@ export default function StudentDetailPage() {
 
       <div className="px-4 pt-4 space-y-4 pb-6">
         {/* 기본 정보 */}
-        <Card variant="borderless" style={{ borderRadius: 16 }} styles={{ body: { padding: '16px' } }}>
+        <Card variant="borderless" style={{ borderRadius: 16, boxShadow: 'var(--shadow-border)' }} styles={{ body: { padding: '16px' } }}>
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-2xl font-bold text-gray-900">{student.name}</span>
@@ -181,10 +181,10 @@ export default function StudentDetailPage() {
 
         {/* 잔여 회차 / 미수금 */}
         <div className="grid grid-cols-2 gap-3">
-          <Card variant="borderless" style={{ borderRadius: 16 }} styles={{ body: { padding: '16px', textAlign: 'center' } }}>
+          <Card variant="borderless" style={{ borderRadius: 16, boxShadow: 'var(--shadow-border)' }} styles={{ body: { padding: '16px', textAlign: 'center' } }}>
             <p className="text-xs text-gray-500 mb-1">잔여 시간 회차</p>
             <p
-              className={`text-2xl font-bold ${
+              className={`text-2xl font-bold tabular-nums ${
                 student.remainingSessions <= 1 ? 'text-red-500' : 'text-gray-900'
               }`}
             >
@@ -192,7 +192,7 @@ export default function StudentDetailPage() {
               <span className="text-sm font-normal text-gray-400 ml-1">회</span>
             </p>
           </Card>
-          <Card variant="borderless" style={{ borderRadius: 16 }} styles={{ body: { padding: '16px', textAlign: 'center' } }}>
+          <Card variant="borderless" style={{ borderRadius: 16, boxShadow: 'var(--shadow-border)' }} styles={{ body: { padding: '16px', textAlign: 'center' } }}>
             <p className="text-xs text-gray-500 mb-1">미수금</p>
             <p
               className={`text-xl font-bold ${
@@ -289,7 +289,7 @@ function InfoRow({ label, value }) {
 
 function Section({ title, children }) {
   return (
-    <Card variant="borderless" style={{ borderRadius: 16 }} styles={{ body: { padding: 0 } }}>
+    <Card variant="borderless" style={{ borderRadius: 16, boxShadow: 'var(--shadow-border)' }} styles={{ body: { padding: 0 } }}>
       <div className="px-4 py-3 border-b border-gray-50">
         <h2 className="text-sm font-bold text-gray-700">{title}</h2>
       </div>

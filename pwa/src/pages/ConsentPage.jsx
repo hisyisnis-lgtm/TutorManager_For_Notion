@@ -30,7 +30,7 @@ function Section({ icon, title, children }) {
 
 function BulletList({ items }) {
   return (
-    <Card variant="borderless" style={{ borderRadius: 16 }}>
+    <Card variant="borderless" style={{ borderRadius: 16, boxShadow: 'var(--shadow-border)' }}>
       <Flex vertical gap={12} style={{ width: '100%' }}>
         {items.map((item, i) => (
           <Space key={i} size={10} align="start">
@@ -45,7 +45,7 @@ function BulletList({ items }) {
 
 function NoteList({ items }) {
   return (
-    <Card variant="borderless" style={{ borderRadius: 16, backgroundColor: '#fafafa' }}>
+    <Card variant="borderless" style={{ borderRadius: 16, backgroundColor: '#fafafa', boxShadow: 'var(--shadow-border)' }}>
       <Flex vertical gap={8} style={{ width: '100%' }}>
         {items.map((item, i) => (
           <Text key={i} type="secondary" style={{ fontSize: 14, lineHeight: 1.7 }}>{item}</Text>
@@ -117,7 +117,7 @@ export default function ConsentPage() {
 
           {/* 3. 환불 규정 */}
           <Section icon={<CreditCardOutlined />} title="3. 환불 규정">
-            <Card variant="borderless" style={{ borderRadius: 16 }}>
+            <Card variant="borderless" style={{ borderRadius: 16, boxShadow: 'var(--shadow-border)' }}>
               <Flex vertical gap={14} style={{ width: '100%' }}>
                 <div>
                   <Text strong style={{ fontSize: 14, display: 'block', marginBottom: 4 }}>수업 시작 전</Text>

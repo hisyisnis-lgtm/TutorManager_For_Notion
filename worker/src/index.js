@@ -288,7 +288,7 @@ async function handleConsultRequest(request, env, corsHeaders) {
     });
   }
 
-  const { name, phone, level, preferredDays, preferredTime, concerns, reasons, reasonOther, message } = body;
+  const { name, phone, kakaoId, level, preferredDays, preferredTime, concerns, reasons, reasonOther, message } = body;
 
   const VALID_LEVELS = ['완전 처음이에요', '조금 배운 적 있어요', '어느 정도 배웠는데 막혀있어요'];
   const VALID_DAYS = ['월', '화', '수', '목', '금', '토', '일'];
@@ -398,6 +398,7 @@ async function handleConsultRequest(request, env, corsHeaders) {
       properties: {
         '이름': { title: [{ text: { content: name.trim() } }] },
         '전화번호': { rich_text: [{ text: { content: phoneDigits } }] },
+        '카카오톡 ID': kakaoId?.trim() ? { rich_text: [{ text: { content: kakaoId.trim() } }] } : undefined,
         '수준': level ? { select: { name: level } } : undefined,
         '희망 요일': Array.isArray(preferredDays) && preferredDays.length > 0
           ? { multi_select: preferredDays.map(d => ({ name: d })) }
@@ -428,6 +429,7 @@ async function handleConsultRequest(request, env, corsHeaders) {
   const ntfyMsg = [
     `이름: ${name.trim()}`,
     `전화: ${phoneDigits}`,
+    kakaoId?.trim() ? `카카오톡 ID: ${kakaoId.trim()}` : null,
     `수준: ${level || '미기재'}`,
     `고민: ${concernsText}`,
     `이유: ${reasonsText}`,

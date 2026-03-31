@@ -187,7 +187,7 @@ function PaymentCard({ payment, studentNameMap, classTypeMap }) {
       <Link to={`/payments/${payment.id}/edit`}>
         <Card
           variant="borderless"
-          style={{ borderRadius: 16 }}
+          style={{ borderRadius: 16, boxShadow: 'var(--shadow-border)', transition: 'box-shadow 150ms ease-out' }}
           styles={{ body: { padding: 16 } }}
         >
           <div className="flex items-start justify-between mb-2">
@@ -202,16 +202,16 @@ function PaymentCard({ payment, studentNameMap, classTypeMap }) {
           <div className="flex gap-4 text-sm">
             <div>
               <span className="text-xs text-gray-500">시간 회차 </span>
-              <span className="font-semibold text-gray-800">{payment.sessionCount}회</span>
+              <span className="font-semibold tabular-nums text-gray-800">{payment.sessionCount}회</span>
             </div>
             <div>
               <span className="text-xs text-gray-500">결제 금액 </span>
-              <span className="font-semibold text-gray-800">{formatKRW(payment.paymentAmount)}</span>
+              <span className="font-semibold tabular-nums text-gray-800">{formatKRW(payment.paymentAmount)}</span>
             </div>
             {payment.unpaid > 0 && (
               <div>
                 <span className="text-xs text-gray-500">미수금 </span>
-                <span className="font-semibold text-red-500">{formatKRW(payment.unpaid)}</span>
+                <span className="font-semibold tabular-nums text-red-500">{formatKRW(payment.unpaid)}</span>
               </div>
             )}
           </div>

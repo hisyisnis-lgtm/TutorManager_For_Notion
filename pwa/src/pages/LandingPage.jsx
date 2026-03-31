@@ -462,6 +462,7 @@ function LandingContent({ onConsult, onFloatChange }) {
 function ConsultContent() {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
+  const [kakaoId, setKakaoId] = useState('');
   const [level, setLevel] = useState('');
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
@@ -485,6 +486,7 @@ function ConsultContent() {
     try {
       await submitConsultation({
         name: name.trim(), phone: digits,
+        kakaoId: kakaoId.trim() || null,
         level: level || null,
         message: message.trim() || null,
       });
@@ -513,6 +515,24 @@ function ConsultContent() {
             <Text type="secondary" style={{ fontSize: 14, lineHeight: 1.6 }}>
               신청해주셔서 감사합니다.<br />확인 후 문자로 연락드릴게요.
             </Text>
+            <Divider style={{ margin: '20px 0 16px' }} />
+            <Text style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 10 }}>
+              더 빨리 연락받고 싶다면
+            </Text>
+            <Text type="secondary" style={{ fontSize: 13, lineHeight: 1.7, display: 'block', marginBottom: 14 }}>
+              채널톡으로 신청 완료 메시지를 보내주시면<br />우선적으로 확인해드릴게요.
+            </Text>
+            <Button
+              size="large" block
+              href="https://pf.kakao.com/_jFnFn"
+              target="_blank" rel="noopener noreferrer"
+              style={{
+                height: 48, borderRadius: 12, fontWeight: 700, fontSize: 15,
+                backgroundColor: '#FEE500', borderColor: '#FEE500', color: '#000',
+              }}
+            >
+              채널톡으로 알리기
+            </Button>
           </div>
         </Card>
       </div>
@@ -565,6 +585,18 @@ function ConsultContent() {
             onChange={e => setPhone(formatPhone(e.target.value))}
             placeholder="010-0000-0000" size="large"
             inputMode="numeric" autoComplete="tel"
+            style={{ borderRadius: 12 }}
+          />
+        </Form.Item>
+
+        <Form.Item
+          label={<span>카카오톡 ID <Text type="secondary" style={{ fontSize: 13, fontWeight: 400 }}>(선택)</Text></span>}
+          extra={<Text type="secondary" style={{ fontSize: 12 }}>카카오톡 설정 → 계정 → 계정 정보 → 아이디</Text>}
+        >
+          <Input
+            value={kakaoId} onChange={e => setKakaoId(e.target.value)}
+            placeholder="kakao_id" size="large"
+            autoComplete="off" autoCorrect="off" autoCapitalize="off"
             style={{ borderRadius: 12 }}
           />
         </Form.Item>
