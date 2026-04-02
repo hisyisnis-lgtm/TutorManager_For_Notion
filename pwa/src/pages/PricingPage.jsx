@@ -470,8 +470,9 @@ export default function PricingPage() {
                   </Flex>
                   <Flex justify="space-between" align="flex-start" style={{ marginBottom: 10 }}>
                     <div>
-                      <Text strong style={{ color: '#1a1a1a', fontSize: 16, display: 'block', marginBottom: 3 }}>부스터 플랜</Text>
-                      <Text style={{ color: '#595959', fontSize: 13 }}>주 2회 · 90분 · 총 8회</Text>
+                      <Text strong style={{ color: '#1a1a1a', fontSize: 16, display: 'block' }}>부스터 플랜</Text>
+                      <Text strong style={{ color: '#1a1a1a', fontSize: 16, display: 'block', marginBottom: 3 }}>+원데이 클래스 1시간</Text>
+                      <Text style={{ color: '#595959', fontSize: 13 }}>주 2회 · 90분 · 총 8회 + 60분 1회</Text>
                     </div>
                     <div style={{ textAlign: 'right' }}>
                       <Text className="tabular-nums" style={{ color: '#1a1a1a', fontSize: 24, fontWeight: 700, display: 'block', lineHeight: 1.2 }}>600,000</Text>
@@ -529,6 +530,7 @@ export default function PricingPage() {
                   <Flex justify="space-between" align="flex-start" style={{ marginBottom: 10 }}>
                     <div>
                       <Text strong style={{ color: 'white', fontSize: 16, display: 'block' }}>VIP 멤버십 플랜</Text>
+                      <Text strong style={{ color: 'white', fontSize: 16, display: 'block' }}>+원데이 클래스 1시간</Text>
                     </div>
                     <div style={{ textAlign: 'right' }}>
                       <Text className="tabular-nums" style={{ color: 'rgba(255,255,255,0.5)', fontSize: 17, textDecoration: 'line-through', display: 'block' }}>
