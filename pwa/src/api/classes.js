@@ -41,13 +41,16 @@ export async function fetchClassesPage(opts = {}) {
 }
 
 /** 수업 생성 */
-export async function createClass({ studentIds, classTypeId, datetime, duration, notes, location, locationMemo }) {
+export async function createClass({ studentIds, classTypeId, datetime, duration, notes, location, locationMemo, title }) {
   const properties = {
     학생: { relation: studentIds.map((id) => ({ id })) },
     '수업 유형': { relation: [{ id: classTypeId }] },
     '수업 일시': { date: { start: datetime } },
     '수업 시간(분)': { select: { name: String(duration) } },
   };
+  if (title) {
+    properties['제목'] = { title: [{ text: { content: title } }] };
+  }
   if (notes) {
     properties['특이사항'] = { select: { name: notes } };
   }
@@ -71,12 +74,17 @@ export async function bulkCreateClasses(items) {
 }
 
 /** 수업 수정 (충돌_감지 checkbox는 건드리지 않음) */
-export async function updateClass(pageId, { studentIds, classTypeId, datetime, duration, notes, location, locationMemo }) {
+export async function updateClass(pageId, { studentIds, classTypeId, datetime, duration, notes, location, locationMemo, title }) {
   const properties = {};
   if (studentIds) properties['학생'] = { relation: studentIds.map((id) => ({ id })) };
   if (classTypeId) properties['수업 유형'] = { relation: [{ id: classTypeId }] };
   if (datetime) properties['수업 일시'] = { date: { start: datetime } };
   if (duration) properties['수업 시간(분)'] = { select: { name: String(duration) } };
+  if (title !== undefined) {
+    properties['제목'] = title
+      ? { title: [{ text: { content: title } }] }
+      : { title: [] };
+  }
   // notes가 null이면 특이사항 제거, 값이 있으면 설정
   properties['특이사항'] = notes ? { select: { name: notes } } : { select: null };
   // location이 null이면 제거, 값이 있으면 설정

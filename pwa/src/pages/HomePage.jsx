@@ -267,7 +267,7 @@ export default function HomePage() {
                   aria-label={hasClass ? `${calMonth + 1}월 ${day}일, 수업 ${count}개` : undefined}
                   aria-pressed={hasClass ? isSelected : undefined}
                   onKeyDown={hasClass ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleDayClick(day); } } : undefined}
-                  className={`flex flex-col items-center h-9 ${hasClass ? 'cursor-pointer' : ''}`}
+                  className={`flex flex-col items-center h-11 ${hasClass ? 'cursor-pointer' : ''}`}
                   onClick={() => handleDayClick(day)}
                 >
                   <span
@@ -397,7 +397,7 @@ export default function HomePage() {
                 const classType = classTypeMap[cls.classTypeId]?.classType ?? '';
                 return (
                   <li key={cls.id}>
-                    <Link to="/classes">
+                    <Link to={`/classes/${cls.id}/edit`}>
                       <Card
                         variant="borderless"
                         style={{ borderRadius: 16, boxShadow: 'var(--shadow-border)', transition: 'box-shadow 150ms ease-out' }}

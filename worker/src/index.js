@@ -624,14 +624,16 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
       });
     }
 
-    // 09:00 ~ 21:00 전체 30분 슬롯 생성 (22:00은 종료시간으로만 사용)
+    // 08:00 ~ 21:00 전체 30분 슬롯 생성 (22:00은 종료시간으로만 사용)
     const allSlots = new Set();
-    for (let m = 9 * 60; m <= 21 * 60; m += 30) allSlots.add(minToTime(m));
+    for (let m = 8 * 60; m <= 21 * 60; m += 30) allSlots.add(minToTime(m));
 
     // busySet: 시작 불가 슬롯
     // passableBlockSet: 종료 시간 범위 탐색 차단 슬롯 (pre-buffer 중 classStart-30만 차단)
     const busySet = new Set();
     const passableBlockSet = new Set();
+    // busyIntervals: 클라이언트 측 수업시간 충돌 계산용 (check-conflict 대체)
+    const busyIntervals = [];
     for (const p of classRes.results ?? []) {
       if (p.id.replace(/-/g, '') === excludeSlotId) continue;
       const props = p.properties;
@@ -656,6 +658,7 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
       const postBuf = minToTime(classStartMin + dur);
       busySet.add(postBuf);
       passableBlockSet.add(postBuf);
+      busyIntervals.push({ startMin: classStartMin, dur });
     }
 
     // 개별 차단 시간 슬롯 제거
@@ -666,7 +669,7 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
 
     const available = [...allSlots].filter(t => !busySet.has(t)).sort();
     const passable = [...allSlots].filter(t => !passableBlockSet.has(t)).sort();
-    return new Response(JSON.stringify({ available, passable }), {
+    return new Response(JSON.stringify({ available, passable, busyIntervals }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

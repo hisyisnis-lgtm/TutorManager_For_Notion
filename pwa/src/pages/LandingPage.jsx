@@ -35,6 +35,20 @@ const theme = {
   },
 };
 
+// ─── prefers-reduced-motion 감지 ─────────────────────────────
+function usePrefersReducedMotion() {
+  const [reduced, setReduced] = useState(
+    () => window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  );
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const handler = (e) => setReduced(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+  return reduced;
+}
+
 // ─── 스크롤 애니메이션 ────────────────────────────────────────
 function useInView(threshold = 0.12) {
   const ref = useRef(null);
@@ -53,11 +67,12 @@ function useInView(threshold = 0.12) {
 
 function FadeUp({ children, delay = 0, style = {} }) {
   const [ref, inView] = useInView();
+  const reducedMotion = usePrefersReducedMotion();
   return (
     <div ref={ref} style={{
-      opacity: inView ? 1 : 0,
-      transform: inView ? 'translateY(0)' : 'translateY(24px)',
-      transition: `opacity 0.55s ease ${delay}ms, transform 0.55s ease ${delay}ms`,
+      opacity: reducedMotion || inView ? 1 : 0,
+      transform: reducedMotion || inView ? 'translateY(0)' : 'translateY(24px)',
+      transition: reducedMotion ? 'none' : `opacity 0.55s ease ${delay}ms, transform 0.55s ease ${delay}ms`,
       ...style,
     }}>
       {children}

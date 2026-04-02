@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button, Input, Select, Typography } from 'antd';
 import PageHeader from '../components/layout/PageHeader.jsx';
@@ -83,6 +83,7 @@ export default function ClassFormPage() {
     notes: '',
     location: '강남사무실',
     locationMemo: '',
+    guestName: '',        // 무료상담 상담자 이름 (노션 제목)
     // 일회성
     datetime: '',
     // 반복
@@ -93,7 +94,7 @@ export default function ClassFormPage() {
   });
 
   const [availableSlots, setAvailableSlots] = useState(null); // null=미조회
-  const [availableDurations, setAvailableDurations] = useState(null); // null=체크안함
+  const [busyIntervals, setBusyIntervals] = useState([]); // 당일 수업 구간 (클라이언트 충돌 계산용)
 
   const selectedDate = form.datetime ? form.datetime.slice(0, 10) : '';
   const selectedHour = form.datetime ? form.datetime.slice(11, 13) : '';
@@ -101,43 +102,55 @@ export default function ClassFormPage() {
 
   // 날짜 변경 시 가용 슬롯 조회 (일회성만)
   useEffect(() => {
-    if (!selectedDate || recurring) { setAvailableSlots(null); return; }
+    if (!selectedDate || recurring) { setAvailableSlots(null); setBusyIntervals([]); return; }
     let cancelled = false;
     fetchTimeSlotsForTeacher(selectedDate, isEdit ? id : '')
-      .then(data => { if (!cancelled) setAvailableSlots(data.available ?? data); })
-      .catch(() => { if (!cancelled) setAvailableSlots(null); });
+      .then(data => {
+        if (!cancelled) {
+          setAvailableSlots(data.available ?? data);
+          setBusyIntervals(data.busyIntervals ?? []);
+        }
+      })
+      .catch(() => { if (!cancelled) { setAvailableSlots(null); setBusyIntervals([]); } });
     return () => { cancelled = true; };
   }, [selectedDate, isEdit, id, recurring]);
 
-  // 시작 시각 확정 시 수업 시간별 충돌 검사 (일회성만)
-  useEffect(() => {
-    if (recurring || !selectedDate || !selectedHour || !selectedMin) {
-      setAvailableDurations(null);
-      return;
-    }
-    const startTime = `${selectedHour}:${selectedMin}`;
-    let cancelled = false;
-    Promise.all(
-      DURATION_OPTIONS.map(d =>
-        checkConflict(selectedDate, startTime, parseInt(d), isEdit ? id : '')
-          .then(r => ({ d, ok: !r.conflict }))
-          .catch(() => ({ d, ok: true }))
-      )
-    ).then(results => {
-      if (!cancelled) setAvailableDurations(new Set(results.filter(r => r.ok).map(r => r.d)));
-    });
-    return () => { cancelled = true; };
-  }, [selectedDate, selectedHour, selectedMin, recurring, isEdit, id]);
+  // 수업 시간별 충돌 여부를 클라이언트에서 즉시 계산 (API 호출 없음)
+  const availableDurations = useMemo(() => {
+    if (recurring || !selectedDate || !selectedHour || !selectedMin) return null;
+    const startMin = parseInt(selectedHour) * 60 + parseInt(selectedMin);
+    return new Set(
+      ['30', ...DURATION_OPTIONS].filter(d => {
+        const dur = parseInt(d);
+        const endMin = startMin + dur;
+        return !busyIntervals.some(({ startMin: cs, dur: cd }) =>
+          startMin < cs + cd + 30 && endMin > cs - 30
+        );
+      })
+    );
+  }, [selectedDate, selectedHour, selectedMin, recurring, busyIntervals]);
 
-  /** 해당 시(HH)에 가용 슬롯이 하나라도 있는지 */
-  const isHourAvailable = (h) => {
-    if (!availableSlots) return true;
-    return availableSlots.some(s => s.startsWith(h + ':'));
+  /** (startMin, durationMin) 조합이 busyIntervals와 충돌하지 않는지 */
+  const noConflict = (startMin, durationMin) => {
+    const endMin = startMin + durationMin;
+    return !busyIntervals.some(({ startMin: cs, dur: cd }) =>
+      startMin < cs + cd + 30 && endMin > cs - 30
+    );
   };
-  /** 선택된 시+분 조합이 가용한지 */
+
+  /** 해당 시(HH)에 어떤 수업 시간으로든 시작 가능한 슬롯이 있는지 */
+  const isHourAvailable = (h) => {
+    if (availableSlots === null) return true; // 아직 미조회
+    return ['00', '30'].some(min => {
+      const startMin = parseInt(h) * 60 + parseInt(min);
+      return displayDurationOptions.some(d => noConflict(startMin, parseInt(d)));
+    });
+  };
+  /** 선택된 시+분 조합에서 어떤 수업 시간이든 가능한지 */
   const isMinAvailable = (min) => {
-    if (!availableSlots || !selectedHour) return true;
-    return availableSlots.includes(`${selectedHour}:${min}`);
+    if (availableSlots === null || !selectedHour) return true;
+    const startMin = parseInt(selectedHour) * 60 + parseInt(min);
+    return displayDurationOptions.some(d => noConflict(startMin, parseInt(d)));
   };
   /** 해당 수업 시간이 선택된 시작 시각에서 가능한지 */
   const isDurationAvailable = (d) => {
@@ -173,6 +186,7 @@ export default function ClassFormPage() {
           notes: cls.notes || '',
           location: cls.location || '강남사무실',
           locationMemo: cls.locationMemo || '',
+          guestName: cls.title || '',
         }));
       } catch (e) {
         setError(e.message);
@@ -208,7 +222,21 @@ export default function ClassFormPage() {
       ? Math.min(...selectedStudents.map((s) => s.remainingSessions ?? 0))
       : 0;
 
-  const canRecur = form.studentIds.length > 0 && Boolean(form.classTypeId);
+  // 무료상담 여부 (수업 유형 타이틀에 "무료상담" 포함)
+  const selectedClassType = classTypes.find(ct => ct.id === form.classTypeId);
+  const isFreeTrial = selectedClassType?.title?.includes('무료상담') ?? false;
+
+  // 무료상담은 30분 옵션 추가, 일반 수업은 기존 60분 이상
+  const displayDurationOptions = isFreeTrial ? ['30', '60'] : DURATION_OPTIONS;
+
+  const canRecur = !isFreeTrial && form.studentIds.length > 0 && Boolean(form.classTypeId);
+
+  // 단계별 표시 조건
+  const showStudent = Boolean(form.classTypeId);
+  const studentDone = isFreeTrial || form.studentIds.length > 0;
+  const showDatetime = showStudent && studentDone;
+  const datetimeDone = recurring ? Boolean(form.recurTime) : Boolean(form.datetime);
+  const showDuration = showDatetime && datetimeDone;
   const sessionsPerLesson = parseInt(form.duration) / 60;
   const maxCount = Math.floor(minRemaining / sessionsPerLesson);
   const recurDates = recurring
@@ -218,8 +246,12 @@ export default function ClassFormPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.studentIds.length) {
+    if (!form.studentIds.length && !isFreeTrial) {
       setError('학생을 최소 한 명 선택하세요.');
+      return;
+    }
+    if (isFreeTrial && !form.studentIds.length && !form.guestName.trim()) {
+      setError('상담자 이름을 입력하거나 학생을 선택하세요.');
       return;
     }
     if (!form.classTypeId) {
@@ -253,11 +285,7 @@ export default function ClassFormPage() {
           setSaving(false);
           return;
         }
-        if (recurCount * sessionsPerLesson > minRemaining) {
-          setError(`잔여 회차(${minRemaining})가 부족합니다. 최대 ${maxCount}개 수업 등록 가능합니다.`);
-          setSaving(false);
-          return;
-        }
+        // 강사용 폼: 잔여 회차 초과해도 등록 가능 (경고는 UI에서 표시)
         const items = recurDates.map((date) => ({
           studentIds: form.studentIds,
           classTypeId: form.classTypeId,
@@ -297,6 +325,7 @@ export default function ClassFormPage() {
           notes: form.notes || null,
           location: form.location || null,
           locationMemo: form.locationMemo || '',
+          title: form.guestName.trim() || undefined,
         };
         // 일회성 수업 충돌 검사
         const [dateStr, timeStr] = form.datetime.split('T');
@@ -346,215 +375,244 @@ export default function ClassFormPage() {
           </div>
         )}
 
-        {/* 학생 선택 */}
-        <div>
-          <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>
-            학생 선택 (2:1 수업 시 두 명 선택)
-          </Typography.Text>
-          <Input
-            type="text"
-            placeholder="학생 이름 검색..."
-            value={studentSearch}
-            onChange={(e) => setStudentSearch(e.target.value)}
-            size="large"
-            style={{ borderRadius: 12, marginBottom: 8 }}
-          />
-          <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
-            {students
-              .filter((s) => s.name.includes(studentSearch))
-              .map((s) => {
-                const isSelected = form.studentIds.includes(s.id);
-                const isFirstSelected = isSelected && form.studentIds[0] === s.id;
-                return (
-                  <label
-                    key={s.id}
-                    ref={isFirstSelected ? selectedStudentRef : null}
-                    className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
-                      isSelected
-                        ? 'border-brand-500 bg-brand-50'
-                        : 'border-gray-200 bg-white'
-                    }`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={isSelected}
-                      onChange={() => toggleStudent(s.id)}
-                      className="w-4 h-4 accent-brand-600"
-                    />
-                    <span className="text-sm font-medium text-gray-800">{s.name}</span>
-                    <span className="text-xs text-gray-500 ml-auto">{s.status}</span>
-                    {recurring && isSelected && (
-                      <span className="text-xs text-brand-600 font-medium">
-                        잔여 {s.remainingSessions ?? 0}회차
-                      </span>
-                    )}
-                  </label>
-                );
-              })}
-            {students.filter((s) => s.name.includes(studentSearch)).length === 0 && (
-              <p className="text-sm text-gray-400 text-center py-3">검색 결과 없음</p>
-            )}
-          </div>
-        </div>
-
-        {/* 수업 유형 */}
+        {/* ① 수업 유형 — 항상 표시 */}
         <div>
           <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>
             수업 유형
           </Typography.Text>
           <Select
             value={form.classTypeId || undefined}
-            onChange={(value) => setForm((f) => ({ ...f, classTypeId: value }))}
+            onChange={(value) => {
+              const ct = classTypes.find(c => c.id === value);
+              const isFT = ct?.title?.includes('무료상담') ?? false;
+              setForm((f) => ({
+                ...f,
+                classTypeId: value,
+                duration: isFT ? '30' : (f.duration === '30' ? '60' : f.duration),
+              }));
+            }}
             style={{ width: '100%' }}
             size="large"
             placeholder="선택하세요"
           >
             {classTypes.map((ct) => (
               <Select.Option key={ct.id} value={ct.id}>
-                {ct.title} ({ct.classType} · {ct.unitPrice.toLocaleString()}원)
+                {ct.title}
               </Select.Option>
             ))}
           </Select>
         </div>
 
-        {/* 수업 일시 — 일회성: 날짜+시각 / 반복: 시작 시각만 */}
-        <div>
-          <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>
-            {recurring ? '수업 시작 시각' : '수업 일시'}
-          </Typography.Text>
-          {!recurring ? (
-            <div className="flex gap-2">
-              <Input
-                type="date"
-                value={form.datetime ? form.datetime.slice(0, 10) : ''}
-                onChange={(e) => {
-                  const date = e.target.value;
-                  const time = form.datetime ? form.datetime.slice(11) : '09:00';
-                  setForm((f) => ({ ...f, datetime: date ? `${date}T${time}` : '' }));
-                }}
-                size="large"
-                style={{ borderRadius: 12, flex: 1 }}
-              />
-              <Select
-                value={selectedHour || undefined}
-                onChange={(h) => {
-                  const date = form.datetime ? form.datetime.slice(0, 10) : '';
-                  const min = form.datetime ? form.datetime.slice(14, 16) : '00';
-                  setForm((f) => ({ ...f, datetime: `${date}T${h}:${min}` }));
-                }}
-                size="large"
-                style={{ width: 80 }}
-                placeholder="시"
-              >
-                {Array.from({ length: 17 }, (_, i) => i + 6).map((h) => {
-                  const hStr = String(h).padStart(2, '0');
-                  const unavailable = !isHourAvailable(hStr);
+        {/* ② 학생 선택 — 수업 유형 선택 후 표시 */}
+        {showStudent && (
+          <div style={{ animation: 'fadeSlideUp 0.35s ease both' }}>
+            {/* 무료상담: 상담자 이름 입력 */}
+            {isFreeTrial && (
+              <div style={{ marginBottom: 20 }}>
+                <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>
+                  상담자 이름
+                </Typography.Text>
+                <Input
+                  placeholder="상담자 이름을 입력하세요 (노션 제목)"
+                  value={form.guestName}
+                  onChange={(e) => setForm((f) => ({ ...f, guestName: e.target.value }))}
+                  size="large"
+                  style={{ borderRadius: 12 }}
+                />
+              </div>
+            )}
+            <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>
+              학생 선택 {isFreeTrial ? <span style={{ fontWeight: 400, color: '#8c8c8c' }}>(무료상담은 선택 사항)</span> : '(2:1 수업 시 두 명 선택)'}
+            </Typography.Text>
+            <Input
+              type="text"
+              placeholder="학생 이름 검색..."
+              value={studentSearch}
+              onChange={(e) => setStudentSearch(e.target.value)}
+              size="large"
+              style={{ borderRadius: 12, marginBottom: 8 }}
+            />
+            <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+              {students
+                .filter((s) => s.name.includes(studentSearch))
+                .map((s) => {
+                  const isSelected = form.studentIds.includes(s.id);
+                  const isFirstSelected = isSelected && form.studentIds[0] === s.id;
                   return (
-                    <Select.Option key={h} value={hStr} disabled={unavailable}>
-                      {h}시{unavailable ? ' ✕' : ''}
-                    </Select.Option>
+                    <label
+                      key={s.id}
+                      ref={isFirstSelected ? selectedStudentRef : null}
+                      className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
+                        isSelected
+                          ? 'border-brand-500 bg-brand-50'
+                          : 'border-gray-200 bg-white'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleStudent(s.id)}
+                        className="w-4 h-4 accent-brand-600"
+                      />
+                      <span className="text-sm font-medium text-gray-800">{s.name}</span>
+                      <span className="text-xs text-gray-500 ml-auto">{s.status}</span>
+                      {recurring && isSelected && (
+                        <span className="text-xs text-brand-600 font-medium">
+                          잔여 {s.remainingSessions ?? 0}회차
+                        </span>
+                      )}
+                    </label>
                   );
                 })}
-              </Select>
-              {['00', '30'].map((min) => {
-                const unavailable = !isMinAvailable(min);
-                return (
-                  <button
-                    key={min}
-                    type="button"
-                    disabled={unavailable}
-                    onClick={() => {
-                      const date = form.datetime ? form.datetime.slice(0, 10) : '';
-                      const hour = form.datetime ? form.datetime.slice(11, 13) : '09';
-                      setForm((f) => ({ ...f, datetime: `${date}T${hour}:${min}` }));
-                    }}
-                    className={`px-3 rounded-xl text-sm font-medium border-2 transition-colors ${
-                      unavailable
-                        ? 'border-gray-100 bg-gray-50 text-gray-300 cursor-not-allowed'
-                        : selectedMin === min
-                        ? 'border-brand-600 bg-brand-50 text-brand-700'
-                        : 'border-gray-200 bg-white text-gray-600'
-                    }`}
-                  >
-                    :{min}
-                  </button>
-                );
-              })}
+              {students.filter((s) => s.name.includes(studentSearch)).length === 0 && (
+                <p className="text-sm text-gray-400 text-center py-3">검색 결과 없음</p>
+              )}
             </div>
-          ) : (
-            <div className="flex gap-2">
-              <Select
-                value={form.recurTime ? form.recurTime.slice(0, 2) : undefined}
-                onChange={(h) => {
-                  const min = form.recurTime ? form.recurTime.slice(3, 5) : '00';
-                  setForm((f) => ({ ...f, recurTime: `${h}:${min}` }));
-                }}
-                size="large"
-                style={{ flex: 1 }}
-                placeholder="시"
-              >
-                {Array.from({ length: 17 }, (_, i) => i + 6).map((h) => (
-                  <Select.Option key={h} value={String(h).padStart(2, '0')}>
-                    {h}시
-                  </Select.Option>
-                ))}
-              </Select>
-              {['00', '30'].map((min) => {
-                const curMin = form.recurTime ? form.recurTime.slice(3, 5) : '00';
-                return (
-                  <button
-                    key={min}
-                    type="button"
-                    onClick={() => {
-                      const hour = form.recurTime ? form.recurTime.slice(0, 2) : '10';
-                      setForm((f) => ({ ...f, recurTime: `${hour}:${min}` }));
-                    }}
-                    className={`px-4 rounded-xl text-sm font-medium border-2 transition-colors ${
-                      curMin === min
-                        ? 'border-brand-600 bg-brand-50 text-brand-700'
-                        : 'border-gray-200 bg-white text-gray-600'
-                    }`}
-                  >
-                    :{min}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* 수업 시간 */}
-        <div>
-          <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>
-            수업 시간
-          </Typography.Text>
-          <div className="grid grid-cols-5 gap-2">
-            {DURATION_OPTIONS.map((d) => {
-              const disabled = !recurring && !isDurationAvailable(d);
-              return (
-                <button
-                  key={d}
-                  type="button"
-                  disabled={disabled}
-                  onClick={() => setForm((f) => ({ ...f, duration: d }))}
-                  className={`py-3 rounded-xl text-sm font-medium border-2 transition-colors ${
-                    disabled
-                      ? 'border-gray-100 bg-gray-50 text-gray-300 cursor-not-allowed'
-                      : form.duration === d
-                      ? 'border-brand-600 bg-brand-50 text-brand-700'
-                      : 'border-gray-200 bg-white text-gray-600'
-                  }`}
-                >
-                  {d}분
-                </button>
-              );
-            })}
           </div>
-        </div>
+        )}
 
-        {/* 반복 수업 등록 (토글 + 설정, 편집 모드에서는 숨김) */}
-        {!isEdit && (
-          <>
+        {/* ③ 수업 일시 — 학생 완료(선택 or 무료상담) 후 표시 */}
+        {showDatetime && (
+          <div style={{ animation: 'fadeSlideUp 0.35s ease both' }}>
+            <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>
+              {recurring ? '수업 시작 시각' : '수업 일시'}
+            </Typography.Text>
+            {!recurring ? (
+              <div className="flex gap-2">
+                <Input
+                  type="date"
+                  value={form.datetime ? form.datetime.slice(0, 10) : ''}
+                  onChange={(e) => {
+                    const date = e.target.value;
+                    const time = form.datetime ? form.datetime.slice(11) : '08:00';
+                    setForm((f) => ({ ...f, datetime: date ? `${date}T${time}` : '' }));
+                  }}
+                  size="large"
+                  style={{ borderRadius: 12, flex: 1 }}
+                />
+                <Select
+                  value={selectedHour || undefined}
+                  onChange={(h) => {
+                    const date = form.datetime ? form.datetime.slice(0, 10) : '';
+                    const min = form.datetime ? form.datetime.slice(14, 16) : '00';
+                    setForm((f) => ({ ...f, datetime: `${date}T${h}:${min}` }));
+                  }}
+                  size="large"
+                  style={{ width: 80 }}
+                  placeholder="시"
+                >
+                  {Array.from({ length: 17 }, (_, i) => i + 6).map((h) => {
+                    const hStr = String(h).padStart(2, '0');
+                    const unavailable = !isHourAvailable(hStr);
+                    return (
+                      <Select.Option key={h} value={hStr} disabled={unavailable}>
+                        {h}시{unavailable ? ' ✕' : ''}
+                      </Select.Option>
+                    );
+                  })}
+                </Select>
+                {['00', '30'].map((min) => {
+                  const unavailable = !isMinAvailable(min);
+                  return (
+                    <button
+                      key={min}
+                      type="button"
+                      disabled={unavailable}
+                      onClick={() => {
+                        const date = form.datetime ? form.datetime.slice(0, 10) : '';
+                        const hour = form.datetime ? form.datetime.slice(11, 13) : '08';
+                        setForm((f) => ({ ...f, datetime: `${date}T${hour}:${min}` }));
+                      }}
+                      className={`px-3 rounded-xl text-sm font-medium border-2 transition-colors ${
+                        unavailable
+                          ? 'border-gray-100 bg-gray-50 text-gray-300 cursor-not-allowed'
+                          : selectedMin === min
+                          ? 'border-brand-600 bg-brand-50 text-brand-700'
+                          : 'border-gray-200 bg-white text-gray-600'
+                      }`}
+                    >
+                      :{min}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <Select
+                  value={form.recurTime ? form.recurTime.slice(0, 2) : undefined}
+                  onChange={(h) => {
+                    const min = form.recurTime ? form.recurTime.slice(3, 5) : '00';
+                    setForm((f) => ({ ...f, recurTime: `${h}:${min}` }));
+                  }}
+                  size="large"
+                  style={{ flex: 1 }}
+                  placeholder="시"
+                >
+                  {Array.from({ length: 17 }, (_, i) => i + 6).map((h) => (
+                    <Select.Option key={h} value={String(h).padStart(2, '0')}>
+                      {h}시
+                    </Select.Option>
+                  ))}
+                </Select>
+                {['00', '30'].map((min) => {
+                  const curMin = form.recurTime ? form.recurTime.slice(3, 5) : '00';
+                  return (
+                    <button
+                      key={min}
+                      type="button"
+                      onClick={() => {
+                        const hour = form.recurTime ? form.recurTime.slice(0, 2) : '10';
+                        setForm((f) => ({ ...f, recurTime: `${hour}:${min}` }));
+                      }}
+                      className={`px-4 rounded-xl text-sm font-medium border-2 transition-colors ${
+                        curMin === min
+                          ? 'border-brand-600 bg-brand-50 text-brand-700'
+                          : 'border-gray-200 bg-white text-gray-600'
+                      }`}
+                    >
+                      :{min}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ④ 수업 시간 — 일시 입력 후 표시 */}
+        {showDuration && (
+          <div style={{ animation: 'fadeSlideUp 0.35s ease both' }}>
+            <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>
+              수업 시간
+            </Typography.Text>
+            <div className="grid grid-cols-5 gap-2">
+              {displayDurationOptions.map((d) => {
+                const disabled = !recurring && !isDurationAvailable(d);
+                return (
+                  <button
+                    key={d}
+                    type="button"
+                    disabled={disabled}
+                    onClick={() => setForm((f) => ({ ...f, duration: d }))}
+                    className={`py-3 rounded-xl text-sm font-medium border-2 transition-colors ${
+                      disabled
+                        ? 'border-gray-100 bg-gray-50 text-gray-300 cursor-not-allowed'
+                        : form.duration === d
+                        ? 'border-brand-600 bg-brand-50 text-brand-700'
+                        : 'border-gray-200 bg-white text-gray-600'
+                    }`}
+                  >
+                    {d}분
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ⑤ 반복 수업 등록 — 일시 입력 후 표시 (편집 모드·무료상담에서는 숨김) */}
+        {showDuration && !isEdit && !isFreeTrial && (
+          <div style={{ animation: 'fadeSlideUp 0.35s ease both' }}>
             <div
               className={`flex items-center justify-between p-3 rounded-xl border-2 transition-colors ${
                 !canRecur
@@ -577,7 +635,7 @@ export default function ClassFormPage() {
             </div>
 
             {recurring && (
-              <div className="space-y-4 p-4 bg-gray-50 rounded-xl border border-gray-200">
+              <div className="space-y-4 p-4 bg-gray-50 rounded-xl border border-gray-200 mt-4">
                 {/* 요일 선택 */}
                 <div>
                   <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>
@@ -624,7 +682,7 @@ export default function ClassFormPage() {
                       {selectedStudents.length === 0 ? '학생을 선택하면 등록 가능한 수업 수가 표시됩니다.'
                         : !form.recurEndDate ? '종료일을 선택하면 등록 예정 수업 수가 표시됩니다.'
                         : recurCount === 0 ? '선택한 날짜 범위에 해당 요일 수업이 없습니다.'
-                        : overLimit ? (<>범위 내 수업 <span className="font-semibold">{recurCount}개</span>{' '}({recurCount * sessionsPerLesson}회차) — 잔여 {minRemaining}회차 초과!{' '}최대 <span className="font-semibold">{maxCount}개</span> 등록 가능</>)
+                        : overLimit ? (<>범위 내 수업 <span className="font-semibold">{recurCount}개</span>{' '}({recurCount * sessionsPerLesson}회차) — 잔여 {minRemaining}회차 초과 (등록은 가능)</>)
                         : (<>잔여 {minRemaining}회차 충분 →{' '}<span className="font-semibold">수업 {recurCount}개</span> 등록 예정
                             {recurDates.length > 0 && (
                               <div className="mt-2 text-xs text-brand-600 space-y-0.5">
@@ -639,89 +697,95 @@ export default function ClassFormPage() {
                 })()}
               </div>
             )}
-          </>
+          </div>
         )}
 
-        {/* 수업 장소 */}
-        <div>
-          <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>
-            수업 장소
-          </Typography.Text>
-          <div className="grid grid-cols-2 gap-2">
-            {LOCATION_OPTIONS.map((loc) => (
-              <button
-                key={loc}
-                type="button"
-                onClick={() => setForm((f) => ({ ...f, location: loc }))}
-                className={`py-3 rounded-xl text-sm font-medium border-2 transition-colors ${
-                  form.location === loc
-                    ? 'border-brand-600 bg-brand-50 text-brand-700'
-                    : 'border-gray-200 bg-white text-gray-600'
-                }`}
-              >
-                {loc}
-              </button>
-            ))}
+        {/* ⑥ 수업 장소 — 일시 입력 후 표시 */}
+        {showDuration && (
+          <div style={{ animation: 'fadeSlideUp 0.35s ease both' }}>
+            <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>
+              수업 장소
+            </Typography.Text>
+            <div className="grid grid-cols-2 gap-2">
+              {LOCATION_OPTIONS.map((loc) => (
+                <button
+                  key={loc}
+                  type="button"
+                  onClick={() => setForm((f) => ({ ...f, location: loc }))}
+                  className={`py-3 rounded-xl text-sm font-medium border-2 transition-colors ${
+                    form.location === loc
+                      ? 'border-brand-600 bg-brand-50 text-brand-700'
+                      : 'border-gray-200 bg-white text-gray-600'
+                  }`}
+                >
+                  {loc}
+                </button>
+              ))}
+            </div>
+            <Input
+              type="text"
+              placeholder="상세 장소 메모 (예: 스타벅스 강남역점)"
+              value={form.locationMemo}
+              onChange={(e) => setForm((f) => ({ ...f, locationMemo: e.target.value }))}
+              size="large"
+              style={{ borderRadius: 12, marginTop: 8 }}
+            />
           </div>
-          <Input
-            type="text"
-            placeholder="상세 장소 메모 (예: 스타벅스 강남역점)"
-            value={form.locationMemo}
-            onChange={(e) => setForm((f) => ({ ...f, locationMemo: e.target.value }))}
-            size="large"
-            style={{ borderRadius: 12, marginTop: 8 }}
-          />
-        </div>
+        )}
 
-        {/* 특이사항 */}
-        <div>
-          <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>
-            특이사항 (선택)
-          </Typography.Text>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => setForm((f) => ({ ...f, notes: '' }))}
-              className={`py-3 rounded-xl text-sm font-medium border-2 transition-colors ${
-                !form.notes
-                  ? 'border-gray-700 bg-gray-100 text-gray-800'
-                  : 'border-gray-200 bg-white text-gray-600'
-              }`}
-            >
-              없음
-            </button>
-            {NOTES_OPTIONS.map((n) => (
+        {/* ⑦ 특이사항 — 일시 입력 후 표시 */}
+        {showDuration && (
+          <div style={{ animation: 'fadeSlideUp 0.35s ease both' }}>
+            <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>
+              특이사항 (선택)
+            </Typography.Text>
+            <div className="grid grid-cols-2 gap-2">
               <button
-                key={n}
                 type="button"
-                onClick={() => setForm((f) => ({ ...f, notes: n }))}
+                onClick={() => setForm((f) => ({ ...f, notes: '' }))}
                 className={`py-3 rounded-xl text-sm font-medium border-2 transition-colors ${
-                  form.notes === n
+                  !form.notes
                     ? 'border-gray-700 bg-gray-100 text-gray-800'
                     : 'border-gray-200 bg-white text-gray-600'
                 }`}
               >
-                {n}
+                없음
               </button>
-            ))}
+              {NOTES_OPTIONS.map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => setForm((f) => ({ ...f, notes: n }))}
+                  className={`py-3 rounded-xl text-sm font-medium border-2 transition-colors ${
+                    form.notes === n
+                      ? 'border-gray-700 bg-gray-100 text-gray-800'
+                      : 'border-gray-200 bg-white text-gray-600'
+                  }`}
+                >
+                  {n}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
-        <Button
-          type="primary"
-          block
-          htmlType="submit"
-          disabled={saving}
-          style={{ borderRadius: 12, height: 44, fontWeight: 600, marginTop: 8 }}
-        >
-          {saving
-            ? '저장 중...'
-            : recurring
-            ? `수업 ${recurCount}개 일괄 등록`
-            : isEdit
-            ? '수정하기'
-            : '수업 추가'}
-        </Button>
+        {showDuration && (
+          <Button
+            type="primary"
+            block
+            htmlType="submit"
+            disabled={saving}
+            style={{ borderRadius: 12, height: 44, fontWeight: 600, marginTop: 8, animation: 'fadeSlideUp 0.35s ease both' }}
+          >
+            {saving
+              ? '저장 중...'
+              : recurring
+              ? `수업 ${recurCount}개 일괄 등록`
+              : isEdit
+              ? '수정하기'
+              : '수업 추가'}
+          </Button>
+        )}
 
         {isEdit && (
           <Button

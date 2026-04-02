@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { fetchBookingStatus } from '../api/bookingApi.js';
 import { Card, Button } from 'antd';
+import { CheckCircleFilled, CloseCircleFilled } from '@ant-design/icons';
 
 const DAY_KR = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -20,12 +21,11 @@ function SuccessIcon() {
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       margin: '0 auto 20px',
       animation: 'successPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both',
-      fontSize: 32,
     }}
     role="img"
     aria-label="예약 확정"
     >
-      ✅
+      <CheckCircleFilled style={{ fontSize: 36, color: '#52c41a' }} />
     </div>
   );
 }
@@ -37,12 +37,11 @@ function CancelIcon() {
       backgroundColor: '#fff2f0',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       margin: '0 auto 20px',
-      fontSize: 32,
     }}
     role="img"
     aria-label="예약 취소됨"
     >
-      ❌
+      <CloseCircleFilled style={{ fontSize: 36, color: '#cf1322' }} />
     </div>
   );
 }
@@ -94,7 +93,7 @@ export default function BookingStatusPage() {
   const isCancelled = booking?.status === '취소';
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-start justify-center pt-12 px-4">
+    <div className="min-h-dvh bg-gray-50 flex items-start justify-center pt-12 px-4">
       <div className="w-full max-w-sm">
 
         {/* 로딩 */}
@@ -109,7 +108,7 @@ export default function BookingStatusPage() {
           <Card variant="borderless" style={{ borderRadius: 16, textAlign: 'center', boxShadow: 'var(--shadow-card)' }}
             role="alert"
           >
-            <div style={{ fontSize: 36, marginBottom: 16 }} aria-hidden="true">❌</div>
+            <CloseCircleFilled style={{ fontSize: 36, color: '#cf1322', marginBottom: 16, display: 'block' }} aria-hidden="true" />
             <p className="text-gray-700 font-medium">예약 정보를 찾을 수 없습니다</p>
             <p className="text-sm text-gray-500 mt-2">{error}</p>
             <Button
@@ -192,7 +191,7 @@ export default function BookingStatusPage() {
             )}
 
             <Button
-              type={isCancelled ? 'primary' : 'default'}
+              type="primary"
               block
               onClick={() => navigate(
                 studentToken ? `/book/${studentToken}` : '/book',

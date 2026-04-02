@@ -10,15 +10,15 @@ import {
   cancelMyClass,
   restoreMyClass,
 } from '../api/bookingApi.js';
-import { Card, Button } from 'antd';
+import { Card, Button, Modal } from 'antd';
 
 const DAY_KR = ['일', '월', '화', '수', '목', '금', '토'];
 const LOCATION_OPTIONS = ['강남사무실', '온라인 (Zoom/화상)'];
 
 const ALL_TIME_SLOTS = (() => {
   const slots = [];
-  // 09:00 ~ 21:00: 시작 시간 표시용 (22:00은 종료 시간으로만 사용)
-  for (let m = 9 * 60; m <= 21 * 60; m += 30) {
+  // 08:00 ~ 21:00: 시작 시간 표시용 (22:00은 종료 시간으로만 사용)
+  for (let m = 8 * 60; m <= 21 * 60; m += 30) {
     const h = String(Math.floor(m / 60)).padStart(2, '0');
     const min = String(m % 60).padStart(2, '0');
     slots.push(`${h}:${min}`);
@@ -101,7 +101,8 @@ function Calendar({ year, month, availableDates, selectedDate, onSelect }) {
               type="button"
               disabled={disabled}
               onClick={() => onSelect(dateStr)}
-              className={`relative flex items-center justify-center h-9 rounded-full text-sm font-medium transition-colors ${
+              style={{ touchAction: 'manipulation' }}
+              className={`relative flex items-center justify-center h-11 rounded-full text-sm font-medium transition-colors ${
                 isSelected
                   ? 'bg-brand-600 text-white'
                   : disabled
@@ -152,32 +153,35 @@ function TimeRangePicker({ availableTimes, passableTimes, startTime, endTime, on
   return (
     <div>
       <p className="text-xs text-gray-500 mb-2">시작 시간 선택</p>
-      <div className="flex flex-wrap gap-2 mb-4">
-        {ALL_TIME_SLOTS.map(t => {
-          const tm = timeToMin(t);
-          const isSelected = t === startTime;
-          const inRange = startMin !== null && endTime && tm >= startMin && tm < timeToMin(endTime);
-          const canSelect = availableSet.has(t);
-          return (
-            <button
-              key={t}
-              type="button"
-              disabled={!canSelect}
-              onClick={() => canSelect && onStartSelect(t)}
-              className={`px-3 py-2 rounded-lg text-sm font-medium border transition-colors ${
-                isSelected
-                  ? 'bg-brand-600 text-white border-brand-600'
-                  : inRange
-                    ? 'bg-brand-50 text-brand-600 border-brand-100'
-                    : canSelect
-                      ? 'bg-white text-gray-700 border-gray-200 hover:border-brand-100'
-                      : 'bg-gray-50 text-gray-300 border-gray-100 cursor-not-allowed line-through'
-              }`}
-            >
-              {t}
-            </button>
-          );
-        })}
+      <div style={{ maxHeight: 152, overflowY: 'auto', WebkitOverflowScrolling: 'touch', marginBottom: 16 }}>
+        <div className="flex flex-wrap gap-2 pb-0.5">
+          {ALL_TIME_SLOTS.map(t => {
+            const tm = timeToMin(t);
+            const isSelected = t === startTime;
+            const inRange = startMin !== null && endTime && tm >= startMin && tm < timeToMin(endTime);
+            const canSelect = availableSet.has(t);
+            return (
+              <button
+                key={t}
+                type="button"
+                disabled={!canSelect}
+                onClick={() => canSelect && onStartSelect(t)}
+                style={{ touchAction: 'manipulation' }}
+                className={`px-3 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                  isSelected
+                    ? 'bg-brand-600 text-white border-brand-600'
+                    : inRange
+                      ? 'bg-brand-50 text-brand-600 border-brand-100'
+                      : canSelect
+                        ? 'bg-white text-gray-700 border-gray-200 hover:border-brand-100'
+                        : 'bg-gray-50 text-gray-300 border-gray-100 cursor-not-allowed line-through'
+                }`}
+              >
+                {t}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {startTime && (
@@ -185,35 +189,38 @@ function TimeRangePicker({ availableTimes, passableTimes, startTime, endTime, on
           <p className="text-xs text-gray-500 mb-2">
             종료 시간 선택 <span className="text-gray-500">(최소 1시간 이상)</span>
           </p>
-          <div className="flex flex-wrap gap-2">
-            {ALL_END_SLOTS
-              .filter(t => timeToMin(t) > (startMin ?? 0))
-              .map(t => {
-                const tm = timeToMin(t);
-                const duration = tm - (startMin ?? 0);
-                const canSelect = validEndTimes.has(t);
-                const isSelected = t === endTime;
-                return (
-                  <button
-                    key={t}
-                    type="button"
-                    disabled={!canSelect}
-                    onClick={() => canSelect && onEndSelect(t)}
-                    className={`px-3 py-2 rounded-lg text-sm font-medium border transition-colors ${
-                      isSelected
-                        ? 'bg-brand-600 text-white border-brand-600'
-                        : canSelect
-                          ? 'bg-white text-gray-700 border-gray-200 hover:border-brand-100'
-                          : 'bg-gray-50 text-gray-300 border-gray-100 cursor-not-allowed line-through'
-                    }`}
-                  >
-                    {t}
-                    {canSelect && (
-                      <span className="text-xs ml-1 opacity-60">({formatDuration(duration)})</span>
-                    )}
-                  </button>
-                );
-              })}
+          <div style={{ maxHeight: 152, overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
+            <div className="flex flex-wrap gap-2 pb-0.5">
+              {ALL_END_SLOTS
+                .filter(t => timeToMin(t) > (startMin ?? 0))
+                .map(t => {
+                  const tm = timeToMin(t);
+                  const duration = tm - (startMin ?? 0);
+                  const canSelect = validEndTimes.has(t);
+                  const isSelected = t === endTime;
+                  return (
+                    <button
+                      key={t}
+                      type="button"
+                      disabled={!canSelect}
+                      onClick={() => canSelect && onEndSelect(t)}
+                      style={{ touchAction: 'manipulation' }}
+                      className={`px-3 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                        isSelected
+                          ? 'bg-brand-600 text-white border-brand-600'
+                          : canSelect
+                            ? 'bg-white text-gray-700 border-gray-200 hover:border-brand-100'
+                            : 'bg-gray-50 text-gray-300 border-gray-100 cursor-not-allowed line-through'
+                      }`}
+                    >
+                      {t}
+                      {canSelect && (
+                        <span className="text-xs ml-1 opacity-60">({formatDuration(duration)})</span>
+                      )}
+                    </button>
+                  );
+                })}
+            </div>
           </div>
         </>
       )}
@@ -248,32 +255,47 @@ function MyClassesTab({ studentToken, month, onMonthChange }) {
   const todayStr = _nowKST.toISOString().slice(0, 10);
   const nowMin = _nowKST.getUTCHours() * 60 + _nowKST.getUTCMinutes();
 
-  const handleCancel = async (cls) => {
+  const handleCancel = (cls) => {
     if (cancellingId || restoringId) return;
-    if (!window.confirm(`${formatDate(cls.date)} ${cls.startTime} 수업을 취소하시겠습니까?`)) return;
-    setCancellingId(cls.id);
-    try {
-      await cancelMyClass(cls.id, studentToken);
-      setClasses(prev => prev.map(c => c.id === cls.id ? { ...c, isCancelled: true } : c));
-    } catch (e) {
-      alert(e.message);
-    } finally {
-      setCancellingId(null);
-    }
+    Modal.confirm({
+      title: '수업 취소',
+      content: `${formatDate(cls.date)} ${cls.startTime} 수업을 취소하시겠습니까?`,
+      okText: '취소하기',
+      cancelText: '닫기',
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        setCancellingId(cls.id);
+        try {
+          await cancelMyClass(cls.id, studentToken);
+          setClasses(prev => prev.map(c => c.id === cls.id ? { ...c, isCancelled: true } : c));
+        } catch (e) {
+          Modal.error({ title: '오류', content: e.message });
+        } finally {
+          setCancellingId(null);
+        }
+      },
+    });
   };
 
-  const handleRestore = async (cls) => {
+  const handleRestore = (cls) => {
     if (restoringId || cancellingId) return;
-    if (!window.confirm(`${formatDate(cls.date)} ${cls.startTime} 수업을 복구하시겠습니까?`)) return;
-    setRestoringId(cls.id);
-    try {
-      await restoreMyClass(cls.id, studentToken);
-      setClasses(prev => prev.map(c => c.id === cls.id ? { ...c, isCancelled: false } : c));
-    } catch (e) {
-      alert(e.message);
-    } finally {
-      setRestoringId(null);
-    }
+    Modal.confirm({
+      title: '수업 복구',
+      content: `${formatDate(cls.date)} ${cls.startTime} 수업을 복구하시겠습니까?`,
+      okText: '복구하기',
+      cancelText: '닫기',
+      onOk: async () => {
+        setRestoringId(cls.id);
+        try {
+          await restoreMyClass(cls.id, studentToken);
+          setClasses(prev => prev.map(c => c.id === cls.id ? { ...c, isCancelled: false } : c));
+        } catch (e) {
+          Modal.error({ title: '오류', content: e.message });
+        } finally {
+          setRestoringId(null);
+        }
+      },
+    });
   };
 
   const LOCATION_LABEL = { '강남사무실': '강남', '온라인 (Zoom/화상)': 'Zoom' };
@@ -464,7 +486,12 @@ export default function BookingPage() {
 
   const { pullY, refreshing: pullRefreshing } = usePullToRefresh(handlePullRefresh);
 
+  const [timeResetKey, setTimeResetKey] = useState(0);
+
   const handleDateSelect = async (date) => {
+    if (selectedDate && selectedDate !== date && (startTime || endTime)) {
+      setTimeResetKey(k => k + 1);
+    }
     setSelectedDate(date);
     setStartTime(null);
     setEndTime(null);
@@ -540,7 +567,7 @@ export default function BookingPage() {
 
   if (studentError) {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center px-4">
+      <div className="min-h-dvh bg-gray-50 flex flex-col items-center justify-center px-4">
         <Card variant="borderless" style={{ borderRadius: 16, maxWidth: 360, width: '100%', textAlign: 'center', boxShadow: 'var(--shadow-card)' }}>
           <div style={{ fontSize: 36, marginBottom: 16 }}>⚠️</div>
           <p className="text-red-500 text-sm">{studentError}</p>
@@ -558,15 +585,15 @@ export default function BookingPage() {
   }
 
   if (!student) {
-    return <div className="min-h-screen bg-gray-50 flex items-center justify-center text-gray-500 text-sm">불러오는 중...</div>;
+    return <div className="min-h-dvh bg-gray-50 flex items-center justify-center text-gray-500 text-sm">불러오는 중...</div>;
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-dvh bg-gray-50">
       <div className="max-w-lg mx-auto">
         <PullIndicator pullY={pullY} refreshing={pullRefreshing} />
         {/* 헤더 */}
-        <div className="bg-white px-4 pt-12 pb-3 border-b border-gray-100">
+        <div className="bg-white px-4 pt-12 pb-3 border-b border-gray-100 sticky top-0 z-[101]">
           <h1 className="text-xl font-bold text-gray-900">수업 예약</h1>
           <div className="flex items-center justify-between mt-1">
             <div className="flex items-center gap-2">
@@ -574,7 +601,7 @@ export default function BookingPage() {
               <button
                 onClick={() => navigate('/book')}
                 aria-label="예약 코드 입력 화면으로 돌아가기"
-                className="text-xs text-gray-400 hover:text-gray-600"
+                className="text-xs text-gray-400 hover:text-gray-600 px-2 py-1 -mx-2 -my-1 rounded"
               >
                 로그아웃
               </button>
@@ -673,9 +700,14 @@ export default function BookingPage() {
                 {(() => {
                   const d = new Date(selectedDate + 'T00:00:00+09:00');
                   return (
-                    <h2 className="font-semibold text-gray-800 mb-3">
-                      {d.getMonth() + 1}월 {d.getDate()}일 ({DAY_KR[d.getDay()]}) 시간 선택
-                    </h2>
+                    <div className="flex items-center gap-2 mb-3">
+                      <h2 className="font-semibold text-gray-800">
+                        {d.getMonth() + 1}월 {d.getDate()}일 ({DAY_KR[d.getDay()]}) 시간 선택
+                      </h2>
+                      {timeResetKey > 0 && (
+                        <span className="text-xs text-gray-400">시간 선택이 초기화되었어요</span>
+                      )}
+                    </div>
                   );
                 })()}
 

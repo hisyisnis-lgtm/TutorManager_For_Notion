@@ -5,9 +5,9 @@ import { Card, Input, Button } from 'antd';
 
 const WEEK_DAYS = ['월', '화', '수', '목', '금', '토', '일'];
 
-// 30분 단위 시간 슬롯 (09:00 ~ 22:00)
+// 30분 단위 시간 슬롯 (08:00 ~ 22:00)
 const TIME_SLOTS = [];
-for (let m = 9 * 60; m <= 22 * 60; m += 30) {
+for (let m = 8 * 60; m <= 22 * 60; m += 30) {
   const h = String(Math.floor(m / 60)).padStart(2, '0');
   const min = String(m % 60).padStart(2, '0');
   TIME_SLOTS.push(`${h}:${min}`);

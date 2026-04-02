@@ -1,13 +1,20 @@
 import { NavLink } from 'react-router-dom';
+import {
+  HomeOutlined,
+  TeamOutlined,
+  CalendarOutlined,
+  BookOutlined,
+  DollarOutlined,
+} from '@ant-design/icons';
 
 const PRIMARY = '#7f0005';
 
 const TABS = [
-  { to: '/home', label: '홈', icon: '🏠' },
-  { to: '/students', label: '학생', icon: '👥' },
-  { to: '/classes', label: '수업', icon: '📅' },
-  { to: '/bookings', label: '예약', icon: '🗓️' },
-  { to: '/payments', label: '결제', icon: '💰' },
+  { to: '/home',     label: '홈',   icon: <HomeOutlined />     },
+  { to: '/students', label: '학생', icon: <TeamOutlined />     },
+  { to: '/classes',  label: '수업', icon: <CalendarOutlined /> },
+  { to: '/bookings', label: '예약', icon: <BookOutlined />     },
+  { to: '/payments', label: '결제', icon: <DollarOutlined />   },
 ];
 
 export default function BottomNav() {

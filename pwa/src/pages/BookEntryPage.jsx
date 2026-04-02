@@ -31,7 +31,7 @@ export default function BookEntryPage() {
   const errorId = 'book-entry-error';
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-dvh bg-gray-50 flex flex-col">
       <div className="max-w-lg mx-auto w-full flex-1 flex flex-col">
         <PullIndicator pullY={pullY} refreshing={refreshing} />
 
