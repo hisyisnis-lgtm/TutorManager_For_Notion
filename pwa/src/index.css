@@ -132,6 +132,29 @@
   }
 }
 
+/* ── 한국어 줄바꿈 ────────────────────────────── */
+html {
+  word-break: keep-all;
+}
+/* antd Typography는 내부적으로 word-break: break-word를 설정하므로 override */
+.ant-typography {
+  word-break: keep-all;
+}
+
+/* ── 탭 페이드인 애니메이션 ──────────────────── */
+@keyframes tabFadeIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── 한자 파티클 애니메이션 (PricingPage, IntroContent 공용) ── */
+@keyframes hanziFloat {
+  0%   { transform: translateY(0) rotate(-4deg); opacity: 0; }
+  12%  { opacity: 0.22; }
+  80%  { opacity: 0.12; }
+  100% { transform: translateY(-70px) rotate(4deg); opacity: 0; }
+}
+
 /* ── no-scrollbar 유틸리티 ─────────────────── */
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }

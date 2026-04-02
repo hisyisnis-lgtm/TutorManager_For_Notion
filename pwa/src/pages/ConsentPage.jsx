@@ -69,7 +69,7 @@ export default function ConsentPage() {
         }}>
           <div style={{ maxWidth: 480, margin: '0 auto', padding: '0 20px' }}>
             <div style={{ height: 48, display: 'flex', alignItems: 'center' }}>
-              <img src="/logo/logo-red.png" alt="하늘하늘 중국어" style={{ height: 24, objectFit: 'contain' }} />
+              <img src="/logo/logo-red.png" alt="하늘하늘 중국어" style={{ height: 24, objectFit: 'contain', outline: 'none' }} />
             </div>
           </div>
         </header>
