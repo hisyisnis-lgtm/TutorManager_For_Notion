@@ -84,6 +84,7 @@ export default function ClassFormPage() {
     location: '강남사무실',
     locationMemo: '',
     guestName: '',        // 무료상담 상담자 이름 (노션 제목)
+    guestPhone: '',       // 무료상담 전화번호 (D-1 카카오 알림용)
     // 일회성
     datetime: '',
     // 반복
@@ -187,6 +188,7 @@ export default function ClassFormPage() {
           location: cls.location || '강남사무실',
           locationMemo: cls.locationMemo || '',
           guestName: cls.title || '',
+          guestPhone: cls.phone || '',
         }));
       } catch (e) {
         setError(e.message);
@@ -326,6 +328,7 @@ export default function ClassFormPage() {
           location: form.location || null,
           locationMemo: form.locationMemo || '',
           title: form.guestName.trim() || undefined,
+          phone: isFreeTrial ? form.guestPhone : undefined,
         };
         // 일회성 수업 충돌 검사
         const [dateStr, timeStr] = form.datetime.split('T');
@@ -417,6 +420,18 @@ export default function ClassFormPage() {
                   value={form.guestName}
                   onChange={(e) => setForm((f) => ({ ...f, guestName: e.target.value }))}
                   size="large"
+                  style={{ borderRadius: 12, marginBottom: 12 }}
+                />
+                <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>
+                  전화번호 <Typography.Text style={{ fontSize: 12, color: '#8c8c8c', fontWeight: 400 }}>(D-1 카카오 알림톡 발송용)</Typography.Text>
+                </Typography.Text>
+                <Input
+                  placeholder="01012345678"
+                  type="tel"
+                  value={form.guestPhone}
+                  onChange={(e) => setForm((f) => ({ ...f, guestPhone: e.target.value.replace(/\D/g, '') }))}
+                  maxLength={11}
+                  size="large"
                   style={{ borderRadius: 12 }}
                 />
               </div>
@@ -500,6 +515,7 @@ export default function ClassFormPage() {
                   size="large"
                   style={{ width: 80 }}
                   placeholder="시"
+                  getPopupContainer={(trigger) => trigger.parentNode}
                 >
                   {Array.from({ length: 17 }, (_, i) => i + 6).map((h) => {
                     const hStr = String(h).padStart(2, '0');
@@ -547,6 +563,7 @@ export default function ClassFormPage() {
                   size="large"
                   style={{ flex: 1 }}
                   placeholder="시"
+                  getPopupContainer={(trigger) => trigger.parentNode}
                 >
                   {Array.from({ length: 17 }, (_, i) => i + 6).map((h) => (
                     <Select.Option key={h} value={String(h).padStart(2, '0')}>

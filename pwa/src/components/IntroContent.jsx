@@ -267,10 +267,10 @@ export default function IntroContent({ onConsult, onFloatChange }) {
           </FadeUp>
           <Flex vertical gap={10} style={{ width: '100%' }}>
             {[
-              { icon: <BulbOutlined />, title: '중국어를 처음 시작하고 싶은 분', desc: '어디서부터 시작할지 같이 잡아드려요.' },
-              { icon: <SoundOutlined />, title: '발음 교정으로 자신감을 키우고 싶은 분', desc: '자연스럽게 말할 수 있도록 체계적으로 교정해드려요.' },
-              { icon: <MessageOutlined />, title: '배웠지만 막상 말이 안 나오는 분', desc: '왜 입이 안 열리는지, 어떻게 해결할지 이야기해요.' },
-              { icon: <LineChartOutlined />, title: '초·중급인데 방향을 못 잡겠는 분', desc: '수준 진단 후 맞춤 방향을 제안해드려요.' },
+              { icon: <BulbOutlined />, title: '중국어를 처음 시작하는 분', desc: '성조부터 회화까지, 가장 빠르고 확실하게 첫 단추를 끼워드립니다.' },
+              { icon: <SoundOutlined />, title: '어색한 발음이 고민인 분', desc: '디테일한 밀착 교정으로, 원어민처럼 당당하게 말하는 자신감을 찾아드립니다.' },
+              { icon: <MessageOutlined />, title: '머리로는 아는데 입이 안 떨어지는 분', desc: '눈으로 하는 공부와, 입 밖으로 꺼내는 훈련은 방식부터 다릅니다.' },
+              { icon: <LineChartOutlined />, title: '초·중급인데 방향을 잘 못 잡겠는 분', desc: '예리한 진단으로 지금의 답답함을 뚫고, 한 단계 도약할 돌파구를 찾아드립니다.' },
             ].map(({ icon, title, desc }, i) => (
               <FadeUp key={title} delay={i * 80}>
                 <Card variant="borderless" style={{ borderRadius: 12 }} styles={{ body: { padding: 16 } }}>
