@@ -515,9 +515,11 @@ export default function ClassFormPage() {
                   size="large"
                   style={{ width: 80 }}
                   placeholder="시"
-                  getPopupContainer={(trigger) => trigger.parentNode}
+                  virtual={false}
                   dropdownRender={(menu) => (
-                    <div onTouchMove={(e) => e.stopPropagation()}>{menu}</div>
+                    <div ref={(el) => { if (el) el.addEventListener('touchmove', (e) => e.stopPropagation(), { passive: false }); }}>
+                      {menu}
+                    </div>
                   )}
                 >
                   {Array.from({ length: 17 }, (_, i) => i + 6).map((h) => {
@@ -566,9 +568,11 @@ export default function ClassFormPage() {
                   size="large"
                   style={{ flex: 1 }}
                   placeholder="시"
-                  getPopupContainer={(trigger) => trigger.parentNode}
+                  virtual={false}
                   dropdownRender={(menu) => (
-                    <div onTouchMove={(e) => e.stopPropagation()}>{menu}</div>
+                    <div ref={(el) => { if (el) el.addEventListener('touchmove', (e) => e.stopPropagation(), { passive: false }); }}>
+                      {menu}
+                    </div>
                   )}
                 >
                   {Array.from({ length: 17 }, (_, i) => i + 6).map((h) => (
