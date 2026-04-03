@@ -42,7 +42,7 @@ function SplashScreen({ updating }) {
       style={{ background: '#7f0005' }}
       className="fixed inset-0 flex flex-col items-center justify-center gap-5"
     >
-      <img src="/logo-white.png" alt="하늘하늘중국어" className="h-10 w-auto" />
+      <img src="/logo-white.png" alt="하늘하늘중국어" className="h-10 w-auto" style={{ mixBlendMode: 'screen' }} />
       <div className="w-7 h-7 rounded-full border-2 border-white/30 border-t-white animate-spin" />
       <p className="text-white/60 text-sm tracking-wide">
         {updating ? '최신 버전으로 업데이트 중...' : ''}
