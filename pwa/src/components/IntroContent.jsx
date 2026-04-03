@@ -13,6 +13,7 @@ import {
 } from '@ant-design/icons';
 import { PRIMARY } from '../constants/theme';
 import FadeUp from './FadeUp';
+import HeroSection from './ui/HeroSection';
 
 const WORKER_URL = import.meta.env.VITE_WORKER_URL;
 
@@ -214,50 +215,8 @@ export default function IntroContent({ onConsult, onFloatChange }) {
       `}</style>
       <div style={{ paddingBottom: 80 }}>
         {/* Hero */}
-        <section ref={heroRef} style={{
-          background: `linear-gradient(150deg, #6b0004 0%, ${PRIMARY} 50%, #9a0007 100%)`,
-          padding: '56px 24px 48px',
-          overflow: 'hidden',
-          position: 'relative',
-        }}>
-          {/* 배경: 심볼 로고 장식 */}
-          <img aria-hidden="true" src="/logo/symbol-white.png" alt=""
-            style={{
-              position: 'absolute', right: -24, bottom: -20,
-              width: 300, height: 300, objectFit: 'contain',
-              opacity: 0.07, pointerEvents: 'none', userSelect: 'none',
-            }} />
-          {/* 배경: 상단 빛 번짐 */}
-          <div aria-hidden="true" style={{
-            position: 'absolute', top: -80, right: -60,
-            width: 260, height: 260, borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(255,255,255,0.09) 0%, transparent 70%)',
-            pointerEvents: 'none',
-          }} />
-          {/* 한자 파티클 */}
-          {[
-            { char: '好', left: '6%',  bottom: '10%', size: 19, delay: '0s',   dur: '7s'   },
-            { char: '学', left: '20%', bottom: '5%',  size: 13, delay: '2.2s', dur: '8.5s' },
-            { char: '说', left: '38%', bottom: '14%', size: 21, delay: '0.8s', dur: '6.5s' },
-            { char: '语', left: '57%', bottom: '7%',  size: 15, delay: '3.1s', dur: '7.5s' },
-            { char: '中', left: '72%', bottom: '13%', size: 17, delay: '0.4s', dur: '9s'   },
-            { char: '文', left: '84%', bottom: '4%',  size: 12, delay: '1.8s', dur: '6s'   },
-            { char: '话', left: '13%', bottom: '24%', size: 11, delay: '4s',   dur: '8s'   },
-            { char: '音', left: '62%', bottom: '22%', size: 10, delay: '1.4s', dur: '7s'   },
-            { char: '口', left: '46%', bottom: '2%',  size: 14, delay: '2.8s', dur: '6.5s' },
-          ].map(({ char, left, bottom, size, delay, dur }) => (
-            <span key={`${char}-${left}`} data-particle aria-hidden="true"
-              style={{
-                position: 'absolute', left, bottom,
-                fontSize: size, lineHeight: 1,
-                color: 'white', fontFamily: 'serif',
-                animation: `hanziFloat ${dur} ease-in-out ${delay} infinite both`,
-                pointerEvents: 'none', userSelect: 'none',
-                zIndex: 1,
-              }}>{char}</span>
-          ))}
-          {/* 콘텐츠 */}
-          <div style={{ position: 'relative', zIndex: 2 }}>
+        <HeroSection sectionRef={heroRef} style={{ padding: '56px 24px 48px' }}>
+          <div>
             <FadeUp delay={0}>
               <Tag style={{
                 backgroundColor: 'rgba(255,255,255,0.15)', color: 'white',
@@ -277,7 +236,7 @@ export default function IntroContent({ onConsult, onFloatChange }) {
               </h1>
             </FadeUp>
             <FadeUp delay={200}>
-              <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: 14, lineHeight: 1.6, margin: '0 0 36px' }}>
+              <p style={{ color: 'rgba(255,255,255,0.85)', fontSize: 14, lineHeight: 1.6, margin: '0 0 36px' }}>
                 10년 경력의 중국어 전문 강사와 함께<br />
                 입문부터 초중급까지 체계적으로.
               </p>
@@ -289,7 +248,7 @@ export default function IntroContent({ onConsult, onFloatChange }) {
               >
                 무료 상담 신청
               </Button>
-              <p style={{ margin: '12px 0 0', fontSize: 13, color: 'rgba(255,255,255,0.7)', textAlign: 'center' }}>
+              <p style={{ margin: '12px 0 0', fontSize: 13, color: 'rgba(255,255,255,0.85)', textAlign: 'center' }}>
                 수강료 문의는{' '}
                 <a href="https://pf.kakao.com/_jFnFn" target="_blank" rel="noopener noreferrer"
                   style={{ color: 'rgba(255,255,255,0.9)', textDecoration: 'underline', textDecorationColor: 'rgba(255,255,255,0.4)' }}
@@ -298,7 +257,7 @@ export default function IntroContent({ onConsult, onFloatChange }) {
               </p>
             </FadeUp>
           </div>
-        </section>
+        </HeroSection>
 
         {/* 이런 분께 */}
         <section style={{ padding: '24px 20px 16px' }}>
@@ -421,7 +380,7 @@ export default function IntroContent({ onConsult, onFloatChange }) {
             <a
               href="https://pf.kakao.com/_jFnFn"
               target="_blank" rel="noopener noreferrer"
-              style={{ display: 'block', textAlign: 'center', fontSize: 13, color: '#8c8c8c', textDecoration: 'none' }}
+              style={{ display: 'block', textAlign: 'center', fontSize: 13, color: '#595959', textDecoration: 'none' }}
             >
               채널톡으로 문의하기 →
             </a>
