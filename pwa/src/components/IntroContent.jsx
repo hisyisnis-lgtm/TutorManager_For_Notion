@@ -232,13 +232,14 @@ export default function IntroContent({ onConsult, onFloatChange }) {
                 lineHeight: 1.3, margin: '0 0 12px',
                 textWrap: 'balance',
               }}>
-                중국어로<br />말하고 싶다면
+                말할 수 있어야<br />진짜 아는 언어입니다.
               </h1>
             </FadeUp>
             <FadeUp delay={200}>
               <p style={{ color: 'rgba(255,255,255,0.85)', fontSize: 14, lineHeight: 1.6, margin: '0 0 36px' }}>
-                10년 경력의 중국어 전문 강사와 함께<br />
-                입문부터 초중급까지 체계적으로.
+                10년의 노하우로 이끄는 다정한 여정.<br />
+                서툰 첫걸음이 막힘없는 대화가 되기까지,<br />
+                가장 든든한 페이스메이커가 되어드릴게요.
               </p>
             </FadeUp>
             <FadeUp delay={300}>
