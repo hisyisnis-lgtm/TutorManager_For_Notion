@@ -516,6 +516,9 @@ export default function ClassFormPage() {
                   style={{ width: 80 }}
                   placeholder="시"
                   getPopupContainer={(trigger) => trigger.parentNode}
+                  dropdownRender={(menu) => (
+                    <div onTouchMove={(e) => e.stopPropagation()}>{menu}</div>
+                  )}
                 >
                   {Array.from({ length: 17 }, (_, i) => i + 6).map((h) => {
                     const hStr = String(h).padStart(2, '0');
@@ -564,6 +567,9 @@ export default function ClassFormPage() {
                   style={{ flex: 1 }}
                   placeholder="시"
                   getPopupContainer={(trigger) => trigger.parentNode}
+                  dropdownRender={(menu) => (
+                    <div onTouchMove={(e) => e.stopPropagation()}>{menu}</div>
+                  )}
                 >
                   {Array.from({ length: 17 }, (_, i) => i + 6).map((h) => (
                     <Select.Option key={h} value={String(h).padStart(2, '0')}>
