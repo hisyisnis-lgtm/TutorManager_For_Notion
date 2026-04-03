@@ -67,6 +67,12 @@ function isPublicBookingRoute() {
   return hash.startsWith('#/book') || hash.startsWith('#/intro') || hash.startsWith('#/pricing') || hash.startsWith('#/consent');
 }
 
+// 데이터 작성 중인 폼 페이지 여부 확인
+function isOnFormPage() {
+  const hash = window.location.hash;
+  return /\/(logs|classes|students|payments)\/(new|[^/]+\/edit)/.test(hash);
+}
+
 export default function App() {
   const [authed, setAuthed] = useState(checkAuth);
   const [swReady, setSwReady] = useState(false);
@@ -88,20 +94,31 @@ export default function App() {
       const fallback = setTimeout(() => setSwReady(true), 2000);
       return () => clearTimeout(fallback);
     }
-    // 새 버전 감지 → skipWaiting 지시 후 controllerchange 이벤트에서 리로드
-    const handleControllerChange = () => window.location.reload();
-    navigator.serviceWorker?.addEventListener('controllerchange', handleControllerChange);
-    updateServiceWorker(true);
-    // controllerchange가 오지 않을 경우 10초 후 강제 리로드
-    const fallback = setTimeout(() => window.location.reload(), 10000);
-    return () => {
-      navigator.serviceWorker?.removeEventListener('controllerchange', handleControllerChange);
-      clearTimeout(fallback);
-    };
+
+    function applyUpdate() {
+      const handleControllerChange = () => window.location.reload();
+      navigator.serviceWorker?.addEventListener('controllerchange', handleControllerChange);
+      updateServiceWorker(true);
+      // controllerchange가 오지 않을 경우 10초 후 강제 리로드
+      setTimeout(() => window.location.reload(), 10000);
+    }
+
+    // 폼 작성 중이면 이탈 후 업데이트
+    if (isOnFormPage()) {
+      const interval = setInterval(() => {
+        if (!isOnFormPage()) {
+          clearInterval(interval);
+          applyUpdate();
+        }
+      }, 500);
+      return () => clearInterval(interval);
+    }
+
+    applyUpdate();
   }, [needRefresh, updateServiceWorker]);
 
-  // SW 준비 전 또는 업데이트 적용 중
-  if (!swReady || needRefresh) {
+  // SW 준비 전 또는 업데이트 적용 중 (폼 작성 중이면 업데이트 미표시)
+  if (!swReady || (needRefresh && !isOnFormPage())) {
     return <SplashScreen updating={needRefresh} />;
   }
 
