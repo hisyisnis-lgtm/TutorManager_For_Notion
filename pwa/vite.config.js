@@ -54,6 +54,7 @@ export default defineConfig({
         clientsClaim: true,
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
         navigateFallback: '/index.html',
+        navigateFallbackDenylist: [/^\/intro$/, /^\/pricing$/],
         runtimeCaching: [
           {
             // Cloudflare Worker API는 항상 네트워크에서 가져옴 (최신 데이터)
