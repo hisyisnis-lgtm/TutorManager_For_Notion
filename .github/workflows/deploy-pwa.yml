@@ -60,7 +60,12 @@ jobs:
         working-directory: pwa
 
       - name: Cloudflare Pages 배포
-        run: npx wrangler pages deploy dist --project-name=tiantian-chinese --branch=main --commit-message="${GITHUB_REF_NAME:-$(git rev-parse --short HEAD)}"
+        run: |
+          for i in 1 2 3; do
+            npx wrangler@3 pages deploy dist --project-name=tiantian-chinese --branch=main --commit-message="${GITHUB_REF_NAME:-$(git rev-parse --short HEAD)}" && break
+            echo "배포 실패 (시도 $i/3), 30초 후 재시도..."
+            sleep 30
+          done
         working-directory: pwa
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
