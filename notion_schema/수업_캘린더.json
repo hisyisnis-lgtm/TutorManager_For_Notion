@@ -117,6 +117,10 @@
         {
           "name": "180",
           "color": "default"
+        },
+        {
+          "name": "30",
+          "color": "pink"
         }
       ]
     },
