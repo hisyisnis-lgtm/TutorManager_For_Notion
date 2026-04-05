@@ -490,9 +490,13 @@ export default function PricingPage() {
                   </Text>
                   <div style={{ backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 10, padding: '12px 14px' }}>
                     <Text style={{ color: '#d4b896', fontSize: 12, fontWeight: 700, display: 'block', marginBottom: 8 }}>VIP 단독 혜택</Text>
+                    <Flex vertical gap={8} style={{ marginBottom: 6 }}>
+                      <CheckItem color="#d4b896" textColor="rgba(255,255,255,0.7)" size={13}>1시간당 5% 할인 된 수강료</CheckItem>
+                    </Flex>
+                    <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', display: 'block', marginBottom: 12 }}>※ VIP 단독 혜택은 재등록 시에도 유효합니다.</Text>
+                    <Text style={{ color: '#d4b896', fontSize: 12, fontWeight: 700, display: 'block', marginBottom: 8 }}>포함 혜택</Text>
                     <Flex vertical gap={8} style={{ marginBottom: 10 }}>
                       {[
-                        '수강료 5% 상시 할인',
                         '교재 & 학습 굿즈 3종 세트',
                         '정규 수업 시작 전 발음 교정 1시간 무료 제공',
                       ].map(item => (
