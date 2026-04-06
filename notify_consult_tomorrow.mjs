@@ -75,7 +75,6 @@ async function main() {
         and: [
           { property: '수업 일시', date: { on_or_after: `${tomorrowStr}T00:00:00+09:00` } },
           { property: '수업 일시', date: { before: `${dayAfterStr}T00:00:00+09:00` } },
-          { property: '전화번호', rich_text: { is_not_empty: true } },
         ],
       },
       sorts: [{ property: '수업 일시', direction: 'ascending' }],
@@ -84,9 +83,10 @@ async function main() {
     cursor = res.has_more ? res.next_cursor : undefined;
   } while (cursor);
 
-  // 취소된 수업 제외
+  // 취소된 수업 제외 + 전화번호 있는 항목만 (무료상담 식별)
   const consultations = allResults.filter(
     p => p.properties['특이사항']?.select?.name !== '🚫 취소'
+      && p.properties['전화번호']?.rich_text?.[0]?.plain_text
   );
 
   console.log(`내일 무료상담 ${consultations.length}건 (취소 제외)`);
