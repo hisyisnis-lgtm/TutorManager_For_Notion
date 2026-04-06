@@ -2,6 +2,7 @@
 // GitHub Actions에서 매일 08:00 KST (23:00 UTC 전날)에 자동 실행됨
 
 import { createHmac } from 'crypto';
+import { createNotionClient, stripEmoji } from './notion_utils.mjs';
 
 const TOKEN = process.env.NOTION_TOKEN;
 const CLASS_DB_ID = '314838fa-f2a6-81bc-8b67-d9e1c8fb7ecb';
@@ -18,20 +19,7 @@ if (!TOKEN) {
   process.exit(1);
 }
 
-async function notion(method, path, body) {
-  const res = await fetch(`https://api.notion.com/v1${path}`, {
-    method,
-    headers: {
-      'Authorization': `Bearer ${TOKEN}`,
-      'Notion-Version': '2022-06-28',
-      'Content-Type': 'application/json',
-    },
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(`${res.status}: ${JSON.stringify(data)}`);
-  return data;
-}
+const { notion } = createNotionClient(TOKEN);
 
 async function sendKakao(to, templateId, variables, buttons = []) {
   if (!SOLAPI_API_KEY || !SOLAPI_API_SECRET || !KAKAO_PFID || !templateId || !to) return;
@@ -63,10 +51,6 @@ function getTodayKST() {
   tomorrow.setUTCDate(kstDate.getUTCDate() + 1);
   const tomorrowStr = tomorrow.toISOString().split('T')[0];
   return { todayStr, tomorrowStr };
-}
-
-function stripEmoji(name) {
-  return name.replace(/^[🟢🟡⚫]\s/, '');
 }
 
 async function main() {

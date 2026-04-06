@@ -1,6 +1,8 @@
 // 잔여 회차 부족 학생 결제 독려 알림 스크립트
 // GitHub Actions에서 매일 10:00 KST (01:00 UTC)에 자동 실행됨
 
+import { createNotionClient, createNtfyClient, stripEmoji } from './notion_utils.mjs';
+
 const TOKEN = process.env.NOTION_TOKEN;
 const NTFY_TOPIC = process.env.NTFY_TOPIC;
 const NTFY_TOKEN = process.env.NTFY_TOKEN;
@@ -14,41 +16,8 @@ if (!TOKEN) {
   process.exit(1);
 }
 
-async function notion(method, path, body) {
-  const res = await fetch(`https://api.notion.com/v1${path}`, {
-    method,
-    headers: {
-      Authorization: `Bearer ${TOKEN}`,
-      'Notion-Version': '2022-06-28',
-      'Content-Type': 'application/json',
-    },
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(`${res.status}: ${JSON.stringify(data)}`);
-  return data;
-}
-
-async function sendNtfy(title, message, priority = 4) {
-  if (!NTFY_TOPIC) return;
-  const headers = { 'Content-Type': 'application/json' };
-  if (NTFY_TOKEN) headers['Authorization'] = `Bearer ${NTFY_TOKEN}`;
-  try {
-    const res = await fetch('https://ntfy.sh', {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ topic: NTFY_TOPIC, title, message, priority }),
-    });
-    if (!res.ok) console.error(`ntfy 전송 실패 (${res.status}): ${await res.text()}`);
-    else console.log(`ntfy 알림 전송 완료: ${title}`);
-  } catch (e) {
-    console.error('ntfy 전송 오류:', e.message);
-  }
-}
-
-function stripEmoji(name) {
-  return name.replace(/^[🟢🟡⚫]\s/, '');
-}
+const { notion } = createNotionClient(TOKEN);
+const sendNtfy = createNtfyClient(NTFY_TOPIC, NTFY_TOKEN);
 
 async function main() {
   console.log(`[${new Date().toISOString()}] 잔여 회차 부족 학생 조회 시작`);

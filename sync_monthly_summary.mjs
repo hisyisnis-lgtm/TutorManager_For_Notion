@@ -1,8 +1,11 @@
 // 월별 수납 현황 페이지 자동 갱신
 // 결제 상태가 "완료" 또는 "초과금"인 항목의 실제 결제 금액을 월별로 집계
 
+import { createNotionClient, createNtfyClient } from './notion_utils.mjs';
+
 const TOKEN = process.env.NOTION_TOKEN;
 const NTFY_TOPIC = process.env.NTFY_TOPIC;
+const NTFY_TOKEN = process.env.NTFY_TOKEN;
 const PAYMENT_DB_ID = '314838fa-f2a6-8154-935b-edd3d2fbea83';
 const SUMMARY_PAGE_ID = '316838fa-f2a6-810b-a382-c567536334de';
 
@@ -11,35 +14,8 @@ if (!TOKEN) {
   process.exit(1);
 }
 
-async function sendNtfy(title, message, priority = 3) {
-  if (!NTFY_TOPIC) return;
-  try {
-    const res = await fetch('https://ntfy.sh', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ topic: NTFY_TOPIC, title, message, priority }),
-    });
-    if (!res.ok) console.error(`ntfy 전송 실패 (${res.status}): ${await res.text()}`);
-    else console.log(`ntfy 알림 전송 완료: ${title}`);
-  } catch (e) {
-    console.error('ntfy 전송 오류:', e.message);
-  }
-}
-
-async function api(method, path, body) {
-  const res = await fetch(`https://api.notion.com/v1${path}`, {
-    method,
-    headers: {
-      Authorization: `Bearer ${TOKEN}`,
-      'Notion-Version': '2022-06-28',
-      'Content-Type': 'application/json',
-    },
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(`${res.status}: ${JSON.stringify(data)}`);
-  return data;
-}
+const { notion: api } = createNotionClient(TOKEN);
+const sendNtfy = createNtfyClient(NTFY_TOPIC, NTFY_TOKEN);
 
 // 전체 결제 내역 조회 (페이지네이션)
 async function getAllPayments() {

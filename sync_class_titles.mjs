@@ -2,6 +2,8 @@
 // 제목이 비어 있는 수업에 학생 이름으로 자동 채움
 // GitHub Actions에서 30분마다 자동 실행됨
 
+import { createNotionClient, stripEmoji } from './notion_utils.mjs';
+
 const TOKEN = process.env.NOTION_TOKEN;
 const CLASS_DB_ID = '314838fa-f2a6-81bc-8b67-d9e1c8fb7ecb';
 
@@ -10,31 +12,7 @@ if (!TOKEN) {
   process.exit(1);
 }
 
-async function notion(method, path, body) {
-  const res = await fetch(`https://api.notion.com/v1${path}`, {
-    method,
-    headers: {
-      Authorization: `Bearer ${TOKEN}`,
-      'Notion-Version': '2022-06-28',
-      'Content-Type': 'application/json',
-    },
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(`${res.status}: ${JSON.stringify(data)}`);
-  return data;
-}
-
-// 학생 이름 앞 상태 이모지(🟢🟡⚫) 제거
-const STATUS_EMOJIS = ['🟢', '🟡', '⚫'];
-function stripEmoji(name) {
-  for (const emoji of STATUS_EMOJIS) {
-    if (name.startsWith(emoji + ' ')) {
-      return name.slice(emoji.length + 1);
-    }
-  }
-  return name;
-}
+const { notion } = createNotionClient(TOKEN);
 
 const studentCache = {};
 async function getStudentName(id) {

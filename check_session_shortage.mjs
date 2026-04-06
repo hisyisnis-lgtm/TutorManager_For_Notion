@@ -8,39 +8,18 @@
 // - 무료 수업(1인 단가 = 0): 항상 false
 // - 예정 수업: 날짜 순으로 누적하여 잔여 초과 시 true
 
+import { createNotionClient, sleep } from './notion_utils.mjs';
+
 const TOKEN = process.env.NOTION_TOKEN;
 const CLASSES_DB = '314838fa-f2a6-81bc-8b67-d9e1c8fb7ecb';
 const STUDENTS_DB = '314838fa-f2a6-8143-a6c7-e59c50f3bbdb';
 
-async function api(method, path, body) {
-  const res = await fetch(`https://api.notion.com/v1${path}`, {
-    method,
-    headers: {
-      Authorization: `Bearer ${TOKEN}`,
-      'Notion-Version': '2022-06-28',
-      'Content-Type': 'application/json',
-    },
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(`${res.status}: ${JSON.stringify(data)}`);
-  return data;
+if (!TOKEN) {
+  console.error('NOTION_TOKEN 환경변수가 설정되지 않았습니다.');
+  process.exit(1);
 }
 
-async function queryAll(dbId, filter, sorts) {
-  const results = [];
-  let cursor;
-  do {
-    const body = { page_size: 100 };
-    if (filter) body.filter = filter;
-    if (sorts) body.sorts = sorts;
-    if (cursor) body.start_cursor = cursor;
-    const data = await api('POST', `/databases/${dbId}/query`, body);
-    results.push(...data.results);
-    cursor = data.next_cursor;
-  } while (cursor);
-  return results;
-}
+const { notion: api, queryAll } = createNotionClient(TOKEN);
 
 async function main() {
   const now = new Date();
@@ -152,6 +131,7 @@ async function main() {
         properties: { '회차부족_감지': { checkbox: shouldWarn } },
       });
       updated++;
+      await sleep(350); // Notion API Rate Limit 대응 (초당 3회)
     }
   }
 

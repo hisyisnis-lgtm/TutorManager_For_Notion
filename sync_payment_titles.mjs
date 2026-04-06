@@ -2,6 +2,8 @@
 // 타이틀(타이틀)가 비어 있고 학생이 입력된 결제 내역에 학생 타이틀을 자동 채움
 // GitHub Actions에서 30분마다 자동 실행됨
 
+import { createNotionClient, stripEmoji } from './notion_utils.mjs';
+
 const TOKEN = process.env.NOTION_TOKEN;
 const PAYMENT_DB_ID = '314838fa-f2a6-8154-935b-edd3d2fbea83';
 const STUDENT_DB_ID = '314838fa-f2a6-8143-a6c7-e59c50f3bbdb';
@@ -11,30 +13,7 @@ if (!TOKEN) {
   process.exit(1);
 }
 
-async function notion(method, path, body) {
-  const res = await fetch(`https://api.notion.com/v1${path}`, {
-    method,
-    headers: {
-      Authorization: `Bearer ${TOKEN}`,
-      'Notion-Version': '2022-06-28',
-      'Content-Type': 'application/json',
-    },
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(`${res.status}: ${JSON.stringify(data)}`);
-  return data;
-}
-
-const STATUS_EMOJIS = ['🟢', '🟡', '⚫'];
-function stripEmoji(name) {
-  for (const emoji of STATUS_EMOJIS) {
-    if (name.startsWith(emoji + ' ')) {
-      return name.slice(emoji.length + 1);
-    }
-  }
-  return name;
-}
+const { notion } = createNotionClient(TOKEN);
 
 const studentCache = {};
 async function getStudentName(id) {
