@@ -186,7 +186,7 @@ function ClassCard({ cls, studentNameMap }) {
         <div className="flex items-start justify-between mb-2">
           <div className="flex-1 min-w-0">
             <p className="text-base font-bold text-gray-900 truncate">
-              {studentNames || '학생 미정'}
+              {studentNames || cls.title || '학생 미정'}
             </p>
             <p className="text-sm text-gray-500 mt-0.5">
               {cls.datetime ? formatDateTime(cls.datetime) : '일시 미정'}

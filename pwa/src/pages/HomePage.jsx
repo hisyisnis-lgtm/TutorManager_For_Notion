@@ -330,7 +330,7 @@ export default function HomePage() {
                           </span>
                           <div className="flex-1 min-w-0">
                             <span className="text-sm font-medium text-gray-800 truncate block">
-                              {names || '학생 미정'}
+                              {names || cls.title || '학생 미정'}
                             </span>
                             {(classType || cls.location) && (
                               <span className="text-xs text-gray-500">
