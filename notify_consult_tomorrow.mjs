@@ -89,15 +89,6 @@ async function main() {
       && p.properties['전화번호']?.rich_text?.[0]?.plain_text
   );
 
-  // 디버그: 내일 전체 수업 현황
-  console.log(`내일 전체 수업 ${allResults.length}건 조회됨`);
-  allResults.forEach(p => {
-    const title = p.properties['제목']?.title?.[0]?.plain_text ?? '(제목없음)';
-    const phone = p.properties['전화번호']?.rich_text?.[0]?.plain_text ?? '(전화번호없음)';
-    const notes = p.properties['특이사항']?.select?.name ?? '';
-    console.log(`  - ${title} | 전화번호: ${phone} | 특이사항: ${notes}`);
-  });
-
   console.log(`내일 무료상담 ${consultations.length}건 (취소 제외)`);
 
   if (consultations.length === 0) {
