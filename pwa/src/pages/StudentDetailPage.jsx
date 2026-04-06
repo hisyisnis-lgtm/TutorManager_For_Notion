@@ -34,7 +34,7 @@ export default function StudentDetailPage() {
       try {
         const [page, classData, paymentData] = await Promise.all([
           getPage(id),
-          fetchClassesPage({ studentId: id }),
+          fetchClassesPage({ studentId: id, completedOnly: true }),
           fetchPaymentsPage({ studentId: id }),
         ]);
         setStudent(parseStudent(page));
