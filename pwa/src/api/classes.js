@@ -41,7 +41,7 @@ export async function fetchClassesPage(opts = {}) {
 }
 
 /** 수업 생성 */
-export async function createClass({ studentIds, classTypeId, datetime, duration, notes, location, locationMemo, title }) {
+export async function createClass({ studentIds, classTypeId, datetime, duration, notes, location, locationMemo, title, phone }) {
   const properties = {
     학생: { relation: studentIds.map((id) => ({ id })) },
     '수업 유형': { relation: [{ id: classTypeId }] },
@@ -60,6 +60,9 @@ export async function createClass({ studentIds, classTypeId, datetime, duration,
   properties['수업 장소 메모'] = locationMemo
     ? { rich_text: [{ text: { content: locationMemo } }] }
     : { rich_text: [] };
+  properties['전화번호'] = phone?.trim()
+    ? { rich_text: [{ text: { content: phone.trim() } }] }
+    : { rich_text: [] };
   return createPage(CLASSES_DB, properties);
 }
 
@@ -74,7 +77,7 @@ export async function bulkCreateClasses(items) {
 }
 
 /** 수업 수정 (충돌_감지 checkbox는 건드리지 않음) */
-export async function updateClass(pageId, { studentIds, classTypeId, datetime, duration, notes, location, locationMemo, title }) {
+export async function updateClass(pageId, { studentIds, classTypeId, datetime, duration, notes, location, locationMemo, title, phone }) {
   const properties = {};
   if (studentIds) properties['학생'] = { relation: studentIds.map((id) => ({ id })) };
   if (classTypeId) properties['수업 유형'] = { relation: [{ id: classTypeId }] };
@@ -92,6 +95,11 @@ export async function updateClass(pageId, { studentIds, classTypeId, datetime, d
   properties['수업 장소 메모'] = locationMemo
     ? { rich_text: [{ text: { content: locationMemo } }] }
     : { rich_text: [] };
+  if (phone !== undefined) {
+    properties['전화번호'] = phone?.trim()
+      ? { rich_text: [{ text: { content: phone.trim() } }] }
+      : { rich_text: [] };
+  }
 
   return updatePage(pageId, properties);
 }
@@ -114,6 +122,7 @@ export function parseClass(page) {
     lessonLogIds: p['수업 일지']?.relation?.map((r) => r.id) ?? [],
     location: p['수업 장소']?.select?.name ?? null,
     locationMemo: p['수업 장소 메모']?.rich_text?.[0]?.plain_text ?? '',
+    phone: p['전화번호']?.rich_text?.[0]?.plain_text ?? '',
   };
 }
 
