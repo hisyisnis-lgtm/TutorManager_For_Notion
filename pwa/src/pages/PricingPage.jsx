@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { ConfigProvider, Button, Card, Flex, Space, Tag, Typography, Divider } from 'antd';
-import { CheckCircleOutlined, GiftOutlined, RightOutlined, ArrowRightOutlined, InfoCircleOutlined } from '@ant-design/icons';
+import { ConfigProvider, Card, Flex, Space, Tag, Typography, Divider } from 'antd';
+import { CheckCircleOutlined, GiftOutlined, RightOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { PRIMARY, antdTheme } from '../constants/theme';
 import FadeUp from '../components/FadeUp';
@@ -9,6 +9,10 @@ import CheckItem from '../components/ui/CheckItem';
 import SectionLabel from '../components/ui/SectionLabel';
 import HeroSection from '../components/ui/HeroSection';
 import IntroContent from '../components/IntroContent';
+import PublicHeader from '../components/public/PublicHeader';
+import PublicFooter from '../components/public/PublicFooter';
+import FloatingCtaButton from '../components/public/FloatingCtaButton';
+import CtaSection from '../components/public/CtaSection';
 
 const { Title, Text } = Typography;
 
@@ -54,64 +58,14 @@ export default function PricingPage() {
         .cta-btn:active { transform: scale(0.96) !important; }
       `}</style>
 
-      {/* 플로팅 무료상담 버튼 (소개 탭) */}
-      <div style={{
-        position: 'fixed', bottom: 24, left: '50%',
-        zIndex: 200,
-        transition: 'opacity 0.3s ease, transform 0.3s ease',
-        opacity: showFloat && tab === '소개' ? 1 : 0,
-        transform: showFloat && tab === '소개' ? 'translateX(-50%) translateY(0)' : 'translateX(-50%) translateY(16px)',
-        pointerEvents: showFloat && tab === '소개' ? 'auto' : 'none',
-      }}>
-        <Button
-          type="primary" size="large"
-          onClick={() => navigate('/intro', { state: { tab: '무료상담' } })}
-          style={{
-            height: 48, borderRadius: 24, fontWeight: 700, fontSize: 15,
-            paddingInline: 28, boxShadow: '0 4px 16px rgba(127,0,5,0.35)',
-          }}
-        >
-          무료 상담 신청 <ArrowRightOutlined />
-        </Button>
-      </div>
+      <FloatingCtaButton
+        visible={showFloat && tab === '소개'}
+        onClick={() => navigate('/intro', { state: { tab: '무료상담' } })}
+      />
 
       <div style={{ minHeight: '100vh', backgroundColor: '#f5f5f5', fontFamily: 'inherit' }}>
 
-        {/* ── 헤더 ── */}
-        <header style={{
-          position: 'sticky', top: 0, zIndex: 50,
-          backgroundColor: 'rgba(255,255,255,0.95)',
-          backdropFilter: 'blur(10px)',
-          borderBottom: '1px solid #ebebeb',
-        }}>
-          <div style={{ maxWidth: 480, margin: '0 auto', padding: '0 20px' }}>
-            <div style={{ height: 48, display: 'flex', alignItems: 'center' }}>
-              <img src="/logo/logo-red.png" alt="하늘하늘 중국어" style={{ height: 24, objectFit: 'contain', outline: 'none' }} />
-            </div>
-            <div role="tablist" aria-label="페이지 섹션" style={{ display: 'flex', marginBottom: -1 }}>
-              {TABS.map(t => (
-                <button
-                  key={t}
-                  role="tab"
-                  aria-selected={tab === t}
-                  aria-controls={`panel-${t}`}
-                  id={`tab-${t}`}
-                  onClick={() => switchTab(t)}
-                  style={{
-                    minHeight: 44, marginRight: 24, paddingBottom: 10, paddingTop: 10,
-                    fontSize: 14, fontWeight: 500,
-                    border: 'none', background: 'none', cursor: 'pointer',
-                    borderBottom: `2px solid ${tab === t ? PRIMARY : 'transparent'}`,
-                    color: tab === t ? PRIMARY : '#595959',
-                    transition: 'color 0.2s, border-color 0.2s',
-                  }}
-                >
-                  {t}
-                </button>
-              ))}
-            </div>
-          </div>
-        </header>
+        <PublicHeader tabs={TABS} activeTab={tab} onTabChange={switchTab} />
 
         <TabPanel active={tab === '소개'} id="panel-소개" labelledBy="tab-소개">
           <div style={{ maxWidth: 480, margin: '0 auto' }}>
@@ -566,58 +520,15 @@ export default function PricingPage() {
           </section>
 
           {/* ── CTA ── */}
-          <section style={{ padding: '36px 24px 32px' }}>
-            <FadeUp>
-              <Text strong style={{ fontSize: 16, color: '#1a1a1a', lineHeight: 1.65, display: 'block', marginBottom: 6, textAlign: 'center' }}>
-                현재 레벨과 목표에 따라<br />가장 적합한 방향을 함께 안내드립니다.
-              </Text>
-              <Text type="secondary" style={{ fontSize: 13, display: 'block', marginBottom: 24, textAlign: 'center' }}>
-                편하게 상담 신청해 주세요 :)
-              </Text>
-              <Button
-                type="primary" size="large" block
-                className="cta-btn"
-                onClick={() => { window.location.hash = '#/intro'; }}
-                style={{ height: 48, borderRadius: 12, fontWeight: 700, fontSize: 15, marginBottom: 14 }}
-              >
-                무료 상담 신청하기
-              </Button>
-              <a
-                href="https://pf.kakao.com/_jFnFn"
-                target="_blank" rel="noopener noreferrer"
-                style={{ display: 'block', textAlign: 'center', fontSize: 13, color: '#595959', textDecoration: 'none' }}
-              >
-                채널톡으로 문의하기 →
-              </a>
-            </FadeUp>
-          </section>
+          <CtaSection
+            className="cta-btn"
+            onCtaClick={() => { window.location.hash = '#/intro'; }}
+          />
 
         </main>
         </TabPanel>
 
-        <footer style={{ backgroundColor: '#1a1a1a', padding: '32px 24px 40px' }}>
-          <div style={{ maxWidth: 480, margin: '0 auto' }}>
-            <Text style={{ display: 'block', color: 'rgba(255,255,255,0.9)', fontSize: 15, fontWeight: 700, marginBottom: 16 }}>
-              하늘하늘중국어
-            </Text>
-            <Flex vertical gap={6} style={{ marginBottom: 20 }}>
-              {[
-                ['대표', '최하늘'],
-                ['사업자등록번호', '747-15-01965'],
-                ['이메일', 'tiantianchinese_@naver.com'],
-              ].map(([label, value]) => (
-                <Text key={label} style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>
-                  {label} : {value}
-                </Text>
-              ))}
-            </Flex>
-            <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 16 }}>
-              <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)' }}>
-                Copyright © 2025 하늘하늘중국어. All rights reserved.
-              </Text>
-            </div>
-          </div>
-        </footer>
+        <PublicFooter />
 
       </div>
     </ConfigProvider>

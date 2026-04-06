@@ -4,42 +4,21 @@ import {
   ConfigProvider, Button, Card, Flex, Form, Input,
   Typography, Space, Divider,
 } from 'antd';
-import { CheckCircleOutlined, ArrowRightOutlined } from '@ant-design/icons';
+import { CheckCircleOutlined } from '@ant-design/icons';
 import { useLocation } from 'react-router-dom';
 import { submitConsultation } from '../api/consultApi';
 import { PRIMARY, antdTheme } from '../constants/theme';
 import TabPanel from '../components/TabPanel';
 import IntroContent from '../components/IntroContent';
+import PublicHeader from '../components/public/PublicHeader';
+import PublicFooter from '../components/public/PublicFooter';
+import FloatingCtaButton from '../components/public/FloatingCtaButton';
+import ToggleButton from '../components/ui/ToggleButton';
 
 const { Title, Text } = Typography;
 
 const TABS = ['소개', '무료상담'];
 const LEVEL_OPTIONS = ['완전 처음이에요', '조금 배운 적 있어요', '어느 정도 배웠는데 막혀있어요'];
-
-// ─── 선택 버튼 (레벨·요일·시간) ─────────────────────────────
-function ToggleButton({ label, selected, onClick, fullWidth = false, style = {} }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={selected}
-      style={{
-        width: fullWidth ? '100%' : undefined,
-        height: 44, borderRadius: 12, fontSize: 14, fontWeight: 500,
-        cursor: 'pointer',
-        transition: 'background-color 0.2s, border-color 0.2s, color 0.2s, transform 0.1s',
-        border: `1px solid ${selected ? PRIMARY : '#d9d9d9'}`,
-        backgroundColor: selected ? PRIMARY : '#ffffff',
-        color: selected ? '#ffffff' : '#595959',
-        textAlign: fullWidth ? 'left' : 'center',
-        padding: fullWidth ? '0 16px' : '0',
-        ...style,
-      }}
-    >
-      {label}
-    </button>
-  );
-}
 
 // ─── 탭 2: 무료 상담 신청 ─────────────────────────────────────
 function ConsultContent() {
@@ -278,70 +257,17 @@ export default function LandingPage() {
 
   return (
     <ConfigProvider theme={antdTheme}>
-      <style>{`
-        @media (hover: none) {
-          .review-nav-btn { display: none !important; }
-        }
-        @media (prefers-reduced-motion: reduce) {
-          [data-particle] { display: none !important; }
-        }
-      `}</style>
-      {/* 플로팅 무료상담 버튼 — TabPanel 애니메이션 바깥에 렌더링해야 position:fixed 정상 작동 */}
-      <div style={{
-        position: 'fixed', bottom: 24, left: '50%',
-        zIndex: 200,
-        transition: 'opacity 0.3s ease, transform 0.3s ease',
-        opacity: showFloat && tab === '소개' ? 1 : 0,
-        transform: showFloat && tab === '소개' ? 'translateX(-50%) translateY(0)' : 'translateX(-50%) translateY(16px)',
-        pointerEvents: showFloat && tab === '소개' ? 'auto' : 'none',
-      }}>
-        <Button
-          type="primary" size="large" onClick={() => switchTab('무료상담')}
-          style={{
-            height: 48, borderRadius: 24, fontWeight: 700, fontSize: 15,
-            paddingInline: 28, boxShadow: '0 4px 16px rgba(127,0,5,0.35)',
-          }}
-        >
-          무료 상담 신청 <ArrowRightOutlined />
-        </Button>
-      </div>
+      <FloatingCtaButton
+        visible={showFloat && tab === '소개'}
+        onClick={() => switchTab('무료상담')}
+      />
       <div style={{ minHeight: '100vh', backgroundColor: '#f5f5f5', fontFamily: 'inherit' }}>
-        {/* Sticky 헤더 */}
-        <header style={{
-          position: 'sticky', top: 0, zIndex: 50,
-          backgroundColor: 'rgba(255,255,255,0.92)',
-          backdropFilter: 'blur(8px)',
-          borderBottom: '1px solid #f0f0f0',
-        }}>
-          <div style={{ maxWidth: 480, margin: '0 auto', padding: '0 20px' }}>
-            <div style={{ height: 48, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <img src="/logo/logo-red.png" alt="하늘하늘 중국어" style={{ height: 24, objectFit: 'contain', outline: 'none' }} />
-              <ShareButton />
-            </div>
-            <div role="tablist" aria-label="페이지 섹션" style={{ display: 'flex', marginBottom: -1 }}>
-              {TABS.map(t => (
-                <button
-                  key={t}
-                  role="tab"
-                  aria-selected={tab === t}
-                  aria-controls={`panel-${t}`}
-                  id={`tab-${t}`}
-                  onClick={() => switchTab(t)}
-                  style={{
-                    minHeight: 44, marginRight: 24, paddingBottom: 10, paddingTop: 10,
-                    fontSize: 14, fontWeight: 500,
-                    border: 'none', background: 'none', cursor: 'pointer',
-                    borderBottom: `2px solid ${tab === t ? PRIMARY : 'transparent'}`,
-                    color: tab === t ? PRIMARY : '#595959',
-                    transition: 'color 0.2s, border-color 0.2s',
-                  }}
-                >
-                  {t}
-                </button>
-              ))}
-            </div>
-          </div>
-        </header>
+        <PublicHeader
+          tabs={TABS}
+          activeTab={tab}
+          onTabChange={switchTab}
+          rightSlot={<ShareButton />}
+        />
 
         <main style={{ maxWidth: 480, margin: '0 auto' }}>
           <TabPanel active={tab === '소개'} id="panel-소개" labelledBy="tab-소개">
@@ -352,29 +278,7 @@ export default function LandingPage() {
           </TabPanel>
         </main>
 
-        <footer style={{ backgroundColor: '#1a1a1a', padding: '32px 24px 40px' }}>
-          <div style={{ maxWidth: 480, margin: '0 auto' }}>
-            <Text style={{ display: 'block', color: 'rgba(255,255,255,0.9)', fontSize: 15, fontWeight: 700, marginBottom: 16 }}>
-              하늘하늘중국어
-            </Text>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 20 }}>
-              {[
-                ['대표', '최하늘'],
-                ['사업자등록번호', '747-15-01965'],
-                ['이메일', 'tiantianchinese_@naver.com'],
-              ].map(([label, value]) => (
-                <Text key={label} style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)' }}>
-                  {label} : {value}
-                </Text>
-              ))}
-            </div>
-            <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 16 }}>
-              <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>
-                Copyright © 2025 하늘하늘중국어. All rights reserved.
-              </Text>
-            </div>
-          </div>
-        </footer>
+        <PublicFooter />
       </div>
     </ConfigProvider>
   );
