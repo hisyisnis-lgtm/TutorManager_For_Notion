@@ -152,6 +152,10 @@
       "id": "ydSp",
       "expression": "if(((empty({{notion:block_property:title:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}}) or empty(join(map({{notion:block_property:egNl:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}}, format(current)), \", \"))) or empty({{notion:block_property:KRV%7D:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}})) or empty({{notion:block_property:t%5CHE:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}}), \"🔴미입력\", if({{notion:block_property:KRV%7D:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}} > now(), \"🔵예정\", \"🟢완료\"))"
     },
+    "전화번호": {
+      "type": "rich_text",
+      "id": "%7C%5DBR"
+    },
     "학생": {
       "type": "dual_property",
       "id": "%7Cu%5CX",
