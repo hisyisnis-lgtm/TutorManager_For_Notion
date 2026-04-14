@@ -1,7 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import { fetchBlockedDates, createBlockedDate, deleteBlockedDate } from '../api/bookingApi.js';
-import { Card, Input, Button } from 'antd';
+import { Alert, Card, Input, Button } from 'antd';
+import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
+import EmptyState from '../components/ui/EmptyState.jsx';
+import ErrorMessage from '../components/ui/ErrorMessage.jsx';
 
 const WEEK_DAYS = ['월', '화', '수', '목', '금', '토', '일'];
 
@@ -273,9 +276,7 @@ export default function BookingsManagePage() {
             </div>
 
             {formError && (
-              <div style={{ padding: '12px 16px', backgroundColor: '#fff2f0', border: '1px solid #ffccc7', borderRadius: 12, fontSize: 14, color: '#cf1322', marginBottom: 12 }}>
-                {formError}
-              </div>
+              <Alert type="error" message={formError} showIcon style={{ borderRadius: 12, marginBottom: 12 }} />
             )}
 
             <Button
@@ -291,23 +292,15 @@ export default function BookingsManagePage() {
         </form>
       )}
 
-      {loading && <div className="text-center py-12 text-gray-400">불러오는 중...</div>}
-      {error && (
-        <div style={{ margin: '0 16px', padding: '12px 16px', backgroundColor: '#fff2f0', border: '1px solid #ffccc7', borderRadius: 12, fontSize: 14, color: '#cf1322' }}>
-          {error}
-        </div>
-      )}
-
-      {!loading && blocked.length === 0 && (
-        <div className="text-center py-12 text-gray-400">
-          <div className="text-4xl mb-3">🚫</div>
-          <div>등록된 예약 불가 설정이 없습니다</div>
-        </div>
+      {loading && <LoadingSpinner />}
+      {error && <ErrorMessage message={error} onRetry={load} />}
+      {!loading && !error && blocked.length === 0 && (
+        <EmptyState icon="🚫" title="등록된 예약 불가 설정이 없습니다" />
       )}
 
       <div className="px-4 pb-24 space-y-2 mt-1">
         {blocked.map(item => (
-          <Card key={item.id} variant="borderless" style={{ borderRadius: 16 }}>
+          <Card key={item.id} variant="borderless" style={{ borderRadius: 16, boxShadow: 'var(--shadow-border)' }}>
             <div className="flex items-center gap-3">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">

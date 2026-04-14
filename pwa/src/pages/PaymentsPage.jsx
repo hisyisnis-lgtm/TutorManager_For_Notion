@@ -148,7 +148,7 @@ export default function PaymentsPage() {
           {filtered.length === 0 ? (
             <EmptyState icon="💰" title="결제 내역이 없습니다" />
           ) : (
-            <ul className="px-4 space-y-3 pb-4">
+            <ul className={`px-4 space-y-3 ${hasMore ? 'pb-2' : 'pb-24'}`}>
               {filtered.map((p) => (
                 <PaymentCard
                   key={p.id}
@@ -160,7 +160,7 @@ export default function PaymentsPage() {
             </ul>
           )}
           {hasMore && (
-            <div className="px-4 pb-4">
+            <div className="px-4 pb-24">
               <Button
                 block
                 onClick={() => load(false, cursor)}

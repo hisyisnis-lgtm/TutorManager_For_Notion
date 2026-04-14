@@ -9,9 +9,9 @@ const CONSULT_DB_ID = '324838fa-f2a6-815d-99a7-ff165e8f78aa';
 
 const DAY_KR = ['일', '월', '화', '수', '목', '금', '토'];
 
-// 학생 이름 앞 상태 이모지(🟢🟡⚫) 제거 — 공백 0개 이상 허용
+// 학생 이름 앞 이모지·특수 심볼(Notion 상태 아이콘 등) 제거
 function stripEmoji(name) {
-  return name.replace(/^[🟢🟡⚫]\s*/, '');
+  return name.replace(/^[\p{Emoji_Presentation}\p{Extended_Pictographic}◆◇▲▽△▼●○■□★☆♦♢]\s*/gu, '').trim();
 }
 
 // Notion ID 정규화 (웹훅은 하이픈 없이 보낼 수 있음)
@@ -887,6 +887,7 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
       name: stripEmoji(rawName),
       phone: props?.['전화번호']?.phone_number ?? '',
       remainingSessions: props?.['잔여 시간 회차']?.formula?.number ?? 0,
+      totalSessions: props?.['총 수업 횟수']?.rollup?.number ?? 0,
     }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -968,7 +969,8 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
       classFilter = {
         and: [
           { property: '학생', relation: { contains: studentPage.id } },
-          { property: '수업 일시', date: { on_or_after: `${month}-01`, before: nextMonthStart } },
+          { property: '수업 일시', date: { on_or_after: `${month}-01` } },
+          { property: '수업 일시', date: { before: nextMonthStart } },
         ],
       };
     } else {
@@ -980,21 +982,42 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
       sorts: [{ property: '수업 일시', direction: 'descending' }],
       page_size: 100,
     });
-    const classes = (res.results ?? []).map(p => {
+    const rawClasses = (res.results ?? []).map(p => {
       const props = p.properties;
       const dtStr = props['수업 일시']?.date?.start ?? '';
       const date = dtStr.slice(0, 10);
       const tm = dtStr.match(/T(\d{2}):(\d{2})/);
       const startTime = tm ? `${tm[1]}:${tm[2]}` : '';
+      const specialNote = props['특이사항']?.select?.name ?? null;
+      const lessonTypeId = props['수업 유형']?.relation?.[0]?.id ?? null;
       return {
         id: p.id,
         date,
         startTime,
         durationMin: Number(props['수업 시간(분)']?.select?.name) || 0,
         location: props['수업 장소']?.select?.name ?? null,
-        isCancelled: props['특이사항']?.select?.name === '🚫 취소',
+        isCancelled: specialNote === '🚫 취소',
+        specialNote,
+        lessonTypeId,
       };
     });
+
+    // 수업 유형 (1:1 / 2:1) — relation이므로 유니크 ID만 병렬 fetch
+    const uniqueTypeIds = [...new Set(rawClasses.map(c => c.lessonTypeId).filter(Boolean))];
+    const typeMap = {};
+    if (uniqueTypeIds.length > 0) {
+      await Promise.all(uniqueTypeIds.map(async id => {
+        try {
+          const page = await n('GET', `/pages/${id}`);
+          typeMap[id] = page.properties?.['수업 유형']?.select?.name ?? null;
+        } catch { typeMap[id] = null; }
+      }));
+    }
+
+    const classes = rawClasses.map(({ lessonTypeId, ...c }) => ({
+      ...c,
+      classType: lessonTypeId ? (typeMap[lessonTypeId] ?? null) : null,
+    }));
     return new Response(JSON.stringify(classes), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

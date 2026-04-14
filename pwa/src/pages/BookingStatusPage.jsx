@@ -90,6 +90,7 @@ export default function BookingStatusPage() {
     return () => { alive = false; clearInterval(id); };
   }, [token]);
 
+  const from = location.state?.from;
   const isCancelled = booking?.status === '취소';
 
   return (
@@ -114,7 +115,7 @@ export default function BookingStatusPage() {
             <Button
               type="primary"
               block
-              onClick={() => navigate('/book')}
+              onClick={() => navigate(from === 'personal' ? '/personal' : '/book')}
               style={{ borderRadius: 12, height: 48, fontWeight: 700, marginTop: 24 }}
             >
               예약 페이지로 돌아가기
@@ -194,7 +195,9 @@ export default function BookingStatusPage() {
               type="primary"
               block
               onClick={() => navigate(
-                studentToken ? `/book/${studentToken}` : '/book',
+                from === 'personal'
+                  ? (studentToken ? `/personal/${studentToken}` : '/personal')
+                  : (studentToken ? `/book/${studentToken}` : '/book'),
                 { state: { tab: isCancelled ? '예약하기' : '내 수업' } }
               )}
               style={{ borderRadius: 12, height: 48, fontWeight: 700 }}

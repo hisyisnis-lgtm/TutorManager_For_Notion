@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Button, Input, Select, Typography } from 'antd';
+import { Alert, Button, Input, Select, Typography } from 'antd';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import { getPage, deletePage } from '../api/notionClient.js';
@@ -163,9 +163,7 @@ export default function PaymentFormPage() {
 
       <form onSubmit={handleSubmit} className="px-4 pt-4 pb-8 space-y-5">
         {error && (
-          <div style={{ padding: '12px 16px', backgroundColor: '#fff2f0', border: '1px solid #ffccc7', borderRadius: 12, fontSize: 14, color: '#cf1322' }}>
-            {error}
-          </div>
+          <Alert type="error" message={error} showIcon style={{ borderRadius: 12 }} />
         )}
 
         {/* 1. 학생 선택 */}

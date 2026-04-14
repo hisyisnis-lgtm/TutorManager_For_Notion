@@ -72,7 +72,7 @@ export default function ClassesPage() {
           <Link to="/classes/new">
             <Button
               type="primary"
-              style={{ borderRadius: 8, fontWeight: 600 }}
+              style={{ borderRadius: 12, fontWeight: 600 }}
             >
               + 수업 추가
             </Button>
@@ -115,14 +115,14 @@ export default function ClassesPage() {
           {filteredClasses.length === 0 ? (
             <EmptyState icon="📅" title="수업이 없습니다" description={search.trim() ? '검색 결과가 없습니다.' : '+ 수업 추가로 새 수업을 등록하세요.'} />
           ) : (
-            <ul className="px-4 space-y-3 pb-4">
+            <ul className={`px-4 space-y-3 ${hasMore && !search.trim() ? 'pb-2' : 'pb-24'}`}>
               {filteredClasses.map((cls) => (
                 <ClassCard key={cls.id} cls={cls} studentNameMap={studentNameMap} />
               ))}
             </ul>
           )}
           {hasMore && !search.trim() && (
-            <div className="px-4 pb-4">
+            <div className="px-4 pb-24">
               <Button
                 block
                 onClick={() => load(false, cursor)}
@@ -179,7 +179,7 @@ function ClassCard({ cls, studentNameMap }) {
     <li>
       <Card
         variant="borderless"
-        style={{ borderRadius: 16, cursor: 'pointer' }}
+        style={{ borderRadius: 16, cursor: 'pointer', boxShadow: 'var(--shadow-border)' }}
         styles={{ body: { padding: 16 } }}
         onClick={() => navigate(`/classes/${cls.id}/edit`)}
       >

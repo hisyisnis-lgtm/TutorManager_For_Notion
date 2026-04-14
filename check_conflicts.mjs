@@ -17,26 +17,39 @@ const { notion } = createNotionClient(TOKEN);
 const sendNtfy = createNtfyClient(NTFY_TOPIC, NTFY_TOKEN);
 
 async function getAllPages() {
-  const pages = [];
-  let cursor = undefined;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const pages = [];
+      let cursor = undefined;
 
-  while (true) {
-    const res = await notion('POST', `/databases/${DB_ID}/query`, {
-      start_cursor: cursor,
-      page_size: 100,
-      filter: {
-        and: [
-          { property: '수업 일시', date: { is_not_empty: true } },
-          { property: '특이사항', select: { does_not_equal: '🚫 취소' } },
-        ],
-      },
-    });
-    pages.push(...res.results);
-    if (!res.has_more) break;
-    cursor = res.next_cursor;
+      while (true) {
+        const body = {
+          page_size: 100,
+          filter: {
+            and: [
+              { property: '수업 일시', date: { is_not_empty: true } },
+              { property: '특이사항', select: { does_not_equal: '🚫 취소' } },
+            ],
+          },
+        };
+        if (cursor) body.start_cursor = cursor;
+
+        const res = await notion('POST', `/databases/${DB_ID}/query`, body);
+        pages.push(...res.results);
+        if (!res.has_more) break;
+        cursor = res.next_cursor;
+      }
+
+      return pages;
+    } catch (e) {
+      if (attempt < 3) {
+        console.warn(`DB 조회 실패 (${attempt}회) — 처음부터 재시도:`, e.message);
+        await sleep(2000);
+      } else {
+        throw e;
+      }
+    }
   }
-
-  return pages;
 }
 
 async function main() {

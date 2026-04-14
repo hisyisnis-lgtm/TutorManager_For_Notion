@@ -90,7 +90,7 @@ export default function NotificationsPage() {
           .filter((m) => m && m.event === 'message');
         addNotifications(msgs);
       })
-      .catch(() => {});
+      .catch((e) => console.error('[알림] 이전 알림 불러오기 오류', e));
 
     // SSE 실시간 연결
     const sse = new EventSource(`https://ntfy.sh/${topic}/sse`);
@@ -107,7 +107,9 @@ export default function NotificationsPage() {
           localStorage.setItem(LAST_READ_KEY, String(Math.floor(Date.now() / 1000)));
           addNotifications([msg]);
         }
-      } catch {}
+      } catch (e) {
+        console.error('[알림] SSE 메시지 파싱 오류', e);
+      }
     });
 
     return () => {

@@ -4,10 +4,11 @@ import { Card } from 'antd';
 import { useData } from '../context/DataContext.jsx';
 import { queryPage } from '../api/notionClient.js';
 import { CLASSES_DB, parseClass } from '../api/classes.js';
-import { CONSULT_DB } from './ConsultManagePage.jsx';
+import { CONSULT_DB } from '../constants.js';
 import { formatShort, formatDateTime, formatTime } from '../utils/dateUtils.js';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import PullToRefresh from '../components/ui/PullToRefresh.jsx';
+import MonthCalendar from '../components/ui/MonthCalendar.jsx';
 import { getInstructorName, getNtfyTopic } from './SettingsPage.jsx';
 
 const KST = 'Asia/Seoul';
@@ -38,6 +39,8 @@ export default function HomePage() {
   const [instructorName, setInstructorName] = useState(getInstructorName);
 
   const today = getKSTToday();
+  const pad = n => String(n).padStart(2, '0');
+  const todayStr = `${today.year}-${pad(today.month + 1)}-${pad(today.day)}`;
   const [unreadCount, setUnreadCount] = useState(() => {
     try {
       const notifications = JSON.parse(localStorage.getItem('ntfy_notifications') || '[]');
@@ -70,8 +73,8 @@ export default function HomePage() {
         5
       );
       setClasses((data?.results ?? []).map(parseClass));
-    } catch {
-      // silent
+    } catch (e) {
+      console.error('[홈] 수업 불러오기 오류', e);
     } finally {
       setLoading(false);
     }
@@ -112,8 +115,8 @@ export default function HomePage() {
         100
       );
       setConsultCount(data?.results?.length ?? 0);
-    } catch {
-      // silent
+    } catch (e) {
+      console.error('[홈] 상담 수 불러오기 오류', e);
     }
   };
 
@@ -209,96 +212,18 @@ export default function HomePage() {
 
       {/* 월별 캘린더 */}
       <div className="px-4 pt-4 pb-2">
-        <Card variant="borderless" style={{ borderRadius: 16, boxShadow: 'var(--shadow-card)' }} styles={{ body: { padding: 16 } }}>
-          {/* 헤더 */}
-          <div className="flex items-center justify-between mb-3">
-            <button
-              onClick={prevMonth}
-              aria-label="이전 달"
-              className="w-10 h-10 flex items-center justify-center rounded-lg active:bg-gray-100 text-gray-500 text-xl font-light"
-            >
-              <span aria-hidden="true">‹</span>
-            </button>
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold tabular-nums text-gray-800" aria-live="polite" aria-atomic="true">
-                {calYear}년 {calMonth + 1}월
-              </span>
-              {calLoading && (
-                <span className="w-1.5 h-1.5 rounded-full bg-brand-400 animate-pulse" aria-hidden="true" />
-              )}
-            </div>
-            <button
-              onClick={nextMonth}
-              aria-label="다음 달"
-              className="w-10 h-10 flex items-center justify-center rounded-lg active:bg-gray-100 text-gray-500 text-xl font-light"
-            >
-              <span aria-hidden="true">›</span>
-            </button>
-          </div>
-
-          {/* 요일 헤더 */}
-          <div className="grid grid-cols-7 mb-1">
-            {WEEKDAYS.map((w, i) => (
-              <div
-                key={w}
-                className={`text-center text-xs font-medium py-1 ${
-                  i === 0 ? 'text-red-400' : i === 6 ? 'text-blue-400' : 'text-gray-400'
-                }`}
-              >
-                {w}
-              </div>
-            ))}
-          </div>
-
-          {/* 날짜 그리드 */}
-          <div className="grid grid-cols-7">
-            {cells.map((day, i) => {
-              if (!day) return <div key={`e-${i}`} className="h-9" />;
-              const isToday = calYear === today.year && calMonth === today.month && day === today.day;
-              const isSelected = selectedDay === day;
-              const count = classCountMap[day] || 0;
-              const dow = (firstDow + day - 1) % 7;
-              const hasClass = count > 0;
-              return (
-                <div
-                  key={day}
-                  role={hasClass ? 'button' : undefined}
-                  tabIndex={hasClass ? 0 : undefined}
-                  aria-label={hasClass ? `${calMonth + 1}월 ${day}일, 수업 ${count}개` : undefined}
-                  aria-pressed={hasClass ? isSelected : undefined}
-                  onKeyDown={hasClass ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleDayClick(day); } } : undefined}
-                  className={`flex flex-col items-center h-11 ${hasClass ? 'cursor-pointer' : ''}`}
-                  onClick={() => handleDayClick(day)}
-                >
-                  <span
-                    className={`text-xs w-6 h-6 flex items-center justify-center rounded-full font-medium transition-colors ${
-                      isSelected
-                        ? 'bg-brand-600 text-white ring-2 ring-brand-300'
-                        : isToday
-                        ? 'bg-brand-600 text-white'
-                        : count > 0
-                        ? 'bg-green-100 text-green-700'
-                        : dow === 0
-                        ? 'text-red-400'
-                        : dow === 6
-                        ? 'text-blue-400'
-                        : 'text-gray-700'
-                    }`}
-                  >
-                    {day}
-                  </span>
-                  {count > 0 && (
-                    <span className="text-[9px] font-bold text-brand-500 leading-none mt-0.5">
-                      {count}
-                    </span>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-
-          {/* 선택된 날 수업 드릴다운 */}
-          {selectedDay !== null && (
+        <MonthCalendar
+          year={calYear}
+          month={calMonth + 1}
+          todayStr={todayStr}
+          classCountMap={classCountMap}
+          selectedDay={selectedDay}
+          onDayClick={handleDayClick}
+          onPrevMonth={prevMonth}
+          onNextMonth={nextMonth}
+          loading={calLoading}
+          onDeselect={() => setSelectedDay(null)}
+          footer={selectedDay !== null && (
             <div className="mt-3 pt-3 border-t border-gray-100">
               <p className="text-xs font-semibold text-gray-500 mb-2">
                 {calMonth + 1}월 {selectedDay}일 수업
@@ -350,7 +275,7 @@ export default function HomePage() {
               )}
             </div>
           )}
-        </Card>
+        />
       </div>
 
       {/* 미확인 무료상담 신청 */}

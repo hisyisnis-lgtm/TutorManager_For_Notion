@@ -1,4 +1,4 @@
-name: 무료상담 전날 알림
+name: 무료상담/원데이클래스 전날 알림
 
 on:
   schedule:
@@ -18,11 +18,12 @@ jobs:
         with:
           node-version: '24'
 
-      - name: 무료상담 전날 리마인더 발송
+      - name: 무료상담/원데이클래스 전날 리마인더 발송
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           SOLAPI_API_KEY: ${{ secrets.SOLAPI_API_KEY }}
           SOLAPI_API_SECRET: ${{ secrets.SOLAPI_API_SECRET }}
           KAKAO_PFID: ${{ secrets.KAKAO_PFID }}
           KAKAO_TPL_CONSULT_TOMORROW: ${{ secrets.KAKAO_TPL_CONSULT_TOMORROW }}
+          KAKAO_TPL_ONEDAY_TOMORROW: ${{ secrets.KAKAO_TPL_ONEDAY_TOMORROW }}
         run: node notify_consult_tomorrow.mjs

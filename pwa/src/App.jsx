@@ -30,6 +30,9 @@ import NotificationsPage from './pages/NotificationsPage.jsx';
 import BookEntryPage from './pages/BookEntryPage.jsx';
 import BookingPage from './pages/BookingPage.jsx';
 import BookingStatusPage from './pages/BookingStatusPage.jsx';
+import PersonalEntryPage from './pages/PersonalEntryPage.jsx';
+import PersonalPage from './pages/PersonalPage.jsx';
+import PandaTestPage from './pages/PandaTestPage.jsx';
 import BookingsManagePage from './pages/BookingsManagePage.jsx';
 import ConsultManagePage from './pages/ConsultManagePage.jsx';
 import LandingPage from './pages/LandingPage.jsx';
@@ -42,7 +45,7 @@ function SplashScreen({ updating }) {
       style={{ background: '#7f0005' }}
       className="fixed inset-0 flex flex-col items-center justify-center gap-5"
     >
-      <img src="/logo-white.png" alt="하늘하늘중국어" className="h-10 w-auto block" style={{ outline: 'none', border: 'none' }} />
+      <img src={`${import.meta.env.BASE_URL}logo/logo-white.png`} alt="하늘하늘중국어" className="h-10 w-auto block" style={{ outline: 'none', border: 'none' }} />
       <div className="w-7 h-7 rounded-full border-2 border-white/30 border-t-white animate-spin" />
       <p className="text-white/60 text-sm tracking-wide">
         {updating ? '최신 버전으로 업데이트 중...' : ''}
@@ -64,7 +67,7 @@ function checkAuth() {
 // 현재 hash가 공개 페이지인지 확인 (로그인 불필요)
 function isPublicBookingRoute() {
   const hash = window.location.hash;
-  return hash.startsWith('#/book') || hash.startsWith('#/intro') || hash.startsWith('#/pricing') || hash.startsWith('#/consent');
+  return hash.startsWith('#/book') || hash.startsWith('#/intro') || hash.startsWith('#/pricing') || hash.startsWith('#/consent') || hash.startsWith('#/personal') || hash.startsWith('#/panda-test');
 }
 
 // 데이터 작성 중인 폼 페이지 여부 확인
@@ -126,7 +129,7 @@ export default function App() {
   if (isPublicBookingRoute()) {
     return (
       <ConfigProvider theme={antdTheme}>
-        <HashRouter>
+        <HashRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <ScrollToTop />
           <Routes>
             <Route path="/intro" element={<LandingPage />} />
@@ -135,6 +138,9 @@ export default function App() {
             <Route path="/book" element={<BookEntryPage />} />
             <Route path="/book/status/:token" element={<BookingStatusPage />} />
             <Route path="/book/:studentToken" element={<BookingPage />} />
+            <Route path="/personal" element={<PersonalEntryPage />} />
+            <Route path="/personal/:studentToken" element={<PersonalPage />} />
+            <Route path="/panda-test" element={<PandaTestPage />} />
           </Routes>
         </HashRouter>
       </ConfigProvider>
@@ -157,7 +163,7 @@ export default function App() {
   return (
     <ConfigProvider theme={antdTheme}>
     <DataProvider>
-      <HashRouter>
+      <HashRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <ScrollToTop />
         <div className="page-container">
           <Routes>

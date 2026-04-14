@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Button } from 'antd';
 
 const WORKER_URL = import.meta.env.VITE_WORKER_URL;

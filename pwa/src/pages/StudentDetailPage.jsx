@@ -1,13 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button, Card } from 'antd';
+import { LinkOutlined } from '@ant-design/icons';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import Badge from '../components/ui/Badge.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import ErrorMessage from '../components/ui/ErrorMessage.jsx';
-import { getPage, updatePage, deletePage } from '../api/notionClient.js';
+import { getPage, deletePage } from '../api/notionClient.js';
 import ConfirmDialog from '../components/ui/ConfirmDialog.jsx';
 import { parseStudent, statusColor, STATUS_OPTIONS, updateStudentStatus } from '../api/students.js';
+import { SITE_ORIGIN } from '../constants.js';
 import { fetchClassesPage, parseClass, classStatusColor } from '../api/classes.js';
 import { fetchPaymentsPage, parsePayment, paymentStatusColor } from '../api/payments.js';
 import { formatDateTime, formatTime, formatKRW } from '../utils/dateUtils.js';
@@ -91,7 +93,7 @@ export default function StudentDetailPage() {
           <div className="flex items-center gap-2">
             <Button
               onClick={() => navigate(`/students/${id}/edit`)}
-              style={{ borderRadius: 8, fontWeight: 500 }}
+              style={{ borderRadius: 12, fontWeight: 600 }}
             >
               수정
             </Button>
@@ -100,7 +102,7 @@ export default function StudentDetailPage() {
                 type="primary"
                 onClick={() => setShowStatusMenu((v) => !v)}
                 disabled={updating}
-                style={{ borderRadius: 8, fontWeight: 500 }}
+                style={{ borderRadius: 12, fontWeight: 600 }}
               >
                 상태 변경
               </Button>
@@ -122,7 +124,7 @@ export default function StudentDetailPage() {
         }
       />
 
-      <div className="px-4 pt-4 space-y-4 pb-6">
+      <div className="px-4 pt-4 space-y-4 pb-24">
         {/* 기본 정보 */}
         <Card variant="borderless" style={{ borderRadius: 16, boxShadow: 'var(--shadow-border)' }} styles={{ body: { padding: '16px' } }}>
           <div className="space-y-3">
@@ -157,23 +159,30 @@ export default function StudentDetailPage() {
               </div>
             )}
             {student.bookingCode && (
-              <div className="pt-2 border-t border-gray-50">
-                <p className="text-xs text-gray-500 mb-1">예약 링크</p>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-gray-500 font-mono truncate flex-1">
-                    /book/{student.bookingCode}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const url = `${window.location.origin}${window.location.pathname}#/book/${encodeURIComponent(student.bookingCode)}`;
-                      navigator.clipboard.writeText(url).then(() => alert('링크가 복사되었습니다.'));
-                    }}
-                    className="shrink-0 text-xs text-brand-600 border border-brand-100 rounded-lg px-2.5 py-1 active:bg-brand-50"
-                  >
-                    복사
-                  </button>
-                </div>
+              <div className="pt-3 border-t border-gray-50">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const personalUrl = `${SITE_ORIGIN}/#/personal/${encodeURIComponent(student.bookingCode)}`;
+                    const cleanName = student.name.replace(/[\u200B-\u200D\uFE0F\uFEFF]/g, '').replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, '').trim();
+                    const text = `${personalUrl}\n[${cleanName}님 학생코드 - ${student.bookingCode}]`;
+                    navigator.clipboard.writeText(text).then(() => alert('복사되었습니다.'));
+                  }}
+                  style={{
+                    width: '100%', height: 44, cursor: 'pointer', borderRadius: 12,
+                    background: '#7f0005', border: 'none',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                    fontSize: 14, fontWeight: 600, color: 'white',
+                    WebkitTapHighlightColor: 'transparent',
+                    transition: 'transform 0.12s ease, opacity 0.12s ease',
+                  }}
+                  onPointerDown={e => e.currentTarget.style.transform = 'scale(0.96)'}
+                  onPointerUp={e => e.currentTarget.style.transform = 'scale(1)'}
+                  onPointerLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+                >
+                  <LinkOutlined style={{ fontSize: 14 }} />
+                  학생 페이지 공유
+                </button>
               </div>
             )}
           </div>

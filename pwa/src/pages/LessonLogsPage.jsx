@@ -70,14 +70,14 @@ export default function LessonLogsPage() {
               description="수업 완료 후 자동으로 빈 일지가 생성됩니다."
             />
           ) : (
-            <ul className="px-4 space-y-3 pb-4">
+            <ul className={`px-4 space-y-3 ${hasMore ? 'pb-2' : 'pb-24'}`}>
               {filteredLogs.map((log) => (
                 <LogCard key={log.id} log={log} studentNameMap={studentNameMap} />
               ))}
             </ul>
           )}
           {hasMore && (
-            <div className="px-4 pb-4">
+            <div className="px-4 pb-24">
               <Button
                 block
                 onClick={() => load(false, cursor)}
@@ -102,7 +102,7 @@ function LogCard({ log, studentNameMap }) {
       <Link to={`/logs/${log.id}/edit`}>
         <Card
           variant="borderless"
-          style={{ borderRadius: 16 }}
+          style={{ borderRadius: 16, boxShadow: 'var(--shadow-border)' }}
           styles={{ body: { padding: 16 } }}
           hoverable
         >

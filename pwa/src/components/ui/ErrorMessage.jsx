@@ -5,7 +5,7 @@ export default function ErrorMessage({ message, onRetry }) {
     <div style={{ margin: '24px 16px 0' }}>
       <Alert
         type="error"
-        message="오류가 발생했습니다"
+        title="오류가 발생했습니다"
         description={
           <>
             <span>{message}</span>

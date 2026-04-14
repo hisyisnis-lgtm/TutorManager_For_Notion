@@ -2,6 +2,43 @@
 @tailwind components;
 @tailwind utilities;
 
+@keyframes panda-float {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  30% { transform: translateY(-8px) rotate(-2deg); }
+  70% { transform: translateY(-4px) rotate(1.5deg); }
+}
+
+/* panda-feed-fly-{id} 는 JS에서 동적 주입 */
+
+/* panda-heart-{id} 는 JS에서 동적 주입 */
+
+@keyframes panda-burst {
+  0%   { transform: translate(0, 0) scale(0.3); opacity: 1; }
+  45%  { opacity: 1; }
+  100% { transform: translate(var(--tx), var(--ty)) scale(0.1); opacity: 0; }
+}
+
+@keyframes panda-sparkle-burst {
+  0%   { transform: translate(0, 0) scale(0.4); opacity: 1; }
+  50%  { opacity: 1; transform: translate(calc(var(--tx) * 0.6), calc(var(--ty) * 0.6)) scale(1.2); }
+  100% { transform: translate(var(--tx), var(--ty)) scale(0.2); opacity: 0; }
+}
+
+@keyframes panda-levelup-bounce {
+  0%   { transform: scale(1) rotate(0deg); }
+  20%  { transform: scale(1.2) rotate(-4deg); }
+  45%  { transform: scale(1.18) rotate(4deg); }
+  65%  { transform: scale(0.96) rotate(-1deg); }
+  80%  { transform: scale(1.04); }
+  100% { transform: scale(1) rotate(0deg); }
+}
+
+@keyframes panda-badge-in {
+  0%   { opacity: 0; transform: translateX(-50%) translateY(-10px) scale(0.85); }
+  70%  { transform: translateX(-50%) translateY(2px) scale(1.05); }
+  100% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+}
+
 @font-face {
   font-family: 'KimjungchulGothic';
   font-weight: 300;

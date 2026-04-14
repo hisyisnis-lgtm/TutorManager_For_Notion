@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Button, Input, Typography } from 'antd';
+import { Alert, Button, Input, Typography } from 'antd';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import { createStudent, updateStudent, parseStudent, STATUS_OPTIONS } from '../api/students.js';
@@ -95,9 +95,7 @@ export default function StudentFormPage() {
 
       <form onSubmit={handleSubmit} className="px-4 pt-4 pb-8 space-y-5">
         {error && (
-          <div style={{ padding: '12px 16px', backgroundColor: '#fff2f0', border: '1px solid #ffccc7', borderRadius: 12, fontSize: 14, color: '#cf1322' }}>
-            {error}
-          </div>
+          <Alert type="error" message={error} showIcon style={{ borderRadius: 12 }} />
         )}
 
         {/* 이름 */}
@@ -177,7 +175,7 @@ export default function StudentFormPage() {
             value={form.level}
             onChange={set('level')}
             placeholder="예: 초급, 중급, 고급"
-            rows={5}
+            rows={3}
             style={{ borderRadius: 12 }}
           />
         </div>
@@ -191,7 +189,7 @@ export default function StudentFormPage() {
             value={form.goal}
             onChange={set('goal')}
             placeholder="예: 수능 1등급, 회화 향상"
-            rows={5}
+            rows={3}
             style={{ borderRadius: 12 }}
           />
         </div>
@@ -205,7 +203,7 @@ export default function StudentFormPage() {
             value={form.memo}
             onChange={set('memo')}
             placeholder="특이사항, 참고 정보 등"
-            rows={5}
+            rows={3}
             style={{ borderRadius: 12 }}
           />
         </div>

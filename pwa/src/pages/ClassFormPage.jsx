@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Button, Input, Select, Typography } from 'antd';
+import { Alert, Button, Input, Select, Typography } from 'antd';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import { getPage, deletePage } from '../api/notionClient.js';
@@ -224,11 +224,11 @@ export default function ClassFormPage() {
       ? Math.min(...selectedStudents.map((s) => s.remainingSessions ?? 0))
       : 0;
 
-  // 무료상담 여부 (수업 유형 타이틀에 "무료상담" 포함)
+  // 이름/전화번호 입력 필요한 수업 유형 (무료상담, 원데이클래스)
   const selectedClassType = classTypes.find(ct => ct.id === form.classTypeId);
-  const isFreeTrial = selectedClassType?.title?.includes('무료상담') ?? false;
+  const isFreeTrial = (selectedClassType?.title?.includes('무료상담') || selectedClassType?.title?.includes('원데이클래스')) ?? false;
 
-  // 무료상담은 30분 옵션 추가, 일반 수업은 기존 60분 이상
+  // 무료상담/원데이클래스는 30분 옵션 추가, 일반 수업은 기존 60분 이상
   const displayDurationOptions = isFreeTrial ? ['30', '60'] : DURATION_OPTIONS;
 
   const canRecur = !isFreeTrial && form.studentIds.length > 0 && Boolean(form.classTypeId);
@@ -253,7 +253,7 @@ export default function ClassFormPage() {
       return;
     }
     if (isFreeTrial && !form.studentIds.length && !form.guestName.trim()) {
-      setError('상담자 이름을 입력하거나 학생을 선택하세요.');
+      setError('이름을 입력하거나 학생을 선택하세요.');
       return;
     }
     if (!form.classTypeId) {
@@ -373,9 +373,7 @@ export default function ClassFormPage() {
 
       <form onSubmit={handleSubmit} className="px-4 pt-4 pb-8 space-y-5">
         {error && (
-          <div style={{ padding: '12px 16px', backgroundColor: '#fff2f0', border: '1px solid #ffccc7', borderRadius: 12, fontSize: 14, color: '#cf1322' }}>
-            {error}
-          </div>
+          <Alert type="error" message={error} showIcon style={{ borderRadius: 12 }} />
         )}
 
         {/* ① 수업 유형 — 항상 표시 */}
@@ -387,7 +385,7 @@ export default function ClassFormPage() {
             value={form.classTypeId || undefined}
             onChange={(value) => {
               const ct = classTypes.find(c => c.id === value);
-              const isFT = ct?.title?.includes('무료상담') ?? false;
+              const isFT = (ct?.title?.includes('무료상담') || ct?.title?.includes('원데이클래스')) ?? false;
               setForm((f) => ({
                 ...f,
                 classTypeId: value,
@@ -413,10 +411,10 @@ export default function ClassFormPage() {
             {isFreeTrial && (
               <div style={{ marginBottom: 20 }}>
                 <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>
-                  상담자 이름
+                  이름
                 </Typography.Text>
                 <Input
-                  placeholder="상담자 이름을 입력하세요 (노션 제목)"
+                  placeholder="이름을 입력하세요 (노션 수업 제목)"
                   value={form.guestName}
                   onChange={(e) => setForm((f) => ({ ...f, guestName: e.target.value }))}
                   size="large"
@@ -437,7 +435,7 @@ export default function ClassFormPage() {
               </div>
             )}
             <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>
-              학생 선택 {isFreeTrial ? <span style={{ fontWeight: 400, color: '#8c8c8c' }}>(무료상담은 선택 사항)</span> : '(2:1 수업 시 두 명 선택)'}
+              학생 선택 {isFreeTrial ? <span style={{ fontWeight: 400, color: '#8c8c8c' }}>(선택 사항)</span> : '(2:1 수업 시 두 명 선택)'}
             </Typography.Text>
             <Input
               type="text"

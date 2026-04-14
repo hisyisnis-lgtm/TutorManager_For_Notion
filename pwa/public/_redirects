@@ -1,1 +1,3 @@
+/personal /#/personal 302
+/personal/* /#/personal/:splat 302
 /* /index.html 200

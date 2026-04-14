@@ -4,8 +4,7 @@ import PageHeader from '../components/layout/PageHeader.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import PullToRefresh from '../components/ui/PullToRefresh.jsx';
 import { queryAll, updatePage } from '../api/notionClient.js';
-
-export const CONSULT_DB = '324838fa-f2a6-815d-99a7-ff165e8f78aa';
+import { CONSULT_DB } from '../constants.js';
 
 const KST = 'Asia/Seoul';
 
@@ -51,7 +50,7 @@ function ConsultCard({ consult: c, onConfirm, confirming }) {
   return (
     <Card
       variant="borderless"
-      style={{ borderRadius: 16, opacity: faded ? 0.55 : 1 }}
+      style={{ borderRadius: 16, boxShadow: 'var(--shadow-border)', opacity: faded ? 0.55 : 1 }}
       styles={{ body: { padding: '14px 16px' } }}
     >
       <div className="flex items-start justify-between gap-2 mb-2">
@@ -108,8 +107,8 @@ export default function ConsultManagePage() {
         [{ timestamp: 'created_time', direction: 'descending' }]
       );
       setConsults(results.map(parseConsult));
-    } catch {
-      // silent
+    } catch (e) {
+      console.error('[상담관리] 불러오기 오류', e);
     } finally {
       setLoading(false);
     }

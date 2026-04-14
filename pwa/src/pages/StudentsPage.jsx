@@ -98,7 +98,7 @@ export default function StudentsPage() {
           {filtered.length === 0 ? (
             <EmptyState icon="👥" title="학생이 없습니다" description="노션에서 학생을 추가하세요." />
           ) : (
-            <ul className="px-4 space-y-3 pb-4">
+            <ul className="px-4 space-y-3 pb-24">
               {filtered.map((student) => (
                 <StudentCard key={student.id} student={student} />
               ))}
