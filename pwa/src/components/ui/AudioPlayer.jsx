@@ -159,7 +159,7 @@ export default function AudioPlayer({ url, fileName, onGetFreshUrl, onDelete, de
       </div>
 
       {/* 시간 */}
-      <div style={{ fontSize: 12, color: '#8c8c8c', flexShrink: 0, fontVariantNumeric: 'tabular-nums', minWidth: 72, textAlign: 'right' }}>
+      <div style={{ fontSize: 12, color: '#767676', flexShrink: 0, fontVariantNumeric: 'tabular-nums', minWidth: 72, textAlign: 'right' }}>
         {formatTime(currentTime)} / {formatTime(duration)}
       </div>
 

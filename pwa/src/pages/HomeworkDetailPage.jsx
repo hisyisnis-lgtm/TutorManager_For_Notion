@@ -191,15 +191,19 @@ export default function HomeworkDetailPage() {
         <Card variant="borderless" style={{ borderRadius: 16, boxShadow: 'var(--shadow-border)' }} styles={{ body: { padding: 16 } }}>
           <p style={{ fontSize: 13, fontWeight: 700, color: '#1d1d1f', marginBottom: 12 }}>피드백</p>
 
-          <Input.TextArea
-            value={feedbackText}
-            onChange={(e) => setFeedbackText(e.target.value)}
-            placeholder="텍스트 피드백을 입력하세요"
-            rows={4}
-            maxLength={2000}
-            showCount
-            style={{ borderRadius: 12, marginBottom: 12 }}
-          />
+          <div style={{ marginBottom: 12 }}>
+            <Input.TextArea
+              value={feedbackText}
+              onChange={(e) => setFeedbackText(e.target.value)}
+              placeholder="텍스트 피드백을 입력하세요"
+              rows={4}
+              maxLength={2000}
+              style={{ borderRadius: 12 }}
+            />
+            <div style={{ textAlign: 'right', fontSize: 12, color: '#767676', marginTop: 4 }}>
+              <span className="tabular-nums">{feedbackText.length}</span> / 2000
+            </div>
+          </div>
 
           {/* 기존 피드백 파일 (저장된 것) */}
           {hw.feedbackFiles?.length > 0 && (
