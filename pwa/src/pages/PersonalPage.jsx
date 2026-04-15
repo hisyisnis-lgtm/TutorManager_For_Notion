@@ -432,7 +432,7 @@ function HwCard({ hw, expanded, onToggle, studentToken, onReload, getFreshUrls }
                   WebkitTapHighlightColor: 'transparent',
                 }}
               >
-                📁 파일 추가하기
+                📁 숙제 제출하기
               </button>
             )}
           </div>
