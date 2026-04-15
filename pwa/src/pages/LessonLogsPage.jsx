@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { Button, Input, Card } from 'antd';
+import { SearchOutlined } from '@ant-design/icons';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import ErrorMessage from '../components/ui/ErrorMessage.jsx';
@@ -49,12 +50,13 @@ export default function LessonLogsPage() {
       {/* 학생 검색 */}
       <div className="px-4 pt-3 pb-3">
         <Input
-          type="search"
+          prefix={<SearchOutlined style={{ color: '#767676' }} />}
           placeholder="학생 이름으로 검색"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          style={{ borderRadius: 12 }}
+          allowClear
           size="large"
+          style={{ borderRadius: 12 }}
         />
       </div>
 
@@ -122,7 +124,7 @@ function LogCard({ log, studentNameMap }) {
           {log.content ? (
             <p className="text-sm text-gray-600 line-clamp-2">{log.content}</p>
           ) : (
-            <p className="text-sm text-gray-300 italic">내용 없음</p>
+            <p className="text-sm italic" style={{ color: '#767676' }}>내용 없음</p>
           )}
           {log.engagement && (
             <p className="text-xs text-gray-500 mt-2">참여도 {log.engagement}</p>

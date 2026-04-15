@@ -161,7 +161,7 @@ export default function SettingsPage() {
           로그아웃
         </Button>
 
-        <p className="text-center text-xs text-gray-300 pt-4">v{__APP_VERSION__}</p>
+        <p className="text-center text-xs pt-4" style={{ color: '#767676' }}>v{__APP_VERSION__}</p>
       </div>
 
       {confirmLogout && (

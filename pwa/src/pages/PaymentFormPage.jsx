@@ -161,7 +161,7 @@ export default function PaymentFormPage() {
     <>
       <PageHeader title={isEdit ? '결제 편집' : '결제 입력'} back />
 
-      <form onSubmit={handleSubmit} className="px-4 pt-4 pb-8 space-y-5">
+      <form onSubmit={handleSubmit} className="px-5 pt-4 pb-8 space-y-5">
         {error && (
           <Alert type="error" message={error} showIcon style={{ borderRadius: 12 }} />
         )}
@@ -379,7 +379,6 @@ export default function PaymentFormPage() {
           <Button
             danger
             block
-            type="primary"
             onClick={() => setShowDeleteConfirm(true)}
             style={{ borderRadius: 12, height: 44, marginTop: 4 }}
           >

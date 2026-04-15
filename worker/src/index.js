@@ -1,5 +1,6 @@
 const CLASS_DB_ID = '314838fa-f2a6-81bc-8b67-d9e1c8fb7ecb';
 const STUDENT_DB_ID = '314838fa-f2a6-8143-a6c7-e59c50f3bbdb';
+const HOMEWORK_DB_ID = '5ce7d5ef-7b80-4795-843f-325f4ca868e2';
 
 // ===== 예약 시스템 DB =====
 const BLOCKED_DATES_DB_ID = '31e838fa-f2a6-81d3-b034-c47a4f0e5f3e';
@@ -1273,6 +1274,217 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
   return new Response('Not Found', { status: 404, headers: corsHeaders });
 }
 
+// ===== 숙제 파일 업로드 공통 헬퍼 =====
+async function uploadFileToNotion(file, notionToken) {
+  const fileName = file.name || 'audio.m4a';
+  const mimeType = file.type || 'audio/mpeg';
+  const arrayBuffer = await file.arrayBuffer();
+
+  // 1. Notion file_upload 세션 생성
+  const sessionRes = await fetch('https://api.notion.com/v1/file_uploads', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${notionToken}`,
+      'Notion-Version': '2022-06-28',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ mode: 'single_part' }),
+  });
+  if (!sessionRes.ok) {
+    const err = await sessionRes.json().catch(() => ({}));
+    throw new Error(err.message || 'Notion 파일 업로드 세션 생성 실패');
+  }
+  const session = await sessionRes.json();
+  const { id: fileUploadId, upload_url } = session;
+
+  // 2. 파일을 upload_url로 전송
+  const uploadForm = new FormData();
+  uploadForm.append('file', new Blob([arrayBuffer], { type: mimeType }), fileName);
+  const uploadRes = await fetch(upload_url, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${notionToken}`,
+      'Notion-Version': '2022-06-28',
+    },
+    body: uploadForm,
+  });
+  if (!uploadRes.ok) {
+    throw new Error('Notion 파일 업로드 실패');
+  }
+
+  return { fileUploadId, fileName };
+}
+
+// ===== 숙제 라우트 핸들러 =====
+async function handleHomeworkRoutes(request, env, corsHeaders, url) {
+  const n = (method, path, body) =>
+    fetch(`https://api.notion.com/v1${path}`, {
+      method,
+      headers: {
+        Authorization: `Bearer ${env.NOTION_TOKEN}`,
+        'Notion-Version': '2022-06-28',
+        'Content-Type': 'application/json',
+      },
+      body: body ? JSON.stringify(body) : undefined,
+    }).then((r) => r.json());
+
+  // 학생 토큰으로 학생 페이지 조회 (공통)
+  async function findStudentByToken(token) {
+    const res = await n('POST', `/databases/${STUDENT_DB_ID}/query`, {
+      filter: { property: '예약 코드', rich_text: { equals: token } },
+      page_size: 1,
+    });
+    return res.results?.[0] ?? null;
+  }
+
+  // JWT 검증 (강사용)
+  async function verifyJwt(req) {
+    const authHeader = req.headers.get('Authorization') || '';
+    const jwtToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+    if (!jwtToken) return false;
+    try {
+      return !!(await verifyToken(jwtToken, env.JWT_SECRET || env.AUTH_PASSWORD));
+    } catch {
+      return false;
+    }
+  }
+
+  // POST /homework/upload — 강사용 파일 업로드 (JWT 인증)
+  if (url.pathname === '/homework/upload' && request.method === 'POST') {
+    if (!(await verifyJwt(request))) {
+      return new Response(JSON.stringify({ error: '인증 필요' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    try {
+      const formData = await request.formData();
+      const file = formData.get('file');
+      if (!file) throw new Error('파일이 없습니다');
+      const result = await uploadFileToNotion(file, env.NOTION_TOKEN);
+      return new Response(JSON.stringify(result), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    } catch (e) {
+      return new Response(JSON.stringify({ error: e.message }), {
+        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+  }
+
+  // POST /homework/student-upload/:token — 학생용 파일 업로드 (예약 코드 인증)
+  const studentUploadMatch = url.pathname.match(/^\/homework\/student-upload\/([^/]+)$/);
+  if (studentUploadMatch && request.method === 'POST') {
+    const token = decodeURIComponent(studentUploadMatch[1]);
+    const studentPage = await findStudentByToken(token);
+    if (!studentPage) {
+      return new Response(JSON.stringify({ error: '등록된 학생이 아닙니다' }), {
+        status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    try {
+      const formData = await request.formData();
+      const file = formData.get('file');
+      if (!file) throw new Error('파일이 없습니다');
+      const result = await uploadFileToNotion(file, env.NOTION_TOKEN);
+      return new Response(JSON.stringify(result), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    } catch (e) {
+      return new Response(JSON.stringify({ error: e.message }), {
+        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+  }
+
+  // GET /homework/student/:token — 학생 숙제 목록
+  const studentHomeworkMatch = url.pathname.match(/^\/homework\/student\/([^/]+)$/);
+  if (studentHomeworkMatch && request.method === 'GET') {
+    const token = decodeURIComponent(studentHomeworkMatch[1]);
+    const studentPage = await findStudentByToken(token);
+    if (!studentPage) {
+      return new Response(JSON.stringify({ error: '등록된 학생이 아닙니다' }), {
+        status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    const res = await n('POST', `/databases/${HOMEWORK_DB_ID}/query`, {
+      filter: { property: '학생', relation: { contains: studentPage.id } },
+      sorts: [{ timestamp: 'created_time', direction: 'descending' }],
+      page_size: 100,
+    });
+    return new Response(JSON.stringify(res.results ?? []), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
+  // POST /homework/student/:token/:id/submit — 학생 숙제 제출
+  const submitMatch = url.pathname.match(/^\/homework\/student\/([^/]+)\/([^/]+)\/submit$/);
+  if (submitMatch && request.method === 'POST') {
+    const token = decodeURIComponent(submitMatch[1]);
+    const homeworkId = submitMatch[2];
+    const studentPage = await findStudentByToken(token);
+    if (!studentPage) {
+      return new Response(JSON.stringify({ error: '등록된 학생이 아닙니다' }), {
+        status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    const body = await request.json().catch(() => ({}));
+    // files: [{fileUploadId, fileName}] — 새로 추가할 파일 (0~5개)
+    // deleteFileNames: [string] — 삭제할 기존 파일 이름 목록
+    const newFiles = Array.isArray(body.files) ? body.files : [];
+    const deleteFileNamesSet = new Set(Array.isArray(body.deleteFileNames) ? body.deleteFileNames : []);
+
+    // 기존 제출 파일 조회 후 삭제 대상 제외
+    const currentPage = await fetch(`https://api.notion.com/v1/pages/${homeworkId}`, {
+      headers: { Authorization: `Bearer ${env.NOTION_TOKEN}`, 'Notion-Version': '2022-06-28' },
+    }).then(r => r.json());
+    const keptFiles = (currentPage.properties?.['학생 제출 파일']?.files ?? [])
+      .filter(f => !deleteFileNamesSet.has(f.name));
+
+    const totalCount = keptFiles.length + newFiles.length;
+    if (totalCount > 5) {
+      return new Response(JSON.stringify({ error: '파일은 최대 5개까지 가능합니다' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    const nowIso = new Date().toISOString();
+    // 파일이 0개이면 제출 취소 (미제출로 복귀)
+    const newStatus = totalCount === 0 ? '미제출' : '제출완료';
+    const updateRes = await fetch(`https://api.notion.com/v1/pages/${homeworkId}`, {
+      method: 'PATCH',
+      headers: {
+        Authorization: `Bearer ${env.NOTION_TOKEN}`,
+        'Notion-Version': '2022-06-28',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        properties: {
+          '제출 상태': { select: { name: newStatus } },
+          '학생 제출 파일': {
+            files: [
+              ...keptFiles,
+              ...newFiles.map(({ fileUploadId, fileName }) => ({
+                name: fileName || 'audio.mp3',
+                type: 'file_upload',
+                file_upload: { id: fileUploadId },
+              })),
+            ],
+          },
+          제출일: totalCount > 0 ? { date: { start: nowIso } } : { date: null },
+        },
+      }),
+    });
+    const updateData = await updateRes.json();
+    return new Response(JSON.stringify(updateData), {
+      status: updateRes.ok ? 200 : updateRes.status,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
+  return new Response(JSON.stringify({ error: 'Not Found' }), {
+    status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
+}
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
@@ -1333,6 +1545,11 @@ export default {
     // 예약 시스템 라우트 (공개 + 강사 인증 혼재, 내부에서 분기)
     if (url.pathname.startsWith('/booking')) {
       return handleBookingRoutes(request, env, corsHeaders, url);
+    }
+
+    // 숙제 라우트 (공개 학생용 + 강사 JWT 인증 혼재)
+    if (url.pathname.startsWith('/homework')) {
+      return handleHomeworkRoutes(request, env, corsHeaders, url);
     }
 
     // 무료상담 신청 (공개, 인증 불필요)

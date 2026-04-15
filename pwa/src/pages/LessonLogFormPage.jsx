@@ -88,7 +88,7 @@ export default function LessonLogFormPage() {
     <>
       <PageHeader title={log?.title || '수업 일지'} back />
 
-      <form onSubmit={handleSubmit} className="px-4 pt-4 pb-8 space-y-5">
+      <form onSubmit={handleSubmit} className="px-5 pt-4 pb-8 space-y-5">
         {studentNames && (
           <Text type="secondary" style={{ fontSize: 14 }}>학생: {studentNames}</Text>
         )}
@@ -136,7 +136,7 @@ export default function LessonLogFormPage() {
             <button
               type="button"
               onClick={() => setForm((f) => ({ ...f, engagement: '' }))}
-              className={`py-3 rounded-xl text-sm font-medium border transition-colors ${
+              className={`py-3 rounded-xl text-sm font-medium border-2 transition-colors ${
                 !form.engagement ? 'bg-gray-200 text-gray-800 border-gray-300' : 'bg-white text-gray-500 border-gray-200'
               }`}
             >

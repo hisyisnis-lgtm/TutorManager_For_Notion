@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Button, Card } from 'antd';
-import { LinkOutlined } from '@ant-design/icons';
+import { Button, Card, message } from 'antd';
+import { LinkOutlined, FileTextOutlined } from '@ant-design/icons';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import Badge from '../components/ui/Badge.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
@@ -29,6 +29,18 @@ export default function StudentDetailPage() {
   const [showStatusMenu, setShowStatusMenu] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const statusMenuRef = useRef(null);
+
+  useEffect(() => {
+    if (!showStatusMenu) return;
+    const handler = (e) => {
+      if (statusMenuRef.current && !statusMenuRef.current.contains(e.target)) {
+        setShowStatusMenu(false);
+      }
+    };
+    document.addEventListener('pointerdown', handler);
+    return () => document.removeEventListener('pointerdown', handler);
+  }, [showStatusMenu]);
 
   useEffect(() => {
     const load = async () => {
@@ -59,7 +71,7 @@ export default function StudentDetailPage() {
       setStudent((s) => ({ ...s, status: newStatus }));
       refreshAll();
     } catch (e) {
-      alert(`상태 변경 실패: ${e.message}`);
+      message.error(`상태 변경 실패: ${e.message}`);
     } finally {
       setUpdating(false);
     }
@@ -72,7 +84,7 @@ export default function StudentDetailPage() {
       refreshAll();
       navigate(-1);
     } catch (e) {
-      alert(`삭제 실패: ${e.message}`);
+      message.error(`삭제 실패: ${e.message}`);
       setShowDeleteConfirm(false);
       setDeleting(false);
     }
@@ -97,7 +109,7 @@ export default function StudentDetailPage() {
             >
               수정
             </Button>
-            <div className="relative">
+            <div className="relative" ref={statusMenuRef}>
               <Button
                 type="primary"
                 onClick={() => setShowStatusMenu((v) => !v)}
@@ -124,7 +136,7 @@ export default function StudentDetailPage() {
         }
       />
 
-      <div className="px-4 pt-4 space-y-4 pb-24">
+      <div className="px-5 pt-4 space-y-4 pb-24">
         {/* 기본 정보 */}
         <Card variant="borderless" style={{ borderRadius: 16, boxShadow: 'var(--shadow-border)' }} styles={{ body: { padding: '16px' } }}>
           <div className="space-y-3">
@@ -159,14 +171,14 @@ export default function StudentDetailPage() {
               </div>
             )}
             {student.bookingCode && (
-              <div className="pt-3 border-t border-gray-50">
+              <div className="pt-3 border-t border-gray-50 space-y-2">
                 <button
                   type="button"
                   onClick={() => {
                     const personalUrl = `${SITE_ORIGIN}/#/personal/${encodeURIComponent(student.bookingCode)}`;
                     const cleanName = student.name.replace(/[\u200B-\u200D\uFE0F\uFEFF]/g, '').replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, '').trim();
                     const text = `${personalUrl}\n[${cleanName}님 학생코드 - ${student.bookingCode}]`;
-                    navigator.clipboard.writeText(text).then(() => alert('복사되었습니다.'));
+                    navigator.clipboard.writeText(text).then(() => message.success('복사되었습니다.'));
                   }}
                   style={{
                     width: '100%', height: 44, cursor: 'pointer', borderRadius: 12,
@@ -182,6 +194,24 @@ export default function StudentDetailPage() {
                 >
                   <LinkOutlined style={{ fontSize: 14 }} />
                   학생 페이지 공유
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigate(`/students/${id}/homework`)}
+                  style={{
+                    width: '100%', height: 44, cursor: 'pointer', borderRadius: 12,
+                    background: '#fff0f1', border: '1.5px solid #ffccc7',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                    fontSize: 14, fontWeight: 600, color: '#7f0005',
+                    WebkitTapHighlightColor: 'transparent',
+                    transition: 'transform 0.12s ease, opacity 0.12s ease',
+                  }}
+                  onPointerDown={e => e.currentTarget.style.transform = 'scale(0.96)'}
+                  onPointerUp={e => e.currentTarget.style.transform = 'scale(1)'}
+                  onPointerLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+                >
+                  <FileTextOutlined style={{ fontSize: 14 }} />
+                  숙제 관리
                 </button>
               </div>
             )}

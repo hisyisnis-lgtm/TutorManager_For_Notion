@@ -175,7 +175,7 @@ export default function HomePage() {
   return (
     <PullToRefresh onRefresh={handleRefresh}>
       {/* 헤더 */}
-      <div className="px-4 pt-8 pb-2 flex items-start justify-between">
+      <div className="px-5 pt-8 pb-2 flex items-start justify-between">
         <h1 className="text-2xl font-bold text-gray-900">
           안녕하세요<br />
           <span className="text-brand-600">{instructorName}</span> 강사님
@@ -211,7 +211,7 @@ export default function HomePage() {
       </div>
 
       {/* 월별 캘린더 */}
-      <div className="px-4 pt-4 pb-2">
+      <div className="px-5 pt-4 pb-2">
         <MonthCalendar
           year={calYear}
           month={calMonth + 1}
@@ -280,7 +280,7 @@ export default function HomePage() {
 
       {/* 미확인 무료상담 신청 */}
       {consultCount > 0 && (
-        <div className="px-4 pt-3">
+        <div className="px-5 pt-3">
           <Link to="/consult">
             <Card
               variant="borderless"
@@ -303,7 +303,7 @@ export default function HomePage() {
       )}
 
       {/* 다가오는 수업 */}
-      <div className="px-4 pt-3 pb-24">
+      <div className="px-5 pt-3 pb-24">
         <p className="text-xs font-semibold text-gray-500 tracking-wider mb-3">다가오는 수업</p>
 
         {loading ? (
