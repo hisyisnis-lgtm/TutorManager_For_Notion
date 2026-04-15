@@ -35,6 +35,9 @@ import PersonalPage from './pages/PersonalPage.jsx';
 import PandaTestPage from './pages/PandaTestPage.jsx';
 import BookingsManagePage from './pages/BookingsManagePage.jsx';
 import ConsultManagePage from './pages/ConsultManagePage.jsx';
+import HomeworkFormPage from './pages/HomeworkFormPage.jsx';
+import HomeworkDetailPage from './pages/HomeworkDetailPage.jsx';
+import StudentHomeworkPage from './pages/StudentHomeworkPage.jsx';
 import LandingPage from './pages/LandingPage.jsx';
 import PricingPage from './pages/PricingPage.jsx';
 import ConsentPage from './pages/ConsentPage.jsx';
@@ -188,6 +191,10 @@ export default function App() {
 
             <Route path="/bookings" element={<BookingsManagePage />} />
             <Route path="/consult" element={<ConsultManagePage />} />
+
+            <Route path="/students/:id/homework" element={<StudentHomeworkPage />} />
+            <Route path="/homework/new" element={<HomeworkFormPage />} />
+            <Route path="/homework/:id" element={<HomeworkDetailPage />} />
 
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/notifications" element={<NotificationsPage />} />

@@ -22,14 +22,15 @@ export default function BottomNav() {
     <nav
       style={{
         position: 'fixed', bottom: 0, left: 0, right: 0,
-        backgroundColor: 'rgba(255,255,255,0.95)',
-        backdropFilter: 'blur(10px)',
+        backgroundColor: 'rgba(255,255,255,0.82)',
+        backdropFilter: 'saturate(180%) blur(20px)',
+        WebkitBackdropFilter: 'saturate(180%) blur(20px)',
         boxShadow: '0px -1px 0px 0px rgba(0,0,0,0.06), 0px -2px 8px 0px rgba(0,0,0,0.04)',
         zIndex: 50,
         paddingBottom: 'env(safe-area-inset-bottom)',
       }}
     >
-      <div style={{ maxWidth: 512, margin: '0 auto', display: 'flex' }}>
+      <div style={{ maxWidth: 480, margin: '0 auto', display: 'flex' }}>
         {TABS.map(({ to, label, icon }) => (
           <NavLink
             key={to}
@@ -38,15 +39,17 @@ export default function BottomNav() {
             style={({ isActive }) => ({
               flex: 1, display: 'flex', flexDirection: 'column',
               alignItems: 'center', justifyContent: 'center',
-              padding: '10px 0 8px',
-              gap: 2,
-              fontSize: 11, fontWeight: 500,
+              padding: '8px 0 10px',
+              gap: 3,
+              fontSize: 11, fontWeight: isActive ? 600 : 500,
               color: isActive ? PRIMARY : '#8c8c8c',
               textDecoration: 'none',
               transitionProperty: 'color, transform',
               transitionDuration: '0.15s',
               transitionTimingFunction: 'ease-out',
-              minHeight: 44,
+              minHeight: 56,
+              WebkitTapHighlightColor: 'transparent',
+              outline: 'none',
             })}
           >
             <span style={{ fontSize: 20, lineHeight: 1 }} aria-hidden="true">{icon}</span>

@@ -93,7 +93,7 @@ export default function StudentFormPage() {
     <>
       <PageHeader title={isEdit ? '학생 수정' : '학생 추가'} back />
 
-      <form onSubmit={handleSubmit} className="px-4 pt-4 pb-8 space-y-5">
+      <form onSubmit={handleSubmit} className="px-5 pt-4 pb-8 space-y-5">
         {error && (
           <Alert type="error" message={error} showIcon style={{ borderRadius: 12 }} />
         )}

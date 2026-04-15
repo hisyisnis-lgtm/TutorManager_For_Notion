@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import { fetchBlockedDates, createBlockedDate, deleteBlockedDate } from '../api/bookingApi.js';
-import { Alert, Card, Input, Button } from 'antd';
+import { Alert, Card, Input, Button, message } from 'antd';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import EmptyState from '../components/ui/EmptyState.jsx';
 import ErrorMessage from '../components/ui/ErrorMessage.jsx';
+import ConfirmDialog from '../components/ui/ConfirmDialog.jsx';
 
 const WEEK_DAYS = ['월', '화', '수', '목', '금', '토', '일'];
 
@@ -46,6 +47,7 @@ export default function BookingsManagePage() {
   });
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState(null);
+  const [confirmItem, setConfirmItem] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -103,14 +105,15 @@ export default function BookingsManagePage() {
     }
   };
 
-  const handleDelete = async (item) => {
-    if (!window.confirm(`"${item.memo || formatBlockedLabel(item)}" 을 삭제하시겠습니까?`)) return;
+  const handleDelete = async () => {
+    const item = confirmItem;
+    setConfirmItem(null);
     setDeletingId(item.id);
     try {
       await deleteBlockedDate(item.id);
       setBlocked(prev => prev.filter(b => b.id !== item.id));
     } catch (e) {
-      alert(`삭제 실패: ${e.message}`);
+      message.error(`삭제 실패: ${e.message}`);
     } finally {
       setDeletingId(null);
     }
@@ -146,7 +149,7 @@ export default function BookingsManagePage() {
                   key={t}
                   type="button"
                   onClick={() => setForm(f => ({ ...f, type: t, days: [], start: '', end: '' }))}
-                  className={`flex-1 py-3 rounded-lg text-sm font-medium border transition-colors ${
+                  className={`flex-1 py-3 rounded-xl text-sm font-medium border transition-colors ${
                     form.type === t ? 'bg-brand-600 text-white border-brand-600' : 'bg-white text-gray-600 border-gray-200'
                   }`}
                 >
@@ -322,9 +325,9 @@ export default function BookingsManagePage() {
               </div>
               <Button
                 danger
-                onClick={() => handleDelete(item)}
+                onClick={() => setConfirmItem(item)}
                 disabled={deletingId === item.id}
-                style={{ borderRadius: 8, flexShrink: 0 }}
+                style={{ borderRadius: 12, flexShrink: 0 }}
               >
                 {deletingId === item.id ? '삭제 중...' : '삭제'}
               </Button>
@@ -332,6 +335,16 @@ export default function BookingsManagePage() {
           </Card>
         ))}
       </div>
+
+      {confirmItem && (
+        <ConfirmDialog
+          title="예약 불가 설정을 삭제하시겠습니까?"
+          message={`"${confirmItem.memo || formatBlockedLabel(confirmItem)}" 항목이 삭제됩니다.`}
+          onConfirm={handleDelete}
+          onCancel={() => setConfirmItem(null)}
+          loading={deletingId === confirmItem.id}
+        />
+      )}
     </div>
   );
 }

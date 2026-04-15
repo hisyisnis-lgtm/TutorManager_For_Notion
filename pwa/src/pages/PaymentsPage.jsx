@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { Button, Input, Card } from 'antd';
+import { SearchOutlined } from '@ant-design/icons';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import Badge from '../components/ui/Badge.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
@@ -67,7 +68,7 @@ export default function PaymentsPage() {
           <Link to="/payments/new">
             <Button
               type="primary"
-              style={{ borderRadius: 8, fontWeight: 600 }}
+              style={{ borderRadius: 12, fontWeight: 600 }}
             >
               + 결제 입력
             </Button>
@@ -79,25 +80,17 @@ export default function PaymentsPage() {
         {/* 학생 검색 필터 */}
         <div className="relative">
           <Input
-            type="text"
+            prefix={<SearchOutlined style={{ color: '#767676' }} />}
             placeholder="학생 이름으로 검색"
             value={nameInput}
             onChange={(e) => {
               setNameInput(e.target.value);
               if (!e.target.value) setStudentFilter('');
             }}
+            allowClear
             size="large"
-            style={{ borderRadius: 12, paddingRight: nameInput ? 32 : undefined }}
+            style={{ borderRadius: 12 }}
           />
-          {nameInput && (
-            <button
-              type="button"
-              onClick={() => { setNameInput(''); setStudentFilter(''); }}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-lg leading-none"
-            >
-              ✕
-            </button>
-          )}
           {nameInput && !studentFilter && (
             (() => {
               const suggestions = students.filter((s) => s.name.includes(nameInput));

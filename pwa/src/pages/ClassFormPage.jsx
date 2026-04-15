@@ -371,7 +371,7 @@ export default function ClassFormPage() {
     <>
       <PageHeader title={isEdit ? '수업 편집' : '수업 추가'} back />
 
-      <form onSubmit={handleSubmit} className="px-4 pt-4 pb-8 space-y-5">
+      <form onSubmit={handleSubmit} className="px-5 pt-4 pb-8 space-y-5">
         {error && (
           <Alert type="error" message={error} showIcon style={{ borderRadius: 12 }} />
         )}

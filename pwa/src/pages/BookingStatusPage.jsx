@@ -55,7 +55,7 @@ function InfoRow({ label, value }) {
       padding: '10px 0',
       borderBottom: '1px solid #f5f5f5',
     }}>
-      <span style={{ fontSize: 13, color: '#8c8c8c' }}>{label}</span>
+      <span style={{ fontSize: 13, color: '#595959' }}>{label}</span>
       <span style={{ fontSize: 14, fontWeight: 600, color: '#262626' }}>{value}</span>
     </div>
   );
@@ -150,7 +150,7 @@ export default function BookingStatusPage() {
                 }}>
                   {isCancelled ? '예약이 취소되었습니다' : '예약이 확정되었습니다!'}
                 </h2>
-                <p style={{ fontSize: 13, color: '#8c8c8c', margin: 0 }}>
+                <p style={{ fontSize: 13, color: '#595959', margin: 0 }}>
                   {isCancelled
                     ? '새로 예약하시려면 아래 버튼을 눌러주세요'
                     : '아래 예약 정보를 확인해주세요'}

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Button, Card } from 'antd';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
+import EmptyState from '../components/ui/EmptyState.jsx';
 import PullToRefresh from '../components/ui/PullToRefresh.jsx';
 import { queryAll, updatePage } from '../api/notionClient.js';
 import { CONSULT_DB } from '../constants.js';
@@ -38,8 +39,8 @@ const STATUS_STYLE = {
   '확인됨': { bg: '#f9f0ff', color: '#531dab' },
   '연락중': { bg: '#fffbe6', color: '#d48806' },
   '확정':   { bg: '#e6f4ff', color: '#0958d9' },
-  '완료':   { bg: '#f5f5f5', color: '#8c8c8c' },
-  '불발':   { bg: '#f5f5f5', color: '#8c8c8c' },
+  '완료':   { bg: '#f5f5f5', color: '#767676' },
+  '불발':   { bg: '#f5f5f5', color: '#767676' },
 };
 
 function ConsultCard({ consult: c, onConfirm, confirming }) {
@@ -83,7 +84,7 @@ function ConsultCard({ consult: c, onConfirm, confirming }) {
             size="small"
             loading={confirming}
             onClick={() => onConfirm(c.id)}
-            style={{ borderRadius: 8, fontWeight: 600, minWidth: 64 }}
+            style={{ borderRadius: 12, fontWeight: 600, minWidth: 64 }}
           >
             확인하기
           </Button>
@@ -133,14 +134,11 @@ export default function ConsultManagePage() {
   return (
     <PullToRefresh onRefresh={load}>
       <PageHeader title="무료상담 신청" back />
-      <div className="px-4 pt-4 pb-24">
+      <div className="px-5 pt-4 pb-24">
         {loading ? (
           <LoadingSpinner />
         ) : consults.length === 0 ? (
-          <div className="flex flex-col items-center gap-3 pt-20 text-center px-8">
-            <span className="text-4xl opacity-30">📋</span>
-            <p className="text-sm text-gray-400">아직 무료상담 신청이 없습니다</p>
-          </div>
+          <EmptyState icon="📋" title="아직 무료상담 신청이 없습니다" />
         ) : (
           <>
             {pending.length > 0 && (

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button, Input, Card } from 'antd';
+import { SearchOutlined } from '@ant-design/icons';
 import { createLessonLog } from '../api/lessonLogs.js';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import Badge from '../components/ui/Badge.jsx';
@@ -86,7 +87,7 @@ export default function ClassesPage() {
           <button
             key={key}
             onClick={() => setPeriod(key)}
-            className={`flex-1 py-3 rounded-xl text-sm font-medium transition-colors ${
+            className={`flex-1 py-3 rounded-full text-sm font-medium transition-colors ${
               period === key ? 'bg-brand-600 text-white' : 'bg-gray-100 text-gray-600'
             }`}
           >
@@ -98,10 +99,11 @@ export default function ClassesPage() {
       {/* 학생 검색 */}
       <div className="px-4 pb-3">
         <Input
-          type="search"
+          prefix={<SearchOutlined style={{ color: '#767676' }} />}
           placeholder="학생 이름으로 검색"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
+          allowClear
           size="large"
           style={{ borderRadius: 12 }}
         />

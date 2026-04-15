@@ -125,18 +125,6 @@ function StudentCard({ student }) {
             <span className="text-base font-bold text-gray-900">{student.name}</span>
             <Badge label={student.status} bg={bg} text={text} />
           </div>
-          <div className="flex gap-2 flex-wrap mb-3">
-            {student.level && (
-              <span className="text-xs text-gray-500 bg-gray-50 px-2 py-0.5 rounded-full">
-                <span className="text-gray-500 mr-0.5">레벨</span>{student.level}
-              </span>
-            )}
-            {student.goal && (
-              <span className="text-xs text-gray-500 bg-gray-50 px-2 py-0.5 rounded-full">
-                <span className="text-gray-500 mr-0.5">목표</span>{student.goal}
-              </span>
-            )}
-          </div>
           <div className="flex gap-4 text-sm">
             <div>
               <span className="text-gray-500 text-xs">잔여 회차 </span>

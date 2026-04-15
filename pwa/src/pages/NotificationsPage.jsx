@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from 'antd';
 import PageHeader from '../components/layout/PageHeader.jsx';
+import EmptyState from '../components/ui/EmptyState.jsx';
 import { getNtfyTopic } from './SettingsPage.jsx';
 
 const STORAGE_KEY = 'ntfy_notifications';
@@ -183,16 +184,13 @@ export default function NotificationsPage() {
       <div className="flex items-center gap-2 px-4 py-2 border-b border-gray-100">
         <span className={`w-2 h-2 rounded-full ${statusDot}`} />
         <span className="text-xs text-gray-500">{statusLabel}</span>
-        <span className="text-xs text-gray-300 ml-auto">ntfy.sh/{topic}</span>
+        <span className="text-xs ml-auto" style={{ color: '#767676' }}>ntfy.sh/{topic}</span>
       </div>
 
       {/* 알림 목록 */}
       <div className="pb-24">
         {notifications.length === 0 ? (
-          <div className="flex flex-col items-center gap-3 pt-20 text-center px-8">
-            <span className="text-4xl opacity-30">🔔</span>
-            <p className="text-sm text-gray-400">아직 받은 알림이 없습니다</p>
-          </div>
+          <EmptyState icon="🔔" title="아직 받은 알림이 없습니다" />
         ) : (
           <ul className="divide-y divide-gray-100">
             {notifications.map((n) => {
@@ -213,7 +211,7 @@ export default function NotificationsPage() {
                       {tags.length > 0 && (
                         <span className="text-xs text-gray-500">{tags.join(' · ')}</span>
                       )}
-                      <span className="text-xs text-gray-300 ml-auto shrink-0">
+                      <span className="text-xs ml-auto shrink-0" style={{ color: '#767676' }}>
                         {relativeTime(n.time)}
                       </span>
                     </div>
