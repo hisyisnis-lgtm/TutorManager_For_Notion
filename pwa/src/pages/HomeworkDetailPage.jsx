@@ -94,15 +94,27 @@ export default function HomeworkDetailPage() {
     setSaving(true);
     try {
       let uploadedFiles;
+      let existingFiles;
+
       if (pendingFeedbackFiles.length > 0) {
+        // 새 파일 업로드
         uploadedFiles = [];
         for (const pf of pendingFeedbackFiles) {
           const namedFile = new File([pf.file], pf.name, { type: pf.file.type });
           const { fileUploadId } = await uploadTeacherFile(namedFile);
           uploadedFiles.push({ fileUploadId, fileName: pf.name });
         }
+
+        // 기존 피드백 파일 보존: fresh URL 재조회 후 포함
+        if (hw.feedbackFiles?.length > 0) {
+          const fresh = await getFreshParsed();
+          existingFiles = fresh.feedbackFiles
+            .filter((f) => f.url)
+            .map((f) => ({ name: f.name, url: f.url }));
+        }
       }
-      await saveFeedback(id, { feedbackText, files: uploadedFiles });
+
+      await saveFeedback(id, { feedbackText, files: uploadedFiles, existingFiles });
       setPendingFeedbackFiles([]);
       await load();
     } catch (e) {

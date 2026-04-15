@@ -74,23 +74,42 @@ export async function uploadTeacherFile(file) {
   return res.json(); // { fileUploadId, fileName }
 }
 
-/** 강사 피드백 저장 — files: [{fileUploadId, fileName}] (없으면 파일 속성 유지) */
-export async function saveFeedback(id, { feedbackText, files }) {
+/**
+ * 강사 피드백 저장
+ * - files: [{fileUploadId, fileName}]   새로 업로드할 파일 목록
+ * - existingFiles: [{name, url}]        보존할 기존 파일 (fresh URL 필요)
+ * - 둘 다 없으면 피드백 파일 속성을 건드리지 않음 (기존 유지)
+ */
+export async function saveFeedback(id, { feedbackText, files, existingFiles }) {
   const nowIso = new Date().toISOString();
   const properties = {
     '피드백 텍스트': { rich_text: [{ text: { content: feedbackText || '' } }] },
     '제출 상태': { select: { name: '피드백완료' } },
     피드백일: { date: { start: nowIso } },
   };
-  if (files?.length > 0) {
+
+  const hasNew = files?.length > 0;
+  const hasExisting = existingFiles?.length > 0;
+
+  if (hasNew || hasExisting) {
     properties['피드백 파일'] = {
-      files: files.map(({ fileUploadId, fileName }) => ({
-        name: fileName,
-        type: 'file_upload',
-        file_upload: { id: fileUploadId },
-      })),
+      files: [
+        // 기존 파일: fresh S3 URL을 external로 재첨부
+        ...(existingFiles ?? []).map(({ name, url }) => ({
+          name,
+          type: 'external',
+          external: { url },
+        })),
+        // 새 파일: file_upload
+        ...(files ?? []).map(({ fileUploadId, fileName }) => ({
+          name: fileName,
+          type: 'file_upload',
+          file_upload: { id: fileUploadId },
+        })),
+      ],
     };
   }
+
   return updatePage(id, properties);
 }
 
