@@ -14,6 +14,11 @@
       "rollup_property_name": "수업 회차",
       "function": "sum"
     },
+    "추천 보너스": {
+      "type": "number",
+      "id": "JUMf",
+      "format": "number"
+    },
     "등록일": {
       "type": "created_time",
       "id": "LADg"
@@ -103,6 +108,11 @@
       "relation_property_name": "결제",
       "rollup_property_name": "1인 미수금",
       "function": "sum"
+    },
+    "숙제": {
+      "type": "dual_property",
+      "id": "%7DDRf",
+      "database_id": "5ce7d5ef-7b80-4795-843f-325f4ca868e2"
     },
     "메모": {
       "type": "rich_text",
