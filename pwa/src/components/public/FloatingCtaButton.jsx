@@ -1,5 +1,5 @@
 import { Button } from 'antd';
-import { ArrowRightOutlined } from '@ant-design/icons';
+import { ArrowRightIcon } from '@phosphor-icons/react';
 
 /**
  * FloatingCtaButton — 스크롤 시 나타나는 플로팅 "무료 상담 신청" 버튼
@@ -22,10 +22,10 @@ export default function FloatingCtaButton({ visible, onClick }) {
         type="primary" size="large" onClick={onClick}
         style={{
           height: 48, borderRadius: 24, fontWeight: 700, fontSize: 15,
-          paddingInline: 28, boxShadow: '0 4px 16px rgba(127,0,5,0.35)',
+          paddingInline: 28, boxShadow: 'var(--shadow-brand-button)',
         }}
       >
-        무료 상담 신청 <ArrowRightOutlined />
+        무료 상담 신청 <ArrowRightIcon weight="fill" />
       </Button>
     </div>
   );

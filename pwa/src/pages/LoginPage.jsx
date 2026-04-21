@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Button } from 'antd';
 
-const WORKER_URL = import.meta.env.VITE_WORKER_URL;
+import { WORKER_URL } from '../config.js';
 
 export default function LoginPage({ onSuccess }) {
   const [pin, setPin] = useState('');

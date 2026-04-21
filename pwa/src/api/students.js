@@ -1,4 +1,5 @@
 import { queryAll, queryPage, updatePage, createPage } from './notionClient.js';
+import { stripEmoji } from '../utils/stringUtils.js';
 
 export const STUDENTS_DB = '314838fa-f2a6-8143-a6c7-e59c50f3bbdb';
 
@@ -65,7 +66,7 @@ export function parseStudent(page) {
   const p = page.properties;
   return {
     id: page.id,
-    name: p['이름']?.title?.[0]?.plain_text ?? '(이름 없음)',
+    name: stripEmoji(p['이름']?.title?.[0]?.plain_text ?? '(이름 없음)'),
     phone: p['전화번호']?.phone_number ?? '',
     email: p['이메일']?.email ?? '',
     level: p['레벨']?.rich_text?.[0]?.plain_text ?? '',

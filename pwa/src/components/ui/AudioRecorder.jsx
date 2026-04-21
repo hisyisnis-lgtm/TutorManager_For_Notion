@@ -29,16 +29,19 @@ export default function AudioRecorder({ onFile, onCancel, defaultName = 'recordi
   const chunksRef = useRef([]);
   const timerRef = useRef(null);
   const blobRef = useRef(null);
+  const blobUrlRef = useRef(null);
   const mimeTypeRef = useRef('');
 
   // defaultName이 바뀌면(부모에서 카운터 변경 등) 반영
   useEffect(() => { setInputName(defaultName); }, [defaultName]);
 
+  // 언마운트 시 최신 blobUrl을 정리하기 위해 ref를 통해 읽는다
+  // (빈 deps 배열이라 cleanup 클로저가 초기 state(null)를 캡처하면 누수 발생)
   useEffect(() => () => {
     clearInterval(timerRef.current);
     mediaRecorderRef.current?.stream?.getTracks().forEach((t) => t.stop());
-    if (blobUrl) URL.revokeObjectURL(blobUrl);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current);
+  }, []);
 
   async function startRecording() {
     try {
@@ -52,7 +55,9 @@ export default function AudioRecorder({ onFile, onCancel, defaultName = 'recordi
         stream.getTracks().forEach((t) => t.stop());
         const blob = new Blob(chunksRef.current, { type: mimeType || 'audio/webm' });
         blobRef.current = blob;
-        setBlobUrl(URL.createObjectURL(blob));
+        const url = URL.createObjectURL(blob);
+        blobUrlRef.current = url;
+        setBlobUrl(url);
         setPhase('preview');
       };
       mr.start();
@@ -71,7 +76,8 @@ export default function AudioRecorder({ onFile, onCancel, defaultName = 'recordi
   }
 
   function retry() {
-    if (blobUrl) URL.revokeObjectURL(blobUrl);
+    if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current);
+    blobUrlRef.current = null;
     setBlobUrl(null);
     blobRef.current = null;
     setPhase('idle');
@@ -159,7 +165,7 @@ export default function AudioRecorder({ onFile, onCancel, defaultName = 'recordi
             </button>
             <button
               type="button"
-              onClick={goToNaming}
+              onClick={confirm}
               style={{
                 flex: 1, height: 44, borderRadius: 12,
                 background: '#7f0005', border: 'none', color: 'white',
@@ -167,7 +173,7 @@ export default function AudioRecorder({ onFile, onCancel, defaultName = 'recordi
                 WebkitTapHighlightColor: 'transparent',
               }}
             >
-              다음 →
+              제출하기
             </button>
           </div>
         </div>

@@ -55,7 +55,7 @@ export default function HomeworkFormPage() {
     <>
       <PageHeader title="숙제 등록" back />
 
-      <div className="px-5 pt-4 pb-24 space-y-5">
+      <div className="px-4 pt-4 pb-24 space-y-5">
         {/* 학생 선택 */}
         <div>
           <label style={LABEL}>학생</label>

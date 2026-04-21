@@ -77,7 +77,7 @@ export default function MonthCalendar({
           type="button"
           onClick={onPrevMonth}
           aria-label="이전 달"
-          className="w-10 h-10 flex items-center justify-center rounded-lg active:bg-gray-100 text-gray-500 text-xl font-light"
+          className="w-10 h-10 flex items-center justify-center rounded-lg active:bg-gray-100 active:scale-[0.96] transition-[scale,background-color] duration-150 ease-out text-gray-500 text-xl font-light"
         >
           <span aria-hidden="true">‹</span>
         </button>
@@ -97,7 +97,7 @@ export default function MonthCalendar({
           type="button"
           onClick={onNextMonth}
           aria-label="다음 달"
-          className="w-10 h-10 flex items-center justify-center rounded-lg active:bg-gray-100 text-gray-500 text-xl font-light"
+          className="w-10 h-10 flex items-center justify-center rounded-lg active:bg-gray-100 active:scale-[0.96] transition-[scale,background-color] duration-150 ease-out text-gray-500 text-xl font-light"
         >
           <span aria-hidden="true">›</span>
         </button>
@@ -109,7 +109,7 @@ export default function MonthCalendar({
           <div
             key={w}
             className={`text-center text-xs font-medium py-1 ${
-              i === 0 ? 'text-red-400' : i === 6 ? 'text-blue-400' : 'text-gray-400'
+              i === 0 ? 'text-red-400' : 'text-gray-400'
             }`}
           >
             {w}
@@ -143,19 +143,19 @@ export default function MonthCalendar({
               onClick={(e) => { if (hasClass) { e.stopPropagation(); onDayClick(day); } }}
             >
               <span
-                className={`text-xs w-6 h-6 flex items-center justify-center rounded-full font-medium transition-colors ${
+                className={`text-xs w-6 h-6 flex items-center justify-center rounded-full font-medium transition-[background-color,color] duration-150 ease-out ${
                   isSelected
-                    ? 'bg-brand-600 text-white ring-2 ring-brand-300'
+                    ? 'bg-brand-600 text-white'
                     : isToday
                       ? 'bg-brand-600 text-white'
                       : isPast && hasClass
                         ? 'bg-gray-100 text-gray-400'
                         : hasClass
-                          ? 'bg-green-100 text-green-700'
+                          ? 'bg-[#fff0f1] text-brand-600'
                           : dow === 0
                             ? 'text-red-400'
                             : dow === 6
-                              ? 'text-blue-400'
+                              ? 'text-gray-400'
                               : 'text-gray-700'
                 }`}
               >
@@ -164,7 +164,7 @@ export default function MonthCalendar({
               {hasClass && (
                 <span
                   className={`text-[9px] font-bold leading-none mt-0.5 ${
-                    isPast && !isSelected ? 'text-gray-400' : 'text-brand-500'
+                    isPast && !isSelected ? 'text-gray-400' : 'text-brand-600'
                   }`}
                 >
                   {count}

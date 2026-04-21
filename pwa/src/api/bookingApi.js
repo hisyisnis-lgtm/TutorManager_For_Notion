@@ -1,8 +1,5 @@
-const WORKER_URL = import.meta.env.VITE_WORKER_URL;
-
-function getToken() {
-  return sessionStorage.getItem('auth_token') || localStorage.getItem('auth_token') || '';
-}
+import { WORKER_URL } from '../config.js';
+import { getToken } from './authUtils.js';
 
 async function bookingFetch(method, path, body, { auth = false } = {}) {
   const headers = { 'Content-Type': 'application/json' };
@@ -93,4 +90,24 @@ export async function createBlockedDate({ type, days, start, end, memo, blockedT
 /** 예약 불가 날짜 삭제 (강사 인증 필요) */
 export async function deleteBlockedDate(id) {
   return bookingFetch('DELETE', `/booking/blocked/${id}`, undefined, { auth: true });
+}
+
+/**
+ * 추천 링크 트래킹 — 친구가 ?ref=TOKEN 링크로 접속했을 때 호출
+ * Worker가 해당 학생의 '추천 보너스' +5 처리
+ * 중복 방지는 호출 전 localStorage `referral_credited_{token}` 체크로 클라이언트에서 담당
+ */
+export async function trackReferral(refToken) {
+  return bookingFetch('GET', `/referral/track?ref=${encodeURIComponent(refToken)}`);
+}
+
+/** 시간 충돌 여부 확인 (강사용 수업 등록 폼) */
+export async function checkConflict(date, startTime, duration, excludeId = '') {
+  const params = new URLSearchParams({ date, startTime, duration: String(duration) });
+  if (excludeId) params.set('excludeId', excludeId);
+  try {
+    return await bookingFetch('GET', `/booking/check-conflict?${params}`);
+  } catch {
+    return { conflict: false };
+  }
 }

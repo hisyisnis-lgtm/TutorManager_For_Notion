@@ -50,11 +50,14 @@ export function useInstallPrompt() {
     setIsDismissed(true);
   };
 
-  // 설치 가능 여부 (dismissed 여부 무관 — 설정 메뉴용)
-  const isInstallable = !isInstalled && (deferredPrompt !== null || isIOS);
+  // 네이티브 프롬프트 바로 실행 가능 여부
+  const canPrompt = deferredPrompt !== null;
+
+  // 설치 가능 여부 (dismissed 여부 무관 — 배너용)
+  const isInstallable = !isInstalled && (canPrompt || isIOS);
 
   // 배너 표시 조건
   const showBanner = isInstallable && !isDismissed;
 
-  return { showBanner, isInstallable, isIOS, promptInstall, dismiss };
+  return { showBanner, isInstallable, canPrompt, isIOS, promptInstall, dismiss };
 }

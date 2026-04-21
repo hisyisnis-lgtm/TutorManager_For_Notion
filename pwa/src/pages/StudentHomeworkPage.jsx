@@ -11,12 +11,8 @@ import HomeworkSection from '../components/homework/HomeworkSection.jsx';
 import { fetchStudentHomework, parseHomework, homeworkStatusColor } from '../api/homework.js';
 import { getPage } from '../api/notionClient.js';
 import { parseStudent } from '../api/students.js';
-
-function formatDate(isoStr) {
-  if (!isoStr) return '';
-  const d = new Date(isoStr);
-  return `${d.getFullYear()}.${d.getMonth() + 1}.${d.getDate()}`;
-}
+import { ClipboardTextIcon, HourglassIcon, ChatTeardropTextIcon, CaretRightIcon } from '@phosphor-icons/react';
+import { formatDateDot } from '../utils/dateUtils.js';
 
 export default function StudentHomeworkPage() {
   const { id } = useParams();  // studentId
@@ -82,7 +78,7 @@ export default function StudentHomeworkPage() {
           <Button
             type="primary"
             onClick={() => navigate(`/homework/new?studentId=${id}`)}
-            style={{ borderRadius: 12, width: 36, height: 36, padding: 0, fontSize: 20, fontWeight: 600 }}
+            style={{ borderRadius: 12, width: 44, height: 44, padding: 0, fontSize: 20, fontWeight: 600 }}
             aria-label="숙제 추가"
           >
             +
@@ -90,7 +86,7 @@ export default function StudentHomeworkPage() {
         }
       />
 
-      <div className="px-5 pt-4 pb-24">
+      <div className="px-4 pt-4 pb-24">
 
         {/* 검색 + 필터 바 */}
         {homeworkList.length > 0 && (
@@ -118,7 +114,7 @@ export default function StudentHomeworkPage() {
         )}
 
         {pending.length > 0 && (
-          <HomeworkSection title={`🔴 미제출 (${pending.length})`}>
+          <HomeworkSection icon={<ClipboardTextIcon size={18} weight="fill" />} label="미제출" count={pending.length} color="#cf1322">
             {pending.map((hw) => (
               <HomeworkCard key={hw.id} hw={hw} onClick={() => navigate(`/homework/${hw.id}`)} />
             ))}
@@ -126,7 +122,7 @@ export default function StudentHomeworkPage() {
         )}
 
         {submitted.length > 0 && (
-          <HomeworkSection title={`🔵 제출완료 (${submitted.length})`}>
+          <HomeworkSection icon={<HourglassIcon size={18} weight="fill" />} label="제출완료" count={submitted.length} color="#1677ff">
             {submitted.map((hw) => (
               <HomeworkCard key={hw.id} hw={hw} onClick={() => navigate(`/homework/${hw.id}`)} />
             ))}
@@ -134,7 +130,7 @@ export default function StudentHomeworkPage() {
         )}
 
         {done.length > 0 && (
-          <HomeworkSection title={`🟢 피드백완료 (${done.length})`}>
+          <HomeworkSection icon={<ChatTeardropTextIcon size={18} weight="fill" />} label="피드백완료" count={done.length} color="#389e0d">
             {done.map((hw) => (
               <HomeworkCard key={hw.id} hw={hw} onClick={() => navigate(`/homework/${hw.id}`)} />
             ))}
@@ -151,17 +147,22 @@ function HomeworkCard({ hw, onClick }) {
   const hasFeedback = hw.feedbackText || (hw.feedbackFiles?.length ?? 0) > 0;
 
   const dateLabel = hw.submitDate
-    ? `제출 ${formatDate(hw.submitDate)}`
+    ? `제출 ${formatDateDot(hw.submitDate)}`
     : hw.createdTime
-    ? `등록 ${formatDate(hw.createdTime)}`
+    ? `등록 ${formatDateDot(hw.createdTime)}`
     : '';
 
   return (
+    <div
+      className="active:scale-[0.96] transition-[scale] duration-150 ease-out"
+      onClick={onClick}
+    >
     <Card
       variant="borderless"
-      style={{ borderRadius: 16, boxShadow: 'var(--shadow-border)', cursor: 'pointer' }}
+      style={{ borderRadius: 16, boxShadow: 'var(--shadow-border)', cursor: 'pointer', transition: 'box-shadow 150ms ease-out' }}
       styles={{ body: { padding: '12px 16px' } }}
-      onClick={onClick}
+      onMouseEnter={(e) => { e.currentTarget.style.boxShadow = 'var(--shadow-border-hover)'; }}
+      onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'var(--shadow-border)'; }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         {/* 텍스트 영역 */}
@@ -196,9 +197,10 @@ function HomeworkCard({ hw, onClick }) {
         {/* 상태 배지 + 화살표 */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
           <Badge label={hw.status} bg={bg} text={text} />
-          <span style={{ fontSize: 12, color: '#d9d9d9' }}>›</span>
+          <CaretRightIcon size={14} weight="bold" color="#d9d9d9" />
         </div>
       </div>
     </Card>
+    </div>
   );
 }

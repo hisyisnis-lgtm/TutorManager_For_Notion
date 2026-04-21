@@ -197,7 +197,7 @@ export default function NotificationsPage() {
               const p = PRIORITY_STYLE[n.priority] ?? PRIORITY_STYLE[3];
               const tags = n.tags ?? [];
               return (
-                <li key={n.id} className="flex gap-3 px-4 py-3 active:bg-gray-50">
+                <li key={n.id} className="flex gap-3 px-4 py-3 active:bg-gray-50 transition-[background-color] duration-150">
                   {/* 우선순위 색상 바 */}
                   <div className={`w-1 rounded-full shrink-0 self-stretch ${p.bar}`} />
                   <div className="flex-1 min-w-0">

@@ -1,6 +1,6 @@
 import { Tag } from 'antd';
 
-export default function Badge({ label, bg, text }) {
+export default function Badge({ label, bg, text, style: styleProp }) {
   if (!label) return null;
 
   // Tailwind bg/text 클래스를 인라인 스타일로 변환
@@ -28,8 +28,10 @@ export default function Badge({ label, bg, text }) {
     'text-purple-700': '#531dab',
   };
 
-  const bgColor = bgMap[bg] || '#f5f5f5';
-  const textColor = textMap[text] || '#595959';
+  // Tailwind 클래스명이면 맵핑, 그 외 (hex 등) 직접 사용
+  const isHex = (v) => typeof v === 'string' && (v.startsWith('#') || v.startsWith('rgb'));
+  const bgColor = isHex(bg) ? bg : (bgMap[bg] || '#f5f5f5');
+  const textColor = isHex(text) ? text : (textMap[text] || '#595959');
 
   return (
     <Tag
@@ -42,6 +44,7 @@ export default function Badge({ label, bg, text }) {
         fontWeight: 500,
         margin: 0,
         padding: '1px 8px',
+        ...styleProp,
       }}
     >
       {label}

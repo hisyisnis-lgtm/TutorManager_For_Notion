@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+.hide-scrollbar { scrollbar-width: none; }
+.hide-scrollbar::-webkit-scrollbar { display: none; }
+
 @keyframes panda-float {
   0%, 100% { transform: translateY(0px) rotate(0deg); }
   30% { transform: translateY(-8px) rotate(-2deg); }
@@ -37,6 +40,31 @@
   0%   { opacity: 0; transform: translateX(-50%) translateY(-10px) scale(0.85); }
   70%  { transform: translateX(-50%) translateY(2px) scale(1.05); }
   100% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+}
+
+@keyframes badge-in {
+  from { opacity: 0; scale: 0.25; filter: blur(4px); }
+  to   { opacity: 1; scale: 1;    filter: blur(0);   }
+}
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(12px); filter: blur(4px); }
+  to   { opacity: 1; transform: translateY(0);    filter: blur(0);   }
+}
+
+@keyframes panda-rock {
+  0%, 100% { transform: rotate(-6deg); }
+  50%       { transform: rotate(6deg); }
+}
+
+@keyframes tip-card-in {
+  from { opacity: 0; transform: translateY(-8px) scaleY(0.94); filter: blur(3px); }
+  to   { opacity: 1; transform: translateY(0)    scaleY(1);    filter: blur(0);   }
+}
+
+@keyframes tip-card-out {
+  from { opacity: 1; transform: translateY(0)    scaleY(1);    max-height: 200px; margin-bottom: 0; }
+  to   { opacity: 0; transform: translateY(-6px) scaleY(0.92); max-height: 0;     margin-bottom: 0; }
 }
 
 @font-face {
@@ -76,6 +104,29 @@
     0px 0px 0px 1px rgba(0, 0, 0, 0.05),
     0px 2px 8px -2px rgba(0, 0, 0, 0.08),
     0px 4px 12px 0px rgba(0, 0, 0, 0.04);
+
+  /* BottomNav / 상단 오버레이 */
+  --shadow-nav:
+    0px -1px 0px 0px rgba(0, 0, 0, 0.06),
+    0px -2px 8px 0px rgba(0, 0, 0, 0.04);
+
+  /* 브랜드 컬러 그림자 */
+  --shadow-brand-button: 0 4px 16px rgba(127, 0, 5, 0.35);
+  --shadow-brand-card: 0 4px 16px rgba(127, 0, 5, 0.25);
+
+  /* 모달 / Drawer */
+  --shadow-modal: 0 8px 40px rgba(0, 0, 0, 0.18);
+
+  /* 경고 테두리 (danger 카드 테두리 대용) */
+  --shadow-danger-border:
+    0px 0px 0px 1px #ffccc7,
+    0px 2px 8px rgba(207, 19, 34, 0.06);
+
+  /* 브랜드 톤 테두리 (강조 카드용 — PRIMARY 톤의 얇은 보더 + 부드러운 그림자) */
+  --shadow-border-brand:
+    0px 0px 0px 1px rgba(127, 0, 5, 0.12),
+    0px 1px 2px -1px rgba(0, 0, 0, 0.06),
+    0px 2px 4px 0px rgba(0, 0, 0, 0.04);
 }
 
 @layer base {
@@ -105,13 +156,7 @@
     text-wrap: pretty;
   }
 
-  /* ── 이미지 미세 아웃라인 (일관된 깊이감) ── */
-  img {
-    outline: 1px solid rgba(0, 0, 0, 0.08);
-    outline-offset: -1px;
-  }
-
-  /* ── 포커스 가시성 (WCAG 2.4.7) ──────────── */
+/* ── 포커스 가시성 (WCAG 2.4.7) ──────────── */
   :focus {
     outline: none;
   }
@@ -132,6 +177,13 @@
 
   button:not([disabled]):not([aria-disabled="true"]):active {
     transform: scale(0.96);
+  }
+
+  /* ── 숙제 카드 토글 버튼 — scale 애니메이션 제거 ── */
+  .hw-toggle-btn,
+  .hw-toggle-btn:active {
+    transform: none !important;
+    transition: none !important;
   }
 
   /* ── 숫자 레이아웃 안정성 ──────────────────── */

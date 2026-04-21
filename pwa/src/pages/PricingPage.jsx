@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ConfigProvider, Card, Flex, Space, Tag, Typography, Divider } from 'antd';
-import { CheckCircleOutlined, GiftOutlined, RightOutlined, InfoCircleOutlined } from '@ant-design/icons';
+import { CheckCircleIcon, GiftIcon, CaretRightIcon, InfoIcon } from '@phosphor-icons/react';
 import { useNavigate } from 'react-router-dom';
 import { PRIMARY, antdTheme } from '../constants/theme';
 import FadeUp from '../components/FadeUp';
@@ -127,7 +127,7 @@ export default function PricingPage() {
                   "수업 안에서 반드시 '말하게' 만드는 구조",
                 ].map(item => (
                   <Space key={item} size={8} align="start">
-                    <CheckCircleOutlined style={{ color: 'rgba(255,255,255,0.75)', fontSize: 14, flexShrink: 0, marginTop: 3 }} />
+                    <CheckCircleIcon weight="fill" size={14} style={{ color: 'rgba(255,255,255,0.75)', flexShrink: 0, marginTop: 3 }} />
                     <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 14, lineHeight: 1.6, textWrap: 'pretty' }}>{item}</Text>
                   </Space>
                 ))}
@@ -151,7 +151,7 @@ export default function PricingPage() {
           </HeroSection>
 
           {/* ── STEP 1 ── */}
-          <section style={{ padding: '32px 20px 24px' }}>
+          <section style={{ padding: '32px 16px 24px' }}>
             <FadeUp>
               <div style={{ marginBottom: 20 }}>
                 <div style={{ display: 'inline-flex', alignItems: 'center', backgroundColor: PRIMARY, borderRadius: 20, padding: '4px 14px', marginBottom: 10 }}>
@@ -200,7 +200,7 @@ export default function PricingPage() {
 
               {/* 옵션 2: 집중 상담 + 프리미엄 첫 수업 */}
               <FadeUp delay={160}>
-                <Card variant="borderless" style={{ borderRadius: 12, boxShadow: '0px 0px 0px 1px rgba(127,0,5,0.12), 0px 1px 2px -1px rgba(0,0,0,0.06), 0px 2px 4px 0px rgba(0,0,0,0.04)' }} styles={{ body: { padding: 16 } }}>
+                <Card variant="borderless" style={{ borderRadius: 12, boxShadow: 'var(--shadow-border-brand)' }} styles={{ body: { padding: 16 } }}>
                   <Flex justify="space-between" align="center" style={{ marginBottom: 8 }}>
                     <Flex align="center" gap={8}>
                       <Tag style={{ backgroundColor: '#fff0f1', color: PRIMARY, border: `1px solid #ffb3b5`, borderRadius: 20, fontSize: 11, fontWeight: 700, padding: '1px 9px', margin: 0 }}>
@@ -226,7 +226,7 @@ export default function PricingPage() {
                         </div>,
                       ];
                       if (i < arr.length - 1) {
-                        els.push(<RightOutlined key={`arr-${i}`} style={{ fontSize: 10, color: '#bfbfbf' }} />);
+                        els.push(<CaretRightIcon weight="fill" key={`arr-${i}`} size={10} style={{ color: '#bfbfbf' }} />);
                       }
                       return els;
                     })}
@@ -245,7 +245,7 @@ export default function PricingPage() {
               <FadeUp delay={200}>
                 <div style={{ backgroundColor: '#e8e8e8', borderRadius: 10, padding: '11px 14px' }}>
                   <Space size={8} align="start">
-                    <InfoCircleOutlined style={{ color: '#8c8c8c', fontSize: 13, marginTop: 2, flexShrink: 0 }} />
+                    <InfoIcon weight="fill" size={13} style={{ color: '#8c8c8c', marginTop: 2, flexShrink: 0 }} />
                     <Text style={{ fontSize: 13, color: '#595959', lineHeight: 1.6 }}>
                       두 가지 방법 중 <Text strong style={{ color: '#1a1a1a' }}>하나만 선택</Text> 가능합니다.
                     </Text>
@@ -256,7 +256,7 @@ export default function PricingPage() {
           </section>
 
           {/* ── STEP 2 ── */}
-          <section style={{ padding: '32px 20px 24px' }}>
+          <section style={{ padding: '32px 16px 24px' }}>
             <FadeUp>
               <div style={{ marginBottom: 20 }}>
                 <div style={{ display: 'inline-flex', alignItems: 'center', backgroundColor: PRIMARY, borderRadius: 20, padding: '4px 14px', marginBottom: 10 }}>
@@ -271,7 +271,7 @@ export default function PricingPage() {
             <FadeUp delay={80}>
               <div style={{ backgroundColor: '#fffbef', border: '1px solid #ffe58f', borderRadius: 12, padding: '13px 16px', marginBottom: 16 }}>
                 <Space size={10} align="start">
-                  <GiftOutlined style={{ color: '#d4a017', fontSize: 16, marginTop: 2, flexShrink: 0 }} />
+                  <GiftIcon weight="fill" size={16} style={{ color: '#d4a017', marginTop: 2, flexShrink: 0 }} />
                   <div>
                     <Text strong style={{ fontSize: 13, color: '#a07800', display: 'block', marginBottom: 4 }}>
                       첫 등록 스페셜 혜택
@@ -476,7 +476,7 @@ export default function PricingPage() {
           </section>
 
           {/* ── 수강 추천 패턴 ── */}
-          <section style={{ padding: '28px 20px 20px' }}>
+          <section style={{ padding: '28px 16px 20px' }}>
             <FadeUp>
               <SectionLabel>TIPS</SectionLabel>
               <Title level={5} style={{ margin: '0 0 8px', textWrap: 'balance' }}>가장 빠르게 실력이 느는 수강 패턴</Title>
@@ -496,7 +496,7 @@ export default function PricingPage() {
           </section>
 
           {/* ── 안내 사항 ── */}
-          <section style={{ padding: '28px 20px 24px' }}>
+          <section style={{ padding: '28px 16px 24px' }}>
             <FadeUp>
               <Title level={5} style={{ margin: '0 0 16px', textWrap: 'balance' }}>안내 사항</Title>
               {[

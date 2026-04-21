@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { Button, Input, Card } from 'antd';
-import { SearchOutlined } from '@ant-design/icons';
+import { MagnifyingGlassIcon } from '@phosphor-icons/react';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import Badge from '../components/ui/Badge.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
@@ -9,10 +9,17 @@ import ErrorMessage from '../components/ui/ErrorMessage.jsx';
 import EmptyState from '../components/ui/EmptyState.jsx';
 import { fetchPaymentsPage, parsePayment, paymentStatusColor } from '../api/payments.js';
 import { formatKRW } from '../utils/dateUtils.js';
+import { stripEmoji } from '../utils/stringUtils.js';
 import { useData } from '../context/DataContext.jsx';
 import PullToRefresh from '../components/ui/PullToRefresh.jsx';
 
-const STATUS_FILTERS = ['전체', '🟢완료', '🔴미완료', '⬛미결제', '⚠️초과금'];
+const STATUS_FILTERS = [
+  { value: '전체', label: '전체' },
+  { value: '🟢완료', label: '완료' },
+  { value: '🔴미완료', label: '미완료' },
+  { value: '⬛미결제', label: '미결제' },
+  { value: '⚠️초과금', label: '초과금' },
+];
 
 export default function PaymentsPage() {
   const { students, studentNameMap, classTypeMap } = useData();
@@ -76,11 +83,11 @@ export default function PaymentsPage() {
         }
       />
 
-      <div className="px-4 pt-3 pb-2 space-y-2">
+      <div className="px-4 pt-4 pb-3 space-y-2">
         {/* 학생 검색 필터 */}
         <div className="relative">
           <Input
-            prefix={<SearchOutlined style={{ color: '#767676' }} />}
+            prefix={<MagnifyingGlassIcon weight="fill" style={{ color: '#767676' }} />}
             placeholder="학생 이름으로 검색"
             value={nameInput}
             onChange={(e) => {
@@ -104,7 +111,7 @@ export default function PaymentsPage() {
                       className="w-full flex items-center justify-between px-4 py-2.5 text-sm text-gray-800 hover:bg-brand-50 active:bg-brand-100"
                     >
                       <span className="font-medium">{s.name}</span>
-                      <span className="text-xs text-gray-500">{s.status}</span>
+                      <span className="text-xs text-gray-500">{stripEmoji(s.status)}</span>
                     </button>
                   ))}
                 </div>
@@ -119,15 +126,15 @@ export default function PaymentsPage() {
 
         {/* 상태 필터 */}
         <div className="flex gap-2 overflow-x-auto no-scrollbar">
-          {STATUS_FILTERS.map((f) => (
+          {STATUS_FILTERS.map(({ value, label }) => (
             <button
-              key={f}
-              onClick={() => setStatusFilter(f)}
-              className={`flex-shrink-0 px-3 py-3 rounded-full text-sm font-medium transition-colors ${
-                statusFilter === f ? 'bg-brand-600 text-white' : 'bg-gray-100 text-gray-600'
+              key={value}
+              onClick={() => setStatusFilter(value)}
+              className={`flex-shrink-0 px-3 py-3 rounded-full text-sm font-medium transition-[scale,background-color,color] duration-150 ease-out active:scale-[0.96] ${
+                statusFilter === value ? 'bg-brand-600 text-white' : 'bg-gray-100 text-gray-600'
               }`}
             >
-              {f}
+              {label}
             </button>
           ))}
         </div>
@@ -177,39 +184,46 @@ function PaymentCard({ payment, studentNameMap, classTypeMap }) {
 
   return (
     <li>
-      <Link to={`/payments/${payment.id}/edit`}>
+      <Link
+        to={`/payments/${payment.id}/edit`}
+        className="block active:scale-[0.96] transition-[scale] duration-150 ease-out"
+      >
         <Card
           variant="borderless"
-          style={{ borderRadius: 16, boxShadow: 'var(--shadow-border)', transition: 'box-shadow 150ms ease-out' }}
-          styles={{ body: { padding: 16 } }}
+          style={{ borderRadius: 12, boxShadow: 'var(--shadow-border)', transition: 'box-shadow 150ms ease-out' }}
+          styles={{ body: { padding: '14px 16px' } }}
+          onMouseEnter={(e) => { e.currentTarget.style.boxShadow = 'var(--shadow-border-hover)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'var(--shadow-border)'; }}
         >
-          <div className="flex items-start justify-between mb-2">
-            <div className="flex-1 min-w-0">
-              <p className="text-base font-bold text-gray-900">{studentName || '학생 없음'}</p>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 10 }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ fontSize: 15, fontWeight: 700, color: '#1d1d1f', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {studentName || '학생 없음'}
+              </p>
               {classTypeName && (
-                <p className="text-xs text-gray-500 mt-0.5">{classTypeName}</p>
+                <p style={{ fontSize: 12, color: '#767676', margin: '2px 0 0' }}>{classTypeName}</p>
               )}
             </div>
-            <Badge label={payment.paymentStatus} bg={bg} text={text} />
+            <Badge label={stripEmoji(payment.paymentStatus)} bg={bg} text={text} />
           </div>
-          <div className="flex gap-4 text-sm">
+          <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
             <div>
-              <span className="text-xs text-gray-500">시간 회차 </span>
-              <span className="font-semibold tabular-nums text-gray-800">{payment.sessionCount}회</span>
+              <span style={{ fontSize: 12, color: '#767676' }}>시간 회차 </span>
+              <span style={{ fontSize: 13, fontWeight: 600, color: '#1d1d1f' }} className="tabular-nums">{payment.sessionCount}회</span>
             </div>
             <div>
-              <span className="text-xs text-gray-500">결제 금액 </span>
-              <span className="font-semibold tabular-nums text-gray-800">{formatKRW(payment.paymentAmount)}</span>
+              <span style={{ fontSize: 12, color: '#767676' }}>결제 금액 </span>
+              <span style={{ fontSize: 13, fontWeight: 600, color: '#1d1d1f' }} className="tabular-nums">{formatKRW(payment.paymentAmount)}</span>
             </div>
             {payment.unpaid > 0 && (
               <div>
-                <span className="text-xs text-gray-500">미수금 </span>
-                <span className="font-semibold tabular-nums text-red-500">{formatKRW(payment.unpaid)}</span>
+                <span style={{ fontSize: 12, color: '#767676' }}>미수금 </span>
+                <span style={{ fontSize: 13, fontWeight: 600, color: '#cf1322' }} className="tabular-nums">{formatKRW(payment.unpaid)}</span>
               </div>
             )}
           </div>
           {payment.paymentDate && (
-            <p className="text-xs text-gray-500 mt-2">결제일 {payment.paymentDate}</p>
+            <p style={{ fontSize: 12, color: '#767676', margin: '8px 0 0' }} className="tabular-nums">결제일 {payment.paymentDate}</p>
           )}
         </Card>
       </Link>

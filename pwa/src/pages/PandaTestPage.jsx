@@ -2,7 +2,8 @@
 import { useState } from 'react';
 import PandaWidget from '../components/ui/PandaWidget.jsx';
 
-const FEED_KEY = 'panda_fed_total';
+// 테스트 전용 키 — PersonalPage의 실제 데이터와 분리
+const FEED_KEY = 'panda_test_fed_total';
 
 export default function PandaTestPage() {
   const [totalSessions, setTotalSessions] = useState(5);
@@ -95,7 +96,14 @@ export default function PandaTestPage() {
       </div>
 
       {/* 팬더 위젯 */}
-      <PandaWidget totalSessions={totalSessions} key={totalSessions + '-' + fedDisplay} />
+      <PandaWidget
+        foodSources={[
+          { key: 'sessions', label: '완료 수업', count: totalSessions },
+          { key: 'referral', label: '친구 추천', count: 0 },
+        ]}
+        storageKey={FEED_KEY}
+        key={totalSessions + '-' + fedDisplay}
+      />
 
       <p style={{ fontSize: 11, color: '#bbb', textAlign: 'center', marginTop: 16 }}>
         먹이 기록은 localStorage에 저장됩니다

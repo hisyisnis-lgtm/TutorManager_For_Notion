@@ -1,12 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 import {
   ConfigProvider, Button, Card, Flex, Form, Input,
   Typography, Space, Divider,
 } from 'antd';
-import { CheckCircleOutlined } from '@ant-design/icons';
+import { CheckCircleIcon } from '@phosphor-icons/react';
 import { useLocation } from 'react-router-dom';
 import { submitConsultation } from '../api/consultApi';
+import { trackReferral } from '../api/bookingApi';
 import { PRIMARY, antdTheme } from '../constants/theme';
 import TabPanel from '../components/TabPanel';
 import IntroContent from '../components/IntroContent';
@@ -62,7 +63,7 @@ function ConsultContent() {
 
   if (done) {
     return (
-      <div style={{ padding: '40px 20px', textAlign: 'center' }}>
+      <div style={{ padding: '40px 16px', textAlign: 'center' }}>
         <Card variant="borderless" style={{ borderRadius: 16 }}>
           <div style={{ padding: '20px 0' }}>
             <div style={{
@@ -71,7 +72,7 @@ function ConsultContent() {
               alignItems: 'center', justifyContent: 'center',
               margin: '0 auto 16px', fontSize: 24, color: '#52c41a',
             }}>
-              <CheckCircleOutlined />
+              <CheckCircleIcon weight="fill" />
             </div>
             <Title level={4} style={{ marginBottom: 8 }}>신청 완료!</Title>
             <Text type="secondary" style={{ fontSize: 14, lineHeight: 1.6 }}>
@@ -102,7 +103,7 @@ function ConsultContent() {
   }
 
   return (
-    <div style={{ maxWidth: 480, margin: '0 auto', padding: '32px 20px 80px' }}>
+    <div style={{ maxWidth: 480, margin: '0 auto', padding: '32px 16px 80px' }}>
       <div style={{ marginBottom: 24 }}>
         <Title level={4} style={{ marginBottom: 4 }}>무료 상담 신청</Title>
         <Text type="secondary">Zoom 화상통화 30분 · 완전 무료</Text>
@@ -119,7 +120,7 @@ function ConsultContent() {
             '나에게 맞는 학습 방향 제안',
           ].map(item => (
             <Space key={item} size={10}>
-              <CheckCircleOutlined style={{ color: PRIMARY, fontSize: 14, flexShrink: 0 }} />
+              <CheckCircleIcon weight="fill" size={14} style={{ color: PRIMARY, flexShrink: 0 }} />
               <Text style={{ fontSize: 14 }}>{item}</Text>
             </Space>
           ))}
@@ -229,13 +230,13 @@ function ShareButton() {
     <button
       onClick={handleShare}
       aria-label="공유하기"
+      className="active:scale-[0.96] transition-[scale,background-color,color] duration-150 ease-out"
       style={{
         display: 'flex', alignItems: 'center', gap: 4,
         border: '1px solid #d9d9d9', borderRadius: 20,
         background: 'none', cursor: 'pointer',
         padding: '5px 12px',
         fontSize: 12, fontWeight: 600, color: '#8c8c8c',
-        transition: 'background 0.15s',
       }}
     >
       {copied ? '링크 복사됨 ✓' : '공유하기'}
@@ -244,10 +245,24 @@ function ShareButton() {
 }
 
 // ─── 메인 랜딩 페이지 ─────────────────────────────────────────
+const REFERRAL_CREDITED_KEY = (token) => `referral_credited_${token}`;
+
 export default function LandingPage() {
   const location = useLocation();
   const [tab, setTab] = useState(location.state?.tab || '소개');
   const [showFloat, setShowFloat] = useState(false);
+
+  // ?ref=TOKEN 파라미터 감지 → 추천 보너스 적립 (클라이언트 중복 방지)
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const ref = params.get('ref');
+    if (!ref) return;
+    const key = REFERRAL_CREDITED_KEY(ref);
+    if (localStorage.getItem(key)) return; // 이미 처리된 추천
+    trackReferral(ref)
+      .then(() => localStorage.setItem(key, String(Date.now())))
+      .catch(() => {}); // 실패해도 조용히 무시
+  }, [location.search]);
 
   function switchTab(t) {
     setTab(t);

@@ -93,7 +93,7 @@ export default function StudentFormPage() {
     <>
       <PageHeader title={isEdit ? '학생 수정' : '학생 추가'} back />
 
-      <form onSubmit={handleSubmit} className="px-5 pt-4 pb-8 space-y-5">
+      <form onSubmit={handleSubmit} className="px-4 pt-4 pb-8 space-y-5">
         {error && (
           <Alert type="error" message={error} showIcon style={{ borderRadius: 12 }} />
         )}
@@ -124,7 +124,7 @@ export default function StudentFormPage() {
                 key={s}
                 type="button"
                 onClick={() => setForm((f) => ({ ...f, status: s }))}
-                className={`px-3 py-3 rounded-xl text-sm font-medium border-2 transition-colors ${
+                className={`px-3 py-3 rounded-xl text-sm font-medium border-2 transition-[background-color,border-color] duration-150 ease-out ${
                   form.status === s
                     ? 'border-brand-600 bg-brand-50 text-brand-700'
                     : 'border-gray-200 bg-white text-gray-600'

@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Button, Card } from 'antd';
+import { Button, Card, message } from 'antd';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import EmptyState from '../components/ui/EmptyState.jsx';
 import PullToRefresh from '../components/ui/PullToRefresh.jsx';
+import SectionHeading from '../components/ui/SectionHeading.jsx';
+import { STATUS_ERROR_TEXT } from '../constants/theme.js';
 import { queryAll, updatePage } from '../api/notionClient.js';
 import { CONSULT_DB } from '../constants.js';
 
@@ -52,7 +54,7 @@ function ConsultCard({ consult: c, onConfirm, confirming }) {
     <Card
       variant="borderless"
       style={{ borderRadius: 16, boxShadow: 'var(--shadow-border)', opacity: faded ? 0.55 : 1 }}
-      styles={{ body: { padding: '14px 16px' } }}
+      styles={{ body: { padding: 16 } }}
     >
       <div className="flex items-start justify-between gap-2 mb-2">
         <div className="min-w-0">
@@ -68,16 +70,16 @@ function ConsultCard({ consult: c, onConfirm, confirming }) {
       </div>
 
       <div className="space-y-0.5 text-sm text-gray-600">
-        {c.level && <p>수준: {c.level}</p>}
-        {c.days.length > 0 && <p>희망 요일: {c.days.join(', ')}</p>}
-        {c.time && <p>희망 시간: {c.time}</p>}
+        {c.level && <p><span className="text-gray-400">수준</span><span className="ml-1.5">{c.level}</span></p>}
+        {c.days.length > 0 && <p><span className="text-gray-400">희망 요일</span><span className="ml-1.5">{c.days.join(', ')}</span></p>}
+        {c.time && <p><span className="text-gray-400">희망 시간</span><span className="ml-1.5">{c.time}</span></p>}
         {c.content && (
           <p className="text-xs text-gray-500 leading-relaxed whitespace-pre-wrap pt-1">{c.content}</p>
         )}
       </div>
 
       <div className="flex items-center justify-between mt-3 pt-2 border-t border-gray-100">
-        <span className="text-xs text-gray-400">{formatKST(c.appliedAt)}</span>
+        <span className="text-xs text-gray-400 tabular-nums">{formatKST(c.appliedAt)}</span>
         {isPending && (
           <Button
             type="primary"
@@ -122,6 +124,8 @@ export default function ConsultManagePage() {
     try {
       await updatePage(id, { '상태': { select: { name: '확인됨' } } });
       setConsults(prev => prev.map(c => c.id === id ? { ...c, status: '확인됨' } : c));
+    } catch (e) {
+      message.error(`처리 실패: ${e.message}`);
     } finally {
       setConfirming(null);
     }
@@ -134,7 +138,7 @@ export default function ConsultManagePage() {
   return (
     <PullToRefresh onRefresh={load}>
       <PageHeader title="무료상담 신청" back />
-      <div className="px-5 pt-4 pb-24">
+      <div className="px-4 pt-4 pb-24">
         {loading ? (
           <LoadingSpinner />
         ) : consults.length === 0 ? (
@@ -143,9 +147,9 @@ export default function ConsultManagePage() {
           <>
             {pending.length > 0 && (
               <section>
-                <p className="text-xs font-semibold text-gray-500 tracking-wider mb-3">
-                  미확인&nbsp;<span className="text-red-500">{pending.length}</span>건
-                </p>
+                <SectionHeading style={{ marginBottom: 12 }}>
+                  미확인&nbsp;<span className="tabular-nums" style={{ color: STATUS_ERROR_TEXT }}>{pending.length}</span>건
+                </SectionHeading>
                 <ul className="space-y-3">
                   {pending.map(c => (
                     <li key={c.id}>
@@ -161,7 +165,7 @@ export default function ConsultManagePage() {
             )}
             {others.length > 0 && (
               <section className={pending.length > 0 ? 'mt-6' : ''}>
-                <p className="text-xs font-semibold text-gray-500 tracking-wider mb-3">이전 신청</p>
+                <SectionHeading style={{ marginBottom: 12 }}>이전 신청</SectionHeading>
                 <ul className="space-y-3">
                   {others.map(c => (
                     <li key={c.id}>

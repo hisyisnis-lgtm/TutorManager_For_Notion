@@ -1,20 +1,14 @@
 import { NavLink } from 'react-router-dom';
-import {
-  HomeOutlined,
-  TeamOutlined,
-  CalendarOutlined,
-  BookOutlined,
-  DollarOutlined,
-} from '@ant-design/icons';
+import { HouseIcon, UsersIcon, CalendarBlankIcon, BookOpenIcon, CurrencyDollarIcon } from '@phosphor-icons/react';
 
 const PRIMARY = '#7f0005';
 
 const TABS = [
-  { to: '/home',     label: '홈',   icon: <HomeOutlined />     },
-  { to: '/students', label: '학생', icon: <TeamOutlined />     },
-  { to: '/classes',  label: '수업', icon: <CalendarOutlined /> },
-  { to: '/bookings', label: '예약', icon: <BookOutlined />     },
-  { to: '/payments', label: '결제', icon: <DollarOutlined />   },
+  { to: '/home',     label: '홈',   icon: <HouseIcon weight="fill" />           },
+  { to: '/students', label: '학생', icon: <UsersIcon weight="fill" />           },
+  { to: '/classes',  label: '수업', icon: <CalendarBlankIcon weight="fill" />   },
+  { to: '/bookings', label: '예약', icon: <BookOpenIcon weight="fill" />        },
+  { to: '/payments', label: '결제', icon: <CurrencyDollarIcon weight="fill" />  },
 ];
 
 export default function BottomNav() {
@@ -25,7 +19,7 @@ export default function BottomNav() {
         backgroundColor: 'rgba(255,255,255,0.82)',
         backdropFilter: 'saturate(180%) blur(20px)',
         WebkitBackdropFilter: 'saturate(180%) blur(20px)',
-        boxShadow: '0px -1px 0px 0px rgba(0,0,0,0.06), 0px -2px 8px 0px rgba(0,0,0,0.04)',
+        boxShadow: 'var(--shadow-nav)',
         zIndex: 50,
         paddingBottom: 'env(safe-area-inset-bottom)',
       }}
@@ -36,6 +30,7 @@ export default function BottomNav() {
             key={to}
             to={to}
             aria-label={label}
+            className="active:scale-[0.96]"
             style={({ isActive }) => ({
               flex: 1, display: 'flex', flexDirection: 'column',
               alignItems: 'center', justifyContent: 'center',
@@ -44,7 +39,7 @@ export default function BottomNav() {
               fontSize: 11, fontWeight: isActive ? 600 : 500,
               color: isActive ? PRIMARY : '#8c8c8c',
               textDecoration: 'none',
-              transitionProperty: 'color, transform',
+              transitionProperty: 'color, scale',
               transitionDuration: '0.15s',
               transitionTimingFunction: 'ease-out',
               minHeight: 56,
@@ -52,7 +47,7 @@ export default function BottomNav() {
               outline: 'none',
             })}
           >
-            <span style={{ fontSize: 20, lineHeight: 1 }} aria-hidden="true">{icon}</span>
+            <span style={{ fontSize: 24, lineHeight: 1 }} aria-hidden="true">{icon}</span>
             <span aria-hidden="true">{label}</span>
           </NavLink>
         ))}

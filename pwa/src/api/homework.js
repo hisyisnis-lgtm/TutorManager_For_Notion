@@ -2,11 +2,8 @@ import { queryPage, createPage, updatePage, deletePage, getPage } from './notion
 
 export const HOMEWORK_DB = '5ce7d5ef-7b80-4795-843f-325f4ca868e2';
 
-const WORKER_URL = import.meta.env.VITE_WORKER_URL;
-
-function getToken() {
-  return sessionStorage.getItem('auth_token') || localStorage.getItem('auth_token') || '';
-}
+import { WORKER_URL } from '../config.js';
+import { getToken } from './authUtils.js';
 
 // ===== 파싱 =====
 
@@ -88,18 +85,13 @@ export async function saveFeedback(id, { feedbackText, files, existingFiles }) {
     피드백일: { date: { start: nowIso } },
   };
 
-  const hasNew = files?.length > 0;
-  const hasExisting = existingFiles?.length > 0;
-
-  if (hasNew || hasExisting) {
+  // files 또는 existingFiles 중 하나라도 명시적으로 전달된 경우 속성 업데이트
+  // (undefined이면 건드리지 않음 — 기존 파일 유지)
+  if (files !== undefined || existingFiles !== undefined) {
     properties['피드백 파일'] = {
       files: [
-        // 기존 파일: fresh S3 URL을 external로 재첨부
-        ...(existingFiles ?? []).map(({ name, url }) => ({
-          name,
-          type: 'external',
-          external: { url },
-        })),
+        // 기존 파일: raw Notion 파일 객체 그대로 재첨부 (type: 'file' 보존)
+        ...(existingFiles ?? []),
         // 새 파일: file_upload
         ...(files ?? []).map(({ fileUploadId, fileName }) => ({
           name: fileName,

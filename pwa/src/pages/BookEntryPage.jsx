@@ -37,33 +37,25 @@ export default function BookEntryPage() {
 
         {/* 브랜드 헤더 */}
         <div style={{
-          background: 'linear-gradient(135deg, #7f0005 0%, #a00008 100%)',
-          padding: '48px 24px 36px',
-          position: 'relative',
-          overflow: 'hidden',
+          background: 'linear-gradient(150deg, #6b0004 0%, #7f0005 50%, #9a0007 100%)',
+          padding: '52px 24px 40px',
         }}>
-          {/* 배경 장식 원 */}
-          <div style={{
-            position: 'absolute', top: -40, right: -40,
-            width: 160, height: 160, borderRadius: '50%',
-            backgroundColor: 'rgba(255,255,255,0.06)',
-            pointerEvents: 'none',
-          }} />
-          <div style={{
-            position: 'absolute', bottom: -20, left: -20,
-            width: 100, height: 100, borderRadius: '50%',
-            backgroundColor: 'rgba(255,255,255,0.04)',
-            pointerEvents: 'none',
-          }} />
+          <p style={{
+            color: 'rgba(255,255,255,0.55)', fontSize: 11,
+            margin: '0 0 10px', fontWeight: 500,
+            letterSpacing: '0.08em', textTransform: 'uppercase',
+          }}>
+            하늘하늘 중국어
+          </p>
           <h1 style={{
-            color: 'white', fontSize: 22, fontWeight: 700,
-            margin: '0 0 6px', lineHeight: 1.3,
+            color: 'white', fontSize: 28, fontWeight: 700,
+            margin: '0 0 8px', lineHeight: 1.15, letterSpacing: '-0.3px',
             textWrap: 'balance',
           }}>
             수업 예약
           </h1>
-          <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 14, margin: 0 }}>
-            강사에게 받은 예약 코드를 입력해주세요
+          <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: 14, margin: 0, lineHeight: 1.65 }}>
+            강사님이 보내준 예약 코드를 입력해주세요
           </p>
         </div>
 

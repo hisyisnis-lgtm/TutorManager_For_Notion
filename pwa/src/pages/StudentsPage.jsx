@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button, Input } from 'antd';
-import { SearchOutlined } from '@ant-design/icons';
+import { MagnifyingGlassIcon } from '@phosphor-icons/react';
 import Card from 'antd/es/card/Card';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import Badge from '../components/ui/Badge.jsx';
@@ -10,9 +10,15 @@ import ErrorMessage from '../components/ui/ErrorMessage.jsx';
 import EmptyState from '../components/ui/EmptyState.jsx';
 import { fetchAllStudents, parseStudent, statusColor, STATUS_OPTIONS } from '../api/students.js';
 import { formatKRW } from '../utils/dateUtils.js';
+import { stripEmoji } from '../utils/stringUtils.js';
 import PullToRefresh from '../components/ui/PullToRefresh.jsx';
 
-const FILTER_TABS = ['전체', '🟢 수강중', '🟡 일시중단', '⚫ 수강종료'];
+const FILTER_TABS = [
+  { value: '전체', label: '전체' },
+  { value: '🟢 수강중', label: '수강중' },
+  { value: '🟡 일시중단', label: '일시중단' },
+  { value: '⚫ 수강종료', label: '수강종료' },
+];
 
 export default function StudentsPage() {
   const navigate = useNavigate();
@@ -64,7 +70,7 @@ export default function StudentsPage() {
         <Input
           size="large"
           placeholder="이름으로 검색"
-          prefix={<SearchOutlined style={{ color: '#767676' }} />}
+          prefix={<MagnifyingGlassIcon weight="fill" style={{ color: '#767676' }} />}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           style={{ borderRadius: 12 }}
@@ -74,18 +80,18 @@ export default function StudentsPage() {
 
       {/* 상태 필터 탭 */}
       <div role="group" aria-label="수강 상태 필터" className="flex gap-2 px-4 pb-3 overflow-x-auto no-scrollbar">
-        {FILTER_TABS.map((tab) => (
+        {FILTER_TABS.map(({ value, label }) => (
           <button
-            key={tab}
-            onClick={() => setFilter(tab)}
-            aria-pressed={filter === tab}
-            className={`flex-shrink-0 px-3 py-3 rounded-full text-sm font-medium transition-colors ${
-              filter === tab
+            key={value}
+            onClick={() => setFilter(value)}
+            aria-pressed={filter === value}
+            className={`flex-shrink-0 px-3 py-3 rounded-full text-sm font-medium transition-[scale,background-color,color] duration-150 ease-out active:scale-[0.96] ${
+              filter === value
                 ? 'bg-brand-600 text-white'
                 : 'bg-gray-100 text-gray-600'
             }`}
           >
-            {tab}
+            {label}
           </button>
         ))}
       </div>
@@ -114,16 +120,20 @@ function StudentCard({ student }) {
   const { bg, text } = statusColor(student.status);
   return (
     <li>
-      <Link to={`/students/${student.id}`}>
+      <Link
+        to={`/students/${student.id}`}
+        className="block active:scale-[0.96] transition-[scale] duration-150 ease-out"
+      >
         <Card
           variant="borderless"
           style={{ borderRadius: 16, boxShadow: 'var(--shadow-border)', transition: 'box-shadow 150ms ease-out' }}
           styles={{ body: { padding: '16px' } }}
-          className="active:bg-gray-50"
+          onMouseEnter={(e) => { e.currentTarget.style.boxShadow = 'var(--shadow-border-hover)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'var(--shadow-border)'; }}
         >
           <div className="flex items-start justify-between mb-2">
             <span className="text-base font-bold text-gray-900">{student.name}</span>
-            <Badge label={student.status} bg={bg} text={text} />
+            <Badge label={stripEmoji(student.status)} bg={bg} text={text} />
           </div>
           <div className="flex gap-4 text-sm">
             <div>

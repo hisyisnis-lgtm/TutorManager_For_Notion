@@ -62,6 +62,16 @@ antd ^6.3.3 기준 — deprecated API 절대 사용 금지:
 
 ---
 
+## 사용자 호출 스킬
+
+| 슬래시 커맨드 | 설명 |
+|---|---|
+| `/make-interfaces-feel-better` | UI 폴리싱 원칙 적용 — 애니메이션·그림자·타이포·히트영역 등 인터페이스 품질 개선 |
+
+스킬 파일 위치: `.agents/skills/make-interfaces-feel-better/`
+
+---
+
 ## Node.js 실행 환경 (Windows)
 
 로컬에서 `.mjs` 스크립트 실행 시 Node.js PATH 설정 필요:
