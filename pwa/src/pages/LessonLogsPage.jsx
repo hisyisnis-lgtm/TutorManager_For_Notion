@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { Button, Input, Card } from 'antd';
-import { SearchOutlined } from '@ant-design/icons';
+import { MagnifyingGlassIcon } from '@phosphor-icons/react';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import ErrorMessage from '../components/ui/ErrorMessage.jsx';
@@ -48,9 +48,9 @@ export default function LessonLogsPage() {
       <PageHeader title="수업 일지" />
 
       {/* 학생 검색 */}
-      <div className="px-4 pt-3 pb-3">
+      <div className="px-4 pt-4 pb-3">
         <Input
-          prefix={<SearchOutlined style={{ color: '#767676' }} />}
+          prefix={<MagnifyingGlassIcon weight="fill" style={{ color: '#767676' }} />}
           placeholder="학생 이름으로 검색"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -101,21 +101,25 @@ function LogCard({ log, studentNameMap }) {
 
   return (
     <li>
-      <Link to={`/logs/${log.id}/edit`}>
+      <Link
+        to={`/logs/${log.id}/edit`}
+        className="block active:scale-[0.96] transition-[scale] duration-150 ease-out"
+      >
         <Card
           variant="borderless"
-          style={{ borderRadius: 16, boxShadow: 'var(--shadow-border)' }}
+          style={{ borderRadius: 16, boxShadow: 'var(--shadow-border)', transition: 'box-shadow 150ms ease-out' }}
           styles={{ body: { padding: 16 } }}
-          hoverable
+          onMouseEnter={(e) => { e.currentTarget.style.boxShadow = 'var(--shadow-border-hover)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'var(--shadow-border)'; }}
         >
           <div className="flex items-start justify-between mb-1.5">
             <span className="text-base font-bold text-gray-900">{log.title || '제목 없음'}</span>
             {empty ? (
-              <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">
+              <span className="text-xs bg-brand-50 text-brand-600 px-2 py-0.5 rounded-full font-medium">
                 작성 필요
               </span>
             ) : (
-              <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">
+              <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-medium">
                 작성 완료
               </span>
             )}

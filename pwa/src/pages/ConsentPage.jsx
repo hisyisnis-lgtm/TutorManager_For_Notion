@@ -1,8 +1,5 @@
 import { ConfigProvider, Button, Card, Flex, Space, Typography, Divider } from 'antd';
-import {
-  BookOutlined, CalendarOutlined,
-  CreditCardOutlined, FileProtectOutlined, CheckCircleOutlined,
-} from '@ant-design/icons';
+import { BookOpenIcon, CalendarBlankIcon, CreditCardIcon, FileLockIcon, CheckCircleIcon } from '@phosphor-icons/react';
 
 const { Title, Text, Paragraph } = Typography;
 const PRIMARY = '#7f0005';
@@ -34,7 +31,7 @@ function BulletList({ items }) {
       <Flex vertical gap={12} style={{ width: '100%' }}>
         {items.map((item, i) => (
           <Space key={i} size={10} align="start">
-            <CheckCircleOutlined style={{ color: PRIMARY, fontSize: 14, flexShrink: 0, marginTop: 2 }} />
+            <CheckCircleIcon weight="fill" size={14} style={{ color: PRIMARY, flexShrink: 0, marginTop: 2 }} />
             <Text style={{ fontSize: 14, lineHeight: 1.7 }}>{item}</Text>
           </Space>
         ))}
@@ -58,7 +55,7 @@ function NoteList({ items }) {
 export default function ConsentPage() {
   return (
     <ConfigProvider theme={theme}>
-      <div style={{ minHeight: '100vh', backgroundColor: '#f5f5f5', fontFamily: 'inherit' }}>
+      <div style={{ minHeight: '100vh', backgroundColor: '#f5f5f7', fontFamily: 'inherit' }}>
 
         {/* 헤더 */}
         <header style={{
@@ -67,14 +64,14 @@ export default function ConsentPage() {
           backdropFilter: 'blur(8px)',
           borderBottom: '1px solid #f0f0f0',
         }}>
-          <div style={{ maxWidth: 480, margin: '0 auto', padding: '0 20px' }}>
+          <div style={{ maxWidth: 480, margin: '0 auto', padding: '0 16px' }}>
             <div style={{ height: 48, display: 'flex', alignItems: 'center' }}>
               <img src="/logo/logo-red.png" alt="하늘하늘 중국어" style={{ height: 24, objectFit: 'contain', outline: 'none' }} />
             </div>
           </div>
         </header>
 
-        <main style={{ maxWidth: 480, margin: '0 auto', padding: '32px 20px 80px' }}>
+        <main style={{ maxWidth: 480, margin: '0 auto', padding: '32px 16px 80px' }}>
 
           {/* 페이지 제목 */}
           <div style={{ marginBottom: 8 }}>
@@ -97,7 +94,7 @@ export default function ConsentPage() {
           <Divider style={{ marginTop: 0, marginBottom: 28 }} />
 
           {/* 1. 수업 형태 및 운영 방식 */}
-          <Section icon={<BookOutlined />} title="1. 수업 형태 및 운영 방식">
+          <Section icon={<BookOpenIcon weight="fill" />} title="1. 수업 형태 및 운영 방식">
             <BulletList items={[
               '성인 대상 중국어 회화·발음 교정 중심 수업입니다.',
               '1:1 또는 2:1 소규모 수업으로 진행됩니다. 3인 이상 그룹 수업은 별도 상담 후 진행합니다.',
@@ -106,7 +103,7 @@ export default function ConsentPage() {
           </Section>
 
           {/* 2. 수업 예약 및 취소 */}
-          <Section icon={<CalendarOutlined />} title="2. 수업 예약 및 취소">
+          <Section icon={<CalendarBlankIcon weight="fill" />} title="2. 수업 예약 및 취소">
             <BulletList items={[
               '수업은 사전 예약제로 운영됩니다.',
               '일정 변경 및 취소는 수업 시작 24시간 전까지 가능합니다.',
@@ -116,7 +113,7 @@ export default function ConsentPage() {
           </Section>
 
           {/* 3. 환불 규정 */}
-          <Section icon={<CreditCardOutlined />} title="3. 환불 규정">
+          <Section icon={<CreditCardIcon weight="fill" />} title="3. 환불 규정">
             <Card variant="borderless" style={{ borderRadius: 16, boxShadow: 'var(--shadow-border)' }}>
               <Flex vertical gap={14} style={{ width: '100%' }}>
                 <div>
@@ -148,7 +145,7 @@ export default function ConsentPage() {
           </Section>
 
           {/* 4. 수업 자료 및 유의사항 */}
-          <Section icon={<FileProtectOutlined />} title="4. 수업 자료 및 유의사항">
+          <Section icon={<FileLockIcon weight="fill" />} title="4. 수업 자료 및 유의사항">
             <BulletList items={[
               '수업 중 녹음·녹화는 사전 동의 없이 불가합니다.',
               '수업 자료 및 피드백 자료는 개인 학습 목적으로만 활용 가능하며, 무단 배포 또는 상업적 사용을 금합니다.',

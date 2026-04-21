@@ -130,14 +130,18 @@ export default function InstallBanner({ showBanner, isIOS, promptInstall, dismis
               홈 화면에 추가하는 방법
             </h2>
             <p style={{ fontSize: 13, color: '#595959', margin: '0 0 20px' }}>
-              Safari에서 아래 순서를 따라주세요
+              {isIOS ? 'Safari에서 아래 순서를 따라주세요' : '브라우저 메뉴에서 직접 추가할 수 있어요'}
             </p>
 
-            {[
+            {(isIOS ? [
               { step: '1', text: '하단의 공유 버튼(□↑)을 탭하세요' },
               { step: '2', text: '스크롤하여 "홈 화면에 추가"를 탭하세요' },
               { step: '3', text: '오른쪽 위 "추가"를 탭하면 완료!' },
-            ].map(({ step, text }) => (
+            ] : [
+              { step: '1', text: '브라우저 주소창 오른쪽 메뉴(⋮)를 탭하세요' },
+              { step: '2', text: '"홈 화면에 추가" 또는 "앱 설치"를 탭하세요' },
+              { step: '3', text: '"추가" 또는 "설치"를 탭하면 완료!' },
+            ]).map(({ step, text }) => (
               <div key={step} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
                 <div style={{
                   width: 28, height: 28, borderRadius: '50%',

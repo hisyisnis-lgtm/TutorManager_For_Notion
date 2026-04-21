@@ -10,11 +10,11 @@ export default function ToggleButton({ label, selected, onClick, fullWidth = fal
       type="button"
       onClick={onClick}
       aria-pressed={selected}
+      className="active:scale-[0.96] transition-[scale,background-color,border-color,color] duration-150 ease-out"
       style={{
         width: fullWidth ? '100%' : undefined,
         height: 44, borderRadius: 12, fontSize: 14, fontWeight: 500,
         cursor: 'pointer',
-        transition: 'background-color 0.2s, border-color 0.2s, color 0.2s',
         border: `1px solid ${selected ? PRIMARY : '#d9d9d9'}`,
         backgroundColor: selected ? PRIMARY : '#ffffff',
         color: selected ? '#ffffff' : '#595959',

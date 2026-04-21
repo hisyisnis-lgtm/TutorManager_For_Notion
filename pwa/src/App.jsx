@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { ConfigProvider } from 'antd';
+import { ConfigProvider, App as AntApp } from 'antd';
 import { useRegisterSW } from 'virtual:pwa-register/react';
+import { isAuthed } from './api/authUtils.js';
 
 const antdTheme = {
   token: {
@@ -32,6 +33,8 @@ import BookingPage from './pages/BookingPage.jsx';
 import BookingStatusPage from './pages/BookingStatusPage.jsx';
 import PersonalEntryPage from './pages/PersonalEntryPage.jsx';
 import PersonalPage from './pages/PersonalPage.jsx';
+import PersonalHomeworkDetailPage from './pages/PersonalHomeworkDetailPage.jsx';
+import PandaPage from './pages/PandaPage.jsx';
 import PandaTestPage from './pages/PandaTestPage.jsx';
 import BookingsManagePage from './pages/BookingsManagePage.jsx';
 import ConsultManagePage from './pages/ConsultManagePage.jsx';
@@ -42,17 +45,30 @@ import LandingPage from './pages/LandingPage.jsx';
 import PricingPage from './pages/PricingPage.jsx';
 import ConsentPage from './pages/ConsentPage.jsx';
 
+// 앱 초기 로드 / SW 업데이트 중 스플래시 (흰 배경 + 빨간 로고)
 function SplashScreen({ updating }) {
   return (
     <div
       style={{ background: '#7f0005' }}
-      className="fixed inset-0 flex flex-col items-center justify-center gap-5"
+      className="fixed inset-0 flex flex-col items-center justify-center gap-6"
     >
-      <img src={`${import.meta.env.BASE_URL}logo/logo-white.png`} alt="하늘하늘중국어" className="h-10 w-auto block" style={{ outline: 'none', border: 'none' }} />
-      <div className="w-7 h-7 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-      <p className="text-white/60 text-sm tracking-wide">
-        {updating ? '최신 버전으로 업데이트 중...' : ''}
-      </p>
+      <img
+        src={`${import.meta.env.BASE_URL}logo/logo-white.png`}
+        alt="하늘하늘중국어"
+        style={{ height: 36, width: 'auto', display: 'block', outline: 'none', border: 'none' }}
+      />
+      <div style={{
+        width: 28, height: 28, borderRadius: '50%',
+        border: '2.5px solid rgba(255,255,255,0.3)',
+        borderTopColor: '#ffffff',
+        animation: 'spin 0.75s linear infinite',
+      }} />
+      {updating && (
+        <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', margin: 0, letterSpacing: '0.02em' }}>
+          최신 버전으로 업데이트 중...
+        </p>
+      )}
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }
@@ -63,9 +79,6 @@ function ScrollToTop() {
   return null;
 }
 
-function checkAuth() {
-  return !!(sessionStorage.getItem('auth_token') || localStorage.getItem('auth_token'));
-}
 
 // 현재 hash가 공개 페이지인지 확인 (로그인 불필요)
 function isPublicBookingRoute() {
@@ -76,11 +89,11 @@ function isPublicBookingRoute() {
 // 데이터 작성 중인 폼 페이지 여부 확인
 function isOnFormPage() {
   const hash = window.location.hash;
-  return /\/(logs|classes|students|payments)\/(new|[^/]+\/edit)/.test(hash);
+  return /\/(logs|classes|students|payments|homework)\/(new|[^/]+\/edit)/.test(hash);
 }
 
 export default function App() {
-  const [authed, setAuthed] = useState(checkAuth);
+  const [authed, setAuthed] = useState(isAuthed);
   const [swReady, setSwReady] = useState(false);
 
   const { needRefresh: [needRefresh], updateServiceWorker } = useRegisterSW({
@@ -132,6 +145,7 @@ export default function App() {
   if (isPublicBookingRoute()) {
     return (
       <ConfigProvider theme={antdTheme}>
+        <AntApp>
         <HashRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <ScrollToTop />
           <Routes>
@@ -143,9 +157,12 @@ export default function App() {
             <Route path="/book/:studentToken" element={<BookingPage />} />
             <Route path="/personal" element={<PersonalEntryPage />} />
             <Route path="/personal/:studentToken" element={<PersonalPage />} />
+            <Route path="/personal/:studentToken/homework/:hwId" element={<PersonalHomeworkDetailPage />} />
+            <Route path="/personal/:studentToken/panda" element={<PandaPage />} />
             <Route path="/panda-test" element={<PandaTestPage />} />
           </Routes>
         </HashRouter>
+        </AntApp>
       </ConfigProvider>
     );
   }
@@ -153,18 +170,21 @@ export default function App() {
   if (!authed) {
     return (
       <ConfigProvider theme={antdTheme}>
-        <LoginPage
-          onSuccess={() => {
-            window.location.hash = '#/home';
-            setAuthed(true);
-          }}
-        />
+        <AntApp>
+          <LoginPage
+            onSuccess={() => {
+              window.location.hash = '#/home';
+              setAuthed(true);
+            }}
+          />
+        </AntApp>
       </ConfigProvider>
     );
   }
 
   return (
     <ConfigProvider theme={antdTheme}>
+    <AntApp>
     <DataProvider>
       <HashRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <ScrollToTop />
@@ -203,6 +223,7 @@ export default function App() {
         <BottomNav />
       </HashRouter>
     </DataProvider>
+    </AntApp>
     </ConfigProvider>
   );
 }

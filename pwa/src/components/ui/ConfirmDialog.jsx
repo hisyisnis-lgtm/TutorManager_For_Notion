@@ -6,6 +6,7 @@ export default function ConfirmDialog({
   onConfirm,
   onCancel,
   confirmLabel = '삭제',
+  cancelLabel = '취소',
   loading = false,
 }) {
   return (
@@ -28,7 +29,7 @@ export default function ConfirmDialog({
           disabled={loading}
           style={{ borderRadius: 12 }}
         >
-          취소
+          {cancelLabel}
         </Button>
         <Button
           block

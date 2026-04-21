@@ -6,17 +6,16 @@
 import { useState, useRef, useEffect } from 'react';
 import { Button, Card, Flex, Space, Tag, Avatar, Typography } from 'antd';
 import {
-  ClockCircleOutlined, EnvironmentOutlined,
-  ReadOutlined, UserOutlined,
-  SoundOutlined, LineChartOutlined, BulbOutlined, MessageOutlined,
-  LeftOutlined, RightOutlined,
-} from '@ant-design/icons';
+  ClockIcon, MapPinIcon, BookBookmarkIcon, UserIcon,
+  SpeakerHighIcon, ChartLineUpIcon, LightbulbIcon, ChatCircleIcon,
+  CaretLeftIcon, CaretRightIcon,
+} from '@phosphor-icons/react';
 import { PRIMARY } from '../constants/theme';
 import FadeUp from './FadeUp';
 import HeroSection from './ui/HeroSection';
 import CtaSection from './public/CtaSection';
 
-const WORKER_URL = import.meta.env.VITE_WORKER_URL;
+import { WORKER_URL } from '../config.js';
 
 const REVIEW_URLS = [
   'https://blog.naver.com/strolling-around/224202928037',
@@ -144,12 +143,12 @@ function ReviewScrollSection() {
         <Title level={5} style={{ marginBottom: 16, paddingLeft: 20 }}>수강생 후기</Title>
         {canLeft && (
           <div className="review-nav-btn" style={{ ...navBtnStyle, left: 4 }} onClick={() => scroll(-1)} aria-label="이전">
-            <LeftOutlined />
+            <CaretLeftIcon weight="fill" />
           </div>
         )}
         {canRight && (
           <div className="review-nav-btn" style={{ ...navBtnStyle, right: 4 }} onClick={() => scroll(1)} aria-label="다음">
-            <RightOutlined />
+            <CaretRightIcon weight="fill" />
           </div>
         )}
         <div ref={scrollRef} style={{
@@ -262,16 +261,16 @@ export default function IntroContent({ onConsult, onFloatChange }) {
         </HeroSection>
 
         {/* 이런 분께 */}
-        <section style={{ padding: '24px 20px 16px' }}>
+        <section style={{ padding: '24px 16px 16px' }}>
           <FadeUp>
             <Title level={5} style={{ marginBottom: 16 }}>이런 분께 맞아요</Title>
           </FadeUp>
           <Flex vertical gap={10} style={{ width: '100%' }}>
             {[
-              { icon: <BulbOutlined />, title: '중국어를 처음 시작하는 분', desc: '성조부터 회화까지, 가장 빠르고 확실하게 첫 단추를 끼워드립니다.' },
-              { icon: <SoundOutlined />, title: '어색한 발음이 고민인 분', desc: '디테일한 밀착 교정으로, 원어민처럼 당당하게 말하는 자신감을 찾아드립니다.' },
-              { icon: <MessageOutlined />, title: '머리로는 아는데 입이 안 떨어지는 분', desc: '눈으로 하는 공부와, 입 밖으로 꺼내는 훈련은 방식부터 다릅니다.' },
-              { icon: <LineChartOutlined />, title: '초·중급인데 방향을 잘 못 잡겠는 분', desc: '예리한 진단으로 지금의 답답함을 뚫고, 한 단계 도약할 돌파구를 찾아드립니다.' },
+              { icon: <LightbulbIcon weight="fill" />, title: '중국어를 처음 시작하는 분', desc: '성조부터 회화까지, 가장 빠르고 확실하게 첫 단추를 끼워드립니다.' },
+              { icon: <SpeakerHighIcon weight="fill" />, title: '어색한 발음이 고민인 분', desc: '디테일한 밀착 교정으로, 원어민처럼 당당하게 말하는 자신감을 찾아드립니다.' },
+              { icon: <ChatCircleIcon weight="fill" />, title: '머리로는 아는데 입이 안 떨어지는 분', desc: '눈으로 하는 공부와, 입 밖으로 꺼내는 훈련은 방식부터 다릅니다.' },
+              { icon: <ChartLineUpIcon weight="fill" />, title: '초·중급인데 방향을 잘 못 잡겠는 분', desc: '예리한 진단으로 지금의 답답함을 뚫고, 한 단계 도약할 돌파구를 찾아드립니다.' },
             ].map(({ icon, title, desc }, i) => (
               <FadeUp key={title} delay={i * 80}>
                 <Card variant="borderless" style={{ borderRadius: 12 }} styles={{ body: { padding: 16 } }}>
@@ -290,7 +289,7 @@ export default function IntroContent({ onConsult, onFloatChange }) {
 
         {/* 어려운 상담 */}
         <FadeUp>
-          <section style={{ padding: '24px 20px 16px' }}>
+          <section style={{ padding: '24px 16px 16px' }}>
             <Card variant="borderless" style={{ borderRadius: 12, backgroundColor: '#fafafa' }} styles={{ body: { padding: 20 } }}>
               <Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 8 }}>이런 상담은 어려워요</Text>
               <Paragraph style={{ fontSize: 14, color: '#595959', marginBottom: 12, lineHeight: 1.6 }}>
@@ -308,7 +307,7 @@ export default function IntroContent({ onConsult, onFloatChange }) {
 
         {/* 강사 프로필 */}
         <FadeUp>
-          <section style={{ padding: '24px 20px 16px' }}>
+          <section style={{ padding: '24px 16px 16px' }}>
             <Flex vertical align="center" gap={12} style={{ textAlign: 'center', padding: '0' }}>
               <Avatar
                 src="/img/profile.jpg" size={120}
@@ -337,15 +336,15 @@ export default function IntroContent({ onConsult, onFloatChange }) {
 
         {/* 수업 안내 */}
         <FadeUp>
-          <section style={{ padding: '24px 20px 16px' }}>
+          <section style={{ padding: '24px 16px 16px' }}>
             <Title level={5} style={{ marginBottom: 16 }}>수업 안내</Title>
             <Card variant="borderless" style={{ borderRadius: 16 }}>
               <Flex vertical gap={16} style={{ width: '100%' }}>
                 {[
-                  { icon: <ClockCircleOutlined />, label: '수업 시간', value: '60분 기준 (조정 가능)' },
-                  { icon: <EnvironmentOutlined />, label: '수업 장소', value: '강남 사무실 · Zoom 화상' },
-                  { icon: <ReadOutlined />, label: '수업 방식', value: '회화·발음 교정, 1:1 맞춤형' },
-                  { icon: <UserOutlined />, label: '수업 형태', value: '1:1 개인 과외' },
+                  { icon: <ClockIcon weight="fill" />, label: '수업 시간', value: '60분 기준 (조정 가능)' },
+                  { icon: <MapPinIcon weight="fill" />, label: '수업 장소', value: '강남 사무실 · Zoom 화상' },
+                  { icon: <BookBookmarkIcon weight="fill" />, label: '수업 방식', value: '회화·발음 교정, 1:1 맞춤형' },
+                  { icon: <UserIcon weight="fill" />, label: '수업 형태', value: '1:1 개인 과외' },
                 ].map(({ icon, label, value }) => (
                   <Space key={label} size={12}>
                     <IconBox icon={icon} />

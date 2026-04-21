@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Button, Input, Typography } from 'antd';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import ConfirmDialog from '../components/ui/ConfirmDialog.jsx';
+import { clearAuth } from '../api/authUtils.js';
 
 const STORAGE_KEY = 'instructor_name';
 const NTFY_TOPIC_KEY = 'ntfy_topic';
@@ -112,7 +113,7 @@ export default function SettingsPage() {
           <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>공유 링크</Typography.Text>
           <div className="space-y-2">
             {SHARE_LINKS.map(({ key, label, path }) => (
-              <div key={key} className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-2.5">
+              <div key={key} className="flex items-center gap-2 bg-white border border-gray-200 rounded-2xl px-3 py-2.5">
                 <div className="flex-1 min-w-0">
                   <p className="text-xs text-gray-500 mb-0.5">{label}</p>
                   <p className="text-xs text-gray-600 font-mono truncate">{window.location.origin}{path}</p>
@@ -120,9 +121,9 @@ export default function SettingsPage() {
                 <button
                   type="button"
                   onClick={() => copyLink(key, path)}
-                  className="shrink-0 text-xs text-brand-600 border border-brand-100 rounded-lg px-2.5 py-1 active:bg-brand-50"
+                  className="shrink-0 text-xs text-brand-600 border border-brand-100 rounded-lg px-3 min-h-[40px] flex items-center active:bg-brand-50 active:scale-[0.96] transition-[scale,background-color] duration-150 ease-out"
                 >
-                  {copiedKey === key ? '복사됨 ✓' : '복사'}
+                  {copiedKey === key ? '복사됨' : '복사'}
                 </button>
               </div>
             ))}
@@ -140,7 +141,7 @@ export default function SettingsPage() {
             ...(saved ? { backgroundColor: '#16a34a', borderColor: '#16a34a' } : {}),
           }}
         >
-          {saved ? '저장됨 ✓' : '저장'}
+          {saved ? '저장됨' : '저장'}
         </Button>
 
         <Button
@@ -170,8 +171,7 @@ export default function SettingsPage() {
           message="로그아웃하면 다시 비밀번호를 입력해야 합니다."
           confirmLabel="로그아웃"
           onConfirm={() => {
-            sessionStorage.removeItem('auth_token');
-            localStorage.removeItem('auth_token');
+            clearAuth();
             window.location.reload();
           }}
           onCancel={() => setConfirmLogout(false)}

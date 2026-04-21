@@ -1,12 +1,5 @@
-const WORKER_URL = import.meta.env.VITE_WORKER_URL;
-
-if (!WORKER_URL) {
-  console.warn('[notionClient] VITE_WORKER_URL이 설정되지 않았습니다. .env.local 파일을 확인하세요.');
-}
-
-function getToken() {
-  return sessionStorage.getItem('auth_token') || localStorage.getItem('auth_token') || '';
-}
+import { WORKER_URL } from '../config.js';
+import { getToken, clearAuth } from './authUtils.js';
 
 async function notionFetch(method, path, body) {
   const res = await fetch(`${WORKER_URL}${path}`, {
@@ -19,8 +12,7 @@ async function notionFetch(method, path, body) {
   });
 
   if (res.status === 401) {
-    sessionStorage.removeItem('auth_token');
-    localStorage.removeItem('auth_token');
+    clearAuth();
     if (window.location.hash !== '#/login') {
       window.location.hash = '#/login';
     }

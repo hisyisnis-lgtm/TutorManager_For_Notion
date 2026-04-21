@@ -1,10 +1,10 @@
 import { useNavigate } from 'react-router-dom';
 import { Flex, Typography } from 'antd';
-import { LeftOutlined } from '@ant-design/icons';
+import { CaretLeftIcon } from '@phosphor-icons/react';
 
 const { Text } = Typography;
 
-export default function PageHeader({ title, back, action }) {
+export default function PageHeader({ title, back, onBack, action }) {
   const navigate = useNavigate();
 
   return (
@@ -21,16 +21,20 @@ export default function PageHeader({ title, back, action }) {
         <Flex align="center" gap={8} style={{ height: 56, padding: '0 20px' }}>
           {back && (
             <button
-              onClick={() => navigate(-1)}
+              onClick={() => onBack ? onBack() : navigate(-1)}
               aria-label="뒤로가기"
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 width: 40, height: 40, border: 'none', background: 'none',
                 cursor: 'pointer', color: '#595959', flexShrink: 0, marginLeft: -8,
                 borderRadius: 12,
+                transition: 'scale 150ms ease-out, color 100ms ease-out',
               }}
+              onPointerDown={(e) => { e.currentTarget.style.scale = '0.96'; e.currentTarget.style.color = '#1d1d1f'; }}
+              onPointerUp={(e) => { e.currentTarget.style.scale = '1'; e.currentTarget.style.color = '#595959'; }}
+              onPointerLeave={(e) => { e.currentTarget.style.scale = '1'; e.currentTarget.style.color = '#595959'; }}
             >
-              <LeftOutlined style={{ fontSize: 16 }} />
+              <CaretLeftIcon size={20} weight="bold" />
             </button>
           )}
           <Text

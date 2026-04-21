@@ -48,43 +48,33 @@ export default function PersonalEntryPage() {
 
       {/* 히어로 */}
       <div style={{
-        background: 'linear-gradient(135deg, #7f0005 0%, #a00008 100%)',
+        background: 'linear-gradient(150deg, #6b0004 0%, #7f0005 50%, #9a0007 100%)',
         padding: '56px 24px 48px',
-        position: 'relative',
-        overflow: 'hidden',
       }}>
-        <div style={{
-          position: 'absolute', top: -60, right: -40,
-          width: 200, height: 200, borderRadius: '50%',
-          backgroundColor: 'rgba(255,255,255,0.06)', pointerEvents: 'none',
-        }} />
-        <div style={{
-          position: 'absolute', bottom: -30, left: -30,
-          width: 140, height: 140, borderRadius: '50%',
-          backgroundColor: 'rgba(255,255,255,0.04)', pointerEvents: 'none',
-        }} />
-        <div style={{ maxWidth: 480, margin: '0 auto', position: 'relative' }}>
+        <div style={{ maxWidth: 480, margin: '0 auto' }}>
           <p style={{
-            color: 'rgba(255,255,255,0.7)', fontSize: 13,
-            margin: '0 0 8px', fontWeight: 500, letterSpacing: 0.5,
+            color: 'rgba(255,255,255,0.55)', fontSize: 11,
+            margin: '0 0 12px', fontWeight: 500,
+            letterSpacing: '0.08em', textTransform: 'uppercase',
           }}>
-            나만의 수업 공간
+            하늘하늘 중국어
           </p>
           <h1 style={{
-            color: 'white', fontSize: 32, fontWeight: 700,
-            margin: '0 0 10px', lineHeight: 1.3, textWrap: 'balance',
+            color: 'white', fontSize: 30, fontWeight: 700,
+            margin: '0 0 10px', lineHeight: 1.15, letterSpacing: '-0.4px',
+            textWrap: 'balance',
           }}>
             학생 페이지
           </h1>
-          <p style={{ color: 'rgba(255,255,255,0.85)', fontSize: 15, margin: 0, lineHeight: 1.7 }}>
+          <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: 14, margin: 0, lineHeight: 1.7 }}>
             강사님이 보내준 학생 코드를 입력하면<br />
-            내 수업과 일정을 바로 볼 수 있어요.
+            내 수업과 일정을 바로 볼 수 있어요
           </p>
         </div>
       </div>
 
       {/* 폼 */}
-      <div style={{ flex: 1, maxWidth: 480, margin: '0 auto', width: '100%', padding: '24px 20px 40px' }}>
+      <div style={{ flex: 1, maxWidth: 480, margin: '0 auto', width: '100%', padding: '24px 16px 40px' }}>
         <form onSubmit={handleSubmit} noValidate>
           <Card variant="borderless" style={{ borderRadius: 16, boxShadow: 'var(--shadow-card)' }}>
             <div style={{ marginBottom: 16 }}>

@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { stripEmoji } from '../utils/stringUtils.js';
 import { Button, Card, message } from 'antd';
-import { LinkOutlined, FileTextOutlined } from '@ant-design/icons';
+import { LinkIcon, FileTextIcon } from '@phosphor-icons/react';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import Badge from '../components/ui/Badge.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
@@ -10,6 +11,8 @@ import { getPage, deletePage } from '../api/notionClient.js';
 import ConfirmDialog from '../components/ui/ConfirmDialog.jsx';
 import { parseStudent, statusColor, STATUS_OPTIONS, updateStudentStatus } from '../api/students.js';
 import { SITE_ORIGIN } from '../constants.js';
+import { PRIMARY, PRIMARY_BG, STATUS_ERROR_BORDER, TEXT_PRIMARY } from '../constants/theme.js';
+import SectionHeading from '../components/ui/SectionHeading.jsx';
 import { fetchClassesPage, parseClass, classStatusColor } from '../api/classes.js';
 import { fetchPaymentsPage, parsePayment, paymentStatusColor } from '../api/payments.js';
 import { formatDateTime, formatTime, formatKRW } from '../utils/dateUtils.js';
@@ -136,13 +139,13 @@ export default function StudentDetailPage() {
         }
       />
 
-      <div className="px-5 pt-4 space-y-4 pb-24">
+      <div className="px-4 pt-4 space-y-4 pb-24">
         {/* 기본 정보 */}
-        <Card variant="borderless" style={{ borderRadius: 16, boxShadow: 'var(--shadow-border)' }} styles={{ body: { padding: '16px' } }}>
+        <Card variant="borderless" style={{ borderRadius: 12, boxShadow: 'var(--shadow-border)' }} styles={{ body: { padding: '16px' } }}>
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-2xl font-bold text-gray-900">{student.name}</span>
-              <Badge label={student.status} bg={bg} text={text} />
+              <Badge label={stripEmoji(student.status)} bg={bg} text={text} />
             </div>
             <div className="grid grid-cols-2 gap-2 text-sm">
               {student.level && <InfoRow label="레벨" value={student.level} />}
@@ -192,7 +195,7 @@ export default function StudentDetailPage() {
                   onPointerUp={e => e.currentTarget.style.transform = 'scale(1)'}
                   onPointerLeave={e => e.currentTarget.style.transform = 'scale(1)'}
                 >
-                  <LinkOutlined style={{ fontSize: 14 }} />
+                  <LinkIcon weight="fill" size={14} />
                   학생 페이지 공유
                 </button>
                 <button
@@ -200,9 +203,9 @@ export default function StudentDetailPage() {
                   onClick={() => navigate(`/students/${id}/homework`)}
                   style={{
                     width: '100%', height: 44, cursor: 'pointer', borderRadius: 12,
-                    background: '#fff0f1', border: '1.5px solid #ffccc7',
+                    background: PRIMARY_BG, border: `1.5px solid ${STATUS_ERROR_BORDER}`,
                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                    fontSize: 14, fontWeight: 600, color: '#7f0005',
+                    fontSize: 14, fontWeight: 600, color: PRIMARY,
                     WebkitTapHighlightColor: 'transparent',
                     transition: 'transform 0.12s ease, opacity 0.12s ease',
                   }}
@@ -210,7 +213,7 @@ export default function StudentDetailPage() {
                   onPointerUp={e => e.currentTarget.style.transform = 'scale(1)'}
                   onPointerLeave={e => e.currentTarget.style.transform = 'scale(1)'}
                 >
-                  <FileTextOutlined style={{ fontSize: 14 }} />
+                  <FileTextIcon weight="fill" size={14} />
                   숙제 관리
                 </button>
               </div>
@@ -218,30 +221,18 @@ export default function StudentDetailPage() {
           </div>
         </Card>
 
-        {/* 잔여 회차 / 미수금 */}
-        <div className="grid grid-cols-2 gap-3">
-          <Card variant="borderless" style={{ borderRadius: 16, boxShadow: 'var(--shadow-border)' }} styles={{ body: { padding: '16px', textAlign: 'center' } }}>
-            <p className="text-xs text-gray-500 mb-1">잔여 시간 회차</p>
-            <p
-              className={`text-2xl font-bold tabular-nums ${
-                student.remainingSessions <= 1 ? 'text-red-500' : 'text-gray-900'
-              }`}
-            >
-              {student.remainingSessions}
-              <span className="text-sm font-normal text-gray-400 ml-1">회</span>
-            </p>
-          </Card>
-          <Card variant="borderless" style={{ borderRadius: 16, boxShadow: 'var(--shadow-border)' }} styles={{ body: { padding: '16px', textAlign: 'center' } }}>
-            <p className="text-xs text-gray-500 mb-1">미수금</p>
-            <p
-              className={`text-xl font-bold ${
-                student.unpaidAmount > 0 ? 'text-red-500' : 'text-gray-400'
-              }`}
-            >
-              {student.unpaidAmount > 0 ? formatKRW(student.unpaidAmount) : '없음'}
-            </p>
-          </Card>
-        </div>
+        {/* 잔여 회차 */}
+        <Card variant="borderless" style={{ borderRadius: 12, boxShadow: 'var(--shadow-border)' }} styles={{ body: { padding: '16px', textAlign: 'center' } }}>
+          <p className="text-xs text-gray-500 mb-1">잔여 시간 회차</p>
+          <p
+            className={`text-2xl font-bold tabular-nums ${
+              student.remainingSessions <= 1 ? 'text-red-500' : 'text-gray-900'
+            }`}
+          >
+            {student.remainingSessions}
+            <span className="text-sm font-normal text-gray-400 ml-1">회</span>
+          </p>
+        </Card>
 
         {/* 최근 수업 */}
         {classes.length > 0 && (
@@ -260,11 +251,11 @@ export default function StudentDetailPage() {
                     )}
                     {cls.location && (
                       <p className="text-xs text-gray-500 mt-0.5">
-                        📍 {cls.location}{cls.locationMemo && ` — ${cls.locationMemo}`}
+                        {cls.location}{cls.locationMemo && ` — ${cls.locationMemo}`}
                       </p>
                     )}
                   </div>
-                  <Badge label={cls.status} bg={sbg} text={st} />
+                  <Badge label={stripEmoji(cls.status)} bg={sbg} text={st} />
                 </div>
               );
             })}
@@ -286,7 +277,7 @@ export default function StudentDetailPage() {
                       <p className="text-xs text-red-500 mt-0.5">미수금 {formatKRW(p.unpaid)}</p>
                     )}
                   </div>
-                  <Badge label={p.paymentStatus} bg={pbg} text={pt} />
+                  <Badge label={stripEmoji(p.paymentStatus)} bg={pbg} text={pt} />
                 </div>
               );
             })}
@@ -328,9 +319,9 @@ function InfoRow({ label, value }) {
 
 function Section({ title, children }) {
   return (
-    <Card variant="borderless" style={{ borderRadius: 16, boxShadow: 'var(--shadow-border)' }} styles={{ body: { padding: 0 } }}>
-      <div className="px-4 py-3 border-b border-gray-50">
-        <h2 className="text-sm font-bold text-gray-700">{title}</h2>
+    <Card variant="borderless" style={{ borderRadius: 12, boxShadow: 'var(--shadow-border)' }} styles={{ body: { padding: 0 } }}>
+      <div className="px-4 py-4 border-b border-gray-50">
+        <SectionHeading as="h2" style={{ marginBottom: 0 }}>{title}</SectionHeading>
       </div>
       <div className="px-4">{children}</div>
     </Card>

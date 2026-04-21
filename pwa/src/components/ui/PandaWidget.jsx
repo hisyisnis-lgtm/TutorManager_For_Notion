@@ -1,7 +1,8 @@
 // 수업 횟수에 따라 팬더가 성장하는 인터랙티브 위젯
 import { useState, useRef, useCallback } from 'react';
+import { LeafIcon, HandHeartIcon } from '@phosphor-icons/react';
 
-const STAGES = [
+export const STAGES = [
   { min: 0,   max: 0,        label: '알에서 깨어나는 중', message: '첫 수업이 기다려져요! 🥚', img: '/panda/Cha_Panda_Step_00.svg', nextAt: 1 },
   { min: 1,   max: 9,        label: '아기 팬더',           message: '이제 막 시작했어요 🌱',     img: '/panda/Cha_Panda_Step_01.svg', nextAt: 10 },
   { min: 10,  max: 24,       label: '꼬마 팬더',           message: '쑥쑥 자라고 있어요 🌿',     img: '/panda/Cha_Panda_Step_02.svg', nextAt: 25 },
@@ -10,17 +11,18 @@ const STAGES = [
   { min: 100, max: Infinity, label: '마스터 팬더',         message: '전설이 되었어요 👑',         img: '/panda/Cha_Panda_Step_05.svg', nextAt: null },
 ];
 
-function getStageInfo(fedTotal) {
+export function getStageInfo(fedTotal) {
   for (let i = STAGES.length - 1; i >= 0; i--) {
     if (fedTotal >= STAGES[i].min) return { stage: STAGES[i], idx: i };
   }
   return { stage: STAGES[0], idx: 0 };
 }
 
-const FEED_KEY = 'panda_fed_total';
+export const PANDA_FEED_KEY = 'panda_fed_total';
+
+const DEFAULT_FEED_KEY = PANDA_FEED_KEY;
 let _pid = 0;
 
-// 2차 베지어 곡선을 N개 샘플로 keyframe 문자열 생성
 function makeBezierKeyframes(p1x, p1y, p2x, p2y, opacityFn, scaleFn, steps = 20) {
   const frames = [];
   for (let i = 0; i <= steps; i++) {
@@ -47,7 +49,6 @@ function removeKeyframe(name, delay) {
   setTimeout(() => document.getElementById(`kf-${name}`)?.remove(), delay);
 }
 
-// 먹이 파티클 keyframe 생성 (버튼→팬더 호 궤적)
 function makeFeedParticle(srcX, srcY, destX, destY, particleDelay = 0) {
   const tx = destX - srcX;
   const ty = destY - srcY;
@@ -58,7 +59,6 @@ function makeFeedParticle(srcX, srcY, destX, destY, particleDelay = 0) {
   const curve = side * (90 + Math.random() * 80);
   const p1x = tx / 2 + perpX * curve;
   const p1y = ty / 2 + perpY * curve;
-
   const pid = ++_pid;
   const kfName = `panda-feed-${pid}`;
   const body = makeBezierKeyframes(
@@ -68,64 +68,72 @@ function makeFeedParticle(srcX, srcY, destX, destY, particleDelay = 0) {
   );
   injectKeyframe(kfName, body);
   removeKeyframe(kfName, 2200 + particleDelay);
-
   return { id: pid, type: 'feed', x: srcX - 9, y: srcY - 9, kfName, delay: particleDelay };
 }
 
-// 하트 파티클 keyframe 생성 (팬더 주변 부유)
 function makeHeartParticle(pRect, index) {
   const startX = pRect.left + 14 + Math.random() * (pRect.width - 28);
   const startY = pRect.top + 18 + Math.random() * (pRect.height * 0.5);
-
-  // 목적지: 위로 60~90px + 좌우 소량 표류
   const p2x = (Math.random() - 0.5) * 44;
   const p2y = -(62 + Math.random() * 28);
-
-  // 제어점: 자연스러운 곡선을 만드는 랜덤 방향
   const p1x = (Math.random() - 0.5) * 72;
   const p1y = -(26 + Math.random() * 26);
-
   const size = 14 + Math.floor(Math.random() * 10);
   const delay = index * 88;
   const pid = ++_pid;
   const kfName = `panda-heart-${pid}`;
-
   const body = makeBezierKeyframes(
     p1x, p1y, p2x, p2y,
-    t => {
-      if (t < 0.1) return t / 0.1;
-      if (t < 0.62) return 1;
-      return 1 - (t - 0.62) / 0.38;
-    },
-    t => {
-      if (t < 0.13) return (t / 0.13) * 1.22;
-      if (t < 0.24) return 1.22 - ((t - 0.13) / 0.11) * 0.22;
-      return 1 - (t - 0.24) * 0.58;
-    },
+    t => { if (t < 0.1) return t / 0.1; if (t < 0.62) return 1; return 1 - (t - 0.62) / 0.38; },
+    t => { if (t < 0.13) return (t / 0.13) * 1.22; if (t < 0.24) return 1.22 - ((t - 0.13) / 0.11) * 0.22; return 1 - (t - 0.24) * 0.58; },
     18,
   );
   injectKeyframe(kfName, body);
   removeKeyframe(kfName, 2200 + delay);
-
   return { id: pid, type: 'heart', x: startX - size / 2, y: startY - size / 2, kfName, size, delay };
 }
 
-export default function PandaWidget({ totalSessions }) {
+/**
+ * foodSources: 먹이 공급원 배열
+ * 각 항목: { key: string, label: string, count: number }
+ * 예시:
+ *   [
+ *     { key: 'sessions', label: '완료 수업', count: 12 },
+ *     { key: 'referral', label: '친구 추천', count: 5 },
+ *   ]
+ * 총 먹이 = foodSources의 count 합계
+ */
+export default function PandaWidget({ foodSources = [], storageKey = DEFAULT_FEED_KEY, fullscreen = false }) {
+  const totalFood = foodSources.reduce((sum, s) => sum + (s.count || 0), 0);
+
   const [fedTotal, setFedTotal] = useState(() => {
-    const saved = parseInt(localStorage.getItem(FEED_KEY) || '0', 10);
-    return Math.min(saved, totalSessions);
+    const saved = parseInt(localStorage.getItem(storageKey) || '0', 10);
+    // totalFood를 초과한 경우 즉시 localStorage에 기록해 둠.
+    // 이렇게 해야 totalFood가 나중에 늘어났을 때(추천 보너스 등)
+    // 과거의 높은 값이 되살아나 EXP가 자동으로 오르는 현상을 방지할 수 있음.
+    const capped = Math.min(saved, totalFood);
+    if (capped !== saved) localStorage.setItem(storageKey, String(capped));
+    return capped;
   });
   const [particles, setParticles] = useState([]);
   const [levelingUp, setLevelingUp] = useState(false);
   const [showBadge, setShowBadge] = useState(false);
   const [isFeeding, setIsFeeding] = useState(false);
+  const [toast, setToast] = useState(false);
 
   const pandaRef = useRef(null);
   const feedBtnRef = useRef(null);
   const feedAllBtnRef = useRef(null);
+  const toastTimerRef = useRef(null);
+
+  const showFeedToast = useCallback(() => {
+    setToast(true);
+    clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = setTimeout(() => setToast(false), 2400);
+  }, []);
 
   const { stage, idx: stageIdx } = getStageInfo(fedTotal);
-  const available = Math.max(0, totalSessions - fedTotal);
+  const available = Math.max(0, totalFood - fedTotal);
   const progress = stage.nextAt == null
     ? 100
     : Math.round(((fedTotal - stage.min) / (stage.nextAt - stage.min)) * 100);
@@ -135,16 +143,12 @@ export default function PandaWidget({ totalSessions }) {
     setParticles(prev => [...prev, ...list]);
     const ids = list.map(p => p.id);
     const maxDelay = Math.max(0, ...list.map(p => p.delay || 0));
-    setTimeout(() => {
-      setParticles(prev => prev.filter(p => !ids.includes(p.id)));
-    }, lifetime + maxDelay);
+    setTimeout(() => setParticles(prev => prev.filter(p => !ids.includes(p.id))), lifetime + maxDelay);
   }, []);
 
-  // 팬더에서 버스트 + 필요시 레벨업 연출
   const triggerArrival = useCallback((newFed, isLevelUp) => {
-    localStorage.setItem(FEED_KEY, String(newFed));
+    localStorage.setItem(storageKey, String(newFed));
     setFedTotal(newFed);
-
     const pRect = pandaRef.current?.getBoundingClientRect();
     if (pRect) {
       const cx = pRect.left + pRect.width / 2 - 3;
@@ -152,13 +156,10 @@ export default function PandaWidget({ totalSessions }) {
       const bursts = Array.from({ length: 10 }, (_, i) => {
         const angle = (i / 10) * Math.PI * 2 + Math.random() * 0.35;
         const dist = 28 + Math.random() * 36;
-        return { id: ++_pid, type: 'burst', x: cx, y: cy,
-          tx: Math.cos(angle) * dist, ty: Math.sin(angle) * dist,
-          delay: Math.floor(Math.random() * 60) };
+        return { id: ++_pid, type: 'burst', x: cx, y: cy, tx: Math.cos(angle) * dist, ty: Math.sin(angle) * dist, delay: Math.floor(Math.random() * 60) };
       });
       spawnParticles(bursts, 500);
     }
-
     if (isLevelUp) {
       setLevelingUp(true);
       setShowBadge(true);
@@ -169,9 +170,7 @@ export default function PandaWidget({ totalSessions }) {
         const sparkles = Array.from({ length: 14 }, (_, i) => {
           const angle = (i / 14) * Math.PI * 2 + Math.random() * 0.4;
           const dist = 45 + Math.random() * 50;
-          return { id: ++_pid, type: 'sparkle', x: cx2, y: cy2,
-            tx: Math.cos(angle) * dist, ty: Math.sin(angle) * dist,
-            delay: Math.floor(Math.random() * 180) };
+          return { id: ++_pid, type: 'sparkle', x: cx2, y: cy2, tx: Math.cos(angle) * dist, ty: Math.sin(angle) * dist, delay: Math.floor(Math.random() * 180) };
         });
         spawnParticles(sparkles, 950);
       }
@@ -179,71 +178,49 @@ export default function PandaWidget({ totalSessions }) {
     }
   }, [spawnParticles]);
 
-  // 먹이 1개
   const handleFeed = useCallback(() => {
-    if (available <= 0 || isFeeding) return;
+    if (isFeeding) return;
+    if (available <= 0) { showFeedToast(); return; }
     const newFed = fedTotal + 1;
     const { idx: newIdx } = getStageInfo(newFed);
     setIsFeeding(true);
-
     const fRect = feedBtnRef.current?.getBoundingClientRect();
     const pRect = pandaRef.current?.getBoundingClientRect();
     if (fRect && pRect) {
-      const p = makeFeedParticle(
-        fRect.left + fRect.width / 2,
-        fRect.top + fRect.height / 2,
-        pRect.left + pRect.width / 2,
-        pRect.top + pRect.height / 2,
-      );
+      const p = makeFeedParticle(fRect.left + fRect.width / 2, fRect.top + fRect.height / 2, pRect.left + pRect.width / 2, pRect.top + pRect.height / 2);
       spawnParticles([p], 850);
-      setTimeout(() => {
-        triggerArrival(newFed, newIdx > stageIdx);
-        setTimeout(() => setIsFeeding(false), 200);
-      }, 750);
+      setTimeout(() => { triggerArrival(newFed, newIdx > stageIdx); setTimeout(() => setIsFeeding(false), 200); }, 750);
     } else {
       triggerArrival(newFed, newIdx > stageIdx);
       setIsFeeding(false);
     }
-  }, [available, fedTotal, stageIdx, isFeeding, spawnParticles, triggerArrival]);
+  }, [available, fedTotal, stageIdx, isFeeding, showFeedToast, spawnParticles, triggerArrival]);
 
-  // 먹이 전부
   const handleFeedAll = useCallback(() => {
     if (available <= 0 || isFeeding) return;
     const newFed = fedTotal + available;
     const { idx: newIdx } = getStageInfo(newFed);
     setIsFeeding(true);
-
     const fRect = feedAllBtnRef.current?.getBoundingClientRect();
     const pRect = pandaRef.current?.getBoundingClientRect();
     if (fRect && pRect) {
       const count = Math.min(available, 5);
       const STAGGER = 130;
-      const srcX = fRect.left + fRect.width / 2;
-      const srcY = fRect.top + fRect.height / 2;
-      const dstX = pRect.left + pRect.width / 2;
-      const dstY = pRect.top + pRect.height / 2;
-
-      const feedPs = Array.from({ length: count }, (_, i) =>
-        makeFeedParticle(srcX, srcY, dstX, dstY, i * STAGGER)
-      );
+      const srcX = fRect.left + fRect.width / 2, srcY = fRect.top + fRect.height / 2;
+      const dstX = pRect.left + pRect.width / 2, dstY = pRect.top + pRect.height / 2;
+      const feedPs = Array.from({ length: count }, (_, i) => makeFeedParticle(srcX, srcY, dstX, dstY, i * STAGGER));
       spawnParticles(feedPs, 850 + (count - 1) * STAGGER);
-
-      setTimeout(() => {
-        triggerArrival(newFed, newIdx > stageIdx);
-        setTimeout(() => setIsFeeding(false), 200);
-      }, 750 + (count - 1) * STAGGER);
+      setTimeout(() => { triggerArrival(newFed, newIdx > stageIdx); setTimeout(() => setIsFeeding(false), 200); }, 750 + (count - 1) * STAGGER);
     } else {
       triggerArrival(newFed, newIdx > stageIdx);
       setIsFeeding(false);
     }
   }, [available, fedTotal, stageIdx, isFeeding, spawnParticles, triggerArrival]);
 
-  // 쓰다듬기
   const handlePet = useCallback(() => {
     const pRect = pandaRef.current?.getBoundingClientRect();
     if (!pRect) return;
-    const hearts = Array.from({ length: 7 }, (_, i) => makeHeartParticle(pRect, i));
-    spawnParticles(hearts, 1100);
+    spawnParticles(Array.from({ length: 7 }, (_, i) => makeHeartParticle(pRect, i)), 1100);
   }, [spawnParticles]);
 
   const canFeed = available > 0 && !isFeeding;
@@ -253,87 +230,90 @@ export default function PandaWidget({ totalSessions }) {
       {/* 파티클 레이어 */}
       {particles.map(p => {
         if (p.type === 'feed') return (
-          <div key={p.id} style={{
-            position: 'fixed', zIndex: 9999, pointerEvents: 'none',
-            left: p.x, top: p.y,
-            width: 18, height: 18, borderRadius: '50%',
-            background: 'radial-gradient(circle at 35% 35%, #dcfce7, #22c55e)',
-            boxShadow: '0 0 14px rgba(34,197,94,0.9), 0 0 28px rgba(34,197,94,0.45)',
-            animationName: p.kfName,
-            animationDuration: '0.8s',
-            animationTimingFunction: 'linear',
-            animationFillMode: 'both',
-            animationDelay: `${p.delay || 0}ms`,
-          }} />
+          <div key={p.id} style={{ position: 'fixed', zIndex: 9999, pointerEvents: 'none', left: p.x, top: p.y, width: 18, height: 18, borderRadius: '50%', background: 'radial-gradient(circle at 35% 35%, #dcfce7, #22c55e)', boxShadow: '0 0 14px rgba(34,197,94,0.9)', animationName: p.kfName, animationDuration: '0.8s', animationTimingFunction: 'linear', animationFillMode: 'both', animationDelay: `${p.delay || 0}ms` }} />
         );
         if (p.type === 'burst') return (
-          <div key={p.id} style={{
-            position: 'fixed', zIndex: 9999, pointerEvents: 'none',
-            left: p.x, top: p.y,
-            width: 14, height: 14, borderRadius: '50%',
-            background: 'radial-gradient(circle at 35% 35%, #bbf7d0, #16a34a)',
-            boxShadow: '0 0 12px rgba(34,197,94,0.95), 0 0 22px rgba(34,197,94,0.5)',
-            animationName: 'panda-burst',
-            animationDuration: '0.5s',
-            animationTimingFunction: 'ease-out',
-            animationFillMode: 'forwards',
-            animationDelay: `${p.delay}ms`,
-            '--tx': `${p.tx}px`,
-            '--ty': `${p.ty}px`,
-          }} />
+          <div key={p.id} style={{ position: 'fixed', zIndex: 9999, pointerEvents: 'none', left: p.x, top: p.y, width: 14, height: 14, borderRadius: '50%', background: 'radial-gradient(circle at 35% 35%, #bbf7d0, #16a34a)', boxShadow: '0 0 12px rgba(34,197,94,0.95)', animationName: 'panda-burst', animationDuration: '0.5s', animationTimingFunction: 'ease-out', animationFillMode: 'forwards', animationDelay: `${p.delay}ms`, '--tx': `${p.tx}px`, '--ty': `${p.ty}px` }} />
         );
         if (p.type === 'heart') return (
-          <div key={p.id} style={{
-            position: 'fixed', zIndex: 9999, pointerEvents: 'none',
-            left: p.x, top: p.y,
-            fontSize: p.size, userSelect: 'none', lineHeight: 1,
-            animationName: p.kfName,
-            animationDuration: '1.05s',
-            animationTimingFunction: 'linear',
-            animationFillMode: 'both',
-            animationDelay: `${p.delay}ms`,
-          }}>❤️</div>
+          <div key={p.id} style={{ position: 'fixed', zIndex: 9999, pointerEvents: 'none', left: p.x, top: p.y, fontSize: p.size, userSelect: 'none', lineHeight: 1, animationName: p.kfName, animationDuration: '1.05s', animationTimingFunction: 'linear', animationFillMode: 'both', animationDelay: `${p.delay}ms` }}>❤️</div>
         );
         if (p.type === 'sparkle') return (
-          <div key={p.id} style={{
-            position: 'fixed', zIndex: 9999, pointerEvents: 'none',
-            left: p.x, top: p.y,
-            fontSize: 17, userSelect: 'none',
-            animationName: 'panda-sparkle-burst',
-            animationDuration: '0.85s',
-            animationTimingFunction: 'ease-out',
-            animationFillMode: 'forwards',
-            animationDelay: `${p.delay}ms`,
-            '--tx': `${p.tx}px`,
-            '--ty': `${p.ty}px`,
-          }}>✨</div>
+          <div key={p.id} style={{ position: 'fixed', zIndex: 9999, pointerEvents: 'none', left: p.x, top: p.y, fontSize: 17, userSelect: 'none', animationName: 'panda-sparkle-burst', animationDuration: '0.85s', animationTimingFunction: 'ease-out', animationFillMode: 'forwards', animationDelay: `${p.delay}ms`, '--tx': `${p.tx}px`, '--ty': `${p.ty}px` }}>✨</div>
         );
         return null;
       })}
 
-      {/* 플로팅 마스코트 (카드 배경 없음) */}
-      <div style={{ userSelect: 'none', position: 'relative' }}>
+      {/* ── 게임 HUD 위젯 (카드 없음) ── */}
+      <div style={{ userSelect: 'none', ...(fullscreen ? { height: '100%', display: 'flex', flexDirection: 'column' } : {}) }}>
 
-        {/* 레벨업 배지 */}
-        {showBadge && (
-          <div style={{
-            position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)',
-            background: 'linear-gradient(135deg, #7f0005, #9a0007)',
-            color: 'white', fontWeight: 700, fontSize: 12,
-            padding: '5px 16px', borderRadius: 20,
-            zIndex: 10, whiteSpace: 'nowrap',
-            boxShadow: '0 4px 14px rgba(127,0,5,0.35)',
-            animationName: 'panda-badge-in',
-            animationDuration: '0.35s',
-            animationTimingFunction: 'ease-out',
-            animationFillMode: 'forwards',
-          }}>
-            🎉 레벨 업!
+        {/* ─ 상단 HUD 행: 레벨 + 스테이지명 / 먹이 카운터 ─ */}
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          marginBottom: 4, flexShrink: 0,
+        }}>
+          {/* 왼쪽: Lv 배지 + 스테이지 이름 */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{
+              background: '#7f0005',
+              color: 'white',
+              fontSize: 12, fontWeight: 800,
+              padding: '3px 7px',
+              borderRadius: 6,
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+              lineHeight: 1.4,
+            }}>
+              LV.{stageIdx + 1}
+            </div>
+            <span style={{ fontSize: 15, fontWeight: 700, color: '#1d1d1f' }}>
+              {stage.label}
+            </span>
           </div>
-        )}
 
-        {/* 팬더 + 라벨 + 메시지 — 중앙 정렬 */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, paddingTop: 8 }}>
+          {/* 오른쪽: 먹이 카운터 (게임 재화 스타일) */}
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 5,
+            background: available > 0 ? '#fff0f1' : '#f5f5f5',
+            border: `1px solid ${available > 0 ? 'rgba(127,0,5,0.12)' : 'rgba(0,0,0,0.05)'}`,
+            borderRadius: 8, padding: '4px 10px',
+            transitionProperty: 'background-color, border-color',
+            transitionDuration: '0.3s',
+            transitionTimingFunction: 'ease',
+          }}>
+            <LeafIcon size={14} weight="fill" color={available > 0 ? '#7f0005' : '#bfbfbf'} />
+            <span style={{
+              fontSize: 14, fontWeight: 700,
+              color: available > 0 ? '#7f0005' : '#bfbfbf',
+              fontVariantNumeric: 'tabular-nums',
+            }}>
+              ×{available}
+            </span>
+          </div>
+        </div>
+
+        {/* ─ 캐릭터 영역 ─ */}
+        <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', ...(fullscreen ? { flex: 1, minHeight: 0 } : {}) }}>
+
+          {/* 레벨업 배지 */}
+          {showBadge && (
+            <div style={{
+              position: 'absolute', top: 8, left: '50%', transform: 'translateX(-50%)',
+              background: 'linear-gradient(135deg, #7f0005, #9a0007)',
+              color: 'white', fontWeight: 700, fontSize: 12,
+              padding: '5px 16px', borderRadius: 20,
+              zIndex: 10, whiteSpace: 'nowrap',
+              boxShadow: '0 4px 14px rgba(127,0,5,0.35)',
+              animationName: 'panda-badge-in',
+              animationDuration: '0.35s',
+              animationTimingFunction: 'ease-out',
+              animationFillMode: 'forwards',
+            }}>
+              레벨 업
+            </div>
+          )}
+
+          {/* 팬더 이미지 */}
           <div
             ref={pandaRef}
             style={{
@@ -347,138 +327,188 @@ export default function PandaWidget({ totalSessions }) {
             <img
               src={stage.img}
               alt={stage.label}
-              width={160}
-              height={160}
+              width={fullscreen ? 220 : 180}
+              height={fullscreen ? 220 : 180}
               style={{
-                display: 'block', border: 'none', outline: 'none',
-                background: 'transparent',
+                display: 'block',
+                outline: 'none',
                 filter: levelingUp
                   ? 'brightness(1.28) drop-shadow(0 0 16px rgba(251,191,36,0.75))'
                   : 'none',
-                transition: 'filter 0.35s ease',
+                transitionProperty: 'filter',
+                transitionDuration: '0.35s',
+                transitionTimingFunction: 'ease',
               }}
             />
           </div>
 
-          {/* 단계 라벨 */}
-          <div style={{
-            fontSize: 12, fontWeight: 600, color: '#7f0005',
-            background: '#fff0f1', borderRadius: 20, padding: '3px 12px',
+          {/* 스테이지 메시지 */}
+          <p style={{
+            fontSize: 15, color: '#595959', margin: '2px 0 0',
+            textAlign: 'center', wordBreak: 'keep-all', lineHeight: 1.5,
           }}>
-            {stage.label}
-          </div>
-
-          <p style={{ fontSize: 13, color: '#595959', margin: 0, textAlign: 'center', wordBreak: 'keep-all' }}>
             {stage.message}
           </p>
-
-          {/* 먹이 배지 */}
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 5,
-            background: available > 0 ? '#fff0f1' : '#f5f5f5',
-            borderRadius: 10, padding: '3px 10px',
-            transition: 'background 0.3s ease',
-          }}>
-            <span style={{ fontSize: 14 }}>🥬</span>
-            <span style={{ fontSize: 12, fontWeight: 600, color: available > 0 ? '#7f0005' : '#8c8c8c' }}>
-              {available > 0 ? `먹이 ${available}개` : '먹이 없음 (수업 후 획득)'}
-            </span>
-          </div>
         </div>
 
-        {/* 구분선 */}
-        <div style={{ height: 1, background: '#f0f0f0', margin: '16px 0' }} />
-
-        {/* 성장 게이지 */}
-        <div>
+        {/* ─ EXP 바 (게임 RPG 스타일) ─ */}
+        <div style={{ marginTop: 16, flexShrink: 0 }}>
           <div style={{
-            display: 'flex', justifyContent: 'space-between',
-            alignItems: 'center', marginBottom: 6,
+            display: 'flex', justifyContent: 'space-between', alignItems: 'baseline',
+            marginBottom: 6,
           }}>
-            <span style={{ fontSize: 12, color: '#767676' }}>
-              성장 <strong style={{ color: '#1d1d1f', fontVariantNumeric: 'tabular-nums' }}>{fedTotal}</strong>회
+            <span style={{
+              fontSize: 12, fontWeight: 800, color: '#7f0005',
+              letterSpacing: '0.12em', textTransform: 'uppercase',
+            }}>
+              EXP
             </span>
             {stage.nextAt != null ? (
-              <span style={{ fontSize: 12, color: '#767676' }}>
-                다음까지 <strong style={{ color: '#7f0005', fontVariantNumeric: 'tabular-nums' }}>{remaining}</strong>회
+              <span style={{ fontSize: 13, color: '#8c8c8c', fontVariantNumeric: 'tabular-nums' }}>
+                <strong style={{ color: '#1d1d1f' }}>{fedTotal}</strong>
+                {' / '}{stage.nextAt}
               </span>
             ) : (
-              <span style={{ fontSize: 12, color: '#7f0005', fontWeight: 700 }}>최고 단계 👑</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: '#7f0005' }}>
+                MAX 👑
+              </span>
             )}
           </div>
-          <div style={{ width: '100%', height: 8, background: '#f0f0f0', borderRadius: 99, overflow: 'hidden' }}>
+
+          {/* 두꺼운 게임형 바 — inset shadow로 홈파인 느낌 */}
+          <div style={{
+            width: '100%', height: 12,
+            background: '#e8e8e8',
+            borderRadius: 4,
+            overflow: 'hidden',
+            boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.12)',
+          }}>
             <div style={{
               width: `${progress}%`, height: '100%',
               background: stage.nextAt == null
-                ? 'linear-gradient(90deg, #fbbf24, #f59e0b)'
-                : 'linear-gradient(90deg, #7f0005, #c8000a)',
-              borderRadius: 99,
-              transition: 'width 0.65s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                ? 'linear-gradient(90deg, #fbbf24 0%, #f59e0b 100%)'
+                : 'linear-gradient(180deg, #c8000a 0%, #7f0005 100%)',
+              borderRadius: 4,
+              boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.28)',
+              transitionProperty: 'width',
+              transitionDuration: '0.65s',
+              transitionTimingFunction: 'cubic-bezier(0.34, 1.56, 0.64, 1)',
             }} />
           </div>
+
+          {/* 다음 레벨까지 */}
+          {stage.nextAt != null && (
+            <p style={{
+              fontSize: 12, color: '#bfbfbf',
+              margin: '5px 0 0', textAlign: 'right',
+              fontVariantNumeric: 'tabular-nums',
+            }}>
+              다음 단계까지 {remaining}회
+            </p>
+          )}
         </div>
 
-        {/* 버튼 행 */}
-        <div style={{ display: 'flex', gap: 8, width: '100%', marginTop: 12 }}>
+        {/* ─ 액션 버튼 ─ */}
+        <div style={{ display: 'flex', gap: 8, marginTop: 14, flexShrink: 0 }}>
+          {/* 먹이주기 — primary (먹이 없어도 클릭 가능 → 토스트 표시) */}
           <button
             ref={feedBtnRef}
             onClick={handleFeed}
-            disabled={!canFeed}
+            disabled={isFeeding}
+            className="active:scale-[0.96]"
             style={{
-              flex: 1, height: 44, borderRadius: 12,
+              flex: 1, height: 52, borderRadius: 12,
               border: 'none',
-              cursor: canFeed ? 'pointer' : 'not-allowed',
+              cursor: isFeeding ? 'not-allowed' : 'pointer',
               background: canFeed
-                ? 'linear-gradient(135deg, #7f0005, #9a0007)'
-                : '#f0f0f0',
+                ? 'linear-gradient(180deg, #c8000a 0%, #7f0005 100%)'
+                : '#ebebeb',
               color: canFeed ? '#ffffff' : '#bfbfbf',
-              fontSize: 14, fontWeight: 600,
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+              fontSize: 15, fontWeight: 700,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
               WebkitTapHighlightColor: 'transparent',
               opacity: available > 0 ? 1 : 0.55,
-              transition: 'opacity 0.2s, background 0.2s',
+              boxShadow: canFeed ? 'inset 0 1px 0 rgba(255,255,255,0.18), 0 2px 8px rgba(127,0,5,0.28)' : 'none',
+              transitionProperty: 'opacity, background-color, box-shadow, scale',
+              transitionDuration: '0.15s',
+              transitionTimingFunction: 'ease-out',
             }}
           >
-            🥬 먹이주기
+            <LeafIcon size={17} weight="fill" />
+            먹이주기
           </button>
+
+          {/* 쓰다듬기 — secondary */}
           <button
             onClick={handlePet}
+            className="active:scale-[0.96]"
             style={{
-              flex: 1, height: 44, borderRadius: 12,
-              border: '1.5px solid #e5e5e5',
+              flex: 1, height: 52, borderRadius: 12,
+              border: '1.5px solid rgba(0,0,0,0.1)',
               cursor: 'pointer',
               background: '#ffffff',
               color: '#595959',
-              fontSize: 14, fontWeight: 500,
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+              fontSize: 15, fontWeight: 600,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
               WebkitTapHighlightColor: 'transparent',
+              boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+              transitionProperty: 'background-color, scale',
+              transitionDuration: '0.15s',
+              transitionTimingFunction: 'ease-out',
             }}
           >
-            🤚 쓰다듬기
+            <HandHeartIcon size={17} weight="fill" />
+            쓰다듬기
           </button>
         </div>
 
-        {/* 먹이 전부 주기 (2개 이상일 때만 표시) */}
+        {/* 먹이 전부 주기 */}
         {available >= 2 && (
           <button
             ref={feedAllBtnRef}
             onClick={handleFeedAll}
             disabled={!canFeed}
+            className="active:scale-[0.96]"
             style={{
-              width: '100%', height: 38, borderRadius: 12, marginTop: 8,
-              border: '1.5px solid #7f0005',
+              width: '100%', height: 42, borderRadius: 12, marginTop: 8,
+              border: '1.5px solid rgba(127,0,5,0.2)',
               cursor: canFeed ? 'pointer' : 'not-allowed',
-              background: canFeed ? '#fff0f1' : '#f5f5f5',
+              background: '#fff0f1',
               color: canFeed ? '#7f0005' : '#bfbfbf',
-              fontSize: 13, fontWeight: 600,
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+              fontSize: 14, fontWeight: 700,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
               WebkitTapHighlightColor: 'transparent',
-              transition: 'background 0.2s',
+              transitionProperty: 'background-color, scale',
+              transitionDuration: '0.15s',
+              transitionTimingFunction: 'ease-out',
             }}
           >
-            🥬✕{available} 먹이 전부 주기
+            <LeafIcon size={14} weight="fill" />
+            먹이 {available}개 전부 주기
           </button>
         )}
+
+        {/* 먹이 없음 알림 — 위젯 내부 슬라이드인 */}
+        <div style={{
+          overflow: 'hidden',
+          maxHeight: toast ? 48 : 0,
+          opacity: toast ? 1 : 0,
+          marginTop: toast ? 8 : 0,
+          transitionProperty: 'max-height, opacity, margin-top',
+          transitionDuration: '0.22s',
+          transitionTimingFunction: 'ease',
+        }}>
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+            background: '#f5f5f5',
+            borderRadius: 10,
+            padding: '10px 14px',
+            fontSize: 14, color: '#767676', fontWeight: 500,
+          }}>
+            <LeafIcon size={13} weight="fill" color="#bfbfbf" />
+            수업을 완료하면 먹이가 생겨요
+          </div>
+        </div>
       </div>
     </>
   );

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { stripEmoji } from '../utils/stringUtils.js';
 import { Alert, Button, Input, Select, Typography } from 'antd';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
@@ -90,10 +91,10 @@ export default function PaymentFormPage() {
 
   const paymentStatus = () => {
     if (!expectedAmount || !sessionCount) return null;
-    if (actualAmount === 0) return { label: '⬛ 미결제', color: 'text-gray-500' };
-    if (actualAmount > expectedAmount) return { label: '⚠️ 초과금', color: 'text-amber-600' };
-    if (unpaid === 0) return { label: '🟢 완료', color: 'text-green-600' };
-    return { label: '🔴 미완료', color: 'text-red-500' };
+    if (actualAmount === 0) return { label: '미결제', color: 'text-gray-500' };
+    if (actualAmount > expectedAmount) return { label: '초과금', color: 'text-amber-600' };
+    if (unpaid === 0) return { label: '완료', color: 'text-green-600' };
+    return { label: '미완료', color: 'text-red-500' };
   };
 
   const status = paymentStatus();
@@ -161,7 +162,7 @@ export default function PaymentFormPage() {
     <>
       <PageHeader title={isEdit ? '결제 편집' : '결제 입력'} back />
 
-      <form onSubmit={handleSubmit} className="px-5 pt-4 pb-8 space-y-5">
+      <form onSubmit={handleSubmit} className="px-4 pt-4 pb-8 space-y-5">
         {error && (
           <Alert type="error" message={error} showIcon style={{ borderRadius: 12 }} />
         )}
@@ -188,7 +189,7 @@ export default function PaymentFormPage() {
                 <label
                   key={s.id}
                   ref={isSelected ? selectedStudentRef : null}
-                  className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
+                  className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-[background-color,border-color] duration-150 ease-out ${
                     isSelected
                       ? 'border-brand-500 bg-brand-50'
                       : 'border-gray-200 bg-white'
@@ -203,7 +204,7 @@ export default function PaymentFormPage() {
                     className="w-4 h-4 accent-brand-600"
                   />
                   <span className="text-sm font-medium text-gray-800">{s.name}</span>
-                  <span className="text-xs text-gray-500 ml-auto">{s.status}</span>
+                  <span className="text-xs text-gray-500 ml-auto">{stripEmoji(s.status)}</span>
                 </label>
                 );
               })}

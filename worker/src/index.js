@@ -10,6 +10,47 @@ const CONSULT_DB_ID = '324838fa-f2a6-815d-99a7-ff165e8f78aa';
 
 const DAY_KR = ['일', '월', '화', '수', '목', '금', '토'];
 
+/**
+ * Notion API fetch 헬퍼 팩토리 — 토큰을 한 번만 바인딩
+ * 반환된 함수: (method, path, body?) → Promise<JSON>
+ */
+function makeNotion(notionToken) {
+  return (method, path, body) =>
+    fetch(`https://api.notion.com/v1${path}`, {
+      method,
+      headers: {
+        Authorization: `Bearer ${notionToken}`,
+        'Notion-Version': '2022-06-28',
+        'Content-Type': 'application/json',
+      },
+      body: body ? JSON.stringify(body) : undefined,
+    }).then(r => r.json());
+}
+
+/**
+ * 에러 응답 헬퍼 — 모든 에러 응답의 단일 생성 지점
+ * { error: message } JSON + Content-Type + CORS 헤더를 항상 일관되게 포함
+ */
+function errRes(corsHeaders, status, message) {
+  return new Response(JSON.stringify({ error: message }), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
+}
+
+/**
+ * JWT 인증 미들웨어 — 유효하지 않으면 401 Response 반환, 통과 시 null 반환
+ * handleBookingRoutes / handleHomeworkRoutes 양쪽에서 공통 사용
+ */
+async function requireJwt(request, env, corsHeaders) {
+  const authHeader = request.headers.get('Authorization') || '';
+  const jwtToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+  if (!jwtToken || !(await verifyToken(jwtToken, env.JWT_SECRET || env.AUTH_PASSWORD))) {
+    return errRes(corsHeaders, 401, 'Unauthorized');
+  }
+  return null;
+}
+
 // 학생 이름 앞 이모지·특수 심볼(Notion 상태 아이콘 등) 제거
 function stripEmoji(name) {
   return name.replace(/^[\p{Emoji_Presentation}\p{Extended_Pictographic}◆◇▲▽△▼●○■□★☆♦♢]\s*/gu, '').trim();
@@ -22,16 +63,7 @@ function normalizeId(id) {
 
 // 수업 페이지 제목이 비어있고 학생이 연결돼 있으면 제목 자동 설정
 async function syncClassTitle(pageId, notionToken) {
-  const notionFetch = (method, path, body) =>
-    fetch(`https://api.notion.com/v1${path}`, {
-      method,
-      headers: {
-        Authorization: `Bearer ${notionToken}`,
-        'Notion-Version': '2022-06-28',
-        'Content-Type': 'application/json',
-      },
-      body: body ? JSON.stringify(body) : undefined,
-    }).then(r => r.json());
+  const notionFetch = makeNotion(notionToken);
 
   const page = await notionFetch('GET', `/pages/${pageId}`);
   const studentRelation = page.properties?.['학생']?.relation ?? [];
@@ -53,16 +85,7 @@ async function syncClassTitle(pageId, notionToken) {
 
 // 학생 이름 변경 시 → 해당 학생이 포함된 모든 수업 제목 강제 갱신
 async function updateClassesByStudent(studentPageId, notionToken) {
-  const notionFetch = (method, path, body) =>
-    fetch(`https://api.notion.com/v1${path}`, {
-      method,
-      headers: {
-        Authorization: `Bearer ${notionToken}`,
-        'Notion-Version': '2022-06-28',
-        'Content-Type': 'application/json',
-      },
-      body: body ? JSON.stringify(body) : undefined,
-    }).then(r => r.json());
+  const notionFetch = makeNotion(notionToken);
 
   const res = await notionFetch('POST', `/databases/${CLASS_DB_ID}/query`, {
     filter: { property: '학생', relation: { contains: studentPageId } },
@@ -463,16 +486,7 @@ async function handleConsultRequest(request, env, corsHeaders) {
 
 // ===== 예약 시스템 라우트 처리 =====
 async function handleBookingRoutes(request, env, corsHeaders, url) {
-  const n = (method, path, body) =>
-    fetch(`https://api.notion.com/v1${path}`, {
-      method,
-      headers: {
-        Authorization: `Bearer ${env.NOTION_TOKEN}`,
-        'Notion-Version': '2022-06-28',
-        'Content-Type': 'application/json',
-      },
-      body: body ? JSON.stringify(body) : undefined,
-    }).then(r => r.json());
+  const n = makeNotion(env.NOTION_TOKEN);
 
   // 시간 관련 유틸
   const timeToMin = (t) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
@@ -813,9 +827,9 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
       '수업 일시': { date: { start: classDatetime } },
       '수업 시간(분)': { select: { name: String(durationMin) } },
       '학생': { relation: [{ id: studentPage.id }] },
-      '수업 유형': { relation: [{ id: env.LESSON_TYPE_PAGE_ID }] },
       '예약 토큰': { rich_text: [{ text: { content: token } }] },
     };
+    if (env.LESSON_TYPE_PAGE_ID) classProps['수업 유형'] = { relation: [{ id: env.LESSON_TYPE_PAGE_ID }] };
     if (mode) classProps['수업 장소'] = { select: { name: mode } };
 
     const newPage = await n('POST', '/pages', {
@@ -883,12 +897,44 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
     }
     const props = page.properties;
     const rawName = props?.['이름']?.title?.[0]?.plain_text ?? '';
+
+    // 완료된 유료 수업의 시간 회차 합계 (취소·보강 제외, 예정 제외)
+    const nowISO = new Date().toISOString();
+    const paidHours = props?.['결제 시간 회차 합계']?.rollup?.number ?? 0;
+    let completedHours = 0;
+    let classCursor;
+    do {
+      const classRes = await n('POST', `/databases/${CLASS_DB_ID}/query`, {
+        filter: {
+          and: [
+            { property: '학생', relation: { contains: page.id } },
+            { property: '수업 일시', date: { on_or_before: nowISO } },
+            { property: '특이사항', select: { does_not_equal: '🚫 취소' } },
+            { property: '특이사항', select: { does_not_equal: '🟠 보강' } },
+            { property: '무료 수업', rollup: { number: { greater_than: 0 } } },
+          ],
+        },
+        page_size: 100,
+        ...(classCursor ? { start_cursor: classCursor } : {}),
+      });
+      for (const cls of classRes.results ?? []) {
+        const minStr = cls.properties?.['수업 시간(분)']?.select?.name;
+        if (minStr) completedHours += parseInt(minStr, 10) / 60;
+      }
+      classCursor = classRes.has_more ? classRes.next_cursor : undefined;
+    } while (classCursor);
+
+    const remainingHours = Math.max(0, paidHours - completedHours);
+
     return new Response(JSON.stringify({
       id: page.id,
       name: stripEmoji(rawName),
       phone: props?.['전화번호']?.phone_number ?? '',
       remainingSessions: props?.['잔여 시간 회차']?.formula?.number ?? 0,
       totalSessions: props?.['총 수업 횟수']?.rollup?.number ?? 0,
+      referralBonus: props?.['추천 보너스']?.number ?? 0,
+      remainingHours,
+      paidHours,
     }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -1044,7 +1090,7 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
     });
     const sPage = sRes.results?.[0];
     if (!sPage) {
-      return new Response(JSON.stringify({ error: '인증 실패.' }), {
+      return new Response(JSON.stringify({ error: '예약 코드가 올바르지 않습니다.' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -1110,7 +1156,7 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
     });
     const sPage = sRes.results?.[0];
     if (!sPage) {
-      return new Response(JSON.stringify({ error: '인증 실패.' }), {
+      return new Response(JSON.stringify({ error: '예약 코드가 올바르지 않습니다.' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -1145,6 +1191,15 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+    const restoreDurationMin = Number(cProps?.['수업 시간(분)']?.select?.name) || 60;
+    const requiredForRestore = restoreDurationMin / 60;
+    const currentRemaining = sPage.properties?.['잔여 시간 회차']?.formula?.number ?? 0;
+    if (currentRemaining < requiredForRestore) {
+      return new Response(JSON.stringify({ error: `잔여 시간이 부족하여 복구할 수 없습니다. (잔여: ${currentRemaining}회차, 필요: ${requiredForRestore}회차)` }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
     await n('PATCH', `/pages/${classId}`, {
       properties: { '특이사항': { select: null } },
     });
@@ -1158,14 +1213,8 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
 
   // GET /booking/blocked
   if (url.pathname === '/booking/blocked' && request.method === 'GET') {
-    const authHeader = request.headers.get('Authorization') || '';
-    const jwtToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
-    if (!(await verifyToken(jwtToken, env.JWT_SECRET || env.AUTH_PASSWORD))) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
+    const authErr = await requireJwt(request, env, corsHeaders);
+    if (authErr) return authErr;
 
     const res = await n('POST', `/databases/${BLOCKED_DATES_DB_ID}/query`, {
       sorts: [{ timestamp: 'created_time', direction: 'ascending' }],
@@ -1195,14 +1244,8 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
 
   // POST /booking/blocked
   if (url.pathname === '/booking/blocked' && request.method === 'POST') {
-    const authHeader = request.headers.get('Authorization') || '';
-    const jwtToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
-    if (!(await verifyToken(jwtToken, env.JWT_SECRET || env.AUTH_PASSWORD))) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
+    const authErr = await requireJwt(request, env, corsHeaders);
+    if (authErr) return authErr;
 
     const body = await request.json().catch(() => ({}));
     const { type, days, start, end, memo, blockedTimes } = body;
@@ -1254,14 +1297,8 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
   // DELETE /booking/blocked/:id
   const blockedDeleteMatch = url.pathname.match(/^\/booking\/blocked\/([^/]+)$/);
   if (blockedDeleteMatch && request.method === 'DELETE') {
-    const authHeader = request.headers.get('Authorization') || '';
-    const jwtToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
-    if (!(await verifyToken(jwtToken, env.JWT_SECRET || env.AUTH_PASSWORD))) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
+    const authErr = await requireJwt(request, env, corsHeaders);
+    if (authErr) return authErr;
 
     await n('PATCH', `/pages/${blockedDeleteMatch[1]}`, { archived: true });
 
@@ -1271,7 +1308,7 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
     });
   }
 
-  return new Response('Not Found', { status: 404, headers: corsHeaders });
+  return errRes(corsHeaders, 404, '요청한 항목을 찾을 수 없습니다.');
 }
 
 // ===== 숙제 파일 업로드 공통 헬퍼 =====
@@ -1317,16 +1354,7 @@ async function uploadFileToNotion(file, notionToken) {
 
 // ===== 숙제 라우트 핸들러 =====
 async function handleHomeworkRoutes(request, env, corsHeaders, url) {
-  const n = (method, path, body) =>
-    fetch(`https://api.notion.com/v1${path}`, {
-      method,
-      headers: {
-        Authorization: `Bearer ${env.NOTION_TOKEN}`,
-        'Notion-Version': '2022-06-28',
-        'Content-Type': 'application/json',
-      },
-      body: body ? JSON.stringify(body) : undefined,
-    }).then((r) => r.json());
+  const n = makeNotion(env.NOTION_TOKEN);
 
   // 학생 토큰으로 학생 페이지 조회 (공통)
   async function findStudentByToken(token) {
@@ -1337,25 +1365,10 @@ async function handleHomeworkRoutes(request, env, corsHeaders, url) {
     return res.results?.[0] ?? null;
   }
 
-  // JWT 검증 (강사용)
-  async function verifyJwt(req) {
-    const authHeader = req.headers.get('Authorization') || '';
-    const jwtToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
-    if (!jwtToken) return false;
-    try {
-      return !!(await verifyToken(jwtToken, env.JWT_SECRET || env.AUTH_PASSWORD));
-    } catch {
-      return false;
-    }
-  }
-
   // POST /homework/upload — 강사용 파일 업로드 (JWT 인증)
   if (url.pathname === '/homework/upload' && request.method === 'POST') {
-    if (!(await verifyJwt(request))) {
-      return new Response(JSON.stringify({ error: '인증 필요' }), {
-        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
+    const authErr = await requireJwt(request, env, corsHeaders);
+    if (authErr) return authErr;
     try {
       const formData = await request.formData();
       const file = formData.get('file');
@@ -1377,7 +1390,7 @@ async function handleHomeworkRoutes(request, env, corsHeaders, url) {
     const token = decodeURIComponent(studentUploadMatch[1]);
     const studentPage = await findStudentByToken(token);
     if (!studentPage) {
-      return new Response(JSON.stringify({ error: '등록된 학생이 아닙니다' }), {
+      return new Response(JSON.stringify({ error: '등록된 학생이 아닙니다.' }), {
         status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -1402,7 +1415,7 @@ async function handleHomeworkRoutes(request, env, corsHeaders, url) {
     const token = decodeURIComponent(studentHomeworkMatch[1]);
     const studentPage = await findStudentByToken(token);
     if (!studentPage) {
-      return new Response(JSON.stringify({ error: '등록된 학생이 아닙니다' }), {
+      return new Response(JSON.stringify({ error: '등록된 학생이 아닙니다.' }), {
         status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -1423,7 +1436,7 @@ async function handleHomeworkRoutes(request, env, corsHeaders, url) {
     const homeworkId = submitMatch[2];
     const studentPage = await findStudentByToken(token);
     if (!studentPage) {
-      return new Response(JSON.stringify({ error: '등록된 학생이 아닙니다' }), {
+      return new Response(JSON.stringify({ error: '등록된 학생이 아닙니다.' }), {
         status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -1433,16 +1446,22 @@ async function handleHomeworkRoutes(request, env, corsHeaders, url) {
     const newFiles = Array.isArray(body.files) ? body.files : [];
     const deleteFileNamesSet = new Set(Array.isArray(body.deleteFileNames) ? body.deleteFileNames : []);
 
-    // 기존 제출 파일 조회 후 삭제 대상 제외
+    // 기존 제출 파일 조회 + 소유권 확인
     const currentPage = await fetch(`https://api.notion.com/v1/pages/${homeworkId}`, {
       headers: { Authorization: `Bearer ${env.NOTION_TOKEN}`, 'Notion-Version': '2022-06-28' },
     }).then(r => r.json());
+    const hwStudentIds = (currentPage.properties?.['학생']?.relation ?? []).map(r => r.id);
+    if (!hwStudentIds.includes(studentPage.id)) {
+      return new Response(JSON.stringify({ error: '이 숙제에 접근할 권한이 없습니다.' }), {
+        status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
     const keptFiles = (currentPage.properties?.['학생 제출 파일']?.files ?? [])
       .filter(f => !deleteFileNamesSet.has(f.name));
 
     const totalCount = keptFiles.length + newFiles.length;
     if (totalCount > 5) {
-      return new Response(JSON.stringify({ error: '파일은 최대 5개까지 가능합니다' }), {
+      return new Response(JSON.stringify({ error: '파일은 최대 5개까지 가능합니다.' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -1480,7 +1499,7 @@ async function handleHomeworkRoutes(request, env, corsHeaders, url) {
     });
   }
 
-  return new Response(JSON.stringify({ error: 'Not Found' }), {
+  return new Response(JSON.stringify({ error: '요청한 항목을 찾을 수 없습니다.' }), {
     status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
 }
@@ -1536,7 +1555,7 @@ export default {
     }
 
     if (!allowed) {
-      return new Response(JSON.stringify({ error: 'Forbidden' }), {
+      return new Response(JSON.stringify({ error: '허용되지 않은 출처입니다.' }), {
         status: 403,
         headers: { 'Content-Type': 'application/json' },
       });
@@ -1557,11 +1576,77 @@ export default {
       return handleConsultRequest(request, env, corsHeaders);
     }
 
+    // 추천 링크 트래킹 (공개) — GET /referral/track?ref=STUDENT_TOKEN
+    // 친구가 추천 링크를 클릭했을 때 호출. 학생의 '추천 보너스' +5 적립.
+    // 최대 한도(100)를 초과하지 않는 범위 내에서만 적립.
+    //
+    // 서버측 중복 방지: Cloudflare Cache API를 이용해 (IP + ref) 조합 기준
+    // 24시간 내 중복 적립을 차단. 브라우저 localStorage 우회(curl/incognito)를
+    // 방지하기 위한 최소 방어선이며, IP를 돌려가며 시도하면 여전히 가능하지만
+    // 자동 부스팅 비용을 크게 올린다.
+    if (url.pathname === '/referral/track' && request.method === 'GET') {
+      const ref = url.searchParams.get('ref') || '';
+      if (!ref) return errRes(corsHeaders, 400, 'ref 파라미터가 필요합니다.');
+
+      const okResponse = () => new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+
+      // (IP, ref) 조합 해시로 dedup key 생성
+      const ip = request.headers.get('CF-Connecting-IP') || '0.0.0.0';
+      const dedupInput = new TextEncoder().encode(`${ip}|${ref}`);
+      const dedupHashBuf = await crypto.subtle.digest('SHA-256', dedupInput);
+      const dedupHash = Array.from(new Uint8Array(dedupHashBuf))
+        .map((b) => b.toString(16).padStart(2, '0')).join('');
+      const dedupKey = new Request(
+        new URL(`/_internal/referral-dedup/${dedupHash}`, request.url).toString(),
+        { method: 'GET' }
+      );
+      const cache = caches.default;
+      const already = await cache.match(dedupKey);
+      if (already) {
+        // 동일 IP가 24시간 내 재시도: 조용히 성공 반환 (공격자에게 dedup 노출 안 함)
+        return okResponse();
+      }
+
+      const n = makeNotion(env.NOTION_TOKEN);
+      const studentRes = await n('POST', `/databases/${STUDENT_DB_ID}/query`, {
+        filter: { property: '예약 코드', rich_text: { equals: ref } },
+        page_size: 1,
+      });
+      const page = studentRes.results?.[0];
+      if (!page) {
+        // 존재하지 않는 토큰이어도 조용히 성공 반환 (정보 노출 방지)
+        return okResponse();
+      }
+
+      const current = page.properties?.['추천 보너스']?.number ?? 0;
+      const MAX_REFERRAL_BONUS = 100;
+      const BONUS_PER_REFERRAL = 5;
+      if (current < MAX_REFERRAL_BONUS) {
+        const newBonus = Math.min(current + BONUS_PER_REFERRAL, MAX_REFERRAL_BONUS);
+        await n('PATCH', `/pages/${page.id}`, {
+          properties: { '추천 보너스': { number: newBonus } },
+        });
+      }
+
+      // dedup 마킹: 24시간 TTL. Notion 업데이트 성공 후에만 마킹해 실패 시 재시도 가능.
+      await cache.put(
+        dedupKey,
+        new Response('1', {
+          headers: { 'Cache-Control': 'public, max-age=86400' },
+        }),
+      );
+
+      return okResponse();
+    }
+
     // OG 메타태그 파싱 프록시 — GET /og-proxy?url=<encoded>
     if (url.pathname === '/og-proxy' && request.method === 'GET') {
       const targetUrl = url.searchParams.get('url');
       if (!targetUrl) {
-        return new Response(JSON.stringify({ error: 'url 파라미터 필요' }), {
+        return new Response(JSON.stringify({ error: 'url 파라미터가 필요합니다.' }), {
           status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
@@ -1650,7 +1735,7 @@ export default {
     const ALLOWED_NOTION_PATHS = ['/v1/databases/', '/v1/pages', '/v1/pages/'];
     const isAllowedPath = ALLOWED_NOTION_PATHS.some(prefix => url.pathname === prefix || url.pathname.startsWith(prefix));
     if (!isAllowedPath) {
-      return new Response(JSON.stringify({ error: 'Not allowed' }), {
+      return new Response(JSON.stringify({ error: '허용되지 않은 경로입니다.' }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });

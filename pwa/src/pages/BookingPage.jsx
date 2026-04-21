@@ -11,8 +11,16 @@ import {
   restoreMyClass,
 } from '../api/bookingApi.js';
 import { Card, Button, Modal } from 'antd';
+import { DAY_KR, formatDateMD, formatYearMonth, addMonths, timeToMin, formatDuration } from '../utils/dateUtils.js';
+import {
+  PRIMARY, PRIMARY_BG,
+  TEXT_PRIMARY, TEXT_SECONDARY, TEXT_TERTIARY, TEXT_INACTIVE,
+  STATUS_SUCCESS_DARK, STATUS_SUCCESS_BG,
+  STATUS_ERROR_TEXT, STATUS_ERROR_BORDER,
+  STATUS_INFO_DARK,
+} from '../constants/theme.js';
+import { BADGE_SMALL } from '../constants/styles.js';
 
-const DAY_KR = ['일', '월', '화', '수', '목', '금', '토'];
 const LOCATION_OPTIONS = ['강남사무실', '온라인 (Zoom/화상)'];
 
 const ALL_TIME_SLOTS = (() => {
@@ -26,31 +34,6 @@ const ALL_TIME_SLOTS = (() => {
   return slots;
 })();
 const ALL_END_SLOTS = [...ALL_TIME_SLOTS, '22:00'];
-
-function timeToMin(t) {
-  const [h, m] = t.split(':').map(Number);
-  return h * 60 + m;
-}
-function formatDuration(min) {
-  const h = Math.floor(min / 60);
-  const m = min % 60;
-  if (m === 0) return `${h}시간`;
-  return `${h}시간 ${m}분`;
-}
-function formatDate(dateStr) {
-  if (!dateStr) return '';
-  const d = new Date(dateStr + 'T00:00:00+09:00');
-  return `${d.getMonth() + 1}/${d.getDate()}(${DAY_KR[d.getDay()]})`;
-}
-function formatMonth(monthStr) {
-  const [y, m] = monthStr.split('-').map(Number);
-  return `${y}년 ${m}월`;
-}
-function shiftMonth(monthStr, delta) {
-  const date = new Date(monthStr + '-01T00:00:00Z');
-  date.setUTCMonth(date.getUTCMonth() + delta);
-  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
-}
 
 // ===== 달력 컴포넌트 =====
 function Calendar({ year, month, availableDates, selectedDate, onSelect }) {
@@ -102,7 +85,7 @@ function Calendar({ year, month, availableDates, selectedDate, onSelect }) {
               disabled={disabled}
               onClick={() => onSelect(dateStr)}
               style={{ touchAction: 'manipulation' }}
-              className={`relative flex items-center justify-center h-11 rounded-full text-sm font-medium transition-colors ${
+              className={`relative flex items-center justify-center h-11 rounded-full text-sm font-medium transition-[scale,background-color,color] duration-150 ease-out ${!disabled ? 'active:scale-[0.96]' : ''} ${
                 isSelected
                   ? 'bg-brand-600 text-white'
                   : disabled
@@ -167,7 +150,7 @@ function TimeRangePicker({ availableTimes, passableTimes, startTime, endTime, on
                 disabled={!canSelect}
                 onClick={() => canSelect && onStartSelect(t)}
                 style={{ touchAction: 'manipulation' }}
-                className={`px-3 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                className={`px-3 py-2 rounded-lg text-sm font-medium border transition-[scale,background-color,color,border-color] duration-150 ease-out ${canSelect ? 'active:scale-[0.96]' : ''} ${
                   isSelected
                     ? 'bg-brand-600 text-white border-brand-600'
                     : inRange
@@ -205,7 +188,7 @@ function TimeRangePicker({ availableTimes, passableTimes, startTime, endTime, on
                       disabled={!canSelect}
                       onClick={() => canSelect && onEndSelect(t)}
                       style={{ touchAction: 'manipulation' }}
-                      className={`px-3 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                      className={`px-3 py-2 rounded-lg text-sm font-medium border transition-[scale,background-color,color,border-color] duration-150 ease-out ${canSelect ? 'active:scale-[0.96]' : ''} ${
                         isSelected
                           ? 'bg-brand-600 text-white border-brand-600'
                           : canSelect
@@ -229,7 +212,7 @@ function TimeRangePicker({ availableTimes, passableTimes, startTime, endTime, on
 }
 
 // ===== 내 수업 탭 =====
-function MyClassesTab({ studentToken, month, onMonthChange }) {
+function MyClassesTab({ studentToken, month, onMonthChange, onStudentRefresh }) {
   const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -259,7 +242,7 @@ function MyClassesTab({ studentToken, month, onMonthChange }) {
     if (cancellingId || restoringId) return;
     Modal.confirm({
       title: '수업 취소',
-      content: `${formatDate(cls.date)} ${cls.startTime} 수업을 취소하시겠습니까?`,
+      content: `${formatDateMD(cls.date)} ${cls.startTime} 수업을 취소하시겠습니까?`,
       okText: '취소하기',
       cancelText: '닫기',
       okButtonProps: { danger: true },
@@ -268,6 +251,7 @@ function MyClassesTab({ studentToken, month, onMonthChange }) {
         try {
           await cancelMyClass(cls.id, studentToken);
           setClasses(prev => prev.map(c => c.id === cls.id ? { ...c, isCancelled: true } : c));
+          onStudentRefresh?.();
         } catch (e) {
           Modal.error({ title: '오류', content: e.message });
         } finally {
@@ -281,7 +265,7 @@ function MyClassesTab({ studentToken, month, onMonthChange }) {
     if (restoringId || cancellingId) return;
     Modal.confirm({
       title: '수업 복구',
-      content: `${formatDate(cls.date)} ${cls.startTime} 수업을 복구하시겠습니까?`,
+      content: `${formatDateMD(cls.date)} ${cls.startTime} 수업을 복구하시겠습니까?`,
       okText: '복구하기',
       cancelText: '닫기',
       onOk: async () => {
@@ -289,6 +273,7 @@ function MyClassesTab({ studentToken, month, onMonthChange }) {
         try {
           await restoreMyClass(cls.id, studentToken);
           setClasses(prev => prev.map(c => c.id === cls.id ? { ...c, isCancelled: false } : c));
+          onStudentRefresh?.();
         } catch (e) {
           Modal.error({ title: '오류', content: e.message });
         } finally {
@@ -303,43 +288,59 @@ function MyClassesTab({ studentToken, month, onMonthChange }) {
   return (
     <div>
       {/* 월 네비게이션 */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '10px 16px', borderBottom: '1px solid rgba(0,0,0,0.06)',
+      }}>
         <button
           type="button"
-          onClick={() => onMonthChange(shiftMonth(month, -1))}
+          onClick={() => onMonthChange(addMonths(month, -1))}
           aria-label="이전 달"
-          className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500 text-lg"
+          className="active:scale-[0.96]"
+          style={{
+            width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            borderRadius: 10, border: 'none', background: 'none', cursor: 'pointer',
+            fontSize: 20, color: '#595959',
+            transitionProperty: 'scale', transitionDuration: '150ms', transitionTimingFunction: 'ease-out',
+            WebkitTapHighlightColor: 'transparent',
+          }}
         >
           <span aria-hidden="true">‹</span>
         </button>
-        <span className="font-semibold text-gray-800 text-sm" aria-live="polite" aria-atomic="true">
-          {formatMonth(month)}
+        <span style={{ fontSize: 15, fontWeight: 600, color: '#1d1d1f' }} aria-live="polite" aria-atomic="true">
+          {formatYearMonth(month)}
         </span>
         <button
           type="button"
-          onClick={() => onMonthChange(shiftMonth(month, 1))}
+          onClick={() => onMonthChange(addMonths(month, 1))}
           aria-label="다음 달"
-          className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500 text-lg"
+          className="active:scale-[0.96]"
+          style={{
+            width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            borderRadius: 10, border: 'none', background: 'none', cursor: 'pointer',
+            fontSize: 20, color: '#595959',
+            transitionProperty: 'scale', transitionDuration: '150ms', transitionTimingFunction: 'ease-out',
+            WebkitTapHighlightColor: 'transparent',
+          }}
         >
           <span aria-hidden="true">›</span>
         </button>
       </div>
 
-      {loading && <div className="text-center py-12 text-gray-500 text-sm">불러오는 중...</div>}
+      {loading && <div style={{ textAlign: 'center', padding: '48px 0', fontSize: 13, color: '#8c8c8c' }}>불러오는 중...</div>}
       {error && (
         <div style={{ margin: '16px', padding: '12px 16px', backgroundColor: '#fff2f0', border: '1px solid #ffccc7', borderRadius: 12, fontSize: 14, color: '#cf1322' }}>
           {error}
         </div>
       )}
       {!loading && !error && classes.length === 0 && (
-        <div className="text-center py-12 text-gray-400">
-          <div className="text-4xl mb-3">📚</div>
-          <div className="text-sm">이 달에 수업이 없습니다</div>
+        <div style={{ textAlign: 'center', padding: '48px 16px', color: '#8c8c8c', fontSize: 14 }}>
+          이 달에 수업이 없어요
         </div>
       )}
 
       {!loading && !error && classes.length > 0 && (
-        <div className="px-4 py-4 space-y-2">
+        <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
           {classes.map(cls => {
             const clsStartMin = timeToMin(cls.startTime);
             const clsEndMin = clsStartMin + cls.durationMin;
@@ -348,33 +349,31 @@ function MyClassesTab({ studentToken, month, onMonthChange }) {
             const canCancel = !cls.isCancelled && cls.date > todayStr;
             const canRestore = cls.isCancelled && cls.date > todayStr;
             const statusLabel = cls.isCancelled ? '취소' : isOngoing ? '수업중' : isPast ? '완료' : '예정';
-            const statusStyle = cls.isCancelled
-              ? 'bg-gray-100 text-gray-400'
+            const statusBadgeStyle = cls.isCancelled
+              ? { ...BADGE_SMALL, backgroundColor: '#f5f5f5', color: TEXT_INACTIVE }
               : isOngoing
-                ? 'bg-blue-100 text-blue-700'
+                ? { ...BADGE_SMALL, backgroundColor: '#e6f4ff', color: STATUS_INFO_DARK }
                 : isPast
-                  ? 'bg-gray-100 text-gray-500'
-                  : 'bg-green-100 text-green-700';
+                  ? { ...BADGE_SMALL, backgroundColor: '#f5f5f5', color: TEXT_SECONDARY }
+                  : { ...BADGE_SMALL, backgroundColor: STATUS_SUCCESS_BG, color: STATUS_SUCCESS_DARK };
             return (
               <Card
                 key={cls.id}
                 variant="borderless"
-                style={{ borderRadius: 16, opacity: isPast || cls.isCancelled ? 0.6 : 1 }}
+                style={{ borderRadius: 12, boxShadow: 'var(--shadow-border)', opacity: isPast || cls.isCancelled ? 0.65 : 1, transition: 'opacity 0.2s' }}
               >
-                <div className="flex items-center gap-3">
-                  <div className="flex-1 min-w-0">
-                    <div className="text-base font-semibold text-gray-900 mb-0.5">
-                      {formatDate(cls.date)}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusStyle}`}>
-                        {statusLabel}
-                      </span>
-                      <span className="text-xs text-gray-500">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontSize: 15, fontWeight: 600, color: TEXT_PRIMARY, margin: '0 0 4px' }} className="tabular-nums">
+                      {formatDateMD(cls.date)}
+                    </p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                      <span style={statusBadgeStyle}>{statusLabel}</span>
+                      <span style={{ fontSize: 12, color: TEXT_TERTIARY }} className="tabular-nums">
                         {cls.startTime} · {formatDuration(cls.durationMin)}
                       </span>
                       {cls.location && (
-                        <span className="text-xs text-gray-500">
+                        <span style={{ fontSize: 12, color: TEXT_TERTIARY }}>
                           {LOCATION_LABEL[cls.location] ?? cls.location}
                         </span>
                       )}
@@ -384,7 +383,15 @@ function MyClassesTab({ studentToken, month, onMonthChange }) {
                     <button
                       onClick={() => handleCancel(cls)}
                       disabled={cancellingId === cls.id}
-                      className="shrink-0 text-sm text-red-500 border border-red-200 rounded-lg px-3 py-1.5 disabled:opacity-40 active:bg-red-50"
+                      className="active:scale-[0.96]"
+                      style={{
+                        flexShrink: 0, height: 36, padding: '0 12px', borderRadius: 10,
+                        fontSize: 13, fontWeight: 500, cursor: 'pointer',
+                        color: STATUS_ERROR_TEXT, border: `1.5px solid ${STATUS_ERROR_BORDER}`, background: '#fff',
+                        transitionProperty: 'scale, background-color', transitionDuration: '150ms', transitionTimingFunction: 'ease-out',
+                        WebkitTapHighlightColor: 'transparent',
+                        opacity: cancellingId === cls.id ? 0.5 : 1,
+                      }}
                     >
                       {cancellingId === cls.id ? '취소 중...' : '취소'}
                     </button>
@@ -393,7 +400,15 @@ function MyClassesTab({ studentToken, month, onMonthChange }) {
                     <button
                       onClick={() => handleRestore(cls)}
                       disabled={restoringId === cls.id}
-                      className="shrink-0 text-sm text-brand-600 border border-brand-100 rounded-lg px-3 py-1.5 disabled:opacity-40 active:bg-brand-50"
+                      className="active:scale-[0.96]"
+                      style={{
+                        flexShrink: 0, height: 36, padding: '0 12px', borderRadius: 10,
+                        fontSize: 13, fontWeight: 500, cursor: 'pointer',
+                        color: PRIMARY, border: '1.5px solid rgba(127,0,5,0.2)', background: PRIMARY_BG,
+                        transitionProperty: 'scale, background-color', transitionDuration: '150ms', transitionTimingFunction: 'ease-out',
+                        WebkitTapHighlightColor: 'transparent',
+                        opacity: restoringId === cls.id ? 0.5 : 1,
+                      }}
                     >
                       {restoringId === cls.id ? '복구 중...' : '복구'}
                     </button>
@@ -402,7 +417,7 @@ function MyClassesTab({ studentToken, month, onMonthChange }) {
               </Card>
             );
           })}
-          <p className="text-xs text-center text-gray-500 pt-2">당일 취소는 강사에게 직접 연락해주세요</p>
+          <p style={{ fontSize: 12, textAlign: 'center', color: '#767676', marginTop: 4 }}>당일 취소는 강사님께 직접 문의해주세요</p>
         </div>
       )}
     </div>
@@ -589,54 +604,93 @@ export default function BookingPage() {
   }
 
   return (
-    <div className="min-h-dvh bg-gray-50">
-      <div className="max-w-lg mx-auto">
+    <div style={{ minHeight: '100dvh', backgroundColor: '#f9fafb' }}>
+      <div style={{ maxWidth: 480, margin: '0 auto' }}>
         <PullIndicator pullY={pullY} refreshing={pullRefreshing} />
-        {/* 헤더 */}
-        <div className="bg-white px-4 pt-12 pb-3 border-b border-gray-100 sticky top-0 z-[101]">
-          <h1 className="text-xl font-bold text-gray-900">수업 예약</h1>
-          <div className="flex items-center justify-between mt-1">
-            <div className="flex items-center gap-2">
-              <p className="text-sm text-gray-500">{student.name}님</p>
+
+        {/* 헤더 + 탭 — 하나의 sticky 컨테이너 */}
+        <div style={{
+          position: 'sticky', top: 0, zIndex: 101,
+          backgroundColor: 'rgba(255,255,255,0.95)',
+          backdropFilter: 'saturate(180%) blur(20px)',
+          WebkitBackdropFilter: 'saturate(180%) blur(20px)',
+        }}>
+          {/* 헤더 행 */}
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '12px 16px 10px',
+            borderBottom: '1px solid rgba(0,0,0,0.04)',
+          }}>
+            <div>
+              <h1 style={{ fontSize: 17, fontWeight: 700, color: '#1d1d1f', margin: 0, lineHeight: 1.3 }}>
+                수업 예약
+              </h1>
+              <p style={{ fontSize: 12, color: '#767676', margin: '1px 0 0' }}>
+                {student.name}님
+              </p>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span
+                className="tabular-nums"
+                style={{
+                  fontSize: 12, fontWeight: 600,
+                  padding: '4px 10px', borderRadius: 20,
+                  backgroundColor: student.remainingSessions > 0 ? '#fff0f1' : '#fff2f0',
+                  color: student.remainingSessions > 0 ? '#7f0005' : '#cf1322',
+                }}
+                aria-label={`잔여 ${student.remainingSessions}회차`}
+              >
+                잔여 {student.remainingSessions}회
+              </span>
               <button
                 onClick={() => navigate('/book')}
                 aria-label="예약 코드 입력 화면으로 돌아가기"
-                className="text-xs text-gray-400 hover:text-gray-600 px-2 py-1 -mx-2 -my-1 rounded"
+                style={{
+                  fontSize: 12, color: '#8c8c8c', background: 'none',
+                  border: 'none', cursor: 'pointer', padding: '4px 0',
+                  WebkitTapHighlightColor: 'transparent',
+                }}
               >
                 로그아웃
               </button>
             </div>
-            <span
-              className={`text-xs font-medium px-2 py-0.5 rounded-full tabular-nums ${
-                student.remainingSessions > 0 ? 'bg-brand-50 text-brand-600' : 'bg-red-50 text-red-500'
-              }`}
-              aria-label={`잔여 ${student.remainingSessions}회차`}
-            >
-              잔여 {student.remainingSessions}회차
-            </span>
           </div>
-        </div>
 
-        {/* 탭 */}
-        <div
-          role="tablist"
-          className="flex border-b border-gray-100 bg-white px-4 sticky top-0 z-[100]"
-        >
-          {['예약하기', '내 수업'].map((t, i) => (
-            <button
-              key={t}
-              role="tab"
-              aria-selected={tab === t}
-              aria-controls={`tab-panel-${i}`}
-              id={`tab-${i}`}
-              onClick={() => setTab(t)}
-              className={`mr-4 py-3 text-sm font-medium border-b-2 transition-colors min-h-[44px] ${
-                tab === t ? 'border-brand-600 text-brand-600' : 'border-transparent text-gray-500'
-              }`}
-            >
-              {t}
-            </button>
-          ))}
+          {/* 탭 행 */}
+          <div
+            role="tablist"
+            style={{
+              display: 'flex', padding: '0 16px',
+              borderBottom: '1px solid rgba(0,0,0,0.06)',
+            }}
+          >
+            {['예약하기', '내 수업'].map((t, i) => (
+              <button
+                key={t}
+                role="tab"
+                aria-selected={tab === t}
+                aria-controls={`tab-panel-${i}`}
+                id={`tab-${i}`}
+                onClick={() => setTab(t)}
+                className="active:scale-[0.96]"
+                style={{
+                  marginRight: 20, paddingTop: 10, paddingBottom: 10,
+                  fontSize: 14, fontWeight: tab === t ? 600 : 500,
+                  border: 'none', background: 'none', cursor: 'pointer',
+                  borderBottom: tab === t ? '2px solid #7f0005' : '2px solid transparent',
+                  color: tab === t ? '#7f0005' : '#595959',
+                  minHeight: 44,
+                  transitionProperty: 'color, border-color',
+                  transitionDuration: '150ms',
+                  transitionTimingFunction: 'ease-out',
+                  WebkitTapHighlightColor: 'transparent',
+                  outline: 'none',
+                }}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
         </div>
 
         {tab === '내 수업' ? (
@@ -646,10 +700,11 @@ export default function BookingPage() {
             studentToken={studentToken}
             month={myClassesMonth}
             onMonthChange={setMyClassesMonth}
+            onStudentRefresh={loadStudent}
           />
           </div>
         ) : (
-          <div role="tabpanel" id="tab-panel-0" aria-labelledby="tab-0" className="px-4 py-4 space-y-4">
+          <div role="tabpanel" id="tab-panel-0" style={{ padding: '16px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
             {/* 잔여 시간 없을 때 안내 */}
             {student.remainingSessions <= 0 && (
               <div role="alert" style={{ padding: '12px 16px', backgroundColor: '#fff2f0', border: '1px solid #ffccc7', borderRadius: 12, fontSize: 14, color: '#cf1322', textAlign: 'center' }}>
@@ -659,30 +714,47 @@ export default function BookingPage() {
 
             {/* 달력 */}
             <Card variant="borderless" style={{ borderRadius: 16, boxShadow: 'var(--shadow-border)' }}>
-              <div className="flex items-center justify-between mb-3">
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
                 <button
                   type="button"
                   onClick={prevMonth}
                   aria-label="이전 달"
-                  className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500 text-lg"
+                  className="active:scale-[0.96]"
+                  style={{
+                    width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    borderRadius: 10, border: 'none', background: 'none', cursor: 'pointer',
+                    fontSize: 20, color: '#595959',
+                    transitionProperty: 'scale, background-color', transitionDuration: '150ms', transitionTimingFunction: 'ease-out',
+                    WebkitTapHighlightColor: 'transparent',
+                  }}
                 >
                   <span aria-hidden="true">‹</span>
                 </button>
-                <span className="font-semibold text-gray-800" aria-live="polite" aria-atomic="true">
+                <span
+                  style={{ fontSize: 15, fontWeight: 600, color: '#1d1d1f' }}
+                  aria-live="polite" aria-atomic="true"
+                >
                   {calYear}년 {MONTHS[calMonth]}
                 </span>
                 <button
                   type="button"
                   onClick={nextMonth}
                   aria-label="다음 달"
-                  className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500 text-lg"
+                  className="active:scale-[0.96]"
+                  style={{
+                    width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    borderRadius: 10, border: 'none', background: 'none', cursor: 'pointer',
+                    fontSize: 20, color: '#595959',
+                    transitionProperty: 'scale, background-color', transitionDuration: '150ms', transitionTimingFunction: 'ease-out',
+                    WebkitTapHighlightColor: 'transparent',
+                  }}
                 >
                   <span aria-hidden="true">›</span>
                 </button>
               </div>
 
               {slotsLoading ? (
-                <div className="text-center py-8 text-gray-500 text-sm">불러오는 중...</div>
+                <div style={{ textAlign: 'center', padding: '32px 0', fontSize: 13, color: '#8c8c8c' }}>불러오는 중...</div>
               ) : (
                 <Calendar
                   year={calYear}
@@ -700,19 +772,19 @@ export default function BookingPage() {
                 {(() => {
                   const d = new Date(selectedDate + 'T00:00:00+09:00');
                   return (
-                    <div className="flex items-center gap-2 mb-3">
-                      <h2 className="font-semibold text-gray-800">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+                      <h2 style={{ fontSize: 15, fontWeight: 600, color: '#1d1d1f', margin: 0 }}>
                         {d.getMonth() + 1}월 {d.getDate()}일 ({DAY_KR[d.getDay()]}) 시간 선택
                       </h2>
                       {timeResetKey > 0 && (
-                        <span className="text-xs text-gray-400">시간 선택이 초기화되었어요</span>
+                        <span style={{ fontSize: 12, color: '#8c8c8c' }}>초기화됨</span>
                       )}
                     </div>
                   );
                 })()}
 
                 {timesLoading ? (
-                  <div className="text-center py-6 text-gray-500 text-sm">불러오는 중...</div>
+                  <div style={{ textAlign: 'center', padding: '24px 0', fontSize: 13, color: '#8c8c8c' }}>불러오는 중...</div>
                 ) : (
                   <TimeRangePicker
                     availableTimes={availableTimes}
@@ -731,34 +803,46 @@ export default function BookingPage() {
               <form onSubmit={handleSubmit}>
                 <Card variant="borderless" style={{ borderRadius: 16, boxShadow: 'var(--shadow-border)' }}>
                   {/* 선택 요약 */}
-                  <div className="bg-brand-50 rounded-lg px-3 py-2.5 text-sm text-brand-600" style={{ marginBottom: 12 }}>
+                  <div style={{
+                    backgroundColor: '#fff0f1', borderRadius: 10,
+                    padding: '10px 14px', marginBottom: 14,
+                    fontSize: 14, color: '#7f0005',
+                  }}>
                     {(() => {
                       const d = new Date(selectedDate + 'T00:00:00+09:00');
                       return (
-                        <>
-                          <span className="font-semibold">
+                        <span className="tabular-nums">
+                          <span style={{ fontWeight: 600 }}>
                             {d.getMonth() + 1}/{d.getDate()}({DAY_KR[d.getDay()]}) {startTime} ~ {endTime}
                           </span>
-                          <span className="ml-2 opacity-70">({formatDuration(durationMin)})</span>
-                        </>
+                          <span style={{ marginLeft: 8, color: '#a00008', opacity: 0.7 }}>({formatDuration(durationMin)})</span>
+                        </span>
                       );
                     })()}
                   </div>
 
                   {/* 수업 장소 선택 */}
-                  <div style={{ marginBottom: 12 }}>
-                    <label className="block text-xs text-gray-500 mb-1.5">수업 장소</label>
-                    <div className="flex gap-2">
+                  <div style={{ marginBottom: 14 }}>
+                    <label style={{ fontSize: 13, fontWeight: 600, color: '#595959', display: 'block', marginBottom: 8 }}>
+                      수업 장소
+                    </label>
+                    <div style={{ display: 'flex', gap: 8 }}>
                       {LOCATION_OPTIONS.map(opt => (
                         <button
                           key={opt}
                           type="button"
                           onClick={() => setLocation(opt)}
-                          className={`flex-1 py-3 rounded-lg text-sm font-medium border transition-colors ${
-                            location === opt
-                              ? 'bg-brand-600 text-white border-brand-600'
-                              : 'bg-white text-gray-600 border-gray-200 hover:border-brand-100'
-                          }`}
+                          className="active:scale-[0.96]"
+                          style={{
+                            flex: 1, height: 44, borderRadius: 12,
+                            fontSize: 14, fontWeight: 500, cursor: 'pointer',
+                            border: location === opt ? '1.5px solid #7f0005' : '1.5px solid #d9d9d9',
+                            backgroundColor: location === opt ? '#7f0005' : '#ffffff',
+                            color: location === opt ? '#ffffff' : '#595959',
+                            transitionProperty: 'background-color, color, border-color',
+                            transitionDuration: '150ms', transitionTimingFunction: 'ease-out',
+                            WebkitTapHighlightColor: 'transparent',
+                          }}
                         >
                           {opt === '강남사무실' ? '강남사무실' : 'Zoom (온라인)'}
                         </button>
@@ -801,7 +885,7 @@ export default function BookingPage() {
               </form>
             )}
 
-            <div className="pb-8" />
+            <div style={{ height: 32 }} />
           </div>
         )}
       </div>

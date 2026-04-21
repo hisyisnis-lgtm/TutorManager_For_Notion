@@ -1,4 +1,4 @@
-const WORKER_URL = import.meta.env.VITE_WORKER_URL;
+import { WORKER_URL } from '../config.js';
 
 export async function submitConsultation({ name, phone, kakaoId, level, preferredDays, preferredTime, concerns, reasons, reasonOther, message }) {
   const res = await fetch(`${WORKER_URL}/consult`, {

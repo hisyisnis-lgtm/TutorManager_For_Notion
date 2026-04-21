@@ -2,15 +2,8 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { fetchBookingStatus } from '../api/bookingApi.js';
 import { Card, Button } from 'antd';
-import { CheckCircleFilled, CloseCircleFilled } from '@ant-design/icons';
-
-const DAY_KR = ['일', '월', '화', '수', '목', '금', '토'];
-
-function formatDate(dateStr) {
-  if (!dateStr) return '';
-  const d = new Date(dateStr + 'T00:00:00+09:00');
-  return `${d.getMonth() + 1}월 ${d.getDate()}일 (${DAY_KR[d.getDay()]})`;
-}
+import { CheckCircleIcon, XCircleIcon } from '@phosphor-icons/react';
+import { formatDateKO } from '../utils/dateUtils.js';
 
 // 예약 확정 성공 아이콘 (애니메이션)
 function SuccessIcon() {
@@ -25,7 +18,7 @@ function SuccessIcon() {
     role="img"
     aria-label="예약 확정"
     >
-      <CheckCircleFilled style={{ fontSize: 36, color: '#52c41a' }} />
+      <CheckCircleIcon weight="fill" size={36} style={{ color: '#52c41a' }} />
     </div>
   );
 }
@@ -41,7 +34,7 @@ function CancelIcon() {
     role="img"
     aria-label="예약 취소됨"
     >
-      <CloseCircleFilled style={{ fontSize: 36, color: '#cf1322' }} />
+      <XCircleIcon weight="fill" size={36} style={{ color: '#cf1322' }} />
     </div>
   );
 }
@@ -109,7 +102,7 @@ export default function BookingStatusPage() {
           <Card variant="borderless" style={{ borderRadius: 16, textAlign: 'center', boxShadow: 'var(--shadow-card)' }}
             role="alert"
           >
-            <CloseCircleFilled style={{ fontSize: 36, color: '#cf1322', marginBottom: 16, display: 'block' }} aria-hidden="true" />
+            <XCircleIcon weight="fill" size={36} style={{ color: '#cf1322', marginBottom: 16, display: 'block' }} aria-hidden="true" />
             <p className="text-gray-700 font-medium">예약 정보를 찾을 수 없습니다</p>
             <p className="text-sm text-gray-500 mt-2">{error}</p>
             <Button
@@ -160,7 +153,7 @@ export default function BookingStatusPage() {
               {/* 예약 상세 정보 */}
               <div style={{ textAlign: 'left' }}>
                 <InfoRow label="예약자" value={booking.studentName} />
-                <InfoRow label="날짜" value={<span className="tabular-nums">{formatDate(booking.date)}</span>} />
+                <InfoRow label="날짜" value={<span className="tabular-nums">{formatDateKO(booking.date)}</span>} />
                 <InfoRow
                   label="시간"
                   value={<span className="tabular-nums">{`${booking.startTime} (${booking.durationMin}분)`}</span>}

@@ -1,14 +1,23 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { BellIcon, GearSixIcon, CalendarPlusIcon, ReceiptIcon, UsersThreeIcon } from '@phosphor-icons/react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Card } from 'antd';
 import { useData } from '../context/DataContext.jsx';
 import { queryPage } from '../api/notionClient.js';
 import { CLASSES_DB, parseClass } from '../api/classes.js';
+import { HOMEWORK_DB, parseHomework } from '../api/homework.js';
 import { CONSULT_DB } from '../constants.js';
 import { formatShort, formatDateTime, formatTime } from '../utils/dateUtils.js';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import PullToRefresh from '../components/ui/PullToRefresh.jsx';
 import MonthCalendar from '../components/ui/MonthCalendar.jsx';
+import SectionHeading from '../components/ui/SectionHeading.jsx';
+import {
+  PRIMARY, PRIMARY_BG,
+  TEXT_PRIMARY, TEXT_TERTIARY, TEXT_DISABLED,
+  STATUS_ERROR_TEXT,
+} from '../constants/theme.js';
+import { BADGE_SMALL } from '../constants/styles.js';
 import { getInstructorName, getNtfyTopic } from './SettingsPage.jsx';
 
 const KST = 'Asia/Seoul';
@@ -36,7 +45,56 @@ export default function HomePage() {
   const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [consultCount, setConsultCount] = useState(0);
+  const [submittedHomework, setSubmittedHomework] = useState([]);
+  const [todayClasses, setTodayClasses] = useState([]);
+  const [todayLoading, setTodayLoading] = useState(true);
   const [instructorName, setInstructorName] = useState(getInstructorName);
+
+  // 피드백 대기 숙제 가로 스크롤 러버밴드
+  const hwScrollRef = useRef(null);
+  const hwInnerRef = useRef(null);
+
+  useEffect(() => {
+    const el = hwScrollRef.current;
+    const inner = hwInnerRef.current;
+    if (!el || !inner) return;
+
+    let startX = 0;
+
+    const onStart = (e) => {
+      e.stopPropagation(); // document 레벨 PullToRefresh 차단
+      startX = e.touches[0].clientX;
+      inner.style.transition = 'none';
+    };
+    const onMove = (e) => {
+      e.stopPropagation();
+      const dx = e.touches[0].clientX - startX;
+      const maxScroll = el.scrollWidth - el.clientWidth;
+      let bounce = 0;
+      if (el.scrollLeft <= 0 && dx > 0) {
+        bounce = Math.min(dx * 0.3, 28);
+      } else if (el.scrollLeft >= maxScroll - 1 && dx < 0) {
+        bounce = Math.max(dx * 0.3, -28);
+      }
+      inner.style.transform = bounce !== 0 ? `translateX(${bounce}px)` : '';
+    };
+    const onEnd = () => {
+      inner.style.transition = 'transform 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+      inner.style.transform = '';
+      setTimeout(() => { inner.style.transition = 'none'; }, 500);
+    };
+
+    el.addEventListener('touchstart', onStart, { passive: true });
+    el.addEventListener('touchmove', onMove, { passive: true });
+    el.addEventListener('touchend', onEnd, { passive: true });
+    el.addEventListener('touchcancel', onEnd, { passive: true });
+    return () => {
+      el.removeEventListener('touchstart', onStart);
+      el.removeEventListener('touchmove', onMove);
+      el.removeEventListener('touchend', onEnd);
+      el.removeEventListener('touchcancel', onEnd);
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const today = getKSTToday();
   const pad = n => String(n).padStart(2, '0');
@@ -105,6 +163,21 @@ export default function HomePage() {
     }
   }, []);
 
+  const loadSubmittedHomework = async () => {
+    try {
+      const data = await queryPage(
+        HOMEWORK_DB,
+        { property: '제출 상태', select: { equals: '제출완료' } },
+        [{ property: '제출일', direction: 'descending' }],
+        undefined,
+        20
+      );
+      setSubmittedHomework((data?.results ?? []).map(parseHomework));
+    } catch (e) {
+      console.error('[홈] 제출된 숙제 불러오기 오류', e);
+    }
+  };
+
   const loadConsultCount = async () => {
     try {
       const data = await queryPage(
@@ -120,7 +193,31 @@ export default function HomePage() {
     }
   };
 
-  useEffect(() => { loadUpcoming(); loadConsultCount(); }, []);
+  const loadTodayClasses = async () => {
+    setTodayLoading(true);
+    try {
+      const data = await queryPage(
+        CLASSES_DB,
+        {
+          and: [
+            { property: '수업 일시', date: { on_or_after: `${todayStr}T00:00:00+09:00` } },
+            { property: '수업 일시', date: { on_or_before: `${todayStr}T23:59:59+09:00` } },
+            { property: '특이사항', select: { does_not_equal: '🚫 취소' } },
+          ],
+        },
+        [{ property: '수업 일시', direction: 'ascending' }],
+        undefined,
+        20
+      );
+      setTodayClasses((data?.results ?? []).map(parseClass));
+    } catch (e) {
+      console.error('[홈] 오늘 수업 불러오기 오류', e);
+    } finally {
+      setTodayLoading(false);
+    }
+  };
+
+  useEffect(() => { loadUpcoming(); loadConsultCount(); loadSubmittedHomework(); loadTodayClasses(); }, []);
   useEffect(() => { loadCalendar(calYear, calMonth); }, [calYear, calMonth, loadCalendar]);
 
   // 설정/알림 페이지에서 돌아올 때 이름 및 뱃지 갱신 (마운트 시 1회)
@@ -134,8 +231,16 @@ export default function HomePage() {
   }, []);
 
   const handleRefresh = async () => {
-    await Promise.all([loadUpcoming(), loadCalendar(calYear, calMonth), loadConsultCount(), refreshData()]);
+    await Promise.all([loadUpcoming(), loadCalendar(calYear, calMonth), loadConsultCount(), loadSubmittedHomework(), loadTodayClasses(), refreshData()]);
   };
+
+  // 최근 완료된 수업 (오늘 종료된 수업) - 숙제 부여 카드용
+  const nowKSTMs = Date.now() + 9 * 60 * 60 * 1000;
+  const nowKSTStr = new Date(nowKSTMs).toISOString().slice(11, 16); // HH:MM
+  const recentlyCompleted = todayClasses.filter((cls) => {
+    if (!cls.endTime) return false;
+    return cls.endTime <= nowKSTStr;
+  });
 
   // 날짜별 수업 집계
   const classCountMap = {};
@@ -172,10 +277,19 @@ export default function HomePage() {
     setSelectedDay((prev) => (prev === day ? null : day));
   };
 
+  // 오늘 수업 요약
+  const totalMinutes = todayClasses.reduce((sum, cls) => sum + (parseInt(cls.duration) || 0), 0);
+
+  const QUICK_ACTIONS = [
+    { label: '수업 추가', Icon: CalendarPlusIcon, path: '/classes/new' },
+    { label: '결제 입력', Icon: ReceiptIcon, path: '/payments/new' },
+    { label: '학생 관리', Icon: UsersThreeIcon, path: '/students' },
+  ];
+
   return (
     <PullToRefresh onRefresh={handleRefresh}>
       {/* 헤더 */}
-      <div className="px-5 pt-8 pb-2 flex items-start justify-between">
+      <div className="px-4 pt-8 pb-2 flex items-start justify-between">
         <h1 className="text-2xl font-bold text-gray-900">
           안녕하세요<br />
           <span className="text-brand-600">{instructorName}</span> 강사님
@@ -184,14 +298,15 @@ export default function HomePage() {
         {/* 알림 버튼 */}
         <button
           onClick={() => { setUnreadCount(0); navigate('/notifications'); }}
-          className="p-2 relative text-gray-400 active:text-gray-600"
+          className="p-2 relative text-gray-400 active:text-gray-600 active:scale-[0.96] transition-[scale,color] duration-150 ease-out"
           aria-label="알림"
         >
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-          </svg>
+          <BellIcon weight="fill" size={24} />
           {unreadCount > 0 && (
-            <span className="absolute top-1.5 right-1.5 min-w-[14px] h-3.5 px-0.5 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center leading-none">
+            <span
+              className="absolute top-1.5 right-1.5 min-w-[14px] h-3.5 px-0.5 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center leading-none tabular-nums"
+              style={{ animation: 'badge-in 300ms cubic-bezier(0.2, 0, 0, 1) both' }}
+            >
               {unreadCount > 99 ? '99+' : unreadCount}
             </span>
           )}
@@ -199,19 +314,102 @@ export default function HomePage() {
         {/* 설정 버튼 */}
         <button
           onClick={() => navigate('/settings')}
-          className="p-2 -mr-1 text-gray-400 active:text-gray-600"
+          className="p-2 -mr-1 text-gray-400 active:text-gray-600 active:scale-[0.96] transition-[scale,color] duration-150 ease-out"
           aria-label="설정"
         >
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M10.343 3.94c.09-.542.56-.94 1.11-.94h1.093c.55 0 1.02.398 1.11.94l.149.894c.07.424.384.764.78.93.398.164.855.142 1.205-.108l.737-.527a1.125 1.125 0 011.45.12l.773.774c.39.389.44 1.002.12 1.45l-.527.737c-.25.35-.272.806-.107 1.204.165.397.505.71.93.78l.893.15c.543.09.94.56.94 1.109v1.094c0 .55-.397 1.02-.94 1.11l-.893.149c-.425.07-.765.383-.93.78-.165.398-.143.854.107 1.204l.527.738c.32.447.269 1.06-.12 1.45l-.774.773a1.125 1.125 0 01-1.449.12l-.738-.527c-.35-.25-.806-.272-1.203-.107-.397.165-.71.505-.781.929l-.149.894c-.09.542-.56.94-1.11.94h-1.094c-.55 0-1.019-.398-1.11-.94l-.148-.894c-.071-.424-.384-.764-.781-.93-.398-.164-.854-.142-1.204.108l-.738.527c-.447.32-1.06.269-1.45-.12l-.773-.774a1.125 1.125 0 01-.12-1.45l.527-.737c.25-.35.273-.806.108-1.204-.165-.397-.505-.71-.93-.78l-.894-.15c-.542-.09-.94-.56-.94-1.109v-1.094c0-.55.398-1.02.94-1.11l.894-.149c.424-.07.765-.383.93-.78.165-.398.143-.854-.108-1.204l-.526-.738a1.125 1.125 0 01.12-1.45l.773-.773a1.125 1.125 0 011.45-.12l.737.527c.35.25.807.272 1.204.107.397-.165.71-.505.78-.929l.15-.894z" />
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-          </svg>
+          <GearSixIcon weight="fill" size={24} />
         </button>
         </div>
       </div>
 
+      {/* 빠른 실행 */}
+      <div
+        className="px-4 pt-4 pb-1 flex gap-2"
+        style={{ animation: 'fade-in-up 400ms cubic-bezier(0.2, 0, 0, 1) both', animationDelay: '0ms' }}
+      >
+        {QUICK_ACTIONS.map(({ label, Icon, path }) => (
+          <button
+            key={path}
+            type="button"
+            onClick={() => navigate(path)}
+            className="flex-1 flex flex-col items-center gap-1.5 py-3 rounded-2xl bg-white active:bg-gray-50 active:scale-[0.96] transition-[scale,background-color] duration-150 ease-out"
+            style={{ boxShadow: 'var(--shadow-border)' }}
+          >
+            <Icon size={22} weight="fill" color={PRIMARY} />
+            <span className="text-xs font-medium text-gray-600">{label}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* 오늘 수업 요약 */}
+      <div
+        className="px-4 pt-3"
+        style={{ animation: 'fade-in-up 400ms cubic-bezier(0.2, 0, 0, 1) both', animationDelay: '80ms' }}
+      >
+        <Card
+          variant="borderless"
+          style={{ borderRadius: 12, boxShadow: 'var(--shadow-border)' }}
+          styles={{ body: { padding: '14px 16px' } }}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-semibold text-gray-800">오늘 수업</span>
+            {todayLoading ? (
+              <span className="w-1.5 h-1.5 rounded-full bg-brand-400 animate-pulse" />
+            ) : todayClasses.length > 0 ? (
+              <div className="flex items-center gap-1.5">
+                <span className="text-sm font-bold tabular-nums" style={{ color: PRIMARY }}>
+                  {todayClasses.length}개
+                </span>
+                <span className="text-gray-300">·</span>
+                <span className="text-xs tabular-nums text-gray-400">총 {totalMinutes}분</span>
+              </div>
+            ) : (
+              <span className="text-xs text-gray-400">없음</span>
+            )}
+          </div>
+          {!todayLoading && todayClasses.length > 0 && (
+            <ul className="mt-2.5 space-y-1">
+              {todayClasses.map((cls) => {
+                const names = cls.studentIds
+                  .map((id) => studentNameMap[id])
+                  .filter(Boolean)
+                  .map((n) => n.replace(/^[\p{Emoji_Presentation}\p{Extended_Pictographic}]\s*/gu, '').trim())
+                  .join(', ');
+                const timeStr = cls.datetime
+                  ? new Date(cls.datetime).toLocaleTimeString('ko-KR', {
+                      timeZone: KST, hour: '2-digit', minute: '2-digit', hour12: false,
+                    })
+                  : '';
+                const endTimeStr = cls.endTime ? formatTime(cls.endTime) : '';
+                return (
+                  <li key={cls.id}>
+                    <Link
+                      to={`/classes/${cls.id}/edit`}
+                      className="flex items-center gap-3 px-3 py-2 rounded-xl bg-gray-50 active:bg-gray-100 transition-[background-color] duration-150"
+                    >
+                      <span className="text-xs font-semibold tabular-nums shrink-0" style={{ color: PRIMARY }}>
+                        {timeStr}{endTimeStr && `~${endTimeStr}`}
+                      </span>
+                      <span className="flex-1 text-sm font-medium text-gray-800 truncate">
+                        {names || cls.title || '학생 미정'}
+                      </span>
+                      {cls.duration && (
+                        <span className="text-xs tabular-nums text-gray-400 shrink-0">{cls.duration}분</span>
+                      )}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </Card>
+      </div>
+
       {/* 월별 캘린더 */}
-      <div className="px-5 pt-4 pb-2">
+      <div
+        className="px-4 pt-4"
+        style={{ animation: 'fade-in-up 400ms cubic-bezier(0.2, 0, 0, 1) both', animationDelay: '160ms' }}
+      >
         <MonthCalendar
           year={calYear}
           month={calMonth + 1}
@@ -260,7 +458,7 @@ export default function HomePage() {
                             {(classType || cls.location) && (
                               <span className="text-xs text-gray-500">
                                 {classType && `${classType} · `}{cls.duration}분
-                                {cls.location && ` · 📍${cls.location}${cls.locationMemo ? ` — ${cls.locationMemo}` : ''}`}
+                                {cls.location && ` · ${cls.location}${cls.locationMemo ? ` — ${cls.locationMemo}` : ''}`}
                               </span>
                             )}
                           </div>
@@ -280,18 +478,23 @@ export default function HomePage() {
 
       {/* 미확인 무료상담 신청 */}
       {consultCount > 0 && (
-        <div className="px-5 pt-3">
-          <Link to="/consult">
+        <div
+          className="px-4 pt-5"
+          style={{ animation: 'fade-in-up 400ms cubic-bezier(0.2, 0, 0, 1) both', animationDelay: '80ms' }}
+        >
+          <Link
+            to="/consult"
+            className="block active:scale-[0.96] transition-[scale] duration-150 ease-out"
+          >
             <Card
               variant="borderless"
-              hoverable
-              style={{ borderRadius: 16, backgroundColor: '#fff1f0', boxShadow: '0px 0px 0px 1px #ffccc7, 0px 2px 8px rgba(207,19,34,0.06)' }}
+              style={{ borderRadius: 16, backgroundColor: '#fff1f0', boxShadow: 'var(--shadow-danger-border)' }}
               styles={{ body: { padding: '12px 16px' } }}
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span aria-hidden="true" className="text-lg">📩</span>
-                  <span className="text-sm font-semibold" style={{ color: '#cf1322' }}>
+                  <span className="text-sm font-semibold tabular-nums" style={{ color: STATUS_ERROR_TEXT }}>
                     미확인 상담 신청 {consultCount}건
                   </span>
                 </div>
@@ -302,58 +505,204 @@ export default function HomePage() {
         </div>
       )}
 
+      {/* 숙제 부여 카드 */}
+      {!todayLoading && recentlyCompleted.length > 0 && (
+        <div
+          className="px-4 pt-5"
+          style={{ animation: 'fade-in-up 400ms cubic-bezier(0.2, 0, 0, 1) both', animationDelay: '120ms' }}
+        >
+          <SectionHeading style={{ marginBottom: 12 }}>숙제 부여</SectionHeading>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {recentlyCompleted.slice(0, 3).map((cls) => {
+              const names = cls.studentIds
+                .map((id) => studentNameMap[id])
+                .filter(Boolean)
+                .map((n) => n.replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]\s*/gu, '').trim())
+                .join(', ');
+              const timeStr = cls.datetime
+                ? new Date(cls.datetime).toLocaleTimeString('ko-KR', { timeZone: KST, hour: '2-digit', minute: '2-digit', hour12: false })
+                : '';
+              const endTimeStr = cls.endTime ? formatTime(cls.endTime) : '';
+              const hwLink = cls.studentIds.length === 1
+                ? `/homework/new?studentId=${cls.studentIds[0]}`
+                : '/homework/new';
+              return (
+                <div
+                  key={cls.id}
+                  style={{
+                    borderRadius: 12, background: '#fff', boxShadow: 'var(--shadow-border)',
+                    padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12,
+                  }}
+                >
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontSize: 14, fontWeight: 600, color: TEXT_PRIMARY, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {names || cls.title || '학생 미정'}
+                    </p>
+                    <p style={{ fontSize: 12, color: TEXT_TERTIARY, margin: '2px 0 0' }} className="tabular-nums">
+                      {timeStr}{endTimeStr && `–${endTimeStr}`} 수업 완료
+                    </p>
+                  </div>
+                  <Link
+                    to={hwLink}
+                    className="active:scale-[0.96] transition-[scale,background-color] duration-150 ease-out"
+                    style={{
+                      flexShrink: 0, height: 44, padding: '0 14px', borderRadius: 10,
+                      background: PRIMARY_BG, color: PRIMARY,
+                      fontSize: 13, fontWeight: 700,
+                      display: 'flex', alignItems: 'center',
+                      border: 'none', textDecoration: 'none',
+                    }}
+                  >
+                    숙제 부여
+                  </Link>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* 제출된 숙제 */}
+      {submittedHomework.length > 0 && (
+        <div
+          className="pt-5"
+          style={{ animation: 'fade-in-up 400ms cubic-bezier(0.2, 0, 0, 1) both', animationDelay: '160ms' }}
+        >
+          <SectionHeading style={{ marginBottom: 12, paddingLeft: 16, paddingRight: 16 }}>
+            피드백 대기 숙제 <span className="tabular-nums" style={{ color: PRIMARY }}>{submittedHomework.length}</span>
+          </SectionHeading>
+          <div
+            ref={hwScrollRef}
+            className="hide-scrollbar"
+            style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}
+          >
+            <div ref={hwInnerRef} style={{
+              display: 'inline-flex', gap: 10, padding: '4px 16px 8px 16px', verticalAlign: 'top',
+            }}>
+            {submittedHomework.map((hw) => {
+              const studentName = hw.studentIds
+                .map((id) => studentNameMap[id])
+                .filter(Boolean)
+                .join(', ')
+                .replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, '')
+                .trim();
+              const submitDate = hw.submitDate
+                ? new Date(hw.submitDate).toLocaleString('ko-KR', {
+                    timeZone: KST, month: 'numeric', day: 'numeric',
+                    hour: '2-digit', minute: '2-digit', hour12: false,
+                  })
+                : null;
+              return (
+                <Link
+                  key={hw.id}
+                  to={`/homework/${hw.id}`}
+                  style={{ flexShrink: 0, textDecoration: 'none', display: 'block', transition: 'scale 150ms ease-out', }}
+                  className="active:scale-[0.96]"
+                >
+                  <div style={{
+                    width: 136, height: 136, borderRadius: 12, padding: 12,
+                    background: '#fff', boxShadow: 'var(--shadow-border)',
+                    display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
+                    boxSizing: 'border-box',
+                  }}>
+                    <div>
+                      <p style={{ fontSize: 15, fontWeight: 700, color: PRIMARY, margin: '0 0 4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {studentName || '—'}
+                      </p>
+                      <p style={{ fontSize: 13, fontWeight: 600, color: TEXT_PRIMARY, margin: 0, lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                        {hw.title}
+                      </p>
+                    </div>
+                    <div>
+                      <span style={{ ...BADGE_SMALL, background: PRIMARY_BG, color: PRIMARY }}>
+                        제출완료
+                      </span>
+                      {submitDate && (
+                        <p style={{ fontSize: 11, color: TEXT_DISABLED, margin: '4px 0 0', fontVariantNumeric: 'tabular-nums' }}>{submitDate}</p>
+                      )}
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 다가오는 수업 */}
-      <div className="px-5 pt-3 pb-24">
-        <p className="text-xs font-semibold text-gray-500 tracking-wider mb-3">다가오는 수업</p>
+      <div
+        className="px-4 pt-5 pb-24"
+        style={{ animation: 'fade-in-up 400ms cubic-bezier(0.2, 0, 0, 1) both', animationDelay: '240ms' }}
+      >
+        <SectionHeading style={{ marginBottom: 12 }}>다가오는 수업</SectionHeading>
 
         {loading ? (
           <LoadingSpinner />
         ) : classes.length === 0 ? (
           <p className="text-sm text-gray-400 py-4 text-center">예정된 수업이 없습니다.</p>
         ) : (
-          <>
-            <ul className="space-y-2">
-              {classes.map((cls) => {
-                const names = cls.studentIds
-                  .map((id) => studentNameMap[id])
-                  .filter(Boolean)
-                  .join(', ');
-                const title = cls.title || names || '수업';
-                const classType = classTypeMap[cls.classTypeId]?.classType ?? '';
-                return (
-                  <li key={cls.id}>
-                    <Link to={`/classes/${cls.id}/edit`}>
-                      <Card
-                        variant="borderless"
-                        style={{ borderRadius: 16, boxShadow: 'var(--shadow-border)', transition: 'box-shadow 150ms ease-out' }}
-                        styles={{ body: { padding: '10px 16px' } }}
-                        hoverable
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1 min-w-0">
-                            <span className="text-sm font-medium text-gray-800 truncate block">{title}</span>
-                            {(classType || cls.location) && (
-                              <span className="text-xs text-gray-500">
-                                {[classType, cls.location && `📍${cls.location}${cls.locationMemo ? ` — ${cls.locationMemo}` : ''}`].filter(Boolean).join(' · ')}
-                              </span>
-                            )}
+          <ul className="space-y-2">
+            {classes.map((cls) => {
+              const names = cls.studentIds
+                .map((id) => studentNameMap[id])
+                .filter(Boolean)
+                .map((n) => n.replace(/^[\p{Emoji_Presentation}\p{Extended_Pictographic}]\s*/gu, '').trim())
+                .join(', ');
+              const title = cls.title || names || '수업';
+              const classType = classTypeMap[cls.classTypeId]?.classType ?? '';
+              const timeStr = cls.datetime
+                ? new Date(cls.datetime).toLocaleTimeString('ko-KR', { timeZone: KST, hour: '2-digit', minute: '2-digit', hour12: false })
+                : '';
+              const endTimeStr = cls.endTime ? formatTime(cls.endTime) : '';
+              const dateStr = cls.datetime
+                ? new Date(cls.datetime).toLocaleDateString('ko-KR', { timeZone: KST, month: 'numeric', day: 'numeric', weekday: 'short' })
+                : '';
+              return (
+                <li key={cls.id}>
+                  <Link
+                    to={`/classes/${cls.id}/edit`}
+                    className="block active:scale-[0.96] transition-[scale] duration-150 ease-out"
+                  >
+                    <Card
+                      variant="borderless"
+                      style={{ borderRadius: 12, boxShadow: 'var(--shadow-border)', transition: 'box-shadow 150ms ease-out' }}
+                      styles={{ body: { padding: '12px 16px' } }}
+                      onMouseEnter={(e) => { e.currentTarget.style.boxShadow = 'var(--shadow-border-hover)'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'var(--shadow-border)'; }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        {/* 시간 박스 */}
+                        <div style={{ flexShrink: 0, minWidth: 48, textAlign: 'center', background: PRIMARY_BG, borderRadius: 10, padding: '6px 4px' }}>
+                          <div style={{ fontSize: 14, fontWeight: 700, color: PRIMARY, lineHeight: 1.2 }} className="tabular-nums">
+                            {timeStr}
                           </div>
-                          <span className="text-xs text-gray-500 ml-3 shrink-0">
-                            {formatShort(cls.datetime)}{cls.endTime && `~${formatTime(cls.endTime)}`}
-                          </span>
+                          {endTimeStr && (
+                            <div style={{ fontSize: 11, color: '#9a0007', marginTop: 1 }} className="tabular-nums">–{endTimeStr}</div>
+                          )}
                         </div>
-                      </Card>
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-            <div className="flex flex-col items-center gap-1.5 pt-3 pb-1">
-              <span className="w-1 h-1 rounded-full bg-gray-300" />
-              <span className="w-1 h-1 rounded-full bg-gray-300" />
-              <span className="w-1 h-1 rounded-full bg-gray-300" />
-            </div>
-          </>
+                        {/* 학생·수업 정보 */}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p style={{ fontSize: 14, fontWeight: 600, color: TEXT_PRIMARY, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {title}
+                          </p>
+                          {(classType || cls.location) && (
+                            <p style={{ fontSize: 12, color: TEXT_TERTIARY, margin: '2px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {[classType, cls.location].filter(Boolean).join(' · ')}
+                            </p>
+                          )}
+                        </div>
+                        {/* 날짜 */}
+                        <div style={{ flexShrink: 0, textAlign: 'right' }}>
+                          <span style={{ fontSize: 12, color: TEXT_TERTIARY }} className="tabular-nums">{dateStr}</span>
+                        </div>
+                      </div>
+                    </Card>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
         )}
       </div>
     </PullToRefresh>

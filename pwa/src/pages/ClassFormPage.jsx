@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { stripEmoji } from '../utils/stringUtils.js';
 import { Alert, Button, Input, Select, Typography } from 'antd';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
@@ -14,22 +15,10 @@ import {
   NOTES_OPTIONS,
   LOCATION_OPTIONS,
 } from '../api/classes.js';
-import { toDatetimeLocal, toNotionDate } from '../utils/dateUtils.js';
+import { toDatetimeLocal, toNotionDate, DAY_KR, toISOLocalKST } from '../utils/dateUtils.js';
 import { useData } from '../context/DataContext.jsx';
-import { fetchTimeSlotsForTeacher } from '../api/bookingApi.js';
+import { fetchTimeSlotsForTeacher, checkConflict } from '../api/bookingApi.js';
 
-const WORKER_URL = import.meta.env.VITE_WORKER_URL;
-
-/** 강사용 충돌 검사: 기존 수업 ±30분 버퍼와 겹치면 { conflict: true, conflictTime } 반환 */
-async function checkConflict(date, startTime, duration, excludeId = '') {
-  const params = new URLSearchParams({ date, startTime, duration: String(duration) });
-  if (excludeId) params.set('excludeId', excludeId);
-  const res = await fetch(`${WORKER_URL}/booking/check-conflict?${params}`);
-  if (!res.ok) return { conflict: false };
-  return res.json();
-}
-
-const DAY_LABELS = ['일', '월', '화', '수', '목', '금', '토'];
 // JS getDay(): 0=일,1=월,2=화,3=수,4=목,5=금,6=토
 const DAY_JS = [0, 1, 2, 3, 4, 5, 6];
 
@@ -51,16 +40,9 @@ function generateRecurringDates(startDate, endDate, selectedDays, time) {
   return dates;
 }
 
-/** Date → Notion ISO string (KST offset) */
-function toISOLocal(date) {
-  const pad = (n) => String(n).padStart(2, '0');
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:00+09:00`;
-}
-
 /** 날짜를 "M/D(요일)" 형태로 표시 */
 function formatDateLabel(date) {
-  const days = ['일', '월', '화', '수', '목', '금', '토'];
-  return `${date.getMonth() + 1}/${date.getDate()}(${days[date.getDay()]})`;
+  return `${date.getMonth() + 1}/${date.getDate()}(${DAY_KR[date.getDay()]})`;
 }
 
 export default function ClassFormPage() {
@@ -228,8 +210,8 @@ export default function ClassFormPage() {
   const selectedClassType = classTypes.find(ct => ct.id === form.classTypeId);
   const isFreeTrial = (selectedClassType?.title?.includes('무료상담') || selectedClassType?.title?.includes('원데이클래스')) ?? false;
 
-  // 무료상담/원데이클래스는 30분 옵션 추가, 일반 수업은 기존 60분 이상
-  const displayDurationOptions = isFreeTrial ? ['30', '60'] : DURATION_OPTIONS;
+  // 무료상담/원데이클래스는 30·60·90분 옵션, 일반 수업은 기존 60분 이상
+  const displayDurationOptions = isFreeTrial ? ['30', '60', '90'] : DURATION_OPTIONS;
 
   const canRecur = !isFreeTrial && form.studentIds.length > 0 && Boolean(form.classTypeId);
 
@@ -291,7 +273,7 @@ export default function ClassFormPage() {
         const items = recurDates.map((date) => ({
           studentIds: form.studentIds,
           classTypeId: form.classTypeId,
-          datetime: toISOLocal(date),
+          datetime: toISOLocalKST(date),
           duration: form.duration,
           notes: form.notes || null,
           location: form.location || null,
@@ -371,7 +353,7 @@ export default function ClassFormPage() {
     <>
       <PageHeader title={isEdit ? '수업 편집' : '수업 추가'} back />
 
-      <form onSubmit={handleSubmit} className="px-5 pt-4 pb-8 space-y-5">
+      <form onSubmit={handleSubmit} className="px-4 pt-4 pb-8 space-y-5">
         {error && (
           <Alert type="error" message={error} showIcon style={{ borderRadius: 12 }} />
         )}
@@ -455,7 +437,7 @@ export default function ClassFormPage() {
                     <label
                       key={s.id}
                       ref={isFirstSelected ? selectedStudentRef : null}
-                      className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
+                      className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-[background-color,border-color] duration-150 ease-out ${
                         isSelected
                           ? 'border-brand-500 bg-brand-50'
                           : 'border-gray-200 bg-white'
@@ -468,7 +450,7 @@ export default function ClassFormPage() {
                         className="w-4 h-4 accent-brand-600"
                       />
                       <span className="text-sm font-medium text-gray-800">{s.name}</span>
-                      <span className="text-xs text-gray-500 ml-auto">{s.status}</span>
+                      <span className="text-xs text-gray-500 ml-auto">{stripEmoji(s.status)}</span>
                       {recurring && isSelected && (
                         <span className="text-xs text-brand-600 font-medium">
                           잔여 {s.remainingSessions ?? 0}회차
@@ -514,7 +496,7 @@ export default function ClassFormPage() {
                   style={{ width: 80 }}
                   placeholder="시"
                   virtual={false}
-                  dropdownRender={(menu) => (
+                  popupRender={(menu) => (
                     <div ref={(el) => { if (el) el.addEventListener('touchmove', (e) => e.stopPropagation(), { passive: false }); }}>
                       {menu}
                     </div>
@@ -542,7 +524,7 @@ export default function ClassFormPage() {
                         const hour = form.datetime ? form.datetime.slice(11, 13) : '08';
                         setForm((f) => ({ ...f, datetime: `${date}T${hour}:${min}` }));
                       }}
-                      className={`px-3 rounded-xl text-sm font-medium border-2 transition-colors ${
+                      className={`px-3 rounded-xl text-sm font-medium border-2 transition-[scale,background-color,color,border-color] duration-150 ease-out active:scale-[0.96] ${
                         unavailable
                           ? 'border-gray-100 bg-gray-50 text-gray-300 cursor-not-allowed'
                           : selectedMin === min
@@ -567,7 +549,7 @@ export default function ClassFormPage() {
                   style={{ flex: 1 }}
                   placeholder="시"
                   virtual={false}
-                  dropdownRender={(menu) => (
+                  popupRender={(menu) => (
                     <div ref={(el) => { if (el) el.addEventListener('touchmove', (e) => e.stopPropagation(), { passive: false }); }}>
                       {menu}
                     </div>
@@ -589,7 +571,7 @@ export default function ClassFormPage() {
                         const hour = form.recurTime ? form.recurTime.slice(0, 2) : '10';
                         setForm((f) => ({ ...f, recurTime: `${hour}:${min}` }));
                       }}
-                      className={`px-4 rounded-xl text-sm font-medium border-2 transition-colors ${
+                      className={`px-4 rounded-xl text-sm font-medium border-2 transition-[scale,background-color,color,border-color] duration-150 ease-out active:scale-[0.96] ${
                         curMin === min
                           ? 'border-brand-600 bg-brand-50 text-brand-700'
                           : 'border-gray-200 bg-white text-gray-600'
@@ -619,7 +601,7 @@ export default function ClassFormPage() {
                     type="button"
                     disabled={disabled}
                     onClick={() => setForm((f) => ({ ...f, duration: d }))}
-                    className={`py-3 rounded-xl text-sm font-medium border-2 transition-colors ${
+                    className={`py-3 rounded-xl text-sm font-medium border-2 transition-[scale,background-color,color,border-color] duration-150 ease-out active:scale-[0.96] ${
                       disabled
                         ? 'border-gray-100 bg-gray-50 text-gray-300 cursor-not-allowed'
                         : form.duration === d
@@ -639,7 +621,7 @@ export default function ClassFormPage() {
         {showDuration && !isEdit && !isFreeTrial && (
           <div style={{ animation: 'fadeSlideUp 0.35s ease both' }}>
             <div
-              className={`flex items-center justify-between p-3 rounded-xl border-2 transition-colors ${
+              className={`flex items-center justify-between p-3 rounded-xl border-2 transition-[scale,background-color,color,border-color] duration-150 ease-out active:scale-[0.96] ${
                 !canRecur
                   ? 'border-gray-100 bg-gray-50 opacity-50 cursor-not-allowed'
                   : recurring
@@ -654,20 +636,20 @@ export default function ClassFormPage() {
                   {recurring ? '요일·날짜범위 지정 → 잔여 회차만큼 자동 등록' : '매 주 같은 요일에 반복 등록'}
                 </p>
               </div>
-              <div className={`w-11 h-6 rounded-full transition-colors flex items-center px-0.5 ${recurring ? 'bg-brand-500' : 'bg-gray-300'}`}>
+              <div className={`w-11 h-6 rounded-full transition-[background-color] duration-150 ease-out flex items-center px-0.5 ${recurring ? 'bg-brand-500' : 'bg-gray-300'}`}>
                 <div className={`w-5 h-5 rounded-full bg-white shadow transition-transform ${recurring ? 'translate-x-5' : 'translate-x-0'}`} />
               </div>
             </div>
 
             {recurring && (
-              <div className="space-y-4 p-4 bg-gray-50 rounded-xl border border-gray-200 mt-4">
+              <div className="space-y-4 p-4 bg-gray-50 rounded-[28px] border border-gray-200 mt-4">
                 {/* 요일 선택 */}
                 <div>
                   <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>
                     수업 요일 (복수 선택 가능)
                   </Typography.Text>
                   <div className="grid grid-cols-7 gap-1.5">
-                    {DAY_LABELS.map((label, i) => {
+                    {DAY_KR.map((label, i) => {
                       const day = DAY_JS[i];
                       const active = form.recurDays.includes(day);
                       return (
@@ -675,7 +657,7 @@ export default function ClassFormPage() {
                           key={day}
                           type="button"
                           onClick={() => toggleDay(day)}
-                          className={`py-3 rounded-xl text-sm font-medium border-2 transition-colors ${
+                          className={`py-3 rounded-xl text-sm font-medium border-2 transition-[scale,background-color,color,border-color] duration-150 ease-out active:scale-[0.96] ${
                             active ? 'border-brand-600 bg-brand-50 text-brand-700' : 'border-gray-200 bg-white text-gray-600'
                           }`}
                         >
@@ -737,7 +719,7 @@ export default function ClassFormPage() {
                   key={loc}
                   type="button"
                   onClick={() => setForm((f) => ({ ...f, location: loc }))}
-                  className={`py-3 rounded-xl text-sm font-medium border-2 transition-colors ${
+                  className={`py-3 rounded-xl text-sm font-medium border-2 transition-[scale,background-color,color,border-color] duration-150 ease-out active:scale-[0.96] ${
                     form.location === loc
                       ? 'border-brand-600 bg-brand-50 text-brand-700'
                       : 'border-gray-200 bg-white text-gray-600'
@@ -768,7 +750,7 @@ export default function ClassFormPage() {
               <button
                 type="button"
                 onClick={() => setForm((f) => ({ ...f, notes: '' }))}
-                className={`py-3 rounded-xl text-sm font-medium border-2 transition-colors ${
+                className={`py-3 rounded-xl text-sm font-medium border-2 transition-[scale,background-color,color,border-color] duration-150 ease-out active:scale-[0.96] ${
                   !form.notes
                     ? 'border-gray-700 bg-gray-100 text-gray-800'
                     : 'border-gray-200 bg-white text-gray-600'
@@ -781,7 +763,7 @@ export default function ClassFormPage() {
                   key={n}
                   type="button"
                   onClick={() => setForm((f) => ({ ...f, notes: n }))}
-                  className={`py-3 rounded-xl text-sm font-medium border-2 transition-colors ${
+                  className={`py-3 rounded-xl text-sm font-medium border-2 transition-[scale,background-color,color,border-color] duration-150 ease-out active:scale-[0.96] ${
                     form.notes === n
                       ? 'border-gray-700 bg-gray-100 text-gray-800'
                       : 'border-gray-200 bg-white text-gray-600'

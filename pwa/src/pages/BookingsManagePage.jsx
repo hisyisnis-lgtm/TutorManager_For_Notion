@@ -124,10 +124,10 @@ export default function BookingsManagePage() {
     : !!form.start;
 
   return (
-    <div className="page-content">
+    <div>
       <PageHeader title="예약 불가 설정" />
 
-      <div className="flex items-center justify-between px-4 pt-3 pb-2">
+      <div className="flex items-center justify-between px-4 pt-4 pb-3">
         <span className="text-sm text-gray-500">{blocked.length}개 등록됨</span>
         <Button
           type="link"
@@ -141,7 +141,7 @@ export default function BookingsManagePage() {
       {/* 추가 폼 */}
       {showForm && (
         <form onSubmit={handleSave}>
-          <Card variant="borderless" style={{ margin: '0 16px 12px', borderRadius: 16, boxShadow: 'var(--shadow-border)' }}>
+          <Card variant="borderless" className="mx-4 mb-3" style={{ borderRadius: 16, boxShadow: 'var(--shadow-border)' }}>
             {/* 유형 선택 */}
             <div className="flex gap-2" style={{ marginBottom: 12 }}>
               {['일회성', '반복'].map(t => (
@@ -149,7 +149,7 @@ export default function BookingsManagePage() {
                   key={t}
                   type="button"
                   onClick={() => setForm(f => ({ ...f, type: t, days: [], start: '', end: '' }))}
-                  className={`flex-1 py-3 rounded-xl text-sm font-medium border transition-colors ${
+                  className={`flex-1 py-3 rounded-xl text-sm font-medium border transition-[scale,background-color,color,border-color] duration-150 ease-out active:scale-[0.96] ${
                     form.type === t ? 'bg-brand-600 text-white border-brand-600' : 'bg-white text-gray-600 border-gray-200'
                   }`}
                 >
@@ -168,7 +168,7 @@ export default function BookingsManagePage() {
                       key={day}
                       type="button"
                       onClick={() => toggleDay(day)}
-                      className={`h-11 w-11 rounded-full text-sm font-medium border transition-colors ${
+                      className={`h-11 w-11 rounded-full text-sm font-medium border transition-[scale,background-color,color,border-color] duration-150 ease-out active:scale-[0.96] ${
                         form.days.includes(day)
                           ? 'bg-brand-600 text-white border-brand-600'
                           : 'bg-white text-gray-600 border-gray-200'
@@ -242,7 +242,7 @@ export default function BookingsManagePage() {
                   <button
                     type="button"
                     onClick={() => setForm(f => ({ ...f, blockedTimes: [] }))}
-                    className="text-xs text-gray-400 active:text-red-500"
+                    className="text-xs text-gray-400 active:text-red-500 active:scale-[0.96] transition-[scale,color] duration-150 ease-out"
                   >
                     전체 해제
                   </button>
@@ -254,7 +254,7 @@ export default function BookingsManagePage() {
                     key={t}
                     type="button"
                     onClick={() => toggleTime(t)}
-                    className={`px-2.5 py-2.5 rounded-lg text-xs font-medium border transition-colors ${
+                    className={`px-2.5 py-2.5 rounded-lg text-xs font-medium tabular-nums border transition-[scale,background-color,color,border-color] duration-150 ease-out active:scale-[0.96] ${
                       form.blockedTimes.includes(t)
                         ? 'bg-red-500 text-white border-red-500'
                         : 'bg-white text-gray-600 border-gray-200 hover:border-red-300'
@@ -308,12 +308,12 @@ export default function BookingsManagePage() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
                   <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                    item.type === '반복' ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-600'
+                    item.type === '반복' ? 'bg-brand-50 text-brand-600' : 'bg-gray-100 text-gray-600'
                   }`}>
                     {item.type}
                   </span>
                   {item.blockedTimes?.length > 0 && (
-                    <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-purple-100 text-purple-700">
+                    <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-gray-100 text-gray-600">
                       시간 차단
                     </span>
                   )}
