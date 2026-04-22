@@ -1,14 +1,16 @@
 // 무료상담/원데이클래스 전날 리마인더 알림 스크립트
 // GitHub Actions에서 매일 특정 시간에 자동 실행됨
-// CLASS_DB 중 전화번호가 입력된 수업을 찾아 내일 수업 있는 번호로 카카오 알림톡 발송
+// - 무료상담: 수업 자체의 "전화번호" 속성으로 발송 (신규 방문자 대상)
+// - 원데이클래스: 수업에 연결된 학생의 전화번호로 발송 (등록된 학생만 예약 가능)
 // 수업 유형에 따라 다른 템플릿 사용: 무료상담 → KAKAO_TPL_CONSULT_TOMORROW, 원데이클래스 → KAKAO_TPL_ONEDAY_TOMORROW
 
 import { createHmac, randomBytes } from 'crypto';
-import { createNotionClient } from './notion_utils.mjs';
+import { createNotionClient, stripEmoji } from './notion_utils.mjs';
 
 const TOKEN = process.env.NOTION_TOKEN;
 const CLASS_DB_ID = '314838fa-f2a6-81bc-8b67-d9e1c8fb7ecb';
 const LESSON_TYPE_DB_ID = '314838fa-f2a6-81c3-b4e4-da87c48f9b43';
+const STUDENT_DB_ID = '314838fa-f2a6-8143-a6c7-e59c50f3bbdb';
 
 const SOLAPI_API_KEY = process.env.SOLAPI_API_KEY;
 const SOLAPI_API_SECRET = process.env.SOLAPI_API_SECRET;
@@ -95,15 +97,40 @@ async function fetchClassTypeMap() {
   return map;
 }
 
+// 학생 DB 조회 → Map<pageId, { name, phone }>
+async function fetchStudentMap() {
+  const map = new Map();
+  let cursor;
+  do {
+    const res = await notion('POST', `/databases/${STUDENT_DB_ID}/query`, {
+      start_cursor: cursor,
+      page_size: 100,
+    });
+    for (const p of res.results) {
+      const rawName = p.properties['이름']?.title?.[0]?.plain_text ?? '';
+      const name = stripEmoji(rawName);
+      const phone = p.properties['전화번호']?.phone_number ?? '';
+      const value = { name, phone };
+      map.set(p.id, value);
+      map.set(p.id.replace(/-/g, ''), value);
+    }
+    cursor = res.has_more ? res.next_cursor : undefined;
+  } while (cursor);
+  return map;
+}
+
 async function main() {
   const { tomorrowStr, dayAfterStr } = getTomorrowKST();
   console.log(`[${new Date().toISOString()}] 내일(${tomorrowStr}) D-1 알림 시작 (무료상담/원데이클래스)`);
 
-  // 수업 유형 맵 미리 조회
-  const classTypeMap = await fetchClassTypeMap();
-  console.log(`수업 유형 ${classTypeMap.size / 2}개 로드 완료`);
+  // 수업 유형 맵 + 학생 맵 미리 조회
+  const [classTypeMap, studentMap] = await Promise.all([
+    fetchClassTypeMap(),
+    fetchStudentMap(),
+  ]);
+  console.log(`수업 유형 ${classTypeMap.size / 2}개, 학생 ${studentMap.size / 2}명 로드 완료`);
 
-  // 내일 수업 중 전화번호가 있는 항목 조회
+  // 내일 수업 전체 조회
   let allResults = [];
   let cursor;
   do {
@@ -121,31 +148,51 @@ async function main() {
     cursor = res.has_more ? res.next_cursor : undefined;
   } while (cursor);
 
-  // 취소 제외 + 전화번호 있는 항목만
-  const targets = allResults.filter(
+  // 취소 수업 제외
+  const candidates = allResults.filter(
     p => p.properties['특이사항']?.select?.name !== '🚫 취소'
-      && p.properties['전화번호']?.rich_text?.[0]?.plain_text
   );
 
-  console.log(`내일 알림 대상 ${targets.length}건 (취소 제외)`);
-
-  if (targets.length === 0) {
-    console.log('내일 알림 대상 없음 - 알림 생략');
-    return;
-  }
+  console.log(`내일 수업 ${candidates.length}건 (취소 제외) — 무료상담/원데이클래스 대상 선별`);
 
   let sent = 0;
-  for (const p of targets) {
+  for (const p of candidates) {
     const dateVal = p.properties['수업 일시']?.date?.start;
-    const phone = p.properties['전화번호']?.rich_text?.[0]?.plain_text ?? '';
-    const guestName = p.properties['제목']?.title?.[0]?.plain_text ?? '고객';
+    if (!dateVal) continue;
 
-    if (!dateVal || !phone) continue;
-
-    // 수업 유형 판별
+    // 수업 유형 판별 — 무료상담/원데이클래스만 처리 (일반 수업은 notify_student_tomorrow에서 발송)
     const classTypeId = p.properties['수업 유형']?.relation?.[0]?.id ?? '';
     const classTypeTitle = classTypeMap.get(classTypeId) ?? classTypeMap.get(classTypeId.replace(/-/g, '')) ?? '';
     const isOneDay = classTypeTitle.includes('원데이클래스');
+    const isConsult = classTypeTitle.includes('무료상담');
+    if (!isOneDay && !isConsult) continue;
+
+    // 수신자(전화번호·이름) 결정
+    // - 원데이클래스: 연결된 학생 relation → 학생 DB의 전화번호·이름
+    // - 무료상담: 수업 자체의 "전화번호" 속성 + "제목"
+    const recipients = [];
+    if (isOneDay) {
+      const studentIds = p.properties['학생']?.relation?.map(r => r.id) ?? [];
+      for (const sid of studentIds) {
+        const student = studentMap.get(sid) ?? studentMap.get(sid.replace(/-/g, ''));
+        if (student?.phone) {
+          recipients.push({ phone: student.phone, name: student.name || '고객' });
+        }
+      }
+      // fallback: 구 레코드(학생 relation 없이 수업 전화번호만 있는 경우)
+      if (recipients.length === 0) {
+        const phone = p.properties['전화번호']?.rich_text?.[0]?.plain_text;
+        const title = p.properties['제목']?.title?.[0]?.plain_text ?? '고객';
+        if (phone) recipients.push({ phone, name: title });
+      }
+    } else {
+      const phone = p.properties['전화번호']?.rich_text?.[0]?.plain_text;
+      const title = p.properties['제목']?.title?.[0]?.plain_text ?? '고객';
+      if (phone) recipients.push({ phone, name: title });
+    }
+
+    if (recipients.length === 0) continue;
+
     const templateId = isOneDay ? KAKAO_TPL_ONEDAY_TOMORROW : KAKAO_TPL_CONSULT_TOMORROW;
     const typeLabel = isOneDay ? '원데이클래스' : '무료상담';
 
@@ -159,18 +206,20 @@ async function main() {
       minute: '2-digit',
     });
 
-    console.log(`  발송 → ${phone} [${typeLabel}] (${guestName}, ${month}월 ${day}일 ${timeStr})`);
-    await sendKakao(
-      phone,
-      templateId,
-      {
-        '#{이름}': guestName,
-        '#{날짜}': `${month}월 ${day}일`,
-        '#{요일}': dayOfWeek,
-        '#{시간}': timeStr,
-      }
-    );
-    sent++;
+    for (const { phone, name } of recipients) {
+      console.log(`  발송 → ${phone} [${typeLabel}] (${name}, ${month}월 ${day}일 ${timeStr})`);
+      await sendKakao(
+        phone,
+        templateId,
+        {
+          '#{이름}': name,
+          '#{날짜}': `${month}월 ${day}일`,
+          '#{요일}': dayOfWeek,
+          '#{시간}': timeStr,
+        }
+      );
+      sent++;
+    }
   }
 
   console.log(`완료: ${sent}건 D-1 알림 발송`);

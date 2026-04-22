@@ -206,18 +206,24 @@ export default function ClassFormPage() {
       ? Math.min(...selectedStudents.map((s) => s.remainingSessions ?? 0))
       : 0;
 
-  // 이름/전화번호 입력 필요한 수업 유형 (무료상담, 원데이클래스)
+  // 수업 유형별 분기
   const selectedClassType = classTypes.find(ct => ct.id === form.classTypeId);
-  const isFreeTrial = (selectedClassType?.title?.includes('무료상담') || selectedClassType?.title?.includes('원데이클래스')) ?? false;
+  // 무료상담: 신규 방문자 대상이라 학생 선택 없이 이름/전화번호 입력 허용
+  const isFreeConsult = selectedClassType?.title?.includes('무료상담') ?? false;
+  // 원데이클래스: 기존 등록된 학생만 선택 가능 (일반 수업과 동일)
+  const isOneDayClass = selectedClassType?.title?.includes('원데이클래스') ?? false;
+  // 30/60/90분 짧은 시간 옵션을 쓰는 체험성 수업
+  const hasShortDuration = isFreeConsult || isOneDayClass;
 
-  // 무료상담/원데이클래스는 30·60·90분 옵션, 일반 수업은 기존 60분 이상
-  const displayDurationOptions = isFreeTrial ? ['30', '60', '90'] : DURATION_OPTIONS;
+  const displayDurationOptions = hasShortDuration ? ['30', '60', '90'] : DURATION_OPTIONS;
 
-  const canRecur = !isFreeTrial && form.studentIds.length > 0 && Boolean(form.classTypeId);
+  // 체험성 수업은 일회성이라 반복 등록 비활성화
+  const canRecur = !hasShortDuration && form.studentIds.length > 0 && Boolean(form.classTypeId);
 
   // 단계별 표시 조건
   const showStudent = Boolean(form.classTypeId);
-  const studentDone = isFreeTrial || form.studentIds.length > 0;
+  // 무료상담은 학생 선택 없어도 이름 입력으로 진행 가능, 원데이클래스는 학생 선택 필수
+  const studentDone = isFreeConsult || form.studentIds.length > 0;
   const showDatetime = showStudent && studentDone;
   const datetimeDone = recurring ? Boolean(form.recurTime) : Boolean(form.datetime);
   const showDuration = showDatetime && datetimeDone;
@@ -230,11 +236,11 @@ export default function ClassFormPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.studentIds.length && !isFreeTrial) {
+    if (!form.studentIds.length && !isFreeConsult) {
       setError('학생을 최소 한 명 선택하세요.');
       return;
     }
-    if (isFreeTrial && !form.studentIds.length && !form.guestName.trim()) {
+    if (isFreeConsult && !form.studentIds.length && !form.guestName.trim()) {
       setError('이름을 입력하거나 학생을 선택하세요.');
       return;
     }
@@ -310,7 +316,7 @@ export default function ClassFormPage() {
           location: form.location || null,
           locationMemo: form.locationMemo || '',
           title: form.guestName.trim() || undefined,
-          phone: isFreeTrial ? form.guestPhone : undefined,
+          phone: isFreeConsult ? form.guestPhone : undefined,
         };
         // 일회성 수업 충돌 검사
         const [dateStr, timeStr] = form.datetime.split('T');
@@ -367,11 +373,11 @@ export default function ClassFormPage() {
             value={form.classTypeId || undefined}
             onChange={(value) => {
               const ct = classTypes.find(c => c.id === value);
-              const isFT = (ct?.title?.includes('무료상담') || ct?.title?.includes('원데이클래스')) ?? false;
+              const isShortDur = (ct?.title?.includes('무료상담') || ct?.title?.includes('원데이클래스')) ?? false;
               setForm((f) => ({
                 ...f,
                 classTypeId: value,
-                duration: isFT ? '30' : (f.duration === '30' ? '60' : f.duration),
+                duration: isShortDur ? '30' : (f.duration === '30' ? '60' : f.duration),
               }));
             }}
             style={{ width: '100%' }}
@@ -389,8 +395,8 @@ export default function ClassFormPage() {
         {/* ② 학생 선택 — 수업 유형 선택 후 표시 */}
         {showStudent && (
           <div style={{ animation: 'fadeSlideUp 0.35s ease both' }}>
-            {/* 무료상담: 상담자 이름 입력 */}
-            {isFreeTrial && (
+            {/* 무료상담: 상담자 이름 입력 (원데이클래스는 등록된 학생만 선택) */}
+            {isFreeConsult && (
               <div style={{ marginBottom: 20 }}>
                 <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>
                   이름
@@ -417,7 +423,7 @@ export default function ClassFormPage() {
               </div>
             )}
             <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>
-              학생 선택 {isFreeTrial ? <span style={{ fontWeight: 400, color: '#8c8c8c' }}>(선택 사항)</span> : '(2:1 수업 시 두 명 선택)'}
+              학생 선택 {isFreeConsult ? <span style={{ fontWeight: 400, color: '#8c8c8c' }}>(선택 사항)</span> : '(2:1 수업 시 두 명 선택)'}
             </Typography.Text>
             <Input
               type="text"
@@ -618,7 +624,7 @@ export default function ClassFormPage() {
         )}
 
         {/* ⑤ 반복 수업 등록 — 일시 입력 후 표시 (편집 모드·무료상담에서는 숨김) */}
-        {showDuration && !isEdit && !isFreeTrial && (
+        {showDuration && !isEdit && !hasShortDuration && (
           <div style={{ animation: 'fadeSlideUp 0.35s ease both' }}>
             <div
               className={`flex items-center justify-between p-3 rounded-xl border-2 transition-[scale,background-color,color,border-color] duration-150 ease-out active:scale-[0.96] ${

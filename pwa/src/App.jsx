@@ -26,6 +26,7 @@ import PaymentFormPage from './pages/PaymentFormPage.jsx';
 import LessonLogsPage from './pages/LessonLogsPage.jsx';
 import LessonLogFormPage from './pages/LessonLogFormPage.jsx';
 import HomePage from './pages/HomePage.jsx';
+import PendingClassesPage from './pages/PendingClassesPage.jsx';
 import SettingsPage from './pages/SettingsPage.jsx';
 import NotificationsPage from './pages/NotificationsPage.jsx';
 import BookEntryPage from './pages/BookEntryPage.jsx';
@@ -192,6 +193,7 @@ export default function App() {
           <Routes>
             <Route path="/" element={<Navigate to="/home" replace />} />
             <Route path="/home" element={<HomePage />} />
+            <Route path="/home/pending" element={<PendingClassesPage />} />
 
             <Route path="/students" element={<StudentsPage />} />
             <Route path="/students/new" element={<StudentFormPage />} />

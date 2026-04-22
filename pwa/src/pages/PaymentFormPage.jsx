@@ -79,6 +79,14 @@ export default function PaymentFormPage() {
   const selectedClassType = classTypes.find((ct) => ct.id === form.classTypeId);
   const unitPrice = selectedClassType?.unitPrice ?? 0;
 
+  // 고정 가격 상품 (원데이클래스 등): 1인 단가는 시간당 기준으로 환산되어 저장되어 있음.
+  // 표시·자동 채움은 "시간(분) 기준 총액"으로 보여준다.
+  const isFixedPriceClass = selectedClassType?.title?.includes('원데이클래스') ?? false;
+  const fixedSessionCount = selectedClassType ? (selectedClassType.duration || 60) / 60 : 0;
+  const fixedTotalPrice = selectedClassType
+    ? Math.round(unitPrice * fixedSessionCount)
+    : 0;
+
   // 선택된 할인 이벤트
   const selectedDiscount = discounts.find((d) => d.id === form.discountEventId);
   const discountRate = selectedDiscount?.rate ?? 0;
@@ -221,21 +229,53 @@ export default function PaymentFormPage() {
           </Typography.Text>
           <Select
             value={form.classTypeId || undefined}
-            onChange={(value) => setForm((f) => ({ ...f, classTypeId: value }))}
+            onChange={(value) => {
+              const ct = classTypes.find((c) => c.id === value);
+              const isFixed = ct?.title?.includes('원데이클래스') ?? false;
+              if (isFixed) {
+                const sc = (ct.duration || 60) / 60;
+                const price = Math.round(ct.unitPrice * sc);
+                setForm((f) => ({
+                  ...f,
+                  classTypeId: value,
+                  sessionCount: String(sc),
+                  actualAmount: String(price),
+                }));
+              } else {
+                setForm((f) => ({ ...f, classTypeId: value }));
+              }
+            }}
             style={{ width: '100%' }}
             size="large"
             placeholder="선택하세요"
           >
-            {classTypes.map((ct) => (
-              <Select.Option key={ct.id} value={ct.id}>
-                {ct.title} ({ct.unitPrice.toLocaleString()}원)
-              </Select.Option>
-            ))}
+            {classTypes.map((ct) => {
+              const isFixed = ct.title?.includes('원데이클래스') ?? false;
+              const totalPrice = Math.round(ct.unitPrice * (ct.duration || 60) / 60);
+              return (
+                <Select.Option key={ct.id} value={ct.id}>
+                  {isFixed
+                    ? `${ct.title} (${ct.duration}분 ${totalPrice.toLocaleString()}원)`
+                    : `${ct.title} (${ct.unitPrice.toLocaleString()}원)`}
+                </Select.Option>
+              );
+            })}
           </Select>
           {selectedClassType && (
-            <p className="text-xs text-gray-500 mt-1.5">
-              시간당 단가: <strong className="text-gray-700">{formatKRW(unitPrice)}</strong>
-            </p>
+            isFixedPriceClass ? (
+              <p className="text-xs text-gray-500 mt-1.5">
+                <strong className="text-gray-700">
+                  {selectedClassType.duration}분 고정 가격: {formatKRW(fixedTotalPrice)}
+                </strong>
+                <span className="text-gray-400 ml-1">
+                  (시간 회차 {fixedSessionCount} 자동 입력)
+                </span>
+              </p>
+            ) : (
+              <p className="text-xs text-gray-500 mt-1.5">
+                시간당 단가: <strong className="text-gray-700">{formatKRW(unitPrice)}</strong>
+              </p>
+            )
           )}
         </div>
 

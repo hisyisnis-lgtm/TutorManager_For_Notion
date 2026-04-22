@@ -1,17 +1,21 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { BellIcon, GearSixIcon, CalendarPlusIcon, ReceiptIcon, UsersThreeIcon } from '@phosphor-icons/react';
+import { useState, useEffect, useRef } from 'react';
+import { BellIcon, GearSixIcon, CalendarPlusIcon, ReceiptIcon, UsersThreeIcon, CaretRightIcon, HourglassLowIcon } from '@phosphor-icons/react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Card } from 'antd';
 import { useData } from '../context/DataContext.jsx';
-import { queryPage } from '../api/notionClient.js';
+import { queryPage, getPage } from '../api/notionClient.js';
 import { CLASSES_DB, parseClass } from '../api/classes.js';
 import { HOMEWORK_DB, parseHomework } from '../api/homework.js';
+import { PAYMENTS_DB, parsePayment } from '../api/payments.js';
+import { STUDENTS_DB, parseStudent } from '../api/students.js';
+import { parseLessonLog } from '../api/lessonLogs.js';
 import { CONSULT_DB } from '../constants.js';
-import { formatShort, formatDateTime, formatTime } from '../utils/dateUtils.js';
+import { formatShort, formatDateTime, formatTime, formatKRW, getWeekStart } from '../utils/dateUtils.js';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import PullToRefresh from '../components/ui/PullToRefresh.jsx';
-import MonthCalendar from '../components/ui/MonthCalendar.jsx';
 import SectionHeading from '../components/ui/SectionHeading.jsx';
+import PendingClassCard from '../components/home/PendingClassCard.jsx';
+import { usePendingClassState } from '../hooks/usePendingClassState.js';
 import {
   PRIMARY, PRIMARY_BG,
   TEXT_PRIMARY, TEXT_TERTIARY, TEXT_DISABLED,
@@ -21,7 +25,6 @@ import { BADGE_SMALL } from '../constants/styles.js';
 import { getInstructorName, getNtfyTopic } from './SettingsPage.jsx';
 
 const KST = 'Asia/Seoul';
-const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 
 function getKSTToday() {
   const now = new Date();
@@ -30,13 +33,6 @@ function getKSTToday() {
   }).formatToParts(now);
   const get = (t) => parseInt(parts.find((p) => p.type === t)?.value ?? '0');
   return { year: get('year'), month: get('month') - 1, day: get('day') };
-}
-
-function getClassDay(isoString) {
-  const parts = new Intl.DateTimeFormat('ko-KR', {
-    timeZone: KST, day: 'numeric',
-  }).formatToParts(new Date(isoString));
-  return parseInt(parts.find((p) => p.type === 'day')?.value ?? '0');
 }
 
 export default function HomePage() {
@@ -109,11 +105,13 @@ export default function HomePage() {
     }
   });
 
-  const [calYear, setCalYear] = useState(today.year);
-  const [calMonth, setCalMonth] = useState(today.month); // 0-indexed
-  const [calClasses, setCalClasses] = useState([]);
-  const [calLoading, setCalLoading] = useState(false);
-  const [selectedDay, setSelectedDay] = useState(null);
+  const { state: pendingState, setHwDone, setDismissed } = usePendingClassState();
+
+  const [weekClasses, setWeekClasses] = useState([]);
+  const [weekPayments, setWeekPayments] = useState([]);
+  const [weekLoading, setWeekLoading] = useState(true);
+  const [lowSessionCount, setLowSessionCount] = useState(0);
+  const [upcomingPrep, setUpcomingPrep] = useState(null);
 
   const loadUpcoming = async () => {
     setLoading(true);
@@ -130,7 +128,9 @@ export default function HomePage() {
         undefined,
         5
       );
-      setClasses((data?.results ?? []).map(parseClass));
+      const list = (data?.results ?? []).map(parseClass);
+      setClasses(list);
+      loadUpcomingPrep(list[0]);
     } catch (e) {
       console.error('[홈] 수업 불러오기 오류', e);
     } finally {
@@ -138,30 +138,92 @@ export default function HomePage() {
     }
   };
 
-  const loadCalendar = useCallback(async (year, month) => {
-    setCalLoading(true);
+  const loadWeekSummary = async () => {
+    setWeekLoading(true);
     try {
-      const mm = String(month + 1).padStart(2, '0');
-      const dd = String(new Date(year, month + 1, 0).getDate()).padStart(2, '0');
-      const data = await queryPage(
+      const weekStart = getWeekStart();
+      const [y, m, d] = weekStart.slice(0, 10).split('-').map(Number);
+      const sun = new Date(y, m - 1, d + 6);
+      const weekEnd = `${sun.getFullYear()}-${String(sun.getMonth() + 1).padStart(2, '0')}-${String(sun.getDate()).padStart(2, '0')}T23:59:59+09:00`;
+      const [classData, paymentData] = await Promise.all([
+        queryPage(
+          CLASSES_DB,
+          {
+            and: [
+              { property: '수업 일시', date: { on_or_after: weekStart } },
+              { property: '수업 일시', date: { on_or_before: weekEnd } },
+              { property: '특이사항', select: { does_not_equal: '🚫 취소' } },
+            ],
+          },
+          undefined,
+          undefined,
+          100
+        ),
+        queryPage(
+          PAYMENTS_DB,
+          {
+            and: [
+              { property: '결제일', date: { on_or_after: weekStart } },
+              { property: '결제일', date: { on_or_before: weekEnd } },
+            ],
+          },
+          undefined,
+          undefined,
+          100
+        ),
+      ]);
+      setWeekClasses((classData?.results ?? []).map(parseClass));
+      setWeekPayments((paymentData?.results ?? []).map(parsePayment));
+    } catch (e) {
+      console.error('[홈] 이번 주 요약 오류', e);
+    } finally {
+      setWeekLoading(false);
+    }
+  };
+
+  const loadLowSessionCount = async () => {
+    try {
+      const data = await queryPage(STUDENTS_DB, undefined, undefined, undefined, 100);
+      const students = (data?.results ?? []).map(parseStudent);
+      setLowSessionCount(students.filter((s) => (s.remainingSessions ?? 0) <= 1).length);
+    } catch (e) {
+      console.error('[홈] 잔여 회차 부족 학생 조회 오류', e);
+    }
+  };
+
+  const loadUpcomingPrep = async (nextClass) => {
+    if (!nextClass || !nextClass.studentIds?.length) { setUpcomingPrep(null); return; }
+    try {
+      const firstStudentId = nextClass.studentIds[0];
+      const prevData = await queryPage(
         CLASSES_DB,
         {
           and: [
-            { property: '수업 일시', date: { on_or_after: `${year}-${mm}-01T00:00:00+09:00` } },
-            { property: '수업 일시', date: { on_or_before: `${year}-${mm}-${dd}T23:59:59+09:00` } },
+            { property: '학생', relation: { contains: firstStudentId } },
+            { property: '수업 일시', date: { before: new Date().toISOString() } },
+            { property: '수업 일지', relation: { is_not_empty: true } },
+            { property: '특이사항', select: { does_not_equal: '🚫 취소' } },
           ],
         },
-        [{ property: '수업 일시', direction: 'ascending' }],
+        [{ property: '수업 일시', direction: 'descending' }],
         undefined,
-        100
+        1
       );
-      setCalClasses((data?.results ?? []).map(parseClass));
-    } catch {
-      setCalClasses([]);
-    } finally {
-      setCalLoading(false);
+      const prevPage = (prevData?.results ?? [])[0];
+      if (!prevPage) { setUpcomingPrep(null); return; }
+      const prevClass = parseClass(prevPage);
+      const logId = prevClass.lessonLogIds?.[0];
+      if (!logId) { setUpcomingPrep(null); return; }
+      const logPage = await getPage(logId);
+      const log = parseLessonLog(logPage);
+      const text = log.nextPrepare?.trim();
+      if (!text) { setUpcomingPrep(null); return; }
+      setUpcomingPrep({ classId: nextClass.id, logId, text });
+    } catch (e) {
+      console.error('[홈] 준비사항 로드 오류', e);
+      setUpcomingPrep(null);
     }
-  }, []);
+  };
 
   const loadSubmittedHomework = async () => {
     try {
@@ -217,8 +279,14 @@ export default function HomePage() {
     }
   };
 
-  useEffect(() => { loadUpcoming(); loadConsultCount(); loadSubmittedHomework(); loadTodayClasses(); }, []);
-  useEffect(() => { loadCalendar(calYear, calMonth); }, [calYear, calMonth, loadCalendar]);
+  useEffect(() => {
+    loadUpcoming();
+    loadConsultCount();
+    loadSubmittedHomework();
+    loadTodayClasses();
+    loadWeekSummary();
+    loadLowSessionCount();
+  }, []);
 
   // 설정/알림 페이지에서 돌아올 때 이름 및 뱃지 갱신 (마운트 시 1회)
   useEffect(() => {
@@ -231,51 +299,30 @@ export default function HomePage() {
   }, []);
 
   const handleRefresh = async () => {
-    await Promise.all([loadUpcoming(), loadCalendar(calYear, calMonth), loadConsultCount(), loadSubmittedHomework(), loadTodayClasses(), refreshData()]);
+    await Promise.all([
+      loadUpcoming(),
+      loadConsultCount(),
+      loadSubmittedHomework(),
+      loadTodayClasses(),
+      loadWeekSummary(),
+      loadLowSessionCount(),
+      refreshData(),
+    ]);
   };
 
-  // 최근 완료된 수업 (오늘 종료된 수업) - 숙제 부여 카드용
-  const nowKSTMs = Date.now() + 9 * 60 * 60 * 1000;
-  const nowKSTStr = new Date(nowKSTMs).toISOString().slice(11, 16); // HH:MM
+  // 최근 완료된 수업 (오늘 종료된 수업) - 수업 마무리 카드용
+  const nowMs = Date.now();
   const recentlyCompleted = todayClasses.filter((cls) => {
     if (!cls.endTime) return false;
-    return cls.endTime <= nowKSTStr;
+    if (new Date(cls.endTime).getTime() > nowMs) return false;
+    const s = pendingState[cls.id] || {};
+    if (s.dismissed) return false;
+    const logDone = (cls.lessonLogIds?.length ?? 0) > 0;
+    if (s.hwDone && logDone) return false;
+    return true;
   });
-
-  // 날짜별 수업 집계
-  const classCountMap = {};
-  calClasses.forEach((cls) => {
-    if (cls.datetime) {
-      const day = getClassDay(cls.datetime);
-      classCountMap[day] = (classCountMap[day] || 0) + 1;
-    }
-  });
-
-  // 선택된 날의 수업 목록
-  const selectedDayClasses = selectedDay
-    ? calClasses.filter((cls) => cls.datetime && getClassDay(cls.datetime) === selectedDay)
-    : [];
-
-  // 캘린더 그리드
-  const firstDow = new Date(calYear, calMonth, 1).getDay();
-  const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
-  const cells = Array(firstDow).fill(null).concat(Array.from({ length: daysInMonth }, (_, i) => i + 1));
-
-  const prevMonth = () => {
-    setSelectedDay(null);
-    if (calMonth === 0) { setCalYear((y) => y - 1); setCalMonth(11); }
-    else setCalMonth((m) => m - 1);
-  };
-  const nextMonth = () => {
-    setSelectedDay(null);
-    if (calMonth === 11) { setCalYear((y) => y + 1); setCalMonth(0); }
-    else setCalMonth((m) => m + 1);
-  };
-
-  const handleDayClick = (day) => {
-    if (!classCountMap[day]) return; // 수업 없는 날은 클릭 무시
-    setSelectedDay((prev) => (prev === day ? null : day));
-  };
+  const visiblePending = recentlyCompleted.slice(0, 5);
+  const overflowCount = Math.max(0, recentlyCompleted.length - 5);
 
   // 오늘 수업 요약
   const totalMinutes = todayClasses.reduce((sum, cls) => sum + (parseInt(cls.duration) || 0), 0);
@@ -339,6 +386,38 @@ export default function HomePage() {
             <span className="text-xs font-medium text-gray-600">{label}</span>
           </button>
         ))}
+      </div>
+
+      {/* 이번 주 요약 */}
+      <div
+        className="px-4 pt-3"
+        style={{ animation: 'fade-in-up 400ms cubic-bezier(0.2, 0, 0, 1) both', animationDelay: '40ms' }}
+      >
+        <Card
+          variant="borderless"
+          style={{ borderRadius: 12, boxShadow: 'var(--shadow-border)' }}
+          styles={{ body: { padding: '14px 16px' } }}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-semibold text-gray-800">이번 주 수업</span>
+            {weekLoading ? (
+              <span className="w-1.5 h-1.5 rounded-full bg-brand-400 animate-pulse" />
+            ) : (
+              <span className="tabular-nums" style={{ fontSize: 14, fontWeight: 600, color: TEXT_PRIMARY }}>
+                {weekClasses.length}회
+                <span style={{ color: TEXT_TERTIARY, fontWeight: 400, marginLeft: 6 }}>
+                  · {weekClasses.reduce((s, c) => s + (parseInt(c.duration) || 0), 0)}분
+                </span>
+              </span>
+            )}
+          </div>
+          <div className="flex items-center justify-between" style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid #f5f5f5' }}>
+            <span className="text-sm" style={{ color: TEXT_TERTIARY }}>결제 수입</span>
+            <span className="tabular-nums" style={{ fontSize: 14, fontWeight: 600, color: TEXT_PRIMARY }}>
+              {formatKRW(weekPayments.reduce((s, p) => s + (p.actualAmount || 0), 0))}
+            </span>
+          </div>
+        </Card>
       </div>
 
       {/* 오늘 수업 요약 */}
@@ -405,77 +484,6 @@ export default function HomePage() {
         </Card>
       </div>
 
-      {/* 월별 캘린더 */}
-      <div
-        className="px-4 pt-4"
-        style={{ animation: 'fade-in-up 400ms cubic-bezier(0.2, 0, 0, 1) both', animationDelay: '160ms' }}
-      >
-        <MonthCalendar
-          year={calYear}
-          month={calMonth + 1}
-          todayStr={todayStr}
-          classCountMap={classCountMap}
-          selectedDay={selectedDay}
-          onDayClick={handleDayClick}
-          onPrevMonth={prevMonth}
-          onNextMonth={nextMonth}
-          loading={calLoading}
-          onDeselect={() => setSelectedDay(null)}
-          footer={selectedDay !== null && (
-            <div className="mt-3 pt-3 border-t border-gray-100">
-              <p className="text-xs font-semibold text-gray-500 mb-2">
-                {calMonth + 1}월 {selectedDay}일 수업
-              </p>
-              {selectedDayClasses.length === 0 ? (
-                <p className="text-sm text-gray-400 py-1 text-center">수업 없음</p>
-              ) : (
-                <ul className="space-y-1.5">
-                  {selectedDayClasses.map((cls) => {
-                    const names = cls.studentIds
-                      .map((id) => studentNameMap[id])
-                      .filter(Boolean)
-                      .join(', ');
-                    const classType = classTypeMap[cls.classTypeId]?.classType ?? '';
-                    const timeStr = cls.datetime
-                      ? new Date(cls.datetime).toLocaleTimeString('ko-KR', {
-                          timeZone: KST, hour: '2-digit', minute: '2-digit', hour12: false,
-                        })
-                      : '';
-                    const endTimeStr = cls.endTime ? formatTime(cls.endTime) : '';
-                    return (
-                      <li key={cls.id}>
-                        <Link
-                          to={`/classes/${cls.id}/edit`}
-                          className="flex items-center gap-3 px-3 py-2 rounded-xl bg-gray-50 active:bg-gray-100"
-                        >
-                          <span className="text-xs font-semibold text-brand-600 shrink-0">
-                            {timeStr}{endTimeStr && `~${endTimeStr}`}
-                          </span>
-                          <div className="flex-1 min-w-0">
-                            <span className="text-sm font-medium text-gray-800 truncate block">
-                              {names || cls.title || '학생 미정'}
-                            </span>
-                            {(classType || cls.location) && (
-                              <span className="text-xs text-gray-500">
-                                {classType && `${classType} · `}{cls.duration}분
-                                {cls.location && ` · ${cls.location}${cls.locationMemo ? ` — ${cls.locationMemo}` : ''}`}
-                              </span>
-                            )}
-                          </div>
-                          {cls.notes && (
-                            <span className="text-xs text-gray-500 shrink-0">{cls.notes}</span>
-                          )}
-                        </Link>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </div>
-          )}
-        />
-      </div>
-
       {/* 미확인 무료상담 신청 */}
       {consultCount > 0 && (
         <div
@@ -505,59 +513,77 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* 숙제 부여 카드 */}
+      {/* 잔여 회차 부족 학생 */}
+      {lowSessionCount > 0 && (
+        <div
+          className="px-4 pt-3"
+          style={{ animation: 'fade-in-up 400ms cubic-bezier(0.2, 0, 0, 1) both', animationDelay: '100ms' }}
+        >
+          <Link
+            to="/students"
+            className="block active:scale-[0.96] transition-[scale] duration-150 ease-out"
+          >
+            <Card
+              variant="borderless"
+              style={{ borderRadius: 16, backgroundColor: '#fff7e6', boxShadow: '0 0 0 1px #ffd591 inset' }}
+              styles={{ body: { padding: '12px 16px' } }}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <HourglassLowIcon size={18} weight="fill" color="#d46b08" />
+                  <span className="text-sm font-semibold tabular-nums" style={{ color: '#ad4e00' }}>
+                    잔여 회차 부족 {lowSessionCount}명
+                  </span>
+                </div>
+                <span className="text-xs text-gray-400">확인하기 ›</span>
+              </div>
+            </Card>
+          </Link>
+        </div>
+      )}
+
+      {/* 수업 마무리 */}
       {!todayLoading && recentlyCompleted.length > 0 && (
         <div
           className="px-4 pt-5"
           style={{ animation: 'fade-in-up 400ms cubic-bezier(0.2, 0, 0, 1) both', animationDelay: '120ms' }}
         >
-          <SectionHeading style={{ marginBottom: 12 }}>숙제 부여</SectionHeading>
+          <SectionHeading style={{ marginBottom: 12 }}>수업 마무리</SectionHeading>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {recentlyCompleted.slice(0, 3).map((cls) => {
+            {visiblePending.map((cls) => {
               const names = cls.studentIds
                 .map((id) => studentNameMap[id])
                 .filter(Boolean)
                 .map((n) => n.replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]\s*/gu, '').trim())
                 .join(', ');
-              const timeStr = cls.datetime
-                ? new Date(cls.datetime).toLocaleTimeString('ko-KR', { timeZone: KST, hour: '2-digit', minute: '2-digit', hour12: false })
-                : '';
-              const endTimeStr = cls.endTime ? formatTime(cls.endTime) : '';
-              const hwLink = cls.studentIds.length === 1
-                ? `/homework/new?studentId=${cls.studentIds[0]}`
-                : '/homework/new';
+              const s = pendingState[cls.id] || {};
               return (
-                <div
+                <PendingClassCard
                   key={cls.id}
-                  style={{
-                    borderRadius: 12, background: '#fff', boxShadow: 'var(--shadow-border)',
-                    padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12,
-                  }}
-                >
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ fontSize: 14, fontWeight: 600, color: TEXT_PRIMARY, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {names || cls.title || '학생 미정'}
-                    </p>
-                    <p style={{ fontSize: 12, color: TEXT_TERTIARY, margin: '2px 0 0' }} className="tabular-nums">
-                      {timeStr}{endTimeStr && `–${endTimeStr}`} 수업 완료
-                    </p>
-                  </div>
-                  <Link
-                    to={hwLink}
-                    className="active:scale-[0.96] transition-[scale,background-color] duration-150 ease-out"
-                    style={{
-                      flexShrink: 0, height: 44, padding: '0 14px', borderRadius: 10,
-                      background: PRIMARY_BG, color: PRIMARY,
-                      fontSize: 13, fontWeight: 700,
-                      display: 'flex', alignItems: 'center',
-                      border: 'none', textDecoration: 'none',
-                    }}
-                  >
-                    숙제 부여
-                  </Link>
-                </div>
+                  cls={cls}
+                  studentName={names}
+                  hwDone={!!s.hwDone}
+                  onHwClick={setHwDone}
+                  onDismiss={setDismissed}
+                />
               );
             })}
+            {overflowCount > 0 && (
+              <Link
+                to="/home/pending"
+                className="active:scale-[0.96] transition-[scale,background-color] duration-150 ease-out"
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+                  height: 40, borderRadius: 10, background: '#fff',
+                  boxShadow: 'var(--shadow-border)',
+                  color: PRIMARY, fontSize: 13, fontWeight: 600,
+                  textDecoration: 'none',
+                }}
+              >
+                더보기 <span className="tabular-nums">+{overflowCount}</span>
+                <CaretRightIcon size={14} weight="bold" />
+              </Link>
+            )}
           </div>
         </div>
       )}
@@ -667,36 +693,61 @@ export default function HomePage() {
                     <Card
                       variant="borderless"
                       style={{ borderRadius: 12, boxShadow: 'var(--shadow-border)', transition: 'box-shadow 150ms ease-out' }}
-                      styles={{ body: { padding: '12px 16px' } }}
+                      styles={{ body: { padding: '14px 16px' } }}
                       onMouseEnter={(e) => { e.currentTarget.style.boxShadow = 'var(--shadow-border-hover)'; }}
                       onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'var(--shadow-border)'; }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                        {/* 시간 박스 */}
-                        <div style={{ flexShrink: 0, minWidth: 48, textAlign: 'center', background: PRIMARY_BG, borderRadius: 10, padding: '6px 4px' }}>
-                          <div style={{ fontSize: 14, fontWeight: 700, color: PRIMARY, lineHeight: 1.2 }} className="tabular-nums">
-                            {timeStr}
-                          </div>
-                          {endTimeStr && (
-                            <div style={{ fontSize: 11, color: '#9a0007', marginTop: 1 }} className="tabular-nums">–{endTimeStr}</div>
-                          )}
-                        </div>
-                        {/* 학생·수업 정보 */}
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <p style={{ fontSize: 14, fontWeight: 600, color: TEXT_PRIMARY, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {title}
-                          </p>
-                          {(classType || cls.location) && (
-                            <p style={{ fontSize: 12, color: TEXT_TERTIARY, margin: '2px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                              {[classType, cls.location].filter(Boolean).join(' · ')}
-                            </p>
-                          )}
-                        </div>
-                        {/* 날짜 */}
-                        <div style={{ flexShrink: 0, textAlign: 'right' }}>
-                          <span style={{ fontSize: 12, color: TEXT_TERTIARY }} className="tabular-nums">{dateStr}</span>
-                        </div>
+                      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12 }}>
+                        <p style={{ fontSize: 15, fontWeight: 600, color: TEXT_PRIMARY, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0 }}>
+                          {title}
+                        </p>
+                        <span style={{ fontSize: 13, color: TEXT_PRIMARY, fontWeight: 500, flexShrink: 0 }} className="tabular-nums">
+                          {dateStr} {timeStr}{endTimeStr && `–${endTimeStr}`}
+                        </span>
                       </div>
+                      {(classType || cls.location) && (
+                        <p style={{ fontSize: 12, color: TEXT_TERTIARY, margin: '4px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {[classType, cls.location].filter(Boolean).join(' · ')}
+                        </p>
+                      )}
+                      {(() => {
+                        const typeTitle = classTypeMap[cls.classTypeId]?.title ?? '';
+                        const isFree = typeTitle.includes('무료상담');
+                        const isOneDay = typeTitle.includes('원데이');
+                        if (isFree || isOneDay) {
+                          return (
+                            <div style={{ marginTop: 8 }}>
+                              <span style={{
+                                display: 'inline-block',
+                                padding: '2px 8px', borderRadius: 6,
+                                background: '#f5f5f5',
+                                color: TEXT_TERTIARY,
+                                fontSize: 11, fontWeight: 600,
+                              }}>
+                                {isFree ? '무료상담' : '원데이클래스'}
+                              </span>
+                            </div>
+                          );
+                        }
+                        if (classes[0]?.id === cls.id && upcomingPrep && cls.id === upcomingPrep.classId) {
+                          return (
+                            <div style={{
+                              marginTop: 10, paddingTop: 10,
+                              borderTop: '1px solid #f5f5f5',
+                            }}>
+                              <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                                <span style={{ fontSize: 11, color: TEXT_TERTIARY, flexShrink: 0, lineHeight: 1.45, marginTop: 1 }}>
+                                  준비
+                                </span>
+                                <span style={{ fontSize: 13, color: TEXT_PRIMARY, lineHeight: 1.45, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                                  {upcomingPrep.text}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        }
+                        return null;
+                      })()}
                     </Card>
                   </Link>
                 </li>

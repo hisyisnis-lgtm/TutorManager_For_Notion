@@ -3,17 +3,37 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Button, Input, Card } from 'antd';
 import { MagnifyingGlassIcon, MapPinIcon, WarningCircleIcon } from '@phosphor-icons/react';
 import { createLessonLog } from '../api/lessonLogs.js';
+import { queryPage } from '../api/notionClient.js';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import Badge from '../components/ui/Badge.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import ErrorMessage from '../components/ui/ErrorMessage.jsx';
 import EmptyState from '../components/ui/EmptyState.jsx';
-import { fetchClassesPage, parseClass, classStatusColor, notesColor } from '../api/classes.js';
+import MonthCalendar from '../components/ui/MonthCalendar.jsx';
+import { fetchClassesPage, parseClass, classStatusColor, notesColor, CLASSES_DB } from '../api/classes.js';
 import { formatDateTime, formatTime } from '../utils/dateUtils.js';
 import { getWeekStart, getMonthStart, getTodayStart } from '../utils/dateUtils.js';
 import { stripEmoji } from '../utils/stringUtils.js';
 import { useData } from '../context/DataContext.jsx';
 import PullToRefresh from '../components/ui/PullToRefresh.jsx';
+
+const KST = 'Asia/Seoul';
+
+function getKSTToday() {
+  const now = new Date();
+  const parts = new Intl.DateTimeFormat('ko-KR', {
+    timeZone: KST, year: 'numeric', month: '2-digit', day: '2-digit',
+  }).formatToParts(now);
+  const get = (t) => parseInt(parts.find((p) => p.type === t)?.value ?? '0');
+  return { year: get('year'), month: get('month') - 1, day: get('day') };
+}
+
+function getClassDay(isoString) {
+  const parts = new Intl.DateTimeFormat('ko-KR', {
+    timeZone: KST, day: 'numeric',
+  }).formatToParts(new Date(isoString));
+  return parseInt(parts.find((p) => p.type === 'day')?.value ?? '0');
+}
 
 const PERIOD_TABS = [
   { key: 'week', label: '이번 주' },
@@ -30,7 +50,7 @@ function getDateFrom(period) {
 }
 
 export default function ClassesPage() {
-  const { studentNameMap } = useData();
+  const { studentNameMap, classTypeMap } = useData();
   const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -38,6 +58,15 @@ export default function ClassesPage() {
   const [hasMore, setHasMore] = useState(false);
   const [cursor, setCursor] = useState(null);
   const [search, setSearch] = useState('');
+
+  const today = getKSTToday();
+  const pad = (n) => String(n).padStart(2, '0');
+  const todayStr = `${today.year}-${pad(today.month + 1)}-${pad(today.day)}`;
+  const [calYear, setCalYear] = useState(today.year);
+  const [calMonth, setCalMonth] = useState(today.month);
+  const [calClasses, setCalClasses] = useState([]);
+  const [calLoading, setCalLoading] = useState(false);
+  const [selectedDay, setSelectedDay] = useState(null);
 
   const load = useCallback(async (reset = true, nextCursor = null) => {
     if (reset) setLoading(true);
@@ -58,7 +87,60 @@ export default function ClassesPage() {
     }
   }, [period]);
 
+  const loadCalendar = useCallback(async (year, month) => {
+    setCalLoading(true);
+    try {
+      const mm = String(month + 1).padStart(2, '0');
+      const dd = String(new Date(year, month + 1, 0).getDate()).padStart(2, '0');
+      const data = await queryPage(
+        CLASSES_DB,
+        {
+          and: [
+            { property: '수업 일시', date: { on_or_after: `${year}-${mm}-01T00:00:00+09:00` } },
+            { property: '수업 일시', date: { on_or_before: `${year}-${mm}-${dd}T23:59:59+09:00` } },
+          ],
+        },
+        [{ property: '수업 일시', direction: 'ascending' }],
+        undefined,
+        100
+      );
+      setCalClasses((data?.results ?? []).map(parseClass));
+    } catch {
+      setCalClasses([]);
+    } finally {
+      setCalLoading(false);
+    }
+  }, []);
+
   useEffect(() => { load(true); }, [load]);
+  useEffect(() => { loadCalendar(calYear, calMonth); }, [calYear, calMonth, loadCalendar]);
+
+  const classCountMap = {};
+  calClasses.forEach((cls) => {
+    if (cls.datetime) {
+      const day = getClassDay(cls.datetime);
+      classCountMap[day] = (classCountMap[day] || 0) + 1;
+    }
+  });
+
+  const selectedDayClasses = selectedDay
+    ? calClasses.filter((cls) => cls.datetime && getClassDay(cls.datetime) === selectedDay)
+    : [];
+
+  const prevMonth = () => {
+    setSelectedDay(null);
+    if (calMonth === 0) { setCalYear((y) => y - 1); setCalMonth(11); }
+    else setCalMonth((m) => m - 1);
+  };
+  const nextMonth = () => {
+    setSelectedDay(null);
+    if (calMonth === 11) { setCalYear((y) => y + 1); setCalMonth(0); }
+    else setCalMonth((m) => m + 1);
+  };
+  const handleDayClick = (day) => {
+    if (!classCountMap[day]) return;
+    setSelectedDay((prev) => (prev === day ? null : day));
+  };
 
   const filteredClasses = classes.filter((cls) => {
     if (!search.trim()) return true;
@@ -66,8 +148,12 @@ export default function ClassesPage() {
     return names.toLowerCase().includes(search.trim().toLowerCase());
   });
 
+  const handleRefresh = async () => {
+    await Promise.all([load(true), loadCalendar(calYear, calMonth)]);
+  };
+
   return (
-    <PullToRefresh onRefresh={load}>
+    <PullToRefresh onRefresh={handleRefresh}>
       <PageHeader
         title="수업 캘린더"
         action={
@@ -81,6 +167,74 @@ export default function ClassesPage() {
           </Link>
         }
       />
+
+      {/* 월별 캘린더 */}
+      <div className="px-4 pt-4">
+        <MonthCalendar
+          year={calYear}
+          month={calMonth + 1}
+          todayStr={todayStr}
+          classCountMap={classCountMap}
+          selectedDay={selectedDay}
+          onDayClick={handleDayClick}
+          onPrevMonth={prevMonth}
+          onNextMonth={nextMonth}
+          loading={calLoading}
+          onDeselect={() => setSelectedDay(null)}
+          footer={selectedDay !== null && (
+            <div className="mt-3 pt-3 border-t border-gray-100">
+              <p className="text-xs font-semibold text-gray-500 mb-2">
+                {calMonth + 1}월 {selectedDay}일 수업
+              </p>
+              {selectedDayClasses.length === 0 ? (
+                <p className="text-sm text-gray-400 py-1 text-center">수업 없음</p>
+              ) : (
+                <ul className="space-y-1.5">
+                  {selectedDayClasses.map((cls) => {
+                    const names = cls.studentIds
+                      .map((id) => studentNameMap[id])
+                      .filter(Boolean)
+                      .join(', ');
+                    const classType = classTypeMap[cls.classTypeId]?.classType ?? '';
+                    const timeStr = cls.datetime
+                      ? new Date(cls.datetime).toLocaleTimeString('ko-KR', {
+                          timeZone: KST, hour: '2-digit', minute: '2-digit', hour12: false,
+                        })
+                      : '';
+                    const endTimeStr = cls.endTime ? formatTime(cls.endTime) : '';
+                    return (
+                      <li key={cls.id}>
+                        <Link
+                          to={`/classes/${cls.id}/edit`}
+                          className="flex items-center gap-3 px-3 py-2 rounded-xl bg-gray-50 active:bg-gray-100"
+                        >
+                          <span className="text-xs font-semibold text-brand-600 shrink-0">
+                            {timeStr}{endTimeStr && `~${endTimeStr}`}
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <span className="text-sm font-medium text-gray-800 truncate block">
+                              {names || cls.title || '학생 미정'}
+                            </span>
+                            {(classType || cls.location) && (
+                              <span className="text-xs text-gray-500">
+                                {classType && `${classType} · `}{cls.duration}분
+                                {cls.location && ` · ${cls.location}${cls.locationMemo ? ` — ${cls.locationMemo}` : ''}`}
+                              </span>
+                            )}
+                          </div>
+                          {cls.notes && (
+                            <span className="text-xs text-gray-500 shrink-0">{cls.notes}</span>
+                          )}
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+          )}
+        />
+      </div>
 
       {/* 기간 필터 */}
       <div className="flex gap-2 px-4 pt-4 pb-3">

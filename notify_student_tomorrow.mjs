@@ -7,6 +7,7 @@ import { createNotionClient, stripEmoji } from './notion_utils.mjs';
 const TOKEN = process.env.NOTION_TOKEN;
 const CLASS_DB_ID = '314838fa-f2a6-81bc-8b67-d9e1c8fb7ecb';
 const STUDENT_DB_ID = '314838fa-f2a6-8143-a6c7-e59c50f3bbdb';
+const LESSON_TYPE_DB_ID = '314838fa-f2a6-81c3-b4e4-da87c48f9b43';
 
 const SOLAPI_API_KEY = process.env.SOLAPI_API_KEY;
 const SOLAPI_API_SECRET = process.env.SOLAPI_API_SECRET;
@@ -69,9 +70,31 @@ function getTomorrowKST() {
 
 const DAY_KR = ['일', '월', '화', '수', '목', '금', '토'];
 
+// 수업 유형 DB 조회 → Map<pageId, 타이틀>
+async function fetchClassTypeMap() {
+  const map = new Map();
+  let cursor;
+  do {
+    const res = await notion('POST', `/databases/${LESSON_TYPE_DB_ID}/query`, {
+      start_cursor: cursor,
+      page_size: 100,
+    });
+    for (const p of res.results) {
+      const title = p.properties['타이틀']?.title?.[0]?.plain_text ?? '';
+      map.set(p.id, title);
+      map.set(p.id.replace(/-/g, ''), title);
+    }
+    cursor = res.has_more ? res.next_cursor : undefined;
+  } while (cursor);
+  return map;
+}
+
 async function main() {
   const { tomorrowStr, dayAfterStr } = getTomorrowKST();
   console.log(`[${new Date().toISOString()}] 내일(${tomorrowStr}) 수업 있는 학생 알림 시작`);
+
+  // 수업 유형 맵 (무료상담/원데이클래스는 notify_consult_tomorrow에서 별도 템플릿으로 발송하므로 여기서 제외)
+  const classTypeMap = await fetchClassTypeMap();
 
   // 내일 수업 조회 (취소 제외)
   const res = await notion('POST', `/databases/${CLASS_DB_ID}/query`, {
@@ -84,11 +107,16 @@ async function main() {
     sorts: [{ property: '수업 일시', direction: 'ascending' }],
   });
 
-  const classes = res.results.filter(
-    p => p.properties['특이사항']?.select?.name !== '🚫 취소'
-  );
+  const classes = res.results.filter(p => {
+    if (p.properties['특이사항']?.select?.name === '🚫 취소') return false;
+    const classTypeId = p.properties['수업 유형']?.relation?.[0]?.id ?? '';
+    const classTypeTitle = classTypeMap.get(classTypeId) ?? classTypeMap.get(classTypeId.replace(/-/g, '')) ?? '';
+    // 무료상담/원데이클래스는 notify_consult_tomorrow에서 전용 템플릿으로 발송
+    if (classTypeTitle.includes('무료상담') || classTypeTitle.includes('원데이클래스')) return false;
+    return true;
+  });
 
-  console.log(`내일 수업 ${classes.length}개 (취소 제외)`);
+  console.log(`내일 수업 ${classes.length}개 (취소·원데이·상담 제외)`);
 
   if (classes.length === 0) {
     console.log('내일 수업 없음 - 알림 생략');
