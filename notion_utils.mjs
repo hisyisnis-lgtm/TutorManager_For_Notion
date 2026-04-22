@@ -68,7 +68,7 @@ export function createNtfyClient(topic, ntfyToken) {
  * 학생 이름 앞 상태 이모지(🟢🟡⚫) 제거
  */
 export function stripEmoji(name) {
-  return name.replace(/^[🟢🟡⚫]\s*/, '');
+  return name.replace(/^[🟢🟡⚫]\s*/u, '');
 }
 
 /**
