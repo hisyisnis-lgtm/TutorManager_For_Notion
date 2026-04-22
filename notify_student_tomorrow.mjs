@@ -12,7 +12,6 @@ const SOLAPI_API_KEY = process.env.SOLAPI_API_KEY;
 const SOLAPI_API_SECRET = process.env.SOLAPI_API_SECRET;
 const KAKAO_PFID = process.env.KAKAO_PFID;
 const KAKAO_TPL_STU_TOMORROW = process.env.KAKAO_TPL_STU_TOMORROW;
-const BOOKING_BASE_URL = 'https://tiantian-chinese.pages.dev/#/book/';
 
 if (!TOKEN) {
   console.error('NOTION_TOKEN 환경변수가 설정되지 않았습니다.');
@@ -105,7 +104,6 @@ async function main() {
     studentCache[id] = {
       name: stripEmoji(props['이름']?.title?.[0]?.plain_text ?? ''),
       phone: props['전화번호']?.phone_number ?? '',
-      token: props['예약 코드']?.rich_text?.[0]?.plain_text ?? '',
     };
     return studentCache[id];
   }
@@ -141,7 +139,6 @@ async function main() {
         continue;
       }
 
-      const bookingUrl = student.token ? `${BOOKING_BASE_URL}${student.token}` : BOOKING_BASE_URL;
       await sendKakao(
         student.phone,
         KAKAO_TPL_STU_TOMORROW,
@@ -151,15 +148,7 @@ async function main() {
           '#{요일}': dayOfWeek,
           '#{시간}': timeStr,
           '#{분}': duration,
-        },
-        [
-          {
-            buttonType: 'WL',
-            buttonName: '예약 페이지',
-            linkMo: bookingUrl,
-            linkPc: bookingUrl,
-          },
-        ]
+        }
       );
       sent++;
     }
