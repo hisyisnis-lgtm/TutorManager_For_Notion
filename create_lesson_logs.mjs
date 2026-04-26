@@ -2,7 +2,7 @@
 // 완료된 수업 중 수업 일지가 없는 항목에 빈 일지를 자동 생성
 // GitHub Actions에서 1시간마다 자동 실행됨
 
-import { createNotionClient, stripEmoji } from './notion_utils.mjs';
+import { createNotionClient, runWithAlert, stripEmoji } from './notion_utils.mjs';
 
 const TOKEN = process.env.NOTION_TOKEN;
 const CLASS_DB_ID = '314838fa-f2a6-81bc-8b67-d9e1c8fb7ecb';
@@ -112,7 +112,4 @@ async function main() {
   console.log(`완료: ${created}개 일지 생성됨`);
 }
 
-main().catch(err => {
-  console.error('오류:', err.message);
-  process.exit(1);
-});
+runWithAlert('create_lesson_logs.mjs', main);

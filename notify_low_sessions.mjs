@@ -1,7 +1,7 @@
 // 잔여 회차 부족 학생 결제 독려 알림 스크립트
 // GitHub Actions에서 매일 10:00 KST (01:00 UTC)에 자동 실행됨
 
-import { createNotionClient, createNtfyClient, stripEmoji } from './notion_utils.mjs';
+import { createNotionClient, createNtfyClient, runWithAlert, stripEmoji } from './notion_utils.mjs';
 
 const TOKEN = process.env.NOTION_TOKEN;
 const NTFY_TOPIC = process.env.NTFY_TOPIC;
@@ -75,7 +75,4 @@ async function main() {
   await sendNtfy('💳 잔여 회차 부족 알림', message, 4);
 }
 
-main().catch(err => {
-  console.error('오류:', err.message);
-  process.exit(1);
-});
+runWithAlert('notify_low_sessions.mjs', main);

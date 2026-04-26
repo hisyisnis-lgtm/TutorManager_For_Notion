@@ -21,3 +21,6 @@ jobs:
         run: node check_session_shortage.mjs
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          NTFY_TOPIC_CRITICAL: ${{ secrets.NTFY_TOPIC_CRITICAL }}
+          NTFY_TOKEN: ${{ secrets.NTFY_TOKEN }}

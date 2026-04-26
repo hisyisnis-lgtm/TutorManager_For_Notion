@@ -21,6 +21,9 @@ jobs:
       - name: 무료상담/원데이클래스 전날 리마인더 발송
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          NTFY_TOPIC_CRITICAL: ${{ secrets.NTFY_TOPIC_CRITICAL }}
+          NTFY_TOKEN: ${{ secrets.NTFY_TOKEN }}
           SOLAPI_API_KEY: ${{ secrets.SOLAPI_API_KEY }}
           SOLAPI_API_SECRET: ${{ secrets.SOLAPI_API_SECRET }}
           KAKAO_PFID: ${{ secrets.KAKAO_PFID }}

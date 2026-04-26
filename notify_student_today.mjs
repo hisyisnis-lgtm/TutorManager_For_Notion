@@ -2,7 +2,7 @@
 // GitHub Actions에서 매일 08:00 KST (23:00 UTC 전날)에 자동 실행됨
 
 import { createHmac } from 'crypto';
-import { createNotionClient, stripEmoji } from './notion_utils.mjs';
+import { createNotionClient, runWithAlert, stripEmoji } from './notion_utils.mjs';
 
 const TOKEN = process.env.NOTION_TOKEN;
 const CLASS_DB_ID = '314838fa-f2a6-81bc-8b67-d9e1c8fb7ecb';
@@ -151,7 +151,4 @@ async function main() {
   console.log(`완료: 학생 ${sent}명에게 당일 리마인더 발송`);
 }
 
-main().catch(err => {
-  console.error('오류:', err.message);
-  process.exit(1);
-});
+runWithAlert('notify_student_today.mjs', main);

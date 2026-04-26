@@ -24,6 +24,9 @@ jobs:
       - name: 스키마 스냅샷 실행
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          NTFY_TOPIC_CRITICAL: ${{ secrets.NTFY_TOPIC_CRITICAL }}
+          NTFY_TOKEN: ${{ secrets.NTFY_TOKEN }}
         run: node snapshot_schema.mjs
 
       - name: 변경 사항 확인 및 커밋

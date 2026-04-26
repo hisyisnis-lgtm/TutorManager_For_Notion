@@ -279,27 +279,80 @@ async function sendKakaoAlert(env, { to, templateId, variables }) {
   }
 }
 
-// ===== ntfy 강사 알림 발송 =====
-async function sendNtfy(env, message, title = 'New Consultation') {
-  const topic = env.NTFY_TOPIC;
-  if (!topic) { console.error('[ntfy] NTFY_TOPIC 미설정'); return; }
+// ===== ntfy 강사 알림 발송 (멀티 토픽 + 심각도) =====
+//
+// level별 토픽 매핑:
+//   critical → NTFY_TOPIC_CRITICAL (즉시 대응, priority 5)
+//   warn     → NTFY_TOPIC_WARN     (당일 확인, priority 3)
+//   digest   → NTFY_TOPIC_DIGEST   (일일 요약, priority 2)
+//   info     → NTFY_TOPIC          (일반 운영 알림, priority 4) — 기존 동작 호환
+//
+// 미설정 토픽은 NTFY_TOPIC으로 fallback. dedupKey를 주면 같은 키로 5분 내 중복 발송 차단.
+async function sendAlert(env, { level = 'info', title, message, tags, dedupKey, ttlSeconds = 300 } = {}) {
+  const TOPIC_MAP = {
+    critical: env.NTFY_TOPIC_CRITICAL || env.NTFY_TOPIC,
+    warn: env.NTFY_TOPIC_WARN || env.NTFY_TOPIC,
+    digest: env.NTFY_TOPIC_DIGEST || env.NTFY_TOPIC,
+    info: env.NTFY_TOPIC,
+  };
+  const PRIORITY_MAP = { critical: 5, warn: 3, digest: 2, info: 4 };
+  const topic = TOPIC_MAP[level] || env.NTFY_TOPIC;
+  const priority = PRIORITY_MAP[level] || 4;
+  if (!topic) { console.error(`[ntfy:${level}] 토픽 미설정`); return; }
+
+  // dedup: 동일 키로 ttl 내 중복 발송 차단 (Cloudflare Cache API)
+  if (dedupKey) {
+    try {
+      const cache = caches.default;
+      const cacheReq = new Request(`https://ntfy-dedup.local/${level}/${encodeURIComponent(dedupKey)}`);
+      const hit = await cache.match(cacheReq);
+      if (hit) { console.log(`[ntfy:${level}] dedup hit:`, dedupKey); return; }
+      await cache.put(cacheReq, new Response('1', { headers: { 'Cache-Control': `public, max-age=${ttlSeconds}` } }));
+    } catch (e) {
+      console.warn('[ntfy] dedup 캐시 오류 (무시하고 발송):', e.message);
+    }
+  }
+
   try {
     const headers = { 'Content-Type': 'application/json' };
     if (env.NTFY_TOKEN) headers['Authorization'] = `Bearer ${env.NTFY_TOKEN}`;
-    const res = await fetch('https://ntfy.sh', {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ topic, title, message, priority: 4 }),
-    });
+    const payload = { topic, title, message, priority };
+    if (Array.isArray(tags) && tags.length > 0) payload.tags = tags;
+    const res = await fetch('https://ntfy.sh', { method: 'POST', headers, body: JSON.stringify(payload) });
     if (!res.ok) {
       const text = await res.text().catch(() => '');
-      console.error(`[ntfy] HTTP ${res.status}:`, text);
+      console.error(`[ntfy:${level}] HTTP ${res.status}:`, text);
     } else {
-      console.log('[ntfy] 발송 성공:', res.status);
+      console.log(`[ntfy:${level}] 발송 성공:`, title);
     }
   } catch (e) {
-    console.error('[ntfy] 네트워크 오류:', e.message);
+    console.error(`[ntfy:${level}] 네트워크 오류:`, e.message);
   }
+}
+
+// 기존 호출부 호환 wrapper — 점진적으로 sendAlert로 마이그레이션
+async function sendNtfy(env, message, title = 'New Consultation') {
+  return sendAlert(env, { level: 'info', title, message });
+}
+
+// ===== 워커 런타임 에러 캡처 =====
+//
+// fetch 핸들러가 던진 unhandled exception을 critical 토픽으로 즉시 알림.
+// 동일 에러(message + path)가 짧은 시간 내 폭주하면 dedup으로 1건만 발송.
+async function captureWorkerError(err, env, request) {
+  const url = new URL(request.url);
+  const path = url.pathname;
+  const errMsg = (err?.message || String(err)).slice(0, 300);
+  const stack = (err?.stack || '').split('\n').slice(0, 4).join('\n').slice(0, 800);
+  const dedupKey = `worker:${request.method}:${path}:${errMsg}`;
+  await sendAlert(env, {
+    level: 'critical',
+    title: `🚨 Worker 에러 (${request.method} ${path})`,
+    message: `${errMsg}\n\n${stack}`,
+    tags: ['rotating_light', 'worker'],
+    dedupKey,
+    ttlSeconds: 600, // 10분 dedup
+  });
 }
 
 // ===== 무료상담 신청 처리 =====
@@ -1384,6 +1437,65 @@ async function handleHomeworkRoutes(request, env, corsHeaders, url) {
     }
   }
 
+  // POST /homework/notify-assign, /homework/notify-feedback — 학생에게 카카오 알림톡 발송 (JWT 인증)
+  // 템플릿 ID 또는 Solapi Secret 미설정 시 no-op, 학생 전화번호 없으면 skip
+  const notifyAssign = url.pathname === '/homework/notify-assign' && request.method === 'POST';
+  const notifyFeedback = url.pathname === '/homework/notify-feedback' && request.method === 'POST';
+  if (notifyAssign || notifyFeedback) {
+    const authErr = await requireJwt(request, env, corsHeaders);
+    if (authErr) return authErr;
+    const body = await request.json().catch(() => ({}));
+    const homeworkId = body.homeworkId;
+    if (!homeworkId) {
+      return new Response(JSON.stringify({ error: 'homeworkId 필수' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    const templateId = notifyAssign ? env.KAKAO_TPL_HW_ASSIGN : env.KAKAO_TPL_HW_FEEDBACK;
+    try {
+      const hwPage = await n('GET', `/pages/${homeworkId}`);
+      const title = hwPage.properties?.['제목']?.title?.[0]?.plain_text ?? '숙제';
+      const studentId = hwPage.properties?.['학생']?.relation?.[0]?.id;
+      if (!studentId) {
+        return new Response(JSON.stringify({ ok: false, reason: 'no_student' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      const studentPage = await n('GET', `/pages/${studentId}`);
+      const name = stripEmoji(studentPage.properties?.['이름']?.title?.[0]?.plain_text ?? '');
+      const phone = (studentPage.properties?.['전화번호']?.phone_number ?? '').replace(/-/g, '');
+      const studentToken = studentPage.properties?.['예약 코드']?.rich_text?.[0]?.plain_text ?? '';
+      if (!phone) {
+        return new Response(JSON.stringify({ ok: false, reason: 'no_phone' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      if (!studentToken) {
+        // 버튼 URL 변수가 비면 Kakao 발송 실패 위험 → 예약 코드 없으면 skip
+        return new Response(JSON.stringify({ ok: false, reason: 'no_token' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      await sendKakaoAlert(env, {
+        to: phone,
+        templateId,
+        variables: {
+          '#{이름}': name,
+          '#{숙제제목}': title,
+          '#{token}': studentToken,
+        },
+      });
+      return new Response(JSON.stringify({ ok: true, sent: !!templateId }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    } catch (e) {
+      console.error('[notify-homework] 오류:', e.message);
+      return new Response(JSON.stringify({ ok: false, error: e.message }), {
+        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+  }
+
   // POST /homework/student-upload/:token — 학생용 파일 업로드 (예약 코드 인증)
   const studentUploadMatch = url.pathname.match(/^\/homework\/student-upload\/([^/]+)$/);
   if (studentUploadMatch && request.method === 'POST') {
@@ -1493,6 +1605,19 @@ async function handleHomeworkRoutes(request, env, corsHeaders, url) {
       }),
     });
     const updateData = await updateRes.json();
+
+    // 실제 새 파일이 업로드된 제출완료 상태일 때만 강사에게 ntfy 알림
+    if (updateRes.ok && newStatus === '제출완료' && newFiles.length > 0) {
+      const studentName = studentPage.properties?.['이름']?.title?.[0]?.plain_text ?? '학생';
+      const homeworkTitle = currentPage.properties?.['제목']?.title?.[0]?.plain_text ?? '숙제';
+      const fileDesc = newFiles.length === 1 ? '파일 1개' : `파일 ${newFiles.length}개`;
+      await sendNtfy(
+        env,
+        `${studentName} 학생이 "${homeworkTitle}" 숙제를 제출했습니다. (${fileDesc})`,
+        '숙제 제출'
+      );
+    }
+
     return new Response(JSON.stringify(updateData), {
       status: updateRes.ok ? 200 : updateRes.status,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -1504,9 +1629,50 @@ async function handleHomeworkRoutes(request, env, corsHeaders, url) {
   });
 }
 
-export default {
-  async fetch(request, env, ctx) {
-    const url = new URL(request.url);
+// ===== 클라이언트 에러 수집 (PWA window.onerror → 여기로 POST) =====
+async function handleErrorLog(request, env, corsHeaders) {
+  let body = {};
+  try { body = await request.json(); } catch { /* ignore */ }
+
+  const message = String(body.message || 'unknown error').slice(0, 400);
+  const source = String(body.source || '').slice(0, 200);
+  const lineno = body.lineno != null ? String(body.lineno).slice(0, 10) : '';
+  const colno = body.colno != null ? String(body.colno).slice(0, 10) : '';
+  const stack = String(body.stack || '').split('\n').slice(0, 6).join('\n').slice(0, 1000);
+  const pageUrl = String(body.url || '').slice(0, 300);
+  const userAgent = String(body.userAgent || request.headers.get('User-Agent') || '').slice(0, 200);
+  const studentToken = String(body.studentToken || '').slice(0, 64);
+
+  // dedup key: 같은 메시지+경로 조합은 5분에 한 번만 알림 (폭주 방지)
+  const dedupKey = `client:${message}:${pageUrl}`;
+
+  const lines = [
+    `📍 ${pageUrl || '(URL 없음)'}`,
+    `💬 ${message}`,
+    source ? `📄 ${source}${lineno ? `:${lineno}` : ''}${colno ? `:${colno}` : ''}` : '',
+    studentToken ? `👤 학생 토큰: ${studentToken.slice(0, 8)}...` : '',
+    `🌐 ${userAgent.slice(0, 100)}`,
+    stack ? `\n${stack}` : '',
+  ].filter(Boolean);
+
+  await sendAlert(env, {
+    level: 'warn',
+    title: `⚠️ PWA 클라이언트 에러`,
+    message: lines.join('\n'),
+    tags: ['warning', 'client'],
+    dedupKey,
+    ttlSeconds: 300,
+  });
+
+  return new Response(JSON.stringify({ ok: true }), {
+    status: 200,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
+}
+
+// 모든 라우팅 로직을 여기 위임. throw된 unhandled exception은 default.fetch에서 캡처.
+async function handleFetch(request, env, ctx) {
+  const url = new URL(request.url);
 
     // Notion 웹훅은 CORS/인증 체크 없이 별도 처리
     if (url.pathname === '/notion-webhook' && request.method === 'POST') {
@@ -1559,6 +1725,11 @@ export default {
         status: 403,
         headers: { 'Content-Type': 'application/json' },
       });
+    }
+
+    // 클라이언트 JS 에러 수집 (공개, 인증 불필요)
+    if (url.pathname === '/error-log' && request.method === 'POST') {
+      return handleErrorLog(request, env, corsHeaders);
     }
 
     // 예약 시스템 라우트 (공개 + 강사 인증 혼재, 내부에서 분기)
@@ -1767,5 +1938,21 @@ export default {
         'Content-Type': 'application/json',
       },
     });
+}
+
+export default {
+  async fetch(request, env, ctx) {
+    try {
+      return await handleFetch(request, env, ctx);
+    } catch (err) {
+      // unhandled exception → critical 알림 (dedup으로 폭주 방지)
+      // ctx.waitUntil로 알림 발송이 응답을 막지 않도록 처리
+      ctx.waitUntil(captureWorkerError(err, env, request).catch(() => {}));
+      console.error('[unhandled]', err?.stack || err);
+      return new Response(JSON.stringify({ error: 'Internal Server Error' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
   },
 };

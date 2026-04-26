@@ -1,12 +1,16 @@
-name: 학생 수업 전날 알림
+name: 일일 운영 리포트
 
 on:
   schedule:
-    - cron: '0 10 * * *'  # 매일 19:00 KST (= 10:00 UTC)
-  workflow_dispatch:          # 수동 실행 가능
+    - cron: '0 0 * * *'  # 매일 09:00 KST (= 00:00 UTC)
+  workflow_dispatch:        # 수동 실행 가능
+
+permissions:
+  contents: read
+  actions: read         # 워크플로우 실행 이력 조회용
 
 jobs:
-  notify:
+  digest:
     runs-on: ubuntu-latest
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -18,14 +22,14 @@ jobs:
         with:
           node-version: '24'
 
-      - name: 학생 전날 수업 리마인더 발송
+      - name: 일일 운영 리포트 생성 및 발송
         env:
-          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          NTFY_TOPIC_DIGEST: ${{ secrets.NTFY_TOPIC_DIGEST }}
           NTFY_TOPIC_CRITICAL: ${{ secrets.NTFY_TOPIC_CRITICAL }}
           NTFY_TOKEN: ${{ secrets.NTFY_TOKEN }}
           SOLAPI_API_KEY: ${{ secrets.SOLAPI_API_KEY }}
           SOLAPI_API_SECRET: ${{ secrets.SOLAPI_API_SECRET }}
-          KAKAO_PFID: ${{ secrets.KAKAO_PFID }}
-          KAKAO_TPL_STU_TOMORROW: ${{ secrets.KAKAO_TPL_STU_TOMORROW }}
-        run: node notify_student_tomorrow.mjs
+        run: node daily_digest.mjs

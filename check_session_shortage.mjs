@@ -8,7 +8,7 @@
 // - 무료 수업(1인 단가 = 0): 항상 false
 // - 예정 수업: 날짜 순으로 누적하여 잔여 초과 시 true
 
-import { createNotionClient, sleep } from './notion_utils.mjs';
+import { createNotionClient, runWithAlert, sleep } from './notion_utils.mjs';
 
 const TOKEN = process.env.NOTION_TOKEN;
 const CLASSES_DB = '314838fa-f2a6-81bc-8b67-d9e1c8fb7ecb';
@@ -138,7 +138,4 @@ async function main() {
   console.log(`✅ 완료: ${updated}개 수업 업데이트`);
 }
 
-main().catch(e => {
-  console.error('❌ 오류:', e.message);
-  process.exit(1);
-});
+runWithAlert('check_session_shortage.mjs', main);

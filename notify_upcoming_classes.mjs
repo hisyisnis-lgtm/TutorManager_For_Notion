@@ -1,7 +1,7 @@
 // 내일 수업 알림 스크립트
 // GitHub Actions에서 매일 21:00 KST (12:00 UTC)에 자동 실행됨
 
-import { createNotionClient, createNtfyClient } from './notion_utils.mjs';
+import { createNotionClient, createNtfyClient, runWithAlert } from './notion_utils.mjs';
 
 const TOKEN = process.env.NOTION_TOKEN;
 const NTFY_TOPIC = process.env.NTFY_TOPIC;
@@ -97,7 +97,4 @@ async function main() {
   await sendNtfy('📅 내일 수업 안내', message, 3);
 }
 
-main().catch(err => {
-  console.error('오류:', err.message);
-  process.exit(1);
-});
+runWithAlert('notify_upcoming_classes.mjs', main);

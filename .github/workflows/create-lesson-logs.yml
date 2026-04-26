@@ -21,4 +21,7 @@ jobs:
       - name: 수업 일지 자동 생성 실행
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          NTFY_TOPIC_CRITICAL: ${{ secrets.NTFY_TOPIC_CRITICAL }}
+          NTFY_TOKEN: ${{ secrets.NTFY_TOKEN }}
         run: node create_lesson_logs.mjs

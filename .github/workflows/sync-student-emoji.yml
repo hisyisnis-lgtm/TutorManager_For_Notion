@@ -21,4 +21,7 @@ jobs:
       - name: 학생 이름 이모지 동기화 실행
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          NTFY_TOPIC_CRITICAL: ${{ secrets.NTFY_TOPIC_CRITICAL }}
+          NTFY_TOKEN: ${{ secrets.NTFY_TOKEN }}
         run: node sync_student_emoji.mjs

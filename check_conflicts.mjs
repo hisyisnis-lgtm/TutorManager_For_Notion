@@ -1,7 +1,7 @@
 // 수업 캘린더 충돌 감지 스크립트
 // GitHub Actions에서 10분마다 자동 실행됨
 
-import { createNotionClient, createNtfyClient, sleep } from './notion_utils.mjs';
+import { createNotionClient, createNtfyClient, runWithAlert, sleep } from './notion_utils.mjs';
 
 const TOKEN = process.env.NOTION_TOKEN;
 const NTFY_TOPIC = process.env.NTFY_TOPIC;
@@ -121,8 +121,4 @@ async function main() {
   }
 }
 
-main().catch(async err => {
-  console.error('오류:', err.message);
-  await sendNtfy('❌ 충돌 감지 스크립트 오류', err.message, 4);
-  process.exit(1);
-});
+runWithAlert('check_conflicts.mjs', main);

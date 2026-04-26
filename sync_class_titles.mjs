@@ -2,7 +2,7 @@
 // 제목이 비어 있는 수업에 학생 이름으로 자동 채움
 // GitHub Actions에서 30분마다 자동 실행됨
 
-import { createNotionClient, stripEmoji } from './notion_utils.mjs';
+import { createNotionClient, runWithAlert, stripEmoji } from './notion_utils.mjs';
 
 const TOKEN = process.env.NOTION_TOKEN;
 const CLASS_DB_ID = '314838fa-f2a6-81bc-8b67-d9e1c8fb7ecb';
@@ -78,7 +78,4 @@ async function main() {
   }
 }
 
-main().catch(err => {
-  console.error('오류:', err.message);
-  process.exit(1);
-});
+runWithAlert('sync_class_titles.mjs', main);

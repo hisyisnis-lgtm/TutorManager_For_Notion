@@ -2,7 +2,7 @@
 // 타이틀(타이틀)가 비어 있고 학생이 입력된 결제 내역에 학생 타이틀을 자동 채움
 // GitHub Actions에서 30분마다 자동 실행됨
 
-import { createNotionClient, stripEmoji } from './notion_utils.mjs';
+import { createNotionClient, runWithAlert, stripEmoji } from './notion_utils.mjs';
 
 const TOKEN = process.env.NOTION_TOKEN;
 const PAYMENT_DB_ID = '314838fa-f2a6-8154-935b-edd3d2fbea83';
@@ -77,7 +77,4 @@ async function main() {
   }
 }
 
-main().catch(err => {
-  console.error('오류:', err.message);
-  process.exit(1);
-});
+runWithAlert('sync_payment_titles.mjs', main);

@@ -5,7 +5,7 @@
 // 수업 유형에 따라 다른 템플릿 사용: 무료상담 → KAKAO_TPL_CONSULT_TOMORROW, 원데이클래스 → KAKAO_TPL_ONEDAY_TOMORROW
 
 import { createHmac, randomBytes } from 'crypto';
-import { createNotionClient, stripEmoji } from './notion_utils.mjs';
+import { createNotionClient, runWithAlert, stripEmoji } from './notion_utils.mjs';
 
 const TOKEN = process.env.NOTION_TOKEN;
 const CLASS_DB_ID = '314838fa-f2a6-81bc-8b67-d9e1c8fb7ecb';
@@ -225,7 +225,4 @@ async function main() {
   console.log(`완료: ${sent}건 D-1 알림 발송`);
 }
 
-main().catch(err => {
-  console.error('오류:', err.message);
-  process.exit(1);
-});
+runWithAlert('notify_consult_tomorrow.mjs', main);
