@@ -105,7 +105,10 @@ export async function sendAlert({ level = 'info', title, message, tags } = {}) {
 
   try {
     const res = await fetch('https://ntfy.sh', { method: 'POST', headers, body: JSON.stringify(payload) });
-    if (!res.ok) console.error(`[ntfy:${level}] 전송 실패 ${res.status}: ${await res.text()}`);
+    const respText = await res.text().catch(() => '');
+    const tokenSent = !!headers['Authorization'];
+    console.log(`[ntfy:${level}] status=${res.status} tokenSent=${tokenSent} topicLen=${topic.length} body=${respText.slice(0, 250)}`);
+    if (!res.ok) console.error(`[ntfy:${level}] 전송 실패 ${res.status}: ${respText}`);
     else console.log(`[ntfy:${level}] 발송: ${title}`);
   } catch (e) {
     console.error(`[ntfy:${level}] 네트워크 오류:`, e.message);
