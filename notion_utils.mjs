@@ -93,7 +93,12 @@ export async function sendAlert({ level = 'info', title, message, tags } = {}) {
   }
 
   const headers = { 'Content-Type': 'application/json' };
-  if (env.NTFY_TOKEN) headers['Authorization'] = `Bearer ${env.NTFY_TOKEN}`;
+  // 기존 NTFY_TOPIC은 user 계정의 reserved topic이라 토큰 필요.
+  // 새 토픽(critical/warn/digest)은 anonymous public이라 토큰을 보내면 ntfy.sh가
+  // user context로 처리하면서 ACL에 없는 토픽이라 silently drop함 (200 응답은 옴).
+  // → 토픽이 env.NTFY_TOPIC과 일치할 때만 토큰 첨부.
+  const isLegacyTopic = topic === env.NTFY_TOPIC;
+  if (isLegacyTopic && env.NTFY_TOKEN) headers['Authorization'] = `Bearer ${env.NTFY_TOKEN}`;
 
   const payload = { topic, title, message, priority };
   if (Array.isArray(tags) && tags.length > 0) payload.tags = tags;
