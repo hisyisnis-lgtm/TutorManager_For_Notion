@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { CaretLeftIcon } from '@phosphor-icons/react';
-import PandaWidget, { PANDA_FEED_KEY, getStageInfo } from '../components/ui/PandaWidget.jsx';
+import PandaWidget, { PANDA_FEED_KEY, getPandaStorageKey, getStageInfo } from '../components/ui/PandaWidget.jsx';
 import { fetchStudentByToken } from '../api/bookingApi.js';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import { GRADIENTS, PRIMARY, TEXT_PRIMARY, TEXT_SECONDARY, STATUS_ERROR_TEXT } from '../constants/theme.js';
@@ -18,6 +18,9 @@ export default function PandaPage() {
 
   useEffect(() => {
     if (!studentToken) { navigate(-1); return; }
+    // 옛 공통 키(`panda_fed_total`)에 다른 학생/세션의 누적값이 남아있으면 정리.
+    // 학생별 키 도입 전 잔존물이라 어느 학생 것인지 알 수 없어 단순 삭제가 맞음.
+    try { localStorage.removeItem(PANDA_FEED_KEY); } catch {}
     fetchStudentByToken(studentToken)
       .then((data) => {
         setStudent(data);
@@ -84,7 +87,11 @@ export default function PandaPage() {
               <LoadingSpinner />
             </div>
           ) : (
-            <PandaWidget foodSources={foodSources} fullscreen />
+            <PandaWidget
+              foodSources={foodSources}
+              storageKey={getPandaStorageKey(studentToken)}
+              fullscreen
+            />
           )}
         </div>
       </div>

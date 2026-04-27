@@ -4,7 +4,7 @@ on:
   repository_dispatch:
     types: [session-shortage-check]
   schedule:
-    - cron: '*/30 * * * *'
+    - cron: '0 0,9 * * *'  # KST 09:00, 18:00 (잔여 회차 부족 알림 일 2회)
   workflow_dispatch:
 
 jobs:

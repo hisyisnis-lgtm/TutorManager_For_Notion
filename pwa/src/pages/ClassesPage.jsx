@@ -12,7 +12,7 @@ import EmptyState from '../components/ui/EmptyState.jsx';
 import MonthCalendar from '../components/ui/MonthCalendar.jsx';
 import { fetchClassesPage, parseClass, classStatusColor, notesColor, CLASSES_DB } from '../api/classes.js';
 import { formatDateTime, formatTime } from '../utils/dateUtils.js';
-import { getWeekStart, getMonthStart, getTodayStart } from '../utils/dateUtils.js';
+import { getWeekStart, getWeekEnd, getMonthStart, getMonthEnd, getTodayStart } from '../utils/dateUtils.js';
 import { stripEmoji } from '../utils/stringUtils.js';
 import { useData } from '../context/DataContext.jsx';
 import PullToRefresh from '../components/ui/PullToRefresh.jsx';
@@ -42,17 +42,18 @@ const PERIOD_TABS = [
   { key: 'completed', label: '완료' },
 ];
 
-function getDateFrom(period) {
-  if (period === 'week') return getWeekStart();
-  if (period === 'month') return getMonthStart();
-  if (period === 'completed') return null;
-  return getTodayStart(); // '전체' 탭도 오늘부터 다가오는 수업 순으로
+function getDateRange(period) {
+  if (period === 'week') return { dateFrom: getWeekStart(), dateTo: getWeekEnd() };
+  if (period === 'month') return { dateFrom: getMonthStart(), dateTo: getMonthEnd() };
+  if (period === 'completed') return { dateFrom: null, dateTo: null };
+  return { dateFrom: getTodayStart(), dateTo: null }; // '전체' 탭은 오늘부터 다가오는 수업 순
 }
 
 export default function ClassesPage() {
   const { studentNameMap, classTypeMap } = useData();
   const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(null);
   const [period, setPeriod] = useState('week');
   const [hasMore, setHasMore] = useState(false);
@@ -70,12 +71,12 @@ export default function ClassesPage() {
 
   const load = useCallback(async (reset = true, nextCursor = null) => {
     if (reset) setLoading(true);
+    else setLoadingMore(true);
     setError(null);
     try {
-      const dateFrom = getDateFrom(period);
+      const { dateFrom, dateTo } = getDateRange(period);
       const completedOnly = period === 'completed';
-      const excludeCompleted = !completedOnly;
-      const data = await fetchClassesPage({ dateFrom, cursor: nextCursor, completedOnly, excludeCompleted });
+      const data = await fetchClassesPage({ dateFrom, dateTo, cursor: nextCursor, completedOnly });
       const parsed = data.results.map(parseClass);
       setClasses((prev) => (reset ? parsed : [...prev, ...parsed]));
       setHasMore(data.has_more);
@@ -84,6 +85,7 @@ export default function ClassesPage() {
       setError(e.message);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   }, [period]);
 
@@ -270,22 +272,33 @@ export default function ClassesPage() {
       {!loading && !error && (
         <>
           {filteredClasses.length === 0 ? (
-            <EmptyState icon="📅" title="수업이 없습니다" description={search.trim() ? '검색 결과가 없습니다.' : '+ 수업 추가로 새 수업을 등록하세요.'} />
+            <EmptyState
+              icon="📅"
+              title="수업이 없습니다"
+              description={
+                search.trim()
+                  ? hasMore
+                    ? '현재 페이지에 결과가 없습니다. "더 보기"로 추가 수업을 불러와 검색해 보세요.'
+                    : '검색 결과가 없습니다.'
+                  : '+ 수업 추가로 새 수업을 등록하세요.'
+              }
+            />
           ) : (
-            <ul className={`px-4 space-y-3 ${hasMore && !search.trim() ? 'pb-2' : 'pb-24'}`}>
+            <ul className={`px-4 space-y-3 ${hasMore ? 'pb-2' : 'pb-24'}`}>
               {filteredClasses.map((cls) => (
                 <ClassCard key={cls.id} cls={cls} studentNameMap={studentNameMap} />
               ))}
             </ul>
           )}
-          {hasMore && !search.trim() && (
+          {hasMore && (
             <div className="px-4 pb-24">
               <Button
                 block
+                loading={loadingMore}
                 onClick={() => load(false, cursor)}
                 style={{ borderRadius: 12 }}
               >
-                더 보기
+                {loadingMore ? '불러오는 중…' : '더 보기'}
               </Button>
             </div>
           )}

@@ -110,6 +110,27 @@ export async function getHomeworkPage(id) {
   return getPage(id);
 }
 
+/**
+ * 학생에게 카카오 알림톡 발송 요청 (fire-and-forget)
+ * kind: 'assign' | 'feedback'
+ * Worker 쪽에서 템플릿/Secret 미설정 시 no-op 처리되므로 실패해도 흐름 중단 안 함.
+ */
+export async function notifyHomework(kind, homeworkId) {
+  try {
+    const path = kind === 'feedback' ? '/homework/notify-feedback' : '/homework/notify-assign';
+    await fetch(`${WORKER_URL}${path}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${getToken()}`,
+      },
+      body: JSON.stringify({ homeworkId }),
+    });
+  } catch (e) {
+    console.warn('[notifyHomework] 실패:', e.message);
+  }
+}
+
 // ===== 학생용 (Worker 공개 엔드포인트 — 예약 코드 인증) =====
 
 async function studentFetch(method, path, body) {

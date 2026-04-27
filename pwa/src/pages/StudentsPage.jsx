@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button, Input } from 'antd';
 import { MagnifyingGlassIcon } from '@phosphor-icons/react';
@@ -8,10 +8,11 @@ import Badge from '../components/ui/Badge.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import ErrorMessage from '../components/ui/ErrorMessage.jsx';
 import EmptyState from '../components/ui/EmptyState.jsx';
-import { fetchAllStudents, parseStudent, statusColor, STATUS_OPTIONS } from '../api/students.js';
+import { statusColor } from '../api/students.js';
 import { formatKRW } from '../utils/dateUtils.js';
 import { stripEmoji } from '../utils/stringUtils.js';
 import PullToRefresh from '../components/ui/PullToRefresh.jsx';
+import { useData } from '../context/DataContext.jsx';
 
 const FILTER_TABS = [
   { value: '전체', label: '전체' },
@@ -22,26 +23,11 @@ const FILTER_TABS = [
 
 export default function StudentsPage() {
   const navigate = useNavigate();
-  const [students, setStudents] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  // DataContext의 학생 데이터를 그대로 사용 → 다른 페이지가 학생 추가/수정해도 자동 반영
+  // stale 캐시가 있으면 즉시 표시하고 백그라운드에서 새로고침되는 패턴
+  const { students, loading, error, refresh } = useData();
   const [filter, setFilter] = useState('전체');
   const [search, setSearch] = useState('');
-
-  const load = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const raw = await fetchAllStudents();
-      setStudents(raw.map(parseStudent));
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => { load(); }, []);
 
   const filtered = students
     .filter((s) => {
@@ -52,7 +38,7 @@ export default function StudentsPage() {
     .sort((a, b) => b.remainingSessions - a.remainingSessions);
 
   return (
-    <PullToRefresh onRefresh={load}>
+    <PullToRefresh onRefresh={refresh}>
       <PageHeader
         title="학생 관리"
         action={
@@ -96,10 +82,10 @@ export default function StudentsPage() {
         ))}
       </div>
 
-      {loading && <LoadingSpinner />}
-      {error && <ErrorMessage message={error} onRetry={load} />}
+      {loading && students.length === 0 && <LoadingSpinner />}
+      {error && students.length === 0 && <ErrorMessage message={error} onRetry={refresh} />}
 
-      {!loading && !error && (
+      {students.length > 0 && (
         <>
           {filtered.length === 0 ? (
             <EmptyState icon="👥" title="학생이 없습니다" description="노션에서 학생을 추가하세요." />

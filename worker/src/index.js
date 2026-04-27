@@ -28,6 +28,28 @@ function makeNotion(notionToken) {
 }
 
 /**
+ * Notion DB query 페이지네이션 헬퍼 — has_more 처리하여 모든 결과 반환.
+ * 100건 초과 시 데이터 누락을 막는다 (학생당 수업·숙제가 100개를 넘는 경우 대비).
+ *
+ * @param {Function} n         makeNotion()이 반환한 fetch 함수
+ * @param {string}   dbId      대상 DB ID
+ * @param {object}   [body]    Notion query body (filter, sorts 등). page_size는 무시됨.
+ * @returns {Promise<Array>}   results 배열 전체
+ */
+async function queryAllNotion(n, dbId, body = {}) {
+  const results = [];
+  let cursor;
+  do {
+    const reqBody = { ...body, page_size: 100 };
+    if (cursor) reqBody.start_cursor = cursor;
+    const data = await n('POST', `/databases/${dbId}/query`, reqBody);
+    if (Array.isArray(data.results)) results.push(...data.results);
+    cursor = data.has_more ? data.next_cursor : undefined;
+  } while (cursor);
+  return results;
+}
+
+/**
  * 에러 응답 헬퍼 — 모든 에러 응답의 단일 생성 지점
  * { error: message } JSON + Content-Type + CORS 헤더를 항상 일관되게 포함
  */
@@ -117,6 +139,139 @@ const ALLOWED_ORIGINS = new Set([
   'http://localhost:5173',
   'http://localhost:4173',
 ]);
+
+// ===== Notion 프록시 화이트리스트 =====
+// /v1/databases/:id 또는 /v1/pages/:id 경로에 들어올 수 있는 ID 집합.
+// 코드에서 명시적으로 사용하는 DB만 허용해 임의 워크스페이스 접근을 차단한다.
+// (페이지 ID는 학생 DB의 row일 수밖에 없으므로 별도 검증은 query 단계에서 수행됨)
+const STUDENT_DB_RAW = STUDENT_DB_ID.replace(/-/g, '');
+const CLASS_DB_RAW = CLASS_DB_ID.replace(/-/g, '');
+const HOMEWORK_DB_RAW = HOMEWORK_DB_ID.replace(/-/g, '');
+const BLOCKED_DATES_DB_RAW = BLOCKED_DATES_DB_ID.replace(/-/g, '');
+const CONSULT_DB_RAW = CONSULT_DB_ID.replace(/-/g, '');
+const ALLOWED_NOTION_DB_IDS = new Set([
+  STUDENT_DB_RAW,
+  CLASS_DB_RAW,
+  HOMEWORK_DB_RAW,
+  BLOCKED_DATES_DB_RAW,
+  CONSULT_DB_RAW,
+  // 수업 유형·할인·결제·수업일지 등 강사용 추가 DB (PWA에서 사용)
+  '314838faf2a681c3b4e4da87c48f9b43', // LESSON_TYPE_DB
+  '314838faf2a681d39ce4c628edab065b', // DISCOUNT_DB
+  '314838faf2a68154935bedd3d2fbea83', // PAYMENT_DB
+  '318838faf2a681f19b9cfd379b1026ed', // LESSON_LOG_DB
+]);
+
+// ===== SSRF 방어 =====
+// og-proxy류에서 사용자가 보낸 URL을 fetch할 때, 내부망/메타데이터/loopback으로의
+// 우회 호출을 차단한다. DNS rebinding까지 막으려면 추가 작업 필요하지만 1차 방어선.
+function isSafeExternalUrl(rawUrl) {
+  let u;
+  try { u = new URL(rawUrl); } catch { return false; }
+  if (u.protocol !== 'https:' && u.protocol !== 'http:') return false;
+
+  const host = u.hostname.toLowerCase();
+  // 명백한 사설/메타데이터 호스트
+  const PRIVATE_HOST_PATTERNS = [
+    /^localhost$/,
+    /\.local$/,
+    /\.internal$/,
+    /^127\./,
+    /^10\./,
+    /^192\.168\./,
+    /^172\.(1[6-9]|2\d|3[01])\./,
+    /^169\.254\./,         // link-local + AWS/GCP 메타데이터
+    /^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./, // CGNAT
+    /^0\./,
+    /^::1$/,
+    /^fe80:/i,
+    /^fc00:/i, /^fd[0-9a-f]{2}:/i, // IPv6 ULA
+  ];
+  if (PRIVATE_HOST_PATTERNS.some(re => re.test(host))) return false;
+
+  // IP 직접 표기는 일반 콘텐츠 미리보기에 필요 없으므로 호스트명만 허용
+  if (/^\d+\.\d+\.\d+\.\d+$/.test(host)) return false;
+  if (host.includes(':')) return false; // IPv6 리터럴
+
+  return true;
+}
+
+// fetch 응답 본문 크기 제한 (스트리밍 단위로 누적). maxBytes 초과 시 throw.
+async function fetchWithLimit(url, init = {}, maxBytes = 5 * 1024 * 1024) {
+  const res = await fetch(url, { ...init, redirect: 'manual' });
+  // redirect 발생 시 Location을 다시 검증 후 따라가야 안전 → 여기선 그냥 거절
+  if (res.status >= 300 && res.status < 400) {
+    throw new Error('redirect blocked');
+  }
+  const contentLength = parseInt(res.headers.get('content-length') || '0', 10);
+  if (contentLength && contentLength > maxBytes) {
+    throw new Error('response too large');
+  }
+  const reader = res.body?.getReader();
+  if (!reader) return { res, buffer: new ArrayBuffer(0) };
+  const chunks = [];
+  let total = 0;
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > maxBytes) {
+      try { reader.cancel(); } catch {}
+      throw new Error('response too large');
+    }
+    chunks.push(value);
+  }
+  const buffer = new Uint8Array(total);
+  let offset = 0;
+  for (const c of chunks) { buffer.set(c, offset); offset += c.byteLength; }
+  return { res, buffer: buffer.buffer };
+}
+
+// ===== Rate limit (Cloudflare Cache API 기반, KV 없이 동작) =====
+// 같은 키로 windowSec 동안 최대 limit번 허용. 초과 시 false 반환.
+// 카운터를 cache에 저장: key별로 호출마다 새 응답을 push하고, 매치된 응답 수로 횟수 추정.
+// 단순화 위해 키별 단일 슬롯에 카운터를 atomic하게 증가하는 대신,
+// "현재 window 시작 시점의 카운터 시리얼라이즈된 응답"을 사용한다.
+async function rateLimitCheck(key, limit, windowSec) {
+  try {
+    const cache = caches.default;
+    const bucket = Math.floor(Date.now() / 1000 / windowSec);
+    const cacheKey = new Request(`https://ratelimit.local/${encodeURIComponent(key)}/${bucket}`);
+    const hit = await cache.match(cacheKey);
+    let count = 0;
+    if (hit) {
+      const text = await hit.text();
+      count = parseInt(text, 10) || 0;
+    }
+    if (count >= limit) return false;
+    await cache.put(
+      cacheKey,
+      new Response(String(count + 1), {
+        headers: { 'Cache-Control': `public, max-age=${windowSec}` },
+      }),
+    );
+    return true;
+  } catch {
+    return true; // 캐시 실패 시 fail-open (가용성 우선)
+  }
+}
+
+// IP를 안정적으로 얻는다. 없으면 0.0.0.0으로 묶음 (테스트/내부 호출 대응).
+function clientIp(request) {
+  return request.headers.get('CF-Connecting-IP') || '0.0.0.0';
+}
+
+// ===== PII 마스킹 =====
+function maskPhone(phone) {
+  const digits = (phone || '').replace(/\D/g, '');
+  if (digits.length < 4) return '***';
+  return `***-****-${digits.slice(-4)}`;
+}
+function maskToken(token) {
+  const t = String(token || '');
+  if (t.length <= 8) return '***';
+  return `${t.slice(0, 4)}...${t.slice(-4)}`;
+}
 
 // HMAC-SHA256 서명 생성 → base64 (토큰용)
 async function createToken(secret, expSeconds) {
@@ -502,21 +657,25 @@ async function handleConsultRequest(request, env, corsHeaders) {
     });
   }
 
-  // 강사에게 ntfy 알림
+  // 강사에게 ntfy 알림 — PII는 마스킹 (전체 정보는 Notion CONSULT_DB에서 확인)
   const concernsText = Array.isArray(concerns) && concerns.length > 0 ? concerns.join(', ') : '미기재';
   const reasonsText = Array.isArray(reasons) && reasons.length > 0
     ? reasons.map(r => r === '기타 (직접 입력)' && reasonOther?.trim() ? `기타: ${reasonOther.trim()}` : r).join(', ')
     : '미기재';
+  // 이름은 성만, 카카오 ID는 첫 2자만 노출 (ntfy.sh 서버에 평문 PII 누적 방지)
+  const trimmedName = name.trim();
+  const maskedName = trimmedName.length > 1 ? `${trimmedName[0]}**` : trimmedName;
+  const maskedKakao = kakaoId?.trim() ? `${kakaoId.trim().slice(0, 2)}***` : null;
   const ntfyMsg = [
-    `이름: ${name.trim()}`,
-    `전화: ${phoneDigits}`,
-    kakaoId?.trim() ? `카카오톡 ID: ${kakaoId.trim()}` : null,
+    `이름: ${maskedName}`,
+    `전화: ${maskPhone(phoneDigits)}`,
+    maskedKakao ? `카카오톡 ID: ${maskedKakao}` : null,
     `수준: ${level || '미기재'}`,
     `고민: ${concernsText}`,
     `이유: ${reasonsText}`,
     `희망 요일: ${daysText}`,
     `희망 시간대: ${preferredTime || '미기재'}`,
-    message?.trim() ? `상담 내용: ${message.trim()}` : null,
+    `※ 자세한 내용은 Notion 무료상담 DB에서 확인하세요.`,
   ].filter(Boolean).join('\n');
 
   // 카카오 알림톡 발송 (강사에게)
@@ -543,6 +702,17 @@ async function handleConsultRequest(request, env, corsHeaders) {
 
 // ===== 예약 시스템 라우트 처리 =====
 async function handleBookingRoutes(request, env, corsHeaders, url) {
+  // 토큰 기반 학생 라우트는 brute-force/스캔 대상이 될 수 있어 IP당 분당 60회 제한.
+  // (강사 인증이 필요한 /booking/blocked 등은 JWT 검증으로 별도 보호)
+  const isStudentTokenPath =
+    /^\/booking\/(student|status|my-classes|my-class)\//.test(url.pathname) ||
+    url.pathname === '/booking/reserve';
+  if (isStudentTokenPath) {
+    if (!(await rateLimitCheck(`book:${clientIp(request)}`, 60, 60))) {
+      return errRes(corsHeaders, 429, '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.');
+    }
+  }
+
   const n = makeNotion(env.NOTION_TOKEN);
 
   // 시간 관련 유틸
@@ -1081,12 +1251,12 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
       classFilter = { property: '학생', relation: { contains: studentPage.id } };
     }
 
-    const res = await n('POST', `/databases/${CLASS_DB_ID}/query`, {
+    // 페이지네이션 처리 — 학생이 100개+ 수업 보유 시 누락 방지
+    const allClassResults = await queryAllNotion(n, CLASS_DB_ID, {
       filter: classFilter,
       sorts: [{ property: '수업 일시', direction: 'descending' }],
-      page_size: 100,
     });
-    const rawClasses = (res.results ?? []).map(p => {
+    const rawClasses = allClassResults.map(p => {
       const props = p.properties;
       const dtStr = props['수업 일시']?.date?.start ?? '';
       const date = dtStr.slice(0, 10);
@@ -1411,6 +1581,16 @@ async function uploadFileToNotion(file, notionToken) {
 
 // ===== 숙제 라우트 핸들러 =====
 async function handleHomeworkRoutes(request, env, corsHeaders, url) {
+  // 학생 토큰 기반 라우트만 IP rate limit (업로드는 정상 사용량이 있어 한도 완화)
+  const isStudentTokenPath = /^\/homework\/student(-upload)?\//.test(url.pathname);
+  if (isStudentTokenPath) {
+    const isUpload = url.pathname.startsWith('/homework/student-upload/');
+    const limit = isUpload ? 30 : 60;
+    if (!(await rateLimitCheck(`hw:${clientIp(request)}`, limit, 60))) {
+      return errRes(corsHeaders, 429, '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.');
+    }
+  }
+
   const n = makeNotion(env.NOTION_TOKEN);
 
   // 학생 토큰으로 학생 페이지 조회 (공통)
@@ -1535,12 +1715,12 @@ async function handleHomeworkRoutes(request, env, corsHeaders, url) {
         status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-    const res = await n('POST', `/databases/${HOMEWORK_DB_ID}/query`, {
+    // 페이지네이션 처리 — 누적 숙제 100개+ 보유 시 누락 방지
+    const allHomework = await queryAllNotion(n, HOMEWORK_DB_ID, {
       filter: { property: '학생', relation: { contains: studentPage.id } },
       sorts: [{ timestamp: 'created_time', direction: 'descending' }],
-      page_size: 100,
     });
-    return new Response(JSON.stringify(res.results ?? []), {
+    return new Response(JSON.stringify(allHomework), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
@@ -1610,9 +1790,10 @@ async function handleHomeworkRoutes(request, env, corsHeaders, url) {
     });
     const updateData = await updateRes.json();
 
-    // 실제 새 파일이 업로드된 제출완료 상태일 때만 강사에게 ntfy 알림
+    // 실제 새 파일이 업로드된 제출완료 상태일 때만 강사에게 ntfy 알림 (학생명 마스킹)
     if (updateRes.ok && newStatus === '제출완료' && newFiles.length > 0) {
-      const studentName = studentPage.properties?.['이름']?.title?.[0]?.plain_text ?? '학생';
+      const rawName = stripEmoji(studentPage.properties?.['이름']?.title?.[0]?.plain_text ?? '학생');
+      const studentName = rawName.length > 1 ? `${rawName[0]}**` : rawName;
       const homeworkTitle = currentPage.properties?.['제목']?.title?.[0]?.plain_text ?? '숙제';
       const fileDesc = newFiles.length === 1 ? '파일 1개' : `파일 ${newFiles.length}개`;
       await sendNtfy(
@@ -1635,8 +1816,16 @@ async function handleHomeworkRoutes(request, env, corsHeaders, url) {
 
 // ===== 클라이언트 에러 수집 (PWA window.onerror → 여기로 POST) =====
 async function handleErrorLog(request, env, corsHeaders) {
+  // Abuse 방지: IP당 분당 10건만 ntfy로 전달 (초과분은 조용히 200으로 무시)
+  const allowed = await rateLimitCheck(`errlog:${clientIp(request)}`, 10, 60);
   let body = {};
   try { body = await request.json(); } catch { /* ignore */ }
+  if (!allowed) {
+    return new Response(JSON.stringify({ ok: true, throttled: true }), {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
 
   const message = String(body.message || 'unknown error').slice(0, 400);
   const source = String(body.source || '').slice(0, 200);
@@ -1688,15 +1877,25 @@ async function handleFetch(request, env, ctx) {
       const imageUrl = url.searchParams.get('url');
       const referer = url.searchParams.get('referer') || '';
       if (!imageUrl) return new Response('url 파라미터 필요', { status: 400 });
+      // SSRF 방어: 사설망/메타데이터/IP 직접 표기 차단
+      if (!isSafeExternalUrl(imageUrl)) return new Response('forbidden url', { status: 403 });
+      if (referer && !isSafeExternalUrl(referer)) return new Response('forbidden referer', { status: 403 });
+      // 간단한 IP 기반 rate limit (분당 60건)
+      if (!(await rateLimitCheck(`og-img:${clientIp(request)}`, 60, 60))) {
+        return new Response('too many requests', { status: 429 });
+      }
       try {
-        const res = await fetch(imageUrl, {
+        const { res, buffer } = await fetchWithLimit(imageUrl, {
           headers: {
             'Referer': referer,
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
           },
-        });
+        }, 5 * 1024 * 1024);
         const contentType = res.headers.get('Content-Type') || 'image/jpeg';
-        const buffer = await res.arrayBuffer();
+        // 이미지 외 콘텐츠 타입 거부 (HTML/JS 등 다른 데이터 누설 차단)
+        if (!/^image\//i.test(contentType)) {
+          return new Response('not an image', { status: 415 });
+        }
         return new Response(buffer, {
           headers: {
             'Content-Type': contentType,
@@ -1825,16 +2024,65 @@ async function handleFetch(request, env, ctx) {
           status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
-      try {
-        const res = await fetch(targetUrl, {
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
-            'Accept': 'text/html,application/xhtml+xml',
-            'Accept-Language': 'ko-KR,ko;q=0.9',
-          },
-          redirect: 'follow',
+      // SSRF 방어 + rate limit (분당 30건)
+      if (!isSafeExternalUrl(targetUrl)) {
+        return new Response(JSON.stringify({ error: 'forbidden url' }), {
+          status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
-        const html = await res.text();
+      }
+      if (!(await rateLimitCheck(`og:${clientIp(request)}`, 30, 60))) {
+        return new Response(JSON.stringify({ error: 'too many requests' }), {
+          status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      try {
+        // redirect 직접 처리: 따라가되 매 단계마다 SSRF 재검증
+        let currentUrl = targetUrl;
+        let res;
+        for (let hop = 0; hop < 3; hop++) {
+          res = await fetch(currentUrl, {
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
+              'Accept': 'text/html,application/xhtml+xml',
+              'Accept-Language': 'ko-KR,ko;q=0.9',
+            },
+            redirect: 'manual',
+          });
+          if (res.status >= 300 && res.status < 400) {
+            const loc = res.headers.get('Location');
+            if (!loc) break;
+            const next = new URL(loc, currentUrl).toString();
+            if (!isSafeExternalUrl(next)) {
+              return new Response(JSON.stringify({ error: 'redirect to forbidden host' }), {
+                status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              });
+            }
+            currentUrl = next;
+            continue;
+          }
+          break;
+        }
+        // HTML만 처리 (다른 콘텐츠 타입 누설 방지)
+        const ct = res.headers.get('Content-Type') || '';
+        if (!/text\/html|application\/xhtml/i.test(ct)) {
+          return new Response(JSON.stringify({ error: 'not an html page' }), {
+            status: 415, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+        // 본문 1MB 제한
+        const reader = res.body?.getReader();
+        let html = '';
+        if (reader) {
+          const dec = new TextDecoder();
+          let total = 0;
+          while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            total += value.byteLength;
+            if (total > 1024 * 1024) { try { reader.cancel(); } catch {} break; }
+            html += dec.decode(value, { stream: true });
+          }
+        }
 
         function getOg(prop) {
           return (
@@ -1878,6 +2126,13 @@ async function handleFetch(request, env, ctx) {
 
     // 로그인 엔드포인트: POST /auth/login
     if (url.pathname === '/auth/login' && request.method === 'POST') {
+      // Brute-force 방어: IP당 5분 윈도우에 최대 10회 시도
+      if (!(await rateLimitCheck(`login:${clientIp(request)}`, 10, 300))) {
+        return new Response(JSON.stringify({ error: '로그인 시도가 너무 많습니다. 잠시 후 다시 시도해주세요.' }), {
+          status: 429,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
       const { password } = await request.json().catch(() => ({}));
       if (!env.AUTH_PASSWORD || password !== env.AUTH_PASSWORD) {
         return new Response(JSON.stringify({ error: '비밀번호가 틀렸습니다.' }), {
@@ -1888,7 +2143,8 @@ async function handleFetch(request, env, ctx) {
       if (!env.JWT_SECRET) {
         console.warn('[보안 경고] JWT_SECRET 미설정. AUTH_PASSWORD를 JWT 서명 키로 사용 중. npx wrangler secret put JWT_SECRET 실행 권장.');
       }
-      const token = await createToken(env.JWT_SECRET || env.AUTH_PASSWORD, 30 * 24 * 60 * 60);
+      // 토큰 유효기간 7일 — sessionStorage 단일 저장과 함께 토큰 탈취 시 악용 기간 단축
+      const token = await createToken(env.JWT_SECRET || env.AUTH_PASSWORD, 7 * 24 * 60 * 60);
       return new Response(JSON.stringify({ token }), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -1914,6 +2170,19 @@ async function handleFetch(request, env, ctx) {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
+    }
+
+    // /v1/databases/:id/* 형식이면 :id가 우리 코드에서 사용하는 DB 화이트리스트에 있어야 함.
+    // 강사 토큰이 유출돼도 임의 워크스페이스 DB로의 horizontal access를 차단.
+    const dbMatch = url.pathname.match(/^\/v1\/databases\/([a-z0-9-]+)/i);
+    if (dbMatch) {
+      const dbId = dbMatch[1].replace(/-/g, '').toLowerCase();
+      if (!ALLOWED_NOTION_DB_IDS.has(dbId)) {
+        return new Response(JSON.stringify({ error: '허용되지 않은 DB입니다.' }), {
+          status: 403,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
     }
 
     const notionUrl = `https://api.notion.com${url.pathname}${url.search}`;

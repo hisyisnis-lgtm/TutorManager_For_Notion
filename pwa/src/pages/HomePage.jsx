@@ -7,7 +7,6 @@ import { queryPage, getPage } from '../api/notionClient.js';
 import { CLASSES_DB, parseClass } from '../api/classes.js';
 import { HOMEWORK_DB, parseHomework } from '../api/homework.js';
 import { PAYMENTS_DB, parsePayment } from '../api/payments.js';
-import { STUDENTS_DB, parseStudent } from '../api/students.js';
 import { parseLessonLog } from '../api/lessonLogs.js';
 import { CONSULT_DB } from '../constants.js';
 import { formatShort, formatDateTime, formatTime, formatKRW, getWeekStart } from '../utils/dateUtils.js';
@@ -37,7 +36,9 @@ function getKSTToday() {
 
 export default function HomePage() {
   const navigate = useNavigate();
-  const { studentNameMap, classTypeMap, refresh: refreshData } = useData();
+  const { studentNameMap, classTypeMap, students, refresh: refreshData } = useData();
+  // 잔여 회차 ≤ 1인 학생 수 — DataContext의 students에서 직접 derive (별도 fetch 불필요)
+  const lowSessionCount = students.filter((s) => (s.remainingSessions ?? 0) <= 1).length;
   const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [consultCount, setConsultCount] = useState(0);
@@ -110,7 +111,6 @@ export default function HomePage() {
   const [weekClasses, setWeekClasses] = useState([]);
   const [weekPayments, setWeekPayments] = useState([]);
   const [weekLoading, setWeekLoading] = useState(true);
-  const [lowSessionCount, setLowSessionCount] = useState(0);
   const [upcomingPrep, setUpcomingPrep] = useState(null);
 
   const loadUpcoming = async () => {
@@ -178,16 +178,6 @@ export default function HomePage() {
       console.error('[홈] 이번 주 요약 오류', e);
     } finally {
       setWeekLoading(false);
-    }
-  };
-
-  const loadLowSessionCount = async () => {
-    try {
-      const data = await queryPage(STUDENTS_DB, undefined, undefined, undefined, 100);
-      const students = (data?.results ?? []).map(parseStudent);
-      setLowSessionCount(students.filter((s) => (s.remainingSessions ?? 0) <= 1).length);
-    } catch (e) {
-      console.error('[홈] 잔여 회차 부족 학생 조회 오류', e);
     }
   };
 
@@ -285,7 +275,6 @@ export default function HomePage() {
     loadSubmittedHomework();
     loadTodayClasses();
     loadWeekSummary();
-    loadLowSessionCount();
   }, []);
 
   // 설정/알림 페이지에서 돌아올 때 이름 및 뱃지 갱신 (마운트 시 1회)
@@ -299,13 +288,13 @@ export default function HomePage() {
   }, []);
 
   const handleRefresh = async () => {
+    // refreshData()가 students를 갱신 → lowSessionCount는 derive로 자동 재계산됨
     await Promise.all([
       loadUpcoming(),
       loadConsultCount(),
       loadSubmittedHomework(),
       loadTodayClasses(),
       loadWeekSummary(),
-      loadLowSessionCount(),
       refreshData(),
     ]);
   };

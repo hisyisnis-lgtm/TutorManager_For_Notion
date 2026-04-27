@@ -97,16 +97,22 @@ export default function App() {
   const [authed, setAuthed] = useState(isAuthed);
   const [swReady, setSwReady] = useState(false);
 
+  const [swRegistration, setSwRegistration] = useState(null);
+
   const { needRefresh: [needRefresh], updateServiceWorker } = useRegisterSW({
     onRegistered(registration) {
       setSwReady(true);
-      // 60초마다 새 버전 체크 (앱이 열린 상태에서 배포돼도 감지)
-      if (registration) {
-        setInterval(() => registration.update(), 60 * 1000);
-      }
+      if (registration) setSwRegistration(registration);
     },
     onRegisterError() { setSwReady(true); },
   });
+
+  // 60초마다 새 버전 체크 — 컴포넌트 언마운트 시 정리
+  useEffect(() => {
+    if (!swRegistration) return;
+    const id = setInterval(() => swRegistration.update(), 60 * 1000);
+    return () => clearInterval(id);
+  }, [swRegistration]);
 
   useEffect(() => {
     if (!needRefresh) {

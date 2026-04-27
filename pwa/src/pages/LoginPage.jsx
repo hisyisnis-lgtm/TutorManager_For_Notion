@@ -5,7 +5,6 @@ import { WORKER_URL } from '../config.js';
 
 export default function LoginPage({ onSuccess }) {
   const [pin, setPin] = useState('');
-  const [remember, setRemember] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -26,10 +25,8 @@ export default function LoginPage({ onSuccess }) {
         return;
       }
       const { token } = data;
+      // sessionStorage만 사용 — 브라우저 닫으면 자동 삭제 (XSS 토큰 탈취 지속성 차단)
       sessionStorage.setItem('auth_token', token);
-      if (remember) {
-        localStorage.setItem('auth_token', token);
-      }
       onSuccess(token);
     } catch {
       setError('서버에 연결할 수 없습니다.');
@@ -69,16 +66,6 @@ export default function LoginPage({ onSuccess }) {
               <p className="text-red-500 text-sm mt-2 text-center">{error}</p>
             )}
           </div>
-
-          <label className="flex items-center gap-2.5 text-sm text-gray-600 cursor-pointer select-none px-1">
-            <input
-              type="checkbox"
-              checked={remember}
-              onChange={e => setRemember(e.target.checked)}
-              className="w-4 h-4 rounded accent-brand-600"
-            />
-            30일 동안 로그인 유지
-          </label>
 
           <Button
             type="primary" htmlType="submit" block loading={loading}

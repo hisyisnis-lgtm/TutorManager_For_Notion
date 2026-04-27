@@ -14,7 +14,7 @@ import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import ErrorMessage from '../components/ui/ErrorMessage.jsx';
 import EmptyState from '../components/ui/EmptyState.jsx';
 import { HouseIcon, BookOpenIcon, FileTextIcon, BellIcon, GearSixIcon, ClipboardTextIcon, HourglassIcon, ChatTeardropTextIcon, ArchiveIcon, NoteBlankIcon, SpeakerHighIcon, CalendarBlankIcon, MegaphoneIcon, CaretRightIcon, InstagramLogoIcon, YoutubeLogoIcon, ArticleIcon, MusicNotesIcon, WarningCircleIcon } from '@phosphor-icons/react';
-import { STAGES, getStageInfo, PANDA_FEED_KEY } from '../components/ui/PandaWidget.jsx';
+import { STAGES, getStageInfo, PANDA_FEED_KEY, getPandaStorageKey } from '../components/ui/PandaWidget.jsx';
 import InstallBanner from '../components/ui/InstallBanner.jsx';
 import { useInstallPrompt } from '../hooks/useInstallPrompt.js';
 import OnboardingCarousel, { ONBOARDING_KEY } from '../components/ui/OnboardingCarousel.jsx';
@@ -823,7 +823,8 @@ function HomeTab({ studentToken, foodSources, studentLoaded, remainingHours, rem
       {/* 내 현황 + 팬더 키우기 */}
       {studentLoaded && (() => {
         const total = foodSources.reduce((s, x) => s + (x.count || 0), 0);
-        const fed = Math.min(parseInt(localStorage.getItem(PANDA_FEED_KEY) || '0', 10), total);
+        // 학생별 키 사용 → 다른 학생의 EXP가 섞여 표시되던 문제 해결
+        const fed = Math.min(parseInt(localStorage.getItem(getPandaStorageKey(studentToken)) || '0', 10), total);
         const { stage } = getStageInfo(fed);
         return (
           <div style={{ padding: '0 20px', marginBottom: 24, animation: 'fade-in-up 400ms cubic-bezier(0.2,0,0,1) both', animationDelay: '120ms' }}>
@@ -987,6 +988,12 @@ export default function PersonalPage() {
 
   const ARCHIVE_SEEN_KEY = `archive_last_seen_${studentToken}`;
   const CLASS_SEEN_KEY = `classes_seen_ids_${studentToken}`;
+
+  // 옛 공통 팬더 EXP 키(`panda_fed_total`) 정리 — 학생별 키 도입 전 누적된 잔존물.
+  // 어느 학생 것인지 식별 불가능하므로 단순 삭제. 이미 없으면 무동작.
+  useEffect(() => {
+    try { localStorage.removeItem(PANDA_FEED_KEY); } catch {}
+  }, []);
 
   const checkDots = useCallback(async () => {
     try {

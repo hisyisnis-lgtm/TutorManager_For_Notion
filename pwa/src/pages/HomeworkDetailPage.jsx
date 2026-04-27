@@ -15,7 +15,7 @@ import {
   TEXT_PRIMARY, TEXT_SECONDARY, TEXT_TERTIARY, TEXT_DISABLED,
   BORDER_DEFAULT, BORDER_NEUTRAL,
 } from '../constants/theme.js';
-import { getHomeworkPage, parseHomework, saveFeedback, deleteHomework, uploadTeacherFile, homeworkStatusColor } from '../api/homework.js';
+import { getHomeworkPage, parseHomework, saveFeedback, deleteHomework, uploadTeacherFile, homeworkStatusColor, notifyHomework } from '../api/homework.js';
 import { getPage } from '../api/notionClient.js';
 import { parseStudent } from '../api/students.js';
 import { formatDateTimeCompact } from '../utils/dateUtils.js';
@@ -174,6 +174,10 @@ export default function HomeworkDetailPage() {
       }
 
       await saveFeedback(id, { feedbackText, files: uploadedFiles, existingFiles });
+      // 새 피드백 파일이 실제로 업로드된 경우에만 학생에게 알림톡 발송
+      if (uploadedFiles && uploadedFiles.length > 0) {
+        notifyHomework('feedback', id);
+      }
       setSavedFeedbackText(feedbackText);
       setPendingFeedbackFiles([]);
       closeFileModal();

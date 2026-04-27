@@ -183,6 +183,26 @@ export function getMonthStart() {
   return `${year}-${month}-01T00:00:00+09:00`;
 }
 
+/** 이번 주 일요일 23:59 ISO 문자열 (월요일 시작 기준) */
+export function getWeekEnd() {
+  const dateStr = new Date().toLocaleDateString('en-CA', { timeZone: KST });
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const tempDate = new Date(year, month - 1, day);
+  const dayOfWeek = tempDate.getDay(); // 0=일, 1=월...
+  const diff = dayOfWeek === 0 ? 0 : 7 - dayOfWeek;
+  const sunday = new Date(year, month - 1, day + diff);
+  const sundayStr = `${sunday.getFullYear()}-${String(sunday.getMonth() + 1).padStart(2, '0')}-${String(sunday.getDate()).padStart(2, '0')}`;
+  return `${sundayStr}T23:59:59+09:00`;
+}
+
+/** 이번 달 말일 23:59 ISO 문자열 */
+export function getMonthEnd() {
+  const dateStr = new Date().toLocaleDateString('en-CA', { timeZone: KST });
+  const [year, month] = dateStr.split('-').map(Number);
+  const lastDay = new Date(year, month, 0).getDate();
+  return `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}T23:59:59+09:00`;
+}
+
 /** 숫자 금액 → 한국식 포맷 (₩100,000) */
 export function formatKRW(amount) {
   if (!amount && amount !== 0) return '';
