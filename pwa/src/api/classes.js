@@ -8,20 +8,14 @@ export const LOCATION_OPTIONS = ['강남사무실', '온라인 (Zoom/화상)', '
 
 /** 수업 목록 조회 */
 export async function fetchClassesPage(opts = {}) {
-  const { dateFrom, dateTo, studentId, cursor, completedOnly, excludeCompleted } = opts;
+  const { dateFrom, dateTo, studentId, cursor, completedOnly } = opts;
   const filters = [];
   const nowIso = new Date().toISOString();
 
-  // formula 필터 미지원 → 수업 일시 기준으로 완료/예정 구분
-  // 완료: 수업 일시 <= now, 예정/수업중: 수업 일시 >= now - 최대수업시간(180분)
   if (completedOnly) {
     filters.push({ property: '수업 일시', date: { on_or_before: nowIso } });
   } else {
-    const ongoingCoverIso = excludeCompleted
-      ? new Date(Date.now() - 180 * 60 * 1000).toISOString()
-      : null;
-    const effectiveDateFrom = ongoingCoverIso ?? dateFrom;
-    if (effectiveDateFrom) filters.push({ property: '수업 일시', date: { on_or_after: effectiveDateFrom } });
+    if (dateFrom) filters.push({ property: '수업 일시', date: { on_or_after: dateFrom } });
     if (dateTo) filters.push({ property: '수업 일시', date: { on_or_before: dateTo } });
   }
   if (studentId) filters.push({ property: '학생', relation: { contains: studentId } });
@@ -37,7 +31,7 @@ export async function fetchClassesPage(opts = {}) {
     ? [{ property: '수업 일시', direction: 'descending' }]
     : [{ property: '수업 일시', direction: 'ascending' }];
 
-  return queryPage(CLASSES_DB, filter, sorts, cursor);
+  return queryPage(CLASSES_DB, filter, sorts, cursor, 100);
 }
 
 /** 수업 생성 */

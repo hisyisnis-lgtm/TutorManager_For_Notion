@@ -8,6 +8,7 @@ export default function ConfirmDialog({
   confirmLabel = '삭제',
   cancelLabel = '취소',
   loading = false,
+  danger = true,
 }) {
   return (
     <Modal
@@ -19,7 +20,7 @@ export default function ConfirmDialog({
       styles={{ content: { borderRadius: 16 } }}
     >
       {message && (
-        <p style={{ fontSize: 14, color: '#595959', margin: '8px 0 24px' }}>{message}</p>
+        <p style={{ fontSize: 14, color: '#595959', margin: '8px 0 24px', whiteSpace: 'pre-line' }}>{message}</p>
       )}
       <Flex gap={12}>
         <Button
@@ -33,7 +34,7 @@ export default function ConfirmDialog({
         </Button>
         <Button
           block
-          danger
+          danger={danger}
           type="primary"
           size="large"
           onClick={onConfirm}

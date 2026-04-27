@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Alert, Button, Input, Select } from 'antd';
 import PageHeader from '../components/layout/PageHeader.jsx';
-import { createHomework } from '../api/homework.js';
+import { createHomework, notifyHomework } from '../api/homework.js';
 import { queryAll } from '../api/notionClient.js';
 import { parseStudent } from '../api/students.js';
 
@@ -38,7 +38,8 @@ export default function HomeworkFormPage() {
     setSaving(true);
     setError(null);
     try {
-      await createHomework({ studentPageId: studentId, title: title.trim(), content: content.trim() });
+      const created = await createHomework({ studentPageId: studentId, title: title.trim(), content: content.trim() });
+      if (created?.id) notifyHomework('assign', created.id);
       navigate(-1);
     } catch (e) {
       setError(e.message);

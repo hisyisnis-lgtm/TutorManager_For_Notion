@@ -10,6 +10,9 @@ export default defineConfig({
   define: {
     __APP_VERSION__: JSON.stringify(version),
   },
+  build: {
+    sourcemap: false,
+  },
   plugins: [
     react(),
     VitePWA({

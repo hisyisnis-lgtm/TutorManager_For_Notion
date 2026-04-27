@@ -1,6 +1,6 @@
 name = "tutor-manager-proxy"
 main = "src/index.js"
-compatibility_date = "2024-09-23"
+compatibility_date = "2026-04-27"
 
 [vars]
 ALLOWED_ORIGIN = "https://hisyisnis-lgtm.github.io"

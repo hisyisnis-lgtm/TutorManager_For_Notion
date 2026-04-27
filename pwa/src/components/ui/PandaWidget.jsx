@@ -18,7 +18,17 @@ export function getStageInfo(fedTotal) {
   return { stage: STAGES[0], idx: 0 };
 }
 
+// 옛 공통 키 — 학생 구분 없이 모든 학생의 EXP가 섞여 누적되던 버그가 있었음.
+// 호환을 위해 export는 유지하되, 신규 호출부는 getPandaStorageKey(studentToken) 사용.
 export const PANDA_FEED_KEY = 'panda_fed_total';
+
+/**
+ * 학생별 EXP 저장소 키. studentToken이 없으면 옛 공통 키로 fallback.
+ * PandaPage·PersonalPage 등 학생 컨텍스트가 있는 곳은 반드시 이 헬퍼 사용.
+ */
+export function getPandaStorageKey(studentToken) {
+  return studentToken ? `panda_fed_total_${studentToken}` : PANDA_FEED_KEY;
+}
 
 const DEFAULT_FEED_KEY = PANDA_FEED_KEY;
 let _pid = 0;

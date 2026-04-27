@@ -1,11 +1,13 @@
 name: 수업 제목 자동 동기화
 
 on:
+  # Worker 웹훅(handleNotionWebhook → syncClassTitle)이 즉시 처리하므로 폴링 cron 제거.
+  # 웹훅 누락 시 안전망으로 6시간마다만 실행.
   schedule:
-    - cron: '*/30 * * * *'  # 30분마다 실행 (웹훅 누락 대비 fallback)
-  workflow_dispatch:          # 수동 실행 가능
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
   repository_dispatch:
-    types: [sync-class-titles]  # Worker 웹훅 핸들러에서 직접 실행 (미래 확장용)
+    types: [sync-class-titles]
 
 jobs:
   sync:

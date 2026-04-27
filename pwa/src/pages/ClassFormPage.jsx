@@ -146,6 +146,8 @@ export default function ClassFormPage() {
   const [deleting, setDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [error, setError] = useState(null);
+  // 충돌 확인 팝업 상태 — { kind: 'single' | 'recurring', payload?, items?, message }
+  const [pendingSubmit, setPendingSubmit] = useState(null);
 
   // 편집 모드: 선택된 학생 항목 스크롤
   useEffect(() => {
@@ -285,7 +287,7 @@ export default function ClassFormPage() {
           location: form.location || null,
           locationMemo: form.locationMemo || '',
         }));
-        // 반복 수업 충돌 검사
+        // 반복 수업 충돌 검사 — 충돌 있어도 확인 팝업 후 진행
         const pad = (n) => String(n).padStart(2, '0');
         const conflicts = [];
         for (const date of recurDates) {
@@ -295,7 +297,11 @@ export default function ClassFormPage() {
           if (result.conflict) conflicts.push(`${dateStr} ${timeStr} (기존 수업 ${result.conflictTime} 근접)`);
         }
         if (conflicts.length > 0) {
-          setError(`다음 날짜가 기존 수업과 30분 이내 겹칩니다:\n${conflicts.join('\n')}`);
+          setPendingSubmit({
+            kind: 'recurring',
+            items,
+            message: `다음 ${conflicts.length}개 수업이 기존 수업과 30분 이내 겹칩니다:\n${conflicts.join('\n')}\n\n그래도 등록하시겠습니까?`,
+          });
           setSaving(false);
           return;
         }
@@ -318,11 +324,15 @@ export default function ClassFormPage() {
           title: form.guestName.trim() || undefined,
           phone: isFreeConsult ? form.guestPhone : undefined,
         };
-        // 일회성 수업 충돌 검사
+        // 일회성 수업 충돌 검사 — 충돌 있어도 확인 팝업 후 진행
         const [dateStr, timeStr] = form.datetime.split('T');
         const conflictRes = await checkConflict(dateStr, timeStr.slice(0, 5), parseInt(form.duration), isEdit ? id : '');
         if (conflictRes.conflict) {
-          setError(`기존 수업(${conflictRes.conflictTime})과 30분 이내 겹칩니다. 시간을 조정해주세요.`);
+          setPendingSubmit({
+            kind: 'single',
+            payload,
+            message: `기존 수업(${conflictRes.conflictTime})과 30분 이내 겹칩니다.\n\n그래도 등록하시겠습니까?`,
+          });
           setSaving(false);
           return;
         }
@@ -337,6 +347,27 @@ export default function ClassFormPage() {
     } catch (e) {
       setError(e.message);
     } finally {
+      setSaving(false);
+    }
+  };
+
+  const proceedSave = async () => {
+    if (!pendingSubmit) return;
+    setSaving(true);
+    setError(null);
+    try {
+      if (pendingSubmit.kind === 'recurring') {
+        await bulkCreateClasses(pendingSubmit.items);
+      } else if (isEdit) {
+        await updateClass(id, pendingSubmit.payload);
+      } else {
+        await createClass(pendingSubmit.payload);
+      }
+      refreshAll();
+      navigate(-1);
+    } catch (e) {
+      setError(e.message);
+      setPendingSubmit(null);
       setSaving(false);
     }
   };
@@ -510,31 +541,30 @@ export default function ClassFormPage() {
                 >
                   {Array.from({ length: 17 }, (_, i) => i + 6).map((h) => {
                     const hStr = String(h).padStart(2, '0');
-                    const unavailable = !isHourAvailable(hStr);
+                    const conflict = !isHourAvailable(hStr);
                     return (
-                      <Select.Option key={h} value={hStr} disabled={unavailable}>
-                        {h}시{unavailable ? ' ✕' : ''}
+                      <Select.Option key={h} value={hStr}>
+                        {h}시{conflict ? ' ⚠' : ''}
                       </Select.Option>
                     );
                   })}
                 </Select>
                 {['00', '30'].map((min) => {
-                  const unavailable = !isMinAvailable(min);
+                  const conflict = !isMinAvailable(min);
                   return (
                     <button
                       key={min}
                       type="button"
-                      disabled={unavailable}
                       onClick={() => {
                         const date = form.datetime ? form.datetime.slice(0, 10) : '';
                         const hour = form.datetime ? form.datetime.slice(11, 13) : '08';
                         setForm((f) => ({ ...f, datetime: `${date}T${hour}:${min}` }));
                       }}
                       className={`px-3 rounded-xl text-sm font-medium border-2 transition-[scale,background-color,color,border-color] duration-150 ease-out active:scale-[0.96] ${
-                        unavailable
-                          ? 'border-gray-100 bg-gray-50 text-gray-300 cursor-not-allowed'
-                          : selectedMin === min
+                        selectedMin === min
                           ? 'border-brand-600 bg-brand-50 text-brand-700'
+                          : conflict
+                          ? 'border-yellow-300 bg-yellow-50 text-yellow-700'
                           : 'border-gray-200 bg-white text-gray-600'
                       }`}
                     >
@@ -600,18 +630,17 @@ export default function ClassFormPage() {
             </Typography.Text>
             <div className="grid grid-cols-5 gap-2">
               {displayDurationOptions.map((d) => {
-                const disabled = !recurring && !isDurationAvailable(d);
+                const conflict = !recurring && !isDurationAvailable(d);
                 return (
                   <button
                     key={d}
                     type="button"
-                    disabled={disabled}
                     onClick={() => setForm((f) => ({ ...f, duration: d }))}
                     className={`py-3 rounded-xl text-sm font-medium border-2 transition-[scale,background-color,color,border-color] duration-150 ease-out active:scale-[0.96] ${
-                      disabled
-                        ? 'border-gray-100 bg-gray-50 text-gray-300 cursor-not-allowed'
-                        : form.duration === d
+                      form.duration === d
                         ? 'border-brand-600 bg-brand-50 text-brand-700'
+                        : conflict
+                        ? 'border-yellow-300 bg-yellow-50 text-yellow-700'
                         : 'border-gray-200 bg-white text-gray-600'
                     }`}
                   >
@@ -820,6 +849,19 @@ export default function ClassFormPage() {
           onConfirm={handleDelete}
           onCancel={() => setShowDeleteConfirm(false)}
           loading={deleting}
+        />
+      )}
+
+      {pendingSubmit && (
+        <ConfirmDialog
+          title="기존 수업과 시간이 겹칩니다"
+          message={pendingSubmit.message}
+          confirmLabel="그대로 등록"
+          cancelLabel="시간 조정"
+          danger={false}
+          onConfirm={proceedSave}
+          onCancel={() => setPendingSubmit(null)}
+          loading={saving}
         />
       )}
     </>

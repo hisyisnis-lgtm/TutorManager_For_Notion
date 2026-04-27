@@ -10,3 +10,12 @@ pwa/node_modules/
 worker/node_modules/
 worker/.wrangler/
 .wrangler/
+# 로컬 wrangler dev secrets — 절대 커밋 금지
+.dev.vars
+worker/.dev.vars
+**/.dev.vars
+
+# 일반 시크릿 패턴
+*.pem
+*.key
+secrets.json

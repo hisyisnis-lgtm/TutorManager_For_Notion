@@ -6,19 +6,35 @@
  * @returns {{ notion, queryAll }}
  */
 export function createNotionClient(token) {
-  async function notion(method, path, body) {
-    const res = await fetch(`https://api.notion.com/v1${path}`, {
-      method,
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Notion-Version': '2022-06-28',
-        'Content-Type': 'application/json',
-      },
-      body: body ? JSON.stringify(body) : undefined,
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(`${res.status}: ${JSON.stringify(data)}`);
-    return data;
+  // 429 (rate limit) / 5xx 응답은 지수 백오프로 자동 재시도.
+  // Notion은 429에 Retry-After 헤더를 보내기도 하므로 우선 사용.
+  async function notion(method, path, body, { maxRetries = 4 } = {}) {
+    let attempt = 0;
+    while (true) {
+      const res = await fetch(`https://api.notion.com/v1${path}`, {
+        method,
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Notion-Version': '2022-06-28',
+          'Content-Type': 'application/json',
+        },
+        body: body ? JSON.stringify(body) : undefined,
+      });
+      if (res.ok) return res.json();
+
+      const isRetryable = res.status === 429 || (res.status >= 500 && res.status < 600);
+      if (!isRetryable || attempt >= maxRetries) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(`${res.status}: ${JSON.stringify(data)}`);
+      }
+      const retryAfter = parseInt(res.headers.get('Retry-After') || '0', 10);
+      const backoffMs = retryAfter > 0
+        ? retryAfter * 1000
+        : Math.min(15000, 500 * Math.pow(2, attempt)) + Math.random() * 250;
+      console.warn(`[notion] ${res.status} 응답, ${Math.round(backoffMs)}ms 후 재시도 (${attempt + 1}/${maxRetries})`);
+      await new Promise(r => setTimeout(r, backoffMs));
+      attempt++;
+    }
   }
 
   async function queryAll(dbId, filter, sorts) {

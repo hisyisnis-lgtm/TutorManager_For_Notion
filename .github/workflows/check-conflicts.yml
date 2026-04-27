@@ -4,8 +4,8 @@ on:
   repository_dispatch:
     types: [conflict-check]
   schedule:
-    - cron: '*/30 * * * *'  # 30분마다 실행
-  workflow_dispatch:          # 수동 실행 가능
+    - cron: '0 */4 * * *'  # 4시간마다 (강사가 수업 추가하는 시점에만 충돌 발생 → Worker 웹훅 dispatch 병행)
+  workflow_dispatch:
 
 jobs:
   check-conflicts:
