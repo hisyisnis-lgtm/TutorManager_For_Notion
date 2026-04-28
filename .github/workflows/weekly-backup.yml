@@ -1,0 +1,107 @@
+name: 주간 노션 백업 (R2)
+
+# 매주 월요일 KST 03:00 (= 일요일 UTC 18:00) 실행.
+# 다른 자동화 스크립트(KST 09:00 발송)들과 시간대 분산.
+on:
+  schedule:
+    - cron: '0 18 * * 0'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: weekly-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Notion DB 9개 백업 → 압축 파일 생성
+        id: backup
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          NTFY_TOPIC_CRITICAL: ${{ secrets.NTFY_TOPIC_CRITICAL }}
+          NTFY_TOKEN: ${{ secrets.NTFY_TOKEN }}
+          BACKUP_OUTPUT_PATH: /tmp/notion-backup.json.gz
+        run: node backup_to_r2.mjs
+
+      - name: R2 시크릿 등록 여부 확인
+        id: check_secrets
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          R2_BACKUP_BUCKET: ${{ secrets.R2_BACKUP_BUCKET }}
+        run: |
+          MISSING=""
+          [ -z "$CLOUDFLARE_API_TOKEN" ] && MISSING="$MISSING CLOUDFLARE_API_TOKEN"
+          [ -z "$CLOUDFLARE_ACCOUNT_ID" ] && MISSING="$MISSING CLOUDFLARE_ACCOUNT_ID"
+          [ -z "$R2_BACKUP_BUCKET" ] && MISSING="$MISSING R2_BACKUP_BUCKET"
+          if [ -n "$MISSING" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "::warning::R2 시크릿 미등록 (누락:${MISSING}). 압축 파일은 만들었지만 업로드는 건너뜁니다. 등록 후 workflow_dispatch로 재실행하세요."
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: R2에 업로드
+        if: steps.check_secrets.outputs.skip != 'true'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          R2_BACKUP_BUCKET: ${{ secrets.R2_BACKUP_BUCKET }}
+        run: |
+          DATE=$(date -u +%Y-%m-%d)
+          KEY="notion-backup/${DATE}.json.gz"
+          echo "📤 업로드: ${R2_BACKUP_BUCKET}/${KEY}"
+          npx --yes wrangler@latest r2 object put "${R2_BACKUP_BUCKET}/${KEY}" \
+            --file=/tmp/notion-backup.json.gz \
+            --content-type="application/gzip" \
+            --remote
+          echo "✅ R2 업로드 완료"
+
+      - name: 성공 알림 (info)
+        if: success() && steps.check_secrets.outputs.skip != 'true'
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          NTFY_TOKEN: ${{ secrets.NTFY_TOKEN }}
+          R2_BACKUP_BUCKET: ${{ secrets.R2_BACKUP_BUCKET }}
+        run: |
+          if [ -z "$NTFY_TOPIC" ]; then exit 0; fi
+          DATE=$(date -u +%Y-%m-%d)
+          SIZE_KB=$(awk "BEGIN{printf \"%.1f\", ${{ steps.backup.outputs.compressed_size }} / 1024}")
+          MSG=$(printf '주간 노션 백업 R2 업로드 완료.\n페이지: %s개\n크기: %s KB\n키: %s/notion-backup/%s.json.gz' \
+            "${{ steps.backup.outputs.total_pages }}" \
+            "$SIZE_KB" \
+            "$R2_BACKUP_BUCKET" \
+            "$DATE")
+          HEADERS=(-H "Title: 주간 백업 완료" -H "Priority: 2" -H "Tags: package,white_check_mark")
+          if [ -n "$NTFY_TOKEN" ]; then HEADERS+=(-H "Authorization: Bearer $NTFY_TOKEN"); fi
+          curl -fsS -X POST "https://ntfy.sh/$NTFY_TOPIC" "${HEADERS[@]}" -d "$MSG"
+
+      - name: R2 업로드 실패 알림 (critical)
+        if: failure() && steps.check_secrets.outputs.skip != 'true'
+        env:
+          NTFY_TOPIC_CRITICAL: ${{ secrets.NTFY_TOPIC_CRITICAL }}
+        run: |
+          if [ -z "$NTFY_TOPIC_CRITICAL" ]; then exit 0; fi
+          MSG=$(printf '주간 노션 백업 R2 업로드 실패.\n링크: %s/%s/actions/runs/%s' \
+            "${{ github.server_url }}" \
+            "${{ github.repository }}" \
+            "${{ github.run_id }}")
+          curl -fsS -X POST "https://ntfy.sh/$NTFY_TOPIC_CRITICAL" \
+            -H "Title: 주간 백업 실패" \
+            -H "Priority: 5" \
+            -H "Tags: rotating_light,floppy_disk" \
+            -d "$MSG"
