@@ -2,6 +2,14 @@
 // 새 순수 함수 추가 시 lib/ 안에 두고 여기서 import.
 import { stripEmoji, normalizeId } from '../lib/string.js';
 import { isSafeExternalUrl, maskPhone, maskToken } from '../lib/security.js';
+import {
+  ConsultSchema,
+  HomeworkSubmitSchema,
+  StudentTokenSchema,
+  NotionPageIdSchema,
+  MyClassesQuerySchema,
+} from '../lib/schemas.js';
+import { validateBody, validateParams, validatePathToken } from '../lib/validation.js';
 
 const CLASS_DB_ID = '314838fa-f2a6-81bc-8b67-d9e1c8fb7ecb';
 const STUDENT_DB_ID = '314838fa-f2a6-8143-a6c7-e59c50f3bbdb';
@@ -477,75 +485,11 @@ async function handleConsultRequest(request, env, corsHeaders) {
     });
   }
 
-  const { name, phone, kakaoId, level, preferredDays, preferredTime, concerns, reasons, reasonOther, message } = body;
-
-  const VALID_LEVELS = ['완전 처음이에요', '조금 배운 적 있어요', '어느 정도 배웠는데 막혀있어요'];
-  const VALID_DAYS = ['월', '화', '수', '목', '금', '토', '일'];
-  const VALID_TIMES = ['오전 (9-12시)', '오후 (12-18시)', '저녁 (18-21시)'];
-  const VALID_CONCERNS = ['발음이 이상한 것 같아요', '배웠는데 막상 말이 안 나와요', '방향을 못 잡겠어요'];
-  const VALID_REASONS = ['여행', '드라마&콘텐츠', '업무&비즈니스', '중국인 지인&가족', '그냥 관심이 생겨서', '기타 (직접 입력)'];
-
-  if (!name?.trim() || !phone?.trim()) {
-    return new Response(JSON.stringify({ error: '이름과 전화번호는 필수입니다.' }), {
-      status: 400,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  }
-
-  // 길이 제한
-  if (name.trim().length > 50) {
-    return new Response(JSON.stringify({ error: '이름이 너무 깁니다.' }), {
-      status: 400,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  }
-  if (message && message.trim().length > 500) {
-    return new Response(JSON.stringify({ error: '상담 내용은 500자 이내로 입력해주세요.' }), {
-      status: 400,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  }
-
-  // 전화번호 형식 검증 (숫자만, 10~11자리)
+  // zod 스키마 검증 (lib/schemas.js의 ConsultSchema)
+  const v = validateBody(ConsultSchema, body, corsHeaders);
+  if (!v.ok) return v.response;
+  const { name, phone, kakaoId, level, preferredDays, preferredTime, concerns, reasons, reasonOther, message } = v.data;
   const phoneDigits = phone.replace(/\D/g, '');
-  if (phoneDigits.length < 10 || phoneDigits.length > 11) {
-    return new Response(JSON.stringify({ error: '전화번호 형식이 올바르지 않습니다.' }), {
-      status: 400,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  }
-
-  // 선택값 화이트리스트 검증
-  if (level && !VALID_LEVELS.includes(level)) {
-    return new Response(JSON.stringify({ error: '잘못된 수준 값입니다.' }), {
-      status: 400,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  }
-  if (preferredTime && !VALID_TIMES.includes(preferredTime)) {
-    return new Response(JSON.stringify({ error: '잘못된 시간대 값입니다.' }), {
-      status: 400,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  }
-  if (Array.isArray(preferredDays) && preferredDays.some(d => !VALID_DAYS.includes(d))) {
-    return new Response(JSON.stringify({ error: '잘못된 요일 값입니다.' }), {
-      status: 400,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  }
-  if (Array.isArray(concerns) && concerns.some(c => !VALID_CONCERNS.includes(c))) {
-    return new Response(JSON.stringify({ error: '잘못된 고민 값입니다.' }), {
-      status: 400,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  }
-  if (Array.isArray(reasons) && reasons.some(r => !VALID_REASONS.includes(r))) {
-    return new Response(JSON.stringify({ error: '잘못된 이유 값입니다.' }), {
-      status: 400,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  }
 
   const dbId = env.CONSULT_DB_ID || CONSULT_DB_ID;
   if (!dbId) {
@@ -1064,6 +1008,8 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
   const studentLookupMatch = url.pathname.match(/^\/booking\/student\/([^/]+)$/);
   if (studentLookupMatch && request.method === 'GET') {
     const token = decodeURIComponent(studentLookupMatch[1]);
+    const tv = validatePathToken(StudentTokenSchema, token, corsHeaders, '학생 토큰');
+    if (!tv.ok) return tv.response;
     const res = await n('POST', `/databases/${STUDENT_DB_ID}/query`, {
       filter: { property: '예약 코드', rich_text: { equals: token } },
       page_size: 1,
@@ -1173,6 +1119,10 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
   const myClassesMatch = url.pathname.match(/^\/booking\/my-classes\/([^/]+)$/);
   if (myClassesMatch && request.method === 'GET') {
     const token = decodeURIComponent(myClassesMatch[1]);
+    const tv = validatePathToken(StudentTokenSchema, token, corsHeaders, '학생 토큰');
+    if (!tv.ok) return tv.response;
+    const qv = validateParams(MyClassesQuerySchema, Object.fromEntries(url.searchParams), corsHeaders);
+    if (!qv.ok) return qv.response;
     const month = url.searchParams.get('month'); // "YYYY-MM" 형식
 
     const studentRes = await n('POST', `/databases/${STUDENT_DB_ID}/query`, {
@@ -1637,6 +1587,8 @@ async function handleHomeworkRoutes(request, env, corsHeaders, url) {
   const studentUploadMatch = url.pathname.match(/^\/homework\/student-upload\/([^/]+)$/);
   if (studentUploadMatch && request.method === 'POST') {
     const token = decodeURIComponent(studentUploadMatch[1]);
+    const tv = validatePathToken(StudentTokenSchema, token, corsHeaders, '학생 토큰');
+    if (!tv.ok) return tv.response;
     const studentPage = await findStudentByToken(token);
     if (!studentPage) {
       return new Response(JSON.stringify({ error: '등록된 학생이 아닙니다.' }), {
@@ -1662,6 +1614,8 @@ async function handleHomeworkRoutes(request, env, corsHeaders, url) {
   const studentHomeworkMatch = url.pathname.match(/^\/homework\/student\/([^/]+)$/);
   if (studentHomeworkMatch && request.method === 'GET') {
     const token = decodeURIComponent(studentHomeworkMatch[1]);
+    const tv = validatePathToken(StudentTokenSchema, token, corsHeaders, '학생 토큰');
+    if (!tv.ok) return tv.response;
     const studentPage = await findStudentByToken(token);
     if (!studentPage) {
       return new Response(JSON.stringify({ error: '등록된 학생이 아닙니다.' }), {
@@ -1683,14 +1637,21 @@ async function handleHomeworkRoutes(request, env, corsHeaders, url) {
   if (submitMatch && request.method === 'POST') {
     const token = decodeURIComponent(submitMatch[1]);
     const homeworkId = submitMatch[2];
+    const tv = validatePathToken(StudentTokenSchema, token, corsHeaders, '학생 토큰');
+    if (!tv.ok) return tv.response;
+    const hv = validatePathToken(NotionPageIdSchema, homeworkId, corsHeaders, '숙제 ID');
+    if (!hv.ok) return hv.response;
     const studentPage = await findStudentByToken(token);
     if (!studentPage) {
       return new Response(JSON.stringify({ error: '등록된 학생이 아닙니다.' }), {
         status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-    const body = await request.json().catch(() => ({}));
-    // files: [{fileUploadId, fileName}] — 새로 추가할 파일 (0~5개)
+    const rawBody = await request.json().catch(() => ({}));
+    const bv = validateBody(HomeworkSubmitSchema, rawBody, corsHeaders);
+    if (!bv.ok) return bv.response;
+    const body = bv.data;
+    // files: [{fileUploadId, fileName}] — 새로 추가할 파일 (0~20개)
     // deleteFileNames: [string] — 삭제할 기존 파일 이름 목록
     const newFiles = Array.isArray(body.files) ? body.files : [];
     const deleteFileNamesSet = new Set(Array.isArray(body.deleteFileNames) ? body.deleteFileNames : []);
