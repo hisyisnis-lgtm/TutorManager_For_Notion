@@ -1,3 +1,8 @@
+// 순수 함수는 lib/로 분리되어 단위 테스트 대상.
+// 새 순수 함수 추가 시 lib/ 안에 두고 여기서 import.
+import { stripEmoji, normalizeId } from '../lib/string.js';
+import { isSafeExternalUrl, maskPhone, maskToken } from '../lib/security.js';
+
 const CLASS_DB_ID = '314838fa-f2a6-81bc-8b67-d9e1c8fb7ecb';
 const STUDENT_DB_ID = '314838fa-f2a6-8143-a6c7-e59c50f3bbdb';
 const HOMEWORK_DB_ID = '5ce7d5ef-7b80-4795-843f-325f4ca868e2';
@@ -71,16 +76,6 @@ async function requireJwt(request, env, corsHeaders) {
     return errRes(corsHeaders, 401, 'Unauthorized');
   }
   return null;
-}
-
-// 학생 이름 앞 이모지·특수 심볼(Notion 상태 아이콘 등) 제거
-function stripEmoji(name) {
-  return name.replace(/^[\p{Emoji_Presentation}\p{Extended_Pictographic}◆◇▲▽△▼●○■□★☆♦♢]\s*/gu, '').trim();
-}
-
-// Notion ID 정규화 (웹훅은 하이픈 없이 보낼 수 있음)
-function normalizeId(id) {
-  return (id || '').replace(/-/g, '');
 }
 
 // 수업 페이지 제목이 비어있고 학생이 연결돼 있으면 제목 자동 설정
@@ -162,39 +157,7 @@ const ALLOWED_NOTION_DB_IDS = new Set([
   '318838faf2a681f19b9cfd379b1026ed', // LESSON_LOG_DB
 ]);
 
-// ===== SSRF 방어 =====
-// og-proxy류에서 사용자가 보낸 URL을 fetch할 때, 내부망/메타데이터/loopback으로의
-// 우회 호출을 차단한다. DNS rebinding까지 막으려면 추가 작업 필요하지만 1차 방어선.
-function isSafeExternalUrl(rawUrl) {
-  let u;
-  try { u = new URL(rawUrl); } catch { return false; }
-  if (u.protocol !== 'https:' && u.protocol !== 'http:') return false;
-
-  const host = u.hostname.toLowerCase();
-  // 명백한 사설/메타데이터 호스트
-  const PRIVATE_HOST_PATTERNS = [
-    /^localhost$/,
-    /\.local$/,
-    /\.internal$/,
-    /^127\./,
-    /^10\./,
-    /^192\.168\./,
-    /^172\.(1[6-9]|2\d|3[01])\./,
-    /^169\.254\./,         // link-local + AWS/GCP 메타데이터
-    /^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./, // CGNAT
-    /^0\./,
-    /^::1$/,
-    /^fe80:/i,
-    /^fc00:/i, /^fd[0-9a-f]{2}:/i, // IPv6 ULA
-  ];
-  if (PRIVATE_HOST_PATTERNS.some(re => re.test(host))) return false;
-
-  // IP 직접 표기는 일반 콘텐츠 미리보기에 필요 없으므로 호스트명만 허용
-  if (/^\d+\.\d+\.\d+\.\d+$/.test(host)) return false;
-  if (host.includes(':')) return false; // IPv6 리터럴
-
-  return true;
-}
+// SSRF 방어 isSafeExternalUrl는 lib/security.js로 분리됨.
 
 // fetch 응답 본문 크기 제한 (스트리밍 단위로 누적). maxBytes 초과 시 throw.
 async function fetchWithLimit(url, init = {}, maxBytes = 5 * 1024 * 1024) {
@@ -261,17 +224,7 @@ function clientIp(request) {
   return request.headers.get('CF-Connecting-IP') || '0.0.0.0';
 }
 
-// ===== PII 마스킹 =====
-function maskPhone(phone) {
-  const digits = (phone || '').replace(/\D/g, '');
-  if (digits.length < 4) return '***';
-  return `***-****-${digits.slice(-4)}`;
-}
-function maskToken(token) {
-  const t = String(token || '');
-  if (t.length <= 8) return '***';
-  return `${t.slice(0, 4)}...${t.slice(-4)}`;
-}
+// PII 마스킹 maskPhone/maskToken는 lib/security.js로 분리됨.
 
 // HMAC-SHA256 서명 생성 → base64 (토큰용)
 async function createToken(secret, expSeconds) {

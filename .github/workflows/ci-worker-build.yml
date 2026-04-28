@@ -50,6 +50,10 @@ jobs:
           done
         working-directory: worker
 
+      - name: 단위 테스트 (Vitest)
+        run: npm test
+        working-directory: worker
+
       - name: Wrangler dry-run 빌드 검증
         run: npx wrangler deploy --dry-run --outdir=dist-check
         working-directory: worker
