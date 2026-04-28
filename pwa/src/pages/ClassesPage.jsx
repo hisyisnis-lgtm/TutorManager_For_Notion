@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Button, Input, Card } from 'antd';
-import { MagnifyingGlassIcon, MapPinIcon, WarningCircleIcon } from '@phosphor-icons/react';
+import { Button, Input, Card, DatePicker } from 'antd';
+import dayjs from 'dayjs';
+import { MagnifyingGlassIcon, MapPinIcon, WarningCircleIcon, CalendarBlankIcon } from '@phosphor-icons/react';
+import { PRIMARY, TEXT_SECONDARY, TEXT_TERTIARY, BORDER_DEFAULT, PRIMARY_ALPHA_25 } from '../constants/theme.js';
 import { createLessonLog } from '../api/lessonLogs.js';
 import { queryPage } from '../api/notionClient.js';
 import PageHeader from '../components/layout/PageHeader.jsx';
@@ -12,7 +14,6 @@ import EmptyState from '../components/ui/EmptyState.jsx';
 import MonthCalendar from '../components/ui/MonthCalendar.jsx';
 import { fetchClassesPage, parseClass, classStatusColor, notesColor, CLASSES_DB } from '../api/classes.js';
 import { formatDateTime, formatTime } from '../utils/dateUtils.js';
-import { getWeekStart, getWeekEnd, getMonthStart, getMonthEnd, getTodayStart } from '../utils/dateUtils.js';
 import { stripEmoji } from '../utils/stringUtils.js';
 import { useData } from '../context/DataContext.jsx';
 import PullToRefresh from '../components/ui/PullToRefresh.jsx';
@@ -36,17 +37,60 @@ function getClassDay(isoString) {
 }
 
 const PERIOD_TABS = [
-  { key: 'week', label: '이번 주' },
-  { key: 'month', label: '이번 달' },
-  { key: 'all', label: '전체' },
+  { key: 'upcoming', label: '예정' },
   { key: 'completed', label: '완료' },
 ];
 
+// 날짜 필터 빠른 선택 — getValue()로 매 렌더 시 dayjs() 호출 (오늘 기준 갱신)
+const QUICK_RANGES = [
+  { label: '오늘', getValue: () => [dayjs(), dayjs()] },
+  { label: '내일', getValue: () => [dayjs().add(1, 'day'), dayjs().add(1, 'day')] },
+  { label: '다음 7일', getValue: () => [dayjs(), dayjs().add(7, 'day')] },
+  { label: '다음 30일', getValue: () => [dayjs(), dayjs().add(30, 'day')] },
+  { label: '지난 7일', getValue: () => [dayjs().subtract(7, 'day'), dayjs()] },
+  { label: '지난 30일', getValue: () => [dayjs().subtract(30, 'day'), dayjs()] },
+];
+
+// 빠른 선택 칩 스타일 — 디자인 토큰 기반
+const CHIP_BASE = {
+  fontSize: 13,
+  fontWeight: 500,
+  lineHeight: 1,
+  height: 36,
+  padding: '0 14px',
+  borderRadius: 980,
+  display: 'inline-flex',
+  alignItems: 'center',
+  whiteSpace: 'nowrap',
+  cursor: 'pointer',
+  transition: 'background-color 150ms ease-out, color 150ms ease-out, border-color 150ms ease-out, box-shadow 150ms ease-out',
+};
+const CHIP_ACTIVE = {
+  ...CHIP_BASE,
+  backgroundColor: PRIMARY,
+  color: '#ffffff',
+  border: '1px solid transparent',
+  boxShadow: `0 2px 8px ${PRIMARY_ALPHA_25}`,
+};
+const CHIP_INACTIVE = {
+  ...CHIP_BASE,
+  backgroundColor: '#ffffff',
+  color: TEXT_SECONDARY,
+  border: `1px solid ${BORDER_DEFAULT}`,
+};
+const CHIP_RESET = {
+  ...CHIP_BASE,
+  backgroundColor: 'transparent',
+  color: TEXT_TERTIARY,
+  border: `1px dashed ${BORDER_DEFAULT}`,
+  fontSize: 12,
+};
+
 function getDateRange(period) {
-  if (period === 'week') return { dateFrom: getWeekStart(), dateTo: getWeekEnd() };
-  if (period === 'month') return { dateFrom: getMonthStart(), dateTo: getMonthEnd() };
   if (period === 'completed') return { dateFrom: null, dateTo: null };
-  return { dateFrom: getTodayStart(), dateTo: null }; // '전체' 탭은 오늘부터 다가오는 수업 순
+  // '예정' 탭: 현재 시각 이후 시작하는 수업만 (CLASS_DB 상태 formula의 "🔵예정" 정의와 동일).
+  // getTodayStart()(오늘 00:00)를 쓰면 오늘 이미 끝난 수업도 포함되어 부정확함.
+  return { dateFrom: new Date().toISOString(), dateTo: null };
 }
 
 export default function ClassesPage() {
@@ -55,10 +99,13 @@ export default function ClassesPage() {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(null);
-  const [period, setPeriod] = useState('week');
+  const [period, setPeriod] = useState('upcoming');
   const [hasMore, setHasMore] = useState(false);
   const [cursor, setCursor] = useState(null);
   const [search, setSearch] = useState('');
+  // 날짜 범위 필터 (YYYY-MM-DD). 비어있으면 period 기본값 사용.
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
 
   const today = getKSTToday();
   const pad = (n) => String(n).padStart(2, '0');
@@ -74,9 +121,12 @@ export default function ClassesPage() {
     else setLoadingMore(true);
     setError(null);
     try {
-      const { dateFrom, dateTo } = getDateRange(period);
+      const range = getDateRange(period);
+      // 날짜 필터 입력이 있으면 우선 적용. 없는 칸은 period 기본값 사용.
+      const finalFrom = dateFrom ? `${dateFrom}T00:00:00+09:00` : range.dateFrom;
+      const finalTo = dateTo ? `${dateTo}T23:59:59+09:00` : range.dateTo;
       const completedOnly = period === 'completed';
-      const data = await fetchClassesPage({ dateFrom, dateTo, cursor: nextCursor, completedOnly });
+      const data = await fetchClassesPage({ dateFrom: finalFrom, dateTo: finalTo, cursor: nextCursor, completedOnly });
       const parsed = data.results.map(parseClass);
       setClasses((prev) => (reset ? parsed : [...prev, ...parsed]));
       setHasMore(data.has_more);
@@ -87,7 +137,7 @@ export default function ClassesPage() {
       setLoading(false);
       setLoadingMore(false);
     }
-  }, [period]);
+  }, [period, dateFrom, dateTo]);
 
   const loadCalendar = useCallback(async (year, month) => {
     setCalLoading(true);
@@ -251,6 +301,77 @@ export default function ClassesPage() {
             {label}
           </button>
         ))}
+      </div>
+
+      {/* 날짜 범위 필터 — 페이지 배경에 직접 배치 (필터는 content가 아니라 control) */}
+      <div className="px-4 pb-3">
+        {/* 빠른 선택 칩 (가로 스크롤, 페이지 좌우 패딩 흡수) */}
+        <div
+          className="flex gap-2 overflow-x-auto [&::-webkit-scrollbar]:hidden"
+          style={{ marginLeft: -16, marginRight: -16, paddingLeft: 16, paddingRight: 16, paddingBottom: 10 }}
+        >
+          {QUICK_RANGES.map(({ label, getValue }) => {
+            const [from, to] = getValue();
+            const fromStr = from.format('YYYY-MM-DD');
+            const toStr = to.format('YYYY-MM-DD');
+            const isActive = dateFrom === fromStr && dateTo === toStr;
+            return (
+              <button
+                key={label}
+                type="button"
+                onClick={() => {
+                  // 활성 상태에서 다시 누르면 필터 해제 (토글)
+                  if (isActive) { setDateFrom(''); setDateTo(''); }
+                  else { setDateFrom(fromStr); setDateTo(toStr); }
+                }}
+                style={{ ...(isActive ? CHIP_ACTIVE : CHIP_INACTIVE), flexShrink: 0 }}
+                className="tabular-nums"
+                aria-pressed={isActive}
+              >
+                {label}
+              </button>
+            );
+          })}
+          {(dateFrom || dateTo) && (
+            <button
+              type="button"
+              onClick={() => { setDateFrom(''); setDateTo(''); }}
+              style={{ ...CHIP_RESET, flexShrink: 0 }}
+              aria-label="날짜 필터 초기화"
+            >
+              × 초기화
+            </button>
+          )}
+        </div>
+
+        {/* 정밀 날짜 선택 (시작일 ~ 종료일) */}
+        <div className="flex items-center gap-2">
+          <DatePicker
+            value={dateFrom ? dayjs(dateFrom) : null}
+            onChange={(d) => setDateFrom(d ? d.format('YYYY-MM-DD') : '')}
+            disabledDate={(d) => (dateTo ? d.isAfter(dayjs(dateTo), 'day') : false)}
+            placeholder="시작일"
+            format="YYYY-MM-DD"
+            style={{ flex: 1, minWidth: 0, borderRadius: 12 }}
+            size="middle"
+            inputReadOnly
+            allowClear
+            suffixIcon={<CalendarBlankIcon size={14} weight="fill" color={TEXT_TERTIARY} />}
+          />
+          <span style={{ color: TEXT_TERTIARY, fontSize: 13, userSelect: 'none' }}>~</span>
+          <DatePicker
+            value={dateTo ? dayjs(dateTo) : null}
+            onChange={(d) => setDateTo(d ? d.format('YYYY-MM-DD') : '')}
+            disabledDate={(d) => (dateFrom ? d.isBefore(dayjs(dateFrom), 'day') : false)}
+            placeholder="종료일"
+            format="YYYY-MM-DD"
+            style={{ flex: 1, minWidth: 0, borderRadius: 12 }}
+            size="middle"
+            inputReadOnly
+            allowClear
+            suffixIcon={<CalendarBlankIcon size={14} weight="fill" color={TEXT_TERTIARY} />}
+          />
+        </div>
       </div>
 
       {/* 학생 검색 */}
