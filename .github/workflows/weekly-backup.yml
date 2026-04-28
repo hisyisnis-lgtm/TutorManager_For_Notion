@@ -73,14 +73,18 @@ jobs:
             --remote
           echo "✅ R2 업로드 완료"
 
-      - name: 성공 알림 (info)
+      # 운영자(hisyi) 전용 토픽 NTFY_TOPIC_OPS로 발송. 강사님이 사용하는
+      # NTFY_TOPIC(비즈니스 알림)과 분리. anonymous 토픽이라 토큰 첨부 안 함.
+      - name: 성공 알림 (info, ops)
         if: success() && steps.check_secrets.outputs.skip != 'true'
         env:
-          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
-          NTFY_TOKEN: ${{ secrets.NTFY_TOKEN }}
+          NTFY_TOPIC_OPS: ${{ secrets.NTFY_TOPIC_OPS }}
           R2_BACKUP_BUCKET: ${{ secrets.R2_BACKUP_BUCKET }}
         run: |
-          if [ -z "$NTFY_TOPIC" ]; then exit 0; fi
+          if [ -z "$NTFY_TOPIC_OPS" ]; then
+            echo "::warning::NTFY_TOPIC_OPS 미등록 — 백업 성공 알림 건너뜀"
+            exit 0
+          fi
           DATE=$(date -u +%Y-%m-%d)
           SIZE_KB=$(awk "BEGIN{printf \"%.1f\", ${{ steps.backup.outputs.compressed_size }} / 1024}")
           MSG=$(printf '주간 노션 백업 R2 업로드 완료.\n페이지: %s개\n크기: %s KB\n키: %s/notion-backup/%s.json.gz' \
@@ -88,9 +92,11 @@ jobs:
             "$SIZE_KB" \
             "$R2_BACKUP_BUCKET" \
             "$DATE")
-          HEADERS=(-H "Title: 주간 백업 완료" -H "Priority: 2" -H "Tags: package,white_check_mark")
-          if [ -n "$NTFY_TOKEN" ]; then HEADERS+=(-H "Authorization: Bearer $NTFY_TOKEN"); fi
-          curl -fsS -X POST "https://ntfy.sh/$NTFY_TOPIC" "${HEADERS[@]}" -d "$MSG"
+          curl -fsS -X POST "https://ntfy.sh/$NTFY_TOPIC_OPS" \
+            -H "Title: 주간 백업 완료" \
+            -H "Priority: 2" \
+            -H "Tags: package,white_check_mark" \
+            -d "$MSG"
 
       - name: R2 업로드 실패 알림 (critical)
         if: failure() && steps.check_secrets.outputs.skip != 'true'
