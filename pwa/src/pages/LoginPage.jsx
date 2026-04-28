@@ -25,8 +25,7 @@ export default function LoginPage({ onSuccess }) {
         return;
       }
       const { token } = data;
-      // sessionStorage만 사용 — 브라우저 닫으면 자동 삭제 (XSS 토큰 탈취 지속성 차단)
-      sessionStorage.setItem('auth_token', token);
+      localStorage.setItem('auth_token', token);
       onSuccess(token);
     } catch {
       setError('서버에 연결할 수 없습니다.');

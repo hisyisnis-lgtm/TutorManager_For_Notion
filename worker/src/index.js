@@ -2057,8 +2057,8 @@ async function handleFetch(request, env, ctx) {
       if (!env.JWT_SECRET) {
         console.warn('[보안 경고] JWT_SECRET 미설정. AUTH_PASSWORD를 JWT 서명 키로 사용 중. npx wrangler secret put JWT_SECRET 실행 권장.');
       }
-      // 토큰 유효기간 7일 — sessionStorage 단일 저장과 함께 토큰 탈취 시 악용 기간 단축
-      const token = await createToken(env.JWT_SECRET || env.AUTH_PASSWORD, 7 * 24 * 60 * 60);
+      // 토큰 유효기간 30일 — localStorage 저장으로 강사 로그인 유지
+      const token = await createToken(env.JWT_SECRET || env.AUTH_PASSWORD, 30 * 24 * 60 * 60);
       return new Response(JSON.stringify({ token }), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
