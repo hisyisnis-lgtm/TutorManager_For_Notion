@@ -10,9 +10,9 @@
     "generate-icons": "pwa-assets-generator --preset minimal-2023 public/symbol-red.png"
   },
   "dependencies": {
-    "@ant-design/icons": "^6.1.0",
+    "@ant-design/icons": "^6.2.2",
     "@phosphor-icons/react": "^2.1.10",
-    "antd": "^6.3.3",
+    "antd": "^6.3.7",
     "dayjs": "^1.11.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
@@ -21,8 +21,8 @@
   "devDependencies": {
     "@vite-pwa/assets-generator": "^0.2.6",
     "@vitejs/plugin-react": "^4.3.1",
-    "autoprefixer": "^10.4.20",
-    "postcss": "^8.4.47",
+    "autoprefixer": "^10.5.0",
+    "postcss": "^8.5.12",
     "tailwindcss": "^3.4.13",
     "vite": "^5.4.8",
     "vite-plugin-pwa": "^0.20.5"
