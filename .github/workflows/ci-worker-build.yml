@@ -1,0 +1,67 @@
+name: Worker 번들 검증 (CI)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'worker/**'
+      - '.github/workflows/ci-worker-build.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-worker-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Worker dry-run 빌드
+    runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: node_modules 캐시
+        uses: actions/cache@v4
+        id: npm-cache
+        with:
+          path: worker/node_modules
+          key: ${{ runner.os }}-node24-${{ hashFiles('worker/package-lock.json') }}
+
+      - name: 의존성 설치
+        if: steps.npm-cache.outputs.cache-hit != 'true'
+        run: |
+          for i in 1 2 3; do
+            npm ci && break
+            echo "npm ci 실패 (시도 $i/3), 10초 후 재시도..."
+            sleep 10
+          done
+        working-directory: worker
+
+      - name: Wrangler dry-run 빌드 검증
+        run: npx wrangler deploy --dry-run --outdir=dist-check
+        working-directory: worker
+
+      - name: 알림 (실패 시)
+        if: failure()
+        env:
+          NTFY_TOPIC_CRITICAL: ${{ secrets.NTFY_TOPIC_CRITICAL }}
+        run: |
+          if [ -z "$NTFY_TOPIC_CRITICAL" ]; then exit 0; fi
+          MSG=$(printf 'main 브랜치 Worker 번들 검증이 실패했습니다.\n커밋: %s\n링크: %s/%s/actions/runs/%s' \
+            "${{ github.sha }}" \
+            "${{ github.server_url }}" \
+            "${{ github.repository }}" \
+            "${{ github.run_id }}")
+          curl -fsS -X POST "https://ntfy.sh/$NTFY_TOPIC_CRITICAL" \
+            -H "Title: Worker 빌드 실패" \
+            -H "Priority: 5" \
+            -H "Tags: rotating_light,gear" \
+            -d "$MSG"
