@@ -1,0 +1,76 @@
+# Dependabot 의존성 업데이트 설정
+# - 매월 첫째주 월요일 09:00 KST에 자동 PR 생성
+# - minor/patch는 한 PR로 묶어서 (그룹) PR 폭주 방지
+# - major 업데이트는 개별 PR (breaking change 가능성으로 신중 검토 필요)
+# - 보안 업데이트(Dependabot security updates)는 GitHub Settings에서 별도 활성화 필요
+#   → Settings > Code security and analysis > Dependabot security updates: Enable
+
+version: 2
+updates:
+  # PWA (vite + React + antd)
+  - package-ecosystem: "npm"
+    directory: "/pwa"
+    schedule:
+      interval: "monthly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Seoul"
+    open-pull-requests-limit: 3
+    groups:
+      pwa-minor-patch:
+        update-types:
+          - "minor"
+          - "patch"
+    commit-message:
+      prefix: "chore(deps-pwa)"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "pwa"
+    assignees:
+      - "hisyisnis-lgtm"
+
+  # Cloudflare Worker (wrangler)
+  - package-ecosystem: "npm"
+    directory: "/worker"
+    schedule:
+      interval: "monthly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Seoul"
+    open-pull-requests-limit: 2
+    groups:
+      worker-minor-patch:
+        update-types:
+          - "minor"
+          - "patch"
+    commit-message:
+      prefix: "chore(deps-worker)"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "worker"
+    assignees:
+      - "hisyisnis-lgtm"
+
+  # GitHub Actions (워크플로우의 actions/checkout, setup-node 등)
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Seoul"
+    open-pull-requests-limit: 2
+    groups:
+      ci-actions:
+        patterns:
+          - "*"
+    commit-message:
+      prefix: "chore(deps-ci)"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "ci"
+    assignees:
+      - "hisyisnis-lgtm"
