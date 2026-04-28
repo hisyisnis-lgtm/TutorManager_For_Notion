@@ -58,8 +58,9 @@ jobs:
         run: npm run build
         working-directory: pwa
 
-      - name: 알림 (실패 시)
-        if: failure()
+      # main push 실패만 critical 알림. PR 실패는 GitHub UI에서 확인 (알림 폭주 방지).
+      - name: 알림 (main push 실패 시)
+        if: failure() && github.event_name == 'push'
         env:
           NTFY_TOPIC_CRITICAL: ${{ secrets.NTFY_TOPIC_CRITICAL }}
         run: |
