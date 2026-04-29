@@ -21,6 +21,15 @@ updates:
         update-types:
           - "minor"
           - "patch"
+    # vite v8과 @vitejs/plugin-react v6은 호환성 충돌로 머지 불가:
+    # - vite-plugin-pwa@1.2.0이 vite v7까지만 지원
+    # - @vitejs/plugin-react v6은 vite v8 peer 요구
+    # vite-plugin-pwa가 vite v8 지원하는 시점까지 무시 (재평가 시 ignore 제거)
+    ignore:
+      - dependency-name: "vite"
+        versions: ["8.x"]
+      - dependency-name: "@vitejs/plugin-react"
+        versions: ["6.x"]
     commit-message:
       prefix: "chore(deps-pwa)"
       include: "scope"
