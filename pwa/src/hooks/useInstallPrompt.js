@@ -20,8 +20,10 @@ export function useInstallPrompt() {
     if (standalone) { setIsInstalled(true); return; }
 
     // iOS 감지 (Safari는 beforeinstallprompt 미지원)
+    // iPadOS 13+ Safari는 UA에 Macintosh로 위장하므로 touch points로 iPad 식별
     const ua = navigator.userAgent;
-    const ios = /iPad|iPhone|iPod/.test(ua) && !window.MSStream;
+    const isIPadOSDesktopMode = /Macintosh/.test(ua) && (navigator.maxTouchPoints || 0) > 1;
+    const ios = (/iPad|iPhone|iPod/.test(ua) || isIPadOSDesktopMode) && !window.MSStream;
     setIsIOS(ios);
 
     // Android Chrome 설치 프롬프트 캡처
@@ -59,5 +61,5 @@ export function useInstallPrompt() {
   // 배너 표시 조건
   const showBanner = isInstallable && !isDismissed;
 
-  return { showBanner, isInstallable, canPrompt, isIOS, promptInstall, dismiss };
+  return { showBanner, isInstallable, canPrompt, isIOS, isInstalled, promptInstall, dismiss };
 }

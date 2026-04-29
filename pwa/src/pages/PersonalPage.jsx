@@ -6,7 +6,7 @@ import {
   fetchMyClasses,
 } from '../api/bookingApi.js';
 import { fetchMyHomework, parseHomework, submitHomework, uploadStudentFile, homeworkStatusColor } from '../api/homework.js';
-import { Card, Button, Spin } from 'antd';
+import { Card, Button, Spin, message } from 'antd';
 import { DAY_KR, timeToMin, formatDuration, formatYearMonth, addMonths } from '../utils/dateUtils.js';
 import HomeworkFilterBar from '../components/homework/HomeworkFilterBar.jsx';
 import HomeworkSection from '../components/homework/HomeworkSection.jsx';
@@ -1082,9 +1082,17 @@ export default function PersonalPage() {
 
   useEffect(() => { setSettingsOpen(false); }, [tab]);
 
-  const handleInstallAction = () => {
-    if (install.canPrompt) install.promptInstall();
-    else setShowIOSGuide(true);
+  const handleInstallAction = async () => {
+    if (install.isInstalled) {
+      message.success('이미 홈 화면에 추가되어 있어요!');
+      return;
+    }
+    if (install.canPrompt) {
+      const accepted = await install.promptInstall();
+      if (accepted) message.success('홈 화면에 추가되었어요!');
+      return;
+    }
+    setShowIOSGuide(true);
   };
 
   const loadStudent = useCallback(async () => {
@@ -1196,7 +1204,7 @@ export default function PersonalPage() {
             transition: 'transform 0.18s cubic-bezier(0.34,1.56,0.64,1), opacity 0.15s ease',
           }}>
             {[
-              { label: '홈 화면에 추가', onClick: handleInstallAction },
+              ...(install.isInstalled ? [] : [{ label: '홈 화면에 추가', onClick: handleInstallAction }]),
               { label: '가이드 보기', onClick: () => { resetAllTabTips(); setTipResetKey(k => k + 1); } },
               { label: '문제 신고하기', onClick: () => window.open('https://forms.gle/dCwXvZAdfG12AxoJ9', '_blank', 'noopener,noreferrer') },
               { label: '로그아웃', onClick: () => { localStorage.removeItem('personal_student_token'); navigate('/personal'); } },

@@ -12,6 +12,59 @@ function getSupportedMimeType() {
   return types.find((t) => MediaRecorder.isTypeSupported(t)) ?? '';
 }
 
+function extFromMime(mime) {
+  if (mime.includes('mp4')) return 'm4a';
+  if (mime.includes('webm')) return 'webm';
+  if (mime.includes('ogg')) return 'ogg';
+  return 'webm';
+}
+
+function detectEnv() {
+  if (typeof navigator === 'undefined') return { os: 'desktop', browser: 'other' };
+  const ua = navigator.userAgent || '';
+  // iPadOS 13+ Safari는 UA에 iPad 대신 Macintosh를 보낸다 — touch points로 실제 iPad 식별
+  const isIPadOSDesktopMode = /Macintosh/.test(ua) && (navigator.maxTouchPoints || 0) > 1;
+  let os = 'desktop';
+  if (/iPad|iPhone|iPod/.test(ua) || isIPadOSDesktopMode) os = 'ios';
+  else if (/Android/.test(ua)) os = 'android';
+
+  let browser = 'other';
+  if (/SamsungBrowser/.test(ua)) browser = 'samsung';
+  else if (/Whale/.test(ua)) browser = 'whale';
+  else if (/Edg\//.test(ua)) browser = 'edge';
+  else if (/Firefox|FxiOS/.test(ua)) browser = 'firefox';
+  else if (/Chrome|CriOS/.test(ua)) browser = 'chrome';
+  else if (/Safari/.test(ua)) browser = 'safari';
+
+  return { os, browser };
+}
+
+function micBlockedMessage() {
+  const { os, browser } = detectEnv();
+
+  if (os === 'ios') {
+    return '마이크 권한이 차단되어 있어요. 설정 앱 → Safari → 카메라/마이크 액세스 → 허용으로 바꾼 뒤 다시 시도해주세요.';
+  }
+
+  if (os === 'android') {
+    if (browser === 'samsung') {
+      return '마이크 권한이 차단되어 있어요. 주소창 왼쪽 자물쇠 아이콘 → 권한 → 마이크를 허용으로 바꾼 뒤 새로고침해주세요.';
+    }
+    if (browser === 'firefox') {
+      return '마이크 권한이 차단되어 있어요. 주소창 왼쪽 방패/자물쇠 → 권한 관리 → 마이크 허용으로 바꾼 뒤 새로고침해주세요.';
+    }
+    return '마이크 권한이 차단되어 있어요. 주소창 왼쪽 자물쇠(또는 ⓘ) 아이콘 → 권한 → 마이크를 허용으로 바꾼 뒤 새로고침해주세요.';
+  }
+
+  if (browser === 'safari') {
+    return '마이크 권한이 차단되어 있어요. Safari 메뉴 → 이 웹사이트 설정(또는 환경설정 → 웹사이트 → 마이크)에서 허용으로 바꿔주세요.';
+  }
+  if (browser === 'firefox') {
+    return '마이크 권한이 차단되어 있어요. 주소창 왼쪽 자물쇠 아이콘 → "더보기" → 권한에서 마이크 차단을 해제해주세요.';
+  }
+  return '마이크 권한이 차단되어 있어요. 주소창 왼쪽 자물쇠 아이콘 → 사이트 설정 → 마이크를 허용으로 바꿔주세요.';
+}
+
 /**
  * 인라인 녹음 컴포넌트
  * props:
@@ -44,6 +97,14 @@ export default function AudioRecorder({ onFile, onCancel, defaultName = 'recordi
   }, []);
 
   async function startRecording() {
+    if (!window.isSecureContext) {
+      message.error('HTTPS 환경에서만 녹음할 수 있어요.');
+      return;
+    }
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
+      message.error('이 브라우저는 녹음을 지원하지 않아요. 최신 Chrome/Safari로 다시 시도해주세요.');
+      return;
+    }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mimeType = getSupportedMimeType();
@@ -65,8 +126,17 @@ export default function AudioRecorder({ onFile, onCancel, defaultName = 'recordi
       setSeconds(0);
       setPhase('recording');
       timerRef.current = setInterval(() => setSeconds((s) => s + 1), 1000);
-    } catch {
-      message.error('마이크 접근 권한이 필요합니다. 브라우저 설정에서 마이크를 허용해주세요.');
+    } catch (err) {
+      const name = err?.name || '';
+      if (name === 'NotAllowedError' || name === 'SecurityError') {
+        message.error(micBlockedMessage());
+      } else if (name === 'NotFoundError' || name === 'OverconstrainedError') {
+        message.error('사용 가능한 마이크를 찾지 못했어요.');
+      } else if (name === 'NotReadableError') {
+        message.error('마이크가 다른 앱에서 사용 중이에요. 다른 앱을 종료한 뒤 다시 시도해주세요.');
+      } else {
+        message.error('녹음을 시작하지 못했어요. 잠시 후 다시 시도해주세요.');
+      }
     }
   }
 
@@ -89,7 +159,7 @@ export default function AudioRecorder({ onFile, onCancel, defaultName = 'recordi
 
   function confirm() {
     const mime = mimeTypeRef.current || 'audio/webm';
-    const ext = 'mp3';
+    const ext = extFromMime(mime);
     const safeName = (inputName.trim() || defaultName).replace(/[/\\:*?"<>|]/g, '_');
     const file = new File([blobRef.current], `${safeName}.${ext}`, { type: mime });
     onFile(file);
