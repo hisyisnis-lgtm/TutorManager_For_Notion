@@ -73,8 +73,12 @@ function micBlockedMessage() {
  *   defaultName: string — 이름 입력 기본값
  */
 export default function AudioRecorder({ onFile, onCancel, defaultName = 'recording', hideCancel = false }) {
-  // idle → recording → preview → naming
-  const [phase, setPhase] = useState('idle');
+  // ios-non-safari → idle → recording → preview → naming
+  const [phase, setPhase] = useState(() => {
+    const { os, browser } = detectEnv();
+    if (os === 'ios' && browser !== 'safari' && browser !== 'other') return 'ios-non-safari';
+    return 'idle';
+  });
   const [seconds, setSeconds] = useState(0);
   const [blobUrl, setBlobUrl] = useState(null);
   const [inputName, setInputName] = useState(defaultName);
@@ -153,6 +157,15 @@ export default function AudioRecorder({ onFile, onCancel, defaultName = 'recordi
     setPhase('idle');
   }
 
+  async function copyCurrentUrl() {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      message.success('주소를 복사했어요. Safari를 열고 주소창에 붙여넣어 주세요.');
+    } catch {
+      message.error('주소 복사에 실패했어요. 주소창에서 직접 복사해주세요.');
+    }
+  }
+
   function goToNaming() {
     setPhase('naming');
   }
@@ -170,6 +183,42 @@ export default function AudioRecorder({ onFile, onCancel, defaultName = 'recordi
 
   return (
     <div style={{ background: '#f9f9f9', borderRadius: 12, padding: 16, marginTop: 10 }}>
+
+      {/* ios-non-safari (iOS Chrome/Firefox 등) — Apple 정책으로 마이크 접근 제한 안내 */}
+      {phase === 'ios-non-safari' && (
+        <div style={{ textAlign: 'center', padding: '4px 4px 0' }}>
+          <p style={{ fontSize: 15, fontWeight: 700, color: '#1d1d1f', margin: '0 0 6px' }}>
+            Safari로 열어 녹음해주세요
+          </p>
+          <p style={{ fontSize: 12, color: '#595959', lineHeight: 1.5, margin: '0 0 14px' }}>
+            iOS의 Chrome·Firefox 등은 Apple 정책상 마이크 사용이 제한될 수 있어요.
+          </p>
+          <button
+            type="button"
+            onClick={copyCurrentUrl}
+            style={{
+              width: '100%', height: 44, borderRadius: 12,
+              background: '#7f0005', border: 'none', color: 'white',
+              fontSize: 14, fontWeight: 600, cursor: 'pointer',
+              WebkitTapHighlightColor: 'transparent', marginBottom: 8,
+            }}
+          >
+            주소 복사 (Safari에 붙여넣기)
+          </button>
+          <button
+            type="button"
+            onClick={() => setPhase('idle')}
+            style={{
+              width: '100%', height: 36, borderRadius: 12,
+              background: 'white', border: '1.5px solid #d9d9d9', color: '#595959',
+              fontSize: 13, fontWeight: 500, cursor: 'pointer',
+              WebkitTapHighlightColor: 'transparent',
+            }}
+          >
+            그래도 여기서 시도
+          </button>
+        </div>
+      )}
 
       {/* idle */}
       {phase === 'idle' && (
