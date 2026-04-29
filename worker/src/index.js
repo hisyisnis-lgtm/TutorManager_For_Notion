@@ -450,9 +450,45 @@ async function sendAlert(env, { level = 'info', title, message, tags, dedupKey, 
   }
 }
 
-// 기존 호출부 호환 wrapper — 점진적으로 sendAlert로 마이그레이션
+// info level 알림은 GitHub repository_dispatch로 우회한다.
+//
+// Cloudflare Workers의 공유 IP가 ntfy.sh의 IP-based daily quota에 자주 걸려 429를 받는
+// 문제를 회피하기 위함. GitHub Actions runner IP에서는 ntfy 발송이 정상 동작한다.
+// 워크플로우: .github/workflows/notify-from-worker.yml (event_type: ntfy-relay)
+//
+// 트레이드오프: ntfy.sh 직접 호출 대비 약 5~15초 지연. 무료상담은 카톡 알림톡으로 가고
+// 이 함수를 쓰는 곳은 숙제 제출 알림 1곳뿐이라 지연 허용 가능.
 async function sendNtfy(env, message, title = 'New Consultation') {
-  return sendAlert(env, { level: 'info', title, message });
+  if (!env.GITHUB_PAT) {
+    console.error('[ntfy-relay] GITHUB_PAT 미설정 — 알림 발송 불가');
+    return;
+  }
+  try {
+    const res = await fetch(
+      'https://api.github.com/repos/hisyisnis-lgtm/TutorManager_For_Notion/dispatches',
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${env.GITHUB_PAT}`,
+          Accept: 'application/vnd.github+json',
+          'X-GitHub-Api-Version': '2022-11-28',
+          'User-Agent': 'tutor-manager-proxy',
+        },
+        body: JSON.stringify({
+          event_type: 'ntfy-relay',
+          client_payload: { title, message, level: 'info' },
+        }),
+      }
+    );
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      console.error(`[ntfy-relay] HTTP ${res.status}:`, text);
+    } else {
+      console.log('[ntfy-relay] dispatch 성공:', title);
+    }
+  } catch (e) {
+    console.error('[ntfy-relay] 네트워크 오류:', e.message);
+  }
 }
 
 // ===== 워커 런타임 에러 캡처 =====

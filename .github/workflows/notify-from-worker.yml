@@ -1,0 +1,28 @@
+name: Worker → ntfy 릴레이 (IP 우회)
+
+on:
+  repository_dispatch:
+    types: [ntfy-relay]
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: ntfy 발송
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          NTFY_TOPIC_CRITICAL: ${{ secrets.NTFY_TOPIC_CRITICAL }}
+          NTFY_TOPIC_WARN: ${{ secrets.NTFY_TOPIC_WARN }}
+          NTFY_TOPIC_DIGEST: ${{ secrets.NTFY_TOPIC_DIGEST }}
+          NTFY_TOKEN: ${{ secrets.NTFY_TOKEN }}
+          PAYLOAD: ${{ toJSON(github.event.client_payload) }}
+        run: node notify_from_worker.mjs
