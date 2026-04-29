@@ -39,30 +39,31 @@ function detectEnv() {
   return { os, browser };
 }
 
-function micBlockedMessage() {
+function micBlockedDetail() {
   const { os, browser } = detectEnv();
 
   if (os === 'ios') {
-    return '마이크 권한이 차단되어 있어요. 설정 앱 → Safari → 카메라/마이크 액세스 → 허용으로 바꾼 뒤 다시 시도해주세요.';
+    if (browser === 'safari') {
+      return '설정 앱 → Safari → 카메라/마이크 액세스 → 허용으로 바꾸고 아래 새로고침을 눌러주세요.';
+    }
+    return '설정 앱에서 이 브라우저(Chrome 등)의 마이크 권한을 허용으로 바꾸고 아래 새로고침을 눌러주세요.';
   }
-
   if (os === 'android') {
     if (browser === 'samsung') {
-      return '마이크 권한이 차단되어 있어요. 주소창 왼쪽 자물쇠 아이콘 → 권한 → 마이크를 허용으로 바꾼 뒤 새로고침해주세요.';
+      return '주소창 왼쪽 자물쇠 아이콘 → 권한 → 마이크를 허용으로 바꾸고 아래 새로고침을 눌러주세요.';
     }
     if (browser === 'firefox') {
-      return '마이크 권한이 차단되어 있어요. 주소창 왼쪽 방패/자물쇠 → 권한 관리 → 마이크 허용으로 바꾼 뒤 새로고침해주세요.';
+      return '주소창 왼쪽 방패/자물쇠 → 권한 관리 → 마이크 허용으로 바꾸고 아래 새로고침을 눌러주세요.';
     }
-    return '마이크 권한이 차단되어 있어요. 주소창 왼쪽 자물쇠(또는 ⓘ) 아이콘 → 권한 → 마이크를 허용으로 바꾼 뒤 새로고침해주세요.';
+    return '주소창 왼쪽 자물쇠(또는 ⓘ) 아이콘 → 권한 → 마이크를 허용으로 바꾸고 아래 새로고침을 눌러주세요.';
   }
-
   if (browser === 'safari') {
-    return '마이크 권한이 차단되어 있어요. Safari 메뉴 → 이 웹사이트 설정(또는 환경설정 → 웹사이트 → 마이크)에서 허용으로 바꿔주세요.';
+    return 'Safari 메뉴 → 이 웹사이트 설정(또는 환경설정 → 웹사이트 → 마이크)에서 허용으로 바꾸고 아래 새로고침을 눌러주세요.';
   }
   if (browser === 'firefox') {
-    return '마이크 권한이 차단되어 있어요. 주소창 왼쪽 자물쇠 아이콘 → "더보기" → 권한에서 마이크 차단을 해제해주세요.';
+    return '주소창 왼쪽 자물쇠 아이콘 → "더보기" → 권한에서 마이크 차단을 해제하고 아래 새로고침을 눌러주세요.';
   }
-  return '마이크 권한이 차단되어 있어요. 주소창 왼쪽 자물쇠 아이콘 → 사이트 설정 → 마이크를 허용으로 바꿔주세요.';
+  return '주소창 왼쪽 자물쇠 아이콘 → 사이트 설정 → 마이크를 허용으로 바꾸고 아래 새로고침을 눌러주세요.';
 }
 
 /**
@@ -109,6 +110,18 @@ export default function AudioRecorder({ onFile, onCancel, defaultName = 'recordi
       message.error('이 브라우저는 녹음을 지원하지 않아요. 최신 Chrome/Safari로 다시 시도해주세요.');
       return;
     }
+    // A. 권한 사전 체크 — Permissions API 지원 브라우저(Chrome/Edge/Firefox 등)에서 미리 'denied' 감지
+    try {
+      if (navigator.permissions?.query) {
+        const status = await navigator.permissions.query({ name: 'microphone' });
+        if (status.state === 'denied') {
+          setPhase('mic-denied');
+          return;
+        }
+      }
+    } catch {
+      // iOS Safari 등 Permissions API 또는 microphone permission name 미지원 — 정상 흐름 진행
+    }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mimeType = getSupportedMimeType();
@@ -133,7 +146,7 @@ export default function AudioRecorder({ onFile, onCancel, defaultName = 'recordi
     } catch (err) {
       const name = err?.name || '';
       if (name === 'NotAllowedError' || name === 'SecurityError') {
-        message.error(micBlockedMessage());
+        setPhase('mic-denied');
       } else if (name === 'NotFoundError' || name === 'OverconstrainedError') {
         message.error('사용 가능한 마이크를 찾지 못했어요.');
       } else if (name === 'NotReadableError') {
@@ -216,6 +229,42 @@ export default function AudioRecorder({ onFile, onCancel, defaultName = 'recordi
             }}
           >
             그래도 여기서 시도
+          </button>
+        </div>
+      )}
+
+      {/* mic-denied — 권한 거부 시 안내 + 새로고침 트리거 */}
+      {phase === 'mic-denied' && (
+        <div style={{ textAlign: 'center', padding: '4px 4px 0' }}>
+          <p style={{ fontSize: 15, fontWeight: 700, color: '#1d1d1f', margin: '0 0 6px' }}>
+            마이크 권한이 차단되어 있어요
+          </p>
+          <p style={{ fontSize: 12, color: '#595959', lineHeight: 1.6, margin: '0 0 14px', whiteSpace: 'pre-wrap' }}>
+            {micBlockedDetail()}
+          </p>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            style={{
+              width: '100%', height: 44, borderRadius: 12,
+              background: '#7f0005', border: 'none', color: 'white',
+              fontSize: 14, fontWeight: 600, cursor: 'pointer',
+              WebkitTapHighlightColor: 'transparent', marginBottom: 8,
+            }}
+          >
+            권한 허용 후 새로고침
+          </button>
+          <button
+            type="button"
+            onClick={() => setPhase('idle')}
+            style={{
+              width: '100%', height: 36, borderRadius: 12,
+              background: 'white', border: '1.5px solid #d9d9d9', color: '#595959',
+              fontSize: 13, fontWeight: 500, cursor: 'pointer',
+              WebkitTapHighlightColor: 'transparent',
+            }}
+          >
+            취소
           </button>
         </div>
       )}
