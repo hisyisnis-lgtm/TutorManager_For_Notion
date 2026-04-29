@@ -412,7 +412,7 @@ export default function HomeworkDetailPage() {
           </div>
         }
         centered
-        destroyOnHide
+        destroyOnHidden
         styles={{ body: { paddingTop: 8, paddingBottom: 4 } }}
       >
         <input ref={fileInputRef} type="file" accept="audio/*" style={{ display: 'none' }} onChange={handleFilePickChange} />

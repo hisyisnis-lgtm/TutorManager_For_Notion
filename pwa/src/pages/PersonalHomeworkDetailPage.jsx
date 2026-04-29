@@ -338,7 +338,7 @@ export default function PersonalHomeworkDetailPage() {
           </div>
         }
         centered
-        destroyOnHide
+        destroyOnHidden
         styles={{ body: { paddingTop: 8, paddingBottom: 4 } }}
       >
         <input ref={fileInputRef} type="file" accept="audio/*" style={{ display: 'none' }} onChange={handleFilePickChange} />
@@ -438,7 +438,7 @@ export default function PersonalHomeworkDetailPage() {
         footer={null}
         title={<span style={{ fontSize: 16, fontWeight: 700 }}>파일 삭제</span>}
         centered
-        destroyOnHide
+        destroyOnHidden
       >
         <p style={{ fontSize: 14, color: '#595959', margin: '0 0 20px', lineHeight: 1.6 }}>
           <strong style={{ color: '#1d1d1f' }}>{deleteConfirmFile?.replace(/\.[^/.]+$/, '')}</strong> 파일을 삭제할까요?<br />
