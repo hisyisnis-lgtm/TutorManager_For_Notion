@@ -483,8 +483,7 @@ export default function HomeworkDetailPage() {
             defaultName={genFeedbackName(hw?.title ?? '숙제', (hw?.feedbackFiles?.length ?? 0) + pendingFeedbackFiles.length + 1)}
             onFile={(file) => {
               const safeName = file.name.replace(/\.[^/.]+$/, '');
-              closeFileModal();
-              uploadAndSave([...pendingFeedbackFiles, { tempId: Date.now(), file, name: safeName }]);
+              addFeedbackFile(file, safeName);
             }}
             onCancel={() => setFileModalView('list')}
             hideCancel

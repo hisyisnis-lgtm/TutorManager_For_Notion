@@ -1002,9 +1002,14 @@ export default function PersonalPage() {
       const viewedMap = getViewedMap(studentToken);
 
       const pendingList = list.filter(h => h.status === '미제출');
-      const feedbackList = list.filter(h => h.status === '피드백완료' && !viewedMap[h.id]);
+      // 홈 탭 피드백 카드: 피드백 도착 후 24시간 이내 항목만 표시 (확인 여부 무관)
+      const feedbackList = list.filter(h => {
+        if (h.status !== '피드백완료') return false;
+        if (!h.feedbackDate) return false;
+        return Date.now() - new Date(h.feedbackDate).getTime() < 24 * 60 * 60 * 1000;
+      });
 
-      // 숙제 dot: 미제출 OR 안 읽은 피드백
+      // 숙제 dot: 미제출 OR 도착 24시간 이내 피드백
       setHomeworkDot(pendingList.length > 0 || feedbackList.length > 0);
 
       // 홈 탭 알림 카드
