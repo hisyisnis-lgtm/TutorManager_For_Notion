@@ -1740,10 +1740,9 @@ async function handleHomeworkRoutes(request, env, corsHeaders, url) {
     });
     const updateData = await updateRes.json();
 
-    // 실제 새 파일이 업로드된 제출완료 상태일 때만 강사에게 ntfy 알림 (학생명 마스킹)
+    // 실제 새 파일이 업로드된 제출완료 상태일 때만 강사에게 ntfy 알림
     if (updateRes.ok && newStatus === '제출완료' && newFiles.length > 0) {
-      const rawName = stripEmoji(studentPage.properties?.['이름']?.title?.[0]?.plain_text ?? '학생');
-      const studentName = rawName.length > 1 ? `${rawName[0]}**` : rawName;
+      const studentName = stripEmoji(studentPage.properties?.['이름']?.title?.[0]?.plain_text ?? '학생');
       const homeworkTitle = currentPage.properties?.['제목']?.title?.[0]?.plain_text ?? '숙제';
       const fileDesc = newFiles.length === 1 ? '파일 1개' : `파일 ${newFiles.length}개`;
       await sendNtfy(
