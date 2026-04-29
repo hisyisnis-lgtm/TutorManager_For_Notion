@@ -331,7 +331,7 @@ export default function PersonalHomeworkDetailPage() {
                 style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: '#595959', padding: '0 4px 0 0', display: 'flex', alignItems: 'center' }}
                 aria-label="뒤로"
               >
-                <ArrowLeftIcon size={16} weight="bold" />
+                <CaretLeftIcon size={18} weight="bold" />
               </button>
             )}
             <span style={{ fontSize: 16, fontWeight: 700 }}>{modalTitle}</span>
