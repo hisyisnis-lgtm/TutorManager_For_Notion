@@ -38,10 +38,10 @@ jobs:
             echo "⏭️ KST 기준 마지막날 아님 (내일=${KST_TOMORROW}일) — 건너뜀"
           fi
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         if: steps.date_check.outputs.is_last_day == 'true'
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         if: steps.date_check.outputs.is_last_day == 'true'
         with:
           node-version: '24'
