@@ -2090,10 +2090,14 @@ async function handleFetch(request, env, ctx) {
         });
       }
       if (!env.JWT_SECRET) {
-        console.warn('[보안 경고] JWT_SECRET 미설정. AUTH_PASSWORD를 JWT 서명 키로 사용 중. npx wrangler secret put JWT_SECRET 실행 권장.');
+        console.error('[보안] JWT_SECRET 미설정 — 로그인 거부. npx wrangler secret put JWT_SECRET 으로 32바이트+ 랜덤 시크릿 등록 필요.');
+        return new Response(JSON.stringify({ error: '서버 설정 오류' }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
       // 토큰 유효기간 30일 — localStorage 저장으로 강사 로그인 유지
-      const token = await createToken(env.JWT_SECRET || env.AUTH_PASSWORD, 30 * 24 * 60 * 60);
+      const token = await createToken(env.JWT_SECRET, 30 * 24 * 60 * 60);
       return new Response(JSON.stringify({ token }), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -2101,9 +2105,16 @@ async function handleFetch(request, env, ctx) {
     }
 
     // 나머지 모든 요청: Bearer 토큰 검증
+    if (!env.JWT_SECRET) {
+      console.error('[보안] JWT_SECRET 미설정 — 인증 요청 거부.');
+      return new Response(JSON.stringify({ error: '서버 설정 오류' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
     const authHeader = request.headers.get('Authorization') || '';
     const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
-    const valid = await verifyToken(token, env.JWT_SECRET || env.AUTH_PASSWORD);
+    const valid = await verifyToken(token, env.JWT_SECRET);
     if (!valid) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
@@ -2139,6 +2150,24 @@ async function handleFetch(request, env, ctx) {
     let body;
     if (request.method !== 'GET' && request.method !== 'HEAD') {
       body = await request.text();
+    }
+
+    // POST /v1/pages: parent.database_id가 화이트리스트에 있는지 검증.
+    // /v1/databases/:id 경로 검증으로는 막을 수 없는 horizontal access를 차단
+    // (강사 JWT 탈취 시 NOTION_TOKEN이 접근 가능한 임의 워크스페이스 DB로의 쓰기).
+    if (url.pathname === '/v1/pages' && request.method === 'POST' && body) {
+      try {
+        const parsed = JSON.parse(body);
+        const dbId = parsed?.parent?.database_id?.replace(/-/g, '').toLowerCase();
+        if (dbId && !ALLOWED_NOTION_DB_IDS.has(dbId)) {
+          return new Response(JSON.stringify({ error: '허용되지 않은 DB입니다.' }), {
+            status: 403,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+      } catch {
+        // JSON 파싱 실패는 Notion API가 400으로 처리하도록 그대로 통과
+      }
     }
 
     const notionResponse = await fetch(notionUrl, {
