@@ -1,4 +1,15 @@
 import { queryPage, createPage, updatePage } from './notionClient.js';
+import {
+  getTitle,
+  getRichText,
+  getSelect,
+  getDate,
+  getCheckbox,
+  getRelationId,
+  getRelationIds,
+  getFormulaString,
+  getFormulaDate,
+} from '../utils/notionProp.js';
 
 export const CLASSES_DB = '314838fa-f2a6-81bc-8b67-d9e1c8fb7ecb';
 
@@ -103,20 +114,20 @@ export function parseClass(page) {
   const p = page.properties;
   return {
     id: page.id,
-    title: p['제목']?.title?.[0]?.plain_text ?? '',
-    studentIds: p['학생']?.relation?.map((r) => r.id) ?? [],
-    classTypeId: p['수업 유형']?.relation?.[0]?.id ?? null,
-    datetime: p['수업 일시']?.date?.start ?? null,
-    duration: p['수업 시간(분)']?.select?.name ?? null,
-    status: p['상태']?.formula?.string ?? '',
-    notes: p['특이사항']?.select?.name ?? null,
-    sessionShortage: p['시간 회차 부족']?.formula?.string ?? '',
-    conflictDetected: p['충돌_감지']?.checkbox ?? false,
-    endTime: p['수업 종료 시간']?.formula?.date?.start ?? null,
-    lessonLogIds: p['수업 일지']?.relation?.map((r) => r.id) ?? [],
-    location: p['수업 장소']?.select?.name ?? null,
-    locationMemo: p['수업 장소 메모']?.rich_text?.[0]?.plain_text ?? '',
-    phone: p['전화번호']?.rich_text?.[0]?.plain_text ?? '',
+    title: getTitle(p['제목']),
+    studentIds: getRelationIds(p['학생']),
+    classTypeId: getRelationId(p['수업 유형']),
+    datetime: getDate(p['수업 일시']),
+    duration: getSelect(p['수업 시간(분)']),
+    status: getFormulaString(p['상태']),
+    notes: getSelect(p['특이사항']),
+    sessionShortage: getFormulaString(p['시간 회차 부족']),
+    conflictDetected: getCheckbox(p['충돌_감지']),
+    endTime: getFormulaDate(p['수업 종료 시간']),
+    lessonLogIds: getRelationIds(p['수업 일지']),
+    location: getSelect(p['수업 장소']),
+    locationMemo: getRichText(p['수업 장소 메모']),
+    phone: getRichText(p['전화번호']),
   };
 }
 

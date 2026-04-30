@@ -15,8 +15,8 @@ import {
   TEXT_PRIMARY, TEXT_SECONDARY, TEXT_TERTIARY, TEXT_DISABLED,
   BORDER_DEFAULT, BORDER_NEUTRAL,
 } from '../constants/theme.js';
-import { getHomeworkPage, parseHomework, saveFeedback, deleteHomework, uploadTeacherFile, homeworkStatusColor, notifyHomework } from '../api/homework.js';
-import { getPage } from '../api/notionClient.js';
+import { parseHomework, saveFeedback, uploadTeacherFile, homeworkStatusColor, notifyHomework } from '../api/homework.js';
+import { getPage, deletePage } from '../api/notionClient.js';
 import { parseStudent } from '../api/students.js';
 import { formatDateTimeCompact } from '../utils/dateUtils.js';
 
@@ -92,7 +92,7 @@ export default function HomeworkDetailPage() {
     setLoading(true);
     setError(null);
     try {
-      const page = await getHomeworkPage(id);
+      const page = await getPage(id);
       const parsed = parseHomework(page);
       setHw(parsed);
       setFeedbackText(parsed.feedbackText || '');
@@ -112,7 +112,7 @@ export default function HomeworkDetailPage() {
   useEffect(() => { load(); }, [load]);
 
   const getFreshParsed = useCallback(async () => {
-    const page = await getHomeworkPage(id);
+    const page = await getPage(id);
     return parseHomework(page);
   }, [id]);
 
@@ -168,7 +168,7 @@ export default function HomeworkDetailPage() {
           uploadedFiles.push({ fileUploadId, fileName: pf.name });
         }
         if (hw.feedbackFiles?.length > 0) {
-          const freshPage = await getHomeworkPage(id);
+          const freshPage = await getPage(id);
           existingFiles = freshPage.properties['피드백 파일']?.files ?? [];
         }
       }
@@ -193,7 +193,7 @@ export default function HomeworkDetailPage() {
     setDeleteFileConfirmIndex(null);
     setDeletingFeedbackFileName(fileIndex);
     try {
-      const freshPage = await getHomeworkPage(id);
+      const freshPage = await getPage(id);
       const existingFiles = (freshPage.properties['피드백 파일']?.files ?? [])
         .filter((_, i) => i !== fileIndex);
       await saveFeedback(id, { feedbackText, files: [], existingFiles });
@@ -216,7 +216,7 @@ export default function HomeworkDetailPage() {
   const handleDelete = async () => {
     setDeleting(true);
     try {
-      await deleteHomework(id);
+      await deletePage(id);
       navigate(-1);
     } catch (e) {
       message.error(`삭제 실패: ${e.message}`);

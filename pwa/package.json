@@ -10,7 +10,6 @@
     "generate-icons": "pwa-assets-generator --preset minimal-2023 public/symbol-red.png"
   },
   "dependencies": {
-    "@ant-design/icons": "^6.2.2",
     "@phosphor-icons/react": "^2.1.10",
     "antd": "^6.3.7",
     "dayjs": "^1.11.0",

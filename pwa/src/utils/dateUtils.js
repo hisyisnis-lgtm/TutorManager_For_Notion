@@ -152,12 +152,6 @@ export function toNotionDate(datetimeLocal) {
   return `${datetimeLocal}:00+09:00`;
 }
 
-/** date input 값 → Notion용 날짜 (날짜만) */
-export function toNotionDateOnly(dateLocal) {
-  if (!dateLocal) return null;
-  return dateLocal; // "YYYY-MM-DD" 그대로
-}
-
 /** 오늘 날짜의 이번 주 월요일 ISO 문자열 (KST) */
 export function getWeekStart() {
   const dateStr = new Date().toLocaleDateString('en-CA', { timeZone: KST }); // "YYYY-MM-DD"

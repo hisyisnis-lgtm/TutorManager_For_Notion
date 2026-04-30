@@ -295,7 +295,6 @@ async function handleNotionWebhook(request, env, ctx) {
   let parsed = null;
   try { parsed = JSON.parse(body); } catch {}
   if (parsed?.verification_token) {
-    console.log('Notion verification_token:', parsed.verification_token);
     return new Response(JSON.stringify({ challenge: parsed.verification_token }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },

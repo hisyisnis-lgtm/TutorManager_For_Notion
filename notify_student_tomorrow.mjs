@@ -1,8 +1,7 @@
 // 학생 수업 전날 리마인더 알림 스크립트
 // GitHub Actions에서 매일 20:00 KST (11:00 UTC)에 자동 실행됨
 
-import { createHmac, randomBytes } from 'crypto';
-import { createNotionClient, runWithAlert, stripEmoji } from './notion_utils.mjs';
+import { createNotionClient, createSolapiClient, runWithAlert, stripEmoji } from './notion_utils.mjs';
 
 const TOKEN = process.env.NOTION_TOKEN;
 const CLASS_DB_ID = '314838fa-f2a6-81bc-8b67-d9e1c8fb7ecb';
@@ -20,39 +19,11 @@ if (!TOKEN) {
 }
 
 const { notion } = createNotionClient(TOKEN);
-
-async function sendKakao(to, templateId, variables, buttons = []) {
-  if (!SOLAPI_API_KEY || !SOLAPI_API_SECRET || !KAKAO_PFID || !templateId || !to) return;
-  for (let attempt = 1; attempt <= 3; attempt++) {
-    const date = new Date().toISOString();
-    const salt = randomBytes(8).toString('hex');
-    const signature = createHmac('sha256', SOLAPI_API_SECRET).update(date + salt).digest('hex');
-    try {
-      const res = await fetch('https://api.solapi.com/messages/v4/send', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `HMAC-SHA256 apiKey=${SOLAPI_API_KEY}, date=${date}, salt=${salt}, signature=${signature}`,
-        },
-        body: JSON.stringify({ message: { to, kakaoOptions: { pfId: KAKAO_PFID, templateId, variables, buttons } } }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        console.error(`카카오 발송 실패 (${to}):`, JSON.stringify(data));
-        return;
-      }
-      console.log(`카카오 알림톡 발송 완료: ${to}`);
-      return;
-    } catch (e) {
-      if (attempt < 3) {
-        console.warn(`카카오 발송 오류 (${to}), ${attempt}회 시도 실패 — 2초 후 재시도:`, e.message);
-        await new Promise(r => setTimeout(r, 2000));
-      } else {
-        console.error(`카카오 발송 오류 (${to}), 최종 실패:`, e.message);
-      }
-    }
-  }
-}
+const sendKakao = createSolapiClient({
+  apiKey: SOLAPI_API_KEY,
+  apiSecret: SOLAPI_API_SECRET,
+  pfId: KAKAO_PFID,
+});
 
 function getTomorrowKST() {
   const now = new Date();

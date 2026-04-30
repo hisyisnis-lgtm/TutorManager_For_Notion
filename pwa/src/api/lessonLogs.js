@@ -1,4 +1,11 @@
 import { queryPage, createPage, updatePage } from './notionClient.js';
+import {
+  getTitle,
+  getRichText,
+  getSelect,
+  getRelationId,
+  getRelationIds,
+} from '../utils/notionProp.js';
 
 export const LESSON_LOGS_DB = '318838fa-f2a6-81f1-9b9c-fd379b1026ed';
 
@@ -49,14 +56,14 @@ export function parseLessonLog(page) {
   const p = page.properties;
   return {
     id: page.id,
-    title: p['제목']?.title?.[0]?.plain_text ?? '',
-    classId: p['수업']?.relation?.[0]?.id ?? null,
-    studentIds: p['학생']?.relation?.map((r) => r.id) ?? [],
-    content: p['오늘 내용']?.rich_text?.[0]?.plain_text ?? '',
-    homework: p['숙제']?.rich_text?.[0]?.plain_text ?? '',
-    nextPrepare: p['다음 수업 준비']?.rich_text?.[0]?.plain_text ?? '',
-    engagement: p['학생 참여도']?.select?.name ?? null,
-    memo: p['메모']?.rich_text?.[0]?.plain_text ?? '',
+    title: getTitle(p['제목']),
+    classId: getRelationId(p['수업']),
+    studentIds: getRelationIds(p['학생']),
+    content: getRichText(p['오늘 내용']),
+    homework: getRichText(p['숙제']),
+    nextPrepare: getRichText(p['다음 수업 준비']),
+    engagement: getSelect(p['학생 참여도']),
+    memo: getRichText(p['메모']),
   };
 }
 

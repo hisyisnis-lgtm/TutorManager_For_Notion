@@ -13,41 +13,31 @@ if (!TOKEN) {
   process.exit(1);
 }
 
-const { notion } = createNotionClient(TOKEN);
+const { queryAll } = createNotionClient(TOKEN);
 const sendNtfy = createNtfyClient(NTFY_TOPIC, NTFY_TOKEN);
 
 async function main() {
   console.log(`[${new Date().toISOString()}] 미수금 학생 조회 시작`);
 
   // 수강중 + 일시중단 학생 중 미수금이 있는 학생 조회
-  const students = [];
-  let cursor = undefined;
-
-  while (true) {
-    const body = {
-      filter: {
-        and: [
-          {
-            or: [
-              { property: '상태', select: { equals: '🟢 수강중' } },
-              { property: '상태', select: { equals: '🟡 일시중단' } },
-            ],
-          },
-          {
-            property: '미수금 합계',
-            rollup: { number: { greater_than: 0 } },
-          },
-        ],
-      },
-      sorts: [{ property: '미수금 합계', direction: 'descending' }],
-    };
-    if (cursor) body.start_cursor = cursor;
-
-    const res = await notion('POST', `/databases/${STUDENT_DB_ID}/query`, body);
-    students.push(...res.results);
-    if (!res.has_more) break;
-    cursor = res.next_cursor;
-  }
+  const students = await queryAll(
+    STUDENT_DB_ID,
+    {
+      and: [
+        {
+          or: [
+            { property: '상태', select: { equals: '🟢 수강중' } },
+            { property: '상태', select: { equals: '🟡 일시중단' } },
+          ],
+        },
+        {
+          property: '미수금 합계',
+          rollup: { number: { greater_than: 0 } },
+        },
+      ],
+    },
+    [{ property: '미수금 합계', direction: 'descending' }],
+  );
 
   console.log(`미수금 학생 ${students.length}명 조회 완료`);
 

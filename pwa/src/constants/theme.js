@@ -23,11 +23,6 @@ export const TEXT_TERTIARY = '#767676';
 export const TEXT_INACTIVE = '#8c8c8c';
 export const TEXT_DISABLED = '#bfbfbf';
 
-/** @deprecated SECONDARY_TEXT — TEXT_SECONDARY를 사용하세요 */
-export const SECONDARY_TEXT = TEXT_SECONDARY;
-/** @deprecated ICON_COLOR — TEXT_TERTIARY를 사용하세요 */
-export const ICON_COLOR = TEXT_TERTIARY;
-
 // ── 배경 ───────────────────────────────────────────────
 export const BG_APP = '#f9fafb';
 export const BG_PUBLIC = '#ffffff';

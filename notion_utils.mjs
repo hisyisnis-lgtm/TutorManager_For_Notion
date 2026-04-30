@@ -1,5 +1,7 @@
 // 자동화 스크립트 공통 유틸리티
 
+import { createHmac, randomBytes } from 'crypto';
+
 /**
  * Notion API 클라이언트 + queryAll 생성
  * @param {string} token - NOTION_TOKEN 환경변수 값
@@ -163,3 +165,59 @@ export function stripEmoji(name) {
  * Rate limit 대응용 딜레이 (Notion API 초당 3회 제한)
  */
 export const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+/**
+ * Solapi 카카오 알림톡 발송 클라이언트 생성
+ *
+ * 사용:
+ *   const sendKakao = createSolapiClient({
+ *     apiKey: process.env.SOLAPI_API_KEY,
+ *     apiSecret: process.env.SOLAPI_API_SECRET,
+ *     pfId: process.env.KAKAO_PFID,
+ *   });
+ *   await sendKakao(to, templateId, variables);                  // 버튼 없음
+ *   await sendKakao(to, templateId, variables, buttonsArray);    // 버튼 포함
+ *
+ * 동작:
+ *  - apiKey/apiSecret/pfId/templateId/to 중 하나라도 비면 silent return (no-op)
+ *  - HMAC-SHA256 서명 + 3회 재시도 (네트워크 오류만 재시도, API 오류는 즉시 반환)
+ *  - buttons === undefined 이면 kakaoOptions.buttons 필드를 누락 (Solapi 호환)
+ *
+ * @returns {Function} sendKakao(to, templateId, variables, buttons?)
+ */
+export function createSolapiClient({ apiKey, apiSecret, pfId }) {
+  return async function sendKakao(to, templateId, variables, buttons) {
+    if (!apiKey || !apiSecret || !pfId || !templateId || !to) return;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      const date = new Date().toISOString();
+      const salt = randomBytes(8).toString('hex');
+      const signature = createHmac('sha256', apiSecret).update(date + salt).digest('hex');
+      const kakaoOptions = { pfId, templateId, variables };
+      if (buttons !== undefined) kakaoOptions.buttons = buttons;
+      try {
+        const res = await fetch('https://api.solapi.com/messages/v4/send', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `HMAC-SHA256 apiKey=${apiKey}, date=${date}, salt=${salt}, signature=${signature}`,
+          },
+          body: JSON.stringify({ message: { to, kakaoOptions } }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          console.error(`카카오 발송 실패 (${to}):`, JSON.stringify(data));
+          return;
+        }
+        console.log(`카카오 알림톡 발송 완료: ${to}`);
+        return;
+      } catch (e) {
+        if (attempt < 3) {
+          console.warn(`카카오 발송 오류 (${to}), ${attempt}회 시도 실패 — 2초 후 재시도:`, e.message);
+          await new Promise(r => setTimeout(r, 2000));
+        } else {
+          console.error(`카카오 발송 오류 (${to}), 최종 실패:`, e.message);
+        }
+      }
+    }
+  };
+}

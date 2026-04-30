@@ -1,4 +1,16 @@
 import { queryPage, createPage, updatePage } from './notionClient.js';
+import {
+  getTitle,
+  getRichText,
+  getSelect,
+  getNumber,
+  getDate,
+  getRelationId,
+  getRelationIds,
+  getFormulaNumber,
+  getFormulaString,
+  getRollupNumber,
+} from '../utils/notionProp.js';
 
 export const PAYMENTS_DB = '314838fa-f2a6-8154-935b-edd3d2fbea83';
 
@@ -85,20 +97,20 @@ export function parsePayment(page) {
   const p = page.properties;
   return {
     id: page.id,
-    note: p['타이틀']?.title?.[0]?.plain_text ?? '',
-    studentIds: p['학생']?.relation?.map((r) => r.id) ?? [],
-    classTypeId: p['수업 종류']?.relation?.[0]?.id ?? null,
-    discountEventId: p['할인 적용']?.relation?.[0]?.id ?? null,
-    unitPrice: p['시간당 단가']?.rollup?.number ?? 0,
-    discountRate: p['적용 할인율(%)']?.rollup?.number ?? 0,
-    sessionCount: p['시간 회차']?.number ?? 0,
-    actualAmount: p['실제 결제 금액']?.number ?? 0,
-    paymentAmount: p['결제 금액']?.formula?.number ?? 0,
-    unpaid: p['미수금']?.formula?.number ?? 0,
-    paymentStatus: p['결제 상태']?.formula?.string ?? '',
-    paymentMethod: p['결제수단']?.select?.name ?? null,
-    paymentDate: p['결제일']?.date?.start ?? null,
-    memo: p['메모']?.rich_text?.[0]?.plain_text ?? '',
+    note: getTitle(p['타이틀']),
+    studentIds: getRelationIds(p['학생']),
+    classTypeId: getRelationId(p['수업 종류']),
+    discountEventId: getRelationId(p['할인 적용']),
+    unitPrice: getRollupNumber(p['시간당 단가']),
+    discountRate: getRollupNumber(p['적용 할인율(%)']),
+    sessionCount: getNumber(p['시간 회차']),
+    actualAmount: getNumber(p['실제 결제 금액']),
+    paymentAmount: getFormulaNumber(p['결제 금액']),
+    unpaid: getFormulaNumber(p['미수금']),
+    paymentStatus: getFormulaString(p['결제 상태']),
+    paymentMethod: getSelect(p['결제수단']),
+    paymentDate: getDate(p['결제일']),
+    memo: getRichText(p['메모']),
   };
 }
 

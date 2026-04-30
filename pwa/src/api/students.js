@@ -1,5 +1,15 @@
 import { queryAll, queryPage, updatePage, createPage } from './notionClient.js';
 import { stripEmoji } from '../utils/stringUtils.js';
+import {
+  getTitle,
+  getRichText,
+  getSelect,
+  getEmail,
+  getPhone,
+  getCreatedTime,
+  getFormulaNumber,
+  getRollupNumber,
+} from '../utils/notionProp.js';
 
 export const STUDENTS_DB = '314838fa-f2a6-8143-a6c7-e59c50f3bbdb';
 
@@ -66,17 +76,17 @@ export function parseStudent(page) {
   const p = page.properties;
   return {
     id: page.id,
-    name: stripEmoji(p['이름']?.title?.[0]?.plain_text ?? '(이름 없음)'),
-    phone: p['전화번호']?.phone_number ?? '',
-    email: p['이메일']?.email ?? '',
-    level: p['레벨']?.rich_text?.[0]?.plain_text ?? '',
-    goal: p['목표']?.rich_text?.[0]?.plain_text ?? '',
-    status: p['상태']?.select?.name ?? '',
-    remainingSessions: p['잔여 시간 회차']?.formula?.number ?? 0,
-    unpaidAmount: p['미수금 합계']?.rollup?.number ?? 0,
-    memo: p['메모']?.rich_text?.[0]?.plain_text ?? '',
-    bookingCode: p['예약 코드']?.rich_text?.[0]?.plain_text ?? '',
-    createdAt: p['등록일']?.created_time ?? '',
+    name: stripEmoji(getTitle(p['이름'], '(이름 없음)')),
+    phone: getPhone(p['전화번호']),
+    email: getEmail(p['이메일']),
+    level: getRichText(p['레벨']),
+    goal: getRichText(p['목표']),
+    status: getSelect(p['상태'], ''),
+    remainingSessions: getFormulaNumber(p['잔여 시간 회차']),
+    unpaidAmount: getRollupNumber(p['미수금 합계']),
+    memo: getRichText(p['메모']),
+    bookingCode: getRichText(p['예약 코드']),
+    createdAt: getCreatedTime(p['등록일']),
   };
 }
 

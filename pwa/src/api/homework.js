@@ -1,4 +1,11 @@
-import { queryPage, createPage, updatePage, deletePage, getPage } from './notionClient.js';
+import { queryPage, createPage, updatePage } from './notionClient.js';
+import {
+  getTitle,
+  getRichText,
+  getSelect,
+  getDate,
+  getRelationIds,
+} from '../utils/notionProp.js';
 
 export const HOMEWORK_DB = '5ce7d5ef-7b80-4795-843f-325f4ca868e2';
 
@@ -15,17 +22,17 @@ export function parseHomework(page) {
   const feedbackFiles = parseFiles(p['피드백 파일']?.files);
   return {
     id: page.id,
-    title: p['제목']?.title?.[0]?.plain_text ?? '(제목 없음)',
-    studentIds: p['학생']?.relation?.map((r) => r.id) ?? [],
-    content: p['과제 내용']?.rich_text?.[0]?.plain_text ?? '',
-    status: p['제출 상태']?.select?.name ?? '미제출',
+    title: getTitle(p['제목'], '(제목 없음)'),
+    studentIds: getRelationIds(p['학생']),
+    content: getRichText(p['과제 내용']),
+    status: getSelect(p['제출 상태'], '미제출'),
     submitFiles,
     submitFile: submitFiles[0] ?? null, // 하위 호환
-    submitDate: p['제출일']?.date?.start ?? null,
-    feedbackText: p['피드백 텍스트']?.rich_text?.[0]?.plain_text ?? '',
+    submitDate: getDate(p['제출일']),
+    feedbackText: getRichText(p['피드백 텍스트']),
     feedbackFiles,
     feedbackFile: feedbackFiles[0] ?? null, // 하위 호환
-    feedbackDate: p['피드백일']?.date?.start ?? null,
+    feedbackDate: getDate(p['피드백일']),
     createdTime: page.created_time,
   };
 }
@@ -49,10 +56,6 @@ export async function createHomework({ studentPageId, title, content }) {
     '과제 내용': { rich_text: [{ text: { content: content || '' } }] },
     '제출 상태': { select: { name: '미제출' } },
   });
-}
-
-export async function deleteHomework(id) {
-  return deletePage(id);
 }
 
 /** 강사용 파일 업로드 (JWT) → Worker가 Notion file_upload 생성 후 업로드 */
@@ -103,11 +106,6 @@ export async function saveFeedback(id, { feedbackText, files, existingFiles }) {
   }
 
   return updatePage(id, properties);
-}
-
-/** 강사용: 최신 파일 URL 조회 (만료 시 재조회) */
-export async function getHomeworkPage(id) {
-  return getPage(id);
 }
 
 /**
