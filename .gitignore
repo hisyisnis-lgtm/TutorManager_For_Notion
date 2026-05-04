@@ -19,3 +19,12 @@ worker/.dev.vars
 *.pem
 *.key
 secrets.json
+
+# 외부 프로젝트/스킬 (별도 관리, 본 repo 추적 대상 아님)
+claude-workspace-dashboard-template/
+stitch-skills/
+supanova-design-skill/
+taste-skill/
+
+# Worker 빌드 산출물 검증용
+worker/dist-check/
