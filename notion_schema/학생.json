@@ -65,6 +65,11 @@
       "type": "rich_text",
       "id": "e%3EPI"
     },
+    "미니게임 베스트": {
+      "type": "dual_property",
+      "id": "fmUN",
+      "database_id": "2602021c-39b5-4517-9eda-ce4808f570bd"
+    },
     "이메일": {
       "type": "email",
       "id": "jgP%3A"
