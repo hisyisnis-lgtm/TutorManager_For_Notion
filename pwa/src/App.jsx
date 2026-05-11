@@ -45,6 +45,7 @@ import StudentHomeworkPage from './pages/StudentHomeworkPage.jsx';
 import LandingPage from './pages/LandingPage.jsx';
 import PricingPage from './pages/PricingPage.jsx';
 import ConsentPage from './pages/ConsentPage.jsx';
+import InAppBrowserWarning from './components/ui/InAppBrowserWarning.jsx';
 
 // 앱 초기 로드 / SW 업데이트 중 스플래시 (흰 배경 + 빨간 로고)
 function SplashScreen({ updating }) {
@@ -171,6 +172,9 @@ export default function App() {
     return (
       <ConfigProvider theme={antdTheme}>
         <AntApp>
+        {/* SNS 인앱 브라우저(카카오톡·인스타·페북 등)에서 학생 라우트로 진입하면
+            외부 브라우저(Android: Chrome, iOS: Safari) 사용 권장 모달 표시. */}
+        <InAppBrowserWarning />
         <HashRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <ScrollToTop />
           <Routes>
