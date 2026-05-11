@@ -179,9 +179,12 @@
     transform: scale(0.96);
   }
 
-  /* ── 숙제 카드 토글 버튼 — scale 애니메이션 제거 ── */
+  /* ── scale 애니메이션 opt-out ── */
+  /* button:active의 transform:scale(0.96) 글로벌 규칙을 무력화. 카드형 버튼처럼 누름 효과가 어울리지 않는 곳에 사용. */
   .hw-toggle-btn,
-  .hw-toggle-btn:active {
+  .hw-toggle-btn:active,
+  .no-press,
+  .no-press:active {
     transform: none !important;
     transition: none !important;
   }
