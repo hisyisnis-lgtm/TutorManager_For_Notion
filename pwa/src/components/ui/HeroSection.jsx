@@ -62,7 +62,7 @@ export default function HeroSection({ children, sectionRef, style }) {
           style={{
             position: 'absolute', left, bottom,
             fontSize: size, lineHeight: 1,
-            color: 'white', fontFamily: 'serif',
+            color: 'white', fontFamily: '"Noto Sans SC", "PingFang SC", "Microsoft YaHei", "Heiti SC", sans-serif',
             animation: `hanziFloat ${dur} ease-in-out ${delay} infinite both`,
             pointerEvents: 'none', userSelect: 'none',
             zIndex: 1,

@@ -47,7 +47,6 @@ import PricingPage from './pages/PricingPage.jsx';
 import ConsentPage from './pages/ConsentPage.jsx';
 import InAppBrowserWarning from './components/ui/InAppBrowserWarning.jsx';
 import DynamicStudentManifest from './components/DynamicStudentManifest.jsx';
-import PwaDebugPanel from './components/PwaDebugPanel.jsx';
 
 // 앱 초기 로드 / SW 업데이트 중 스플래시 (흰 배경 + 빨간 로고)
 function SplashScreen({ updating }) {
@@ -126,15 +125,6 @@ if (typeof window !== 'undefined') {
         localStorage.setItem('personal_student_token', pathToken);
       }
     }
-    // 옛 버전 호환: `?student={token}` query string도 동일하게 처리
-    const search = new URLSearchParams(window.location.search);
-    const queryToken = search.get('student');
-    if (queryToken && queryToken !== 'undefined' && queryToken.length >= 4) {
-      localStorage.setItem('personal_student_token', queryToken);
-      const cleanPath = window.location.pathname || '/';
-      window.history.replaceState(null, '', `${cleanPath}#/personal/${encodeURIComponent(queryToken)}`);
-    }
-
     const hash = window.location.hash;
 
     // 1) 학생 라우트(`#/personal/{token}` 또는 그 하위)로 진입한 경우 토큰을 localStorage에 저장.
@@ -234,7 +224,6 @@ export default function App() {
     return (
       <ConfigProvider theme={antdTheme}>
         <AntApp>
-        <PwaDebugPanel />
         <InAppBrowserWarning />
         {/* iOS에서는 manifest를 DOM에서 제거해 "홈 화면에 추가" 시 현재 path를 PWA URL로 박는다. */}
         <DynamicStudentManifest />
@@ -287,7 +276,6 @@ export default function App() {
     return (
       <ConfigProvider theme={antdTheme}>
         <AntApp>
-          <PwaDebugPanel />
           <LoginPage
             onSuccess={() => {
               window.location.hash = '#/home';

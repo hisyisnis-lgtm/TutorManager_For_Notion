@@ -58,25 +58,34 @@ function extractTokenFromUrl() {
 
 export default function DynamicStudentManifest() {
   useEffect(() => {
-    const link = document.querySelector('link[rel="manifest"]');
-    if (!link) return;
-
     const isIOS = isIOSDevice();
 
-    // iOS: manifest link를 DOM에서 제거. iOS Safari는 manifest 없으면 현재 페이지 URL을 그대로
-    // "홈 화면에 추가" 시점의 PWA URL로 사용한다. 학생 페이지 path가 그대로 박힘.
+    // iOS: manifest link가 있으면 DOM에서 제거 (학생 path에서는 index.html inline script가 link를 추가하지
+    // 않으니 보통은 없지만, 혹시 다른 곳에서 추가됐다면 cleanup). manifest 없는 상태로 "홈 화면에 추가"
+    // 시 현재 페이지 URL이 그대로 PWA에 박힘.
     if (isIOS) {
-      const parent = link.parentNode;
-      const nextSibling = link.nextSibling;
-      parent?.removeChild(link);
+      const existing = document.querySelector('link[rel="manifest"]');
+      if (!existing) return;
+      const parent = existing.parentNode;
+      const nextSibling = existing.nextSibling;
+      parent?.removeChild(existing);
       return () => {
-        // 학생 라우트 떠날 때 manifest 복원 (강사 라우트로 갈 때 등)
-        if (parent) parent.insertBefore(link, nextSibling);
+        if (parent) parent.insertBefore(existing, nextSibling);
       };
     }
 
-    // Android·Desktop: data URL로 동적 manifest 교체. start_url에 학생 path 박음.
-    const originalHref = link.getAttribute('href') || '/manifest.webmanifest';
+    // Android·Desktop: 학생 path에서는 index.html inline script가 manifest link를 추가하지 않으므로
+    // 직접 새 link를 만들어 학생 토큰이 박힌 동적 manifest를 적용한다. 이러면 Android Chrome에서
+    // "앱 설치" 옵션이 떠 PWA로 정상 설치 가능.
+    let createdLink = null;
+    let link = document.querySelector('link[rel="manifest"]');
+    if (!link) {
+      link = document.createElement('link');
+      link.rel = 'manifest';
+      document.head.appendChild(link);
+      createdLink = link;
+    }
+    const originalHref = createdLink ? '' : (link.getAttribute('href') || '/manifest.webmanifest');
     let lastApplied = '';
 
     function apply() {
@@ -84,7 +93,11 @@ export default function DynamicStudentManifest() {
       if (!token) {
         if (lastApplied) {
           lastApplied = '';
-          link.setAttribute('href', originalHref);
+          if (createdLink) {
+            link.remove();
+          } else {
+            link.setAttribute('href', originalHref);
+          }
         }
         return;
       }
@@ -101,7 +114,11 @@ export default function DynamicStudentManifest() {
     return () => {
       window.removeEventListener('hashchange', apply);
       window.removeEventListener('popstate', apply);
-      if (lastApplied) link.setAttribute('href', originalHref);
+      if (createdLink) {
+        link.remove();
+      } else if (lastApplied) {
+        link.setAttribute('href', originalHref);
+      }
     };
   }, []);
 
