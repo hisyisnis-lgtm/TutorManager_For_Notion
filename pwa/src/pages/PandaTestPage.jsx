@@ -6,19 +6,21 @@ import PandaWidget from '../components/ui/PandaWidget.jsx';
 const FEED_KEY = 'panda_test_fed_total';
 
 export default function PandaTestPage() {
-  const [totalSessions, setTotalSessions] = useState(5);
+  // 완료된 수업 시간(분) — 30분당 먹이 1개로 환산
+  const [completedMinutes, setCompletedMinutes] = useState(150);
   const [fedDisplay, setFedDisplay] = useState(
     () => parseInt(localStorage.getItem(FEED_KEY) || '0', 10)
   );
+
+  const foodCount = Math.floor(completedMinutes / 30);
 
   const resetFed = () => {
     localStorage.removeItem(FEED_KEY);
     window.location.reload();
   };
 
-  // 슬라이더로 totalSessions 조절 시 fedDisplay도 동기화
-  const handleSessionChange = (v) => {
-    setTotalSessions(v);
+  const handleMinutesChange = (v) => {
+    setCompletedMinutes(v);
     setFedDisplay(parseInt(localStorage.getItem(FEED_KEY) || '0', 10));
   };
 
@@ -29,7 +31,7 @@ export default function PandaTestPage() {
           🐼 팬더 위젯 테스트
         </h2>
         <p style={{ fontSize: 12, color: '#8c8c8c', margin: '4px 0 0' }}>
-          슬라이더로 총 수업 횟수를 조절하세요
+          슬라이더로 완료된 수업 시간(분)을 조절하세요 — 30분당 먹이 1개
         </p>
       </div>
 
@@ -39,11 +41,15 @@ export default function PandaTestPage() {
         marginBottom: 16, boxShadow: 'var(--shadow-card)',
       }}>
         <label style={{ fontSize: 13, color: '#595959', display: 'block', marginBottom: 10 }}>
-          총 수업 횟수:{' '}
+          완료 수업 시간:{' '}
           <strong style={{ color: '#7f0005', fontVariantNumeric: 'tabular-nums' }}>
-            {totalSessions}회
+            {completedMinutes}분
           </strong>
-          {' '}/ 먹이 준 횟수:{' '}
+          {' '}→ 먹이{' '}
+          <strong style={{ color: '#7f0005', fontVariantNumeric: 'tabular-nums' }}>
+            {foodCount}개
+          </strong>
+          {' '}/ 먹인 횟수:{' '}
           <strong style={{ fontVariantNumeric: 'tabular-nums' }}>
             {parseInt(localStorage.getItem(FEED_KEY) || '0', 10)}회
           </strong>
@@ -51,34 +57,35 @@ export default function PandaTestPage() {
         <input
           type="range"
           min={0}
-          max={150}
-          value={totalSessions}
-          onChange={e => handleSessionChange(Number(e.target.value))}
+          max={3000}
+          step={10}
+          value={completedMinutes}
+          onChange={e => handleMinutesChange(Number(e.target.value))}
           style={{ width: '100%', accentColor: '#7f0005' }}
         />
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#aaa', marginTop: 2 }}>
-          <span>0회</span>
-          <span>50회</span>
-          <span>100회</span>
-          <span>150회</span>
+          <span>0분</span>
+          <span>1000분</span>
+          <span>2000분</span>
+          <span>3000분</span>
         </div>
 
-        {/* 빠른 설정 버튼 */}
+        {/* 빠른 설정 버튼 — 레벨 경계에 맞춘 분 값 */}
         <div style={{ display: 'flex', gap: 6, marginTop: 12, flexWrap: 'wrap' }}>
-          {[0, 1, 9, 10, 24, 25, 49, 50, 99, 100].map(v => (
+          {[0, 30, 270, 300, 720, 750, 1470, 1500, 2970, 3000].map(v => (
             <button
               key={v}
-              onClick={() => handleSessionChange(v)}
+              onClick={() => handleMinutesChange(v)}
               style={{
                 padding: '3px 10px', borderRadius: 8, border: '1.5px solid',
-                borderColor: totalSessions === v ? '#7f0005' : '#e5e5e5',
-                background: totalSessions === v ? '#fff0f1' : 'white',
-                color: totalSessions === v ? '#7f0005' : '#595959',
+                borderColor: completedMinutes === v ? '#7f0005' : '#e5e5e5',
+                background: completedMinutes === v ? '#fff0f1' : 'white',
+                color: completedMinutes === v ? '#7f0005' : '#595959',
                 fontSize: 12, fontWeight: 600, cursor: 'pointer',
                 fontVariantNumeric: 'tabular-nums',
               }}
             >
-              {v}회
+              {v}분
             </button>
           ))}
         </div>
@@ -98,11 +105,11 @@ export default function PandaTestPage() {
       {/* 팬더 위젯 */}
       <PandaWidget
         foodSources={[
-          { key: 'sessions', label: '완료 수업', count: totalSessions },
+          { key: 'sessions', label: '완료 수업', count: foodCount },
           { key: 'referral', label: '친구 추천', count: 0 },
         ]}
         storageKey={FEED_KEY}
-        key={totalSessions + '-' + fedDisplay}
+        key={completedMinutes + '-' + fedDisplay}
       />
 
       <p style={{ fontSize: 11, color: '#bbb', textAlign: 'center', marginTop: 16 }}>

@@ -1,4 +1,4 @@
-import { queryAll, queryPage, updatePage, createPage } from './notionClient.js';
+import { queryAll, queryPage, updatePage, createPage, getPage } from './notionClient.js';
 import { stripEmoji } from '../utils/stringUtils.js';
 import {
   getTitle,
@@ -40,6 +40,21 @@ export async function updateStudentStatus(pageId, status) {
   return updatePage(pageId, {
     상태: { select: { name: status } },
   });
+}
+
+/**
+ * 학생페이지 첫 공유 시점 기록 — 강사가 "학생 페이지 공유" 버튼을 처음 누른 시점.
+ * 이미 기록된 학생은 건드리지 않아 재공유 시 시점이 리셋되지 않는다.
+ * Worker가 이 값을 sharedAt으로 사용해 판다 먹이(수업시간 30분당 1개)를 그 이후 수업으로만 집계.
+ * 반환: 새로 기록했으면 true, 이미 있어서 스킵했으면 false.
+ */
+export async function markStudentSharedIfEmpty(pageId) {
+  const page = await getPage(pageId);
+  if (page?.properties?.['공유일']?.date?.start) return false;
+  await updatePage(pageId, {
+    '공유일': { date: { start: new Date().toISOString() } },
+  });
+  return true;
 }
 
 /** 학생 정보 수정 */

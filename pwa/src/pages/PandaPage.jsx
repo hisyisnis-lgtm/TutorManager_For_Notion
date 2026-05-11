@@ -37,9 +37,12 @@ export default function PandaPage() {
     setShowCoach(false);
   };
 
+  // 수업시간 30분당 먹이 1개. 학생페이지 공유 전(sharedAt 없음)에는 referral도 0으로 게이팅 —
+  // "공유 전엔 먹이가 쌓이지 않는다"는 정책을 sessions/referral 모두에 일관 적용.
+  const hasShared = !!student?.sharedAt;
   const foodSources = student ? [
-    { key: 'sessions', label: '완료 수업', count: student.totalSessions ?? 0 },
-    { key: 'referral', label: '친구 추천', count: student.referralBonus ?? 0 },
+    { key: 'sessions', label: '완료 수업', count: Math.floor((student.completedMinutes ?? 0) / 30) },
+    { key: 'referral', label: '친구 추천', count: hasShared ? (student.referralBonus ?? 0) : 0 },
   ] : [];
 
   return (
@@ -120,7 +123,7 @@ export default function PandaPage() {
               내 팬더를 키워보세요!
             </p>
             <div style={{ fontSize: 14, color: TEXT_SECONDARY, lineHeight: 1.65, margin: '0 0 20px', wordBreak: 'keep-all' }}>
-              <p style={{ margin: '0 0 8px' }}>수업을 완료하면 <strong style={{ color: PRIMARY }}>먹이</strong>가 생겨요.</p>
+              <p style={{ margin: '0 0 8px' }}>수업 <strong style={{ color: PRIMARY }}>30분</strong>마다 <strong style={{ color: PRIMARY }}>먹이</strong>가 생겨요.</p>
               <p style={{ margin: '0 0 8px' }}><strong style={{ color: PRIMARY }}>먹이주기</strong>를 누르면 팬더가 성장해요.</p>
               <p style={{ margin: 0 }}><strong style={{ color: PRIMARY }}>쓰다듬기</strong>로 팬더를 응원해 주세요 ❤️</p>
             </div>
