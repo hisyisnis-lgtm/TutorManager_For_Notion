@@ -1,21 +1,24 @@
 import { useEffect } from 'react';
 
-// 학생 라우트(`#/personal/{token}` 또는 그 하위)에 진입했을 때 PWA manifest의 start_url을
-// 그 학생 토큰이 포함된 URL로 동적으로 교체한다. 이게 없으면:
+// 학생 라우트(path-based `/personal/{token}` 또는 hash-based) 진입 시 manifest 동작을 우회한다.
 //
-// 1) Safari에서 학생 페이지 본 후 "홈 화면에 추가" → manifest.start_url='/'로 PWA 설치
-// 2) PWA 진입 → start_url='/'로 시작 → hash 비어있음 → LoginPage
-//
-// iOS Safari PWA는 16.4+부터 localStorage가 Safari와 격리되므로 localStorage redirect 트릭으로는
-// 해결 불가. start_url 자체에 토큰을 박아두는 게 유일하게 확실한 방법.
-//
-// 중요: iOS Safari는 manifest start_url의 hash(#)를 잘라내므로 query string(`?student=...`)으로 전달.
-// App.jsx 진입 시점에 query를 hash로 변환해 정상 라우팅한다.
-//
-// <link rel="manifest"> href를 data URL로 바꾸면 vite-plugin-pwa의 정적 manifest를 런타임에 덮어쓴다.
-// PWA 설치 시점의 manifest가 영구적으로 박히므로, 이미 설치된 PWA는 재설치해야 새 start_url 반영.
+// iOS Safari PWA quirk:
+//  - manifest의 start_url은 hash·query를 잘라낸다 (data URL·blob URL도 마찬가지)
+//  - manifest 자체가 없으면 "홈 화면에 추가" 시점의 페이지 URL을 그대로 사용 (path는 보존)
+//  - 따라서 iOS에서는 학생 라우트일 때 <link rel="manifest"> 자체를 DOM에서 제거해
+//    iOS가 강제로 현재 URL을 사용하게 한다. path 기반 학생 URL이므로 토큰이 박힌다.
+//  - Android Chrome 등은 manifest가 있어야 PWA 설치 가능하므로 iOS만 제거.
 
-// vite-plugin-pwa가 빌드 시점에 생성하는 manifest와 동일한 메타데이터를 유지하고 start_url만 학생 URL로.
+function isIOSDevice() {
+  if (typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent || '';
+  if (/iPad|iPhone|iPod/.test(ua)) return true;
+  // iPadOS 13+ Safari는 UA에 Macintosh를 보내므로 touch points로 보정
+  return /Macintosh/.test(ua) && (navigator.maxTouchPoints || 0) > 1;
+}
+
+// Android·Desktop용 — vite-plugin-pwa가 빌드 시점에 생성하는 manifest와 동일한 메타데이터를 유지하고
+// start_url에 학생 path를 박는다. Android Chrome의 PWA 설치 흐름에서 사용.
 function buildManifest(studentToken) {
   return {
     name: '하늘하늘중국어',
@@ -25,10 +28,7 @@ function buildManifest(studentToken) {
     background_color: '#F9FAFB',
     display: 'standalone',
     orientation: 'portrait',
-    // iOS Safari는 manifest start_url의 hash·query를 잘라낼 수 있으므로 가장 안정적인 path-based로 전달.
-    // _redirects의 `/* /index.html 200`이 SPA fallback을 처리하고, App.jsx 모듈 IIFE가
-    // `/student/{token}` path를 감지해 hash(`#/personal/...`)로 변환한다.
-    start_url: `/student/${encodeURIComponent(studentToken)}`,
+    start_url: `/personal/${encodeURIComponent(studentToken)}`,
     scope: '/',
     lang: 'ko',
     icons: [
@@ -40,25 +40,48 @@ function buildManifest(studentToken) {
   };
 }
 
-function extractToken(hash) {
-  const m = hash.match(/^#\/personal\/([^/?#]+)/);
-  if (!m) return '';
-  const token = decodeURIComponent(m[1]);
-  // 'personal' 라우트(PersonalEntryPage) 자체 또는 너무 짧은 값 제외
-  return token && token !== 'undefined' && token.length >= 4 ? token : '';
+function extractTokenFromUrl() {
+  // path 기반 URL 우선 (BrowserRouter 환경)
+  const pathMatch = window.location.pathname.match(/^\/(personal|student)\/([^/?#]+)/);
+  if (pathMatch) {
+    const token = decodeURIComponent(pathMatch[2]);
+    if (token && token !== 'undefined' && token.length >= 4) return token;
+  }
+  // hash 기반 URL (HashRouter 환경 호환)
+  const hashMatch = window.location.hash.match(/^#\/personal\/([^/?#]+)/);
+  if (hashMatch) {
+    const token = decodeURIComponent(hashMatch[1]);
+    if (token && token !== 'undefined' && token.length >= 4) return token;
+  }
+  return '';
 }
 
 export default function DynamicStudentManifest() {
   useEffect(() => {
     const link = document.querySelector('link[rel="manifest"]');
     if (!link) return;
+
+    const isIOS = isIOSDevice();
+
+    // iOS: manifest link를 DOM에서 제거. iOS Safari는 manifest 없으면 현재 페이지 URL을 그대로
+    // "홈 화면에 추가" 시점의 PWA URL로 사용한다. 학생 페이지 path가 그대로 박힘.
+    if (isIOS) {
+      const parent = link.parentNode;
+      const nextSibling = link.nextSibling;
+      parent?.removeChild(link);
+      return () => {
+        // 학생 라우트 떠날 때 manifest 복원 (강사 라우트로 갈 때 등)
+        if (parent) parent.insertBefore(link, nextSibling);
+      };
+    }
+
+    // Android·Desktop: data URL로 동적 manifest 교체. start_url에 학생 path 박음.
     const originalHref = link.getAttribute('href') || '/manifest.webmanifest';
     let lastApplied = '';
 
     function apply() {
-      const token = extractToken(window.location.hash);
+      const token = extractTokenFromUrl();
       if (!token) {
-        // 학생 라우트가 아니면 원본 manifest로 복원
         if (lastApplied) {
           lastApplied = '';
           link.setAttribute('href', originalHref);
@@ -68,15 +91,16 @@ export default function DynamicStudentManifest() {
       if (lastApplied === token) return;
       lastApplied = token;
       const json = JSON.stringify(buildManifest(token));
-      // data URL은 Blob URL보다 origin·revoke 이슈가 없어 iOS Safari가 더 잘 인식한다.
       const dataUrl = `data:application/manifest+json;charset=utf-8,${encodeURIComponent(json)}`;
       link.setAttribute('href', dataUrl);
     }
 
     apply();
     window.addEventListener('hashchange', apply);
+    window.addEventListener('popstate', apply);
     return () => {
       window.removeEventListener('hashchange', apply);
+      window.removeEventListener('popstate', apply);
       if (lastApplied) link.setAttribute('href', originalHref);
     };
   }, []);

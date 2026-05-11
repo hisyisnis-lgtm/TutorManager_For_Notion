@@ -236,6 +236,8 @@ export default function App() {
         <AntApp>
         <PwaDebugPanel />
         <InAppBrowserWarning />
+        {/* iOS에서는 manifest를 DOM에서 제거해 "홈 화면에 추가" 시 현재 path를 PWA URL로 박는다. */}
+        <DynamicStudentManifest />
         <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <ScrollToTop />
           <Routes>
