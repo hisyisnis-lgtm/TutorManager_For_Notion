@@ -79,9 +79,10 @@ export default function PandaPage() {
         </div>
       </div>
 
-      {/* 콘텐츠 */}
+      {/* 콘텐츠 — 하단은 iOS 홈 인디케이터 회피를 위해 safe-area-inset-bottom 추가
+           (PandaPage는 position:fixed inset:0이라 body의 padding-bottom이 적용 안 됨) */}
       <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-        <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', maxWidth: 480, width: '100%', margin: '0 auto', padding: '16px 20px 20px' }}>
+        <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', maxWidth: 480, width: '100%', margin: '0 auto', padding: '16px 20px calc(20px + env(safe-area-inset-bottom))' }}>
           {error ? (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: STATUS_ERROR_TEXT, fontSize: 14 }}>
               정보를 불러오지 못했어요

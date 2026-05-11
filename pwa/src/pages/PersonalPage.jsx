@@ -855,7 +855,6 @@ function HomeTab({ studentToken, foodSources, studentLoaded, remainingHours, rem
                 data-coach="panda"
                 type="button"
                 onClick={onOpenPanda}
-                className="active:scale-[0.97] transition-[scale] duration-150 ease-out"
                 style={{
                   position: 'relative', zIndex: 1,
                   width: '100%', height: 80,
