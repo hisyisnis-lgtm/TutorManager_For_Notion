@@ -94,14 +94,12 @@ function isOnFormPage() {
   return /\/(logs|classes|students|payments|homework)\/(new|[^/]+\/edit)/.test(hash);
 }
 
-export default function App() {
-  const [authed, setAuthed] = useState(isAuthed);
-  const [swReady, setSwReady] = useState(false);
-
-  // PWA standalone에서 root hash로 진입 + 강사 미인증 + 저장된 학생 토큰 있음 → 학생 페이지로 자동 이동.
-  // manifest.start_url이 '/' 고정이라 그대로 두면 강사 LoginPage가 뜨는 문제를 우회.
-  // 강사는 PWA로 학생 페이지를 미리보지 않으므로 isTeacher 체크로 강사 PWA 흐름을 보호.
-  useEffect(() => {
+// PWA standalone에서 root hash로 진입 + 강사 미인증 + 저장된 학생 토큰이 있으면 학생 페이지로 자동 이동.
+// manifest.start_url이 '/' 고정이라 그대로 두면 강사 LoginPage가 뜨는 문제를 우회.
+// useEffect 대신 모듈 로드 시점(첫 렌더 전)에 동기적으로 실행해 isPublicBookingRoute() 첫 호출이
+// 갱신된 hash를 보도록 한다. 강사는 PWA로 학생 페이지를 미리보지 않으므로 isTeacher 체크로 강사 PWA 흐름은 보호.
+if (typeof window !== 'undefined') {
+  try {
     const isStandalone =
       window.matchMedia('(display-mode: standalone)').matches ||
       window.navigator.standalone === true;
@@ -111,10 +109,17 @@ export default function App() {
     if (isStandalone && isRootHash && !isTeacher) {
       const savedToken = localStorage.getItem('personal_student_token');
       if (savedToken) {
-        window.location.hash = `#/personal/${encodeURIComponent(savedToken)}`;
+        // history.replaceState로 hash를 미리 바꿈 — popstate/hashchange를 발생시키지 않으므로
+        // 이후 React가 첫 렌더할 때 isPublicBookingRoute()가 새 hash를 동기적으로 본다.
+        window.history.replaceState(null, '', `#/personal/${encodeURIComponent(savedToken)}`);
       }
     }
-  }, []);
+  } catch {}
+}
+
+export default function App() {
+  const [authed, setAuthed] = useState(isAuthed);
+  const [swReady, setSwReady] = useState(false);
 
   const [swRegistration, setSwRegistration] = useState(null);
 
