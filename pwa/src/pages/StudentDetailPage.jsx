@@ -178,7 +178,9 @@ export default function StudentDetailPage() {
                 <button
                   type="button"
                   onClick={() => {
-                    const personalUrl = `${SITE_ORIGIN}/#/personal/${encodeURIComponent(student.bookingCode)}`;
+                    // iOS Safari PWA가 "홈 화면에 추가" 시 hash·query를 잘라내므로 path 기반 URL로 공유.
+                    // App.jsx 모듈 IIFE가 `/personal/{token}` path 진입 시 hash로 변환해 라우터로 전달.
+                    const personalUrl = `${SITE_ORIGIN}/personal/${encodeURIComponent(student.bookingCode)}`;
                     const cleanName = student.name.replace(/[\u200B-\u200D\uFE0F\uFEFF]/g, '').replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, '').trim();
                     const text = `${personalUrl}\n[${cleanName}님 학생코드 - ${student.bookingCode}]`;
                     navigator.clipboard.writeText(text).then(() => message.success('복사되었습니다.'));

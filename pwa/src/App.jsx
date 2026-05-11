@@ -102,12 +102,13 @@ function isOnFormPage() {
 // 갱신된 hash를 보도록 한다. 강사는 PWA로 학생 페이지를 미리보지 않으므로 isTeacher 체크로 강사 PWA 흐름은 보호.
 if (typeof window !== 'undefined') {
   try {
-    // 0) PWA 진입 케이스 — DynamicStudentManifest가 박아둔 `/student/{token}` path를 hash로 변환.
-    //    iOS Safari가 manifest start_url의 hash·query를 잘라낼 수 있으므로 가장 안정적인
-    //    path-based 진입을 사용한다. _redirects의 SPA fallback이 임의 path를 index.html로 처리.
-    const pathMatch = window.location.pathname.match(/^\/student\/([^/?#]+)/);
+    // 0) Path-based 학생 URL을 hash로 변환 — 카카오톡 공유 URL과 PWA 진입의 핵심 경로.
+    //    iOS Safari PWA는 manifest의 hash·query를 잘라내고 path만 보존하므로 학생 URL을
+    //    `/personal/{token}` (또는 옛 호환 `/student/{token}`) 형식으로 만들고, App 진입 시
+    //    즉시 HashRouter 호환 형태(`#/personal/{token}`)로 변환한다.
+    const pathMatch = window.location.pathname.match(/^\/(personal|student)\/([^/?#]+)/);
     if (pathMatch) {
-      const pathToken = decodeURIComponent(pathMatch[1]);
+      const pathToken = decodeURIComponent(pathMatch[2]);
       if (pathToken && pathToken !== 'undefined' && pathToken.length >= 4) {
         localStorage.setItem('personal_student_token', pathToken);
         // path는 root로 정리하고 hash로 변환

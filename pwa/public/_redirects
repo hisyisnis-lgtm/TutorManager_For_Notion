@@ -1,3 +1,4 @@
-/personal /#/personal 302
-/personal/* /#/personal/:splat 302
+# 모든 path를 SPA index.html로 fallback.
+# 학생 페이지 URL은 path 기반(`/personal/{token}`)이며, App.jsx 모듈 IIFE가 이를 hash로 변환한다.
+# 옛 hash URL(`/#/personal/{token}`)은 클라이언트 측에서 그대로 동작 (server-side redirect 불필요).
 /* /index.html 200

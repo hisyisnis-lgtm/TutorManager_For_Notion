@@ -26,7 +26,10 @@ export default defineConfig({
         background_color: '#F9FAFB',
         display: 'standalone',
         orientation: 'portrait',
-        start_url: '/',
+        // start_url을 '.'(현재 URL)로 — iOS Safari PWA에서 manifest의 동적 교체나 hash·query는
+        // 무시되지만, 정적 manifest의 start_url을 '.'로 두면 "홈 화면에 추가" 시점의 페이지 URL이
+        // 그대로 보존된다. 학생이 path 기반 URL(`/personal/{token}`)에서 PWA 설치하면 그 URL이 박힘.
+        start_url: '.',
         scope: '/',
         lang: 'ko',
         icons: [
