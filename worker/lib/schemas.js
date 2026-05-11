@@ -69,3 +69,25 @@ export const HomeworkSubmitSchema = z.object({
 export const MyClassesQuerySchema = z.object({
   month: MonthSchema.optional(),
 }).strip();
+
+// ===== /game/best/:token/:gameKey (미니게임 베스트) =====
+
+/**
+ * 게임 종류 키 — 새 게임/난이도 추가 시 enum 옵션만 늘림.
+ * Notion DB의 '게임' select 옵션과 1:1 대응.
+ * 'tone'은 레거시(난이도 도입 전), 'tone-easy/normal/hard'는 난이도별.
+ */
+export const GameKeySchema = z.enum(['tone', 'tone-easy', 'tone-normal', 'tone-hard'], {
+  errorMap: () => ({ message: '알 수 없는 게임 키입니다' }),
+});
+
+/**
+ * POST /game/best/:token/:gameKey body — 게임 결과 1회분.
+ * meta는 게임별 고유 데이터 (Notion '메타' 필드에 JSON 직렬화).
+ */
+export const GameResultSchema = z.object({
+  score: z.number().int().min(0).max(99999),
+  maxCombo: z.number().int().min(0).max(99),
+  avgMs: z.number().min(0).max(60000),
+  meta: z.record(z.any()).optional(),
+}).strip();
