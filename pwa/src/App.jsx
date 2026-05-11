@@ -100,10 +100,24 @@ function isOnFormPage() {
 // 갱신된 hash를 보도록 한다. 강사는 PWA로 학생 페이지를 미리보지 않으므로 isTeacher 체크로 강사 PWA 흐름은 보호.
 if (typeof window !== 'undefined') {
   try {
+    const hash = window.location.hash;
+
+    // 1) 학생 라우트(`#/personal/{token}` 또는 그 하위)로 진입한 경우 토큰을 localStorage에 저장.
+    //    학생은 보통 카카오톡으로 받은 토큰 URL을 바로 클릭하므로 PersonalEntryPage를 거치지 않아
+    //    토큰이 저장될 기회가 없다. 이 단계가 PWA 설치 후 자동 redirect의 전제 조건.
+    const personalMatch = hash.match(/^#\/personal\/([^/?#]+)/);
+    if (personalMatch) {
+      const token = decodeURIComponent(personalMatch[1]);
+      // 'undefined' 같은 잘못된 값 또는 너무 짧은 값은 제외 (예약 코드는 12자 대문자+숫자)
+      if (token && token !== 'undefined' && token.length >= 4) {
+        localStorage.setItem('personal_student_token', token);
+      }
+    }
+
+    // 2) standalone + root hash + 강사 미인증 + 저장된 학생 토큰 → 학생 페이지로 redirect.
     const isStandalone =
       window.matchMedia('(display-mode: standalone)').matches ||
       window.navigator.standalone === true;
-    const hash = window.location.hash;
     const isRootHash = !hash || hash === '#/' || hash === '#';
     const isTeacher = !!localStorage.getItem('auth_token');
     if (isStandalone && isRootHash && !isTeacher) {
