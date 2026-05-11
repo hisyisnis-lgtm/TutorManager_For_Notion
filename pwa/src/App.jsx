@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { HashRouter, BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { ConfigProvider, App as AntApp } from 'antd';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { isAuthed } from './api/authUtils.js';
@@ -102,17 +102,14 @@ function isOnFormPage() {
 // 갱신된 hash를 보도록 한다. 강사는 PWA로 학생 페이지를 미리보지 않으므로 isTeacher 체크로 강사 PWA 흐름은 보호.
 if (typeof window !== 'undefined') {
   try {
-    // 0) Path-based 학생 URL을 hash로 변환 — 카카오톡 공유 URL과 PWA 진입의 핵심 경로.
-    //    iOS Safari PWA는 manifest의 hash·query를 잘라내고 path만 보존하므로 학생 URL을
-    //    `/personal/{token}` (또는 옛 호환 `/student/{token}`) 형식으로 만들고, App 진입 시
-    //    즉시 HashRouter 호환 형태(`#/personal/{token}`)로 변환한다.
+    // 0) Path-based 학생 URL 진입 시 토큰만 localStorage에 저장하고 URL은 path 그대로 유지.
+    //    iOS Safari PWA "홈 화면에 추가"는 path만 보존하고 hash·query는 잘라내므로 절대 hash로 변환하지 않는다.
+    //    App() 컴포넌트가 학생 path 진입을 감지하면 BrowserRouter로 학생 라우트만 렌더한다.
     const pathMatch = window.location.pathname.match(/^\/(personal|student)\/([^/?#]+)/);
     if (pathMatch) {
       const pathToken = decodeURIComponent(pathMatch[2]);
       if (pathToken && pathToken !== 'undefined' && pathToken.length >= 4) {
         localStorage.setItem('personal_student_token', pathToken);
-        // path는 root로 정리하고 hash로 변환
-        window.history.replaceState(null, '', `/#/personal/${encodeURIComponent(pathToken)}`);
       }
     }
     // 옛 버전 호환: `?student={token}` query string도 동일하게 처리
@@ -208,6 +205,34 @@ export default function App() {
   // SW 준비 전 또는 업데이트 적용 중 (폼 작성 중이면 업데이트 미표시)
   if (!swReady || (needRefresh && !isOnFormPage())) {
     return <SplashScreen updating={needRefresh} />;
+  }
+
+  // Path-based 학생 라우트 — BrowserRouter로 학생 라우트만 렌더.
+  // iOS Safari PWA "홈 화면에 추가" 시 URL의 path는 보존되므로 path 기반 라우팅이 안전.
+  // hash 기반 강사 라우트와 공존하기 위해 이 분기에서만 BrowserRouter 사용.
+  const studentPathMatch = window.location.pathname.match(/^\/(personal|student)\/([^/?#]+)/);
+  if (studentPathMatch) {
+    // 옛 호환 `/student/{token}`은 `/personal/{token}`로 자동 redirect
+    if (studentPathMatch[1] === 'student') {
+      const token = studentPathMatch[2];
+      window.history.replaceState(null, '', `/personal/${token}${window.location.search}${window.location.hash}`);
+    }
+    return (
+      <ConfigProvider theme={antdTheme}>
+        <AntApp>
+        <PwaDebugPanel />
+        <InAppBrowserWarning />
+        <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+          <ScrollToTop />
+          <Routes>
+            <Route path="/personal/:studentToken" element={<PersonalPage />} />
+            <Route path="/personal/:studentToken/homework/:hwId" element={<PersonalHomeworkDetailPage />} />
+            <Route path="/personal/:studentToken/panda" element={<PandaPage />} />
+          </Routes>
+        </BrowserRouter>
+        </AntApp>
+      </ConfigProvider>
+    );
   }
 
   // 공개 예약 페이지는 로그인 없이 접근
