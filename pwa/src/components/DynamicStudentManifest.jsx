@@ -25,9 +25,10 @@ function buildManifest(studentToken) {
     background_color: '#F9FAFB',
     display: 'standalone',
     orientation: 'portrait',
-    // iOS는 manifest의 hash를 보존하지 않으므로 query string으로 토큰 전달.
-    // App.jsx의 모듈 최상위 IIFE가 ?student=...를 hash(`#/personal/...`)로 변환한다.
-    start_url: `/?student=${encodeURIComponent(studentToken)}`,
+    // iOS Safari는 manifest start_url의 hash·query를 잘라낼 수 있으므로 가장 안정적인 path-based로 전달.
+    // _redirects의 `/* /index.html 200`이 SPA fallback을 처리하고, App.jsx 모듈 IIFE가
+    // `/student/{token}` path를 감지해 hash(`#/personal/...`)로 변환한다.
+    start_url: `/student/${encodeURIComponent(studentToken)}`,
     scope: '/',
     lang: 'ko',
     icons: [

@@ -101,9 +101,19 @@ function isOnFormPage() {
 // 갱신된 hash를 보도록 한다. 강사는 PWA로 학생 페이지를 미리보지 않으므로 isTeacher 체크로 강사 PWA 흐름은 보호.
 if (typeof window !== 'undefined') {
   try {
-    // 0) PWA 진입 케이스 — DynamicStudentManifest가 박아둔 `?student={token}`을 hash로 변환.
-    //    iOS Safari는 manifest start_url의 hash(#)를 잘라내므로 query string으로 토큰을 받는다.
-    //    이게 PWA "홈 화면에 추가" → 아이콘 탭 시 학생 페이지로 직접 진입하는 핵심 경로.
+    // 0) PWA 진입 케이스 — DynamicStudentManifest가 박아둔 `/student/{token}` path를 hash로 변환.
+    //    iOS Safari가 manifest start_url의 hash·query를 잘라낼 수 있으므로 가장 안정적인
+    //    path-based 진입을 사용한다. _redirects의 SPA fallback이 임의 path를 index.html로 처리.
+    const pathMatch = window.location.pathname.match(/^\/student\/([^/?#]+)/);
+    if (pathMatch) {
+      const pathToken = decodeURIComponent(pathMatch[1]);
+      if (pathToken && pathToken !== 'undefined' && pathToken.length >= 4) {
+        localStorage.setItem('personal_student_token', pathToken);
+        // path는 root로 정리하고 hash로 변환
+        window.history.replaceState(null, '', `/#/personal/${encodeURIComponent(pathToken)}`);
+      }
+    }
+    // 옛 버전 호환: `?student={token}` query string도 동일하게 처리
     const search = new URLSearchParams(window.location.search);
     const queryToken = search.get('student');
     if (queryToken && queryToken !== 'undefined' && queryToken.length >= 4) {
