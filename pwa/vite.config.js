@@ -18,44 +18,12 @@ export default defineConfig({
     VitePWA({
       registerType: 'prompt',
       includeAssets: ['symbol-red.png', 'icon.svg', 'apple-touch-icon-180x180.png', 'pwa-*.png', 'maskable-icon-512x512.png'],
-      manifest: {
-        name: '하늘하늘중국어',
-        short_name: '하늘하늘중국어',
-        description: '중국어 튜터링 관리 시스템',
-        theme_color: '#830009',
-        background_color: '#F9FAFB',
-        display: 'standalone',
-        orientation: 'portrait',
-        // start_url을 '.'(현재 URL)로 — iOS Safari PWA에서 manifest의 동적 교체나 hash·query는
-        // 무시되지만, 정적 manifest의 start_url을 '.'로 두면 "홈 화면에 추가" 시점의 페이지 URL이
-        // 그대로 보존된다. 학생이 path 기반 URL(`/personal/{token}`)에서 PWA 설치하면 그 URL이 박힘.
-        start_url: '.',
-        scope: '/',
-        lang: 'ko',
-        icons: [
-          {
-            src: 'pwa-64x64.png',
-            sizes: '64x64',
-            type: 'image/png',
-          },
-          {
-            src: 'pwa-192x192.png',
-            sizes: '192x192',
-            type: 'image/png',
-          },
-          {
-            src: 'pwa-512x512.png',
-            sizes: '512x512',
-            type: 'image/png',
-          },
-          {
-            src: 'maskable-icon-512x512.png',
-            sizes: '512x512',
-            type: 'image/png',
-            purpose: 'maskable',
-          },
-        ],
-      },
+      // iOS Safari PWA가 manifest의 start_url을 자기 마음대로 해석(hash·query 제거, '.'을 root로)해
+      // 학생 토큰을 잃어버리는 문제 때문에 manifest 자동 주입 자체를 비활성화한다.
+      // 대신 pwa/public/manifest.webmanifest를 정적 파일로 두고, index.html의 inline script가
+      // 학생 path가 아닐 때만 <link rel="manifest"> 태그를 동적으로 추가한다.
+      // 학생 path에서는 manifest 자체가 없으므로 iOS가 "홈 화면에 추가" 시 현재 페이지 URL을 그대로 박는다.
+      manifest: false,
       workbox: {
         clientsClaim: true,
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],

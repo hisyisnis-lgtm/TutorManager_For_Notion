@@ -5,37 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#7f0005" />
 
-    <!-- iOS Safari PWA quirk 우회: 학생 path 진입 시 manifest link를 페이지 파싱 즉시 제거.
+    <!-- iOS Safari PWA quirk 우회: vite-plugin-pwa의 manifest 자동 주입을 비활성화하고
+         학생 path가 아닐 때만 이 inline script가 manifest link를 동적으로 추가한다.
          iOS는 manifest가 있으면 start_url을 자기 마음대로 해석(hash·query 제거, '.'을 root 해석)해
          학생 토큰을 잃어버리지만, manifest 자체가 없으면 "홈 화면에 추가" 시 현재 페이지 URL을
-         그대로 PWA의 시작 URL로 사용한다 — path 기반 학생 URL이 그대로 보존됨.
-         React 마운트는 너무 늦으므로 vite-plugin-pwa가 주입하는 link를 MutationObserver로 즉시 가로챈다. -->
+         그대로 PWA의 시작 URL로 사용한다 — path 기반 학생 URL이 그대로 보존됨. -->
     <script>
       (function () {
         try {
-          if (!/^\/(personal|student)\//.test(window.location.pathname)) return;
-          var ua = navigator.userAgent || '';
-          var isIOS = /iPad|iPhone|iPod/.test(ua) || (/Macintosh/.test(ua) && (navigator.maxTouchPoints || 0) > 1);
-          if (!isIOS) return;
-          var removeAll = function () {
-            var links = document.querySelectorAll('link[rel="manifest"]');
-            for (var i = 0; i < links.length; i++) links[i].remove();
-          };
-          removeAll();
-          var mo = new MutationObserver(function (mutations) {
-            for (var i = 0; i < mutations.length; i++) {
-              var added = mutations[i].addedNodes;
-              for (var j = 0; j < added.length; j++) {
-                var n = added[j];
-                if (n.nodeName === 'LINK' && n.getAttribute && n.getAttribute('rel') === 'manifest') {
-                  n.remove();
-                }
-              }
-            }
-          });
-          mo.observe(document.documentElement, { childList: true, subtree: true });
-          // DOM 로드 후엔 추가될 일이 거의 없으니 적당히 종료해 메모리 해제
-          window.addEventListener('load', function () { mo.disconnect(); }, { once: true });
+          // 학생 path(`/personal/...` 또는 `/student/...`) 진입 시엔 manifest link를 절대 추가하지 않는다.
+          if (/^\/(personal|student)\//.test(window.location.pathname)) return;
+          // 그 외에는 정적 manifest 파일을 link로 추가 (강사 라우트·랜딩 페이지 등의 PWA 설치 흐름).
+          var link = document.createElement('link');
+          link.rel = 'manifest';
+          link.href = '/manifest.webmanifest';
+          document.head.appendChild(link);
         } catch (e) {}
       })();
     </script>
