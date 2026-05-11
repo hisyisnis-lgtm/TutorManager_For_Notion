@@ -37,7 +37,6 @@ import PersonalPage from './pages/PersonalPage.jsx';
 import PersonalHomeworkDetailPage from './pages/PersonalHomeworkDetailPage.jsx';
 import PandaPage from './pages/PandaPage.jsx';
 import PandaTestPage from './pages/PandaTestPage.jsx';
-import ToneGamePage from './pages/ToneGamePage.jsx';
 import BookingsManagePage from './pages/BookingsManagePage.jsx';
 import ConsultManagePage from './pages/ConsultManagePage.jsx';
 import HomeworkFormPage from './pages/HomeworkFormPage.jsx';
@@ -234,7 +233,6 @@ export default function App() {
             <Route path="/personal/:studentToken" element={<PersonalPage />} />
             <Route path="/personal/:studentToken/homework/:hwId" element={<PersonalHomeworkDetailPage />} />
             <Route path="/personal/:studentToken/panda" element={<PandaPage />} />
-            <Route path="/personal/:studentToken/game/tone" element={<ToneGamePage />} />
           </Routes>
         </BrowserRouter>
         </AntApp>
@@ -266,7 +264,6 @@ export default function App() {
             <Route path="/personal/:studentToken" element={<PersonalPage />} />
             <Route path="/personal/:studentToken/homework/:hwId" element={<PersonalHomeworkDetailPage />} />
             <Route path="/personal/:studentToken/panda" element={<PandaPage />} />
-            <Route path="/personal/:studentToken/game/tone" element={<ToneGamePage />} />
             <Route path="/panda-test" element={<PandaTestPage />} />
           </Routes>
         </HashRouter>

@@ -13,7 +13,7 @@ import HomeworkSection from '../components/homework/HomeworkSection.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import ErrorMessage from '../components/ui/ErrorMessage.jsx';
 import EmptyState from '../components/ui/EmptyState.jsx';
-import { HouseIcon, BookOpenIcon, FileTextIcon, BellIcon, GearSixIcon, ClipboardTextIcon, HourglassIcon, ChatTeardropTextIcon, ArchiveIcon, NoteBlankIcon, SpeakerHighIcon, CalendarBlankIcon, MegaphoneIcon, CaretRightIcon, InstagramLogoIcon, YoutubeLogoIcon, ArticleIcon, MusicNotesIcon, WarningCircleIcon, GameControllerIcon } from '@phosphor-icons/react';
+import { HouseIcon, BookOpenIcon, FileTextIcon, BellIcon, GearSixIcon, ClipboardTextIcon, HourglassIcon, ChatTeardropTextIcon, ArchiveIcon, NoteBlankIcon, SpeakerHighIcon, CalendarBlankIcon, MegaphoneIcon, CaretRightIcon, InstagramLogoIcon, YoutubeLogoIcon, ArticleIcon, MusicNotesIcon, WarningCircleIcon } from '@phosphor-icons/react';
 import { STAGES, getStageInfo, PANDA_FEED_KEY, getPandaStorageKey } from '../components/ui/PandaWidget.jsx';
 import InstallBanner from '../components/ui/InstallBanner.jsx';
 import { useInstallPrompt } from '../hooks/useInstallPrompt.js';
@@ -730,7 +730,7 @@ function HomeworkAlertCard({ pending, feedback, studentToken, onNavigate }) {
 }
 
 // ===== 홈 탭 =====
-function HomeTab({ studentToken, foodSources, studentLoaded, remainingHours, remainingSessions, onUpcomingLoaded, hwAlerts, onSwitchToHomework, onOpenPanda, onOpenToneGame, onSwitchToClasses }) {
+function HomeTab({ studentToken, foodSources, studentLoaded, remainingHours, remainingSessions, onUpcomingLoaded, hwAlerts, onSwitchToHomework, onOpenPanda, onSwitchToClasses }) {
   const nowKST = new Date(Date.now() + 9 * 60 * 60 * 1000);
   const pad = n => String(n).padStart(2, '0');
   const todayStr = `${nowKST.getUTCFullYear()}-${pad(nowKST.getUTCMonth() + 1)}-${pad(nowKST.getUTCDate())}`;
@@ -893,41 +893,6 @@ function HomeTab({ studentToken, foodSources, studentLoaded, remainingHours, rem
                 <div style={{ width: 148, flexShrink: 0 }} />
               </button>
             </div>
-
-            {/* 미니게임 진입 — 성조 빨리 찾기 */}
-            <button
-              type="button"
-              onClick={onOpenToneGame}
-              className="active:scale-[0.98] transition-[scale] duration-150 ease-out"
-              style={{
-                marginTop: 8, width: '100%',
-                display: 'flex', alignItems: 'center', gap: 12,
-                padding: '14px 16px',
-                background: '#fff', borderRadius: 12,
-                boxShadow: 'var(--shadow-border)',
-                border: 'none', cursor: 'pointer',
-                textAlign: 'left',
-                WebkitTapHighlightColor: 'transparent',
-              }}
-            >
-              <div style={{
-                width: 40, height: 40, borderRadius: 10,
-                background: PRIMARY_BG, color: PRIMARY,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                flexShrink: 0,
-              }}>
-                <GameControllerIcon weight="fill" size={22} />
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: TEXT_PRIMARY, lineHeight: 1.3, marginBottom: 2 }}>
-                  성조 빨리 찾기
-                </div>
-                <div style={{ fontSize: 12, color: TEXT_SECONDARY, lineHeight: 1.4 }}>
-                  10문제로 가볍게 성조 감각 깨우기
-                </div>
-              </div>
-              <CaretRightIcon weight="bold" size={16} style={{ color: TEXT_TERTIARY, flexShrink: 0 }} />
-            </button>
 
             {/* 블로그·인스타·유튜브 링크 카드 */}
             <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
@@ -1288,7 +1253,6 @@ export default function PersonalPage() {
             hwAlerts={hwAlerts}
             onSwitchToHomework={() => setTab('숙제')}
             onOpenPanda={() => navigate(`/personal/${studentToken}/panda`)}
-            onOpenToneGame={() => navigate(`/personal/${studentToken}/game/tone`)}
             onSwitchToClasses={() => setTab('내 수업')}
           />
         )}
