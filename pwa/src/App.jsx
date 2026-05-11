@@ -97,6 +97,24 @@ export default function App() {
   const [authed, setAuthed] = useState(isAuthed);
   const [swReady, setSwReady] = useState(false);
 
+  // PWA standalone에서 root hash로 진입 + 강사 미인증 + 저장된 학생 토큰 있음 → 학생 페이지로 자동 이동.
+  // manifest.start_url이 '/' 고정이라 그대로 두면 강사 LoginPage가 뜨는 문제를 우회.
+  // 강사는 PWA로 학생 페이지를 미리보지 않으므로 isTeacher 체크로 강사 PWA 흐름을 보호.
+  useEffect(() => {
+    const isStandalone =
+      window.matchMedia('(display-mode: standalone)').matches ||
+      window.navigator.standalone === true;
+    const hash = window.location.hash;
+    const isRootHash = !hash || hash === '#/' || hash === '#';
+    const isTeacher = !!localStorage.getItem('auth_token');
+    if (isStandalone && isRootHash && !isTeacher) {
+      const savedToken = localStorage.getItem('personal_student_token');
+      if (savedToken) {
+        window.location.hash = `#/personal/${encodeURIComponent(savedToken)}`;
+      }
+    }
+  }, []);
+
   const [swRegistration, setSwRegistration] = useState(null);
 
   const { needRefresh: [needRefresh], updateServiceWorker } = useRegisterSW({

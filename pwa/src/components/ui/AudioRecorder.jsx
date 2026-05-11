@@ -89,6 +89,10 @@ export default function AudioRecorder({ onFile, onCancel, defaultName = 'recordi
   const blobRef = useRef(null);
   const blobUrlRef = useRef(null);
   const mimeTypeRef = useRef('');
+  // 컴포넌트 마운트 동안 stream을 유지해 두 번째 녹음부터는 권한 prompt가 다시 뜨지 않게 한다.
+  // (브라우저에 따라 매번 getUserMedia 호출 시 prompt가 뜨거나 stream 종료 후 재요청 시 권한이 만료되는 경우가 있음)
+  // trade-off: 모달이 열려있는 동안 마이크 인디케이터가 계속 표시됨 — 모달 unmount 시 stop.
+  const streamRef = useRef(null);
 
   // defaultName이 바뀌면(부모에서 카운터 변경 등) 반영
   useEffect(() => { setInputName(defaultName); }, [defaultName]);
@@ -97,7 +101,8 @@ export default function AudioRecorder({ onFile, onCancel, defaultName = 'recordi
   // (빈 deps 배열이라 cleanup 클로저가 초기 state(null)를 캡처하면 누수 발생)
   useEffect(() => () => {
     clearInterval(timerRef.current);
-    mediaRecorderRef.current?.stream?.getTracks().forEach((t) => t.stop());
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
     if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current);
   }, []);
 
@@ -123,14 +128,21 @@ export default function AudioRecorder({ onFile, onCancel, defaultName = 'recordi
       // iOS Safari 등 Permissions API 또는 microphone permission name 미지원 — 정상 흐름 진행
     }
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // 컴포넌트 마운트 동안 동일 stream 재사용 → 두 번째 녹음부터 권한 prompt 회피.
+      // 트랙이 종료된 상태(예: 브라우저가 백그라운드에서 자동 종료)면 새로 받는다.
+      const existingTrack = streamRef.current?.getAudioTracks?.()[0];
+      if (!streamRef.current || !existingTrack || existingTrack.readyState !== 'live') {
+        streamRef.current?.getTracks().forEach((t) => t.stop());
+        streamRef.current = await navigator.mediaDevices.getUserMedia({ audio: true });
+      }
+      const stream = streamRef.current;
       const mimeType = getSupportedMimeType();
       mimeTypeRef.current = mimeType;
       const mr = new MediaRecorder(stream, mimeType ? { mimeType } : {});
       chunksRef.current = [];
       mr.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
       mr.onstop = () => {
-        stream.getTracks().forEach((t) => t.stop());
+        // stream은 종료하지 않고 유지 — unmount 시점에 한 번만 stop.
         const blob = new Blob(chunksRef.current, { type: mimeType || 'audio/webm' });
         blobRef.current = blob;
         const url = URL.createObjectURL(blob);
