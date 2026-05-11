@@ -516,7 +516,7 @@ export default function PandaWidget({ foodSources = [], storageKey = DEFAULT_FEE
             fontSize: 14, color: '#767676', fontWeight: 500,
           }}>
             <LeafIcon size={13} weight="fill" color="#bfbfbf" />
-            수업을 완료하면 먹이가 생겨요
+            수업 30분마다 먹이가 생겨요
           </div>
         </div>
       </div>

@@ -1242,8 +1242,8 @@ export default function PersonalPage() {
             key={classRefreshKey}
             studentToken={studentToken}
             foodSources={[
-              { key: 'sessions', label: '완료 수업', count: student?.totalSessions ?? 0 },
-              { key: 'referral', label: '친구 추천', count: student?.referralBonus ?? 0 },
+              { key: 'sessions', label: '완료 수업', count: Math.floor((student?.completedMinutes ?? 0) / 30) },
+              { key: 'referral', label: '친구 추천', count: student?.sharedAt ? (student?.referralBonus ?? 0) : 0 },
             ]}
             studentLoaded={student !== null}
             remainingHours={student?.remainingHours ?? 0}

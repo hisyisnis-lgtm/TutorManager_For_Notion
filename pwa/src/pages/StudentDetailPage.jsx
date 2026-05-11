@@ -9,7 +9,7 @@ import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import ErrorMessage from '../components/ui/ErrorMessage.jsx';
 import { getPage, deletePage } from '../api/notionClient.js';
 import ConfirmDialog from '../components/ui/ConfirmDialog.jsx';
-import { parseStudent, statusColor, STATUS_OPTIONS, updateStudentStatus } from '../api/students.js';
+import { parseStudent, statusColor, STATUS_OPTIONS, updateStudentStatus, markStudentSharedIfEmpty } from '../api/students.js';
 import { SITE_ORIGIN } from '../constants.js';
 import { PRIMARY, PRIMARY_BG, STATUS_ERROR_BORDER, TEXT_PRIMARY } from '../constants/theme.js';
 import SectionHeading from '../components/ui/SectionHeading.jsx';
@@ -182,6 +182,8 @@ export default function StudentDetailPage() {
                     const cleanName = student.name.replace(/[\u200B-\u200D\uFE0F\uFEFF]/g, '').replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, '').trim();
                     const text = `${personalUrl}\n[${cleanName}님 학생코드 - ${student.bookingCode}]`;
                     navigator.clipboard.writeText(text).then(() => message.success('복사되었습니다.'));
+                    // 첫 공유 시점만 기록 — 판다 먹이 계산의 시작점이 됨.
+                    markStudentSharedIfEmpty(student.id).catch(e => console.warn('공유일 기록 실패:', e?.message));
                   }}
                   style={{
                     width: '100%', height: 44, cursor: 'pointer', borderRadius: 12,

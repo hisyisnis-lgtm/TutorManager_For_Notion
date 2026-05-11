@@ -8,6 +8,8 @@ import {
   StudentTokenSchema,
   NotionPageIdSchema,
   MyClassesQuerySchema,
+  GameKeySchema,
+  GameResultSchema,
 } from '../lib/schemas.js';
 import { validateBody, validateParams, validatePathToken } from '../lib/validation.js';
 
@@ -20,6 +22,25 @@ const BLOCKED_DATES_DB_ID = '31e838fa-f2a6-81d3-b034-c47a4f0e5f3e';
 
 // ===== 무료상담 신청 DB =====
 const CONSULT_DB_ID = '324838fa-f2a6-815d-99a7-ff165e8f78aa';
+
+// ===== 미니게임 베스트 DB (학생 × 게임 = 1 row) =====
+const GAME_BEST_DB_ID = '2602021c-39b5-4517-9eda-ce4808f570bd';
+
+// 게임 키 ↔ Notion '게임' select 옵션 이름 매핑.
+// 새 게임/난이도 추가 시: (1) Notion DB 'select' 옵션 추가, (2) 여기 매핑 추가, (3) GameKeySchema enum에 키 추가.
+// 'tone'은 레거시(난이도 도입 전), 'tone-easy/normal/hard'는 난이도별 분리.
+const GAME_KEY_TO_NAME = {
+  'tone': '성조 찾기',
+  'tone-easy': '성조 찾기 (초급)',
+  'tone-normal': '성조 찾기 (중급)',
+  'tone-hard': '성조 찾기 (고급)',
+};
+const GAME_NAME_TO_KEY = {
+  '성조 찾기': 'tone',
+  '성조 찾기 (초급)': 'tone-easy',
+  '성조 찾기 (중급)': 'tone-normal',
+  '성조 찾기 (고급)': 'tone-hard',
+};
 
 const DAY_KR = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -152,12 +173,14 @@ const CLASS_DB_RAW = CLASS_DB_ID.replace(/-/g, '');
 const HOMEWORK_DB_RAW = HOMEWORK_DB_ID.replace(/-/g, '');
 const BLOCKED_DATES_DB_RAW = BLOCKED_DATES_DB_ID.replace(/-/g, '');
 const CONSULT_DB_RAW = CONSULT_DB_ID.replace(/-/g, '');
+const GAME_BEST_DB_RAW = GAME_BEST_DB_ID.replace(/-/g, '');
 const ALLOWED_NOTION_DB_IDS = new Set([
   STUDENT_DB_RAW,
   CLASS_DB_RAW,
   HOMEWORK_DB_RAW,
   BLOCKED_DATES_DB_RAW,
   CONSULT_DB_RAW,
+  GAME_BEST_DB_RAW,
   // 수업 유형·할인·결제·수업일지 등 강사용 추가 DB (PWA에서 사용)
   '314838faf2a681c3b4e4da87c48f9b43', // LESSON_TYPE_DB
   '314838faf2a681d39ce4c628edab065b', // DISCOUNT_DB
@@ -1059,10 +1082,23 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
     const props = page.properties;
     const rawName = props?.['이름']?.title?.[0]?.plain_text ?? '';
 
-    // 완료된 유료 수업의 시간 회차 합계 (취소·보강 제외, 예정 제외)
+    // 학생페이지 공유 시점 — 강사가 StudentDetailPage에서 "학생 페이지 공유" 버튼을 처음 누를 때
+    // PWA(markStudentSharedIfEmpty)가 기록한 학생 DB의 "공유일" 속성.
+    // 판다 먹이(수업시간 30분당 1개)는 이 시점 이후의 완료 수업만 카운트.
+    // 학생이 페이지를 늦게 본 경우에도 그 사이 수업 시간이 먹이로 누적된다.
+    // 공유일이 비어 있으면 → completedMinutes=0 (공유 전에는 먹이가 쌓이지 않음).
+    // PandaWidget이 totalFood로 localStorage EXP를 cap하므로 기존 학생 먹이는 자동으로 0으로 리셋된다.
     const nowISO = new Date().toISOString();
+    const sharedAt = props?.['공유일']?.date?.start ?? null;
+
+    // 완료된 유료 수업의 시간 합계 (취소·보강 제외, 예정 제외)
+    // 분 단위로 누적해 부동소수 오차를 피한다.
+    //   completedMinutesAll : 잔여 시간(remainingHours) 계산용 — 전체 기간
+    //   completedMinutes    : 팬더 먹이 계산용 — 공유 시점(sharedAt) 이후만 집계
     const paidHours = props?.['결제 시간 회차 합계']?.rollup?.number ?? 0;
-    let completedHours = 0;
+    const sharedTs = sharedAt ? new Date(sharedAt).getTime() : null;
+    let completedMinutesAll = 0;
+    let completedMinutes = 0;
     let classCursor;
     do {
       const classRes = await n('POST', `/databases/${CLASS_DB_ID}/query`, {
@@ -1080,12 +1116,20 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
       });
       for (const cls of classRes.results ?? []) {
         const minStr = cls.properties?.['수업 시간(분)']?.select?.name;
-        if (minStr) completedHours += parseInt(minStr, 10) / 60;
+        if (!minStr) continue;
+        const min = parseInt(minStr, 10);
+        completedMinutesAll += min;
+        if (sharedTs == null) continue; // 공유 전: 먹이 0
+        const dt = cls.properties?.['수업 일시']?.date?.start;
+        const dtTs = dt ? new Date(dt).getTime() : null;
+        if (dtTs != null && dtTs >= sharedTs) {
+          completedMinutes += min;
+        }
       }
       classCursor = classRes.has_more ? classRes.next_cursor : undefined;
     } while (classCursor);
 
-    const remainingHours = Math.max(0, paidHours - completedHours);
+    const remainingHours = Math.max(0, paidHours - completedMinutesAll / 60);
 
     return new Response(JSON.stringify({
       id: page.id,
@@ -1096,6 +1140,8 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
       referralBonus: props?.['추천 보너스']?.number ?? 0,
       remainingHours,
       paidHours,
+      completedMinutes,
+      sharedAt,
     }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -1762,6 +1808,173 @@ async function handleHomeworkRoutes(request, env, corsHeaders, url) {
   });
 }
 
+// ===== 미니게임 베스트 라우트 (학생 토큰 기반 공개 API) =====
+//
+// GET  /game/best/:token              → 학생의 모든 게임 베스트 [{ gameKey, ... }]
+// GET  /game/best/:token/:gameKey     → 특정 게임 베스트 (없으면 null)
+// POST /game/best/:token/:gameKey     → 결과 1회 저장 + 베스트 비교
+//
+// Body (POST): { score, maxCombo, avgMs, meta? } — GameResultSchema로 검증.
+// 응답 (POST): { isNewBest: bool, best: { ... } }
+//
+// 새 게임 추가 절차:
+//  1. Notion DB '게임' select에 옵션 추가
+//  2. GAME_KEY_TO_NAME / GAME_NAME_TO_KEY 매핑 추가
+//  3. GameKeySchema enum에 키 추가
+async function handleGameRoutes(request, env, corsHeaders, url) {
+  // IP당 분당 60회 rate limit
+  if (!(await rateLimitCheck(`game:${clientIp(request)}`, 60, 60))) {
+    return errRes(corsHeaders, 429, '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.');
+  }
+
+  const n = makeNotion(env.NOTION_TOKEN);
+
+  async function findStudentByToken(token) {
+    const res = await n('POST', `/databases/${STUDENT_DB_ID}/query`, {
+      filter: { property: '예약 코드', rich_text: { equals: token } },
+      page_size: 1,
+    });
+    return res.results?.[0] ?? null;
+  }
+
+  function parseBest(page) {
+    const p = page.properties || {};
+    const gameName = p['게임']?.select?.name || '';
+    let meta = {};
+    try { meta = JSON.parse(p['메타']?.rich_text?.[0]?.plain_text || '{}'); } catch { /* noop */ }
+    return {
+      gameKey: GAME_NAME_TO_KEY[gameName] || null,
+      gameName,
+      bestScore: p['최고 점수']?.number ?? 0,
+      playCount: p['플레이 수']?.number ?? 0,
+      bestMaxCombo: p['최대 콤보']?.number ?? 0,
+      bestAvgSec: p['평균 답변(초)']?.number ?? 0,
+      lastPlayedAt: p['최근 플레이']?.date?.start ?? null,
+      meta,
+      pageId: page.id,
+    };
+  }
+
+  // GET /game/best/:token  (전체)
+  // GET /game/best/:token/:gameKey  (단일)
+  const allMatch = url.pathname.match(/^\/game\/best\/([^/]+)$/);
+  const oneMatch = url.pathname.match(/^\/game\/best\/([^/]+)\/([^/]+)$/);
+
+  if (request.method === 'GET' && (allMatch || oneMatch)) {
+    const token = decodeURIComponent((allMatch || oneMatch)[1]);
+    const tv = validatePathToken(StudentTokenSchema, token, corsHeaders, '학생 토큰');
+    if (!tv.ok) return tv.response;
+
+    const studentPage = await findStudentByToken(token);
+    if (!studentPage) {
+      return errRes(corsHeaders, 404, '등록된 학생이 아닙니다.');
+    }
+
+    let filter = { property: '학생', relation: { contains: studentPage.id } };
+    let gameKeyFilter = null;
+    if (oneMatch) {
+      gameKeyFilter = decodeURIComponent(oneMatch[2]);
+      const gv = validatePathToken(GameKeySchema, gameKeyFilter, corsHeaders, '게임 키');
+      if (!gv.ok) return gv.response;
+      const gameName = GAME_KEY_TO_NAME[gameKeyFilter];
+      filter = {
+        and: [
+          filter,
+          { property: '게임', select: { equals: gameName } },
+        ],
+      };
+    }
+
+    const results = await queryAllNotion(n, GAME_BEST_DB_ID, { filter });
+    const bests = results.map(parseBest).filter(b => b.gameKey);
+
+    const payload = oneMatch ? (bests[0] || null) : bests;
+    return new Response(JSON.stringify(payload), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
+  // POST /game/best/:token/:gameKey
+  if (request.method === 'POST' && oneMatch) {
+    const token = decodeURIComponent(oneMatch[1]);
+    const gameKey = decodeURIComponent(oneMatch[2]);
+    const tv = validatePathToken(StudentTokenSchema, token, corsHeaders, '학생 토큰');
+    if (!tv.ok) return tv.response;
+    const gv = validatePathToken(GameKeySchema, gameKey, corsHeaders, '게임 키');
+    if (!gv.ok) return gv.response;
+
+    const body = await request.json().catch(() => ({}));
+    const bv = validateBody(GameResultSchema, body, corsHeaders);
+    if (!bv.ok) return bv.response;
+    const data = bv.data;
+
+    const studentPage = await findStudentByToken(token);
+    if (!studentPage) {
+      return errRes(corsHeaders, 404, '등록된 학생이 아닙니다.');
+    }
+
+    const studentName = stripEmoji(studentPage.properties?.['이름']?.title?.[0]?.plain_text ?? '');
+    const gameName = GAME_KEY_TO_NAME[gameKey];
+    const titleText = `${studentName || '학생'} - ${gameName}`;
+
+    // 기존 row 검색 (학생 × 게임 = 1 row 보장)
+    const existing = await n('POST', `/databases/${GAME_BEST_DB_ID}/query`, {
+      filter: {
+        and: [
+          { property: '학생', relation: { contains: studentPage.id } },
+          { property: '게임', select: { equals: gameName } },
+        ],
+      },
+      page_size: 1,
+    });
+    const existingPage = existing.results?.[0];
+    const prev = existingPage
+      ? parseBest(existingPage)
+      : { bestScore: 0, playCount: 0, bestMaxCombo: 0, bestAvgSec: 0, meta: {} };
+
+    const isNewBest = data.score > prev.bestScore;
+    const newAvgSec = Number((data.avgMs / 1000).toFixed(1));
+    const updated = {
+      bestScore: isNewBest ? data.score : prev.bestScore,
+      bestMaxCombo: isNewBest ? data.maxCombo : prev.bestMaxCombo,
+      bestAvgSec: isNewBest ? newAvgSec : prev.bestAvgSec,
+      playCount: (prev.playCount || 0) + 1,
+      lastPlayedAt: new Date().toISOString(),
+      meta: { ...(prev.meta || {}), ...(data.meta || {}) },
+    };
+
+    const properties = {
+      '이름': { title: [{ text: { content: titleText } }] },
+      '학생': { relation: [{ id: studentPage.id }] },
+      '게임': { select: { name: gameName } },
+      '최고 점수': { number: updated.bestScore },
+      '최대 콤보': { number: updated.bestMaxCombo },
+      '평균 답변(초)': { number: updated.bestAvgSec },
+      '플레이 수': { number: updated.playCount },
+      '최근 플레이': { date: { start: updated.lastPlayedAt } },
+      '메타': { rich_text: [{ text: { content: JSON.stringify(updated.meta) } }] },
+    };
+
+    if (existingPage) {
+      await n('PATCH', `/pages/${existingPage.id}`, { properties });
+    } else {
+      await n('POST', '/pages', {
+        parent: { database_id: GAME_BEST_DB_ID },
+        properties,
+      });
+    }
+
+    return new Response(JSON.stringify({
+      isNewBest,
+      best: { gameKey, gameName, ...updated },
+    }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
+  return errRes(corsHeaders, 404, '요청한 항목을 찾을 수 없습니다.');
+}
+
 // ===== 클라이언트 에러 수집 (PWA window.onerror → 여기로 POST) =====
 async function handleErrorLog(request, env, corsHeaders) {
   // Abuse 방지: IP당 분당 10건만 ntfy로 전달 (초과분은 조용히 200으로 무시)
@@ -1891,6 +2104,11 @@ async function handleFetch(request, env, ctx) {
     // 숙제 라우트 (공개 학생용 + 강사 JWT 인증 혼재)
     if (url.pathname.startsWith('/homework')) {
       return handleHomeworkRoutes(request, env, corsHeaders, url);
+    }
+
+    // 미니게임 베스트 라우트 (학생 토큰 기반 공개)
+    if (url.pathname.startsWith('/game/')) {
+      return handleGameRoutes(request, env, corsHeaders, url);
     }
 
     // 무료상담 신청 (공개, 인증 불필요)
