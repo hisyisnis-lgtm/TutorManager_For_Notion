@@ -106,7 +106,6 @@ export default function PandaTestPage() {
       <PandaWidget
         foodSources={[
           { key: 'sessions', label: '완료 수업', count: foodCount },
-          { key: 'referral', label: '친구 추천', count: 0 },
         ]}
         storageKey={FEED_KEY}
         key={completedMinutes + '-' + fedDisplay}

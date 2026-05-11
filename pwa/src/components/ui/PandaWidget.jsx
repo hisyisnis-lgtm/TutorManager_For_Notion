@@ -109,7 +109,7 @@ function makeHeartParticle(pRect, index) {
  * 예시:
  *   [
  *     { key: 'sessions', label: '완료 수업', count: 12 },
- *     { key: 'referral', label: '친구 추천', count: 5 },
+ *     { key: 'hw_submit', label: '숙제 제출', count: 3 },
  *   ]
  * 총 먹이 = foodSources의 count 합계
  */
@@ -119,8 +119,8 @@ export default function PandaWidget({ foodSources = [], storageKey = DEFAULT_FEE
   const [fedTotal, setFedTotal] = useState(() => {
     const saved = parseInt(localStorage.getItem(storageKey) || '0', 10);
     // totalFood를 초과한 경우 즉시 localStorage에 기록해 둠.
-    // 이렇게 해야 totalFood가 나중에 늘어났을 때(추천 보너스 등)
-    // 과거의 높은 값이 되살아나 EXP가 자동으로 오르는 현상을 방지할 수 있음.
+    // 이렇게 해야 totalFood가 나중에 늘어났을 때 과거의 높은 값이 되살아나
+    // EXP가 자동으로 오르는 현상을 방지할 수 있음.
     const capped = Math.min(saved, totalFood);
     if (capped !== saved) localStorage.setItem(storageKey, String(capped));
     return capped;

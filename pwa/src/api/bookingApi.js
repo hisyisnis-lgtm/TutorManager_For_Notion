@@ -92,15 +92,6 @@ export async function deleteBlockedDate(id) {
   return bookingFetch('DELETE', `/booking/blocked/${id}`, undefined, { auth: true });
 }
 
-/**
- * 추천 링크 트래킹 — 친구가 ?ref=TOKEN 링크로 접속했을 때 호출
- * Worker가 해당 학생의 '추천 보너스' +5 처리
- * 중복 방지는 호출 전 localStorage `referral_credited_{token}` 체크로 클라이언트에서 담당
- */
-export async function trackReferral(refToken) {
-  return bookingFetch('GET', `/referral/track?ref=${encodeURIComponent(refToken)}`);
-}
-
 /** 시간 충돌 여부 확인 (강사용 수업 등록 폼) */
 export async function checkConflict(date, startTime, duration, excludeId = '') {
   const params = new URLSearchParams({ date, startTime, duration: String(duration) });

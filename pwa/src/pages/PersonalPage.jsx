@@ -1243,7 +1243,6 @@ export default function PersonalPage() {
             studentToken={studentToken}
             foodSources={[
               { key: 'sessions', label: '완료 수업', count: Math.floor((student?.completedMinutes ?? 0) / 30) },
-              { key: 'referral', label: '친구 추천', count: student?.sharedAt ? (student?.referralBonus ?? 0) : 0 },
               { key: 'hw_submit', label: '숙제 제출', count: student?.sharedAt ? (student?.submittedHomeworkFood ?? 0) : 0 },
               { key: 'hw_feedback', label: '피드백 확인', count: student?.sharedAt ? (student?.feedbackSeenHomeworkFood ?? 0) : 0 },
             ]}

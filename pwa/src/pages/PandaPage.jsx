@@ -38,11 +38,10 @@ export default function PandaPage() {
   };
 
   // 수업시간 30분당 먹이 1개. 학생페이지 공유 전(sharedAt 없음)에는 모든 먹이가 0으로 게이팅 —
-  // "공유 전엔 먹이가 쌓이지 않는다"는 정책을 sessions·referral·숙제 먹이 모두에 일관 적용.
+  // "공유 전엔 먹이가 쌓이지 않는다"는 정책을 sessions·숙제 먹이 모두에 일관 적용.
   const hasShared = !!student?.sharedAt;
   const foodSources = student ? [
     { key: 'sessions', label: '완료 수업', count: Math.floor((student.completedMinutes ?? 0) / 30) },
-    { key: 'referral', label: '친구 추천', count: hasShared ? (student.referralBonus ?? 0) : 0 },
     { key: 'hw_submit', label: '숙제 제출', count: hasShared ? (student.submittedHomeworkFood ?? 0) : 0 },
     { key: 'hw_feedback', label: '피드백 확인', count: hasShared ? (student.feedbackSeenHomeworkFood ?? 0) : 0 },
   ] : [];

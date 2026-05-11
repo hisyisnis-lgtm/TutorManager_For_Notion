@@ -1137,7 +1137,6 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
       phone: props?.['전화번호']?.phone_number ?? '',
       remainingSessions: props?.['잔여 시간 회차']?.formula?.number ?? 0,
       totalSessions: props?.['총 수업 횟수']?.rollup?.number ?? 0,
-      referralBonus: props?.['추천 보너스']?.number ?? 0,
       remainingHours,
       paidHours,
       completedMinutes,
@@ -2168,72 +2167,6 @@ async function handleFetch(request, env, ctx) {
     // 무료상담 신청 (공개, 인증 불필요)
     if (url.pathname === '/consult' && request.method === 'POST') {
       return handleConsultRequest(request, env, corsHeaders);
-    }
-
-    // 추천 링크 트래킹 (공개) — GET /referral/track?ref=STUDENT_TOKEN
-    // 친구가 추천 링크를 클릭했을 때 호출. 학생의 '추천 보너스' +5 적립.
-    // 최대 한도(100)를 초과하지 않는 범위 내에서만 적립.
-    //
-    // 서버측 중복 방지: Cloudflare Cache API를 이용해 (IP + ref) 조합 기준
-    // 24시간 내 중복 적립을 차단. 브라우저 localStorage 우회(curl/incognito)를
-    // 방지하기 위한 최소 방어선이며, IP를 돌려가며 시도하면 여전히 가능하지만
-    // 자동 부스팅 비용을 크게 올린다.
-    if (url.pathname === '/referral/track' && request.method === 'GET') {
-      const ref = url.searchParams.get('ref') || '';
-      if (!ref) return errRes(corsHeaders, 400, 'ref 파라미터가 필요합니다.');
-
-      const okResponse = () => new Response(JSON.stringify({ ok: true }), {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-
-      // (IP, ref) 조합 해시로 dedup key 생성
-      const ip = request.headers.get('CF-Connecting-IP') || '0.0.0.0';
-      const dedupInput = new TextEncoder().encode(`${ip}|${ref}`);
-      const dedupHashBuf = await crypto.subtle.digest('SHA-256', dedupInput);
-      const dedupHash = Array.from(new Uint8Array(dedupHashBuf))
-        .map((b) => b.toString(16).padStart(2, '0')).join('');
-      const dedupKey = new Request(
-        new URL(`/_internal/referral-dedup/${dedupHash}`, request.url).toString(),
-        { method: 'GET' }
-      );
-      const cache = caches.default;
-      const already = await cache.match(dedupKey);
-      if (already) {
-        // 동일 IP가 24시간 내 재시도: 조용히 성공 반환 (공격자에게 dedup 노출 안 함)
-        return okResponse();
-      }
-
-      const n = makeNotion(env.NOTION_TOKEN);
-      const studentRes = await n('POST', `/databases/${STUDENT_DB_ID}/query`, {
-        filter: { property: '예약 코드', rich_text: { equals: ref } },
-        page_size: 1,
-      });
-      const page = studentRes.results?.[0];
-      if (!page) {
-        // 존재하지 않는 토큰이어도 조용히 성공 반환 (정보 노출 방지)
-        return okResponse();
-      }
-
-      const current = page.properties?.['추천 보너스']?.number ?? 0;
-      const MAX_REFERRAL_BONUS = 100;
-      const BONUS_PER_REFERRAL = 5;
-      if (current < MAX_REFERRAL_BONUS) {
-        const newBonus = Math.min(current + BONUS_PER_REFERRAL, MAX_REFERRAL_BONUS);
-        await n('PATCH', `/pages/${page.id}`, {
-          properties: { '추천 보너스': { number: newBonus } },
-        });
-      }
-
-      // dedup 마킹: 24시간 TTL. Notion 업데이트 성공 후에만 마킹해 실패 시 재시도 가능.
-      await cache.put(
-        dedupKey,
-        new Response('1', {
-          headers: { 'Cache-Control': 'public, max-age=86400' },
-        }),
-      );
-
-      return okResponse();
     }
 
     // OG 메타태그 파싱 프록시 — GET /og-proxy?url=<encoded>

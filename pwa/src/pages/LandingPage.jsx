@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 import {
   ConfigProvider, Button, Card, Flex, Form, Input,
@@ -7,7 +7,6 @@ import {
 import { CheckCircleIcon } from '@phosphor-icons/react';
 import { useLocation } from 'react-router-dom';
 import { submitConsultation } from '../api/consultApi';
-import { trackReferral } from '../api/bookingApi';
 import { PRIMARY, antdTheme } from '../constants/theme';
 import TabPanel from '../components/TabPanel';
 import IntroContent from '../components/IntroContent';
@@ -245,24 +244,10 @@ function ShareButton() {
 }
 
 // ─── 메인 랜딩 페이지 ─────────────────────────────────────────
-const REFERRAL_CREDITED_KEY = (token) => `referral_credited_${token}`;
-
 export default function LandingPage() {
   const location = useLocation();
   const [tab, setTab] = useState(location.state?.tab || '소개');
   const [showFloat, setShowFloat] = useState(false);
-
-  // ?ref=TOKEN 파라미터 감지 → 추천 보너스 적립 (클라이언트 중복 방지)
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const ref = params.get('ref');
-    if (!ref) return;
-    const key = REFERRAL_CREDITED_KEY(ref);
-    if (localStorage.getItem(key)) return; // 이미 처리된 추천
-    trackReferral(ref)
-      .then(() => localStorage.setItem(key, String(Date.now())))
-      .catch(() => {}); // 실패해도 조용히 무시
-  }, [location.search]);
 
   function switchTab(t) {
     setTab(t);
