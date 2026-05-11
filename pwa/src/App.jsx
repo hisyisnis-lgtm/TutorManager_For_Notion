@@ -47,6 +47,7 @@ import PricingPage from './pages/PricingPage.jsx';
 import ConsentPage from './pages/ConsentPage.jsx';
 import InAppBrowserWarning from './components/ui/InAppBrowserWarning.jsx';
 import DynamicStudentManifest from './components/DynamicStudentManifest.jsx';
+import PwaDebugPanel from './components/PwaDebugPanel.jsx';
 
 // 앱 초기 로드 / SW 업데이트 중 스플래시 (흰 배경 + 빨간 로고)
 function SplashScreen({ updating }) {
@@ -244,6 +245,7 @@ export default function App() {
     return (
       <ConfigProvider theme={antdTheme}>
         <AntApp>
+          <PwaDebugPanel />
           <LoginPage
             onSuccess={() => {
               window.location.hash = '#/home';
