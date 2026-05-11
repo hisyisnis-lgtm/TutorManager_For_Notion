@@ -1142,6 +1142,9 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
       paidHours,
       completedMinutes,
       sharedAt,
+      // 숙제 먹이: 노션 학생 DB rollup이 자동 합산. PWA가 sharedAt 게이팅 적용.
+      submittedHomeworkFood: props?.['숙제 제출 먹이']?.rollup?.number ?? 0,
+      feedbackSeenHomeworkFood: props?.['피드백 확인 먹이']?.rollup?.number ?? 0,
     }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -1747,6 +1750,13 @@ async function handleHomeworkRoutes(request, env, corsHeaders, url) {
         status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+    // 피드백완료 후에는 학생 수정 차단 — 파일 추가·삭제 모두 거부.
+    const currentStatus = currentPage.properties?.['제출 상태']?.select?.name;
+    if (currentStatus === '피드백완료') {
+      return new Response(JSON.stringify({ error: '강사 피드백이 완료되어 더 이상 수정할 수 없습니다.' }), {
+        status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
     const keptFiles = (currentPage.properties?.['학생 제출 파일']?.files ?? [])
       .filter(f => !deleteFileNamesSet.has(f.name));
 
@@ -1780,6 +1790,10 @@ async function handleHomeworkRoutes(request, env, corsHeaders, url) {
             ],
           },
           제출일: totalCount > 0 ? { date: { start: nowIso } } : { date: null },
+          // 학생 첫 제출 시점만 기록 — 이후 파일 추가/삭제로는 갱신되지 않아 먹이 중복 지급 방지.
+          ...(totalCount > 0 && !currentPage.properties?.['제출 먹이 마크']?.date?.start
+            ? { '제출 먹이 마크': { date: { start: nowIso } } }
+            : {}),
         },
       }),
     });
@@ -1799,6 +1813,46 @@ async function handleHomeworkRoutes(request, env, corsHeaders, url) {
 
     return new Response(JSON.stringify(updateData), {
       status: updateRes.ok ? 200 : updateRes.status,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
+  // POST /homework/feedback-seen/:token — 학생이 피드백완료 숙제를 처음 열어본 시점 기록
+  // body: { homeworkId } — 두 번째 호출부터는 idempotent하게 스킵 (먹이 중복 방지)
+  const feedbackSeenMatch = url.pathname.match(/^\/homework\/feedback-seen\/([^/]+)$/);
+  if (feedbackSeenMatch && request.method === 'POST') {
+    const token = decodeURIComponent(feedbackSeenMatch[1]);
+    const tv = validatePathToken(StudentTokenSchema, token, corsHeaders, '학생 토큰');
+    if (!tv.ok) return tv.response;
+    const body = await request.json().catch(() => ({}));
+    const homeworkId = body.homeworkId;
+    const hv = validatePathToken(NotionPageIdSchema, homeworkId, corsHeaders, '숙제 ID');
+    if (!hv.ok) return hv.response;
+    const studentPage = await findStudentByToken(token);
+    if (!studentPage) {
+      return new Response(JSON.stringify({ error: '등록된 학생이 아닙니다.' }), {
+        status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    const hwPage = await n('GET', `/pages/${homeworkId}`);
+    const hwStudentIds = (hwPage.properties?.['학생']?.relation ?? []).map(r => r.id);
+    if (!hwStudentIds.includes(studentPage.id)) {
+      return new Response(JSON.stringify({ error: '이 숙제에 접근할 권한이 없습니다.' }), {
+        status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    const status = hwPage.properties?.['제출 상태']?.select?.name;
+    const already = hwPage.properties?.['피드백 확인일']?.date?.start;
+    // 피드백완료 상태이고 아직 확인일이 비어있을 때만 기록 (race condition: 동시 호출이 와도 두 번째는 skip)
+    if (status === '피드백완료' && !already) {
+      await n('PATCH', `/pages/${homeworkId}`, {
+        properties: { '피드백 확인일': { date: { start: new Date().toISOString() } } },
+      });
+      return new Response(JSON.stringify({ ok: true, recorded: true }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    return new Response(JSON.stringify({ ok: true, recorded: false }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }

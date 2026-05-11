@@ -33,6 +33,9 @@ export function parseHomework(page) {
     feedbackFiles,
     feedbackFile: feedbackFiles[0] ?? null, // 하위 호환
     feedbackDate: getDate(p['피드백일']),
+    // 판다 먹이 시스템용 — 학생 첫 제출/피드백 첫 확인 시점 (Worker가 자동 기록)
+    submitMark: getDate(p['제출 먹이 마크']),
+    feedbackSeenDate: getDate(p['피드백 확인일']),
     createdTime: page.created_time,
   };
 }
@@ -169,6 +172,16 @@ export async function submitHomework(studentToken, homeworkId, files, deleteFile
   return studentFetch('POST', `/homework/student/${encodeURIComponent(studentToken)}/${homeworkId}/submit`, {
     files,
     deleteFileNames,
+  });
+}
+
+/**
+ * 학생이 피드백완료 숙제를 처음 열어본 시점 기록.
+ * Worker가 비어있을 때만 PATCH하므로 두 번째 호출부터는 idempotent — 먹이 중복 지급 방지.
+ */
+export async function markFeedbackSeen(studentToken, homeworkId) {
+  return studentFetch('POST', `/homework/feedback-seen/${encodeURIComponent(studentToken)}`, {
+    homeworkId,
   });
 }
 

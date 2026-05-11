@@ -12,6 +12,7 @@ import {
   submitHomework,
   uploadStudentFile,
   homeworkStatusColor,
+  markFeedbackSeen,
 } from '../api/homework.js';
 import { formatDateTimeCompact } from '../utils/dateUtils.js';
 
@@ -79,6 +80,16 @@ export default function PersonalHomeworkDetailPage() {
   }, [studentToken, hwId]);
 
   useEffect(() => { load(); }, [load]);
+
+  // 학생이 피드백완료 숙제를 처음 열어본 시점 기록 — Worker가 비어있을 때만 PATCH(idempotent).
+  // 호출 후 로컬 상태도 즉시 갱신해 같은 페이지에서 재호출되지 않게 함.
+  useEffect(() => {
+    if (hw?.status === '피드백완료' && !hw.feedbackSeenDate) {
+      markFeedbackSeen(studentToken, hwId)
+        .then(() => setHw(prev => prev ? { ...prev, feedbackSeenDate: new Date().toISOString() } : prev))
+        .catch(e => console.warn('피드백 확인 기록 실패:', e?.message));
+    }
+  }, [hw?.status, hw?.feedbackSeenDate, studentToken, hwId]);
 
   const getFreshHw = useCallback(async () => {
     const pages = await fetchMyHomework(studentToken);
@@ -193,7 +204,8 @@ export default function PersonalHomeworkDetailPage() {
   if (!hw) return null;
 
   const { bg, text } = homeworkStatusColor(hw.status);
-  const canEdit = hw.status === '미제출' || hw.status === '제출완료' || hw.status === '피드백완료';
+  // 피드백완료 후에는 학생이 파일 추가·삭제 불가 — 강사가 피드백을 단 결과물을 보존.
+  const canEdit = hw.status === '미제출' || hw.status === '제출완료';
   const isFeedback = hw.status === '피드백완료';
   const totalFiles = (hw.submitFiles?.length ?? 0) + pendingFiles.length;
   const canAddMore = totalFiles < MAX_FILES;
@@ -293,8 +305,19 @@ export default function PersonalHomeworkDetailPage() {
               WebkitTapHighlightColor: 'transparent', marginBottom: 10,
             }}
           >
-            {isFeedback ? '추가 제출하기' : '숙제 제출하기'}
+            숙제 제출하기
           </button>
+        )}
+
+        {/* 피드백완료 후 수정 불가 안내 */}
+        {isFeedback && (
+          <p style={{
+            fontSize: 12, color: '#8c8c8c',
+            textAlign: 'center', margin: '0 0 10px',
+            wordBreak: 'keep-all',
+          }}>
+            강사 피드백이 완료되어 더 이상 수정할 수 없습니다.
+          </p>
         )}
 
         {/* 보관함으로 이동 버튼 */}
