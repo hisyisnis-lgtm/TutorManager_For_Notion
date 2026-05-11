@@ -1,0 +1,83 @@
+import { useEffect } from 'react';
+
+// 학생 라우트(`#/personal/{token}` 또는 그 하위)에 진입했을 때 PWA manifest의 start_url을
+// 그 학생 토큰이 포함된 URL로 동적으로 교체한다. 이게 없으면:
+//
+// 1) Safari에서 학생 페이지 본 후 "홈 화면에 추가" → manifest.start_url='/'로 PWA 설치
+// 2) PWA 진입 → start_url='/'로 시작 → hash 비어있음 → LoginPage
+//
+// iOS Safari PWA는 16.4+부터 localStorage가 Safari와 격리되므로 localStorage redirect 트릭으로는
+// 해결 불가. start_url 자체에 토큰을 박아두는 게 유일하게 확실한 방법.
+//
+// <link rel="manifest"> href를 Blob URL로 바꾸면 vite-plugin-pwa의 정적 manifest를 런타임에 덮어쓴다.
+// PWA 설치 시점의 manifest가 영구적으로 박히므로, 이미 설치된 PWA는 재설치해야 새 start_url 반영.
+
+// vite-plugin-pwa가 빌드 시점에 생성하는 manifest와 동일한 메타데이터를 유지하고 start_url만 학생 URL로.
+function buildManifest(studentToken) {
+  return {
+    name: '하늘하늘중국어',
+    short_name: '하늘하늘중국어',
+    description: '중국어 튜터링 관리 시스템',
+    theme_color: '#830009',
+    background_color: '#F9FAFB',
+    display: 'standalone',
+    orientation: 'portrait',
+    start_url: `/#/personal/${encodeURIComponent(studentToken)}`,
+    scope: '/',
+    lang: 'ko',
+    icons: [
+      { src: '/pwa-64x64.png', sizes: '64x64', type: 'image/png' },
+      { src: '/pwa-192x192.png', sizes: '192x192', type: 'image/png' },
+      { src: '/pwa-512x512.png', sizes: '512x512', type: 'image/png' },
+      { src: '/maskable-icon-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+    ],
+  };
+}
+
+function extractToken(hash) {
+  const m = hash.match(/^#\/personal\/([^/?#]+)/);
+  if (!m) return '';
+  const token = decodeURIComponent(m[1]);
+  // 'personal' 라우트(PersonalEntryPage) 자체 또는 너무 짧은 값 제외
+  return token && token !== 'undefined' && token.length >= 4 ? token : '';
+}
+
+export default function DynamicStudentManifest() {
+  useEffect(() => {
+    const link = document.querySelector('link[rel="manifest"]');
+    if (!link) return;
+    const originalHref = link.getAttribute('href') || '/manifest.webmanifest';
+    let currentBlobUrl = null;
+
+    function apply() {
+      const token = extractToken(window.location.hash);
+      if (!token) {
+        // 학생 라우트가 아니면 원본 manifest로 복원
+        if (currentBlobUrl) {
+          URL.revokeObjectURL(currentBlobUrl);
+          currentBlobUrl = null;
+          link.setAttribute('href', originalHref);
+        }
+        return;
+      }
+      const json = JSON.stringify(buildManifest(token));
+      const blob = new Blob([json], { type: 'application/manifest+json' });
+      const url = URL.createObjectURL(blob);
+      if (currentBlobUrl) URL.revokeObjectURL(currentBlobUrl);
+      currentBlobUrl = url;
+      link.setAttribute('href', url);
+    }
+
+    apply();
+    window.addEventListener('hashchange', apply);
+    return () => {
+      window.removeEventListener('hashchange', apply);
+      if (currentBlobUrl) {
+        URL.revokeObjectURL(currentBlobUrl);
+        link.setAttribute('href', originalHref);
+      }
+    };
+  }, []);
+
+  return null;
+}

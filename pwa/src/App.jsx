@@ -46,6 +46,7 @@ import LandingPage from './pages/LandingPage.jsx';
 import PricingPage from './pages/PricingPage.jsx';
 import ConsentPage from './pages/ConsentPage.jsx';
 import InAppBrowserWarning from './components/ui/InAppBrowserWarning.jsx';
+import DynamicStudentManifest from './components/DynamicStudentManifest.jsx';
 
 // 앱 초기 로드 / SW 업데이트 중 스플래시 (흰 배경 + 빨간 로고)
 function SplashScreen({ updating }) {
@@ -194,6 +195,9 @@ export default function App() {
         {/* SNS 인앱 브라우저(카카오톡·인스타·페북 등)에서 학생 라우트로 진입하면
             외부 브라우저(Android: Chrome, iOS: Safari) 사용 권장 모달 표시. */}
         <InAppBrowserWarning />
+        {/* 학생 페이지에서 "홈 화면에 추가" 시 manifest.start_url에 학생 토큰을 박아넣어
+            iOS PWA의 localStorage 격리 문제를 우회 — PWA 진입 시 학생 페이지로 직접 진입. */}
+        <DynamicStudentManifest />
         <HashRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <ScrollToTop />
           <Routes>
