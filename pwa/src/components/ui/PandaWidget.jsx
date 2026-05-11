@@ -3,12 +3,12 @@ import { useState, useRef, useCallback } from 'react';
 import { LeafIcon, HandHeartIcon } from '@phosphor-icons/react';
 
 export const STAGES = [
-  { min: 0,   max: 0,        label: '알에서 깨어나는 중', message: '첫 수업이 기다려져요! 🥚', img: '/panda/Cha_Panda_Step_00.svg', nextAt: 1 },
-  { min: 1,   max: 9,        label: '아기 팬더',           message: '이제 막 시작했어요 🌱',     img: '/panda/Cha_Panda_Step_01.svg', nextAt: 10 },
-  { min: 10,  max: 24,       label: '꼬마 팬더',           message: '쑥쑥 자라고 있어요 🌿',     img: '/panda/Cha_Panda_Step_02.svg', nextAt: 25 },
-  { min: 25,  max: 49,       label: '청소년 팬더',         message: '많이 성장했어요 🌳',         img: '/panda/Cha_Panda_Step_03.svg', nextAt: 50 },
-  { min: 50,  max: 99,       label: '어른 팬더',           message: '완전히 성장했어요 ✨',       img: '/panda/Cha_Panda_Step_04.svg', nextAt: 100 },
-  { min: 100, max: Infinity, label: '마스터 팬더',         message: '전설이 되었어요 👑',         img: '/panda/Cha_Panda_Step_05.svg', nextAt: null },
+  { min: 0,   max: 2,         label: '알에서 깨어나는 중', message: '첫 수업이 기다려져요! 🥚', img: '/panda/Cha_Panda_Step_00.svg', nextAt: 3 },
+  { min: 3,   max: 19,        label: '아기 팬더',           message: '이제 막 시작했어요 🌱',     img: '/panda/Cha_Panda_Step_01.svg', nextAt: 20 },
+  { min: 20,  max: 47,        label: '꼬마 팬더',           message: '쑥쑥 자라고 있어요 🌿',     img: '/panda/Cha_Panda_Step_02.svg', nextAt: 48 },
+  { min: 48,  max: 79,        label: '청소년 팬더',         message: '많이 성장했어요 🌳',         img: '/panda/Cha_Panda_Step_03.svg', nextAt: 80 },
+  { min: 80,  max: 111,       label: '어른 팬더',           message: '완전히 성장했어요 ✨',       img: '/panda/Cha_Panda_Step_04.svg', nextAt: 112 },
+  { min: 112, max: Infinity,  label: '마스터 팬더',         message: '전설이 되었어요 👑',         img: '/panda/Cha_Panda_Step_05.svg', nextAt: null },
 ];
 
 export function getStageInfo(fedTotal) {
