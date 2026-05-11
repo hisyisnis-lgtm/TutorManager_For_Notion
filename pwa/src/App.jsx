@@ -102,6 +102,20 @@ function isOnFormPage() {
 // 갱신된 hash를 보도록 한다. 강사는 PWA로 학생 페이지를 미리보지 않으므로 isTeacher 체크로 강사 PWA 흐름은 보호.
 if (typeof window !== 'undefined') {
   try {
+    // -1) 옛 hash 형식 학생 URL(`#/personal/{token}`)을 path 형식으로 자동 redirect.
+    //     강사가 옛 PWA 버전에서 공유한 URL을 학생이 클릭하면 hash가 붙어있는데,
+    //     iOS Safari "홈 화면에 추가"는 hash를 잘라내므로 path 형식으로 강제 변환해야 한다.
+    const oldHashMatch = window.location.hash.match(/^#\/personal\/([^/?#]+)/);
+    if (oldHashMatch && !window.location.pathname.startsWith('/personal/')) {
+      const oldHashToken = decodeURIComponent(oldHashMatch[1]);
+      if (oldHashToken && oldHashToken !== 'undefined' && oldHashToken.length >= 4) {
+        // location.replace로 history 항목을 덮어써 뒤로 가기가 hash URL로 돌아가지 않게.
+        window.location.replace(`/personal/${encodeURIComponent(oldHashToken)}`);
+        // replace 후엔 페이지가 즉시 다시 로드되므로 IIFE를 명시적으로 종료.
+        throw new Error('redirecting');
+      }
+    }
+
     // 0) Path-based 학생 URL 진입 시 토큰만 localStorage에 저장하고 URL은 path 그대로 유지.
     //    iOS Safari PWA "홈 화면에 추가"는 path만 보존하고 hash·query는 잘라내므로 절대 hash로 변환하지 않는다.
     //    App() 컴포넌트가 학생 path 진입을 감지하면 BrowserRouter로 학생 라우트만 렌더한다.
