@@ -8,4 +8,7 @@
   Referrer-Policy: no-referrer
   Strict-Transport-Security: max-age=31536000; includeSubDomains
   Permissions-Policy: geolocation=(), microphone=(self), camera=(), payment=(), usb=()
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob: https:; connect-src 'self' https://tutor-manager-proxy.hisyisnis.workers.dev https://api.notion.com https://*.notion.so https://*.notion-static.com https://ntfy.sh; media-src 'self' blob: https:; worker-src 'self' blob:; manifest-src 'self' data: blob:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'
+  # script-src sha256: index.html의 manifest 분기 인라인 스크립트 (학생 path가 아닐 때만 manifest link 추가).
+  # 스크립트 본문 한 글자라도 바뀌면 hash 재계산 필요 — 브라우저 콘솔에 Refused to execute 에러로 즉시 드러남.
+  # style-src cdn.jsdelivr.net: Pretendard 폰트 CSS (pretendard-dynamic-subset.min.css) 로딩용.
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'sha256-ev4BkAGZQMt++Y2kD1o1eSZ5ogBdiNm6WRilz5Ff+ek='; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob: https:; connect-src 'self' https://tutor-manager-proxy.hisyisnis.workers.dev https://api.notion.com https://*.notion.so https://*.notion-static.com https://ntfy.sh; media-src 'self' blob: https:; worker-src 'self' blob:; manifest-src 'self' data: blob:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'
