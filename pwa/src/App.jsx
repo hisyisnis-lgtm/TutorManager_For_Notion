@@ -101,6 +101,17 @@ function isOnFormPage() {
 // 갱신된 hash를 보도록 한다. 강사는 PWA로 학생 페이지를 미리보지 않으므로 isTeacher 체크로 강사 PWA 흐름은 보호.
 if (typeof window !== 'undefined') {
   try {
+    // 0) PWA 진입 케이스 — DynamicStudentManifest가 박아둔 `?student={token}`을 hash로 변환.
+    //    iOS Safari는 manifest start_url의 hash(#)를 잘라내므로 query string으로 토큰을 받는다.
+    //    이게 PWA "홈 화면에 추가" → 아이콘 탭 시 학생 페이지로 직접 진입하는 핵심 경로.
+    const search = new URLSearchParams(window.location.search);
+    const queryToken = search.get('student');
+    if (queryToken && queryToken !== 'undefined' && queryToken.length >= 4) {
+      localStorage.setItem('personal_student_token', queryToken);
+      const cleanPath = window.location.pathname || '/';
+      window.history.replaceState(null, '', `${cleanPath}#/personal/${encodeURIComponent(queryToken)}`);
+    }
+
     const hash = window.location.hash;
 
     // 1) 학생 라우트(`#/personal/{token}` 또는 그 하위)로 진입한 경우 토큰을 localStorage에 저장.

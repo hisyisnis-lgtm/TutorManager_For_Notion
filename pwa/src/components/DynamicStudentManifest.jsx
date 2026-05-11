@@ -9,7 +9,10 @@ import { useEffect } from 'react';
 // iOS Safari PWA는 16.4+부터 localStorage가 Safari와 격리되므로 localStorage redirect 트릭으로는
 // 해결 불가. start_url 자체에 토큰을 박아두는 게 유일하게 확실한 방법.
 //
-// <link rel="manifest"> href를 Blob URL로 바꾸면 vite-plugin-pwa의 정적 manifest를 런타임에 덮어쓴다.
+// 중요: iOS Safari는 manifest start_url의 hash(#)를 잘라내므로 query string(`?student=...`)으로 전달.
+// App.jsx 진입 시점에 query를 hash로 변환해 정상 라우팅한다.
+//
+// <link rel="manifest"> href를 data URL로 바꾸면 vite-plugin-pwa의 정적 manifest를 런타임에 덮어쓴다.
 // PWA 설치 시점의 manifest가 영구적으로 박히므로, 이미 설치된 PWA는 재설치해야 새 start_url 반영.
 
 // vite-plugin-pwa가 빌드 시점에 생성하는 manifest와 동일한 메타데이터를 유지하고 start_url만 학생 URL로.
@@ -22,7 +25,9 @@ function buildManifest(studentToken) {
     background_color: '#F9FAFB',
     display: 'standalone',
     orientation: 'portrait',
-    start_url: `/#/personal/${encodeURIComponent(studentToken)}`,
+    // iOS는 manifest의 hash를 보존하지 않으므로 query string으로 토큰 전달.
+    // App.jsx의 모듈 최상위 IIFE가 ?student=...를 hash(`#/personal/...`)로 변환한다.
+    start_url: `/?student=${encodeURIComponent(studentToken)}`,
     scope: '/',
     lang: 'ko',
     icons: [
@@ -47,35 +52,31 @@ export default function DynamicStudentManifest() {
     const link = document.querySelector('link[rel="manifest"]');
     if (!link) return;
     const originalHref = link.getAttribute('href') || '/manifest.webmanifest';
-    let currentBlobUrl = null;
+    let lastApplied = '';
 
     function apply() {
       const token = extractToken(window.location.hash);
       if (!token) {
         // 학생 라우트가 아니면 원본 manifest로 복원
-        if (currentBlobUrl) {
-          URL.revokeObjectURL(currentBlobUrl);
-          currentBlobUrl = null;
+        if (lastApplied) {
+          lastApplied = '';
           link.setAttribute('href', originalHref);
         }
         return;
       }
+      if (lastApplied === token) return;
+      lastApplied = token;
       const json = JSON.stringify(buildManifest(token));
-      const blob = new Blob([json], { type: 'application/manifest+json' });
-      const url = URL.createObjectURL(blob);
-      if (currentBlobUrl) URL.revokeObjectURL(currentBlobUrl);
-      currentBlobUrl = url;
-      link.setAttribute('href', url);
+      // data URL은 Blob URL보다 origin·revoke 이슈가 없어 iOS Safari가 더 잘 인식한다.
+      const dataUrl = `data:application/manifest+json;charset=utf-8,${encodeURIComponent(json)}`;
+      link.setAttribute('href', dataUrl);
     }
 
     apply();
     window.addEventListener('hashchange', apply);
     return () => {
       window.removeEventListener('hashchange', apply);
-      if (currentBlobUrl) {
-        URL.revokeObjectURL(currentBlobUrl);
-        link.setAttribute('href', originalHref);
-      }
+      if (lastApplied) link.setAttribute('href', originalHref);
     };
   }, []);
 
