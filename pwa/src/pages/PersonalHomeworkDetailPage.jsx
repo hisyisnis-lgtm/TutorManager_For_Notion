@@ -6,6 +6,7 @@ import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import ErrorMessage from '../components/ui/ErrorMessage.jsx';
 import AudioPlayer from '../components/ui/AudioPlayer.jsx';
 import AudioRecorder from '../components/ui/AudioRecorder.jsx';
+import FoodEarnedToast from '../components/ui/FoodEarnedToast.jsx';
 import {
   fetchMyHomework,
   parseHomework,
@@ -61,6 +62,8 @@ export default function PersonalHomeworkDetailPage() {
   const [deletingFileName, setDeletingFileName] = useState(null);
   const [deleteConfirmFile, setDeleteConfirmFile] = useState(null);
   const fileInputRef = useRef(null);
+  // 먹이 획득 알림 — 숙제 첫 제출 또는 피드백 첫 확인 시점에 표시.
+  const [foodToast, setFoodToast] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -83,10 +86,14 @@ export default function PersonalHomeworkDetailPage() {
 
   // 학생이 피드백완료 숙제를 처음 열어본 시점 기록 — Worker가 비어있을 때만 PATCH(idempotent).
   // 호출 후 로컬 상태도 즉시 갱신해 같은 페이지에서 재호출되지 않게 함.
+  // recorded:true는 Worker가 실제로 기록한 첫 호출이라는 뜻 = 먹이 1개 적립 시점.
   useEffect(() => {
     if (hw?.status === '피드백완료' && !hw.feedbackSeenDate) {
       markFeedbackSeen(studentToken, hwId)
-        .then(() => setHw(prev => prev ? { ...prev, feedbackSeenDate: new Date().toISOString() } : prev))
+        .then((result) => {
+          setHw(prev => prev ? { ...prev, feedbackSeenDate: new Date().toISOString() } : prev);
+          if (result?.recorded) setFoodToast({ message: '피드백 확인 보상이에요' });
+        })
         .catch(e => console.warn('피드백 확인 기록 실패:', e?.message));
     }
   }, [hw?.status, hw?.feedbackSeenDate, studentToken, hwId]);
@@ -120,6 +127,9 @@ export default function PersonalHomeworkDetailPage() {
 
   const uploadAndSubmit = async (files) => {
     if (files.length === 0) return;
+    // 첫 제출이면 Worker가 "제출 먹이 마크"를 박고 먹이 1개를 적립함.
+    // 이후 재제출·파일 추가에선 마크가 이미 있어 추가 적립 없음 → 토스트도 1회만.
+    const wasFirstSubmit = !hw?.submitMark;
     setUploading(true);
     try {
       const uploaded = [];
@@ -132,6 +142,7 @@ export default function PersonalHomeworkDetailPage() {
       setPendingFiles([]);
       closeModal();
       await load();
+      if (wasFirstSubmit) setFoodToast({ message: '숙제 제출 보상이에요' });
     } catch (err) {
       message.error(`제출 실패: ${err.message}`);
     } finally {
@@ -492,6 +503,13 @@ export default function PersonalHomeworkDetailPage() {
           <Spin size="large" />
         </div>
       )}
+
+      {/* 먹이 획득 알림 — 첫 제출/첫 피드백 확인 순간에 1.8s 표시 */}
+      <FoodEarnedToast
+        open={!!foodToast}
+        message={foodToast?.message}
+        onClose={() => setFoodToast(null)}
+      />
     </>
   );
 }

@@ -57,6 +57,17 @@
   50%       { transform: rotate(6deg); }
 }
 
+/* FoodEarnedToast — translateX(-50%)를 모든 키프레임에 포함시켜 가로 중앙 고정 */
+@keyframes food-earned-in {
+  0%   { opacity: 0; transform: translateX(-50%) translateY(20px) scale(0.5); }
+  60%  { opacity: 1; transform: translateX(-50%) translateY(-6px) scale(1.06); }
+  100% { opacity: 1; transform: translateX(-50%) translateY(0)    scale(1); }
+}
+@keyframes food-earned-out {
+  0%   { opacity: 1; transform: translateX(-50%) translateY(0)     scale(1); }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-32px) scale(0.95); }
+}
+
 @keyframes tip-card-in {
   from { opacity: 0; transform: translateY(-8px) scaleY(0.94); filter: blur(3px); }
   to   { opacity: 1; transform: translateY(0)    scaleY(1);    filter: blur(0);   }
