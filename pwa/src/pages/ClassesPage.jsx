@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button, Input, Card, DatePicker } from 'antd';
 import dayjs from 'dayjs';
-import { MagnifyingGlassIcon, MapPinIcon, WarningCircleIcon, CalendarBlankIcon } from '@phosphor-icons/react';
+import { MagnifyingGlassIcon, MapPinIcon, WarningCircleIcon, CalendarBlankIcon, InfoIcon } from '@phosphor-icons/react';
 import { PRIMARY, TEXT_SECONDARY, TEXT_TERTIARY, BORDER_DEFAULT, PRIMARY_ALPHA_25 } from '../constants/theme.js';
 import { createLessonLog } from '../api/lessonLogs.js';
 import { queryPage } from '../api/notionClient.js';
@@ -493,6 +493,14 @@ function ClassCard({ cls, studentNameMap }) {
                 <MapPinIcon size={12} weight="fill" color="#767676" style={{ flexShrink: 0 }} />
                 <span style={{ fontSize: 12, color: '#767676' }}>
                   {cls.location}{cls.locationMemo && ` — ${cls.locationMemo}`}
+                </span>
+              </div>
+            )}
+            {cls.noteMemo && (
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 4, marginTop: 2 }}>
+                <InfoIcon size={12} weight="fill" color="#767676" style={{ flexShrink: 0, marginTop: 3 }} />
+                <span style={{ fontSize: 12, color: '#767676', whiteSpace: 'pre-wrap', wordBreak: 'keep-all', lineHeight: 1.5 }}>
+                  {cls.noteMemo}
                 </span>
               </div>
             )}

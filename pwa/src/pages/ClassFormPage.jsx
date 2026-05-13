@@ -63,6 +63,7 @@ export default function ClassFormPage() {
     classTypeId: '',
     duration: '60',
     notes: '',
+    noteMemo: '',         // 특이사항 상세 메모 (rich_text)
     location: '강남사무실',
     locationMemo: '',
     guestName: '',        // 무료상담 상담자 이름 (노션 제목)
@@ -169,6 +170,7 @@ export default function ClassFormPage() {
           datetime: toDatetimeLocal(cls.datetime),
           duration: cls.duration || '60',
           notes: cls.notes || '',
+          noteMemo: cls.noteMemo || '',
           location: cls.location || '강남사무실',
           locationMemo: cls.locationMemo || '',
           guestName: cls.title || '',
@@ -286,6 +288,7 @@ export default function ClassFormPage() {
           notes: form.notes || null,
           location: form.location || null,
           locationMemo: form.locationMemo || '',
+          noteMemo: form.noteMemo || '',
         }));
         // 반복 수업 충돌 검사 — 충돌 있어도 확인 팝업 후 진행
         const pad = (n) => String(n).padStart(2, '0');
@@ -321,6 +324,7 @@ export default function ClassFormPage() {
           notes: form.notes || null,
           location: form.location || null,
           locationMemo: form.locationMemo || '',
+          noteMemo: form.noteMemo || '',
           title: form.guestName.trim() || undefined,
           phone: isFreeConsult ? form.guestPhone : undefined,
         };
@@ -753,7 +757,12 @@ export default function ClassFormPage() {
                 <button
                   key={loc}
                   type="button"
-                  onClick={() => setForm((f) => ({ ...f, location: loc }))}
+                  onClick={() => setForm((f) => ({
+                    ...f,
+                    location: loc,
+                    // 카페/외부 장소가 아닌 옵션 선택 시 메모 자동 리셋
+                    locationMemo: loc?.includes('카페') ? f.locationMemo : '',
+                  }))}
                   className={`py-3 rounded-xl text-sm font-medium border-2 transition-[scale,background-color,color,border-color] duration-150 ease-out active:scale-[0.96] ${
                     form.location === loc
                       ? 'border-brand-600 bg-brand-50 text-brand-700'
@@ -764,14 +773,18 @@ export default function ClassFormPage() {
                 </button>
               ))}
             </div>
-            <Input
-              type="text"
-              placeholder="상세 장소 메모 (예: 스타벅스 강남역점)"
-              value={form.locationMemo}
-              onChange={(e) => setForm((f) => ({ ...f, locationMemo: e.target.value }))}
-              size="large"
-              style={{ borderRadius: 12, marginTop: 8 }}
-            />
+            {form.location?.includes('카페') && (
+              <div style={{ animation: 'fadeSlideUp 0.25s ease both', marginTop: 8 }}>
+                <Input
+                  type="text"
+                  placeholder="상세 장소 (예: 스타벅스 강남역점)"
+                  value={form.locationMemo}
+                  onChange={(e) => setForm((f) => ({ ...f, locationMemo: e.target.value }))}
+                  size="large"
+                  style={{ borderRadius: 12 }}
+                />
+              </div>
+            )}
           </div>
         )}
 
@@ -808,6 +821,22 @@ export default function ClassFormPage() {
                 </button>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* ⑧ 메모 — 특이사항 상세 내용 (자유 텍스트) */}
+        {showDuration && (
+          <div style={{ animation: 'fadeSlideUp 0.35s ease both' }}>
+            <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>
+              메모 (선택)
+            </Typography.Text>
+            <Input.TextArea
+              placeholder="특이사항 상세 내용을 입력하세요 (예: 결석 사유, 보강 일정, 학생 요청사항 등)"
+              value={form.noteMemo}
+              onChange={(e) => setForm((f) => ({ ...f, noteMemo: e.target.value }))}
+              autoSize={{ minRows: 2, maxRows: 6 }}
+              style={{ borderRadius: 12 }}
+            />
           </div>
         )}
 

@@ -46,7 +46,7 @@ export async function fetchClassesPage(opts = {}) {
 }
 
 /** 수업 생성 */
-export async function createClass({ studentIds, classTypeId, datetime, duration, notes, location, locationMemo, title, phone }) {
+export async function createClass({ studentIds, classTypeId, datetime, duration, notes, location, locationMemo, noteMemo, title, phone }) {
   const properties = {
     학생: { relation: studentIds.map((id) => ({ id })) },
     '수업 유형': { relation: [{ id: classTypeId }] },
@@ -65,6 +65,9 @@ export async function createClass({ studentIds, classTypeId, datetime, duration,
   properties['수업 장소 메모'] = locationMemo
     ? { rich_text: [{ text: { content: locationMemo } }] }
     : { rich_text: [] };
+  properties['특이사항 메모'] = noteMemo
+    ? { rich_text: [{ text: { content: noteMemo } }] }
+    : { rich_text: [] };
   properties['전화번호'] = phone?.trim()
     ? { rich_text: [{ text: { content: phone.trim() } }] }
     : { rich_text: [] };
@@ -82,7 +85,7 @@ export async function bulkCreateClasses(items) {
 }
 
 /** 수업 수정 (충돌_감지 checkbox는 건드리지 않음) */
-export async function updateClass(pageId, { studentIds, classTypeId, datetime, duration, notes, location, locationMemo, title, phone }) {
+export async function updateClass(pageId, { studentIds, classTypeId, datetime, duration, notes, location, locationMemo, noteMemo, title, phone }) {
   const properties = {};
   if (studentIds) properties['학생'] = { relation: studentIds.map((id) => ({ id })) };
   if (classTypeId) properties['수업 유형'] = { relation: [{ id: classTypeId }] };
@@ -99,6 +102,9 @@ export async function updateClass(pageId, { studentIds, classTypeId, datetime, d
   properties['수업 장소'] = location ? { select: { name: location } } : { select: null };
   properties['수업 장소 메모'] = locationMemo
     ? { rich_text: [{ text: { content: locationMemo } }] }
+    : { rich_text: [] };
+  properties['특이사항 메모'] = noteMemo
+    ? { rich_text: [{ text: { content: noteMemo } }] }
     : { rich_text: [] };
   if (phone !== undefined) {
     properties['전화번호'] = phone?.trim()
@@ -127,6 +133,7 @@ export function parseClass(page) {
     lessonLogIds: getRelationIds(p['수업 일지']),
     location: getSelect(p['수업 장소']),
     locationMemo: getRichText(p['수업 장소 메모']),
+    noteMemo: getRichText(p['특이사항 메모']),
     phone: getRichText(p['전화번호']),
   };
 }
