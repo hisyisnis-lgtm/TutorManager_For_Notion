@@ -1,7 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import { HouseIcon, UsersIcon, CalendarBlankIcon, BookOpenIcon, CurrencyDollarIcon } from '@phosphor-icons/react';
-
-const PRIMARY = '#7f0005';
+import { PRIMARY, TEXT_INACTIVE } from '../../constants/theme.js';
 
 const TABS = [
   { to: '/home',     label: '홈',   icon: <HouseIcon weight="fill" />           },
@@ -37,7 +36,7 @@ export default function BottomNav() {
               padding: '8px 0 10px',
               gap: 3,
               fontSize: 11, fontWeight: isActive ? 600 : 500,
-              color: isActive ? PRIMARY : '#8c8c8c',
+              color: isActive ? PRIMARY : TEXT_INACTIVE,
               textDecoration: 'none',
               transitionProperty: 'color, scale',
               transitionDuration: '0.15s',

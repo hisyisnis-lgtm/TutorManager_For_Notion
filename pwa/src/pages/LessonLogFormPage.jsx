@@ -7,10 +7,11 @@ import { getPage, deletePage } from '../api/notionClient.js';
 import ConfirmDialog from '../components/ui/ConfirmDialog.jsx';
 import { parseLessonLog, updateLessonLog, ENGAGEMENT_OPTIONS } from '../api/lessonLogs.js';
 import { useData } from '../context/DataContext.jsx';
+import { TEXT_SECONDARY } from '../constants/theme.js';
 
 const { Text } = Typography;
 
-const LABEL_STYLE = { fontSize: 14, color: '#595959', display: 'block', marginBottom: 6, fontWeight: 600 };
+const LABEL_STYLE = { fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6, fontWeight: 600 };
 
 export default function LessonLogFormPage() {
   const { id } = useParams();

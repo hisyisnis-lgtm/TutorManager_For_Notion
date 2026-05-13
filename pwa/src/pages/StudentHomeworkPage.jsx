@@ -13,6 +13,17 @@ import { getPage } from '../api/notionClient.js';
 import { parseStudent } from '../api/students.js';
 import { ClipboardTextIcon, HourglassIcon, ChatTeardropTextIcon, CaretRightIcon } from '@phosphor-icons/react';
 import { formatDateDot } from '../utils/dateUtils.js';
+import {
+  STATUS_ERROR_TEXT,
+  STATUS_INFO,
+  STATUS_SUCCESS_DARK,
+  STATUS_SUCCESS,
+  TEXT_PRIMARY,
+  TEXT_SECONDARY,
+  TEXT_TERTIARY,
+  TEXT_DISABLED,
+  BORDER_NEUTRAL,
+} from '../constants/theme.js';
 
 export default function StudentHomeworkPage() {
   const { id } = useParams();  // studentId
@@ -114,7 +125,7 @@ export default function StudentHomeworkPage() {
         )}
 
         {pending.length > 0 && (
-          <HomeworkSection icon={<ClipboardTextIcon size={18} weight="fill" />} label="미제출" count={pending.length} color="#cf1322">
+          <HomeworkSection icon={<ClipboardTextIcon size={18} weight="fill" />} label="미제출" count={pending.length} color={STATUS_ERROR_TEXT}>
             {pending.map((hw) => (
               <HomeworkCard key={hw.id} hw={hw} onClick={() => navigate(`/homework/${hw.id}`)} />
             ))}
@@ -122,7 +133,7 @@ export default function StudentHomeworkPage() {
         )}
 
         {submitted.length > 0 && (
-          <HomeworkSection icon={<HourglassIcon size={18} weight="fill" />} label="제출완료" count={submitted.length} color="#1677ff">
+          <HomeworkSection icon={<HourglassIcon size={18} weight="fill" />} label="제출완료" count={submitted.length} color={STATUS_INFO}>
             {submitted.map((hw) => (
               <HomeworkCard key={hw.id} hw={hw} onClick={() => navigate(`/homework/${hw.id}`)} />
             ))}
@@ -130,7 +141,7 @@ export default function StudentHomeworkPage() {
         )}
 
         {done.length > 0 && (
-          <HomeworkSection icon={<ChatTeardropTextIcon size={18} weight="fill" />} label="피드백완료" count={done.length} color="#389e0d">
+          <HomeworkSection icon={<ChatTeardropTextIcon size={18} weight="fill" />} label="피드백완료" count={done.length} color={STATUS_SUCCESS_DARK}>
             {done.map((hw) => (
               <HomeworkCard key={hw.id} hw={hw} onClick={() => navigate(`/homework/${hw.id}`)} />
             ))}
@@ -168,14 +179,14 @@ function HomeworkCard({ hw, onClick }) {
         {/* 텍스트 영역 */}
         <div style={{ flex: 1, minWidth: 0 }}>
           <p style={{
-            fontSize: 14, fontWeight: 600, color: '#1d1d1f',
+            fontSize: 14, fontWeight: 600, color: TEXT_PRIMARY,
             marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           }}>
             {hw.title}
           </p>
           {hw.content && (
             <p style={{
-              fontSize: 12, color: '#595959',
+              fontSize: 12, color: TEXT_SECONDARY,
               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 2,
             }}>
               {hw.content}
@@ -183,13 +194,13 @@ function HomeworkCard({ hw, onClick }) {
           )}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
             {dateLabel && (
-              <span style={{ fontSize: 11, color: '#bfbfbf' }}>{dateLabel}</span>
+              <span style={{ fontSize: 11, color: TEXT_DISABLED }}>{dateLabel}</span>
             )}
             {fileCount > 0 && (
-              <span style={{ fontSize: 11, color: '#767676' }}>🎵 {fileCount}개</span>
+              <span style={{ fontSize: 11, color: TEXT_TERTIARY }}>🎵 {fileCount}개</span>
             )}
             {hasFeedback && (
-              <span style={{ fontSize: 11, color: '#52c41a' }}>💬 피드백 있음</span>
+              <span style={{ fontSize: 11, color: STATUS_SUCCESS }}>💬 피드백 있음</span>
             )}
           </div>
         </div>
@@ -197,7 +208,7 @@ function HomeworkCard({ hw, onClick }) {
         {/* 상태 배지 + 화살표 */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
           <Badge label={hw.status} bg={bg} text={text} />
-          <CaretRightIcon size={14} weight="bold" color="#d9d9d9" />
+          <CaretRightIcon size={14} weight="bold" color={BORDER_NEUTRAL} />
         </div>
       </div>
     </Card>

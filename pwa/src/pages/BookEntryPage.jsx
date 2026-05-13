@@ -3,6 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { fetchStudentByToken } from '../api/bookingApi.js';
 import { usePullToRefresh, PullIndicator } from '../hooks/usePullToRefresh.jsx';
 import { Card, Input, Button, Typography } from 'antd';
+import {
+  GRADIENTS,
+  TEXT_SECONDARY,
+  TEXT_INACTIVE,
+  STATUS_ERROR_BG,
+  STATUS_ERROR_BORDER,
+  STATUS_ERROR_TEXT,
+} from '../constants/theme.js';
 
 export default function BookEntryPage() {
   const navigate = useNavigate();
@@ -37,7 +45,7 @@ export default function BookEntryPage() {
 
         {/* 브랜드 헤더 */}
         <div style={{
-          background: 'linear-gradient(150deg, #6b0004 0%, #7f0005 50%, #9a0007 100%)',
+          background: GRADIENTS.hero,
           padding: '52px 24px 40px',
         }}>
           <p style={{
@@ -65,7 +73,7 @@ export default function BookEntryPage() {
               <div style={{ marginBottom: 16 }}>
                 <label
                   htmlFor="booking-code"
-                  style={{ fontSize: 14, fontWeight: 600, color: '#595959', display: 'block', marginBottom: 8 }}
+                  style={{ fontSize: 14, fontWeight: 600, color: TEXT_SECONDARY, display: 'block', marginBottom: 8 }}
                 >
                   예약 코드
                 </label>
@@ -102,11 +110,11 @@ export default function BookEntryPage() {
                 {error && (
                   <div style={{
                     padding: '12px 16px',
-                    backgroundColor: '#fff2f0',
-                    border: '1px solid #ffccc7',
+                    backgroundColor: STATUS_ERROR_BG,
+                    border: `1px solid ${STATUS_ERROR_BORDER}`,
                     borderRadius: 12,
                     fontSize: 14,
-                    color: '#cf1322',
+                    color: STATUS_ERROR_TEXT,
                     display: 'flex',
                     alignItems: 'center',
                     gap: 8,
@@ -129,7 +137,7 @@ export default function BookEntryPage() {
               </Button>
             </Card>
 
-            <p style={{ textAlign: 'center', fontSize: 13, color: '#8c8c8c', marginTop: 16 }}>
+            <p style={{ textAlign: 'center', fontSize: 13, color: TEXT_INACTIVE, marginTop: 16 }}>
               예약 코드는 강사에게 문의해주세요
             </p>
           </form>

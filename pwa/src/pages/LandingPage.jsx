@@ -7,7 +7,17 @@ import {
 import { CheckCircleIcon } from '@phosphor-icons/react';
 import { useLocation } from 'react-router-dom';
 import { submitConsultation } from '../api/consultApi';
-import { PRIMARY, antdTheme } from '../constants/theme';
+import {
+  PRIMARY,
+  antdTheme,
+  STATUS_SUCCESS,
+  STATUS_SUCCESS_BG,
+  STATUS_ERROR_BG,
+  STATUS_ERROR_BORDER,
+  STATUS_ERROR_TEXT,
+  TEXT_INACTIVE,
+  BORDER_NEUTRAL,
+} from '../constants/theme';
 import TabPanel from '../components/TabPanel';
 import IntroContent from '../components/IntroContent';
 import PublicHeader from '../components/public/PublicHeader';
@@ -67,9 +77,9 @@ function ConsultContent() {
           <div style={{ padding: '20px 0' }}>
             <div style={{
               width: 56, height: 56, borderRadius: '50%',
-              backgroundColor: '#f6ffed', display: 'flex',
+              backgroundColor: STATUS_SUCCESS_BG, display: 'flex',
               alignItems: 'center', justifyContent: 'center',
-              margin: '0 auto 16px', fontSize: 24, color: '#52c41a',
+              margin: '0 auto 16px', fontSize: 24, color: STATUS_SUCCESS,
             }}>
               <CheckCircleIcon weight="fill" />
             </div>
@@ -189,8 +199,8 @@ function ConsultContent() {
         {error && (
           <div style={{
             marginBottom: 20, padding: '12px 16px',
-            backgroundColor: '#fff2f0', border: '1px solid #ffccc7',
-            borderRadius: 12, fontSize: 14, color: '#cf1322',
+            backgroundColor: STATUS_ERROR_BG, border: `1px solid ${STATUS_ERROR_BORDER}`,
+            borderRadius: 12, fontSize: 14, color: STATUS_ERROR_TEXT,
           }}>
             {error}
           </div>
@@ -232,10 +242,10 @@ function ShareButton() {
       className="active:scale-[0.96] transition-[scale,background-color,color] duration-150 ease-out"
       style={{
         display: 'flex', alignItems: 'center', gap: 4,
-        border: '1px solid #d9d9d9', borderRadius: 20,
+        border: `1px solid ${BORDER_NEUTRAL}`, borderRadius: 20,
         background: 'none', cursor: 'pointer',
         padding: '5px 12px',
-        fontSize: 12, fontWeight: 600, color: '#8c8c8c',
+        fontSize: 12, fontWeight: 600, color: TEXT_INACTIVE,
       }}
     >
       {copied ? '링크 복사됨 ✓' : '공유하기'}

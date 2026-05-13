@@ -1,4 +1,4 @@
-import { PRIMARY } from '../../constants/theme';
+import { PRIMARY, BORDER_DEFAULT, TEXT_SECONDARY } from '../../constants/theme';
 
 /**
  * PublicHeader — 공개 페이지 공통 스티키 헤더
@@ -15,7 +15,7 @@ export default function PublicHeader({ tabs, activeTab, onTabChange, rightSlot }
       position: 'sticky', top: 0, zIndex: 50,
       backgroundColor: 'rgba(255,255,255,0.95)',
       backdropFilter: 'blur(10px)',
-      borderBottom: '1px solid #ebebeb',
+      borderBottom: `1px solid ${BORDER_DEFAULT}`,
     }}>
       <div style={{ maxWidth: 480, margin: '0 auto', padding: '0 20px' }}>
         <div style={{ height: 48, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -40,7 +40,7 @@ export default function PublicHeader({ tabs, activeTab, onTabChange, rightSlot }
                 fontSize: 14, fontWeight: 500,
                 border: 'none', background: 'none', cursor: 'pointer',
                 borderBottom: `2px solid ${activeTab === t ? PRIMARY : 'transparent'}`,
-                color: activeTab === t ? PRIMARY : '#595959',
+                color: activeTab === t ? PRIMARY : TEXT_SECONDARY,
                 transition: 'color 0.2s, border-color 0.2s',
               }}
             >

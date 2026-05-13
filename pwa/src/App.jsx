@@ -3,15 +3,7 @@ import { HashRouter, BrowserRouter, Routes, Route, Navigate, useLocation } from 
 import { ConfigProvider, App as AntApp } from 'antd';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { isAuthed } from './api/authUtils.js';
-
-const antdTheme = {
-  token: {
-    colorPrimary: '#7f0005',
-    borderRadius: 12,
-    colorBgContainer: '#ffffff',
-    fontFamily: 'inherit',
-  },
-};
+import { PRIMARY, antdTheme } from './constants/theme.js';
 import { DataProvider } from './context/DataContext.jsx';
 import BottomNav from './components/layout/BottomNav.jsx';
 import LoginPage from './pages/LoginPage.jsx';
@@ -52,7 +44,7 @@ import DynamicStudentManifest from './components/DynamicStudentManifest.jsx';
 function SplashScreen({ updating }) {
   return (
     <div
-      style={{ background: '#7f0005' }}
+      style={{ background: PRIMARY }}
       className="fixed inset-0 flex flex-col items-center justify-center gap-6"
     >
       <img

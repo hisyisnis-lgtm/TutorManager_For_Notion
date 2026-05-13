@@ -6,6 +6,14 @@
  *
  * Props: showBanner, isIOS, promptInstall, dismiss, showIOSGuide, setShowIOSGuide (from useInstallPrompt + parent)
  */
+import {
+  PRIMARY,
+  PRIMARY_BG,
+  TEXT_PRIMARY,
+  TEXT_SECONDARY,
+  TEXT_INACTIVE,
+} from '../../constants/theme.js';
+
 export default function InstallBanner({ showBanner, isIOS, promptInstall, dismiss, showIOSGuide, setShowIOSGuide }) {
   if (!showBanner && !showIOSGuide) return null;
 
@@ -47,10 +55,10 @@ export default function InstallBanner({ showBanner, isIOS, promptInstall, dismis
 
         {/* 텍스트 */}
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#1d1d1f', lineHeight: 1.3 }}>
+          <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: TEXT_PRIMARY, lineHeight: 1.3 }}>
             홈 화면에 추가하기
           </p>
-          <p style={{ margin: '2px 0 0', fontSize: 12, color: '#595959', lineHeight: 1.4 }}>
+          <p style={{ margin: '2px 0 0', fontSize: 12, color: TEXT_SECONDARY, lineHeight: 1.4 }}>
             앱처럼 빠르게 수업을 확인해요
           </p>
         </div>
@@ -63,7 +71,7 @@ export default function InstallBanner({ showBanner, isIOS, promptInstall, dismis
             flexShrink: 0,
             height: 34,
             padding: '0 14px',
-            backgroundColor: '#7f0005',
+            backgroundColor: PRIMARY,
             color: '#ffffff',
             fontSize: 13,
             fontWeight: 600,
@@ -92,7 +100,7 @@ export default function InstallBanner({ showBanner, isIOS, promptInstall, dismis
             height: 28,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             border: 'none', background: 'none', cursor: 'pointer',
-            color: '#8c8c8c', fontSize: 18,
+            color: TEXT_INACTIVE, fontSize: 18,
             WebkitTapHighlightColor: 'transparent',
             outline: 'none',
           }}
@@ -126,10 +134,10 @@ export default function InstallBanner({ showBanner, isIOS, promptInstall, dismis
               boxShadow: '0 8px 40px rgba(0,0,0,0.2)',
             }}
           >
-            <h2 style={{ fontSize: 17, fontWeight: 700, color: '#1d1d1f', margin: '0 0 4px' }}>
+            <h2 style={{ fontSize: 17, fontWeight: 700, color: TEXT_PRIMARY, margin: '0 0 4px' }}>
               홈 화면에 추가하는 방법
             </h2>
-            <p style={{ fontSize: 13, color: '#595959', margin: '0 0 20px' }}>
+            <p style={{ fontSize: 13, color: TEXT_SECONDARY, margin: '0 0 20px' }}>
               {isIOS ? 'Safari에서 아래 순서를 따라주세요' : '브라우저 메뉴에서 직접 추가할 수 있어요'}
             </p>
 
@@ -145,14 +153,14 @@ export default function InstallBanner({ showBanner, isIOS, promptInstall, dismis
               <div key={step} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
                 <div style={{
                   width: 28, height: 28, borderRadius: '50%',
-                  backgroundColor: '#fff0f1',
+                  backgroundColor: PRIMARY_BG,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   flexShrink: 0,
-                  fontSize: 13, fontWeight: 700, color: '#7f0005',
+                  fontSize: 13, fontWeight: 700, color: PRIMARY,
                 }}>
                   {step}
                 </div>
-                <p style={{ margin: 0, fontSize: 14, color: '#1d1d1f', lineHeight: 1.4 }}>{text}</p>
+                <p style={{ margin: 0, fontSize: 14, color: TEXT_PRIMARY, lineHeight: 1.4 }}>{text}</p>
               </div>
             ))}
 
@@ -162,9 +170,9 @@ export default function InstallBanner({ showBanner, isIOS, promptInstall, dismis
               style={{
                 marginTop: 8,
                 width: '100%', height: 48,
-                backgroundColor: '#7f0005', color: '#ffffff',
+                backgroundColor: PRIMARY, color: '#ffffff',
                 fontSize: 15, fontWeight: 600,
-                border: 'none', borderRadius: 14,
+                border: 'none', borderRadius: 12,
                 cursor: 'pointer',
                 WebkitTapHighlightColor: 'transparent',
               }}

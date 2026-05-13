@@ -189,7 +189,7 @@ export default function StudentDetailPage() {
                   }}
                   style={{
                     width: '100%', height: 44, cursor: 'pointer', borderRadius: 12,
-                    background: '#7f0005', border: 'none',
+                    background: PRIMARY, border: 'none',
                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                     fontSize: 14, fontWeight: 600, color: 'white',
                     WebkitTapHighlightColor: 'transparent',

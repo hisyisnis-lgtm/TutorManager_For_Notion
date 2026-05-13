@@ -4,6 +4,7 @@ import { Button } from 'antd';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import EmptyState from '../components/ui/EmptyState.jsx';
 import { getNtfyTopic } from './SettingsPage.jsx';
+import { TEXT_TERTIARY } from '../constants/theme.js';
 
 const STORAGE_KEY = 'ntfy_notifications';
 const LAST_READ_KEY = 'ntfy_last_read';
@@ -184,7 +185,7 @@ export default function NotificationsPage() {
       <div className="flex items-center gap-2 px-4 py-2 border-b border-gray-100">
         <span className={`w-2 h-2 rounded-full ${statusDot}`} />
         <span className="text-xs text-gray-500">{statusLabel}</span>
-        <span className="text-xs ml-auto" style={{ color: '#767676' }}>ntfy.sh/{topic}</span>
+        <span className="text-xs ml-auto" style={{ color: TEXT_TERTIARY }}>ntfy.sh/{topic}</span>
       </div>
 
       {/* 알림 목록 */}
@@ -211,7 +212,7 @@ export default function NotificationsPage() {
                       {tags.length > 0 && (
                         <span className="text-xs text-gray-500">{tags.join(' · ')}</span>
                       )}
-                      <span className="text-xs ml-auto shrink-0" style={{ color: '#767676' }}>
+                      <span className="text-xs ml-auto shrink-0" style={{ color: TEXT_TERTIARY }}>
                         {relativeTime(n.time)}
                       </span>
                     </div>

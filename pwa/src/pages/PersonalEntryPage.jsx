@@ -5,6 +5,14 @@ import { usePullToRefresh, PullIndicator } from '../hooks/usePullToRefresh.jsx';
 import { Card, Input, Button } from 'antd';
 import PublicHeader from '../components/public/PublicHeader.jsx';
 import PublicFooter from '../components/public/PublicFooter.jsx';
+import {
+  GRADIENTS,
+  TEXT_SECONDARY,
+  TEXT_INACTIVE,
+  STATUS_ERROR_BG,
+  STATUS_ERROR_BORDER,
+  STATUS_ERROR_TEXT,
+} from '../constants/theme.js';
 
 const SAVED_TOKEN_KEY = 'personal_student_token';
 
@@ -48,7 +56,7 @@ export default function PersonalEntryPage() {
 
       {/* 히어로 */}
       <div style={{
-        background: 'linear-gradient(150deg, #6b0004 0%, #7f0005 50%, #9a0007 100%)',
+        background: GRADIENTS.hero,
         padding: '56px 24px 48px',
       }}>
         <div style={{ maxWidth: 480, margin: '0 auto' }}>
@@ -80,7 +88,7 @@ export default function PersonalEntryPage() {
             <div style={{ marginBottom: 16 }}>
               <label
                 htmlFor="student-code"
-                style={{ fontSize: 14, fontWeight: 600, color: '#595959', display: 'block', marginBottom: 8 }}
+                style={{ fontSize: 14, fontWeight: 600, color: TEXT_SECONDARY, display: 'block', marginBottom: 8 }}
               >
                 학생 코드
               </label>
@@ -116,11 +124,11 @@ export default function PersonalEntryPage() {
               {error && (
                 <div style={{
                   padding: '12px 16px',
-                  backgroundColor: '#fff2f0',
-                  border: '1px solid #ffccc7',
+                  backgroundColor: STATUS_ERROR_BG,
+                  border: `1px solid ${STATUS_ERROR_BORDER}`,
                   borderRadius: 12,
                   fontSize: 14,
-                  color: '#cf1322',
+                  color: STATUS_ERROR_TEXT,
                   display: 'flex',
                   alignItems: 'center',
                   gap: 8,
@@ -143,7 +151,7 @@ export default function PersonalEntryPage() {
             </Button>
           </Card>
 
-          <p style={{ textAlign: 'center', fontSize: 13, color: '#8c8c8c', marginTop: 16 }}>
+          <p style={{ textAlign: 'center', fontSize: 13, color: TEXT_INACTIVE, marginTop: 16 }}>
             코드를 모르시면 강사님께 카카오톡으로 문의해주세요 💬
           </p>
         </form>

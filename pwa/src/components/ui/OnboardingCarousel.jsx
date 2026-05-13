@@ -1,6 +1,11 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Fragment } from 'react';
 import { CalendarBlankIcon, ClipboardTextIcon, CaretRightIcon } from '@phosphor-icons/react';
+import {
+  PRIMARY, PRIMARY_DARK,
+  TEXT_PRIMARY, TEXT_SECONDARY,
+  GRADIENTS,
+} from '../../constants/theme.js';
 
 export const ONBOARDING_KEY = 'onboarding_v1_done';
 
@@ -115,7 +120,7 @@ export default function OnboardingCarousel({ onDone }) {
             borderRadius: 4,
             background: isOnDark
               ? (i === current ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.3)')
-              : (i === current ? '#7f0005' : '#e0e0e0'),
+              : (i === current ? PRIMARY : '#e0e0e0'),
             transitionProperty: 'width, background-color',
             transitionDuration: '0.28s',
             transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)',
@@ -180,7 +185,7 @@ export default function OnboardingCarousel({ onDone }) {
         <div
           className="onboarding-card"
           style={{
-            backgroundColor: isOnDark ? '#6b0004' : '#ffffff',
+            backgroundColor: isOnDark ? PRIMARY_DARK : '#ffffff',
             transitionProperty: 'background-color',
             transitionDuration: '0.40s',
             transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)',
@@ -343,7 +348,7 @@ export default function OnboardingCarousel({ onDone }) {
                             <slide.Icon
                               size={80}
                               weight="fill"
-                              color="#7f0005"
+                              color={PRIMARY}
                               style={{ filter: 'drop-shadow(0 6px 20px rgba(127,0,5,0.18))' }}
                             />
                           ) : (
@@ -381,7 +386,7 @@ export default function OnboardingCarousel({ onDone }) {
                         <div
                           className="stagger-item"
                           style={{
-                            color: '#7f0005',
+                            color: PRIMARY,
                             fontSize: 11, fontWeight: 500,
                             letterSpacing: '0.14em',
                             textTransform: 'uppercase',
@@ -396,7 +401,7 @@ export default function OnboardingCarousel({ onDone }) {
                         <h2
                           className="stagger-item"
                           style={{
-                            fontSize: 30, fontWeight: 700, color: '#1d1d1f',
+                            fontSize: 30, fontWeight: 700, color: TEXT_PRIMARY,
                             textAlign: 'left', lineHeight: 1.18,
                             margin: '0 0 12px',
                             letterSpacing: '-0.6px',
@@ -412,7 +417,7 @@ export default function OnboardingCarousel({ onDone }) {
                         <p
                           className="stagger-item"
                           style={{
-                            fontSize: 14, fontWeight: 400, color: '#595959',
+                            fontSize: 14, fontWeight: 400, color: TEXT_SECONDARY,
                             textAlign: 'left', lineHeight: 1.7,
                             margin: 0,
                             whiteSpace: 'pre-line',
@@ -453,12 +458,12 @@ export default function OnboardingCarousel({ onDone }) {
               style={{
                 width: '100%',
                 height: 48,
-                borderRadius: 14,
+                borderRadius: 12,
                 background: isOnDark
                   ? '#ffffff'
-                  : 'linear-gradient(180deg, #c8000a 0%, #7f0005 100%)',
+                  : GRADIENTS.panda,
                 border: 'none',
-                color: isOnDark ? '#7f0005' : '#ffffff',
+                color: isOnDark ? PRIMARY : '#ffffff',
                 fontSize: 15, fontWeight: 700,
                 cursor: 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,

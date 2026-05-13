@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { Flex, Typography } from 'antd';
 import { CaretLeftIcon } from '@phosphor-icons/react';
+import { TEXT_PRIMARY, TEXT_SECONDARY } from '../../constants/theme.js';
 
 const { Text } = Typography;
 
@@ -26,20 +27,20 @@ export default function PageHeader({ title, back, onBack, action }) {
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 width: 40, height: 40, border: 'none', background: 'none',
-                cursor: 'pointer', color: '#595959', flexShrink: 0, marginLeft: -8,
+                cursor: 'pointer', color: TEXT_SECONDARY, flexShrink: 0, marginLeft: -8,
                 borderRadius: 12,
                 transition: 'scale 150ms ease-out, color 100ms ease-out',
               }}
-              onPointerDown={(e) => { e.currentTarget.style.scale = '0.96'; e.currentTarget.style.color = '#1d1d1f'; }}
-              onPointerUp={(e) => { e.currentTarget.style.scale = '1'; e.currentTarget.style.color = '#595959'; }}
-              onPointerLeave={(e) => { e.currentTarget.style.scale = '1'; e.currentTarget.style.color = '#595959'; }}
+              onPointerDown={(e) => { e.currentTarget.style.scale = '0.96'; e.currentTarget.style.color = TEXT_PRIMARY; }}
+              onPointerUp={(e) => { e.currentTarget.style.scale = '1'; e.currentTarget.style.color = TEXT_SECONDARY; }}
+              onPointerLeave={(e) => { e.currentTarget.style.scale = '1'; e.currentTarget.style.color = TEXT_SECONDARY; }}
             >
               <CaretLeftIcon size={20} weight="bold" />
             </button>
           )}
           <Text
             strong
-            style={{ flex: 1, fontSize: 17, color: '#1d1d1f', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+            style={{ flex: 1, fontSize: 17, color: TEXT_PRIMARY, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
           >
             {title}
           </Text>

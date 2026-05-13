@@ -1,6 +1,12 @@
 // 수업 횟수에 따라 팬더가 성장하는 인터랙티브 위젯
 import { useState, useRef, useCallback } from 'react';
 import { LeafIcon, HandHeartIcon } from '@phosphor-icons/react';
+import {
+  PRIMARY, PRIMARY_LIGHT, PRIMARY_BG, PRIMARY_ALPHA_20,
+  TEXT_PRIMARY, TEXT_SECONDARY, TEXT_TERTIARY, TEXT_INACTIVE, TEXT_DISABLED,
+  BORDER_DEFAULT,
+  GRADIENTS,
+} from '../../constants/theme.js';
 
 export const STAGES = [
   { min: 0,   max: 2,         label: '알에서 깨어나는 중', message: '첫 수업이 기다려져요! 🥚', img: '/panda/Cha_Panda_Step_00.svg', nextAt: 3 },
@@ -265,9 +271,9 @@ export default function PandaWidget({ foodSources = [], storageKey = DEFAULT_FEE
           {/* 왼쪽: Lv 배지 + 스테이지 이름 */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <div style={{
-              background: '#7f0005',
+              background: PRIMARY,
               color: 'white',
-              fontSize: 12, fontWeight: 800,
+              fontSize: 12, fontWeight: 700,
               padding: '3px 7px',
               borderRadius: 6,
               letterSpacing: '0.08em',
@@ -276,7 +282,7 @@ export default function PandaWidget({ foodSources = [], storageKey = DEFAULT_FEE
             }}>
               LV.{stageIdx + 1}
             </div>
-            <span style={{ fontSize: 15, fontWeight: 700, color: '#1d1d1f' }}>
+            <span style={{ fontSize: 15, fontWeight: 700, color: TEXT_PRIMARY }}>
               {stage.label}
             </span>
           </div>
@@ -284,17 +290,17 @@ export default function PandaWidget({ foodSources = [], storageKey = DEFAULT_FEE
           {/* 오른쪽: 먹이 카운터 (게임 재화 스타일) */}
           <div style={{
             display: 'flex', alignItems: 'center', gap: 5,
-            background: available > 0 ? '#fff0f1' : '#f5f5f5',
+            background: available > 0 ? PRIMARY_BG : '#f5f5f5',
             border: `1px solid ${available > 0 ? 'rgba(127,0,5,0.12)' : 'rgba(0,0,0,0.05)'}`,
             borderRadius: 8, padding: '4px 10px',
             transitionProperty: 'background-color, border-color',
             transitionDuration: '0.3s',
             transitionTimingFunction: 'ease',
           }}>
-            <LeafIcon size={14} weight="fill" color={available > 0 ? '#7f0005' : '#bfbfbf'} />
+            <LeafIcon size={14} weight="fill" color={available > 0 ? PRIMARY : TEXT_DISABLED} />
             <span style={{
               fontSize: 14, fontWeight: 700,
-              color: available > 0 ? '#7f0005' : '#bfbfbf',
+              color: available > 0 ? PRIMARY : TEXT_DISABLED,
               fontVariantNumeric: 'tabular-nums',
             }}>
               ×{available}
@@ -309,7 +315,7 @@ export default function PandaWidget({ foodSources = [], storageKey = DEFAULT_FEE
           {showBadge && (
             <div style={{
               position: 'absolute', top: 8, left: '50%', transform: 'translateX(-50%)',
-              background: 'linear-gradient(135deg, #7f0005, #9a0007)',
+              background: `linear-gradient(135deg, ${PRIMARY}, ${PRIMARY_LIGHT})`,
               color: 'white', fontWeight: 700, fontSize: 12,
               padding: '5px 16px', borderRadius: 20,
               zIndex: 10, whiteSpace: 'nowrap',
@@ -354,7 +360,7 @@ export default function PandaWidget({ foodSources = [], storageKey = DEFAULT_FEE
 
           {/* 스테이지 메시지 */}
           <p style={{
-            fontSize: 15, color: '#595959', margin: '2px 0 0',
+            fontSize: 15, color: TEXT_SECONDARY, margin: '2px 0 0',
             textAlign: 'center', wordBreak: 'keep-all', lineHeight: 1.5,
           }}>
             {stage.message}
@@ -368,18 +374,18 @@ export default function PandaWidget({ foodSources = [], storageKey = DEFAULT_FEE
             marginBottom: 6,
           }}>
             <span style={{
-              fontSize: 12, fontWeight: 800, color: '#7f0005',
+              fontSize: 12, fontWeight: 700, color: PRIMARY,
               letterSpacing: '0.12em', textTransform: 'uppercase',
             }}>
               EXP
             </span>
             {stage.nextAt != null ? (
-              <span style={{ fontSize: 13, color: '#8c8c8c', fontVariantNumeric: 'tabular-nums' }}>
-                <strong style={{ color: '#1d1d1f' }}>{fedTotal}</strong>
+              <span style={{ fontSize: 13, color: TEXT_INACTIVE, fontVariantNumeric: 'tabular-nums' }}>
+                <strong style={{ color: TEXT_PRIMARY }}>{fedTotal}</strong>
                 {' / '}{stage.nextAt}
               </span>
             ) : (
-              <span style={{ fontSize: 13, fontWeight: 700, color: '#7f0005' }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: PRIMARY }}>
                 MAX 👑
               </span>
             )}
@@ -397,7 +403,7 @@ export default function PandaWidget({ foodSources = [], storageKey = DEFAULT_FEE
               width: `${progress}%`, height: '100%',
               background: stage.nextAt == null
                 ? 'linear-gradient(90deg, #fbbf24 0%, #f59e0b 100%)'
-                : 'linear-gradient(180deg, #c8000a 0%, #7f0005 100%)',
+                : GRADIENTS.panda,
               borderRadius: 4,
               boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.28)',
               transitionProperty: 'width',
@@ -409,7 +415,7 @@ export default function PandaWidget({ foodSources = [], storageKey = DEFAULT_FEE
           {/* 다음 레벨까지 */}
           {stage.nextAt != null && (
             <p style={{
-              fontSize: 12, color: '#bfbfbf',
+              fontSize: 12, color: TEXT_DISABLED,
               margin: '5px 0 0', textAlign: 'right',
               fontVariantNumeric: 'tabular-nums',
             }}>
@@ -431,9 +437,9 @@ export default function PandaWidget({ foodSources = [], storageKey = DEFAULT_FEE
               border: 'none',
               cursor: isFeeding ? 'not-allowed' : 'pointer',
               background: canFeed
-                ? 'linear-gradient(180deg, #c8000a 0%, #7f0005 100%)'
-                : '#ebebeb',
-              color: canFeed ? '#ffffff' : '#bfbfbf',
+                ? GRADIENTS.panda
+                : BORDER_DEFAULT,
+              color: canFeed ? '#ffffff' : TEXT_DISABLED,
               fontSize: 15, fontWeight: 700,
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
               WebkitTapHighlightColor: 'transparent',
@@ -457,7 +463,7 @@ export default function PandaWidget({ foodSources = [], storageKey = DEFAULT_FEE
               border: '1.5px solid rgba(0,0,0,0.1)',
               cursor: 'pointer',
               background: '#ffffff',
-              color: '#595959',
+              color: TEXT_SECONDARY,
               fontSize: 15, fontWeight: 600,
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
               WebkitTapHighlightColor: 'transparent',
@@ -481,10 +487,10 @@ export default function PandaWidget({ foodSources = [], storageKey = DEFAULT_FEE
             className="active:scale-[0.96]"
             style={{
               width: '100%', height: 42, borderRadius: 12, marginTop: 8,
-              border: '1.5px solid rgba(127,0,5,0.2)',
+              border: `1.5px solid ${PRIMARY_ALPHA_20}`,
               cursor: canFeed ? 'pointer' : 'not-allowed',
-              background: '#fff0f1',
-              color: canFeed ? '#7f0005' : '#bfbfbf',
+              background: PRIMARY_BG,
+              color: canFeed ? PRIMARY : TEXT_DISABLED,
               fontSize: 14, fontWeight: 700,
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
               WebkitTapHighlightColor: 'transparent',
@@ -513,9 +519,9 @@ export default function PandaWidget({ foodSources = [], storageKey = DEFAULT_FEE
             background: '#f5f5f5',
             borderRadius: 10,
             padding: '10px 14px',
-            fontSize: 14, color: '#767676', fontWeight: 500,
+            fontSize: 14, color: TEXT_TERTIARY, fontWeight: 500,
           }}>
-            <LeafIcon size={13} weight="fill" color="#bfbfbf" />
+            <LeafIcon size={13} weight="fill" color={TEXT_DISABLED} />
             수업 30분마다 먹이가 생겨요
           </div>
         </div>

@@ -8,6 +8,12 @@ import AudioPlayer from '../components/ui/AudioPlayer.jsx';
 import AudioRecorder from '../components/ui/AudioRecorder.jsx';
 import FoodEarnedToast from '../components/ui/FoodEarnedToast.jsx';
 import {
+  PRIMARY, PRIMARY_BG, PRIMARY_ALPHA_20,
+  TEXT_PRIMARY, TEXT_SECONDARY, TEXT_TERTIARY, TEXT_INACTIVE, TEXT_DISABLED,
+  BG_APP, BORDER_NEUTRAL,
+  STATUS_SUCCESS_DARK, STATUS_ERROR,
+} from '../constants/theme.js';
+import {
   fetchMyHomework,
   parseHomework,
   submitHomework,
@@ -177,7 +183,7 @@ export default function PersonalHomeworkDetailPage() {
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     width: 44, height: 44, marginLeft: -8, padding: 0,
     border: 'none', background: 'none', cursor: 'pointer',
-    color: '#595959', WebkitTapHighlightColor: 'transparent', flexShrink: 0,
+    color: TEXT_SECONDARY, WebkitTapHighlightColor: 'transparent', flexShrink: 0,
   };
 
   const BackButton = () => (
@@ -192,7 +198,7 @@ export default function PersonalHomeworkDetailPage() {
   );
 
   if (loading) return (
-    <div style={{ minHeight: '100dvh', background: '#f9fafb' }}>
+    <div style={{ minHeight: '100dvh', background: BG_APP }}>
       <div style={headerStyle}>
         <div style={innerStyle}><BackButton /></div>
       </div>
@@ -201,11 +207,11 @@ export default function PersonalHomeworkDetailPage() {
   );
 
   if (error) return (
-    <div style={{ minHeight: '100dvh', background: '#f9fafb' }}>
+    <div style={{ minHeight: '100dvh', background: BG_APP }}>
       <div style={headerStyle}>
         <div style={innerStyle}>
           <BackButton />
-          <h1 style={{ fontSize: 17, fontWeight: 700, color: '#1d1d1f', margin: 0 }}>숙제 상세</h1>
+          <h1 style={{ fontSize: 17, fontWeight: 700, color: TEXT_PRIMARY, margin: 0 }}>숙제 상세</h1>
         </div>
       </div>
       <ErrorMessage message={error} onRetry={load} />
@@ -234,7 +240,7 @@ export default function PersonalHomeworkDetailPage() {
       <div style={{ ...headerStyle, position: 'sticky', top: 0, zIndex: 100 }}>
         <div style={innerStyle}>
           <BackButton />
-          <h1 style={{ flex: 1, fontSize: 17, fontWeight: 700, color: '#1d1d1f', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <h1 style={{ flex: 1, fontSize: 17, fontWeight: 700, color: TEXT_PRIMARY, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {hw.title}
           </h1>
           <span style={{ flexShrink: 0, fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: bg, color: text }}>
@@ -243,13 +249,13 @@ export default function PersonalHomeworkDetailPage() {
         </div>
       </div>
 
-      <div style={{ background: '#f9fafb', minHeight: 'calc(100dvh - 56px)' }}>
+      <div style={{ background: BG_APP, minHeight: 'calc(100dvh - 56px)' }}>
         <div style={{ maxWidth: 480, margin: '0 auto', padding: '20px 16px 80px' }}>
 
         {/* 숙제 내용 */}
         {hw.content && (
           <div style={{ background: '#fff', borderRadius: 16, padding: '16px', marginBottom: 12, boxShadow: 'var(--shadow-border)' }}>
-            <p style={{ fontSize: 13, fontWeight: 600, color: '#595959', margin: '0 0 8px' }}>숙제 내용</p>
+            <p style={{ fontSize: 13, fontWeight: 600, color: TEXT_SECONDARY, margin: '0 0 8px' }}>숙제 내용</p>
             <p style={{ fontSize: 14, color: '#262626', lineHeight: 1.7, whiteSpace: 'pre-wrap', margin: 0 }}>{hw.content}</p>
           </div>
         )}
@@ -257,7 +263,7 @@ export default function PersonalHomeworkDetailPage() {
         {/* 내 제출 파일 */}
         {hw.submitFiles?.length > 0 && (
           <div style={{ background: '#fff', borderRadius: 16, padding: '16px', marginBottom: 12, boxShadow: 'var(--shadow-border)' }}>
-            <p style={{ fontSize: 13, fontWeight: 600, color: '#595959', margin: '0 0 10px' }}>내 제출 파일</p>
+            <p style={{ fontSize: 13, fontWeight: 600, color: TEXT_SECONDARY, margin: '0 0 10px' }}>내 제출 파일</p>
             {hw.submitFiles.map((f, i) => (
               <div key={i} style={{ marginBottom: i < hw.submitFiles.length - 1 ? 8 : 0 }}>
                 <AudioPlayer
@@ -270,7 +276,7 @@ export default function PersonalHomeworkDetailPage() {
               </div>
             ))}
             {hw.submitDate && (
-              <p style={{ fontSize: 12, color: '#767676', marginTop: 8 }}>
+              <p style={{ fontSize: 12, color: TEXT_TERTIARY, marginTop: 8 }}>
                 제출일: <span className="tabular-nums">{formatDateTimeCompact(hw.submitDate)}</span>
               </p>
             )}
@@ -280,7 +286,7 @@ export default function PersonalHomeworkDetailPage() {
         {/* 선생님 피드백 */}
         {(hw.feedbackText || hw.feedbackFiles?.length > 0) && (
           <div style={{ background: '#f6ffed', border: '1px solid #b7eb8f', borderRadius: 16, padding: '16px', marginBottom: 12 }}>
-            <p style={{ fontSize: 13, fontWeight: 700, color: '#389e0d', margin: '0 0 10px' }}>선생님 피드백</p>
+            <p style={{ fontSize: 13, fontWeight: 700, color: STATUS_SUCCESS_DARK, margin: '0 0 10px' }}>선생님 피드백</p>
             {hw.feedbackText && (
               <p style={{ fontSize: 14, color: '#262626', lineHeight: 1.7, whiteSpace: 'pre-wrap', margin: hw.feedbackFiles?.length > 0 ? '0 0 10px' : 0 }}>
                 {hw.feedbackText}
@@ -296,7 +302,7 @@ export default function PersonalHomeworkDetailPage() {
               </div>
             ))}
             {hw.feedbackDate && (
-              <p style={{ fontSize: 12, color: '#8c8c8c', marginTop: 8 }}>
+              <p style={{ fontSize: 12, color: TEXT_INACTIVE, marginTop: 8 }}>
                 피드백일: <span className="tabular-nums">{formatDateTimeCompact(hw.feedbackDate)}</span>
               </p>
             )}
@@ -310,9 +316,9 @@ export default function PersonalHomeworkDetailPage() {
             onClick={openModal}
             className="active:scale-[0.96] transition-[scale,background-color] duration-150 ease-out"
             style={{
-              width: '100%', height: 48, borderRadius: 14,
-              background: '#fff0f1', border: '1.5px solid rgba(127,0,5,0.2)',
-              color: '#7f0005', fontSize: 15, fontWeight: 700, cursor: 'pointer',
+              width: '100%', height: 48, borderRadius: 12,
+              background: PRIMARY_BG, border: `1.5px solid ${PRIMARY_ALPHA_20}`,
+              color: PRIMARY, fontSize: 15, fontWeight: 700, cursor: 'pointer',
               WebkitTapHighlightColor: 'transparent', marginBottom: 10,
             }}
           >
@@ -323,7 +329,7 @@ export default function PersonalHomeworkDetailPage() {
         {/* 피드백완료 후 수정 불가 안내 */}
         {isFeedback && (
           <p style={{
-            fontSize: 12, color: '#8c8c8c',
+            fontSize: 12, color: TEXT_INACTIVE,
             textAlign: 'center', margin: '0 0 10px',
             wordBreak: 'keep-all',
           }}>
@@ -338,9 +344,9 @@ export default function PersonalHomeworkDetailPage() {
             onClick={() => { forceArchive(studentToken, hwId); navigate(-1); }}
             className="active:scale-[0.96] transition-[scale] duration-150 ease-out"
             style={{
-              width: '100%', height: 44, borderRadius: 14,
-              background: 'none', border: '1.5px solid #d9d9d9',
-              color: '#8c8c8c', fontSize: 14, fontWeight: 500, cursor: 'pointer',
+              width: '100%', height: 44, borderRadius: 12,
+              background: 'none', border: `1.5px solid ${BORDER_NEUTRAL}`,
+              color: TEXT_INACTIVE, fontSize: 14, fontWeight: 500, cursor: 'pointer',
               WebkitTapHighlightColor: 'transparent',
             }}
           >
@@ -362,7 +368,7 @@ export default function PersonalHomeworkDetailPage() {
                 type="button"
                 onClick={() => setModalView('list')}
                 className="active:scale-[0.96] transition-[scale,color] duration-150 ease-out"
-                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: '#595959', padding: '0 4px 0 0', display: 'flex', alignItems: 'center' }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: TEXT_SECONDARY, padding: '0 4px 0 0', display: 'flex', alignItems: 'center' }}
                 aria-label="뒤로"
               >
                 <CaretLeftIcon size={18} weight="bold" />
@@ -381,7 +387,7 @@ export default function PersonalHomeworkDetailPage() {
           <div>
             {pendingFiles.length > 0 && (
               <div style={{ marginBottom: 12 }}>
-                <p style={{ fontSize: 12, fontWeight: 600, color: '#595959', margin: '0 0 6px' }}>
+                <p style={{ fontSize: 12, fontWeight: 600, color: TEXT_SECONDARY, margin: '0 0 6px' }}>
                   새로 추가할 파일 ({pendingFiles.length}개)
                 </p>
                 {pendingFiles.map((pf) => (
@@ -390,13 +396,13 @@ export default function PersonalHomeworkDetailPage() {
                     padding: '8px 12px', background: '#f6ffed', border: '1px solid #b7eb8f',
                     borderRadius: 12, marginBottom: 6,
                   }}>
-                    <span style={{ fontSize: 13, color: '#1d1d1f', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <span style={{ fontSize: 13, color: TEXT_PRIMARY, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {pf.name}
                     </span>
                     <button
                       type="button"
                       onClick={() => removeFile(pf.tempId)}
-                      style={{ marginLeft: 10, background: 'none', border: 'none', cursor: 'pointer', color: '#bfbfbf', fontSize: 18, flexShrink: 0, padding: 0, lineHeight: 1 }}
+                      style={{ marginLeft: 10, background: 'none', border: 'none', cursor: 'pointer', color: TEXT_DISABLED, fontSize: 18, flexShrink: 0, padding: 0, lineHeight: 1 }}
                       aria-label="삭제"
                     >×</button>
                   </div>
@@ -409,7 +415,7 @@ export default function PersonalHomeworkDetailPage() {
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   className="active:scale-[0.96] transition-[scale,background-color] duration-150 ease-out"
-                  style={{ flex: 1, height: 44, borderRadius: 12, background: 'white', border: '1.5px solid #d9d9d9', color: '#595959', fontSize: 14, fontWeight: 600, cursor: 'pointer', WebkitTapHighlightColor: 'transparent' }}
+                  style={{ flex: 1, height: 44, borderRadius: 12, background: 'white', border: `1.5px solid ${BORDER_NEUTRAL}`, color: TEXT_SECONDARY, fontSize: 14, fontWeight: 600, cursor: 'pointer', WebkitTapHighlightColor: 'transparent' }}
                 >
                   파일 추가
                 </button>
@@ -417,7 +423,7 @@ export default function PersonalHomeworkDetailPage() {
                   type="button"
                   onClick={() => setModalView('record')}
                   className="active:scale-[0.96] transition-[scale,background-color] duration-150 ease-out"
-                  style={{ flex: 1, height: 44, borderRadius: 12, background: '#7f0005', border: 'none', color: 'white', fontSize: 14, fontWeight: 600, cursor: 'pointer', WebkitTapHighlightColor: 'transparent' }}
+                  style={{ flex: 1, height: 44, borderRadius: 12, background: PRIMARY, border: 'none', color: 'white', fontSize: 14, fontWeight: 600, cursor: 'pointer', WebkitTapHighlightColor: 'transparent' }}
                 >
                   바로 녹음
                 </button>
@@ -441,7 +447,7 @@ export default function PersonalHomeworkDetailPage() {
 
         {modalView === 'naming' && namingFile && (
           <div>
-            <p style={{ fontSize: 13, color: '#595959', margin: '0 0 8px' }}>파일 이름을 입력하세요</p>
+            <p style={{ fontSize: 13, color: TEXT_SECONDARY, margin: '0 0 8px' }}>파일 이름을 입력하세요</p>
             <input
               type="text"
               value={namingInput}
@@ -449,7 +455,7 @@ export default function PersonalHomeworkDetailPage() {
               onKeyDown={(e) => e.key === 'Enter' && handleNamingConfirm()}
               maxLength={50}
               autoFocus
-              style={{ width: '100%', height: 44, borderRadius: 12, border: '1.5px solid #d9d9d9', padding: '0 14px', fontSize: 15, color: '#1d1d1f', boxSizing: 'border-box', outline: 'none', marginBottom: 12 }}
+              style={{ width: '100%', height: 44, borderRadius: 12, border: `1.5px solid ${BORDER_NEUTRAL}`, padding: '0 14px', fontSize: 15, color: TEXT_PRIMARY, boxSizing: 'border-box', outline: 'none', marginBottom: 12 }}
               onFocus={(e) => e.target.select()}
             />
             <Button
@@ -474,15 +480,15 @@ export default function PersonalHomeworkDetailPage() {
         centered
         destroyOnHidden
       >
-        <p style={{ fontSize: 14, color: '#595959', margin: '0 0 20px', lineHeight: 1.6 }}>
-          <strong style={{ color: '#1d1d1f' }}>{deleteConfirmFile?.replace(/\.[^/.]+$/, '')}</strong> 파일을 삭제할까요?<br />
+        <p style={{ fontSize: 14, color: TEXT_SECONDARY, margin: '0 0 20px', lineHeight: 1.6 }}>
+          <strong style={{ color: TEXT_PRIMARY }}>{deleteConfirmFile?.replace(/\.[^/.]+$/, '')}</strong> 파일을 삭제할까요?<br />
           삭제 후에는 복구할 수 없어요.
         </p>
         <div style={{ display: 'flex', gap: 8 }}>
           <button
             type="button"
             onClick={() => setDeleteConfirmFile(null)}
-            style={{ flex: 1, height: 44, borderRadius: 12, border: '1.5px solid #d9d9d9', background: '#fff', color: '#595959', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
+            style={{ flex: 1, height: 44, borderRadius: 12, border: `1.5px solid ${BORDER_NEUTRAL}`, background: '#fff', color: TEXT_SECONDARY, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
           >
             취소
           </button>
@@ -490,7 +496,7 @@ export default function PersonalHomeworkDetailPage() {
             type="button"
             onClick={() => handleDeleteFile(deleteConfirmFile)}
             className="active:scale-[0.96] transition-[scale] duration-150 ease-out"
-            style={{ flex: 1, height: 44, borderRadius: 12, border: 'none', background: '#ff4d4f', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
+            style={{ flex: 1, height: 44, borderRadius: 12, border: 'none', background: STATUS_ERROR, color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
           >
             삭제
           </button>

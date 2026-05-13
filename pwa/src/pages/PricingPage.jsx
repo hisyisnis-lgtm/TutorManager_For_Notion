@@ -2,7 +2,12 @@ import { useState } from 'react';
 import { ConfigProvider, Card, Flex, Space, Tag, Typography, Divider } from 'antd';
 import { CheckCircleIcon, GiftIcon, CaretRightIcon, InfoIcon } from '@phosphor-icons/react';
 import { useNavigate } from 'react-router-dom';
-import { PRIMARY, antdTheme } from '../constants/theme';
+import {
+  PRIMARY, PRIMARY_BG, antdTheme,
+  TEXT_BODY, TEXT_SECONDARY, TEXT_INACTIVE, TEXT_DISABLED,
+  STATUS_SUCCESS, STATUS_SUCCESS_DARK, STATUS_SUCCESS_BG,
+  BORDER_NEUTRAL,
+} from '../constants/theme';
 import FadeUp from '../components/FadeUp';
 import TabPanel from '../components/TabPanel';
 import CheckItem from '../components/ui/CheckItem';
@@ -168,17 +173,17 @@ export default function PricingPage() {
               <FadeUp delay={80}>
                 <Card variant="borderless" style={{ borderRadius: 12, boxShadow: 'var(--shadow-border)' }} styles={{ body: { padding: 16 } }}>
                   <Flex align="center" gap={8} style={{ marginBottom: 8 }}>
-                    <Tag style={{ backgroundColor: '#f6ffed', color: '#389e0d', border: '1px solid #d9f7be', borderRadius: 20, fontSize: 11, fontWeight: 700, padding: '1px 9px', margin: 0 }}>
+                    <Tag style={{ backgroundColor: STATUS_SUCCESS_BG, color: STATUS_SUCCESS_DARK, border: '1px solid #d9f7be', borderRadius: 20, fontSize: 11, fontWeight: 700, padding: '1px 9px', margin: 0 }}>
                       FREE
                     </Tag>
                     <Text type="secondary" style={{ fontSize: 12 }}>30분</Text>
                   </Flex>
-                  <Text strong style={{ fontSize: 15, color: '#1a1a1a', display: 'block', marginBottom: 6 }}>무료 맞춤 상담</Text>
+                  <Text strong style={{ fontSize: 15, color: TEXT_BODY, display: 'block', marginBottom: 6 }}>무료 맞춤 상담</Text>
                   <Text type="secondary" style={{ fontSize: 13, lineHeight: 1.65, display: 'block', marginBottom: 12 }}>
                     처음 시작하시는 분, 또는 공부는 했지만 회화가 막막하신 분께 추천드립니다.
                   </Text>
-                  <div style={{ backgroundColor: '#f6ffed', borderRadius: 10, padding: '11px 14px' }}>
-                    <CheckItem color="#52c41a" textColor="#3d3d3d">
+                  <div style={{ backgroundColor: STATUS_SUCCESS_BG, borderRadius: 10, padding: '11px 14px' }}>
+                    <CheckItem color={STATUS_SUCCESS} textColor="#3d3d3d">
                       내 연습 방법이 맞는지 점검하고, 앞으로의 방향을 명확하게 잡을 수 있습니다.
                     </CheckItem>
                   </div>
@@ -190,10 +195,10 @@ export default function PricingPage() {
                 <div style={{ flex: 1, height: 1, backgroundColor: '#e8e8e8' }} />
                 <div style={{
                   display: 'inline-flex', alignItems: 'center',
-                  border: '1px solid #d9d9d9', borderRadius: 20,
+                  border: `1px solid ${BORDER_NEUTRAL}`, borderRadius: 20,
                   padding: '3px 12px', backgroundColor: '#e8e8e8',
                 }}>
-                  <Text style={{ fontSize: 12, fontWeight: 700, color: '#595959', letterSpacing: '0.06em', lineHeight: 1 }}>OR</Text>
+                  <Text style={{ fontSize: 12, fontWeight: 700, color: TEXT_SECONDARY, letterSpacing: '0.06em', lineHeight: 1 }}>OR</Text>
                 </div>
                 <div style={{ flex: 1, height: 1, backgroundColor: '#e8e8e8' }} />
               </Flex>
@@ -203,7 +208,7 @@ export default function PricingPage() {
                 <Card variant="borderless" style={{ borderRadius: 12, boxShadow: 'var(--shadow-border-brand)' }} styles={{ body: { padding: 16 } }}>
                   <Flex justify="space-between" align="center" style={{ marginBottom: 8 }}>
                     <Flex align="center" gap={8}>
-                      <Tag style={{ backgroundColor: '#fff0f1', color: PRIMARY, border: `1px solid #ffb3b5`, borderRadius: 20, fontSize: 11, fontWeight: 700, padding: '1px 9px', margin: 0 }}>
+                      <Tag style={{ backgroundColor: PRIMARY_BG, color: PRIMARY, border: `1px solid #ffb3b5`, borderRadius: 20, fontSize: 11, fontWeight: 700, padding: '1px 9px', margin: 0 }}>
                         체험
                       </Tag>
                       <Text type="secondary" style={{ fontSize: 12 }}>90분</Text>
@@ -212,7 +217,7 @@ export default function PricingPage() {
                       50,000원
                     </Text>
                   </Flex>
-                  <Text strong style={{ fontSize: 15, color: '#1a1a1a', display: 'block', marginBottom: 6 }}>집중 상담 & 프리미엄 첫 수업</Text>
+                  <Text strong style={{ fontSize: 15, color: TEXT_BODY, display: 'block', marginBottom: 6 }}>집중 상담 & 프리미엄 첫 수업</Text>
                   <Text type="secondary" style={{ fontSize: 13, lineHeight: 1.65, display: 'block', marginBottom: 12 }}>
                     하늘쌤의 수업 방식을 직접 경험해보고 결정하고 싶은 분께 추천드립니다.
                   </Text>
@@ -222,11 +227,11 @@ export default function PricingPage() {
                     {['사전 설문', '30분 집중상담', '60분 본수업'].flatMap((step, i, arr) => {
                       const els = [
                         <div key={step} style={{ backgroundColor: '#f5f5f5', borderRadius: 20, padding: '4px 11px' }}>
-                          <Text style={{ fontSize: 12, color: '#595959' }}>{step}</Text>
+                          <Text style={{ fontSize: 12, color: TEXT_SECONDARY }}>{step}</Text>
                         </div>,
                       ];
                       if (i < arr.length - 1) {
-                        els.push(<CaretRightIcon weight="fill" key={`arr-${i}`} size={10} style={{ color: '#bfbfbf' }} />);
+                        els.push(<CaretRightIcon weight="fill" key={`arr-${i}`} size={10} style={{ color: TEXT_DISABLED }} />);
                       }
                       return els;
                     })}
@@ -245,9 +250,9 @@ export default function PricingPage() {
               <FadeUp delay={200}>
                 <div style={{ backgroundColor: '#e8e8e8', borderRadius: 10, padding: '11px 14px' }}>
                   <Space size={8} align="start">
-                    <InfoIcon weight="fill" size={13} style={{ color: '#8c8c8c', marginTop: 2, flexShrink: 0 }} />
-                    <Text style={{ fontSize: 13, color: '#595959', lineHeight: 1.6 }}>
-                      두 가지 방법 중 <Text strong style={{ color: '#1a1a1a' }}>하나만 선택</Text> 가능합니다.
+                    <InfoIcon weight="fill" size={13} style={{ color: TEXT_INACTIVE, marginTop: 2, flexShrink: 0 }} />
+                    <Text style={{ fontSize: 13, color: TEXT_SECONDARY, lineHeight: 1.6 }}>
+                      두 가지 방법 중 <Text strong style={{ color: TEXT_BODY }}>하나만 선택</Text> 가능합니다.
                     </Text>
                   </Space>
                 </div>
@@ -276,7 +281,7 @@ export default function PricingPage() {
                     <Text strong style={{ fontSize: 13, color: '#a07800', display: 'block', marginBottom: 4 }}>
                       첫 등록 스페셜 혜택
                     </Text>
-                    <Text style={{ fontSize: 13, color: '#595959', lineHeight: 1.65 }}>
+                    <Text style={{ fontSize: 13, color: TEXT_SECONDARY, lineHeight: 1.65 }}>
                       첫 상담·수업 후 <Text strong>3일 이내</Text> 30만 원 이상 등록 시<br />
                       <Text strong>교재 & 학습 굿즈 3종 세트</Text> 무료 증정
                     </Text>
@@ -289,29 +294,29 @@ export default function PricingPage() {
 
               {/* ── 베이직 플랜 ── */}
               <FadeUp delay={120}>
-                <div style={{ position: 'relative', borderRadius: 14, padding: 2, overflow: 'hidden', boxShadow: '0 4px 16px rgba(82,196,26,0.2)', background: '#52c41a' }}>
+                <div style={{ position: 'relative', borderRadius: 14, padding: 2, overflow: 'hidden', boxShadow: '0 4px 16px rgba(82,196,26,0.2)', background: STATUS_SUCCESS }}>
                 <div style={{ position: 'relative', zIndex: 1, borderRadius: 12, overflow: 'hidden' }}>
                 <Card variant="borderless" style={{ borderRadius: 12, backgroundColor: 'white', border: 'none' }} styles={{ body: { padding: 16 } }}>
                   <Flex justify="space-between" align="center" style={{ marginBottom: 12 }}>
                     <div style={{ position: 'relative', display: 'inline-flex' }}>
-                      <Tag style={{ backgroundColor: 'rgba(82,196,26,0.1)', color: '#389e0d', border: '1px solid rgba(82,196,26,0.25)', borderRadius: 20, fontSize: 12, fontWeight: 700, padding: '2px 10px', margin: 0 }}>
+                      <Tag style={{ backgroundColor: 'rgba(82,196,26,0.1)', color: STATUS_SUCCESS_DARK, border: '1px solid rgba(82,196,26,0.25)', borderRadius: 20, fontSize: 12, fontWeight: 700, padding: '2px 10px', margin: 0 }}>
                         🌱 꾸준히 성장
                       </Tag>
-                      <span data-particle aria-hidden="true" style={{ position: 'absolute', left: 8,  top: -8,  width: 3.5, height: 3.5, borderRadius: '50%', backgroundColor: '#52c41a', animation: 'sparkFloat 2.2s ease-out 0s infinite',    pointerEvents: 'none' }} />
+                      <span data-particle aria-hidden="true" style={{ position: 'absolute', left: 8,  top: -8,  width: 3.5, height: 3.5, borderRadius: '50%', backgroundColor: STATUS_SUCCESS, animation: 'sparkFloat 2.2s ease-out 0s infinite',    pointerEvents: 'none' }} />
                       <span data-particle aria-hidden="true" style={{ position: 'absolute', left: 18, top: -13, width: 2.5, height: 2.5, borderRadius: '50%', backgroundColor: '#95de64', animation: 'sparkFloat 1.9s ease-out 0.6s infinite',  pointerEvents: 'none' }} />
                       <span data-particle aria-hidden="true" style={{ position: 'absolute', left: 3,  top: -6,  width: 3,   height: 3,   borderRadius: '50%', backgroundColor: '#73d13d', animation: 'sparkFloat 2.4s ease-out 1.2s infinite',  pointerEvents: 'none' }} />
                       <span data-particle aria-hidden="true" style={{ position: 'absolute', left: 25, top: -10, width: 2.5, height: 2.5, borderRadius: '50%', backgroundColor: '#b7eb8f', animation: 'sparkFloat 2.0s ease-out 1.8s infinite',  pointerEvents: 'none' }} />
-                      <span data-particle aria-hidden="true" style={{ position: 'absolute', left: 13, top: -16, width: 2,   height: 2,   borderRadius: '50%', backgroundColor: '#52c41a', animation: 'sparkFloat 1.6s ease-out 1.0s infinite',  pointerEvents: 'none' }} />
+                      <span data-particle aria-hidden="true" style={{ position: 'absolute', left: 13, top: -16, width: 2,   height: 2,   borderRadius: '50%', backgroundColor: STATUS_SUCCESS, animation: 'sparkFloat 1.6s ease-out 1.0s infinite',  pointerEvents: 'none' }} />
                     </div>
-                    <Text style={{ fontSize: 11, fontWeight: 700, color: '#8c8c8c', letterSpacing: '0.12em' }}>BASIC</Text>
+                    <Text style={{ fontSize: 11, fontWeight: 700, color: TEXT_INACTIVE, letterSpacing: '0.12em' }}>BASIC</Text>
                   </Flex>
                   <Flex justify="space-between" align="flex-start" style={{ marginBottom: 14 }}>
                     <div>
-                      <Text strong style={{ fontSize: 16, color: '#1a1a1a', display: 'block', marginBottom: 2 }}>베이직 플랜</Text>
+                      <Text strong style={{ fontSize: 16, color: TEXT_BODY, display: 'block', marginBottom: 2 }}>베이직 플랜</Text>
                       <Text type="secondary" style={{ fontSize: 13 }}>안정적인 학습 습관 형성</Text>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      <Text className="tabular-nums" style={{ fontSize: 24, fontWeight: 700, color: '#1a1a1a', display: 'block', lineHeight: 1.2 }}>300,000</Text>
+                      <Text className="tabular-nums" style={{ fontSize: 24, fontWeight: 700, color: TEXT_BODY, display: 'block', lineHeight: 1.2 }}>300,000</Text>
                       <Text type="secondary" style={{ fontSize: 12 }}>원 / 월</Text>
                     </div>
                   </Flex>
@@ -322,7 +327,7 @@ export default function PricingPage() {
                       { label: '옵션 B', sub: '주 2회 60분', note: '총 6회' },
                     ].map(({ label, sub, note }) => (
                       <div key={label} style={{ flex: 1, backgroundColor: '#fafafa', borderRadius: 10, padding: '11px 13px' }}>
-                        <Text style={{ fontSize: 11, fontWeight: 700, color: '#bfbfbf', letterSpacing: '0.08em', display: 'block', marginBottom: 5 }}>{label}</Text>
+                        <Text style={{ fontSize: 11, fontWeight: 700, color: TEXT_DISABLED, letterSpacing: '0.08em', display: 'block', marginBottom: 5 }}>{label}</Text>
                         <Text strong style={{ fontSize: 14, display: 'block', marginBottom: 2 }}>{sub}</Text>
                         <Text type="secondary" style={{ fontSize: 12 }}>{note}</Text>
                       </div>
@@ -360,33 +365,33 @@ export default function PricingPage() {
                       <span data-particle aria-hidden="true" style={{ position: 'absolute', left: 21, top: -10, width: 2.5, height: 2.5, borderRadius: '50%', backgroundColor: '#ffaa00', animation: 'sparkFloat 1.9s ease-out 1.7s infinite',  pointerEvents: 'none' }} />
                       <span data-particle aria-hidden="true" style={{ position: 'absolute', left: 11, top: -16, width: 2,   height: 2,   borderRadius: '50%', backgroundColor: '#ff8c00', animation: 'sparkFloat 1.5s ease-out 0.9s infinite',  pointerEvents: 'none' }} />
                     </div>
-                    <Text style={{ fontSize: 11, fontWeight: 700, color: '#8c8c8c', letterSpacing: '0.12em' }}>BOOSTER</Text>
+                    <Text style={{ fontSize: 11, fontWeight: 700, color: TEXT_INACTIVE, letterSpacing: '0.12em' }}>BOOSTER</Text>
                   </Flex>
                   <Flex justify="space-between" align="flex-start" style={{ marginBottom: 10 }}>
                     <div>
-                      <Text strong style={{ color: '#1a1a1a', fontSize: 16, display: 'block' }}>부스터 플랜</Text>
-                      <Text strong style={{ color: '#1a1a1a', fontSize: 16, display: 'block', marginBottom: 3 }}>+발음 교정 1시간</Text>
-                      <Text style={{ color: '#595959', fontSize: 13 }}>주 2회 · 90분 · 총 8회 + 60분 1회</Text>
+                      <Text strong style={{ color: TEXT_BODY, fontSize: 16, display: 'block' }}>부스터 플랜</Text>
+                      <Text strong style={{ color: TEXT_BODY, fontSize: 16, display: 'block', marginBottom: 3 }}>+발음 교정 1시간</Text>
+                      <Text style={{ color: TEXT_SECONDARY, fontSize: 13 }}>주 2회 · 90분 · 총 8회 + 60분 1회</Text>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      <Text className="tabular-nums" style={{ color: '#1a1a1a', fontSize: 24, fontWeight: 700, display: 'block', lineHeight: 1.2 }}>600,000</Text>
-                      <Text style={{ color: '#595959', fontSize: 12 }}>원 / 월</Text>
+                      <Text className="tabular-nums" style={{ color: TEXT_BODY, fontSize: 24, fontWeight: 700, display: 'block', lineHeight: 1.2 }}>600,000</Text>
+                      <Text style={{ color: TEXT_SECONDARY, fontSize: 12 }}>원 / 월</Text>
                     </div>
                   </Flex>
-                  <Text style={{ color: '#595959', fontSize: 13, display: 'block', lineHeight: 1.7, marginBottom: 14 }}>
+                  <Text style={{ color: TEXT_SECONDARY, fontSize: 13, display: 'block', lineHeight: 1.7, marginBottom: 14 }}>
                     빠른 실력 향상을 원한다면 가장 추천합니다. 실제로 가장 눈에 띄는 성장을 보이는 수강생들의 선택입니다.
                   </Text>
                   <div style={{ backgroundColor: 'rgba(127,0,5,0.05)', borderRadius: 10, padding: '12px 14px' }}>
-                    <Text style={{ color: '#1a1a1a', fontSize: 12, fontWeight: 700, display: 'block', marginBottom: 8 }}>포함 혜택</Text>
+                    <Text style={{ color: TEXT_BODY, fontSize: 12, fontWeight: 700, display: 'block', marginBottom: 8 }}>포함 혜택</Text>
                     <Flex vertical gap={8} style={{ marginBottom: 10 }}>
                       {[
                         '교재 & 학습 굿즈 3종 세트',
                         '정규 수업 시작 전 발음 교정 1시간 무료 제공',
                       ].map(item => (
-                        <CheckItem key={item} color={PRIMARY} textColor="#595959" size={13}>{item}</CheckItem>
+                        <CheckItem key={item} color={PRIMARY} textColor={TEXT_SECONDARY} size={13}>{item}</CheckItem>
                       ))}
                     </Flex>
-                    <Text style={{ fontSize: 12, color: '#8c8c8c', lineHeight: 1.6 }}>
+                    <Text style={{ fontSize: 12, color: TEXT_INACTIVE, lineHeight: 1.6 }}>
                       해당 혜택은 첫 등록 시에만 적용됩니다.
                     </Text>
                   </div>
@@ -489,7 +494,7 @@ export default function PricingPage() {
                   '일정 간격을 두고 자주 말하는 구조가 핵심입니다.',
                 ].map(item => <CheckItem key={item}>{item}</CheckItem>)}
               </Flex>
-              <Text style={{ fontSize: 13, color: '#595959', lineHeight: 1.7, textWrap: 'pretty' }}>
+              <Text style={{ fontSize: 13, color: TEXT_SECONDARY, lineHeight: 1.7, textWrap: 'pretty' }}>
                 특히 초반에 발음과 말하기 습관을 잡는 과정에서는 공부 시간보다는 공부 빈도가 중요합니다.
               </Text>
             </FadeUp>
@@ -513,7 +518,7 @@ export default function PricingPage() {
                   }}
                 >
                   <Text style={{ fontSize: 13, fontWeight: 700, color: PRIMARY, width: 60, flexShrink: 0, paddingTop: 1 }}>{label}</Text>
-                  <Text style={{ fontSize: 13, color: '#595959', lineHeight: 1.65, flex: 1, textWrap: 'pretty' }}>{desc}</Text>
+                  <Text style={{ fontSize: 13, color: TEXT_SECONDARY, lineHeight: 1.65, flex: 1, textWrap: 'pretty' }}>{desc}</Text>
                 </div>
               ))}
             </FadeUp>

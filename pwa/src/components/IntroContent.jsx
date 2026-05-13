@@ -10,7 +10,15 @@ import {
   SpeakerHighIcon, ChartLineUpIcon, LightbulbIcon, ChatCircleIcon,
   CaretLeftIcon, CaretRightIcon,
 } from '@phosphor-icons/react';
-import { PRIMARY } from '../constants/theme';
+import {
+  PRIMARY,
+  PRIMARY_BG,
+  TEXT_SECONDARY,
+  TEXT_TERTIARY,
+  BG_APP,
+  BORDER_NEUTRAL,
+  STATUS_ERROR_BORDER,
+} from '../constants/theme';
 import FadeUp from './FadeUp';
 import HeroSection from './ui/HeroSection';
 import CtaSection from './public/CtaSection';
@@ -24,7 +32,7 @@ const REVIEW_URLS = [
 
 const { Title, Text, Paragraph } = Typography;
 
-function IconBox({ icon, color = '#767676', bg = '#f9fafb' }) {
+function IconBox({ icon, color = TEXT_TERTIARY, bg = BG_APP }) {
   return (
     <div style={{
       width: 36, height: 36, borderRadius: 10,
@@ -85,7 +93,7 @@ function ReviewCard({ url }) {
           />
         )}
         <div style={{ padding: '14px 16px 16px', display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-          <Tag style={{ borderRadius: 20, marginBottom: 8, fontSize: 12, fontWeight: 600, backgroundColor: '#fff0f1', borderColor: '#ffccc7', color: PRIMARY, flexShrink: 0 }}>
+          <Tag style={{ borderRadius: 20, marginBottom: 8, fontSize: 12, fontWeight: 600, backgroundColor: PRIMARY_BG, borderColor: STATUS_ERROR_BORDER, color: PRIMARY, flexShrink: 0 }}>
             {hostname}
           </Tag>
           {og.title && (
@@ -275,7 +283,7 @@ export default function IntroContent({ onConsult, onFloatChange }) {
               <FadeUp key={title} delay={i * 80}>
                 <Card variant="borderless" style={{ borderRadius: 12 }} styles={{ body: { padding: 16 } }}>
                   <Space size={14} align="start">
-                    <IconBox icon={icon} color={PRIMARY} bg="#fff0f1" />
+                    <IconBox icon={icon} color={PRIMARY} bg={PRIMARY_BG} />
                     <div>
                       <Text strong style={{ fontSize: 14, display: 'block', marginBottom: 2 }}>{title}</Text>
                       <Text type="secondary" style={{ fontSize: 13, lineHeight: 1.5 }}>{desc}</Text>
@@ -291,8 +299,8 @@ export default function IntroContent({ onConsult, onFloatChange }) {
         <FadeUp>
           <section style={{ padding: '24px 16px 16px' }}>
             <Card variant="borderless" style={{ borderRadius: 12, backgroundColor: '#fafafa' }} styles={{ body: { padding: 20 } }}>
-              <Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 8 }}>이런 상담은 어려워요</Text>
-              <Paragraph style={{ fontSize: 14, color: '#595959', marginBottom: 12, lineHeight: 1.6 }}>
+              <Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 8 }}>이런 상담은 어려워요</Text>
+              <Paragraph style={{ fontSize: 14, color: TEXT_SECONDARY, marginBottom: 12, lineHeight: 1.6 }}>
                 하늘쌤은 입문~초중급 회화·발음 교정 전문입니다.<br />
                 아래 항목은 충분히 도움드리기 어려울 수 있어요.
               </Paragraph>
@@ -326,7 +334,7 @@ export default function IntroContent({ onConsult, onFloatChange }) {
                 </Text>
                 <Space size={6} wrap style={{ justifyContent: 'center' }}>
                   {['10년 경력', '회화 전문', '발음 교정'].map(tag => (
-                    <Tag key={tag} style={{ borderRadius: 20, margin: 0, fontSize: 13, backgroundColor: 'transparent', borderColor: '#d9d9d9', color: '#262626' }}>{tag}</Tag>
+                    <Tag key={tag} style={{ borderRadius: 20, margin: 0, fontSize: 13, backgroundColor: 'transparent', borderColor: BORDER_NEUTRAL, color: '#262626' }}>{tag}</Tag>
                   ))}
                 </Space>
               </div>

@@ -11,6 +11,13 @@ export const HOMEWORK_DB = '5ce7d5ef-7b80-4795-843f-325f4ca868e2';
 
 import { WORKER_URL } from '../config.js';
 import { getToken } from './authUtils.js';
+import {
+  STATUS_SUCCESS_BG,
+  STATUS_SUCCESS_DARK,
+  STATUS_INFO_DARK,
+  STATUS_ERROR_BG,
+  STATUS_ERROR_TEXT,
+} from '../constants/theme.js';
 
 // ===== 파싱 =====
 
@@ -186,7 +193,7 @@ export async function markFeedbackSeen(studentToken, homeworkId) {
 }
 
 export function homeworkStatusColor(status) {
-  if (status === '피드백완료') return { bg: '#f6ffed', text: '#389e0d' };
-  if (status === '제출완료') return { bg: '#e6f4ff', text: '#0958d9' };
-  return { bg: '#fff2f0', text: '#cf1322' };
+  if (status === '피드백완료') return { bg: STATUS_SUCCESS_BG, text: STATUS_SUCCESS_DARK };
+  if (status === '제출완료') return { bg: '#e6f4ff', text: STATUS_INFO_DARK };
+  return { bg: STATUS_ERROR_BG, text: STATUS_ERROR_TEXT };
 }

@@ -1,4 +1,5 @@
 import { Flex, Typography } from 'antd';
+import { TEXT_SECONDARY } from '../../constants/theme.js';
 
 const { Text } = Typography;
 
@@ -11,7 +12,7 @@ export default function EmptyState({ icon, title, description }) {
     <Flex vertical align="center" justify="center" gap={8} style={{ padding: '80px 24px', textAlign: 'center' }}>
       {iconNode && <div style={{ marginBottom: 4 }}>{iconNode}</div>}
       {title && (
-        <Text strong style={{ fontSize: 15, color: '#595959', display: 'block' }}>
+        <Text strong style={{ fontSize: 15, color: TEXT_SECONDARY, display: 'block' }}>
           {title}
         </Text>
       )}

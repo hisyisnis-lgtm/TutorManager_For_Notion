@@ -4,13 +4,23 @@ import { fetchBookingStatus } from '../api/bookingApi.js';
 import { Card, Button } from 'antd';
 import { CheckCircleIcon, XCircleIcon } from '@phosphor-icons/react';
 import { formatDateKO } from '../utils/dateUtils.js';
+import {
+  PRIMARY,
+  PRIMARY_BG,
+  STATUS_SUCCESS,
+  STATUS_SUCCESS_BG,
+  STATUS_ERROR_BG,
+  STATUS_ERROR_BORDER,
+  STATUS_ERROR_TEXT,
+  TEXT_SECONDARY,
+} from '../constants/theme.js';
 
 // 예약 확정 성공 아이콘 (애니메이션)
 function SuccessIcon() {
   return (
     <div style={{
       width: 72, height: 72, borderRadius: '50%',
-      backgroundColor: '#f6ffed',
+      backgroundColor: STATUS_SUCCESS_BG,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       margin: '0 auto 20px',
       animation: 'successPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both',
@@ -18,7 +28,7 @@ function SuccessIcon() {
     role="img"
     aria-label="예약 확정"
     >
-      <CheckCircleIcon weight="fill" size={36} style={{ color: '#52c41a' }} />
+      <CheckCircleIcon weight="fill" size={36} style={{ color: STATUS_SUCCESS }} />
     </div>
   );
 }
@@ -27,14 +37,14 @@ function CancelIcon() {
   return (
     <div style={{
       width: 72, height: 72, borderRadius: '50%',
-      backgroundColor: '#fff2f0',
+      backgroundColor: STATUS_ERROR_BG,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       margin: '0 auto 20px',
     }}
     role="img"
     aria-label="예약 취소됨"
     >
-      <XCircleIcon weight="fill" size={36} style={{ color: '#cf1322' }} />
+      <XCircleIcon weight="fill" size={36} style={{ color: STATUS_ERROR_TEXT }} />
     </div>
   );
 }
@@ -48,7 +58,7 @@ function InfoRow({ label, value }) {
       padding: '10px 0',
       borderBottom: '1px solid #f5f5f5',
     }}>
-      <span style={{ fontSize: 13, color: '#595959' }}>{label}</span>
+      <span style={{ fontSize: 13, color: TEXT_SECONDARY }}>{label}</span>
       <span style={{ fontSize: 14, fontWeight: 600, color: '#262626' }}>{value}</span>
     </div>
   );
@@ -102,7 +112,7 @@ export default function BookingStatusPage() {
           <Card variant="borderless" style={{ borderRadius: 16, textAlign: 'center', boxShadow: 'var(--shadow-card)' }}
             role="alert"
           >
-            <XCircleIcon weight="fill" size={36} style={{ color: '#cf1322', marginBottom: 16, display: 'block' }} aria-hidden="true" />
+            <XCircleIcon weight="fill" size={36} style={{ color: STATUS_ERROR_TEXT, marginBottom: 16, display: 'block' }} aria-hidden="true" />
             <p className="text-gray-700 font-medium">예약 정보를 찾을 수 없습니다</p>
             <p className="text-sm text-gray-500 mt-2">{error}</p>
             <Button
@@ -137,13 +147,13 @@ export default function BookingStatusPage() {
               >
                 <h2 style={{
                   fontSize: 20, fontWeight: 700,
-                  color: isCancelled ? '#cf1322' : '#262626',
+                  color: isCancelled ? STATUS_ERROR_TEXT : '#262626',
                   margin: '0 0 4px',
                   textWrap: 'balance',
                 }}>
                   {isCancelled ? '예약이 취소되었습니다' : '예약이 확정되었습니다!'}
                 </h2>
-                <p style={{ fontSize: 13, color: '#595959', margin: 0 }}>
+                <p style={{ fontSize: 13, color: TEXT_SECONDARY, margin: 0 }}>
                   {isCancelled
                     ? '새로 예약하시려면 아래 버튼을 눌러주세요'
                     : '아래 예약 정보를 확인해주세요'}
@@ -164,8 +174,8 @@ export default function BookingStatusPage() {
               {isCancelled && (
                 <div style={{
                   marginTop: 20, padding: '12px 16px',
-                  backgroundColor: '#fff2f0', border: '1px solid #ffccc7',
-                  borderRadius: 12, fontSize: 14, color: '#cf1322', textAlign: 'left',
+                  backgroundColor: STATUS_ERROR_BG, border: `1px solid ${STATUS_ERROR_BORDER}`,
+                  borderRadius: 12, fontSize: 14, color: STATUS_ERROR_TEXT, textAlign: 'left',
                 }}>
                   수업이 취소되었습니다. 새로 예약해주세요.
                 </div>
@@ -175,8 +185,8 @@ export default function BookingStatusPage() {
             {/* 페이지 저장 안내 */}
             {!isCancelled && (
               <div style={{
-                backgroundColor: '#fff0f1', borderRadius: 12,
-                padding: '14px 16px', fontSize: 13, color: '#7f0005',
+                backgroundColor: PRIMARY_BG, borderRadius: 12,
+                padding: '14px 16px', fontSize: 13, color: PRIMARY,
                 display: 'flex', alignItems: 'flex-start', gap: 8,
               }}>
                 <span aria-hidden="true" style={{ flexShrink: 0 }}>💡</span>

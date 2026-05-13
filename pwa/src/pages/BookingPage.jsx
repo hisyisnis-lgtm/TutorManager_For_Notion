@@ -13,10 +13,11 @@ import {
 import { Card, Button, Modal } from 'antd';
 import { DAY_KR, formatDateMD, formatYearMonth, addMonths, timeToMin, formatDuration } from '../utils/dateUtils.js';
 import {
-  PRIMARY, PRIMARY_BG,
+  PRIMARY, PRIMARY_BG, PRIMARY_ALPHA_20,
   TEXT_PRIMARY, TEXT_SECONDARY, TEXT_TERTIARY, TEXT_INACTIVE,
+  BG_APP, BORDER_NEUTRAL,
   STATUS_SUCCESS_DARK, STATUS_SUCCESS_BG,
-  STATUS_ERROR_TEXT, STATUS_ERROR_BORDER,
+  STATUS_ERROR_TEXT, STATUS_ERROR_BG, STATUS_ERROR_BORDER,
   STATUS_INFO_DARK,
 } from '../constants/theme.js';
 import { BADGE_SMALL } from '../constants/styles.js';
@@ -300,14 +301,14 @@ function MyClassesTab({ studentToken, month, onMonthChange, onStudentRefresh }) 
           style={{
             width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center',
             borderRadius: 10, border: 'none', background: 'none', cursor: 'pointer',
-            fontSize: 20, color: '#595959',
+            fontSize: 20, color: TEXT_SECONDARY,
             transitionProperty: 'scale', transitionDuration: '150ms', transitionTimingFunction: 'ease-out',
             WebkitTapHighlightColor: 'transparent',
           }}
         >
           <span aria-hidden="true">‹</span>
         </button>
-        <span style={{ fontSize: 15, fontWeight: 600, color: '#1d1d1f' }} aria-live="polite" aria-atomic="true">
+        <span style={{ fontSize: 15, fontWeight: 600, color: TEXT_PRIMARY }} aria-live="polite" aria-atomic="true">
           {formatYearMonth(month)}
         </span>
         <button
@@ -318,7 +319,7 @@ function MyClassesTab({ studentToken, month, onMonthChange, onStudentRefresh }) 
           style={{
             width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center',
             borderRadius: 10, border: 'none', background: 'none', cursor: 'pointer',
-            fontSize: 20, color: '#595959',
+            fontSize: 20, color: TEXT_SECONDARY,
             transitionProperty: 'scale', transitionDuration: '150ms', transitionTimingFunction: 'ease-out',
             WebkitTapHighlightColor: 'transparent',
           }}
@@ -327,14 +328,14 @@ function MyClassesTab({ studentToken, month, onMonthChange, onStudentRefresh }) 
         </button>
       </div>
 
-      {loading && <div style={{ textAlign: 'center', padding: '48px 0', fontSize: 13, color: '#8c8c8c' }}>불러오는 중...</div>}
+      {loading && <div style={{ textAlign: 'center', padding: '48px 0', fontSize: 13, color: TEXT_INACTIVE }}>불러오는 중...</div>}
       {error && (
-        <div style={{ margin: '16px', padding: '12px 16px', backgroundColor: '#fff2f0', border: '1px solid #ffccc7', borderRadius: 12, fontSize: 14, color: '#cf1322' }}>
+        <div style={{ margin: '16px', padding: '12px 16px', backgroundColor: STATUS_ERROR_BG, border: `1px solid ${STATUS_ERROR_BORDER}`, borderRadius: 12, fontSize: 14, color: STATUS_ERROR_TEXT }}>
           {error}
         </div>
       )}
       {!loading && !error && classes.length === 0 && (
-        <div style={{ textAlign: 'center', padding: '48px 16px', color: '#8c8c8c', fontSize: 14 }}>
+        <div style={{ textAlign: 'center', padding: '48px 16px', color: TEXT_INACTIVE, fontSize: 14 }}>
           이 달에 수업이 없어요
         </div>
       )}
@@ -404,7 +405,7 @@ function MyClassesTab({ studentToken, month, onMonthChange, onStudentRefresh }) 
                       style={{
                         flexShrink: 0, height: 36, padding: '0 12px', borderRadius: 10,
                         fontSize: 13, fontWeight: 500, cursor: 'pointer',
-                        color: PRIMARY, border: '1.5px solid rgba(127,0,5,0.2)', background: PRIMARY_BG,
+                        color: PRIMARY, border: `1.5px solid ${PRIMARY_ALPHA_20}`, background: PRIMARY_BG,
                         transitionProperty: 'scale, background-color', transitionDuration: '150ms', transitionTimingFunction: 'ease-out',
                         WebkitTapHighlightColor: 'transparent',
                         opacity: restoringId === cls.id ? 0.5 : 1,
@@ -417,7 +418,7 @@ function MyClassesTab({ studentToken, month, onMonthChange, onStudentRefresh }) 
               </Card>
             );
           })}
-          <p style={{ fontSize: 12, textAlign: 'center', color: '#767676', marginTop: 4 }}>당일 취소는 강사님께 직접 문의해주세요</p>
+          <p style={{ fontSize: 12, textAlign: 'center', color: TEXT_TERTIARY, marginTop: 4 }}>당일 취소는 강사님께 직접 문의해주세요</p>
         </div>
       )}
     </div>
@@ -604,7 +605,7 @@ export default function BookingPage() {
   }
 
   return (
-    <div style={{ minHeight: '100dvh', backgroundColor: '#f9fafb' }}>
+    <div style={{ minHeight: '100dvh', backgroundColor: BG_APP }}>
       <div style={{ maxWidth: 480, margin: '0 auto' }}>
         <PullIndicator pullY={pullY} refreshing={pullRefreshing} />
 
@@ -622,10 +623,10 @@ export default function BookingPage() {
             borderBottom: '1px solid rgba(0,0,0,0.04)',
           }}>
             <div>
-              <h1 style={{ fontSize: 17, fontWeight: 700, color: '#1d1d1f', margin: 0, lineHeight: 1.3 }}>
+              <h1 style={{ fontSize: 17, fontWeight: 700, color: TEXT_PRIMARY, margin: 0, lineHeight: 1.3 }}>
                 수업 예약
               </h1>
-              <p style={{ fontSize: 12, color: '#767676', margin: '1px 0 0' }}>
+              <p style={{ fontSize: 12, color: TEXT_TERTIARY, margin: '1px 0 0' }}>
                 {student.name}님
               </p>
             </div>
@@ -635,8 +636,8 @@ export default function BookingPage() {
                 style={{
                   fontSize: 12, fontWeight: 600,
                   padding: '4px 10px', borderRadius: 20,
-                  backgroundColor: student.remainingSessions > 0 ? '#fff0f1' : '#fff2f0',
-                  color: student.remainingSessions > 0 ? '#7f0005' : '#cf1322',
+                  backgroundColor: student.remainingSessions > 0 ? PRIMARY_BG : STATUS_ERROR_BG,
+                  color: student.remainingSessions > 0 ? PRIMARY : STATUS_ERROR_TEXT,
                 }}
                 aria-label={`잔여 ${student.remainingSessions}회차`}
               >
@@ -646,7 +647,7 @@ export default function BookingPage() {
                 onClick={() => navigate('/book')}
                 aria-label="예약 코드 입력 화면으로 돌아가기"
                 style={{
-                  fontSize: 12, color: '#8c8c8c', background: 'none',
+                  fontSize: 12, color: TEXT_INACTIVE, background: 'none',
                   border: 'none', cursor: 'pointer', padding: '4px 0',
                   WebkitTapHighlightColor: 'transparent',
                 }}
@@ -677,8 +678,8 @@ export default function BookingPage() {
                   marginRight: 20, paddingTop: 10, paddingBottom: 10,
                   fontSize: 14, fontWeight: tab === t ? 600 : 500,
                   border: 'none', background: 'none', cursor: 'pointer',
-                  borderBottom: tab === t ? '2px solid #7f0005' : '2px solid transparent',
-                  color: tab === t ? '#7f0005' : '#595959',
+                  borderBottom: tab === t ? `2px solid ${PRIMARY}` : '2px solid transparent',
+                  color: tab === t ? PRIMARY : TEXT_SECONDARY,
                   minHeight: 44,
                   transitionProperty: 'color, border-color',
                   transitionDuration: '150ms',
@@ -707,7 +708,7 @@ export default function BookingPage() {
           <div role="tabpanel" id="tab-panel-0" style={{ padding: '16px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
             {/* 잔여 시간 없을 때 안내 */}
             {student.remainingSessions <= 0 && (
-              <div role="alert" style={{ padding: '12px 16px', backgroundColor: '#fff2f0', border: '1px solid #ffccc7', borderRadius: 12, fontSize: 14, color: '#cf1322', textAlign: 'center' }}>
+              <div role="alert" style={{ padding: '12px 16px', backgroundColor: STATUS_ERROR_BG, border: `1px solid ${STATUS_ERROR_BORDER}`, borderRadius: 12, fontSize: 14, color: STATUS_ERROR_TEXT, textAlign: 'center' }}>
                 잔여 시간이 없습니다. 결제 후 예약이 가능합니다.
               </div>
             )}
@@ -723,7 +724,7 @@ export default function BookingPage() {
                   style={{
                     width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center',
                     borderRadius: 10, border: 'none', background: 'none', cursor: 'pointer',
-                    fontSize: 20, color: '#595959',
+                    fontSize: 20, color: TEXT_SECONDARY,
                     transitionProperty: 'scale, background-color', transitionDuration: '150ms', transitionTimingFunction: 'ease-out',
                     WebkitTapHighlightColor: 'transparent',
                   }}
@@ -731,7 +732,7 @@ export default function BookingPage() {
                   <span aria-hidden="true">‹</span>
                 </button>
                 <span
-                  style={{ fontSize: 15, fontWeight: 600, color: '#1d1d1f' }}
+                  style={{ fontSize: 15, fontWeight: 600, color: TEXT_PRIMARY }}
                   aria-live="polite" aria-atomic="true"
                 >
                   {calYear}년 {MONTHS[calMonth]}
@@ -744,7 +745,7 @@ export default function BookingPage() {
                   style={{
                     width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center',
                     borderRadius: 10, border: 'none', background: 'none', cursor: 'pointer',
-                    fontSize: 20, color: '#595959',
+                    fontSize: 20, color: TEXT_SECONDARY,
                     transitionProperty: 'scale, background-color', transitionDuration: '150ms', transitionTimingFunction: 'ease-out',
                     WebkitTapHighlightColor: 'transparent',
                   }}
@@ -754,7 +755,7 @@ export default function BookingPage() {
               </div>
 
               {slotsLoading ? (
-                <div style={{ textAlign: 'center', padding: '32px 0', fontSize: 13, color: '#8c8c8c' }}>불러오는 중...</div>
+                <div style={{ textAlign: 'center', padding: '32px 0', fontSize: 13, color: TEXT_INACTIVE }}>불러오는 중...</div>
               ) : (
                 <Calendar
                   year={calYear}
@@ -773,18 +774,18 @@ export default function BookingPage() {
                   const d = new Date(selectedDate + 'T00:00:00+09:00');
                   return (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-                      <h2 style={{ fontSize: 15, fontWeight: 600, color: '#1d1d1f', margin: 0 }}>
+                      <h2 style={{ fontSize: 15, fontWeight: 600, color: TEXT_PRIMARY, margin: 0 }}>
                         {d.getMonth() + 1}월 {d.getDate()}일 ({DAY_KR[d.getDay()]}) 시간 선택
                       </h2>
                       {timeResetKey > 0 && (
-                        <span style={{ fontSize: 12, color: '#8c8c8c' }}>초기화됨</span>
+                        <span style={{ fontSize: 12, color: TEXT_INACTIVE }}>초기화됨</span>
                       )}
                     </div>
                   );
                 })()}
 
                 {timesLoading ? (
-                  <div style={{ textAlign: 'center', padding: '24px 0', fontSize: 13, color: '#8c8c8c' }}>불러오는 중...</div>
+                  <div style={{ textAlign: 'center', padding: '24px 0', fontSize: 13, color: TEXT_INACTIVE }}>불러오는 중...</div>
                 ) : (
                   <TimeRangePicker
                     availableTimes={availableTimes}
@@ -804,9 +805,9 @@ export default function BookingPage() {
                 <Card variant="borderless" style={{ borderRadius: 16, boxShadow: 'var(--shadow-border)' }}>
                   {/* 선택 요약 */}
                   <div style={{
-                    backgroundColor: '#fff0f1', borderRadius: 10,
+                    backgroundColor: PRIMARY_BG, borderRadius: 10,
                     padding: '10px 14px', marginBottom: 14,
-                    fontSize: 14, color: '#7f0005',
+                    fontSize: 14, color: PRIMARY,
                   }}>
                     {(() => {
                       const d = new Date(selectedDate + 'T00:00:00+09:00');
@@ -823,7 +824,7 @@ export default function BookingPage() {
 
                   {/* 수업 장소 선택 */}
                   <div style={{ marginBottom: 14 }}>
-                    <label style={{ fontSize: 13, fontWeight: 600, color: '#595959', display: 'block', marginBottom: 8 }}>
+                    <label style={{ fontSize: 13, fontWeight: 600, color: TEXT_SECONDARY, display: 'block', marginBottom: 8 }}>
                       수업 장소
                     </label>
                     <div style={{ display: 'flex', gap: 8 }}>
@@ -836,9 +837,9 @@ export default function BookingPage() {
                           style={{
                             flex: 1, height: 44, borderRadius: 12,
                             fontSize: 14, fontWeight: 500, cursor: 'pointer',
-                            border: location === opt ? '1.5px solid #7f0005' : '1.5px solid #d9d9d9',
-                            backgroundColor: location === opt ? '#7f0005' : '#ffffff',
-                            color: location === opt ? '#ffffff' : '#595959',
+                            border: location === opt ? `1.5px solid ${PRIMARY}` : `1.5px solid ${BORDER_NEUTRAL}`,
+                            backgroundColor: location === opt ? PRIMARY : '#ffffff',
+                            color: location === opt ? '#ffffff' : TEXT_SECONDARY,
                             transitionProperty: 'background-color, color, border-color',
                             transitionDuration: '150ms', transitionTimingFunction: 'ease-out',
                             WebkitTapHighlightColor: 'transparent',
@@ -855,7 +856,7 @@ export default function BookingPage() {
                     <div
                       role="alert"
                       aria-live="assertive"
-                      style={{ padding: '8px 12px', backgroundColor: '#fff2f0', border: '1px solid #ffccc7', borderRadius: 8, fontSize: 14, color: '#cf1322', marginBottom: 12 }}
+                      style={{ padding: '8px 12px', backgroundColor: STATUS_ERROR_BG, border: `1px solid ${STATUS_ERROR_BORDER}`, borderRadius: 8, fontSize: 14, color: STATUS_ERROR_TEXT, marginBottom: 12 }}
                     >
                       잔여 시간이 부족합니다.{' '}
                       <span className="tabular-nums">(잔여 {student.remainingSessions}회차, 필요 {requiredSessions}회차)</span>
@@ -866,7 +867,7 @@ export default function BookingPage() {
                     <div
                       role="alert"
                       aria-live="assertive"
-                      style={{ padding: '8px 12px', backgroundColor: '#fff2f0', border: '1px solid #ffccc7', borderRadius: 8, fontSize: 14, color: '#cf1322', marginBottom: 12 }}
+                      style={{ padding: '8px 12px', backgroundColor: STATUS_ERROR_BG, border: `1px solid ${STATUS_ERROR_BORDER}`, borderRadius: 8, fontSize: 14, color: STATUS_ERROR_TEXT, marginBottom: 12 }}
                     >
                       {submitError}
                     </div>

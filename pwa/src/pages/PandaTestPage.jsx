@@ -1,6 +1,13 @@
 // 팬더 위젯 인터랙션 테스트 페이지 — /panda-test
 import { useState } from 'react';
 import PandaWidget from '../components/ui/PandaWidget.jsx';
+import {
+  PRIMARY,
+  PRIMARY_BG,
+  TEXT_PRIMARY,
+  TEXT_SECONDARY,
+  TEXT_INACTIVE,
+} from '../constants/theme.js';
 
 // 테스트 전용 키 — PersonalPage의 실제 데이터와 분리
 const FEED_KEY = 'panda_test_fed_total';
@@ -27,10 +34,10 @@ export default function PandaTestPage() {
   return (
     <div style={{ minHeight: '100vh', background: '#f5f5f5', padding: '24px 20px', maxWidth: 420, margin: '0 auto' }}>
       <div style={{ marginBottom: 20 }}>
-        <h2 style={{ fontSize: 17, fontWeight: 700, color: '#1d1d1f', margin: 0 }}>
+        <h2 style={{ fontSize: 17, fontWeight: 700, color: TEXT_PRIMARY, margin: 0 }}>
           🐼 팬더 위젯 테스트
         </h2>
-        <p style={{ fontSize: 12, color: '#8c8c8c', margin: '4px 0 0' }}>
+        <p style={{ fontSize: 12, color: TEXT_INACTIVE, margin: '4px 0 0' }}>
           슬라이더로 완료된 수업 시간(분)을 조절하세요 — 30분당 먹이 1개
         </p>
       </div>
@@ -40,13 +47,13 @@ export default function PandaTestPage() {
         background: 'white', borderRadius: 16, padding: '16px',
         marginBottom: 16, boxShadow: 'var(--shadow-card)',
       }}>
-        <label style={{ fontSize: 13, color: '#595959', display: 'block', marginBottom: 10 }}>
+        <label style={{ fontSize: 13, color: TEXT_SECONDARY, display: 'block', marginBottom: 10 }}>
           완료 수업 시간:{' '}
-          <strong style={{ color: '#7f0005', fontVariantNumeric: 'tabular-nums' }}>
+          <strong style={{ color: PRIMARY, fontVariantNumeric: 'tabular-nums' }}>
             {completedMinutes}분
           </strong>
           {' '}→ 먹이{' '}
-          <strong style={{ color: '#7f0005', fontVariantNumeric: 'tabular-nums' }}>
+          <strong style={{ color: PRIMARY, fontVariantNumeric: 'tabular-nums' }}>
             {foodCount}개
           </strong>
           {' '}/ 먹인 횟수:{' '}
@@ -61,7 +68,7 @@ export default function PandaTestPage() {
           step={10}
           value={completedMinutes}
           onChange={e => handleMinutesChange(Number(e.target.value))}
-          style={{ width: '100%', accentColor: '#7f0005' }}
+          style={{ width: '100%', accentColor: PRIMARY }}
         />
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#aaa', marginTop: 2 }}>
           <span>0분</span>
@@ -78,9 +85,9 @@ export default function PandaTestPage() {
               onClick={() => handleMinutesChange(v)}
               style={{
                 padding: '3px 10px', borderRadius: 8, border: '1.5px solid',
-                borderColor: completedMinutes === v ? '#7f0005' : '#e5e5e5',
-                background: completedMinutes === v ? '#fff0f1' : 'white',
-                color: completedMinutes === v ? '#7f0005' : '#595959',
+                borderColor: completedMinutes === v ? PRIMARY : '#e5e5e5',
+                background: completedMinutes === v ? PRIMARY_BG : 'white',
+                color: completedMinutes === v ? PRIMARY : TEXT_SECONDARY,
                 fontSize: 12, fontWeight: 600, cursor: 'pointer',
                 fontVariantNumeric: 'tabular-nums',
               }}
@@ -95,7 +102,7 @@ export default function PandaTestPage() {
           style={{
             marginTop: 12, width: '100%', height: 36, borderRadius: 10,
             border: '1.5px solid #f0f0f0', background: 'white',
-            color: '#7f0005', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+            color: PRIMARY, fontSize: 13, fontWeight: 600, cursor: 'pointer',
           }}
         >
           🔄 먹이 기록 초기화 (새로고침)

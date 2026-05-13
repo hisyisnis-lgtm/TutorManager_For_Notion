@@ -1,4 +1,5 @@
 import React from 'react';
+import { PRIMARY, BG_APP, TEXT_PRIMARY, TEXT_SECONDARY } from '../../constants/theme.js';
 
 export default class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -29,23 +30,23 @@ export default class ErrorBoundary extends React.Component {
     return (
       <div style={{
         minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: 20, background: '#f9fafb',
+        padding: 20, background: BG_APP,
       }}>
         <div style={{
           maxWidth: 400, width: '100%', background: '#fff', borderRadius: 16, padding: 24,
           boxShadow: '0 4px 20px rgba(0,0,0,0.08)', textAlign: 'center',
         }}>
-          <h2 style={{ fontSize: 17, fontWeight: 700, color: '#1d1d1f', margin: '0 0 8px' }}>
+          <h2 style={{ fontSize: 17, fontWeight: 700, color: TEXT_PRIMARY, margin: '0 0 8px' }}>
             화면 표시 중 문제가 발생했어요
           </h2>
-          <p style={{ fontSize: 13, color: '#595959', margin: '0 0 16px', wordBreak: 'break-all' }}>
+          <p style={{ fontSize: 13, color: TEXT_SECONDARY, margin: '0 0 16px', wordBreak: 'break-all' }}>
             {this.state.error?.message || '알 수 없는 오류'}
           </p>
           <button
             type="button"
             onClick={() => window.location.reload()}
             style={{
-              width: '100%', height: 44, borderRadius: 12, background: '#7f0005',
+              width: '100%', height: 44, borderRadius: 12, background: PRIMARY,
               border: 'none', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer',
               WebkitTapHighlightColor: 'transparent',
             }}

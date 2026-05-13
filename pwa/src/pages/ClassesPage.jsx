@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Button, Input, Card, DatePicker } from 'antd';
 import dayjs from 'dayjs';
 import { MagnifyingGlassIcon, MapPinIcon, WarningCircleIcon, CalendarBlankIcon, InfoIcon } from '@phosphor-icons/react';
-import { PRIMARY, TEXT_SECONDARY, TEXT_TERTIARY, BORDER_DEFAULT, PRIMARY_ALPHA_25 } from '../constants/theme.js';
+import { PRIMARY, PRIMARY_BG, TEXT_PRIMARY, TEXT_SECONDARY, TEXT_TERTIARY, BORDER_DEFAULT, PRIMARY_ALPHA_25, STATUS_ERROR_TEXT, STATUS_ERROR_BG } from '../constants/theme.js';
 import { createLessonLog } from '../api/lessonLogs.js';
 import { queryPage } from '../api/notionClient.js';
 import PageHeader from '../components/layout/PageHeader.jsx';
@@ -377,7 +377,7 @@ export default function ClassesPage() {
       {/* 학생 검색 */}
       <div className="px-4 pb-3">
         <Input
-          prefix={<MagnifyingGlassIcon weight="fill" style={{ color: '#767676' }} />}
+          prefix={<MagnifyingGlassIcon weight="fill" style={{ color: TEXT_TERTIARY }} />}
           placeholder="학생 이름으로 검색"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -480,26 +480,26 @@ function ClassCard({ cls, studentNameMap }) {
       >
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
-            <p style={{ fontSize: 15, fontWeight: 700, color: '#1d1d1f', margin: '0 0 3px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <p style={{ fontSize: 15, fontWeight: 700, color: TEXT_PRIMARY, margin: '0 0 3px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {studentNames || cls.title || '학생 미정'}
             </p>
-            <p style={{ fontSize: 13, color: '#595959', margin: '0 0 2px' }} className="tabular-nums">
+            <p style={{ fontSize: 13, color: TEXT_SECONDARY, margin: '0 0 2px' }} className="tabular-nums">
               {cls.datetime ? formatDateTime(cls.datetime) : '일시 미정'}
               {cls.endTime && ` ~ ${formatTime(cls.endTime)}`}
               {cls.duration && ` · ${cls.duration}분`}
             </p>
             {cls.location && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
-                <MapPinIcon size={12} weight="fill" color="#767676" style={{ flexShrink: 0 }} />
-                <span style={{ fontSize: 12, color: '#767676' }}>
+                <MapPinIcon size={12} weight="fill" color={TEXT_TERTIARY} style={{ flexShrink: 0 }} />
+                <span style={{ fontSize: 12, color: TEXT_TERTIARY }}>
                   {cls.location}{cls.locationMemo && ` — ${cls.locationMemo}`}
                 </span>
               </div>
             )}
             {cls.noteMemo && (
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: 4, marginTop: 2 }}>
-                <InfoIcon size={12} weight="fill" color="#767676" style={{ flexShrink: 0, marginTop: 3 }} />
-                <span style={{ fontSize: 12, color: '#767676', whiteSpace: 'pre-wrap', wordBreak: 'keep-all', lineHeight: 1.5 }}>
+                <InfoIcon size={12} weight="fill" color={TEXT_TERTIARY} style={{ flexShrink: 0, marginTop: 3 }} />
+                <span style={{ fontSize: 12, color: TEXT_TERTIARY, whiteSpace: 'pre-wrap', wordBreak: 'keep-all', lineHeight: 1.5 }}>
                   {cls.noteMemo}
                 </span>
               </div>
@@ -521,7 +521,7 @@ function ClassCard({ cls, studentNameMap }) {
               </span>
             )}
             {cls.conflictDetected && (
-              <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#cf1322', background: '#fff2f0', padding: '2px 8px', borderRadius: 20 }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: STATUS_ERROR_TEXT, background: STATUS_ERROR_BG, padding: '2px 8px', borderRadius: 20 }}>
                 <WarningCircleIcon size={12} weight="fill" />
                 시간 충돌
               </span>
@@ -536,8 +536,8 @@ function ClassCard({ cls, studentNameMap }) {
               style={{
                 fontSize: 12, fontWeight: 600,
                 padding: '5px 12px', borderRadius: 8, border: 'none', cursor: 'pointer',
-                background: logId ? '#fff0f1' : '#f5f5f5',
-                color: logId ? '#7f0005' : '#595959',
+                background: logId ? PRIMARY_BG : '#f5f5f5',
+                color: logId ? PRIMARY : TEXT_SECONDARY,
                 transition: 'background-color 150ms ease-out',
                 opacity: creatingLog ? 0.5 : 1,
               }}

@@ -1,8 +1,8 @@
 import { ConfigProvider, Button, Card, Flex, Space, Typography, Divider } from 'antd';
 import { BookOpenIcon, CalendarBlankIcon, CreditCardIcon, FileLockIcon, CheckCircleIcon } from '@phosphor-icons/react';
+import { PRIMARY, BG_SECTION_ALT, TEXT_SECONDARY, PRIMARY_BG, BG_DARK } from '../constants/theme.js';
 
 const { Title, Text, Paragraph } = Typography;
-const PRIMARY = '#7f0005';
 
 const theme = {
   token: {
@@ -55,7 +55,7 @@ function NoteList({ items }) {
 export default function ConsentPage() {
   return (
     <ConfigProvider theme={theme}>
-      <div style={{ minHeight: '100vh', backgroundColor: '#f5f5f7', fontFamily: 'inherit' }}>
+      <div style={{ minHeight: '100vh', backgroundColor: BG_SECTION_ALT, fontFamily: 'inherit' }}>
 
         {/* 헤더 */}
         <header style={{
@@ -84,7 +84,7 @@ export default function ConsentPage() {
             variant="borderless"
             style={{ borderRadius: 16, marginBottom: 28, backgroundColor: '#fff8f8', border: '1px solid #ffe0e0' }}
           >
-            <Paragraph style={{ fontSize: 13.5, color: '#595959', lineHeight: 1.75, margin: 0 }}>
+            <Paragraph style={{ fontSize: 13.5, color: TEXT_SECONDARY, lineHeight: 1.75, margin: 0 }}>
               본 동의서는 <Text strong style={{ color: '#262626' }}>「하늘하늘 중국어」</Text>와 수강생 간의
               원활한 수업 진행 및 분쟁 예방을 위해 작성되었습니다.
               아래 내용을 충분히 확인하신 후, 하단 버튼을 통해 동의 확인을 완료해 주세요.
@@ -102,7 +102,7 @@ export default function ConsentPage() {
                 '수업 장소는 강남구 역삼동 봉은사로16길 14이며, 대면 수업이 어려운 경우 Zoom 비대면 수업도 동일한 조건으로 진행 가능합니다.',
               ]} />
               <Card variant="borderless" style={{ borderRadius: 16, backgroundColor: '#fafafa', boxShadow: 'var(--shadow-border)' }}>
-                <Paragraph style={{ fontSize: 13.5, color: '#595959', lineHeight: 1.75, margin: 0 }}>
+                <Paragraph style={{ fontSize: 13.5, color: TEXT_SECONDARY, lineHeight: 1.75, margin: 0 }}>
                   <Text strong style={{ color: '#262626' }}>[하늘하늘중국어]</Text>의 모든 수업은 수강생 개개인에게 최적화된 1:1 맞춤 커리큘럼으로 진행됩니다. 단기간에 목표하신 실력 향상을 이루기 위해서는 안정적인 수업 진행 외에도 안내해 드리는 가이드와 녹음 과제, 피드백 적용이 반드시 동반되어야 합니다. 잦은 수업 시간 변경/취소 및 가이드 이행이 원활하지 않을 경우 기대하시는 성과 도달이 지연될 수 있음을 안내해 드립니다.
                 </Paragraph>
               </Card>
@@ -168,7 +168,7 @@ export default function ConsentPage() {
           {/* 동의 CTA */}
           <Card
             variant="borderless"
-            style={{ borderRadius: 16, backgroundColor: '#fff0f1', textAlign: 'center', marginBottom: 12 }}
+            style={{ borderRadius: 16, backgroundColor: PRIMARY_BG, textAlign: 'center', marginBottom: 12 }}
           >
             <Text
               strong
@@ -213,7 +213,7 @@ export default function ConsentPage() {
         </main>
 
         {/* 푸터 */}
-        <footer style={{ backgroundColor: '#1a1a1a', padding: '32px 24px 40px' }}>
+        <footer style={{ backgroundColor: BG_DARK, padding: '32px 24px 40px' }}>
           <div style={{ maxWidth: 480, margin: '0 auto' }}>
             <Text style={{ display: 'block', color: 'rgba(255,255,255,0.9)', fontSize: 15, fontWeight: 700, marginBottom: 16 }}>
               하늘하늘중국어
@@ -230,7 +230,7 @@ export default function ConsentPage() {
               ))}
             </div>
             <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 16 }}>
-              <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>
+              <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.8)' }}>
                 Copyright © 2025 하늘하늘중국어. All rights reserved.
               </Text>
             </div>

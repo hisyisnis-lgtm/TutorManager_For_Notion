@@ -1,5 +1,6 @@
 import { Input, Select } from 'antd';
 import { MagnifyingGlassIcon } from '@phosphor-icons/react';
+import { PRIMARY, TEXT_SECONDARY, TEXT_TERTIARY } from '../../constants/theme.js';
 
 /**
  * HomeworkFilterBar — 숙제 검색 + 월별/상태별 필터
@@ -54,7 +55,7 @@ export default function HomeworkFilterBar({
       {/* 검색 + 검색 타입 토글 */}
       <div style={{ display: 'flex', gap: 6 }}>
         <Input
-          prefix={<MagnifyingGlassIcon weight="fill" style={{ color: '#767676' }} />}
+          prefix={<MagnifyingGlassIcon weight="fill" style={{ color: TEXT_TERTIARY }} />}
           placeholder={searchPlaceholder}
           value={searchText}
           onChange={(e) => onSearchChange(e.target.value)}
@@ -71,8 +72,8 @@ export default function HomeworkFilterBar({
                 style={{
                   height: 40, padding: '0 12px', border: 'none', cursor: 'pointer',
                   fontSize: 12, fontWeight: searchType === value ? 700 : 400,
-                  background: searchType === value ? '#7f0005' : '#fff',
-                  color: searchType === value ? '#fff' : '#595959',
+                  background: searchType === value ? PRIMARY : '#fff',
+                  color: searchType === value ? '#fff' : TEXT_SECONDARY,
                   transition: 'background 150ms ease-out, color 150ms ease-out',
                   WebkitTapHighlightColor: 'transparent',
                 }}
@@ -107,8 +108,8 @@ export default function HomeworkFilterBar({
                   flexShrink: 0,
                   height: 32, padding: '0 14px', borderRadius: 100,
                   border: isActive ? 'none' : '1.5px solid #e0e0e0',
-                  background: isActive ? '#7f0005' : '#fff',
-                  color: isActive ? '#fff' : '#595959',
+                  background: isActive ? PRIMARY : '#fff',
+                  color: isActive ? '#fff' : TEXT_SECONDARY,
                   fontSize: 13, fontWeight: isActive ? 600 : 400,
                   cursor: 'pointer',
                   WebkitTapHighlightColor: 'transparent',

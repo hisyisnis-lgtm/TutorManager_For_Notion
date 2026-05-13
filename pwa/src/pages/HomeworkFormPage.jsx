@@ -5,10 +5,11 @@ import PageHeader from '../components/layout/PageHeader.jsx';
 import { createHomework, notifyHomework } from '../api/homework.js';
 import { queryAll } from '../api/notionClient.js';
 import { parseStudent } from '../api/students.js';
+import { TEXT_PRIMARY, TEXT_SECONDARY } from '../constants/theme.js';
 
 const STUDENT_DB = '314838fa-f2a6-8143-a6c7-e59c50f3bbdb';
 
-const LABEL = { fontSize: 14, color: '#595959', display: 'block', marginBottom: 6, fontWeight: 600 };
+const LABEL = { fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6, fontWeight: 600 };
 
 export default function HomeworkFormPage() {
   const navigate = useNavigate();
@@ -61,7 +62,7 @@ export default function HomeworkFormPage() {
         <div>
           <label style={LABEL}>학생</label>
           {presetStudentId ? (
-            <div style={{ fontSize: 15, fontWeight: 600, color: '#1d1d1f', padding: '8px 0' }}>
+            <div style={{ fontSize: 15, fontWeight: 600, color: TEXT_PRIMARY, padding: '8px 0' }}>
               {studentOptions.find((o) => o.value === presetStudentId)?.label ?? '…'}
             </div>
           ) : (

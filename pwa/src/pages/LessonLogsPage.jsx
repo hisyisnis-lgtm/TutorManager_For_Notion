@@ -9,6 +9,7 @@ import EmptyState from '../components/ui/EmptyState.jsx';
 import { fetchLessonLogsPage, parseLessonLog, isEmpty } from '../api/lessonLogs.js';
 import { useData } from '../context/DataContext.jsx';
 import PullToRefresh from '../components/ui/PullToRefresh.jsx';
+import { TEXT_TERTIARY } from '../constants/theme.js';
 
 export default function LessonLogsPage() {
   const { students, studentNameMap } = useData();
@@ -50,7 +51,7 @@ export default function LessonLogsPage() {
       {/* 학생 검색 */}
       <div className="px-4 pt-4 pb-3">
         <Input
-          prefix={<MagnifyingGlassIcon weight="fill" style={{ color: '#767676' }} />}
+          prefix={<MagnifyingGlassIcon weight="fill" style={{ color: TEXT_TERTIARY }} />}
           placeholder="학생 이름으로 검색"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -128,7 +129,7 @@ function LogCard({ log, studentNameMap }) {
           {log.content ? (
             <p className="text-sm text-gray-600 line-clamp-2">{log.content}</p>
           ) : (
-            <p className="text-sm italic" style={{ color: '#767676' }}>내용 없음</p>
+            <p className="text-sm italic" style={{ color: TEXT_TERTIARY }}>내용 없음</p>
           )}
           {log.engagement && (
             <p className="text-xs text-gray-500 mt-2">참여도 {log.engagement}</p>

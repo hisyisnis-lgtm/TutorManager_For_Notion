@@ -1,5 +1,6 @@
 import { Button, Typography } from 'antd';
 import FadeUp from '../FadeUp';
+import { TEXT_BODY, TEXT_SECONDARY } from '../../constants/theme.js';
 
 const { Text } = Typography;
 
@@ -15,7 +16,7 @@ export default function CtaSection({ onCtaClick, className, sectionRef }) {
   return (
     <FadeUp>
       <section ref={sectionRef} style={{ padding: '36px 24px 32px' }}>
-        <Text strong style={{ fontSize: 16, color: '#1a1a1a', lineHeight: 1.65, display: 'block', marginBottom: 6, textAlign: 'center' }}>
+        <Text strong style={{ fontSize: 16, color: TEXT_BODY, lineHeight: 1.65, display: 'block', marginBottom: 6, textAlign: 'center' }}>
           현재 레벨과 목표에 따라<br />가장 적합한 방향을 함께 안내드립니다.
         </Text>
         <Text type="secondary" style={{ fontSize: 13, display: 'block', marginBottom: 24, textAlign: 'center' }}>
@@ -32,7 +33,7 @@ export default function CtaSection({ onCtaClick, className, sectionRef }) {
         <a
           href="https://pf.kakao.com/_jFnFn"
           target="_blank" rel="noopener noreferrer"
-          style={{ display: 'block', textAlign: 'center', fontSize: 13, color: '#595959', textDecoration: 'none' }}
+          style={{ display: 'block', textAlign: 'center', fontSize: 13, color: TEXT_SECONDARY, textDecoration: 'none' }}
         >
           채널톡으로 문의하기 →
         </a>

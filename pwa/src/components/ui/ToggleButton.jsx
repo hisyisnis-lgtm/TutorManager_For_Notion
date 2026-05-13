@@ -1,4 +1,4 @@
-import { PRIMARY } from '../../constants/theme';
+import { PRIMARY, BORDER_NEUTRAL, TEXT_SECONDARY } from '../../constants/theme';
 
 /**
  * ToggleButton — 선택/비선택 상태를 가진 토글 버튼
@@ -15,9 +15,9 @@ export default function ToggleButton({ label, selected, onClick, fullWidth = fal
         width: fullWidth ? '100%' : undefined,
         height: 44, borderRadius: 12, fontSize: 14, fontWeight: 500,
         cursor: 'pointer',
-        border: `1px solid ${selected ? PRIMARY : '#d9d9d9'}`,
+        border: `1px solid ${selected ? PRIMARY : BORDER_NEUTRAL}`,
         backgroundColor: selected ? PRIMARY : '#ffffff',
-        color: selected ? '#ffffff' : '#595959',
+        color: selected ? '#ffffff' : TEXT_SECONDARY,
         textAlign: fullWidth ? 'left' : 'center',
         padding: fullWidth ? '0 16px' : '0',
         ...style,

@@ -13,6 +13,7 @@ import { formatKRW } from '../utils/dateUtils.js';
 import { stripEmoji } from '../utils/stringUtils.js';
 import PullToRefresh from '../components/ui/PullToRefresh.jsx';
 import { useData } from '../context/DataContext.jsx';
+import { TEXT_TERTIARY } from '../constants/theme.js';
 
 const FILTER_TABS = [
   { value: '전체', label: '전체' },
@@ -56,7 +57,7 @@ export default function StudentsPage() {
         <Input
           size="large"
           placeholder="이름으로 검색"
-          prefix={<MagnifyingGlassIcon weight="fill" style={{ color: '#767676' }} />}
+          prefix={<MagnifyingGlassIcon weight="fill" style={{ color: TEXT_TERTIARY }} />}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           style={{ borderRadius: 12 }}

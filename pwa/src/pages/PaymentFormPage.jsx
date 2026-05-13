@@ -15,6 +15,7 @@ import {
 } from '../api/payments.js';
 import { formatKRW } from '../utils/dateUtils.js';
 import { useData } from '../context/DataContext.jsx';
+import { TEXT_SECONDARY } from '../constants/theme.js';
 
 export default function PaymentFormPage() {
   const { id } = useParams();
@@ -176,7 +177,7 @@ export default function PaymentFormPage() {
 
         {/* 1. 학생 선택 */}
         <div>
-          <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>
+          <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
             ① 학생
           </Typography.Text>
           <Input
@@ -223,7 +224,7 @@ export default function PaymentFormPage() {
 
         {/* 2. 수업 종류 선택 */}
         <div>
-          <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>
+          <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
             ② 수업 종류
           </Typography.Text>
           <Select
@@ -280,7 +281,7 @@ export default function PaymentFormPage() {
 
         {/* 3. 할인 이벤트 */}
         <div>
-          <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>
+          <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
             ③ 할인 이벤트 (선택)
           </Typography.Text>
           <Select
@@ -306,7 +307,7 @@ export default function PaymentFormPage() {
 
         {/* 4. 시간 회차 */}
         <div>
-          <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>
+          <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
             ④ 시간 회차
           </Typography.Text>
           <Input
@@ -329,7 +330,7 @@ export default function PaymentFormPage() {
 
         {/* 5. 실제 결제 금액 */}
         <div>
-          <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>
+          <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
             ⑤ 실제 결제 금액
           </Typography.Text>
           <Input
@@ -359,7 +360,7 @@ export default function PaymentFormPage() {
 
         {/* 6. 결제 수단 */}
         <div>
-          <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>
+          <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
             ⑥ 결제 수단
           </Typography.Text>
           <Select
@@ -378,7 +379,7 @@ export default function PaymentFormPage() {
 
         {/* 7. 결제일 */}
         <div>
-          <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>
+          <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
             ⑦ 결제일
           </Typography.Text>
           <Input
@@ -392,7 +393,7 @@ export default function PaymentFormPage() {
 
         {/* 8. 비고 */}
         <div>
-          <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>
+          <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
             ⑧ 비고 (선택)
           </Typography.Text>
           <Input

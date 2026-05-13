@@ -5,7 +5,7 @@ import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import EmptyState from '../components/ui/EmptyState.jsx';
 import PullToRefresh from '../components/ui/PullToRefresh.jsx';
 import SectionHeading from '../components/ui/SectionHeading.jsx';
-import { STATUS_ERROR_TEXT } from '../constants/theme.js';
+import { STATUS_ERROR_TEXT, STATUS_INFO_DARK, TEXT_TERTIARY } from '../constants/theme.js';
 import { queryAll, updatePage } from '../api/notionClient.js';
 import { CONSULT_DB } from '../constants.js';
 
@@ -37,12 +37,12 @@ function parseConsult(page) {
 }
 
 const STATUS_STYLE = {
-  '신청됨': { bg: '#fff1f0', color: '#cf1322' },
+  '신청됨': { bg: '#fff1f0', color: STATUS_ERROR_TEXT },
   '확인됨': { bg: '#f9f0ff', color: '#531dab' },
   '연락중': { bg: '#fffbe6', color: '#d48806' },
-  '확정':   { bg: '#e6f4ff', color: '#0958d9' },
-  '완료':   { bg: '#f5f5f5', color: '#767676' },
-  '불발':   { bg: '#f5f5f5', color: '#767676' },
+  '확정':   { bg: '#e6f4ff', color: STATUS_INFO_DARK },
+  '완료':   { bg: '#f5f5f5', color: TEXT_TERTIARY },
+  '불발':   { bg: '#f5f5f5', color: TEXT_TERTIARY },
 };
 
 function ConsultCard({ consult: c, onConfirm, confirming }) {

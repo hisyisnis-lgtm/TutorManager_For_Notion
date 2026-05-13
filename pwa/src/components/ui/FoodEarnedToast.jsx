@@ -32,7 +32,7 @@ export default function FoodEarnedToast({ open, onClose, message = '먹이를 �
         background: 'linear-gradient(180deg, #c8000a 0%, #7f0005 100%)',
         color: 'white',
         padding: '14px 22px',
-        borderRadius: 18,
+        borderRadius: 16,
         boxShadow: '0 10px 32px rgba(127,0,5,0.45), inset 0 1px 0 rgba(255,255,255,0.18)',
         display: 'flex',
         alignItems: 'center',
@@ -49,7 +49,7 @@ export default function FoodEarnedToast({ open, onClose, message = '먹이를 �
           <LeafIcon weight="fill" size={20} color="#dcfce7" />
         </div>
         <div>
-          <div style={{ fontSize: 17, fontWeight: 800, lineHeight: 1.2, letterSpacing: '-0.2px' }}>
+          <div style={{ fontSize: 17, fontWeight: 700, lineHeight: 1.2, letterSpacing: '-0.2px' }}>
             +1 먹이!
           </div>
           <div style={{ fontSize: 12, opacity: 0.88, marginTop: 2, fontWeight: 500 }}>

@@ -18,6 +18,7 @@ import {
 import { toDatetimeLocal, toNotionDate, DAY_KR, toISOLocalKST } from '../utils/dateUtils.js';
 import { useData } from '../context/DataContext.jsx';
 import { fetchTimeSlotsForTeacher, checkConflict } from '../api/bookingApi.js';
+import { TEXT_SECONDARY, TEXT_INACTIVE } from '../constants/theme.js';
 
 // JS getDay(): 0=일,1=월,2=화,3=수,4=목,5=금,6=토
 const DAY_JS = [0, 1, 2, 3, 4, 5, 6];
@@ -401,7 +402,7 @@ export default function ClassFormPage() {
 
         {/* ① 수업 유형 — 항상 표시 */}
         <div>
-          <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>
+          <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
             수업 유형
           </Typography.Text>
           <Select
@@ -433,7 +434,7 @@ export default function ClassFormPage() {
             {/* 무료상담: 상담자 이름 입력 (원데이클래스는 등록된 학생만 선택) */}
             {isFreeConsult && (
               <div style={{ marginBottom: 20 }}>
-                <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>
+                <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
                   이름
                 </Typography.Text>
                 <Input
@@ -443,8 +444,8 @@ export default function ClassFormPage() {
                   size="large"
                   style={{ borderRadius: 12, marginBottom: 12 }}
                 />
-                <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>
-                  전화번호 <Typography.Text style={{ fontSize: 12, color: '#8c8c8c', fontWeight: 400 }}>(D-1 카카오 알림톡 발송용)</Typography.Text>
+                <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
+                  전화번호 <Typography.Text style={{ fontSize: 12, color: TEXT_INACTIVE, fontWeight: 400 }}>(D-1 카카오 알림톡 발송용)</Typography.Text>
                 </Typography.Text>
                 <Input
                   placeholder="01012345678"
@@ -457,8 +458,8 @@ export default function ClassFormPage() {
                 />
               </div>
             )}
-            <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>
-              학생 선택 {isFreeConsult ? <span style={{ fontWeight: 400, color: '#8c8c8c' }}>(선택 사항)</span> : '(2:1 수업 시 두 명 선택)'}
+            <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
+              학생 선택 {isFreeConsult ? <span style={{ fontWeight: 400, color: TEXT_INACTIVE }}>(선택 사항)</span> : '(2:1 수업 시 두 명 선택)'}
             </Typography.Text>
             <Input
               type="text"
@@ -510,7 +511,7 @@ export default function ClassFormPage() {
         {/* ③ 수업 일시 — 학생 완료(선택 or 무료상담) 후 표시 */}
         {showDatetime && (
           <div style={{ animation: 'fadeSlideUp 0.35s ease both' }}>
-            <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>
+            <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
               {recurring ? '수업 시작 시각' : '수업 일시'}
             </Typography.Text>
             {!recurring ? (
@@ -629,7 +630,7 @@ export default function ClassFormPage() {
         {/* ④ 수업 시간 — 일시 입력 후 표시 */}
         {showDuration && (
           <div style={{ animation: 'fadeSlideUp 0.35s ease both' }}>
-            <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>
+            <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
               수업 시간
             </Typography.Text>
             <div className="grid grid-cols-5 gap-2">
@@ -684,7 +685,7 @@ export default function ClassFormPage() {
               <div className="space-y-4 p-4 bg-gray-50 rounded-[28px] border border-gray-200 mt-4">
                 {/* 요일 선택 */}
                 <div>
-                  <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>
+                  <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
                     수업 요일 (복수 선택 가능)
                   </Typography.Text>
                   <div className="grid grid-cols-7 gap-1.5">
@@ -710,11 +711,11 @@ export default function ClassFormPage() {
                 {/* 시작일 / 종료일 */}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>시작일</Typography.Text>
+                    <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>시작일</Typography.Text>
                     <Input type="date" value={form.recurStartDate} onChange={(e) => setForm((f) => ({ ...f, recurStartDate: e.target.value }))} size="large" style={{ borderRadius: 12 }} />
                   </div>
                   <div>
-                    <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>종료일</Typography.Text>
+                    <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>종료일</Typography.Text>
                     <Input type="date" value={form.recurEndDate} min={form.recurStartDate} onChange={(e) => setForm((f) => ({ ...f, recurEndDate: e.target.value }))} size="large" style={{ borderRadius: 12 }} />
                   </div>
                 </div>
@@ -749,7 +750,7 @@ export default function ClassFormPage() {
         {/* ⑥ 수업 장소 — 일시 입력 후 표시 */}
         {showDuration && (
           <div style={{ animation: 'fadeSlideUp 0.35s ease both' }}>
-            <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>
+            <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
               수업 장소
             </Typography.Text>
             <div className="grid grid-cols-2 gap-2">
@@ -791,7 +792,7 @@ export default function ClassFormPage() {
         {/* ⑦ 특이사항 — 일시 입력 후 표시 */}
         {showDuration && (
           <div style={{ animation: 'fadeSlideUp 0.35s ease both' }}>
-            <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>
+            <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
               특이사항 (선택)
             </Typography.Text>
             <div className="grid grid-cols-2 gap-2">
@@ -827,7 +828,7 @@ export default function ClassFormPage() {
         {/* ⑧ 메모 — 특이사항 상세 내용 (자유 텍스트) */}
         {showDuration && (
           <div style={{ animation: 'fadeSlideUp 0.35s ease both' }}>
-            <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>
+            <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
               메모 (선택)
             </Typography.Text>
             <Input.TextArea

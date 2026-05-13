@@ -1,4 +1,5 @@
 import { Modal, Button, Flex } from 'antd';
+import { TEXT_SECONDARY } from '../../constants/theme.js';
 
 export default function ConfirmDialog({
   title,
@@ -20,7 +21,7 @@ export default function ConfirmDialog({
       styles={{ content: { borderRadius: 16 } }}
     >
       {message && (
-        <p style={{ fontSize: 14, color: '#595959', margin: '8px 0 24px', whiteSpace: 'pre-line' }}>{message}</p>
+        <p style={{ fontSize: 14, color: TEXT_SECONDARY, margin: '8px 0 24px', whiteSpace: 'pre-line' }}>{message}</p>
       )}
       <Flex gap={12}>
         <Button

@@ -21,7 +21,7 @@ export default function FloatingCtaButton({ visible, onClick }) {
       <Button
         type="primary" size="large" onClick={onClick}
         style={{
-          height: 48, borderRadius: 24, fontWeight: 700, fontSize: 15,
+          height: 48, borderRadius: 980, fontWeight: 700, fontSize: 15,
           paddingInline: 28, boxShadow: 'var(--shadow-brand-button)',
         }}
       >

@@ -1,5 +1,15 @@
 import { useState, useRef, useEffect } from 'react';
 import { SpeakerHighIcon, PauseIcon, TrashIcon } from '@phosphor-icons/react';
+import {
+  PRIMARY,
+  PRIMARY_ALPHA_35,
+  TEXT_PRIMARY,
+  TEXT_TERTIARY,
+  TEXT_DISABLED,
+  BORDER_NEUTRAL,
+  STATUS_ERROR_TEXT,
+  STATUS_ERROR,
+} from '../../constants/theme.js';
 
 /**
  * AudioPlayer — Notion 파일 URL용 오디오 플레이어
@@ -133,7 +143,7 @@ export default function AudioPlayer({ url, fileName, onGetFreshUrl, onDelete, de
         aria-label={playing ? '일시정지' : '재생'}
         style={{
           width: 40, height: 40, borderRadius: '50%',
-          border: 'none', background: '#7f0005',
+          border: 'none', background: PRIMARY,
           color: '#ffffff',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           cursor: loading || !src ? 'not-allowed' : 'pointer',
@@ -181,19 +191,19 @@ export default function AudioPlayer({ url, fileName, onGetFreshUrl, onDelete, de
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
           {displayName && (
             <div style={{
-              fontSize: 13, color: '#1d1d1f', fontWeight: 500,
+              fontSize: 13, color: TEXT_PRIMARY, fontWeight: 500,
               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
               flex: 1, minWidth: 0,
             }}>
               {displayName}
             </div>
           )}
-          <div className="tabular-nums" style={{ fontSize: 12, color: '#767676', flexShrink: 0, marginLeft: 8 }}>
+          <div className="tabular-nums" style={{ fontSize: 12, color: TEXT_TERTIARY, flexShrink: 0, marginLeft: 8 }}>
             {formatTime(currentTime)} / {formatTime(duration)}
           </div>
         </div>
         {error ? (
-          <div style={{ fontSize: 11, color: '#cf1322' }}>{error}</div>
+          <div style={{ fontSize: 11, color: STATUS_ERROR_TEXT }}>{error}</div>
         ) : (
           <div
             onClick={handleSeek}
@@ -211,15 +221,15 @@ export default function AudioPlayer({ url, fileName, onGetFreshUrl, onDelete, de
           >
             <div style={{
               height: '100%', width: `${progress * 100}%`,
-              background: '#7f0005', borderRadius: 3,
+              background: PRIMARY, borderRadius: 3,
               transition: 'width 0.1s linear',
               position: 'relative',
             }}>
               {/* thumb: opacity 트랜지션으로 부드럽게 등장 */}
               <div style={{
                 position: 'absolute', right: -5, top: '50%', transform: 'translateY(-50%)',
-                width: 10, height: 10, borderRadius: '50%', background: '#7f0005',
-                boxShadow: '0 1px 4px rgba(127,0,5,0.35)',
+                width: 10, height: 10, borderRadius: '50%', background: PRIMARY,
+                boxShadow: `0 1px 4px ${PRIMARY_ALPHA_35}`,
                 opacity: progress > 0 ? 1 : 0,
                 transition: 'opacity 200ms ease-out',
               }} />
@@ -238,14 +248,14 @@ export default function AudioPlayer({ url, fileName, onGetFreshUrl, onDelete, de
           style={{
             flexShrink: 0, background: 'none', border: 'none',
             cursor: deleteDisabled ? 'not-allowed' : 'pointer',
-            color: deleteDisabled ? '#d9d9d9' : '#bfbfbf',
+            color: deleteDisabled ? BORDER_NEUTRAL : TEXT_DISABLED,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             width: 40, height: 40, borderRadius: 8,
             transition: 'color 150ms ease-out',
             WebkitTapHighlightColor: 'transparent',
           }}
-          onMouseEnter={(e) => { if (!deleteDisabled) e.currentTarget.style.color = '#ff4d4f'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.color = deleteDisabled ? '#d9d9d9' : '#bfbfbf'; }}
+          onMouseEnter={(e) => { if (!deleteDisabled) e.currentTarget.style.color = STATUS_ERROR; }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = deleteDisabled ? BORDER_NEUTRAL : TEXT_DISABLED; }}
         >
           <TrashIcon size={16} weight="regular" />
         </button>

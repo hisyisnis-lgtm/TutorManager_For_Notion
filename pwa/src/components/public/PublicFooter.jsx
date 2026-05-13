@@ -27,7 +27,7 @@ export default function PublicFooter() {
           ))}
         </Flex>
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 16 }}>
-          <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>
+          <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.8)' }}>
             Copyright © 2025 하늘하늘중국어. All rights reserved.
           </Text>
         </div>

@@ -6,6 +6,7 @@ import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import { createStudent, updateStudent, parseStudent, STATUS_OPTIONS } from '../api/students.js';
 import { getPage } from '../api/notionClient.js';
 import { useData } from '../context/DataContext.jsx';
+import { TEXT_SECONDARY } from '../constants/theme.js';
 
 // 0/O, 1/I/l 제외 — 혼동 없는 대문자+숫자 32자
 const CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
@@ -100,7 +101,7 @@ export default function StudentFormPage() {
 
         {/* 이름 */}
         <div>
-          <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>
+          <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
             이름 *
           </Typography.Text>
           <Input
@@ -115,7 +116,7 @@ export default function StudentFormPage() {
 
         {/* 상태 */}
         <div>
-          <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>
+          <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
             상태
           </Typography.Text>
           <div className="flex gap-2 flex-wrap">
@@ -138,7 +139,7 @@ export default function StudentFormPage() {
 
         {/* 전화번호 */}
         <div>
-          <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>
+          <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
             전화번호 (선택)
           </Typography.Text>
           <Input
@@ -153,7 +154,7 @@ export default function StudentFormPage() {
 
         {/* 이메일 */}
         <div>
-          <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>
+          <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
             이메일 (선택)
           </Typography.Text>
           <Input
@@ -168,7 +169,7 @@ export default function StudentFormPage() {
 
         {/* 레벨 */}
         <div>
-          <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>
+          <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
             레벨 (선택)
           </Typography.Text>
           <Input.TextArea
@@ -182,7 +183,7 @@ export default function StudentFormPage() {
 
         {/* 목표 */}
         <div>
-          <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>
+          <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
             목표 (선택)
           </Typography.Text>
           <Input.TextArea
@@ -196,7 +197,7 @@ export default function StudentFormPage() {
 
         {/* 메모 */}
         <div>
-          <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>
+          <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
             메모 (선택)
           </Typography.Text>
           <Input.TextArea
@@ -210,7 +211,7 @@ export default function StudentFormPage() {
 
         {/* 예약 코드 */}
         <div>
-          <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>
+          <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
             예약 코드
           </Typography.Text>
           <div className="flex gap-2">

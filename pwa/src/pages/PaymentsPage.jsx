@@ -12,6 +12,7 @@ import { formatKRW } from '../utils/dateUtils.js';
 import { stripEmoji } from '../utils/stringUtils.js';
 import { useData } from '../context/DataContext.jsx';
 import PullToRefresh from '../components/ui/PullToRefresh.jsx';
+import { TEXT_PRIMARY, TEXT_TERTIARY, STATUS_ERROR_TEXT } from '../constants/theme.js';
 
 const STATUS_FILTERS = [
   { value: '전체', label: '전체' },
@@ -87,7 +88,7 @@ export default function PaymentsPage() {
         {/* 학생 검색 필터 */}
         <div className="relative">
           <Input
-            prefix={<MagnifyingGlassIcon weight="fill" style={{ color: '#767676' }} />}
+            prefix={<MagnifyingGlassIcon weight="fill" style={{ color: TEXT_TERTIARY }} />}
             placeholder="학생 이름으로 검색"
             value={nameInput}
             onChange={(e) => {
@@ -197,33 +198,33 @@ function PaymentCard({ payment, studentNameMap, classTypeMap }) {
         >
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 10 }}>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ fontSize: 15, fontWeight: 700, color: '#1d1d1f', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <p style={{ fontSize: 15, fontWeight: 700, color: TEXT_PRIMARY, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {studentName || '학생 없음'}
               </p>
               {classTypeName && (
-                <p style={{ fontSize: 12, color: '#767676', margin: '2px 0 0' }}>{classTypeName}</p>
+                <p style={{ fontSize: 12, color: TEXT_TERTIARY, margin: '2px 0 0' }}>{classTypeName}</p>
               )}
             </div>
             <Badge label={stripEmoji(payment.paymentStatus)} bg={bg} text={text} />
           </div>
           <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
             <div>
-              <span style={{ fontSize: 12, color: '#767676' }}>시간 회차 </span>
-              <span style={{ fontSize: 13, fontWeight: 600, color: '#1d1d1f' }} className="tabular-nums">{payment.sessionCount}회</span>
+              <span style={{ fontSize: 12, color: TEXT_TERTIARY }}>시간 회차 </span>
+              <span style={{ fontSize: 13, fontWeight: 600, color: TEXT_PRIMARY }} className="tabular-nums">{payment.sessionCount}회</span>
             </div>
             <div>
-              <span style={{ fontSize: 12, color: '#767676' }}>결제 금액 </span>
-              <span style={{ fontSize: 13, fontWeight: 600, color: '#1d1d1f' }} className="tabular-nums">{formatKRW(payment.paymentAmount)}</span>
+              <span style={{ fontSize: 12, color: TEXT_TERTIARY }}>결제 금액 </span>
+              <span style={{ fontSize: 13, fontWeight: 600, color: TEXT_PRIMARY }} className="tabular-nums">{formatKRW(payment.paymentAmount)}</span>
             </div>
             {payment.unpaid > 0 && (
               <div>
-                <span style={{ fontSize: 12, color: '#767676' }}>미수금 </span>
-                <span style={{ fontSize: 13, fontWeight: 600, color: '#cf1322' }} className="tabular-nums">{formatKRW(payment.unpaid)}</span>
+                <span style={{ fontSize: 12, color: TEXT_TERTIARY }}>미수금 </span>
+                <span style={{ fontSize: 13, fontWeight: 600, color: STATUS_ERROR_TEXT }} className="tabular-nums">{formatKRW(payment.unpaid)}</span>
               </div>
             )}
           </div>
           {payment.paymentDate && (
-            <p style={{ fontSize: 12, color: '#767676', margin: '8px 0 0' }} className="tabular-nums">결제일 {payment.paymentDate}</p>
+            <p style={{ fontSize: 12, color: TEXT_TERTIARY, margin: '8px 0 0' }} className="tabular-nums">결제일 {payment.paymentDate}</p>
           )}
         </Card>
       </Link>

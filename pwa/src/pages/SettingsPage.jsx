@@ -3,6 +3,7 @@ import { Button, Input, Typography } from 'antd';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import ConfirmDialog from '../components/ui/ConfirmDialog.jsx';
 import { clearAuth } from '../api/authUtils.js';
+import { TEXT_SECONDARY, TEXT_TERTIARY, STATUS_ERROR_BORDER } from '../constants/theme.js';
 
 const STORAGE_KEY = 'instructor_name';
 const NTFY_TOPIC_KEY = 'ntfy_topic';
@@ -78,7 +79,7 @@ export default function SettingsPage() {
       <PageHeader title="설정" back />
       <div className="px-4 pt-6 pb-8 space-y-6">
         <div>
-          <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>강사 이름</Typography.Text>
+          <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>강사 이름</Typography.Text>
           <Input
             type="text"
             value={name}
@@ -92,7 +93,7 @@ export default function SettingsPage() {
         </div>
 
         <div>
-          <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>ntfy 토픽</Typography.Text>
+          <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>ntfy 토픽</Typography.Text>
           <Input
             type="text"
             value={ntfyTopic}
@@ -110,7 +111,7 @@ export default function SettingsPage() {
         </div>
 
         <div>
-          <Typography.Text strong style={{ fontSize: 14, color: '#595959', display: 'block', marginBottom: 6 }}>공유 링크</Typography.Text>
+          <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>공유 링크</Typography.Text>
           <div className="space-y-2">
             {SHARE_LINKS.map(({ key, label, path }) => (
               <div key={key} className="flex items-center gap-2 bg-white border border-gray-200 rounded-2xl px-3 py-2.5">
@@ -157,12 +158,12 @@ export default function SettingsPage() {
           danger
           block
           onClick={() => setConfirmLogout(true)}
-          style={{ borderRadius: 12, height: 44, fontWeight: 500, border: '1px solid #ffccc7' }}
+          style={{ borderRadius: 12, height: 44, fontWeight: 500, border: `1px solid ${STATUS_ERROR_BORDER}` }}
         >
           로그아웃
         </Button>
 
-        <p className="text-center text-xs pt-4" style={{ color: '#767676' }}>v{__APP_VERSION__}</p>
+        <p className="text-center text-xs pt-4" style={{ color: TEXT_TERTIARY }}>v{__APP_VERSION__}</p>
       </div>
 
       {confirmLogout && (

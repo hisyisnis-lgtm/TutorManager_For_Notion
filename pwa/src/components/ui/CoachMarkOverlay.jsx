@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { TEXT_PRIMARY } from '../../constants/theme.js';
 
 const PAD = 10;        // spotlight 여백
 const RADIUS = 16;     // spotlight 모서리 반경
@@ -177,14 +178,14 @@ export default function CoachMarkOverlay({ steps, visible, onDone }) {
         {/* 툴팁 본문 */}
         <div style={{
           background: '#fff',
-          borderRadius: 18,
+          borderRadius: 16,
           padding: '16px 20px',
           boxShadow: '0 12px 40px rgba(0,0,0,0.24)',
           position: 'relative', zIndex: 2,
         }}>
           <p style={{
             fontSize: 15, fontWeight: 500,
-            color: '#1d1d1f', lineHeight: 1.65, margin: 0,
+            color: TEXT_PRIMARY, lineHeight: 1.65, margin: 0,
           }}>
             {current?.label}
           </p>

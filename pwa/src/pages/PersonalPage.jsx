@@ -1331,7 +1331,7 @@ export default function PersonalPage() {
         backgroundColor: 'rgba(255,255,255,0.82)',
         backdropFilter: 'saturate(180%) blur(20px)',
         WebkitBackdropFilter: 'saturate(180%) blur(20px)',
-        boxShadow: '0px -1px 0px 0px rgba(0,0,0,0.06), 0px -2px 8px 0px rgba(0,0,0,0.04)',
+        boxShadow: 'var(--shadow-nav)',
         paddingBottom: 'env(safe-area-inset-bottom)',
       }}>
         <div style={{ maxWidth: 480, margin: '0 auto', display: 'flex' }}>

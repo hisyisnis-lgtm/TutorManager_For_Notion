@@ -1,6 +1,14 @@
 import { useState } from 'react';
 import { message } from 'antd';
 import { detectInAppBrowser, openInChromeAndroid } from '../../utils/inAppBrowser.js';
+import {
+  PRIMARY,
+  PRIMARY_BG,
+  PRIMARY_ALPHA_20,
+  TEXT_PRIMARY,
+  TEXT_SECONDARY,
+  TEXT_INACTIVE,
+} from '../../constants/theme.js';
 
 // SNS 인앱 브라우저로 PWA에 진입한 학생에게 외부 브라우저(Chrome/Safari) 이동을 권하는 모달.
 // 모달 dismiss는 24시간 기억하므로 매번 짜증나게 뜨지는 않는다 — 새 학생이 새 디바이스로
@@ -63,11 +71,11 @@ export default function InAppBrowserWarning() {
         animation: 'slideUpModal 0.28s cubic-bezier(0.34,1.56,0.64,1)',
       }}>
         <p style={{ fontSize: 32, margin: '0 0 8px', textAlign: 'center', lineHeight: 1 }}>📱</p>
-        <h2 style={{ fontSize: 17, fontWeight: 700, color: '#1d1d1f', margin: '0 0 6px', textAlign: 'center' }}>
+        <h2 style={{ fontSize: 17, fontWeight: 700, color: TEXT_PRIMARY, margin: '0 0 6px', textAlign: 'center' }}>
           외부 브라우저로 열어주세요
         </h2>
-        <p style={{ fontSize: 13, color: '#595959', margin: '0 0 18px', textAlign: 'center', lineHeight: 1.55, wordBreak: 'keep-all' }}>
-          현재 <strong style={{ color: '#7f0005' }}>{info.appLabel}</strong> 안에서 열려있어요.<br />
+        <p style={{ fontSize: 13, color: TEXT_SECONDARY, margin: '0 0 18px', textAlign: 'center', lineHeight: 1.55, wordBreak: 'keep-all' }}>
+          현재 <strong style={{ color: PRIMARY }}>{info.appLabel}</strong> 안에서 열려있어요.<br />
           홈 화면에 추가나 마이크 사용이 제한될 수 있어 <strong>{info.os === 'ios' ? 'Safari' : 'Chrome'}</strong>으로 다시 열어주세요.
         </p>
 
@@ -77,7 +85,7 @@ export default function InAppBrowserWarning() {
             onClick={handleAndroidOpen}
             style={{
               width: '100%', height: 48, marginBottom: 8,
-              background: '#7f0005', color: '#fff',
+              background: PRIMARY, color: '#fff',
               fontSize: 15, fontWeight: 700,
               border: 'none', borderRadius: 12,
               cursor: 'pointer', WebkitTapHighlightColor: 'transparent',
@@ -93,7 +101,7 @@ export default function InAppBrowserWarning() {
               background: '#fafafa', borderRadius: 12,
               padding: '14px 16px', marginBottom: 12,
             }}>
-              <p style={{ fontSize: 12, fontWeight: 700, color: '#7f0005', margin: '0 0 8px', letterSpacing: '0.04em' }}>
+              <p style={{ fontSize: 12, fontWeight: 700, color: PRIMARY, margin: '0 0 8px', letterSpacing: '0.04em' }}>
                 Safari로 여는 방법
               </p>
               {[
@@ -105,14 +113,14 @@ export default function InAppBrowserWarning() {
                   <div style={{
                     flexShrink: 0,
                     width: 22, height: 22, borderRadius: '50%',
-                    background: '#fff0f1', color: '#7f0005',
+                    background: PRIMARY_BG, color: PRIMARY,
                     fontSize: 12, fontWeight: 700,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     marginTop: 1,
                   }}>
                     {i + 1}
                   </div>
-                  <p style={{ margin: 0, fontSize: 13, color: '#1d1d1f', lineHeight: 1.55, wordBreak: 'keep-all' }}>{text}</p>
+                  <p style={{ margin: 0, fontSize: 13, color: TEXT_PRIMARY, lineHeight: 1.55, wordBreak: 'keep-all' }}>{text}</p>
                 </div>
               ))}
             </div>
@@ -121,9 +129,9 @@ export default function InAppBrowserWarning() {
               onClick={handleCopyUrl}
               style={{
                 width: '100%', height: 44, marginBottom: 8,
-                background: '#fff0f1', color: '#7f0005',
+                background: PRIMARY_BG, color: PRIMARY,
                 fontSize: 14, fontWeight: 700,
-                border: '1.5px solid rgba(127,0,5,0.2)', borderRadius: 12,
+                border: `1.5px solid ${PRIMARY_ALPHA_20}`, borderRadius: 12,
                 cursor: 'pointer', WebkitTapHighlightColor: 'transparent',
               }}
             >
@@ -138,7 +146,7 @@ export default function InAppBrowserWarning() {
             onClick={handleCopyUrl}
             style={{
               width: '100%', height: 48, marginBottom: 8,
-              background: '#7f0005', color: '#fff',
+              background: PRIMARY, color: '#fff',
               fontSize: 15, fontWeight: 700,
               border: 'none', borderRadius: 12,
               cursor: 'pointer', WebkitTapHighlightColor: 'transparent',
@@ -153,7 +161,7 @@ export default function InAppBrowserWarning() {
           onClick={handleDismiss}
           style={{
             width: '100%', height: 40,
-            background: 'transparent', color: '#8c8c8c',
+            background: 'transparent', color: TEXT_INACTIVE,
             fontSize: 13, fontWeight: 500,
             border: 'none', cursor: 'pointer',
             WebkitTapHighlightColor: 'transparent',

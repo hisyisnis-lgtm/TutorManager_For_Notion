@@ -1,5 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
 import { message } from 'antd';
+import {
+  PRIMARY,
+  TEXT_PRIMARY, TEXT_SECONDARY, TEXT_TERTIARY, TEXT_DISABLED,
+  BORDER_NEUTRAL,
+  STATUS_ERROR,
+} from '../../constants/theme.js';
 
 function getSupportedMimeType() {
   const types = [
@@ -212,10 +218,10 @@ export default function AudioRecorder({ onFile, onCancel, defaultName = 'recordi
       {/* ios-non-safari (iOS Chrome/Firefox 등) — Apple 정책으로 마이크 접근 제한 안내 */}
       {phase === 'ios-non-safari' && (
         <div style={{ textAlign: 'center', padding: '4px 4px 0' }}>
-          <p style={{ fontSize: 15, fontWeight: 700, color: '#1d1d1f', margin: '0 0 6px' }}>
+          <p style={{ fontSize: 15, fontWeight: 700, color: TEXT_PRIMARY, margin: '0 0 6px' }}>
             Safari로 열어 녹음해주세요
           </p>
-          <p style={{ fontSize: 12, color: '#595959', lineHeight: 1.5, margin: '0 0 14px' }}>
+          <p style={{ fontSize: 12, color: TEXT_SECONDARY, lineHeight: 1.5, margin: '0 0 14px' }}>
             iOS의 Chrome·Firefox 등은 Apple 정책상 마이크 사용이 제한될 수 있어요.
           </p>
           <button
@@ -223,7 +229,7 @@ export default function AudioRecorder({ onFile, onCancel, defaultName = 'recordi
             onClick={copyCurrentUrl}
             style={{
               width: '100%', height: 44, borderRadius: 12,
-              background: '#7f0005', border: 'none', color: 'white',
+              background: PRIMARY, border: 'none', color: 'white',
               fontSize: 14, fontWeight: 600, cursor: 'pointer',
               WebkitTapHighlightColor: 'transparent', marginBottom: 8,
             }}
@@ -235,7 +241,7 @@ export default function AudioRecorder({ onFile, onCancel, defaultName = 'recordi
             onClick={() => setPhase('idle')}
             style={{
               width: '100%', height: 36, borderRadius: 12,
-              background: 'white', border: '1.5px solid #d9d9d9', color: '#595959',
+              background: 'white', border: `1.5px solid ${BORDER_NEUTRAL}`, color: TEXT_SECONDARY,
               fontSize: 13, fontWeight: 500, cursor: 'pointer',
               WebkitTapHighlightColor: 'transparent',
             }}
@@ -248,10 +254,10 @@ export default function AudioRecorder({ onFile, onCancel, defaultName = 'recordi
       {/* mic-denied — 권한 거부 시 안내 + 새로고침 트리거 */}
       {phase === 'mic-denied' && (
         <div style={{ textAlign: 'center', padding: '4px 4px 0' }}>
-          <p style={{ fontSize: 15, fontWeight: 700, color: '#1d1d1f', margin: '0 0 6px' }}>
+          <p style={{ fontSize: 15, fontWeight: 700, color: TEXT_PRIMARY, margin: '0 0 6px' }}>
             마이크 권한이 차단되어 있어요
           </p>
-          <p style={{ fontSize: 12, color: '#595959', lineHeight: 1.6, margin: '0 0 14px', whiteSpace: 'pre-wrap' }}>
+          <p style={{ fontSize: 12, color: TEXT_SECONDARY, lineHeight: 1.6, margin: '0 0 14px', whiteSpace: 'pre-wrap' }}>
             {micBlockedDetail()}
           </p>
           <button
@@ -259,7 +265,7 @@ export default function AudioRecorder({ onFile, onCancel, defaultName = 'recordi
             onClick={() => window.location.reload()}
             style={{
               width: '100%', height: 44, borderRadius: 12,
-              background: '#7f0005', border: 'none', color: 'white',
+              background: PRIMARY, border: 'none', color: 'white',
               fontSize: 14, fontWeight: 600, cursor: 'pointer',
               WebkitTapHighlightColor: 'transparent', marginBottom: 8,
             }}
@@ -271,7 +277,7 @@ export default function AudioRecorder({ onFile, onCancel, defaultName = 'recordi
             onClick={() => setPhase('idle')}
             style={{
               width: '100%', height: 36, borderRadius: 12,
-              background: 'white', border: '1.5px solid #d9d9d9', color: '#595959',
+              background: 'white', border: `1.5px solid ${BORDER_NEUTRAL}`, color: TEXT_SECONDARY,
               fontSize: 13, fontWeight: 500, cursor: 'pointer',
               WebkitTapHighlightColor: 'transparent',
             }}
@@ -288,7 +294,7 @@ export default function AudioRecorder({ onFile, onCancel, defaultName = 'recordi
           onClick={startRecording}
           style={{
             width: '100%', height: 44, borderRadius: 12,
-            background: '#7f0005', border: 'none', color: 'white',
+            background: PRIMARY, border: 'none', color: 'white',
             fontSize: 15, fontWeight: 600, cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
             WebkitTapHighlightColor: 'transparent',
@@ -304,10 +310,10 @@ export default function AudioRecorder({ onFile, onCancel, defaultName = 'recordi
         <div style={{ textAlign: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 14 }}>
             <span style={{
-              width: 10, height: 10, borderRadius: '50%', background: '#ff4d4f',
+              width: 10, height: 10, borderRadius: '50%', background: STATUS_ERROR,
               display: 'inline-block', animation: 'rec-pulse 1s ease-in-out infinite',
             }} />
-            <span style={{ fontSize: 26, fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: '#1d1d1f', letterSpacing: 1 }}>
+            <span style={{ fontSize: 26, fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: TEXT_PRIMARY, letterSpacing: 1 }}>
               {fmt(seconds)}
             </span>
           </div>
@@ -316,7 +322,7 @@ export default function AudioRecorder({ onFile, onCancel, defaultName = 'recordi
             onClick={stopRecording}
             style={{
               width: '100%', height: 44, borderRadius: 12,
-              background: '#ff4d4f', border: 'none', color: 'white',
+              background: STATUS_ERROR, border: 'none', color: 'white',
               fontSize: 14, fontWeight: 600, cursor: 'pointer',
               WebkitTapHighlightColor: 'transparent',
             }}
@@ -336,7 +342,7 @@ export default function AudioRecorder({ onFile, onCancel, defaultName = 'recordi
               onClick={retry}
               style={{
                 flex: 1, height: 44, borderRadius: 12,
-                background: 'white', border: '1.5px solid #d9d9d9', color: '#595959',
+                background: 'white', border: `1.5px solid ${BORDER_NEUTRAL}`, color: TEXT_SECONDARY,
                 fontSize: 14, fontWeight: 600, cursor: 'pointer',
                 WebkitTapHighlightColor: 'transparent',
               }}
@@ -348,7 +354,7 @@ export default function AudioRecorder({ onFile, onCancel, defaultName = 'recordi
               onClick={confirm}
               style={{
                 flex: 1, height: 44, borderRadius: 12,
-                background: '#7f0005', border: 'none', color: 'white',
+                background: PRIMARY, border: 'none', color: 'white',
                 fontSize: 14, fontWeight: 600, cursor: 'pointer',
                 WebkitTapHighlightColor: 'transparent',
               }}
@@ -362,7 +368,7 @@ export default function AudioRecorder({ onFile, onCancel, defaultName = 'recordi
       {/* naming */}
       {phase === 'naming' && (
         <div>
-          <p style={{ fontSize: 12, fontWeight: 600, color: '#595959', margin: '0 0 6px' }}>파일 이름</p>
+          <p style={{ fontSize: 12, fontWeight: 600, color: TEXT_SECONDARY, margin: '0 0 6px' }}>파일 이름</p>
           <input
             type="text"
             aria-label="파일 이름"
@@ -370,8 +376,8 @@ export default function AudioRecorder({ onFile, onCancel, defaultName = 'recordi
             onChange={(e) => setInputName(e.target.value)}
             maxLength={50}
             style={{
-              width: '100%', height: 42, borderRadius: 12, border: '1.5px solid #d9d9d9',
-              padding: '0 12px', fontSize: 14, color: '#1d1d1f',
+              width: '100%', height: 42, borderRadius: 12, border: `1.5px solid ${BORDER_NEUTRAL}`,
+              padding: '0 12px', fontSize: 14, color: TEXT_PRIMARY,
               boxSizing: 'border-box', outline: 'none', marginBottom: 10,
             }}
             onFocus={(e) => e.target.select()}
@@ -382,7 +388,7 @@ export default function AudioRecorder({ onFile, onCancel, defaultName = 'recordi
               onClick={() => setPhase('preview')}
               style={{
                 flex: 1, height: 44, borderRadius: 12,
-                background: 'white', border: '1.5px solid #d9d9d9', color: '#595959',
+                background: 'white', border: `1.5px solid ${BORDER_NEUTRAL}`, color: TEXT_SECONDARY,
                 fontSize: 14, fontWeight: 600, cursor: 'pointer',
                 WebkitTapHighlightColor: 'transparent',
               }}
@@ -395,8 +401,8 @@ export default function AudioRecorder({ onFile, onCancel, defaultName = 'recordi
               disabled={!inputName.trim()}
               style={{
                 flex: 2, height: 44, borderRadius: 12,
-                background: inputName.trim() ? '#7f0005' : '#f5f5f5',
-                border: 'none', color: inputName.trim() ? 'white' : '#bfbfbf',
+                background: inputName.trim() ? PRIMARY : '#f5f5f5',
+                border: 'none', color: inputName.trim() ? 'white' : TEXT_DISABLED,
                 fontSize: 14, fontWeight: 600, cursor: inputName.trim() ? 'pointer' : 'not-allowed',
                 WebkitTapHighlightColor: 'transparent',
               }}
@@ -413,7 +419,7 @@ export default function AudioRecorder({ onFile, onCancel, defaultName = 'recordi
           onClick={onCancel}
           style={{
             width: '100%', marginTop: 8,
-            fontSize: 12, color: '#767676',
+            fontSize: 12, color: TEXT_TERTIARY,
             background: 'none', border: 'none', cursor: 'pointer', padding: '4px 0',
           }}
         >
