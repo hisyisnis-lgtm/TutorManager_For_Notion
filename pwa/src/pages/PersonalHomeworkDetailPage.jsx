@@ -6,13 +6,6 @@ import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import ErrorMessage from '../components/ui/ErrorMessage.jsx';
 import AudioPlayer from '../components/ui/AudioPlayer.jsx';
 import AudioRecorder from '../components/ui/AudioRecorder.jsx';
-import FoodEarnedToast from '../components/ui/FoodEarnedToast.jsx';
-import {
-  PRIMARY, PRIMARY_BG, PRIMARY_ALPHA_20,
-  TEXT_PRIMARY, TEXT_SECONDARY, TEXT_TERTIARY, TEXT_INACTIVE, TEXT_DISABLED,
-  BG_APP, BORDER_NEUTRAL,
-  STATUS_SUCCESS_DARK, STATUS_ERROR,
-} from '../constants/theme.js';
 import {
   fetchMyHomework,
   parseHomework,
@@ -22,6 +15,7 @@ import {
   markFeedbackSeen,
 } from '../api/homework.js';
 import { formatDateTimeCompact } from '../utils/dateUtils.js';
+import { validateAudioFile, splitFileName } from '../utils/audioFile.js';
 
 const MAX_FILES = 5;
 
@@ -61,15 +55,15 @@ export default function PersonalHomeworkDetailPage() {
 
   const [modalOpen, setModalOpen] = useState(false);
   const [modalView, setModalView] = useState('list');
+  // pendingFiles: [{ tempId, file, baseName, ext }] — ext는 점 포함(`.mp3`) 또는 빈 문자열
   const [pendingFiles, setPendingFiles] = useState([]);
+  // namingFile: { file, ext } — 원본 확장자를 보존해 업로드 시 다시 결합
   const [namingFile, setNamingFile] = useState(null);
   const [namingInput, setNamingInput] = useState('');
   const [uploading, setUploading] = useState(false);
   const [deletingFileName, setDeletingFileName] = useState(null);
   const [deleteConfirmFile, setDeleteConfirmFile] = useState(null);
   const fileInputRef = useRef(null);
-  // 먹이 획득 알림 — 숙제 첫 제출 또는 피드백 첫 확인 시점에 표시.
-  const [foodToast, setFoodToast] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -92,14 +86,10 @@ export default function PersonalHomeworkDetailPage() {
 
   // 학생이 피드백완료 숙제를 처음 열어본 시점 기록 — Worker가 비어있을 때만 PATCH(idempotent).
   // 호출 후 로컬 상태도 즉시 갱신해 같은 페이지에서 재호출되지 않게 함.
-  // recorded:true는 Worker가 실제로 기록한 첫 호출이라는 뜻 = 먹이 1개 적립 시점.
   useEffect(() => {
     if (hw?.status === '피드백완료' && !hw.feedbackSeenDate) {
       markFeedbackSeen(studentToken, hwId)
-        .then((result) => {
-          setHw(prev => prev ? { ...prev, feedbackSeenDate: new Date().toISOString() } : prev);
-          if (result?.recorded) setFoodToast({ message: '피드백 확인 보상이에요' });
-        })
+        .then(() => setHw(prev => prev ? { ...prev, feedbackSeenDate: new Date().toISOString() } : prev))
         .catch(e => console.warn('피드백 확인 기록 실패:', e?.message));
     }
   }, [hw?.status, hw?.feedbackSeenDate, studentToken, hwId]);
@@ -118,37 +108,46 @@ export default function PersonalHomeworkDetailPage() {
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
+    // 사이즈/MIME 사전 차단 — Notion 20 MiB 상한 + 오디오 외 파일 거부.
+    const v = validateAudioFile(file);
+    if (!v.ok) {
+      message.error(v.error);
+      return;
+    }
+    const { ext } = splitFileName(file.name);
     const nextIndex = (hw?.submitFiles?.length ?? 0) + pendingFiles.length + 1;
     setNamingInput(genStudentName(hw.title, nextIndex));
-    setNamingFile(file);
+    setNamingFile({ file, ext });
     setModalView('naming');
   };
 
   const handleNamingConfirm = () => {
-    if (!namingInput.trim()) return;
-    const newPf = { tempId: Date.now(), file: namingFile, name: namingInput.trim() };
+    if (!namingInput.trim() || !namingFile) return;
+    const newPf = {
+      tempId: Date.now(),
+      file: namingFile.file,
+      baseName: namingInput.trim(),
+      ext: namingFile.ext,
+    };
     setNamingFile(null);
     uploadAndSubmit([...pendingFiles, newPf]);
   };
 
   const uploadAndSubmit = async (files) => {
     if (files.length === 0) return;
-    // 첫 제출이면 Worker가 "제출 먹이 마크"를 박고 먹이 1개를 적립함.
-    // 이후 재제출·파일 추가에선 마크가 이미 있어 추가 적립 없음 → 토스트도 1회만.
-    const wasFirstSubmit = !hw?.submitMark;
     setUploading(true);
     try {
       const uploaded = [];
       for (const pf of files) {
-        const namedFile = new File([pf.file], pf.name, { type: pf.file.type });
+        const fullName = pf.baseName + pf.ext;
+        const namedFile = new File([pf.file], fullName, { type: pf.file.type });
         const { fileUploadId } = await uploadStudentFile(studentToken, namedFile);
-        uploaded.push({ fileUploadId, fileName: pf.name });
+        uploaded.push({ fileUploadId, fileName: fullName });
       }
       await submitHomework(studentToken, hwId, uploaded);
       setPendingFiles([]);
       closeModal();
       await load();
-      if (wasFirstSubmit) setFoodToast({ message: '숙제 제출 보상이에요' });
     } catch (err) {
       message.error(`제출 실패: ${err.message}`);
     } finally {
@@ -183,7 +182,7 @@ export default function PersonalHomeworkDetailPage() {
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     width: 44, height: 44, marginLeft: -8, padding: 0,
     border: 'none', background: 'none', cursor: 'pointer',
-    color: TEXT_SECONDARY, WebkitTapHighlightColor: 'transparent', flexShrink: 0,
+    color: '#595959', WebkitTapHighlightColor: 'transparent', flexShrink: 0,
   };
 
   const BackButton = () => (
@@ -198,7 +197,7 @@ export default function PersonalHomeworkDetailPage() {
   );
 
   if (loading) return (
-    <div style={{ minHeight: '100dvh', background: BG_APP }}>
+    <div style={{ minHeight: '100dvh', background: '#f9fafb' }}>
       <div style={headerStyle}>
         <div style={innerStyle}><BackButton /></div>
       </div>
@@ -207,11 +206,11 @@ export default function PersonalHomeworkDetailPage() {
   );
 
   if (error) return (
-    <div style={{ minHeight: '100dvh', background: BG_APP }}>
+    <div style={{ minHeight: '100dvh', background: '#f9fafb' }}>
       <div style={headerStyle}>
         <div style={innerStyle}>
           <BackButton />
-          <h1 style={{ fontSize: 17, fontWeight: 700, color: TEXT_PRIMARY, margin: 0 }}>숙제 상세</h1>
+          <h1 style={{ fontSize: 17, fontWeight: 700, color: '#1d1d1f', margin: 0 }}>숙제 상세</h1>
         </div>
       </div>
       <ErrorMessage message={error} onRetry={load} />
@@ -240,7 +239,7 @@ export default function PersonalHomeworkDetailPage() {
       <div style={{ ...headerStyle, position: 'sticky', top: 0, zIndex: 100 }}>
         <div style={innerStyle}>
           <BackButton />
-          <h1 style={{ flex: 1, fontSize: 17, fontWeight: 700, color: TEXT_PRIMARY, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <h1 style={{ flex: 1, fontSize: 17, fontWeight: 700, color: '#1d1d1f', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {hw.title}
           </h1>
           <span style={{ flexShrink: 0, fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: bg, color: text }}>
@@ -249,13 +248,13 @@ export default function PersonalHomeworkDetailPage() {
         </div>
       </div>
 
-      <div style={{ background: BG_APP, minHeight: 'calc(100dvh - 56px)' }}>
+      <div style={{ background: '#f9fafb', minHeight: 'calc(100dvh - 56px)' }}>
         <div style={{ maxWidth: 480, margin: '0 auto', padding: '20px 16px 80px' }}>
 
         {/* 숙제 내용 */}
         {hw.content && (
           <div style={{ background: '#fff', borderRadius: 16, padding: '16px', marginBottom: 12, boxShadow: 'var(--shadow-border)' }}>
-            <p style={{ fontSize: 13, fontWeight: 600, color: TEXT_SECONDARY, margin: '0 0 8px' }}>숙제 내용</p>
+            <p style={{ fontSize: 13, fontWeight: 600, color: '#595959', margin: '0 0 8px' }}>숙제 내용</p>
             <p style={{ fontSize: 14, color: '#262626', lineHeight: 1.7, whiteSpace: 'pre-wrap', margin: 0 }}>{hw.content}</p>
           </div>
         )}
@@ -263,7 +262,7 @@ export default function PersonalHomeworkDetailPage() {
         {/* 내 제출 파일 */}
         {hw.submitFiles?.length > 0 && (
           <div style={{ background: '#fff', borderRadius: 16, padding: '16px', marginBottom: 12, boxShadow: 'var(--shadow-border)' }}>
-            <p style={{ fontSize: 13, fontWeight: 600, color: TEXT_SECONDARY, margin: '0 0 10px' }}>내 제출 파일</p>
+            <p style={{ fontSize: 13, fontWeight: 600, color: '#595959', margin: '0 0 10px' }}>내 제출 파일</p>
             {hw.submitFiles.map((f, i) => (
               <div key={i} style={{ marginBottom: i < hw.submitFiles.length - 1 ? 8 : 0 }}>
                 <AudioPlayer
@@ -276,7 +275,7 @@ export default function PersonalHomeworkDetailPage() {
               </div>
             ))}
             {hw.submitDate && (
-              <p style={{ fontSize: 12, color: TEXT_TERTIARY, marginTop: 8 }}>
+              <p style={{ fontSize: 12, color: '#767676', marginTop: 8 }}>
                 제출일: <span className="tabular-nums">{formatDateTimeCompact(hw.submitDate)}</span>
               </p>
             )}
@@ -286,7 +285,7 @@ export default function PersonalHomeworkDetailPage() {
         {/* 선생님 피드백 */}
         {(hw.feedbackText || hw.feedbackFiles?.length > 0) && (
           <div style={{ background: '#f6ffed', border: '1px solid #b7eb8f', borderRadius: 16, padding: '16px', marginBottom: 12 }}>
-            <p style={{ fontSize: 13, fontWeight: 700, color: STATUS_SUCCESS_DARK, margin: '0 0 10px' }}>선생님 피드백</p>
+            <p style={{ fontSize: 13, fontWeight: 700, color: '#389e0d', margin: '0 0 10px' }}>선생님 피드백</p>
             {hw.feedbackText && (
               <p style={{ fontSize: 14, color: '#262626', lineHeight: 1.7, whiteSpace: 'pre-wrap', margin: hw.feedbackFiles?.length > 0 ? '0 0 10px' : 0 }}>
                 {hw.feedbackText}
@@ -302,7 +301,7 @@ export default function PersonalHomeworkDetailPage() {
               </div>
             ))}
             {hw.feedbackDate && (
-              <p style={{ fontSize: 12, color: TEXT_INACTIVE, marginTop: 8 }}>
+              <p style={{ fontSize: 12, color: '#8c8c8c', marginTop: 8 }}>
                 피드백일: <span className="tabular-nums">{formatDateTimeCompact(hw.feedbackDate)}</span>
               </p>
             )}
@@ -316,9 +315,9 @@ export default function PersonalHomeworkDetailPage() {
             onClick={openModal}
             className="active:scale-[0.96] transition-[scale,background-color] duration-150 ease-out"
             style={{
-              width: '100%', height: 48, borderRadius: 12,
-              background: PRIMARY_BG, border: `1.5px solid ${PRIMARY_ALPHA_20}`,
-              color: PRIMARY, fontSize: 15, fontWeight: 700, cursor: 'pointer',
+              width: '100%', height: 48, borderRadius: 14,
+              background: '#fff0f1', border: '1.5px solid rgba(127,0,5,0.2)',
+              color: '#7f0005', fontSize: 15, fontWeight: 700, cursor: 'pointer',
               WebkitTapHighlightColor: 'transparent', marginBottom: 10,
             }}
           >
@@ -329,7 +328,7 @@ export default function PersonalHomeworkDetailPage() {
         {/* 피드백완료 후 수정 불가 안내 */}
         {isFeedback && (
           <p style={{
-            fontSize: 12, color: TEXT_INACTIVE,
+            fontSize: 12, color: '#8c8c8c',
             textAlign: 'center', margin: '0 0 10px',
             wordBreak: 'keep-all',
           }}>
@@ -344,9 +343,9 @@ export default function PersonalHomeworkDetailPage() {
             onClick={() => { forceArchive(studentToken, hwId); navigate(-1); }}
             className="active:scale-[0.96] transition-[scale] duration-150 ease-out"
             style={{
-              width: '100%', height: 44, borderRadius: 12,
-              background: 'none', border: `1.5px solid ${BORDER_NEUTRAL}`,
-              color: TEXT_INACTIVE, fontSize: 14, fontWeight: 500, cursor: 'pointer',
+              width: '100%', height: 44, borderRadius: 14,
+              background: 'none', border: '1.5px solid #d9d9d9',
+              color: '#8c8c8c', fontSize: 14, fontWeight: 500, cursor: 'pointer',
               WebkitTapHighlightColor: 'transparent',
             }}
           >
@@ -368,7 +367,7 @@ export default function PersonalHomeworkDetailPage() {
                 type="button"
                 onClick={() => setModalView('list')}
                 className="active:scale-[0.96] transition-[scale,color] duration-150 ease-out"
-                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: TEXT_SECONDARY, padding: '0 4px 0 0', display: 'flex', alignItems: 'center' }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: '#595959', padding: '0 4px 0 0', display: 'flex', alignItems: 'center' }}
                 aria-label="뒤로"
               >
                 <CaretLeftIcon size={18} weight="bold" />
@@ -387,7 +386,7 @@ export default function PersonalHomeworkDetailPage() {
           <div>
             {pendingFiles.length > 0 && (
               <div style={{ marginBottom: 12 }}>
-                <p style={{ fontSize: 12, fontWeight: 600, color: TEXT_SECONDARY, margin: '0 0 6px' }}>
+                <p style={{ fontSize: 12, fontWeight: 600, color: '#595959', margin: '0 0 6px' }}>
                   새로 추가할 파일 ({pendingFiles.length}개)
                 </p>
                 {pendingFiles.map((pf) => (
@@ -396,13 +395,13 @@ export default function PersonalHomeworkDetailPage() {
                     padding: '8px 12px', background: '#f6ffed', border: '1px solid #b7eb8f',
                     borderRadius: 12, marginBottom: 6,
                   }}>
-                    <span style={{ fontSize: 13, color: TEXT_PRIMARY, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {pf.name}
+                    <span style={{ fontSize: 13, color: '#1d1d1f', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {pf.baseName + pf.ext}
                     </span>
                     <button
                       type="button"
                       onClick={() => removeFile(pf.tempId)}
-                      style={{ marginLeft: 10, background: 'none', border: 'none', cursor: 'pointer', color: TEXT_DISABLED, fontSize: 18, flexShrink: 0, padding: 0, lineHeight: 1 }}
+                      style={{ marginLeft: 10, background: 'none', border: 'none', cursor: 'pointer', color: '#bfbfbf', fontSize: 18, flexShrink: 0, padding: 0, lineHeight: 1 }}
                       aria-label="삭제"
                     >×</button>
                   </div>
@@ -415,7 +414,7 @@ export default function PersonalHomeworkDetailPage() {
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   className="active:scale-[0.96] transition-[scale,background-color] duration-150 ease-out"
-                  style={{ flex: 1, height: 44, borderRadius: 12, background: 'white', border: `1.5px solid ${BORDER_NEUTRAL}`, color: TEXT_SECONDARY, fontSize: 14, fontWeight: 600, cursor: 'pointer', WebkitTapHighlightColor: 'transparent' }}
+                  style={{ flex: 1, height: 44, borderRadius: 12, background: 'white', border: '1.5px solid #d9d9d9', color: '#595959', fontSize: 14, fontWeight: 600, cursor: 'pointer', WebkitTapHighlightColor: 'transparent' }}
                 >
                   파일 추가
                 </button>
@@ -423,7 +422,7 @@ export default function PersonalHomeworkDetailPage() {
                   type="button"
                   onClick={() => setModalView('record')}
                   className="active:scale-[0.96] transition-[scale,background-color] duration-150 ease-out"
-                  style={{ flex: 1, height: 44, borderRadius: 12, background: PRIMARY, border: 'none', color: 'white', fontSize: 14, fontWeight: 600, cursor: 'pointer', WebkitTapHighlightColor: 'transparent' }}
+                  style={{ flex: 1, height: 44, borderRadius: 12, background: '#7f0005', border: 'none', color: 'white', fontSize: 14, fontWeight: 600, cursor: 'pointer', WebkitTapHighlightColor: 'transparent' }}
                 >
                   바로 녹음
                 </button>
@@ -436,9 +435,10 @@ export default function PersonalHomeworkDetailPage() {
           <AudioRecorder
             defaultName={genStudentName(hw.title, nextIndex)}
             onFile={(file) => {
-              const safeName = file.name.replace(/\.[^/.]+$/, '');
+              // AudioRecorder가 이미 `${name}.${ext}` 형식으로 만들어 보냄 → 확장자 분리해 보존.
+              const { base, ext } = splitFileName(file.name);
               setModalView('list');
-              uploadAndSubmit([...pendingFiles, { tempId: Date.now(), file, name: safeName }]);
+              uploadAndSubmit([...pendingFiles, { tempId: Date.now(), file, baseName: base, ext }]);
             }}
             onCancel={() => setModalView('list')}
             hideCancel
@@ -447,17 +447,32 @@ export default function PersonalHomeworkDetailPage() {
 
         {modalView === 'naming' && namingFile && (
           <div>
-            <p style={{ fontSize: 13, color: TEXT_SECONDARY, margin: '0 0 8px' }}>파일 이름을 입력하세요</p>
-            <input
-              type="text"
-              value={namingInput}
-              onChange={(e) => setNamingInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleNamingConfirm()}
-              maxLength={50}
-              autoFocus
-              style={{ width: '100%', height: 44, borderRadius: 12, border: `1.5px solid ${BORDER_NEUTRAL}`, padding: '0 14px', fontSize: 15, color: TEXT_PRIMARY, boxSizing: 'border-box', outline: 'none', marginBottom: 12 }}
-              onFocus={(e) => e.target.select()}
-            />
+            <p style={{ fontSize: 13, color: '#595959', margin: '0 0 8px' }}>파일 이름을 입력하세요</p>
+            <div style={{ position: 'relative', marginBottom: 8 }}>
+              <input
+                type="text"
+                value={namingInput}
+                onChange={(e) => setNamingInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleNamingConfirm()}
+                maxLength={50}
+                autoFocus
+                style={{
+                  width: '100%', height: 44, borderRadius: 12,
+                  border: '1.5px solid #d9d9d9',
+                  padding: namingFile.ext ? '0 56px 0 14px' : '0 14px',
+                  fontSize: 15, color: '#1d1d1f', boxSizing: 'border-box', outline: 'none',
+                }}
+                onFocus={(e) => e.target.select()}
+              />
+              {namingFile.ext && (
+                <span style={{
+                  position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)',
+                  fontSize: 13, color: '#8c8c8c', pointerEvents: 'none',
+                }}>
+                  {namingFile.ext}
+                </span>
+              )}
+            </div>
             <Button
               type="primary"
               block
@@ -480,15 +495,15 @@ export default function PersonalHomeworkDetailPage() {
         centered
         destroyOnHidden
       >
-        <p style={{ fontSize: 14, color: TEXT_SECONDARY, margin: '0 0 20px', lineHeight: 1.6 }}>
-          <strong style={{ color: TEXT_PRIMARY }}>{deleteConfirmFile?.replace(/\.[^/.]+$/, '')}</strong> 파일을 삭제할까요?<br />
+        <p style={{ fontSize: 14, color: '#595959', margin: '0 0 20px', lineHeight: 1.6 }}>
+          <strong style={{ color: '#1d1d1f' }}>{deleteConfirmFile?.replace(/\.[^/.]+$/, '')}</strong> 파일을 삭제할까요?<br />
           삭제 후에는 복구할 수 없어요.
         </p>
         <div style={{ display: 'flex', gap: 8 }}>
           <button
             type="button"
             onClick={() => setDeleteConfirmFile(null)}
-            style={{ flex: 1, height: 44, borderRadius: 12, border: `1.5px solid ${BORDER_NEUTRAL}`, background: '#fff', color: TEXT_SECONDARY, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
+            style={{ flex: 1, height: 44, borderRadius: 12, border: '1.5px solid #d9d9d9', background: '#fff', color: '#595959', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
           >
             취소
           </button>
@@ -496,7 +511,7 @@ export default function PersonalHomeworkDetailPage() {
             type="button"
             onClick={() => handleDeleteFile(deleteConfirmFile)}
             className="active:scale-[0.96] transition-[scale] duration-150 ease-out"
-            style={{ flex: 1, height: 44, borderRadius: 12, border: 'none', background: STATUS_ERROR, color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
+            style={{ flex: 1, height: 44, borderRadius: 12, border: 'none', background: '#ff4d4f', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
           >
             삭제
           </button>
@@ -509,13 +524,6 @@ export default function PersonalHomeworkDetailPage() {
           <Spin size="large" />
         </div>
       )}
-
-      {/* 먹이 획득 알림 — 첫 제출/첫 피드백 확인 순간에 1.8s 표시 */}
-      <FoodEarnedToast
-        open={!!foodToast}
-        message={foodToast?.message}
-        onClose={() => setFoodToast(null)}
-      />
     </>
   );
 }

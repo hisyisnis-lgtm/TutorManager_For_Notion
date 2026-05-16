@@ -19,6 +19,7 @@ import { parseHomework, saveFeedback, uploadTeacherFile, homeworkStatusColor, no
 import { getPage, deletePage } from '../api/notionClient.js';
 import { parseStudent } from '../api/students.js';
 import { formatDateTimeCompact } from '../utils/dateUtils.js';
+import { validateAudioFile, splitFileName } from '../utils/audioFile.js';
 
 const MAX_FILES = 5;
 
@@ -119,11 +120,12 @@ export default function HomeworkDetailPage() {
   const openFileModal = () => { setFileModalView('list'); setFileModalOpen(true); };
   const closeFileModal = () => { setFileModalOpen(false); setTimeout(() => setFileModalView('list'), 300); };
 
-  const addFeedbackFile = (file, name) => {
-    const safeName = (name || '').trim();
+  // pendingFeedbackFiles 항목: { tempId, file, baseName, ext } — ext는 점 포함(`.mp3`).
+  const addFeedbackFile = (file, baseName, ext) => {
+    const safeBase = (baseName || '').trim();
     setPendingFeedbackFiles((prev) => [
       ...prev,
-      { tempId: Date.now() + Math.random(), file, name: safeName },
+      { tempId: Date.now() + Math.random(), file, baseName: safeBase, ext: ext || '' },
     ]);
     setFileModalView('list');
     setNamingFile(null);
@@ -137,15 +139,22 @@ export default function HomeworkDetailPage() {
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
+    // 사이즈/MIME 사전 차단 — Notion 20 MiB 상한 + 오디오 외 파일 거부.
+    const v = validateAudioFile(file);
+    if (!v.ok) {
+      message.error(v.error);
+      return;
+    }
+    const { ext } = splitFileName(file.name);
     const nextIndex = (hw?.feedbackFiles?.length ?? 0) + pendingFeedbackFiles.length + 1;
     setNamingInput(genFeedbackName(hw?.title ?? '숙제', nextIndex));
-    setNamingFile({ file });
+    setNamingFile({ file, ext });
     setFileModalView('naming');
   };
 
   const handleNamingConfirm = () => {
-    if (!namingInput.trim()) return;
-    addFeedbackFile(namingFile.file, namingInput);
+    if (!namingInput.trim() || !namingFile) return;
+    addFeedbackFile(namingFile.file, namingInput, namingFile.ext);
   };
 
   const fileModalTitle = (() => {
@@ -163,9 +172,10 @@ export default function HomeworkDetailPage() {
       if (files.length > 0) {
         uploadedFiles = [];
         for (const pf of files) {
-          const namedFile = new File([pf.file], pf.name, { type: pf.file.type });
+          const fullName = pf.baseName + pf.ext;
+          const namedFile = new File([pf.file], fullName, { type: pf.file.type });
           const { fileUploadId } = await uploadTeacherFile(namedFile);
-          uploadedFiles.push({ fileUploadId, fileName: pf.name });
+          uploadedFiles.push({ fileUploadId, fileName: fullName });
         }
         if (hw.feedbackFiles?.length > 0) {
           const freshPage = await getPage(id);
@@ -351,7 +361,7 @@ export default function HomeworkDetailPage() {
                   borderRadius: 12, marginBottom: 6,
                 }}>
                   <span style={{ fontSize: 13, color: TEXT_PRIMARY, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {pf.name}
+                    {pf.baseName + pf.ext}
                   </span>
                   <button
                     type="button"
@@ -432,7 +442,7 @@ export default function HomeworkDetailPage() {
                     borderRadius: 12, marginBottom: 6,
                   }}>
                     <span style={{ fontSize: 13, color: TEXT_PRIMARY, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {pf.name}
+                      {pf.baseName + pf.ext}
                     </span>
                     <button
                       type="button"
@@ -482,8 +492,9 @@ export default function HomeworkDetailPage() {
           <AudioRecorder
             defaultName={genFeedbackName(hw?.title ?? '숙제', (hw?.feedbackFiles?.length ?? 0) + pendingFeedbackFiles.length + 1)}
             onFile={(file) => {
-              const safeName = file.name.replace(/\.[^/.]+$/, '');
-              addFeedbackFile(file, safeName);
+              // AudioRecorder가 이미 `${name}.${ext}` 형식으로 만들어 보냄 → 분리해 보존.
+              const { base, ext } = splitFileName(file.name);
+              addFeedbackFile(file, base, ext);
             }}
             onCancel={() => setFileModalView('list')}
             hideCancel
@@ -494,20 +505,31 @@ export default function HomeworkDetailPage() {
         {fileModalView === 'naming' && namingFile && (
           <div>
             <p style={{ fontSize: 13, color: TEXT_SECONDARY, margin: '0 0 8px' }}>파일 이름을 입력하세요</p>
-            <input
-              type="text"
-              value={namingInput}
-              onChange={(e) => setNamingInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleNamingConfirm()}
-              maxLength={50}
-              autoFocus
-              style={{
-                width: '100%', height: 44, borderRadius: 12, border: '1.5px solid #d9d9d9',
-                padding: '0 14px', fontSize: 15, color: TEXT_PRIMARY,
-                boxSizing: 'border-box', outline: 'none', marginBottom: 12,
-              }}
-              onFocus={(e) => e.target.select()}
-            />
+            <div style={{ position: 'relative', marginBottom: 12 }}>
+              <input
+                type="text"
+                value={namingInput}
+                onChange={(e) => setNamingInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleNamingConfirm()}
+                maxLength={50}
+                autoFocus
+                style={{
+                  width: '100%', height: 44, borderRadius: 12, border: '1.5px solid #d9d9d9',
+                  padding: namingFile.ext ? '0 56px 0 14px' : '0 14px',
+                  fontSize: 15, color: TEXT_PRIMARY,
+                  boxSizing: 'border-box', outline: 'none',
+                }}
+                onFocus={(e) => e.target.select()}
+              />
+              {namingFile.ext && (
+                <span style={{
+                  position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)',
+                  fontSize: 13, color: TEXT_TERTIARY, pointerEvents: 'none',
+                }}>
+                  {namingFile.ext}
+                </span>
+              )}
+            </div>
             <Button
               type="primary"
               block

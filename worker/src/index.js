@@ -2,6 +2,7 @@
 // 새 순수 함수 추가 시 lib/ 안에 두고 여기서 import.
 import { stripEmoji, normalizeId } from '../lib/string.js';
 import { isSafeExternalUrl, maskPhone, maskToken } from '../lib/security.js';
+import { validateAudioUpload } from '../lib/upload.js';
 import {
   ConsultSchema,
   HomeworkSubmitSchema,
@@ -1595,7 +1596,9 @@ async function handleHomeworkRoutes(request, env, corsHeaders, url) {
     try {
       const formData = await request.formData();
       const file = formData.get('file');
-      if (!file) throw new Error('파일이 없습니다');
+      // JWT 신뢰하더라도 토큰 탈취·잘못된 클라이언트 발송 대비해 동일 검증.
+      const v = validateAudioUpload(file);
+      if (!v.ok) return errRes(corsHeaders, v.status, v.error);
       const result = await uploadFileToNotion(file, env.NOTION_TOKEN);
       return new Response(JSON.stringify(result), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -1681,7 +1684,9 @@ async function handleHomeworkRoutes(request, env, corsHeaders, url) {
     try {
       const formData = await request.formData();
       const file = formData.get('file');
-      if (!file) throw new Error('파일이 없습니다');
+      // 익명 라우트라 검증 핵심: size 상한(Notion 20 MiB) + MIME 화이트리스트.
+      const v = validateAudioUpload(file);
+      if (!v.ok) return errRes(corsHeaders, v.status, v.error);
       const result = await uploadFileToNotion(file, env.NOTION_TOKEN);
       return new Response(JSON.stringify(result), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
