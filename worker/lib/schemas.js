@@ -82,14 +82,6 @@ export const GameKeySchema = z.enum(['tone', 'tone-easy', 'tone-normal', 'tone-h
 });
 
 /**
- * 성조 게임 난이도 — GET /game/tone-words/:difficulty
- * Notion DB '난이도' select 옵션과 매핑.
- */
-export const ToneDifficultySchema = z.enum(['easy', 'normal', 'hard'], {
-  errorMap: () => ({ message: '알 수 없는 난이도입니다 (easy/normal/hard)' }),
-});
-
-/**
  * POST /game/best/:token/:gameKey body — 게임 결과 1회분.
  * meta는 게임별 고유 데이터 (Notion '메타' 필드에 JSON 직렬화).
  */
