@@ -11,6 +11,7 @@ import {
   MyClassesQuerySchema,
   GameKeySchema,
   GameResultSchema,
+  ToneDifficultySchema,
 } from '../lib/schemas.js';
 import { validateBody, validateParams, validatePathToken } from '../lib/validation.js';
 
@@ -26,6 +27,16 @@ const CONSULT_DB_ID = '324838fa-f2a6-815d-99a7-ff165e8f78aa';
 
 // ===== 미니게임 베스트 DB (학생 × 게임 = 1 row) =====
 const GAME_BEST_DB_ID = '2602021c-39b5-4517-9eda-ce4808f570bd';
+
+// ===== 성조 게임 단어 DB (난이도별 출제 풀) =====
+const TONE_WORDS_DB_ID = '6e6956bf-4d48-4d63-adf2-778f056529df';
+
+// 난이도 키(영문) ↔ Notion '난이도' select 옵션(한글) 매핑.
+const TONE_DIFFICULTY_TO_NAME = {
+  'easy': '초급',
+  'normal': '중급',
+  'hard': '고급',
+};
 
 // 게임 키 ↔ Notion '게임' select 옵션 이름 매핑.
 // 새 게임/난이도 추가 시: (1) Notion DB 'select' 옵션 추가, (2) 여기 매핑 추가, (3) GameKeySchema enum에 키 추가.
@@ -175,6 +186,7 @@ const HOMEWORK_DB_RAW = HOMEWORK_DB_ID.replace(/-/g, '');
 const BLOCKED_DATES_DB_RAW = BLOCKED_DATES_DB_ID.replace(/-/g, '');
 const CONSULT_DB_RAW = CONSULT_DB_ID.replace(/-/g, '');
 const GAME_BEST_DB_RAW = GAME_BEST_DB_ID.replace(/-/g, '');
+const TONE_WORDS_DB_RAW = TONE_WORDS_DB_ID.replace(/-/g, '');
 const ALLOWED_NOTION_DB_IDS = new Set([
   STUDENT_DB_RAW,
   CLASS_DB_RAW,
@@ -182,6 +194,7 @@ const ALLOWED_NOTION_DB_IDS = new Set([
   BLOCKED_DATES_DB_RAW,
   CONSULT_DB_RAW,
   GAME_BEST_DB_RAW,
+  TONE_WORDS_DB_RAW,
   // 수업 유형·할인·결제·수업일지 등 강사용 추가 DB (PWA에서 사용)
   '314838faf2a681c3b4e4da87c48f9b43', // LESSON_TYPE_DB
   '314838faf2a681d39ce4c628edab065b', // DISCOUNT_DB
@@ -1886,6 +1899,59 @@ async function handleGameRoutes(request, env, corsHeaders, url) {
   }
 
   const n = makeNotion(env.NOTION_TOKEN);
+
+  // GET /game/tone-words/:difficulty  (공개, 토큰 불필요)
+  // 모든 학생에게 동일한 단어 풀이라 Cloudflare 엣지 캐시(1시간)로 거의 모든 요청을 캐시 히트로 처리.
+  const toneWordsMatch = url.pathname.match(/^\/game\/tone-words\/([^/]+)$/);
+  if (request.method === 'GET' && toneWordsMatch) {
+    const difficulty = decodeURIComponent(toneWordsMatch[1]);
+    const dv = validatePathToken(ToneDifficultySchema, difficulty, corsHeaders, '난이도');
+    if (!dv.ok) return dv.response;
+
+    // 엣지 캐시 — 모든 학생 동일 URL이라 high cache hit rate.
+    const cacheUrl = new URL(request.url);
+    const cacheKey = new Request(cacheUrl.toString(), { method: 'GET' });
+    const cache = caches.default;
+    const cached = await cache.match(cacheKey);
+    if (cached) {
+      // CORS는 요청마다 동적이므로 캐시본의 헤더는 그대로 두고 새 응답으로 감싼다.
+      const body = await cached.text();
+      return new Response(body, {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json', 'X-Cache': 'HIT' },
+      });
+    }
+
+    const difficultyName = TONE_DIFFICULTY_TO_NAME[difficulty];
+    const results = await queryAllNotion(n, TONE_WORDS_DB_ID, {
+      filter: {
+        and: [
+          { property: '난이도', select: { equals: difficultyName } },
+          { property: '활성', checkbox: { equals: true } },
+        ],
+      },
+    });
+
+    const words = results.map((page) => {
+      const p = page.properties || {};
+      const hanzi = p['한자']?.title?.[0]?.plain_text ?? '';
+      const pinyin = (p['병음']?.rich_text?.[0]?.plain_text ?? '').trim().split(/\s+/).filter(Boolean);
+      const tones = (p['성조']?.rich_text?.[0]?.plain_text ?? '').split(',').map((s) => Number(s.trim())).filter((n) => Number.isFinite(n));
+      const meaning = p['의미']?.rich_text?.[0]?.plain_text ?? '';
+      return { hanzi, pinyin, tones, meaning };
+    }).filter((w) => w.hanzi && w.pinyin.length > 0 && w.tones.length === w.pinyin.length);
+
+    const body = JSON.stringify(words);
+    // 1시간 캐시. 단어 갱신 후엔 캐시 만료까지 기다리거나 별도 무효화 도구 필요.
+    const cachedResponse = new Response(body, {
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=3600' },
+    });
+    // 백그라운드 캐시 저장 (응답 지연 방지)
+    try { await cache.put(cacheKey, cachedResponse.clone()); } catch { /* noop */ }
+
+    return new Response(body, {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json', 'X-Cache': 'MISS' },
+    });
+  }
 
   async function findStudentByToken(token) {
     const res = await n('POST', `/databases/${STUDENT_DB_ID}/query`, {
