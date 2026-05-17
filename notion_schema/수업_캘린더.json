@@ -10,6 +10,10 @@
       "rollup_property_name": "잔여 시간 회차",
       "function": "min"
     },
+    "특이사항 메모": {
+      "type": "rich_text",
+      "id": "GO%3CJ"
+    },
     "충돌_감지": {
       "type": "checkbox",
       "id": "Jcae"

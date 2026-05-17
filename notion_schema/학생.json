@@ -7,6 +7,10 @@
       "type": "date",
       "id": "%3A%7DtL"
     },
+    "공유일": {
+      "type": "date",
+      "id": "%3Bcj%5E"
+    },
     "총 수업 횟수": {
       "type": "rollup",
       "id": "%3CzGQ",
@@ -14,14 +18,23 @@
       "rollup_property_name": "수업 회차",
       "function": "sum"
     },
-    "추천 보너스": {
-      "type": "number",
-      "id": "JUMf",
-      "format": "number"
+    "피드백 확인 먹이": {
+      "type": "rollup",
+      "id": "HGQK",
+      "relation_property_name": "숙제",
+      "rollup_property_name": "피드백 먹이",
+      "function": "sum"
     },
     "등록일": {
       "type": "created_time",
       "id": "LADg"
+    },
+    "숙제 제출 먹이": {
+      "type": "rollup",
+      "id": "LW%3AB",
+      "relation_property_name": "숙제",
+      "rollup_property_name": "제출 먹이",
+      "function": "sum"
     },
     "결제 시간 회차 합계": {
       "type": "rollup",
