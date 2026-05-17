@@ -1,0 +1,18 @@
+# 검색엔진 인덱싱 정책
+# - /intro: 유일한 공개 랜딩페이지 (검색엔진 노출 허용)
+# - /pricing: 강사가 카톡 등으로 직접 공유하기 전까지는 비공개. OG 미리보기는 동작하나 인덱싱은 차단.
+# - 그 외 모든 경로(루트 /, 강사 라우트, 학생 토큰 URL): 절대 인덱싱되지 않아야 함
+
+User-agent: *
+Disallow: /
+Allow: /intro
+Allow: /favicon.png
+Allow: /favicon.ico
+Allow: /apple-touch-icon-180x180.png
+Allow: /pwa-64x64.png
+Allow: /pwa-192x192.png
+Allow: /pwa-512x512.png
+Allow: /img/
+Allow: /logo/
+
+Sitemap: https://tiantian-chinese.pages.dev/sitemap.xml
