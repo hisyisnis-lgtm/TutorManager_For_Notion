@@ -26,6 +26,7 @@ import CtaSection from './public/CtaSection';
 import { WORKER_URL } from '../config.js';
 
 const REVIEW_URLS = [
+  'https://blog.naver.com/strolling-around/224268868564',
   'https://blog.naver.com/strolling-around/224202928037',
   'https://m.blog.naver.com/naningumusme/224232796614',
 ];
