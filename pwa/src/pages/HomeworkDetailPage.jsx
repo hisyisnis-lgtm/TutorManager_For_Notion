@@ -425,7 +425,14 @@ export default function HomeworkDetailPage() {
         destroyOnHidden
         styles={{ body: { paddingTop: 8, paddingBottom: 4 } }}
       >
-        <input ref={fileInputRef} type="file" accept="audio/*" style={{ display: 'none' }} onChange={handleFilePickChange} />
+        {/* iOS Safari는 accept="audio/*" 만으로 .m4a/.mp3 등을 회색 처리하는 경우가 있어 확장자를 명시적으로 함께 나열 */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="audio/*,.mp3,.m4a,.mp4,.wav,.aac,.ogg,.webm,.opus,.flac"
+          style={{ display: 'none' }}
+          onChange={handleFilePickChange}
+        />
 
         {/* list 뷰 */}
         {fileModalView === 'list' && (

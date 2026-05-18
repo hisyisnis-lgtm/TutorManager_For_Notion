@@ -61,12 +61,9 @@ jobs:
         working-directory: pwa
 
       - name: Cloudflare Pages 배포
-        uses: cloudflare/pages-action@v1
+        uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          projectName: tiantian-chinese
-          directory: pwa/dist
-          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
-          branch: main
           wranglerVersion: '4'
+          command: pages deploy pwa/dist --project-name=tiantian-chinese --branch=main --commit-dirty=true --commit-message="Deploy ${{ github.ref_name }}" --commit-hash=${{ github.sha }}

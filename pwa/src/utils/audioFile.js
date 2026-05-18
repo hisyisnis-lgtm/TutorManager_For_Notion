@@ -57,7 +57,11 @@ export function validateAudioFile(file) {
     };
   }
 
-  const mime = (file.type || '').toLowerCase().trim();
+  // MediaRecorder는 `audio/webm;codecs=opus` 형태로 codec 파라미터를 붙인다.
+  // RFC 7231 기준 파라미터는 옵셔널 — base MIME만으로 비교해 통과시켜야 한다.
+  const rawType = (file.type || '').toLowerCase().trim();
+  const semi = rawType.indexOf(';');
+  const mime = semi >= 0 ? rawType.slice(0, semi).trim() : rawType;
   if (ALLOWED_MIME.has(mime)) return { ok: true };
 
   const { ext } = splitFileName(file.name || '');

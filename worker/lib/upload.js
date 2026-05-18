@@ -35,11 +35,47 @@ const ALLOWED_EXTENSIONS = new Set([
 
 const FALLBACK_MIMES = new Set(['', 'application/octet-stream', 'application/binary']);
 
-function extOf(name) {
+// 확장자 → 표준 MIME. Notion에 업로드할 때 type을 정확히 맞추기 위한 폴백.
+// MediaRecorder의 `audio/webm;codecs=opus` 같은 비표준 표기나 OS가 MIME을 모르는
+// 경우 (Windows의 `.webm` 등) 파일 이름으로 보정한다.
+const EXT_TO_MIME = {
+  mp3: 'audio/mpeg',
+  m4a: 'audio/mp4',
+  mp4: 'audio/mp4',
+  aac: 'audio/aac',
+  webm: 'audio/webm',
+  ogg: 'audio/ogg',
+  opus: 'audio/opus',
+  wav: 'audio/wav',
+  flac: 'audio/flac',
+};
+
+export function extOf(name) {
   if (typeof name !== 'string') return '';
   const idx = name.lastIndexOf('.');
   if (idx < 0 || idx === name.length - 1) return '';
   return name.slice(idx + 1).toLowerCase();
+}
+
+// `audio/webm;codecs=opus` → `audio/webm`. MIME 파라미터 stripping은 RFC 7231 표준.
+export function baseMimeOf(type) {
+  if (typeof type !== 'string') return '';
+  const semi = type.indexOf(';');
+  const base = semi >= 0 ? type.slice(0, semi) : type;
+  return base.toLowerCase().trim();
+}
+
+/**
+ * Notion 업로드에 안전한 MIME 도출.
+ * - file.type이 표준이면 그대로 (codec 파라미터만 strip)
+ * - 비어있거나 generic이면 확장자 기반으로 보정
+ * - 그래도 못 찾으면 audio/mpeg 폴백 (Notion이 가장 보편적으로 받는 audio MIME)
+ */
+export function resolveAudioMime(file) {
+  const base = baseMimeOf(file?.type);
+  if (base && !FALLBACK_MIMES.has(base)) return base;
+  const ext = extOf(file?.name);
+  return EXT_TO_MIME[ext] || 'audio/mpeg';
 }
 
 /**
@@ -66,7 +102,9 @@ export function validateAudioUpload(file) {
     };
   }
 
-  const mime = (typeof file.type === 'string' ? file.type : '').toLowerCase().trim();
+  // MediaRecorder는 `audio/webm;codecs=opus` 같은 형태로 codec 파라미터를 붙인다.
+  // RFC 7231 기준 파라미터는 옵셔널이므로 base MIME만 비교한다.
+  const mime = baseMimeOf(file.type);
   const ext = extOf(file.name);
 
   // 1차: MIME 화이트리스트

@@ -2,7 +2,7 @@
 // 새 순수 함수 추가 시 lib/ 안에 두고 여기서 import.
 import { stripEmoji, normalizeId } from '../lib/string.js';
 import { isSafeExternalUrl, maskPhone, maskToken } from '../lib/security.js';
-import { validateAudioUpload } from '../lib/upload.js';
+import { validateAudioUpload, resolveAudioMime } from '../lib/upload.js';
 import {
   ConsultSchema,
   HomeworkSubmitSchema,
@@ -1528,7 +1528,11 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
 // ===== 숙제 파일 업로드 공통 헬퍼 =====
 async function uploadFileToNotion(file, notionToken) {
   const fileName = file.name || 'audio.m4a';
-  const mimeType = file.type || 'audio/mpeg';
+  // Notion이 받는 Content-Type은 표준 MIME이어야 한다.
+  // MediaRecorder의 `audio/webm;codecs=opus` 처럼 codec 파라미터가 붙으면 Notion이 거부하고,
+  // Windows 등에서 file.type이 빈 문자열이면 폴백으로 `audio/mpeg`을 보내던 옛 로직이 webm 파일을
+  // 오디오/MPEG으로 위장해 Notion 업로드를 깨뜨렸다. resolveAudioMime으로 확장자 보정까지 거친다.
+  const mimeType = resolveAudioMime(file);
   const arrayBuffer = await file.arrayBuffer();
 
   // 1. Notion file_upload 세션 생성
