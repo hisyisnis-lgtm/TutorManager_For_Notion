@@ -55,8 +55,11 @@ export default function PersonalHomeworkDetailPage() {
 
   const [modalOpen, setModalOpen] = useState(false);
   const [modalView, setModalView] = useState('list');
-  // pendingFiles: [{ tempId, file, baseName, ext }] — ext는 점 포함(`.mp3`) 또는 빈 문자열
+  // pendingFiles: 외부 페이지에 표시되는 저장 대기 목록. 학생이 "숙제 저장"을 눌러야 업로드된다.
+  // 항목: { tempId, file, baseName, ext } — ext는 점 포함(`.mp3`) 또는 빈 문자열
   const [pendingFiles, setPendingFiles] = useState([]);
+  // sessionFiles: 모달이 열려있는 동안만 누적되는 임시 목록. 확인 누르면 pendingFiles 에 합쳐진다.
+  const [sessionFiles, setSessionFiles] = useState([]);
   // namingFile: { file, ext } — 원본 확장자를 보존해 업로드 시 다시 결합
   const [namingFile, setNamingFile] = useState(null);
   const [namingInput, setNamingInput] = useState('');
@@ -100,41 +103,107 @@ export default function PersonalHomeworkDetailPage() {
     return list.find((h) => h.id === hwId) ?? null;
   }, [studentToken, hwId]);
 
-  const openModal = () => { setModalView('list'); setModalOpen(true); };
-  const closeModal = () => { setModalOpen(false); setTimeout(() => setModalView('list'), 300); };
-  const removeFile = (tempId) => setPendingFiles((prev) => prev.filter((f) => f.tempId !== tempId));
+  const openModal = () => {
+    setSessionFiles([]);
+    setNamingFile(null);
+    setModalView('list');
+    setModalOpen(true);
+  };
+  const closeModal = () => {
+    setModalOpen(false);
+    setTimeout(() => {
+      setModalView('list');
+      setSessionFiles([]);
+      setNamingFile(null);
+    }, 300);
+  };
 
-  const handleFilePickChange = (e) => {
-    const file = e.target.files?.[0];
-    e.target.value = '';
-    if (!file) return;
-    // 사이즈/MIME 사전 차단 — Notion 20 MiB 상한 + 오디오 외 파일 거부.
-    const v = validateAudioFile(file);
-    if (!v.ok) {
-      message.error(v.error);
+  const removeFile = (tempId) => setPendingFiles((prev) => prev.filter((f) => f.tempId !== tempId));
+  const removeSessionFile = (tempId) => setSessionFiles((prev) => prev.filter((f) => f.tempId !== tempId));
+
+  const addToSession = (file, baseName, ext) => {
+    setSessionFiles((prev) => [
+      ...prev,
+      { tempId: Date.now() + Math.random(), file, baseName: (baseName || '').trim(), ext: ext || '' },
+    ]);
+    setModalView('list');
+    setNamingFile(null);
+  };
+
+  // 외부 페이지·기존 저장본·모달 임시 목록 합산 — 5개 제한 판정에 쓰인다.
+  // (hw 가 아직 없을 때도 안전하도록 옵셔널 체이닝)
+  const fixedCount = (hw?.submitFiles?.length ?? 0) + pendingFiles.length;
+  const totalCount = fixedCount + sessionFiles.length;
+
+  const tryOpenFilePicker = () => {
+    if (totalCount >= MAX_FILES) {
+      message.error(`파일은 최대 ${MAX_FILES}개까지 첨부할 수 있어요`);
       return;
     }
-    const { ext } = splitFileName(file.name);
-    const nextIndex = (hw?.submitFiles?.length ?? 0) + pendingFiles.length + 1;
-    setNamingInput(genStudentName(hw.title, nextIndex));
-    setNamingFile({ file, ext });
-    setModalView('naming');
+    fileInputRef.current?.click();
+  };
+  const tryOpenRecord = () => {
+    if (totalCount >= MAX_FILES) {
+      message.error(`파일은 최대 ${MAX_FILES}개까지 첨부할 수 있어요`);
+      return;
+    }
+    setModalView('record');
+  };
+
+  const handleFilePickChange = (e) => {
+    const files = Array.from(e.target.files ?? []);
+    e.target.value = '';
+    if (files.length === 0) return;
+
+    // 사이즈/MIME 사전 차단 — Notion 20 MiB 상한 + 오디오 외 파일 거부.
+    for (const f of files) {
+      const v = validateAudioFile(f);
+      if (!v.ok) {
+        message.error(v.error);
+        return;
+      }
+    }
+    // 5개 제한: 다중 선택분이 한계를 넘으면 전체 거부 (부분 추가는 사용자 의도와 어긋남).
+    if (totalCount + files.length > MAX_FILES) {
+      message.error(`파일은 최대 ${MAX_FILES}개까지 첨부할 수 있어요`);
+      return;
+    }
+
+    // 단일 파일은 기존처럼 naming 뷰로, 다중 파일은 자동 이름으로 한꺼번에 누적.
+    if (files.length === 1) {
+      const file = files[0];
+      const { ext } = splitFileName(file.name);
+      setNamingInput(genStudentName(hw?.title ?? '숙제', totalCount + 1));
+      setNamingFile({ file, ext });
+      setModalView('naming');
+      return;
+    }
+    const baseStart = totalCount;
+    const newOnes = files.map((file, i) => {
+      const { ext } = splitFileName(file.name);
+      return {
+        tempId: Date.now() + Math.random() + i,
+        file,
+        baseName: genStudentName(hw?.title ?? '숙제', baseStart + i + 1),
+        ext: ext || '',
+      };
+    });
+    setSessionFiles((prev) => [...prev, ...newOnes]);
   };
 
   const handleNamingConfirm = () => {
     if (!namingInput.trim() || !namingFile) return;
-    const newPf = {
-      tempId: Date.now(),
-      file: namingFile.file,
-      baseName: namingInput.trim(),
-      ext: namingFile.ext,
-    };
-    setPendingFiles((prev) => [...prev, newPf]);
-    setNamingFile(null);
-    setModalView('list');
+    addToSession(namingFile.file, namingInput, namingFile.ext);
   };
 
-  const uploadAndSubmit = async () => {
+  const handleSessionConfirm = () => {
+    if (sessionFiles.length > 0) {
+      setPendingFiles((prev) => [...prev, ...sessionFiles]);
+    }
+    closeModal();
+  };
+
+  const handleSaveSubmit = async () => {
     if (pendingFiles.length === 0) return;
     setUploading(true);
     try {
@@ -147,7 +216,6 @@ export default function PersonalHomeworkDetailPage() {
       }
       await submitHomework(studentToken, hwId, uploaded);
       setPendingFiles([]);
-      closeModal();
       await load();
       message.success('숙제가 제출되었어요');
     } catch (err) {
@@ -225,14 +293,11 @@ export default function PersonalHomeworkDetailPage() {
   // 피드백완료 후에는 학생이 파일 추가·삭제 불가 — 강사가 피드백을 단 결과물을 보존.
   const canEdit = hw.status === '미제출' || hw.status === '제출완료';
   const isFeedback = hw.status === '피드백완료';
-  const totalFiles = (hw.submitFiles?.length ?? 0) + pendingFiles.length;
-  const canAddMore = totalFiles < MAX_FILES;
-  const nextIndex = (hw.submitFiles?.length ?? 0) + pendingFiles.length + 1;
 
   const modalTitle = (() => {
     if (modalView === 'record') return '음성 녹음';
     if (modalView === 'naming') return '파일 이름 입력';
-    return '숙제 제출';
+    return '숙제 파일';
   })();
 
   return (
@@ -310,33 +375,63 @@ export default function PersonalHomeworkDetailPage() {
           </div>
         )}
 
-        {/* 파일 추가 진입 버튼 — 실제 제출은 모달 안의 "숙제 제출하기"에서 일어남 */}
-        {canEdit && (
+        {/* 새로 추가할 숙제 파일 — pendingFiles 목록. 저장 전 외부에서 미리보기·삭제 가능 */}
+        {canEdit && pendingFiles.length > 0 && (
+          <div style={{ background: '#fff', borderRadius: 16, padding: '16px', marginBottom: 12, boxShadow: 'var(--shadow-border)' }}>
+            <p style={{ fontSize: 13, fontWeight: 600, color: '#595959', margin: '0 0 8px' }}>
+              새 숙제 파일 ({pendingFiles.length}/{MAX_FILES})
+            </p>
+            {pendingFiles.map((pf) => (
+              <div key={pf.tempId} style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '8px 12px', background: '#f6ffed', border: '1px solid #b7eb8f',
+                borderRadius: 12, marginBottom: 6,
+              }}>
+                <span style={{ fontSize: 13, color: '#1d1d1f', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {pf.baseName + pf.ext}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => removeFile(pf.tempId)}
+                  style={{ marginLeft: 10, background: 'none', border: 'none', cursor: 'pointer', color: '#bfbfbf', fontSize: 18, flexShrink: 0, padding: 0, lineHeight: 1 }}
+                  aria-label="삭제"
+                  disabled={uploading}
+                >×</button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* 숙제 파일 추가 진입 버튼 — 모달 내부에서 "확인" 누르면 위 pendingFiles 에 합쳐진다 */}
+        {canEdit && fixedCount < MAX_FILES && (
           <button
             type="button"
             onClick={openModal}
+            disabled={uploading}
             className="active:scale-[0.96] transition-[scale,background-color] duration-150 ease-out"
             style={{
-              width: '100%', height: 48, borderRadius: 14,
+              width: '100%', height: 44, borderRadius: 12,
               background: '#fff0f1', border: '1.5px solid rgba(127,0,5,0.2)',
-              color: '#7f0005', fontSize: 15, fontWeight: 700, cursor: 'pointer',
+              color: '#7f0005', fontSize: 14, fontWeight: 600, cursor: uploading ? 'not-allowed' : 'pointer',
               WebkitTapHighlightColor: 'transparent', marginBottom: 10,
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              opacity: uploading ? 0.6 : 1,
             }}
           >
-            {pendingFiles.length > 0 ? (
-              <>
-                <span>녹음 더 추가하기</span>
-                <span style={{
-                  fontSize: 12, fontWeight: 700, color: '#7f0005',
-                  background: '#fff', borderRadius: 999, padding: '2px 8px',
-                  border: '1px solid rgba(127,0,5,0.25)',
-                }}>대기 {pendingFiles.length}</span>
-              </>
-            ) : (
-              <span>녹음 추가하기</span>
-            )}
+            숙제 파일 추가
           </button>
+        )}
+
+        {/* 숙제 저장 — pendingFiles 를 한 번에 업로드 + Notion 반영. 추가할 게 있을 때만 노출 */}
+        {canEdit && pendingFiles.length > 0 && (
+          <Button
+            type="primary"
+            block
+            onClick={handleSaveSubmit}
+            loading={uploading}
+            style={{ height: 48, borderRadius: 12, fontWeight: 700, fontSize: 15, marginBottom: 10 }}
+          >
+            숙제 저장 ({pendingFiles.length}개 파일)
+          </Button>
         )}
 
         {/* 피드백완료 후 수정 불가 안내 */}
@@ -369,14 +464,14 @@ export default function PersonalHomeworkDetailPage() {
         </div>
       </div>
 
-      {/* ===== 제출 팝업 ===== */}
+      {/* ===== 숙제 파일 추가 팝업 ===== */}
       <Modal
         open={modalOpen}
         onCancel={closeModal}
         footer={null}
-        closable={!uploading}
-        maskClosable={!uploading}
-        keyboard={!uploading}
+        closable={false}
+        maskClosable={false}
+        keyboard={false}
         title={
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             {modalView !== 'list' && (
@@ -402,18 +497,20 @@ export default function PersonalHomeworkDetailPage() {
           ref={fileInputRef}
           type="file"
           accept="audio/*,.mp3,.m4a,.mp4,.wav,.aac,.ogg,.webm,.opus,.flac"
+          multiple
           style={{ display: 'none' }}
           onChange={handleFilePickChange}
         />
 
+        {/* list 뷰 — 이 세션에서 추가한 파일만 노출. 외부 페이지의 pendingFiles 는 모달 밖에서 보여준다. */}
         {modalView === 'list' && (
           <div>
-            {pendingFiles.length > 0 ? (
+            {sessionFiles.length > 0 ? (
               <div style={{ marginBottom: 12 }}>
                 <p style={{ fontSize: 12, fontWeight: 600, color: '#595959', margin: '0 0 6px' }}>
-                  제출할 파일 ({pendingFiles.length}개)
+                  추가된 파일 ({sessionFiles.length}개)
                 </p>
-                {pendingFiles.map((pf) => (
+                {sessionFiles.map((pf) => (
                   <div key={pf.tempId} style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                     padding: '8px 12px', background: '#f6ffed', border: '1px solid #b7eb8f',
@@ -424,7 +521,7 @@ export default function PersonalHomeworkDetailPage() {
                     </span>
                     <button
                       type="button"
-                      onClick={() => removeFile(pf.tempId)}
+                      onClick={() => removeSessionFile(pf.tempId)}
                       style={{ marginLeft: 10, background: 'none', border: 'none', cursor: 'pointer', color: '#bfbfbf', fontSize: 18, flexShrink: 0, padding: 0, lineHeight: 1 }}
                       aria-label="삭제"
                     >×</button>
@@ -434,60 +531,47 @@ export default function PersonalHomeworkDetailPage() {
             ) : (
               <p style={{
                 fontSize: 13, color: '#8c8c8c', textAlign: 'center',
-                padding: '16px 0 18px', margin: 0, lineHeight: 1.6,
+                padding: '14px 0 16px', margin: 0, lineHeight: 1.6,
               }}>
-                녹음 파일을 추가한 뒤<br />
-                아래 <strong style={{ color: '#7f0005' }}>숙제 제출하기</strong> 버튼을 눌러주세요
+                추가할 파일을 선택하거나 녹음해주세요
               </p>
             )}
-            {canAddMore && (
-              <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="active:scale-[0.96] transition-[scale,background-color] duration-150 ease-out"
-                  style={{ flex: 1, height: 44, borderRadius: 12, background: 'white', border: '1.5px solid #d9d9d9', color: '#595959', fontSize: 14, fontWeight: 600, cursor: 'pointer', WebkitTapHighlightColor: 'transparent' }}
-                >
-                  파일 추가
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setModalView('record')}
-                  className="active:scale-[0.96] transition-[scale,background-color] duration-150 ease-out"
-                  style={{ flex: 1, height: 44, borderRadius: 12, background: 'white', border: '1.5px solid #d9d9d9', color: '#595959', fontSize: 14, fontWeight: 600, cursor: 'pointer', WebkitTapHighlightColor: 'transparent' }}
-                >
-                  바로 녹음
-                </button>
-              </div>
-            )}
-            {!canAddMore && (
-              <p style={{ fontSize: 12, color: '#8c8c8c', textAlign: 'center', margin: '0 0 10px' }}>
-                파일은 최대 {MAX_FILES}개까지 첨부할 수 있어요
-              </p>
-            )}
+            <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+              <button
+                type="button"
+                onClick={tryOpenFilePicker}
+                className="active:scale-[0.96] transition-[scale,background-color] duration-150 ease-out"
+                style={{ flex: 1, height: 44, borderRadius: 12, background: 'white', border: '1.5px solid #d9d9d9', color: '#595959', fontSize: 14, fontWeight: 600, cursor: 'pointer', WebkitTapHighlightColor: 'transparent' }}
+              >
+                파일 추가
+              </button>
+              <button
+                type="button"
+                onClick={tryOpenRecord}
+                className="active:scale-[0.96] transition-[scale,background-color] duration-150 ease-out"
+                style={{ flex: 1, height: 44, borderRadius: 12, background: 'white', border: '1.5px solid #d9d9d9', color: '#595959', fontSize: 14, fontWeight: 600, cursor: 'pointer', WebkitTapHighlightColor: 'transparent' }}
+              >
+                바로 녹음
+              </button>
+            </div>
             <Button
               type="primary"
               block
-              onClick={uploadAndSubmit}
-              disabled={pendingFiles.length === 0}
-              loading={uploading}
+              onClick={handleSessionConfirm}
               style={{ height: 48, borderRadius: 12, fontWeight: 700, fontSize: 15 }}
             >
-              숙제 제출하기
+              확인{sessionFiles.length > 0 ? ` (${sessionFiles.length}개 추가)` : ''}
             </Button>
           </div>
         )}
 
         {modalView === 'record' && (
           <AudioRecorder
-            defaultName={genStudentName(hw.title, nextIndex)}
+            defaultName={genStudentName(hw?.title ?? '숙제', totalCount + 1)}
             onFile={(file) => {
-              // AudioRecorder가 이미 `${name}.${ext}` 형식으로 만들어 보냄 → 확장자 분리해 보존.
-              // 즉시 업로드하지 않고 pendingFiles 에만 누적 — 사용자가 모달 하단의
-              // "숙제 제출하기"를 누를 때 한 번에 업로드 + Notion 반영된다.
+              // AudioRecorder가 `${name}.${ext}` 형식으로 만들어 보냄 → 확장자 분리해 sessionFiles 누적.
               const { base, ext } = splitFileName(file.name);
-              setPendingFiles((prev) => [...prev, { tempId: Date.now(), file, baseName: base, ext }]);
-              setModalView('list');
+              addToSession(file, base, ext);
             }}
             onCancel={() => setModalView('list')}
             hideCancel
