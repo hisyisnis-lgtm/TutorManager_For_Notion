@@ -559,6 +559,27 @@ async function handleConsultRequest(request, env, corsHeaders) {
     });
   }
 
+  // 중복 신청 마킹 — 차단하지 않고, 같은 전화번호로 최근 7일 내 신청 건수를 세서 강사 ntfy 알림 상단에 표시.
+  // 학생은 항상 신청 성공하지만 강사는 푸시 보고 한눈에 중복 여부 판단 가능.
+  // Notion 조회 실패 시 0으로 fallback (신청 흐름은 그대로 진행).
+  let recentDuplicateCount = 0;
+  try {
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    const n = makeNotion(env.NOTION_TOKEN);
+    const dup = await n('POST', `/databases/${dbId}/query`, {
+      filter: {
+        and: [
+          { property: '전화번호', rich_text: { equals: phoneDigits } },
+          { timestamp: 'created_time', created_time: { on_or_after: sevenDaysAgo } },
+        ],
+      },
+      page_size: 100,
+    });
+    if (Array.isArray(dup.results)) recentDuplicateCount = dup.results.length;
+  } catch (e) {
+    console.error('[consult] 중복 조회 실패 — 0으로 처리:', e);
+  }
+
   const daysText = Array.isArray(preferredDays) && preferredDays.length > 0
     ? preferredDays.join(', ')
     : '미기재';
@@ -623,6 +644,9 @@ async function handleConsultRequest(request, env, corsHeaders) {
   const maskedName = trimmedName.length > 1 ? `${trimmedName[0]}**` : trimmedName;
   const maskedKakao = kakaoId?.trim() ? `${kakaoId.trim().slice(0, 2)}***` : null;
   const ntfyMsg = [
+    recentDuplicateCount > 0
+      ? `⚠️ 최근 7일 내 동일 번호 ${recentDuplicateCount}건 신청 이력 있음`
+      : null,
     `이름: ${maskedName}`,
     `전화: ${maskPhone(phoneDigits)}`,
     maskedKakao ? `카카오톡 ID: ${maskedKakao}` : null,
