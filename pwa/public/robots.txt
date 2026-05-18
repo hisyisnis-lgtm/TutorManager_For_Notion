@@ -2,9 +2,14 @@
 # - /intro: 유일한 공개 랜딩페이지 (검색엔진 노출 허용)
 # - /pricing: 강사가 카톡 등으로 직접 공유하기 전까지는 비공개. OG 미리보기는 동작하나 인덱싱은 차단.
 # - 그 외 모든 경로(루트 /, 강사 라우트, 학생 토큰 URL): 절대 인덱싱되지 않아야 함
+#
+# 주의: Disallow: / + Allow: /intro 조합은 Google 이 모호하게 해석해 차단함.
+# 명시적인 path 별 Disallow + 루트만 정확히 차단(/$) 패턴을 사용한다.
+# $ 종료 매칭은 Googlebot/Bingbot/Naverbot 공통 지원.
 
 User-agent: *
-Disallow: /
+
+# 검색 노출 허용 — Allow 를 먼저 (일부 크롤러 순서 의존)
 Allow: /intro
 Allow: /favicon.png
 Allow: /favicon.ico
@@ -14,5 +19,32 @@ Allow: /pwa-192x192.png
 Allow: /pwa-512x512.png
 Allow: /img/
 Allow: /logo/
+Allow: /sitemap.xml
+Allow: /manifest.webmanifest
+
+# 루트만 정확히 차단 (강사 LoginPage)
+Disallow: /$
+
+# 강사용 라우트 (해시 라우트지만 일부 크롤러가 SPA fallback 시도할 수 있음)
+Disallow: /home
+Disallow: /students
+Disallow: /classes
+Disallow: /payments
+Disallow: /logs
+Disallow: /bookings
+Disallow: /consult
+Disallow: /homework
+Disallow: /settings
+Disallow: /notifications
+
+# 학생용 path-based 라우트 (토큰 URL)
+Disallow: /personal/
+Disallow: /book/
+Disallow: /student/
+
+# 강사 공유 전까지 비공개 페이지
+Disallow: /pricing
+Disallow: /consent
+Disallow: /panda-test
 
 Sitemap: https://tiantian-chinese.pages.dev/sitemap.xml
