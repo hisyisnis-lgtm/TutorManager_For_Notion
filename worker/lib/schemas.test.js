@@ -127,6 +127,23 @@ describe('ConsultSchema', () => {
     expect(result.success).toBe(true);
     expect(result.data.hackField).toBeUndefined();
   });
+
+  // 클라이언트(LandingPage.jsx)가 빈값을 null로 보내는 패턴 — 모든 선택 필드는 null도 받아야 함.
+  it('선택 필드를 null로 보내도 통과 (빈값→null 클라이언트 패턴)', () => {
+    const result = ConsultSchema.safeParse({
+      name: '김',
+      phone: '01012345678',
+      kakaoId: null,
+      level: null,
+      preferredDays: null,
+      preferredTime: null,
+      concerns: null,
+      reasons: null,
+      reasonOther: null,
+      message: null,
+    });
+    expect(result.success).toBe(true);
+  });
 });
 
 describe('HomeworkSubmitSchema', () => {

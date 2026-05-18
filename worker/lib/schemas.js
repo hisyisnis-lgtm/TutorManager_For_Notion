@@ -40,14 +40,15 @@ export const ConsultSchema = z.object({
     },
     { message: '전화번호 형식이 올바르지 않습니다 (10~11자리 숫자)' }
   ),
-  kakaoId: z.string().max(50).optional(),
-  level: z.enum(VALID_LEVELS, { errorMap: () => ({ message: '잘못된 수준 값입니다' }) }).optional(),
-  preferredDays: z.array(z.enum(VALID_DAYS, { errorMap: () => ({ message: '잘못된 요일 값입니다' }) })).optional(),
-  preferredTime: z.enum(VALID_TIMES, { errorMap: () => ({ message: '잘못된 시간대 값입니다' }) }).optional(),
-  concerns: z.array(z.enum(VALID_CONCERNS, { errorMap: () => ({ message: '잘못된 고민 값입니다' }) })).optional(),
-  reasons: z.array(z.enum(VALID_REASONS, { errorMap: () => ({ message: '잘못된 이유 값입니다' }) })).optional(),
-  reasonOther: z.string().max(200).optional(),
-  message: z.string().max(500, '상담 내용은 500자 이내로 입력해주세요').optional(),
+  // 선택 필드는 nullish() — 클라이언트가 빈값을 null로 보내는 패턴(LandingPage.jsx)을 그대로 수용.
+  kakaoId: z.string().max(50).nullish(),
+  level: z.enum(VALID_LEVELS, { errorMap: () => ({ message: '잘못된 수준 값입니다' }) }).nullish(),
+  preferredDays: z.array(z.enum(VALID_DAYS, { errorMap: () => ({ message: '잘못된 요일 값입니다' }) })).nullish(),
+  preferredTime: z.enum(VALID_TIMES, { errorMap: () => ({ message: '잘못된 시간대 값입니다' }) }).nullish(),
+  concerns: z.array(z.enum(VALID_CONCERNS, { errorMap: () => ({ message: '잘못된 고민 값입니다' }) })).nullish(),
+  reasons: z.array(z.enum(VALID_REASONS, { errorMap: () => ({ message: '잘못된 이유 값입니다' }) })).nullish(),
+  reasonOther: z.string().max(200).nullish(),
+  message: z.string().max(500, '상담 내용은 500자 이내로 입력해주세요').nullish(),
 }).strip(); // 알 수 없는 필드는 조용히 제거
 
 // ===== /homework/student/:token/:id/submit (학생 숙제 제출) =====
