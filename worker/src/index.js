@@ -658,6 +658,11 @@ async function handleConsultRequest(request, env, corsHeaders) {
     `※ 자세한 내용은 Notion 무료상담 DB에서 확인하세요.`,
   ].filter(Boolean).join('\n');
 
+  // ntfy 푸시 알림 (카카오 알림톡과 이중 발송). GitHub Actions 우회라 5~15초 지연 있지만,
+  // 카카오 알림톡 템플릿은 솔라피 검수가 필요해서 자유롭게 수정 어려운 점을 ntfy로 보완.
+  // sendNtfy 내부에서 try/catch 처리되므로 실패해도 응답 흐름 영향 없음.
+  await sendNtfy(env, ntfyMsg, '📩 무료상담 신청');
+
   // 카카오 알림톡 발송 (강사에게)
   if (env.KAKAO_TPL_CONSULT && env.MY_PHONE) {
     await sendKakaoAlert(env, {
