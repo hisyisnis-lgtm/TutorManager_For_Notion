@@ -36,7 +36,13 @@ export default function StudentsPage() {
       const matchSearch = !search || s.name.includes(search);
       return matchStatus && matchSearch;
     })
-    .sort((a, b) => b.remainingSessions - a.remainingSessions);
+    .sort((a, b) => {
+      // 수강중 학생 우선 → 잔여 회차 많은 순
+      const activeA = a.status === '🟢 수강중' ? 0 : 1;
+      const activeB = b.status === '🟢 수강중' ? 0 : 1;
+      if (activeA !== activeB) return activeA - activeB;
+      return b.remainingSessions - a.remainingSessions;
+    });
 
   return (
     <PullToRefresh onRefresh={refresh}>

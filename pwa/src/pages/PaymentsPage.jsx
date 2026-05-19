@@ -7,12 +7,16 @@ import Badge from '../components/ui/Badge.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import ErrorMessage from '../components/ui/ErrorMessage.jsx';
 import EmptyState from '../components/ui/EmptyState.jsx';
-import { fetchPaymentsPage, parsePayment, paymentStatusColor } from '../api/payments.js';
+import { fetchPaymentsPage, parsePayment, paymentStatusColor, PAYMENTS_DB } from '../api/payments.js';
+import { queryAll } from '../api/notionClient.js';
 import { formatKRW } from '../utils/dateUtils.js';
 import { stripEmoji } from '../utils/stringUtils.js';
 import { useData } from '../context/DataContext.jsx';
 import PullToRefresh from '../components/ui/PullToRefresh.jsx';
+import PaymentTrendChart from '../components/payments/PaymentTrendChart.jsx';
 import { TEXT_PRIMARY, TEXT_TERTIARY, STATUS_ERROR_TEXT } from '../constants/theme.js';
+
+const KST = 'Asia/Seoul';
 
 const STATUS_FILTERS = [
   { value: '전체', label: '전체' },
@@ -32,6 +36,9 @@ export default function PaymentsPage() {
   const [statusFilter, setStatusFilter] = useState('전체');
   const [hasMore, setHasMore] = useState(false);
   const [cursor, setCursor] = useState(null);
+  // 차트용 최근 6개월 결제 (페이지네이션과 별도 fetch)
+  const [trendPayments, setTrendPayments] = useState([]);
+  const [trendLoading, setTrendLoading] = useState(true);
 
   const load = useCallback(async (reset = true, nextCursor = null) => {
     if (reset) setLoading(true);
@@ -54,6 +61,30 @@ export default function PaymentsPage() {
 
   useEffect(() => { load(true); }, [load]);
 
+  // 차트용 — 최근 6개월 결제 fetch (학생 필터와 무관, client-side에서 필터 적용)
+  const loadTrend = useCallback(async () => {
+    setTrendLoading(true);
+    try {
+      const todayKstStr = new Date().toLocaleDateString('en-CA', { timeZone: KST });
+      const [y, m] = todayKstStr.split('-').map(Number);
+      // 5개월 전 1일 KST → on_or_after
+      const start = new Date(y, m - 1 - 5, 1);
+      const startStr = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}-01T00:00:00+09:00`;
+      const results = await queryAll(
+        PAYMENTS_DB,
+        { property: '결제일', date: { on_or_after: startStr } },
+        [{ property: '결제일', direction: 'descending' }]
+      );
+      setTrendPayments(results.map(parsePayment));
+    } catch (e) {
+      console.error('[결제] 추이 데이터 오류', e);
+    } finally {
+      setTrendLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadTrend(); }, [loadTrend]);
+
   const sortByDate = (arr) =>
     [...arr].sort((a, b) => {
       if (!a.paymentDate && !b.paymentDate) return 0;
@@ -69,7 +100,7 @@ export default function PaymentsPage() {
   );
 
   return (
-    <PullToRefresh onRefresh={load}>
+    <PullToRefresh onRefresh={() => Promise.all([load(true), loadTrend()])}>
       <PageHeader
         title="결제 내역"
         action={
@@ -84,7 +115,16 @@ export default function PaymentsPage() {
         }
       />
 
-      <div className="px-4 pt-4 pb-3 space-y-2">
+      {/* 최근 6개월 결제 추이 */}
+      <div className="px-4 pt-4">
+        <PaymentTrendChart
+          payments={trendPayments}
+          studentFilter={studentFilter}
+          loading={trendLoading}
+        />
+      </div>
+
+      <div className="px-4 pt-3 pb-3 space-y-2">
         {/* 학생 검색 필터 */}
         <div className="relative">
           <Input

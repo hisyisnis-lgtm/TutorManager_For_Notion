@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { BellIcon, GearSixIcon, CalendarPlusIcon, ReceiptIcon, UsersThreeIcon, CaretRightIcon, HourglassLowIcon } from '@phosphor-icons/react';
+import { BellIcon, GearSixIcon, CalendarPlusIcon, ReceiptIcon, UsersThreeIcon, CaretRightIcon, HourglassLowIcon, ClipboardTextIcon } from '@phosphor-icons/react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Card } from 'antd';
+import { Card, Modal } from 'antd';
 import { useData } from '../context/DataContext.jsx';
 import { queryPage, getPage } from '../api/notionClient.js';
 import { CLASSES_DB, parseClass } from '../api/classes.js';
@@ -9,7 +9,7 @@ import { HOMEWORK_DB, parseHomework } from '../api/homework.js';
 import { PAYMENTS_DB, parsePayment } from '../api/payments.js';
 import { parseLessonLog } from '../api/lessonLogs.js';
 import { CONSULT_DB } from '../constants.js';
-import { formatShort, formatDateTime, formatTime, formatKRW, getWeekStart } from '../utils/dateUtils.js';
+import { formatShort, formatDateTime, formatTime, formatKRW, getWeekStart, getMonthStart, getMonthEnd, getTodayStart } from '../utils/dateUtils.js';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import PullToRefresh from '../components/ui/PullToRefresh.jsx';
 import SectionHeading from '../components/ui/SectionHeading.jsx';
@@ -109,8 +109,14 @@ export default function HomePage() {
   const { state: pendingState, setHwDone, setDismissed } = usePendingClassState();
 
   const [weekClasses, setWeekClasses] = useState([]);
-  const [weekPayments, setWeekPayments] = useState([]);
+  const [monthPayments, setMonthPayments] = useState([]);
   const [weekLoading, setWeekLoading] = useState(true);
+  const [forecastThisMonth, setForecastThisMonth] = useState(0);
+  const [forecastNextMonth, setForecastNextMonth] = useState(0);
+  const [forecastLoading, setForecastLoading] = useState(true);
+  const [forecastBreakdown, setForecastBreakdown] = useState([]); // 학생별 예상 상세
+  const [breakdownModalOpen, setBreakdownModalOpen] = useState(false);
+  const [breakdownBucket, setBreakdownBucket] = useState(null); // 'thisMonth' | 'nextMonth'
   const [upcomingPrep, setUpcomingPrep] = useState(null);
 
   const loadUpcoming = async () => {
@@ -145,6 +151,8 @@ export default function HomePage() {
       const [y, m, d] = weekStart.slice(0, 10).split('-').map(Number);
       const sun = new Date(y, m - 1, d + 6);
       const weekEnd = `${sun.getFullYear()}-${String(sun.getMonth() + 1).padStart(2, '0')}-${String(sun.getDate()).padStart(2, '0')}T23:59:59+09:00`;
+      const monthStart = getMonthStart();
+      const monthEnd = getMonthEnd();
       const [classData, paymentData] = await Promise.all([
         queryPage(
           CLASSES_DB,
@@ -163,8 +171,8 @@ export default function HomePage() {
           PAYMENTS_DB,
           {
             and: [
-              { property: '결제일', date: { on_or_after: weekStart } },
-              { property: '결제일', date: { on_or_before: weekEnd } },
+              { property: '결제일', date: { on_or_after: monthStart } },
+              { property: '결제일', date: { on_or_before: monthEnd } },
             ],
           },
           undefined,
@@ -173,11 +181,215 @@ export default function HomePage() {
         ),
       ]);
       setWeekClasses((classData?.results ?? []).map(parseClass));
-      setWeekPayments((paymentData?.results ?? []).map(parsePayment));
+      setMonthPayments((paymentData?.results ?? []).map(parsePayment));
     } catch (e) {
-      console.error('[홈] 이번 주 요약 오류', e);
+      console.error('[홈] 이번 주/달 요약 오류', e);
     } finally {
       setWeekLoading(false);
+    }
+  };
+
+  /**
+   * 예상 결제 수익 계산 (이번 달·다음 달)
+   * - 학생별 마지막 결제 금액을 다음 결제 금액으로 가정
+   * - 결제 예상일 산정:
+   *   1) 미래 수업 중 sessionShortage(회차 부족 뱃지) 있는 첫 수업의 날짜
+   *   2) (없으면) 마지막 결제일 + 학생 과거 평균 결제 간격 (결제 2건+)
+   *   3) (없으면) 마지막 결제일 + 30일 (결제 1건)
+   * - 마지막 결제일 이후로 예상되는 경우만 인정 (이중 카운트 방지)
+   */
+  const loadForecast = async () => {
+    setForecastLoading(true);
+    try {
+      const activeStudents = students.filter((s) => s.status === '🟢 수강중');
+      if (activeStudents.length === 0) {
+        setForecastThisMonth(0);
+        setForecastNextMonth(0);
+        return;
+      }
+
+      const [paymentsData, futureClassData] = await Promise.all([
+        // 최근 결제 100건 — 학생별 마지막 결제 + 평균 간격 산정용
+        queryPage(
+          PAYMENTS_DB,
+          undefined,
+          [{ property: '결제일', direction: 'descending' }],
+          undefined,
+          100
+        ),
+        // 오늘 이후 미래 수업 — sessionShortage 첫 발생 시점 산정용
+        queryPage(
+          CLASSES_DB,
+          {
+            and: [
+              { property: '수업 일시', date: { on_or_after: getTodayStart() } },
+              { property: '특이사항', select: { does_not_equal: '🚫 취소' } },
+            ],
+          },
+          [{ property: '수업 일시', direction: 'ascending' }],
+          undefined,
+          100
+        ),
+      ]);
+
+      const payments = (paymentsData?.results ?? []).map(parsePayment);
+      const futureClasses = (futureClassData?.results ?? []).map(parseClass);
+
+      // 학생별 결제 이력 (paymentDate desc 유지) — 원데이클래스 결제는 정기 결제 추정에서 제외
+      const paymentsByStudent = new Map();
+      for (const pmt of payments) {
+        if (!pmt.paymentDate) continue;
+        const ct = classTypeMap[pmt.classTypeId];
+        if (ct?.title?.includes('원데이클래스')) continue; // 일회성 체험 결제 제외
+        for (const sid of pmt.studentIds) {
+          if (!paymentsByStudent.has(sid)) paymentsByStudent.set(sid, []);
+          paymentsByStudent.get(sid).push(pmt);
+        }
+      }
+
+      // 학생별 미래 수업 (datetime asc 유지)
+      const futureClassesByStudent = new Map();
+      for (const cls of futureClasses) {
+        if (!cls.datetime) continue;
+        for (const sid of cls.studentIds) {
+          if (!futureClassesByStudent.has(sid)) futureClassesByStudent.set(sid, []);
+          futureClassesByStudent.get(sid).push(cls);
+        }
+      }
+
+      const now = new Date();
+      const todayKstStr = new Date().toLocaleDateString('en-CA', { timeZone: KST });
+      const [tyStr, tmStr] = todayKstStr.split('-');
+      const thisYear = parseInt(tyStr, 10);
+      const thisMonth = parseInt(tmStr, 10) - 1; // 0-indexed
+      const nextMonth = (thisMonth + 1) % 12;
+      const nextMonthYear = thisMonth === 11 ? thisYear + 1 : thisYear;
+
+      let thisMonthTotal = 0;
+      let nextMonthTotal = 0;
+
+      // 디버깅용 학생별 상세
+      const breakdown = [];
+      // 모달용 학생별 상세 (이번 달/다음 달 카운트된 항목만, 예상일 asc)
+      const breakdownEntries = [];
+
+      for (const student of activeStudents) {
+        const studentPayments = paymentsByStudent.get(student.id) ?? [];
+        if (studentPayments.length === 0) {
+          breakdown.push({ 학생: student.name, 결과: '제외(결제이력없음)' });
+          continue;
+        }
+        const lastPayment = studentPayments[0];
+        const expectedAmount = lastPayment.actualAmount || 0;
+        if (expectedAmount <= 0) {
+          breakdown.push({ 학생: student.name, 결과: '제외(마지막결제금액0)' });
+          continue;
+        }
+        if (!lastPayment.paymentDate) {
+          breakdown.push({ 학생: student.name, 결과: '제외(결제일없음)' });
+          continue;
+        }
+        const lastPaymentDate = new Date(lastPayment.paymentDate);
+        const lastPaymentStr = lastPaymentDate.toLocaleDateString('ko-KR', { timeZone: KST });
+
+        const studentFuture = futureClassesByStudent.get(student.id) ?? [];
+        const firstShortage = studentFuture.find((c) => c.sessionShortage);
+
+        let expectedDate;
+        let basis;
+        if (firstShortage) {
+          expectedDate = new Date(firstShortage.datetime);
+          basis = `회차부족(${firstShortage.datetime.slice(0, 10)})`;
+        } else if (studentPayments.length >= 2 && studentPayments[1].paymentDate) {
+          const prevDate = new Date(studentPayments[1].paymentDate);
+          const avgIntervalMs = lastPaymentDate.getTime() - prevDate.getTime();
+          const avgDays = Math.round(avgIntervalMs / (1000 * 60 * 60 * 24));
+          if (avgIntervalMs > 0) {
+            expectedDate = new Date(lastPaymentDate.getTime() + avgIntervalMs);
+            basis = `평균간격(${avgDays}일)`;
+          } else {
+            expectedDate = new Date(lastPaymentDate.getTime() + 30 * 24 * 60 * 60 * 1000);
+            basis = `30일기본(평균계산실패)`;
+          }
+        } else {
+          expectedDate = new Date(lastPaymentDate.getTime() + 30 * 24 * 60 * 60 * 1000);
+          basis = `30일기본(결제이력1건)`;
+        }
+
+        const expectedStr = expectedDate.toLocaleDateString('ko-KR', { timeZone: KST });
+
+        if (expectedDate <= lastPaymentDate) {
+          breakdown.push({
+            학생: student.name,
+            마지막결제: lastPaymentStr,
+            예상일: expectedStr,
+            예상금액: expectedAmount,
+            산정방식: basis,
+            결과: '제외(예상일이마지막결제이전)',
+          });
+          continue;
+        }
+
+        const ey = parseInt(expectedDate.toLocaleString('en-CA', { timeZone: KST, year: 'numeric' }), 10);
+        const em = parseInt(expectedDate.toLocaleString('en-CA', { timeZone: KST, month: '2-digit' }), 10) - 1;
+
+        let bucket;
+        let modalBucket = null;
+        if (ey === thisYear && em === thisMonth) {
+          thisMonthTotal += expectedAmount;
+          bucket = '이번 달';
+          modalBucket = 'thisMonth';
+        } else if (ey === nextMonthYear && em === nextMonth) {
+          nextMonthTotal += expectedAmount;
+          bucket = '다음 달';
+          modalBucket = 'nextMonth';
+        } else if (expectedDate < now) {
+          thisMonthTotal += expectedAmount;
+          bucket = '이번 달(과거예상→즉시)';
+          modalBucket = 'thisMonth';
+        } else {
+          bucket = '제외(범위밖)';
+        }
+
+        breakdown.push({
+          학생: student.name,
+          마지막결제: lastPaymentStr,
+          예상일: expectedStr,
+          예상금액: expectedAmount,
+          산정방식: basis,
+          결과: bucket,
+        });
+
+        if (modalBucket) {
+          breakdownEntries.push({
+            studentId: student.id,
+            studentName: student.name,
+            lastPaymentStr,
+            expectedDateRaw: expectedDate.toISOString(),
+            expectedStr,
+            expectedAmount,
+            basis,
+            bucket: modalBucket,
+          });
+        }
+      }
+
+      breakdownEntries.sort((a, b) => a.expectedDateRaw.localeCompare(b.expectedDateRaw));
+
+      // 디버깅 출력
+      console.group('[홈] 예상 결제 수익 학생별 상세');
+      console.table(breakdown);
+      console.log(`이번 달 가산 예상 합계: ${thisMonthTotal.toLocaleString('ko-KR')}원`);
+      console.log(`다음 달 가산 예상 합계: ${nextMonthTotal.toLocaleString('ko-KR')}원`);
+      console.groupEnd();
+
+      setForecastThisMonth(thisMonthTotal);
+      setForecastNextMonth(nextMonthTotal);
+      setForecastBreakdown(breakdownEntries);
+    } catch (e) {
+      console.error('[홈] 예상 결제 수익 계산 오류', e);
+    } finally {
+      setForecastLoading(false);
     }
   };
 
@@ -277,6 +489,13 @@ export default function HomePage() {
     loadWeekSummary();
   }, []);
 
+  // 학생 데이터가 로드된 후 예상 결제 수익 계산 (students 의존)
+  useEffect(() => {
+    if (students.length > 0) {
+      loadForecast();
+    }
+  }, [students]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // 설정/알림 페이지에서 돌아올 때 이름 및 뱃지 갱신 (마운트 시 1회)
   useEffect(() => {
     setInstructorName(getInstructorName());
@@ -289,12 +508,14 @@ export default function HomePage() {
 
   const handleRefresh = async () => {
     // refreshData()가 students를 갱신 → lowSessionCount는 derive로 자동 재계산됨
+    // refreshData가 완료된 후 loadForecast가 students useEffect를 통해 자동 호출됨
     await Promise.all([
       loadUpcoming(),
       loadConsultCount(),
       loadSubmittedHomework(),
       loadTodayClasses(),
       loadWeekSummary(),
+      loadForecast(),
       refreshData(),
     ]);
   };
@@ -320,6 +541,7 @@ export default function HomePage() {
     { label: '수업 추가', Icon: CalendarPlusIcon, path: '/classes/new' },
     { label: '결제 입력', Icon: ReceiptIcon, path: '/payments/new' },
     { label: '학생 관리', Icon: UsersThreeIcon, path: '/students' },
+    { label: '숙제 관리', Icon: ClipboardTextIcon, path: '/homework' },
   ];
 
   return (
@@ -360,7 +582,7 @@ export default function HomePage() {
 
       {/* 빠른 실행 */}
       <div
-        className="px-4 pt-4 pb-1 flex gap-2"
+        className="px-4 pt-4 pb-1 grid grid-cols-2 gap-2"
         style={{ animation: 'fade-in-up 400ms cubic-bezier(0.2, 0, 0, 1) both', animationDelay: '0ms' }}
       >
         {QUICK_ACTIONS.map(({ label, Icon, path }) => (
@@ -368,16 +590,16 @@ export default function HomePage() {
             key={path}
             type="button"
             onClick={() => navigate(path)}
-            className="flex-1 flex flex-col items-center gap-1.5 py-3 rounded-2xl bg-white active:bg-gray-50 active:scale-[0.96] transition-[scale,background-color] duration-150 ease-out"
+            className="flex flex-col items-center gap-1.5 py-4 rounded-2xl bg-white active:bg-gray-50 active:scale-[0.96] transition-[scale,background-color] duration-150 ease-out"
             style={{ boxShadow: 'var(--shadow-border)' }}
           >
-            <Icon size={22} weight="fill" color={PRIMARY} />
-            <span className="text-xs font-medium text-gray-600">{label}</span>
+            <Icon size={24} weight="fill" color={PRIMARY} />
+            <span className="text-sm font-medium text-gray-700">{label}</span>
           </button>
         ))}
       </div>
 
-      {/* 이번 주 요약 */}
+      {/* 이번 주/달 요약 */}
       <div
         className="px-4 pt-3"
         style={{ animation: 'fade-in-up 400ms cubic-bezier(0.2, 0, 0, 1) both', animationDelay: '40ms' }}
@@ -400,12 +622,75 @@ export default function HomePage() {
               </span>
             )}
           </div>
-          <div className="flex items-center justify-between" style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid #f5f5f5' }}>
-            <span className="text-sm" style={{ color: TEXT_TERTIARY }}>결제 수입</span>
-            <span className="tabular-nums" style={{ fontSize: 14, fontWeight: 600, color: TEXT_PRIMARY }}>
-              {formatKRW(weekPayments.reduce((s, p) => s + (p.actualAmount || 0), 0))}
+          <button
+            type="button"
+            onClick={() => { setBreakdownBucket('thisMonth'); setBreakdownModalOpen(true); }}
+            disabled={weekLoading}
+            className="flex items-center justify-between w-full active:scale-[0.98] transition-[scale] duration-150 ease-out"
+            style={{
+              marginTop: 10, paddingTop: 10, borderTop: '1px solid #f5f5f5',
+              background: 'none', border: 'none', textAlign: 'left', padding: '10px 0 0',
+              cursor: weekLoading ? 'default' : 'pointer',
+            }}
+          >
+            <span className="text-sm flex items-center gap-1" style={{ color: TEXT_TERTIARY }}>
+              이번 달 결제 수입
+              <CaretRightIcon size={12} weight="bold" />
             </span>
-          </div>
+            <span className="tabular-nums" style={{ fontSize: 14, fontWeight: 600, color: TEXT_PRIMARY }}>
+              {formatKRW(monthPayments.reduce((s, p) => s + (p.actualAmount || 0), 0))}
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => { setBreakdownBucket('thisMonth'); setBreakdownModalOpen(true); }}
+            disabled={forecastLoading}
+            className="flex items-center justify-between w-full active:scale-[0.98] transition-[scale] duration-150 ease-out"
+            style={{
+              marginTop: 10, paddingTop: 10, borderTop: '1px solid #f5f5f5',
+              background: 'none', border: 'none', textAlign: 'left', padding: '10px 0 0',
+              cursor: forecastLoading ? 'default' : 'pointer',
+            }}
+          >
+            <span className="text-sm flex items-center gap-1" style={{ color: TEXT_TERTIARY }}>
+              예상 이번 달
+              <CaretRightIcon size={12} weight="bold" />
+            </span>
+            {forecastLoading ? (
+              <span className="w-1.5 h-1.5 rounded-full bg-brand-400 animate-pulse" />
+            ) : (() => {
+              const confirmed = monthPayments.reduce((s, p) => s + (p.actualAmount || 0), 0);
+              const totalThisMonth = confirmed + forecastThisMonth;
+              return (
+                <span className="tabular-nums" style={{ fontSize: 14, fontWeight: 600, color: PRIMARY }}>
+                  {formatKRW(totalThisMonth) || '₩0'}
+                </span>
+              );
+            })()}
+          </button>
+          <button
+            type="button"
+            onClick={() => { setBreakdownBucket('nextMonth'); setBreakdownModalOpen(true); }}
+            disabled={forecastLoading}
+            className="flex items-center justify-between w-full active:scale-[0.98] transition-[scale] duration-150 ease-out"
+            style={{
+              marginTop: 6,
+              background: 'none', border: 'none', textAlign: 'left', padding: 0,
+              cursor: forecastLoading ? 'default' : 'pointer',
+            }}
+          >
+            <span className="text-sm flex items-center gap-1" style={{ color: TEXT_TERTIARY }}>
+              예상 다음 달
+              <CaretRightIcon size={12} weight="bold" />
+            </span>
+            {forecastLoading ? (
+              <span className="w-1.5 h-1.5 rounded-full bg-brand-400 animate-pulse" />
+            ) : (
+              <span className="tabular-nums" style={{ fontSize: 14, fontWeight: 600, color: TEXT_TERTIARY }}>
+                {formatKRW(forecastNextMonth) || '₩0'}
+              </span>
+            )}
+          </button>
         </Card>
       </div>
 
@@ -745,6 +1030,161 @@ export default function HomePage() {
           </ul>
         )}
       </div>
+
+      {/* 예상 결제 수익 상세 모달 */}
+      <Modal
+        open={breakdownModalOpen}
+        onCancel={() => setBreakdownModalOpen(false)}
+        footer={null}
+        destroyOnHidden
+        title={breakdownBucket === 'thisMonth' ? '예상 이번 달 상세' : '예상 다음 달 상세'}
+        width={420}
+      >
+        {(() => {
+          const entries = forecastBreakdown.filter((e) => e.bucket === breakdownBucket);
+          const confirmedThisMonth = monthPayments.reduce((s, p) => s + (p.actualAmount || 0), 0);
+          const forecastTotal = breakdownBucket === 'thisMonth' ? forecastThisMonth : forecastNextMonth;
+          const grandTotal = breakdownBucket === 'thisMonth' ? confirmedThisMonth + forecastTotal : forecastTotal;
+
+          return (
+            <div>
+              {/* 합계 헤더 */}
+              <div style={{
+                padding: '12px 14px', borderRadius: 12,
+                background: PRIMARY_BG,
+                marginBottom: 14,
+              }}>
+                <div className="flex items-center justify-between">
+                  <span style={{ fontSize: 13, color: TEXT_PRIMARY }}>
+                    {breakdownBucket === 'thisMonth' ? '이번 달 총 예상' : '다음 달 예상'}
+                  </span>
+                  <span className="tabular-nums" style={{ fontSize: 18, fontWeight: 700, color: PRIMARY }}>
+                    {formatKRW(grandTotal)}
+                  </span>
+                </div>
+                {breakdownBucket === 'thisMonth' && (
+                  <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid rgba(127,0,5,0.12)', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <div className="flex items-center justify-between">
+                      <span style={{ fontSize: 12, color: TEXT_TERTIARY }}>확정 결제</span>
+                      <span className="tabular-nums" style={{ fontSize: 12, color: TEXT_PRIMARY, fontWeight: 600 }}>
+                        {formatKRW(confirmedThisMonth)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span style={{ fontSize: 12, color: TEXT_TERTIARY }}>예상 추가 ({entries.length}명)</span>
+                      <span className="tabular-nums" style={{ fontSize: 12, color: TEXT_PRIMARY, fontWeight: 600 }}>
+                        +{formatKRW(forecastTotal) || '₩0'}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* 이번 달: 확정 결제 섹션 */}
+              {breakdownBucket === 'thisMonth' && (() => {
+                const sortedPayments = [...monthPayments]
+                  .filter((p) => p.paymentDate)
+                  .sort((a, b) => (b.paymentDate || '').localeCompare(a.paymentDate || ''));
+                return (
+                  <div style={{ marginBottom: 16 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: TEXT_PRIMARY, marginBottom: 8 }}>
+                      확정 결제 {sortedPayments.length > 0 && <span className="tabular-nums" style={{ color: TEXT_TERTIARY, fontWeight: 400 }}>· {sortedPayments.length}건</span>}
+                    </div>
+                    {sortedPayments.length === 0 ? (
+                      <p style={{ fontSize: 13, color: TEXT_TERTIARY, textAlign: 'center', margin: '12px 0' }}>
+                        이번 달 결제 내역이 없습니다.
+                      </p>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        {sortedPayments.map((p) => {
+                          const studentName = p.studentIds
+                            .map((id) => studentNameMap[id])
+                            .filter(Boolean)
+                            .map((n) => n.replace(/^[\p{Emoji_Presentation}\p{Extended_Pictographic}]\s*/gu, '').trim())
+                            .join(', ') || '—';
+                          const ctTitle = classTypeMap[p.classTypeId]?.title || '';
+                          const paymentDateStr = p.paymentDate
+                            ? new Date(p.paymentDate).toLocaleDateString('ko-KR', { timeZone: KST })
+                            : '';
+                          return (
+                            <div
+                              key={p.id}
+                              style={{
+                                padding: '12px 14px', borderRadius: 12,
+                                background: '#f9fafb', border: '1px solid #f0f0f0',
+                              }}
+                            >
+                              <div className="flex items-center justify-between">
+                                <span style={{ fontSize: 14, fontWeight: 600, color: TEXT_PRIMARY }}>
+                                  {studentName}
+                                </span>
+                                <span className="tabular-nums" style={{ fontSize: 14, fontWeight: 700, color: TEXT_PRIMARY }}>
+                                  {formatKRW(p.actualAmount || 0)}
+                                </span>
+                              </div>
+                              <div className="flex items-center justify-between" style={{ marginTop: 4 }}>
+                                <span style={{ fontSize: 12, color: TEXT_TERTIARY }}>
+                                  결제일 {paymentDateStr}
+                                </span>
+                                {ctTitle && (
+                                  <span style={{ fontSize: 11, color: TEXT_DISABLED }}>
+                                    {ctTitle}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* 예상 추가 섹션 */}
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: TEXT_PRIMARY, marginBottom: 8 }}>
+                  예상 추가 {entries.length > 0 && <span className="tabular-nums" style={{ color: TEXT_TERTIARY, fontWeight: 400 }}>· {entries.length}명</span>}
+                </div>
+                {entries.length === 0 ? (
+                  <p style={{ fontSize: 13, color: TEXT_TERTIARY, textAlign: 'center', margin: '12px 0' }}>
+                    예상되는 학생이 없습니다.
+                  </p>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {entries.map((e) => (
+                      <div
+                        key={`${e.studentId}-${e.expectedDateRaw}`}
+                        style={{
+                          padding: '12px 14px', borderRadius: 12,
+                          background: '#f9fafb', border: '1px solid #f0f0f0',
+                        }}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span style={{ fontSize: 14, fontWeight: 600, color: TEXT_PRIMARY }}>
+                            {e.studentName}
+                          </span>
+                          <span className="tabular-nums" style={{ fontSize: 14, fontWeight: 700, color: PRIMARY }}>
+                            {formatKRW(e.expectedAmount)}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between" style={{ marginTop: 4 }}>
+                          <span style={{ fontSize: 12, color: TEXT_TERTIARY }}>
+                            예상일 {e.expectedStr}
+                          </span>
+                          <span style={{ fontSize: 11, color: TEXT_DISABLED }}>
+                            {e.basis}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })()}
+      </Modal>
     </PullToRefresh>
   );
 }

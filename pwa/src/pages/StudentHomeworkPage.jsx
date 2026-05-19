@@ -89,10 +89,9 @@ export default function StudentHomeworkPage() {
           <Button
             type="primary"
             onClick={() => navigate(`/homework/new?studentId=${id}`)}
-            style={{ borderRadius: 12, width: 44, height: 44, padding: 0, fontSize: 20, fontWeight: 600 }}
-            aria-label="숙제 추가"
+            style={{ borderRadius: 12, fontWeight: 600 }}
           >
-            +
+            + 숙제 추가
           </Button>
         }
       />
