@@ -90,7 +90,7 @@ export default function PendingClassesPage() {
           pending.length > 0 ? (
             <button
               onClick={() => setShowConfirm(true)}
-              className="active:scale-[0.96] transition-[scale,color] duration-150 ease-out"
+              className="transition-[color] duration-150 ease-out"
               style={{
                 background: 'transparent', border: 'none',
                 color: PRIMARY, fontSize: 14, fontWeight: 600,

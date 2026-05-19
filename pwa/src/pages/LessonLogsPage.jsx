@@ -104,7 +104,7 @@ function LogCard({ log, studentNameMap }) {
     <li>
       <Link
         to={`/logs/${log.id}/edit`}
-        className="block active:scale-[0.96] transition-[scale] duration-150 ease-out"
+        className="block duration-150 ease-out"
       >
         <Card
           variant="borderless"

@@ -137,7 +137,7 @@ export default function LessonLogFormPage() {
             <button
               type="button"
               onClick={() => setForm((f) => ({ ...f, engagement: '' }))}
-              className={`py-3 rounded-xl text-sm font-medium border-2 transition-[scale,background-color,color,border-color] duration-150 ease-out active:scale-[0.96] ${
+              className={`py-3 rounded-xl text-sm font-medium border-2 transition-[background-color,color,border-color] duration-150 ease-out ${
                 !form.engagement ? 'bg-gray-200 text-gray-800 border-gray-300' : 'bg-white text-gray-500 border-gray-200'
               }`}
             >
@@ -148,7 +148,7 @@ export default function LessonLogFormPage() {
                 key={opt}
                 type="button"
                 onClick={() => setForm((f) => ({ ...f, engagement: opt }))}
-                className={`py-3 rounded-xl text-sm font-medium border-2 transition-[scale,background-color,color,border-color] duration-150 ease-out active:scale-[0.96] ${
+                className={`py-3 rounded-xl text-sm font-medium border-2 transition-[background-color,color,border-color] duration-150 ease-out ${
                   form.engagement === opt
                     ? 'border-brand-600 bg-brand-50 text-brand-700'
                     : 'border-gray-200 bg-white text-gray-600'

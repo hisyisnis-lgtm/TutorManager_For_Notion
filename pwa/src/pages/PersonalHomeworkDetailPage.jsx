@@ -259,7 +259,7 @@ export default function PersonalHomeworkDetailPage() {
     <button
       onClick={() => navigate(-1)}
       aria-label="뒤로"
-      className="active:scale-[0.96] transition-[scale,color] duration-150 ease-out"
+      className="transition-[color] duration-150 ease-out"
       style={backBtnStyle}
     >
       <CaretLeftIcon weight="bold" size={20} />
@@ -408,7 +408,7 @@ export default function PersonalHomeworkDetailPage() {
             type="button"
             onClick={openModal}
             disabled={uploading}
-            className="active:scale-[0.96] transition-[scale,background-color] duration-150 ease-out"
+            className="transition-[background-color] duration-150 ease-out"
             style={{
               width: '100%', height: 44, borderRadius: 12,
               background: '#fff0f1', border: '1.5px solid rgba(127,0,5,0.2)',
@@ -450,7 +450,7 @@ export default function PersonalHomeworkDetailPage() {
           <button
             type="button"
             onClick={() => { forceArchive(studentToken, hwId); navigate(-1); }}
-            className="active:scale-[0.96] transition-[scale] duration-150 ease-out"
+            className="duration-150 ease-out"
             style={{
               width: '100%', height: 44, borderRadius: 14,
               background: 'none', border: '1.5px solid #d9d9d9',
@@ -478,7 +478,7 @@ export default function PersonalHomeworkDetailPage() {
               <button
                 type="button"
                 onClick={() => setModalView('list')}
-                className="active:scale-[0.96] transition-[scale,color] duration-150 ease-out"
+                className="transition-[color] duration-150 ease-out"
                 style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: '#595959', padding: '0 4px 0 0', display: 'flex', alignItems: 'center' }}
                 aria-label="뒤로"
               >
@@ -540,7 +540,7 @@ export default function PersonalHomeworkDetailPage() {
               <button
                 type="button"
                 onClick={tryOpenFilePicker}
-                className="active:scale-[0.96] transition-[scale,background-color] duration-150 ease-out"
+                className="transition-[background-color] duration-150 ease-out"
                 style={{ flex: 1, height: 44, borderRadius: 12, background: 'white', border: '1.5px solid #d9d9d9', color: '#595959', fontSize: 14, fontWeight: 600, cursor: 'pointer', WebkitTapHighlightColor: 'transparent' }}
               >
                 파일 추가
@@ -548,7 +548,7 @@ export default function PersonalHomeworkDetailPage() {
               <button
                 type="button"
                 onClick={tryOpenRecord}
-                className="active:scale-[0.96] transition-[scale,background-color] duration-150 ease-out"
+                className="transition-[background-color] duration-150 ease-out"
                 style={{ flex: 1, height: 44, borderRadius: 12, background: 'white', border: '1.5px solid #d9d9d9', color: '#595959', fontSize: 14, fontWeight: 600, cursor: 'pointer', WebkitTapHighlightColor: 'transparent' }}
               >
                 바로 녹음
@@ -643,7 +643,7 @@ export default function PersonalHomeworkDetailPage() {
           <button
             type="button"
             onClick={() => handleDeleteFile(deleteConfirmFile)}
-            className="active:scale-[0.96] transition-[scale] duration-150 ease-out"
+            className="duration-150 ease-out"
             style={{ flex: 1, height: 44, borderRadius: 12, border: 'none', background: '#ff4d4f', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
           >
             삭제

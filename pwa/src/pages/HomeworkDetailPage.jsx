@@ -445,7 +445,7 @@ export default function HomeworkDetailPage() {
             <button
               type="button"
               onClick={openFileModal}
-              className="active:scale-[0.96] transition-[scale] duration-150 ease-out"
+              className="duration-150 ease-out"
               style={{
                 width: '100%', height: 44, borderRadius: 12,
                 background: PRIMARY_BG, border: '1.5px solid rgba(127,0,5,0.2)',
@@ -542,7 +542,7 @@ export default function HomeworkDetailPage() {
               <button
                 type="button"
                 onClick={tryOpenFilePicker}
-                className="active:scale-[0.96] transition-[scale] duration-150 ease-out"
+                className="duration-150 ease-out"
                 style={{
                   flex: 1, height: 44, borderRadius: 12,
                   background: 'white', border: `1.5px solid ${BORDER_NEUTRAL}`, color: TEXT_SECONDARY,
@@ -555,7 +555,7 @@ export default function HomeworkDetailPage() {
               <button
                 type="button"
                 onClick={tryOpenRecord}
-                className="active:scale-[0.96] transition-[scale] duration-150 ease-out"
+                className="duration-150 ease-out"
                 style={{
                   flex: 1, height: 44, borderRadius: 12,
                   background: 'white', border: `1.5px solid ${BORDER_NEUTRAL}`, color: TEXT_SECONDARY,

@@ -77,7 +77,7 @@ export default function MonthCalendar({
           type="button"
           onClick={onPrevMonth}
           aria-label="이전 달"
-          className="w-10 h-10 flex items-center justify-center rounded-lg active:bg-gray-100 active:scale-[0.96] transition-[scale,background-color] duration-150 ease-out text-gray-500 text-xl font-light"
+          className="w-10 h-10 flex items-center justify-center rounded-lg active:bg-gray-100 transition-[background-color] duration-150 ease-out text-gray-500 text-xl font-light"
         >
           <span aria-hidden="true">‹</span>
         </button>
@@ -97,7 +97,7 @@ export default function MonthCalendar({
           type="button"
           onClick={onNextMonth}
           aria-label="다음 달"
-          className="w-10 h-10 flex items-center justify-center rounded-lg active:bg-gray-100 active:scale-[0.96] transition-[scale,background-color] duration-150 ease-out text-gray-500 text-xl font-light"
+          className="w-10 h-10 flex items-center justify-center rounded-lg active:bg-gray-100 transition-[background-color] duration-150 ease-out text-gray-500 text-xl font-light"
         >
           <span aria-hidden="true">›</span>
         </button>

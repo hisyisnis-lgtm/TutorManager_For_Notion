@@ -8,8 +8,7 @@ import {
   reserveSlot,
   fetchMyClasses,
   cancelMyClass,
-  restoreMyClass,
-} from '../api/bookingApi.js';
+  restoreMyClass } from '../api/bookingApi.js';
 import { Card, Button, Modal } from 'antd';
 import { DAY_KR, formatDateMD, formatYearMonth, addMonths, timeToMin, formatDuration } from '../utils/dateUtils.js';
 import {
@@ -18,8 +17,7 @@ import {
   BG_APP, BORDER_NEUTRAL,
   STATUS_SUCCESS_DARK, STATUS_SUCCESS_BG,
   STATUS_ERROR_TEXT, STATUS_ERROR_BG, STATUS_ERROR_BORDER,
-  STATUS_INFO_DARK,
-} from '../constants/theme.js';
+  STATUS_INFO_DARK } from '../constants/theme.js';
 import { BADGE_SMALL } from '../constants/styles.js';
 
 const LOCATION_OPTIONS = ['강남사무실', '온라인 (Zoom/화상)'];
@@ -86,7 +84,7 @@ function Calendar({ year, month, availableDates, selectedDate, onSelect }) {
               disabled={disabled}
               onClick={() => onSelect(dateStr)}
               style={{ touchAction: 'manipulation' }}
-              className={`relative flex items-center justify-center h-11 rounded-full text-sm font-medium transition-[scale,background-color,color] duration-150 ease-out ${!disabled ? 'active:scale-[0.96]' : ''} ${
+              className={`relative flex items-center justify-center h-11 rounded-full text-sm font-medium transition-[background-color,color] duration-150 ease-out ${!disabled ? '' : ''} ${
                 isSelected
                   ? 'bg-brand-600 text-white'
                   : disabled
@@ -151,7 +149,7 @@ function TimeRangePicker({ availableTimes, passableTimes, startTime, endTime, on
                 disabled={!canSelect}
                 onClick={() => canSelect && onStartSelect(t)}
                 style={{ touchAction: 'manipulation' }}
-                className={`px-3 py-2 rounded-lg text-sm font-medium border transition-[scale,background-color,color,border-color] duration-150 ease-out ${canSelect ? 'active:scale-[0.96]' : ''} ${
+                className={`px-3 py-2 rounded-lg text-sm font-medium border transition-[background-color,color,border-color] duration-150 ease-out ${canSelect ? '' : ''} ${
                   isSelected
                     ? 'bg-brand-600 text-white border-brand-600'
                     : inRange
@@ -189,7 +187,7 @@ function TimeRangePicker({ availableTimes, passableTimes, startTime, endTime, on
                       disabled={!canSelect}
                       onClick={() => canSelect && onEndSelect(t)}
                       style={{ touchAction: 'manipulation' }}
-                      className={`px-3 py-2 rounded-lg text-sm font-medium border transition-[scale,background-color,color,border-color] duration-150 ease-out ${canSelect ? 'active:scale-[0.96]' : ''} ${
+                      className={`px-3 py-2 rounded-lg text-sm font-medium border transition-[background-color,color,border-color] duration-150 ease-out ${canSelect ? '' : ''} ${
                         isSelected
                           ? 'bg-brand-600 text-white border-brand-600'
                           : canSelect
@@ -258,8 +256,7 @@ function MyClassesTab({ studentToken, month, onMonthChange, onStudentRefresh }) 
         } finally {
           setCancellingId(null);
         }
-      },
-    });
+      } });
   };
 
   const handleRestore = (cls) => {
@@ -280,8 +277,7 @@ function MyClassesTab({ studentToken, month, onMonthChange, onStudentRefresh }) 
         } finally {
           setRestoringId(null);
         }
-      },
-    });
+      } });
   };
 
   const LOCATION_LABEL = { '강남사무실': '강남', '온라인 (Zoom/화상)': 'Zoom' };
@@ -291,20 +287,18 @@ function MyClassesTab({ studentToken, month, onMonthChange, onStudentRefresh }) 
       {/* 월 네비게이션 */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '10px 16px', borderBottom: '1px solid rgba(0,0,0,0.06)',
-      }}>
+        padding: '10px 16px', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
         <button
           type="button"
           onClick={() => onMonthChange(addMonths(month, -1))}
           aria-label="이전 달"
-          className="active:scale-[0.96]"
+          className=""
           style={{
             width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center',
             borderRadius: 10, border: 'none', background: 'none', cursor: 'pointer',
             fontSize: 20, color: TEXT_SECONDARY,
-            transitionProperty: 'scale', transitionDuration: '150ms', transitionTimingFunction: 'ease-out',
-            WebkitTapHighlightColor: 'transparent',
-          }}
+            
+            WebkitTapHighlightColor: 'transparent' }}
         >
           <span aria-hidden="true">‹</span>
         </button>
@@ -315,14 +309,13 @@ function MyClassesTab({ studentToken, month, onMonthChange, onStudentRefresh }) 
           type="button"
           onClick={() => onMonthChange(addMonths(month, 1))}
           aria-label="다음 달"
-          className="active:scale-[0.96]"
+          className=""
           style={{
             width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center',
             borderRadius: 10, border: 'none', background: 'none', cursor: 'pointer',
             fontSize: 20, color: TEXT_SECONDARY,
-            transitionProperty: 'scale', transitionDuration: '150ms', transitionTimingFunction: 'ease-out',
-            WebkitTapHighlightColor: 'transparent',
-          }}
+            
+            WebkitTapHighlightColor: 'transparent' }}
         >
           <span aria-hidden="true">›</span>
         </button>
@@ -384,15 +377,14 @@ function MyClassesTab({ studentToken, month, onMonthChange, onStudentRefresh }) 
                     <button
                       onClick={() => handleCancel(cls)}
                       disabled={cancellingId === cls.id}
-                      className="active:scale-[0.96]"
+                      className=""
                       style={{
                         flexShrink: 0, height: 36, padding: '0 12px', borderRadius: 10,
                         fontSize: 13, fontWeight: 500, cursor: 'pointer',
                         color: STATUS_ERROR_TEXT, border: `1.5px solid ${STATUS_ERROR_BORDER}`, background: '#fff',
-                        transitionProperty: 'scale, background-color', transitionDuration: '150ms', transitionTimingFunction: 'ease-out',
+                        transitionProperty: 'background-color', transitionDuration: '150ms', transitionTimingFunction: 'ease-out',
                         WebkitTapHighlightColor: 'transparent',
-                        opacity: cancellingId === cls.id ? 0.5 : 1,
-                      }}
+                        opacity: cancellingId === cls.id ? 0.5 : 1 }}
                     >
                       {cancellingId === cls.id ? '취소 중...' : '취소'}
                     </button>
@@ -401,15 +393,14 @@ function MyClassesTab({ studentToken, month, onMonthChange, onStudentRefresh }) 
                     <button
                       onClick={() => handleRestore(cls)}
                       disabled={restoringId === cls.id}
-                      className="active:scale-[0.96]"
+                      className=""
                       style={{
                         flexShrink: 0, height: 36, padding: '0 12px', borderRadius: 10,
                         fontSize: 13, fontWeight: 500, cursor: 'pointer',
                         color: PRIMARY, border: `1.5px solid ${PRIMARY_ALPHA_20}`, background: PRIMARY_BG,
-                        transitionProperty: 'scale, background-color', transitionDuration: '150ms', transitionTimingFunction: 'ease-out',
+                        transitionProperty: 'background-color', transitionDuration: '150ms', transitionTimingFunction: 'ease-out',
                         WebkitTapHighlightColor: 'transparent',
-                        opacity: restoringId === cls.id ? 0.5 : 1,
-                      }}
+                        opacity: restoringId === cls.id ? 0.5 : 1 }}
                     >
                       {restoringId === cls.id ? '복구 중...' : '복구'}
                     </button>
@@ -547,8 +538,7 @@ export default function BookingPage() {
         date: selectedDate,
         startTime,
         endTime,
-        location,
-      });
+        location });
       navigate(`/book/status/${encodeURIComponent(result.token)}`, { replace: true, state: { studentToken } });
     } catch (err) {
       setSubmitError(err.message);
@@ -614,14 +604,12 @@ export default function BookingPage() {
           position: 'sticky', top: 0, zIndex: 101,
           backgroundColor: 'rgba(255,255,255,0.95)',
           backdropFilter: 'saturate(180%) blur(20px)',
-          WebkitBackdropFilter: 'saturate(180%) blur(20px)',
-        }}>
+          WebkitBackdropFilter: 'saturate(180%) blur(20px)' }}>
           {/* 헤더 행 */}
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             padding: '12px 16px 10px',
-            borderBottom: '1px solid rgba(0,0,0,0.04)',
-          }}>
+            borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
             <div>
               <h1 style={{ fontSize: 17, fontWeight: 700, color: TEXT_PRIMARY, margin: 0, lineHeight: 1.3 }}>
                 수업 예약
@@ -637,8 +625,7 @@ export default function BookingPage() {
                   fontSize: 12, fontWeight: 600,
                   padding: '4px 10px', borderRadius: 20,
                   backgroundColor: student.remainingSessions > 0 ? PRIMARY_BG : STATUS_ERROR_BG,
-                  color: student.remainingSessions > 0 ? PRIMARY : STATUS_ERROR_TEXT,
-                }}
+                  color: student.remainingSessions > 0 ? PRIMARY : STATUS_ERROR_TEXT }}
                 aria-label={`잔여 ${student.remainingSessions}회차`}
               >
                 잔여 {student.remainingSessions}회
@@ -649,8 +636,7 @@ export default function BookingPage() {
                 style={{
                   fontSize: 12, color: TEXT_INACTIVE, background: 'none',
                   border: 'none', cursor: 'pointer', padding: '4px 0',
-                  WebkitTapHighlightColor: 'transparent',
-                }}
+                  WebkitTapHighlightColor: 'transparent' }}
               >
                 로그아웃
               </button>
@@ -662,8 +648,7 @@ export default function BookingPage() {
             role="tablist"
             style={{
               display: 'flex', padding: '0 16px',
-              borderBottom: '1px solid rgba(0,0,0,0.06)',
-            }}
+              borderBottom: '1px solid rgba(0,0,0,0.06)' }}
           >
             {['예약하기', '내 수업'].map((t, i) => (
               <button
@@ -673,7 +658,7 @@ export default function BookingPage() {
                 aria-controls={`tab-panel-${i}`}
                 id={`tab-${i}`}
                 onClick={() => setTab(t)}
-                className="active:scale-[0.96]"
+                className=""
                 style={{
                   marginRight: 20, paddingTop: 10, paddingBottom: 10,
                   fontSize: 14, fontWeight: tab === t ? 600 : 500,
@@ -685,8 +670,7 @@ export default function BookingPage() {
                   transitionDuration: '150ms',
                   transitionTimingFunction: 'ease-out',
                   WebkitTapHighlightColor: 'transparent',
-                  outline: 'none',
-                }}
+                  outline: 'none' }}
               >
                 {t}
               </button>
@@ -720,14 +704,13 @@ export default function BookingPage() {
                   type="button"
                   onClick={prevMonth}
                   aria-label="이전 달"
-                  className="active:scale-[0.96]"
+                  className=""
                   style={{
                     width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center',
                     borderRadius: 10, border: 'none', background: 'none', cursor: 'pointer',
                     fontSize: 20, color: TEXT_SECONDARY,
-                    transitionProperty: 'scale, background-color', transitionDuration: '150ms', transitionTimingFunction: 'ease-out',
-                    WebkitTapHighlightColor: 'transparent',
-                  }}
+                    transitionProperty: 'background-color', transitionDuration: '150ms', transitionTimingFunction: 'ease-out',
+                    WebkitTapHighlightColor: 'transparent' }}
                 >
                   <span aria-hidden="true">‹</span>
                 </button>
@@ -741,14 +724,13 @@ export default function BookingPage() {
                   type="button"
                   onClick={nextMonth}
                   aria-label="다음 달"
-                  className="active:scale-[0.96]"
+                  className=""
                   style={{
                     width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center',
                     borderRadius: 10, border: 'none', background: 'none', cursor: 'pointer',
                     fontSize: 20, color: TEXT_SECONDARY,
-                    transitionProperty: 'scale, background-color', transitionDuration: '150ms', transitionTimingFunction: 'ease-out',
-                    WebkitTapHighlightColor: 'transparent',
-                  }}
+                    transitionProperty: 'background-color', transitionDuration: '150ms', transitionTimingFunction: 'ease-out',
+                    WebkitTapHighlightColor: 'transparent' }}
                 >
                   <span aria-hidden="true">›</span>
                 </button>
@@ -807,8 +789,7 @@ export default function BookingPage() {
                   <div style={{
                     backgroundColor: PRIMARY_BG, borderRadius: 10,
                     padding: '10px 14px', marginBottom: 14,
-                    fontSize: 14, color: PRIMARY,
-                  }}>
+                    fontSize: 14, color: PRIMARY }}>
                     {(() => {
                       const d = new Date(selectedDate + 'T00:00:00+09:00');
                       return (
@@ -833,7 +814,7 @@ export default function BookingPage() {
                           key={opt}
                           type="button"
                           onClick={() => setLocation(opt)}
-                          className="active:scale-[0.96]"
+                          className=""
                           style={{
                             flex: 1, height: 44, borderRadius: 12,
                             fontSize: 14, fontWeight: 500, cursor: 'pointer',
@@ -842,8 +823,7 @@ export default function BookingPage() {
                             color: location === opt ? '#ffffff' : TEXT_SECONDARY,
                             transitionProperty: 'background-color, color, border-color',
                             transitionDuration: '150ms', transitionTimingFunction: 'ease-out',
-                            WebkitTapHighlightColor: 'transparent',
-                          }}
+                            WebkitTapHighlightColor: 'transparent' }}
                         >
                           {opt === '강남사무실' ? '강남사무실' : 'Zoom (온라인)'}
                         </button>

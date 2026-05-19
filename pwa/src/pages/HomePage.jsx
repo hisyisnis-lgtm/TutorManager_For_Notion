@@ -18,8 +18,7 @@ import { usePendingClassState } from '../hooks/usePendingClassState.js';
 import {
   PRIMARY, PRIMARY_BG,
   TEXT_PRIMARY, TEXT_TERTIARY, TEXT_DISABLED,
-  STATUS_ERROR_TEXT,
-} from '../constants/theme.js';
+  STATUS_ERROR_TEXT } from '../constants/theme.js';
 import { BADGE_SMALL } from '../constants/styles.js';
 import { getInstructorName, getNtfyTopic } from './SettingsPage.jsx';
 
@@ -28,8 +27,7 @@ const KST = 'Asia/Seoul';
 function getKSTToday() {
   const now = new Date();
   const parts = new Intl.DateTimeFormat('ko-KR', {
-    timeZone: KST, year: 'numeric', month: '2-digit', day: '2-digit',
-  }).formatToParts(now);
+    timeZone: KST, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(now);
   const get = (t) => parseInt(parts.find((p) => p.type === t)?.value ?? '0');
   return { year: get('year'), month: get('month') - 1, day: get('day') };
 }
@@ -128,8 +126,7 @@ export default function HomePage() {
           and: [
             { property: '수업 일시', date: { on_or_after: new Date().toISOString() } },
             { property: '특이사항', select: { does_not_equal: '🚫 취소' } },
-          ],
-        },
+          ] },
         [{ property: '수업 일시', direction: 'ascending' }],
         undefined,
         5
@@ -161,8 +158,7 @@ export default function HomePage() {
               { property: '수업 일시', date: { on_or_after: weekStart } },
               { property: '수업 일시', date: { on_or_before: weekEnd } },
               { property: '특이사항', select: { does_not_equal: '🚫 취소' } },
-            ],
-          },
+            ] },
           undefined,
           undefined,
           100
@@ -173,8 +169,7 @@ export default function HomePage() {
             and: [
               { property: '결제일', date: { on_or_after: monthStart } },
               { property: '결제일', date: { on_or_before: monthEnd } },
-            ],
-          },
+            ] },
           undefined,
           undefined,
           100
@@ -224,8 +219,7 @@ export default function HomePage() {
             and: [
               { property: '수업 일시', date: { on_or_after: getTodayStart() } },
               { property: '특이사항', select: { does_not_equal: '🚫 취소' } },
-            ],
-          },
+            ] },
           [{ property: '수업 일시', direction: 'ascending' }],
           undefined,
           100
@@ -325,8 +319,7 @@ export default function HomePage() {
             예상일: expectedStr,
             예상금액: expectedAmount,
             산정방식: basis,
-            결과: '제외(예상일이마지막결제이전)',
-          });
+            결과: '제외(예상일이마지막결제이전)' });
           continue;
         }
 
@@ -357,8 +350,7 @@ export default function HomePage() {
           예상일: expectedStr,
           예상금액: expectedAmount,
           산정방식: basis,
-          결과: bucket,
-        });
+          결과: bucket });
 
         if (modalBucket) {
           breakdownEntries.push({
@@ -369,8 +361,7 @@ export default function HomePage() {
             expectedStr,
             expectedAmount,
             basis,
-            bucket: modalBucket,
-          });
+            bucket: modalBucket });
         }
       }
 
@@ -405,8 +396,7 @@ export default function HomePage() {
             { property: '수업 일시', date: { before: new Date().toISOString() } },
             { property: '수업 일지', relation: { is_not_empty: true } },
             { property: '특이사항', select: { does_not_equal: '🚫 취소' } },
-          ],
-        },
+          ] },
         [{ property: '수업 일시', direction: 'descending' }],
         undefined,
         1
@@ -467,8 +457,7 @@ export default function HomePage() {
             { property: '수업 일시', date: { on_or_after: `${todayStr}T00:00:00+09:00` } },
             { property: '수업 일시', date: { on_or_before: `${todayStr}T23:59:59+09:00` } },
             { property: '특이사항', select: { does_not_equal: '🚫 취소' } },
-          ],
-        },
+          ] },
         [{ property: '수업 일시', direction: 'ascending' }],
         undefined,
         20
@@ -556,7 +545,7 @@ export default function HomePage() {
         {/* 알림 버튼 */}
         <button
           onClick={() => { setUnreadCount(0); navigate('/notifications'); }}
-          className="p-2 relative text-gray-400 active:text-gray-600 active:scale-[0.96] transition-[scale,color] duration-150 ease-out"
+          className="p-2 relative text-gray-400 active:text-gray-600 transition-[color] duration-150 ease-out"
           aria-label="알림"
         >
           <BellIcon weight="fill" size={24} />
@@ -572,7 +561,7 @@ export default function HomePage() {
         {/* 설정 버튼 */}
         <button
           onClick={() => navigate('/settings')}
-          className="p-2 -mr-1 text-gray-400 active:text-gray-600 active:scale-[0.96] transition-[scale,color] duration-150 ease-out"
+          className="p-2 -mr-1 text-gray-400 active:text-gray-600 transition-[color] duration-150 ease-out"
           aria-label="설정"
         >
           <GearSixIcon weight="fill" size={24} />
@@ -590,7 +579,7 @@ export default function HomePage() {
             key={path}
             type="button"
             onClick={() => navigate(path)}
-            className="flex flex-col items-center gap-1.5 py-4 rounded-2xl bg-white active:bg-gray-50 active:scale-[0.96] transition-[scale,background-color] duration-150 ease-out"
+            className="flex flex-col items-center gap-1.5 py-4 rounded-2xl bg-white active:bg-gray-50 transition-[background-color] duration-150 ease-out"
             style={{ boxShadow: 'var(--shadow-border)' }}
           >
             <Icon size={24} weight="fill" color={PRIMARY} />
@@ -626,12 +615,11 @@ export default function HomePage() {
             type="button"
             onClick={() => { setBreakdownBucket('thisMonth'); setBreakdownModalOpen(true); }}
             disabled={weekLoading}
-            className="flex items-center justify-between w-full active:scale-[0.98] transition-[scale] duration-150 ease-out"
+            className="flex items-center justify-between w-full duration-150 ease-out"
             style={{
               marginTop: 10, paddingTop: 10, borderTop: '1px solid #f5f5f5',
               background: 'none', border: 'none', textAlign: 'left', padding: '10px 0 0',
-              cursor: weekLoading ? 'default' : 'pointer',
-            }}
+              cursor: weekLoading ? 'default' : 'pointer' }}
           >
             <span className="text-sm flex items-center gap-1" style={{ color: TEXT_TERTIARY }}>
               이번 달 결제 수입
@@ -645,12 +633,11 @@ export default function HomePage() {
             type="button"
             onClick={() => { setBreakdownBucket('thisMonth'); setBreakdownModalOpen(true); }}
             disabled={forecastLoading}
-            className="flex items-center justify-between w-full active:scale-[0.98] transition-[scale] duration-150 ease-out"
+            className="flex items-center justify-between w-full duration-150 ease-out"
             style={{
               marginTop: 10, paddingTop: 10, borderTop: '1px solid #f5f5f5',
               background: 'none', border: 'none', textAlign: 'left', padding: '10px 0 0',
-              cursor: forecastLoading ? 'default' : 'pointer',
-            }}
+              cursor: forecastLoading ? 'default' : 'pointer' }}
           >
             <span className="text-sm flex items-center gap-1" style={{ color: TEXT_TERTIARY }}>
               예상 이번 달
@@ -672,12 +659,11 @@ export default function HomePage() {
             type="button"
             onClick={() => { setBreakdownBucket('nextMonth'); setBreakdownModalOpen(true); }}
             disabled={forecastLoading}
-            className="flex items-center justify-between w-full active:scale-[0.98] transition-[scale] duration-150 ease-out"
+            className="flex items-center justify-between w-full duration-150 ease-out"
             style={{
               marginTop: 6,
               background: 'none', border: 'none', textAlign: 'left', padding: 0,
-              cursor: forecastLoading ? 'default' : 'pointer',
-            }}
+              cursor: forecastLoading ? 'default' : 'pointer' }}
           >
             <span className="text-sm flex items-center gap-1" style={{ color: TEXT_TERTIARY }}>
               예상 다음 달
@@ -730,8 +716,7 @@ export default function HomePage() {
                   .join(', ');
                 const timeStr = cls.datetime
                   ? new Date(cls.datetime).toLocaleTimeString('ko-KR', {
-                      timeZone: KST, hour: '2-digit', minute: '2-digit', hour12: false,
-                    })
+                      timeZone: KST, hour: '2-digit', minute: '2-digit', hour12: false })
                   : '';
                 const endTimeStr = cls.endTime ? formatTime(cls.endTime) : '';
                 return (
@@ -766,7 +751,7 @@ export default function HomePage() {
         >
           <Link
             to="/consult"
-            className="block active:scale-[0.96] transition-[scale] duration-150 ease-out"
+            className="block duration-150 ease-out"
           >
             <Card
               variant="borderless"
@@ -795,7 +780,7 @@ export default function HomePage() {
         >
           <Link
             to="/students"
-            className="block active:scale-[0.96] transition-[scale] duration-150 ease-out"
+            className="block duration-150 ease-out"
           >
             <Card
               variant="borderless"
@@ -845,14 +830,13 @@ export default function HomePage() {
             {overflowCount > 0 && (
               <Link
                 to="/home/pending"
-                className="active:scale-[0.96] transition-[scale,background-color] duration-150 ease-out"
+                className="transition-[background-color] duration-150 ease-out"
                 style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
                   height: 40, borderRadius: 10, background: '#fff',
                   boxShadow: 'var(--shadow-border)',
                   color: PRIMARY, fontSize: 13, fontWeight: 600,
-                  textDecoration: 'none',
-                }}
+                  textDecoration: 'none' }}
               >
                 더보기 <span className="tabular-nums">+{overflowCount}</span>
                 <CaretRightIcon size={14} weight="bold" />
@@ -877,8 +861,7 @@ export default function HomePage() {
             style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}
           >
             <div ref={hwInnerRef} style={{
-              display: 'inline-flex', gap: 10, padding: '4px 16px 8px 16px', verticalAlign: 'top',
-            }}>
+              display: 'inline-flex', gap: 10, padding: '4px 16px 8px 16px', verticalAlign: 'top' }}>
             {submittedHomework.map((hw) => {
               const studentName = hw.studentIds
                 .map((id) => studentNameMap[id])
@@ -889,22 +872,20 @@ export default function HomePage() {
               const submitDate = hw.submitDate
                 ? new Date(hw.submitDate).toLocaleString('ko-KR', {
                     timeZone: KST, month: 'numeric', day: 'numeric',
-                    hour: '2-digit', minute: '2-digit', hour12: false,
-                  })
+                    hour: '2-digit', minute: '2-digit', hour12: false })
                 : null;
               return (
                 <Link
                   key={hw.id}
                   to={`/homework/${hw.id}`}
-                  style={{ flexShrink: 0, textDecoration: 'none', display: 'block', transition: 'scale 150ms ease-out', }}
-                  className="active:scale-[0.96]"
+                  style={{ flexShrink: 0, textDecoration: 'none', display: 'block' }}
+                  className=""
                 >
                   <div style={{
                     width: 136, height: 136, borderRadius: 12, padding: 12,
                     background: '#fff', boxShadow: 'var(--shadow-border)',
                     display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
-                    boxSizing: 'border-box',
-                  }}>
+                    boxSizing: 'border-box' }}>
                     <div>
                       <p style={{ fontSize: 15, fontWeight: 700, color: PRIMARY, margin: '0 0 4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {studentName || '—'}
@@ -962,7 +943,7 @@ export default function HomePage() {
                 <li key={cls.id}>
                   <Link
                     to={`/classes/${cls.id}/edit`}
-                    className="block active:scale-[0.96] transition-[scale] duration-150 ease-out"
+                    className="block duration-150 ease-out"
                   >
                     <Card
                       variant="borderless"
@@ -996,8 +977,7 @@ export default function HomePage() {
                                 padding: '2px 8px', borderRadius: 6,
                                 background: '#f5f5f5',
                                 color: TEXT_TERTIARY,
-                                fontSize: 11, fontWeight: 600,
-                              }}>
+                                fontSize: 11, fontWeight: 600 }}>
                                 {isFree ? '무료상담' : '원데이클래스'}
                               </span>
                             </div>
@@ -1007,8 +987,7 @@ export default function HomePage() {
                           return (
                             <div style={{
                               marginTop: 10, paddingTop: 10,
-                              borderTop: '1px solid #f5f5f5',
-                            }}>
+                              borderTop: '1px solid #f5f5f5' }}>
                               <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
                                 <span style={{ fontSize: 11, color: TEXT_TERTIARY, flexShrink: 0, lineHeight: 1.45, marginTop: 1 }}>
                                   준비
@@ -1047,9 +1026,7 @@ export default function HomePage() {
             overflowY: 'auto',
             overscrollBehavior: 'contain',
             WebkitOverflowScrolling: 'touch',
-            paddingRight: 4,
-          },
-        }}
+            paddingRight: 4 } }}
       >
         {(() => {
           const entries = forecastBreakdown.filter((e) => e.bucket === breakdownBucket);
@@ -1063,8 +1040,7 @@ export default function HomePage() {
               <div style={{
                 padding: '12px 14px', borderRadius: 12,
                 background: PRIMARY_BG,
-                marginBottom: 14,
-              }}>
+                marginBottom: 14 }}>
                 <div className="flex items-center justify-between">
                   <span style={{ fontSize: 13, color: TEXT_PRIMARY }}>
                     {breakdownBucket === 'thisMonth' ? '이번 달 총 예상' : '다음 달 예상'}
@@ -1122,8 +1098,7 @@ export default function HomePage() {
                               key={p.id}
                               style={{
                                 padding: '12px 14px', borderRadius: 12,
-                                background: '#f9fafb', border: '1px solid #f0f0f0',
-                              }}
+                                background: '#f9fafb', border: '1px solid #f0f0f0' }}
                             >
                               <div className="flex items-center justify-between">
                                 <span style={{ fontSize: 14, fontWeight: 600, color: TEXT_PRIMARY }}>
@@ -1168,8 +1143,7 @@ export default function HomePage() {
                         key={`${e.studentId}-${e.expectedDateRaw}`}
                         style={{
                           padding: '12px 14px', borderRadius: 12,
-                          background: '#f9fafb', border: '1px solid #f0f0f0',
-                        }}
+                          background: '#f9fafb', border: '1px solid #f0f0f0' }}
                       >
                         <div className="flex items-center justify-between">
                           <span style={{ fontSize: 14, fontWeight: 600, color: TEXT_PRIMARY }}>

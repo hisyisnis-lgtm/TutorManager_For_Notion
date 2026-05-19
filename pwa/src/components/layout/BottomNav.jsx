@@ -20,8 +20,7 @@ export default function BottomNav() {
         WebkitBackdropFilter: 'saturate(180%) blur(20px)',
         boxShadow: 'var(--shadow-nav)',
         zIndex: 50,
-        paddingBottom: 'env(safe-area-inset-bottom)',
-      }}
+        paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
       <div style={{ maxWidth: 480, margin: '0 auto', display: 'flex' }}>
         {TABS.map(({ to, label, icon }) => (
@@ -29,7 +28,7 @@ export default function BottomNav() {
             key={to}
             to={to}
             aria-label={label}
-            className="active:scale-[0.96]"
+            className=""
             style={({ isActive }) => ({
               flex: 1, display: 'flex', flexDirection: 'column',
               alignItems: 'center', justifyContent: 'center',
@@ -38,13 +37,12 @@ export default function BottomNav() {
               fontSize: 11, fontWeight: isActive ? 600 : 500,
               color: isActive ? PRIMARY : TEXT_INACTIVE,
               textDecoration: 'none',
-              transitionProperty: 'color, scale',
+              transitionProperty: 'color',
               transitionDuration: '0.15s',
               transitionTimingFunction: 'ease-out',
               minHeight: 56,
               WebkitTapHighlightColor: 'transparent',
-              outline: 'none',
-            })}
+              outline: 'none' })}
           >
             <span style={{ fontSize: 24, lineHeight: 1 }} aria-hidden="true">{icon}</span>
             <span aria-hidden="true">{label}</span>

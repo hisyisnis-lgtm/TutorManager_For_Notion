@@ -90,7 +90,7 @@ export default function PendingClassCard({ cls, studentName, hwDone, onHwClick, 
         </div>
         <button
           onClick={() => onDismiss(cls.id)}
-          className="active:scale-[0.96] transition-[scale,background-color] duration-150 ease-out"
+          className="transition-[background-color] duration-150 ease-out"
           style={{
             flexShrink: 0, background: '#fff', border: '1px solid #e5e5e7',
             color: TEXT_TERTIARY, fontSize: 12, fontWeight: 600,
@@ -104,7 +104,7 @@ export default function PendingClassCard({ cls, studentName, hwDone, onHwClick, 
         <button
           onClick={handleHwClick}
           disabled={hwDone}
-          className={hwDone ? '' : 'active:scale-[0.96] transition-[scale,background-color] duration-150 ease-out'}
+          className={hwDone ? '' : 'transition-[background-color] duration-150 ease-out'}
           style={hwDone ? doneBtn : activeBtn}
         >
           {hwDone && <CheckIcon size={14} weight="bold" />}
@@ -113,7 +113,7 @@ export default function PendingClassCard({ cls, studentName, hwDone, onHwClick, 
         <button
           onClick={handleLogClick}
           disabled={creatingLog}
-          className={creatingLog ? '' : 'active:scale-[0.96] transition-[scale,background-color] duration-150 ease-out'}
+          className={creatingLog ? '' : 'transition-[background-color] duration-150 ease-out'}
           style={logDone ? editBtn : { ...activeBtn, opacity: creatingLog ? 0.5 : 1 }}
         >
           {creatingLog ? '생성 중...' : logDone ? '일지 수정' : '일지 작성'}

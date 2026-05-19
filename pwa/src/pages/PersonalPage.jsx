@@ -3,8 +3,7 @@ import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { usePullToRefresh, PullIndicator } from '../hooks/usePullToRefresh.jsx';
 import {
   fetchStudentByToken,
-  fetchMyClasses,
-} from '../api/bookingApi.js';
+  fetchMyClasses } from '../api/bookingApi.js';
 import { fetchMyHomework, parseHomework, submitHomework, uploadStudentFile, homeworkStatusColor } from '../api/homework.js';
 import { Card, Button, Spin, message } from 'antd';
 import { DAY_KR, timeToMin, formatDuration, formatYearMonth, addMonths } from '../utils/dateUtils.js';
@@ -28,8 +27,7 @@ import {
   BORDER_SUBTLE,
   STATUS_SUCCESS_DARK, STATUS_SUCCESS_BG,
   STATUS_ERROR_TEXT, STATUS_ERROR_BG, STATUS_ERROR_BORDER,
-  STATUS_INFO_DARK,
-} from '../constants/theme.js';
+  STATUS_INFO_DARK } from '../constants/theme.js';
 import { BADGE_SMALL, BADGE_MEDIUM, FOOTNOTE } from '../constants/styles.js';
 
 const SAVED_TOKEN_KEY = 'personal_student_token';
@@ -275,8 +273,7 @@ function HwCard({ hw, studentToken, onMarkViewed }) {
         boxShadow: isFeedback
           ? '0 0 0 2px rgba(82, 196, 26, 0.35), var(--shadow-border)'
           : 'var(--shadow-border)',
-        overflow: 'hidden',
-      }}
+        overflow: 'hidden' }}
       styles={{ body: { padding: 0 } }}
     >
       <button
@@ -285,16 +282,15 @@ function HwCard({ hw, studentToken, onMarkViewed }) {
           onMarkViewed?.();
           navigate(`/personal/${studentToken}/homework/${hw.id}`);
         }}
-        className="active:scale-[0.96]"
+        className=""
         style={{
           width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           padding: '14px 16px', border: 'none', cursor: 'pointer',
           WebkitTapHighlightColor: 'transparent', textAlign: 'left',
           background: isFeedback ? 'rgba(82, 196, 26, 0.04)' : 'none',
-          transitionProperty: 'scale, background',
+          transitionProperty: 'background',
           transitionDuration: '150ms',
-          transitionTimingFunction: 'ease-out',
-        }}
+          transitionTimingFunction: 'ease-out' }}
       >
         <div style={{ flex: 1, minWidth: 0 }}>
           <p style={{ fontSize: 14, fontWeight: 600, color: TEXT_PRIMARY, margin: '0 0 2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -348,13 +344,11 @@ function ArchiveHwCard({ hw, studentToken }) {
       <button
         type="button"
         onClick={() => navigate(`/personal/${studentToken}/homework/${hw.id}`)}
-        className="active:scale-[0.96]"
+        className=""
         style={{
           width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between",
           padding: "14px 16px", border: "none", cursor: "pointer",
-          WebkitTapHighlightColor: "transparent", textAlign: "left", background: "none",
-          transitionProperty: "scale", transitionDuration: "150ms", transitionTimingFunction: "ease-out",
-        }}
+          WebkitTapHighlightColor: "transparent", textAlign: "left", background: "none" }}
       >
         <div style={{ flex: 1, minWidth: 0 }}>
           <p style={{ fontSize: 14, fontWeight: 600, color: TEXT_PRIMARY, margin: "0 0 2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -506,19 +500,17 @@ function MyClassesTab({ studentToken, month, onMonthChange }) {
       <div data-coach="month-nav" style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '12px 16px', borderBottom: `1px solid ${BORDER_SUBTLE}`,
-        backgroundColor: '#fff',
-      }}>
+        backgroundColor: '#fff' }}>
         <button
           type="button"
           onClick={() => onMonthChange(addMonths(month, -1))}
           aria-label="이전 달"
-          className="active:scale-[0.96] transition-[scale,background-color] duration-150 ease-out"
+          className="transition-[background-color] duration-150 ease-out"
           style={{
             width: 44, height: 44, borderRadius: 12,
             border: `1px solid ${BORDER_SUBTLE}`, background: '#fafafa', cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 18, color: TEXT_SECONDARY,
-          }}
+            fontSize: 18, color: TEXT_SECONDARY }}
         >‹</button>
         <span
           style={{ fontSize: 16, fontWeight: 700, color: TEXT_PRIMARY }}
@@ -531,13 +523,12 @@ function MyClassesTab({ studentToken, month, onMonthChange }) {
           type="button"
           onClick={() => onMonthChange(addMonths(month, 1))}
           aria-label="다음 달"
-          className="active:scale-[0.96] transition-[scale,background-color] duration-150 ease-out"
+          className="transition-[background-color] duration-150 ease-out"
           style={{
             width: 44, height: 44, borderRadius: 12,
             border: `1px solid ${BORDER_SUBTLE}`, background: '#fafafa', cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 18, color: TEXT_SECONDARY,
-          }}
+            fontSize: 18, color: TEXT_SECONDARY }}
         >›</button>
       </div>
 
@@ -609,8 +600,7 @@ function NextClassHeroCard({ cls, todayStr, nowMin }) {
         <span style={{
           position: 'absolute', top: 0, right: 0,
           ...BADGE_MEDIUM,
-          background: badge.bg, color: badge.color,
-        }}>
+          background: badge.bg, color: badge.color }}>
           {badge.label}
         </span>
       )}
@@ -663,8 +653,7 @@ function MetricRow({ remainingHours, upcomingCount }) {
       ].map(({ label, value, unit }) => (
         <div key={label} style={{
           flex: 1, background: '#fff', borderRadius: 12, padding: '12px 14px',
-          boxShadow: 'var(--shadow-border)',
-        }}>
+          boxShadow: 'var(--shadow-border)' }}>
           <p style={{ fontSize: 11, fontWeight: 500, color: TEXT_TERTIARY, margin: '0 0 4px' }}>{label}</p>
           <p style={{ fontSize: 20, fontWeight: 700, color: TEXT_PRIMARY, margin: 0, lineHeight: 1.15 }} className="tabular-nums">
             {value}
@@ -695,20 +684,18 @@ function HomeworkAlertCard({ pending, feedback, studentToken, onNavigate }) {
             key={hw.id}
             type="button"
             onClick={() => studentToken ? navigate(`/personal/${studentToken}/homework/${hw.id}`) : onNavigate?.()}
-            className="active:scale-[0.97] transition-[scale,background-color] duration-150 ease-out"
+            className="transition-[background-color] duration-150 ease-out"
             style={{
               width: '100%', display: 'flex', alignItems: 'center', gap: 12,
               padding: '12px 16px',
               background: 'none', border: 'none', cursor: 'pointer',
               borderTop: i > 0 ? `1px solid ${BORDER_SUBTLE}` : 'none',
-              WebkitTapHighlightColor: 'transparent', textAlign: 'left',
-            }}
+              WebkitTapHighlightColor: 'transparent', textAlign: 'left' }}
           >
             <div style={{
               width: 36, height: 36, borderRadius: 10, flexShrink: 0,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: isPending ? PRIMARY_BG : STATUS_SUCCESS_BG,
-            }}>
+              background: isPending ? PRIMARY_BG : STATUS_SUCCESS_BG }}>
               {isPending
                 ? <ClipboardTextIcon size={18} weight="fill" color={PRIMARY} />
                 : <ChatTeardropTextIcon size={18} weight="fill" color={STATUS_SUCCESS_DARK} />}
@@ -777,15 +764,13 @@ function HomeTab({ studentToken, foodSources, studentLoaded, remainingHours, rem
           <div style={{
             height: 86, borderRadius: 12, background: '#fff',
             boxShadow: 'var(--shadow-card)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
+            display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Spin size="small" />
           </div>
         ) : visibleUpcoming.length === 0 ? (
           <div style={{
             borderRadius: 12, background: '#fff',
-            boxShadow: 'var(--shadow-border)', padding: '20px', textAlign: 'center',
-          }}>
+            boxShadow: 'var(--shadow-border)', padding: '20px', textAlign: 'center' }}>
             <p style={{ fontSize: 14, color: TEXT_TERTIARY, margin: 0 }}>선생님과 수업 일정을 잡아보세요</p>
           </div>
         ) : (
@@ -842,8 +827,7 @@ function HomeTab({ studentToken, foodSources, studentLoaded, remainingHours, rem
               <div style={{
                 position: 'absolute', top: 0, right: -20,
                 width: 180, height: 52,
-                overflow: 'hidden', pointerEvents: 'none', zIndex: 2,
-              }}>
+                overflow: 'hidden', pointerEvents: 'none', zIndex: 2 }}>
                 <img
                   src={stage.img} alt={stage.label}
                   style={{ position: 'absolute', right: 0, bottom: -104, width: 180, height: 180, objectFit: 'contain', animation: 'panda-rock 2s ease-in-out infinite', transformOrigin: 'bottom center' }}
@@ -865,8 +849,7 @@ function HomeTab({ studentToken, foodSources, studentLoaded, remainingHours, rem
                   borderRadius: 16, boxShadow: '0 4px 20px rgba(127,0,5,0.28)',
                   padding: '0 16px 0 20px', textAlign: 'left',
                   overflow: 'hidden',
-                  WebkitTapHighlightColor: 'transparent',
-                }}
+                  WebkitTapHighlightColor: 'transparent' }}
               >
                 {/* 팬더 이미지: 카드 내부에서 overflow:hidden으로 상·하단 클립 */}
                 <img
@@ -875,8 +858,7 @@ function HomeTab({ studentToken, foodSources, studentLoaded, remainingHours, rem
                     position: 'absolute', right: -20, bottom: -24,
                     width: 180, height: 180, objectFit: 'contain',
                     pointerEvents: 'none',
-                    animation: 'panda-rock 2s ease-in-out infinite', transformOrigin: 'bottom center',
-                  }}
+                    animation: 'panda-rock 2s ease-in-out infinite', transformOrigin: 'bottom center' }}
                 />
                 {/* 배경 장식 원 */}
                 <div style={{ position: 'absolute', left: -12, bottom: -18, width: 72, height: 72, borderRadius: '50%', background: 'rgba(255,255,255,0.06)', pointerEvents: 'none' }} />
@@ -906,7 +888,7 @@ function HomeTab({ studentToken, foodSources, studentLoaded, remainingHours, rem
                   href={href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="active:scale-[0.96] transition-[scale] duration-150 ease-out"
+                  className="duration-150 ease-out"
                   style={{
                     flex: 1, display: 'flex', flexDirection: 'column',
                     alignItems: 'center', justifyContent: 'center', gap: 6,
@@ -914,8 +896,7 @@ function HomeTab({ studentToken, foodSources, studentLoaded, remainingHours, rem
                     background: '#fff', borderRadius: 12,
                     boxShadow: 'var(--shadow-border)',
                     textDecoration: 'none',
-                    WebkitTapHighlightColor: 'transparent',
-                  }}
+                    WebkitTapHighlightColor: 'transparent' }}
                 >
                   {icon}
                   <span style={{ fontSize: 11, fontWeight: 600, color: TEXT_SECONDARY }}>{label}</span>
@@ -934,12 +915,11 @@ function HomeTab({ studentToken, foodSources, studentLoaded, remainingHours, rem
             <button
               type="button"
               onClick={onSwitchToClasses}
-              className="active:scale-[0.96] transition-[scale,color] duration-150 ease-out"
+              className="transition-[color] duration-150 ease-out"
               style={{
                 border: 'none', background: 'none', cursor: 'pointer',
                 fontSize: 13, color: TEXT_TERTIARY, padding: '4px 0',
-                WebkitTapHighlightColor: 'transparent',
-              }}
+                WebkitTapHighlightColor: 'transparent' }}
             >
               전체 보기 ›
             </button>
@@ -1166,13 +1146,11 @@ export default function PersonalPage() {
         backgroundColor: 'rgba(255,255,255,0.82)',
         backdropFilter: 'saturate(180%) blur(20px)',
         WebkitBackdropFilter: 'saturate(180%) blur(20px)',
-        borderBottom: `1px solid ${BORDER_SUBTLE}`,
-      }}>
+        borderBottom: `1px solid ${BORDER_SUBTLE}` }}>
         <div style={{
           maxWidth: 480, margin: '0 auto',
           height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '0 16px',
-        }}>
+          padding: '0 16px' }}>
         <h1 style={{ fontSize: 17, fontWeight: 700, color: TEXT_PRIMARY, margin: 0, lineHeight: 1.3 }}>
           {tab === '홈' ? student.name : tab === '내 수업' ? '예약 현황' : tab === '보관함' ? '발음 보관함' : tab}
         </h1>
@@ -1182,15 +1160,14 @@ export default function PersonalPage() {
             onClick={() => setSettingsOpen(v => !v)}
             aria-label="설정"
             aria-expanded={settingsOpen}
-            className="active:scale-[0.96] transition-[scale,color] duration-150 ease-out"
+            className="transition-[color] duration-150 ease-out"
             style={{
               width: 36, height: 36, padding: 0,
               border: 'none', background: 'none',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               cursor: 'pointer', color: TEXT_SECONDARY, fontSize: 24,
               WebkitTapHighlightColor: 'transparent',
-              outline: 'none',
-            }}
+              outline: 'none' }}
           >
             <GearSixIcon weight="fill" />
           </button>
@@ -1206,8 +1183,7 @@ export default function PersonalPage() {
             transform: settingsOpen ? 'scale(1)' : 'scale(0.85)',
             opacity: settingsOpen ? 1 : 0,
             pointerEvents: settingsOpen ? 'auto' : 'none',
-            transition: 'transform 0.18s cubic-bezier(0.34,1.56,0.64,1), opacity 0.15s ease',
-          }}>
+            transition: 'transform 0.18s cubic-bezier(0.34,1.56,0.64,1), opacity 0.15s ease' }}>
             {[
               ...(install.isInstalled ? [] : [{ label: '홈 화면에 추가', onClick: handleInstallAction }]),
               { label: '가이드 보기', onClick: () => { resetAllTabTips(); setTipResetKey(k => k + 1); } },
@@ -1217,15 +1193,14 @@ export default function PersonalPage() {
               <button
                 key={item.label}
                 onClick={() => { setSettingsOpen(false); item.onClick(); }}
-                className="active:scale-[0.96] transition-[scale,background-color] duration-150 ease-out"
+                className="transition-[background-color] duration-150 ease-out"
                 style={{
                   width: '100%', display: 'flex', alignItems: 'center',
                   padding: '10px 12px', borderRadius: 8,
                   border: 'none', background: 'none', cursor: 'pointer',
                   fontSize: 14, fontWeight: 500,
                   color: item.label === '로그아웃' ? STATUS_ERROR_TEXT : TEXT_PRIMARY,
-                  borderTop: i > 0 ? `1px solid ${BORDER_SUBTLE}` : 'none',
-                }}
+                  borderTop: i > 0 ? `1px solid ${BORDER_SUBTLE}` : 'none' }}
               >
                 {item.label}
               </button>
@@ -1332,8 +1307,7 @@ export default function PersonalPage() {
         backdropFilter: 'saturate(180%) blur(20px)',
         WebkitBackdropFilter: 'saturate(180%) blur(20px)',
         boxShadow: 'var(--shadow-nav)',
-        paddingBottom: 'env(safe-area-inset-bottom)',
-      }}>
+        paddingBottom: 'env(safe-area-inset-bottom)' }}>
         <div style={{ maxWidth: 480, margin: '0 auto', display: 'flex' }}>
           {[
             { key: '홈', icon: <HouseIcon weight="fill" />, label: '홈', dot: false },
@@ -1360,13 +1334,12 @@ export default function PersonalPage() {
                   minHeight: 56,
                   color: isActive ? PRIMARY : TEXT_INACTIVE,
                   fontSize: 24,
-                  transitionProperty: 'color, scale',
+                  transitionProperty: 'color',
                   transitionDuration: '0.15s',
                   transitionTimingFunction: 'ease-out',
                   WebkitTapHighlightColor: 'transparent',
-                  outline: 'none',
-                }}
-                className="active:scale-[0.96]"
+                  outline: 'none' }}
+                className=""
               >
                 <div style={{ position: 'relative', display: 'inline-flex' }}>
                   {item.icon}
@@ -1375,8 +1348,7 @@ export default function PersonalPage() {
                       position: 'absolute', top: -1, right: -3,
                       width: 7, height: 7, borderRadius: '50%',
                       background: STATUS_ERROR_TEXT,
-                      border: '1.5px solid rgba(255,255,255,0.82)',
-                    }} />
+                      border: '1.5px solid rgba(255,255,255,0.82)' }} />
                   )}
                 </div>
                 <span style={{ fontSize: 11, fontWeight: isActive ? 600 : 500 }}>{item.label}</span>

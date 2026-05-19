@@ -239,7 +239,7 @@ function ShareButton() {
     <button
       onClick={handleShare}
       aria-label="공유하기"
-      className="active:scale-[0.96] transition-[scale,background-color,color] duration-150 ease-out"
+      className="transition-[background-color,color] duration-150 ease-out"
       style={{
         display: 'flex', alignItems: 'center', gap: 4,
         border: `1px solid ${BORDER_NEUTRAL}`, borderRadius: 20,

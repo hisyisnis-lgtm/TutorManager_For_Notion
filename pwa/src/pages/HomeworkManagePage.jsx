@@ -125,7 +125,7 @@ export default function HomeworkManagePage() {
             key={value}
             onClick={() => setFilter(value)}
             aria-pressed={filter === value}
-            className={`flex-shrink-0 px-3 py-3 rounded-full text-sm font-medium transition-[scale,background-color,color] duration-150 ease-out active:scale-[0.96] ${
+            className={`flex-shrink-0 px-3 py-3 rounded-full text-sm font-medium transition-[background-color,color] duration-150 ease-out ${
               filter === value
                 ? 'bg-brand-600 text-white'
                 : 'bg-gray-100 text-gray-600'
@@ -166,7 +166,7 @@ function HomeworkStudentCard({ student, count }) {
     <li>
       <Link
         to={`/students/${student.id}/homework`}
-        className="block active:scale-[0.96] transition-[scale] duration-150 ease-out"
+        className="block duration-150 ease-out"
       >
         <Card
           variant="borderless"

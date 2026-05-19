@@ -294,7 +294,7 @@ export default function ClassesPage() {
           <button
             key={key}
             onClick={() => setPeriod(key)}
-            className={`flex-1 py-3 rounded-full text-sm font-medium transition-[scale,background-color,color] duration-150 ease-out active:scale-[0.96] ${
+            className={`flex-1 py-3 rounded-full text-sm font-medium transition-[background-color,color] duration-150 ease-out ${
               period === key ? 'bg-brand-600 text-white' : 'bg-gray-100 text-gray-600'
             }`}
           >
@@ -468,7 +468,7 @@ function ClassCard({ cls, studentNameMap }) {
 
   return (
     <li
-      className="active:scale-[0.96] transition-[scale] duration-150 ease-out"
+      className="duration-150 ease-out"
     >
       <Card
         variant="borderless"
@@ -541,7 +541,7 @@ function ClassCard({ cls, studentNameMap }) {
                 transition: 'background-color 150ms ease-out',
                 opacity: creatingLog ? 0.5 : 1,
               }}
-              className="active:scale-[0.96] transition-[scale,background-color] duration-150 ease-out"
+              className="transition-[background-color] duration-150 ease-out"
             >
               {creatingLog ? '생성 중...' : logId ? '일지 보기' : '일지 작성'}
             </button>

@@ -5,8 +5,7 @@ import {
   PRIMARY, PRIMARY_LIGHT, PRIMARY_BG, PRIMARY_ALPHA_20,
   TEXT_PRIMARY, TEXT_SECONDARY, TEXT_TERTIARY, TEXT_INACTIVE, TEXT_DISABLED,
   BORDER_DEFAULT,
-  GRADIENTS,
-} from '../../constants/theme.js';
+  GRADIENTS } from '../../constants/theme.js';
 
 export const STAGES = [
   { min: 0,   max: 2,         label: '알에서 깨어나는 중', message: '첫 수업이 기다려져요! 🥚', img: '/panda/Cha_Panda_Step_00.svg', nextAt: 3 },
@@ -266,8 +265,7 @@ export default function PandaWidget({ foodSources = [], storageKey = DEFAULT_FEE
         {/* ─ 상단 HUD 행: 레벨 + 스테이지명 / 먹이 카운터 ─ */}
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          marginBottom: 4, flexShrink: 0,
-        }}>
+          marginBottom: 4, flexShrink: 0 }}>
           {/* 왼쪽: Lv 배지 + 스테이지 이름 */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <div style={{
@@ -278,8 +276,7 @@ export default function PandaWidget({ foodSources = [], storageKey = DEFAULT_FEE
               borderRadius: 6,
               letterSpacing: '0.08em',
               textTransform: 'uppercase',
-              lineHeight: 1.4,
-            }}>
+              lineHeight: 1.4 }}>
               LV.{stageIdx + 1}
             </div>
             <span style={{ fontSize: 15, fontWeight: 700, color: TEXT_PRIMARY }}>
@@ -295,14 +292,12 @@ export default function PandaWidget({ foodSources = [], storageKey = DEFAULT_FEE
             borderRadius: 8, padding: '4px 10px',
             transitionProperty: 'background-color, border-color',
             transitionDuration: '0.3s',
-            transitionTimingFunction: 'ease',
-          }}>
+            transitionTimingFunction: 'ease' }}>
             <LeafIcon size={14} weight="fill" color={available > 0 ? PRIMARY : TEXT_DISABLED} />
             <span style={{
               fontSize: 14, fontWeight: 700,
               color: available > 0 ? PRIMARY : TEXT_DISABLED,
-              fontVariantNumeric: 'tabular-nums',
-            }}>
+              fontVariantNumeric: 'tabular-nums' }}>
               ×{available}
             </span>
           </div>
@@ -323,8 +318,7 @@ export default function PandaWidget({ foodSources = [], storageKey = DEFAULT_FEE
               animationName: 'panda-badge-in',
               animationDuration: '0.35s',
               animationTimingFunction: 'ease-out',
-              animationFillMode: 'forwards',
-            }}>
+              animationFillMode: 'forwards' }}>
               레벨 업
             </div>
           )}
@@ -337,8 +331,7 @@ export default function PandaWidget({ foodSources = [], storageKey = DEFAULT_FEE
               animationDuration: levelingUp ? '0.55s' : '3s',
               animationTimingFunction: 'ease-in-out',
               animationIterationCount: levelingUp ? 1 : 'infinite',
-              animationFillMode: levelingUp ? 'forwards' : 'none',
-            }}
+              animationFillMode: levelingUp ? 'forwards' : 'none' }}
           >
             <img
               src={stage.img}
@@ -353,16 +346,14 @@ export default function PandaWidget({ foodSources = [], storageKey = DEFAULT_FEE
                   : 'none',
                 transitionProperty: 'filter',
                 transitionDuration: '0.35s',
-                transitionTimingFunction: 'ease',
-              }}
+                transitionTimingFunction: 'ease' }}
             />
           </div>
 
           {/* 스테이지 메시지 */}
           <p style={{
             fontSize: 15, color: TEXT_SECONDARY, margin: '2px 0 0',
-            textAlign: 'center', wordBreak: 'keep-all', lineHeight: 1.5,
-          }}>
+            textAlign: 'center', wordBreak: 'keep-all', lineHeight: 1.5 }}>
             {stage.message}
           </p>
         </div>
@@ -371,12 +362,10 @@ export default function PandaWidget({ foodSources = [], storageKey = DEFAULT_FEE
         <div style={{ marginTop: 16, flexShrink: 0 }}>
           <div style={{
             display: 'flex', justifyContent: 'space-between', alignItems: 'baseline',
-            marginBottom: 6,
-          }}>
+            marginBottom: 6 }}>
             <span style={{
               fontSize: 12, fontWeight: 700, color: PRIMARY,
-              letterSpacing: '0.12em', textTransform: 'uppercase',
-            }}>
+              letterSpacing: '0.12em', textTransform: 'uppercase' }}>
               EXP
             </span>
             {stage.nextAt != null ? (
@@ -397,8 +386,7 @@ export default function PandaWidget({ foodSources = [], storageKey = DEFAULT_FEE
             background: '#e8e8e8',
             borderRadius: 4,
             overflow: 'hidden',
-            boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.12)',
-          }}>
+            boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.12)' }}>
             <div style={{
               width: `${progress}%`, height: '100%',
               background: stage.nextAt == null
@@ -408,8 +396,7 @@ export default function PandaWidget({ foodSources = [], storageKey = DEFAULT_FEE
               boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.28)',
               transitionProperty: 'width',
               transitionDuration: '0.65s',
-              transitionTimingFunction: 'cubic-bezier(0.34, 1.56, 0.64, 1)',
-            }} />
+              transitionTimingFunction: 'cubic-bezier(0.34, 1.56, 0.64, 1)' }} />
           </div>
 
           {/* 다음 레벨까지 */}
@@ -417,8 +404,7 @@ export default function PandaWidget({ foodSources = [], storageKey = DEFAULT_FEE
             <p style={{
               fontSize: 12, color: TEXT_DISABLED,
               margin: '5px 0 0', textAlign: 'right',
-              fontVariantNumeric: 'tabular-nums',
-            }}>
+              fontVariantNumeric: 'tabular-nums' }}>
               다음 단계까지 {remaining}회
             </p>
           )}
@@ -431,7 +417,7 @@ export default function PandaWidget({ foodSources = [], storageKey = DEFAULT_FEE
             ref={feedBtnRef}
             onClick={handleFeed}
             disabled={isFeeding}
-            className="active:scale-[0.96]"
+            className=""
             style={{
               flex: 1, height: 52, borderRadius: 12,
               border: 'none',
@@ -445,10 +431,9 @@ export default function PandaWidget({ foodSources = [], storageKey = DEFAULT_FEE
               WebkitTapHighlightColor: 'transparent',
               opacity: available > 0 ? 1 : 0.55,
               boxShadow: canFeed ? 'inset 0 1px 0 rgba(255,255,255,0.18), 0 2px 8px rgba(127,0,5,0.28)' : 'none',
-              transitionProperty: 'opacity, background-color, box-shadow, scale',
+              transitionProperty: 'opacity, background-color, box-shadow',
               transitionDuration: '0.15s',
-              transitionTimingFunction: 'ease-out',
-            }}
+              transitionTimingFunction: 'ease-out' }}
           >
             <LeafIcon size={17} weight="fill" />
             먹이주기
@@ -457,7 +442,7 @@ export default function PandaWidget({ foodSources = [], storageKey = DEFAULT_FEE
           {/* 쓰다듬기 — secondary */}
           <button
             onClick={handlePet}
-            className="active:scale-[0.96]"
+            className=""
             style={{
               flex: 1, height: 52, borderRadius: 12,
               border: '1.5px solid rgba(0,0,0,0.1)',
@@ -468,10 +453,9 @@ export default function PandaWidget({ foodSources = [], storageKey = DEFAULT_FEE
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
               WebkitTapHighlightColor: 'transparent',
               boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-              transitionProperty: 'background-color, scale',
+              transitionProperty: 'background-color',
               transitionDuration: '0.15s',
-              transitionTimingFunction: 'ease-out',
-            }}
+              transitionTimingFunction: 'ease-out' }}
           >
             <HandHeartIcon size={17} weight="fill" />
             쓰다듬기
@@ -484,7 +468,7 @@ export default function PandaWidget({ foodSources = [], storageKey = DEFAULT_FEE
             ref={feedAllBtnRef}
             onClick={handleFeedAll}
             disabled={!canFeed}
-            className="active:scale-[0.96]"
+            className=""
             style={{
               width: '100%', height: 42, borderRadius: 12, marginTop: 8,
               border: `1.5px solid ${PRIMARY_ALPHA_20}`,
@@ -494,10 +478,9 @@ export default function PandaWidget({ foodSources = [], storageKey = DEFAULT_FEE
               fontSize: 14, fontWeight: 700,
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
               WebkitTapHighlightColor: 'transparent',
-              transitionProperty: 'background-color, scale',
+              transitionProperty: 'background-color',
               transitionDuration: '0.15s',
-              transitionTimingFunction: 'ease-out',
-            }}
+              transitionTimingFunction: 'ease-out' }}
           >
             <LeafIcon size={14} weight="fill" />
             먹이 {available}개 전부 주기
@@ -512,15 +495,13 @@ export default function PandaWidget({ foodSources = [], storageKey = DEFAULT_FEE
           marginTop: toast ? 8 : 0,
           transitionProperty: 'max-height, opacity, margin-top',
           transitionDuration: '0.22s',
-          transitionTimingFunction: 'ease',
-        }}>
+          transitionTimingFunction: 'ease' }}>
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
             background: '#f5f5f5',
             borderRadius: 10,
             padding: '10px 14px',
-            fontSize: 14, color: TEXT_TERTIARY, fontWeight: 500,
-          }}>
+            fontSize: 14, color: TEXT_TERTIARY, fontWeight: 500 }}>
             <LeafIcon size={13} weight="fill" color={TEXT_DISABLED} />
             수업 30분마다 먹이가 생겨요
           </div>

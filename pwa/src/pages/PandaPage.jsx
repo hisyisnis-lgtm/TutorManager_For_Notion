@@ -63,7 +63,7 @@ export default function PandaPage() {
           <button
             onClick={() => navigate(-1)}
             aria-label="뒤로"
-            className="active:scale-[0.96] transition-[scale,color] duration-150 ease-out"
+            className="transition-[color] duration-150 ease-out"
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               width: 44, height: 44, marginLeft: -8, padding: 0,

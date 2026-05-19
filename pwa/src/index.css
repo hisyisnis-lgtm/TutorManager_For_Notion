@@ -178,28 +178,6 @@
     border-radius: 4px;
   }
 
-  /* ── 버튼 누름 피드백 (scale on press) ───── */
-  /* transition은 base에 정의해야 release 시에도 부드럽게 복귀함 */
-  button:not([disabled]):not([aria-disabled="true"]) {
-    transition-property: transform, opacity;
-    transition-duration: 150ms;
-    transition-timing-function: ease-out;
-  }
-
-  button:not([disabled]):not([aria-disabled="true"]):active {
-    transform: scale(0.96);
-  }
-
-  /* ── scale 애니메이션 opt-out ── */
-  /* button:active의 transform:scale(0.96) 글로벌 규칙을 무력화. 카드형 버튼처럼 누름 효과가 어울리지 않는 곳에 사용. */
-  .hw-toggle-btn,
-  .hw-toggle-btn:active,
-  .no-press,
-  .no-press:active {
-    transform: none !important;
-    transition: none !important;
-  }
-
   /* ── 숫자 레이아웃 안정성 ──────────────────── */
   .tabular-nums {
     font-variant-numeric: tabular-nums;

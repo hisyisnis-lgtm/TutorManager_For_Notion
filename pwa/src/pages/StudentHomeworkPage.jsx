@@ -164,7 +164,7 @@ function HomeworkCard({ hw, onClick }) {
 
   return (
     <div
-      className="active:scale-[0.96] transition-[scale] duration-150 ease-out"
+      className="duration-150 ease-out"
       onClick={onClick}
     >
     <Card

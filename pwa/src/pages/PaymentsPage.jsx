@@ -171,7 +171,7 @@ export default function PaymentsPage() {
             <button
               key={value}
               onClick={() => setStatusFilter(value)}
-              className={`flex-shrink-0 px-3 py-3 rounded-full text-sm font-medium transition-[scale,background-color,color] duration-150 ease-out active:scale-[0.96] ${
+              className={`flex-shrink-0 px-3 py-3 rounded-full text-sm font-medium transition-[background-color,color] duration-150 ease-out ${
                 statusFilter === value ? 'bg-brand-600 text-white' : 'bg-gray-100 text-gray-600'
               }`}
             >
@@ -227,7 +227,7 @@ function PaymentCard({ payment, studentNameMap, classTypeMap }) {
     <li>
       <Link
         to={`/payments/${payment.id}/edit`}
-        className="block active:scale-[0.96] transition-[scale] duration-150 ease-out"
+        className="block duration-150 ease-out"
       >
         <Card
           variant="borderless"

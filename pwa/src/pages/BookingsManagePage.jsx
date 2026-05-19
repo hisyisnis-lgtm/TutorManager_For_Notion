@@ -149,7 +149,7 @@ export default function BookingsManagePage() {
                   key={t}
                   type="button"
                   onClick={() => setForm(f => ({ ...f, type: t, days: [], start: '', end: '' }))}
-                  className={`flex-1 py-3 rounded-xl text-sm font-medium border transition-[scale,background-color,color,border-color] duration-150 ease-out active:scale-[0.96] ${
+                  className={`flex-1 py-3 rounded-xl text-sm font-medium border transition-[background-color,color,border-color] duration-150 ease-out ${
                     form.type === t ? 'bg-brand-600 text-white border-brand-600' : 'bg-white text-gray-600 border-gray-200'
                   }`}
                 >
@@ -168,7 +168,7 @@ export default function BookingsManagePage() {
                       key={day}
                       type="button"
                       onClick={() => toggleDay(day)}
-                      className={`h-11 w-11 rounded-full text-sm font-medium border transition-[scale,background-color,color,border-color] duration-150 ease-out active:scale-[0.96] ${
+                      className={`h-11 w-11 rounded-full text-sm font-medium border transition-[background-color,color,border-color] duration-150 ease-out ${
                         form.days.includes(day)
                           ? 'bg-brand-600 text-white border-brand-600'
                           : 'bg-white text-gray-600 border-gray-200'
@@ -242,7 +242,7 @@ export default function BookingsManagePage() {
                   <button
                     type="button"
                     onClick={() => setForm(f => ({ ...f, blockedTimes: [] }))}
-                    className="text-xs text-gray-400 active:text-red-500 active:scale-[0.96] transition-[scale,color] duration-150 ease-out"
+                    className="text-xs text-gray-400 active:text-red-500 transition-[color] duration-150 ease-out"
                   >
                     전체 해제
                   </button>
@@ -254,7 +254,7 @@ export default function BookingsManagePage() {
                     key={t}
                     type="button"
                     onClick={() => toggleTime(t)}
-                    className={`px-2.5 py-2.5 rounded-lg text-xs font-medium tabular-nums border transition-[scale,background-color,color,border-color] duration-150 ease-out active:scale-[0.96] ${
+                    className={`px-2.5 py-2.5 rounded-lg text-xs font-medium tabular-nums border transition-[background-color,color,border-color] duration-150 ease-out ${
                       form.blockedTimes.includes(t)
                         ? 'bg-red-500 text-white border-red-500'
                         : 'bg-white text-gray-600 border-gray-200 hover:border-red-300'

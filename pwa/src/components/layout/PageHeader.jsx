@@ -29,11 +29,11 @@ export default function PageHeader({ title, back, onBack, action }) {
                 width: 40, height: 40, border: 'none', background: 'none',
                 cursor: 'pointer', color: TEXT_SECONDARY, flexShrink: 0, marginLeft: -8,
                 borderRadius: 12,
-                transition: 'scale 150ms ease-out, color 100ms ease-out',
+                transition: 'color 100ms ease-out',
               }}
-              onPointerDown={(e) => { e.currentTarget.style.scale = '0.96'; e.currentTarget.style.color = TEXT_PRIMARY; }}
-              onPointerUp={(e) => { e.currentTarget.style.scale = '1'; e.currentTarget.style.color = TEXT_SECONDARY; }}
-              onPointerLeave={(e) => { e.currentTarget.style.scale = '1'; e.currentTarget.style.color = TEXT_SECONDARY; }}
+              onPointerDown={(e) => { e.currentTarget.style.color = TEXT_PRIMARY; }}
+              onPointerUp={(e) => { e.currentTarget.style.color = TEXT_SECONDARY; }}
+              onPointerLeave={(e) => { e.currentTarget.style.color = TEXT_SECONDARY; }}
             >
               <CaretLeftIcon size={20} weight="bold" />
             </button>

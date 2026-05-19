@@ -29,8 +29,7 @@ export default function HomeworkFilterBar({
   availableMonths = [],
   hideStatus = false,
   pillMode = false,
-  showSearchType = false,
-}) {
+  showSearchType = false }) {
   const currentYear = new Date().getFullYear();
 
   const monthOptions = [
@@ -75,8 +74,7 @@ export default function HomeworkFilterBar({
                   background: searchType === value ? PRIMARY : '#fff',
                   color: searchType === value ? '#fff' : TEXT_SECONDARY,
                   transition: 'background 150ms ease-out, color 150ms ease-out',
-                  WebkitTapHighlightColor: 'transparent',
-                }}
+                  WebkitTapHighlightColor: 'transparent' }}
               >
                 {label}
               </button>
@@ -89,8 +87,7 @@ export default function HomeworkFilterBar({
       {pillMode && availableMonths.length >= 1 && (
         <div style={{
           display: 'flex', gap: 6, overflowX: 'auto',
-          scrollbarWidth: 'none', msOverflowStyle: 'none', paddingBottom: 2,
-        }}>
+          scrollbarWidth: 'none', msOverflowStyle: 'none', paddingBottom: 2 }}>
           {['', ...availableMonths].map((m) => {
             const isActive = filterMonth === m;
             let label = '전체';
@@ -103,7 +100,7 @@ export default function HomeworkFilterBar({
                 key={m}
                 type="button"
                 onClick={() => onMonthChange(m)}
-                className="active:scale-[0.96]"
+                className=""
                 style={{
                   flexShrink: 0,
                   height: 32, padding: '0 14px', borderRadius: 100,
@@ -113,10 +110,9 @@ export default function HomeworkFilterBar({
                   fontSize: 13, fontWeight: isActive ? 600 : 400,
                   cursor: 'pointer',
                   WebkitTapHighlightColor: 'transparent',
-                  transitionProperty: 'background, color, border-color, scale',
+                  transitionProperty: 'background, color, border-color',
                   transitionDuration: '150ms',
-                  transitionTimingFunction: 'ease-out',
-                }}
+                  transitionTimingFunction: 'ease-out' }}
               >
                 {label}
               </button>

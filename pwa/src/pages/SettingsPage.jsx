@@ -122,7 +122,7 @@ export default function SettingsPage() {
                 <button
                   type="button"
                   onClick={() => copyLink(key, path)}
-                  className="shrink-0 text-xs text-brand-600 border border-brand-100 rounded-lg px-3 min-h-[40px] flex items-center active:bg-brand-50 active:scale-[0.96] transition-[scale,background-color] duration-150 ease-out"
+                  className="shrink-0 text-xs text-brand-600 border border-brand-100 rounded-lg px-3 min-h-[40px] flex items-center active:bg-brand-50 transition-[background-color] duration-150 ease-out"
                 >
                   {copiedKey === key ? '복사됨' : '복사'}
                 </button>
