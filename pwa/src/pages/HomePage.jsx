@@ -1037,8 +1037,19 @@ export default function HomePage() {
         onCancel={() => setBreakdownModalOpen(false)}
         footer={null}
         destroyOnHidden
+        centered
         title={breakdownBucket === 'thisMonth' ? '예상 이번 달 상세' : '예상 다음 달 상세'}
-        width={420}
+        width="92vw"
+        style={{ maxWidth: 480, paddingBottom: 0 }}
+        styles={{
+          body: {
+            maxHeight: 'calc(85vh - 110px)',
+            overflowY: 'auto',
+            overscrollBehavior: 'contain',
+            WebkitOverflowScrolling: 'touch',
+            paddingRight: 4,
+          },
+        }}
       >
         {(() => {
           const entries = forecastBreakdown.filter((e) => e.bucket === breakdownBucket);

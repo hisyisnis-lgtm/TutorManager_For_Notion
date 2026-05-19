@@ -18,6 +18,9 @@ export default function PullToRefresh({ onRefresh, children }) {
     let startX = 0;
 
     function onTouchStart(e) {
+      // antd Modal/Drawer 등 portal로 띄운 컨테이너 안에서 시작된 터치는 무시
+      // (모달 안 스크롤이 PullToRefresh에 가로채여 끊기는 문제 방지)
+      if (e.target.closest?.('.ant-modal, .ant-drawer, .ant-popover, .ant-tooltip')) return;
       if (window.scrollY > 5) return;
       startX = e.touches[0].clientX;
       startY.current = e.touches[0].clientY;
