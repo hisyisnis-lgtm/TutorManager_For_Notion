@@ -1,31 +1,15 @@
 # 검색엔진 인덱싱 정책
-# - /intro: 유일한 공개 랜딩페이지 (검색엔진 노출 허용)
-# - /pricing: 강사가 카톡 등으로 직접 공유하기 전까지는 비공개. OG 미리보기는 동작하나 인덱싱은 차단.
-# - 그 외 모든 경로(루트 /, 강사 라우트, 학생 토큰 URL): 절대 인덱싱되지 않아야 함
+# - /intro: 유일한 공개 랜딩페이지 (sitemap.xml 에 명시 + intro.html 의 canonical 자체 선언)
+# - 강사용 라우트 + 학생 토큰 URL + /pricing/consent/panda-test: 명시적 path 별 Disallow
+# - 루트 /: 명시적 차단 없음. sitemap 미포함 + 외부 링크 없음으로 자연 차단.
 #
-# 주의: Disallow: / + Allow: /intro 조합은 Google 이 모호하게 해석해 차단함.
-# 명시적인 path 별 Disallow + 루트만 정확히 차단(/$) 패턴을 사용한다.
-# $ 종료 매칭은 Googlebot/Bingbot/Naverbot 공통 지원.
+# 이전 버전(v2.5.92)에서 사용한 `Disallow: /$` 가 Googlebot 에서 의도와 다르게
+# /intro 까지 차단시키는 부작용이 발견되어 제거. $ 종료 매처가 표준상 지원되지만
+# 실제 동작이 불안정함.
 
 User-agent: *
 
-# 검색 노출 허용 — Allow 를 먼저 (일부 크롤러 순서 의존)
-Allow: /intro
-Allow: /favicon.png
-Allow: /favicon.ico
-Allow: /apple-touch-icon-180x180.png
-Allow: /pwa-64x64.png
-Allow: /pwa-192x192.png
-Allow: /pwa-512x512.png
-Allow: /img/
-Allow: /logo/
-Allow: /sitemap.xml
-Allow: /manifest.webmanifest
-
-# 루트만 정확히 차단 (강사 LoginPage)
-Disallow: /$
-
-# 강사용 라우트 (해시 라우트지만 일부 크롤러가 SPA fallback 시도할 수 있음)
+# 강사용 라우트 (해시 라우트지만 SPA fallback 시도 가능성 차단)
 Disallow: /home
 Disallow: /students
 Disallow: /classes
