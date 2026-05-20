@@ -192,6 +192,7 @@ export default function HomePage() {
    *   2) (없으면) 마지막 결제일 + 학생 과거 평균 결제 간격 (결제 2건+)
    *   3) (없으면) 마지막 결제일 + 30일 (결제 1건)
    * - 마지막 결제일 이후로 예상되는 경우만 인정 (이중 카운트 방지)
+   * - 예상일이 이번 달 또는 다음 달에 해당하는 경우만 합계에 가산 (과거·미래 예상은 제외)
    */
   const loadForecast = async () => {
     setForecastLoading(true);
@@ -336,10 +337,6 @@ export default function HomePage() {
           nextMonthTotal += expectedAmount;
           bucket = '다음 달';
           modalBucket = 'nextMonth';
-        } else if (expectedDate < now) {
-          thisMonthTotal += expectedAmount;
-          bucket = '이번 달(과거예상→즉시)';
-          modalBucket = 'thisMonth';
         } else {
           bucket = '제외(범위밖)';
         }
