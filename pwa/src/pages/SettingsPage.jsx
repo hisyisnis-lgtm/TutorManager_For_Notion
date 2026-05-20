@@ -12,7 +12,6 @@ const SHARE_LINKS = [
   { key: 'intro', label: '홈페이지', path: '/intro' },
   { key: 'pricing', label: '수강료 안내', path: '/pricing' },
   { key: 'consent', label: '수업 동의서', path: '/#/consent' },
-  { key: 'book', label: '학생 예약코드 입력', path: '/#/book' },
 ];
 
 export function getInstructorName() {
