@@ -121,14 +121,11 @@ function makeHeartParticle(pRect, index) {
 export default function PandaWidget({ foodSources = [], storageKey = DEFAULT_FEED_KEY, fullscreen = false }) {
   const totalFood = foodSources.reduce((sum, s) => sum + (s.count || 0), 0);
 
+  // localStorage 에는 "학생이 실제로 누른 횟수" 그대로 저장. 표시·available 계산 시점에만 cap 한다.
+  // 옛 코드는 마운트 시 totalFood 초과분을 localStorage 에 영구 저장(capping)했는데, 학생 API 응답이
+  // 일시적으로 누락돼서 totalFood 가 0 으로 들어오면 누른 횟수가 영구 0 으로 덮어써지는 버그가 있었음 (2026-05-21).
   const [fedTotal, setFedTotal] = useState(() => {
-    const saved = parseInt(localStorage.getItem(storageKey) || '0', 10);
-    // totalFood를 초과한 경우 즉시 localStorage에 기록해 둠.
-    // 이렇게 해야 totalFood가 나중에 늘어났을 때 과거의 높은 값이 되살아나
-    // EXP가 자동으로 오르는 현상을 방지할 수 있음.
-    const capped = Math.min(saved, totalFood);
-    if (capped !== saved) localStorage.setItem(storageKey, String(capped));
-    return capped;
+    return parseInt(localStorage.getItem(storageKey) || '0', 10);
   });
   const [particles, setParticles] = useState([]);
   const [levelingUp, setLevelingUp] = useState(false);

@@ -20,7 +20,8 @@ import { formatDateTimeCompact } from '../utils/dateUtils.js';
 import {
   validateFile,
   splitFileName,
-  fileCategoryByName,
+  isImageByName,
+  isPdfByName,
   ACCEPT_AUDIO,
   ACCEPT_DOCUMENT,
 } from '../utils/audioFile.js';
@@ -345,11 +346,13 @@ export default function PersonalHomeworkDetailPage() {
   // 피드백완료 후에는 학생이 파일 추가·삭제 불가 — 강사가 피드백을 단 결과물을 보존.
   const canEdit = hw.status === '미제출' || hw.status === '제출완료';
 
-  // 저장본을 카테고리별로 분리 — file.name 확장자로 판정.
-  const submitAudio = (hw.submitFiles ?? []).filter((f) => fileCategoryByName(f.name) === 'audio');
-  const submitDocs = (hw.submitFiles ?? []).filter((f) => fileCategoryByName(f.name) === 'document');
-  const feedbackAudio = (hw.feedbackFiles ?? []).filter((f) => fileCategoryByName(f.name) === 'audio');
-  const feedbackDocs = (hw.feedbackFiles ?? []).filter((f) => fileCategoryByName(f.name) === 'document');
+  // 저장본을 카테고리별로 분리 — PDF/이미지가 아닌 모든 파일은 녹음 섹션으로.
+  // 옛 데이터(확장자 누락 등)도 누락 없이 표시되도록 명시적 document 만 분리하고 나머지는 audio.
+  const isDoc = (f) => isImageByName(f.name) || isPdfByName(f.name);
+  const submitAudio = (hw.submitFiles ?? []).filter((f) => !isDoc(f));
+  const submitDocs = (hw.submitFiles ?? []).filter(isDoc);
+  const feedbackAudio = (hw.feedbackFiles ?? []).filter((f) => !isDoc(f));
+  const feedbackDocs = (hw.feedbackFiles ?? []).filter(isDoc);
 
   const modalTitle = (() => {
     if (modalView === 'record') return '음성 녹음';

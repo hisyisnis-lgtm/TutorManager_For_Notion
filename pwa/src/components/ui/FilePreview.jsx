@@ -9,7 +9,7 @@ import {
   BORDER_NEUTRAL,
   STATUS_ERROR_TEXT,
 } from '../../constants/theme.js';
-import { fileCategoryByName, isImageByName, isPdfByName } from '../../utils/audioFile.js';
+import { isImageByName, isPdfByName } from '../../utils/audioFile.js';
 
 /**
  * FilePreview — 파일 카테고리별 분기 렌더링.
@@ -31,54 +31,40 @@ export default function FilePreview({
   onDelete,
   deleteDisabled,
 }) {
-  const category = fileCategoryByName(file?.name);
-
-  if (category === 'audio') {
+  // 카테고리 분류는 명확한 PDF/이미지가 아니면 audio 폴백.
+  // 이유: 옛 데이터(확장자 없는 파일 등)는 모두 음성이었고, 모르는 확장자도 일단 재생 UI 가 가장 안전.
+  if (isImageByName(file?.name)) {
     return (
-      <AudioPlayer
-        url={file.url}
+      <ImagePreview
         fileName={file.name}
-        onGetFreshUrl={onGetFreshUrl}
+        fetchInlineBlobUrl={fetchInlineBlobUrl}
+        onDownload={onDownload}
         onDelete={onDelete}
         deleteDisabled={deleteDisabled}
-        onDownload={onDownload}
       />
     );
   }
 
-  if (category === 'document') {
-    if (isImageByName(file.name)) {
-      return (
-        <ImagePreview
-          fileName={file.name}
-          fetchInlineBlobUrl={fetchInlineBlobUrl}
-          onDownload={onDownload}
-          onDelete={onDelete}
-          deleteDisabled={deleteDisabled}
-        />
-      );
-    }
-    if (isPdfByName(file.name)) {
-      return (
-        <DocumentRow
-          fileName={file.name}
-          icon={<FilePdfIcon size={22} weight="fill" color="#d32f2f" />}
-          onDownload={onDownload}
-          onDelete={onDelete}
-          deleteDisabled={deleteDisabled}
-        />
-      );
-    }
+  if (isPdfByName(file?.name)) {
+    return (
+      <DocumentRow
+        fileName={file.name}
+        icon={<FilePdfIcon size={22} weight="fill" color="#d32f2f" />}
+        onDownload={onDownload}
+        onDelete={onDelete}
+        deleteDisabled={deleteDisabled}
+      />
+    );
   }
 
-  // 알 수 없는 카테고리 (이론상 업로드 차단되지만 안전망)
   return (
-    <DocumentRow
-      fileName={file?.name || '파일'}
-      icon={<DownloadSimpleIcon size={22} color={TEXT_TERTIARY} />}
-      onDownload={onDownload}
+    <AudioPlayer
+      url={file?.url}
+      fileName={file?.name}
+      onGetFreshUrl={onGetFreshUrl}
       onDelete={onDelete}
       deleteDisabled={deleteDisabled}
+      onDownload={onDownload}
     />
   );
 }

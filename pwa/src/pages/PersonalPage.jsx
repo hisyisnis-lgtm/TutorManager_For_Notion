@@ -123,15 +123,28 @@ function markViewed(token, hwId) {
   }
 }
 
-function isArchived(token, hwId) {
+// 보관함 판정: 학생이 본 적이 있고(viewedAt 존재) AND 강사의 마지막 피드백일이 viewedAt 이전.
+// - viewedAt 없음 → 본 적 없음 → 홈/피드백 섹션에 노출
+// - feedbackDate > viewedAt → 강사가 본 후 새 피드백을 줌 → 홈에 다시 노출
+// - 그 외 → 보관함
+//
+// 옛 동작은 "viewedAt 으로부터 24h 경과 후 보관함" 이었으나, 2026-05-21 부터 학생이 보면 즉시
+// 보관함으로 이동하는 흐름이 표준이 되어 24h 유예 조건은 제거됨. (forceArchive 가 viewedAt 을
+// 가짜로 24h 전 시점에 기록하던 hack 도 함께 제거 — 그 hack 이 feedbackDate 비교를 오작동시켰음)
+function isArchived(token, hwId, feedbackDate) {
   const viewedAt = getViewedMap(token)[hwId];
-  return !!viewedAt && Date.now() - viewedAt > 24 * 60 * 60 * 1000;
+  if (!viewedAt) return false;
+  if (feedbackDate) {
+    const fbTime = new Date(feedbackDate).getTime();
+    if (Number.isFinite(fbTime) && fbTime > viewedAt) return false;
+  }
+  return true;
 }
 
 function forceArchive(token, hwId) {
   const map = getViewedMap(token);
-  // 24시간+1초 전으로 설정해 즉시 보관함 조건 충족
-  map[hwId] = Date.now() - (24 * 60 * 60 * 1000 + 1000);
+  // viewedAt = 현재 시점. 학생이 같은 카드를 다시 볼 때마다 갱신 → 강사 피드백일과의 시점 비교가 정확.
+  map[hwId] = Date.now();
   localStorage.setItem(HW_VIEWED_KEY(token), JSON.stringify(map));
 }
 
@@ -206,9 +219,11 @@ function HwCard({ hw, studentToken, onMarkViewed }) {
 // ===== 발음 보관함 카드 (읽기 전용) =====
 function ArchiveHwCard({ hw, studentToken }) {
   const navigate = useNavigate();
-  const viewedAt = getViewedMap(studentToken)[hw.id];
-  const viewedDateStr = viewedAt
-    ? new Date(viewedAt).toLocaleDateString("ko-KR", { month: "long", day: "numeric" })
+  // 표시는 Notion 필드 기준 — 학생 첫 확인일(feedbackSeenDate) 우선, 없으면 강사 피드백일.
+  // localStorage 의 viewedAt 은 마이그레이션·forceArchive 갱신으로 시점이 바뀔 수 있어 의미가 흐려져 사용 안 함.
+  const dateForDisplay = hw.feedbackSeenDate || hw.feedbackDate;
+  const viewedDateStr = dateForDisplay
+    ? new Date(dateForDisplay).toLocaleDateString("ko-KR", { month: "long", day: "numeric" })
     : "";
 
   return (
@@ -219,7 +234,7 @@ function ArchiveHwCard({ hw, studentToken }) {
     >
       <button
         type="button"
-        onClick={() => navigate(`/personal/${studentToken}/homework/${hw.id}`)}
+        onClick={() => navigate(`/personal/${studentToken}/homework/${hw.id}`, { state: { tab: '보관함' } })}
         className=""
         style={{
           width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between",
@@ -266,7 +281,7 @@ function ArchiveTab({ studentToken }) {
   useEffect(() => { load(); }, [load]);
 
   const archivedList = homeworkList.filter(
-    (h) => h.status === '피드백완료' && isArchived(studentToken, h.id)
+    (h) => h.status === '피드백완료' && isArchived(studentToken, h.id, h.feedbackDate)
   );
 
   const availableMonths = [...new Set(
@@ -818,6 +833,23 @@ export default function PersonalPage() {
     try { localStorage.removeItem(PANDA_FEED_KEY); } catch {}
   }, []);
 
+  // viewedMap 마이그레이션 (2026-05-21) — 옛 forceArchive 가 viewedAt 을 가짜로 "24h+1s 전" 시점에 기록하던
+  // hack 때문에, 강사 피드백일이 그 사이에 끼면 feedbackDate > viewedAt 으로 잘못 판정돼 홈에 다시 등장.
+  // 학생 입장에선 "이미 본 카드"이므로 일괄 Date.now() 로 보정 → 강사가 그 이후 새 피드백 주면 재등장.
+  useEffect(() => {
+    if (!studentToken) return;
+    const MIGRATION_KEY = `hw_viewed_migrated_v2_${studentToken}`;
+    if (localStorage.getItem(MIGRATION_KEY)) return;
+    try {
+      const map = getViewedMap(studentToken);
+      const now = Date.now();
+      const shifted = {};
+      for (const id of Object.keys(map)) shifted[id] = now;
+      localStorage.setItem(HW_VIEWED_KEY(studentToken), JSON.stringify(shifted));
+      localStorage.setItem(MIGRATION_KEY, '1');
+    } catch { /* ignore */ }
+  }, [studentToken]);
+
   const checkDots = useCallback(async () => {
     try {
       const pages = await fetchMyHomework(studentToken);
@@ -826,8 +858,9 @@ export default function PersonalPage() {
 
       const pendingList = list.filter(h => h.status === '미제출');
       const submittedList = list.filter(h => h.status === '제출완료');
-      // 피드백 완료 — 학생이 아직 확인하지 않은 항목만 (확인 시 forceArchive 로 즉시 보관함 이동)
-      const feedbackList = list.filter(h => h.status === '피드백완료' && !isArchived(studentToken, h.id));
+      // 피드백 완료 — 학생이 아직 확인하지 않은 항목 + 강사가 viewedAt 이후 새 피드백을 준 항목.
+      // (확인 시 forceArchive 로 즉시 보관함 이동, 다만 강사가 또 피드백을 주면 다시 홈에 등장)
+      const feedbackList = list.filter(h => h.status === '피드백완료' && !isArchived(studentToken, h.id, h.feedbackDate));
 
       // 홈 탭 숙제 섹션
       setHwAlerts({ pending: pendingList, submitted: submittedList, feedback: feedbackList });
@@ -838,7 +871,7 @@ export default function PersonalPage() {
         list.some(h => {
           if (h.status !== '피드백완료') return false;
           const viewedAt = viewedMap[h.id];
-          return viewedAt && isArchived(studentToken, h.id) && viewedAt > lastSeenTime;
+          return viewedAt && isArchived(studentToken, h.id, h.feedbackDate) && viewedAt > lastSeenTime;
         })
       );
     } catch { /* ignore */ }
@@ -879,6 +912,18 @@ export default function PersonalPage() {
       setClassDot(false);
     }
   }, [tab, checkDots]);
+
+  // 탭이 바뀌면 현재 history entry 의 state 도 갱신해 두어, 학생이 카드 → detail → 뒤로가기
+  // 흐름에서 이전 entry 의 routerLocation.state.tab 으로 복원되도록 한다. (replace 라 history 스택 변동 없음)
+  useEffect(() => {
+    if (routerLocation.state?.tab === tab) return;
+    navigate(routerLocation.pathname, {
+      state: { ...routerLocation.state, tab },
+      replace: true,
+    });
+    // routerLocation, navigate 는 stable 한 ref 라 deps 에는 tab 만.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab]);
 
   // 탭별 튜토리얼 팁 (온보딩 완료 후 활성화)
   const [tipResetKey, setTipResetKey] = useState(0);

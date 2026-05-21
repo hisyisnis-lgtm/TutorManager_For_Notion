@@ -30,7 +30,8 @@ import { formatDateTimeCompact } from '../utils/dateUtils.js';
 import {
   validateFile,
   splitFileName,
-  fileCategoryByName,
+  isImageByName,
+  isPdfByName,
   ACCEPT_AUDIO,
   ACCEPT_DOCUMENT,
 } from '../utils/audioFile.js';
@@ -359,11 +360,12 @@ export default function HomeworkDetailPage() {
 
   const { bg, text } = homeworkStatusColor(hw.status);
 
-  // 저장본 카테고리 분리
-  const submitAudio = (hw.submitFiles ?? []).filter((f) => fileCategoryByName(f.name) === 'audio');
-  const submitDocs = (hw.submitFiles ?? []).filter((f) => fileCategoryByName(f.name) === 'document');
-  const feedbackAudio = (hw.feedbackFiles ?? []).filter((f) => fileCategoryByName(f.name) === 'audio');
-  const feedbackDocs = (hw.feedbackFiles ?? []).filter((f) => fileCategoryByName(f.name) === 'document');
+  // 저장본 카테고리 분리 — PDF/이미지가 아닌 모든 파일은 녹음 섹션으로 (옛 데이터 누락 방지)
+  const isDoc = (f) => isImageByName(f.name) || isPdfByName(f.name);
+  const submitAudio = (hw.submitFiles ?? []).filter((f) => !isDoc(f));
+  const submitDocs = (hw.submitFiles ?? []).filter(isDoc);
+  const feedbackAudio = (hw.feedbackFiles ?? []).filter((f) => !isDoc(f));
+  const feedbackDocs = (hw.feedbackFiles ?? []).filter(isDoc);
 
   const renderSubmitFile = (f) => (
     <FilePreview
@@ -424,7 +426,7 @@ export default function HomeworkDetailPage() {
           )}
         </div>
 
-        {/* 학생 제출 파일 — 카테고리별 카드 (강사는 다운로드만, 삭제 불가) */}
+        {/* 학생 제출 파일 — 카테고리별 카드 (강사는 다운로드만, 삭제 불가). 제출일은 마지막 카드 내부에. */}
         {(submitAudio.length > 0 || submitDocs.length > 0) ? (
           <>
             {submitAudio.length > 0 && (
@@ -435,6 +437,11 @@ export default function HomeworkDetailPage() {
                     {renderSubmitFile(f)}
                   </div>
                 ))}
+                {submitDocs.length === 0 && hw.submitDate && (
+                  <p style={{ fontSize: 13, color: TEXT_TERTIARY, margin: '8px 0 0' }}>
+                    제출일: <span className="tabular-nums">{formatDateTimeCompact(hw.submitDate)}</span>
+                  </p>
+                )}
               </Card>
             )}
             {submitDocs.length > 0 && (
@@ -445,12 +452,12 @@ export default function HomeworkDetailPage() {
                     {renderSubmitFile(f)}
                   </div>
                 ))}
+                {hw.submitDate && (
+                  <p style={{ fontSize: 13, color: TEXT_TERTIARY, margin: '8px 0 0' }}>
+                    제출일: <span className="tabular-nums">{formatDateTimeCompact(hw.submitDate)}</span>
+                  </p>
+                )}
               </Card>
-            )}
-            {hw.submitDate && (
-              <p style={{ fontSize: 13, color: TEXT_TERTIARY, margin: '-8px 4px 0' }}>
-                제출일: <span className="tabular-nums">{formatDateTimeCompact(hw.submitDate)}</span>
-              </p>
             )}
           </>
         ) : (
