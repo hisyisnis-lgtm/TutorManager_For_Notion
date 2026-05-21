@@ -12,7 +12,7 @@ import HomeworkSection from '../components/homework/HomeworkSection.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import ErrorMessage from '../components/ui/ErrorMessage.jsx';
 import EmptyState from '../components/ui/EmptyState.jsx';
-import { HouseIcon, BookOpenIcon, FileTextIcon, BellIcon, GearSixIcon, ClipboardTextIcon, HourglassIcon, ChatTeardropTextIcon, ArchiveIcon, NoteBlankIcon, SpeakerHighIcon, CalendarBlankIcon, MegaphoneIcon, CaretRightIcon, InstagramLogoIcon, YoutubeLogoIcon, ArticleIcon, MusicNotesIcon, WarningCircleIcon } from '@phosphor-icons/react';
+import { HouseIcon, BookOpenIcon, BellIcon, GearSixIcon, ClipboardTextIcon, HourglassIcon, ChatTeardropTextIcon, ArchiveIcon, SpeakerHighIcon, CalendarBlankIcon, MegaphoneIcon, CaretRightIcon, InstagramLogoIcon, YoutubeLogoIcon, ArticleIcon, MusicNotesIcon, WarningCircleIcon } from '@phosphor-icons/react';
 import { STAGES, getStageInfo, PANDA_FEED_KEY, getPandaStorageKey } from '../components/ui/PandaWidget.jsx';
 import InstallBanner from '../components/ui/InstallBanner.jsx';
 import { useInstallPrompt } from '../hooks/useInstallPrompt.js';
@@ -134,130 +134,6 @@ function forceArchive(token, hwId) {
   map[hwId] = Date.now() - (24 * 60 * 60 * 1000 + 1000);
   localStorage.setItem(HW_VIEWED_KEY(token), JSON.stringify(map));
 }
-
-// ===== 숙제 탭 =====
-function MyHomeworkTab({ studentToken }) {
-  const [homeworkList, setHomeworkList] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [searchText, setSearchText] = useState('');
-  const [searchType, setSearchType] = useState('title');
-  const [filterMonth, setFilterMonth] = useState('');
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const pages = await fetchMyHomework(studentToken);
-      setHomeworkList(pages.map(parseHomework));
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
-    }
-  }, [studentToken]);
-
-  useEffect(() => { load(); }, [load]);
-
-  // 사용 가능한 월 목록 (내림차순)
-  const availableMonths = [...new Set(
-    homeworkList.map((h) => h.createdTime?.slice(0, 7)).filter(Boolean)
-  )].sort().reverse();
-
-  // 필터 적용
-  const filteredList = homeworkList.filter((h) => {
-    if (searchText) {
-      const q = searchText.toLowerCase();
-      if (searchType === 'content') {
-        if (!h.content?.toLowerCase().includes(q)) return false;
-      } else {
-        if (!h.title.toLowerCase().includes(q)) return false;
-      }
-    }
-    if (filterMonth && h.createdTime?.slice(0, 7) !== filterMonth) return false;
-    return true;
-  });
-
-  const pending = filteredList.filter((h) => h.status === '미제출');
-  const submitted = filteredList.filter((h) => h.status === '제출완료');
-  const feedbacked = filteredList.filter((h) => h.status === '피드백완료' && !isArchived(studentToken, h.id));
-
-  if (loading) return <LoadingSpinner />;
-  if (error) return <ErrorMessage message={error} onRetry={load} />;
-
-  if (homeworkList.length === 0) {
-    return <EmptyState icon={<NoteBlankIcon size={44} weight="thin" style={{ color: '#d9d9d9' }} />} title="숙제가 없어요" description="선생님이 숙제를 등록하면 여기에 표시돼요" />;
-  }
-
-  return (
-    <div style={{ padding: '16px 16px 0' }}>
-      {/* 검색 + 필터 바 */}
-      <div style={{ marginBottom: 16 }}>
-        <HomeworkFilterBar
-          searchText={searchText}
-          onSearchChange={setSearchText}
-          searchType={searchType}
-          onSearchTypeChange={setSearchType}
-          showSearchType
-          filterMonth={filterMonth}
-          onMonthChange={setFilterMonth}
-          availableMonths={availableMonths}
-          pillMode
-        />
-      </div>
-
-      {feedbacked.length > 0 && (
-        <HomeworkSection icon={<ChatTeardropTextIcon size={18} weight="fill" />} label="피드백 왔어요" count={feedbacked.length} color={STATUS_SUCCESS_DARK}>
-          {feedbacked.map((hw, i) => (
-            <div key={hw.id} {...(i === 0 ? { 'data-coach': 'homework-card' } : {})}>
-              <HwCard
-                hw={hw}
-                studentToken={studentToken}
-                onMarkViewed={() => markViewed(studentToken, hw.id)}
-              />
-            </div>
-          ))}
-        </HomeworkSection>
-      )}
-
-      {pending.length > 0 && (
-        <HomeworkSection icon={<ClipboardTextIcon size={18} weight="fill" />} label="해야 할 숙제" count={pending.length} color={STATUS_ERROR_TEXT}>
-          {pending.map((hw, i) => (
-            <div key={hw.id} {...(i === 0 ? { 'data-coach': 'homework-card' } : {})}>
-              <HwCard
-                hw={hw}
-                studentToken={studentToken}
-              />
-            </div>
-          ))}
-        </HomeworkSection>
-      )}
-
-      {submitted.length > 0 && (
-        <HomeworkSection icon={<HourglassIcon size={18} weight="fill" />} label="검토 중" count={submitted.length} color={STATUS_INFO_DARK}>
-          {submitted.map((hw) => (
-            <HwCard
-              key={hw.id}
-              hw={hw}
-              studentToken={studentToken}
-            />
-          ))}
-        </HomeworkSection>
-      )}
-
-      {filteredList.length === 0 && homeworkList.length > 0 && (
-        <div style={{ textAlign: 'center', padding: '32px 0', color: TEXT_DISABLED, fontSize: 13 }}>
-          검색 결과가 없어요
-        </div>
-      )}
-
-      <p style={FOOTNOTE}>
-        숙제 관련 문의는 선생님께 해주세요
-      </p>
-    </div>
-  );
-}
-
 
 function HwCard({ hw, studentToken, onMarkViewed }) {
   const navigate = useNavigate();
@@ -665,59 +541,8 @@ function MetricRow({ remainingHours, upcomingCount }) {
   );
 }
 
-// ===== 홈 숙제 알림 카드 =====
-function HomeworkAlertCard({ pending, feedback, studentToken, onNavigate }) {
-  const navigate = useNavigate();
-  if (pending.length === 0 && feedback.length === 0) return null;
-
-  const items = [
-    ...pending.map((h) => ({ hw: h, type: 'pending' })),
-    ...feedback.map((h) => ({ hw: h, type: 'feedback' })),
-  ];
-
-  return (
-    <div style={{ borderRadius: 12, overflow: 'hidden', background: '#fff', boxShadow: 'var(--shadow-border)' }}>
-      {items.map(({ hw, type }, i) => {
-        const isPending = type === 'pending';
-        return (
-          <button
-            key={hw.id}
-            type="button"
-            onClick={() => studentToken ? navigate(`/personal/${studentToken}/homework/${hw.id}`) : onNavigate?.()}
-            className="transition-[background-color] duration-150 ease-out"
-            style={{
-              width: '100%', display: 'flex', alignItems: 'center', gap: 12,
-              padding: '12px 16px',
-              background: 'none', border: 'none', cursor: 'pointer',
-              borderTop: i > 0 ? `1px solid ${BORDER_SUBTLE}` : 'none',
-              WebkitTapHighlightColor: 'transparent', textAlign: 'left' }}
-          >
-            <div style={{
-              width: 36, height: 36, borderRadius: 10, flexShrink: 0,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: isPending ? PRIMARY_BG : STATUS_SUCCESS_BG }}>
-              {isPending
-                ? <ClipboardTextIcon size={18} weight="fill" color={PRIMARY} />
-                : <ChatTeardropTextIcon size={18} weight="fill" color={STATUS_SUCCESS_DARK} />}
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ fontSize: 14, fontWeight: 600, color: TEXT_PRIMARY, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', wordBreak: 'keep-all' }}>
-                {hw.title}
-              </p>
-              <p style={{ fontSize: 12, color: isPending ? PRIMARY : STATUS_SUCCESS_DARK, margin: '2px 0 0' }}>
-                {isPending ? '미제출' : '피드백 도착'}
-              </p>
-            </div>
-            <CaretRightIcon size={16} weight="bold" color="#d9d9d9" style={{ flexShrink: 0 }} />
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
 // ===== 홈 탭 =====
-function HomeTab({ studentToken, foodSources, studentLoaded, remainingHours, remainingSessions, onUpcomingLoaded, hwAlerts, onSwitchToHomework, onOpenPanda, onSwitchToClasses }) {
+function HomeTab({ studentToken, foodSources, studentLoaded, remainingHours, remainingSessions, onUpcomingLoaded, hwAlerts, onOpenPanda, onSwitchToClasses }) {
   const nowKST = new Date(Date.now() + 9 * 60 * 60 * 1000);
   const pad = n => String(n).padStart(2, '0');
   const todayStr = `${nowKST.getUTCFullYear()}-${pad(nowKST.getUTCMonth() + 1)}-${pad(nowKST.getUTCDate())}`;
@@ -779,29 +604,45 @@ function HomeTab({ studentToken, foodSources, studentLoaded, remainingHours, rem
       </div>
       <div style={{ margin: '0 20px 24px', borderBottom: `1px solid ${BORDER_SUBTLE}` }} />
 
-      {/* 숙제 */}
-      {studentLoaded && hwAlerts?.pending?.length > 0 && (
+      {/* 숙제 — 제출 전 / 제출 완료 / 피드백 완료 (각 섹션은 카드 있을 때만 노출) */}
+      {studentLoaded && (hwAlerts?.pending?.length > 0 || hwAlerts?.submitted?.length > 0 || hwAlerts?.feedback?.length > 0) && (
         <div style={{ padding: '0 20px', marginBottom: 24, animation: 'fade-in-up 400ms cubic-bezier(0.2,0,0,1) both', animationDelay: '60ms' }}>
           <SectionHeading>숙제</SectionHeading>
-          <HomeworkAlertCard
-            pending={hwAlerts.pending}
-            feedback={[]}
-            studentToken={studentToken}
-            onNavigate={onSwitchToHomework}
-          />
-        </div>
-      )}
 
-      {/* 피드백 */}
-      {studentLoaded && hwAlerts?.feedback?.length > 0 && (
-        <div style={{ padding: '0 20px', marginBottom: 24, animation: 'fade-in-up 400ms cubic-bezier(0.2,0,0,1) both', animationDelay: '80ms' }}>
-          <SectionHeading>피드백</SectionHeading>
-          <HomeworkAlertCard
-            pending={[]}
-            feedback={hwAlerts.feedback}
-            studentToken={studentToken}
-            onNavigate={onSwitchToHomework}
-          />
+          {hwAlerts.feedback.length > 0 && (
+            <HomeworkSection icon={<ChatTeardropTextIcon size={18} weight="fill" />} label="피드백 완료" count={hwAlerts.feedback.length} color={STATUS_SUCCESS_DARK}>
+              {hwAlerts.feedback.map((hw, i) => (
+                <div key={hw.id} {...(i === 0 ? { 'data-coach': 'homework-card' } : {})}>
+                  <HwCard
+                    hw={hw}
+                    studentToken={studentToken}
+                    onMarkViewed={() => {
+                      forceArchive(studentToken, hw.id);
+                      message.success('보관함으로 이동됐어요');
+                    }}
+                  />
+                </div>
+              ))}
+            </HomeworkSection>
+          )}
+
+          {hwAlerts.pending.length > 0 && (
+            <HomeworkSection icon={<ClipboardTextIcon size={18} weight="fill" />} label="제출 전" count={hwAlerts.pending.length} color={STATUS_ERROR_TEXT}>
+              {hwAlerts.pending.map((hw, i) => (
+                <div key={hw.id} {...(i === 0 && hwAlerts.feedback.length === 0 ? { 'data-coach': 'homework-card' } : {})}>
+                  <HwCard hw={hw} studentToken={studentToken} />
+                </div>
+              ))}
+            </HomeworkSection>
+          )}
+
+          {hwAlerts.submitted.length > 0 && (
+            <HomeworkSection icon={<HourglassIcon size={18} weight="fill" />} label="제출 완료" count={hwAlerts.submitted.length} color={STATUS_INFO_DARK}>
+              {hwAlerts.submitted.map((hw) => (
+                <HwCard key={hw.id} hw={hw} studentToken={studentToken} />
+              ))}
+            </HomeworkSection>
+          )}
         </div>
       )}
 
@@ -943,7 +784,10 @@ export default function PersonalPage() {
 
   const [student, setStudent] = useState(null);
   const [studentError, setStudentError] = useState(null);
-  const [tab, setTab] = useState(routerLocation.state?.tab ?? '홈');
+  const [tab, setTab] = useState(() => {
+    const t = routerLocation.state?.tab;
+    return ['홈', '내 수업', '보관함', '공지'].includes(t) ? t : '홈';
+  });
   const [showOnboarding, setShowOnboarding] = useState(() => !localStorage.getItem(ONBOARDING_KEY));
 
   const [classRefreshKey, setClassRefreshKey] = useState(0);
@@ -957,12 +801,11 @@ export default function PersonalPage() {
   const install = useInstallPrompt();
 
   // 탭 레드닷
-  const [homeworkDot, setHomeworkDot] = useState(false);
   const [archiveDot, setArchiveDot] = useState(false);
   const [classDot, setClassDot] = useState(false);
 
-  // 홈 탭 숙제 알림 카드
-  const [hwAlerts, setHwAlerts] = useState({ pending: [], feedback: [] });
+  // 홈 탭 숙제 섹션 (제출 전 / 제출 완료 / 피드백 완료)
+  const [hwAlerts, setHwAlerts] = useState({ pending: [], submitted: [], feedback: [] });
   const prevTabRef = useRef(tab);
   const lastUpcomingIdsRef = useRef(null);
 
@@ -982,18 +825,12 @@ export default function PersonalPage() {
       const viewedMap = getViewedMap(studentToken);
 
       const pendingList = list.filter(h => h.status === '미제출');
-      // 홈 탭 피드백 카드: 피드백 도착 후 24시간 이내 항목만 표시 (확인 여부 무관)
-      const feedbackList = list.filter(h => {
-        if (h.status !== '피드백완료') return false;
-        if (!h.feedbackDate) return false;
-        return Date.now() - new Date(h.feedbackDate).getTime() < 24 * 60 * 60 * 1000;
-      });
+      const submittedList = list.filter(h => h.status === '제출완료');
+      // 피드백 완료 — 학생이 아직 확인하지 않은 항목만 (확인 시 forceArchive 로 즉시 보관함 이동)
+      const feedbackList = list.filter(h => h.status === '피드백완료' && !isArchived(studentToken, h.id));
 
-      // 숙제 dot: 미제출 OR 도착 24시간 이내 피드백
-      setHomeworkDot(pendingList.length > 0 || feedbackList.length > 0);
-
-      // 홈 탭 알림 카드
-      setHwAlerts({ pending: pendingList, feedback: feedbackList });
+      // 홈 탭 숙제 섹션
+      setHwAlerts({ pending: pendingList, submitted: submittedList, feedback: feedbackList });
 
       // 보관함 dot: 마지막 보관함 방문 이후 새로 archived된 항목
       const lastSeenTime = parseInt(localStorage.getItem(ARCHIVE_SEEN_KEY) || '0', 10);
@@ -1027,8 +864,8 @@ export default function PersonalPage() {
     const prev = prevTabRef.current;
     prevTabRef.current = tab;
 
-    // 숙제 탭에서 나올 때 재확인
-    if (prev === '숙제' && tab !== '숙제') checkDots();
+    // 보관함 탭에서 나올 때 숙제 목록 재확인 (확인 처리된 항목 반영)
+    if (prev === '보관함' && tab !== '보관함') checkDots();
 
     // 보관함 탭 방문 시 dot 해제 + 타임스탬프 저장
     if (tab === '보관함') {
@@ -1048,7 +885,6 @@ export default function PersonalPage() {
   const onboardingDone = !showOnboarding;
   const tipHome     = useTabTip('홈',     onboardingDone, tipResetKey);
   const tipClasses  = useTabTip('내 수업', onboardingDone, tipResetKey);
-  const tipHomework = useTabTip('숙제',   onboardingDone, tipResetKey);
   const tipArchive  = useTabTip('보관함', onboardingDone, tipResetKey);
   const tipNotice   = useTabTip('공지',   onboardingDone, tipResetKey);
   const settingsRef = useRef(null);
@@ -1226,7 +1062,6 @@ export default function PersonalPage() {
             remainingSessions={student?.remainingSessions ?? null}
             onUpcomingLoaded={handleUpcomingLoaded}
             hwAlerts={hwAlerts}
-            onSwitchToHomework={() => setTab('숙제')}
             onOpenPanda={() => navigate(`/personal/${studentToken}/panda`)}
             onSwitchToClasses={() => setTab('내 수업')}
           />
@@ -1241,13 +1076,8 @@ export default function PersonalPage() {
             />
           </div>
         )}
-        {tab === '숙제' && (
-          <div role="tabpanel" id="tab-panel-2" aria-labelledby="nav-숙제">
-            <MyHomeworkTab key={classRefreshKey} studentToken={studentToken} />
-          </div>
-        )}
         {tab === '보관함' && (
-          <div role="tabpanel" id="tab-panel-3" aria-labelledby="nav-보관함">
+          <div role="tabpanel" id="tab-panel-2" aria-labelledby="nav-보관함">
             <ArchiveTab key={classRefreshKey} studentToken={studentToken} />
           </div>
         )}
@@ -1266,6 +1096,7 @@ export default function PersonalPage() {
         onDone={tipHome.dismiss}
         steps={[
           { selector: '[data-coach="next-class"]', label: '다음 수업 날짜와 시간이 여기에 표시돼요. 내 수업 탭에서 전체 일정을 확인할 수 있어요.' },
+          { selector: '[data-coach="homework-card"]', label: '숙제는 여기서 바로 확인하고 파일이나 음성으로 제출할 수 있어요' },
           { selector: '[data-coach="panda"]', label: '수업을 완료하면 팬더에게 먹이를 줄 수 있어요 🐼 탭해서 팬더를 키워보세요!' },
         ]}
       />
@@ -1274,13 +1105,6 @@ export default function PersonalPage() {
         onDone={tipClasses.dismiss}
         steps={[
           { selector: '[data-coach="month-nav"]', label: '← → 버튼으로 월을 이동하며 수업을 확인해요' },
-        ]}
-      />
-      <CoachMarkOverlay
-        visible={tab === '숙제' && tipHomework.visible}
-        onDone={tipHomework.dismiss}
-        steps={[
-          { selector: '[data-coach="homework-card"]', label: '탭하면 내용을 확인하고 파일이나 음성으로 제출할 수 있어요' },
         ]}
       />
       <CoachMarkOverlay
@@ -1312,7 +1136,6 @@ export default function PersonalPage() {
           {[
             { key: '홈', icon: <HouseIcon weight="fill" />, label: '홈', dot: false },
             { key: '내 수업', icon: <BookOpenIcon weight="fill" />, label: '예약 현황', dot: classDot },
-            { key: '숙제', icon: <FileTextIcon weight="fill" />, label: '숙제', dot: homeworkDot },
             { key: '보관함', icon: <ArchiveIcon weight="fill" />, label: '보관함', dot: archiveDot },
             { key: '공지', icon: <BellIcon weight="fill" />, label: '공지', dot: false },
           ].map(item => {

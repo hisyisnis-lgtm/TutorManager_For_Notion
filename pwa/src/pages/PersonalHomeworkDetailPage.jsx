@@ -34,12 +34,6 @@ function markViewed(token, hwId) {
   }
 }
 
-function forceArchive(token, hwId) {
-  const map = getViewedMap(token);
-  map[hwId] = Date.now() - (24 * 60 * 60 * 1000 + 1000);
-  localStorage.setItem(HW_VIEWED_KEY(token), JSON.stringify(map));
-}
-
 function genStudentName(title, index) {
   const base = title.replace(/[^\w가-힣]/g, '').slice(0, 20) || '숙제';
   return `${base}_${String(index).padStart(2, '0')}`;
@@ -92,7 +86,10 @@ export default function PersonalHomeworkDetailPage() {
   useEffect(() => {
     if (hw?.status === '피드백완료' && !hw.feedbackSeenDate) {
       markFeedbackSeen(studentToken, hwId)
-        .then(() => setHw(prev => prev ? { ...prev, feedbackSeenDate: new Date().toISOString() } : prev))
+        .then(() => {
+          setHw(prev => prev ? { ...prev, feedbackSeenDate: new Date().toISOString() } : prev);
+          message.success('피드백 확인 완료 · 먹이 +1');
+        })
         .catch(e => console.warn('피드백 확인 기록 실패:', e?.message));
     }
   }, [hw?.status, hw?.feedbackSeenDate, studentToken, hwId]);
@@ -205,6 +202,7 @@ export default function PersonalHomeworkDetailPage() {
 
   const handleSaveSubmit = async () => {
     if (pendingFiles.length === 0) return;
+    const isFirstSubmit = !hw?.submitMark;
     setUploading(true);
     try {
       const uploaded = [];
@@ -217,7 +215,11 @@ export default function PersonalHomeworkDetailPage() {
       await submitHomework(studentToken, hwId, uploaded);
       setPendingFiles([]);
       await load();
-      message.success('숙제가 제출되었어요');
+      if (isFirstSubmit) {
+        message.success('숙제 제출 완료 · 먹이 +1');
+      } else {
+        message.success('숙제가 제출되었어요');
+      }
     } catch (err) {
       message.error(`제출 실패: ${err.message}`);
     } finally {
@@ -292,7 +294,6 @@ export default function PersonalHomeworkDetailPage() {
   const { bg, text } = homeworkStatusColor(hw.status);
   // 피드백완료 후에는 학생이 파일 추가·삭제 불가 — 강사가 피드백을 단 결과물을 보존.
   const canEdit = hw.status === '미제출' || hw.status === '제출완료';
-  const isFeedback = hw.status === '피드백완료';
 
   const modalTitle = (() => {
     if (modalView === 'record') return '음성 녹음';
@@ -434,33 +435,6 @@ export default function PersonalHomeworkDetailPage() {
           </Button>
         )}
 
-        {/* 피드백완료 후 수정 불가 안내 */}
-        {isFeedback && (
-          <p style={{
-            fontSize: 12, color: '#8c8c8c',
-            textAlign: 'center', margin: '0 0 10px',
-            wordBreak: 'keep-all',
-          }}>
-            강사 피드백이 완료되어 더 이상 수정할 수 없습니다.
-          </p>
-        )}
-
-        {/* 보관함으로 이동 버튼 */}
-        {isFeedback && (
-          <button
-            type="button"
-            onClick={() => { forceArchive(studentToken, hwId); navigate(-1); }}
-            className="duration-150 ease-out"
-            style={{
-              width: '100%', height: 44, borderRadius: 14,
-              background: 'none', border: '1.5px solid #d9d9d9',
-              color: '#8c8c8c', fontSize: 14, fontWeight: 500, cursor: 'pointer',
-              WebkitTapHighlightColor: 'transparent',
-            }}
-          >
-            보관함으로 이동
-          </button>
-        )}
         </div>
       </div>
 
