@@ -2,7 +2,7 @@
 // 새 순수 함수 추가 시 lib/ 안에 두고 여기서 import.
 import { stripEmoji, normalizeId } from '../lib/string.js';
 import { isSafeExternalUrl, maskPhone, maskToken } from '../lib/security.js';
-import { validateAudioUpload, resolveAudioMime } from '../lib/upload.js';
+import { validateFileUpload, resolveFileMime } from '../lib/upload.js';
 import {
   ConsultSchema,
   HomeworkSubmitSchema,
@@ -1556,12 +1556,12 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
 
 // ===== 숙제 파일 업로드 공통 헬퍼 =====
 async function uploadFileToNotion(file, notionToken) {
-  const fileName = file.name || 'audio.m4a';
+  const fileName = file.name || 'file';
   // Notion이 받는 Content-Type은 표준 MIME이어야 한다.
   // MediaRecorder의 `audio/webm;codecs=opus` 처럼 codec 파라미터가 붙으면 Notion이 거부하고,
-  // Windows 등에서 file.type이 빈 문자열이면 폴백으로 `audio/mpeg`을 보내던 옛 로직이 webm 파일을
-  // 오디오/MPEG으로 위장해 Notion 업로드를 깨뜨렸다. resolveAudioMime으로 확장자 보정까지 거친다.
-  const mimeType = resolveAudioMime(file);
+  // Windows·iOS 등에서 file.type이 빈 문자열일 때도 확장자 기반으로 보정해야 한다.
+  // resolveFileMime이 음성·이미지·PDF 모두 처리한다.
+  const mimeType = resolveFileMime(file);
   const arrayBuffer = await file.arrayBuffer();
 
   // 1. Notion file_upload 세션 생성
@@ -1622,6 +1622,28 @@ async function handleHomeworkRoutes(request, env, corsHeaders, url) {
     return res.results?.[0] ?? null;
   }
 
+  // Notion 파일을 attachment 응답으로 스트림 — URL 만료(7일)·소유권 누출 방지를 위해 클라엔
+  // Notion 임시 URL을 노출하지 않고 항상 Worker proxy를 통해 다운로드한다.
+  async function streamNotionFile(sourceUrl, fileName) {
+    const upstream = await fetch(sourceUrl);
+    if (!upstream.ok || !upstream.body) {
+      return errRes(corsHeaders, 502, '파일을 가져올 수 없습니다.');
+    }
+    const contentType = upstream.headers.get('Content-Type') || 'application/octet-stream';
+    const contentLength = upstream.headers.get('Content-Length');
+    // RFC 5987 한글 파일명 인코딩 (ASCII fallback + filename*= UTF-8)
+    const asciiName = fileName.replace(/[^\x20-\x7E]/g, '_').replace(/"/g, "'");
+    const dispo = `attachment; filename="${asciiName}"; filename*=UTF-8''${encodeURIComponent(fileName)}`;
+    const headers = {
+      ...corsHeaders,
+      'Content-Type': contentType,
+      'Content-Disposition': dispo,
+      'Cache-Control': 'private, no-store',
+    };
+    if (contentLength) headers['Content-Length'] = contentLength;
+    return new Response(upstream.body, { status: 200, headers });
+  }
+
   // POST /homework/upload — 강사용 파일 업로드 (JWT 인증)
   if (url.pathname === '/homework/upload' && request.method === 'POST') {
     const authErr = await requireJwt(request, env, corsHeaders);
@@ -1630,7 +1652,7 @@ async function handleHomeworkRoutes(request, env, corsHeaders, url) {
       const formData = await request.formData();
       const file = formData.get('file');
       // JWT 신뢰하더라도 토큰 탈취·잘못된 클라이언트 발송 대비해 동일 검증.
-      const v = validateAudioUpload(file);
+      const v = validateFileUpload(file);
       if (!v.ok) return errRes(corsHeaders, v.status, v.error);
       const result = await uploadFileToNotion(file, env.NOTION_TOKEN);
       return new Response(JSON.stringify(result), {
@@ -1640,6 +1662,37 @@ async function handleHomeworkRoutes(request, env, corsHeaders, url) {
       return new Response(JSON.stringify({ error: e.message }), {
         status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
+    }
+  }
+
+  // GET /homework/:hwId/file?name=&kind=submit|feedback — 강사용 파일 다운로드 (JWT 인증)
+  // proxy 방식 — 클라이언트가 Notion 임시 URL을 절대 보지 못하게 항상 Worker 경유.
+  const teacherFileMatch = url.pathname.match(/^\/homework\/([^/]+)\/file$/);
+  if (teacherFileMatch && request.method === 'GET') {
+    const authErr = await requireJwt(request, env, corsHeaders);
+    if (authErr) return authErr;
+    const homeworkId = teacherFileMatch[1];
+    const hv = validatePathToken(NotionPageIdSchema, homeworkId, corsHeaders, '숙제 ID');
+    if (!hv.ok) return hv.response;
+    const fileName = url.searchParams.get('name') || '';
+    const kind = url.searchParams.get('kind');
+    if (!fileName || fileName.length > 256) {
+      return errRes(corsHeaders, 400, 'name 쿼리 파라미터가 필요합니다.');
+    }
+    if (kind !== 'submit' && kind !== 'feedback') {
+      return errRes(corsHeaders, 400, 'kind는 submit 또는 feedback 이어야 합니다.');
+    }
+    try {
+      const hwPage = await n('GET', `/pages/${homeworkId}`);
+      const propName = kind === 'submit' ? '학생 제출 파일' : '피드백 파일';
+      const files = hwPage.properties?.[propName]?.files ?? [];
+      const target = files.find(f => f.name === fileName);
+      if (!target) return errRes(corsHeaders, 404, '파일을 찾을 수 없습니다.');
+      const sourceUrl = target.file?.url || target.external?.url;
+      if (!sourceUrl) return errRes(corsHeaders, 500, '파일 URL을 얻을 수 없습니다.');
+      return await streamNotionFile(sourceUrl, fileName);
+    } catch (e) {
+      return errRes(corsHeaders, 500, e.message);
     }
   }
 
@@ -1718,7 +1771,7 @@ async function handleHomeworkRoutes(request, env, corsHeaders, url) {
       const formData = await request.formData();
       const file = formData.get('file');
       // 익명 라우트라 검증 핵심: size 상한(Notion 20 MiB) + MIME 화이트리스트.
-      const v = validateAudioUpload(file);
+      const v = validateFileUpload(file);
       if (!v.ok) return errRes(corsHeaders, v.status, v.error);
       const result = await uploadFileToNotion(file, env.NOTION_TOKEN);
       return new Response(JSON.stringify(result), {
@@ -1852,6 +1905,45 @@ async function handleHomeworkRoutes(request, env, corsHeaders, url) {
       status: updateRes.ok ? 200 : updateRes.status,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
+  }
+
+  // GET /homework/student/:token/:hwId/file?name=&kind=submit|feedback — 학생 파일 다운로드 (예약 코드 인증)
+  // proxy 방식 — 클라이언트는 Notion 임시 URL을 보지 못함. 소유권(학생-숙제 relation) 검증 필수.
+  const studentFileMatch = url.pathname.match(/^\/homework\/student\/([^/]+)\/([^/]+)\/file$/);
+  if (studentFileMatch && request.method === 'GET') {
+    const token = decodeURIComponent(studentFileMatch[1]);
+    const homeworkId = studentFileMatch[2];
+    const tv = validatePathToken(StudentTokenSchema, token, corsHeaders, '학생 토큰');
+    if (!tv.ok) return tv.response;
+    const hv = validatePathToken(NotionPageIdSchema, homeworkId, corsHeaders, '숙제 ID');
+    if (!hv.ok) return hv.response;
+    const fileName = url.searchParams.get('name') || '';
+    const kind = url.searchParams.get('kind');
+    if (!fileName || fileName.length > 256) {
+      return errRes(corsHeaders, 400, 'name 쿼리 파라미터가 필요합니다.');
+    }
+    if (kind !== 'submit' && kind !== 'feedback') {
+      return errRes(corsHeaders, 400, 'kind는 submit 또는 feedback 이어야 합니다.');
+    }
+    const studentPage = await findStudentByToken(token);
+    if (!studentPage) return errRes(corsHeaders, 404, '등록된 학생이 아닙니다.');
+    try {
+      const hwPage = await n('GET', `/pages/${homeworkId}`);
+      // 소유권: 이 숙제가 그 학생 것인지 relation 검증.
+      const hwStudentIds = (hwPage.properties?.['학생']?.relation ?? []).map(r => r.id);
+      if (!hwStudentIds.includes(studentPage.id)) {
+        return errRes(corsHeaders, 403, '이 숙제에 접근할 권한이 없습니다.');
+      }
+      const propName = kind === 'submit' ? '학생 제출 파일' : '피드백 파일';
+      const files = hwPage.properties?.[propName]?.files ?? [];
+      const target = files.find(f => f.name === fileName);
+      if (!target) return errRes(corsHeaders, 404, '파일을 찾을 수 없습니다.');
+      const sourceUrl = target.file?.url || target.external?.url;
+      if (!sourceUrl) return errRes(corsHeaders, 500, '파일 URL을 얻을 수 없습니다.');
+      return await streamNotionFile(sourceUrl, fileName);
+    } catch (e) {
+      return errRes(corsHeaders, 500, e.message);
+    }
   }
 
   // POST /homework/feedback-seen/:token — 학생이 피드백완료 숙제를 처음 열어본 시점 기록

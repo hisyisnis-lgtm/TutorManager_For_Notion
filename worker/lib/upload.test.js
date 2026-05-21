@@ -7,7 +7,7 @@ function makeFile({ name = 'audio.mp3', type = 'audio/mpeg', size = 1024 } = {})
 }
 
 describe('validateAudioUpload', () => {
-  describe('정상 케이스', () => {
+  describe('정상 케이스 — 오디오', () => {
     it('표준 MIME (mp3, m4a, webm, wav 등) 통과', () => {
       const types = [
         'audio/mpeg', 'audio/mp4', 'audio/webm', 'audio/ogg',
@@ -16,6 +16,7 @@ describe('validateAudioUpload', () => {
       for (const type of types) {
         const r = validateAudioUpload(makeFile({ type }));
         expect(r.ok, type).toBe(true);
+        if (r.ok) expect(r.category, type).toBe('audio');
       }
     });
 
@@ -30,8 +31,41 @@ describe('validateAudioUpload', () => {
     });
   });
 
+  describe('정상 케이스 — 이미지·PDF (document)', () => {
+    it('image/png → 통과, category=document', () => {
+      const r = validateAudioUpload(makeFile({ name: 'photo.png', type: 'image/png' }));
+      expect(r.ok).toBe(true);
+      if (r.ok) expect(r.category).toBe('document');
+    });
+
+    it('application/pdf → 통과, category=document', () => {
+      const r = validateAudioUpload(makeFile({ name: 'doc.pdf', type: 'application/pdf' }));
+      expect(r.ok).toBe(true);
+      if (r.ok) expect(r.category).toBe('document');
+    });
+
+    it('image/jpeg / image/webp / image/heic → 통과', () => {
+      const cases = [
+        { name: 'a.jpg', type: 'image/jpeg' },
+        { name: 'a.webp', type: 'image/webp' },
+        { name: 'a.heic', type: 'image/heic' },
+      ];
+      for (const c of cases) {
+        const r = validateAudioUpload(makeFile(c));
+        expect(r.ok, c.type).toBe(true);
+        if (r.ok) expect(r.category, c.type).toBe('document');
+      }
+    });
+
+    it('image/png;charset=utf-8 — MIME 파라미터 strip 후 통과', () => {
+      const r = validateAudioUpload(makeFile({ name: 'a.png', type: 'image/png;charset=utf-8' }));
+      expect(r.ok).toBe(true);
+      if (r.ok) expect(r.category).toBe('document');
+    });
+  });
+
   describe('MIME 누락 fallback (모바일 브라우저)', () => {
-    it('빈 MIME + 허용 확장자 → 통과', () => {
+    it('빈 MIME + 허용 오디오 확장자 → 통과', () => {
       const r = validateAudioUpload(makeFile({ name: 'recording.m4a', type: '' }));
       expect(r.ok).toBe(true);
     });
@@ -46,8 +80,14 @@ describe('validateAudioUpload', () => {
       expect(r.ok).toBe(true);
     });
 
-    it('빈 MIME + 알 수 없는 확장자 → 거부', () => {
+    it('빈 MIME + document 확장자(pdf) → 통과, category=document', () => {
       const r = validateAudioUpload(makeFile({ name: 'file.pdf', type: '' }));
+      expect(r.ok).toBe(true);
+      if (r.ok) expect(r.category).toBe('document');
+    });
+
+    it('빈 MIME + 알 수 없는 확장자(.xyz) → 거부', () => {
+      const r = validateAudioUpload(makeFile({ name: 'file.xyz', type: '' }));
       expect(r.ok).toBe(false);
       if (!r.ok) expect(r.status).toBe(415);
     });
@@ -59,18 +99,7 @@ describe('validateAudioUpload', () => {
   });
 
   describe('보안 거부 케이스', () => {
-    it('image/png → 거부', () => {
-      const r = validateAudioUpload(makeFile({ name: 'photo.png', type: 'image/png' }));
-      expect(r.ok).toBe(false);
-      if (!r.ok) expect(r.status).toBe(415);
-    });
-
-    it('application/pdf → 거부', () => {
-      const r = validateAudioUpload(makeFile({ name: 'doc.pdf', type: 'application/pdf' }));
-      expect(r.ok).toBe(false);
-    });
-
-    it('video/mp4 → 거부 (오디오만 허용)', () => {
+    it('video/mp4 → 거부 (동영상 비허용)', () => {
       const r = validateAudioUpload(makeFile({ name: 'movie.mp4', type: 'video/mp4' }));
       expect(r.ok).toBe(false);
     });
@@ -85,8 +114,13 @@ describe('validateAudioUpload', () => {
       expect(r.ok).toBe(false);
     });
 
-    it('확장자만 mp3로 위장한 image MIME → 거부 (MIME이 명시되면 화이트리스트 검증)', () => {
-      const r = validateAudioUpload(makeFile({ name: 'fake.mp3', type: 'image/png' }));
+    it('확장자만 mp3로 위장한 video MIME → 거부 (MIME이 명시되면 화이트리스트 검증)', () => {
+      const r = validateAudioUpload(makeFile({ name: 'fake.mp3', type: 'video/mp4' }));
+      expect(r.ok).toBe(false);
+    });
+
+    it('application/zip → 거부', () => {
+      const r = validateAudioUpload(makeFile({ name: 'archive.zip', type: 'application/zip' }));
       expect(r.ok).toBe(false);
     });
   });
@@ -136,11 +170,6 @@ describe('validateAudioUpload', () => {
       const r = validateAudioUpload(makeFile({ name: 'rec.webm', type: 'audio/webm ; codecs=opus' }));
       expect(r.ok).toBe(true);
     });
-
-    it('image/png;charset=utf-8 같은 비-오디오 파라미터 MIME은 여전히 거부', () => {
-      const r = validateAudioUpload(makeFile({ name: 'a.png', type: 'image/png;charset=utf-8' }));
-      expect(r.ok).toBe(false);
-    });
   });
 });
 
@@ -164,14 +193,19 @@ describe('resolveAudioMime', () => {
     expect(resolveAudioMime({ name: 'rec.webm', type: 'application/octet-stream' })).toBe('audio/webm');
   });
 
-  it('MIME도 확장자도 모를 때 audio/mpeg 폴백', () => {
-    expect(resolveAudioMime({ name: 'noext', type: '' })).toBe('audio/mpeg');
+  it('document 확장자도 EXT_TO_MIME으로 보정 (pdf → application/pdf)', () => {
+    expect(resolveAudioMime({ name: 'doc.pdf', type: '' })).toBe('application/pdf');
+    expect(resolveAudioMime({ name: 'photo.png', type: '' })).toBe('image/png');
   });
 
-  it('null·undefined 안전 처리', () => {
-    expect(resolveAudioMime(null)).toBe('audio/mpeg');
-    expect(resolveAudioMime(undefined)).toBe('audio/mpeg');
-    expect(resolveAudioMime({})).toBe('audio/mpeg');
+  it('MIME도 확장자도 모를 때 application/octet-stream 폴백', () => {
+    expect(resolveAudioMime({ name: 'noext', type: '' })).toBe('application/octet-stream');
+  });
+
+  it('null·undefined 안전 처리 — application/octet-stream 폴백', () => {
+    expect(resolveAudioMime(null)).toBe('application/octet-stream');
+    expect(resolveAudioMime(undefined)).toBe('application/octet-stream');
+    expect(resolveAudioMime({})).toBe('application/octet-stream');
   });
 });
 

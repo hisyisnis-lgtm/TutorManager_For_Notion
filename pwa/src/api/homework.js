@@ -192,6 +192,77 @@ export async function markFeedbackSeen(studentToken, homeworkId) {
   });
 }
 
+// ===== 파일 다운로드 (Worker proxy — Notion 임시 URL 미노출) =====
+
+/**
+ * 학생/강사 공용 — fetch 결과를 anchor click으로 브라우저 다운로드 트리거.
+ * Content-Disposition: attachment는 Worker가 부여하므로 a.download 속성은 폴백.
+ */
+function triggerBlobDownload(blob, fileName) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileName || 'download';
+  a.rel = 'noopener';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  // 즉시 revoke하면 일부 브라우저에서 다운로드가 중단됨 → 다음 틱에 정리.
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
+async function fetchOrThrow(url, init) {
+  const res = await fetch(url, { cache: 'no-store', ...init });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `요청 실패 (${res.status})`);
+  }
+  return res;
+}
+
+/**
+ * 학생용 파일 다운로드 — 예약 코드로 본인 숙제 파일만 받을 수 있다.
+ * @param {string} studentToken
+ * @param {string} homeworkId
+ * @param {string} fileName
+ * @param {'submit'|'feedback'} kind
+ */
+export async function downloadHomeworkFileStudent(studentToken, homeworkId, fileName, kind) {
+  const url = `${WORKER_URL}/homework/student/${encodeURIComponent(studentToken)}/${encodeURIComponent(homeworkId)}/file?name=${encodeURIComponent(fileName)}&kind=${kind}`;
+  const res = await fetchOrThrow(url);
+  const blob = await res.blob();
+  triggerBlobDownload(blob, fileName);
+}
+
+/**
+ * 강사용 파일 다운로드 (JWT 인증).
+ */
+export async function downloadHomeworkFileTeacher(homeworkId, fileName, kind) {
+  const url = `${WORKER_URL}/homework/${encodeURIComponent(homeworkId)}/file?name=${encodeURIComponent(fileName)}&kind=${kind}`;
+  const res = await fetchOrThrow(url, { headers: { Authorization: `Bearer ${getToken()}` } });
+  const blob = await res.blob();
+  triggerBlobDownload(blob, fileName);
+}
+
+/**
+ * 인라인 표시용 — 파일을 blob URL로 받는다.
+ * 호출자는 사용 끝난 뒤 반드시 `URL.revokeObjectURL`로 해제해야 메모리 누수가 없다.
+ * (FilePreview 같은 컴포넌트에서 useEffect cleanup에 묶어 호출)
+ */
+export async function fetchHomeworkFileBlobUrlStudent(studentToken, homeworkId, fileName, kind) {
+  const url = `${WORKER_URL}/homework/student/${encodeURIComponent(studentToken)}/${encodeURIComponent(homeworkId)}/file?name=${encodeURIComponent(fileName)}&kind=${kind}`;
+  const res = await fetchOrThrow(url);
+  const blob = await res.blob();
+  return URL.createObjectURL(blob);
+}
+
+export async function fetchHomeworkFileBlobUrlTeacher(homeworkId, fileName, kind) {
+  const url = `${WORKER_URL}/homework/${encodeURIComponent(homeworkId)}/file?name=${encodeURIComponent(fileName)}&kind=${kind}`;
+  const res = await fetchOrThrow(url, { headers: { Authorization: `Bearer ${getToken()}` } });
+  const blob = await res.blob();
+  return URL.createObjectURL(blob);
+}
+
 export function homeworkStatusColor(status) {
   if (status === '피드백완료') return { bg: STATUS_SUCCESS_BG, text: STATUS_SUCCESS_DARK };
   if (status === '제출완료') return { bg: '#e6f4ff', text: STATUS_INFO_DARK };

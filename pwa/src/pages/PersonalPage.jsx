@@ -1111,7 +1111,7 @@ export default function PersonalPage() {
         visible={tab === '보관함' && tipArchive.visible}
         onDone={tipArchive.dismiss}
         steps={[
-          { selector: null, label: '피드백 받은 숙제는 24시간 뒤 자동으로 여기에 보관돼요' },
+          { selector: null, label: '확인한 피드백 숙제를 언제든 다시 들춰볼 수 있어요' },
         ]}
       />
       <CoachMarkOverlay

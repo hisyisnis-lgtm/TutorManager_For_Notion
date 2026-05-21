@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { SpeakerHighIcon, PauseIcon, TrashIcon } from '@phosphor-icons/react';
+import { SpeakerHighIcon, PauseIcon, TrashIcon, DownloadSimpleIcon } from '@phosphor-icons/react';
 import {
   PRIMARY,
   PRIMARY_ALPHA_35,
@@ -17,7 +17,16 @@ import {
  * - fileName: 표시할 파일명
  * - onGetFreshUrl: URL 만료 시 호출할 async 함수 → 새 URL 반환
  */
-export default function AudioPlayer({ url, fileName, onGetFreshUrl, onDelete, deleteDisabled }) {
+export default function AudioPlayer({ url, fileName, onGetFreshUrl, onDelete, deleteDisabled, onDownload }) {
+  const [downloading, setDownloading] = useState(false);
+  const handleDownload = async () => {
+    if (!onDownload || downloading) return;
+    setDownloading(true);
+    try { await onDownload(); }
+    catch (e) { console.warn('[AudioPlayer] 다운로드 실패:', e?.message); }
+    finally { setDownloading(false); }
+  };
+
   const audioRef = useRef(null);
   const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -237,6 +246,27 @@ export default function AudioPlayer({ url, fileName, onGetFreshUrl, onDelete, de
           </div>
         )}
       </div>
+
+      {/* 다운로드 버튼 — 36×36 히트 영역 */}
+      {onDownload && (
+        <button
+          type="button"
+          onClick={handleDownload}
+          disabled={downloading}
+          aria-label="다운로드"
+          style={{
+            flexShrink: 0, background: 'none', border: 'none',
+            cursor: downloading ? 'wait' : 'pointer',
+            color: PRIMARY,
+            opacity: downloading ? 0.5 : 1,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            width: 36, height: 36, borderRadius: 8,
+            WebkitTapHighlightColor: 'transparent',
+          }}
+        >
+          <DownloadSimpleIcon size={18} weight="bold" />
+        </button>
+      )}
 
       {/* 삭제 버튼 — 40×40px 히트 영역 */}
       {onDelete && (
