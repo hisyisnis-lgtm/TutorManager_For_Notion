@@ -1,11 +1,13 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button, Modal, Spin, message } from 'antd';
-import { CaretLeftIcon, MicrophoneIcon, ImageSquareIcon } from '@phosphor-icons/react';
+import { CaretLeftIcon, MicrophoneIcon, ImageSquareIcon, ClipboardTextIcon, PaperPlaneTiltIcon, ChatTeardropTextIcon } from '@phosphor-icons/react';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import ErrorMessage from '../components/ui/ErrorMessage.jsx';
 import FilePreview from '../components/ui/FilePreview.jsx';
 import AudioRecorder from '../components/ui/AudioRecorder.jsx';
+import SectionHeading from '../components/ui/SectionHeading.jsx';
+import ConfirmDialog from '../components/ui/ConfirmDialog.jsx';
 import {
   fetchMyHomework,
   parseHomework,
@@ -77,6 +79,46 @@ export default function PersonalHomeworkDetailPage() {
   const audioInputRef = useRef(null);
   const docInputRef = useRef(null);
 
+  // 저장 전 이탈 차단 — pending 파일이 하나라도 있으면 dirty.
+  // 강사 페이지(HomeworkDetailPage)와 동일 패턴: handleBack 가드 + popstate 가드 + ConfirmDialog.
+  const isDirty = pendingAudio.length + pendingDocs.length > 0;
+  const isDirtyRef = useRef(isDirty);
+  useEffect(() => { isDirtyRef.current = isDirty; }, [isDirty]);
+
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+  const pendingNavRef = useRef(null);
+
+  // 브라우저 뒤로가기(swipe·Android back) 차단 — HashRouter 는 useBlocker 미지원이라
+  // history.pushState 더미 entry + popstate 리스너로 가드.
+  useEffect(() => {
+    window.history.pushState(null, '', window.location.href);
+    const onPopState = () => {
+      if (isDirtyRef.current) {
+        window.history.pushState(null, '', window.location.href);
+        setShowLeaveConfirm(true);
+        pendingNavRef.current = () => navigate(-2);
+      } else {
+        navigate(-1);
+      }
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, [navigate]);
+
+  const handleBack = () => {
+    if (isDirtyRef.current) {
+      setShowLeaveConfirm(true);
+      pendingNavRef.current = () => navigate(-1);
+    } else {
+      navigate(-1);
+    }
+  };
+
+  const handleLeaveConfirm = () => {
+    setShowLeaveConfirm(false);
+    pendingNavRef.current?.();
+  };
+
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -121,12 +163,12 @@ export default function PersonalHomeworkDetailPage() {
     setModalKind(kind);
   };
   const closeModal = () => {
+    // antd v6 Modal 의 destroyOnHidden 가 children unmount 를 처리하므로 setTimeout 으로 미룰 필요 없음.
+    // 옛 패턴(300ms 후 리셋)이 닫힘 애니메이션과 race 를 만들어 modalView='record' 잔존 버그를 만들었음.
     setModalKind(null);
-    setTimeout(() => {
-      setModalView('list');
-      setSessionFiles([]);
-      setNamingFile(null);
-    }, 300);
+    setModalView('list');
+    setSessionFiles([]);
+    setNamingFile(null);
   };
 
   const removePendingAudio = (tempId) => setPendingAudio((prev) => prev.filter((f) => f.tempId !== tempId));
@@ -310,7 +352,7 @@ export default function PersonalHomeworkDetailPage() {
 
   const BackButton = () => (
     <button
-      onClick={() => navigate(-1)}
+      onClick={handleBack}
       aria-label="뒤로"
       className="transition-[color] duration-150 ease-out"
       style={backBtnStyle}
@@ -357,9 +399,9 @@ export default function PersonalHomeworkDetailPage() {
   const modalTitle = (() => {
     if (modalView === 'record') return '음성 녹음';
     if (modalView === 'naming') return '파일 이름 입력';
-    if (modalKind === 'audio') return '녹음 파일';
-    if (modalKind === 'document') return '이미지·PDF';
-    return '파일 추가';
+    if (modalKind === 'audio') return '녹음 제출';
+    if (modalKind === 'document') return '사진·문서 제출';
+    return '파일 제출';
   })();
 
   const pendingTotal = pendingAudio.length + pendingDocs.length;
@@ -402,17 +444,15 @@ export default function PersonalHomeworkDetailPage() {
       <div style={{ background: '#f9fafb', minHeight: 'calc(100dvh - 56px)' }}>
         <div style={{ maxWidth: 480, margin: '0 auto', padding: '20px 16px 80px' }}>
 
-        {/* 숙제 내용 */}
+        {/* ===== 1. 부여한 숙제 ===== */}
+        <AreaHeading icon={<ClipboardTextIcon size={18} weight="fill" />} label="부여한 숙제" first />
         {hw.content && (
-          <div style={{ background: '#fff', borderRadius: 16, padding: '16px', marginBottom: 12, boxShadow: 'var(--shadow-border)' }}>
-            <p style={{ fontSize: 13, fontWeight: 600, color: '#595959', margin: '0 0 8px' }}>숙제 내용</p>
+          <SectionCard label="숙제 내용">
             <p style={{ fontSize: 14, color: '#262626', lineHeight: 1.7, whiteSpace: 'pre-wrap', margin: 0 }}>{hw.content}</p>
-          </div>
+          </SectionCard>
         )}
-
-        {/* 과제 파일 — 강사가 등록 시 첨부한 파일 (학생 다운로드만) */}
         {hw.assignmentFiles?.length > 0 && (
-          <SectionCard label="과제 파일">
+          <SectionCard label="숙제 파일">
             {hw.assignmentFiles.map((f) => (
               <div key={f.name} style={{ marginBottom: 8 }}>
                 {renderStoredFile(f, 'assignment')}
@@ -421,10 +461,11 @@ export default function PersonalHomeworkDetailPage() {
           </SectionCard>
         )}
 
-        {/* 내 제출 파일 — 녹음 섹션 */}
-        {submitAudio.length > 0 && (
-          <SectionCard label="내 녹음 파일">
-            {submitAudio.map((f) => (
+        {/* ===== 2. 내 제출 ===== */}
+        <AreaHeading icon={<PaperPlaneTiltIcon size={18} weight="fill" />} label="내 제출" />
+        {(submitAudio.length > 0 || submitDocs.length > 0) && (
+          <SectionCard label="내 제출 파일">
+            {[...submitAudio, ...submitDocs].map((f) => (
               <div key={f.name} style={{ marginBottom: 8 }}>
                 {renderStoredFile(f, 'submit')}
               </div>
@@ -436,60 +477,17 @@ export default function PersonalHomeworkDetailPage() {
             )}
           </SectionCard>
         )}
-
-        {/* 내 제출 파일 — 이미지·PDF 섹션 */}
-        {submitDocs.length > 0 && (
-          <SectionCard label="내 이미지·PDF">
-            {submitDocs.map((f) => (
-              <div key={f.name} style={{ marginBottom: 8 }}>
-                {renderStoredFile(f, 'submit')}
-              </div>
-            ))}
-          </SectionCard>
-        )}
-
-        {/* 선생님 피드백 */}
-        {(hw.feedbackText || feedbackAudio.length > 0 || feedbackDocs.length > 0) && (
-          <div style={{ background: '#f6ffed', border: '1px solid #b7eb8f', borderRadius: 16, padding: '16px', marginBottom: 12 }}>
-            <p style={{ fontSize: 13, fontWeight: 700, color: '#389e0d', margin: '0 0 10px' }}>선생님 피드백</p>
-            {hw.feedbackText && (
-              <p style={{ fontSize: 14, color: '#262626', lineHeight: 1.7, whiteSpace: 'pre-wrap', margin: (feedbackAudio.length + feedbackDocs.length) > 0 ? '0 0 10px' : 0 }}>
-                {hw.feedbackText}
-              </p>
-            )}
-            {feedbackAudio.length > 0 && (
-              <>
-                <p style={{ fontSize: 12, fontWeight: 600, color: '#389e0d', margin: '8px 0 6px' }}>녹음 파일</p>
-                {feedbackAudio.map((f) => (
-                  <div key={f.name} style={{ marginBottom: 8 }}>
-                    {renderStoredFile(f, 'feedback')}
-                  </div>
-                ))}
-              </>
-            )}
-            {feedbackDocs.length > 0 && (
-              <>
-                <p style={{ fontSize: 12, fontWeight: 600, color: '#389e0d', margin: '8px 0 6px' }}>이미지·PDF</p>
-                {feedbackDocs.map((f) => (
-                  <div key={f.name} style={{ marginBottom: 8 }}>
-                    {renderStoredFile(f, 'feedback')}
-                  </div>
-                ))}
-              </>
-            )}
-            {hw.feedbackDate && (
-              <p style={{ fontSize: 12, color: '#8c8c8c', marginTop: 8 }}>
-                피드백일: <span className="tabular-nums">{formatDateTimeCompact(hw.feedbackDate)}</span>
-              </p>
-            )}
-          </div>
-        )}
-
-        {/* 녹음 파일 추가 — pending + 진입 버튼 */}
+        {/* "내 숙제 제출" 추가 업로드 영역 — 미제출/제출완료 시. 학생이 더 올리거나 수정할 수 있도록. */}
         {canEdit && (
-          <>
+          <SectionCard label="내 숙제 제출">
+            <p style={{ fontSize: 13, color: '#8c8c8c', lineHeight: 1.6, margin: '-2px 0 14px' }}>
+              {hw.status === '미제출'
+                ? '공부한 내용을 녹음·사진·PDF로 올려주세요'
+                : '더 올리거나 수정할 수 있어요'}
+            </p>
+
             {pendingAudio.length > 0 && (
-              <PendingCard
+              <PendingInline
                 label={`새 녹음 파일 (${pendingAudio.length}/${MAX_FILES})`}
                 items={pendingAudio}
                 onRemove={removePendingAudio}
@@ -499,19 +497,16 @@ export default function PersonalHomeworkDetailPage() {
             {fixedCount < MAX_FILES && (
               <SectionEntryButton
                 icon={<MicrophoneIcon size={18} weight="fill" />}
-                label="녹음 파일 추가"
+                label="녹음 제출하기"
                 onClick={() => openModal('audio')}
                 disabled={uploading}
               />
             )}
-          </>
-        )}
 
-        {/* 이미지·PDF 추가 — pending + 진입 버튼 */}
-        {canEdit && (
-          <>
+            <div style={{ height: 8 }} />
+
             {pendingDocs.length > 0 && (
-              <PendingCard
+              <PendingInline
                 label={`새 이미지·PDF (${pendingDocs.length}/${MAX_FILES})`}
                 items={pendingDocs}
                 onRemove={removePendingDoc}
@@ -521,15 +516,39 @@ export default function PersonalHomeworkDetailPage() {
             {fixedCount < MAX_FILES && (
               <SectionEntryButton
                 icon={<ImageSquareIcon size={18} weight="fill" />}
-                label="이미지·PDF 추가"
+                label="사진·문서 제출하기"
                 onClick={() => openModal('document')}
                 disabled={uploading}
               />
             )}
+          </SectionCard>
+        )}
+
+        {/* ===== 3. 선생님 피드백 ===== */}
+        {(hw.feedbackText || feedbackAudio.length > 0 || feedbackDocs.length > 0) && (
+          <>
+            <AreaHeading icon={<ChatTeardropTextIcon size={18} weight="fill" />} label="선생님 피드백" />
+            <SectionCard label={null}>
+              {hw.feedbackText && (
+                <p style={{ fontSize: 14, color: '#262626', lineHeight: 1.7, whiteSpace: 'pre-wrap', margin: (feedbackAudio.length + feedbackDocs.length) > 0 ? '0 0 12px' : 0 }}>
+                  {hw.feedbackText}
+                </p>
+              )}
+              {[...feedbackAudio, ...feedbackDocs].map((f) => (
+                <div key={f.name} style={{ marginBottom: 8 }}>
+                  {renderStoredFile(f, 'feedback')}
+                </div>
+              ))}
+              {hw.feedbackDate && (
+                <p style={{ fontSize: 12, color: '#8c8c8c', marginTop: 8 }}>
+                  피드백일: <span className="tabular-nums">{formatDateTimeCompact(hw.feedbackDate)}</span>
+                </p>
+              )}
+            </SectionCard>
           </>
         )}
 
-        {/* 숙제 저장 — 두 카테고리 pending 을 한 번에 업로드 */}
+        {/* 숙제 제출 — 두 카테고리 pending 을 한 번에 업로드 (카드 외부에 둬서 액션 강조) */}
         {canEdit && pendingTotal > 0 && (
           <Button
             type="primary"
@@ -538,7 +557,7 @@ export default function PersonalHomeworkDetailPage() {
             loading={uploading}
             style={{ height: 48, borderRadius: 12, fontWeight: 700, fontSize: 15, marginTop: 4 }}
           >
-            숙제 저장 ({pendingTotal}개 파일)
+            숙제 제출하기 ({pendingTotal}개 파일)
           </Button>
         )}
 
@@ -622,8 +641,8 @@ export default function PersonalHomeworkDetailPage() {
                 padding: '14px 0 16px', margin: 0, lineHeight: 1.6,
               }}>
                 {modalKind === 'audio'
-                  ? '추가할 녹음 파일을 선택하거나 직접 녹음해주세요'
-                  : '추가할 이미지 또는 PDF 파일을 선택해주세요'}
+                  ? '선생님께 보낼 녹음을 선택하거나 직접 녹음해주세요'
+                  : '선생님께 보낼 사진이나 PDF를 선택해주세요'}
               </p>
             )}
 
@@ -761,6 +780,18 @@ export default function PersonalHomeworkDetailPage() {
           <Spin size="large" />
         </div>
       )}
+
+      {/* 저장 전 이탈 확인 — pending 파일이 있는 상태에서 뒤로가기 시도 시 */}
+      {showLeaveConfirm && (
+        <ConfirmDialog
+          title="페이지를 나가시겠습니까?"
+          message="저장하지 않은 파일이 있어요. 지금 나가면 추가한 파일이 사라집니다."
+          confirmLabel="나가기"
+          cancelLabel="계속 작성"
+          onConfirm={handleLeaveConfirm}
+          onCancel={() => setShowLeaveConfirm(false)}
+        />
+      )}
     </>
   );
 }
@@ -769,17 +800,33 @@ export default function PersonalHomeworkDetailPage() {
 
 function SectionCard({ label, children }) {
   return (
-    <div style={{ background: '#fff', borderRadius: 16, padding: '16px', marginBottom: 12, boxShadow: 'var(--shadow-border)' }}>
-      <p style={{ fontSize: 13, fontWeight: 600, color: '#595959', margin: '0 0 10px' }}>{label}</p>
+    <div style={{ background: '#fff', borderRadius: 12, padding: '16px', marginBottom: 12, boxShadow: 'var(--shadow-border)' }}>
+      {label && <SectionHeading style={{ marginBottom: 12 }}>{label}</SectionHeading>}
       {children}
     </div>
   );
 }
 
-function PendingCard({ label, items, onRemove, disabled }) {
+// 3영역(부여한 숙제 / 내 제출 / 선생님 피드백) 시각 구분용 헤더.
+function AreaHeading({ icon, label, first }) {
   return (
-    <div style={{ background: '#fff', borderRadius: 16, padding: '16px', marginBottom: 12, boxShadow: 'var(--shadow-border)' }}>
-      <p style={{ fontSize: 13, fontWeight: 600, color: '#595959', margin: '0 0 8px' }}>{label}</p>
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 8,
+      marginTop: first ? 0 : 24,
+      marginBottom: 10,
+      color: '#595959',
+    }}>
+      {icon}
+      <span style={{ fontSize: 15, fontWeight: 700 }}>{label}</span>
+    </div>
+  );
+}
+
+// SectionCard 내부에서 쓰는 인라인 버전 — 카드 중첩 방지 (boxShadow·padding 없음)
+function PendingInline({ label, items, onRemove, disabled }) {
+  return (
+    <div style={{ marginBottom: 8 }}>
+      <p style={{ fontSize: 12, fontWeight: 600, color: '#8c8c8c', margin: '0 0 6px' }}>{label}</p>
       {items.map((pf) => (
         <div key={pf.tempId} style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',

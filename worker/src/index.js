@@ -1576,7 +1576,7 @@ async function uploadFileToNotion(file, notionToken) {
   });
   if (!sessionRes.ok) {
     const err = await sessionRes.json().catch(() => ({}));
-    throw new Error(err.message || 'Notion 파일 업로드 세션 생성 실패');
+    throw new Error(err.message || `Notion 파일 업로드 세션 생성 실패 (${sessionRes.status})`);
   }
   const session = await sessionRes.json();
   const { id: fileUploadId, upload_url } = session;
@@ -1593,7 +1593,10 @@ async function uploadFileToNotion(file, notionToken) {
     body: uploadForm,
   });
   if (!uploadRes.ok) {
-    throw new Error('Notion 파일 업로드 실패');
+    // 디버깅 정보 강화 — 다음 재발 시 정확한 거부 사유(MIME/size/format)를 확인할 수 있도록
+    // 응답 본문 일부를 메시지에 포함. (PWA 토스트 표시 길이 보호용으로 200자 절단)
+    const errBody = await uploadRes.text().catch(() => '');
+    throw new Error(`Notion 파일 업로드 실패 (${uploadRes.status}, mime=${mimeType}): ${errBody.slice(0, 200)}`);
   }
 
   return { fileUploadId, fileName };

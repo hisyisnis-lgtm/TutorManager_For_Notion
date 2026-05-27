@@ -58,6 +58,20 @@ const ALLOWED_EXTENSIONS = new Set([...AUDIO_EXTENSIONS, ...DOCUMENT_EXTENSIONS]
 
 const FALLBACK_MIMES = new Set(['', 'application/octet-stream', 'application/binary']);
 
+// 비표준·alias MIME → IANA 표준 MIME 매핑.
+// validateFileUpload 화이트리스트엔 통과시키지만, Notion file_uploads single_part API 는
+// 비표준 mime(`audio/m4a`, `audio/x-m4a` 등)을 거부하는 경우가 있어 업로드 직전에 표준으로 정규화한다.
+// (macOS Safari·iOS Safari 등 일부 환경이 m4a 파일에 `audio/m4a`를 붙여 보냄)
+const MIME_NORMALIZE = {
+  'audio/m4a': 'audio/mp4',
+  'audio/x-m4a': 'audio/mp4',
+  'audio/mp3': 'audio/mpeg',
+  'audio/wave': 'audio/wav',
+  'audio/x-wav': 'audio/wav',
+  'audio/x-flac': 'audio/flac',
+  'image/jpg': 'image/jpeg',
+};
+
 // 확장자 → 표준 MIME. Notion에 업로드할 때 type을 정확히 맞추기 위한 폴백.
 // MediaRecorder의 `audio/webm;codecs=opus` 같은 비표준 표기나 OS가 MIME을 모르는
 // 경우(Windows의 `.webm` 등) 파일 이름으로 보정한다.
@@ -100,13 +114,16 @@ export function baseMimeOf(type) {
 
 /**
  * Notion 업로드에 안전한 MIME 도출.
- * - file.type이 표준이면 그대로 (codec 파라미터만 strip)
+ * - file.type이 비표준(alias)이면 표준 MIME 으로 정규화 (audio/m4a → audio/mp4 등)
+ * - 표준이면 그대로 (codec 파라미터만 strip)
  * - 비어있거나 generic이면 확장자 기반으로 보정
- * - 그래도 못 찾으면 audio/mpeg 폴백 (가장 보편)
+ * - 그래도 못 찾으면 application/octet-stream 폴백
  */
 export function resolveFileMime(file) {
   const base = baseMimeOf(file?.type);
-  if (base && !FALLBACK_MIMES.has(base)) return base;
+  if (base && !FALLBACK_MIMES.has(base)) {
+    return MIME_NORMALIZE[base] || base;
+  }
   const ext = extOf(file?.name);
   return EXT_TO_MIME[ext] || 'application/octet-stream';
 }

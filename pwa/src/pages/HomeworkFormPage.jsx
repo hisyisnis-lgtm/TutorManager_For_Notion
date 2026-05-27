@@ -26,7 +26,7 @@ const LABEL = { fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBot
 
 function genAssignmentName(title, index) {
   const base = (title || '숙제').replace(/[^\w가-힣]/g, '').slice(0, 20) || '숙제';
-  return `${base}_과제_${String(index).padStart(2, '0')}`;
+  return `${base}_숙제_${String(index).padStart(2, '0')}`;
 }
 
 export default function HomeworkFormPage() {
@@ -74,12 +74,11 @@ export default function HomeworkFormPage() {
     setModalKind(kind);
   };
   const closeModal = () => {
+    // antd v6 Modal 의 destroyOnHidden 가 children unmount 를 처리하므로 setTimeout 으로 미룰 필요 없음.
     setModalKind(null);
-    setTimeout(() => {
-      setModalView('list');
-      setSessionFiles([]);
-      setNamingFile(null);
-    }, 300);
+    setModalView('list');
+    setSessionFiles([]);
+    setNamingFile(null);
   };
 
   const removePendingAudio = (tempId) => setPendingAudio((prev) => prev.filter((f) => f.tempId !== tempId));
@@ -215,7 +214,7 @@ export default function HomeworkFormPage() {
     if (modalView === 'naming') return '파일 이름 입력';
     if (modalKind === 'audio') return '녹음 파일';
     if (modalKind === 'document') return '이미지·PDF';
-    return '과제 파일';
+    return '숙제 파일';
   })();
 
   return (
@@ -258,14 +257,14 @@ export default function HomeworkFormPage() {
           />
         </div>
 
-        {/* 과제 내용 */}
+        {/* 숙제 내용 */}
         <div>
-          <label htmlFor="hw-content" style={LABEL}>과제 내용</label>
+          <label htmlFor="hw-content" style={LABEL}>숙제 내용</label>
           <Input.TextArea
             id="hw-content"
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            placeholder="학생에게 전달할 과제 내용을 입력하세요"
+            placeholder="학생에게 전달할 숙제 내용을 입력하세요"
             rows={5}
             maxLength={1000}
             showCount
@@ -273,9 +272,9 @@ export default function HomeworkFormPage() {
           />
         </div>
 
-        {/* 과제 파일 — 카테고리별 섹션 */}
+        {/* 숙제 파일 — 카테고리별 섹션 */}
         <div>
-          <label style={LABEL}>과제 파일 <span style={{ fontWeight: 400, color: TEXT_TERTIARY }}>(선택)</span></label>
+          <label style={LABEL}>숙제 파일 <span style={{ fontWeight: 400, color: TEXT_TERTIARY }}>(선택)</span></label>
 
           {pendingAudio.length > 0 && (
             <PendingCard

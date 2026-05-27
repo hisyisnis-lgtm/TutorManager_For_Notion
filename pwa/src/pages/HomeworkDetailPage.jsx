@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button, Input, Card, Modal, App, Spin } from 'antd';
-import { ArrowLeftIcon, MicrophoneIcon, ImageSquareIcon } from '@phosphor-icons/react';
+import { ArrowLeftIcon, MicrophoneIcon, ImageSquareIcon, ClipboardTextIcon, PaperPlaneTiltIcon, ChatTeardropTextIcon } from '@phosphor-icons/react';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import ErrorMessage from '../components/ui/ErrorMessage.jsx';
@@ -150,12 +150,13 @@ export default function HomeworkDetailPage() {
     setModalKind(kind);
   };
   const closeModal = () => {
+    // antd v6 Modal 의 destroyOnHidden 가 children unmount 를 처리하므로 view·session 리셋을
+    // setTimeout 으로 미룰 필요가 없다. 옛 패턴(300ms 후 리셋)이 닫힘 애니메이션 + destroyOnHidden 와
+    // race 를 일으켜 "확인 후 녹음 시작 화면이 뜨는" 버그를 만들었다. 동기 처리로 단순화.
     setModalKind(null);
-    setTimeout(() => {
-      setModalView('list');
-      setSessionFiles([]);
-      setNamingFile(null);
-    }, 300);
+    setModalView('list');
+    setSessionFiles([]);
+    setNamingFile(null);
   };
 
   const removePendingAudio = (tempId) => setPendingFeedbackAudio((prev) => prev.filter((f) => f.tempId !== tempId));
@@ -422,28 +423,27 @@ export default function HomeworkDetailPage() {
         }
       />
 
-      <div className="px-4 pt-4 pb-24 space-y-4">
-        {/* 상단 묶음: 타이틀 + 뱃지 + 과제 내용 */}
-        <div style={{ paddingBottom: 16, borderBottom: `1px solid ${BORDER_DEFAULT}` }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: hw.content ? 20 : 0 }}>
-            <div>
-              {studentName && <div style={{ fontSize: 20, fontWeight: 600, color: TEXT_SECONDARY, lineHeight: 1.2 }}>{studentName}</div>}
-              <div style={{ fontSize: 20, fontWeight: 600, color: TEXT_PRIMARY, lineHeight: 1.2 }}>{hw.title}</div>
-            </div>
-            <Badge label={hw.status} bg={bg} text={text} style={{ fontSize: 15, padding: '4px 12px', borderRadius: 10, flexShrink: 0, marginTop: 2 }} />
+      <div className="px-4 pt-4 pb-24">
+        {/* 상단 묶음: 학생명 + 타이틀 + 뱃지 */}
+        <div style={{ paddingBottom: 16, marginBottom: 8, borderBottom: `1px solid ${BORDER_DEFAULT}`, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+          <div>
+            {studentName && <div style={{ fontSize: 20, fontWeight: 600, color: TEXT_SECONDARY, lineHeight: 1.2 }}>{studentName}</div>}
+            <div style={{ fontSize: 20, fontWeight: 600, color: TEXT_PRIMARY, lineHeight: 1.2 }}>{hw.title}</div>
           </div>
-          {hw.content && (
-            <div>
-              <SectionHeading style={{ marginBottom: 8 }}>숙제 내용</SectionHeading>
-              <p style={{ fontSize: 14, color: '#262626', lineHeight: 1.7, whiteSpace: 'pre-wrap', margin: 0 }}>{hw.content}</p>
-            </div>
-          )}
+          <Badge label={hw.status} bg={bg} text={text} style={{ fontSize: 15, padding: '4px 12px', borderRadius: 10, flexShrink: 0, marginTop: 2 }} />
         </div>
 
-        {/* 과제 파일 — 강사가 출제 시 첨부한 파일 (편집 미지원, 다운로드만) */}
+        {/* ===== 1. 부여한 숙제 ===== */}
+        <AreaHeading icon={<ClipboardTextIcon size={18} weight="fill" />} label="부여한 숙제" first />
+        {hw.content && (
+          <Card variant="borderless" style={{ borderRadius: 12, boxShadow: 'var(--shadow-border)', marginBottom: 12 }} styles={{ body: { padding: 16 } }}>
+            <SectionHeading style={{ marginBottom: 8 }}>숙제 내용</SectionHeading>
+            <p style={{ fontSize: 14, color: '#262626', lineHeight: 1.7, whiteSpace: 'pre-wrap', margin: 0 }}>{hw.content}</p>
+          </Card>
+        )}
         {hw.assignmentFiles?.length > 0 && (
-          <Card variant="borderless" style={{ borderRadius: 12, boxShadow: 'var(--shadow-border)' }} styles={{ body: { padding: 16 } }}>
-            <SectionHeading style={{ marginBottom: 12 }}>과제 파일</SectionHeading>
+          <Card variant="borderless" style={{ borderRadius: 12, boxShadow: 'var(--shadow-border)', marginBottom: 12 }} styles={{ body: { padding: 16 } }}>
+            <SectionHeading style={{ marginBottom: 12 }}>숙제 파일</SectionHeading>
             {hw.assignmentFiles.map((f, i) => (
               <div key={f.name} style={{ marginBottom: i < hw.assignmentFiles.length - 1 ? 8 : 0 }}>
                 {renderAssignmentFile(f)}
@@ -452,53 +452,33 @@ export default function HomeworkDetailPage() {
           </Card>
         )}
 
-        {/* 학생 제출 파일 — 카테고리별 카드 (강사는 다운로드만, 삭제 불가). 제출일은 마지막 카드 내부에. */}
+        {/* ===== 2. 학생 제출 ===== */}
+        <AreaHeading icon={<PaperPlaneTiltIcon size={18} weight="fill" />} label="학생 제출" />
         {(submitAudio.length > 0 || submitDocs.length > 0) ? (
-          <>
-            {submitAudio.length > 0 && (
-              <Card variant="borderless" style={{ borderRadius: 12, boxShadow: 'var(--shadow-border)' }} styles={{ body: { padding: 16 } }}>
-                <SectionHeading style={{ marginBottom: 12 }}>학생 제출 — 녹음</SectionHeading>
-                {submitAudio.map((f, i) => (
-                  <div key={f.name} style={{ marginBottom: i < submitAudio.length - 1 ? 8 : 0 }}>
-                    {renderSubmitFile(f)}
-                  </div>
-                ))}
-                {submitDocs.length === 0 && hw.submitDate && (
-                  <p style={{ fontSize: 13, color: TEXT_TERTIARY, margin: '8px 0 0' }}>
-                    제출일: <span className="tabular-nums">{formatDateTimeCompact(hw.submitDate)}</span>
-                  </p>
-                )}
-              </Card>
-            )}
-            {submitDocs.length > 0 && (
-              <Card variant="borderless" style={{ borderRadius: 12, boxShadow: 'var(--shadow-border)' }} styles={{ body: { padding: 16 } }}>
-                <SectionHeading style={{ marginBottom: 12 }}>학생 제출 — 이미지·PDF</SectionHeading>
-                {submitDocs.map((f, i) => (
-                  <div key={f.name} style={{ marginBottom: i < submitDocs.length - 1 ? 8 : 0 }}>
-                    {renderSubmitFile(f)}
-                  </div>
-                ))}
-                {hw.submitDate && (
-                  <p style={{ fontSize: 13, color: TEXT_TERTIARY, margin: '8px 0 0' }}>
-                    제출일: <span className="tabular-nums">{formatDateTimeCompact(hw.submitDate)}</span>
-                  </p>
-                )}
-              </Card>
-            )}
-          </>
-        ) : (
-          <Card variant="borderless" style={{ borderRadius: 12, boxShadow: 'var(--shadow-border)' }} styles={{ body: { padding: 16 } }}>
+          <Card variant="borderless" style={{ borderRadius: 12, boxShadow: 'var(--shadow-border)', marginBottom: 12 }} styles={{ body: { padding: 16 } }}>
             <SectionHeading style={{ marginBottom: 12 }}>학생 제출 파일</SectionHeading>
+            {[...submitAudio, ...submitDocs].map((f, i, arr) => (
+              <div key={f.name} style={{ marginBottom: i < arr.length - 1 ? 8 : 0 }}>
+                {renderSubmitFile(f)}
+              </div>
+            ))}
+            {hw.submitDate && (
+              <p style={{ fontSize: 13, color: TEXT_TERTIARY, margin: '8px 0 0' }}>
+                제출일: <span className="tabular-nums">{formatDateTimeCompact(hw.submitDate)}</span>
+              </p>
+            )}
+          </Card>
+        ) : (
+          <Card variant="borderless" style={{ borderRadius: 12, boxShadow: 'var(--shadow-border)', marginBottom: 12 }} styles={{ body: { padding: 16 } }}>
             <div style={{ textAlign: 'center', padding: '20px 0', color: TEXT_DISABLED, fontSize: 13 }}>
               아직 제출하지 않았습니다
             </div>
           </Card>
         )}
 
-        {/* 피드백 */}
+        {/* ===== 3. 피드백 ===== */}
+        <AreaHeading icon={<ChatTeardropTextIcon size={18} weight="fill" />} label="피드백" />
         <Card variant="borderless" style={{ borderRadius: 12, boxShadow: 'var(--shadow-border)' }} styles={{ body: { padding: 16 } }}>
-          <SectionHeading style={{ marginBottom: 12 }}>피드백</SectionHeading>
-
           <div style={{ marginBottom: 12 }}>
             <Input.TextArea
               value={feedbackText}
@@ -513,19 +493,21 @@ export default function HomeworkDetailPage() {
             </div>
           </div>
 
-          {/* 녹음 파일 섹션 */}
-          {feedbackAudio.length > 0 && (
+          {/* 기존 피드백 파일 — 녹음·이미지·PDF 통합 표시 (카테고리 라벨 없이 한 목록) */}
+          {(feedbackAudio.length > 0 || feedbackDocs.length > 0) && (
             <div style={{ marginBottom: 12 }}>
               <p style={{ fontSize: 13, color: TEXT_SECONDARY, margin: '0 0 6px', fontWeight: 600 }}>
-                기존 녹음 파일 ({feedbackAudio.length}개)
+                기존 피드백 파일 ({feedbackAudio.length + feedbackDocs.length}개)
               </p>
-              {feedbackAudio.map((f, i) => (
-                <div key={f.name} style={{ marginBottom: i < feedbackAudio.length - 1 ? 6 : 0 }}>
+              {[...feedbackAudio, ...feedbackDocs].map((f, i, arr) => (
+                <div key={f.name} style={{ marginBottom: i < arr.length - 1 ? 6 : 0 }}>
                   {renderFeedbackFile(f)}
                 </div>
               ))}
             </div>
           )}
+
+          {/* 새 추가 업로드 — 카테고리별 분리 유지 (모달이 카테고리별로 다름) */}
           {pendingFeedbackAudio.length > 0 && (
             <PendingCard
               label={`새 녹음 파일 (${pendingFeedbackAudio.length}/${MAX_FILES})`}
@@ -541,19 +523,6 @@ export default function HomeworkDetailPage() {
             />
           )}
 
-          {/* 이미지·PDF 섹션 */}
-          {feedbackDocs.length > 0 && (
-            <div style={{ marginBottom: 12 }}>
-              <p style={{ fontSize: 13, color: TEXT_SECONDARY, margin: '0 0 6px', fontWeight: 600 }}>
-                기존 이미지·PDF ({feedbackDocs.length}개)
-              </p>
-              {feedbackDocs.map((f, i) => (
-                <div key={f.name} style={{ marginBottom: i < feedbackDocs.length - 1 ? 6 : 0 }}>
-                  {renderFeedbackFile(f)}
-                </div>
-              ))}
-            </div>
-          )}
           {pendingFeedbackDocs.length > 0 && (
             <PendingCard
               label={`새 이미지·PDF (${pendingFeedbackDocs.length}/${MAX_FILES})`}
@@ -821,6 +790,22 @@ export default function HomeworkDetailPage() {
 }
 
 // ===== 보조 컴포넌트 =====
+
+// 3영역(부여한 숙제 / 학생 제출 / 피드백) 시각 구분용 헤더.
+// 아이콘 + 텍스트, 영역 사이 24px 여백. 첫 영역은 marginTop 0.
+function AreaHeading({ icon, label, first }) {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 8,
+      marginTop: first ? 0 : 24,
+      marginBottom: 10,
+      color: TEXT_SECONDARY,
+    }}>
+      {icon}
+      <span style={{ fontSize: 15, fontWeight: 700 }}>{label}</span>
+    </div>
+  );
+}
 
 function PendingCard({ label, items, onRemove }) {
   return (
