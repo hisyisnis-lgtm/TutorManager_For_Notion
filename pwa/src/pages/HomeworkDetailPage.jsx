@@ -380,6 +380,20 @@ export default function HomeworkDetailPage() {
     />
   );
 
+  // 과제 파일 — 강사 본인이 등록한 출제 파일. 다운로드만 노출 (편집은 미지원).
+  const renderAssignmentFile = (f) => (
+    <FilePreview
+      key={`assignment-${f.name}`}
+      file={f}
+      onGetFreshUrl={async () => {
+        const parsed = await getFreshParsed();
+        return parsed.assignmentFiles?.find((x) => x.name === f.name)?.url ?? null;
+      }}
+      onDownload={() => downloadHomeworkFileTeacher(id, f.name, 'assignment')}
+      fetchInlineBlobUrl={() => fetchHomeworkFileBlobUrlTeacher(id, f.name, 'assignment')}
+    />
+  );
+
   const renderFeedbackFile = (f) => (
     <FilePreview
       key={`feedback-${f.name}`}
@@ -425,6 +439,18 @@ export default function HomeworkDetailPage() {
             </div>
           )}
         </div>
+
+        {/* 과제 파일 — 강사가 출제 시 첨부한 파일 (편집 미지원, 다운로드만) */}
+        {hw.assignmentFiles?.length > 0 && (
+          <Card variant="borderless" style={{ borderRadius: 12, boxShadow: 'var(--shadow-border)' }} styles={{ body: { padding: 16 } }}>
+            <SectionHeading style={{ marginBottom: 12 }}>과제 파일</SectionHeading>
+            {hw.assignmentFiles.map((f, i) => (
+              <div key={f.name} style={{ marginBottom: i < hw.assignmentFiles.length - 1 ? 8 : 0 }}>
+                {renderAssignmentFile(f)}
+              </div>
+            ))}
+          </Card>
+        )}
 
         {/* 학생 제출 파일 — 카테고리별 카드 (강사는 다운로드만, 삭제 불가). 제출일은 마지막 카드 내부에. */}
         {(submitAudio.length > 0 || submitDocs.length > 0) ? (

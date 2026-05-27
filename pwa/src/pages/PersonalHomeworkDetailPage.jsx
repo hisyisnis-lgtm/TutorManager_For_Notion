@@ -365,14 +365,16 @@ export default function PersonalHomeworkDetailPage() {
   const pendingTotal = pendingAudio.length + pendingDocs.length;
 
   // 학생이 저장한 파일 한 행 — FilePreview wrapper.
-  // kind: 'submit' | 'feedback'
+  // kind: 'submit' | 'feedback' | 'assignment'
   const renderStoredFile = (f, kind) => (
     <FilePreview
       key={`${kind}-${f.name}`}
       file={f}
       onGetFreshUrl={async () => {
         const h = await getFreshHw();
-        const arr = kind === 'submit' ? h?.submitFiles : h?.feedbackFiles;
+        const arr = kind === 'submit' ? h?.submitFiles
+                  : kind === 'feedback' ? h?.feedbackFiles
+                  : h?.assignmentFiles;
         return arr?.find((x) => x.name === f.name)?.url ?? null;
       }}
       onDownload={() => downloadHomeworkFileStudent(studentToken, hwId, f.name, kind)}
@@ -406,6 +408,17 @@ export default function PersonalHomeworkDetailPage() {
             <p style={{ fontSize: 13, fontWeight: 600, color: '#595959', margin: '0 0 8px' }}>숙제 내용</p>
             <p style={{ fontSize: 14, color: '#262626', lineHeight: 1.7, whiteSpace: 'pre-wrap', margin: 0 }}>{hw.content}</p>
           </div>
+        )}
+
+        {/* 과제 파일 — 강사가 등록 시 첨부한 파일 (학생 다운로드만) */}
+        {hw.assignmentFiles?.length > 0 && (
+          <SectionCard label="과제 파일">
+            {hw.assignmentFiles.map((f) => (
+              <div key={f.name} style={{ marginBottom: 8 }}>
+                {renderStoredFile(f, 'assignment')}
+              </div>
+            ))}
+          </SectionCard>
         )}
 
         {/* 내 제출 파일 — 녹음 섹션 */}

@@ -27,11 +27,13 @@ export function parseHomework(page) {
     (files ?? []).map((f) => ({ name: f.name, url: f.file?.url ?? f.external?.url ?? null }));
   const submitFiles = parseFiles(p['학생 제출 파일']?.files);
   const feedbackFiles = parseFiles(p['피드백 파일']?.files);
+  const assignmentFiles = parseFiles(p['과제 파일']?.files);
   return {
     id: page.id,
     title: getTitle(p['제목'], '(제목 없음)'),
     studentIds: getRelationIds(p['학생']),
     content: getRichText(p['과제 내용']),
+    assignmentFiles,
     status: getSelect(p['제출 상태'], '미제출'),
     submitFiles,
     submitFile: submitFiles[0] ?? null, // 하위 호환
@@ -59,13 +61,31 @@ export async function fetchStudentHomework(studentPageId) {
   );
 }
 
-export async function createHomework({ studentPageId, title, content }) {
-  return createPage(HOMEWORK_DB, {
+/**
+ * 강사 숙제 등록
+ * @param {object} args
+ * @param {string} args.studentPageId
+ * @param {string} args.title
+ * @param {string} [args.content]
+ * @param {Array<{fileUploadId: string, fileName: string}>} [args.files]  과제 파일(녹음·이미지·PDF 통합)
+ */
+export async function createHomework({ studentPageId, title, content, files }) {
+  const properties = {
     제목: { title: [{ text: { content: title } }] },
     학생: { relation: [{ id: studentPageId }] },
     '과제 내용': { rich_text: [{ text: { content: content || '' } }] },
     '제출 상태': { select: { name: '미제출' } },
-  });
+  };
+  if (files && files.length > 0) {
+    properties['과제 파일'] = {
+      files: files.map(({ fileUploadId, fileName }) => ({
+        name: fileName,
+        type: 'file_upload',
+        file_upload: { id: fileUploadId },
+      })),
+    };
+  }
+  return createPage(HOMEWORK_DB, properties);
 }
 
 /** 강사용 파일 업로드 (JWT) → Worker가 Notion file_upload 생성 후 업로드 */

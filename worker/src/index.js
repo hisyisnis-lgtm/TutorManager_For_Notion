@@ -1679,12 +1679,14 @@ async function handleHomeworkRoutes(request, env, corsHeaders, url) {
     if (!fileName || fileName.length > 256) {
       return errRes(corsHeaders, 400, 'name 쿼리 파라미터가 필요합니다.');
     }
-    if (kind !== 'submit' && kind !== 'feedback') {
-      return errRes(corsHeaders, 400, 'kind는 submit 또는 feedback 이어야 합니다.');
+    if (kind !== 'submit' && kind !== 'feedback' && kind !== 'assignment') {
+      return errRes(corsHeaders, 400, 'kind는 submit / feedback / assignment 이어야 합니다.');
     }
     try {
       const hwPage = await n('GET', `/pages/${homeworkId}`);
-      const propName = kind === 'submit' ? '학생 제출 파일' : '피드백 파일';
+      const propName = kind === 'submit' ? '학생 제출 파일'
+                     : kind === 'feedback' ? '피드백 파일'
+                     : '과제 파일';
       const files = hwPage.properties?.[propName]?.files ?? [];
       const target = files.find(f => f.name === fileName);
       if (!target) return errRes(corsHeaders, 404, '파일을 찾을 수 없습니다.');
@@ -1922,8 +1924,8 @@ async function handleHomeworkRoutes(request, env, corsHeaders, url) {
     if (!fileName || fileName.length > 256) {
       return errRes(corsHeaders, 400, 'name 쿼리 파라미터가 필요합니다.');
     }
-    if (kind !== 'submit' && kind !== 'feedback') {
-      return errRes(corsHeaders, 400, 'kind는 submit 또는 feedback 이어야 합니다.');
+    if (kind !== 'submit' && kind !== 'feedback' && kind !== 'assignment') {
+      return errRes(corsHeaders, 400, 'kind는 submit / feedback / assignment 이어야 합니다.');
     }
     const studentPage = await findStudentByToken(token);
     if (!studentPage) return errRes(corsHeaders, 404, '등록된 학생이 아닙니다.');
@@ -1934,7 +1936,9 @@ async function handleHomeworkRoutes(request, env, corsHeaders, url) {
       if (!hwStudentIds.includes(studentPage.id)) {
         return errRes(corsHeaders, 403, '이 숙제에 접근할 권한이 없습니다.');
       }
-      const propName = kind === 'submit' ? '학생 제출 파일' : '피드백 파일';
+      const propName = kind === 'submit' ? '학생 제출 파일'
+                     : kind === 'feedback' ? '피드백 파일'
+                     : '과제 파일';
       const files = hwPage.properties?.[propName]?.files ?? [];
       const target = files.find(f => f.name === fileName);
       if (!target) return errRes(corsHeaders, 404, '파일을 찾을 수 없습니다.');
