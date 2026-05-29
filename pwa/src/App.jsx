@@ -133,11 +133,14 @@ if (typeof window !== 'undefined') {
     }
 
     // 2) standalone + root hash + 강사 미인증 + 저장된 학생 토큰 → 학생 페이지로 redirect.
+    //    teacher_device 플래그가 있으면(이 디바이스에서 강사 로그인을 한 적이 있으면)
+    //    토큰이 만료·삭제됐더라도 강사앱 루트 진입을 학생 페이지로 튕기지 않는다.
+    //    학생앱 아이콘은 path 기반(`/personal/{token}`)으로 진입하므로 이 분기와 무관 — 영향 없음.
     const isStandalone =
       window.matchMedia('(display-mode: standalone)').matches ||
       window.navigator.standalone === true;
     const isRootHash = !hash || hash === '#/' || hash === '#';
-    const isTeacher = !!localStorage.getItem('auth_token');
+    const isTeacher = !!localStorage.getItem('auth_token') || !!localStorage.getItem('teacher_device');
     if (isStandalone && isRootHash && !isTeacher) {
       const savedToken = localStorage.getItem('personal_student_token');
       if (savedToken) {
@@ -318,6 +321,10 @@ export default function App() {
 
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/notifications" element={<NotificationsPage />} />
+
+            {/* 매칭되는 라우트가 없으면 홈으로. 옛 401 핸들러가 남긴 죽은 `#/login` 등
+                알 수 없는 hash로 진입해도 흰 화면 대신 홈으로 복구된다. */}
+            <Route path="*" element={<Navigate to="/home" replace />} />
           </Routes>
         </div>
         <BottomNav />

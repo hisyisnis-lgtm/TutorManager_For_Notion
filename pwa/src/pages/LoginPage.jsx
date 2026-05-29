@@ -26,6 +26,9 @@ export default function LoginPage({ onSuccess }) {
       }
       const { token } = data;
       localStorage.setItem('auth_token', token);
+      // 이 디바이스/브라우저는 강사용임을 표시. 토큰이 만료·삭제돼도 남아 있어
+      // 루트 진입 시 학생 페이지로 자동 리다이렉트되는 것을 막는다 (App.jsx 참고).
+      localStorage.setItem('teacher_device', '1');
       onSuccess(token);
     } catch {
       setError('서버에 연결할 수 없습니다.');

@@ -13,10 +13,12 @@ async function notionFetch(method, path, body) {
 
   if (res.status === 401) {
     clearAuth();
-    if (window.location.hash !== '#/login') {
-      window.location.hash = '#/login';
-    }
-    return new Promise(() => {}); // 이동 완료 전까지 pending 유지 (undefined 반환 방지)
+    // 강사 HashRouter엔 '/login' 라우트가 없다. hash만 바꾸면 매칭되는 라우트가 없어
+    // 콘텐츠가 흰 화면이 되고 BottomNav만 남는다. 새로고침해 App을 isAuthed()=false로
+    // 재초기화하면 LoginPage가 정상으로 뜬다. (teacher_device 플래그가 남아 있어 루트
+    // 자동 리다이렉트가 학생 페이지로 튕기지 않고 LoginPage로 간다.)
+    window.location.reload();
+    return new Promise(() => {}); // 리로드 전까지 pending 유지 (undefined 반환 방지)
   }
 
   const data = await res.json().catch(() => ({}));
