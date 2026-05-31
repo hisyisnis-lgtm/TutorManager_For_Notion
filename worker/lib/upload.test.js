@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { validateAudioUpload, resolveAudioMime, MAX_AUDIO_BYTES } from './upload.js';
+import { validateAudioUpload, resolveAudioMime, dedupeFileNames, MAX_AUDIO_BYTES } from './upload.js';
 
 // File 객체를 모킹 — Workers/Vitest 환경에서 Blob의 name·type만 필요.
 function makeFile({ name = 'audio.mp3', type = 'audio/mpeg', size = 1024 } = {}) {
@@ -226,5 +226,42 @@ describe('validateAudioUpload — 기타', () => {
       const r = validateAudioUpload({});
       expect(r.ok).toBe(false);
     });
+  });
+});
+
+describe('dedupeFileNames', () => {
+  it('중복 없으면 그대로 반환', () => {
+    expect(dedupeFileNames(['a.jpg', 'b.png', 'c.pdf'])).toEqual(['a.jpg', 'b.png', 'c.pdf']);
+  });
+
+  it('같은 이름 3개 → 첫 번째 보존 + (2)/(3) 접미사 (확장자 보존)', () => {
+    expect(dedupeFileNames(['image.jpg', 'image.jpg', 'image.jpg']))
+      .toEqual(['image.jpg', 'image (2).jpg', 'image (3).jpg']);
+  });
+
+  it('녹음 동명 파일도 확장자 보존하며 유일화', () => {
+    expect(dedupeFileNames(['숙제_01.webm', '숙제_01.webm']))
+      .toEqual(['숙제_01.webm', '숙제_01 (2).webm']);
+  });
+
+  it('기존에 이미 번호가 붙은 이름과도 충돌하지 않음', () => {
+    expect(dedupeFileNames(['image.jpg', 'image (2).jpg', 'image.jpg']))
+      .toEqual(['image.jpg', 'image (2).jpg', 'image (3).jpg']);
+  });
+
+  it('대소문자 무시 — 다운로드 라우트가 대소문자 구분 없이 충돌하는 경우 방지', () => {
+    expect(dedupeFileNames(['Photo.JPG', 'photo.jpg']))
+      .toEqual(['Photo.JPG', 'photo (2).jpg']);
+  });
+
+  it('확장자 없는 파일명도 처리', () => {
+    expect(dedupeFileNames(['recording', 'recording']))
+      .toEqual(['recording', 'recording (2)']);
+  });
+
+  it('빈/비문자열 입력 안전 처리', () => {
+    expect(dedupeFileNames([])).toEqual([]);
+    expect(dedupeFileNames(null)).toEqual([]);
+    expect(dedupeFileNames(['', ''])).toEqual(['file', 'file (2)']);
   });
 });

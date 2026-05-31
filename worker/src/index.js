@@ -2,7 +2,7 @@
 // 새 순수 함수 추가 시 lib/ 안에 두고 여기서 import.
 import { stripEmoji, normalizeId } from '../lib/string.js';
 import { isSafeExternalUrl, maskPhone, maskToken } from '../lib/security.js';
-import { validateFileUpload, resolveFileMime } from '../lib/upload.js';
+import { validateFileUpload, resolveFileMime, dedupeFileNames } from '../lib/upload.js';
 import {
   ConsultSchema,
   HomeworkSubmitSchema,
@@ -1864,6 +1864,19 @@ async function handleHomeworkRoutes(request, env, corsHeaders, url) {
     const nowIso = new Date().toISOString();
     // 파일이 0개이면 제출 취소 (미제출로 복귀)
     const newStatus = totalCount === 0 ? '미제출' : '제출완료';
+    // 동명 파일 충돌 방지 — 다운로드/미리보기가 파일을 이름으로 식별하므로(노션 files 속성은
+    // 동명 파일을 허용) 같은 이름이 둘 이상이면 전부 첫 번째로만 조회되는 버그가 생긴다.
+    // 기존 파일 이름은 보존되고(먼저 옴) 새 파일에만 ` (2)` 접미사가 붙어 유일화된다.
+    const mergedFiles = [
+      ...keptFiles,
+      ...newFiles.map(({ fileUploadId, fileName }) => ({
+        name: fileName || 'audio.mp3',
+        type: 'file_upload',
+        file_upload: { id: fileUploadId },
+      })),
+    ];
+    const mergedNames = dedupeFileNames(mergedFiles.map(f => f.name));
+    mergedFiles.forEach((f, i) => { f.name = mergedNames[i]; });
     const updateRes = await fetch(`https://api.notion.com/v1/pages/${homeworkId}`, {
       method: 'PATCH',
       headers: {
@@ -1875,14 +1888,7 @@ async function handleHomeworkRoutes(request, env, corsHeaders, url) {
         properties: {
           '제출 상태': { select: { name: newStatus } },
           '학생 제출 파일': {
-            files: [
-              ...keptFiles,
-              ...newFiles.map(({ fileUploadId, fileName }) => ({
-                name: fileName || 'audio.mp3',
-                type: 'file_upload',
-                file_upload: { id: fileUploadId },
-              })),
-            ],
+            files: mergedFiles,
           },
           제출일: totalCount > 0 ? { date: { start: nowIso } } : { date: null },
           // 학생 첫 제출 시점만 기록 — 이후 파일 추가/삭제로는 갱신되지 않아 먹이 중복 지급 방지.

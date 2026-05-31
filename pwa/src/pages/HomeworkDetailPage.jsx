@@ -30,6 +30,7 @@ import { formatDateTimeCompact } from '../utils/dateUtils.js';
 import {
   validateFile,
   splitFileName,
+  dedupeFileNames,
   isImageByName,
   isPdfByName,
   ACCEPT_AUDIO,
@@ -289,9 +290,16 @@ export default function HomeworkDetailPage() {
       let existingFiles;
 
       if (files.length > 0) {
+        // 동명 파일 충돌 방지 — 기존 피드백 파일 + 새 파일 이름을 합쳐 유일화한다.
+        // (다운로드/미리보기가 파일을 이름으로 찾으므로 같은 이름이면 전부 첫 번째로만 조회됨)
+        // 기존 이름은 보존되고 새 파일에만 ` (2)` 접미사가 붙는다. 서버도 saveFeedback 후 한 번 더 dedup 가능.
+        const existingNames = (hw?.feedbackFiles ?? []).map((f) => f.name);
+        const allNames = dedupeFileNames([...existingNames, ...files.map((pf) => pf.baseName + pf.ext)]);
+        const newNames = allNames.slice(existingNames.length);
         uploadedFiles = [];
-        for (const pf of files) {
-          const fullName = pf.baseName + pf.ext;
+        for (let i = 0; i < files.length; i += 1) {
+          const pf = files[i];
+          const fullName = newNames[i];
           const namedFile = new File([pf.file], fullName, { type: pf.file.type });
           const { fileUploadId } = await uploadTeacherFile(namedFile);
           uploadedFiles.push({ fileUploadId, fileName: fullName });
@@ -368,9 +376,9 @@ export default function HomeworkDetailPage() {
   const feedbackAudio = (hw.feedbackFiles ?? []).filter((f) => !isDoc(f));
   const feedbackDocs = (hw.feedbackFiles ?? []).filter(isDoc);
 
-  const renderSubmitFile = (f) => (
+  const renderSubmitFile = (f, idx = 0) => (
     <FilePreview
-      key={`submit-${f.name}`}
+      key={`submit-${idx}-${f.name}`}
       file={f}
       onGetFreshUrl={async () => {
         const parsed = await getFreshParsed();
@@ -382,9 +390,9 @@ export default function HomeworkDetailPage() {
   );
 
   // 과제 파일 — 강사 본인이 등록한 출제 파일. 다운로드만 노출 (편집은 미지원).
-  const renderAssignmentFile = (f) => (
+  const renderAssignmentFile = (f, idx = 0) => (
     <FilePreview
-      key={`assignment-${f.name}`}
+      key={`assignment-${idx}-${f.name}`}
       file={f}
       onGetFreshUrl={async () => {
         const parsed = await getFreshParsed();
@@ -395,9 +403,9 @@ export default function HomeworkDetailPage() {
     />
   );
 
-  const renderFeedbackFile = (f) => (
+  const renderFeedbackFile = (f, idx = 0) => (
     <FilePreview
-      key={`feedback-${f.name}`}
+      key={`feedback-${idx}-${f.name}`}
       file={f}
       onGetFreshUrl={async () => {
         const parsed = await getFreshParsed();
@@ -445,8 +453,8 @@ export default function HomeworkDetailPage() {
           <Card variant="borderless" style={{ borderRadius: 12, boxShadow: 'var(--shadow-border)', marginBottom: 12 }} styles={{ body: { padding: 16 } }}>
             <SectionHeading style={{ marginBottom: 12 }}>숙제 파일</SectionHeading>
             {hw.assignmentFiles.map((f, i) => (
-              <div key={f.name} style={{ marginBottom: i < hw.assignmentFiles.length - 1 ? 8 : 0 }}>
-                {renderAssignmentFile(f)}
+              <div key={`assignment-${i}-${f.name}`} style={{ marginBottom: i < hw.assignmentFiles.length - 1 ? 8 : 0 }}>
+                {renderAssignmentFile(f, i)}
               </div>
             ))}
           </Card>
@@ -458,8 +466,8 @@ export default function HomeworkDetailPage() {
           <Card variant="borderless" style={{ borderRadius: 12, boxShadow: 'var(--shadow-border)', marginBottom: 12 }} styles={{ body: { padding: 16 } }}>
             <SectionHeading style={{ marginBottom: 12 }}>학생 제출 파일</SectionHeading>
             {[...submitAudio, ...submitDocs].map((f, i, arr) => (
-              <div key={f.name} style={{ marginBottom: i < arr.length - 1 ? 8 : 0 }}>
-                {renderSubmitFile(f)}
+              <div key={`submit-${i}-${f.name}`} style={{ marginBottom: i < arr.length - 1 ? 8 : 0 }}>
+                {renderSubmitFile(f, i)}
               </div>
             ))}
             {hw.submitDate && (
@@ -500,8 +508,8 @@ export default function HomeworkDetailPage() {
                 기존 피드백 파일 ({feedbackAudio.length + feedbackDocs.length}개)
               </p>
               {[...feedbackAudio, ...feedbackDocs].map((f, i, arr) => (
-                <div key={f.name} style={{ marginBottom: i < arr.length - 1 ? 6 : 0 }}>
-                  {renderFeedbackFile(f)}
+                <div key={`feedback-${i}-${f.name}`} style={{ marginBottom: i < arr.length - 1 ? 6 : 0 }}>
+                  {renderFeedbackFile(f, i)}
                 </div>
               ))}
             </div>

@@ -190,3 +190,38 @@ export function validateFileUpload(file) {
 
 // 호환 별칭 (호출처 이름이 옛 이름인 경우)
 export const validateAudioUpload = validateFileUpload;
+
+/**
+ * 파일 이름 중복 제거 — 같은 이름이 둘 이상이면 두 번째부터 ` (2)`, ` (3)` 접미사를 붙여 유일화한다.
+ * 확장자는 보존한다: `사진.jpg`, `사진.jpg` → `사진.jpg`, `사진 (2).jpg`.
+ *
+ * 왜 필요한가: 다운로드·미리보기 라우트가 파일을 **이름으로** 식별하는데(노션 files 속성은 동명
+ * 파일을 허용함), 동명 파일이 있으면 `files.find(f => f.name === name)` 가 항상 첫 번째만 반환해
+ * 서로 다른 파일이 전부 같은 파일로 보이는 버그가 생긴다. 업로드/병합 시점에 이름을 유일화해 방지.
+ * 비교는 대소문자 무시(노션·OS 파일명 관행).
+ *
+ * @param {string[]} names  순서가 보존된 파일 이름 배열
+ * @returns {string[]}      같은 길이·순서로 유일화된 이름 배열
+ */
+export function dedupeFileNames(names) {
+  const used = new Set();
+  const out = [];
+  for (const raw of Array.isArray(names) ? names : []) {
+    const name = (typeof raw === 'string' && raw) ? raw : 'file';
+    let candidate = name;
+    if (used.has(candidate.toLowerCase())) {
+      const dot = name.lastIndexOf('.');
+      const hasExt = dot > 0 && dot < name.length - 1;
+      const base = hasExt ? name.slice(0, dot) : name;
+      const ext = hasExt ? name.slice(dot) : '';
+      let n = 2;
+      do {
+        candidate = `${base} (${n})${ext}`;
+        n += 1;
+      } while (used.has(candidate.toLowerCase()));
+    }
+    used.add(candidate.toLowerCase());
+    out.push(candidate);
+  }
+  return out;
+}

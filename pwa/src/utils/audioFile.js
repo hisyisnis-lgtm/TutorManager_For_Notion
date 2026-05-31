@@ -169,3 +169,34 @@ export function validateFile(file, opts = {}) {
 export function validateAudioFile(file) {
   return validateFile(file, { expectedCategory: 'audio' });
 }
+
+/**
+ * 파일 이름 중복 제거 — 같은 이름이 둘 이상이면 두 번째부터 ` (2)`, ` (3)` 접미사를 붙인다.
+ * 확장자는 보존: `사진.jpg`, `사진.jpg` → `사진.jpg`, `사진 (2).jpg`.
+ *
+ * 다운로드·미리보기가 파일을 이름으로 식별하므로(노션 files 속성은 동명 파일 허용) 같은 이름이
+ * 둘 이상이면 전부 첫 번째 파일로만 조회되는 버그가 생긴다. 업로드 직전 유일화로 방지.
+ * 서버(worker/lib/upload.js dedupeFileNames)도 같은 로직으로 한 번 더 강제한다 — 양쪽 동기화.
+ *
+ * @param {string[]} names 순서가 보존된 파일 이름 배열
+ * @returns {string[]} 같은 길이·순서로 유일화된 이름 배열
+ */
+export function dedupeFileNames(names) {
+  const used = new Set();
+  const out = [];
+  for (const raw of Array.isArray(names) ? names : []) {
+    const name = (typeof raw === 'string' && raw) ? raw : 'file';
+    let candidate = name;
+    if (used.has(candidate.toLowerCase())) {
+      const { base, ext } = splitFileName(name);
+      let n = 2;
+      do {
+        candidate = `${base} (${n})${ext}`;
+        n += 1;
+      } while (used.has(candidate.toLowerCase()));
+    }
+    used.add(candidate.toLowerCase());
+    out.push(candidate);
+  }
+  return out;
+}

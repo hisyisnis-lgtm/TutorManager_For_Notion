@@ -22,6 +22,7 @@ import { formatDateTimeCompact } from '../utils/dateUtils.js';
 import {
   validateFile,
   splitFileName,
+  dedupeFileNames,
   isImageByName,
   isPdfByName,
   ACCEPT_AUDIO,
@@ -297,9 +298,16 @@ export default function PersonalHomeworkDetailPage() {
     const isFirstSubmit = !hw?.submitMark;
     setUploading(true);
     try {
+      // 동명 파일 충돌 방지 — 기존 제출본 + 이번 pending 이름을 합쳐 유일화한다.
+      // (다운로드/미리보기가 파일을 이름으로 찾으므로 같은 이름이면 전부 첫 번째로만 조회됨)
+      // 기존 이름은 보존되고 새 파일에만 ` (2)` 접미사가 붙는다. 서버도 한 번 더 dedup.
+      const existingNames = (hw?.submitFiles ?? []).map((f) => f.name);
+      const allNames = dedupeFileNames([...existingNames, ...all.map((pf) => pf.baseName + pf.ext)]);
+      const newNames = allNames.slice(existingNames.length);
       const uploaded = [];
-      for (const pf of all) {
-        const fullName = pf.baseName + pf.ext;
+      for (let i = 0; i < all.length; i += 1) {
+        const pf = all[i];
+        const fullName = newNames[i];
         const namedFile = new File([pf.file], fullName, { type: pf.file.type });
         const { fileUploadId } = await uploadStudentFile(studentToken, namedFile);
         uploaded.push({ fileUploadId, fileName: fullName });
@@ -408,9 +416,9 @@ export default function PersonalHomeworkDetailPage() {
 
   // 학생이 저장한 파일 한 행 — FilePreview wrapper.
   // kind: 'submit' | 'feedback' | 'assignment'
-  const renderStoredFile = (f, kind) => (
+  const renderStoredFile = (f, kind, idx = 0) => (
     <FilePreview
-      key={`${kind}-${f.name}`}
+      key={`${kind}-${idx}-${f.name}`}
       file={f}
       onGetFreshUrl={async () => {
         const h = await getFreshHw();
@@ -453,9 +461,9 @@ export default function PersonalHomeworkDetailPage() {
         )}
         {hw.assignmentFiles?.length > 0 && (
           <SectionCard label="숙제 파일">
-            {hw.assignmentFiles.map((f) => (
-              <div key={f.name} style={{ marginBottom: 8 }}>
-                {renderStoredFile(f, 'assignment')}
+            {hw.assignmentFiles.map((f, i) => (
+              <div key={`assignment-${i}-${f.name}`} style={{ marginBottom: 8 }}>
+                {renderStoredFile(f, 'assignment', i)}
               </div>
             ))}
           </SectionCard>
@@ -465,9 +473,9 @@ export default function PersonalHomeworkDetailPage() {
         <AreaHeading icon={<PaperPlaneTiltIcon size={18} weight="fill" />} label="내 제출" />
         {(submitAudio.length > 0 || submitDocs.length > 0) && (
           <SectionCard label="내 제출 파일">
-            {[...submitAudio, ...submitDocs].map((f) => (
-              <div key={f.name} style={{ marginBottom: 8 }}>
-                {renderStoredFile(f, 'submit')}
+            {[...submitAudio, ...submitDocs].map((f, i) => (
+              <div key={`submit-${i}-${f.name}`} style={{ marginBottom: 8 }}>
+                {renderStoredFile(f, 'submit', i)}
               </div>
             ))}
             {hw.submitDate && (
@@ -534,9 +542,9 @@ export default function PersonalHomeworkDetailPage() {
                   {hw.feedbackText}
                 </p>
               )}
-              {[...feedbackAudio, ...feedbackDocs].map((f) => (
-                <div key={f.name} style={{ marginBottom: 8 }}>
-                  {renderStoredFile(f, 'feedback')}
+              {[...feedbackAudio, ...feedbackDocs].map((f, i) => (
+                <div key={`feedback-${i}-${f.name}`} style={{ marginBottom: 8 }}>
+                  {renderStoredFile(f, 'feedback', i)}
                 </div>
               ))}
               {hw.feedbackDate && (
