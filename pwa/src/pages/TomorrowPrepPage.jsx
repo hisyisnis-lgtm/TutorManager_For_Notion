@@ -171,12 +171,37 @@ export default function TomorrowPrepPage() {
 
   useEffect(() => { load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // 이 페이지가 마운트된 동안 page-container를 실제 화면 높이(dvh)에 고정 → window 세로 스크롤 제거.
-  // 모바일에서 100vh > 보이는 높이라 기본 page-container(min-h-screen + pb-24)는 항상 넘침.
+  // 이 페이지가 마운트된 동안 페이지 세로 스크롤을 완전히 제거.
+  // ① page-container를 실제 화면 높이(dvh)에 고정 (모바일 100vh > 보이는 높이 + pb-24 넘침 방지)
+  // ② iOS Safari는 div의 overflow:hidden만으로 페이지 스크롤이 안 막히므로 body 자체를 position:fixed로 잠금.
   useEffect(() => {
     const el = document.querySelector('.page-container');
     el?.classList.add('page-fixed-viewport');
-    return () => el?.classList.remove('page-fixed-viewport');
+
+    const body = document.body;
+    const scrollY = window.scrollY;
+    const prev = {
+      position: body.style.position, top: body.style.top,
+      left: body.style.left, right: body.style.right,
+      width: body.style.width, overflow: body.style.overflow,
+    };
+    body.style.position = 'fixed';
+    body.style.top = `-${scrollY}px`;
+    body.style.left = '0';
+    body.style.right = '0';
+    body.style.width = '100%';
+    body.style.overflow = 'hidden';
+
+    return () => {
+      el?.classList.remove('page-fixed-viewport');
+      body.style.position = prev.position;
+      body.style.top = prev.top;
+      body.style.left = prev.left;
+      body.style.right = prev.right;
+      body.style.width = prev.width;
+      body.style.overflow = prev.overflow;
+      window.scrollTo(0, scrollY);
+    };
   }, []);
 
   const triggerDownload = (dataUrl, filename) => {
