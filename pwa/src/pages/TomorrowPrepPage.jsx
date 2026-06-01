@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, useCallback, forwardRef } from 'react';
-import { CaretLeftIcon, CaretRightIcon, CaretDownIcon, DownloadSimpleIcon, NotePencilIcon, ImageIcon, StackIcon, ClockIcon, MapPinIcon } from '@phosphor-icons/react';
-import { useNavigate } from 'react-router-dom';
+import { CaretLeftIcon, CaretRightIcon, CaretDownIcon, DownloadSimpleIcon, ImageIcon, StackIcon, ClockIcon, MapPinIcon } from '@phosphor-icons/react';
 import { App as AntApp, Dropdown } from 'antd';
 import useEmblaCarousel from 'embla-carousel-react';
 import { domToPng } from 'modern-screenshot';
@@ -47,7 +46,6 @@ function fmtTimeOnly(iso) {
 }
 
 export default function TomorrowPrepPage() {
-  const navigate = useNavigate();
   const { message } = AntApp.useApp();
   const { studentNameMap } = useData();
   const [slides, setSlides] = useState([]);
@@ -265,31 +263,6 @@ export default function TomorrowPrepPage() {
         </p>
       ) : (
         <>
-          {/* 상단 안내 + 다운로드 메뉴 */}
-          <div className="px-4 flex items-center justify-between" style={{ paddingTop: 16, marginBottom: 14 }}>
-            <span style={{ fontSize: 13, color: TEXT_TERTIARY }}>
-              내일 수업 {slides.length}명 · 직전 수업 일지
-            </span>
-            <Dropdown
-              menu={{ items: menuItems, onClick: ({ key }) => (key === 'one' ? handleDownloadOne() : handleDownloadAll()) }}
-              trigger={['click']}
-              placement="bottomRight"
-              disabled={downloading}
-            >
-              <button
-                type="button"
-                aria-label="이미지 저장"
-                style={{
-                  background: 'none', border: 'none', padding: 6, cursor: 'pointer',
-                  color: PRIMARY, display: 'flex', alignItems: 'center',
-                  opacity: downloading ? 0.5 : 1,
-                }}
-              >
-                <DownloadSimpleIcon size={22} weight="bold" />
-              </button>
-            </Dropdown>
-          </div>
-
           {/* Embla 캐러셀 — 드래그/스냅/끝 러버밴드.
               page-fixed-viewport(flex column) 안에서 flex:1로 남은 공간을 정확히 차지 →
               하단 컨트롤·BottomNav 공간만큼 띄우고 페이지 스크롤 없이 카드만 표시. */}
@@ -299,6 +272,7 @@ export default function TomorrowPrepPage() {
             style={{
               flex: '1 1 0',
               minHeight: 0,
+              marginTop: 12,
               // 하단 ◀1/N▶ 컨트롤(bottom 80+safe, 높이 ~64) + BottomNav 공간 확보.
               marginBottom: 'calc(160px + env(safe-area-inset-bottom))',
             }}
@@ -314,22 +288,27 @@ export default function TomorrowPrepPage() {
                     {/* 고정 헤더 + 스크롤 본문 카드 */}
                     <FillLogCard slide={s} />
 
-                    {/* 일지 수정 — 아이콘만, 카드 우상단 */}
-                    {s.prevLog && (
+                    {/* 이미지 저장 — 카드 우상단 (이 일지만 / 일괄 저장) */}
+                    <Dropdown
+                      menu={{ items: menuItems, onClick: ({ key }) => (key === 'one' ? handleDownloadOne() : handleDownloadAll()) }}
+                      trigger={['click']}
+                      placement="bottomRight"
+                      disabled={downloading}
+                    >
                       <button
                         type="button"
-                        onClick={() => navigate(`/logs/${s.prevLog.id}/edit`)}
-                        aria-label="일지 수정"
+                        aria-label="이미지 저장"
                         style={{
                           position: 'absolute', top: 14, right: 14, zIndex: 3,
                           padding: 8, background: 'none', border: 'none',
-                          color: TEXT_TERTIARY, cursor: 'pointer',
+                          color: PRIMARY, cursor: 'pointer',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          opacity: downloading ? 0.5 : 1,
                         }}
                       >
-                        <NotePencilIcon size={20} weight="fill" />
+                        <DownloadSimpleIcon size={20} weight="bold" />
                       </button>
-                    )}
+                    </Dropdown>
                   </div>
                 </div>
               ))}
@@ -530,15 +509,16 @@ function FillLogCard({ slide }) {
         <div
           aria-hidden="true"
           style={{
-            position: 'absolute', left: 0, right: 0, bottom: 0, height: 52,
+            position: 'absolute', left: 0, right: 0, bottom: 0, height: 60,
             borderRadius: '0 0 12px 12px',
-            background: `linear-gradient(to bottom, rgba(255,255,255,0), ${BG_CARD} 70%)`,
-            display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
-            paddingBottom: 8, pointerEvents: 'none',
+            background: `linear-gradient(to bottom, rgba(255,255,255,0), ${BG_CARD} 65%)`,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end',
+            gap: 1, paddingBottom: 6, pointerEvents: 'none',
           }}
         >
+          <span style={{ fontSize: 11, fontWeight: 500, color: TEXT_TERTIARY, lineHeight: 1 }}>더보기</span>
           <CaretDownIcon
-            size={18} weight="bold" color={TEXT_TERTIARY}
+            size={16} weight="bold" color={TEXT_TERTIARY}
             style={{ animation: 'tprep-scroll-hint 1.4s ease-in-out infinite' }}
           />
         </div>
