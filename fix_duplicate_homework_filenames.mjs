@@ -6,18 +6,20 @@
 // 재발 방지했고, 이 스크립트는 **이미 저장된** 동명 파일의 이름만 ` (2)`, ` (3)` 으로 갈라준다.
 // 파일 바이트(notion-hosted)는 그대로 두고 name 만 바꾼다 — 복구이지 재업로드가 아니다.
 //
-// 실행:
-//   export PATH="/c/Program Files/nodejs:$PATH"
-//   # 미리보기 (변경 안 함):
-//   NOTION_TOKEN=ntn_... DRY_RUN=1 node fix_duplicate_homework_filenames.mjs
+// SDK 의존성 없이 Notion REST API 를 fetch 로 직접 호출한다 (@notionhq/client 버전 무관).
+//
+// 실행 (PowerShell):
+//   $env:NOTION_TOKEN = "ntn_..."
+//   $env:DRY_RUN = "1"            # 미리보기 (변경 안 함)
+//   node fix_duplicate_homework_filenames.mjs
 //   # 실제 적용:
-//   NOTION_TOKEN=ntn_... node fix_duplicate_homework_filenames.mjs
-
-import { Client } from '@notionhq/client';
+//   $env:DRY_RUN = ""
+//   node fix_duplicate_homework_filenames.mjs
 
 const NOTION_TOKEN = process.env.NOTION_TOKEN;
 const DRY_RUN = !!process.env.DRY_RUN;
 const HOMEWORK_DB = '5ce7d5ef-7b80-4795-843f-325f4ca868e2';
+const NOTION_VERSION = '2022-06-28';
 
 // 검사 대상 file 속성 3종
 const FILE_PROPS = ['학생 제출 파일', '피드백 파일', '과제 파일'];
@@ -27,7 +29,22 @@ if (!NOTION_TOKEN) {
   process.exit(1);
 }
 
-const notion = new Client({ auth: NOTION_TOKEN });
+async function notion(method, path, body) {
+  const res = await fetch(`https://api.notion.com/v1${path}`, {
+    method,
+    headers: {
+      Authorization: `Bearer ${NOTION_TOKEN}`,
+      'Notion-Version': NOTION_VERSION,
+      'Content-Type': 'application/json',
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(`${res.status} ${path}: ${data.message || JSON.stringify(data).slice(0, 200)}`);
+  }
+  return data;
+}
 
 // worker/lib/upload.js dedupeFileNames 와 동일 로직 (대소문자 무시, 확장자 보존)
 function dedupeFileNames(names) {
@@ -57,12 +74,11 @@ async function queryAll() {
   const pages = [];
   let cursor;
   do {
-    const res = await notion.databases.query({
-      database_id: HOMEWORK_DB,
+    const res = await notion('POST', `/databases/${HOMEWORK_DB}/query`, {
       start_cursor: cursor,
       page_size: 100,
     });
-    pages.push(...res.results);
+    pages.push(...(res.results || []));
     cursor = res.has_more ? res.next_cursor : undefined;
   } while (cursor);
   return pages;
@@ -97,7 +113,6 @@ async function main() {
       if (!changed) continue;
 
       // notion-hosted/external 파일 객체를 그대로 두고 name 만 교체.
-      // (saveFeedback 의 existingFiles 재첨부 패턴과 동일 — 받은 객체를 그대로 되돌려 보냄)
       const rebuilt = files.map((f, i) => {
         const copy = { name: newNames[i], type: f.type };
         if (f.type === 'file') copy.file = f.file;
@@ -122,7 +137,7 @@ async function main() {
     logLines.forEach((l) => console.log(l));
 
     if (!DRY_RUN) {
-      await notion.pages.update({ page_id: page.id, properties: propsToUpdate });
+      await notion('PATCH', `/pages/${page.id}`, { properties: propsToUpdate });
       console.log('      ✓ 적용 완료');
     }
   }
@@ -130,7 +145,7 @@ async function main() {
   console.log(`\n=== 요약 ===`);
   console.log(`영향받은 숙제: ${affectedPages}건`);
   console.log(`이름 변경된 파일: ${renamedFiles}개`);
-  if (DRY_RUN) console.log(`\nDRY RUN 모드였습니다. 실제 적용하려면 DRY_RUN 없이 다시 실행하세요.`);
+  if (DRY_RUN) console.log(`\nDRY RUN 모드였습니다. 실제 적용하려면 $env:DRY_RUN = "" 후 다시 실행하세요.`);
   else console.log(`\n복구 완료. 학생/강사 앱에서 새로고침하면 각 파일이 따로 보입니다.`);
 }
 

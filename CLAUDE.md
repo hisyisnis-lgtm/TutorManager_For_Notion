@@ -32,6 +32,15 @@
 
 ---
 
+## 계획 우선 규칙
+
+사용자가 "계획부터", "계획 먼저", "어떻게 할지 짜줘", "기획부터" 등 **계획을 요청**하면:
+- 계획(분석 + 단계별 구현안)만 제시하고 **멈춘다**.
+- 코드 수정·파일 생성·패키지 설치 등 **실제 작업은 사용자의 명시적 승인("진행해", "그대로 해" 등) 전까지 시작하지 않는다.**
+- 결정이 필요한 부분은 질문으로 정리해 제시하되, 질문에 답을 받았다고 곧바로 구현으로 넘어가지 말 것 — 답변은 계획을 다듬는 재료일 뿐, 착수 승인이 아니다.
+
+---
+
 ## Git / 커밋 규칙
 
 - 코드 수정 완료 후 `git commit` / `git push`를 자동으로 하지 말 것
@@ -79,3 +88,29 @@ antd ^6.3.3 기준 — deprecated API 절대 사용 금지:
 export PATH="/c/Program Files/nodejs:$PATH"
 NOTION_TOKEN=ntn_... node script.mjs
 ```
+
+---
+
+## PWA 페이지 검수 플로우 (필수)
+
+PWA 페이지를 **새로 만들거나 수정한 뒤**, 작업 완료를 보고하기 **전에** 반드시 아래 검수 단계를 수행한다. "코드가 컴파일된다 = 끝"이 아니다 — 실제 화면이 디자인 가이드에 맞고 화면 밖으로 넘치지 않는지까지 확인해야 완료다.
+
+### 1. 빌드 통과
+`cd pwa && npm run build` 에러 없이 통과.
+
+### 2. 디자인 가이드 자가 대조 (`design_system.md` 기준)
+- `#7f0005`(PRIMARY)는 **인터랙티브 요소·아이콘·배지 배경에만**. **본문 텍스트 강조에 빨강 사용 금지** — 강조는 `PRIMARY_BG` 박스 또는 `fontWeight 600`.
+- 색상 리터럴 직접 사용 금지 → `constants/theme.js` 토큰 import.
+- antd v6 deprecated API 0건 (`Card bordered`, `Space direction="vertical"`, `Modal destroyOnClose`, `Button iconPosition`).
+- `borderLeft: '3px solid'` 등 굵은 컬러 보더 금지. radius 12 기본.
+- 아이콘은 `@phosphor-icons/react`의 `XxxIcon` + `weight="fill"`.
+
+### 3. 레이아웃 함정 점검 (화면 밖 넘침·가림 방지)
+- **전역 `BottomNav`는 `position: fixed; bottom: 0; zIndex: 50; 높이 ≈ 60px + safe-area`로 모든 라우트에 깔린다.** 페이지에 자체 하단 고정 요소(컨트롤 바·CTA)를 두면 BottomNav에 가려진다 → `bottom: calc(60px + env(safe-area-inset-bottom))` 이상으로 띄우고 `zIndex`는 50 미만.
+- 스크롤 콘텐츠 하단에 `paddingBottom`을 충분히 줘서 BottomNav·자체 고정요소에 마지막 내용이 가리지 않게.
+- 가로 overflow·고정폭으로 인한 화면 밖 넘침 / `env(safe-area-inset-*)` 대응 확인.
+
+### 4. 실제 화면 시각 검수 (가장 중요)
+Claude는 브라우저를 직접 보지 못하므로, **사용자에게 실제 화면 스크린샷을 요청**해 가이드와 대조한다. 스크린샷에서 ① 잘림·가림 ② 색상/타이포 가이드 위반 ③ 화면 밖 넘침을 확인하고, 문제가 있으면 수정 후 다시 검수한다. 스크린샷 확인 전에는 "완료"로 보고하지 않는다.
+
+> (선택) Claude가 스스로 화면을 보려면 Playwright MCP 같은 브라우저 자동화 도구 도입이 필요. 미도입 상태에서는 4번을 사용자 스크린샷 협업으로 수행.

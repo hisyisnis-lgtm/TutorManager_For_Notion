@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Button, Input, Card } from 'antd';
 import { MagnifyingGlassIcon } from '@phosphor-icons/react';
@@ -14,6 +14,7 @@ import { stripEmoji } from '../utils/stringUtils.js';
 import { useData } from '../context/DataContext.jsx';
 import PullToRefresh from '../components/ui/PullToRefresh.jsx';
 import PaymentTrendChart from '../components/payments/PaymentTrendChart.jsx';
+import IncomeSummary from '../components/payments/IncomeSummary.jsx';
 import { TEXT_PRIMARY, TEXT_TERTIARY, STATUS_ERROR_TEXT } from '../constants/theme.js';
 
 const KST = 'Asia/Seoul';
@@ -39,6 +40,7 @@ export default function PaymentsPage() {
   // 차트용 최근 6개월 결제 (페이지네이션과 별도 fetch)
   const [trendPayments, setTrendPayments] = useState([]);
   const [trendLoading, setTrendLoading] = useState(true);
+  const incomeRef = useRef(null);
 
   const load = useCallback(async (reset = true, nextCursor = null) => {
     if (reset) setLoading(true);
@@ -100,7 +102,7 @@ export default function PaymentsPage() {
   );
 
   return (
-    <PullToRefresh onRefresh={() => Promise.all([load(true), loadTrend()])}>
+    <PullToRefresh onRefresh={() => Promise.all([load(true), loadTrend(), incomeRef.current?.reload()])}>
       <PageHeader
         title="결제 내역"
         action={
@@ -123,6 +125,9 @@ export default function PaymentsPage() {
           loading={trendLoading}
         />
       </div>
+
+      {/* 수입 현황 (이번 달 결제 수입 · 예상 수익) */}
+      <IncomeSummary ref={incomeRef} />
 
       <div className="px-4 pt-3 pb-3 space-y-2">
         {/* 학생 검색 필터 */}

@@ -1,7 +1,7 @@
 {
   "name": "tutor-manager-pwa",
   "private": true,
-  "version": "2.10.2",
+  "version": "2.11.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -13,6 +13,8 @@
     "@phosphor-icons/react": "^2.1.10",
     "antd": "^6.3.7",
     "dayjs": "^1.11.0",
+    "embla-carousel-react": "^8.6.0",
+    "modern-screenshot": "^4.7.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.26.2"
