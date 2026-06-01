@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, forwardRef } from 'react';
-import { CaretLeftIcon, CaretRightIcon, DownloadSimpleIcon, NotePencilIcon, ImageIcon, StackIcon, ClockIcon, MapPinIcon } from '@phosphor-icons/react';
+import { CaretLeftIcon, CaretRightIcon, CaretDownIcon, DownloadSimpleIcon, NotePencilIcon, ImageIcon, StackIcon, ClockIcon, MapPinIcon } from '@phosphor-icons/react';
 import { useNavigate } from 'react-router-dom';
 import { App as AntApp, Dropdown } from 'antd';
 import useEmblaCarousel from 'embla-carousel-react';
@@ -171,6 +171,14 @@ export default function TomorrowPrepPage() {
 
   useEffect(() => { load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // 이 페이지가 마운트된 동안 page-container를 실제 화면 높이(dvh)에 고정 → window 세로 스크롤 제거.
+  // 모바일에서 100vh > 보이는 높이라 기본 page-container(min-h-screen + pb-24)는 항상 넘침.
+  useEffect(() => {
+    const el = document.querySelector('.page-container');
+    el?.classList.add('page-fixed-viewport');
+    return () => el?.classList.remove('page-fixed-viewport');
+  }, []);
+
   const triggerDownload = (dataUrl, filename) => {
     const a = document.createElement('a');
     a.href = dataUrl;
@@ -257,23 +265,29 @@ export default function TomorrowPrepPage() {
             </Dropdown>
           </div>
 
-          {/* Embla 캐러셀 — 드래그/스냅/끝 러버밴드 */}
+          {/* Embla 캐러셀 — 드래그/스냅/끝 러버밴드.
+              page-fixed-viewport(flex column) 안에서 flex:1로 남은 공간을 정확히 차지 →
+              하단 컨트롤·BottomNav 공간만큼 띄우고 페이지 스크롤 없이 카드만 표시. */}
           <div
             className="overflow-hidden pull-isolate"
             ref={emblaRef}
-            style={{ height: 'calc(100dvh - 272px - env(safe-area-inset-bottom))' }}
+            style={{
+              flex: '1 1 0',
+              minHeight: 0,
+              // 하단 ◀1/N▶ 컨트롤(bottom 80+safe, 높이 ~64) + BottomNav 공간 확보.
+              marginBottom: 'calc(160px + env(safe-area-inset-bottom))',
+            }}
           >
             <div style={{ display: 'flex', height: '100%' }}>
               {slides.map((s) => (
                 <div
                   key={s.studentId}
-                  style={{ flex: '0 0 100%', minWidth: 0, boxSizing: 'border-box', padding: '0 16px', height: '100%' }}
+                  // 상하 여백(12px): 카드 그림자가 캐러셀 overflow-hidden에 잘리지 않도록 공간 확보.
+                  style={{ flex: '0 0 100%', minWidth: 0, boxSizing: 'border-box', padding: '12px 16px', height: '100%' }}
                 >
                   <div style={{ position: 'relative', height: '100%' }}>
-                    {/* 카드 세로 스크롤 뷰포트 */}
-                    <div className="hide-scrollbar" style={{ height: '100%', overflowY: 'auto', borderRadius: 12 }}>
-                      <LogCard slide={s} fill />
-                    </div>
+                    {/* 고정 헤더 + 스크롤 본문 카드 */}
+                    <FillLogCard slide={s} />
 
                     {/* 일지 수정 — 아이콘만, 카드 우상단 */}
                     {s.prevLog && (
@@ -282,7 +296,7 @@ export default function TomorrowPrepPage() {
                         onClick={() => navigate(`/logs/${s.prevLog.id}/edit`)}
                         aria-label="일지 수정"
                         style={{
-                          position: 'absolute', top: 14, right: 14, zIndex: 2,
+                          position: 'absolute', top: 14, right: 14, zIndex: 3,
                           padding: 8, background: 'none', border: 'none',
                           color: TEXT_TERTIARY, cursor: 'pointer',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -368,9 +382,148 @@ export default function TomorrowPrepPage() {
   );
 }
 
-/** 명세서 카드 — 학생 1명의 내일 수업 + 직전 수업 일지 */
-const LogCard = forwardRef(function LogCard({ slide, fill }, ref) {
+/** 카드 헤더 — 학생명 + 내일 수업 시간/장소 (구분선 포함). 화면/캡처 공용. */
+function LogCardHead({ slide }) {
+  return (
+    <div style={{ borderBottom: `1px solid ${BORDER_SUBTLE}`, paddingBottom: 14 }}>
+      <p style={{ fontSize: 20, fontWeight: 700, color: PRIMARY, margin: 0, lineHeight: 1.2 }}>
+        {slide.studentName}
+      </p>
+      <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {slide.classes.map((c) => (
+          // 시간과 장소는 무조건 한 줄 (nowrap). 시간·회차·핀은 고정, 장소명만 필요 시 말줄임.
+          <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'nowrap', minWidth: 0 }}>
+            <ClockIcon size={16} weight="fill" color={PRIMARY} style={{ flexShrink: 0 }} />
+            <span className="tabular-nums" style={{ fontSize: 15, fontWeight: 700, color: TEXT_PRIMARY, flexShrink: 0, whiteSpace: 'nowrap' }}>
+              {fmtTimeOnly(c.datetime)}{c.endTime && `~${fmtTimeOnly(c.endTime)}`}
+            </span>
+            {c.duration && (
+              <span className="tabular-nums" style={{ fontSize: 12, color: TEXT_TERTIARY, flexShrink: 0, whiteSpace: 'nowrap' }}>
+                ({c.duration}분)
+              </span>
+            )}
+            {c.location && (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, minWidth: 0, flexShrink: 1 }}>
+                <span style={{ color: BORDER_NEUTRAL, flexShrink: 0 }}>·</span>
+                <MapPinIcon size={16} weight="fill" color={PRIMARY} style={{ flexShrink: 0 }} />
+                <span style={{ fontSize: 15, fontWeight: 600, color: TEXT_PRIMARY, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {stripEmoji(c.location)}
+                </span>
+              </span>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** 카드 본문 — 직전 수업 일지. 화면/캡처 공용. */
+function LogCardBody({ slide }) {
   const log = slide.prevLog;
+  if (!log) {
+    return (
+      <p style={{ fontSize: 14, color: TEXT_TERTIARY, textAlign: 'center', padding: '24px 0' }}>
+        직전 수업 일지가 없습니다.
+      </p>
+    );
+  }
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      {slide.prevClassDate && (
+        <p className="tabular-nums" style={{ fontSize: 12, color: TEXT_TERTIARY, margin: 0 }}>
+          직전 수업: {fmtDateOnly(slide.prevClassDate)}
+        </p>
+      )}
+      <LogSection label="오늘 내용" text={log.content} />
+      <LogSection label="숙제" text={log.homework} />
+      <LogSection label="다음 수업 준비" text={log.nextPrepare} highlight />
+      {log.engagement && (
+        <div>
+          <SectionLabel>학생 참여도</SectionLabel>
+          <span style={{ ...BADGE_SMALL, display: 'inline-block', borderRadius: 980, background: PRIMARY_BG, color: PRIMARY }}>
+            {stripEmoji(log.engagement)}
+          </span>
+        </div>
+      )}
+      <LogSection label="메모" text={log.memo} />
+      {!log.content && !log.homework && !log.nextPrepare && !log.memo && !log.engagement && (
+        <p style={{ fontSize: 14, color: TEXT_TERTIARY, textAlign: 'center', padding: '16px 0' }}>
+          작성된 일지 내용이 없습니다.
+        </p>
+      )}
+    </div>
+  );
+}
+
+/**
+ * 화면 표시용 카드 — 헤더는 상단 고정, 본문만 네이티브 세로 스크롤.
+ * (embla는 슬라이드 캐러셀이라 단일 긴 본문 전체 스크롤엔 부적합 → 네이티브 스크롤 사용.)
+ * iOS 네이티브 바운스로 끝에서 당겼다 돌아오는 느낌을 살린다.
+ * 더 볼 내용이 있으면 하단에 페이드 + ⌄ 스크롤 안내를 표시한다.
+ */
+function FillLogCard({ slide }) {
+  const scrollRef = useRef(null);
+  const [hasMore, setHasMore] = useState(false);
+
+  const checkScroll = useCallback(() => {
+    const el = scrollRef.current;
+    setHasMore(!!el && el.scrollHeight - el.scrollTop - el.clientHeight > 8);
+  }, []);
+
+  useEffect(() => { checkScroll(); }, [checkScroll, slide]);
+
+  return (
+    <div
+      style={{
+        height: '100%', display: 'flex', flexDirection: 'column', position: 'relative',
+        background: BG_CARD, borderRadius: 12, boxShadow: 'var(--shadow-card)', overflow: 'hidden',
+      }}
+    >
+      {/* 고정 헤더 (배경 있음 — 본문이 뒤로 스크롤돼도 겹치지 않음) */}
+      <div style={{ flexShrink: 0, background: BG_CARD, padding: '24px 24px 0' }}>
+        <LogCardHead slide={slide} />
+      </div>
+
+      {/* 네이티브 세로 스크롤 본문 — iOS 바운스(당겼다 돌아옴) 활용.
+          contain은 주지 않아 바운스를 살리고, 페이지 전파는 전역 body contain + 고정 뷰포트가 차단. */}
+      <div
+        ref={scrollRef}
+        onScroll={checkScroll}
+        className="hide-scrollbar"
+        style={{
+          flex: 1, minHeight: 0, overflowY: 'auto',
+          WebkitOverflowScrolling: 'touch',
+          padding: '16px 24px 24px',
+        }}
+      >
+        <LogCardBody slide={slide} />
+      </div>
+
+      {/* 하단 스크롤 안내 — 더 볼 내용이 있을 때만 */}
+      {hasMore && (
+        <div
+          aria-hidden="true"
+          style={{
+            position: 'absolute', left: 0, right: 0, bottom: 0, height: 52,
+            borderRadius: '0 0 12px 12px',
+            background: `linear-gradient(to bottom, rgba(255,255,255,0), ${BG_CARD} 70%)`,
+            display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+            paddingBottom: 8, pointerEvents: 'none',
+          }}
+        >
+          <CaretDownIcon
+            size={18} weight="bold" color={TEXT_TERTIARY}
+            style={{ animation: 'tprep-scroll-hint 1.4s ease-in-out infinite' }}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** off-screen 캡처용 카드 — 전체 내용을 한 장으로 (스크롤 없음). */
+const LogCard = forwardRef(function LogCard({ slide }, ref) {
   return (
     <div
       ref={ref}
@@ -378,71 +531,12 @@ const LogCard = forwardRef(function LogCard({ slide, fill }, ref) {
         background: BG_CARD, borderRadius: 12,
         boxShadow: 'var(--shadow-card)', padding: 24,
         boxSizing: 'border-box',
-        minHeight: fill ? '100%' : undefined,
       }}
     >
-      {/* 헤더: 학생명 + 내일 수업 시간 */}
-      <div style={{ borderBottom: `1px solid ${BORDER_SUBTLE}`, paddingBottom: 14, marginBottom: 16 }}>
-        <p style={{ fontSize: 20, fontWeight: 700, color: PRIMARY, margin: 0, lineHeight: 1.2 }}>
-          {slide.studentName}
-        </p>
-        <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
-          {slide.classes.map((c) => (
-            <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-              <ClockIcon size={16} weight="fill" color={PRIMARY} style={{ flexShrink: 0 }} />
-              <span className="tabular-nums" style={{ fontSize: 15, fontWeight: 700, color: TEXT_PRIMARY }}>
-                {fmtTimeOnly(c.datetime)}{c.endTime && `~${fmtTimeOnly(c.endTime)}`}
-              </span>
-              {c.duration && (
-                <span className="tabular-nums" style={{ fontSize: 12, color: TEXT_TERTIARY }}>
-                  ({c.duration}분)
-                </span>
-              )}
-              {c.location && (
-                <>
-                  <span style={{ color: BORDER_NEUTRAL, margin: '0 2px' }}>·</span>
-                  <MapPinIcon size={16} weight="fill" color={PRIMARY} style={{ flexShrink: 0 }} />
-                  <span style={{ fontSize: 15, fontWeight: 600, color: TEXT_PRIMARY }}>
-                    {stripEmoji(c.location)}
-                  </span>
-                </>
-              )}
-            </div>
-          ))}
-        </div>
+      <div style={{ marginBottom: 16 }}>
+        <LogCardHead slide={slide} />
       </div>
-
-      {/* 직전 수업 일지 */}
-      {!log ? (
-        <p style={{ fontSize: 14, color: TEXT_TERTIARY, textAlign: 'center', padding: '24px 0' }}>
-          직전 수업 일지가 없습니다.
-        </p>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          {slide.prevClassDate && (
-            <p className="tabular-nums" style={{ fontSize: 12, color: TEXT_TERTIARY, margin: 0 }}>
-              직전 수업: {fmtDateOnly(slide.prevClassDate)}
-            </p>
-          )}
-          <LogSection label="오늘 내용" text={log.content} />
-          <LogSection label="숙제" text={log.homework} />
-          <LogSection label="다음 수업 준비" text={log.nextPrepare} highlight />
-          {log.engagement && (
-            <div>
-              <SectionLabel>학생 참여도</SectionLabel>
-              <span style={{ ...BADGE_SMALL, display: 'inline-block', borderRadius: 980, background: PRIMARY_BG, color: PRIMARY }}>
-                {stripEmoji(log.engagement)}
-              </span>
-            </div>
-          )}
-          <LogSection label="메모" text={log.memo} />
-          {!log.content && !log.homework && !log.nextPrepare && !log.memo && !log.engagement && (
-            <p style={{ fontSize: 14, color: TEXT_TERTIARY, textAlign: 'center', padding: '16px 0' }}>
-              작성된 일지 내용이 없습니다.
-            </p>
-          )}
-        </div>
-      )}
+      <LogCardBody slide={slide} />
     </div>
   );
 });
