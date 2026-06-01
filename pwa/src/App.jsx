@@ -149,6 +149,16 @@ if (typeof window !== 'undefined') {
         window.history.replaceState(null, '', `#/personal/${encodeURIComponent(savedToken)}`);
       }
     }
+
+    // 3) 일반 방문자(강사·학생 아님)가 루트 도메인으로 진입하면 인트로(소개) 페이지로 보낸다.
+    //    검색엔진(구글·네이버) 결과의 루트 링크를 클릭한 잠재 수강생이 강사 로그인 화면 대신
+    //    서비스 소개를 보게 하기 위함. teacher_device 플래그가 있는 강사 기기는 제외해
+    //    기존 루트→로그인/홈 흐름을 그대로 유지하고, 새 기기의 강사는 #/login으로 로그인한다.
+    //    #/login·#/intro 등 명시적 hash 진입은 isRootHash가 false라 영향받지 않는다.
+    //    학생 토큰이 저장돼 있으면(standalone 분기에서 처리) intro로 보내지 않는다.
+    if (isRootHash && !isTeacher && !localStorage.getItem('personal_student_token')) {
+      window.history.replaceState(null, '', '#/intro');
+    }
   } catch {}
 }
 
