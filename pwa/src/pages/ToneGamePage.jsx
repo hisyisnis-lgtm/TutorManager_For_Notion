@@ -593,8 +593,9 @@ function StartScreen({ best, bestLabel, onStart, onClose, onDebugIntro, onMaster
           ))}
         </div>
         </Reveal>
-        {/* 판다 코치 말풍선 (중앙 빈 공간 채움) */}
-        <Reveal i={3} style={{ position: 'absolute', left: 24, top: 548 }}>
+        {/* 판다 코치 말풍선 — 칩 하단(493)과 시작하기 CTA(상단 150) 사이 가용공간에 가두고 세로 중앙 정렬.
+            top 고정이면 짧은 화면서 CTA에 가리고, bottom 고정이면 짧은 화면서 위쪽 칩과 겹침 → top·bottom 동시 지정 + flex center로 양쪽 모두 회피. */}
+        <Reveal i={3} style={{ position: 'absolute', left: 24, right: 24, top: 493, bottom: 'calc(170px + env(safe-area-inset-bottom))', display: 'flex', alignItems: 'center' }}>
           <CoachBubble text="오늘도 성조 찾으러 가볼까요?" />
         </Reveal>
         {/* 시작하기 메인 CTA (하단 고정·풀폭) — 최하단 보조쌍 위 gap14 (보조쌍 30 + 간격 60) */}
@@ -937,8 +938,8 @@ function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, onRetry
         ))}
       </div>
       </Reveal>
-      {/* 코치 top551 */}
-      <Reveal i={4} style={{ position: 'absolute', left: 24, right: 24, top: 551 }}>
+      {/* 코치 — 통계카드 하단(509)과 다시 도전 CTA(상단 162) 사이 가용공간에 가두고 세로 중앙(짧은 화면서 통계·CTA 양쪽과 겹침 방지) */}
+      <Reveal i={4} style={{ position: 'absolute', left: 24, right: 24, top: 521, bottom: 'calc(182px + env(safe-area-inset-bottom))', display: 'flex', alignItems: 'center' }}>
         <CoachBubble text="다시 도전해서 신기록을 깨볼까요?" />
       </Reveal>
       {/* 다시 도전 (하단 고정) — 최하단 '난이도 바꾸기' 30 + 간격 70 */}
