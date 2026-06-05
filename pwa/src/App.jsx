@@ -30,6 +30,7 @@ import PersonalPage from './pages/PersonalPage.jsx';
 import PersonalHomeworkDetailPage from './pages/PersonalHomeworkDetailPage.jsx';
 import PandaPage from './pages/PandaPage.jsx';
 import PandaTestPage from './pages/PandaTestPage.jsx';
+import ToneGamePage from './pages/ToneGamePage.jsx';
 import BookingsManagePage from './pages/BookingsManagePage.jsx';
 import ConsultManagePage from './pages/ConsultManagePage.jsx';
 import HomeworkFormPage from './pages/HomeworkFormPage.jsx';
@@ -221,7 +222,8 @@ export default function App() {
   // Path-based 학생 라우트 — BrowserRouter로 학생 라우트만 렌더.
   // iOS Safari PWA "홈 화면에 추가" 시 URL의 path는 보존되므로 path 기반 라우팅이 안전.
   // hash 기반 강사 라우트와 공존하기 위해 이 분기에서만 BrowserRouter 사용.
-  const studentPathMatch = window.location.pathname.match(/^\/(personal|student)\/([^/?#]+)/);
+  // `/game/*`(게스트 독립 진입)도 path 기반으로 같은 BrowserRouter 블록에서 렌더 — 학생 토큰 없이 게임만.
+  const studentPathMatch = window.location.pathname.match(/^\/(personal|student|game)\/([^/?#]+)/);
   if (studentPathMatch) {
     // 옛 호환 `/student/{token}`은 `/personal/{token}`로 자동 redirect
     if (studentPathMatch[1] === 'student') {
@@ -240,6 +242,9 @@ export default function App() {
             <Route path="/personal/:studentToken" element={<PersonalPage />} />
             <Route path="/personal/:studentToken/homework/:hwId" element={<PersonalHomeworkDetailPage />} />
             <Route path="/personal/:studentToken/panda" element={<PandaPage />} />
+            <Route path="/personal/:studentToken/game/tone" element={<ToneGamePage />} />
+            {/* 게스트 독립 진입 (학생 토큰 없음) — 채널 유입 깔때기. ToneGamePage가 토큰 부재를 게스트로 처리 */}
+            <Route path="/game/tone" element={<ToneGamePage />} />
           </Routes>
         </BrowserRouter>
         </AntApp>
@@ -271,6 +276,7 @@ export default function App() {
             <Route path="/personal/:studentToken" element={<PersonalPage />} />
             <Route path="/personal/:studentToken/homework/:hwId" element={<PersonalHomeworkDetailPage />} />
             <Route path="/personal/:studentToken/panda" element={<PandaPage />} />
+            <Route path="/personal/:studentToken/game/tone" element={<ToneGamePage />} />
             <Route path="/panda-test" element={<PandaTestPage />} />
           </Routes>
         </HashRouter>
