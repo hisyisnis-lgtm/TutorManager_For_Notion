@@ -514,7 +514,7 @@ function StartScreen({ best, bestLabel, onStart, onClose, onDebugIntro, onMaster
     <FigmaScreen bgImage={ASSETS.startBg}>
       <div style={{ position: 'absolute', inset: 0, ...TOUCH_OPT }}>
         {/* 타이틀 아트 (가로 중앙) — 로고 비율 2047×1039 ≈ 1.97:1 유지 + 프리미엄 효과(글로우·팝·빛스윕·반짝임) */}
-        <Reveal i={0} style={{ position: 'absolute', top: 120, left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: 322 }}>
+        <Reveal i={0} style={{ position: 'absolute', top: 90, left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: 322 }}>
           <div style={{ position: 'relative' }}>
             {/* 로고 — 진입 시 통통 팝 */}
             <img src={ASSETS.startTitle} alt="성조 빨리찾기" style={{ position: 'relative', zIndex: 1, display: 'block', width: '100%', height: 'auto', objectFit: 'contain', animation: 'tg-logo-pop .7s cubic-bezier(.34,1.56,.64,1) both' }} />
@@ -567,7 +567,7 @@ function StartScreen({ best, bestLabel, onStart, onClose, onDebugIntro, onMaster
           </div>
         )}
         {/* 최고 점수 카드 top323 — 항상 표시(기록 없으면 0 + '도전!' 칩) */}
-          <Reveal i={1} style={{ position: 'absolute', left: 24, right: 24, top: 300 }}>
+          <Reveal i={1} style={{ position: 'absolute', left: 24, right: 24, top: 290 }}>
           <div style={{ height: 90, background: '#fff', borderRadius: 22, boxShadow: '0px 6px 16px rgba(43,39,48,0.06)', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
             <div style={{ width: 46, height: 46, borderRadius: 23, background: '#fff6e8', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <StarIcon size={21} weight="fill" color={TG.SUN} />
@@ -582,7 +582,7 @@ function StartScreen({ best, bestLabel, onStart, onClose, onDebugIntro, onMaster
           </div>
           </Reveal>
         {/* 성조 미리보기 칩 top431 */}
-        <Reveal i={2} style={{ position: 'absolute', left: 24, right: 24, top: 408 }}>
+        <Reveal i={2} style={{ position: 'absolute', left: 24, right: 24, top: 398 }}>
         <div style={{ height: 62, display: 'flex', gap: 10, alignItems: 'center', justifyContent: 'center' }}>
           {TONES.map((t, idx) => (
             // 칩마다 위상차(-idx*0.2s)를 줘 좌→우로 물결치듯 둥둥
@@ -907,7 +907,7 @@ function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, onRetry
       {/* 점수 */}
       <Reveal i={2} style={{ position: 'absolute', left: 24, right: 24, top: 196 }}>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-        <span style={{ fontFamily: FONT_NUM, fontWeight: 800, fontSize: 60, color: '#f2484c', lineHeight: 'normal', whiteSpace: 'nowrap' }}>{animScore.toLocaleString()}</span>
+        <span style={{ fontFamily: FONT_NUM, fontWeight: 800, fontSize: 60, color: '#f2484c', lineHeight: 1, whiteSpace: 'nowrap' }}>{animScore.toLocaleString()}</span>
         {previousBest > 0 && (
           <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 2 }}>
             <span style={{ fontFamily: FONT_BODY, fontWeight: 500, fontSize: 13, color: '#9a93a0', whiteSpace: 'nowrap' }}>이전 최고 {previousBest.toLocaleString()}</span>
