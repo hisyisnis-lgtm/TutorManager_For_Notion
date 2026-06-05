@@ -143,7 +143,10 @@ if (typeof window !== 'undefined') {
       window.navigator.standalone === true;
     const isRootHash = !hash || hash === '#/' || hash === '#';
     const isTeacher = !!localStorage.getItem('auth_token') || !!localStorage.getItem('teacher_device');
-    if (isStandalone && isRootHash && !isTeacher) {
+    // path 기반 공개 라우트(학생 /personal·/student, 게스트 게임 /game)는 hash가 비어도 "루트 진입"이 아니다.
+    // → standalone→personal·root→intro redirect 대상에서 제외(안 그러면 /game/tone 게스트 진입이 #/intro로 튕김).
+    const isPathPublicRoute = /^\/(personal|student|game)\//.test(window.location.pathname);
+    if (isStandalone && isRootHash && !isTeacher && !isPathPublicRoute) {
       const savedToken = localStorage.getItem('personal_student_token');
       if (savedToken) {
         // history.replaceState로 hash를 미리 바꿈 — popstate/hashchange를 발생시키지 않으므로
@@ -158,7 +161,7 @@ if (typeof window !== 'undefined') {
     //    기존 루트→로그인/홈 흐름을 그대로 유지하고, 새 기기의 강사는 #/login으로 로그인한다.
     //    #/login·#/intro 등 명시적 hash 진입은 isRootHash가 false라 영향받지 않는다.
     //    학생 토큰이 저장돼 있으면(standalone 분기에서 처리) intro로 보내지 않는다.
-    if (isRootHash && !isTeacher && !localStorage.getItem('personal_student_token')) {
+    if (isRootHash && !isTeacher && !localStorage.getItem('personal_student_token') && !isPathPublicRoute) {
       window.history.replaceState(null, '', '#/intro');
     }
   } catch {}
