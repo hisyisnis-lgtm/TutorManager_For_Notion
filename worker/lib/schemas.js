@@ -83,6 +83,14 @@ export const GameKeySchema = z.enum(['tone', 'tone-easy', 'tone-normal', 'tone-h
 });
 
 /**
+ * 성조 게임 난이도 — GET /game/tone-words/:difficulty
+ * Notion DB '난이도' select 옵션과 매핑.
+ */
+export const ToneDifficultySchema = z.enum(['easy', 'normal', 'hard'], {
+  errorMap: () => ({ message: '알 수 없는 난이도입니다 (easy/normal/hard)' }),
+});
+
+/**
  * POST /game/best/:token/:gameKey body — 게임 결과 1회분.
  * meta는 게임별 고유 데이터 (Notion '메타' 필드에 JSON 직렬화).
  */
@@ -90,5 +98,8 @@ export const GameResultSchema = z.object({
   score: z.number().int().min(0).max(99999),
   maxCombo: z.number().int().min(0).max(99),
   avgMs: z.number().min(0).max(60000),
-  meta: z.record(z.any()).optional(),
+  // meta는 자유 형식이지만 Notion '메타' rich_text(2000자 한도)에 저장되므로 직렬화 크기를 제한.
+  // 정상 클라이언트는 난이도별 subset(w/eb)이라 1800자 이내. 초과 페이로드는 입력단에서 거부.
+  meta: z.record(z.any()).optional()
+    .refine((m) => m == null || JSON.stringify(m).length <= 1800, { message: 'meta가 너무 큽니다' }),
 }).strip();

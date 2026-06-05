@@ -18,3 +18,19 @@ export function stripEmoji(name) {
 export function normalizeId(id) {
   return (id || '').replace(/-/g, '');
 }
+
+/**
+ * 한국 휴대폰 번호 정규화 — 학생 DB 형식(하이픈 없는 `01012345678`)으로 통일.
+ * 게임 회원(전화번호 = 단일 정체성)의 find-or-create·학생 매칭 키로 사용.
+ * 다양한 입력(하이픈·공백·국가코드 +82)을 표준형으로. 유효한 휴대폰 패턴이 아니면 null.
+ *   "010-1234-5678" / "+82 10 1234 5678" / "821012345678" → "01012345678"
+ * @param {string} raw
+ * @returns {string|null} 표준형 또는 null(유효하지 않음)
+ */
+export function normalizePhone(raw) {
+  let d = String(raw ?? '').replace(/\D/g, ''); // 숫자만
+  if (!d) return null;
+  if (d.startsWith('82')) d = `0${d.slice(2)}`;  // 국가코드 +82 → 국내 0 prefix
+  d = d.replace(/^0+/, '0');                      // 선행 0 중복(예: 82+010 → 00..) 정리
+  return /^01[016789]\d{7,8}$/.test(d) ? d : null; // 010/011/016~019 + 7~8자리
+}

@@ -1,6 +1,6 @@
 // 순수 함수는 lib/로 분리되어 단위 테스트 대상.
 // 새 순수 함수 추가 시 lib/ 안에 두고 여기서 import.
-import { stripEmoji, normalizeId } from '../lib/string.js';
+import { stripEmoji, normalizeId, normalizePhone } from '../lib/string.js';
 import { isSafeExternalUrl, maskPhone, maskToken } from '../lib/security.js';
 import { validateFileUpload, resolveFileMime, dedupeFileNames } from '../lib/upload.js';
 import {
@@ -11,6 +11,7 @@ import {
   MyClassesQuerySchema,
   GameKeySchema,
   GameResultSchema,
+  ToneDifficultySchema,
 } from '../lib/schemas.js';
 import { validateBody, validateParams, validatePathToken } from '../lib/validation.js';
 
@@ -26,6 +27,19 @@ const CONSULT_DB_ID = '324838fa-f2a6-815d-99a7-ff165e8f78aa';
 
 // ===== 미니게임 베스트 DB (학생 × 게임 = 1 row) =====
 const GAME_BEST_DB_ID = '2602021c-39b5-4517-9eda-ce4808f570bd';
+
+// ===== 게임 계정 DB (독립실행·회원/게스트, 전화번호=주 정체성) =====
+const GAME_USERS_DB_ID = 'd9c69797-2daf-4d89-8f9a-e4a4e0cbc969';
+
+// ===== 성조 게임 단어 DB (난이도별 출제 풀) =====
+const TONE_WORDS_DB_ID = '6e6956bf-4d48-4d63-adf2-778f056529df';
+
+// 난이도 키(영문) ↔ Notion '난이도' select 옵션(한글) 매핑.
+const TONE_DIFFICULTY_TO_NAME = {
+  'easy': '초급',
+  'normal': '중급',
+  'hard': '고급',
+};
 
 // 게임 키 ↔ Notion '게임' select 옵션 이름 매핑.
 // 새 게임/난이도 추가 시: (1) Notion DB 'select' 옵션 추가, (2) 여기 매핑 추가, (3) GameKeySchema enum에 키 추가.
@@ -175,6 +189,8 @@ const HOMEWORK_DB_RAW = HOMEWORK_DB_ID.replace(/-/g, '');
 const BLOCKED_DATES_DB_RAW = BLOCKED_DATES_DB_ID.replace(/-/g, '');
 const CONSULT_DB_RAW = CONSULT_DB_ID.replace(/-/g, '');
 const GAME_BEST_DB_RAW = GAME_BEST_DB_ID.replace(/-/g, '');
+const GAME_USERS_DB_RAW = GAME_USERS_DB_ID.replace(/-/g, '');
+const TONE_WORDS_DB_RAW = TONE_WORDS_DB_ID.replace(/-/g, '');
 const ALLOWED_NOTION_DB_IDS = new Set([
   STUDENT_DB_RAW,
   CLASS_DB_RAW,
@@ -182,6 +198,8 @@ const ALLOWED_NOTION_DB_IDS = new Set([
   BLOCKED_DATES_DB_RAW,
   CONSULT_DB_RAW,
   GAME_BEST_DB_RAW,
+  GAME_USERS_DB_RAW,
+  TONE_WORDS_DB_RAW,
   // 수업 유형·할인·결제·수업일지 등 강사용 추가 DB (PWA에서 사용)
   '314838faf2a681c3b4e4da87c48f9b43', // LESSON_TYPE_DB
   '314838faf2a681d39ce4c628edab065b', // DISCOUNT_DB
@@ -416,6 +434,100 @@ async function sendKakaoAlert(env, { to, templateId, variables }) {
   } catch (e) {
     console.error('[kakao] 발송 오류:', e.message);
   }
+}
+
+// ===== 게임 계정(독립실행) 인증 헬퍼 — 휴대폰 OTP + 게임유저 JWT =====
+
+// 게임유저 JWT — 강사용 createToken과 달리 sub(유저 페이지ID)를 담는다. HMAC-SHA256.
+async function createGameToken(secret, sub, expSeconds) {
+  const payload = btoa(JSON.stringify({ sub, exp: Math.floor(Date.now() / 1000) + expSeconds }));
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(payload));
+  return `${payload}.${btoa(String.fromCharCode(...new Uint8Array(sig)))}`;
+}
+// 게임유저 JWT 검증 → claim {sub, exp} 또는 null(만료/위조)
+async function verifyGameToken(token, secret) {
+  const parts = (token || '').split('.');
+  if (parts.length !== 2 || !secret) return null;
+  try {
+    const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['verify']);
+    const sigBytes = Uint8Array.from(atob(parts[1]), c => c.charCodeAt(0));
+    const valid = await crypto.subtle.verify('HMAC', key, sigBytes, new TextEncoder().encode(parts[0]));
+    if (!valid) return null;
+    const claim = JSON.parse(atob(parts[0]));
+    return claim.exp > Math.floor(Date.now() / 1000) ? claim : null;
+  } catch { return null; }
+}
+
+// OTP 임시저장 (Cloudflare Cache API, 3분 TTL — KV 없이)
+function otpCacheKey(phone) { return new Request(`https://gameotp.local/${encodeURIComponent(phone)}`); }
+async function putGameOtp(phone, code) {
+  try { await caches.default.put(otpCacheKey(phone), new Response(code, { headers: { 'Cache-Control': 'public, max-age=180' } })); } catch { /* noop */ }
+}
+async function getGameOtp(phone) {
+  try { const h = await caches.default.match(otpCacheKey(phone)); return h ? (await h.text()) : null; } catch { return null; }
+}
+async function clearGameOtp(phone) {
+  try { await caches.default.delete(otpCacheKey(phone)); } catch { /* noop */ }
+}
+
+// 솔라피 일반 SMS 발송 (현재 미사용 — 게임 OTP는 알림톡 채널명 발송으로 발신번호 노출 회피).
+// 향후 발신전용번호 SMS fallback 등이 필요하면 재사용. 발신번호 env.SOLAPI_SENDER 필요(사전등록). 미설정 시 no-op.
+// eslint-disable-next-line no-unused-vars
+async function sendSms(env, to, text) {
+  if (!env.SOLAPI_API_KEY || !env.SOLAPI_API_SECRET || !env.SOLAPI_SENDER || !to) { console.log('[sms] 미설정 — 스킵'); return; }
+  const date = new Date().toISOString();
+  const salt = crypto.randomUUID().replace(/-/g, '').slice(0, 16);
+  const signature = await hmacSha256Hex(env.SOLAPI_API_SECRET, date + salt);
+  try {
+    const res = await fetch('https://api.solapi.com/messages/v4/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `HMAC-SHA256 apiKey=${env.SOLAPI_API_KEY}, date=${date}, salt=${salt}, signature=${signature}` },
+      body: JSON.stringify({ message: { to, from: env.SOLAPI_SENDER, text } }),
+    });
+    if (!res.ok) { const d = await res.json().catch(() => ({})); console.error('[sms] 발송 실패:', JSON.stringify(d)); }
+  } catch (e) { console.error('[sms] 발송 오류:', e.message); }
+}
+
+// GAME_USERS 페이지 파싱
+function parseGameUser(page) {
+  const p = page.properties || {};
+  let gameData = {};
+  try { gameData = JSON.parse(p['게임데이터']?.rich_text?.[0]?.plain_text || '{}'); } catch { /* noop */ }
+  return {
+    id: page.id,
+    phone: p['전화번호']?.phone_number || null,
+    nickname: p['닉네임']?.rich_text?.[0]?.plain_text || null,
+    studentToken: p['연결된 학생 토큰']?.rich_text?.[0]?.plain_text || null,
+    gameData,
+  };
+}
+
+// 전화번호로 게임 계정 find-or-create. 신규면 학생 DB 전화번호 매칭으로 학생 토큰 자동 연결(같은 사람이면 기록 동기화).
+async function findOrCreateGameUser(n, phone) {
+  const q = await n('POST', `/databases/${GAME_USERS_DB_ID}/query`, {
+    filter: { property: '전화번호', phone_number: { equals: phone } }, page_size: 1,
+  });
+  if (q.results?.[0]) return parseGameUser(q.results[0]);
+  let studentToken = null;
+  try {
+    const sq = await n('POST', `/databases/${STUDENT_DB_ID}/query`, {
+      filter: { property: '전화번호', phone_number: { equals: phone } }, page_size: 1,
+    });
+    studentToken = sq.results?.[0]?.properties?.['예약 코드']?.rich_text?.[0]?.plain_text || null;
+  } catch { /* noop */ }
+  const userId = crypto.randomUUID();
+  const created = await n('POST', '/pages', {
+    parent: { database_id: GAME_USERS_DB_ID },
+    properties: {
+      '유저ID': { title: [{ text: { content: userId } }] },
+      '전화번호': { phone_number: phone },
+      '가입수단': { select: { name: '휴대폰' } },
+      '최종접속': { date: { start: new Date().toISOString() } },
+      ...(studentToken ? { '연결된 학생 토큰': { rich_text: [{ text: { content: studentToken } }] } } : {}),
+    },
+  });
+  return parseGameUser(created);
 }
 
 // ===== ntfy 강사 알림 발송 (멀티 토픽 + 심각도) =====
@@ -2025,6 +2137,126 @@ async function handleGameRoutes(request, env, corsHeaders, url) {
 
   const n = makeNotion(env.NOTION_TOKEN);
 
+  // GET /game/tone-words/:difficulty  (공개, 토큰 불필요)
+  // 모든 학생에게 동일한 단어 풀이라 Cloudflare 엣지 캐시(1시간)로 거의 모든 요청을 캐시 히트로 처리.
+  const toneWordsMatch = url.pathname.match(/^\/game\/tone-words\/([^/]+)$/);
+  if (request.method === 'GET' && toneWordsMatch) {
+    const difficulty = decodeURIComponent(toneWordsMatch[1]);
+    const dv = validatePathToken(ToneDifficultySchema, difficulty, corsHeaders, '난이도');
+    if (!dv.ok) return dv.response;
+
+    // 엣지 캐시 — 모든 학생 동일 URL이라 high cache hit rate.
+    const cacheUrl = new URL(request.url);
+    const cacheKey = new Request(cacheUrl.toString(), { method: 'GET' });
+    const cache = caches.default;
+    const cached = await cache.match(cacheKey);
+    if (cached) {
+      // CORS는 요청마다 동적이므로 캐시본의 헤더는 그대로 두고 새 응답으로 감싼다.
+      const body = await cached.text();
+      return new Response(body, {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json', 'X-Cache': 'HIT' },
+      });
+    }
+
+    const difficultyName = TONE_DIFFICULTY_TO_NAME[difficulty];
+    const results = await queryAllNotion(n, TONE_WORDS_DB_ID, {
+      filter: {
+        and: [
+          { property: '난이도', select: { equals: difficultyName } },
+          { property: '활성', checkbox: { equals: true } },
+        ],
+      },
+    });
+
+    const words = results.map((page) => {
+      const p = page.properties || {};
+      const hanzi = p['한자']?.title?.[0]?.plain_text ?? '';
+      const pinyin = (p['병음']?.rich_text?.[0]?.plain_text ?? '').trim().split(/\s+/).filter(Boolean);
+      const tones = (p['성조']?.rich_text?.[0]?.plain_text ?? '').split(',').map((s) => Number(s.trim())).filter((n) => Number.isFinite(n));
+      const meaning = p['의미']?.rich_text?.[0]?.plain_text ?? '';
+      return { hanzi, pinyin, tones, meaning };
+    }).filter((w) => w.hanzi && w.pinyin.length > 0 && w.tones.length === w.pinyin.length);
+
+    const body = JSON.stringify(words);
+    // 1시간 캐시. 단어 갱신 후엔 캐시 만료까지 기다리거나 별도 무효화 도구 필요.
+    const cachedResponse = new Response(body, {
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=3600' },
+    });
+    // 백그라운드 캐시 저장 (응답 지연 방지)
+    try { await cache.put(cacheKey, cachedResponse.clone()); } catch { /* noop */ }
+
+    return new Response(body, {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json', 'X-Cache': 'MISS' },
+    });
+  }
+
+  // ===== 게임 계정(독립실행) — 휴대폰 OTP 회원가입/로그인 + 게임데이터 =====
+  // POST /game/auth/otp — 휴대폰 → SMS 인증번호 발송
+  if (url.pathname === '/game/auth/otp' && request.method === 'POST') {
+    const body = await request.json().catch(() => null);
+    const phone = normalizePhone(body?.phone);
+    if (!phone) return errRes(corsHeaders, 400, '올바른 휴대폰 번호가 아닙니다.');
+    const ip = clientIp(request);
+    if (!(await rateLimitCheck(`gameotp:ip:${ip}`, 8, 600)) || !(await rateLimitCheck(`gameotp:ph:${phone}`, 5, 600))) {
+      return errRes(corsHeaders, 429, '잠시 후 다시 시도해주세요.');
+    }
+    const code = String(100000 + (crypto.getRandomValues(new Uint32Array(1))[0] % 900000)); // 6자리 (CSPRNG)
+    await putGameOtp(phone, code);
+    // 카카오 알림톡 인증번호 — 채널명("하늘하늘중국어")으로 발송(발신번호 노출 X). 템플릿 미승인/미설정 시 no-op → 개발은 GAME_OTP_DEBUG.
+    await sendKakaoAlert(env, { to: phone, templateId: env.KAKAO_TPL_GAME_OTP, variables: { '#{인증번호}': code } });
+    const out = { ok: true };
+    if (env.GAME_OTP_DEBUG === '1') out.devCode = code; // 개발 검증용(시크릿 설정 시에만 노출)
+    return new Response(JSON.stringify(out), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+  }
+
+  // POST /game/auth/verify — 휴대폰+코드 검증 → find-or-create → 게임유저 JWT
+  if (url.pathname === '/game/auth/verify' && request.method === 'POST') {
+    const body = await request.json().catch(() => null);
+    const phone = normalizePhone(body?.phone);
+    const code = String(body?.code || '').trim();
+    if (!phone || !/^\d{6}$/.test(code)) return errRes(corsHeaders, 400, '입력값을 확인해주세요.');
+    // 무차별 대입 방지 — 검증 시도도 제한(발송 rate limit과 별개). OTP TTL(180s)과 같은 창에서 전화·IP당 시도 상한.
+    // 전화당 5회/180s면 6자리(1M) 추측은 사실상 불가, IP당 20회/180s로 분산(여러 전화) 시도도 차단.
+    const vip = clientIp(request);
+    if (!(await rateLimitCheck(`gameverify:ph:${phone}`, 5, 180)) || !(await rateLimitCheck(`gameverify:ip:${vip}`, 20, 180))) {
+      return errRes(corsHeaders, 429, '잠시 후 다시 시도해주세요.');
+    }
+    const saved = await getGameOtp(phone);
+    if (!saved || saved !== code) return errRes(corsHeaders, 401, '인증번호가 일치하지 않습니다.');
+    await clearGameOtp(phone);
+    if (!env.JWT_SECRET) return errRes(corsHeaders, 500, '서버 설정 오류입니다.');
+    const user = await findOrCreateGameUser(n, phone);
+    const token = await createGameToken(env.JWT_SECRET, user.id, 60 * 60 * 24 * 60); // 60일
+    return new Response(JSON.stringify({
+      token,
+      user: { id: user.id, phone, nickname: user.nickname, studentToken: user.studentToken, gameData: user.gameData },
+    }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+  }
+
+  // GET/PUT /game/me — 게임유저 JWT 인증 → 게임데이터 read/write
+  if (url.pathname === '/game/me' && (request.method === 'GET' || request.method === 'PUT')) {
+    const auth = (request.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
+    const claim = await verifyGameToken(auth, env.JWT_SECRET);
+    if (!claim?.sub) return errRes(corsHeaders, 401, '로그인이 필요합니다.');
+    const page = await n('GET', `/pages/${claim.sub}`);
+    if (!page || page.object === 'error') return errRes(corsHeaders, 404, '계정을 찾을 수 없습니다.');
+    if (request.method === 'GET') {
+      return new Response(JSON.stringify({ user: parseGameUser(page) }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+    // PUT — 게임데이터 갱신(클라이언트 병합 후 최종본 덮어쓰기)
+    const body = await request.json().catch(() => null);
+    if (body?.gameData == null || typeof body.gameData !== 'object') return errRes(corsHeaders, 400, '게임데이터가 필요합니다.');
+    const json = JSON.stringify(body.gameData).slice(0, 1900); // Notion rich_text 2000자 안전
+    await n('PATCH', `/pages/${claim.sub}`, {
+      properties: {
+        '게임데이터': { rich_text: [{ text: { content: json } }] },
+        '최종접속': { date: { start: new Date().toISOString() } },
+        ...(body.nickname ? { '닉네임': { rich_text: [{ text: { content: String(body.nickname).slice(0, 40) } }] } } : {}),
+      },
+    });
+    return new Response(JSON.stringify({ ok: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+  }
+
   async function findStudentByToken(token) {
     const res = await n('POST', `/databases/${STUDENT_DB_ID}/query`, {
       filter: { property: '예약 코드', rich_text: { equals: token } },
@@ -2130,13 +2362,17 @@ async function handleGameRoutes(request, env, corsHeaders, url) {
 
     const isNewBest = data.score > prev.bestScore;
     const newAvgSec = Number((data.avgMs / 1000).toFixed(1));
+    // 심층 방어 — 입력단(zod)에서 meta를 1800자로 제한하지만, 기존 meta와 병합 누적해도
+    // Notion '메타' rich_text(2000자 한도)를 넘지 않도록 최종 가드. 초과 시 이번 meta는 버리고 이전 값 유지(데이터 손상 방지).
+    const mergedMeta = { ...(prev.meta || {}), ...(data.meta || {}) };
+    const safeMeta = JSON.stringify(mergedMeta).length <= 1900 ? mergedMeta : (prev.meta || {});
     const updated = {
       bestScore: isNewBest ? data.score : prev.bestScore,
       bestMaxCombo: isNewBest ? data.maxCombo : prev.bestMaxCombo,
       bestAvgSec: isNewBest ? newAvgSec : prev.bestAvgSec,
       playCount: (prev.playCount || 0) + 1,
       lastPlayedAt: new Date().toISOString(),
-      meta: { ...(prev.meta || {}), ...(data.meta || {}) },
+      meta: safeMeta,
     };
 
     const properties = {
