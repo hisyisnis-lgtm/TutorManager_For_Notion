@@ -25,12 +25,24 @@ const sendKakao = createSolapiClient({
   pfId: KAKAO_PFID,
 });
 
+// cron 예정 시각 (KST). GitHub Actions 스케줄 지연 보정 기준 — 워크플로우 cron('0 8 * * *' = 17:00 KST)과 일치시킬 것.
+const SCHEDULED_HOUR_KST = 17;
+
+// "내일"(D-1 알림 대상일)을 계산하되, GitHub Actions cron 지연이 KST 자정을 넘겨도
+// 대상일이 하루 밀리지 않도록 보정한다.
+// - 정상/당일 지연: 실행 시각이 예정 시각(17시) 이후 → 저녁 배치가 돌아야 했던 "의도일" = 오늘
+// - 자정 넘긴 지연: 실행 시각이 예정 시각보다 이른 KST 새벽(0~16시) → 의도일 = 어제
+//   (어제 저녁 배치가 지연 실행된 것으로 간주 → 그날 기준 "내일" 수업을 정상 발송)
 function getTomorrowKST() {
   const now = new Date();
   const kstDate = new Date(now.getTime() + 9 * 60 * 60 * 1000);
-  const tomorrow = new Date(kstDate);
-  tomorrow.setUTCDate(kstDate.getUTCDate() + 1);
-  tomorrow.setUTCHours(0, 0, 0, 0);
+  const intendedDay = new Date(kstDate);
+  intendedDay.setUTCHours(0, 0, 0, 0);
+  if (kstDate.getUTCHours() < SCHEDULED_HOUR_KST) {
+    intendedDay.setUTCDate(intendedDay.getUTCDate() - 1);
+  }
+  const tomorrow = new Date(intendedDay);
+  tomorrow.setUTCDate(intendedDay.getUTCDate() + 1);
   const dayAfter = new Date(tomorrow);
   dayAfter.setUTCDate(tomorrow.getUTCDate() + 1);
   return {
