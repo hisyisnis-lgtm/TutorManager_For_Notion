@@ -2,7 +2,7 @@ name: 학생 수업 전날 알림
 
 on:
   schedule:
-    - cron: '0 10 * * *'  # 매일 19:00 KST (= 10:00 UTC)
+    - cron: '0 8 * * *'  # 매일 17:00 KST (= 08:00 UTC). 자정 버퍼 확보용으로 19시→17시 앞당김 (스크립트 SCHEDULED_HOUR_KST와 일치)
   workflow_dispatch:          # 수동 실행 가능
 
 jobs:
