@@ -567,7 +567,7 @@ function StartScreen({ best, bestLabel, onStart, onClose, onDebugIntro, onMaster
           </div>
         )}
         {/* 최고 점수 카드 top323 — 항상 표시(기록 없으면 0 + '도전!' 칩) */}
-          <Reveal i={1} style={{ position: 'absolute', left: 24, right: 24, top: 323 }}>
+          <Reveal i={1} style={{ position: 'absolute', left: 24, right: 24, top: 300 }}>
           <div style={{ height: 90, background: '#fff', borderRadius: 22, boxShadow: '0px 6px 16px rgba(43,39,48,0.06)', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
             <div style={{ width: 46, height: 46, borderRadius: 23, background: '#fff6e8', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <StarIcon size={21} weight="fill" color={TG.SUN} />
@@ -582,7 +582,7 @@ function StartScreen({ best, bestLabel, onStart, onClose, onDebugIntro, onMaster
           </div>
           </Reveal>
         {/* 성조 미리보기 칩 top431 */}
-        <Reveal i={2} style={{ position: 'absolute', left: 24, right: 24, top: 431 }}>
+        <Reveal i={2} style={{ position: 'absolute', left: 24, right: 24, top: 408 }}>
         <div style={{ height: 62, display: 'flex', gap: 10, alignItems: 'center', justifyContent: 'center' }}>
           {TONES.map((t, idx) => (
             // 칩마다 위상차(-idx*0.2s)를 줘 좌→우로 물결치듯 둥둥
@@ -595,11 +595,11 @@ function StartScreen({ best, bestLabel, onStart, onClose, onDebugIntro, onMaster
         </Reveal>
         {/* 판다 코치 말풍선 — 칩 하단(493)과 시작하기 CTA(상단 150) 사이 가용공간에 가두고 세로 중앙 정렬.
             top 고정이면 짧은 화면서 CTA에 가리고, bottom 고정이면 짧은 화면서 위쪽 칩과 겹침 → top·bottom 동시 지정 + flex center로 양쪽 모두 회피. */}
-        <Reveal i={3} style={{ position: 'absolute', left: 24, right: 24, top: 493, bottom: 'calc(170px + env(safe-area-inset-bottom))', display: 'flex', alignItems: 'center' }}>
+        <Reveal i={3} style={{ position: 'absolute', left: 24, right: 24, top: 470, bottom: 'calc(150px + env(safe-area-inset-bottom))', display: 'flex', alignItems: 'center' }}>
           <CoachBubble text="오늘도 성조 찾으러 가볼까요?" />
         </Reveal>
-        {/* 시작하기 메인 CTA (하단 고정·풀폭) — 최하단 보조쌍 위 gap14 (보조쌍 30 + 간격 60) */}
-        <Reveal i={4} style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(90px + env(safe-area-inset-bottom))' }}>
+        {/* 시작하기 메인 CTA (하단 고정·풀폭) — 최하단 보조쌍 위 */}
+        <Reveal i={4} style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(80px + env(safe-area-inset-bottom))' }}>
         <button className="tg-press" onClick={() => { playSfx('button'); onStart(); }} style={{
           width: '100%', height: 60, borderRadius: 20, border: 'none', cursor: 'pointer',
           background: TG.CORAL_GRAD, boxShadow: '0px 10px 20px rgba(242,72,76,0.32)',
@@ -609,8 +609,8 @@ function StartScreen({ best, bestLabel, onStart, onClose, onDebugIntro, onMaster
           <PlayIcon size={14} weight="fill" color="#fff" />
         </button>
         </Reveal>
-        {/* 보조 버튼 한 쌍 (하단·표준 70px) — 놀러가기 | 단어 숙련도 */}
-        <Reveal i={5} style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(30px + env(safe-area-inset-bottom))' }}>
+        {/* 보조 버튼 한 쌍 (하단) — 놀러가기 | 단어 숙련도 */}
+        <Reveal i={5} style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(20px + env(safe-area-inset-bottom))' }}>
         <div style={{ display: 'flex', gap: 10 }}>
           <button className="tg-press" onClick={() => setPlayOpen(true)} style={{
             flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '13px 0', borderRadius: 16,
@@ -891,21 +891,21 @@ function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, onRetry
   const delta = score - previousBest;
   return (
     <>
-      {/* 신기록 배지 top48 (중앙) */}
+      {/* 신기록 배지 (중앙) */}
       {isNewBest && (
-        <Reveal i={0} style={{ position: 'absolute', top: 48, left: '50%', transform: 'translateX(-50%)' }}>
+        <Reveal i={0} style={{ position: 'absolute', top: 36, left: '50%', transform: 'translateX(-50%)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 16, background: 'linear-gradient(90deg, #ffd24d, #ff9f40)', boxShadow: '0px 6px 14px rgba(255,159,64,0.28)' }}>
           <TrophyIcon size={13} weight="fill" color="#fff" />
           <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 15, color: '#fff', whiteSpace: 'nowrap' }}>신기록 달성!</span>
         </div>
         </Reveal>
       )}
-      {/* 축하 판다 top83, 175×175 (가로 중앙) */}
-      <Reveal i={1} style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', top: 83 }}>
-        <img src={pandaSrc} alt="" width={175} height={175} style={{ display: 'block', objectFit: 'contain' }} />
+      {/* 축하 판다 150×150 (가로 중앙) */}
+      <Reveal i={1} style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', top: 64 }}>
+        <img src={pandaSrc} alt="" width={150} height={150} style={{ display: 'block', objectFit: 'contain' }} />
       </Reveal>
-      {/* 점수 top232 */}
-      <Reveal i={2} style={{ position: 'absolute', left: 24, right: 24, top: 232 }}>
+      {/* 점수 */}
+      <Reveal i={2} style={{ position: 'absolute', left: 24, right: 24, top: 196 }}>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
         <span style={{ fontFamily: FONT_NUM, fontWeight: 800, fontSize: 60, color: '#f2484c', lineHeight: 'normal', whiteSpace: 'nowrap' }}>{animScore.toLocaleString()}</span>
         {previousBest > 0 && (
@@ -920,9 +920,9 @@ function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, onRetry
         )}
       </div>
       </Reveal>
-      {/* 통계 2카드 top369, h140 */}
-      <Reveal i={3} style={{ position: 'absolute', left: 24, right: 24, top: 369 }}>
-      <div style={{ height: 140, display: 'flex', gap: 12, alignItems: 'stretch' }}>
+      {/* 통계 2카드 */}
+      <Reveal i={3} style={{ position: 'absolute', left: 24, right: 24, top: 312 }}>
+      <div style={{ height: 128, display: 'flex', gap: 12, alignItems: 'stretch' }}>
         {[
           { icon: <FlameIcon size={17} color={TG.CORAL_DK} />, ibg: 'rgba(255,107,107,0.14)', val: maxCombo, unit: '콤보', label: '최고 콤보' },
           { icon: <LightningIcon size={17} weight="fill" color="#4D8DFF" />, ibg: 'rgba(77,141,255,0.14)', val: avgSec, unit: avgSec === '-' ? '' : '초', label: '평균 반응속도' },
@@ -938,12 +938,12 @@ function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, onRetry
         ))}
       </div>
       </Reveal>
-      {/* 코치 — 통계카드 하단(509)과 다시 도전 CTA(상단 162) 사이 가용공간에 가두고 세로 중앙(짧은 화면서 통계·CTA 양쪽과 겹침 방지) */}
-      <Reveal i={4} style={{ position: 'absolute', left: 24, right: 24, top: 521, bottom: 'calc(182px + env(safe-area-inset-bottom))', display: 'flex', alignItems: 'center' }}>
+      {/* 코치 — 통계카드 하단(440)과 다시 도전 CTA 사이 가용공간에 가두고 세로 중앙(짧은 화면·사파리 툴바서도 통계·CTA 양쪽과 겹침 방지) */}
+      <Reveal i={4} style={{ position: 'absolute', left: 24, right: 24, top: 452, bottom: 'calc(150px + env(safe-area-inset-bottom))', display: 'flex', alignItems: 'center' }}>
         <CoachBubble text="다시 도전해서 신기록을 깨볼까요?" />
       </Reveal>
-      {/* 다시 도전 (하단 고정) — 최하단 '난이도 바꾸기' 30 + 간격 70 */}
-      <Reveal i={5} style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(100px + env(safe-area-inset-bottom))' }}>
+      {/* 다시 도전 (하단 고정) — 최하단 '난이도 바꾸기' 위 */}
+      <Reveal i={5} style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(80px + env(safe-area-inset-bottom))' }}>
       <button onClick={() => { playSfx('button'); onRetry(); }} className="tg-press" style={{
         width: '100%', height: 62, borderRadius: 20, border: 'none', cursor: 'pointer',
         background: TG.CORAL_GRAD, boxShadow: '0px 10px 20px rgba(242,72,76,0.32)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, ...TOUCH_OPT,
@@ -953,7 +953,7 @@ function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, onRetry
       </button>
       </Reveal>
       {/* 난이도 바꾸기 (하단 고정) */}
-      <Reveal i={6} style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(30px + env(safe-area-inset-bottom))' }}>
+      <Reveal i={6} style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(18px + env(safe-area-inset-bottom))' }}>
       <button onClick={() => { playSfx('button'); onChangeDiff(); }} className="tg-press" style={{
         width: '100%', height: 54, borderRadius: 18, background: '#fff', border: '1.5px solid #ebe5de', cursor: 'pointer',
         display: 'flex', alignItems: 'center', justifyContent: 'center', ...TOUCH_OPT,
