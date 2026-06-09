@@ -7,7 +7,7 @@
 // Phase 2(GAME_USERS·휴대폰 OTP 회원·서버 계정·기기간 동기화)는 여기에 'member' provider만 추가하면 됨.
 // 참조 메모리: game_account_standalone.md
 import { loadBest, saveBest } from './tgTokens.js';
-import { loadWordStats, saveWordStats, mergeStats } from './tgWordStats.js';
+import { loadWordStats, saveWordStats, mergeStats, isMastered } from './tgWordStats.js';
 import { fetchAllGameBests, submitGameResult, fetchGameMe, saveGameMe } from '../api/gameApi.js';
 
 const GUEST_ID_KEY = 'tg_guest_id';
@@ -133,10 +133,32 @@ export function isMember() { const m = getMemberSession(); return !!(m && m.toke
 
 // 로컬 게임데이터 수집(회원 서버 동기화용 JSON 블롭): 베스트 4키 + 단어 숙련도.
 const ALL_BEST_KEYS = [...DIFF_KEYS, ENDLESS_KEY];
+// 서버 /game/me는 Notion rich_text(2000자)라 1900자 한도. 베스트 등 다른 키 여유를 빼고 단어 통계 예산.
+const WORDS_BUDGET = 1500;
+
+// 단어 통계가 무한 성장하면 직렬화가 1900자를 넘어 서버 저장이 거부된다(동기화 누락).
+// → 예산 초과 시 학습상 중요한 순서로 추려 한도 내로 트림: ①미마스터(복습 대상) 우선 보존 ②시도 많은 순.
+//   (마스터된 단어 일부가 빠지면 '마스터 수'가 살짝 줄 수 있으나, 약점 단어 보존이 학습엔 더 중요)
+function trimWords(words) {
+  const entries = Object.entries(words || {});
+  if (entries.length === 0 || JSON.stringify(words).length <= WORDS_BUDGET) return words || {};
+  entries.sort((a, b) => {
+    const am = isMastered(a[1]) ? 1 : 0, bm = isMastered(b[1]) ? 1 : 0;
+    if (am !== bm) return am - bm;                      // 미마스터(0) 먼저
+    return (b[1]?.[0] || 0) - (a[1]?.[0] || 0);         // 시도(attempts) 많은 순
+  });
+  const out = {};
+  for (const [hz, e] of entries) {
+    out[hz] = e;
+    if (JSON.stringify(out).length > WORDS_BUDGET) { delete out[hz]; break; }
+  }
+  return out;
+}
+
 export function collectLocalGameData(id) {
   const best = {};
   for (const k of ALL_BEST_KEYS) { const b = loadBest(id, k); if (b) best[k] = b; }
-  return { best, words: loadWordStats(id) };
+  return { best, words: trimWords(loadWordStats(id)) };
 }
 // 서버/게스트 게임데이터를 로컬에 머지(베스트=점수 큰 쪽, 숙련도=mergeStats).
 function applyGameDataToLocal(id, data) {
