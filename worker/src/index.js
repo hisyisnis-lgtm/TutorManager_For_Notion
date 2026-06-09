@@ -2246,7 +2246,11 @@ async function handleGameRoutes(request, env, corsHeaders, url) {
     // PUT — 게임데이터 갱신(클라이언트 병합 후 최종본 덮어쓰기)
     const body = await request.json().catch(() => null);
     if (body?.gameData == null || typeof body.gameData !== 'object') return errRes(corsHeaders, 400, '게임데이터가 필요합니다.');
-    const json = JSON.stringify(body.gameData).slice(0, 1900); // Notion rich_text 2000자 안전
+    // ⚠️ slice로 자르면 JSON이 중간에서 끊겨 깨진 문자열이 저장되고, 다음 읽기 때 parseGameUser의
+    //    JSON.parse가 실패해 게임데이터가 통째로 {}로 유실된다. → 자르지 말고 한도 초과 시 이번 저장만 거부
+    //    (이전 유효 데이터 보존). 정상 클라이언트는 collectLocalGameData가 한도 내로 트림해 보낸다.
+    const json = JSON.stringify(body.gameData); // Notion rich_text 2000자 한도
+    if (json.length > 1900) return errRes(corsHeaders, 413, '게임데이터가 너무 큽니다.');
     await n('PATCH', `/pages/${claim.sub}`, {
       properties: {
         '게임데이터': { rich_text: [{ text: { content: json } }] },
