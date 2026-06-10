@@ -23,20 +23,6 @@ async function bookingFetch(method, path, body, { auth = false } = {}) {
   return data;
 }
 
-/** 예약 가능 슬롯 조회 (공개) */
-export async function fetchAvailableSlots(from, to) {
-  const params = new URLSearchParams();
-  if (from) params.set('from', from);
-  if (to) params.set('to', to);
-  return bookingFetch('GET', `/booking/slots?${params}`);
-}
-
-/** 날짜별 예약 가능 시간 슬롯 조회 (공개, 30분 단위) → { available, passable } */
-export async function fetchTimeSlots(date) {
-  const data = await bookingFetch('GET', `/booking/time-slots?date=${date}`);
-  return Array.isArray(data) ? { available: data, passable: data } : data;
-}
-
 /** 강사용: 날짜별 예약 가능 시간 슬롯 조회 (날짜 제한 없음, excludeId로 자기 자신 제외) → { available, passable } */
 export async function fetchTimeSlotsForTeacher(date, excludeId = '') {
   const params = new URLSearchParams({ date, skipMinDate: '1' });
@@ -50,31 +36,10 @@ export async function fetchStudentByToken(token) {
   return bookingFetch('GET', `/booking/student/${encodeURIComponent(token)}`);
 }
 
-/** 예약 신청 (공개) → 즉시 확정 */
-export async function reserveSlot({ studentToken, date, startTime, endTime, location }) {
-  // Worker는 수업 장소를 'mode' 필드로 수신 (PWA 내부 명칭 'location'을 변환)
-  return bookingFetch('POST', '/booking/reserve', { studentToken, date, startTime, endTime, mode: location });
-}
-
 /** 학생 본인 수업 목록 조회 - CLASS_DB 기반 (공개) */
 export async function fetchMyClasses(studentToken, month) {
   const params = month ? `?month=${encodeURIComponent(month)}` : '';
   return bookingFetch('GET', `/booking/my-classes/${encodeURIComponent(studentToken)}${params}`);
-}
-
-/** 학생 본인 수업 취소 - CLASS_DB ID 기반 (공개, 당일 취소 불가) */
-export async function cancelMyClass(classId, studentToken) {
-  return bookingFetch('DELETE', `/booking/my-class/${classId}`, { token: studentToken });
-}
-
-/** 학생 본인 취소 수업 복구 (공개, 과거 수업 불가) */
-export async function restoreMyClass(classId, studentToken) {
-  return bookingFetch('POST', `/booking/my-class/${classId}/restore`, { token: studentToken });
-}
-
-/** 예약 상태 조회 (공개, 토큰 기반) */
-export async function fetchBookingStatus(token) {
-  return bookingFetch('GET', `/booking/status/${encodeURIComponent(token)}`);
 }
 
 /** 예약 불가 날짜 목록 조회 (강사 인증 필요) */

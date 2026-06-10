@@ -230,7 +230,7 @@ export default function StudentFormPage() {
               재생성
             </Button>
           </div>
-          <p className="text-xs text-gray-500 mt-1">학생이 /book/[코드] 로 예약 가능 · 직접 입력도 가능</p>
+          <p className="text-xs text-gray-500 mt-1">학생 개인 페이지(/personal/[코드]) 접속용 코드 · 직접 입력도 가능</p>
         </div>
 
         <Button

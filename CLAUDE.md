@@ -76,6 +76,7 @@ antd ^6.3.3 기준 — deprecated API 절대 사용 금지:
 | 슬래시 커맨드 | 설명 |
 |---|---|
 | `/make-interfaces-feel-better` | UI 폴리싱 원칙 적용 — 애니메이션·그림자·타이포·히트영역 등 인터페이스 품질 개선 |
+| `/ux-heuristic-audit` | 유저 테스트 대체 UX 휴리스틱 봇 — JTBD 페르소나가 PWA를 워크스루하며 이탈 지점·H1~H6 휴리스틱 위반을 채점. (디자인 컴플라이언스는 `/pwa-visual-qa` 담당) |
 
 스킬 파일 위치: `.agents/skills/make-interfaces-feel-better/`
 

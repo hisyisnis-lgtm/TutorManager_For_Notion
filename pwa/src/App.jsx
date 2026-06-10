@@ -22,9 +22,6 @@ import PendingClassesPage from './pages/PendingClassesPage.jsx';
 import TomorrowPrepPage from './pages/TomorrowPrepPage.jsx';
 import SettingsPage from './pages/SettingsPage.jsx';
 import NotificationsPage from './pages/NotificationsPage.jsx';
-import BookEntryPage from './pages/BookEntryPage.jsx';
-import BookingPage from './pages/BookingPage.jsx';
-import BookingStatusPage from './pages/BookingStatusPage.jsx';
 import PersonalEntryPage from './pages/PersonalEntryPage.jsx';
 import PersonalPage from './pages/PersonalPage.jsx';
 import PersonalHomeworkDetailPage from './pages/PersonalHomeworkDetailPage.jsx';
@@ -272,9 +269,8 @@ export default function App() {
             <Route path="/intro" element={<LandingPage />} />
             <Route path="/pricing" element={<PricingPage />} />
             <Route path="/consent" element={<ConsentPage />} />
-            <Route path="/book" element={<BookEntryPage />} />
-            <Route path="/book/status/:token" element={<BookingStatusPage />} />
-            <Route path="/book/:studentToken" element={<BookingPage />} />
+            {/* 학생 자가예약 화면 폐기 (2026-06-10) — 옛 /book* 링크는 인트로로 보냄 */}
+            <Route path="/book/*" element={<Navigate to="/intro" replace />} />
             <Route path="/personal" element={<PersonalEntryPage />} />
             <Route path="/personal/:studentToken" element={<PersonalPage />} />
             <Route path="/personal/:studentToken/homework/:hwId" element={<PersonalHomeworkDetailPage />} />

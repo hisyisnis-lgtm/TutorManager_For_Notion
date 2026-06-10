@@ -145,7 +145,7 @@ function ConsultContent() {
       <Form layout="vertical" requiredMark={false}>
         <Form.Item label={<span>이름 <span style={{ color: PRIMARY }}>*</span></span>}>
           <Input
-            value={name} onChange={e => setName(e.target.value)}
+            value={name} onChange={e => { setName(e.target.value); if (error) setError(''); }}
             placeholder="홍길동" size="large" autoComplete="name"
             style={{ borderRadius: 12 }}
           />
@@ -154,7 +154,7 @@ function ConsultContent() {
         <Form.Item label={<span>전화번호 <span style={{ color: PRIMARY }}>*</span></span>}>
           <Input
             type="tel" value={phone}
-            onChange={e => setPhone(formatPhone(e.target.value))}
+            onChange={e => { setPhone(formatPhone(e.target.value)); if (error) setError(''); }}
             placeholder="010-0000-0000" size="large"
             inputMode="numeric" autoComplete="tel"
             style={{ borderRadius: 12 }}
