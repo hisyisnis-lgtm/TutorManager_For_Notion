@@ -75,51 +75,13 @@ export async function submitGameResult(studentToken, gameKey, result) {
   );
 }
 
-// 단어 풀 localStorage 캐시 — Worker 엣지 캐시(1시간)와 별개로
-// 오프라인/네트워크 실패 시 fallback 용도. 24시간 TTL.
-const TONE_WORDS_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
-function toneWordsCacheKey(difficulty) { return `tone_words_${difficulty}`; }
-
-function readToneWordsCache(difficulty) {
-  try {
-    const raw = localStorage.getItem(toneWordsCacheKey(difficulty));
-    if (!raw) return null;
-    const { ts, words } = JSON.parse(raw);
-    if (!Array.isArray(words) || words.length === 0) return null;
-    if (Date.now() - ts > TONE_WORDS_CACHE_TTL_MS) return null;
-    return words;
-  } catch { return null; }
-}
-
-function writeToneWordsCache(difficulty, words) {
-  try {
-    localStorage.setItem(toneWordsCacheKey(difficulty), JSON.stringify({ ts: Date.now(), words }));
-  } catch { /* quota 초과 등 무시 */ }
-}
-
 /**
- * 성조 게임 단어 풀 조회.
- * Notion DB의 활성 단어를 난이도별로 가져온다. 네트워크 실패 시 localStorage fallback.
+ * 성조 게임 단어 풀 조회 — CSV(data/tone-words.csv)에서 빌드 변환된 로컬 데이터를 반환.
+ * 단어는 모든 유저 동일·소량이라 클라이언트 번들에 포함 → 네트워크/워커/Notion 불필요.
+ * async 시그니처는 호출부(await fetchToneWords) 호환을 위해 유지.
  * @param {'easy'|'normal'|'hard'} difficulty
  * @returns {Promise<Array<{hanzi: string, pinyin: string[], tones: number[], meaning: string}>>}
  */
 export async function fetchToneWords(difficulty) {
-  try {
-    const words = await gameFetch('GET', `/game/tone-words/${encodeURIComponent(difficulty)}`);
-    if (Array.isArray(words) && words.length > 0) {
-      writeToneWordsCache(difficulty, words);
-      return words;
-    }
-    // 서버는 응답했으나 빈 배열인 경우 — 캐시 → 시드 폴백
-    const cached = readToneWordsCache(difficulty);
-    if (cached) return cached;
-    return SEED_WORDS[difficulty] ?? [];
-  } catch (e) {
-    // 네트워크/라우트 실패 — 캐시 → 시드 폴백 (워커 미배포/오프라인에서도 플레이 보장)
-    const cached = readToneWordsCache(difficulty);
-    if (cached) return cached;
-    const seed = SEED_WORDS[difficulty];
-    if (seed && seed.length > 0) return seed;
-    throw e;
-  }
+  return SEED_WORDS[difficulty] ?? [];
 }

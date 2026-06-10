@@ -4,7 +4,9 @@
   "version": "2.12.5",
   "type": "module",
   "scripts": {
+    "predev": "node ../scripts/tone-words-build.mjs",
     "dev": "vite",
+    "prebuild": "node ../scripts/tone-words-build.mjs",
     "build": "vite build",
     "preview": "vite preview",
     "generate-icons": "pwa-assets-generator --preset minimal-2023 public/symbol-red.png"
