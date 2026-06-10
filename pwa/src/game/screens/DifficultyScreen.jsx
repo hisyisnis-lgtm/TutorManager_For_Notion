@@ -12,7 +12,7 @@ const DIFF_META = {
   hard:   { Icon: CrownIcon,  stars: 3 },
 };
 
-export function DifficultyScreen({ selected, studentToken, onSelect, onStart, onBack, onLocked }) {
+export function DifficultyScreen({ selected, studentToken, onSelect, onStart, onBack, onLocked, forPractice = false }) {
   return (
     <>
       {/* 헤더 top20 */}
@@ -21,12 +21,12 @@ export function DifficultyScreen({ selected, studentToken, onSelect, onStart, on
         <button onClick={onBack} aria-label="뒤로" className="tg-press" style={{ width: 40, height: 40, borderRadius: 20, background: '#fff', boxShadow: '0px 3px 5px rgba(43,39,48,0.08)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, ...TOUCH_OPT }}>
           <CaretLeftIcon size={20} weight="bold" color={TG.INK} />
         </button>
-        <span style={{ fontFamily: FONT_TITLE, fontSize: 22, color: '#2b2730' }}>난이도 선택</span>
+        <span style={{ fontFamily: FONT_TITLE, fontSize: 22, color: '#2b2730' }}>{forPractice ? '연습할 난이도' : '난이도 선택'}</span>
       </div>
       </Reveal>
       {/* 판다 다이얼로그 top120 */}
       <Reveal i={1} style={{ position: 'absolute', left: 24, right: 24, top: 120 }}>
-        <CoachBubble text="실력에 맞는 단계를 골라보세요" />
+        <CoachBubble text={forPractice ? '어떤 단어로 공부할까요?' : '실력에 맞는 단계를 골라보세요'} />
       </Reveal>
       {/* 카드 top217 */}
       <div style={{ position: 'absolute', left: 24, right: 24, top: 217, display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -34,7 +34,7 @@ export function DifficultyScreen({ selected, studentToken, onSelect, onStart, on
           const meta = DIFF_META[d.id];
           const c = DIFF_COLORS[d.id];
           const Icon = meta.Icon;
-          const unlocked = isDifficultyUnlocked(studentToken, d.id);
+          const unlocked = forPractice || isDifficultyUnlocked(studentToken, d.id);
           const best = diffBestScore(studentToken, d.id);
           const on = unlocked && selected.id === d.id;
           return (
@@ -81,7 +81,7 @@ export function DifficultyScreen({ selected, studentToken, onSelect, onStart, on
         background: TG.CORAL_GRAD, boxShadow: '0px 10px 20px rgba(242,72,76,0.32)',
         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, ...TOUCH_OPT,
       }}>
-        <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 19, color: '#fff' }}>{selected.label}으로 시작</span>
+        <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 19, color: '#fff' }}>{forPractice ? `${selected.label} 연습 시작` : `${selected.label}으로 시작`}</span>
         <PlayIcon size={13} weight="fill" color="#fff" />
       </button>
       </Reveal>

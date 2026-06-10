@@ -5,7 +5,7 @@ import { useCountUp, FlameIcon } from '../tgWidgets.jsx';
 import { play as playSfx } from '../tgSfx.js';
 import { Reveal, CoachBubble } from './shared.jsx';
 
-export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, onRetry, onChangeDiff, retryLabel = '다시 도전', changeLabel = '난이도 바꾸기' }) {
+export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, onRetry, onChangeDiff, retryLabel = '다시 도전', changeLabel = '난이도 바꾸기', practice = false }) {
   const animScore = useCountUp(score, 1100);
   const avgSec = avgMs > 0 ? (avgMs / 1000).toFixed(1) : '-';
   const pandaSrc = pickCelebratePanda(isNewBest, maxCombo);
@@ -61,7 +61,7 @@ export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, 
       </Reveal>
       {/* 코치 — 통계카드 하단(440)과 다시 도전 CTA 사이 가용공간에 가두고 세로 중앙(짧은 화면·사파리 툴바서도 통계·CTA 양쪽과 겹침 방지) */}
       <Reveal i={4} style={{ position: 'absolute', left: 24, right: 24, top: 452, bottom: 'calc(150px + env(safe-area-inset-bottom))', display: 'flex', alignItems: 'center' }}>
-        <CoachBubble text="다시 도전해서 신기록을 깨볼까요?" />
+        <CoachBubble text={practice ? '잘했어요! 또 연습해볼까요?' : '다시 도전해서 신기록을 깨볼까요?'} />
       </Reveal>
       {/* 다시 도전 (하단 고정) — 최하단 '난이도 바꾸기' 위 */}
       <Reveal i={5} style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(80px + env(safe-area-inset-bottom))' }}>
