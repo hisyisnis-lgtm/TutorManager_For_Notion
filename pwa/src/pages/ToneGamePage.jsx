@@ -16,7 +16,7 @@ import { ROUND_LENGTH, DIFFICULTIES } from '../constants/toneGameWords.js';
 import { TG, ensureGameFonts, haptic, shuffle, getTimeLimitForCombo, loadBest, saveBest } from '../game/tgTokens.js';
 import {
   loadWordStats, saveWordStats, recordWordResult, subsetForPool, mergeStats,
-  buildReviewList, masteredCount,
+  buildReviewList, masteredCount, buildRoundWords,
 } from '../game/tgWordStats.js';
 import { initTts, speakWord } from '../game/tgTts.js';
 import { initSfx, play as playSfx } from '../game/tgSfx.js';
@@ -336,7 +336,7 @@ export default function ToneGamePage() {
       return;
     }
     setReviewMode(false); setEndlessMode(false); setPracticeMode(false);
-    setWords(shuffle(pool).slice(0, ROUND_LENGTH));
+    setWords(buildRoundWords(pool, wordStatsRef.current, ROUND_LENGTH)); // 교육적 가중 추첨(약점 우선·은은하게)
     resetRunState();
   };
 
@@ -352,7 +352,7 @@ export default function ToneGamePage() {
       return;
     }
     setPracticeMode(true); setReviewMode(false); setEndlessMode(false);
-    setWords(shuffle(pool).slice(0, ROUND_LENGTH));
+    setWords(buildRoundWords(pool, wordStatsRef.current, ROUND_LENGTH)); // 교육적 가중 추첨(약점 우선·은은하게)
     resetRunState();
   };
 
