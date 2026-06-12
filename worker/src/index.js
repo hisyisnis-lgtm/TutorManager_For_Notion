@@ -11,6 +11,8 @@ import {
   MyClassesQuerySchema,
   GameKeySchema,
   GameResultSchema,
+  StudentAuthRequestSchema,
+  StudentAuthVerifySchema,
 } from '../lib/schemas.js';
 import { validateBody, validateParams, validatePathToken } from '../lib/validation.js';
 
@@ -461,6 +463,34 @@ async function clearGameOtp(phone) {
   try { await caches.default.delete(otpCacheKey(phone)); } catch { /* noop */ }
 }
 
+// ===== 학생앱 휴대폰 인증(step-up) — OTP 저장 + 학생 조회 =====
+// 게임 OTP(전화번호 키)와 별도 네임스페이스(예약코드 키)로 분리. 강사 우회코드도 같은 store에 더 긴 TTL로 저장.
+function studentOtpKey(token) { return new Request(`https://studentotp.local/${encodeURIComponent(token)}`); }
+async function putStudentOtp(token, code, ttl = 180) {
+  try { await caches.default.put(studentOtpKey(token), new Response(code, { headers: { 'Cache-Control': `public, max-age=${ttl}` } })); } catch { /* noop */ }
+}
+async function getStudentOtp(token) {
+  try { const h = await caches.default.match(studentOtpKey(token)); return h ? (await h.text()) : null; } catch { return null; }
+}
+async function clearStudentOtp(token) {
+  try { await caches.default.delete(studentOtpKey(token)); } catch { /* noop */ }
+}
+
+// 예약 코드로 학생 조회 → 인증에 필요한 최소 정보(전화번호)만. 없으면 null.
+async function findStudentForAuth(n, token) {
+  const q = await n('POST', `/databases/${STUDENT_DB_ID}/query`, {
+    filter: { property: '예약 코드', rich_text: { equals: token } }, page_size: 1,
+  });
+  const page = q.results?.[0];
+  if (!page) return null;
+  const p = page.properties || {};
+  return { id: page.id, phone: p['전화번호']?.phone_number || null };
+}
+
+// 학생 세션 JWT — 게임 토큰과 동일 HMAC 구조 재사용, sub에 네임스페이스(`personal:<예약코드>`)를 박아
+// 게임 JWT가 학생 세션으로 오인되지 않게 한다. createGameToken/verifyGameToken을 그대로 활용.
+function studentSessionSub(token) { return `personal:${token}`; }
+
 // 솔라피 일반 SMS 발송 (현재 미사용 — 게임 OTP는 알림톡 채널명 발송으로 발신번호 노출 회피).
 // 향후 발신전용번호 SMS fallback 등이 필요하면 재사용. 발신번호 env.SOLAPI_SENDER 필요(사전등록). 미설정 시 no-op.
 // eslint-disable-next-line no-unused-vars
@@ -798,6 +828,83 @@ async function handleConsultRequest(request, env, corsHeaders) {
     status: 200,
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
+}
+
+// ===== 학생앱 휴대폰 인증(step-up) 라우트 =====
+// 유출된 학생 링크를 받은 제3자가 새 기기에서 접근 못 하게: 새 기기는 학생 등록 휴대폰 OTP를 요구.
+// 정상 학생은 기기당 1회 인증 후 세션(JWT)으로 무마찰. 아이콘은 URL 예약코드로 동작(불변).
+// ⚠️ 1단계(현재): 발급 엔드포인트만 추가 — 기존 데이터 라우트는 미변경(soft-enforce는 2단계).
+const STUDENT_SESSION_TTL = 180 * 24 * 60 * 60; // 180일
+
+async function handleStudentAuthRoutes(request, env, corsHeaders, url) {
+  if (request.method !== 'POST') return errRes(corsHeaders, 405, 'Method Not Allowed');
+  if (!env.JWT_SECRET) {
+    console.error('[학생인증] JWT_SECRET 미설정 — 인증 거부.');
+    return errRes(corsHeaders, 500, '서버 설정 오류입니다.');
+  }
+  const n = makeNotion(env.NOTION_TOKEN);
+  const ip = clientIp(request);
+
+  // POST /personal/auth/request-otp — 예약코드로 학생 조회 → 등록 휴대폰으로 OTP 발송
+  if (url.pathname === '/personal/auth/request-otp') {
+    const body = await request.json().catch(() => null);
+    const v = validateBody(StudentAuthRequestSchema, body, corsHeaders);
+    if (!v.ok) return v.response;
+    const { token } = v.data;
+    // SMS 폭탄 방지 — IP·예약코드별 제한
+    if (!(await rateLimitCheck(`pauth:otp:ip:${ip}`, 8, 600)) || !(await rateLimitCheck(`pauth:otp:tk:${token}`, 5, 600))) {
+      return errRes(corsHeaders, 429, '잠시 후 다시 시도해주세요.');
+    }
+    const student = await findStudentForAuth(n, token);
+    if (!student) return errRes(corsHeaders, 404, '학생 코드를 확인해주세요.');
+    if (!student.phone) {
+      // 전화 미등록 → 강사 우회코드 경로로 안내 (락아웃 방지)
+      return new Response(JSON.stringify({ ok: false, reason: 'no_phone' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+    const code = String(100000 + (crypto.getRandomValues(new Uint32Array(1))[0] % 900000)); // 6자리 (CSPRNG)
+    await putStudentOtp(token, code, 180);
+    // TODO: 학생 전용 알림톡 템플릿 승인 후 교체. 우선 게임 OTP 템플릿 재사용(Taste 결정).
+    await sendKakaoAlert(env, { to: student.phone, templateId: env.KAKAO_TPL_GAME_OTP, variables: { '#{인증번호}': code } });
+    return new Response(JSON.stringify({ ok: true, phoneTail: student.phone.replace(/\D/g, '').slice(-4) }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+  }
+
+  // POST /personal/auth/verify-otp — 인증번호 검증 → 학생 세션 JWT 발급
+  if (url.pathname === '/personal/auth/verify-otp') {
+    const body = await request.json().catch(() => null);
+    const v = validateBody(StudentAuthVerifySchema, body, corsHeaders);
+    if (!v.ok) return v.response;
+    const { token, code } = v.data;
+    // 무차별 대입 방지 — 예약코드·IP별 시도 상한 (6자리 추측 차단)
+    if (!(await rateLimitCheck(`pauth:vf:tk:${token}`, 5, 180)) || !(await rateLimitCheck(`pauth:vf:ip:${ip}`, 20, 180))) {
+      return errRes(corsHeaders, 429, '잠시 후 다시 시도해주세요.');
+    }
+    const saved = await getStudentOtp(token);
+    if (!saved || saved !== code) return errRes(corsHeaders, 401, '인증번호가 일치하지 않습니다.');
+    await clearStudentOtp(token);
+    const session = await createGameToken(env.JWT_SECRET, studentSessionSub(token), STUDENT_SESSION_TTL);
+    return new Response(JSON.stringify({ ok: true, session }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+  }
+
+  // POST /personal/auth/teacher-grant — 강사 JWT 인증 → 전화 미등록 학생용 1회 우회코드 발급
+  if (url.pathname === '/personal/auth/teacher-grant') {
+    const authHeader = request.headers.get('Authorization') || '';
+    const jwt = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+    if (!jwt || !(await verifyToken(jwt, env.JWT_SECRET))) {
+      return errRes(corsHeaders, 401, '강사 인증이 필요합니다.');
+    }
+    if (!(await rateLimitCheck(`pauth:grant:ip:${ip}`, 30, 60))) {
+      return errRes(corsHeaders, 429, '잠시 후 다시 시도해주세요.');
+    }
+    const body = await request.json().catch(() => null);
+    const v = validateBody(StudentAuthRequestSchema, body, corsHeaders);
+    if (!v.ok) return v.response;
+    const { token } = v.data;
+    const code = String(100000 + (crypto.getRandomValues(new Uint32Array(1))[0] % 900000));
+    await putStudentOtp(token, code, 3600); // 1시간 유효 — 강사가 학생에게 직접 전달
+    return new Response(JSON.stringify({ ok: true, code }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+  }
+
+  return errRes(corsHeaders, 404, 'Not Found');
 }
 
 // ===== 예약 시스템 라우트 처리 =====
@@ -2496,6 +2603,11 @@ async function handleFetch(request, env, ctx) {
     // 미니게임 베스트 라우트 (학생 토큰 기반 공개)
     if (url.pathname.startsWith('/game/')) {
       return handleGameRoutes(request, env, corsHeaders, url);
+    }
+
+    // 학생앱 휴대폰 인증(step-up) — request-otp/verify-otp는 공개, teacher-grant는 내부에서 강사 JWT 검증
+    if (url.pathname.startsWith('/personal/auth/')) {
+      return handleStudentAuthRoutes(request, env, corsHeaders, url);
     }
 
     // 무료상담 신청 (공개, 인증 불필요)

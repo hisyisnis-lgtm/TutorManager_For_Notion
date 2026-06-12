@@ -7,6 +7,8 @@ import {
   HomeworkSubmitSchema,
   MyClassesQuerySchema,
   GameResultSchema,
+  StudentAuthRequestSchema,
+  StudentAuthVerifySchema,
 } from './schemas.js';
 
 describe('StudentTokenSchema', () => {
@@ -22,6 +24,33 @@ describe('StudentTokenSchema', () => {
     expect(StudentTokenSchema.safeParse('ABCD1234EFGHI').success).toBe(false);
     expect(StudentTokenSchema.safeParse('ABCD-234EFGH').success).toBe(false);
     expect(StudentTokenSchema.safeParse('').success).toBe(false);
+  });
+});
+
+describe('StudentAuthRequestSchema', () => {
+  it('유효한 예약코드를 허용', () => {
+    expect(StudentAuthRequestSchema.safeParse({ token: 'ABCD1234EFGH' }).success).toBe(true);
+  });
+  it('잘못된 토큰·누락 거부', () => {
+    expect(StudentAuthRequestSchema.safeParse({ token: 'abc' }).success).toBe(false);
+    expect(StudentAuthRequestSchema.safeParse({}).success).toBe(false);
+  });
+  it('알 수 없는 필드는 제거(strip)', () => {
+    const r = StudentAuthRequestSchema.safeParse({ token: 'ABCD1234EFGH', evil: 1 });
+    expect(r.success).toBe(true);
+    expect(r.data.evil).toBeUndefined();
+  });
+});
+
+describe('StudentAuthVerifySchema', () => {
+  it('6자리 인증번호를 허용', () => {
+    expect(StudentAuthVerifySchema.safeParse({ token: 'ABCD1234EFGH', code: '123456' }).success).toBe(true);
+  });
+  it('6자리 아닌 코드·문자 거부', () => {
+    expect(StudentAuthVerifySchema.safeParse({ token: 'ABCD1234EFGH', code: '12345' }).success).toBe(false);
+    expect(StudentAuthVerifySchema.safeParse({ token: 'ABCD1234EFGH', code: '1234567' }).success).toBe(false);
+    expect(StudentAuthVerifySchema.safeParse({ token: 'ABCD1234EFGH', code: 'abcdef' }).success).toBe(false);
+    expect(StudentAuthVerifySchema.safeParse({ token: 'ABCD1234EFGH' }).success).toBe(false);
   });
 });
 

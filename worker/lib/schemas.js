@@ -51,6 +51,25 @@ export const ConsultSchema = z.object({
   message: z.string().max(500, '상담 내용은 500자 이내로 입력해주세요').nullish(),
 }).strip(); // 알 수 없는 필드는 조용히 제거
 
+// ===== 학생앱 휴대폰 인증(step-up) — /personal/auth/* =====
+
+/**
+ * POST /personal/auth/request-otp · /personal/auth/teacher-grant body.
+ * token = 학생 예약 코드. (서버가 이 코드로 학생·전화번호를 조회해 OTP 발송)
+ */
+export const StudentAuthRequestSchema = z.object({
+  token: StudentTokenSchema,
+}).strip();
+
+/**
+ * POST /personal/auth/verify-otp body.
+ * code = 6자리 인증번호 (휴대폰 OTP 또는 강사 우회코드).
+ */
+export const StudentAuthVerifySchema = z.object({
+  token: StudentTokenSchema,
+  code: z.string().regex(/^\d{6}$/, '인증번호는 6자리 숫자입니다'),
+}).strip();
+
 // ===== /homework/student/:token/:id/submit (학생 숙제 제출) =====
 
 export const HomeworkSubmitSchema = z.object({
