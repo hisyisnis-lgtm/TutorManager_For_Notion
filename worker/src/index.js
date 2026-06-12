@@ -491,6 +491,31 @@ async function findStudentForAuth(n, token) {
 // 게임 JWT가 학생 세션으로 오인되지 않게 한다. createGameToken/verifyGameToken을 그대로 활용.
 function studentSessionSub(token) { return `personal:${token}`; }
 
+// 학생 세션(JWT) 유효성 — Authorization: Bearer <session>의 sub가 해당 토큰과 일치하면 true.
+async function studentSessionValid(request, env, token) {
+  const auth = (request.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
+  if (!auth || !env.JWT_SECRET) return false;
+  const claim = await verifyGameToken(auth, env.JWT_SECRET);
+  return !!claim && claim.sub === studentSessionSub(token);
+}
+
+// 학생 데이터 라우트 세션 게이트.
+//  - 유효한 학생 세션 OR 강사 JWT(미리보기·공유) → 통과(null).
+//  - 무효 + 강제 ON(env.STUDENT_AUTH_ENFORCE==='1') → 401.
+//  - 무효 + 강제 OFF(기본 soft) → 통과하되 미세션 접근을 로그로 집계(hard 전환 전 관측용).
+// ⚠️ 현재 2단계: 강제 플래그 미설정(soft) → 동작 변화 없음. 3단계에서 플래그 ON.
+async function enforceStudentSession(request, env, corsHeaders, token, routeTag) {
+  if (await studentSessionValid(request, env, token)) return null;
+  // 강사 기기 우회 — 강사가 학생 페이지를 열면 강사 JWT를 보냄.
+  const auth = (request.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
+  if (auth && env.JWT_SECRET && await verifyToken(auth, env.JWT_SECRET)) return null;
+  if (env.STUDENT_AUTH_ENFORCE === '1') {
+    return errRes(corsHeaders, 401, '휴대폰 인증이 필요합니다. 다시 로그인해주세요.');
+  }
+  console.log(`[학생인증:soft] 미세션 접근 — ${routeTag}`);
+  return null;
+}
+
 // 솔라피 일반 SMS 발송 (현재 미사용 — 게임 OTP는 알림톡 채널명 발송으로 발신번호 노출 회피).
 // 향후 발신전용번호 SMS fallback 등이 필요하면 재사용. 발신번호 env.SOLAPI_SENDER 필요(사전등록). 미설정 시 no-op.
 // eslint-disable-next-line no-unused-vars
@@ -1321,6 +1346,8 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
     const token = decodeURIComponent(studentLookupMatch[1]);
     const tv = validatePathToken(StudentTokenSchema, token, corsHeaders, '학생 토큰');
     if (!tv.ok) return tv.response;
+    const gate = await enforceStudentSession(request, env, corsHeaders, token, 'booking/student');
+    if (gate) return gate;
     const res = await n('POST', `/databases/${STUDENT_DB_ID}/query`, {
       filter: { property: '예약 코드', rich_text: { equals: token } },
       page_size: 1,
@@ -1457,6 +1484,8 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
     const token = decodeURIComponent(myClassesMatch[1]);
     const tv = validatePathToken(StudentTokenSchema, token, corsHeaders, '학생 토큰');
     if (!tv.ok) return tv.response;
+    const gate = await enforceStudentSession(request, env, corsHeaders, token, 'booking/my-classes');
+    if (gate) return gate;
     const qv = validateParams(MyClassesQuerySchema, Object.fromEntries(url.searchParams), corsHeaders);
     if (!qv.ok) return qv.response;
     const month = url.searchParams.get('month'); // "YYYY-MM" 형식
@@ -1550,6 +1579,8 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+    const gate = await enforceStudentSession(request, env, corsHeaders, studentToken, 'booking/my-class:delete');
+    if (gate) return gate;
     const sRes = await n('POST', `/databases/${STUDENT_DB_ID}/query`, {
       filter: { property: '예약 코드', rich_text: { equals: studentToken } },
       page_size: 1,
@@ -1616,6 +1647,8 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+    const gate = await enforceStudentSession(request, env, corsHeaders, studentToken, 'booking/my-class:restore');
+    if (gate) return gate;
     const sRes = await n('POST', `/databases/${STUDENT_DB_ID}/query`, {
       filter: { property: '예약 코드', rich_text: { equals: studentToken } },
       page_size: 1,
@@ -1836,6 +1869,11 @@ async function handleHomeworkRoutes(request, env, corsHeaders, url) {
     if (!(await rateLimitCheck(`hw:${clientIp(request)}`, limit, 60))) {
       return errRes(corsHeaders, 429, '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.');
     }
+    // 학생 세션 게이트(soft/hard) — 숙제 학생 라우트 공통
+    const tkMatch = url.pathname.match(/^\/homework\/(?:student-upload|student|feedback-seen)\/([^/]+)/);
+    const tk = tkMatch ? decodeURIComponent(tkMatch[1]) : '';
+    const gate = await enforceStudentSession(request, env, corsHeaders, tk, `homework ${url.pathname}`);
+    if (gate) return gate;
   }
 
   const n = makeNotion(env.NOTION_TOKEN);
@@ -2357,6 +2395,8 @@ async function handleGameRoutes(request, env, corsHeaders, url) {
     const token = decodeURIComponent((allMatch || oneMatch)[1]);
     const tv = validatePathToken(StudentTokenSchema, token, corsHeaders, '학생 토큰');
     if (!tv.ok) return tv.response;
+    const gate = await enforceStudentSession(request, env, corsHeaders, token, 'game/best:get');
+    if (gate) return gate;
 
     const studentPage = await findStudentByToken(token);
     if (!studentPage) {
@@ -2395,6 +2435,8 @@ async function handleGameRoutes(request, env, corsHeaders, url) {
     if (!tv.ok) return tv.response;
     const gv = validatePathToken(GameKeySchema, gameKey, corsHeaders, '게임 키');
     if (!gv.ok) return gv.response;
+    const gate = await enforceStudentSession(request, env, corsHeaders, token, 'game/best:post');
+    if (gate) return gate;
 
     const body = await request.json().catch(() => ({}));
     const bv = validateBody(GameResultSchema, body, corsHeaders);
