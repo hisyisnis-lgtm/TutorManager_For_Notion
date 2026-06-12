@@ -94,6 +94,16 @@ function isOnFormPage() {
 // 갱신된 hash를 보도록 한다. 강사는 PWA로 학생 페이지를 미리보지 않으므로 isTeacher 체크로 강사 PWA 흐름은 보호.
 if (typeof window !== 'undefined') {
   try {
+    // -2) group-class 공개 페이지를 path 형식(# 없이)으로 들어온 경우 hash 라우트로 보정.
+    //     이 페이지는 HashRouter 기반이라 `/group-class`(또는 옛 `/bootcamp`)로 직접 진입하면
+    //     라우터가 경로를 못 잡고 #/intro(홈)로 튕긴다 → 해시 형식으로 강제 변환.
+    //     (정상 공유 링크는 `/#/group-class`. # 없이 공유·입력된 경우 대비.)
+    const gcPath = window.location.pathname.replace(/\/+$/, '');
+    if ((gcPath === '/group-class' || gcPath === '/bootcamp') && !window.location.hash) {
+      window.location.replace('/#/group-class');
+      throw new Error('redirecting');
+    }
+
     // -1) 옛 hash 형식 학생 URL(`#/personal/{token}`)을 path 형식으로 자동 redirect.
     //     강사가 옛 PWA 버전에서 공유한 URL을 학생이 클릭하면 hash가 붙어있는데,
     //     iOS Safari "홈 화면에 추가"는 hash를 잘라내므로 path 형식으로 강제 변환해야 한다.
