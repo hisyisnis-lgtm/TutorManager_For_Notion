@@ -504,7 +504,7 @@ export default function GroupClassPage() {
                 items={POLICY.map(({ key, title, items }) => ({
                   key,
                   label: <Text strong style={{ fontSize: 14, color: TEXT_BODY }}>{title}</Text>,
-                  style: { backgroundColor: '#ffffff', borderRadius: 12, marginBottom: 10, boxShadow: '0 1px 2px rgba(20,20,20,0.04), 0 0 0 1px rgba(20,20,20,0.04)' },
+                  style: { backgroundColor: '#ffffff', borderRadius: 12, marginBottom: 10, overflow: 'hidden', boxShadow: '0 1px 2px rgba(20,20,20,0.04), 0 0 0 1px rgba(20,20,20,0.04)' },
                   children: (
                     <Flex vertical gap={10}>
                       {items.map(([label, value], i) => (
