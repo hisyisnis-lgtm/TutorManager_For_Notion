@@ -7,8 +7,9 @@ import { ArrowRightIcon } from '@phosphor-icons/react';
  *
  * @param {boolean}  visible  - 버튼 표시 여부 (true: 표시)
  * @param {Function} onClick  - 버튼 클릭 콜백
+ * @param {string}   [label]  - 버튼 라벨 (기본: '무료 상담 신청')
  */
-export default function FloatingCtaButton({ visible, onClick }) {
+export default function FloatingCtaButton({ visible, onClick, label = '무료 상담 신청' }) {
   return (
     <div style={{
       position: 'fixed', bottom: 24, left: '50%',
@@ -25,7 +26,7 @@ export default function FloatingCtaButton({ visible, onClick }) {
           paddingInline: 28, boxShadow: 'var(--shadow-brand-button)',
         }}
       >
-        무료 상담 신청 <ArrowRightIcon weight="fill" />
+        {label} <ArrowRightIcon weight="fill" />
       </Button>
     </div>
   );

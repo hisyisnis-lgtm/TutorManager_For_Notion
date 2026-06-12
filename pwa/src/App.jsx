@@ -37,6 +37,7 @@ import HomeworkManagePage from './pages/HomeworkManagePage.jsx';
 import LandingPage from './pages/LandingPage.jsx';
 import PricingPage from './pages/PricingPage.jsx';
 import ConsentPage from './pages/ConsentPage.jsx';
+import GroupClassPage from './pages/GroupClassPage.jsx';
 import InAppBrowserWarning from './components/ui/InAppBrowserWarning.jsx';
 import DynamicStudentManifest from './components/DynamicStudentManifest.jsx';
 
@@ -78,7 +79,7 @@ function ScrollToTop() {
 // 현재 hash가 공개 페이지인지 확인 (로그인 불필요)
 function isPublicBookingRoute() {
   const hash = window.location.hash;
-  return hash.startsWith('#/book') || hash.startsWith('#/intro') || hash.startsWith('#/pricing') || hash.startsWith('#/consent') || hash.startsWith('#/personal') || hash.startsWith('#/panda-test');
+  return hash.startsWith('#/book') || hash.startsWith('#/intro') || hash.startsWith('#/pricing') || hash.startsWith('#/consent') || hash.startsWith('#/group-class') || hash.startsWith('#/bootcamp') || hash.startsWith('#/personal') || hash.startsWith('#/panda-test');
 }
 
 // 데이터 작성 중인 폼 페이지 여부 확인
@@ -269,6 +270,9 @@ export default function App() {
             <Route path="/intro" element={<LandingPage />} />
             <Route path="/pricing" element={<PricingPage />} />
             <Route path="/consent" element={<ConsentPage />} />
+            <Route path="/group-class" element={<GroupClassPage />} />
+            {/* 옛 /bootcamp 링크 호환 — 그룹 수업 페이지로 리다이렉트 (부트캠프 명칭 폐기 2026-06-12) */}
+            <Route path="/bootcamp" element={<Navigate to="/group-class" replace />} />
             {/* 학생 자가예약 화면 폐기 (2026-06-10) — 옛 /book* 링크는 인트로로 보냄 */}
             <Route path="/book/*" element={<Navigate to="/intro" replace />} />
             <Route path="/personal" element={<PersonalEntryPage />} />

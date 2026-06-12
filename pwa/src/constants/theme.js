@@ -31,6 +31,8 @@ export const BG_CARD = '#ffffff';
 export const BG_ICON_NEUTRAL = '#f9fafb';
 export const BG_DARK = '#1a1a1a';
 export const BG_SUCCESS = '#f6ffed';
+/** 편지지 톤(따뜻한 오프화이트) — 손편지 느낌 카드 전용 */
+export const BG_LETTER = '#fffdf8';
 
 // ── 테두리 ─────────────────────────────────────────────
 export const BORDER_SUBTLE = 'rgba(0,0,0,0.06)';
