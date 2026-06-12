@@ -4,6 +4,7 @@
 // localStorage 캐시 패턴과 함께 사용 — 진입 시 fetchOne으로 동기화, 종료 시 submit (fire-and-forget).
 import { WORKER_URL } from '../config.js';
 import { SEED_WORDS } from '../constants/toneGameWords.js';
+import { studentBearer } from './studentAuth.js';
 
 async function gameFetch(method, path, body, token) {
   const headers = { 'Content-Type': 'application/json' };
@@ -47,7 +48,7 @@ export async function saveGameMe(token, gameData, nickname) {
  * @returns {Promise<Array<{gameKey, gameName, bestScore, bestMaxCombo, bestAvgSec, playCount, lastPlayedAt, meta}>>}
  */
 export async function fetchAllGameBests(studentToken) {
-  return gameFetch('GET', `/game/best/${encodeURIComponent(studentToken)}`);
+  return gameFetch('GET', `/game/best/${encodeURIComponent(studentToken)}`, undefined, studentBearer(studentToken));
 }
 
 /**
@@ -57,7 +58,7 @@ export async function fetchAllGameBests(studentToken) {
  * @param {string} gameKey - 'tone' 등
  */
 export async function fetchGameBest(studentToken, gameKey) {
-  return gameFetch('GET', `/game/best/${encodeURIComponent(studentToken)}/${encodeURIComponent(gameKey)}`);
+  return gameFetch('GET', `/game/best/${encodeURIComponent(studentToken)}/${encodeURIComponent(gameKey)}`, undefined, studentBearer(studentToken));
 }
 
 /**
@@ -71,7 +72,8 @@ export async function submitGameResult(studentToken, gameKey, result) {
   return gameFetch(
     'POST',
     `/game/best/${encodeURIComponent(studentToken)}/${encodeURIComponent(gameKey)}`,
-    result
+    result,
+    studentBearer(studentToken)
   );
 }
 

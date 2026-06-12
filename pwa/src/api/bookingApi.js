@@ -1,9 +1,14 @@
 import { WORKER_URL } from '../config.js';
 import { getToken } from './authUtils.js';
+import { studentBearer } from './studentAuth.js';
 
-async function bookingFetch(method, path, body, { auth = false } = {}) {
+async function bookingFetch(method, path, body, { auth = false, studentToken = '' } = {}) {
   const headers = { 'Content-Type': 'application/json' };
   if (auth) headers['Authorization'] = `Bearer ${getToken()}`;
+  else if (studentToken) {
+    const bearer = studentBearer(studentToken);
+    if (bearer) headers['Authorization'] = `Bearer ${bearer}`;
+  }
 
   const res = await fetch(`${WORKER_URL}${path}`, {
     method,
@@ -33,13 +38,13 @@ export async function fetchTimeSlotsForTeacher(date, excludeId = '') {
 
 /** 학생 예약 코드로 학생 정보 조회 (공개) */
 export async function fetchStudentByToken(token) {
-  return bookingFetch('GET', `/booking/student/${encodeURIComponent(token)}`);
+  return bookingFetch('GET', `/booking/student/${encodeURIComponent(token)}`, undefined, { studentToken: token });
 }
 
 /** 학생 본인 수업 목록 조회 - CLASS_DB 기반 (공개) */
 export async function fetchMyClasses(studentToken, month) {
   const params = month ? `?month=${encodeURIComponent(month)}` : '';
-  return bookingFetch('GET', `/booking/my-classes/${encodeURIComponent(studentToken)}${params}`);
+  return bookingFetch('GET', `/booking/my-classes/${encodeURIComponent(studentToken)}${params}`, undefined, { studentToken });
 }
 
 /** 예약 불가 날짜 목록 조회 (강사 인증 필요) */

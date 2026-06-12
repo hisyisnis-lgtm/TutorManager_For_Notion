@@ -40,6 +40,7 @@ import ConsentPage from './pages/ConsentPage.jsx';
 import GroupClassPage from './pages/GroupClassPage.jsx';
 import InAppBrowserWarning from './components/ui/InAppBrowserWarning.jsx';
 import DynamicStudentManifest from './components/DynamicStudentManifest.jsx';
+import StudentAuthGate from './components/StudentAuthGate.jsx';
 
 // 앱 초기 로드 / SW 업데이트 중 스플래시 (흰 배경 + 빨간 로고)
 function SplashScreen({ updating }) {
@@ -252,6 +253,8 @@ export default function App() {
         <InAppBrowserWarning />
         {/* iOS에서는 manifest를 DOM에서 제거해 "홈 화면에 추가" 시 현재 path를 PWA URL로 박는다. */}
         <DynamicStudentManifest />
+        {/* 새 기기 휴대폰 인증 게이트 — 학생 페이지만 보호, 게스트 게임(/game/*)은 면제 */}
+        <StudentAuthGate token={studentPathMatch[2]} disabled={studentPathMatch[1] === 'game'}>
         <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <ScrollToTop />
           <Routes>
@@ -263,6 +266,7 @@ export default function App() {
             <Route path="/game/tone" element={<ToneGamePage />} />
           </Routes>
         </BrowserRouter>
+        </StudentAuthGate>
         </AntApp>
       </ConfigProvider>
     );

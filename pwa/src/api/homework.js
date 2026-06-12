@@ -11,6 +11,7 @@ export const HOMEWORK_DB = '5ce7d5ef-7b80-4795-843f-325f4ca868e2';
 
 import { WORKER_URL } from '../config.js';
 import { getToken } from './authUtils.js';
+import { studentBearer } from './studentAuth.js';
 import {
   STATUS_SUCCESS_BG,
   STATUS_SUCCESS_DARK,
@@ -161,12 +162,13 @@ export async function notifyHomework(kind, homeworkId) {
 
 // ===== 학생용 (Worker 공개 엔드포인트 — 예약 코드 인증) =====
 
-async function studentFetch(method, path, body) {
-  const opts = {
-    method,
-    headers: { 'Content-Type': 'application/json' },
-    cache: 'no-store',
-  };
+async function studentFetch(method, path, body, studentToken) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (studentToken) {
+    const bearer = studentBearer(studentToken);
+    if (bearer) headers['Authorization'] = `Bearer ${bearer}`;
+  }
+  const opts = { method, headers, cache: 'no-store' };
   if (body) opts.body = JSON.stringify(body);
   const res = await fetch(`${WORKER_URL}${path}`, opts);
   const data = await res.json().catch(() => ({}));
@@ -174,9 +176,15 @@ async function studentFetch(method, path, body) {
   return data;
 }
 
+// 학생 파일 업로드·다운로드(FormData/blob)에 붙일 Authorization 헤더.
+function studentAuthHeader(studentToken) {
+  const bearer = studentBearer(studentToken);
+  return bearer ? { Authorization: `Bearer ${bearer}` } : {};
+}
+
 /** 학생 숙제 목록 조회 */
 export async function fetchMyHomework(studentToken) {
-  return studentFetch('GET', `/homework/student/${encodeURIComponent(studentToken)}`);
+  return studentFetch('GET', `/homework/student/${encodeURIComponent(studentToken)}`, undefined, studentToken);
 }
 
 /** 학생용 파일 업로드 → Worker가 Notion file_upload 처리 */
@@ -185,7 +193,7 @@ export async function uploadStudentFile(studentToken, file) {
   form.append('file', file);
   const res = await fetch(
     `${WORKER_URL}/homework/student-upload/${encodeURIComponent(studentToken)}`,
-    { method: 'POST', body: form, cache: 'no-store' }
+    { method: 'POST', body: form, cache: 'no-store', headers: studentAuthHeader(studentToken) }
   );
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
@@ -199,7 +207,7 @@ export async function submitHomework(studentToken, homeworkId, files, deleteFile
   return studentFetch('POST', `/homework/student/${encodeURIComponent(studentToken)}/${homeworkId}/submit`, {
     files,
     deleteFileNames,
-  });
+  }, studentToken);
 }
 
 /**
@@ -209,7 +217,7 @@ export async function submitHomework(studentToken, homeworkId, files, deleteFile
 export async function markFeedbackSeen(studentToken, homeworkId) {
   return studentFetch('POST', `/homework/feedback-seen/${encodeURIComponent(studentToken)}`, {
     homeworkId,
-  });
+  }, studentToken);
 }
 
 // ===== 파일 다운로드 (Worker proxy — Notion 임시 URL 미노출) =====
@@ -249,7 +257,7 @@ async function fetchOrThrow(url, init) {
  */
 export async function downloadHomeworkFileStudent(studentToken, homeworkId, fileName, kind) {
   const url = `${WORKER_URL}/homework/student/${encodeURIComponent(studentToken)}/${encodeURIComponent(homeworkId)}/file?name=${encodeURIComponent(fileName)}&kind=${kind}`;
-  const res = await fetchOrThrow(url);
+  const res = await fetchOrThrow(url, { headers: studentAuthHeader(studentToken) });
   const blob = await res.blob();
   triggerBlobDownload(blob, fileName);
 }
@@ -271,7 +279,7 @@ export async function downloadHomeworkFileTeacher(homeworkId, fileName, kind) {
  */
 export async function fetchHomeworkFileBlobUrlStudent(studentToken, homeworkId, fileName, kind) {
   const url = `${WORKER_URL}/homework/student/${encodeURIComponent(studentToken)}/${encodeURIComponent(homeworkId)}/file?name=${encodeURIComponent(fileName)}&kind=${kind}`;
-  const res = await fetchOrThrow(url);
+  const res = await fetchOrThrow(url, { headers: studentAuthHeader(studentToken) });
   const blob = await res.blob();
   return URL.createObjectURL(blob);
 }
