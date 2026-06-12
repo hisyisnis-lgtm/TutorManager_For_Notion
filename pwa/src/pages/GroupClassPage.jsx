@@ -18,7 +18,7 @@ const { Title, Text } = Typography;
 
 // 신청 폼 (구글폼)
 const APPLY_FORM_URL = 'https://forms.gle/1bwL7MPjhnsdF8uz9';
-const KAKAO_CHANNEL_URL = 'https://pf.kakao.com/_jFnFn';
+const KAKAO_CHANNEL_URL = 'https://pf.kakao.com/_jFnFn/chat';
 const openApply = () => window.open(APPLY_FORM_URL, '_blank', 'noopener');
 
 // ── 콘텐츠 데이터 (이번 7~8월 기수 한정 · 대표님 안내서 원문 유지) ──────
