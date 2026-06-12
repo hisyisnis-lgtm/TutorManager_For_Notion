@@ -863,8 +863,12 @@ async function handleStudentAuthRoutes(request, env, corsHeaders, url) {
     }
     const code = String(100000 + (crypto.getRandomValues(new Uint32Array(1))[0] % 900000)); // 6자리 (CSPRNG)
     await putStudentOtp(token, code, 180);
-    // TODO: 학생 전용 알림톡 템플릿 승인 후 교체. 우선 게임 OTP 템플릿 재사용(Taste 결정).
-    await sendKakaoAlert(env, { to: student.phone, templateId: env.KAKAO_TPL_GAME_OTP, variables: { '#{인증번호}': code } });
+    // 학생 전용 알림톡 템플릿(KAKAO_TPL_PERSONAL_OTP). 미설정 시 게임 OTP 템플릿으로 폴백.
+    await sendKakaoAlert(env, {
+      to: student.phone,
+      templateId: env.KAKAO_TPL_PERSONAL_OTP || env.KAKAO_TPL_GAME_OTP,
+      variables: { '#{인증번호}': code },
+    });
     return new Response(JSON.stringify({ ok: true, phoneTail: student.phone.replace(/\D/g, '').slice(-4) }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
 
