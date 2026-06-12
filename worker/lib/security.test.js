@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isSafeExternalUrl, maskPhone, maskToken } from './security.js';
+import { isSafeExternalUrl, maskPhone, maskToken, sanitizePath } from './security.js';
 
 describe('isSafeExternalUrl', () => {
   it('일반 https URL을 허용한다', () => {
@@ -118,5 +118,46 @@ describe('maskToken', () => {
 
   it('정확히 9자는 끝 4자만 노출 (경계 테스트)', () => {
     expect(maskToken('123456789')).toBe('1234...6789');
+  });
+});
+
+describe('sanitizePath', () => {
+  it('학생앱 personal 경로의 토큰을 마스킹한다', () => {
+    expect(sanitizePath('/personal/ABCD1234EFGH')).toBe('/personal/ABCD...EFGH');
+  });
+
+  it('예약/숙제/게임 토큰 경로를 마스킹한다', () => {
+    expect(sanitizePath('/booking/student/ABCD1234EFGH')).toBe('/booking/student/ABCD...EFGH');
+    expect(sanitizePath('/homework/student/ABCD1234EFGH')).toBe('/homework/student/ABCD...EFGH');
+    expect(sanitizePath('/homework/feedback-seen/ABCD1234EFGH')).toBe('/homework/feedback-seen/ABCD...EFGH');
+    expect(sanitizePath('/game/best/ABCD1234EFGH')).toBe('/game/best/ABCD...EFGH');
+    expect(sanitizePath('/booking/my-classes/ABCD1234EFGH')).toBe('/booking/my-classes/ABCD...EFGH');
+  });
+
+  it('경로 뒤 추가 세그먼트는 보존한다', () => {
+    expect(sanitizePath('/homework/student/ABCD1234EFGH/123/submit'))
+      .toBe('/homework/student/ABCD...EFGH/123/submit');
+  });
+
+  it('전체 URL과 쿼리스트링도 처리한다', () => {
+    expect(sanitizePath('https://tiantian-chinese.pages.dev/personal/ABCD1234EFGH?x=1'))
+      .toBe('https://tiantian-chinese.pages.dev/personal/ABCD...EFGH?x=1');
+  });
+
+  it('?token= 쿼리 파라미터를 마스킹한다', () => {
+    expect(sanitizePath('/booking/my-class/abc-123?token=ABCD1234EFGH'))
+      .toBe('/booking/my-class/abc-123?token=ABCD...EFGH');
+  });
+
+  it('토큰이 없는 경로는 그대로 둔다', () => {
+    expect(sanitizePath('/booking/slots')).toBe('/booking/slots');
+    expect(sanitizePath('/consult')).toBe('/consult');
+    expect(sanitizePath('/game/auth/otp')).toBe('/game/auth/otp');
+  });
+
+  it('null·undefined·빈 문자열에 안전하다', () => {
+    expect(sanitizePath(null)).toBe('');
+    expect(sanitizePath(undefined)).toBe('');
+    expect(sanitizePath('')).toBe('');
   });
 });

@@ -65,3 +65,26 @@ export function maskToken(token) {
   if (t.length <= 8) return '***';
   return `${t.slice(0, 4)}...${t.slice(-4)}`;
 }
+
+/**
+ * 로그·알림에 넣기 전에 경로/URL에서 학생 토큰(예약 코드)을 마스킹한다.
+ *
+ * `/personal/{token}`, `/booking/student/{token}`, `/homework/student/{token}`,
+ * `/game/best/{token}`, `?token={token}` 처럼 토큰이 들어가는 세그먼트·쿼리를
+ * maskToken으로 가린다. critical/warn ntfy 토픽이나 공개 로그(Cloudflare/GitHub)에
+ * 토큰 원본이 새면 그게 곧 학생 계정 비밀번호 유출이므로 발송 전 반드시 거친다.
+ *
+ * @param {string} pathOrUrl - 경로 또는 전체 URL 문자열
+ * @returns {string} 토큰이 마스킹된 문자열
+ */
+export function sanitizePath(pathOrUrl) {
+  let s = String(pathOrUrl || '');
+  // 토큰이 뒤따르는 경로 세그먼트 (학생/예약/숙제/게임 라우트)
+  s = s.replace(
+    /\/(personal|student|student-upload|feedback-seen|my-classes|status|best)\/([^/?#]+)/g,
+    (_, seg, tok) => `/${seg}/${maskToken(tok)}`,
+  );
+  // ?token=... / &token=... 쿼리 파라미터
+  s = s.replace(/([?&]token=)([^&#]+)/g, (_, pre, tok) => `${pre}${maskToken(tok)}`);
+  return s;
+}

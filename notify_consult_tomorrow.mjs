@@ -4,7 +4,7 @@
 // - 원데이클래스: 수업에 연결된 학생의 전화번호로 발송 (등록된 학생만 예약 가능)
 // 수업 유형에 따라 다른 템플릿 사용: 무료상담 → KAKAO_TPL_CONSULT_TOMORROW, 원데이클래스 → KAKAO_TPL_ONEDAY_TOMORROW
 
-import { createNotionClient, createSolapiClient, runWithAlert, stripEmoji } from './notion_utils.mjs';
+import { createNotionClient, createSolapiClient, runWithAlert, stripEmoji, maskPhone } from './notion_utils.mjs';
 
 const TOKEN = process.env.NOTION_TOKEN;
 const CLASS_DB_ID = '314838fa-f2a6-81bc-8b67-d9e1c8fb7ecb';
@@ -167,7 +167,7 @@ async function main() {
     });
 
     for (const { phone, name } of recipients) {
-      console.log(`  발송 → ${phone} [${typeLabel}] (${name}, ${month}월 ${day}일 ${timeStr})`);
+      console.log(`  발송 → ${maskPhone(phone)} [${typeLabel}] (${name}, ${month}월 ${day}일 ${timeStr})`);
       await sendKakao(
         phone,
         templateId,

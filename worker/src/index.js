@@ -1,7 +1,7 @@
 // 순수 함수는 lib/로 분리되어 단위 테스트 대상.
 // 새 순수 함수 추가 시 lib/ 안에 두고 여기서 import.
 import { stripEmoji, normalizeId, normalizePhone } from '../lib/string.js';
-import { isSafeExternalUrl, maskPhone, maskToken } from '../lib/security.js';
+import { isSafeExternalUrl, maskPhone, maskToken, sanitizePath } from '../lib/security.js';
 import { validateFileUpload, resolveFileMime, dedupeFileNames } from '../lib/upload.js';
 import {
   ConsultSchema,
@@ -419,7 +419,7 @@ async function sendKakaoAlert(env, { to, templateId, variables }) {
       const data = await res.json().catch(() => ({}));
       console.error('[kakao] 발송 실패:', JSON.stringify(data));
     } else {
-      console.log(`[kakao] 알림톡 발송 완료: ${to}`);
+      console.log(`[kakao] 알림톡 발송 완료: ${maskPhone(to)}`);
     }
   } catch (e) {
     console.error('[kakao] 발송 오류:', e.message);
@@ -622,9 +622,11 @@ async function sendNtfy(env, message, title = 'New Consultation') {
 // 동일 에러(message + path)가 짧은 시간 내 폭주하면 dedup으로 1건만 발송.
 async function captureWorkerError(err, env, request) {
   const url = new URL(request.url);
-  const path = url.pathname;
-  const errMsg = (err?.message || String(err)).slice(0, 300);
-  const stack = (err?.stack || '').split('\n').slice(0, 4).join('\n').slice(0, 800);
+  // 경로에 학생 토큰이 박힌 라우트(/booking/student/{token} 등)의 에러가
+  // critical 토픽으로 갈 때 토큰 원본이 새지 않도록 마스킹.
+  const path = sanitizePath(url.pathname);
+  const errMsg = sanitizePath((err?.message || String(err)).slice(0, 300));
+  const stack = sanitizePath((err?.stack || '').split('\n').slice(0, 4).join('\n').slice(0, 800));
   const dedupKey = `worker:${request.method}:${path}:${errMsg}`;
   await sendAlert(env, {
     level: 'critical',
@@ -638,6 +640,12 @@ async function captureWorkerError(err, env, request) {
 
 // ===== 무료상담 신청 처리 =====
 async function handleConsultRequest(request, env, corsHeaders) {
+  // Abuse 방지: 무료상담 1건은 Notion 쓰기 + 카카오 알림톡(건당 과금) + GitHub Actions 발동을
+  // 유발하므로 rate limit 필수. (다른 공개 라우트와 달리 여기만 누락돼 있었음)
+  if (!(await rateLimitCheck(`consult:ip:${clientIp(request)}`, 5, 300))) {
+    return errRes(corsHeaders, 429, '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.');
+  }
+
   const body = await request.json().catch(() => null);
   if (!body) {
     return new Response(JSON.stringify({ error: '잘못된 요청입니다.' }), {
@@ -651,6 +659,11 @@ async function handleConsultRequest(request, env, corsHeaders) {
   if (!v.ok) return v.response;
   const { name, phone, kakaoId, level, preferredDays, preferredTime, concerns, reasons, reasonOther, message } = v.data;
   const phoneDigits = phone.replace(/\D/g, '');
+
+  // 같은 번호로 하루 3회까지만 (IP 우회 스팸 차단)
+  if (!(await rateLimitCheck(`consult:ph:${phoneDigits}`, 3, 86400))) {
+    return errRes(corsHeaders, 429, '오늘 신청 횟수를 초과했습니다. 잠시 후 다시 시도해주세요.');
+  }
 
   const dbId = env.CONSULT_DB_ID || CONSULT_DB_ID;
   if (!dbId) {
@@ -789,15 +802,12 @@ async function handleConsultRequest(request, env, corsHeaders) {
 
 // ===== 예약 시스템 라우트 처리 =====
 async function handleBookingRoutes(request, env, corsHeaders, url) {
-  // 토큰 기반 학생 라우트는 brute-force/스캔 대상이 될 수 있어 IP당 분당 60회 제한.
-  // (강사 인증이 필요한 /booking/blocked 등은 JWT 검증으로 별도 보호)
-  const isStudentTokenPath =
-    /^\/booking\/(student|status|my-classes|my-class)\//.test(url.pathname) ||
-    url.pathname === '/booking/reserve';
-  if (isStudentTokenPath) {
-    if (!(await rateLimitCheck(`book:${clientIp(request)}`, 60, 60))) {
-      return errRes(corsHeaders, 429, '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.');
-    }
+  // 모든 예약 라우트는 Notion 쿼리를 유발하므로 IP당 분당 60회 제한.
+  // 공개 GET(slots·time-slots·check-conflict)이 무제한이면 무한 루프 하나로
+  // NOTION_TOKEN 쿼터(~3rps)를 고갈시켜 예약·숙제·게임 전체가 마비될 수 있어 전 라우트에 적용.
+  // (강사 JWT 라우트 /booking/blocked도 포함 — 단일 강사 사용량엔 영향 없는 한도)
+  if (!(await rateLimitCheck(`book:${clientIp(request)}`, 60, 60))) {
+    return errRes(corsHeaders, 429, '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.');
   }
 
   const n = makeNotion(env.NOTION_TOKEN);
@@ -1707,7 +1717,8 @@ async function uploadFileToNotion(file, notionToken) {
 // ===== 숙제 라우트 핸들러 =====
 async function handleHomeworkRoutes(request, env, corsHeaders, url) {
   // 학생 토큰 기반 라우트만 IP rate limit (업로드는 정상 사용량이 있어 한도 완화)
-  const isStudentTokenPath = /^\/homework\/student(-upload)?\//.test(url.pathname);
+  // feedback-seen도 토큰 라우트라 포함(기존 정규식에서 누락돼 있었음).
+  const isStudentTokenPath = /^\/homework\/(student(-upload)?|feedback-seen)\//.test(url.pathname);
   if (isStudentTokenPath) {
     const isUpload = url.pathname.startsWith('/homework/student-upload/');
     const limit = isUpload ? 30 : 60;
@@ -2143,11 +2154,9 @@ async function handleGameRoutes(request, env, corsHeaders, url) {
     }
     const code = String(100000 + (crypto.getRandomValues(new Uint32Array(1))[0] % 900000)); // 6자리 (CSPRNG)
     await putGameOtp(phone, code);
-    // 카카오 알림톡 인증번호 — 채널명("하늘하늘중국어")으로 발송(발신번호 노출 X). 템플릿 미승인/미설정 시 no-op → 개발은 GAME_OTP_DEBUG.
+    // 카카오 알림톡 인증번호 — 채널명("하늘하늘중국어")으로 발송(발신번호 노출 X). 템플릿 미승인/미설정 시 no-op.
     await sendKakaoAlert(env, { to: phone, templateId: env.KAKAO_TPL_GAME_OTP, variables: { '#{인증번호}': code } });
-    const out = { ok: true };
-    if (env.GAME_OTP_DEBUG === '1') out.devCode = code; // 개발 검증용(시크릿 설정 시에만 노출)
-    return new Response(JSON.stringify(out), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ ok: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
 
   // POST /game/auth/verify — 휴대폰+코드 검증 → find-or-create → 게임유저 JWT
@@ -2369,8 +2378,9 @@ async function handleErrorLog(request, env, corsHeaders) {
   const source = String(body.source || '').slice(0, 200);
   const lineno = body.lineno != null ? String(body.lineno).slice(0, 10) : '';
   const colno = body.colno != null ? String(body.colno).slice(0, 10) : '';
-  const stack = String(body.stack || '').split('\n').slice(0, 6).join('\n').slice(0, 1000);
-  const pageUrl = String(body.url || '').slice(0, 300);
+  const stack = sanitizePath(String(body.stack || '').split('\n').slice(0, 6).join('\n').slice(0, 1000));
+  // 학생앱 URL(`/personal/{token}`)이 그대로 ntfy로 가지 않도록 토큰 마스킹.
+  const pageUrl = sanitizePath(String(body.url || '').slice(0, 300));
   const userAgent = String(body.userAgent || request.headers.get('User-Agent') || '').slice(0, 200);
   const studentToken = String(body.studentToken || '').slice(0, 64);
 
@@ -2381,7 +2391,7 @@ async function handleErrorLog(request, env, corsHeaders) {
     `📍 ${pageUrl || '(URL 없음)'}`,
     `💬 ${message}`,
     source ? `📄 ${source}${lineno ? `:${lineno}` : ''}${colno ? `:${colno}` : ''}` : '',
-    studentToken ? `👤 학생 토큰: ${studentToken.slice(0, 8)}...` : '',
+    studentToken ? `👤 학생 토큰: ${maskToken(studentToken)}` : '',
     `🌐 ${userAgent.slice(0, 100)}`,
     stack ? `\n${stack}` : '',
   ].filter(Boolean);

@@ -162,6 +162,18 @@ export function stripEmoji(name) {
 }
 
 /**
+ * 전화번호 PII 마스킹 — 끝 4자리만 보존.
+ * 공개 저장소의 GitHub Actions 로그에 수강생 전화번호가 평문으로 남지 않게,
+ * 발송 로그 출력 시 거친다. (worker/lib/security.js의 maskPhone과 동일 로직 — 빌드 구조상 공유 불가라 별도 정의)
+ * 예: "010-1234-5678" → "***-****-5678"
+ */
+export function maskPhone(phone) {
+  const digits = (phone || '').replace(/\D/g, '');
+  if (digits.length < 4) return '***';
+  return `***-****-${digits.slice(-4)}`;
+}
+
+/**
  * Rate limit 대응용 딜레이 (Notion API 초당 3회 제한)
  */
 export const sleep = (ms) => new Promise(r => setTimeout(r, ms));
@@ -205,17 +217,17 @@ export function createSolapiClient({ apiKey, apiSecret, pfId }) {
         });
         const data = await res.json();
         if (!res.ok) {
-          console.error(`카카오 발송 실패 (${to}):`, JSON.stringify(data));
+          console.error(`카카오 발송 실패 (${maskPhone(to)}):`, JSON.stringify(data));
           return;
         }
-        console.log(`카카오 알림톡 발송 완료: ${to}`);
+        console.log(`카카오 알림톡 발송 완료: ${maskPhone(to)}`);
         return;
       } catch (e) {
         if (attempt < 3) {
-          console.warn(`카카오 발송 오류 (${to}), ${attempt}회 시도 실패 — 2초 후 재시도:`, e.message);
+          console.warn(`카카오 발송 오류 (${maskPhone(to)}), ${attempt}회 시도 실패 — 2초 후 재시도:`, e.message);
           await new Promise(r => setTimeout(r, 2000));
         } else {
-          console.error(`카카오 발송 오류 (${to}), 최종 실패:`, e.message);
+          console.error(`카카오 발송 오류 (${maskPhone(to)}), 최종 실패:`, e.message);
         }
       }
     }
