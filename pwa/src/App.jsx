@@ -184,7 +184,12 @@ export default function App() {
   const { needRefresh: [needRefresh], updateServiceWorker } = useRegisterSW({
     onRegistered(registration) {
       setSwReady(true);
-      if (registration) setSwRegistration(registration);
+      if (registration) {
+        setSwRegistration(registration);
+        // 앱을 열자마자 즉시 새 버전 검사 (60초 폴링 첫 틱을 기다리지 않음).
+        // 오프라인 등 실패는 조용히 무시 — unhandled rejection으로 에러 알림 안 뜨게.
+        registration.update().catch(() => {});
+      }
     },
     onRegisterError() { setSwReady(true); },
   });
