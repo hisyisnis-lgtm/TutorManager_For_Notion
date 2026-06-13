@@ -306,6 +306,26 @@ html {
   100% { background-position: 200% center; }
 }
 
+/* ── 학생 인증 게이트 ───────────────────────── */
+.sa-gate-card { animation: fadeSlideUp 440ms cubic-bezier(0.2, 0, 0, 1) both; }
+.sa-gate-icon { animation: successPop 520ms cubic-bezier(0.2, 0, 0, 1) both; }
+@keyframes sa-shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-5px); }
+  40%, 80% { transform: translateX(5px); }
+}
+.sa-gate-shake { animation: sa-shake 360ms cubic-bezier(0.36, 0.07, 0.19, 0.97); }
+/* OTP 입력 박스 폴리싱 — 둥근 모서리·큰 글자·넉넉한 터치영역 */
+.sa-otp { width: 100%; justify-content: space-between; }
+.sa-otp input {
+  border-radius: 12px !important;
+  font-size: 20px !important;
+  font-weight: 700 !important;
+  height: 52px !important;
+  width: 100% !important;
+}
+.sa-otp .ant-otp-input-wrapper, .sa-otp > * { flex: 1; }
+
 /* ── prefers-reduced-motion: 애니메이션 비활성화 ── */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
