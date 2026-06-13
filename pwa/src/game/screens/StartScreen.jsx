@@ -3,8 +3,8 @@
 // 놀러가기 모달(PlayModal)·디버그 점수 모달(DebugScoreModal)도 이 파일에.
 import { useState } from 'react';
 import {
-  CaretLeftIcon, StarIcon, PlayIcon, HandWavingIcon, ChartBarIcon,
-  SpeakerHighIcon, SpeakerSlashIcon, InstagramLogoIcon, YoutubeLogoIcon, ArticleIcon, CaretRightIcon,
+  CaretLeftIcon, StarIcon, FlameIcon, PlayIcon, HandWavingIcon, ChartBarIcon, TrophyIcon, QuestionIcon,
+  SpeakerHighIcon, SpeakerSlashIcon, InstagramLogoIcon, YoutubeLogoIcon, ArticleIcon, CaretRightIcon, InfinityIcon,
 } from '@phosphor-icons/react';
 import { TG, FONT_TITLE, FONT_BODY, FONT_NUM, SHADOW, TOUCH_OPT, ASSETS, TONE_TINTS, loadBest, saveBest } from '../tgTokens.js';
 import { ToneMark, useCountUp } from '../tgWidgets.jsx';
@@ -123,10 +123,72 @@ function Sparkle({ s, size = 14, delay = 0 }) {
   );
 }
 
-export function StartScreen({ best, bestLabel, onStart, onClose, onDebugIntro, onMastery, studentToken, onRefreshBest, onLogin, isMemberUser, memberName, onLogout }) {
+// 스탯 타일 — 스트릭/최고점수 2분할(P3). 아이콘 배지가 카드 상단 가장자리에 반쯤 걸친 플로팅 디자인.
+// onHelp 있으면 우상단 '?' 버튼(최고 점수 기준 안내).
+function StatTile({ icon, badgeBg, value, label, onHelp }) {
+  return (
+    <div style={{ position: 'relative', flex: 1, minWidth: 0, height: 100, background: '#fff', borderRadius: 22, boxShadow: '0px 6px 16px rgba(43,39,48,0.06)', overflow: 'visible' }}>
+      {onHelp && (
+        <button onClick={(e) => { e.stopPropagation(); onHelp(); }} aria-label="최고 점수 기준" className="tg-press" style={{ position: 'absolute', top: 7, right: 7, zIndex: 2, width: 22, height: 22, borderRadius: 11, background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, ...TOUCH_OPT }}>
+          <QuestionIcon size={20} weight="bold" color="#c2bab1" />
+        </button>
+      )}
+      {/* 배지 — 카드 상단 중앙에 반쯤 걸침(중심이 상단 모서리). 살짝 떠 보이게 소프트 섀도 */}
+      <div style={{ position: 'absolute', top: -22, left: '50%', transform: 'translateX(-50%)', width: 44, height: 44, borderRadius: 22, background: badgeBg, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0px 3px 8px rgba(43,39,48,0.06)' }}>{icon}</div>
+      {/* 숫자 + 라벨 — 카드 하단부 중앙(배지 자리 비우려 paddingTop) */}
+      <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', paddingTop: 22, gap: 6 }}>
+        <span style={{ fontFamily: FONT_NUM, fontWeight: 800, fontSize: 24, color: '#2b2730', lineHeight: 1 }}>{value}</span>
+        <span style={{ fontFamily: FONT_BODY, fontWeight: 500, fontSize: 12, color: '#9a93a0' }}>{label}</span>
+      </div>
+    </div>
+  );
+}
+
+// 최고 점수 기준 안내 모달 — headlineBest 로직(무한 우선, 없으면 통합) 설명. '?' 버튼으로 호출.
+function BestInfoRow({ Icon, color, bg, title, desc }) {
+  return (
+    <div style={{ display: 'flex', gap: 11, alignItems: 'flex-start' }}>
+      <div style={{ width: 34, height: 34, borderRadius: 10, background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+        <Icon size={18} weight="fill" color={color} />
+      </div>
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
+        <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 13, color: '#2b2730' }}>{title}</span>
+        <span style={{ fontFamily: FONT_BODY, fontWeight: 500, fontSize: 12.5, color: '#9a93a0', lineHeight: 1.4 }}>{desc}</span>
+      </div>
+    </div>
+  );
+}
+
+function BestInfoModal({ best, onClose }) {
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(26,16,20,0.55)', backdropFilter: 'blur(2px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, ...TOUCH_OPT }}>
+      <div className="tg-enter" onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 320, background: TG.CARD, borderRadius: 24, padding: '24px 22px 20px', boxShadow: '0 20px 50px rgba(26,16,20,0.3)', display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center', textAlign: 'center' }}>
+          <div style={{ width: 52, height: 52, borderRadius: 26, background: '#ffe7bb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <StarIcon size={24} weight="fill" color="#FF9500" />
+          </div>
+          <span style={{ fontFamily: FONT_TITLE, fontSize: 20, color: '#2b2730' }}>최고 점수 기준</span>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <BestInfoRow Icon={InfinityIcon} color="#4D8DFF" bg="rgba(77,141,255,0.13)" title="무한 모드 기록이 있으면" desc="무한 모드 최고 점수를 보여줘요" />
+          <BestInfoRow Icon={StarIcon} color="#FF9500" bg="rgba(255,149,0,0.13)" title="무한 기록이 없으면" desc="초급·중급·고급 중 가장 높은 점수예요" />
+        </div>
+        <div style={{ background: '#f7f3ee', borderRadius: 14, padding: '11px 14px' }}>
+          <span style={{ fontFamily: FONT_BODY, fontWeight: 500, fontSize: 12.5, color: '#767676', lineHeight: 1.5 }}>
+            연습·복습 모드는 점수에 반영되지 않아요.{best?.label && best?.bestScore > 0 ? ` 지금은 ‘${best.label}’ 기준이에요.` : ''}
+          </span>
+        </div>
+        <button onClick={onClose} className="tg-press" style={{ width: '100%', height: 50, borderRadius: 16, border: 'none', cursor: 'pointer', background: TG.CORAL_GRAD, boxShadow: SHADOW.btn, color: '#fff', fontFamily: FONT_BODY, fontWeight: 700, fontSize: 16, ...TOUCH_OPT }}>알겠어요</button>
+      </div>
+    </div>
+  );
+}
+
+export function StartScreen({ best, streak = 0, onStart, onClose, onHelp, onDebugIntro, onMastery, onAchievements, studentToken, onRefreshBest, onLogin, isMemberUser, memberName, onLogout }) {
   const animBest = useCountUp(best?.bestScore || 0, 1100); // 최고점수 0→실값 카운트업
   const [playOpen, setPlayOpen] = useState(false);
   const [debugScoreOpen, setDebugScoreOpen] = useState(false);
+  const [bestInfoOpen, setBestInfoOpen] = useState(false);
   const [sfxOn, setSfxOn] = useState(() => !isSfxMuted());
   return (
     <FigmaScreen bgImage={ASSETS.startBg}>
@@ -153,6 +215,13 @@ export function StartScreen({ best, bestLabel, onStart, onClose, onDebugIntro, o
           style={{ position: 'absolute', left: 24, top: 20, width: 40, height: 40, borderRadius: 20, background: '#fff', boxShadow: '0px 3px 5px rgba(43,39,48,0.08)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', ...TOUCH_OPT }}>
           <CaretLeftIcon weight="bold" size={20} color={TG.INK} />
         </button>
+        {/* 도움말 top20 left72 — 소개·튜토리얼 재시청(온보딩 후 규칙 복구 경로). 닫기 옆 */}
+        {onHelp && (
+          <button onClick={(e) => { e.stopPropagation(); onHelp(); }} aria-label="도움말" className="tg-press"
+            style={{ position: 'absolute', left: 72, top: 20, width: 40, height: 40, borderRadius: 20, background: '#fff', boxShadow: '0px 3px 5px rgba(43,39,48,0.08)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', ...TOUCH_OPT }}>
+            <QuestionIcon weight="fill" size={20} color={TG.INK} />
+          </button>
+        )}
         {/* 로그인/로그아웃 — 우상단 소리토글 옆 (게스트=로그인 진입, 회원=로그아웃). 학생은 둘 다 null이라 미표시 */}
         {onLogin && (
           <button onClick={(e) => { e.stopPropagation(); onLogin(); }} className="tg-press"
@@ -184,23 +253,21 @@ export function StartScreen({ best, bestLabel, onStart, onClose, onDebugIntro, o
             </button>
           </div>
         )}
-        {/* 최고 점수 카드 top323 — 항상 표시(기록 없으면 0 + '도전!' 칩) */}
-          <Reveal i={1} style={{ position: 'absolute', left: 24, right: 24, top: 290 }}>
-          <div style={{ height: 90, background: '#fff', borderRadius: 22, boxShadow: '0px 6px 16px rgba(43,39,48,0.06)', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
-            <div style={{ width: 46, height: 46, borderRadius: 23, background: '#fff6e8', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <StarIcon size={21} weight="fill" color={TG.SUN} />
-            </div>
-            <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <span style={{ fontFamily: FONT_BODY, fontWeight: 500, fontSize: 12, color: '#9a93a0' }}>최고 점수</span>
-              <span style={{ fontFamily: FONT_NUM, fontWeight: 800, fontSize: 26, color: '#2b2730' }}>{animBest.toLocaleString()}</span>
-            </div>
-            <div style={{ background: '#fff1f1', padding: '7px 12px', borderRadius: 14 }}>
-              <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 13, color: '#f2484c' }}>{best?.bestScore > 0 ? (bestLabel || '초급') : '도전!'}</span>
-            </div>
+        {/* 스탯 2분할 top288 — 🔥스트릭 | ⭐최고점수 (P3) */}
+        <Reveal i={1} style={{ position: 'absolute', left: 24, right: 24, top: 288 }}>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <StatTile
+              icon={<FlameIcon size={22} weight="fill" color={streak > 0 ? TG.CORAL_DK : '#b9a89f'} />}
+              badgeBg={streak > 0 ? '#ffded3' : '#e9e2d8'}
+              value={streak} label="일 연속" />
+            <StatTile
+              icon={<StarIcon size={21} weight="fill" color="#FF9500" />}
+              badgeBg="#ffe7bb" value={animBest.toLocaleString()} label="최고 점수"
+              onHelp={() => setBestInfoOpen(true)} />
           </div>
-          </Reveal>
-        {/* 성조 미리보기 칩 top431 */}
-        <Reveal i={2} style={{ position: 'absolute', left: 24, right: 24, top: 398 }}>
+        </Reveal>
+        {/* 성조 미리보기 칩 top416 */}
+        <Reveal i={2} style={{ position: 'absolute', left: 24, right: 24, top: 416 }}>
         <div style={{ height: 62, display: 'flex', gap: 10, alignItems: 'center', justifyContent: 'center' }}>
           {TONES.map((t, idx) => (
             // 칩마다 위상차(-idx*0.2s)를 줘 좌→우로 물결치듯 둥둥
@@ -213,7 +280,7 @@ export function StartScreen({ best, bestLabel, onStart, onClose, onDebugIntro, o
         </Reveal>
         {/* 판다 코치 말풍선 — 칩 하단(493)과 시작하기 CTA(상단 150) 사이 가용공간에 가두고 세로 중앙 정렬.
             top 고정이면 짧은 화면서 CTA에 가리고, bottom 고정이면 짧은 화면서 위쪽 칩과 겹침 → top·bottom 동시 지정 + flex center로 양쪽 모두 회피. */}
-        <Reveal i={3} style={{ position: 'absolute', left: 24, right: 24, top: 470, bottom: 'calc(150px + env(safe-area-inset-bottom))', display: 'flex', alignItems: 'center' }}>
+        <Reveal i={3} style={{ position: 'absolute', left: 24, right: 24, top: 492, bottom: 'calc(150px + env(safe-area-inset-bottom))', display: 'flex', alignItems: 'center' }}>
           <CoachBubble text="오늘도 성조 찾으러 가볼까요?" />
         </Reveal>
         {/* 시작하기 메인 CTA (하단 고정·풀폭) — 최하단 보조쌍 위 */}
@@ -227,27 +294,27 @@ export function StartScreen({ best, bestLabel, onStart, onClose, onDebugIntro, o
           <PlayIcon size={14} weight="fill" color="#fff" />
         </button>
         </Reveal>
-        {/* 보조 버튼 한 쌍 (하단) — 놀러가기 | 단어 숙련도 */}
+        {/* 보조 버튼 (하단) — 놀러가기 | 숙련도 | 업적 */}
         <Reveal i={5} style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(20px + env(safe-area-inset-bottom))' }}>
-        <div style={{ display: 'flex', gap: 10 }}>
-          <button className="tg-press" onClick={() => setPlayOpen(true)} style={{
-            flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '13px 0', borderRadius: 16,
-            background: '#fff', border: '1.5px solid #ebe5de', cursor: 'pointer', ...TOUCH_OPT,
-          }}>
-            <HandWavingIcon size={18} weight="fill" color={TG.CORAL_DK} />
-            <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 14, color: '#2b2730' }}>놀러가기</span>
-          </button>
-          <button className="tg-press" onClick={onMastery} style={{
-            flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '13px 0', borderRadius: 16,
-            background: '#fff', border: '1.5px solid #ebe5de', cursor: 'pointer', ...TOUCH_OPT,
-          }}>
-            <ChartBarIcon size={18} weight="fill" color={TG.CORAL_DK} />
-            <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 14, color: '#2b2730' }}>단어 숙련도</span>
-          </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {[
+            { key: 'play', Icon: HandWavingIcon, label: '놀러가기', onClick: () => setPlayOpen(true) },
+            { key: 'mastery', Icon: ChartBarIcon, label: '숙련도', onClick: onMastery },
+            { key: 'ach', Icon: TrophyIcon, label: '업적', onClick: () => onAchievements && onAchievements() },
+          ].map(({ key, Icon, label, onClick }) => (
+            <button key={key} className="tg-press" onClick={onClick} style={{
+              flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '13px 0', borderRadius: 16,
+              background: '#fff', border: '1.5px solid #ebe5de', cursor: 'pointer', ...TOUCH_OPT,
+            }}>
+              <Icon size={18} weight="fill" color={TG.CORAL_DK} />
+              <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 13.5, color: '#2b2730' }}>{label}</span>
+            </button>
+          ))}
         </div>
         </Reveal>
       </div>
       {playOpen && <PlayModal onClose={() => setPlayOpen(false)} />}
+      {bestInfoOpen && <BestInfoModal best={best} onClose={() => setBestInfoOpen(false)} />}
       {import.meta.env.DEV && debugScoreOpen && <DebugScoreModal studentToken={studentToken} onClose={() => setDebugScoreOpen(false)} onApplied={() => onRefreshBest && onRefreshBest()} />}
     </FigmaScreen>
   );

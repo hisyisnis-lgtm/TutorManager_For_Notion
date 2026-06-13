@@ -54,6 +54,43 @@ export function masteredCount(stats, wordMap) {
   return n;
 }
 
+// 라운드 단어 선택 — 교육적 가중 추첨(은은하게).
+// 완전 랜덤 대신, 단어별 가중치로 비복원 추첨해 약점 단어를 더 자주 노출하되
+// 신규·마스터 단어도 계속 섞여 나오게 한다(같은 단어 반복 피로 방지·전체 노출 보장).
+// 가중치: 약점(정답률<80%) 3.0 > 신규(미시도) 2.5 > 익숙(1회 양호·마스터 전) 1.5 > 마스터 1.0.
+// 마스터도 0이 아니라 1.0 → 영구 제외 없음(망각 방지). 첫 플레이(통계 0)엔 전부 신규=거의 균등.
+// 풀 크기가 n 이하면 가중치 의미 없으므로 전부 셔플 반환.
+function shuffleInPlace(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+export function buildRoundWords(pool, stats, n) {
+  const list = Array.isArray(pool) ? [...pool] : [];
+  if (list.length <= n) return shuffleInPlace(list);
+  const weightOf = (w) => {
+    const e = stats && stats[w.hanzi];
+    if (!e || e[0] === 0) return 2.5;   // 신규(미시도)
+    if (needsReview(e)) return 3.0;     // 약점(시도≥1 & 정답률<80%)
+    if (isMastered(e)) return 1.0;      // 마스터(가끔 복습)
+    return 1.5;                         // 익숙(1회 양호, 마스터 전)
+  };
+  const cand = list.map((w) => ({ w, weight: weightOf(w) }));
+  const picked = [];
+  while (picked.length < n && cand.length > 0) {
+    let total = 0;
+    for (const c of cand) total += c.weight;
+    let r = Math.random() * total;
+    let idx = 0;
+    for (; idx < cand.length - 1; idx++) { r -= cand[idx].weight; if (r <= 0) break; }
+    picked.push(cand[idx].w);
+    cand.splice(idx, 1);
+  }
+  return picked;
+}
+
 // 난이도별 meta.w 동기화용: 해당 풀에 있는 단어 통계만 추림(블롭 작게).
 export function subsetForPool(stats, pool) {
   const out = {};

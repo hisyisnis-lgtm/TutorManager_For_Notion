@@ -57,6 +57,35 @@ export function computeScore({ perfect, newCombo = 0, remainingMs = 0 }) {
   const timeBonus = Math.floor(Math.max(0, remainingMs) / 100);
   return perfect ? (100 + newCombo * 20 + timeBonus) : (50 + Math.floor(timeBonus / 2));
 }
+// ── 게임 종료 결과 판정 ──────────────────────────────────
+// 모드별 최고기록 갱신·신기록 여부·효과음을 한곳에서 순수 계산한다(예전엔 end-effect에 4모드 인라인 중복).
+// 부수효과(localStorage 저장·서버 submit·사운드 재생·updatedAt 스탬프)는 호출부가 수행.
+//   mode : 'normal' | 'endless' | 'practice' | 'review'
+//   prev : 이전 베스트 레코드(없으면 null) — normal=난이도별, endless=무한
+// 반환:
+//   tracksBest  : 최고기록을 갱신하는 모드인지(normal·endless=true, practice·review=false)
+//   isNewBest   : 이번 점수가 신기록인지
+//   previousBest: 이전 최고점(결과화면 표시용)
+//   updated     : 저장할 베스트 레코드(updatedAt 제외) — tracksBest=false면 null
+//   sfx         : 재생할 효과음 키('unlock'|'win'|'gameover')
+export function resolveEndOutcome({ mode, prev, score, maxCombo = 0, avgMs = 0 }) {
+  if (mode === 'practice' || mode === 'review') {
+    return { tracksBest: false, isNewBest: false, previousBest: 0, updated: null, sfx: 'gameover' };
+  }
+  const previousBest = prev?.bestScore || 0;
+  const isNewBest = score > previousBest;
+  const updated = {
+    bestScore: isNewBest ? score : previousBest,
+    bestMaxCombo: isNewBest ? maxCombo : (prev?.bestMaxCombo || 0),
+    bestAvgMs: isNewBest ? avgMs : (prev?.bestAvgMs || 0),
+    playCount: (prev?.playCount || 0) + 1,
+  };
+  // 잠금 해제음은 난이도(normal) 모드에서 1000점 임계를 처음 넘을 때만(무한은 잠금해제 개념 없음).
+  const justUnlocked = mode === 'normal' && previousBest < UNLOCK_THRESHOLD && updated.bestScore >= UNLOCK_THRESHOLD;
+  const sfx = justUnlocked ? 'unlock' : (isNewBest ? 'win' : 'gameover');
+  return { tracksBest: true, isNewBest, previousBest, updated, sfx };
+}
+
 // 무한모드 베스트 캐시(localStorage)
 export function loadEndlessBest(token) { return loadBest(token, ENDLESS_BEST_KEY); }
 export function saveEndlessBest(token, data) { saveBest(token, ENDLESS_BEST_KEY, data); }
