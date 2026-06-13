@@ -417,11 +417,12 @@ async function sendKakaoAlert(env, { to, templateId, variables }) {
         message: { to, kakaoOptions: { pfId: env.KAKAO_PFID, templateId, variables } },
       }),
     });
+    const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
       console.error('[kakao] 발송 실패:', JSON.stringify(data));
     } else {
-      console.log(`[kakao] 알림톡 발송 완료: ${maskPhone(to)}`);
+      // 접수 상태 진단 — statusCode/statusMessage로 알림톡 즉시 접수 여부 확인 (PII 없음).
+      console.log(`[kakao] 접수 ${maskPhone(to)} | status=${data.statusCode || '?'} "${data.statusMessage || ''}" type=${data.type || '?'} gid=${data.groupInfo?.groupId || data.groupId || '?'}`);
     }
   } catch (e) {
     console.error('[kakao] 발송 오류:', e.message);
@@ -887,7 +888,9 @@ async function handleStudentAuthRoutes(request, env, corsHeaders, url) {
       return new Response(JSON.stringify({ ok: false, reason: 'no_phone' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
     const code = String(100000 + (crypto.getRandomValues(new Uint32Array(1))[0] % 900000)); // 6자리 (CSPRNG)
-    await putStudentOtp(token, code, 180);
+    // 유효 5분 — 알림톡 배송이 수 분 지연될 수 있어 여유를 둠(도착 시 이미 만료되는 사고 방지).
+    // brute-force는 verify rate limit(전화·IP당 5회/180s)로 별도 차단되므로 창을 늘려도 안전.
+    await putStudentOtp(token, code, 300);
     // 학생 전용 알림톡 템플릿(KAKAO_TPL_PERSONAL_OTP). 미설정 시 게임 OTP 템플릿으로 폴백.
     await sendKakaoAlert(env, {
       to: student.phone,
