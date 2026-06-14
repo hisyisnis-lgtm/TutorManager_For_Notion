@@ -629,8 +629,9 @@ export default function HomePage() {
                       {(() => {
                         const typeTitle = classTypeMap[cls.classTypeId]?.title ?? '';
                         const isFree = typeTitle.includes('무료상담');
-                        const isOneDay = typeTitle.includes('원데이');
-                        if (isFree || isOneDay) {
+                        const isOneDay = typeTitle.includes('원데이') || typeTitle.includes('체험');
+                        const isGroup = typeTitle.includes('온라인그룹수업');
+                        if (isFree || isOneDay || isGroup) {
                           return (
                             <div style={{ marginTop: 8 }}>
                               <span style={{
@@ -639,7 +640,7 @@ export default function HomePage() {
                                 background: '#f5f5f5',
                                 color: TEXT_TERTIARY,
                                 fontSize: 11, fontWeight: 600 }}>
-                                {isFree ? '무료상담' : '원데이클래스'}
+                                {isFree ? '무료상담' : isGroup ? '그룹수업' : typeTitle.includes('체험') ? '체험수업' : '원데이클래스'}
                               </span>
                             </div>
                           );

@@ -55,8 +55,9 @@ export default function ClassFormPage() {
   const [studentSearch, setStudentSearch] = useState('');
   const selectedStudentRef = useRef(null);
 
-  // 반복 여부
-  const [recurring, setRecurring] = useState(false);
+  // 반복/단일 선택 ('' = 미선택, 'single' = 단일, 'recur' = 반복). 반복 가능 유형에서 일시 입력 전에 선택.
+  const [recurMode, setRecurMode] = useState('');
+  const recurring = recurMode === 'recur';
 
   // 공통 폼
   const [form, setForm] = useState({
@@ -195,6 +196,8 @@ export default function ClassFormPage() {
     }));
   };
 
+
+
   const toggleDay = (day) => {
     setForm((f) => ({
       ...f,
@@ -216,20 +219,28 @@ export default function ClassFormPage() {
   // 무료상담: 신규 방문자 대상이라 학생 선택 없이 이름/전화번호 입력 허용
   const isFreeConsult = selectedClassType?.title?.includes('무료상담') ?? false;
   // 원데이클래스: 기존 등록된 학생만 선택 가능 (일반 수업과 동일)
-  const isOneDayClass = selectedClassType?.title?.includes('원데이클래스') ?? false;
+  const isOneDayClass = (selectedClassType?.title?.includes('원데이클래스') || selectedClassType?.title?.includes('체험수업')) ?? false;
+  // 온라인그룹수업: 학생앱 미등록자 대상. 학생 선택 없이 제목(이름)만 입력해 일정 생성 (전화번호·D-1 알림 없음)
+  const isOnlineGroup = selectedClassType?.title?.includes('온라인그룹수업') ?? false;
+  // 학생 없이 제목만으로 진행 가능한 유형 (무료상담·온라인그룹수업)
+  const isGuestType = isFreeConsult || isOnlineGroup;
   // 30/60/90분 짧은 시간 옵션을 쓰는 체험성 수업
   const hasShortDuration = isFreeConsult || isOneDayClass;
 
   const displayDurationOptions = hasShortDuration ? ['30', '60', '90'] : DURATION_OPTIONS;
 
-  // 체험성 수업은 일회성이라 반복 등록 비활성화
-  const canRecur = !hasShortDuration && form.studentIds.length > 0 && Boolean(form.classTypeId);
+  // 체험성 수업은 일회성이라 반복 등록 비활성화. 온라인그룹수업은 학생 없이도 매주 반복 등록 허용
+  const canRecur = !hasShortDuration && (form.studentIds.length > 0 || isOnlineGroup) && Boolean(form.classTypeId);
 
   // 단계별 표시 조건
   const showStudent = Boolean(form.classTypeId);
-  // 무료상담은 학생 선택 없어도 이름 입력으로 진행 가능, 원데이클래스는 학생 선택 필수
-  const studentDone = isFreeConsult || form.studentIds.length > 0;
-  const showDatetime = showStudent && studentDone;
+  // 무료상담·온라인그룹수업은 학생 선택 없어도 이름(제목) 입력으로 진행, 원데이클래스는 학생 선택 필수
+  const studentDone = isGuestType || form.studentIds.length > 0;
+  // 반복/단일 선택 섹션: 반복 가능 유형(일반 학생수업·온라인그룹수업)에서만, 선행(학생/수업종류) 완료 후. 편집·일회성 제외.
+  const showRecurChoice = !isEdit && canRecur && studentDone;
+  // 반복 선택이 필요없으면(일회성·편집) 바로 일시. 필요하면 단일/반복을 골라야 일시 표시.
+  const recurChosen = !showRecurChoice || recurMode !== '';
+  const showDatetime = showStudent && studentDone && recurChosen;
   const datetimeDone = recurring ? Boolean(form.recurTime) : Boolean(form.datetime);
   const showDuration = showDatetime && datetimeDone;
   const sessionsPerLesson = parseInt(form.duration) / 60;
@@ -241,7 +252,7 @@ export default function ClassFormPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.studentIds.length && !isFreeConsult) {
+    if (!form.studentIds.length && !isGuestType) {
       setError('학생을 최소 한 명 선택하세요.');
       return;
     }
@@ -290,6 +301,7 @@ export default function ClassFormPage() {
           location: form.location || null,
           locationMemo: form.locationMemo || '',
           noteMemo: form.noteMemo || '',
+          title: (isOnlineGroup ? '온라인그룹수업' : form.guestName.trim()) || undefined,
         }));
         // 반복 수업 충돌 검사 — 충돌 있어도 확인 팝업 후 진행
         const pad = (n) => String(n).padStart(2, '0');
@@ -326,7 +338,7 @@ export default function ClassFormPage() {
           location: form.location || null,
           locationMemo: form.locationMemo || '',
           noteMemo: form.noteMemo || '',
-          title: form.guestName.trim() || undefined,
+          title: (isOnlineGroup ? '온라인그룹수업' : form.guestName.trim()) || undefined,
           phone: isFreeConsult ? form.guestPhone : undefined,
         };
         // 일회성 수업 충돌 검사 — 충돌 있어도 확인 팝업 후 진행
@@ -409,12 +421,13 @@ export default function ClassFormPage() {
             value={form.classTypeId || undefined}
             onChange={(value) => {
               const ct = classTypes.find(c => c.id === value);
-              const isShortDur = (ct?.title?.includes('무료상담') || ct?.title?.includes('원데이클래스')) ?? false;
+              const isShortDur = (ct?.title?.includes('무료상담') || ct?.title?.includes('원데이클래스') || ct?.title?.includes('체험수업')) ?? false;
               setForm((f) => ({
                 ...f,
                 classTypeId: value,
                 duration: isShortDur ? '30' : (f.duration === '30' ? '60' : f.duration),
               }));
+              setRecurMode(''); // 수업 종류 바뀌면 반복/단일 선택 초기화
             }}
             style={{ width: '100%' }}
             size="large"
@@ -428,10 +441,10 @@ export default function ClassFormPage() {
           </Select>
         </div>
 
-        {/* ② 학생 선택 — 수업 유형 선택 후 표시 */}
-        {showStudent && (
+        {/* ② 학생 선택 — 수업 유형 선택 후 표시 (온라인그룹수업은 학생/이름 입력 없이 건너뜀) */}
+        {showStudent && !isOnlineGroup && (
           <div style={{ animation: 'fadeSlideUp 0.35s ease both' }}>
-            {/* 무료상담: 상담자 이름 입력 (원데이클래스는 등록된 학생만 선택) */}
+            {/* 무료상담: 상담자 이름 + 전화번호(D-1 알림용) */}
             {isFreeConsult && (
               <div style={{ marginBottom: 20 }}>
                 <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
@@ -458,6 +471,7 @@ export default function ClassFormPage() {
                 />
               </div>
             )}
+            {!isOnlineGroup && (<>
             <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
               학생 선택 {isFreeConsult ? <span style={{ fontWeight: 400, color: TEXT_INACTIVE }}>(선택 사항)</span> : '(2:1 수업 시 두 명 선택)'}
             </Typography.Text>
@@ -505,80 +519,153 @@ export default function ClassFormPage() {
                 <p className="text-sm text-gray-400 text-center py-3">검색 결과 없음</p>
               )}
             </div>
+            </>)}
           </div>
         )}
 
-        {/* ③ 수업 일시 — 학생 완료(선택 or 무료상담) 후 표시 */}
-        {showDatetime && (
+        {/* 반복/단일 선택 — 일시 입력 전. 학생수업: 학생 선택 후 / 온라인그룹수업: 수업 종류 후 */}
+        {showRecurChoice && (
           <div style={{ animation: 'fadeSlideUp 0.35s ease both' }}>
             <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
-              {recurring ? '수업 시작 시각' : '수업 일시'}
+              수업 등록 방식
             </Typography.Text>
-            {!recurring ? (
-              <div className="flex gap-2">
-                <Input
-                  type="date"
-                  value={form.datetime ? form.datetime.slice(0, 10) : ''}
-                  onChange={(e) => {
-                    const date = e.target.value;
-                    const time = form.datetime ? form.datetime.slice(11) : '08:00';
-                    setForm((f) => ({ ...f, datetime: date ? `${date}T${time}` : '' }));
-                  }}
-                  size="large"
-                  style={{ borderRadius: 12, flex: 1 }}
-                />
-                <Select
-                  value={selectedHour || undefined}
-                  onChange={(h) => {
-                    const date = form.datetime ? form.datetime.slice(0, 10) : '';
-                    const min = form.datetime ? form.datetime.slice(14, 16) : '00';
-                    setForm((f) => ({ ...f, datetime: `${date}T${h}:${min}` }));
-                  }}
-                  size="large"
-                  style={{ width: 80 }}
-                  placeholder="시"
-                  virtual={false}
-                  popupRender={(menu) => (
-                    <div ref={(el) => { if (el) el.addEventListener('touchmove', (e) => e.stopPropagation(), { passive: false }); }}>
-                      {menu}
-                    </div>
-                  )}
-                >
-                  {Array.from({ length: 17 }, (_, i) => i + 6).map((h) => {
-                    const hStr = String(h).padStart(2, '0');
-                    const conflict = !isHourAvailable(hStr);
-                    return (
-                      <Select.Option key={h} value={hStr}>
-                        {h}시{conflict ? ' ⚠' : ''}
-                      </Select.Option>
-                    );
-                  })}
-                </Select>
-                {['00', '30'].map((min) => {
-                  const conflict = !isMinAvailable(min);
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setRecurMode('single')}
+                className={`py-3 rounded-xl text-sm font-medium border-2 transition-[background-color,color,border-color] duration-150 ease-out ${
+                  recurMode === 'single' ? 'border-brand-600 bg-brand-50 text-brand-700' : 'border-gray-200 bg-white text-gray-600'
+                }`}
+              >
+                단일 수업
+              </button>
+              <button
+                type="button"
+                onClick={() => setRecurMode('recur')}
+                className={`py-3 rounded-xl text-sm font-medium border-2 transition-[background-color,color,border-color] duration-150 ease-out ${
+                  recurMode === 'recur' ? 'border-brand-600 bg-brand-50 text-brand-700' : 'border-gray-200 bg-white text-gray-600'
+                }`}
+              >
+                반복 수업
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ③ 일시(단일) 또는 요일·기간·시각(반복) — 등록 방식 선택 후 표시 */}
+        {showDatetime && !recurring && (
+          <div style={{ animation: 'fadeSlideUp 0.35s ease both' }}>
+            <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
+              수업 일시
+            </Typography.Text>
+            <div className="flex gap-2">
+              <Input
+                type="date"
+                value={form.datetime ? form.datetime.slice(0, 10) : ''}
+                onChange={(e) => {
+                  const date = e.target.value;
+                  const time = form.datetime ? form.datetime.slice(11) : '08:00';
+                  setForm((f) => ({ ...f, datetime: date ? `${date}T${time}` : '' }));
+                }}
+                size="large"
+                style={{ borderRadius: 12, flex: 1 }}
+              />
+              <Select
+                value={selectedHour || undefined}
+                onChange={(h) => {
+                  const date = form.datetime ? form.datetime.slice(0, 10) : '';
+                  const min = form.datetime ? form.datetime.slice(14, 16) : '00';
+                  setForm((f) => ({ ...f, datetime: `${date}T${h}:${min}` }));
+                }}
+                size="large"
+                style={{ width: 80 }}
+                placeholder="시"
+                virtual={false}
+                popupRender={(menu) => (
+                  <div ref={(el) => { if (el) el.addEventListener('touchmove', (e) => e.stopPropagation(), { passive: false }); }}>
+                    {menu}
+                  </div>
+                )}
+              >
+                {Array.from({ length: 17 }, (_, i) => i + 6).map((h) => {
+                  const hStr = String(h).padStart(2, '0');
+                  const conflict = !isHourAvailable(hStr);
+                  return (
+                    <Select.Option key={h} value={hStr}>
+                      {h}시{conflict ? ' ⚠' : ''}
+                    </Select.Option>
+                  );
+                })}
+              </Select>
+              {['00', '30'].map((min) => {
+                const conflict = !isMinAvailable(min);
+                return (
+                  <button
+                    key={min}
+                    type="button"
+                    onClick={() => {
+                      const date = form.datetime ? form.datetime.slice(0, 10) : '';
+                      const hour = form.datetime ? form.datetime.slice(11, 13) : '08';
+                      setForm((f) => ({ ...f, datetime: `${date}T${hour}:${min}` }));
+                    }}
+                    className={`px-3 rounded-xl text-sm font-medium border-2 transition-[background-color,color,border-color] duration-150 ease-out ${
+                      selectedMin === min
+                        ? 'border-brand-600 bg-brand-50 text-brand-700'
+                        : conflict
+                        ? 'border-yellow-300 bg-yellow-50 text-yellow-700'
+                        : 'border-gray-200 bg-white text-gray-600'
+                    }`}
+                  >
+                    :{min}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ③-반복: 요일 → 기간 → 시작 시각 */}
+        {showDatetime && recurring && (
+          <div style={{ animation: 'fadeSlideUp 0.35s ease both' }} className="space-y-4">
+            <div>
+              <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
+                수업 요일 (복수 선택 가능)
+              </Typography.Text>
+              <div className="grid grid-cols-7 gap-1.5">
+                {DAY_KR.map((label, i) => {
+                  const day = DAY_JS[i];
+                  const active = form.recurDays.includes(day);
                   return (
                     <button
-                      key={min}
+                      key={day}
                       type="button"
-                      onClick={() => {
-                        const date = form.datetime ? form.datetime.slice(0, 10) : '';
-                        const hour = form.datetime ? form.datetime.slice(11, 13) : '08';
-                        setForm((f) => ({ ...f, datetime: `${date}T${hour}:${min}` }));
-                      }}
-                      className={`px-3 rounded-xl text-sm font-medium border-2 transition-[background-color,color,border-color] duration-150 ease-out ${
-                        selectedMin === min
-                          ? 'border-brand-600 bg-brand-50 text-brand-700'
-                          : conflict
-                          ? 'border-yellow-300 bg-yellow-50 text-yellow-700'
-                          : 'border-gray-200 bg-white text-gray-600'
+                      onClick={() => toggleDay(day)}
+                      className={`py-3 rounded-xl text-sm font-medium border-2 transition-[background-color,color,border-color] duration-150 ease-out ${
+                        active ? 'border-brand-600 bg-brand-50 text-brand-700' : 'border-gray-200 bg-white text-gray-600'
                       }`}
                     >
-                      :{min}
+                      {label}
                     </button>
                   );
                 })}
               </div>
-            ) : (
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>시작일</Typography.Text>
+                <Input type="date" value={form.recurStartDate} onChange={(e) => setForm((f) => ({ ...f, recurStartDate: e.target.value }))} size="large" style={{ borderRadius: 12 }} />
+              </div>
+              <div>
+                <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>종료일</Typography.Text>
+                <Input type="date" value={form.recurEndDate} min={form.recurStartDate} onChange={(e) => setForm((f) => ({ ...f, recurEndDate: e.target.value }))} size="large" style={{ borderRadius: 12 }} />
+              </div>
+            </div>
+
+            <div>
+              <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
+                수업 시작 시각
+              </Typography.Text>
               <div className="flex gap-2">
                 <Select
                   value={form.recurTime ? form.recurTime.slice(0, 2) : undefined}
@@ -623,7 +710,7 @@ export default function ClassFormPage() {
                   );
                 })}
               </div>
-            )}
+            </div>
           </div>
         )}
 
@@ -657,93 +744,36 @@ export default function ClassFormPage() {
           </div>
         )}
 
-        {/* ⑤ 반복 수업 등록 — 일시 입력 후 표시 (편집 모드·무료상담에서는 숨김) */}
-        {showDuration && !isEdit && !hasShortDuration && (
+        {/* ⑤ 등록 예정 수업 수 — 반복 수업, 시간 입력 후 표시 */}
+        {showDuration && recurring && (
           <div style={{ animation: 'fadeSlideUp 0.35s ease both' }}>
-            <div
-              className={`flex items-center justify-between p-3 rounded-xl border-2 transition-[background-color,color,border-color] duration-150 ease-out ${
-                !canRecur
-                  ? 'border-gray-100 bg-gray-50 opacity-50 cursor-not-allowed'
-                  : recurring
-                  ? 'border-brand-500 bg-brand-50 cursor-pointer'
-                  : 'border-gray-200 bg-white cursor-pointer'
-              }`}
-              onClick={() => canRecur && setRecurring((v) => !v)}
-            >
-              <div>
-                <p className="text-sm font-medium text-gray-800">반복 수업 등록</p>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  {recurring ? '요일·날짜범위 지정 → 잔여 회차만큼 자동 등록' : '매 주 같은 요일에 반복 등록'}
-                </p>
-              </div>
-              <div className={`w-11 h-6 rounded-full transition-[background-color] duration-150 ease-out flex items-center px-0.5 ${recurring ? 'bg-brand-500' : 'bg-gray-300'}`}>
-                <div className={`w-5 h-5 rounded-full bg-white shadow transition-transform ${recurring ? 'translate-x-5' : 'translate-x-0'}`} />
-              </div>
-            </div>
-
-            {recurring && (
-              <div className="space-y-4 p-4 bg-gray-50 rounded-[28px] border border-gray-200 mt-4">
-                {/* 요일 선택 */}
-                <div>
-                  <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
-                    수업 요일 (복수 선택 가능)
-                  </Typography.Text>
-                  <div className="grid grid-cols-7 gap-1.5">
-                    {DAY_KR.map((label, i) => {
-                      const day = DAY_JS[i];
-                      const active = form.recurDays.includes(day);
-                      return (
-                        <button
-                          key={day}
-                          type="button"
-                          onClick={() => toggleDay(day)}
-                          className={`py-3 rounded-xl text-sm font-medium border-2 transition-[background-color,color,border-color] duration-150 ease-out ${
-                            active ? 'border-brand-600 bg-brand-50 text-brand-700' : 'border-gray-200 bg-white text-gray-600'
-                          }`}
-                        >
-                          {label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* 시작일 / 종료일 */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>시작일</Typography.Text>
-                    <Input type="date" value={form.recurStartDate} onChange={(e) => setForm((f) => ({ ...f, recurStartDate: e.target.value }))} size="large" style={{ borderRadius: 12 }} />
-                  </div>
-                  <div>
-                    <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>종료일</Typography.Text>
-                    <Input type="date" value={form.recurEndDate} min={form.recurStartDate} onChange={(e) => setForm((f) => ({ ...f, recurEndDate: e.target.value }))} size="large" style={{ borderRadius: 12 }} />
-                  </div>
-                </div>
-
                 {/* 등록 예정 수업 수 안내 */}
                 {(() => {
-                  const overLimit = recurCount > 0 && recurCount * sessionsPerLesson > minRemaining;
+                  // 온라인그룹수업은 학생(잔여 회차) 개념이 없어 회차 초과 판정에서 제외
+                  const overLimit = !isOnlineGroup && recurCount > 0 && recurCount * sessionsPerLesson > minRemaining;
                   const boxColor = !form.recurEndDate || recurCount === 0 ? 'bg-gray-50 text-gray-500' : overLimit ? 'bg-yellow-50 text-yellow-700' : 'bg-brand-50 text-brand-600';
+                  const datePreview = recurDates.length > 0 && (
+                    <div className="mt-2 text-xs text-brand-600 space-y-0.5">
+                      {recurDates.slice(0, 5).map((d, i) => <div key={i}>{formatDateLabel(d)} {form.recurTime}</div>)}
+                      {recurDates.length > 5 && <div className="text-blue-400">... 외 {recurDates.length - 5}개</div>}
+                    </div>
+                  );
                   return (
                     <div className={`p-3 rounded-xl text-sm ${boxColor}`}>
-                      {selectedStudents.length === 0 ? '학생을 선택하면 등록 가능한 수업 수가 표시됩니다.'
+                      {isOnlineGroup ? (
+                        !form.recurEndDate ? '종료일을 선택하면 등록 예정 수업 수가 표시됩니다.'
+                        : recurCount === 0 ? '선택한 날짜 범위에 해당 요일 수업이 없습니다.'
+                        : (<><span className="font-semibold">수업 {recurCount}개</span> 등록 예정{datePreview}</>)
+                      )
+                        : selectedStudents.length === 0 ? '학생을 선택하면 등록 가능한 수업 수가 표시됩니다.'
                         : !form.recurEndDate ? '종료일을 선택하면 등록 예정 수업 수가 표시됩니다.'
                         : recurCount === 0 ? '선택한 날짜 범위에 해당 요일 수업이 없습니다.'
                         : overLimit ? (<>범위 내 수업 <span className="font-semibold">{recurCount}개</span>{' '}({recurCount * sessionsPerLesson}회차) — 잔여 {minRemaining}회차 초과 (등록은 가능)</>)
-                        : (<>잔여 {minRemaining}회차 충분 →{' '}<span className="font-semibold">수업 {recurCount}개</span> 등록 예정
-                            {recurDates.length > 0 && (
-                              <div className="mt-2 text-xs text-brand-600 space-y-0.5">
-                                {recurDates.slice(0, 5).map((d, i) => <div key={i}>{formatDateLabel(d)} {form.recurTime}</div>)}
-                                {recurDates.length > 5 && <div className="text-blue-400">... 외 {recurDates.length - 5}개</div>}
-                              </div>
-                            )}
-                          </>)
+                        : (<>잔여 {minRemaining}회차 충분 →{' '}<span className="font-semibold">수업 {recurCount}개</span> 등록 예정{datePreview}</>)
                       }
                     </div>
                   );
                 })()}
-              </div>
-            )}
           </div>
         )}
 

@@ -41,7 +41,7 @@ export default function PaymentTrendChart({ payments, studentFilter, loading }) 
           const pdM = parseInt(pd.toLocaleString('en-CA', { timeZone: KST, month: '2-digit' }), 10) - 1;
           return pdY === m.year && pdM === m.month;
         })
-        .reduce((s, p) => s + (p.actualAmount || 0), 0);
+        .reduce((s, p) => s + ((p.actualAmount || 0) - (p.refundAmount || 0)), 0);
       return { ...m, total };
     });
   }, [months, payments, studentFilter]);

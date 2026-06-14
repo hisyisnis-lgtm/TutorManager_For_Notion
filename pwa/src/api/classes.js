@@ -19,7 +19,7 @@ export const LOCATION_OPTIONS = ['강남사무실', '온라인 (Zoom/화상)', '
 
 /** 수업 목록 조회 */
 export async function fetchClassesPage(opts = {}) {
-  const { dateFrom, dateTo, studentId, cursor, completedOnly } = opts;
+  const { dateFrom, dateTo, studentId, classTypeId, cursor, completedOnly } = opts;
   const filters = [];
   const nowIso = new Date().toISOString();
 
@@ -30,6 +30,7 @@ export async function fetchClassesPage(opts = {}) {
     if (dateTo) filters.push({ property: '수업 일시', date: { on_or_before: dateTo } });
   }
   if (studentId) filters.push({ property: '학생', relation: { contains: studentId } });
+  if (classTypeId) filters.push({ property: '수업 유형', relation: { contains: classTypeId } });
 
   const filter =
     filters.length > 1
@@ -46,7 +47,7 @@ export async function fetchClassesPage(opts = {}) {
 }
 
 /** 수업 생성 */
-export async function createClass({ studentIds, classTypeId, datetime, duration, notes, location, locationMemo, noteMemo, title, phone }) {
+export async function createClass({ studentIds, classTypeId, datetime, duration, notes, location, locationMemo, noteMemo, title, phone, roster }) {
   const properties = {
     학생: { relation: studentIds.map((id) => ({ id })) },
     '수업 유형': { relation: [{ id: classTypeId }] },
@@ -71,6 +72,9 @@ export async function createClass({ studentIds, classTypeId, datetime, duration,
   properties['전화번호'] = phone?.trim()
     ? { rich_text: [{ text: { content: phone.trim() } }] }
     : { rich_text: [] };
+  properties['수강생'] = roster?.trim()
+    ? { rich_text: [{ text: { content: roster.trim() } }] }
+    : { rich_text: [] };
   return createPage(CLASSES_DB, properties);
 }
 
@@ -85,7 +89,7 @@ export async function bulkCreateClasses(items) {
 }
 
 /** 수업 수정 (충돌_감지 checkbox는 건드리지 않음) */
-export async function updateClass(pageId, { studentIds, classTypeId, datetime, duration, notes, location, locationMemo, noteMemo, title, phone }) {
+export async function updateClass(pageId, { studentIds, classTypeId, datetime, duration, notes, location, locationMemo, noteMemo, title, phone, roster }) {
   const properties = {};
   if (studentIds) properties['학생'] = { relation: studentIds.map((id) => ({ id })) };
   if (classTypeId) properties['수업 유형'] = { relation: [{ id: classTypeId }] };
@@ -109,6 +113,11 @@ export async function updateClass(pageId, { studentIds, classTypeId, datetime, d
   if (phone !== undefined) {
     properties['전화번호'] = phone?.trim()
       ? { rich_text: [{ text: { content: phone.trim() } }] }
+      : { rich_text: [] };
+  }
+  if (roster !== undefined) {
+    properties['수강생'] = roster?.trim()
+      ? { rich_text: [{ text: { content: roster.trim() } }] }
       : { rich_text: [] };
   }
 
@@ -135,6 +144,7 @@ export function parseClass(page) {
     locationMemo: getRichText(p['수업 장소 메모']),
     noteMemo: getRichText(p['특이사항 메모']),
     phone: getRichText(p['전화번호']),
+    roster: getRichText(p['수강생']),
   };
 }
 

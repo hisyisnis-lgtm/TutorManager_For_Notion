@@ -13,6 +13,10 @@ import {
 
 const KST = 'Asia/Seoul';
 
+// 순 결제액(매출) = 실제 결제 − 환불. 확정 매출 집계에만 사용.
+// ⚠️ forecast(예상 수익)의 기준액(lastPayment.actualAmount)에는 적용하지 않음 — 다음 정기결제 예측 왜곡 방지.
+const netPaid = (p) => (p.actualAmount || 0) - (p.refundAmount || 0);
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 // 예상 결제 간격 산정 기준: 1시간 50,000원, 주 1회 1.5시간 = 주당 75,000원
 const HOURLY_RATE = 50000;
@@ -121,7 +125,7 @@ const IncomeSummary = forwardRef(function IncomeSummary(_props, ref) {
       for (const pmt of payments) {
         if (!pmt.paymentDate) continue;
         const ct = classTypeMap[pmt.classTypeId];
-        if (ct?.title?.includes('원데이클래스')) continue; // 일회성 체험 결제 제외
+        if (ct?.title?.includes('원데이클래스') || ct?.title?.includes('체험수업')) continue; // 일회성·체험 결제 제외
         for (const sid of pmt.studentIds) {
           if (!paymentsByStudent.has(sid)) paymentsByStudent.set(sid, []);
           paymentsByStudent.get(sid).push(pmt);
@@ -148,7 +152,7 @@ const IncomeSummary = forwardRef(function IncomeSummary(_props, ref) {
       for (const pmt of payments) {
         if (!pmt.paymentDate) continue;
         const ct = classTypeMap[pmt.classTypeId];
-        if (ct?.title?.includes('원데이클래스')) continue;
+        if (ct?.title?.includes('원데이클래스') || ct?.title?.includes('체험수업')) continue;
         const py = parseInt(new Date(pmt.paymentDate).toLocaleString('en-CA', { timeZone: KST, year: 'numeric' }), 10);
         const pm = parseInt(new Date(pmt.paymentDate).toLocaleString('en-CA', { timeZone: KST, month: '2-digit' }), 10) - 1;
         if (py === thisYear && pm === thisMonth) {
@@ -336,7 +340,7 @@ const IncomeSummary = forwardRef(function IncomeSummary(_props, ref) {
               <CaretRightIcon size={12} weight="bold" />
             </span>
             <span className="tabular-nums" style={{ fontSize: 14, fontWeight: 600, color: TEXT_PRIMARY }}>
-              {formatKRW(monthPayments.reduce((s, p) => s + (p.actualAmount || 0), 0))}
+              {formatKRW(monthPayments.reduce((s, p) => s + netPaid(p), 0))}
             </span>
           </button>
           <button
@@ -356,7 +360,7 @@ const IncomeSummary = forwardRef(function IncomeSummary(_props, ref) {
             {forecastLoading ? (
               <span className="w-1.5 h-1.5 rounded-full bg-brand-400 animate-pulse" />
             ) : (() => {
-              const confirmed = monthPayments.reduce((s, p) => s + (p.actualAmount || 0), 0);
+              const confirmed = monthPayments.reduce((s, p) => s + netPaid(p), 0);
               const totalThisMonth = confirmed + forecastThisMonth;
               return (
                 <span className="tabular-nums" style={{ fontSize: 14, fontWeight: 600, color: PRIMARY }}>
@@ -410,7 +414,7 @@ const IncomeSummary = forwardRef(function IncomeSummary(_props, ref) {
       >
         {(() => {
           const entries = forecastBreakdown.filter((e) => e.bucket === breakdownBucket);
-          const confirmedThisMonth = monthPayments.reduce((s, p) => s + (p.actualAmount || 0), 0);
+          const confirmedThisMonth = monthPayments.reduce((s, p) => s + netPaid(p), 0);
           const forecastTotal = breakdownBucket === 'thisMonth' ? forecastThisMonth : forecastNextMonth;
           const grandTotal = breakdownBucket === 'thisMonth' ? confirmedThisMonth + forecastTotal : forecastTotal;
 
@@ -485,7 +489,7 @@ const IncomeSummary = forwardRef(function IncomeSummary(_props, ref) {
                                   {studentName}
                                 </span>
                                 <span className="tabular-nums" style={{ fontSize: 14, fontWeight: 700, color: TEXT_PRIMARY }}>
-                                  {formatKRW(p.actualAmount || 0)}
+                                  {formatKRW(netPaid(p))}
                                 </span>
                               </div>
                               <div className="flex items-center justify-between" style={{ marginTop: 4 }}>
