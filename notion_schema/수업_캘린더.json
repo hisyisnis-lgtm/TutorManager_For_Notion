@@ -151,6 +151,10 @@
       "id": "yE%7DP",
       "expression": "if({{notion:block_property:Jcae:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}}, \"⚠️ 충돌\", \"\")"
     },
+    "수강생": {
+      "type": "rich_text",
+      "id": "y%5D%3Fu"
+    },
     "상태": {
       "type": "formula",
       "id": "ydSp",
