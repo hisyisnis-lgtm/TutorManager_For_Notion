@@ -5,6 +5,10 @@
 .hide-scrollbar { scrollbar-width: none; }
 .hide-scrollbar::-webkit-scrollbar { display: none; }
 
+/* 모바일 <input type="date">는 intrinsic min-width가 커서 grid 2열(시작/종료일)에서 칸을 넘쳐 박스가 겹치고 화면 밖으로 삐져나감 → min-width:0으로 축소 허용. iOS의 값 가운데 정렬도 왼쪽으로 보정. */
+input[type="date"] { min-width: 0; text-align: left; }
+input[type="date"]::-webkit-date-and-time-value { text-align: left; }
+
 @keyframes panda-float {
   0%, 100% { transform: translateY(0px) rotate(0deg); }
   30% { transform: translateY(-8px) rotate(-2deg); }

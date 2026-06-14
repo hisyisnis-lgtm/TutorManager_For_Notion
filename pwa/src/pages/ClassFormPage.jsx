@@ -652,13 +652,13 @@ export default function ClassFormPage() {
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              <div>
+              <div className="min-w-0">
                 <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>시작일</Typography.Text>
-                <Input type="date" value={form.recurStartDate} onChange={(e) => setForm((f) => ({ ...f, recurStartDate: e.target.value }))} size="large" style={{ borderRadius: 12 }} />
+                <Input type="date" value={form.recurStartDate} onChange={(e) => setForm((f) => ({ ...f, recurStartDate: e.target.value }))} size="large" style={{ borderRadius: 12, width: '100%' }} />
               </div>
-              <div>
+              <div className="min-w-0">
                 <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>종료일</Typography.Text>
-                <Input type="date" value={form.recurEndDate} min={form.recurStartDate} onChange={(e) => setForm((f) => ({ ...f, recurEndDate: e.target.value }))} size="large" style={{ borderRadius: 12 }} />
+                <Input type="date" value={form.recurEndDate} min={form.recurStartDate} onChange={(e) => setForm((f) => ({ ...f, recurEndDate: e.target.value }))} size="large" style={{ borderRadius: 12, width: '100%' }} />
               </div>
             </div>
 
