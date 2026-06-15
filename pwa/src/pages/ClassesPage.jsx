@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Button, Input, Card, DatePicker } from 'antd';
+import { Button, Input, Card, DatePicker, Select } from 'antd';
 import dayjs from 'dayjs';
 import { MagnifyingGlassIcon, MapPinIcon, WarningCircleIcon, CalendarBlankIcon, InfoIcon } from '@phosphor-icons/react';
 import { PRIMARY, PRIMARY_BG, TEXT_PRIMARY, TEXT_SECONDARY, TEXT_TERTIARY, BORDER_DEFAULT, PRIMARY_ALPHA_25, STATUS_ERROR_TEXT, STATUS_ERROR_BG } from '../constants/theme.js';
@@ -94,7 +94,7 @@ function getDateRange(period) {
 }
 
 export default function ClassesPage() {
-  const { studentNameMap, classTypeMap } = useData();
+  const { studentNameMap, classTypeMap, classTypes } = useData();
   const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -103,6 +103,7 @@ export default function ClassesPage() {
   const [hasMore, setHasMore] = useState(false);
   const [cursor, setCursor] = useState(null);
   const [search, setSearch] = useState('');
+  const [classTypeFilter, setClassTypeFilter] = useState('');
   // 날짜 범위 필터 (YYYY-MM-DD). 비어있으면 period 기본값 사용.
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
@@ -126,7 +127,7 @@ export default function ClassesPage() {
       const finalFrom = dateFrom ? `${dateFrom}T00:00:00+09:00` : range.dateFrom;
       const finalTo = dateTo ? `${dateTo}T23:59:59+09:00` : range.dateTo;
       const completedOnly = period === 'completed';
-      const data = await fetchClassesPage({ dateFrom: finalFrom, dateTo: finalTo, cursor: nextCursor, completedOnly });
+      const data = await fetchClassesPage({ dateFrom: finalFrom, dateTo: finalTo, cursor: nextCursor, completedOnly, classTypeId: classTypeFilter || undefined });
       const parsed = data.results.map(parseClass);
       setClasses((prev) => (reset ? parsed : [...prev, ...parsed]));
       setHasMore(data.has_more);
@@ -137,7 +138,7 @@ export default function ClassesPage() {
       setLoading(false);
       setLoadingMore(false);
     }
-  }, [period, dateFrom, dateTo]);
+  }, [period, dateFrom, dateTo, classTypeFilter]);
 
   const loadCalendar = useCallback(async (year, month) => {
     setCalLoading(true);
@@ -257,7 +258,7 @@ export default function ClassesPage() {
                     return (
                       <li key={cls.id}>
                         <Link
-                          to={`/classes/${cls.id}/edit`}
+                          to={`/classes/${cls.id}`}
                           className="flex items-center gap-3 px-3 py-2 rounded-xl bg-gray-50 active:bg-gray-100"
                         >
                           <span className="text-xs font-semibold text-brand-600 shrink-0">
@@ -374,8 +375,8 @@ export default function ClassesPage() {
         </div>
       </div>
 
-      {/* 학생 검색 */}
-      <div className="px-4 pb-3">
+      {/* 학생 검색 + 수업 종류 필터 */}
+      <div className="px-4 pb-3 space-y-2">
         <Input
           prefix={<MagnifyingGlassIcon weight="fill" style={{ color: TEXT_TERTIARY }} />}
           placeholder="학생 이름으로 검색"
@@ -385,6 +386,18 @@ export default function ClassesPage() {
           size="large"
           style={{ borderRadius: 12 }}
         />
+        <Select
+          value={classTypeFilter || undefined}
+          onChange={(v) => setClassTypeFilter(v || '')}
+          placeholder="수업 종류 전체"
+          allowClear
+          size="large"
+          style={{ width: '100%' }}
+        >
+          {classTypes.map((ct) => (
+            <Select.Option key={ct.id} value={ct.id}>{ct.title}</Select.Option>
+          ))}
+        </Select>
       </div>
 
       {loading && <LoadingSpinner />}
@@ -474,7 +487,7 @@ function ClassCard({ cls, studentNameMap }) {
         variant="borderless"
         style={{ borderRadius: 16, cursor: 'pointer', boxShadow: 'var(--shadow-border)', transition: 'box-shadow 150ms ease-out' }}
         styles={{ body: { padding: '14px 16px' } }}
-        onClick={() => navigate(`/classes/${cls.id}/edit`)}
+        onClick={() => navigate(`/classes/${cls.id}`)}
         onMouseEnter={(e) => { e.currentTarget.style.boxShadow = 'var(--shadow-border-hover)'; }}
         onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'var(--shadow-border)'; }}
       >

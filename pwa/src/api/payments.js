@@ -23,10 +23,11 @@ export const PAYMENT_METHODS = [
 ];
 
 export async function fetchPaymentsPage(opts = {}) {
-  const { studentId, cursor } = opts;
-  const filter = studentId
-    ? { property: '학생', relation: { contains: studentId } }
-    : undefined;
+  const { studentId, classTypeId, cursor } = opts;
+  const filters = [];
+  if (studentId) filters.push({ property: '학생', relation: { contains: studentId } });
+  if (classTypeId) filters.push({ property: '수업 종류', relation: { contains: classTypeId } });
+  const filter = filters.length > 1 ? { and: filters } : filters.length === 1 ? filters[0] : undefined;
 
   return queryPage(
     PAYMENTS_DB,
@@ -38,6 +39,8 @@ export async function fetchPaymentsPage(opts = {}) {
 
 export async function createPayment({
   note,
+  guestName,   // 학생앱 미등록자(온라인그룹수업 등) 수강생 이름 → 타이틀
+  phone,       // 학생 없는 결제의 연락처 (선택)
   studentId,
   classTypeId,
   discountEventId,
@@ -46,14 +49,24 @@ export async function createPayment({
   paymentMethod,
   paymentDate,
 }) {
+  // 학생 연결 결제는 타이틀=비고(note), 학생 없는 결제는 타이틀=수강생 이름(guestName)
+  const title = studentId ? (note || '') : (guestName || '');
   const properties = {
-    타이틀: { title: [{ text: { content: note || '' } }] },
-    학생: { relation: [{ id: studentId }] },
+    타이틀: { title: [{ text: { content: title } }] },
     '수업 종류': { relation: [{ id: classTypeId }] },
     '시간 회차': { number: sessionCount },
     '실제 결제 금액': { number: actualAmount },
   };
 
+  if (studentId) {
+    properties['학생'] = { relation: [{ id: studentId }] };
+  } else if (note) {
+    // 학생 없는 결제: 비고는 메모 필드로 (타이틀은 이름이 차지)
+    properties['메모'] = { rich_text: [{ text: { content: note } }] };
+  }
+  if (!studentId && phone?.trim()) {
+    properties['전화번호'] = { phone_number: phone.trim() };
+  }
   if (discountEventId) {
     properties['할인 적용'] = { relation: [{ id: discountEventId }] };
   }
@@ -76,6 +89,9 @@ export async function updatePayment(pageId, {
   paymentMethod,
   paymentDate,
   note,
+  refundAmount,
+  refundDate,
+  refundReason,
 }) {
   const properties = {};
   if (studentId) properties['학생'] = { relation: [{ id: studentId }] };
@@ -89,6 +105,11 @@ export async function updatePayment(pageId, {
   else if (paymentMethod === '') properties['결제수단'] = { select: null };
   if (paymentDate) properties['결제일'] = { date: { start: paymentDate } };
   if (note !== undefined) properties['타이틀'] = { title: [{ text: { content: note } }] };
+  if (refundAmount !== undefined) properties['환불 금액'] = { number: refundAmount };
+  if (refundDate !== undefined) properties['환불일'] = refundDate ? { date: { start: refundDate } } : { date: null };
+  if (refundReason !== undefined) {
+    properties['환불 사유'] = refundReason ? { rich_text: [{ text: { content: refundReason } }] } : { rich_text: [] };
+  }
 
   return updatePage(pageId, properties);
 }
@@ -111,6 +132,10 @@ export function parsePayment(page) {
     paymentMethod: getSelect(p['결제수단']),
     paymentDate: getDate(p['결제일']),
     memo: getRichText(p['메모']),
+    phone: p['전화번호']?.phone_number ?? '',
+    refundAmount: getNumber(p['환불 금액']),
+    refundDate: getDate(p['환불일']),
+    refundReason: getRichText(p['환불 사유']),
   };
 }
 

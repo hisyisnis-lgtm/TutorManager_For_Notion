@@ -13,8 +13,10 @@ import StudentDetailPage from './pages/StudentDetailPage.jsx';
 import StudentFormPage from './pages/StudentFormPage.jsx';
 import ClassesPage from './pages/ClassesPage.jsx';
 import ClassFormPage from './pages/ClassFormPage.jsx';
+import ClassDetailPage from './pages/ClassDetailPage.jsx';
 import PaymentsPage from './pages/PaymentsPage.jsx';
 import PaymentFormPage from './pages/PaymentFormPage.jsx';
+import PaymentDetailPage from './pages/PaymentDetailPage.jsx';
 import LessonLogsPage from './pages/LessonLogsPage.jsx';
 import LessonLogFormPage from './pages/LessonLogFormPage.jsx';
 import HomePage from './pages/HomePage.jsx';
@@ -343,10 +345,12 @@ export default function App() {
             <Route path="/classes" element={<ClassesPage />} />
             <Route path="/classes/new" element={<ClassFormPage />} />
             <Route path="/classes/:id/edit" element={<ClassFormPage />} />
+            <Route path="/classes/:id" element={<ClassDetailPage />} />
 
             <Route path="/payments" element={<PaymentsPage />} />
             <Route path="/payments/new" element={<PaymentFormPage />} />
             <Route path="/payments/:id/edit" element={<PaymentFormPage />} />
+            <Route path="/payments/:id" element={<PaymentDetailPage />} />
 
             <Route path="/logs" element={<LessonLogsPage />} />
             <Route path="/logs/:id/edit" element={<LessonLogFormPage />} />

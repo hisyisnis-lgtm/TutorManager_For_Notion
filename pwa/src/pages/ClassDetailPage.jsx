@@ -1,0 +1,80 @@
+import { useState, useEffect } from 'react';
+import { useParams, Link } from 'react-router-dom';
+import { Button, Card } from 'antd';
+import PageHeader from '../components/layout/PageHeader.jsx';
+import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
+import ErrorMessage from '../components/ui/ErrorMessage.jsx';
+import Badge from '../components/ui/Badge.jsx';
+import { getPage } from '../api/notionClient.js';
+import { parseClass, classStatusColor, notesColor } from '../api/classes.js';
+import { useData } from '../context/DataContext.jsx';
+import { stripEmoji } from '../utils/stringUtils.js';
+import { PRIMARY, TEXT_PRIMARY, TEXT_TERTIARY } from '../constants/theme.js';
+
+function Row({ label, value }) {
+  if (value === null || value === undefined || value === '' ) return null;
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '12px 0', borderBottom: '1px solid #f5f5f5' }}>
+      <span style={{ fontSize: 13, color: TEXT_TERTIARY, flexShrink: 0 }}>{label}</span>
+      <span style={{ fontSize: 14, color: TEXT_PRIMARY, fontWeight: 500, textAlign: 'right', wordBreak: 'break-word' }}>{value}</span>
+    </div>
+  );
+}
+
+export default function ClassDetailPage() {
+  const { id } = useParams();
+  const { studentNameMap, classTypeMap } = useData();
+  const [cls, setCls] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    getPage(id)
+      .then((p) => { if (!cancelled) setCls(parseClass(p)); })
+      .catch((e) => { if (!cancelled) setError(e.message); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [id]);
+
+  if (loading) return <><PageHeader title="수업 상세" back /><LoadingSpinner /></>;
+  if (error || !cls) return <><PageHeader title="수업 상세" back /><ErrorMessage message={error || '불러올 수 없습니다'} /></>;
+
+  const studentNames = cls.studentIds.map((sid) => studentNameMap[sid]).filter(Boolean).join(', ');
+  const ct = classTypeMap[cls.classTypeId];
+  const isGroup = ct?.title?.includes('온라인그룹수업') ?? false;
+  const dt = cls.datetime
+    ? new Date(cls.datetime).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', year: 'numeric', month: 'long', day: 'numeric', weekday: 'short', hour: '2-digit', minute: '2-digit' })
+    : '';
+  const sc = classStatusColor(cls.status);
+  const nc = notesColor(cls.notes);
+  const locationText = [cls.location, cls.locationMemo].filter(Boolean).join(' · ');
+
+  return (
+    <>
+      <PageHeader title="수업 상세" back />
+      <div className="px-4 pt-4 pb-24">
+        <Card variant="borderless" style={{ borderRadius: 12, boxShadow: 'var(--shadow-border)' }} styles={{ body: { padding: '16px 18px' } }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 14 }}>
+            <p style={{ fontSize: 18, fontWeight: 700, color: TEXT_PRIMARY, margin: 0 }}>
+              {cls.title || studentNames || '수업'}
+            </p>
+            <Link to={`/classes/${id}/edit`} style={{ flexShrink: 0 }}>
+              <Button type="text" size="small" style={{ color: PRIMARY, fontWeight: 600, paddingInline: 8 }}>편집</Button>
+            </Link>
+          </div>
+          <Row label="상태" value={cls.status ? <Badge label={stripEmoji(cls.status)} bg={sc.bg} text={sc.text} /> : null} />
+          {studentNames && <Row label="학생" value={studentNames} />}
+          {isGroup && cls.roster && <Row label="수강생" value={cls.roster} />}
+          <Row label="수업 유형" value={ct?.title} />
+          <Row label="일시" value={dt} />
+          <Row label="수업 시간" value={cls.duration ? `${cls.duration}분` : null} />
+          <Row label="장소" value={locationText} />
+          <Row label="특이사항" value={cls.notes ? <Badge label={stripEmoji(cls.notes)} bg={nc?.bg || 'bg-gray-100'} text={nc?.text || 'text-gray-500'} /> : null} />
+          <Row label="메모" value={cls.noteMemo} />
+          <Row label="전화번호" value={cls.phone} />
+        </Card>
+      </div>
+    </>
+  );
+}

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { Button, Input, Card } from 'antd';
+import { Button, Input, Card, Select } from 'antd';
 import { MagnifyingGlassIcon } from '@phosphor-icons/react';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import Badge from '../components/ui/Badge.jsx';
@@ -19,22 +19,14 @@ import { TEXT_PRIMARY, TEXT_TERTIARY, STATUS_ERROR_TEXT } from '../constants/the
 
 const KST = 'Asia/Seoul';
 
-const STATUS_FILTERS = [
-  { value: '전체', label: '전체' },
-  { value: '🟢완료', label: '완료' },
-  { value: '🔴미완료', label: '미완료' },
-  { value: '⬛미결제', label: '미결제' },
-  { value: '⚠️초과금', label: '초과금' },
-];
-
 export default function PaymentsPage() {
-  const { students, studentNameMap, classTypeMap } = useData();
+  const { students, classTypes, studentNameMap, classTypeMap } = useData();
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [nameInput, setNameInput] = useState('');
   const [studentFilter, setStudentFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState('전체');
+  const [classTypeFilter, setClassTypeFilter] = useState('');
   const [hasMore, setHasMore] = useState(false);
   const [cursor, setCursor] = useState(null);
   // 차트용 최근 6개월 결제 (페이지네이션과 별도 fetch)
@@ -48,6 +40,7 @@ export default function PaymentsPage() {
     try {
       const data = await fetchPaymentsPage({
         studentId: studentFilter || undefined,
+        classTypeId: classTypeFilter || undefined,
         cursor: nextCursor,
       });
       const parsed = data.results.map(parsePayment);
@@ -59,7 +52,7 @@ export default function PaymentsPage() {
     } finally {
       setLoading(false);
     }
-  }, [studentFilter]);
+  }, [studentFilter, classTypeFilter]);
 
   useEffect(() => { load(true); }, [load]);
 
@@ -95,11 +88,7 @@ export default function PaymentsPage() {
       return b.paymentDate.localeCompare(a.paymentDate);
     });
 
-  const filtered = sortByDate(
-    statusFilter === '전체'
-      ? payments
-      : payments.filter((p) => p.paymentStatus?.startsWith(statusFilter))
-  );
+  const filtered = sortByDate(payments);
 
   return (
     <PullToRefresh onRefresh={() => Promise.all([load(true), loadTrend(), incomeRef.current?.reload()])}>
@@ -170,20 +159,19 @@ export default function PaymentsPage() {
           )}
         </div>
 
-        {/* 상태 필터 */}
-        <div className="flex gap-2 overflow-x-auto no-scrollbar">
-          {STATUS_FILTERS.map(({ value, label }) => (
-            <button
-              key={value}
-              onClick={() => setStatusFilter(value)}
-              className={`flex-shrink-0 px-3 py-3 rounded-full text-sm font-medium transition-[background-color,color] duration-150 ease-out ${
-                statusFilter === value ? 'bg-brand-600 text-white' : 'bg-gray-100 text-gray-600'
-              }`}
-            >
-              {label}
-            </button>
+        {/* 수업 종류 필터 */}
+        <Select
+          value={classTypeFilter || undefined}
+          onChange={(v) => setClassTypeFilter(v || '')}
+          placeholder="수업 종류 전체"
+          allowClear
+          size="large"
+          style={{ width: '100%' }}
+        >
+          {classTypes.map((ct) => (
+            <Select.Option key={ct.id} value={ct.id}>{ct.title}</Select.Option>
           ))}
-        </div>
+        </Select>
       </div>
 
       {loading && <LoadingSpinner />}
@@ -226,12 +214,14 @@ function PaymentCard({ payment, studentNameMap, classTypeMap }) {
   const { bg, text } = paymentStatusColor(payment.paymentStatus);
   const studentName =
     payment.studentIds.map((id) => studentNameMap[id] || '(알 수 없음)').join(', ');
+  // 학생 없는 결제(온라인그룹수업 등)는 타이틀(수강생 이름)을 표시
+  const displayName = studentName || payment.note || '학생 없음';
   const classTypeName = payment.classTypeId ? classTypeMap[payment.classTypeId]?.title : null;
 
   return (
     <li>
       <Link
-        to={`/payments/${payment.id}/edit`}
+        to={`/payments/${payment.id}`}
         className="block duration-150 ease-out"
       >
         <Card
@@ -244,27 +234,36 @@ function PaymentCard({ payment, studentNameMap, classTypeMap }) {
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 10 }}>
             <div style={{ flex: 1, minWidth: 0 }}>
               <p style={{ fontSize: 15, fontWeight: 700, color: TEXT_PRIMARY, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {studentName || '학생 없음'}
+                {displayName}
               </p>
               {classTypeName && (
                 <p style={{ fontSize: 12, color: TEXT_TERTIARY, margin: '2px 0 0' }}>{classTypeName}</p>
               )}
             </div>
-            <Badge label={stripEmoji(payment.paymentStatus)} bg={bg} text={text} />
+            {payment.studentIds.length > 0 && <Badge label={stripEmoji(payment.paymentStatus)} bg={bg} text={text} />}
           </div>
           <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-            <div>
-              <span style={{ fontSize: 12, color: TEXT_TERTIARY }}>시간 회차 </span>
-              <span style={{ fontSize: 13, fontWeight: 600, color: TEXT_PRIMARY }} className="tabular-nums">{payment.sessionCount}회</span>
-            </div>
+            {/* 학생 없는 결제(온라인그룹수업)는 시간회차·미수금 개념이 없어 실제 결제 금액만 표시 */}
+            {payment.studentIds.length > 0 && (
+              <div>
+                <span style={{ fontSize: 12, color: TEXT_TERTIARY }}>시간 회차 </span>
+                <span style={{ fontSize: 13, fontWeight: 600, color: TEXT_PRIMARY }} className="tabular-nums">{payment.sessionCount}회</span>
+              </div>
+            )}
             <div>
               <span style={{ fontSize: 12, color: TEXT_TERTIARY }}>결제 금액 </span>
-              <span style={{ fontSize: 13, fontWeight: 600, color: TEXT_PRIMARY }} className="tabular-nums">{formatKRW(payment.paymentAmount)}</span>
+              <span style={{ fontSize: 13, fontWeight: 600, color: TEXT_PRIMARY }} className="tabular-nums">{formatKRW(payment.studentIds.length ? payment.paymentAmount : payment.actualAmount)}</span>
             </div>
-            {payment.unpaid > 0 && (
+            {payment.studentIds.length > 0 && payment.unpaid > 0 && (
               <div>
                 <span style={{ fontSize: 12, color: TEXT_TERTIARY }}>미수금 </span>
                 <span style={{ fontSize: 13, fontWeight: 600, color: STATUS_ERROR_TEXT }} className="tabular-nums">{formatKRW(payment.unpaid)}</span>
+              </div>
+            )}
+            {payment.refundAmount > 0 && (
+              <div>
+                <span style={{ fontSize: 12, color: TEXT_TERTIARY }}>환불 </span>
+                <span style={{ fontSize: 13, fontWeight: 600, color: TEXT_PRIMARY }} className="tabular-nums">−{formatKRW(payment.refundAmount)}</span>
               </div>
             )}
           </div>
