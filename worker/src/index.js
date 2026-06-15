@@ -517,9 +517,7 @@ async function enforceStudentSession(request, env, corsHeaders, token, routeTag)
   return null;
 }
 
-// 솔라피 일반 SMS 발송 (현재 미사용 — 게임 OTP는 알림톡 채널명 발송으로 발신번호 노출 회피).
-// 향후 발신전용번호 SMS fallback 등이 필요하면 재사용. 발신번호 env.SOLAPI_SENDER 필요(사전등록). 미설정 시 no-op.
-// eslint-disable-next-line no-unused-vars
+// 솔라피 SMS 발송 — 학생 OTP용(즉시·안정 도착). 발신번호 env.SOLAPI_SENDER(통신사 사전등록) 필요, 미설정 시 no-op.
 async function sendSms(env, to, text) {
   if (!env.SOLAPI_API_KEY || !env.SOLAPI_API_SECRET || !env.SOLAPI_SENDER || !to) { console.log('[sms] 미설정 — 스킵'); return; }
   const date = new Date().toISOString();
@@ -531,7 +529,13 @@ async function sendSms(env, to, text) {
       headers: { 'Content-Type': 'application/json', 'Authorization': `HMAC-SHA256 apiKey=${env.SOLAPI_API_KEY}, date=${date}, salt=${salt}, signature=${signature}` },
       body: JSON.stringify({ message: { to, from: env.SOLAPI_SENDER, text } }),
     });
-    if (!res.ok) { const d = await res.json().catch(() => ({})); console.error('[sms] 발송 실패:', JSON.stringify(d)); }
+    const d = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      console.error('[sms] 발송 실패:', JSON.stringify(d));
+    } else {
+      // 접수 상태 진단 (PII 없음).
+      console.log(`[sms] 접수 ${maskPhone(to)} | status=${d.statusCode || '?'} "${d.statusMessage || ''}" type=${d.type || '?'}`);
+    }
   } catch (e) { console.error('[sms] 발송 오류:', e.message); }
 }
 
@@ -891,12 +895,17 @@ async function handleStudentAuthRoutes(request, env, corsHeaders, url) {
     // 유효 5분 — 알림톡 배송이 수 분 지연될 수 있어 여유를 둠(도착 시 이미 만료되는 사고 방지).
     // brute-force는 verify rate limit(전화·IP당 5회/180s)로 별도 차단되므로 창을 늘려도 안전.
     await putStudentOtp(token, code, 300);
-    // 학생 전용 알림톡 템플릿(KAKAO_TPL_PERSONAL_OTP). 미설정 시 게임 OTP 템플릿으로 폴백.
-    await sendKakaoAlert(env, {
-      to: student.phone,
-      templateId: env.KAKAO_TPL_PERSONAL_OTP || env.KAKAO_TPL_GAME_OTP,
-      variables: { '#{인증번호}': code },
-    });
+    // OTP는 즉시·안정 도착이 생명이라 SMS로 발송(알림톡 전달 지연 회피). 승인된 SOLAPI_SENDER 발신번호 필요.
+    // SOLAPI_SENDER 미설정 시 sendSms가 no-op → 알림톡으로 폴백.
+    if (env.SOLAPI_SENDER) {
+      await sendSms(env, student.phone, `[하늘하늘중국어] 본인확인 인증번호 [${code}] (5분 내 입력)`);
+    } else {
+      await sendKakaoAlert(env, {
+        to: student.phone,
+        templateId: env.KAKAO_TPL_PERSONAL_OTP || env.KAKAO_TPL_GAME_OTP,
+        variables: { '#{인증번호}': code },
+      });
+    }
     return new Response(JSON.stringify({ ok: true, phoneTail: student.phone.replace(/\D/g, '').slice(-4) }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
 
