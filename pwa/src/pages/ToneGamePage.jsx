@@ -567,10 +567,10 @@ export default function ToneGamePage() {
           isNewBest={(reviewMode || practiceMode) ? false : isNewBest} previousBest={(reviewMode || practiceMode) ? 0 : previousBest}
           practice={practiceMode} endless={endlessMode}
           onRetry={practiceMode ? () => startPractice(selectedDifficulty) : endlessMode ? () => startEndless() : reviewMode ? () => startReview(reviewWords) : () => startGame(selectedDifficulty)}
-          onChangeDiff={practiceMode ? () => setScreen('modeselect') : endlessMode ? () => setScreen('modeselect') : reviewMode ? () => setScreen('mastery') : () => setScreen('difficulty')}
-          onModeSelect={(!practiceMode && !endlessMode) ? () => setScreen('modeselect') : undefined}
+          onChangeDiff={endlessMode ? () => setScreen('modeselect') : reviewMode ? () => setScreen('mastery') : practiceMode ? () => { setDifficultyForPractice(true); setScreen('difficulty'); } : () => setScreen('difficulty')}
+          onModeSelect={!endlessMode ? () => setScreen('modeselect') : undefined}
           retryLabel={practiceMode ? '한 번 더 연습' : reviewMode ? '한 번 더 복습' : undefined}
-          changeLabel={practiceMode ? '모드 선택으로' : endlessMode ? '모드 선택으로' : reviewMode ? '숙련도로 돌아가기' : undefined} />
+          changeLabel={endlessMode ? '모드 선택으로' : reviewMode ? '숙련도로 돌아가기' : '난이도 바꾸기'} />
       </FigmaScreen>
     );
   } else { // game
