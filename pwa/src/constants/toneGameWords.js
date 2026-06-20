@@ -8,10 +8,10 @@
 // 새 난이도 추가 시: ① CSV '난이도'에 새 이름 ② scripts/tone-words-build.mjs 의 DIFF_KEY 매핑 ③ 아래 DIFFICULTIES 추가.
 import toneWordsData from './toneWordsData.json';
 
-// timeMultiplier: 단어당 시간 배수(높을수록 시간 여유=쉬움). 고급=옛 초급(1.0). 초급은 입문자용으로 매우 여유롭게(2.6≈옛 초급의 2배). 중급은 중간.
+// timeMultiplier: 단어당 시간 배수(높을수록 시간 여유=쉬움). 초급2.6→중급1.8→고급1.0 균등 간격(0.8씩, 콤보0 18.2/12.6/7.0초).
 export const DIFFICULTIES = [
   { id: 'easy', gameKey: 'tone-easy', label: '초급', desc: '기초 단어', timeMultiplier: 2.6 },
-  { id: 'normal', gameKey: 'tone-normal', label: '중급', desc: '일상 회화', timeMultiplier: 1.15 },
+  { id: 'normal', gameKey: 'tone-normal', label: '중급', desc: '일상 회화', timeMultiplier: 1.8 },
   { id: 'hard', gameKey: 'tone-hard', label: '고급', desc: '도전 단어', timeMultiplier: 1.0 },
 ];
 
