@@ -8,10 +8,11 @@
 // 새 난이도 추가 시: ① CSV '난이도'에 새 이름 ② scripts/tone-words-build.mjs 의 DIFF_KEY 매핑 ③ 아래 DIFFICULTIES 추가.
 import toneWordsData from './toneWordsData.json';
 
+// timeMultiplier: 단어당 시간 배수(높을수록 시간 여유=쉬움). 2026-06 너프: 고급=옛 초급(1.0), 초급·중급은 더 여유롭게.
 export const DIFFICULTIES = [
-  { id: 'easy', gameKey: 'tone-easy', label: '초급', desc: '기초 단어', timeMultiplier: 1.0 },
-  { id: 'normal', gameKey: 'tone-normal', label: '중급', desc: '일상 회화', timeMultiplier: 0.85 },
-  { id: 'hard', gameKey: 'tone-hard', label: '고급', desc: '도전 단어', timeMultiplier: 0.7 },
+  { id: 'easy', gameKey: 'tone-easy', label: '초급', desc: '기초 단어', timeMultiplier: 1.3 },
+  { id: 'normal', gameKey: 'tone-normal', label: '중급', desc: '일상 회화', timeMultiplier: 1.15 },
+  { id: 'hard', gameKey: 'tone-hard', label: '고급', desc: '도전 단어', timeMultiplier: 1.0 },
 ];
 
 // 성조 정의 — 학습 도구 특성상 5색 매핑은 디자인 시스템 단일 액센트 원칙의 합리적 예외.
