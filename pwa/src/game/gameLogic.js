@@ -46,9 +46,9 @@ export function unlockToastText(diffId) {
   if (diffId === 'hard') return '중급 1,000점을 달성하면 열려요';
   return '';
 }
-// 무한모드 제한시간 — 제일 쉽게 시작(9000ms)해 누적 클리어로 점점 짧아지고,
+// 무한모드 제한시간 — 제일 쉽게 시작(18000ms)해 누적 클리어로 점점 짧아지고,
 // 고급 난이도 수준(3500ms=고급 콤보6~7)에서 하한 고정(그 이상 안 어려워짐). ~30단어에 하한 도달.
-export function getEndlessTimeLimit(cleared) { return Math.max(3500, 9000 - cleared * 180); }
+export function getEndlessTimeLimit(cleared) { return Math.max(3500, 18000 - cleared * 480); }
 
 // ── 점수 공식 ──────────────────────────────────────────
 // 정답 1단어 획득 점수. 밸런싱을 한곳에 모음(handleTone에서 인라인 분산 → 여기로).
