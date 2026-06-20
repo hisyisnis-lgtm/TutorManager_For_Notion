@@ -304,7 +304,7 @@ export default function ToneGamePage() {
     if (screen !== 'game' || cdPhase) return; // 카운트다운 끝나야 타이머 시작
     const limit = practiceMode ? 0                                      // 연습: 시간 무제한(게이지 미표시·타임아웃 effect 비활성)
       : endlessMode ? getEndlessTimeLimit(answeredCount)                // 무한: 누적 클리어 수로 점점 가속(하한)
-      : getTimeLimitForCombo(combo, reviewMode ? 0.85 : selectedDifficulty.timeMultiplier);
+      : getTimeLimitForCombo(combo, reviewMode ? 1.4 : selectedDifficulty.timeMultiplier); // 복습=제일 쉽게(초급보다 여유)
     wordElapsedRef.current = 0; // 새 단어 — 누적 진행시간 리셋
     wordTimeLimitRef.current = limit;
     setWordTimeLimit(limit);
