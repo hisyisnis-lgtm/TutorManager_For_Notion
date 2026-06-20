@@ -311,7 +311,11 @@ export default function HomeworkDetailPage() {
       }
 
       await saveFeedback(id, { feedbackText, files: uploadedFiles, existingFiles });
-      if (uploadedFiles && uploadedFiles.length > 0) {
+      // 알림톡 발송 조건: 새 파일을 첨부했거나, 피드백 텍스트가 새로 작성/변경된 경우.
+      // 텍스트가 그대로인 재저장(파일 삭제·오타 미수정 등)은 중복 발송 방지를 위해 제외.
+      const hasNewFiles = uploadedFiles && uploadedFiles.length > 0;
+      const hasNewText = feedbackText.trim() && feedbackText.trim() !== savedFeedbackText.trim();
+      if (hasNewFiles || hasNewText) {
         notifyHomework('feedback', id);
       }
       setSavedFeedbackText(feedbackText);
