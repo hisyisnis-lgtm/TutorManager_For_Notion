@@ -147,7 +147,7 @@ export function formatTime(ms) {
 }
 
 // 콤보 단계별 단어당 제한시간 (ms). 잘할수록 자동으로 빨라지고, 콤보 깨지면 회복됨.
-// multiplier: 난이도별 시간 배수 (2.6=초급, 1.8=중급, 1.0=고급 / 복습=2.8 / 무한=별도 함수)
+// multiplier: 난이도별 시간 배수 (콤보0=초급30·중급20·고급10초 / 복습=30초 고정 / 무한=30→10초 별도 함수)
 export function getTimeLimitForCombo(combo, multiplier = 1) {
   let base;
   if (combo >= 8) base = 3000;

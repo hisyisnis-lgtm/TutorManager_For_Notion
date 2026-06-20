@@ -8,11 +8,11 @@
 // 새 난이도 추가 시: ① CSV '난이도'에 새 이름 ② scripts/tone-words-build.mjs 의 DIFF_KEY 매핑 ③ 아래 DIFFICULTIES 추가.
 import toneWordsData from './toneWordsData.json';
 
-// timeMultiplier: 단어당 시간 배수(높을수록 시간 여유=쉬움). 초급2.6→중급1.8→고급1.0 균등 간격(0.8씩, 콤보0 18.2/12.6/7.0초).
+// timeMultiplier: 단어당 시간 배수(base 7000ms × 배수). 콤보0 기준 초급30·중급20·고급10초(균등 10초 간격), 콤보 쌓이면 기존처럼 가속.
 export const DIFFICULTIES = [
-  { id: 'easy', gameKey: 'tone-easy', label: '초급', desc: '기초 단어', timeMultiplier: 2.6 },
-  { id: 'normal', gameKey: 'tone-normal', label: '중급', desc: '일상 회화', timeMultiplier: 1.8 },
-  { id: 'hard', gameKey: 'tone-hard', label: '고급', desc: '도전 단어', timeMultiplier: 1.0 },
+  { id: 'easy', gameKey: 'tone-easy', label: '초급', desc: '기초 단어', timeMultiplier: 4.2857 },   // 콤보0 ≈30초
+  { id: 'normal', gameKey: 'tone-normal', label: '중급', desc: '일상 회화', timeMultiplier: 2.8571 }, // 콤보0 ≈20초
+  { id: 'hard', gameKey: 'tone-hard', label: '고급', desc: '도전 단어', timeMultiplier: 1.4286 },   // 콤보0 ≈10초
 ];
 
 // 성조 정의 — 학습 도구 특성상 5색 매핑은 디자인 시스템 단일 액센트 원칙의 합리적 예외.
