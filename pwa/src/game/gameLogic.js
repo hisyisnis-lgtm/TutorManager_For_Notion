@@ -55,7 +55,7 @@ export function getEndlessTimeLimit(cleared) { return Math.max(10000, 30000 - cl
 //  - 실수 있음: 기본 50 + 남은시간 보너스 절반(콤보 없음)
 export function computeScore({ perfect, newCombo = 0, remainingMs = 0 }) {
   const timeBonus = Math.floor(Math.max(0, remainingMs) / 100);
-  return perfect ? (100 + newCombo * 20 + timeBonus) : (50 + Math.floor(timeBonus / 2));
+  return perfect ? (100 + newCombo * 20 + timeBonus) : 50; // 오답 클리어는 시간보너스 없이 플랫 50(랜덤 탭 잠금해제 방지)
 }
 // ── 게임 종료 결과 판정 ──────────────────────────────────
 // 모드별 최고기록 갱신·신기록 여부·효과음을 한곳에서 순수 계산한다(예전엔 end-effect에 4모드 인라인 중복).

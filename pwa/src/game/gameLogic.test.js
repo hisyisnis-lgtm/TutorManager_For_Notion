@@ -21,8 +21,9 @@ describe('computeScore — 점수 공식', () => {
     expect(computeScore({ perfect: true, remainingMs: 0 })).toBe(100);
   });
 
-  it('실수 있음: 기본 50 + 남은시간 보너스 절반(콤보 없음)', () => {
-    expect(computeScore({ perfect: false, remainingMs: 600 })).toBe(50 + 3); // 53
+  it('실수 있음: 시간보너스 없이 플랫 50 (랜덤 탭 방지)', () => {
+    expect(computeScore({ perfect: false, remainingMs: 600 })).toBe(50);
+    expect(computeScore({ perfect: false, remainingMs: 30000 })).toBe(50); // 시간 많이 남아도 50
     expect(computeScore({ perfect: false, remainingMs: 0 })).toBe(50);
   });
 
