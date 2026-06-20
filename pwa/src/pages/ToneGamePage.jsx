@@ -308,6 +308,7 @@ export default function ToneGamePage() {
       : reviewMode ? 30000                                              // 복습: 30초 고정(콤보 무관)
       : Math.max(4000, getTimeLimitForCombo(combo, selectedDifficulty.timeMultiplier)); // 난이도: 콤보0 30/20/10초, 콤보로 가속(하한 4초)
     wordElapsedRef.current = 0; // 새 단어 — 누적 진행시간 리셋
+    segStartRef.current = Date.now(); // 진행 구간 시작 — 연습 모드는 타임아웃 effect가 안 도니 여기서 설정(answerTime 거대값 버그 방지)
     wordTimeLimitRef.current = limit;
     setWordTimeLimit(limit);
     setTimedOut(false);

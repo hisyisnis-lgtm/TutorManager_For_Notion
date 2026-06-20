@@ -69,7 +69,7 @@ function WordStatRow({ word, acc, avg }) {
         <div style={{ width: 64, height: 6, borderRadius: 3, background: '#f0ebe4', overflow: 'hidden' }}>
           <div style={{ width: `${pct}%`, height: '100%', background: c, borderRadius: 3 }} />
         </div>
-        <span style={{ fontFamily: FONT_BODY, fontWeight: 500, fontSize: 11, color: '#9a93a0' }}>{avg > 0 ? `평균 ${(avg / 1000).toFixed(1)}초` : '—'}</span>
+        <span style={{ fontFamily: FONT_BODY, fontWeight: 500, fontSize: 11, color: '#9a93a0' }}>{avg > 0 && avg < 180000 ? `평균 ${(avg / 1000).toFixed(1)}초` : '—'}</span>
       </div>
       {/* 발음 듣기(TTS) */}
       <button onClick={() => speakWord(word)} aria-label="발음 듣기" className="tg-press" style={{ width: 34, height: 34, borderRadius: 12, background: '#f3efe9', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, ...TOUCH_OPT }}>
@@ -92,31 +92,32 @@ export function MasteryScreen({ rows, masteredN, toneStats, onBack, onReview }) 
         <span style={{ fontFamily: FONT_TITLE, fontSize: 22, color: '#2b2730' }}>단어 숙련도</span>
       </div>
       </Reveal>
-      <Reveal i={1} style={{ position: 'absolute', left: 24, right: 24, top: 88 }}>
-        <CoachBubble text={need ? '약한 단어부터 복습해 볼까요?' : '잘하고 있어요! 계속 도전해요'} />
-      </Reveal>
-      {/* 성조 레이더(P2) — 코치 아래, 항상 표시 */}
-      <Reveal i={2} style={{ position: 'absolute', left: 24, right: 24, top: 158 }}>
-        <ToneRadar toneStats={toneStats} />
-      </Reveal>
-      {/* 소제목 */}
-      <div style={{ position: 'absolute', left: 24, right: 24, top: 372, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 13, color: '#2b2730' }}>복습 필요 {need}개</span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'rgba(54,201,141,0.14)', padding: '5px 11px', borderRadius: 12 }}>
-          <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 12, color: TG.SUCCESS }}>✓ 마스터 {masteredN}개</span>
-        </div>
+      {/* 스크롤 영역 — 코치 + 레이더 + 소제목 + 리스트를 함께 스크롤(모바일서 리스트가 좁은 고정영역에 갇히지 않게) */}
+      <div style={{ position: 'absolute', left: 0, right: 0, top: 72, bottom: need > 0 ? 'calc(102px + env(safe-area-inset-bottom))' : 'calc(24px + env(safe-area-inset-bottom))', overflowY: 'auto', WebkitOverflowScrolling: 'touch', padding: '12px 24px 10px' }}>
+        <Reveal i={1}><CoachBubble text={need ? '약한 단어부터 복습해 볼까요?' : '잘하고 있어요! 계속 도전해요'} /></Reveal>
+        {/* 성조 레이더(P2) */}
+        <Reveal i={2} style={{ display: 'block', marginTop: 14 }}><ToneRadar toneStats={toneStats} /></Reveal>
+        {need > 0 ? (
+          <>
+            {/* 소제목 */}
+            <div style={{ marginTop: 18, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 13, color: '#2b2730' }}>복습 필요 {need}개</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'rgba(54,201,141,0.14)', padding: '5px 11px', borderRadius: 12 }}>
+                <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 12, color: TG.SUCCESS }}>✓ 마스터 {masteredN}개</span>
+              </div>
+            </div>
+            {/* 리스트 */}
+            <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {rows.map((r) => <WordStatRow key={r.word.hanzi} word={r.word} acc={r.acc} avg={r.avg} />)}
+            </div>
+          </>
+        ) : (
+          <div style={{ marginTop: 28, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, textAlign: 'center' }}>
+            <span style={{ fontFamily: FONT_TITLE, fontSize: 18, color: '#2b2730' }}>아직 복습할 단어가 없어요</span>
+            <span style={{ fontFamily: FONT_BODY, fontWeight: 500, fontSize: 13, color: '#9a93a0' }}>게임을 플레이하면 약한 단어가 모여요</span>
+          </div>
+        )}
       </div>
-      {/* 복습 필요 → 리스트(스크롤) / 없음 → 빈 상태 */}
-      {need > 0 ? (
-        <div style={{ position: 'absolute', left: 24, right: 24, top: 404, bottom: 'calc(110px + env(safe-area-inset-bottom))', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10, paddingBottom: 8 }}>
-          {rows.map((r) => <WordStatRow key={r.word.hanzi} word={r.word} acc={r.acc} avg={r.avg} />)}
-        </div>
-      ) : (
-        <div style={{ position: 'absolute', left: 24, right: 24, top: 448, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, textAlign: 'center' }}>
-          <span style={{ fontFamily: FONT_TITLE, fontSize: 18, color: '#2b2730' }}>아직 복습할 단어가 없어요</span>
-          <span style={{ fontFamily: FONT_BODY, fontWeight: 500, fontSize: 13, color: '#9a93a0' }}>게임을 플레이하면 약한 단어가 모여요</span>
-        </div>
-      )}
       {/* 복습 CTA */}
       {need > 0 && (
         <Reveal i={3} style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(30px + env(safe-area-inset-bottom))' }}>
