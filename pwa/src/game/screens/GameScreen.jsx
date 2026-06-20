@@ -110,14 +110,16 @@ export function GameScreen({ word, entered, currentSyl, completed, timedOut, wor
       <Reveal i={2} play={playReveal} style={{ position: 'absolute', left: 20, right: 20, top: 129 }}>
         <WordCard word={word} entered={entered} currentSyl={currentSyl} completed={completed} timedOut={timedOut} progressText={endless ? `${wordIndex + 1}` : `${wordIndex + 1}/${wordsLen}`} combo={combo} comboFlash={comboFlash} floatScore={floatScore} />
       </Reveal>
-      {/* 코치 — 일반=top470 / 연습=카드와 발음·정답 버튼 사이에 가두고 세로중앙(짧은 화면서 버튼과 겹침 방지) */}
-      <Reveal i={3} play={playReveal} style={{ position: 'absolute', left: 24, right: 24,
-        ...(practice ? { top: 425, bottom: 'calc(156px + env(safe-area-inset-bottom))', display: 'flex', alignItems: 'center' } : { top: 470 }) }}>
-        <CoachBubble text={coachText} />
-      </Reveal>
+      {/* 코치 — 일반 모드만. 연습 모드는 카드 힌트 + 발음듣기/정답보기 버튼이 안내하고,
+          4겹(카드·코치·연습버튼·성조버튼)이라 짧은 화면서 겹쳐 미표시. */}
+      {!practice && (
+        <Reveal i={3} play={playReveal} style={{ position: 'absolute', left: 24, right: 24, top: 470 }}>
+          <CoachBubble text={coachText} />
+        </Reveal>
+      )}
       {/* 연습 모드 — 발음 듣기 / 정답 보기 (성조버튼 위) */}
       {practice && (
-        <Reveal i={4} play={playReveal} style={{ position: 'absolute', left: 20, right: 20, bottom: 'calc(100px + env(safe-area-inset-bottom))' }}>
+        <Reveal i={4} play={playReveal} style={{ position: 'absolute', left: 20, right: 20, bottom: 'calc(130px + env(safe-area-inset-bottom))' }}>
           <div style={{ display: 'flex', gap: 10 }}>
             <button onClick={onSpeak} className="tg-press" style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '13px 0', borderRadius: 16, background: '#fff', border: '1.5px solid #ebe5de', cursor: 'pointer', ...TOUCH_OPT }}>
               <SpeakerHighIcon size={20} weight="fill" color={TG.SUCCESS_GLOW} />
