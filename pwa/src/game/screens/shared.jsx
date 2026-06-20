@@ -5,7 +5,7 @@
 import { useState, useEffect } from 'react';
 import { LockSimpleIcon } from '@phosphor-icons/react';
 import {
-  TG, FONT_NUM, FONT_BODY, FONT_HANZI, SHADOW, DUR, TOUCH_OPT, TONE_TINTS, TONE_BORDERS, ASSETS,
+  TG, FONT_NUM, FONT_BODY, FONT_HANZI, FONT_PINYIN, SHADOW, DUR, TOUCH_OPT, TONE_TINTS, TONE_BORDERS, ASSETS,
 } from '../tgTokens.js';
 import { ToneMark, ComboChip } from '../tgWidgets.jsx';
 import { TONES } from '../../constants/toneGameWords.js';
@@ -168,7 +168,7 @@ export function WordCard({ word, entered, currentSyl, completed, timedOut, progr
         }}>{word.hanzi[i] ?? ''}</div>
         <div style={{ height: hz > 50 ? 26 : 20, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           {completed && (
-            <span style={{ fontFamily: FONT_BODY, fontWeight: 600, fontSize: hz > 50 ? 17 : 14, color: TG.SUB }}>{word.pinyin[i] ?? ''}</span>
+            <span style={{ fontFamily: FONT_PINYIN, fontWeight: 600, fontSize: hz > 50 ? 17 : 14, color: TG.SUB }}>{word.pinyin[i] ?? ''}</span>
           )}
         </div>
       </div>

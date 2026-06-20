@@ -79,6 +79,9 @@ export function pickCelebratePanda(isNewBest, maxCombo) {
 export const FONT_TITLE = '"Jua", "Noto Sans KR", sans-serif';        // 타이틀(둥근 한글)
 export const FONT_NUM = '"Baloo 2", "Noto Sans KR", sans-serif';      // 숫자·점수
 export const FONT_BODY = '"Noto Sans KR", system-ui, sans-serif';    // 본문·버튼
+// 병음 — 성조 마크롱(ā ē ī ō ū) 렌더 안정성 위해 Noto Sans KR 대신 OS 네이티브 라틴 폰트 스택.
+// (일부 기기에서 Noto Sans KR이 1성 마크롱 글리프를 폴백→옆으로 밀려 보이는 버그 회피. SF/Segoe UI/Roboto는 정상)
+export const FONT_PINYIN = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
 // 한자 — 용량 큰 Noto SC 웹폰트 대신 시스템 스택(OS 설치 폰트)으로 처리.
 export const FONT_HANZI = '"Noto Sans SC", "PingFang SC", "Microsoft YaHei", "Heiti SC", sans-serif';
 
