@@ -305,7 +305,7 @@ export default function ToneGamePage() {
     const limit = practiceMode ? 0                                      // 연습: 시간 무제한(게이지 미표시·타임아웃 effect 비활성)
       : endlessMode ? getEndlessTimeLimit(answeredCount)                // 무한: 30초 시작→누적 클리어로 10초까지 단축
       : reviewMode ? 30000                                              // 복습: 30초 고정(콤보 무관)
-      : getTimeLimitForCombo(combo, selectedDifficulty.timeMultiplier); // 난이도: 콤보0 30/20/10초, 콤보로 가속
+      : Math.max(4000, getTimeLimitForCombo(combo, selectedDifficulty.timeMultiplier)); // 난이도: 콤보0 30/20/10초, 콤보로 가속(하한 4초)
     wordElapsedRef.current = 0; // 새 단어 — 누적 진행시간 리셋
     wordTimeLimitRef.current = limit;
     setWordTimeLimit(limit);
