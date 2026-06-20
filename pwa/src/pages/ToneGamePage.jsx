@@ -103,6 +103,7 @@ export default function ToneGamePage() {
   const [showWrong, setShowWrong] = useState(false); // 코치 오답 메시지 지속(다음 시도/단어까지) — wrongBtn과 분리
   const [wordTimeLimit, setWordTimeLimit] = useState(7000);
   const [timedOut, setTimedOut] = useState(false);
+  const [gaugeOffsetMs, setGaugeOffsetMs] = useState(0); // 오답 패널티로 게이지 즉시 차감(애니메이션 음수 delay) + 타이머 재계산 트리거
 
   const wordTimeLimitRef = useRef(7000);
   const wordElapsedRef = useRef(0); // 현재 단어의 누적 '진행' 시간(일시정지·카운트다운 제외)
@@ -303,7 +304,7 @@ export default function ToneGamePage() {
   useEffect(() => {
     if (screen !== 'game' || cdPhase) return; // 카운트다운 끝나야 타이머 시작
     const limit = practiceMode ? 0                                      // 연습: 시간 무제한(게이지 미표시·타임아웃 effect 비활성)
-      : endlessMode ? getEndlessTimeLimit(answeredCount)                // 무한: 30초 시작→누적 클리어로 10초까지 단축
+      : endlessMode ? getEndlessTimeLimit(answeredCount, combo)         // 무한: 클리어 램프 + 콤보 가속(둘 다)
       : reviewMode ? 30000                                              // 복습: 30초 고정(콤보 무관)
       : Math.max(4000, getTimeLimitForCombo(combo, selectedDifficulty.timeMultiplier)); // 난이도: 콤보0 30/20/10초, 콤보로 가속(하한 4초)
     wordElapsedRef.current = 0; // 새 단어 — 누적 진행시간 리셋
@@ -329,14 +330,14 @@ export default function ToneGamePage() {
       if (!isPreview) { recordWordResult(wordStatsRef.current, word.hanzi, { perfect: false, timedOut: true, ms: 0 }); saveWordStats(studentToken, wordStatsRef.current); }
       addTimer(setTimeout(() => {
         if (endlessMode || wordIndex + 1 >= words.length) setScreen('end'); // 무한: 첫 시간초과 = 종료
-        else { setWordIndex((i) => i + 1); setCurrentSyl(0); setEntered([]); setCompleted(false); setHasMistake(false); }
+        else { setWordIndex((i) => i + 1); setCurrentSyl(0); setEntered([]); setCompleted(false); setHasMistake(false); setGaugeOffsetMs(0); }
       }, 1700));
     }, remaining);
     return () => {
       clearTimeout(timer);
       wordElapsedRef.current += Date.now() - segStartRef.current; // 이번 진행 구간을 누적
     };
-  }, [screen, completed, paused, cdPhase, wordTimeLimit, wordIndex, words, endlessMode, practiceMode, isPreview, studentToken]);
+  }, [screen, completed, paused, cdPhase, wordTimeLimit, gaugeOffsetMs, wordIndex, words, endlessMode, practiceMode, isPreview, studentToken]);
 
   // ── 게임 런 상태 초기화(난이도/복습/무한 공통) — 단어1 재시작도 runId 증가로 타이머·게이지 리셋 ──
   const resetRunState = () => {
@@ -345,7 +346,7 @@ export default function ToneGamePage() {
     setWordIndex(0); setCurrentSyl(0); setEntered([]); setCompleted(false);
     setCombo(0); setMaxCombo(0); setScore(0); setHasMistake(false); setStartTs(Date.now());
     setTotalAnswerTime(0); setAnsweredCount(0); setIsNewBest(false); setPreviousBest(0); setTimedOut(false); setPaused(false);
-    wordElapsedRef.current = 0; setRunId((n) => n + 1);
+    wordElapsedRef.current = 0; setGaugeOffsetMs(0); setRunId((n) => n + 1);
     setCdNum(3); setCdPhase('in'); // 카운트다운 오버레이 시작(현재 화면 위로 슬라이드 인 → 게임 전환 → 슬라이드 아웃)
   };
 
@@ -435,12 +436,19 @@ export default function ToneGamePage() {
         addTimer(setTimeout(() => setFloatScore(null), 1300));
         addTimer(setTimeout(() => {
           if (wordIndex + 1 >= words.length) setScreen('end');
-          else { setWordIndex((i) => i + 1); setCurrentSyl(0); setEntered([]); setCompleted(false); setHasMistake(false); }
+          else { setWordIndex((i) => i + 1); setCurrentSyl(0); setEntered([]); setCompleted(false); setHasMistake(false); setGaugeOffsetMs(0); }
         }, 1500));
       } else { haptic(8); playSfx('tap'); setCurrentSyl((s) => s + 1); }
     } else {
       setHasMistake(true); setCombo(0); setWrongBtn(toneNum); setShowWrong(true); haptic([40, 30, 40]); playSfx('wrong');
       addTimer(setTimeout(() => setWrongBtn(null), 450)); // 버튼 흔들림만 해제, 코치 메시지는 유지
+      // 오답 0.5초 패널티(연습·미리보기 제외) — 경과시간에 500ms 더해 남은시간 차감. setGaugeOffsetMs가 게이지 재마운트(음수 delay)+타이머 effect 재실행 유발.
+      if (!practiceMode && !isPreview) {
+        const elapsed = Math.min(wordTimeLimitRef.current, wordElapsedRef.current + (Date.now() - segStartRef.current) + 500);
+        wordElapsedRef.current = elapsed;
+        segStartRef.current = Date.now();
+        setGaugeOffsetMs(elapsed);
+      }
     }
   }, [completed, paused, cdPhase, words, wordIndex, currentSyl, entered, hasMistake, combo, practiceMode, isPreview, studentToken]);
 
@@ -579,7 +587,7 @@ export default function ToneGamePage() {
       <FigmaScreen>
         {word && (
           <GameScreen word={word} entered={entered} currentSyl={currentSyl} completed={completed} timedOut={timedOut}
-            wordIndex={wordIndex} wordsLen={words.length} wordTimeLimit={wordTimeLimit} paused={paused || !!cdPhase} endless={endlessMode} runId={runId} recordToBeat={recordToBeat}
+            wordIndex={wordIndex} wordsLen={words.length} wordTimeLimit={wordTimeLimit} gaugeOffsetMs={gaugeOffsetMs} paused={paused || !!cdPhase} endless={endlessMode} runId={runId} recordToBeat={recordToBeat}
             combo={combo} comboFlash={comboFlash} floatScore={floatScore} score={score} coachText={coach.text}
             onTone={handleTone} wrongBtn={wrongBtn} onPause={() => setPaused(true)} playReveal={!cdPhase}
             practice={practiceMode} onSpeak={() => word && speakWord(word)} onReveal={revealAnswer}

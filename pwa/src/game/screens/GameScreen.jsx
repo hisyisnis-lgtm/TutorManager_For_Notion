@@ -36,7 +36,7 @@ function CenterBurst({ data }) {
   );
 }
 
-export function GameScreen({ word, entered, currentSyl, completed, timedOut, wordIndex, wordsLen, wordTimeLimit, paused, combo, comboFlash, floatScore, score, coachText, onTone, wrongBtn, onPause, playReveal = true, endless = false, runId = 0, recordToBeat = 0, practice = false, onSpeak, onReveal, demoFx = null }) {
+export function GameScreen({ word, entered, currentSyl, completed, timedOut, wordIndex, wordsLen, wordTimeLimit, gaugeOffsetMs = 0, paused, combo, comboFlash, floatScore, score, coachText, onTone, wrongBtn, onPause, playReveal = true, endless = false, runId = 0, recordToBeat = 0, practice = false, onSpeak, onReveal, demoFx = null }) {
   // ── 버스트 연출(P4b): 콤보 마일스톤(5·10·15…) + 라이브 신기록. 비차단·자동 소멸 ──
   const [burst, setBurst] = useState(null);
   const prevComboRef = useRef(0);
@@ -101,7 +101,7 @@ export function GameScreen({ word, entered, currentSyl, completed, timedOut, wor
             <TimerIcon size={20} weight="fill" color="#fff" />
           </div>
           <div style={{ flex: 1, height: 12, borderRadius: 6, background: '#f0ebe4', overflow: 'hidden' }}>
-            <div key={`${runId}-${wordIndex}-${wordTimeLimit}`} style={{ height: '100%', width: '100%', borderRadius: 6, background: 'linear-gradient(90deg,#ffc23c,#ff6b6b)', animation: `tg-timer ${wordTimeLimit}ms linear forwards`, animationPlayState: (paused || completed) ? 'paused' : 'running' }} />
+            <div key={`${runId}-${wordIndex}-${wordTimeLimit}-${gaugeOffsetMs}`} style={{ height: '100%', width: '100%', borderRadius: 6, background: 'linear-gradient(90deg,#ffc23c,#ff6b6b)', animation: `tg-timer ${wordTimeLimit}ms linear forwards`, animationDelay: `-${gaugeOffsetMs}ms`, animationPlayState: (paused || completed) ? 'paused' : 'running' }} />
           </div>
         </div>
         </Reveal>

@@ -33,19 +33,24 @@ describe('computeScore — 점수 공식', () => {
   });
 });
 
-describe('getEndlessTimeLimit — 무한모드 가속', () => {
-  it('클리어 0개면 6500ms', () => {
-    expect(getEndlessTimeLimit(0)).toBe(6500);
+describe('getEndlessTimeLimit — 무한모드 가속(클리어 램프 + 콤보)', () => {
+  it('클리어 0·콤보 0이면 30000ms', () => {
+    expect(getEndlessTimeLimit(0, 0)).toBe(30000);
   });
 
-  it('클리어할수록 180ms씩 짧아진다', () => {
-    expect(getEndlessTimeLimit(10)).toBe(6500 - 1800); // 4700
+  it('클리어할수록 1400ms씩 짧아진다', () => {
+    expect(getEndlessTimeLimit(10, 0)).toBe(30000 - 14000); // 16000
   });
 
-  it('하한 2500ms 아래로 내려가지 않는다', () => {
-    expect(getEndlessTimeLimit(100)).toBe(2500);
-    expect(getEndlessTimeLimit(23)).toBe(2500); // 6500-4140=2360 → 클램프
-    expect(getEndlessTimeLimit(22)).toBe(2540); // 하한 직전
+  it('클리어 램프 하한 10000ms (~14단어)', () => {
+    expect(getEndlessTimeLimit(20, 0)).toBe(10000);
+    expect(getEndlessTimeLimit(100, 0)).toBe(10000);
+  });
+
+  it('콤보가 쌓이면 추가로 빨라진다(콤보당 -5%, 65%까지)', () => {
+    expect(getEndlessTimeLimit(0, 8)).toBe(Math.round(30000 * 0.65)); // 19500
+    expect(getEndlessTimeLimit(20, 8)).toBe(Math.round(10000 * 0.65)); // 6500
+    expect(getEndlessTimeLimit(0, 2)).toBe(Math.round(30000 * 0.9)); // 27000
   });
 });
 

@@ -46,8 +46,15 @@ export function unlockToastText(diffId) {
   if (diffId === 'hard') return '중급 1,000점을 달성하면 열려요';
   return '';
 }
-// 무한모드 제한시간 — 30초 시작 → 누적 클리어로 단어당 0.7초씩 단축 → 10초 하한(그 이상 안 어려워짐). ~29단어에 하한 도달.
-export function getEndlessTimeLimit(cleared) { return Math.max(10000, 30000 - cleared * 700); }
+// 무한모드 제한시간 — 두 축으로 단축(둘 다):
+//  ① 클리어 램프: 30초 시작 → 단어당 1.4초씩 → 10초(약 14단어에 도달)
+//  ② 콤보 가속: 콤보 쌓이면 추가로 빨라짐(콤보당 -5%, 콤보7+면 65%), 끊기면 회복
+//  최종 절대 하한 4초.
+export function getEndlessTimeLimit(cleared, combo = 0) {
+  const byCleared = Math.max(10000, 30000 - cleared * 1400);
+  const comboFactor = Math.max(0.65, 1 - combo * 0.05);
+  return Math.max(4000, Math.round(byCleared * comboFactor));
+}
 
 // ── 점수 공식 ──────────────────────────────────────────
 // 정답 1단어 획득 점수. 밸런싱을 한곳에 모음(handleTone에서 인라인 분산 → 여기로).
