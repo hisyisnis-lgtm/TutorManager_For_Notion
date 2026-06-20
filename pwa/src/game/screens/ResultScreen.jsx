@@ -5,7 +5,19 @@ import { useCountUp, FlameIcon } from '../tgWidgets.jsx';
 import { play as playSfx } from '../tgSfx.js';
 import { Reveal, CoachBubble } from './shared.jsx';
 
-export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, onRetry, onChangeDiff, retryLabel = '다시 도전', changeLabel = '난이도 바꾸기', practice = false }) {
+// 하단 보조 버튼 (흰 배경 아웃라인). flex:1로 단일=풀폭 / 2개=반반.
+function SecBtn({ label, onClick }) {
+  return (
+    <button onClick={() => { playSfx('button'); onClick(); }} className="tg-press" style={{
+      flex: 1, minWidth: 0, height: 54, borderRadius: 18, background: '#fff', border: '1.5px solid #ebe5de', cursor: 'pointer',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 8px', ...TOUCH_OPT,
+    }}>
+      <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 15, color: '#9a93a0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
+    </button>
+  );
+}
+
+export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, onRetry, onChangeDiff, onModeSelect, retryLabel = '다시 도전', changeLabel = '난이도 바꾸기', practice = false }) {
   const animScore = useCountUp(score, 1100);
   const avgSec = avgMs > 0 ? (avgMs / 1000).toFixed(1) : '-';
   const pandaSrc = pickCelebratePanda(isNewBest, maxCombo);
@@ -73,14 +85,12 @@ export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, 
         <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 19, color: '#fff' }}>{retryLabel}</span>
       </button>
       </Reveal>
-      {/* 난이도 바꾸기 (하단 고정) */}
+      {/* 하단 보조 — onModeSelect 있으면 [변경 | 모드 선택] 2분할, 없으면 단일(풀폭) */}
       <Reveal i={6} style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(18px + env(safe-area-inset-bottom))' }}>
-      <button onClick={() => { playSfx('button'); onChangeDiff(); }} className="tg-press" style={{
-        width: '100%', height: 54, borderRadius: 18, background: '#fff', border: '1.5px solid #ebe5de', cursor: 'pointer',
-        display: 'flex', alignItems: 'center', justifyContent: 'center', ...TOUCH_OPT,
-      }}>
-        <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 16, color: '#9a93a0' }}>{changeLabel}</span>
-      </button>
+      <div style={{ display: 'flex', gap: 10 }}>
+        <SecBtn label={changeLabel} onClick={onChangeDiff} />
+        {onModeSelect && <SecBtn label="모드 선택" onClick={onModeSelect} />}
+      </div>
       </Reveal>
     </>
   );
