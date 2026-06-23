@@ -2,14 +2,15 @@
 // 스타일 주입(ToneGameStyles)·반응형 컨테이너(FigmaScreen)·등장 래퍼(Reveal)·코치 말풍선·
 // 단어 카드/성조 버튼·카운트다운 비주얼·토스트·흔들림 버튼.
 // 참조 메모리: tone_game_redesign.md §5(단어카드)·§10-B(FigmaScreen)·§10-C(연출)
-import { useState, useEffect } from 'react';
-import { LockSimpleIcon } from '@phosphor-icons/react';
+import { useState, useEffect, useRef } from 'react';
+import { LockSimpleIcon, SpeakerHighIcon, SpeakerSlashIcon, VibrateIcon, XIcon } from '@phosphor-icons/react';
 import {
   TG, FONT_NUM, FONT_BODY, FONT_HANZI, FONT_PINYIN, SHADOW, DUR, TOUCH_OPT, TONE_TINTS, TONE_BORDERS, ASSETS,
+  haptic, isHapticMuted, setHapticMuted,
 } from '../tgTokens.js';
 import { ToneMark, ComboChip } from '../tgWidgets.jsx';
 import { TONES } from '../../constants/toneGameWords.js';
-import { play as playSfx } from '../tgSfx.js';
+import { play as playSfx, isSfxMuted, setSfxMuted } from '../tgSfx.js';
 
 // 카운트다운 슬라이드 가장자리 진폭 폭(px) — keyframes(tg-cd-out)와 CdWaveEdge가 공유.
 export const CD_WAVE_W = 12;
@@ -20,6 +21,13 @@ export function ToneGameStyles() {
     <style>{`
       @keyframes tg-shake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-6px)} 40%{transform:translateX(6px)} 60%{transform:translateX(-4px)} 80%{transform:translateX(4px)} }
       @keyframes tg-pulse { 0%,100%{opacity:.35} 50%{opacity:.9} }
+      @keyframes tg-heartbeat { 0%,100%{transform:scale(1)} 28%{transform:scale(1.2)} 42%{transform:scale(1)} 58%{transform:scale(1.12)} 72%{transform:scale(1)} }
+      @keyframes tg-screenshake { 0%,100%{transform:translate(0,0)} 15%{transform:translate(-7px,2px)} 30%{transform:translate(6px,-2px)} 45%{transform:translate(-5px,1px)} 60%{transform:translate(4px,-1px)} 80%{transform:translate(-2px,0)} }
+      @keyframes tg-punch { 0%{transform:scale(1)} 35%{transform:scale(1.06)} 100%{transform:scale(1)} }
+      @keyframes tg-flash { 0%{opacity:0} 18%{opacity:.7} 100%{opacity:0} }
+      @keyframes tg-fade-out { to { opacity:0 } }
+      @keyframes tg-vignette { 0%,100%{opacity:.45} 50%{opacity:1} }
+      @keyframes tg-card-in { 0%{opacity:0;transform:translateY(16px) scale(.965)} 100%{opacity:1;transform:translateY(0) scale(1)} }
       @keyframes tg-pop { 0%{transform:scale(.6);opacity:0} 60%{transform:scale(1.15)} 100%{transform:scale(1);opacity:1} }
       @keyframes tg-float { 0%{transform:translateY(0) scale(.9);opacity:0} 20%{opacity:1} 100%{transform:translateY(-28px) scale(1.05);opacity:0} }
       @keyframes tg-enter { 0%{transform:translateY(10px);opacity:0} 100%{transform:translateY(0);opacity:1} }
@@ -164,7 +172,9 @@ export function WordCard({ word, entered, currentSyl, completed, timedOut, progr
         </div>
         <div style={{
           fontFamily: FONT_HANZI, fontWeight: 700, fontSize: hz, lineHeight: 1.05,
-          color: isCurrent ? TG.CORAL_DK : TG.INK, transition: `color ${DUR.state} ease`,
+          // 정답 입력 시 글자가 성조색으로 채워짐(전환) + 팝 — 타격감 + 성조-색 각인
+          color: isCurrent ? TG.CORAL_DK : (revealed ? toneColor : TG.INK), transition: `color ${DUR.state} ease`,
+          animation: revealed ? 'tg-pop .32s cubic-bezier(.34,1.56,.64,1) both' : 'none',
         }}>{word.hanzi[i] ?? ''}</div>
         <div style={{ height: hz > 50 ? 26 : 20, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           {completed && (
@@ -186,7 +196,8 @@ export function WordCard({ word, entered, currentSyl, completed, timedOut, progr
       {!hideProgress && (
         <div style={{ position: 'absolute', left: 16, top: 16, fontFamily: FONT_NUM, fontWeight: 700, fontSize: 16, display: 'flex', gap: 3, alignItems: 'center' }}>
           <span style={{ color: '#f2484c' }}>{progressText.split('/')[0]}</span>
-          <span style={{ color: '#9a93a0', fontSize: 14 }}>/ {progressText.split('/')[1]}</span>
+          {/* 분모(총 문제수)는 있을 때만 — 무한모드는 숫자만이라 '/ ' 안 보이게 */}
+          {progressText.split('/')[1] && <span style={{ color: '#9a93a0', fontSize: 14 }}>/ {progressText.split('/')[1]}</span>}
         </div>
       )}
       <div style={{ position: 'absolute', right: 16, top: 14 }}><ComboChip combo={combo} flash={comboFlash} /></div>
@@ -213,15 +224,19 @@ export function WordCard({ word, entered, currentSyl, completed, timedOut, progr
 
 // ── 성조 버튼 5개 (성조색 소프트 틴트 배경) ────────────
 export function ToneButtons({ onTone, wrongBtn, disabled }) {
+  const [ripple, setRipple] = useState(null); // { num, key } — 탭 순간 성조색 리플
+  const seqRef = useRef(0);
+  const handle = (num) => { seqRef.current += 1; setRipple({ num, key: seqRef.current }); onTone(num); };
   return (
     <div style={{ display: 'flex', gap: 9, height: 81, alignItems: 'stretch' }}>
       {TONES.map((t) => {
         const isWrong = wrongBtn === t.num;
         return (
           <button
-            key={t.num} onClick={() => onTone(t.num)} disabled={disabled} aria-label={t.name}
+            key={t.num} onClick={() => handle(t.num)} disabled={disabled} aria-label={t.name}
             className={`tg-press ${isWrong ? 'tg-shake' : ''}`}
             style={{
+              position: 'relative', overflow: 'hidden',
               flex: 1, minWidth: 0, height: '100%', cursor: disabled ? 'default' : 'pointer', borderRadius: 20,
               background: isWrong ? '#FFD9D9' : TONE_TINTS[t.num],
               border: `1.5px solid ${isWrong ? TG.DANGER : TONE_BORDERS[t.num]}`,
@@ -229,8 +244,15 @@ export function ToneButtons({ onTone, wrongBtn, disabled }) {
               paddingTop: 16, paddingBottom: 12, color: t.color, ...TOUCH_OPT,
             }}
           >
+            {/* 탭 순간 성조색 리플 — 타격감 + 성조-색 각인 */}
+            {ripple && ripple.num === t.num && (
+              <span key={ripple.key} aria-hidden="true" style={{
+                position: 'absolute', left: '50%', top: '50%', width: 90, height: 90, borderRadius: '50%',
+                background: t.color, animation: 'tg-ripple .5s ease-out forwards', pointerEvents: 'none', zIndex: 0,
+              }} />
+            )}
             <ToneMark tone={t.num} size={34} />
-            <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 12, color: t.color }}>{t.name}</span>
+            <span style={{ position: 'relative', zIndex: 1, fontFamily: FONT_BODY, fontWeight: 700, fontSize: 12, color: t.color }}>{t.name}</span>
           </button>
         );
       })}
@@ -310,6 +332,50 @@ export function GameToast({ msg }) {
       <div className="tg-toast" style={{ display: 'flex', alignItems: 'center', gap: 7, background: 'rgba(43,39,48,0.94)', boxShadow: '0 8px 22px rgba(26,16,20,0.28)', borderRadius: 14, padding: '12px 18px 12px 16px', maxWidth: '90%' }}>
         <LockSimpleIcon size={16} weight="fill" color="#fff" style={{ flexShrink: 0 }} />
         <span style={{ fontFamily: FONT_BODY, fontWeight: 500, fontSize: 14, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{msg}</span>
+      </div>
+    </div>
+  );
+}
+
+// ── 설정 모달 ─────────────────────────────────────────
+// ⚙️ 설정 — 소리(SFX)·햅틱(진동) on/off. 시작화면·일시정지 모달에서 공용. Figma "18. 설정 모달" 기준.
+function SettingRow({ Icon, label, on, onToggle }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ width: 36, height: 36, borderRadius: 11, background: on ? 'rgba(242,72,76,0.12)' : '#f0ebe4', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Icon size={20} weight="fill" color={on ? TG.CORAL_DK : '#b8b0a8'} />
+        </div>
+        <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 15, color: TG.INK }}>{label}</span>
+      </div>
+      <button onClick={onToggle} role="switch" aria-checked={on} aria-label={label} className="tg-press"
+        style={{ width: 48, height: 28, borderRadius: 14, border: 'none', cursor: 'pointer', padding: 0, background: on ? TG.CORAL_DK : '#d8d0c7', position: 'relative', transition: 'background .2s ease', ...TOUCH_OPT }}>
+        <span style={{ position: 'absolute', top: 3, left: on ? 23 : 3, width: 22, height: 22, borderRadius: 11, background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left .18s ease' }} />
+      </button>
+    </div>
+  );
+}
+
+export function SettingsModal({ onClose }) {
+  const [sfxOn, setSfxOn] = useState(() => !isSfxMuted());
+  const [hapticOn, setHapticOn] = useState(() => !isHapticMuted());
+  const toggleSfx = () => { const next = !sfxOn; setSfxOn(next); setSfxMuted(!next); if (next) playSfx('button'); };
+  const toggleHaptic = () => { const next = !hapticOn; setHapticOn(next); setHapticMuted(!next); if (next) haptic(20); };
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(26,16,20,0.55)', backdropFilter: 'blur(2px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, ...TOUCH_OPT }}>
+      <div className="tg-enter" onClick={(e) => e.stopPropagation()} style={{
+        width: '100%', maxWidth: 300, background: TG.CARD, borderRadius: 24, padding: '20px 22px 22px',
+        boxShadow: '0 20px 50px rgba(26,16,20,0.3)', display: 'flex', flexDirection: 'column', gap: 16,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 18, color: TG.INK }}>설정</span>
+          <button onClick={onClose} aria-label="닫기" className="tg-press"
+            style={{ width: 30, height: 30, borderRadius: 15, border: 'none', background: '#f3efe9', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', ...TOUCH_OPT }}>
+            <XIcon size={14} weight="bold" color={TG.SUB} />
+          </button>
+        </div>
+        <SettingRow Icon={sfxOn ? SpeakerHighIcon : SpeakerSlashIcon} label="소리" on={sfxOn} onToggle={toggleSfx} />
+        <SettingRow Icon={VibrateIcon} label="햅틱" on={hapticOn} onToggle={toggleHaptic} />
       </div>
     </div>
   );

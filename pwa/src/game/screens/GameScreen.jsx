@@ -1,6 +1,6 @@
 // 게임 화면 (Figma 좌표 절대배치) — 점수·일시정지·타이머·단어카드·코치·성조버튼 + 콤보/신기록 버스트 연출(P4b).
 import { useState, useEffect, useRef } from 'react';
-import { StarIcon, PauseIcon, TimerIcon, SpeakerHighIcon, EyeIcon } from '@phosphor-icons/react';
+import { StarIcon, PauseIcon, TimerIcon, SpeakerHighIcon, EyeIcon, HeartIcon } from '@phosphor-icons/react';
 import { TG, FONT_TITLE, FONT_NUM, FONT_BODY, TOUCH_OPT } from '../tgTokens.js';
 import { play as playSfx } from '../tgSfx.js';
 import { Reveal, WordCard, ToneButtons, CoachBubble } from './shared.jsx';
@@ -36,7 +36,8 @@ function CenterBurst({ data }) {
   );
 }
 
-export function GameScreen({ word, entered, currentSyl, completed, timedOut, wordIndex, wordsLen, wordTimeLimit, gaugeOffsetMs = 0, paused, combo, comboFlash, floatScore, score, coachText, onTone, wrongBtn, onPause, playReveal = true, endless = false, runId = 0, recordToBeat = 0, practice = false, onSpeak, onReveal, demoFx = null }) {
+export function GameScreen({ word, entered, currentSyl, completed, timedOut, wordIndex, wordsLen, wordTimeLimit, gaugeOffsetMs = 0, lowTime = false, paused, combo, comboFlash, floatScore, score, coachText, onTone, wrongBtn, wrongShakeKey = 0, onPause, playReveal = true, endless = false, lives = 3, runId = 0, recordToBeat = 0, practice = false, onSpeak, onReveal, demoFx = null }) {
+  lowTime = lowTime || demoFx === 'low'; // [DEV] 미리보기 텐션 데모(?screen=game&fx=low) — 머지 전 백도어 제거 대상
   // ── 버스트 연출(P4b): 콤보 마일스톤(5·10·15…) + 라이브 신기록. 비차단·자동 소멸 ──
   const [burst, setBurst] = useState(null);
   const prevComboRef = useRef(0);
@@ -65,15 +66,48 @@ export function GameScreen({ word, entered, currentSyl, completed, timedOut, wor
   useEffect(() => { prevComboRef.current = 0; recordShownRef.current = false; }, [runId]); // 새 런 리셋
   useEffect(() => () => { if (burstTimerRef.current) clearTimeout(burstTimerRef.current); }, []);
   useEffect(() => { // [DEV] 미리보기 버스트 데모(?screen=game&fx=combo|record) — hold로 유지(검수용). 머지 전 백도어 제거 대상
-    if (!demoFx) return;
+    if (demoFx !== 'combo' && demoFx !== 'record') return; // 'low'(텐션 데모) 등은 버스트 미발생
     burstSeqRef.current += 1;
     setBurst(demoFx === 'record'
       ? { key: burstSeqRef.current, hold: true, text: '신기록!', sub: '최고 기록을 넘었어요', color: '#FF9500', subColor: '#c98300', particleColor: TG.SUN }
       : { key: burstSeqRef.current, hold: true, text: '콤보 10!', color: TG.CORAL_DK, particleColor: TG.SUN });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [demoFx]);
+  // ── 임팩트 연출: 오답=화면 셰이크, 정답 완성=카드 펀치+화이트 플래시 ──
+  const shakeRef = useRef(null);
+  const [punch, setPunch] = useState(false);
+  const [flashKey, setFlashKey] = useState(0);
+  useEffect(() => { // 오답마다 화면 전체 셰이크 — Web Animations API로 매번 처음부터 무조건 재생(React 토글의 배칭/재시작 불안정 회피)
+    if (wrongShakeKey === 0 || !shakeRef.current) return; // 초기값 — 게임 시작·재시작 시 미발동
+    shakeRef.current.animate(
+      [
+        { transform: 'translate(0,0)' }, { transform: 'translate(-8px,2px)' }, { transform: 'translate(7px,-2px)' },
+        { transform: 'translate(-5px,1px)' }, { transform: 'translate(4px,-1px)' }, { transform: 'translate(0,0)' },
+      ],
+      { duration: 420, easing: 'ease-in-out' },
+    );
+  }, [wrongShakeKey]);
+  useEffect(() => { // 정답으로 단어 완성(시간초과 제외) — 카드 펀치 + 플래시
+    if (!completed || timedOut) return undefined;
+    setPunch(true); setFlashKey((n) => n + 1);
+    const t = setTimeout(() => setPunch(false), 360);
+    return () => clearTimeout(t);
+  }, [completed, timedOut]);
+  // 콤보 히트 — 콤보가 오를수록 0→1로 고조(콤보2부터, 12에서 최대). 가장자리 코랄 글로우 강도에 사용.
+  const heat = combo >= 2 ? Math.min((combo - 1) / 11, 1) : 0;
   return (
-    <>
+    <div ref={shakeRef} data-tg-shake-root="1" style={{ position: 'absolute', inset: 0 }}>
+      {/* 콤보 히트 글로우 — '점점 뜨거워진다'는 모멘텀 시각화(압박 아님). 콘텐츠 뒤(zIndex0)·비차단 */}
+      {heat > 0 && (
+        <div aria-hidden="true" style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0,
+          boxShadow: `inset 0 0 ${50 + heat * 90}px ${8 + heat * 34}px rgba(255,94,98,${0.10 + heat * 0.42})`,
+          transition: 'box-shadow .45s ease' }} />
+      )}
+      {/* 저시간 비네트 — 막바지에 화면 가장자리 붉은 맥동(텐션 램프 보강·게이지 심박과 동기). 비차단 */}
+      {lowTime && !practice && (
+        <div aria-hidden="true" style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 3,
+          boxShadow: 'inset 0 0 72px 26px rgba(242,72,76,0.42)', animation: 'tg-vignette .85s ease-in-out infinite' }} />
+      )}
       {/* 점수 (상단 중앙) */}
       <Reveal i={0} play={playReveal} style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', top: 20 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 5, background: '#fff', padding: '9px 14px', borderRadius: 15, boxShadow: '0px 3px 8px rgba(43,39,48,0.06)' }}>
@@ -81,6 +115,20 @@ export function GameScreen({ word, entered, currentSyl, completed, timedOut, wor
         <span style={{ fontFamily: FONT_NUM, fontWeight: 800, fontSize: 17, color: '#2b2730' }}>{score}</span>
       </div>
       </Reveal>
+      {/* 하트 HUD (좌상단) — 무한 모드만. 단어당 3개, 오답마다 하나씩 빈 하트로. */}
+      {endless && (
+        <Reveal i={0} play={playReveal} style={{ position: 'absolute', left: 20, top: 22 }}>
+          <div style={{ display: 'flex', gap: 5 }} aria-label={`남은 기회 ${lives}개`}>
+            {[0, 1, 2].map((i) => {
+              const on = i < lives;
+              return (
+                <HeartIcon key={i} size={24} weight={on ? 'fill' : 'regular'} color={on ? TG.CORAL : '#d8d0c7'}
+                  style={{ transition: 'transform 200ms ease, color 200ms ease', transform: on ? 'scale(1)' : 'scale(0.82)' }} />
+              );
+            })}
+          </div>
+        </Reveal>
+      )}
       {/* 일시정지 (우상단) */}
       <Reveal i={0} play={playReveal} style={{ position: 'absolute', right: 20, top: 23 }}>
       <button onClick={onPause} aria-label="일시정지" className="tg-press" style={{ width: 40, height: 40, border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', ...TOUCH_OPT }}>
@@ -97,18 +145,23 @@ export function GameScreen({ word, entered, currentSyl, completed, timedOut, wor
       ) : (
         <Reveal i={1} play={playReveal} style={{ position: 'absolute', left: 20, right: 20, top: 69 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <div style={{ width: 32, height: 32, borderRadius: 16, background: '#ff5e62', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0px 3px 4.5px rgba(255,94,98,0.45)' }}>
+          <div style={{ width: 32, height: 32, borderRadius: 16, background: lowTime ? '#f2484c' : '#ff5e62', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: lowTime ? '0px 0px 10px rgba(242,72,76,0.7)' : '0px 3px 4.5px rgba(255,94,98,0.45)', animation: lowTime ? 'tg-heartbeat .85s ease-in-out infinite' : 'none' }}>
             <TimerIcon size={20} weight="fill" color="#fff" />
           </div>
-          <div style={{ flex: 1, height: 12, borderRadius: 6, background: '#f0ebe4', overflow: 'hidden' }}>
-            <div key={`${runId}-${wordIndex}-${wordTimeLimit}-${gaugeOffsetMs}`} style={{ height: '100%', width: '100%', borderRadius: 6, background: 'linear-gradient(90deg,#ffc23c,#ff6b6b)', animation: `tg-timer ${wordTimeLimit}ms linear forwards`, animationDelay: `-${gaugeOffsetMs}ms`, animationPlayState: (paused || completed) ? 'paused' : 'running' }} />
+          <div style={{ flex: 1, height: 12, borderRadius: 6, background: '#f0ebe4', overflow: 'hidden', boxShadow: lowTime ? '0 0 0 2px rgba(242,72,76,0.35)' : 'none', transition: 'box-shadow .2s ease' }}>
+            <div key={`${runId}-${wordIndex}-${wordTimeLimit}-${gaugeOffsetMs}`} style={{ height: '100%', width: '100%', borderRadius: 6, background: lowTime ? 'linear-gradient(90deg,#ff5e62,#f2484c)' : 'linear-gradient(90deg,#ffc23c,#ff6b6b)', animation: `tg-timer ${wordTimeLimit}ms linear forwards`, animationDelay: `-${gaugeOffsetMs}ms`, animationPlayState: (paused || completed) ? 'paused' : 'running' }} />
           </div>
         </div>
         </Reveal>
       )}
-      {/* 단어카드 top129 (폭 채움) */}
+      {/* 단어카드 top129 (폭 채움) — 단어 바뀔 때마다 키 변경으로 입장 모션(tg-card-in) */}
       <Reveal i={2} play={playReveal} style={{ position: 'absolute', left: 20, right: 20, top: 129 }}>
-        <WordCard word={word} entered={entered} currentSyl={currentSyl} completed={completed} timedOut={timedOut} progressText={endless ? `${wordIndex + 1}` : `${wordIndex + 1}/${wordsLen}`} combo={combo} comboFlash={comboFlash} floatScore={floatScore} />
+        <div key={`card-${runId}-${wordIndex}`} style={{ animation: 'tg-card-in .38s cubic-bezier(.22,1,.36,1) both' }}>
+        <div style={{ position: 'relative', animation: punch ? 'tg-punch .35s ease-out' : 'none' }}>
+          <WordCard word={word} entered={entered} currentSyl={currentSyl} completed={completed} timedOut={timedOut} progressText={endless ? `${wordIndex + 1}` : `${wordIndex + 1}/${wordsLen}`} combo={combo} comboFlash={comboFlash} floatScore={floatScore} />
+          {flashKey > 0 && <div key={flashKey} style={{ position: 'absolute', inset: 0, borderRadius: 24, background: 'radial-gradient(closest-side, rgba(255,255,255,0.9), rgba(255,255,255,0))', animation: 'tg-flash .5s ease-out forwards', pointerEvents: 'none' }} />}
+        </div>
+        </div>
       </Reveal>
       {/* 코치 — 일반 모드만. 연습 모드는 카드 힌트 + 발음듣기/정답보기 버튼이 안내하고,
           4겹(카드·코치·연습버튼·성조버튼)이라 짧은 화면서 겹쳐 미표시. */}
@@ -138,6 +191,6 @@ export function GameScreen({ word, entered, currentSyl, completed, timedOut, wor
       </Reveal>
       {/* 콤보 마일스톤 · 라이브 신기록 버스트(P4b) */}
       <CenterBurst data={burst} />
-    </>
+    </div>
   );
 }

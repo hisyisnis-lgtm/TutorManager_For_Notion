@@ -131,7 +131,12 @@ export function ensureGameFonts() {
 }
 
 // ── 게임 유틸 ──────────────────────────────────────────
+// 햅틱(진동) 음소거 — 설정 시트의 '햅틱' 토글. SFX와 별도 키. 미지원 기기(iOS Safari 등)는 vibrate 자체가 no-op.
+export function isHapticMuted() { try { return localStorage.getItem('tg_haptic_muted') === '1'; } catch { return false; } }
+export function setHapticMuted(m) { try { localStorage.setItem('tg_haptic_muted', m ? '1' : '0'); } catch { /* noop */ } }
+
 export function haptic(pattern) {
+  if (isHapticMuted()) return;
   try { navigator.vibrate?.(pattern); } catch { /* noop */ }
 }
 

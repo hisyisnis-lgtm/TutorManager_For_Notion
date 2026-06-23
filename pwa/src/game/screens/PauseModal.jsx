@@ -1,17 +1,25 @@
-// 일시정지 모달 — 계속하기 / 처음부터 / 그만두기.
-import { PauseIcon, PlayIcon, ArrowClockwiseIcon, SignOutIcon } from '@phosphor-icons/react';
+// 일시정지 모달 — 계속하기 / 처음부터 / 그만두기 (+ 우상단 설정).
+import { useState } from 'react';
+import { PauseIcon, PlayIcon, ArrowClockwiseIcon, SignOutIcon, GearSixIcon } from '@phosphor-icons/react';
 import { TG, FONT_TITLE, FONT_BODY, FONT_NUM, RADIUS, SHADOW, TOUCH_OPT } from '../tgTokens.js';
+import { SettingsModal } from './shared.jsx';
 
 export function PauseModal({ score, combo, onResume, onRestart, onQuit }) {
+  const [settingsOpen, setSettingsOpen] = useState(false);
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(43,39,48,0.45)',
       display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, backdropFilter: 'blur(2px)',
     }}>
       <div className="tg-enter" style={{
-        width: '100%', maxWidth: 342, background: TG.CARD, borderRadius: 24, padding: '28px 22px 22px',
+        position: 'relative', width: '100%', maxWidth: 342, background: TG.CARD, borderRadius: 24, padding: '28px 22px 22px',
         boxShadow: '0 20px 60px rgba(43,39,48,0.3)', textAlign: 'center',
       }}>
+        {/* 설정 ⚙️ — 카드 우상단 */}
+        <button onClick={() => setSettingsOpen(true)} aria-label="설정" className="tg-press"
+          style={{ position: 'absolute', right: 16, top: 16, width: 34, height: 34, borderRadius: 17, border: 'none', background: '#f3efe9', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', ...TOUCH_OPT }}>
+          <GearSixIcon size={18} weight="fill" color={TG.SUB} />
+        </button>
         <div style={{ width: 56, height: 56, borderRadius: 999, background: TG.CORAL_BG, margin: '0 auto 14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <PauseIcon size={26} weight="fill" color={TG.CORAL_DK} />
         </div>
@@ -40,6 +48,7 @@ export function PauseModal({ score, combo, onResume, onRestart, onQuit }) {
           fontFamily: FONT_BODY, fontWeight: 600, fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, ...TOUCH_OPT,
         }}><SignOutIcon size={16} weight="bold" /> 그만두기</button>
       </div>
+      {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
     </div>
   );
 }

@@ -80,7 +80,8 @@ export function initSfx() {
 }
 
 // 효과음 재생 — AudioBufferSourceNode(1회용)+GainNode. 지연 0, 겹쳐 재생 자유.
-export function play(key, volOverride) {
+// rate: 재생 속도(=음정). 1=원음, 2^(반음/12). 콤보 피치 래더 등에 사용.
+export function play(key, volOverride, rate) {
   if (muted) return;
   const c = ensureCtx();
   if (!c) return;
@@ -90,6 +91,7 @@ export function play(key, volOverride) {
   try {
     const src = c.createBufferSource();
     src.buffer = buf;
+    if (rate && rate > 0) src.playbackRate.value = rate;
     const g = c.createGain();
     g.gain.value = volOverride != null ? volOverride : (VOL[key] ?? 0.4);
     src.connect(g).connect(c.destination);

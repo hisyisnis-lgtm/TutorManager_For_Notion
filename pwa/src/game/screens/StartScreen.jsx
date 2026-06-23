@@ -4,14 +4,14 @@
 import { useState } from 'react';
 import {
   CaretLeftIcon, StarIcon, FlameIcon, PlayIcon, HandWavingIcon, ChartBarIcon, TrophyIcon, QuestionIcon,
-  SpeakerHighIcon, SpeakerSlashIcon, InstagramLogoIcon, YoutubeLogoIcon, ArticleIcon, CaretRightIcon, InfinityIcon,
+  GearSixIcon, InstagramLogoIcon, YoutubeLogoIcon, ArticleIcon, CaretRightIcon, InfinityIcon,
 } from '@phosphor-icons/react';
 import { TG, FONT_TITLE, FONT_BODY, FONT_NUM, SHADOW, TOUCH_OPT, ASSETS, TONE_TINTS, loadBest, saveBest } from '../tgTokens.js';
 import { ToneMark, useCountUp } from '../tgWidgets.jsx';
 import { TONES } from '../../constants/toneGameWords.js';
-import { play as playSfx, isSfxMuted, setSfxMuted } from '../tgSfx.js';
+import { play as playSfx } from '../tgSfx.js';
 import { GAMEKEY, loadEndlessBest, saveEndlessBest } from '../gameLogic.js';
-import { FigmaScreen, Reveal, CoachBubble } from './shared.jsx';
+import { FigmaScreen, Reveal, CoachBubble, SettingsModal } from './shared.jsx';
 
 // SNS 링크 (PersonalPage와 동일 URL). 인스타그램이 메인, 유튜브·블로그는 보조.
 const PLAY_LINKS = {
@@ -189,7 +189,7 @@ export function StartScreen({ best, streak = 0, onStart, onClose, onHelp, onDebu
   const [playOpen, setPlayOpen] = useState(false);
   const [debugScoreOpen, setDebugScoreOpen] = useState(false);
   const [bestInfoOpen, setBestInfoOpen] = useState(false);
-  const [sfxOn, setSfxOn] = useState(() => !isSfxMuted());
+  const [settingsOpen, setSettingsOpen] = useState(false);
   return (
     <FigmaScreen bgImage={ASSETS.startBg}>
       <div style={{ position: 'absolute', inset: 0, ...TOUCH_OPT }}>
@@ -235,10 +235,10 @@ export function StartScreen({ best, streak = 0, onStart, onClose, onHelp, onDebu
             <span style={{ fontFamily: FONT_BODY, fontWeight: 600, fontSize: 13, color: TG.SUB }}>{memberName ? `${memberName} · ` : ''}로그아웃</span>
           </button>
         )}
-        {/* 소리 on/off 토글 (SFX 음소거) — 우상단 */}
-        <button onClick={(e) => { e.stopPropagation(); const next = !sfxOn; setSfxOn(next); setSfxMuted(!next); if (next) playSfx('button'); }} aria-label="소리" className="tg-press"
+        {/* 설정 ⚙️ (소리·햅틱 토글) — 우상단. 기존 단독 소리 토글을 흡수 */}
+        <button onClick={(e) => { e.stopPropagation(); setSettingsOpen(true); }} aria-label="설정" className="tg-press"
           style={{ position: 'absolute', right: 24, top: 20, width: 40, height: 40, borderRadius: 20, background: '#fff', boxShadow: '0px 3px 5px rgba(43,39,48,0.08)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', ...TOUCH_OPT }}>
-          {sfxOn ? <SpeakerHighIcon size={20} weight="fill" color={TG.INK} /> : <SpeakerSlashIcon size={20} weight="fill" color="#b8b0a8" />}
+          <GearSixIcon size={20} weight="fill" color={TG.INK} />
         </button>
         {/* [디버그] 가운데 상단 — 소개부터 / 점수. import.meta.env.DEV 게이트로 프로덕션 빌드선 dead-code 제거(번들서도 빠짐), dev에선 유지 */}
         {import.meta.env.DEV && onDebugIntro && (
@@ -314,6 +314,7 @@ export function StartScreen({ best, streak = 0, onStart, onClose, onHelp, onDebu
         </Reveal>
       </div>
       {playOpen && <PlayModal onClose={() => setPlayOpen(false)} />}
+      {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
       {bestInfoOpen && <BestInfoModal best={best} onClose={() => setBestInfoOpen(false)} />}
       {import.meta.env.DEV && debugScoreOpen && <DebugScoreModal studentToken={studentToken} onClose={() => setDebugScoreOpen(false)} onApplied={() => onRefreshBest && onRefreshBest()} />}
     </FigmaScreen>
