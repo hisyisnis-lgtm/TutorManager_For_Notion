@@ -36,7 +36,7 @@ function CenterBurst({ data }) {
   );
 }
 
-export function GameScreen({ word, entered, currentSyl, completed, timedOut, wordIndex, wordsLen, wordTimeLimit, gaugeOffsetMs = 0, lowTime = false, paused, combo, comboFlash, floatScore, score, coachText, onTone, wrongBtn, wrongShakeKey = 0, onPause, playReveal = true, endless = false, lives = 3, runId = 0, recordToBeat = 0, practice = false, onSpeak, onReveal, demoFx = null }) {
+export function GameScreen({ word, entered, currentSyl, completed, timedOut, wordIndex, wordsLen, wordTimeLimit, gaugeOffsetMs = 0, lowTime = false, paused, combo, comboFlash, floatScore, score, coachText, onTone, wrongBtn, wrongShakeKey = 0, onPause, playReveal = true, endless = false, lives = 3, runId = 0, recordToBeat = 0, practice = false, listen = false, audioOff = false, onReplay, onCantHear, onSpeak, onReveal, demoFx = null }) {
   lowTime = lowTime || demoFx === 'low'; // [DEV] 미리보기 텐션 데모(?screen=game&fx=low) — 머지 전 백도어 제거 대상
   // ── 버스트 연출(P4b): 콤보 마일스톤(5·10·15…) + 라이브 신기록. 비차단·자동 소멸 ──
   const [burst, setBurst] = useState(null);
@@ -158,7 +158,7 @@ export function GameScreen({ word, entered, currentSyl, completed, timedOut, wor
       <Reveal i={2} play={playReveal} style={{ position: 'absolute', left: 20, right: 20, top: 129 }}>
         <div key={`card-${runId}-${wordIndex}`} style={{ animation: 'tg-card-in .38s cubic-bezier(.22,1,.36,1) both' }}>
         <div style={{ position: 'relative', animation: punch ? 'tg-punch .35s ease-out' : 'none' }}>
-          <WordCard word={word} entered={entered} currentSyl={currentSyl} completed={completed} timedOut={timedOut} progressText={endless ? `${wordIndex + 1}` : `${wordIndex + 1}/${wordsLen}`} combo={combo} comboFlash={comboFlash} floatScore={floatScore} />
+          <WordCard word={word} entered={entered} currentSyl={currentSyl} completed={completed} timedOut={timedOut} progressText={endless ? `${wordIndex + 1}` : `${wordIndex + 1}/${wordsLen}`} combo={combo} comboFlash={comboFlash} floatScore={floatScore} listen={listen} audioOff={audioOff} onReplay={onReplay} onCantHear={onCantHear} />
           {flashKey > 0 && <div key={flashKey} style={{ position: 'absolute', inset: 0, borderRadius: 24, background: 'radial-gradient(closest-side, rgba(255,255,255,0.9), rgba(255,255,255,0))', animation: 'tg-flash .5s ease-out forwards', pointerEvents: 'none' }} />}
         </div>
         </div>

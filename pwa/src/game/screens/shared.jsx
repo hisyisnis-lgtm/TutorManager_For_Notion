@@ -134,7 +134,8 @@ export function CoachBubble({ text }) {
 }
 
 // ── 단어 카드 (반응형 + 고정 슬롯, 메모리 §5) ──────────
-export function WordCard({ word, entered, currentSyl, completed, timedOut, progressText, combo, comboFlash, floatScore, hideProgress }) {
+export function WordCard({ word, entered, currentSyl, completed, timedOut, progressText, combo, comboFlash, floatScore, hideProgress, listen = false, audioOff = false, onReplay, onCantHear }) {
+  const listening = listen && !audioOff && !completed && !timedOut; // 듣기 모드: 답하기 전엔 한자 가리고 소리 패널
   const n = word.tones.length;
   let hz, colW, gap, twoRow = false, perRow = n;
   if (n <= 4) { hz = 66; colW = 72; gap = 14; }
@@ -207,17 +208,39 @@ export function WordCard({ word, entered, currentSyl, completed, timedOut, progr
           color: TG.SUCCESS, animation: 'tg-float 1.3s ease-out forwards', pointerEvents: 'none',
         }}>{floatScore}</div>
       )}
-      <div style={{ height: 22, marginTop: 8, textAlign: 'center', flexShrink: 0 }}>
-        <span style={{ fontFamily: FONT_BODY, fontWeight: 500, fontSize: 13, color: TG.SUB }}>{word.meaning}</span>
-      </div>
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 6 }}>
-        {rows.map((row, ri) => (
-          <div key={ri} style={{ display: 'flex', justifyContent: 'center', gap }}>{row.map((i) => Syllable(i))}</div>
-        ))}
-      </div>
-      <div style={{ height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-        <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 14, color: guide.color, transition: `color ${DUR.state} ease` }}>{guide.text}</span>
-      </div>
+      {listening ? (
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
+          {/* 한자·뜻 가림 → 소리만. 스피커 + 다시 듣기 / 지금은 못 들어요 */}
+          <div style={{ width: 104, height: 104, borderRadius: 52, background: 'rgba(242,72,76,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <SpeakerHighIcon size={48} weight="fill" color={TG.CORAL_DK} />
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={onReplay} className="tg-press" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '11px 17px', borderRadius: 16, background: '#fff', border: `1.5px solid ${TG.CORAL_BG}`, cursor: 'pointer', ...TOUCH_OPT }}>
+              <SpeakerHighIcon size={18} weight="fill" color={TG.CORAL_DK} />
+              <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 14, color: TG.INK }}>다시 듣기</span>
+            </button>
+            <button onClick={onCantHear} className="tg-press" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '11px 17px', borderRadius: 16, background: '#fff', border: '1.5px solid #ebe5de', cursor: 'pointer', ...TOUCH_OPT }}>
+              <SpeakerSlashIcon size={18} weight="fill" color="#767676" />
+              <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 14, color: TG.INK }}>지금은 못 들어요</span>
+            </button>
+          </div>
+          <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 14, color: TG.GUIDE }}>소리를 듣고 성조를 찾으세요</span>
+        </div>
+      ) : (
+        <>
+          <div style={{ height: 22, marginTop: 8, textAlign: 'center', flexShrink: 0 }}>
+            <span style={{ fontFamily: FONT_BODY, fontWeight: 500, fontSize: 13, color: TG.SUB }}>{word.meaning}</span>
+          </div>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 6 }}>
+            {rows.map((row, ri) => (
+              <div key={ri} style={{ display: 'flex', justifyContent: 'center', gap }}>{row.map((i) => Syllable(i))}</div>
+            ))}
+          </div>
+          <div style={{ height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 14, color: guide.color, transition: `color ${DUR.state} ease` }}>{guide.text}</span>
+          </div>
+        </>
+      )}
     </div>
   );
 }

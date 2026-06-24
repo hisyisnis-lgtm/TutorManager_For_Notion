@@ -132,7 +132,10 @@ export default function ToneGamePage() {
   const [reviewMode, setReviewMode] = useState(false); // 복습 모드(약한 단어 10개)
   const [endlessMode, setEndlessMode] = useState(false); // 무한 모드(랜덤·가속·첫초과종료)
   const [practiceMode, setPracticeMode] = useState(false); // 연습 모드(시간 무제한·기록 미반영·정답 보기)
-  const [difficultyForPractice, setDifficultyForPractice] = useState(false); // 난이도 선택 화면이 연습 진입용인지
+  const [wordIsListen, setWordIsListen] = useState(false); // 이 단어가 듣기 문제인지(한자 가림·소리 먼저) — 일반/복습에 섞여 출제
+  const [audioOff, setAudioOff] = useState(false); // '지금은 못 들어요' — 그 판 한정 듣기 문제 미출제(한자 공개·자동재생 중지)
+  const audioOffRef = useRef(false); // word-start effect서 최신값 동기 읽기
+  const [difficultyTarget, setDifficultyTarget] = useState('normal'); // 난이도 화면 진입 목적: 'normal'|'practice'
   const [runId, setRunId] = useState(0); // 게임 시작 시마다 증가 — 같은 단어1로 재시작해도 타이머·게이지 리셋용
   const [splash, setSplash] = useState(isPreview ? previewScreen === 'splash' : true); // 진입 스플래시(실제 진입만, 미리보기는 ?screen=splash)
   const [toast, setToast] = useState(null); // 중앙 토스트(잠금 안내 등)
@@ -328,6 +331,10 @@ export default function ToneGamePage() {
     setLowTime(false); // 새 단어 — 텐션 연출 초기화
     setShowWrong(false); // 새 단어 — 코치 오답 메시지 초기화
     livesRef.current = 3; setLives(3); // 무한: 단어당 하트 3개로 회복(다른 모드는 표시 안 함)
+    // 듣기 문제 섞어 출제(일반·복습 한정·첫 단어 제외·약 35%). '지금은 못 들어요'면 미출제. 듣기면 소리 자동재생.
+    const isListen = !practiceMode && !endlessMode && !audioOffRef.current && wordIndex > 0 && Math.random() < 0.35;
+    setWordIsListen(isListen);
+    if (isListen && !isPreview) { const lw = words[wordIndex]; if (lw) addTimer(setTimeout(() => speakWord(lw), 240)); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wordIndex, screen, selectedDifficulty, cdPhase, runId]);
 
@@ -372,6 +379,7 @@ export default function ToneGamePage() {
     setTotalAnswerTime(0); setAnsweredCount(0); setIsNewBest(false); setPreviousBest(0); setTimedOut(false); setPaused(false);
     setEndKind('complete'); setWrongShakeKey(0); setShowGameOverBeat(false); // 게임오버 비트 헤드라인·셰이크·오버레이 초기화
     livesRef.current = 3; setLives(3); // 무한 하트 초기화
+    audioOffRef.current = false; setAudioOff(false); setWordIsListen(false); // '지금은 못 들어요'·듣기문제는 그 판 한정 → 새 런마다 리셋
     wordElapsedRef.current = 0; setGaugeOffsetMs(0); setRunId((n) => n + 1);
     setCdNum(3); setCdPhase('in'); // 카운트다운 오버레이 시작(현재 화면 위로 슬라이드 인 → 게임 전환 → 슬라이드 아웃)
   };
@@ -386,8 +394,7 @@ export default function ToneGamePage() {
       fetchToneWords(d.id).then((w) => { if (Array.isArray(w) && w.length > 0) setWordPoolByDiff((prev) => ({ ...prev, [d.id]: w })); }).catch(() => {});
       return;
     }
-    setReviewMode(false); setEndlessMode(false); setPracticeMode(false);
-    setRecordToBeat(loadBest(studentToken, d.gameKey)?.bestScore || 0); // 라이브 신기록 기준(이 난이도 직전 최고)
+    setReviewMode(false); setEndlessMode(false); setPracticeMode(false);    setRecordToBeat(loadBest(studentToken, d.gameKey)?.bestScore || 0); // 라이브 신기록 기준(이 난이도 직전 최고)
     setWords(buildRoundWords(pool, wordStatsRef.current, ROUND_LENGTH)); // 교육적 가중 추첨(약점 우선·은은하게)
     resetRunState();
   };
@@ -403,8 +410,7 @@ export default function ToneGamePage() {
       fetchToneWords(d.id).then((w) => { if (Array.isArray(w) && w.length > 0) setWordPoolByDiff((prev) => ({ ...prev, [d.id]: w })); }).catch(() => {});
       return;
     }
-    setPracticeMode(true); setReviewMode(false); setEndlessMode(false);
-    setRecordToBeat(0); // 연습=기록 미반영
+    setPracticeMode(true); setReviewMode(false); setEndlessMode(false);    setRecordToBeat(0); // 연습=기록 미반영
     setWords(buildRoundWords(pool, wordStatsRef.current, ROUND_LENGTH)); // 교육적 가중 추첨(약점 우선·은은하게)
     resetRunState();
   };
@@ -412,8 +418,7 @@ export default function ToneGamePage() {
   // 복습 모드 — 약한 단어 N개로 게임. 최고기록 미반영, 단어 통계만 갱신.
   const startReview = (reviewWords) => {
     if (!reviewWords || reviewWords.length === 0) return;
-    setReviewMode(true); setEndlessMode(false); setPracticeMode(false);
-    setRecordToBeat(0); // 복습=기록 미반영
+    setReviewMode(true); setEndlessMode(false); setPracticeMode(false);    setRecordToBeat(0); // 복습=기록 미반영
     setWords(reviewWords);
     resetRunState();
   };
@@ -424,8 +429,7 @@ export default function ToneGamePage() {
     if (all.length === 0) { message.error('단어를 불러오지 못했어요. 잠시 후 다시 시도해주세요.'); return; }
     let stream = [];
     for (let i = 0; i < 8; i++) stream = stream.concat(shuffle(all)); // 첫 초과로 끝나므로 충분히 길게
-    setEndlessMode(true); setReviewMode(false); setPracticeMode(false);
-    setRecordToBeat(loadEndlessBest(studentToken)?.bestScore || 0); // 라이브 신기록 기준(무한 직전 최고)
+    setEndlessMode(true); setReviewMode(false); setPracticeMode(false);    setRecordToBeat(loadEndlessBest(studentToken)?.bestScore || 0); // 라이브 신기록 기준(무한 직전 최고)
     setWords(stream);
     resetRunState();
   };
@@ -526,6 +530,7 @@ export default function ToneGamePage() {
     if (timedOut) return { text: '시간 끝! 다시 도전해요', tone: 'danger' };
     if (completed) return combo >= 2 ? { text: `콤보 ${combo}! 멋져요`, tone: 'success' } : { text: '정확해요! 잘했어요', tone: 'success' };
     if (showWrong) return { text: '앗! 다시 찾아봐', tone: 'danger' };
+    if (wordIsListen && !audioOff) return { text: '잘 듣고 성조를 찾아봐요', tone: 'neutral' };
     if (practiceMode) return { text: '발음을 듣고 성조를 찾아봐요', tone: 'neutral' };
     return { text: '이건 무슨 성조일까?', tone: 'neutral' };
   })();
@@ -598,9 +603,9 @@ export default function ToneGamePage() {
     content = (
       <FigmaScreen>
         <ModeScreen endlessUnlocked={isEndlessUnlocked(studentToken)} reviewCount={reviewWords.length}
-          onDifficulty={() => { playSfx('button'); setDifficultyForPractice(false); setScreen('difficulty'); }}
+          onDifficulty={() => { playSfx('button'); setDifficultyTarget('normal'); setScreen('difficulty'); }}
           onEndless={() => { playSfx('button'); startEndless(); }}
-          onPractice={() => { playSfx('button'); setDifficultyForPractice(true); setScreen('difficulty'); }}
+          onPractice={() => { playSfx('button'); setDifficultyTarget('practice'); setScreen('difficulty'); }}
           onReview={() => { if (reviewWords.length > 0) { playSfx('button'); startReview(reviewWords); } else showToast('아직 복습할 단어가 없어요. 먼저 게임을 플레이해보세요'); }}
           onBack={() => setScreen('start')} onLocked={showToast} />
       </FigmaScreen>
@@ -608,7 +613,7 @@ export default function ToneGamePage() {
   } else if (screen === 'difficulty') {
     content = (
       <FigmaScreen>
-        <DifficultyScreen selected={selectedDifficulty} studentToken={studentToken} onSelect={setSelectedDifficulty} onStart={difficultyForPractice ? startPractice : startGame} onBack={() => setScreen('modeselect')} onLocked={showToast} forPractice={difficultyForPractice} />
+        <DifficultyScreen selected={selectedDifficulty} studentToken={studentToken} onSelect={setSelectedDifficulty} onStart={difficultyTarget === 'practice' ? startPractice : startGame} onBack={() => setScreen('modeselect')} onLocked={showToast} forPractice={difficultyTarget === 'practice'} />
       </FigmaScreen>
     );
   } else if (screen === 'end') {
@@ -618,7 +623,7 @@ export default function ToneGamePage() {
           isNewBest={(reviewMode || practiceMode) ? false : isNewBest} previousBest={(reviewMode || practiceMode) ? 0 : previousBest}
           practice={practiceMode} endless={endlessMode} endReason={endKind}
           onRetry={practiceMode ? () => startPractice(selectedDifficulty) : endlessMode ? () => startEndless() : reviewMode ? () => startReview(reviewWords) : () => startGame(selectedDifficulty)}
-          onChangeDiff={endlessMode ? () => setScreen('modeselect') : reviewMode ? () => setScreen('mastery') : practiceMode ? () => { setDifficultyForPractice(true); setScreen('difficulty'); } : () => setScreen('difficulty')}
+          onChangeDiff={endlessMode ? () => setScreen('modeselect') : reviewMode ? () => setScreen('mastery') : practiceMode ? () => { setDifficultyTarget('practice'); setScreen('difficulty'); } : () => setScreen('difficulty')}
           onModeSelect={!endlessMode ? () => setScreen('modeselect') : undefined}
           retryLabel={practiceMode ? '한 번 더 연습' : reviewMode ? '한 번 더 복습' : undefined}
           changeLabel={endlessMode ? '모드 선택으로' : reviewMode ? '숙련도로 돌아가기' : '난이도 바꾸기'} />
@@ -632,7 +637,9 @@ export default function ToneGamePage() {
             wordIndex={wordIndex} wordsLen={words.length} wordTimeLimit={wordTimeLimit} gaugeOffsetMs={gaugeOffsetMs} lowTime={lowTime} paused={paused || !!cdPhase} endless={endlessMode || (isPreview && new URLSearchParams(window.location.search).get('endless') === '1')} lives={lives} runId={runId} recordToBeat={recordToBeat}
             combo={combo} comboFlash={comboFlash} floatScore={floatScore} score={score} coachText={coach.text}
             onTone={handleTone} wrongBtn={wrongBtn} wrongShakeKey={wrongShakeKey} onPause={() => setPaused(true)} playReveal={!cdPhase}
-            practice={practiceMode} onSpeak={() => word && speakWord(word)} onReveal={revealAnswer}
+            practice={practiceMode} listen={wordIsListen || (isPreview && new URLSearchParams(window.location.search).get('listen') === '1')} audioOff={audioOff}
+            onReplay={() => word && speakWord(word)} onCantHear={() => { audioOffRef.current = true; setAudioOff(true); }}
+            onSpeak={() => word && speakWord(word)} onReveal={revealAnswer}
             demoFx={isPreview ? new URLSearchParams(window.location.search).get('fx') : null} />
         )}
       </FigmaScreen>
