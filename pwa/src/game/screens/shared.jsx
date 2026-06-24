@@ -171,12 +171,21 @@ export function WordCard({ word, entered, currentSyl, completed, timedOut, progr
             }} />
           )}
         </div>
-        <div style={{
-          fontFamily: FONT_HANZI, fontWeight: 700, fontSize: hz, lineHeight: 1.05,
-          // 정답 입력 시 글자가 성조색으로 채워짐(전환) + 팝 — 타격감 + 성조-색 각인
-          color: isCurrent ? TG.CORAL_DK : (revealed ? toneColor : TG.INK), transition: `color ${DUR.state} ease`,
-          animation: revealed ? 'tg-pop .32s cubic-bezier(.34,1.56,.64,1) both' : 'none',
-        }}>{word.hanzi[i] ?? ''}</div>
+        {listening && !revealed ? (
+          // 듣기 중 미공개 글자 — 스피커(현재 글자는 코랄 강조). 맞히면 아래 한자로 공개됨
+          <div style={{ width: hz, height: hz, borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: isCurrent ? 'rgba(242,72,76,0.15)' : 'rgba(242,72,76,0.07)',
+            border: isCurrent ? `2px solid ${TG.CORAL}` : '2px solid transparent', transition: `all ${DUR.state} ease` }}>
+            <SpeakerHighIcon size={Math.round(hz * 0.52)} weight="fill" color={TG.CORAL_DK} />
+          </div>
+        ) : (
+          <div style={{
+            fontFamily: FONT_HANZI, fontWeight: 700, fontSize: hz, lineHeight: 1.05,
+            // 정답 입력 시 글자가 성조색으로 채워짐(전환) + 팝 — 타격감 + 성조-색 각인
+            color: isCurrent ? TG.CORAL_DK : (revealed ? toneColor : TG.INK), transition: `color ${DUR.state} ease`,
+            animation: revealed ? 'tg-pop .32s cubic-bezier(.34,1.56,.64,1) both' : 'none',
+          }}>{word.hanzi[i] ?? ''}</div>
+        )}
         <div style={{ height: hz > 50 ? 26 : 20, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           {completed && (
             <span style={{ fontFamily: FONT_PINYIN, fontWeight: 600, fontSize: hz > 50 ? 17 : 14, color: TG.SUB }}>{word.pinyin[i] ?? ''}</span>
@@ -208,38 +217,35 @@ export function WordCard({ word, entered, currentSyl, completed, timedOut, progr
           color: TG.SUCCESS, animation: 'tg-float 1.3s ease-out forwards', pointerEvents: 'none',
         }}>{floatScore}</div>
       )}
+      {/* 뜻 — 듣기 중엔 가림(완료 시 공개="아 이 말이었구나") */}
+      <div style={{ height: 22, marginTop: 8, textAlign: 'center', flexShrink: 0 }}>
+        {!listening && <span style={{ fontFamily: FONT_BODY, fontWeight: 500, fontSize: 13, color: TG.SUB }}>{word.meaning}</span>}
+      </div>
+      {/* 음절 — 듣기 중 미공개 글자는 스피커, 맞히면 한자 공개 */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 6 }}>
+        {rows.map((row, ri) => (
+          <div key={ri} style={{ display: 'flex', justifyContent: 'center', gap }}>{row.map((i) => Syllable(i))}</div>
+        ))}
+      </div>
+      {/* 하단 — 듣기면 안내 + 다시듣기/못들어요, 아니면 가이드 */}
       {listening ? (
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
-          {/* 한자·뜻 가림 → 소리만. 스피커 + 다시 듣기 / 지금은 못 들어요 */}
-          <div style={{ width: 104, height: 104, borderRadius: 52, background: 'rgba(242,72,76,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <SpeakerHighIcon size={48} weight="fill" color={TG.CORAL_DK} />
-          </div>
+        <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, paddingTop: 2 }}>
+          <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 13, color: TG.GUIDE }}>{`${currentSyl + 1}번째 글자의 성조를 들어보세요`}</span>
           <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={onReplay} className="tg-press" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '11px 17px', borderRadius: 16, background: '#fff', border: `1.5px solid ${TG.CORAL_BG}`, cursor: 'pointer', ...TOUCH_OPT }}>
-              <SpeakerHighIcon size={18} weight="fill" color={TG.CORAL_DK} />
-              <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 14, color: TG.INK }}>다시 듣기</span>
+            <button onClick={onReplay} className="tg-press" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 16px', borderRadius: 14, background: '#fff', border: `1.5px solid ${TG.CORAL_BG}`, cursor: 'pointer', ...TOUCH_OPT }}>
+              <SpeakerHighIcon size={17} weight="fill" color={TG.CORAL_DK} />
+              <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 13, color: TG.INK }}>다시 듣기</span>
             </button>
-            <button onClick={onCantHear} className="tg-press" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '11px 17px', borderRadius: 16, background: '#fff', border: '1.5px solid #ebe5de', cursor: 'pointer', ...TOUCH_OPT }}>
-              <SpeakerSlashIcon size={18} weight="fill" color="#767676" />
-              <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 14, color: TG.INK }}>지금은 못 들어요</span>
+            <button onClick={onCantHear} className="tg-press" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 16px', borderRadius: 14, background: '#fff', border: '1.5px solid #ebe5de', cursor: 'pointer', ...TOUCH_OPT }}>
+              <SpeakerSlashIcon size={17} weight="fill" color="#767676" />
+              <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 13, color: TG.INK }}>지금은 못 들어요</span>
             </button>
           </div>
-          <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 14, color: TG.GUIDE }}>소리를 듣고 성조를 찾으세요</span>
         </div>
       ) : (
-        <>
-          <div style={{ height: 22, marginTop: 8, textAlign: 'center', flexShrink: 0 }}>
-            <span style={{ fontFamily: FONT_BODY, fontWeight: 500, fontSize: 13, color: TG.SUB }}>{word.meaning}</span>
-          </div>
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 6 }}>
-            {rows.map((row, ri) => (
-              <div key={ri} style={{ display: 'flex', justifyContent: 'center', gap }}>{row.map((i) => Syllable(i))}</div>
-            ))}
-          </div>
-          <div style={{ height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 14, color: guide.color, transition: `color ${DUR.state} ease` }}>{guide.text}</span>
-          </div>
-        </>
+        <div style={{ height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 14, color: guide.color, transition: `color ${DUR.state} ease` }}>{guide.text}</span>
+        </div>
       )}
     </div>
   );
