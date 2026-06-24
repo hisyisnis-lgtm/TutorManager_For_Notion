@@ -39,6 +39,7 @@ import { MasteryScreen } from '../game/screens/MasteryScreen.jsx';
 import { AchievementsScreen } from '../game/screens/AchievementsScreen.jsx';
 import { CelebrationOverlay } from '../game/screens/CelebrationOverlay.jsx';
 import { GameOverBeat } from '../game/screens/GameOverBeat.jsx';
+import { RankUpReveal } from '../game/screens/RankUpReveal.jsx';
 import { IntroScreen } from '../game/screens/IntroScreen.jsx';
 import { TutorialScreen } from '../game/screens/TutorialScreen.jsx';
 import { PauseModal } from '../game/screens/PauseModal.jsx';
@@ -116,6 +117,8 @@ export default function ToneGamePage() {
   const [wrongShakeKey, setWrongShakeKey] = useState(0); // 오답마다 +1 — 화면 셰이크 트리거(같은 버튼 연타·연속 오답도 매번 발동)
   // 게임오버 비트 — 결과화면 직전, 게임 화면 '위 오버레이'로 표시(전 종료 공통). 미리보기 ?screen=gameover면 시작부터 표시.
   const [showGameOverBeat, setShowGameOverBeat] = useState(() => isPreview && previewScreen === 'gameover');
+  const [rankUp, setRankUp] = useState(null); // 등급 진행 연출 {prev, now} — 새 마스터 시 비트 다음·결과 전
+  const masteredAtStartRef = useRef(0); // 판 시작 시 마스터 단어 수 스냅샷 — 종료 시 증가분 판정
 
   const wordTimeLimitRef = useRef(7000);
   const wordElapsedRef = useRef(0); // 현재 단어의 누적 '진행' 시간(일시정지·카운트다운 제외)
@@ -370,6 +373,13 @@ export default function ToneGamePage() {
     };
   }, [screen, completed, paused, cdPhase, wordTimeLimit, gaugeOffsetMs, wordIndex, words, endlessMode, practiceMode, isPreview, studentToken]);
 
+  // 현재 마스터한 단어 수(전 난이도 풀 기준) — 등급 진행 연출의 시작/종료 스냅샷용
+  const currentMastered = () => {
+    const map = {};
+    for (const d of DIFFICULTIES) for (const w of (wordPoolByDiff[d.id] || [])) map[w.hanzi] = w;
+    return masteredCount(wordStatsRef.current, map);
+  };
+
   // ── 게임 런 상태 초기화(난이도/복습/무한 공통) — 단어1 재시작도 runId 증가로 타이머·게이지 리셋 ──
   const resetRunState = () => {
     clearTimers(); // 이전 런의 진행/플로트 타이머가 새 런에 끼어들지 않게(runId 가드 보강)
@@ -380,6 +390,7 @@ export default function ToneGamePage() {
     setEndKind('complete'); setWrongShakeKey(0); setShowGameOverBeat(false); // 게임오버 비트 헤드라인·셰이크·오버레이 초기화
     livesRef.current = 3; setLives(3); // 무한 하트 초기화
     audioOffRef.current = false; setAudioOff(false); setWordIsListen(false); // '지금은 못 들어요'·듣기문제는 그 판 한정 → 새 런마다 리셋
+    masteredAtStartRef.current = currentMastered(); setRankUp(null); // 등급 진행 연출 — 판 시작 마스터 수 스냅샷
     wordElapsedRef.current = 0; setGaugeOffsetMs(0); setRunId((n) => n + 1);
     setCdNum(3); setCdPhase('in'); // 카운트다운 오버레이 시작(현재 화면 위로 슬라이드 인 → 게임 전환 → 슬라이드 아웃)
   };
@@ -672,7 +683,18 @@ export default function ToneGamePage() {
       {showGameOverBeat && (
         <GameOverBeat endKind={endKind}
           hold={isPreview && previewScreen === 'gameover'}
-          onDone={() => { setShowGameOverBeat(false); setScreen('end'); }} />
+          onDone={() => {
+            setShowGameOverBeat(false);
+            const now = currentMastered();
+            if (!isPreview && now > masteredAtStartRef.current) setRankUp({ prev: masteredAtStartRef.current, now }); // 새 마스터 → 등급 진행 연출
+            else setScreen('end');
+          }} />
+      )}
+      {/* 등급 진행 연출 — 비트 다음·결과 전(새 마스터 시). 미리보기 ?screen=rankup */}
+      {(rankUp || (isPreview && previewScreen === 'rankup')) && (
+        <RankUpReveal prev={rankUp ? rankUp.prev : 9} now={rankUp ? rankUp.now : 12}
+          hold={isPreview && previewScreen === 'rankup'}
+          onDone={() => { setRankUp(null); setScreen('end'); }} />
       )}
       {/* [DEV] 설정 모달 미리보기(?screen=settings) — 머지 전 백도어 제거 대상 */}
       {isPreview && previewScreen === 'settings' && <SettingsModal onClose={() => {}} />}

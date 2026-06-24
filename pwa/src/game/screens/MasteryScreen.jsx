@@ -3,11 +3,15 @@ import { CaretLeftIcon, SpeakerHighIcon, PlayIcon } from '@phosphor-icons/react'
 import { TG, FONT_TITLE, FONT_HANZI, FONT_BODY, FONT_NUM, FONT_PINYIN, TOUCH_OPT } from '../tgTokens.js';
 import { ROUND_LENGTH } from '../../constants/toneGameWords.js';
 import { TONE_NUMS, toneAccuracy, toneAttempts } from '../toneStats.js';
+import { earTier } from '../earProfile.js';
 import { speakWord } from '../tgTts.js';
 import { play as playSfx } from '../tgSfx.js';
 import { Reveal, CoachBubble } from './shared.jsx';
 
 function masteryColor(acc) { return acc >= 0.8 ? TG.SUCCESS_GLOW : acc >= 0.5 ? TG.SUN : TG.CORAL; }
+
+// 엠블럼 주변 반짝임 위치 [중심대비 dx, dy, 크기] — 단계 particles 수만큼 앞에서부터 사용
+const PARTICLE_POS = [[-92, -28, 13], [86, -42, 10], [-100, 42, 9], [96, 30, 12], [4, -84, 11], [-58, 76, 9], [72, 70, 10]];
 
 // ── 성조 레이더(P2) — 성조별 정답률 5각형. toneStats(1·2·3·4·경성)로 데이터 폴리곤을 그림 ──
 const RADAR = { cx: 100, cy: 80, R: 52 };
@@ -25,7 +29,7 @@ function ToneRadar({ toneStats }) {
   const dataPts = accs.map((a, i) => vtx(i, hasData ? Math.max(0.06, a.acc) : 0).map((n) => n.toFixed(1)).join(',')).join(' ');
   return (
     <div style={{ background: '#fff', border: '1.5px solid #efeae4', borderRadius: 18, padding: '16px 18px 10px' }}>
-      <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 13, color: '#2b2730' }}>성조별 정답률</span>
+      <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 13, color: '#2b2730' }}>내 귀 지도 · 성조별 정답률</span>
       <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', marginTop: 2 }}>
         <svg width={200} height={150} viewBox="0 0 200 150" style={{ display: 'block', overflow: 'visible' }} aria-hidden="true">
           {/* 그리드(외곽+50%) */}
@@ -82,6 +86,7 @@ function WordStatRow({ word, acc, avg }) {
 export function MasteryScreen({ rows, masteredN, toneStats, onBack, onReview }) {
   const need = rows.length;
   const reviewN = Math.min(ROUND_LENGTH, need);
+  const tier = earTier(masteredN);
   return (
     <>
       <Reveal i={0} style={{ position: 'absolute', left: 24, top: 20, right: 24 }}>
@@ -89,14 +94,44 @@ export function MasteryScreen({ rows, masteredN, toneStats, onBack, onReview }) 
         <button onClick={onBack} aria-label="뒤로" className="tg-press" style={{ width: 40, height: 40, borderRadius: 20, background: '#fff', boxShadow: '0px 3px 5px rgba(43,39,48,0.08)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, ...TOUCH_OPT }}>
           <CaretLeftIcon size={20} weight="bold" color={TG.INK} />
         </button>
-        <span style={{ fontFamily: FONT_TITLE, fontSize: 22, color: '#2b2730' }}>단어 숙련도</span>
+        <span style={{ fontFamily: FONT_TITLE, fontSize: 22, color: '#2b2730' }}>내 등급</span>
       </div>
       </Reveal>
       {/* 스크롤 영역 — 코치 + 레이더 + 소제목 + 리스트를 함께 스크롤(모바일서 리스트가 좁은 고정영역에 갇히지 않게) */}
       <div style={{ position: 'absolute', left: 0, right: 0, top: 72, bottom: need > 0 ? 'calc(102px + env(safe-area-inset-bottom))' : 'calc(24px + env(safe-area-inset-bottom))', overflowY: 'auto', WebkitOverflowScrolling: 'touch', padding: '12px 24px 10px' }}>
-        <Reveal i={1}><CoachBubble text={need ? '약한 단어부터 복습해 볼까요?' : '잘하고 있어요! 계속 도전해요'} /></Reveal>
-        {/* 성조 레이더(P2) */}
-        <Reveal i={2} style={{ display: 'block', marginTop: 14 }}><ToneRadar toneStats={toneStats} /></Reveal>
+        {/* 성장 엠블럼 히어로 — 중앙 대형 엠블럼 + 단계별 글로우/파티클 + 단계명 + 진행 */}
+        <Reveal i={1}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, padding: '6px 0 2px' }}>
+            {/* 엠블럼 + 글로우 + 반짝임 파티클 */}
+            <div style={{ position: 'relative', width: '100%', height: 150, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div aria-hidden="true" style={{ position: 'absolute', width: 196, height: 196, borderRadius: '50%', pointerEvents: 'none', background: `radial-gradient(closest-side, ${tier.glow}66, ${tier.glow}1a 55%, ${tier.glow}00 72%)` }} />
+              {PARTICLE_POS.slice(0, tier.particles).map(([dx, dy, sz], i) => (
+                <div key={i} aria-hidden="true" style={{ position: 'absolute', left: '50%', top: '50%', transform: `translate(${dx}px, ${dy}px)`, pointerEvents: 'none' }}>
+                  <div style={{ animation: `tg-sparkle ${2.4 + i * 0.35}s ease-in-out ${i * 0.45}s infinite` }}>
+                    <svg viewBox="0 0 24 24" width={sz} height={sz} aria-hidden="true"><path d="M12 0 L14 10 L24 12 L14 14 L12 24 L10 14 L0 12 L10 10 Z" fill={tier.spark} /></svg>
+                  </div>
+                </div>
+              ))}
+              <img src={tier.emblem} alt="" width={132} height={132} style={{ position: 'relative', filter: `drop-shadow(0 8px 18px ${tier.glow}55)` }} />
+            </div>
+            {/* 단계명 */}
+            <span style={{ fontFamily: FONT_TITLE, fontSize: 22, color: '#2b2730' }}>{tier.name}</span>
+            {/* 진행 */}
+            {tier.isMax ? (
+              <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 13, color: '#E0A21A' }}>최고 단계 달성! 🎉 · 마스터한 단어 {masteredN}개</span>
+            ) : (
+              <>
+                <div style={{ width: 220, height: 8, borderRadius: 4, background: '#f0ebe4', overflow: 'hidden' }}>
+                  <div style={{ width: `${Math.round(tier.progress * 100)}%`, height: '100%', borderRadius: 4, background: TG.CORAL_GRAD, transition: 'width .4s ease' }} />
+                </div>
+                <span style={{ fontFamily: FONT_BODY, fontWeight: 500, fontSize: 12.5, color: '#9a93a0' }}>다음 단계까지 {tier.toNext}개 · 마스터한 단어 {masteredN}개</span>
+              </>
+            )}
+          </div>
+        </Reveal>
+        <Reveal i={2} style={{ display: 'block', marginTop: 30 }}><CoachBubble text={need ? '약한 단어부터 복습해 볼까요?' : '잘하고 있어요! 계속 도전해요'} /></Reveal>
+        {/* 내 귀 지도(성조 레이더, P2) */}
+        <Reveal i={3} style={{ display: 'block', marginTop: 14 }}><ToneRadar toneStats={toneStats} /></Reveal>
         {need > 0 ? (
           <>
             {/* 소제목 */}

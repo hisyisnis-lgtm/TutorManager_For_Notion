@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import {
   CaretLeftIcon, StarIcon, FlameIcon, PlayIcon, HandWavingIcon, ChartBarIcon, TrophyIcon, QuestionIcon,
-  GearSixIcon, InstagramLogoIcon, YoutubeLogoIcon, ArticleIcon, CaretRightIcon, InfinityIcon,
+  GearSixIcon, InstagramLogoIcon, YoutubeLogoIcon, ArticleIcon, CaretRightIcon, InfinityIcon, MedalIcon,
 } from '@phosphor-icons/react';
 import { TG, FONT_TITLE, FONT_BODY, FONT_NUM, SHADOW, TOUCH_OPT, ASSETS, TONE_TINTS, loadBest, saveBest } from '../tgTokens.js';
 import { ToneMark, useCountUp } from '../tgWidgets.jsx';
@@ -299,7 +299,7 @@ export function StartScreen({ best, streak = 0, onStart, onClose, onHelp, onDebu
         <div style={{ display: 'flex', gap: 8 }}>
           {[
             { key: 'play', Icon: HandWavingIcon, label: '놀러가기', onClick: () => setPlayOpen(true) },
-            { key: 'mastery', Icon: ChartBarIcon, label: '숙련도', onClick: onMastery },
+            { key: 'mastery', Icon: MedalIcon, label: '내 등급', onClick: onMastery },
             { key: 'ach', Icon: TrophyIcon, label: '업적', onClick: () => onAchievements && onAchievements() },
           ].map(({ key, Icon, label, onClick }) => (
             <button key={key} className="tg-press" onClick={onClick} style={{
