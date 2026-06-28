@@ -5,7 +5,7 @@ import dayjs from 'dayjs';
 import { MagnifyingGlassIcon, MapPinIcon, WarningCircleIcon, CalendarBlankIcon, InfoIcon } from '@phosphor-icons/react';
 import { PRIMARY, PRIMARY_BG, TEXT_PRIMARY, TEXT_SECONDARY, TEXT_TERTIARY, BORDER_DEFAULT, PRIMARY_ALPHA_25, STATUS_ERROR_TEXT, STATUS_ERROR_BG } from '../constants/theme.js';
 import { createLessonLog } from '../api/lessonLogs.js';
-import { queryPage } from '../api/notionClient.js';
+import { queryAll } from '../api/notionClient.js';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import Badge from '../components/ui/Badge.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
@@ -145,7 +145,9 @@ export default function ClassesPage() {
     try {
       const mm = String(month + 1).padStart(2, '0');
       const dd = String(new Date(year, month + 1, 0).getDate()).padStart(2, '0');
-      const data = await queryPage(
+      // queryAll: 자동 페이지네이션. 한 달 수업이 100건을 넘으면 queryPage(단일 100건)는
+      // 오름차순 정렬 때문에 월말 수업부터 잘려나간다 → 캘린더 카운트·목록 누락. 전체를 가져온다.
+      const results = await queryAll(
         CLASSES_DB,
         {
           and: [
@@ -153,11 +155,9 @@ export default function ClassesPage() {
             { property: '수업 일시', date: { on_or_before: `${year}-${mm}-${dd}T23:59:59+09:00` } },
           ],
         },
-        [{ property: '수업 일시', direction: 'ascending' }],
-        undefined,
-        100
+        [{ property: '수업 일시', direction: 'ascending' }]
       );
-      setCalClasses((data?.results ?? []).map(parseClass));
+      setCalClasses((results ?? []).map(parseClass));
     } catch {
       setCalClasses([]);
     } finally {
