@@ -1,7 +1,7 @@
 import { WORKER_URL } from '../config.js';
 import { getToken, clearAuth } from './authUtils.js';
 
-async function notionFetch(method, path, body) {
+async function notionFetch(method, path, body, attempt = 0) {
   const res = await fetch(`${WORKER_URL}${path}`, {
     method,
     headers: {
@@ -10,6 +10,19 @@ async function notionFetch(method, path, body) {
     },
     body: body ? JSON.stringify(body) : undefined,
   });
+
+  // Notion rate limit(429): 워커가 이미 Retry-After backoff 재시도를 하지만, 그래도
+  // 드물게 올라오면 클라이언트에서 한 번 더 backoff 재시도한다. 429는 요청이 처리되기
+  // 전 거부된 것이라 재시도해도 중복 쓰기 위험이 없다.
+  if (res.status === 429 && attempt < 2) {
+    const retryAfter = Number(res.headers.get('Retry-After'));
+    const waitMs = Math.min(
+      (Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : 2 ** attempt) * 1000,
+      5000,
+    );
+    await new Promise((r) => setTimeout(r, waitMs));
+    return notionFetch(method, path, body, attempt + 1);
+  }
 
   if (res.status === 401) {
     clearAuth();

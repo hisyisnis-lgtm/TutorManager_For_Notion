@@ -2878,7 +2878,11 @@ async function handleFetch(request, env, ctx) {
       }
     }
 
-    const notionResponse = await fetch(notionUrl, {
+    // Notion 통합 토큰은 평균 초당 3회 제한이라, 강사앱이 화면 진입 시 동시에 여러
+    // 쿼리를 쏘면 429(rate limited)가 날 수 있다. Notion이 주는 Retry-After를 존중해
+    // backoff 재시도하면 사용자는 오류 화면 대신 약간의 지연만 겪는다. (429는 요청이
+    // 처리되기 전 거부되므로 POST/PATCH 재시도도 중복 쓰기 위험 없음.)
+    const notionInit = {
       method: request.method,
       headers: {
         Authorization: `Bearer ${env.NOTION_TOKEN}`,
@@ -2886,16 +2890,37 @@ async function handleFetch(request, env, ctx) {
         'Content-Type': 'application/json',
       },
       body: body || undefined,
-    });
+    };
+
+    let notionResponse;
+    for (let attempt = 0; ; attempt++) {
+      notionResponse = await fetch(notionUrl, notionInit);
+      if (notionResponse.status !== 429 || attempt >= 3) break;
+      // Retry-After(초) 우선, 없으면 지수 백오프(1·2·4초). 과도한 대기는 피하려 상한 5초.
+      const retryAfter = Number(notionResponse.headers.get('Retry-After'));
+      const waitMs = Math.min(
+        (Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : 2 ** attempt) * 1000,
+        5000,
+      );
+      await new Promise((r) => setTimeout(r, waitMs));
+    }
 
     const responseText = await notionResponse.text();
 
+    // 재시도를 다 쓰고도 429면 클라이언트가 추가 backoff할 수 있게 Retry-After를 전달.
+    // (브라우저가 읽으려면 Expose-Headers 필요)
+    const responseHeaders = { ...corsHeaders, 'Content-Type': 'application/json' };
+    if (notionResponse.status === 429) {
+      const retryAfter = notionResponse.headers.get('Retry-After');
+      if (retryAfter) {
+        responseHeaders['Retry-After'] = retryAfter;
+        responseHeaders['Access-Control-Expose-Headers'] = 'Retry-After';
+      }
+    }
+
     return new Response(responseText, {
       status: notionResponse.status,
-      headers: {
-        ...corsHeaders,
-        'Content-Type': 'application/json',
-      },
+      headers: responseHeaders,
     });
 }
 
