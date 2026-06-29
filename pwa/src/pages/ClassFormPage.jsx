@@ -23,6 +23,9 @@ import { TEXT_SECONDARY, TEXT_INACTIVE } from '../constants/theme.js';
 // JS getDay(): 0=일,1=월,2=화,3=수,4=목,5=금,6=토
 const DAY_JS = [0, 1, 2, 3, 4, 5, 6];
 
+// 수업 시작 시각 분(分) 옵션 — 5분 단위
+const MINUTE_OPTIONS = ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'];
+
 /** 반복 수업 날짜 목록 생성 (시작일~종료일 범위) */
 function generateRecurringDates(startDate, endDate, selectedDays, time) {
   if (!selectedDays.length || !startDate || !endDate) return [];
@@ -127,7 +130,7 @@ export default function ClassFormPage() {
   /** 해당 시(HH)에 어떤 수업 시간으로든 시작 가능한 슬롯이 있는지 */
   const isHourAvailable = (h) => {
     if (availableSlots === null) return true; // 아직 미조회
-    return ['00', '30'].some(min => {
+    return MINUTE_OPTIONS.some(min => {
       const startMin = parseInt(h) * 60 + parseInt(min);
       return displayDurationOptions.some(d => noConflict(startMin, parseInt(d)));
     });
@@ -597,29 +600,32 @@ export default function ClassFormPage() {
                   );
                 })}
               </Select>
-              {['00', '30'].map((min) => {
-                const conflict = !isMinAvailable(min);
-                return (
-                  <button
-                    key={min}
-                    type="button"
-                    onClick={() => {
-                      const date = form.datetime ? form.datetime.slice(0, 10) : '';
-                      const hour = form.datetime ? form.datetime.slice(11, 13) : '08';
-                      setForm((f) => ({ ...f, datetime: `${date}T${hour}:${min}` }));
-                    }}
-                    className={`px-3 rounded-xl text-sm font-medium border-2 transition-[background-color,color,border-color] duration-150 ease-out ${
-                      selectedMin === min
-                        ? 'border-brand-600 bg-brand-50 text-brand-700'
-                        : conflict
-                        ? 'border-yellow-300 bg-yellow-50 text-yellow-700'
-                        : 'border-gray-200 bg-white text-gray-600'
-                    }`}
-                  >
-                    :{min}
-                  </button>
-                );
-              })}
+              <Select
+                value={form.datetime ? selectedMin : undefined}
+                onChange={(min) => {
+                  const date = form.datetime ? form.datetime.slice(0, 10) : '';
+                  const hour = form.datetime ? form.datetime.slice(11, 13) : '08';
+                  setForm((f) => ({ ...f, datetime: `${date}T${hour}:${min}` }));
+                }}
+                size="large"
+                style={{ width: 92 }}
+                placeholder="분"
+                virtual={false}
+                popupRender={(menu) => (
+                  <div ref={(el) => { if (el) el.addEventListener('touchmove', (e) => e.stopPropagation(), { passive: false }); }}>
+                    {menu}
+                  </div>
+                )}
+              >
+                {MINUTE_OPTIONS.map((min) => {
+                  const conflict = !isMinAvailable(min);
+                  return (
+                    <Select.Option key={min} value={min}>
+                      {min}분{conflict ? ' ⚠' : ''}
+                    </Select.Option>
+                  );
+                })}
+              </Select>
             </div>
           </div>
         )}
@@ -689,26 +695,28 @@ export default function ClassFormPage() {
                     </Select.Option>
                   ))}
                 </Select>
-                {['00', '30'].map((min) => {
-                  const curMin = form.recurTime ? form.recurTime.slice(3, 5) : '00';
-                  return (
-                    <button
-                      key={min}
-                      type="button"
-                      onClick={() => {
-                        const hour = form.recurTime ? form.recurTime.slice(0, 2) : '10';
-                        setForm((f) => ({ ...f, recurTime: `${hour}:${min}` }));
-                      }}
-                      className={`px-4 rounded-xl text-sm font-medium border-2 transition-[background-color,color,border-color] duration-150 ease-out ${
-                        curMin === min
-                          ? 'border-brand-600 bg-brand-50 text-brand-700'
-                          : 'border-gray-200 bg-white text-gray-600'
-                      }`}
-                    >
-                      :{min}
-                    </button>
-                  );
-                })}
+                <Select
+                  value={form.recurTime ? form.recurTime.slice(3, 5) : undefined}
+                  onChange={(min) => {
+                    const hour = form.recurTime ? form.recurTime.slice(0, 2) : '10';
+                    setForm((f) => ({ ...f, recurTime: `${hour}:${min}` }));
+                  }}
+                  size="large"
+                  style={{ flex: 1 }}
+                  placeholder="분"
+                  virtual={false}
+                  popupRender={(menu) => (
+                    <div ref={(el) => { if (el) el.addEventListener('touchmove', (e) => e.stopPropagation(), { passive: false }); }}>
+                      {menu}
+                    </div>
+                  )}
+                >
+                  {MINUTE_OPTIONS.map((min) => (
+                    <Select.Option key={min} value={min}>
+                      {min}분
+                    </Select.Option>
+                  ))}
+                </Select>
               </div>
             </div>
           </div>
