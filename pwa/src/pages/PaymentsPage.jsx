@@ -7,7 +7,7 @@ import Badge from '../components/ui/Badge.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import ErrorMessage from '../components/ui/ErrorMessage.jsx';
 import EmptyState from '../components/ui/EmptyState.jsx';
-import { fetchPaymentsPage, parsePayment, paymentStatusColor, PAYMENTS_DB } from '../api/payments.js';
+import { fetchPaymentsPage, parsePayment, paymentStatusColor, refundSessions, formatSessions, PAYMENTS_DB } from '../api/payments.js';
 import { queryAll } from '../api/notionClient.js';
 import { formatKRW } from '../utils/dateUtils.js';
 import { stripEmoji } from '../utils/stringUtils.js';
@@ -263,7 +263,10 @@ function PaymentCard({ payment, studentNameMap, classTypeMap }) {
             {payment.refundAmount > 0 && (
               <div>
                 <span style={{ fontSize: 12, color: TEXT_TERTIARY }}>환불 </span>
-                <span style={{ fontSize: 13, fontWeight: 600, color: TEXT_PRIMARY }} className="tabular-nums">−{formatKRW(payment.refundAmount)}</span>
+                <span style={{ fontSize: 13, fontWeight: 600, color: TEXT_PRIMARY }} className="tabular-nums">
+                  −{formatKRW(payment.refundAmount)}
+                  {payment.studentIds.length > 0 && refundSessions(payment) > 0 && ` · ${formatSessions(refundSessions(payment))}회`}
+                </span>
               </div>
             )}
           </div>

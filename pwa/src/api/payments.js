@@ -152,3 +152,25 @@ export function paymentStatusColor(status) {
 export function calcPaymentAmount(sessionCount, unitPrice, discountRate) {
   return Math.round(sessionCount * unitPrice * (1 - (discountRate || 0) / 100));
 }
+
+/**
+ * 환불 금액 → 환산 시간 회차 (할인 적용 단가 기준, 반올림 없이 소수 그대로).
+ * Notion '유효 시간 회차' formula의 차감식과 동일하게 단가 0이면 0 반환(div-by-zero 가드).
+ * 학생 없는 결제(단가 0)는 0이라 회차 개념 미적용.
+ */
+export function refundSessions({ refundAmount, unitPrice, discountRate } = {}) {
+  const perSession = (unitPrice || 0) * (1 - (discountRate || 0) / 100);
+  if (!perSession || !refundAmount) return 0;
+  return refundAmount / perSession;
+}
+
+/** 시간 회차 표시용 포맷 — 정수면 정수, 소수면 소수점 2자리까지(불필요한 0 제거) */
+export function formatSessions(n) {
+  const r = Math.round((n || 0) * 100) / 100;
+  return Number.isInteger(r) ? String(r) : String(parseFloat(r.toFixed(2)));
+}
+
+/** 환산 회차가 정수로 딱 떨어지는지 (소수면 false → 경고 표시용) */
+export function isWholeSession(n) {
+  return Math.abs((n || 0) - Math.round(n || 0)) < 1e-9;
+}

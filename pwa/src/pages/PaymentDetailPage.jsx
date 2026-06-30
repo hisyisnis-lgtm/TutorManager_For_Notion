@@ -7,11 +7,11 @@ import ErrorMessage from '../components/ui/ErrorMessage.jsx';
 import Badge from '../components/ui/Badge.jsx';
 import ConfirmDialog from '../components/ui/ConfirmDialog.jsx';
 import { getPage } from '../api/notionClient.js';
-import { parsePayment, paymentStatusColor, updatePayment } from '../api/payments.js';
+import { parsePayment, paymentStatusColor, updatePayment, refundSessions, formatSessions, isWholeSession } from '../api/payments.js';
 import { useData } from '../context/DataContext.jsx';
 import { stripEmoji } from '../utils/stringUtils.js';
 import { formatKRW } from '../utils/dateUtils.js';
-import { PRIMARY, TEXT_SECONDARY, TEXT_PRIMARY, TEXT_TERTIARY } from '../constants/theme.js';
+import { PRIMARY, PRIMARY_BG, TEXT_SECONDARY, TEXT_PRIMARY, TEXT_TERTIARY } from '../constants/theme.js';
 
 const todayKST = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' });
 
@@ -57,6 +57,10 @@ export default function PaymentDetailPage() {
   const refunded = (p.refundAmount || 0) > 0;
   const netAmount = (p.actualAmount || 0) - (p.refundAmount || 0);
   const fullyRefunded = refunded && netAmount <= 0;
+
+  // 환불 모달 실시간 환산 회차 미리보기 (학생 결제만 — 단가 0이면 0)
+  const refundAmtInput = parseFloat(refundForm.amount) || 0;
+  const previewSessions = refundSessions({ refundAmount: refundAmtInput, unitPrice: p.unitPrice, discountRate: p.discountRate });
 
   const openRefund = () => {
     setRefundError(null);
@@ -128,6 +132,9 @@ export default function PaymentDetailPage() {
           <Row label="실제 결제 금액" value={formatKRW(p.actualAmount)} />
           {hasStudent && p.unpaid > 0 && <Row label="미수금" value={formatKRW(p.unpaid)} />}
           {refunded && <Row label="환불 금액" value={`− ${formatKRW(p.refundAmount)}`} />}
+          {refunded && hasStudent && refundSessions(p) > 0 && (
+            <Row label="환불 회차" value={`− ${formatSessions(refundSessions(p))}회`} />
+          )}
           {refunded && <Row label="환불일" value={p.refundDate} />}
           {refunded && <Row label="환불 사유" value={p.refundReason} />}
           {refunded && <Row label="순 결제 금액" value={formatKRW(netAmount)} />}
@@ -174,8 +181,22 @@ export default function PaymentDetailPage() {
           min="0"
           placeholder="환불할 금액"
           size="large"
-          style={{ borderRadius: 12, marginBottom: 12 }}
+          style={{ borderRadius: 12, marginBottom: previewSessions > 0 ? 6 : 12 }}
         />
+
+        {previewSessions > 0 && (
+          <div style={{ background: PRIMARY_BG, borderRadius: 12, padding: '10px 12px', marginBottom: 12 }}>
+            <p style={{ fontSize: 13, color: TEXT_SECONDARY, margin: 0 }}>
+              이 금액은 <strong style={{ color: TEXT_PRIMARY }}>{formatSessions(previewSessions)}회차</strong>에 해당해요.
+              <span style={{ color: TEXT_TERTIARY }}> 학생 잔여 회차에서 차감됩니다.</span>
+            </p>
+            {!isWholeSession(previewSessions) && (
+              <p style={{ fontSize: 12, color: TEXT_PRIMARY, margin: '4px 0 0', fontWeight: 600 }}>
+                ⚠ 회차가 딱 떨어지지 않아요. 금액을 회차 단위로 맞춰보세요.
+              </p>
+            )}
+          </div>
+        )}
 
         <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
           환불일

@@ -14,7 +14,7 @@ import { SITE_ORIGIN } from '../constants.js';
 import { PRIMARY, PRIMARY_BG, STATUS_ERROR_BORDER, TEXT_PRIMARY } from '../constants/theme.js';
 import SectionHeading from '../components/ui/SectionHeading.jsx';
 import { fetchClassesPage, parseClass, classStatusColor } from '../api/classes.js';
-import { fetchPaymentsPage, parsePayment, paymentStatusColor } from '../api/payments.js';
+import { fetchPaymentsPage, parsePayment, paymentStatusColor, refundSessions, formatSessions } from '../api/payments.js';
 import { formatDateTime, formatTime, formatKRW } from '../utils/dateUtils.js';
 import { useData } from '../context/DataContext.jsx';
 
@@ -279,6 +279,12 @@ export default function StudentDetailPage() {
                     </p>
                     {p.unpaid > 0 && (
                       <p className="text-xs text-red-500 mt-0.5">미수금 {formatKRW(p.unpaid)}</p>
+                    )}
+                    {p.refundAmount > 0 && (
+                      <p className="text-xs text-amber-700 mt-0.5">
+                        환불 −{formatKRW(p.refundAmount)}
+                        {refundSessions(p) > 0 && ` · ${formatSessions(refundSessions(p))}회`}
+                      </p>
                     )}
                   </div>
                   <Badge label={stripEmoji(p.paymentStatus)} bg={pbg} text={pt} />
