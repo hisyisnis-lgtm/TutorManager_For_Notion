@@ -21,6 +21,13 @@ const FILES = [
   ['tone-words-hard.csv', 'hard'],
 ];
 
+// 테마별 파일 (파일명 = 테마). 난이도와 별개 축 — 테마 단어가 난이도 단어와 겹치는 건 정상.
+// 새 테마 추가 시: ① 여기 파일 한 줄 ② out 초기화에 키 ③ toneGameWords.js THEMES 추가.
+const THEME_FILES = [
+  ['tone-words-drama.csv', 'drama'],
+  ['tone-words-travel.csv', 'travel'],
+];
+
 // 병음 성조 부호 → 숫자
 const TONE_MARK = {
   ā: 1, ē: 1, ī: 1, ō: 1, ū: 1, ǖ: 1,
@@ -55,14 +62,15 @@ function parseCsv(text) {
 }
 
 function build() {
-  const out = { easy: [], normal: [], hard: [] };
+  const out = { easy: [], normal: [], hard: [], drama: [], travel: [] };
   const errors = [];
   const warnings = [];
-  const seen = new Map(); // hanzi → 첫 등장 위치(전 난이도 통합 중복 점검)
 
-  for (const [file, key] of FILES) {
+  // CSV 파일 한 개를 검증·변환해 out[key]에 채운다.
+  // dedupMap: 같은 한자가 또 나오면 경고. 범위를 호출부에서 정해 난이도(통합)·테마(파일별)를 구분.
+  function processFile(file, key, dedupMap) {
     const fp = path.join(DATA_DIR, file);
-    if (!fs.existsSync(fp)) { errors.push(`단어 파일이 없습니다: data/${file}`); continue; }
+    if (!fs.existsSync(fp)) { errors.push(`단어 파일이 없습니다: data/${file}`); return; }
     const rows = parseCsv(fs.readFileSync(fp, 'utf8'));
     rows.shift(); // 헤더(한자,병음,의미,활성) 제거
 
@@ -84,12 +92,18 @@ function build() {
         return;
       }
       if (!meaning) warnings.push(`${file} ${ln}행 '${hanzi}': 의미가 비어 있음`);
-      if (seen.has(hanzi)) warnings.push(`${file} ${ln}행: 중복 한자 '${hanzi}' (${seen.get(hanzi)}에도 있음)`);
-      else seen.set(hanzi, `${file} ${ln}행`);
+      if (dedupMap.has(hanzi)) warnings.push(`${file} ${ln}행: 중복 한자 '${hanzi}' (${dedupMap.get(hanzi)}에도 있음)`);
+      else dedupMap.set(hanzi, `${file} ${ln}행`);
 
       out[key].push({ hanzi, pinyin: syllables, tones: syllables.map(toneOfSyllable), meaning });
     });
   }
+
+  // 난이도 3파일은 통합 중복검사(같은 단어가 여러 난이도에 들어가면 경고).
+  const diffSeen = new Map();
+  for (const [file, key] of FILES) processFile(file, key, diffSeen);
+  // 테마는 난이도와 별개 축 — 난이도 단어와 겹치는 건 정상이라 파일별 자체 중복만 점검.
+  for (const [file, key] of THEME_FILES) processFile(file, key, new Map());
 
   if (warnings.length) console.warn('⚠️  경고:\n' + warnings.map((w) => '  ' + w).join('\n'));
   if (errors.length) {
@@ -97,12 +111,13 @@ function build() {
     process.exit(1);
   }
 
-  const total = out.easy.length + out.normal.length + out.hard.length;
-  if (total === 0) { console.error('❌ 활성 단어가 0개입니다.'); process.exit(1); }
+  const diffTotal = out.easy.length + out.normal.length + out.hard.length;
+  if (diffTotal === 0) { console.error('❌ 활성 난이도 단어가 0개입니다.'); process.exit(1); }
+  const themeTotal = out.drama.length + out.travel.length;
 
   fs.mkdirSync(path.dirname(OUT_PATH), { recursive: true });
   fs.writeFileSync(OUT_PATH, JSON.stringify(out, null, 2) + '\n', 'utf8');
-  console.log(`✅ 단어 ${total}개 변환 완료 → toneWordsData.json (초급 ${out.easy.length} · 중급 ${out.normal.length} · 고급 ${out.hard.length})`);
+  console.log(`✅ 단어 변환 완료 → toneWordsData.json · 난이도 ${diffTotal}개 (초급 ${out.easy.length} · 중급 ${out.normal.length} · 고급 ${out.hard.length}) · 테마 ${themeTotal}개 (드라마 ${out.drama.length} · 여행 ${out.travel.length})`);
 }
 
 build();

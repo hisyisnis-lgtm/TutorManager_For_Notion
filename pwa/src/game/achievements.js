@@ -33,6 +33,10 @@ export const ACHIEVEMENTS = [
     check: (s) => (s.streakLongest || 0) >= 3 },
   { id: 'streak-7', label: '일주일 개근', desc: '7일 연속 플레이했어요', cond: '7일 연속 플레이하면 얻어요', icon: 'CalendarHeart',
     check: (s) => (s.streakLongest || 0) >= 7 },
+  { id: 'streak-14', label: '2주 개근', desc: '14일 연속 플레이했어요', cond: '14일 연속 플레이하면 얻어요', icon: 'CalendarDots',
+    check: (s) => (s.streakLongest || 0) >= 14 },
+  { id: 'streak-30', label: '한 달 개근', desc: '30일 연속 플레이했어요', cond: '30일 연속 플레이하면 얻어요', icon: 'Fire',
+    check: (s) => (s.streakLongest || 0) >= 30 },
   { id: 'tone-master', label: '성조 감별사', desc: '모든 성조 정답률 90% 이상', cond: '모든 성조 정답률 90%를 넘으면 얻어요', icon: 'Waveform',
     check: (s) => allTonesAbove(s.toneStats || {}, 0.9, 5) },
 ];

@@ -35,6 +35,14 @@ export function ToneGameStyles() {
       @keyframes tg-touch { 0%,100%{opacity:.5} 50%{opacity:1} }
       @keyframes tg-ripple { 0%{transform:translate(-50%,-50%) scale(.5);opacity:.4} 70%{opacity:.1} 100%{transform:translate(-50%,-50%) scale(2);opacity:0} }
       @keyframes tg-bob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-5px)} }
+      @keyframes tg-hop { 0%,100%{transform:translateY(0)} 38%{transform:translateY(-15px)} }
+      @keyframes tg-blinkeye { 0%,90%,100%{transform:scaleY(1)} 95%{transform:scaleY(.1)} }
+      @keyframes tg-cta-pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.018)} }
+      @keyframes tg-needme { 0%,68%,100%{transform:rotate(0)} 76%{transform:rotate(-6deg)} 84%{transform:rotate(6deg)} 92%{transform:rotate(-3deg)} }
+      @keyframes tg-sheet-up { from{transform:translateY(100%)} to{transform:translateY(0)} }
+      @keyframes tg-sheet-down { from{transform:translateY(0)} to{transform:translateY(100%)} }
+      @keyframes tg-dim-in { from{opacity:0} to{opacity:1} }
+      @keyframes tg-drift { 0%{transform:translateY(0);opacity:.0} 25%{opacity:.9} 75%{opacity:.9} 100%{transform:translateY(-26px);opacity:0} }
       @keyframes tg-dot { 0%,100%{transform:translateY(0);opacity:.4} 50%{transform:translateY(-6px);opacity:1} }
       @keyframes tg-cd-in { from{transform:translateX(100%)} to{transform:translateX(0)} }
       @keyframes tg-cd-out { from{transform:translateX(0)} to{transform:translateX(calc(-100% - ${CD_WAVE_W + 8}px))} }
@@ -56,6 +64,7 @@ export function ToneGameStyles() {
       .tg-press{ transition: transform .28s cubic-bezier(0.34,1.56,0.64,1) }
       .tg-press:active{ transform: scale(.95); transition: transform .09s ease-out }
       .tg-root, .tg-root *, .tg-root *::before, .tg-root *::after { box-sizing: border-box; }
+      .tg-noscroll::-webkit-scrollbar { display: none; }
     `}</style>
   );
 }
@@ -292,6 +301,7 @@ export function ToneButtons({ onTone, wrongBtn, disabled }) {
 // ── 카운트다운 비주얼 (난이도 핀 포함) ──────────────────
 const DIFF_HANZI = { easy: '初', normal: '中', hard: '高' };
 export function CountdownVisual({ n, difficulty }) {
+  const pinHz = DIFF_HANZI[difficulty?.id]; // 테마 등 난이도 외엔 한자 핀 생략
   return (
     <>
       {/* 숫자 + 안내 (Figma top290.5 = 34.4%) */}
@@ -306,7 +316,7 @@ export function CountdownVisual({ n, difficulty }) {
       {/* 난이도 핀 (Figma top575.5 = 68.2%) */}
       <Reveal i={2} base={140} style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', top: '68.2%' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#fff3d6', padding: '10px 16px', borderRadius: 16 }}>
-        <span style={{ fontFamily: FONT_HANZI, fontWeight: 700, fontSize: 15, color: '#e0a21a' }}>{DIFF_HANZI[difficulty?.id] || '中'}</span>
+        {pinHz && <span style={{ fontFamily: FONT_HANZI, fontWeight: 700, fontSize: 15, color: '#e0a21a' }}>{pinHz}</span>}
         <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 13, color: '#b07d12' }}>{difficulty?.label || '중급'}</span>
       </div>
       </Reveal>

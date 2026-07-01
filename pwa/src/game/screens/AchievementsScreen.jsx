@@ -1,8 +1,8 @@
-// 업적 전체 화면 — 12개 배지 그리드(획득=금색/미획득=회색). 시작화면 업적 선반(P3) 탭으로 진입.
+// 업적 전체 화면 — 배지 그리드(획득=금색/미획득=회색). 시작화면 업적 선반(P3) 탭으로 진입.
 // 톤 원칙: 미획득도 실제 아이콘을 회색으로 보여줘 '다음 목표'로 보이게(압박 아님·격려). 참조: tone_game_redesign.md
 import {
   CaretLeftIcon, FootprintsIcon, TrophyIcon, FlameIcon, FireSimpleIcon, RocketIcon, CrownIcon,
-  InfinityIcon, BookmarkSimpleIcon, BooksIcon, CalendarCheckIcon, CalendarHeartIcon, WaveformIcon,
+  InfinityIcon, BookmarkSimpleIcon, BooksIcon, CalendarCheckIcon, CalendarHeartIcon, CalendarDotsIcon, FireIcon, WaveformIcon,
 } from '@phosphor-icons/react';
 import { TG, FONT_TITLE, FONT_BODY, TOUCH_OPT } from '../tgTokens.js';
 import { ACHIEVEMENTS } from '../achievements.js';
@@ -12,7 +12,8 @@ import { Reveal, CoachBubble } from './shared.jsx';
 const ACH_ICONS = {
   Footprints: FootprintsIcon, Trophy: TrophyIcon, Flame: FlameIcon, FireSimple: FireSimpleIcon,
   Rocket: RocketIcon, Crown: CrownIcon, Infinity: InfinityIcon, BookmarkSimple: BookmarkSimpleIcon,
-  Books: BooksIcon, CalendarCheck: CalendarCheckIcon, CalendarHeart: CalendarHeartIcon, Waveform: WaveformIcon,
+  Books: BooksIcon, CalendarCheck: CalendarCheckIcon, CalendarHeart: CalendarHeartIcon,
+  CalendarDots: CalendarDotsIcon, Fire: FireIcon, Waveform: WaveformIcon,
 };
 
 const EARNED_BG = '#fff6e8';   // 따뜻한 금색 틴트(획득)

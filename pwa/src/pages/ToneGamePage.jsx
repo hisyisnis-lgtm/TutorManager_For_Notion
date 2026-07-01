@@ -12,14 +12,14 @@ import {
   resolveIdentity, fetchBests, submitResult, mergeGuestIntoStudent,
   pullMemberData, pushMemberData, mergeStudentIntoMember, logoutMember,
 } from '../game/gameStore.js';
-import { ROUND_LENGTH, DIFFICULTIES } from '../constants/toneGameWords.js';
+import { ROUND_LENGTH, DIFFICULTIES, THEMES } from '../constants/toneGameWords.js';
 import { TG, ensureGameFonts, haptic, shuffle, getTimeLimitForCombo, loadBest, saveBest } from '../game/tgTokens.js';
 import {
   loadWordStats, saveWordStats, recordWordResult, subsetForPool, mergeStats,
   buildReviewList, masteredCount, buildRoundWords,
 } from '../game/tgWordStats.js';
-import { recordTone, loadToneStats, saveToneStats } from '../game/toneStats.js';
-import { recordPlay, loadStreak, effectiveCurrent, dateKeyKST } from '../game/streak.js';
+import { recordTone, loadToneStats, saveToneStats, weakestTone } from '../game/toneStats.js';
+import { recordPlay, loadStreak, effectiveCurrent, dateKeyKST, loadFreezes } from '../game/streak.js';
 import { syncAchievements, loadAchievements, achievementById } from '../game/achievements.js';
 import { initTts, speakWord } from '../game/tgTts.js';
 import { initSfx, play as playSfx } from '../game/tgSfx.js';
@@ -29,10 +29,12 @@ import {
 } from '../game/gameLogic.js';
 import { FigmaScreen, CountdownVisual, CdWaveEdge, GameToast, SettingsModal } from '../game/screens/shared.jsx';
 import { SplashScreen } from '../game/screens/SplashScreen.jsx';
-import { StartScreen } from '../game/screens/StartScreen.jsx';
+import { TitleScreen } from '../game/screens/TitleScreen.jsx';
+import { HomeScreen } from '../game/screens/HomeScreen.jsx';
 import { LoginScreen } from '../game/screens/LoginScreen.jsx';
 import { ModeScreen } from '../game/screens/ModeScreen.jsx';
 import { DifficultyScreen } from '../game/screens/DifficultyScreen.jsx';
+import { ThemeScreen } from '../game/screens/ThemeScreen.jsx';
 import { GameScreen } from '../game/screens/GameScreen.jsx';
 import { ResultScreen } from '../game/screens/ResultScreen.jsx';
 import { MasteryScreen } from '../game/screens/MasteryScreen.jsx';
@@ -83,11 +85,11 @@ export default function ToneGamePage() {
   // 학생 인증 게이트가 /personal/preview를 막으므로, 게스트 라우트(/game/tone?screen=)에서도 미리보기 허용(DEV 한정).
   const isPreview = import.meta.env.DEV && (identity.kind === 'preview'
     || (identity.kind === 'guest' && new URLSearchParams(window.location.search).has('screen')));
-  const previewScreen = isPreview ? (new URLSearchParams(window.location.search).get('screen') || 'start') : 'start';
+  const previewScreen = isPreview ? (new URLSearchParams(window.location.search).get('screen') || 'title') : 'title';
   const cdPreview = previewScreen === 'countdown'; // 카운트다운 미리보기는 난이도 위 오버레이로
   const initialScreen = cdPreview ? 'difficulty'
-    : previewScreen === 'celebrate' ? 'start'   // celebrate는 start 위에 오버레이로
-    : previewScreen === 'settings' ? 'start'    // 설정 모달은 start 위에 오버레이로
+    : previewScreen === 'celebrate' ? 'home'   // celebrate는 홈 위에 오버레이로
+    : previewScreen === 'settings' ? 'home'    // 설정 모달은 홈 위에 오버레이로
     : previewScreen; // 'gameover'는 그 자체가 화면(결과 직전 단독 비트)
 
   const [screen, setScreen] = useState(initialScreen); // start | difficulty | game | end | intro | tutorial
@@ -129,8 +131,13 @@ export default function ToneGamePage() {
 
   const [selectedDifficulty, setSelectedDifficulty] = useState(DIFFICULTIES[0]);
   const [wordPoolByDiff, setWordPoolByDiff] = useState({});
+  const [themeMode, setThemeMode] = useState(false); // 테마 모드(드라마·여행 등) — 난이도와 별개 축, 종료처리는 normal과 동일(gameKey만 테마 것)
+  const [selectedTheme, setSelectedTheme] = useState(THEMES[0]);
+  const [wordPoolByTheme, setWordPoolByTheme] = useState({});
   const wordStatsRef = useRef({});  // 단어별 숙련도 글로벌(localStorage 동기화)
   const toneStatsRef = useRef({});  // 성조별 정답률(1·2·3·4·경성) — 성조 레이더/약점 진단(P1)
+  const toneSnapRef = useRef(null); // 런 시작 시 성조별 정답수 스냅샷 → 홈 복귀 시 성장 축하 연출(D)
+  const [celebrateTone, setCelebrateTone] = useState(null); // 홈에서 성장 축하할 성조(점프+반짝)
   const endHandledRef = useRef(false); // 결과화면 1회 처리 가드(다시하기로 score 리셋 시 재실행·중복 사운드 방지)
   const [reviewMode, setReviewMode] = useState(false); // 복습 모드(약한 단어 10개)
   const [endlessMode, setEndlessMode] = useState(false); // 무한 모드(랜덤·가속·첫초과종료)
@@ -181,6 +188,9 @@ export default function ToneGamePage() {
   useEffect(() => {
     DIFFICULTIES.forEach((d) => {
       fetchToneWords(d.id).then((w) => { if (Array.isArray(w) && w.length > 0) setWordPoolByDiff((prev) => ({ ...prev, [d.id]: w })); }).catch(() => {});
+    });
+    THEMES.forEach((t) => {
+      fetchToneWords(t.id).then((w) => { if (Array.isArray(w) && w.length > 0) setWordPoolByTheme((prev) => ({ ...prev, [t.id]: w })); }).catch(() => {});
     });
   }, []);
 
@@ -237,8 +247,10 @@ export default function ToneGamePage() {
 
     // 모드별 종료 판정(최고기록·신기록·효과음)은 순수함수 resolveEndOutcome에 모음.
     //  normal=난이도별 best · endless=무한 best · practice/review=기록 미반영(단어통계만).
+    // 테마 모드는 난이도(normal)와 동일 메커니즘(난이도별 best) — gameKey·단어풀만 테마 것으로 치환.
     const mode = endlessMode ? 'endless' : practiceMode ? 'practice' : reviewMode ? 'review' : 'normal';
-    const gameKey = selectedDifficulty.gameKey;
+    const gameKey = themeMode ? selectedTheme.gameKey : selectedDifficulty.gameKey;
+    const statsPool = themeMode ? (wordPoolByTheme[selectedTheme.id] || []) : (wordPoolByDiff[selectedDifficulty.id] || []);
     const prevRecord = mode === 'endless' ? loadEndlessBest(studentToken)
       : mode === 'normal' ? loadBest(studentToken, gameKey) : null;
     const outcome = resolveEndOutcome({ mode, prev: prevRecord, score, maxCombo, avgMs: avgMsVal });
@@ -258,7 +270,7 @@ export default function ToneGamePage() {
         const updated = { ...outcome.updated, updatedAt: Date.now() };
         saveBest(studentToken, gameKey, updated);
         setBest(headlineBest(studentToken)); // 헤드라인(무한 우선, 없으면 통합) 갱신
-        const wSub = subsetForPool(wordStatsRef.current, wordPoolByDiff[selectedDifficulty.id] || []);
+        const wSub = subsetForPool(wordStatsRef.current, statsPool);
         submitResult(identity, gameKey, { score, maxCombo, avgMs: avgMsVal, ...(Object.keys(wSub).length ? { meta: { w: wSub } } : {}) }).catch(() => {});
       } else {
         // 연습·복습 — 최고기록 미반영, 영향받은 난이도 단어통계만 동기화
@@ -267,6 +279,9 @@ export default function ToneGamePage() {
 
       // ── 성취 레이어(P1) — 일일 스트릭 + 업적 평가. 로컬 저장(서버 동기화는 후속). 모든 모드 공통(플레이=출석) ──
       const streak = recordPlay(studentToken);
+      // 보호권 알림 — 방어 성공(안도)·획득(보상). 압박 아닌 긍정 카피.
+      if (streak.freezeUsed > 0) showToast(`❄️ 보호권이 빠진 하루를 지켜줬어요! 스트릭 ${streak.current}일 유지`);
+      else if (streak.freezeEarned > 0) showToast(`🔥 ${streak.current}일 달성! 보호권 +1 (❄️${streak.freezes})`);
       const masteredN = (() => {
         const map = {};
         for (const d of DIFFICULTIES) for (const w of (wordPoolByDiff[d.id] || [])) map[w.hanzi] = w;
@@ -297,7 +312,7 @@ export default function ToneGamePage() {
       if (identity.kind === 'member') pushMemberData(identity).catch(() => {}); // 회원: 로컬 → 서버(/game/me) 통째 동기화
     }
     playSfx(outcome.sfx);
-  }, [screen, identity, studentToken, selectedDifficulty, score, maxCombo, answeredCount, totalAnswerTime, reviewMode, endlessMode, practiceMode, words, wordPoolByDiff, isPreview]);
+  }, [screen, identity, studentToken, selectedDifficulty, score, maxCombo, answeredCount, totalAnswerTime, reviewMode, endlessMode, practiceMode, themeMode, selectedTheme, words, wordPoolByDiff, wordPoolByTheme, isPreview]);
 
   useEffect(() => () => clearTimers(), []);
 
@@ -325,7 +340,7 @@ export default function ToneGamePage() {
     const limit = practiceMode ? 0                                      // 연습: 시간 무제한(게이지 미표시·타임아웃 effect 비활성)
       : endlessMode ? getEndlessTimeLimit(answeredCount, combo)         // 무한: 클리어 램프 + 콤보 가속(둘 다)
       : reviewMode ? 30000                                              // 복습: 30초 고정(콤보 무관)
-      : Math.max(4000, getTimeLimitForCombo(combo, selectedDifficulty.timeMultiplier)); // 난이도: 콤보0 30/20/10초, 콤보로 가속(하한 4초)
+      : Math.max(4000, getTimeLimitForCombo(combo, (themeMode ? selectedTheme.timeMultiplier : selectedDifficulty.timeMultiplier))); // 난이도/테마: 콤보0 페이스, 콤보로 가속(하한 4초)
     wordElapsedRef.current = 0; // 새 단어 — 누적 진행시간 리셋
     segStartRef.current = Date.now(); // 진행 구간 시작 — 연습 모드는 타임아웃 effect가 안 도니 여기서 설정(answerTime 거대값 버그 방지)
     wordTimeLimitRef.current = limit;
@@ -391,9 +406,22 @@ export default function ToneGamePage() {
     livesRef.current = 3; setLives(3); // 무한 하트 초기화
     audioOffRef.current = false; setAudioOff(false); setWordIsListen(false); // '지금은 못 들어요'·듣기문제는 그 판 한정 → 새 런마다 리셋
     masteredAtStartRef.current = currentMastered(); setRankUp(null); // 등급 진행 연출 — 판 시작 마스터 수 스냅샷
+    { const ts = toneStatsRef.current || {}, snap = {}; for (const t of [1, 2, 3, 4, 0]) snap[t] = (ts[t] && ts[t][0]) || 0; toneSnapRef.current = snap; } // 성조별 정답수 스냅샷(성장 축하용)
     wordElapsedRef.current = 0; setGaugeOffsetMs(0); setRunId((n) => n + 1);
     setCdNum(3); setCdPhase('in'); // 카운트다운 오버레이 시작(현재 화면 위로 슬라이드 인 → 게임 전환 → 슬라이드 아웃)
   };
+
+  // 게임 종료→홈 복귀 시, 이번 런에서 가장 많이 맞힌 성조 캐릭터가 성장 축하(점프+반짝). 1회.
+  useEffect(() => {
+    if (screen !== 'home' || isPreview || !toneSnapRef.current) return undefined;
+    const ts = toneStatsRef.current || {}, snap = toneSnapRef.current; toneSnapRef.current = null;
+    let best = null, bestGain = 0;
+    for (const t of [1, 2, 3, 4, 0]) { const gain = (((ts[t] && ts[t][0]) || 0) - (snap[t] || 0)); if (gain > bestGain) { bestGain = gain; best = t; } }
+    if (best == null) return undefined;
+    setCelebrateTone(best);
+    const id = setTimeout(() => setCelebrateTone(null), 2600);
+    return () => clearTimeout(id);
+  }, [screen, isPreview]);
 
   const startGame = (difficulty) => {
     const d = difficulty || selectedDifficulty;
@@ -405,7 +433,7 @@ export default function ToneGamePage() {
       fetchToneWords(d.id).then((w) => { if (Array.isArray(w) && w.length > 0) setWordPoolByDiff((prev) => ({ ...prev, [d.id]: w })); }).catch(() => {});
       return;
     }
-    setReviewMode(false); setEndlessMode(false); setPracticeMode(false);    setRecordToBeat(loadBest(studentToken, d.gameKey)?.bestScore || 0); // 라이브 신기록 기준(이 난이도 직전 최고)
+    setReviewMode(false); setEndlessMode(false); setPracticeMode(false); setThemeMode(false);    setRecordToBeat(loadBest(studentToken, d.gameKey)?.bestScore || 0); // 라이브 신기록 기준(이 난이도 직전 최고)
     setWords(buildRoundWords(pool, wordStatsRef.current, ROUND_LENGTH)); // 교육적 가중 추첨(약점 우선·은은하게)
     resetRunState();
   };
@@ -421,7 +449,7 @@ export default function ToneGamePage() {
       fetchToneWords(d.id).then((w) => { if (Array.isArray(w) && w.length > 0) setWordPoolByDiff((prev) => ({ ...prev, [d.id]: w })); }).catch(() => {});
       return;
     }
-    setPracticeMode(true); setReviewMode(false); setEndlessMode(false);    setRecordToBeat(0); // 연습=기록 미반영
+    setPracticeMode(true); setReviewMode(false); setEndlessMode(false); setThemeMode(false);    setRecordToBeat(0); // 연습=기록 미반영
     setWords(buildRoundWords(pool, wordStatsRef.current, ROUND_LENGTH)); // 교육적 가중 추첨(약점 우선·은은하게)
     resetRunState();
   };
@@ -429,7 +457,7 @@ export default function ToneGamePage() {
   // 복습 모드 — 약한 단어 N개로 게임. 최고기록 미반영, 단어 통계만 갱신.
   const startReview = (reviewWords) => {
     if (!reviewWords || reviewWords.length === 0) return;
-    setReviewMode(true); setEndlessMode(false); setPracticeMode(false);    setRecordToBeat(0); // 복습=기록 미반영
+    setReviewMode(true); setEndlessMode(false); setPracticeMode(false); setThemeMode(false);    setRecordToBeat(0); // 복습=기록 미반영
     setWords(reviewWords);
     resetRunState();
   };
@@ -440,8 +468,24 @@ export default function ToneGamePage() {
     if (all.length === 0) { message.error('단어를 불러오지 못했어요. 잠시 후 다시 시도해주세요.'); return; }
     let stream = [];
     for (let i = 0; i < 8; i++) stream = stream.concat(shuffle(all)); // 첫 초과로 끝나므로 충분히 길게
-    setEndlessMode(true); setReviewMode(false); setPracticeMode(false);    setRecordToBeat(loadEndlessBest(studentToken)?.bestScore || 0); // 라이브 신기록 기준(무한 직전 최고)
+    setEndlessMode(true); setReviewMode(false); setPracticeMode(false); setThemeMode(false);    setRecordToBeat(loadEndlessBest(studentToken)?.bestScore || 0); // 라이브 신기록 기준(무한 직전 최고)
     setWords(stream);
+    resetRunState();
+  };
+
+  // 테마 모드 — 테마별 단어풀로 게임. 난이도(normal)와 동일 메커니즘(테마별 best/리더보드), 타이머는 중급 페이스.
+  const startTheme = (theme) => {
+    const t = theme || selectedTheme;
+    if (theme && theme.id !== selectedTheme.id) setSelectedTheme(t);
+    const pool = wordPoolByTheme[t.id];
+    if (!pool || pool.length === 0) {
+      message.error('단어를 불러오지 못했어요. 잠시 후 다시 시도해주세요.');
+      setScreen('theme');
+      fetchToneWords(t.id).then((w) => { if (Array.isArray(w) && w.length > 0) setWordPoolByTheme((prev) => ({ ...prev, [t.id]: w })); }).catch(() => {});
+      return;
+    }
+    setThemeMode(true); setReviewMode(false); setEndlessMode(false); setPracticeMode(false);    setRecordToBeat(loadBest(studentToken, t.gameKey)?.bestScore || 0); // 라이브 신기록 기준(이 테마 직전 최고)
+    setWords(buildRoundWords(pool, wordStatsRef.current, ROUND_LENGTH)); // 교육적 가중 추첨(약점 우선·은은하게)
     resetRunState();
   };
 
@@ -575,29 +619,57 @@ export default function ToneGamePage() {
   const reviewWords = reviewRows.slice(0, ROUND_LENGTH).map((r) => r.word);
 
   // 성취 표시 데이터(P3) — 시작/업적 화면에서만 localStorage 조회(게임 중 불필요). 미리보기는 샘플.
-  const showStartData = screen === 'start' || screen === 'achievements';
-  const startStreak = !showStartData ? 0 : isPreview ? 5 : effectiveCurrent(loadStreak(studentToken), dateKeyKST());
+  const showStartData = screen === 'home' || screen === 'achievements';
+  const startFreezes = !showStartData ? 0 : isPreview ? 1 : loadFreezes(studentToken);
+  const startStreak = !showStartData ? 0 : isPreview ? 5 : effectiveCurrent(loadStreak(studentToken), dateKeyKST(), startFreezes);
+  const startStreakLongest = !showStartData ? 0 : isPreview ? 12 : (loadStreak(studentToken)?.longest || 0);
   const startAchievements = !showStartData ? [] : isPreview ? ['first-play', 'score-1000', 'combo-10'] : loadAchievements(studentToken);
+  // 성조별 레벨·상태 = **정확도 기준 통일**(2026-07-01, 사용자 결정: 강/약을 한눈에 → 정확도 낮으면 레벨/크기도 내려감).
+  //  lv(1~5): 정확도 밴드(<.5=1·<.65=2·<.8=3·<.92=4·그이상=5). 게이지 prog=정확도 그대로. state는 lv에서 파생(1~2약·3중·4~5강).
+  //  시도<3=데이터부족 → unknown(중립): lv1·게이지0·움직임 평온(약점 흔들 안 함). lv·게이지·크기·팔로워 모두 여기서 파생. 미리보기는 샘플.
+  const PREVIEW_ACC = { 1: { acc: 0.48, attempts: 12 }, 2: { acc: 0.95, attempts: 20 }, 3: { acc: 0.72, attempts: 15 }, 4: { acc: 0, attempts: 1 }, 0: { acc: 0.84, attempts: 9 } };
+  const toneLevels = {}, toneStatus = {};
+  if (showStartData) {
+    const src = isPreview ? PREVIEW_ACC : (() => { const ts = toneStatsRef.current || {}, o = {}; for (const t of [1, 2, 3, 4, 0]) { const e = ts[t]; o[t] = { acc: (e && e[1]) ? e[0] / e[1] : 0, attempts: (e && e[1]) || 0 }; } return o; })();
+    for (const t of [1, 2, 3, 4, 0]) {
+      const { acc, attempts } = src[t];
+      if (attempts < 3) { toneLevels[t] = { lv: 1, prog: 0 }; toneStatus[t] = { acc, attempts, state: 'unknown' }; continue; }
+      const lv = acc < 0.5 ? 1 : acc < 0.65 ? 2 : acc < 0.8 ? 3 : acc < 0.92 ? 4 : 5;
+      toneLevels[t] = { lv, prog: acc };
+      toneStatus[t] = { acc, attempts, state: lv <= 2 ? 'weak' : lv === 3 ? 'mid' : 'strong' };
+    }
+  }
+  // 첫 코치 안내가 가리킬 약점 성조(시도 3+ 중 정답률 최저). 없으면 null.
+  const coachTone = !showStartData ? null : isPreview ? 1 : ((weakestTone(toneStatsRef.current || {}, 3) || {}).tone ?? null);
 
   // 화면별 본문 (카운트다운 오버레이/일시정지 모달은 아래에서 위에 덧댐)
+  const exitGame = () => { if (identity.kind === 'student') navigate(`/personal/${identity.token}`); else window.location.href = '/'; };
   let content;
-  if (screen === 'start') {
-    content = <StartScreen best={best} streak={startStreak} onStart={goFromStart} onClose={() => { if (identity.kind === 'student') navigate(`/personal/${identity.token}`); else window.location.href = '/'; }} onHelp={() => { setIntroPage(0); setScreen('intro'); }} onDebugIntro={import.meta.env.DEV ? (() => { setIntroPage(0); setScreen('intro'); }) : undefined} onMastery={() => setScreen('mastery')} onAchievements={() => setScreen('achievements')} studentToken={studentToken} onRefreshBest={() => setBest(headlineBest(studentToken))}
+  if (screen === 'title') {
+    content = <TitleScreen onStart={() => setScreen('home')} onClose={exitGame} />;
+  } else if (screen === 'home') {
+    content = <HomeScreen streak={startStreak} streakLongest={startStreakLongest} freezes={startFreezes} masteredN={masteredN} toneLevels={toneLevels}
+      toneStatus={toneStatus} coachTone={coachTone} celebrateTone={celebrateTone}
+      onPlay={goFromStart}
+      onMastery={() => setScreen('mastery')} onAchievements={() => setScreen('achievements')}
+      onHelp={() => { setIntroPage(0); setScreen('intro'); }}
       onLogin={identity.kind === 'guest' ? () => setScreen('login') : null}
       isMemberUser={identity.kind === 'member'} memberName={identity.memberUser?.nickname || null}
-      onLogout={() => { logoutMember(); window.location.reload(); }} />;
+      onLogout={() => { logoutMember(); window.location.reload(); }} onExit={exitGame}
+      studentToken={studentToken} onRefreshBest={() => setBest(headlineBest(studentToken))}
+      onDebugIntro={import.meta.env.DEV ? (() => { setIntroPage(0); setScreen('intro'); }) : undefined} />;
   } else if (screen === 'login') {
-    content = <FigmaScreen><LoginScreen onBack={() => setScreen('start')} onSuccess={() => { setTimeout(() => window.location.reload(), 500); }} /></FigmaScreen>;
+    content = <FigmaScreen><LoginScreen onBack={() => setScreen('home')} onSuccess={() => { setTimeout(() => window.location.reload(), 500); }} /></FigmaScreen>;
   } else if (screen === 'mastery') {
     content = (
       <FigmaScreen>
-        <MasteryScreen rows={reviewRows} masteredN={masteredN} toneStats={masteryTones} onBack={() => setScreen('start')} onReview={() => startReview(reviewWords)} />
+        <MasteryScreen rows={reviewRows} masteredN={masteredN} toneStats={masteryTones} onBack={() => setScreen('home')} onReview={() => startReview(reviewWords)} />
       </FigmaScreen>
     );
   } else if (screen === 'achievements') {
     content = (
       <FigmaScreen>
-        <AchievementsScreen earned={startAchievements} onBack={() => setScreen('start')} onToast={showToast} />
+        <AchievementsScreen earned={startAchievements} onBack={() => setScreen('home')} onToast={showToast} />
       </FigmaScreen>
     );
   } else if (screen === 'intro') {
@@ -615,10 +687,11 @@ export default function ToneGamePage() {
       <FigmaScreen>
         <ModeScreen endlessUnlocked={isEndlessUnlocked(studentToken)} reviewCount={reviewWords.length}
           onDifficulty={() => { playSfx('button'); setDifficultyTarget('normal'); setScreen('difficulty'); }}
+          onTheme={() => { playSfx('button'); setScreen('theme'); }}
           onEndless={() => { playSfx('button'); startEndless(); }}
           onPractice={() => { playSfx('button'); setDifficultyTarget('practice'); setScreen('difficulty'); }}
           onReview={() => { if (reviewWords.length > 0) { playSfx('button'); startReview(reviewWords); } else showToast('아직 복습할 단어가 없어요. 먼저 게임을 플레이해보세요'); }}
-          onBack={() => setScreen('start')} onLocked={showToast} />
+          onBack={() => setScreen('home')} onLocked={showToast} />
       </FigmaScreen>
     );
   } else if (screen === 'difficulty') {
@@ -627,17 +700,25 @@ export default function ToneGamePage() {
         <DifficultyScreen selected={selectedDifficulty} studentToken={studentToken} onSelect={setSelectedDifficulty} onStart={difficultyTarget === 'practice' ? startPractice : startGame} onBack={() => setScreen('modeselect')} onLocked={showToast} forPractice={difficultyTarget === 'practice'} />
       </FigmaScreen>
     );
+  } else if (screen === 'theme') {
+    content = (
+      <FigmaScreen>
+        <ThemeScreen themes={THEMES} studentToken={studentToken}
+          counts={THEMES.reduce((m, t) => { m[t.id] = (wordPoolByTheme[t.id] || []).length; return m; }, {})}
+          onStart={startTheme} onBack={() => setScreen('modeselect')} onLocked={showToast} />
+      </FigmaScreen>
+    );
   } else if (screen === 'end') {
     content = (
       <FigmaScreen>
         <ResultScreen score={score} maxCombo={maxCombo} avgMs={avgMsForResult}
           isNewBest={(reviewMode || practiceMode) ? false : isNewBest} previousBest={(reviewMode || practiceMode) ? 0 : previousBest}
           practice={practiceMode} endless={endlessMode} endReason={endKind}
-          onRetry={practiceMode ? () => startPractice(selectedDifficulty) : endlessMode ? () => startEndless() : reviewMode ? () => startReview(reviewWords) : () => startGame(selectedDifficulty)}
-          onChangeDiff={endlessMode ? () => setScreen('modeselect') : reviewMode ? () => setScreen('mastery') : practiceMode ? () => { setDifficultyTarget('practice'); setScreen('difficulty'); } : () => setScreen('difficulty')}
+          onRetry={practiceMode ? () => startPractice(selectedDifficulty) : endlessMode ? () => startEndless() : reviewMode ? () => startReview(reviewWords) : themeMode ? () => startTheme(selectedTheme) : () => startGame(selectedDifficulty)}
+          onChangeDiff={endlessMode ? () => setScreen('modeselect') : reviewMode ? () => setScreen('mastery') : practiceMode ? () => { setDifficultyTarget('practice'); setScreen('difficulty'); } : themeMode ? () => setScreen('theme') : () => setScreen('difficulty')}
           onModeSelect={!endlessMode ? () => setScreen('modeselect') : undefined}
           retryLabel={practiceMode ? '한 번 더 연습' : reviewMode ? '한 번 더 복습' : undefined}
-          changeLabel={endlessMode ? '모드 선택으로' : reviewMode ? '숙련도로 돌아가기' : '난이도 바꾸기'} />
+          changeLabel={endlessMode ? '모드 선택으로' : reviewMode ? '숙련도로 돌아가기' : themeMode ? '테마 바꾸기' : '난이도 바꾸기'} />
       </FigmaScreen>
     );
   } else { // game
@@ -670,13 +751,13 @@ export default function ToneGamePage() {
           {/* 좌우 물결 가장자리 — 컨테이너 바깥쪽이라 가운데 정렬 시엔 화면 밖(비표시), 슬라이드 중에만 보임 */}
           <CdWaveEdge side="left" />
           <CdWaveEdge side="right" />
-          <FigmaScreen bg="#f96c6e"><CountdownVisual n={cdNum} difficulty={selectedDifficulty} /></FigmaScreen>
+          <FigmaScreen bg="#f96c6e"><CountdownVisual n={cdNum} difficulty={themeMode ? selectedTheme : selectedDifficulty} /></FigmaScreen>
         </div>
       )}
       {paused && (
         <PauseModal score={score} combo={combo} onResume={() => setPaused(false)}
-          onRestart={() => { setPaused(false); if (endlessMode) startEndless(); else if (reviewMode) startReview(reviewWords); else if (practiceMode) startPractice(selectedDifficulty); else startGame(selectedDifficulty); }}
-          onQuit={() => { setPaused(false); setReviewMode(false); setEndlessMode(false); setPracticeMode(false); setScreen('start'); }} />
+          onRestart={() => { setPaused(false); if (endlessMode) startEndless(); else if (reviewMode) startReview(reviewWords); else if (practiceMode) startPractice(selectedDifficulty); else if (themeMode) startTheme(selectedTheme); else startGame(selectedDifficulty); }}
+          onQuit={() => { setPaused(false); setReviewMode(false); setEndlessMode(false); setPracticeMode(false); setThemeMode(false); setScreen('home'); }} />
       )}
       {toast && <GameToast key={toast.key} msg={toast.msg} />}
       {/* 게임오버 비트 — 게임 화면 위 오버레이(결과화면 직전). ~1.3초 후 결과('end')로 진행 */}

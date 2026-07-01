@@ -2,7 +2,7 @@
 // React 무관. localStorage 베스트 캐시(tgTokens) 위에서 동작 → 화면 컴포넌트·상태머신이 공유.
 // 참조 메모리: tone_game_redesign.md (잠금 사다리·무한·헤드라인)
 import { loadBest, saveBest } from './tgTokens.js';
-import { DIFFICULTIES } from '../constants/toneGameWords.js';
+import { DIFFICULTIES, THEMES } from '../constants/toneGameWords.js';
 
 // 통합 최고점수 — 3난이도 기록 중 최고(+ 그 난이도 라벨). 타이틀 카드는 '내 최고 실력'을 보여줌.
 export function bestLabelForKey(gameKey) { const d = DIFFICULTIES.find((x) => x.gameKey === gameKey); return d ? d.label : '초급'; }
@@ -45,6 +45,28 @@ export function unlockToastText(diffId) {
   if (diffId === 'normal') return '초급 1,000점을 달성하면 열려요';
   if (diffId === 'hard') return '중급 1,000점을 달성하면 열려요';
   return '';
+}
+
+// ── 테마 모드(난이도와 별개 축) ──────────────────────────
+// 각 테마는 자체 gameKey라 최고점·리더보드가 난이도처럼 자동으로 붙는다(종료 처리도 normal과 동일, gameKey만 다름).
+// 잠금: theme.unlock=null이면 오픈, { byGameKey, score }면 그 게임키 최고점이 score 이상일 때 해제.
+function labelForGameKey(gameKey) {
+  const d = DIFFICULTIES.find((x) => x.gameKey === gameKey); if (d) return d.label;
+  const t = THEMES.find((x) => x.gameKey === gameKey); if (t) return t.label;
+  return '';
+}
+export function themeBestScore(token, gameKey) { const b = loadBest(token, gameKey); return b ? (b.bestScore || 0) : 0; }
+export function isThemeUnlocked(token, theme) {
+  if (!theme || !theme.unlock) return true;
+  return themeBestScore(token, theme.unlock.byGameKey) >= theme.unlock.score;
+}
+export function themeUnlockReqText(theme) {
+  if (!theme || !theme.unlock) return '';
+  return `${labelForGameKey(theme.unlock.byGameKey)} ${theme.unlock.score.toLocaleString()}점 달성 시 해제`;
+}
+export function themeUnlockToastText(theme) {
+  if (!theme || !theme.unlock) return '';
+  return `${labelForGameKey(theme.unlock.byGameKey)} ${theme.unlock.score.toLocaleString()}점을 달성하면 열려요`;
 }
 // 무한모드 제한시간 — 두 축으로 단축(둘 다):
 //  ① 클리어 램프: 30초 시작 → 단어당 1.4초씩 → 10초(약 14단어에 도달)
