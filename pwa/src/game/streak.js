@@ -15,24 +15,36 @@ export function diffDays(a, b) {
   return Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / 86400000);
 }
 
-// 순수 전이 — 이전 스트릭 상태 + 오늘 날짜키 → 새 상태.
+// 보호권(스트릭 프리즈) — "하루 빠져도 스트릭을 지켜줌". 벌어서 갖고, 공백 시 자동 소비.
+//  압박(FOMO) 완화 장치: 벌은 없고 방어만. 저장은 스트릭과 분리(지갑).
+export const FREEZE_CAP = 2;         // 최대 보유
+export const FREEZE_EARN_EVERY = 7;  // current가 7의 배수 도달 시 +1 (주간 리필)
+
+// 순수 전이 — 이전 스트릭 상태 + 오늘 날짜키(+보유 보호권) → 새 상태.
 //  prev: { lastDate, current, longest } | null
-//  같은 날 재플레이=무변화 / 바로 다음날=+1 / 그 외(공백·역행)=1로 리셋. longest는 항상 최댓값 유지.
-export function advanceStreak(prev, todayKey) {
+//  같은 날=무변화 / 다음날=+1 / 공백이라도 빠진 날 수 ≤ 보호권(최대 2)이면 브릿지(+1) / 그 외=리셋.
+//  freezes 미전달(=0)이면 기존 동작 그대로(공백=리셋). 시계 역행(gap≤0)=무변화. longest는 최댓값 유지.
+export function advanceStreak(prev, todayKey, freezes = 0) {
   if (!prev || !prev.lastDate) return { lastDate: todayKey, current: 1, longest: 1 };
   if (prev.lastDate === todayKey) return { ...prev };           // 오늘 이미 셈 — 변화 없음
   const gap = diffDays(prev.lastDate, todayKey);
-  const current = gap === 1 ? (prev.current || 0) + 1 : 1;       // 연속이면 +1, 끊기면 다시 1
+  if (gap <= 0) return { ...prev };                             // 시계 역행 등 — 무변화(리셋 안 함)
+  const missed = gap - 1;                                       // 빠진 날 수(gap1=0)
+  const bridged = missed >= 1 && missed <= freezes && missed <= FREEZE_CAP; // 보호권으로 공백 메움
+  const current = (gap === 1 || bridged) ? (prev.current || 0) + 1 : 1;
   const longest = Math.max(prev.longest || 0, current);
   return { lastDate: todayKey, current, longest };
 }
 
-// 오늘 플레이 안 했어도, 마지막 플레이가 어제보다 오래면 현재 스트릭은 사실상 끊긴 상태.
-// 표시용: 저장값을 건드리지 않고 "지금 시점의 유효 현재 스트릭"을 계산.
-export function effectiveCurrent(state, todayKey) {
+// 오늘 플레이 안 했어도, 마지막 플레이가 (보호권으로 못 메우는) 과거면 현재 스트릭은 사실상 끊긴 상태.
+// 표시용: 저장값을 건드리지 않고 "지금 시점의 유효 현재 스트릭"을 계산. 보호권이 지켜줄 공백은 살아있음으로 표시.
+export function effectiveCurrent(state, todayKey, freezes = 0) {
   if (!state || !state.lastDate) return 0;
   if (state.lastDate === todayKey) return state.current || 0;
-  return diffDays(state.lastDate, todayKey) === 1 ? (state.current || 0) : 0;
+  const gap = diffDays(state.lastDate, todayKey);
+  if (gap <= 0) return state.current || 0;
+  const missed = gap - 1;
+  return missed <= Math.min(freezes, FREEZE_CAP) ? (state.current || 0) : 0; // gap1(missed0)도 여기서 살아있음
 }
 
 // ── localStorage ──────────────────────────────────────
@@ -45,9 +57,33 @@ export function saveStreak(token, data) {
   try { localStorage.setItem(streakKey(token), JSON.stringify(data)); } catch { /* quota 등 무시 */ }
 }
 
-// 오늘 플레이 1건 반영 — load → advance → save. 새 상태 반환.
+function freezeKey(token) { return token ? `game_streak_freeze_${token}` : 'game_streak_freeze'; }
+export function loadFreezes(token) {
+  try { const n = parseInt(localStorage.getItem(freezeKey(token)) || '0', 10); return Number.isFinite(n) ? Math.max(0, Math.min(FREEZE_CAP, n)) : 0; }
+  catch { return 0; }
+}
+export function saveFreezes(token, n) {
+  try { localStorage.setItem(freezeKey(token), String(Math.max(0, Math.min(FREEZE_CAP, n || 0)))); } catch { /* 무시 */ }
+}
+
+// 오늘 플레이 1건 반영 — load → advance → save + 보호권 소비/획득.
+//  반환: { lastDate, current, longest, freezeUsed, freezeEarned, freezes } (freezeUsed/Earned=이번 판 알림용)
 export function recordPlay(token, now = new Date()) {
-  const next = advanceStreak(loadStreak(token), dateKeyKST(now));
+  const today = dateKeyKST(now);
+  const prev = loadStreak(token);
+  const prevFreezes = loadFreezes(token);
+  const next = advanceStreak(prev, today, prevFreezes);
   saveStreak(token, next);
-  return next;
+  // 소비 — advanceStreak이 브릿지한 만큼(빠진 날 수). 브릿지 여부는 current가 이어졌는지로 판정.
+  const gap = prev && prev.lastDate ? diffDays(prev.lastDate, today) : 0;
+  const missed = gap > 0 ? gap - 1 : 0;
+  const freezeUsed = (missed >= 1 && next.current > 1 && missed <= prevFreezes) ? missed : 0;
+  let freezes = prevFreezes - freezeUsed;
+  // 획득 — 이번 플레이로 current가 전진했고 새 current가 7의 배수(cap 초과분은 버려짐 → earned 0).
+  let freezeEarned = 0;
+  if (next.current > (prev?.current || 0) && next.current % FREEZE_EARN_EVERY === 0) {
+    const before = freezes; freezes = Math.min(FREEZE_CAP, freezes + 1); freezeEarned = freezes - before;
+  }
+  saveFreezes(token, freezes);
+  return { ...next, freezeUsed, freezeEarned, freezes };
 }

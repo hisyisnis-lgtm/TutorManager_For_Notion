@@ -15,6 +15,16 @@ export const DIFFICULTIES = [
   { id: 'hard', gameKey: 'tone-hard', label: '고급', desc: '도전 단어', timeMultiplier: 1.4286 },   // 콤보0 ≈10초
 ];
 
+// 테마 모드 — 난이도와 별개 축. 난이도 잠금 사다리와 무관, 각 테마가 자체 gameKey라
+// 최고점·리더보드(loadBest/submitResult)가 난이도처럼 자동으로 붙는다.
+// timeMultiplier: 테마는 난이도를 안 가르므로 중급(≈20초) 페이스로 통일.
+// unlock: null=처음부터 오픈. { byGameKey, score }=해당 게임키 최고점이 score 이상이면 해제.
+// image: 포스터 이미지 경로(5:7 세로, 카드 cover). null이면 tint 배경 + placeholder 라벨로 표시 → 이미지 준비되면 경로만 채우면 됨.
+export const THEMES = [
+  { id: 'drama', gameKey: 'tone-drama', label: '드라마 중국어', desc: '드라마 속 사랑·감정 표현', timeMultiplier: 2.8571, unlock: null, image: null, tint: '#f1d7cf', placeholder: '드라마 이미지' },
+  { id: 'travel', gameKey: 'tone-travel', label: '여행 중국어', desc: '공항·호텔·주문 실전 단어', timeMultiplier: 2.8571, unlock: { byGameKey: 'tone-drama', score: 1000 }, image: null, tint: '#c9d3e4', placeholder: '여행 이미지' },
+];
+
 // 성조 정의 — 학습 도구 특성상 5색 매핑은 디자인 시스템 단일 액센트 원칙의 합리적 예외.
 // 색상은 globally distinguishable하고 색맹에게도 모양(mark)으로 구분 가능하도록 설계.
 // tgTokens.js TONE_COLORS와 동일하게 유지.

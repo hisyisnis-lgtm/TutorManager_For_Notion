@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import {
   dateKeyKST, diffDays, advanceStreak, effectiveCurrent,
-  loadStreak, saveStreak, recordPlay,
+  loadStreak, saveStreak, recordPlay, loadFreezes, saveFreezes,
 } from './streak.js';
 
 beforeEach(() => { localStorage.clear(); });
@@ -84,5 +84,75 @@ describe('recordPlay — load/advance/save 라운드트립', () => {
     localStorage.setItem('game_streak_u', '{broken');
     expect(loadStreak('u')).toBe(null);
     expect(recordPlay('u', new Date('2026-06-13T03:00:00Z')).current).toBe(1);
+  });
+});
+
+describe('advanceStreak — 보호권 브릿지', () => {
+  const prev = { lastDate: '2026-06-13', current: 5, longest: 5 };
+  it('하루 공백 + 보호권 1개면 이어짐(+1)', () => {
+    expect(advanceStreak(prev, '2026-06-15', 1)).toEqual({ lastDate: '2026-06-15', current: 6, longest: 6 });
+  });
+  it('하루 공백 + 보호권 0개면 리셋', () => {
+    expect(advanceStreak(prev, '2026-06-15', 0)).toEqual({ lastDate: '2026-06-15', current: 1, longest: 5 });
+  });
+  it('이틀 공백 + 보호권 2개면 이어짐', () => {
+    expect(advanceStreak(prev, '2026-06-16', 2)).toEqual({ lastDate: '2026-06-16', current: 6, longest: 6 });
+  });
+  it('이틀 공백 + 보호권 1개면 리셋(부족)', () => {
+    expect(advanceStreak(prev, '2026-06-16', 1)).toEqual({ lastDate: '2026-06-16', current: 1, longest: 5 });
+  });
+  it('시계 역행(과거 날짜)은 무변화', () => {
+    expect(advanceStreak(prev, '2026-06-12', 2)).toEqual(prev);
+  });
+});
+
+describe('effectiveCurrent — 보호권 반영', () => {
+  const state = { lastDate: '2026-06-13', current: 5 };
+  it('하루 공백 + 보호권 있으면 살아있음', () => {
+    expect(effectiveCurrent(state, '2026-06-15', 1)).toBe(5);
+  });
+  it('하루 공백 + 보호권 0이면 0', () => {
+    expect(effectiveCurrent(state, '2026-06-15', 0)).toBe(0);
+  });
+  it('이틀 공백 + 보호권 2면 살아있음', () => {
+    expect(effectiveCurrent(state, '2026-06-16', 2)).toBe(5);
+  });
+  it('사흘 공백은 보호권 2로도 못 지킴(0)', () => {
+    expect(effectiveCurrent(state, '2026-06-17', 2)).toBe(0);
+  });
+});
+
+describe('recordPlay — 보호권 획득/소비', () => {
+  it('7일 연속 도달 시 보호권 +1', () => {
+    let d = new Date('2026-06-13T03:00:00Z');
+    for (let i = 0; i < 6; i++) { recordPlay('u', d); d = new Date(d.getTime() + 86400000); }
+    expect(loadFreezes('u')).toBe(0);           // 아직 6일
+    const seventh = recordPlay('u', d);          // 7일째
+    expect(seventh.current).toBe(7);
+    expect(seventh.freezeEarned).toBe(1);
+    expect(loadFreezes('u')).toBe(1);
+  });
+  it('공백을 보호권으로 메우면 소비되고 스트릭 이어짐', () => {
+    saveStreak('u', { lastDate: '2026-06-13', current: 4, longest: 4 });
+    saveFreezes('u', 1);
+    const r = recordPlay('u', new Date('2026-06-15T03:00:00Z')); // 하루 공백
+    expect(r.current).toBe(5);
+    expect(r.freezeUsed).toBe(1);
+    expect(loadFreezes('u')).toBe(0);
+  });
+  it('보호권 없이 공백이면 리셋(소비 0)', () => {
+    saveStreak('u', { lastDate: '2026-06-13', current: 9, longest: 9 });
+    saveFreezes('u', 0);
+    const r = recordPlay('u', new Date('2026-06-15T03:00:00Z'));
+    expect(r.current).toBe(1);
+    expect(r.freezeUsed).toBe(0);
+  });
+  it('보유 상한(2) 초과 획득은 버려짐', () => {
+    saveStreak('u', { lastDate: '2026-06-13', current: 13, longest: 13 });
+    saveFreezes('u', 2);
+    const r = recordPlay('u', new Date('2026-06-14T03:00:00Z')); // 14일째
+    expect(r.current).toBe(14);
+    expect(r.freezeEarned).toBe(0);
+    expect(loadFreezes('u')).toBe(2);
   });
 });
