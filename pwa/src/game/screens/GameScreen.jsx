@@ -4,6 +4,7 @@ import { StarIcon, PauseIcon, TimerIcon, SpeakerHighIcon, EyeIcon, HeartIcon } f
 import { TG, FONT_TITLE, FONT_NUM, FONT_BODY, TOUCH_OPT } from '../tgTokens.js';
 import { play as playSfx } from '../tgSfx.js';
 import { Reveal, WordCard, ToneButtons, CoachBubble } from './shared.jsx';
+import { useTabTip } from '../../hooks/useTabTip.js';
 
 // 화면 중앙 버스트(P4b) — 콤보 마일스톤·신기록 순간 별 파티클 + 큰 텍스트가 팝하고 사라짐. 비차단.
 function CenterBurst({ data }) {
@@ -95,6 +96,16 @@ export function GameScreen({ word, entered, currentSyl, completed, timedOut, wor
   }, [completed, timedOut]);
   // 콤보 히트 — 콤보가 오를수록 0→1로 고조(콤보2부터, 12에서 최대). 가장자리 코랄 글로우 강도에 사용.
   const heat = combo >= 2 ? Math.min((combo - 1) / 11, 1) : 0;
+  // 첫 실제 게임 1회 — 카운트다운이 끝나(playReveal) 라이브가 되면 타이머 힌트를 잠깐 띄우고 자동 사라짐.
+  // 딤/블로킹 없음(타이머 안 멈춤·탭 방해 없음). 조작법은 튜토리얼이 이미 가르침.
+  const firstPlay = useTabTip('game-play', true);
+  const [showHint, setShowHint] = useState(false);
+  useEffect(() => {
+    if (practice || !playReveal || !firstPlay.visible) return undefined;
+    const a = setTimeout(() => setShowHint(true), 300);
+    const b = setTimeout(() => { setShowHint(false); firstPlay.dismiss(); }, 5100);
+    return () => { clearTimeout(a); clearTimeout(b); };
+  }, [playReveal, practice]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <div ref={shakeRef} data-tg-shake-root="1" style={{ position: 'absolute', inset: 0 }}>
       {/* 콤보 히트 글로우 — '점점 뜨거워진다'는 모멘텀 시각화(압박 아님). 콘텐츠 뒤(zIndex0)·비차단 */}
@@ -153,6 +164,14 @@ export function GameScreen({ word, entered, currentSyl, completed, timedOut, wor
           </div>
         </div>
         </Reveal>
+      )}
+      {/* 첫 게임 힌트(1회) — 타이머 바로 아래 작은 말풍선. 비차단(pointerEvents none)·자동 페이드 */}
+      {showHint && !practice && (
+        <div style={{ position: 'absolute', left: 20, right: 20, top: 103, display: 'flex', justifyContent: 'center', zIndex: 24, pointerEvents: 'none', animation: 'tg-hint 5.1s ease forwards' }} aria-hidden="true">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#2b2730', color: '#fff', fontFamily: FONT_BODY, fontWeight: 700, fontSize: 12, lineHeight: 1, padding: '7px 12px', borderRadius: 11, boxShadow: '0 4px 12px rgba(43,39,48,0.22)', whiteSpace: 'nowrap' }}>
+            <TimerIcon size={13} weight="fill" color="#ff9f6b" />타이머가 끝나기 전에 성조를 골라요!
+          </div>
+        </div>
       )}
       {/* 단어카드 top129 (폭 채움) — 단어 바뀔 때마다 키 변경으로 입장 모션(tg-card-in) */}
       <Reveal i={2} play={playReveal} style={{ position: 'absolute', left: 20, right: 20, top: 129 }}>

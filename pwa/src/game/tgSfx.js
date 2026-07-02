@@ -81,8 +81,14 @@ export function initSfx() {
 
 // 효과음 재생 — AudioBufferSourceNode(1회용)+GainNode. 지연 0, 겹쳐 재생 자유.
 // rate: 재생 속도(=음정). 1=원음, 2^(반음/12). 콤보 피치 래더 등에 사용.
+let lastBtnAt = 0; // 'button' 마지막 재생 — 초근접 중복(전역 리스너 pointerdown + 명시 onClick) 1회로 합침(다른 키는 미적용: 콤보 래더 등 보호)
 export function play(key, volOverride, rate) {
   if (muted) return;
+  if (key === 'button') {
+    const now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+    if (now - lastBtnAt < 200) return; // 200ms 내 중복 버튼음 무시
+    lastBtnAt = now;
+  }
   const c = ensureCtx();
   if (!c) return;
   if (c.state === 'suspended') c.resume().catch(() => {}); // 첫 제스처에서 오디오 unlock

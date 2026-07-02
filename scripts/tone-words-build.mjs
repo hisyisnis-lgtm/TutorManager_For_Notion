@@ -8,6 +8,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { ttsAudioUrl } from '../pwa/src/game/ttsSlug.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
@@ -95,7 +96,9 @@ function build() {
       if (dedupMap.has(hanzi)) warnings.push(`${file} ${ln}행: 중복 한자 '${hanzi}' (${dedupMap.get(hanzi)}에도 있음)`);
       else dedupMap.set(hanzi, `${file} ${ln}행`);
 
-      out[key].push({ hanzi, pinyin: syllables, tones: syllables.map(toneOfSyllable), meaning });
+      const tones = syllables.map(toneOfSyllable);
+      // audioUrl = 미리 생성한 신경망 음성 경로(결정적 슬러그). 파일이 없어도 tgTts가 Web Speech로 폴백.
+      out[key].push({ hanzi, pinyin: syllables, tones, meaning, audioUrl: ttsAudioUrl({ pinyin: syllables, tones }) });
     });
   }
 

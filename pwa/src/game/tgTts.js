@@ -33,13 +33,8 @@ export function ttsAvailable() {
   return typeof window !== 'undefined' && (!!window.speechSynthesis || typeof Audio !== 'undefined');
 }
 
-// 단어 발음 재생. word: { hanzi, audioUrl? }
-export function speakWord(word) {
-  if (!word) return;
-  // 고음질 미리생성 음성 우선
-  if (word.audioUrl) {
-    try { const a = new Audio(word.audioUrl); a.play().catch(() => {}); return; } catch { /* fallthrough */ }
-  }
+// Web Speech(브라우저 내장) 폴백 — 미리생성 음성이 없거나 재생 실패 시.
+function speakViaSynth(word) {
   if (typeof window === 'undefined' || !window.speechSynthesis) return;
   try {
     const synth = window.speechSynthesis;
@@ -52,4 +47,24 @@ export function speakWord(word) {
     u.rate = 0.9; // 살짝 천천히 — 성조가 또렷이 들리게
     synth.speak(u);
   } catch { /* noop */ }
+}
+
+// 단어 발음 재생. word: { hanzi, audioUrl? }
+// 미리 생성한 신경망 음성(audioUrl) 우선 — 전 기기 동일·성조 정확. 없거나 재생 실패(404 등)면 Web Speech로 폴백.
+let currentAudio = null;
+export function speakWord(word) {
+  if (!word) return;
+  if (word.audioUrl) {
+    try {
+      if (currentAudio) { try { currentAudio.pause(); } catch { /* noop */ } } // 이전 재생 중단(겹침 방지)
+      const a = new Audio(word.audioUrl);
+      currentAudio = a;
+      let fellBack = false;
+      const fallback = () => { if (fellBack) return; fellBack = true; if (currentAudio === a) currentAudio = null; speakViaSynth(word); };
+      a.addEventListener('error', fallback, { once: true }); // 파일 없음/디코딩 실패
+      a.play().catch(fallback); // 재생 거부(포맷 미지원 등) → 폴백
+      return;
+    } catch { /* fallthrough to synth */ }
+  }
+  speakViaSynth(word);
 }

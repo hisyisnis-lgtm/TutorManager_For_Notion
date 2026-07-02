@@ -1,11 +1,11 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { TEXT_PRIMARY } from '../../constants/theme.js';
 
 const PAD = 10;        // spotlight 여백
 const RADIUS = 16;     // spotlight 모서리 반경
 const TIP_GAP = 16;    // spotlight ↔ 툴팁 간격
 const TIP_H_PAD = 20;  // 툴팁 좌우 여백
-const DELAY = 350;     // 탭 렌더링 대기 시간 (ms)
 
 function resolveRect(selector) {
   if (!selector) return null;
@@ -29,24 +29,36 @@ function resolveRect(selector) {
  *   steps   — [{ selector: string | null, label: string }]
  *   visible — boolean (useTabTip의 visible)
  *   onDone  — () => void (useTabTip의 dismiss 연결)
+ *   delay   — 첫 스포트라이트 계산 전 대기(ms). 기본 350(탭 콘텐츠 async 렌더 대기).
+ *             콘텐츠가 이미 떠있는 화면은 작게 줘 빠르게 표시.
  */
-export default function CoachMarkOverlay({ steps, visible, onDone }) {
+export default function CoachMarkOverlay({ steps, visible, onDone, delay = 350, showControls = true }) {
   const [step, setStep]       = useState(0);
   const [rect, setRect]       = useState(null);
   const [mounted, setMounted] = useState(false);
   const [alpha, setAlpha]     = useState(0);   // 페이드 opacity
+  const stepRef = useRef(0);                   // 첫 스텝 보정 재측정 가드용
 
   // visible → true 시 마운트 + fade-in
   useEffect(() => {
     if (!visible) return;
     setStep(0);
+    stepRef.current = 0;
     setAlpha(0);
     setMounted(true);
-    const t = setTimeout(() => {
+    // delay에 첫 스포트라이트+페이드인. 첫 스텝 요소가 등장 애니(tg-rise 등) 중이면 위치가 어긋나므로
+    // 등장이 끝나는 구간까지 몇 차례 재측정해 스냅(여전히 첫 스텝일 때만).
+    const timers = [];
+    timers.push(setTimeout(() => {
       setRect(resolveRect(steps[0]?.selector));
       requestAnimationFrame(() => setAlpha(1));
-    }, DELAY);
-    return () => clearTimeout(t);
+    }, delay));
+    if (steps[0]?.selector) {
+      [220, 420, 620, 820].forEach((off) => timers.push(setTimeout(() => {
+        if (stepRef.current === 0) setRect(resolveRect(steps[0].selector));
+      }, delay + off)));
+    }
+    return () => timers.forEach(clearTimeout);
   }, [visible]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 코치마크가 열려 있는 동안 스크롤 잠금
@@ -70,6 +82,7 @@ export default function CoachMarkOverlay({ steps, visible, onDone }) {
   const advance = useCallback(() => {
     const next = step + 1;
     if (next >= steps.length) { finish(); return; }
+    stepRef.current = next; // 첫 스텝 보정 재측정 취소
     // 살짝 dimming 후 spotlight 이동
     setAlpha(0.55);
     setTimeout(() => {
@@ -84,6 +97,9 @@ export default function CoachMarkOverlay({ steps, visible, onDone }) {
   const vw = window.innerWidth;
   const vh = window.innerHeight;
   const current = steps[step];
+  // 툴팁·컨트롤은 게임 컬럼(가운데 최대 600px, FigmaScreen과 정합) 안에만 — 포탈(뷰포트 전체)이라 넓은 웹서 가로로 안 늘어나게.
+  const COL_W = Math.min(vw, 600);
+  const COL_LEFT = Math.round((vw - COL_W) / 2);
 
   // ── 툴팁 세로 위치 계산 ──────────────────────────────────
   // rect 있으면: element 상단 절반 → 아래에, 하단 절반 → 위에
@@ -100,13 +116,16 @@ export default function CoachMarkOverlay({ steps, visible, onDone }) {
     tipBottom = Math.round(vh - rect.y + TIP_GAP);
   }
 
-  // ── 화살표 가로 위치: element 중심에 정렬, 툴팁 경계 내 클램프 ──
-  const tipWidth = vw - TIP_H_PAD * 2;
+  // ── 화살표 가로 위치: element 중심에 정렬, 툴팁 경계(컬럼) 내 클램프 ──
+  const tipLeft = COL_LEFT + TIP_H_PAD;
+  const tipWidth = COL_W - TIP_H_PAD * 2;
   const arrowLeft = hasSpotlight
-    ? Math.max(12, Math.min(tipWidth - 24, rect.cx - TIP_H_PAD - 5))
+    ? Math.max(12, Math.min(tipWidth - 24, rect.cx - tipLeft - 5))
     : tipWidth / 2 - 5;
 
-  return (
+  // document.body로 포탈 — FigmaScreen 등 transform 조상 안에 두면 position:fixed가 뷰포트가 아닌
+  // 그 컨테이너 기준이 돼(넓은 화면서 스포트라이트 구멍이 밀림). 포탈로 빼내 getBoundingClientRect(뷰포트)와 일치.
+  return createPortal(
     <div
       style={{
         position: 'fixed', inset: 0, zIndex: 500,
@@ -146,12 +165,12 @@ export default function CoachMarkOverlay({ steps, visible, onDone }) {
       {/* ── 탭하면 다음 스텝 ── */}
       <div style={{ position: 'absolute', inset: 0 }} onClick={advance} aria-hidden="true" />
 
-      {/* ── 툴팁 ── */}
+      {/* ── 툴팁 (게임 컬럼 안, 가운데 정렬) ── */}
       <div
         style={{
           position: 'absolute',
-          left: TIP_H_PAD,
-          right: TIP_H_PAD,
+          left: tipLeft,
+          width: tipWidth,
           ...(tipTop    !== undefined ? { top: tipTop }       : {}),
           ...(tipBottom !== undefined ? { bottom: tipBottom } : {}),
           pointerEvents: 'none',
@@ -192,13 +211,24 @@ export default function CoachMarkOverlay({ steps, visible, onDone }) {
         </div>
       </div>
 
-      {/* ── 하단 컨트롤 ── */}
+      {/* ── 하단 컨트롤 (건너뛰기 · 스텝 도트 · 다음/완료). showControls=false면 숨기고 탭으로만 진행 ── */}
+      {!showControls && (
+        <div style={{
+          position: 'absolute',
+          bottom: 'max(22px, calc(env(safe-area-inset-bottom) + 22px))',
+          left: COL_LEFT, width: COL_W, textAlign: 'center', pointerEvents: 'none',
+          color: 'rgba(255,255,255,0.62)', fontSize: 13, fontWeight: 600,
+        }}>
+          {step >= steps.length - 1 ? '탭하여 완료' : '탭하여 계속'}
+        </div>
+      )}
+      {showControls && (
       <div style={{
         position: 'absolute',
         bottom: 'max(20px, calc(env(safe-area-inset-bottom) + 76px))',
-        left: 0, right: 0,
+        left: COL_LEFT, width: COL_W,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '0 28px',
+        padding: '0 28px', boxSizing: 'border-box',
         pointerEvents: 'auto',
       }}>
         {/* 건너뛰기 */}
@@ -241,6 +271,8 @@ export default function CoachMarkOverlay({ steps, visible, onDone }) {
           {step >= steps.length - 1 ? '완료' : '다음 →'}
         </button>
       </div>
-    </div>
+      )}
+    </div>,
+    document.body,
   );
 }
