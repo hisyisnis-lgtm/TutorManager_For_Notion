@@ -1,10 +1,90 @@
 // 게임 화면 (Figma 좌표 절대배치) — 점수·일시정지·타이머·단어카드·코치·성조버튼 + 콤보/신기록 버스트 연출(P4b).
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { StarIcon, PauseIcon, TimerIcon, SpeakerHighIcon, EyeIcon, HeartIcon } from '@phosphor-icons/react';
 import { TG, FONT_TITLE, FONT_NUM, FONT_BODY, TOUCH_OPT } from '../tgTokens.js';
 import { play as playSfx } from '../tgSfx.js';
 import { Reveal, WordCard, ToneButtons, CoachBubble } from './shared.jsx';
 import { useTabTip } from '../../hooks/useTabTip.js';
+
+// 불티 온도 색 — 0 뜨거움(흰-노랑) · 1 중간(오렌지) · 2 식음(진빨강). bg=코어 그라디언트, sh=글로우색.
+const SPARK_COLORS = [
+  { bg: 'radial-gradient(circle, #fff7de 0%, #ffc058 40%, #ff7a2a 76%, rgba(255,110,30,0) 100%)', sh: 'rgba(255,140,50,0.8)' },
+  { bg: 'radial-gradient(circle, #ffe6b2 0%, #ff8f34 44%, #f0421a 78%, rgba(240,60,20,0) 100%)', sh: 'rgba(240,74,24,0.78)' },
+  { bg: 'radial-gradient(circle, #ffc891 0%, #f2611c 46%, #cf2c10 80%, rgba(200,40,15,0) 100%)', sh: 'rgba(210,44,18,0.72)' },
+];
+// 1D 부드러운 값 노이즈(-1..1) — 웨이포인트 없이 연속 난류. 정수 격자 해시 + smoothstep 보간.
+function sparkNoise(x) {
+  const i = Math.floor(x), f = x - i, u = f * f * (3 - 2 * f);
+  const h = (n) => { const s = Math.sin(n * 127.1) * 43758.5453; return s - Math.floor(s); };
+  return (h(i) * (1 - u) + h(i + 1) * u) * 2 - 1;
+}
+// 콤보 불티 — 각 가장자리(하단↑·상단↓·좌→·우←)에서 안쪽으로. rAF로 매 프레임 위치를 노이즈로 갱신(연속 난류·부력·트윙클·수축·루프).
+function ComboSparks({ heatRef }) {
+  const refs = useRef([]);
+  const cfg = useRef(null);
+  if (!cfg.current) {
+    const R = Math.random, arr = [];
+    for (const [edge, n] of [['up', 9], ['down', 7], ['right', 5], ['left', 5]]) {
+      for (let i = 0; i < n; i++) {
+        arr.push({
+          edge,
+          ex: edge === 'left' ? 100 : edge === 'right' ? 0 : 5 + R() * 90, // 시작 x%
+          ey: edge === 'up' ? 100 : edge === 'down' ? 0 : 7 + R() * 86,     // 시작 y%
+          dist: 42 + R() * 66,   // 주 이동 px
+          amp: 11 + R() * 17,    // 노이즈 난류 진폭(잔잔하게 11~28)
+          freq: 1.6 + R() * 2.6, // 경로 따라 노이즈 주파수(느긋하게 1.6~4.2)
+          seed: R() * 100,
+          life: 1.1 + R() * 1.0, // 수명(s)
+          t: -R() * 2.2,         // 시작 경과(음수=시차)
+          sz: 2.5 + R() * 2.6,
+          c: (R() * 3) | 0,
+        });
+      }
+    }
+    cfg.current = arr;
+  }
+  useLayoutEffect(() => {
+    let raf, alive = true, last = performance.now();
+    const tick = (now) => {
+      if (!alive) return;
+      const dt = Math.min(0.05, (now - last) / 1000); last = now;
+      const heat = heatRef.current || 0;
+      for (let k = 0; k < cfg.current.length; k++) {
+        const el = refs.current[k]; const s = cfg.current[k]; if (!el) continue;
+        if (heat <= 0) { el.style.opacity = '0'; continue; }
+        s.t += dt;
+        if (s.t >= s.life) s.t %= s.life;   // 루프(재발생)
+        if (s.t < 0) { el.style.opacity = '0'; continue; }
+        const t = s.t / s.life;
+        const prim = s.dist * (1 - (1 - t) * (1 - t));      // ease-out 주 이동
+        const nz = sparkNoise(s.seed + t * s.freq) * s.amp;  // 연속 노이즈 수직 난류
+        const buoy = -t * 12;                                // 부력 살짝 위로
+        let tx, ty;
+        if (s.edge === 'up') { tx = nz; ty = -prim + buoy; }
+        else if (s.edge === 'down') { tx = nz; ty = prim + buoy * 0.25; }
+        else if (s.edge === 'right') { tx = prim; ty = nz + buoy; }
+        else { tx = -prim; ty = nz + buoy; }
+        const env = Math.min(1, t * 7) * Math.max(0, 1 - Math.pow(t, 1.7)); // 페이드 인/아웃
+        const flick = 0.6 + 0.4 * sparkNoise(s.seed * 1.7 + t * s.freq * 3.2); // 노이즈 트윙클
+        el.style.opacity = String(Math.max(0, env * flick));
+        el.style.transform = `translate(${tx.toFixed(1)}px, ${ty.toFixed(1)}px) scale(${(1 - 0.82 * t).toFixed(3)})`;
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => { alive = false; cancelAnimationFrame(raf); };
+  }, [heatRef]);
+  return cfg.current.map((s, k) => {
+    const st = SPARK_COLORS[s.c];
+    return (
+      <span key={k} ref={(n) => { refs.current[k] = n; }} style={{
+        position: 'absolute', left: `${s.ex}%`, top: `${s.ey}%`, width: s.sz, height: s.sz, marginLeft: -s.sz / 2, marginTop: -s.sz / 2,
+        borderRadius: '50%', background: st.bg, boxShadow: `0 0 ${Math.round(3 + s.sz * 1.1)}px 0.5px ${st.sh}`,
+        opacity: 0, willChange: 'transform, opacity',
+      }} />
+    );
+  });
+}
 
 // 화면 중앙 버스트(P4b) — 콤보 마일스톤·신기록 순간 별 파티클 + 큰 텍스트가 팝하고 사라짐. 비차단.
 function CenterBurst({ data }) {
@@ -94,8 +174,10 @@ export function GameScreen({ word, entered, currentSyl, completed, timedOut, wor
     const t = setTimeout(() => setPunch(false), 360);
     return () => clearTimeout(t);
   }, [completed, timedOut]);
-  // 콤보 히트 — 콤보가 오를수록 0→1로 고조(콤보2부터, 12에서 최대). 가장자리 코랄 글로우 강도에 사용.
-  const heat = combo >= 2 ? Math.min((combo - 1) / 11, 1) : 0;
+  // 콤보 히트 — 콤보가 오를수록 0→1로 고조(콤보2부터, 12에서 최대). 콤보 화염(외곽 불씨+글로우) 강도에 사용.
+  // demoFx='combo'는 [DEV] 미리보기서 화염 강제(?screen=game&fx=combo). 머지 전 백도어 제거 대상.
+  const heat = demoFx === 'combo' ? 0.8 : (combo >= 2 ? Math.min((combo - 1) / 11, 1) : 0);
+  const heatRef = useRef(heat); heatRef.current = heat; // rAF 불티가 매 프레임 참조(강도)
   // 첫 실제 게임 1회 — 카운트다운이 끝나(playReveal) 라이브가 되면 타이머 힌트를 잠깐 띄우고 자동 사라짐.
   // 딤/블로킹 없음(타이머 안 멈춤·탭 방해 없음). 조작법은 튜토리얼이 이미 가르침.
   const firstPlay = useTabTip('game-play', true);
@@ -108,11 +190,14 @@ export function GameScreen({ word, entered, currentSyl, completed, timedOut, wor
   }, [playReveal, practice]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <div ref={shakeRef} data-tg-shake-root="1" style={{ position: 'absolute', inset: 0 }}>
-      {/* 콤보 히트 글로우 — '점점 뜨거워진다'는 모멘텀 시각화(압박 아님). 콘텐츠 뒤(zIndex0)·비차단 */}
+      {/* 콤보 화염 — '불붙는다'는 긍정적 모멘텀(피격 비네트 아님). 사방 외곽에서 불씨가 피어오름 + 골드 글로우 플리커. 콘텐츠 뒤(zIndex0)·비차단 */}
       {heat > 0 && (
-        <div aria-hidden="true" style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0,
-          boxShadow: `inset 0 0 ${50 + heat * 90}px ${8 + heat * 34}px rgba(255,94,98,${0.10 + heat * 0.42})`,
-          transition: 'box-shadow .45s ease' }} />
+        <div aria-hidden="true" style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0, opacity: 0.72 + heat * 0.28 }}>
+          {/* 따뜻한 외곽 화염 글로우(골드→오렌지) + 은은한 플리커 */}
+          <div style={{ position: 'absolute', inset: 0, boxShadow: `inset 0 0 ${46 + heat * 80}px ${7 + heat * 24}px rgba(255,140,40,${0.14 + heat * 0.32})`, animation: 'tg-emberflicker 1.5s ease-in-out infinite', transition: 'box-shadow .45s ease' }} />
+          {/* 나무 타듯 각 가장자리에서 안쪽으로 튀는 불티 — rAF+노이즈로 연속 난류(웨이포인트 없음) */}
+          <ComboSparks heatRef={heatRef} />
+        </div>
       )}
       {/* 저시간 비네트 — 막바지에 화면 가장자리 붉은 맥동(텐션 램프 보강·게이지 심박과 동기). 비차단 */}
       {lowTime && !practice && (

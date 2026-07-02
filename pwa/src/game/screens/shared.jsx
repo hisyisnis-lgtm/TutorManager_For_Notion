@@ -58,6 +58,8 @@ export function ToneGameStyles() {
       @keyframes tg-sparkle { 0%,100%{opacity:0; transform:scale(0) rotate(0deg)} 50%{opacity:1; transform:scale(1) rotate(45deg)} }
       /* 첫 게임 논블로킹 힌트 — 페이드 인 → 유지 → 페이드 아웃(1회, 타이머 방해 없음) */
       @keyframes tg-hint { 0%{opacity:0; transform:translateY(-5px)} 12%{opacity:1; transform:translateY(0)} 84%{opacity:1; transform:translateY(0)} 100%{opacity:0; transform:translateY(-3px)} }
+      /* 콤보 불티 — rAF+노이즈로 JS에서 갱신(GameScreen ComboSparks). 여기선 외곽 글로우 플리커만. */
+      @keyframes tg-emberflicker { 0%,100%{opacity:1} 42%{opacity:.66} 68%{opacity:.9} }
       .tg-reveal{ animation: tg-rise .4s cubic-bezier(.22,1,.36,1) both }
       .tg-toast{ animation: tg-toast 1.7s ease both }
       @media (prefers-reduced-motion: reduce){ .tg-reveal{ animation: none !important } }
