@@ -1,9 +1,42 @@
 // 게임 공용 모달 — 놀러가기(SNS)·[DEV]점수 디버그. 시작/홈 등 여러 화면에서 재사용.
 // (기존 StartScreen.jsx 내부 함수에서 추출)
 import { useState } from 'react';
-import { HandWavingIcon, InstagramLogoIcon, YoutubeLogoIcon, ArticleIcon, CaretRightIcon } from '@phosphor-icons/react';
+import { HandWavingIcon, InstagramLogoIcon, YoutubeLogoIcon, ArticleIcon, CaretRightIcon, ArrowsClockwiseIcon, PlayIcon } from '@phosphor-icons/react';
 import { TG, FONT_TITLE, FONT_BODY, FONT_NUM, SHADOW, TOUCH_OPT, loadBest, saveBest } from '../tgTokens.js';
 import { GAMEKEY, loadEndlessBest, saveEndlessBest } from '../gameLogic.js';
+
+// 복습 시작 모달 — 모드선택 '복습' 탭 시. 복습이 뭔지 짧게 안내 + [게임 시작] 눌러야 진입.
+// count=복습할 단어 수. 기록 미반영(startReview에서 recordToBeat=0).
+export function ReviewStartModal({ count = 0, onStart, onClose }) {
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(26,16,20,0.55)', backdropFilter: 'blur(2px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, ...TOUCH_OPT }}>
+      <div className="tg-enter" onClick={(e) => e.stopPropagation()} style={{
+        width: '100%', maxWidth: 322, background: TG.CARD, borderRadius: 28, padding: '28px 24px 20px',
+        boxShadow: '0 20px 50px rgba(26,16,20,0.3)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16,
+      }}>
+        <div style={{ width: 72, height: 72, borderRadius: 36, background: 'rgba(77,141,255,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <ArrowsClockwiseIcon size={30} weight="fill" color="#4D8DFF" />
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, textAlign: 'center', width: '100%' }}>
+          <span style={{ fontFamily: FONT_TITLE, fontSize: 24, color: '#2b2730' }}>복습하기</span>
+          <span style={{ fontFamily: FONT_BODY, fontWeight: 500, fontSize: 14, lineHeight: 1.55, color: '#9a93a0' }}>
+            지난 게임에서 헷갈린 단어 <b style={{ color: '#4D8DFF', fontWeight: 800 }}>{count}개</b>를 다시 풀어봐요.<br />기록에는 반영되지 않아요.
+          </span>
+        </div>
+        <button className="tg-press" onClick={() => { onStart && onStart(); }} style={{
+          width: '100%', height: 56, borderRadius: 18, border: 'none', cursor: 'pointer',
+          background: TG.CORAL_GRAD, boxShadow: '0px 10px 20px rgba(242,72,76,0.32)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, ...TOUCH_OPT,
+        }}>
+          <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 18, color: '#fff' }}>게임 시작</span>
+          <PlayIcon size={14} weight="fill" color="#fff" />
+        </button>
+        <button className="tg-press" onClick={onClose} style={{ width: '100%', padding: '4px 0', background: 'none', border: 'none', cursor: 'pointer', ...TOUCH_OPT }}>
+          <span style={{ fontFamily: FONT_BODY, fontWeight: 500, fontSize: 15, color: '#9a93a0' }}>닫기</span>
+        </button>
+      </div>
+    </div>
+  );
+}
 
 // SNS 링크 (PersonalPage와 동일 URL). 인스타그램이 메인, 유튜브·블로그는 보조.
 export const PLAY_LINKS = {

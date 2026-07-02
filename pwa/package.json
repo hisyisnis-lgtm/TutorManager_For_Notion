@@ -4,11 +4,12 @@
   "version": "2.19.5",
   "type": "module",
   "scripts": {
-    "predev": "node ../scripts/tone-words-build.mjs",
+    "predev": "node ../scripts/tone-words-build.mjs && node ../scripts/tone-tts-build.mjs",
     "dev": "vite",
-    "prebuild": "node ../scripts/tone-words-build.mjs",
+    "prebuild": "node ../scripts/tone-words-build.mjs && node ../scripts/tone-tts-build.mjs",
     "build": "vite build",
     "preview": "vite preview",
+    "tts": "node ../scripts/tone-tts-build.mjs",
     "generate-icons": "pwa-assets-generator --preset minimal-2023 public/symbol-red.png"
   },
   "dependencies": {

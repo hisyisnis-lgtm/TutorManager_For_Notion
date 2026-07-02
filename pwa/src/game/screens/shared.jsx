@@ -42,6 +42,7 @@ export function ToneGameStyles() {
       @keyframes tg-sheet-up { from{transform:translateY(100%)} to{transform:translateY(0)} }
       @keyframes tg-sheet-down { from{transform:translateY(0)} to{transform:translateY(100%)} }
       @keyframes tg-dim-in { from{opacity:0} to{opacity:1} }
+      @keyframes tg-loadbar { from{width:0%} to{width:100%} }
       @keyframes tg-drift { 0%{transform:translateY(0);opacity:.0} 25%{opacity:.9} 75%{opacity:.9} 100%{transform:translateY(-26px);opacity:0} }
       @keyframes tg-dot { 0%,100%{transform:translateY(0);opacity:.4} 50%{transform:translateY(-6px);opacity:1} }
       @keyframes tg-cd-in { from{transform:translateX(100%)} to{transform:translateX(0)} }
@@ -55,6 +56,8 @@ export function ToneGameStyles() {
       @keyframes tg-logo-pop { 0%{opacity:0; transform:scale(.7)} 60%{opacity:1; transform:scale(1.05)} 100%{opacity:1; transform:scale(1)} }
       @keyframes tg-shine { 0%{background-position:160% 0} 22%{background-position:-60% 0} 100%{background-position:-60% 0} }
       @keyframes tg-sparkle { 0%,100%{opacity:0; transform:scale(0) rotate(0deg)} 50%{opacity:1; transform:scale(1) rotate(45deg)} }
+      /* 첫 게임 논블로킹 힌트 — 페이드 인 → 유지 → 페이드 아웃(1회, 타이머 방해 없음) */
+      @keyframes tg-hint { 0%{opacity:0; transform:translateY(-5px)} 12%{opacity:1; transform:translateY(0)} 84%{opacity:1; transform:translateY(0)} 100%{opacity:0; transform:translateY(-3px)} }
       .tg-reveal{ animation: tg-rise .4s cubic-bezier(.22,1,.36,1) both }
       .tg-toast{ animation: tg-toast 1.7s ease both }
       @media (prefers-reduced-motion: reduce){ .tg-reveal{ animation: none !important } }
@@ -271,7 +274,7 @@ export function ToneButtons({ onTone, wrongBtn, disabled }) {
         const isWrong = wrongBtn === t.num;
         return (
           <button
-            key={t.num} onClick={() => handle(t.num)} disabled={disabled} aria-label={t.name}
+            key={t.num} onClick={() => handle(t.num)} disabled={disabled} aria-label={t.name} data-nosfx="true"
             className={`tg-press ${isWrong ? 'tg-shake' : ''}`}
             style={{
               position: 'relative', overflow: 'hidden',

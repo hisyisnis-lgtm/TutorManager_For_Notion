@@ -5,6 +5,14 @@ import { DIFFICULTIES } from '../../constants/toneGameWords.js';
 import { isDifficultyUnlocked, diffBestScore, unlockReqText, unlockToastText } from '../gameLogic.js';
 import { play as playSfx } from '../tgSfx.js';
 import { Reveal, CoachBubble, ShakeButton } from './shared.jsx';
+import CoachMarkOverlay from '../../components/ui/CoachMarkOverlay.jsx';
+import { useTabTip } from '../../hooks/useTabTip.js';
+
+// 첫 진입 코치마크 — 난이도 목록 + 시작 버튼. Reveal 등장 후 표시.
+const DIFF_COACH = [
+  { selector: '[data-coach="diff-list"]', label: '실력에 맞는 난이도를 골라요. 초급부터 시작해 익숙해지면 위로!' },
+  { selector: '[data-coach="diff-start"]', label: '고르고 이 버튼을 누르면 게임이 시작돼요!' },
+];
 
 const DIFF_META = {
   easy:   { Icon: LeafIcon,   stars: 1 },
@@ -13,6 +21,8 @@ const DIFF_META = {
 };
 
 export function DifficultyScreen({ selected, studentToken, onSelect, onStart, onBack, onLocked, forPractice = false }) {
+  // 연습 진입(forPractice)엔 코치마크 안 띄움 — 난이도 경로 첫 사이클만
+  const tip = useTabTip('game-difficulty', !forPractice);
   return (
     <>
       {/* 헤더 top20 */}
@@ -24,12 +34,14 @@ export function DifficultyScreen({ selected, studentToken, onSelect, onStart, on
         <span style={{ fontFamily: FONT_TITLE, fontSize: 22, color: '#2b2730' }}>{forPractice ? '연습할 난이도' : '난이도 선택'}</span>
       </div>
       </Reveal>
-      {/* 판다 다이얼로그 top120 */}
-      <Reveal i={1} style={{ position: 'absolute', left: 24, right: 24, top: 120 }}>
+      {/* 코치+카드 = 헤더와 하단 CTA 사이 공간에 세로중앙 + 모바일 높이 캡(웹 긴 화면서 붕 뜨는 것 방지) */}
+      <div style={{ position: 'absolute', left: 0, right: 0, top: 72, height: 'min(calc(100% - 72px - 118px), 470px)', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+      {/* 판다 다이얼로그 */}
+      <Reveal i={1} style={{ paddingLeft: 24, paddingRight: 24 }}>
         <CoachBubble text={forPractice ? '어떤 단어로 공부할까요?' : '실력에 맞는 단계를 골라보세요'} />
       </Reveal>
-      {/* 카드 top217 */}
-      <div style={{ position: 'absolute', left: 24, right: 24, top: 217, display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {/* 카드 */}
+      <div data-coach="diff-list" style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingLeft: 24, paddingRight: 24, marginTop: 28 }}>
         {DIFFICULTIES.map((d, idx) => {
           const meta = DIFF_META[d.id];
           const c = DIFF_COLORS[d.id];
@@ -74,9 +86,10 @@ export function DifficultyScreen({ selected, studentToken, onSelect, onStart, on
           );
         })}
       </div>
+      </div>
       {/* CTA 하단 고정 (Figma top712 → bottom 70) */}
       <Reveal i={5} style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(30px + env(safe-area-inset-bottom))' }}>
-      <button onClick={() => { playSfx('button'); onStart(selected); }} className="tg-press" style={{
+      <button data-coach="diff-start" onClick={() => { playSfx('button'); onStart(selected); }} className="tg-press" style={{
         width: '100%', height: 62, borderRadius: 20, border: 'none', cursor: 'pointer',
         background: TG.CORAL_GRAD, boxShadow: '0px 10px 20px rgba(242,72,76,0.32)',
         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, ...TOUCH_OPT,
@@ -85,6 +98,7 @@ export function DifficultyScreen({ selected, studentToken, onSelect, onStart, on
         <PlayIcon size={13} weight="fill" color="#fff" />
       </button>
       </Reveal>
+      <CoachMarkOverlay visible={tip.visible} onDone={tip.dismiss} steps={DIFF_COACH} delay={160} showControls={false} />
     </>
   );
 }

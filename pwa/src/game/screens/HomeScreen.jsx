@@ -13,6 +13,17 @@ import { earTier } from '../earProfile.js';
 import { play as playSfx, isSfxMuted, setSfxMuted } from '../tgSfx.js';
 import { FigmaScreen } from './shared.jsx';
 import { PlayModal, DebugScoreModal } from './gameModals.jsx';
+import CoachMarkOverlay from '../../components/ui/CoachMarkOverlay.jsx';
+import { useTabTip } from '../../hooks/useTabTip.js';
+
+// 홈 허브 코치마크 — 첫 방문 1회(useTabTip 'game-home'). 학생앱과 동일한 스포트라이트 오버레이 재사용.
+// 캐릭터는 계속 움직여 스포트라이트 고정이 안 되므로 방 소개는 selector:null(중앙 툴팁)로.
+const COACH_STEPS = [
+  { selector: null, label: '여긴 성조 친구들이 사는 방이에요. 친구를 탭하면 그 성조의 실력을 볼 수 있어요 🎵' },
+  { selector: '[data-coach="tg-myinfo"]', label: '게임을 할수록 등급이 올라가요. 탭하면 등급 상세를 볼 수 있어요.' },
+  { selector: '[data-coach="tg-streak"]', label: '매일 한 판이면 연속학습이 쌓여요. 불꽃을 키워보세요! 🔥' },
+  { selector: '[data-coach="tg-play"]', label: '준비됐으면 플레이를 눌러 시작해요!' },
+];
 
 const WALL = '#E9E3D9', FLOOR = '#FCFAF6', OUTSIDE = '#F1EDE6'; // 밝고 깔끔한 모던 — 크림/화이트
 
@@ -418,12 +429,15 @@ function HomeMenu({ onClose, onHelp, onLogin, isMemberUser, memberName, onLogout
 // 내 정보 카드 — 등급 앰블럼 + 등급명 + 진행 게이지. 탭 → 등급 상세.
 function MyInfo({ tier, onClick }) {
   return (
-    <button onClick={onClick} className="tg-press" style={{
+    <button onClick={onClick} className="tg-press" data-coach="tg-myinfo" style={{
       position: 'absolute', left: 24, top: 20, width: 168, height: 60, display: 'flex', alignItems: 'center', gap: 11,
       padding: '0 14px 0 11px', borderRadius: 18, background: '#fff', border: 'none', cursor: 'pointer',
       boxShadow: '0 5px 14px rgba(43,39,48,0.07)', zIndex: 5, ...TOUCH_OPT,
     }}>
-      <img src={tier.emblem} alt="" width={40} height={40} style={{ flexShrink: 0, filter: `drop-shadow(0 2px 5px ${tier.glow}66)` }} />
+      {/* 앰블럼 — 은은한 틴트 소켓에 앉혀 그라운딩(뜬 느낌 제거·게임 아이콘 타일 스타일과 통일) */}
+      <div style={{ flexShrink: 0, width: 48, height: 48, borderRadius: 15, background: `${tier.glow}22`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <img src={tier.emblem} alt="" width={44} height={44} style={{ display: 'block' }} />
+      </div>
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: 6 }}>
         <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 13, color: '#2b2730', textAlign: 'left', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{tier.name}</span>
         <div style={{ width: '100%', height: 6, borderRadius: 3, background: '#ece6dd', overflow: 'hidden' }}>
@@ -451,7 +465,7 @@ function StreakPill({ streak, freezes = 0, onClick }) {
   const animStreak = useCountUp(streak, 800);
   const tier = streakTier(streak);
   return (
-    <button onClick={onClick} className="tg-press" style={{ position: 'absolute', right: 72, top: 20, height: 40, display: 'flex', alignItems: 'center', gap: 5, padding: '0 12px', borderRadius: 20, background: '#fff', boxShadow: '0 5px 14px rgba(43,39,48,0.07)', border: 'none', cursor: 'pointer', zIndex: 5, ...TOUCH_OPT }}>
+    <button onClick={onClick} className="tg-press" data-coach="tg-streak" style={{ position: 'absolute', right: 72, top: 20, height: 40, display: 'flex', alignItems: 'center', gap: 5, padding: '0 12px', borderRadius: 20, background: '#fff', boxShadow: '0 5px 14px rgba(43,39,48,0.07)', border: 'none', cursor: 'pointer', zIndex: 5, ...TOUCH_OPT }}>
       <FlameIcon size={16} weight="fill" color={tier.color} style={{ filter: streak > 0 ? `drop-shadow(0 0 5px ${tier.glow})` : 'none' }} />
       <span style={{ fontFamily: FONT_NUM, fontWeight: 800, fontSize: 15, color: '#2b2730', lineHeight: 1 }}>{animStreak}</span>
       <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 11.5, color: '#9a93a0' }}>일</span>
@@ -511,7 +525,7 @@ function StreakSheet({ streak, longest, freezes, onClose }) {
             <div style={{ fontFamily: FONT_BODY, fontWeight: 600, fontSize: 11.5, color: '#9a93a0', marginTop: 2 }}>보호권</div>
           </div>
         </div>
-        <p style={{ margin: 0, fontFamily: FONT_BODY, fontWeight: 500, fontSize: 12.5, lineHeight: 1.5, color: '#8a8580' }}>보호권은 하루 빠져도 스트릭을 지켜줘요. 7일마다 하나씩 모여요.</p>
+        <p style={{ margin: 0, fontFamily: FONT_BODY, fontWeight: 500, fontSize: 12.5, lineHeight: 1.5, color: '#8a8580' }}>보호권은 하루 빠져도 연속학습을 지켜줘요. 7일마다 하나씩 모여요.</p>
       </div>
     </div>
   );
@@ -567,6 +581,7 @@ function ToneCard({ tone, status, level, onClose }) {
 
 export function HomeScreen({
   streak = 0, streakLongest = 0, freezes = 0, masteredN = 0, toneLevels = {}, toneStatus = {}, coachTone = null, celebrateTone = null,
+  homeReady = true,
   onPlay, onMastery, onAchievements, onHelp,
   onLogin, isMemberUser, memberName, onLogout, onExit, studentToken, onRefreshBest, onDebugIntro,
 }) {
@@ -577,6 +592,7 @@ export function HomeScreen({
   const [cardTone, setCardTone] = useState(null); // 탭한 성조 미니 카드
   const [streakOpen, setStreakOpen] = useState(false); // 스트릭 상세 시트
   const [showIntro, setShowIntro] = useState(() => { try { return !localStorage.getItem('tg_home_intro'); } catch { return false; } });
+  const coach = useTabTip('game-home', true); // 첫 방문 코치마크 가이드(1회)
   // 첫 방문 코치 1회 — 약점 성조가 정해지면 표시·플래그 저장, 잠시 후 종료
   useEffect(() => {
     if (!(showIntro && coachTone != null)) return undefined;
@@ -662,7 +678,7 @@ export function HomeScreen({
 
       {/* 하단 — 플레이 CTA(은은한 펄스) + 보조 3 */}
       <div style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(86px + env(safe-area-inset-bottom))', zIndex: 3, animation: 'tg-cta-pulse 2.6s ease-in-out infinite' }}>
-        <button className="tg-press" onClick={() => { playSfx('button'); onPlay && onPlay(); }} style={{
+        <button className="tg-press" data-coach="tg-play" onClick={() => { playSfx('button'); onPlay && onPlay(); }} style={{
           width: '100%', height: 60, borderRadius: 20, border: 'none', cursor: 'pointer',
           background: TG.CORAL_GRAD, boxShadow: '0px 10px 20px rgba(242,72,76,0.32)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, ...TOUCH_OPT,
         }}>
@@ -689,6 +705,9 @@ export function HomeScreen({
       {menuOpen && <HomeMenu onClose={() => setMenuOpen(false)} onHelp={onHelp} onLogin={onLogin} isMemberUser={isMemberUser} memberName={memberName} onLogout={onLogout} onExit={onExit} onDebugIntro={onDebugIntro} onDebugScore={() => setDebugScoreOpen(true)} />}
       {playOpen && <PlayModal onClose={() => setPlayOpen(false)} />}
       {import.meta.env.DEV && debugScoreOpen && <DebugScoreModal studentToken={studentToken} onClose={() => setDebugScoreOpen(false)} onApplied={() => onRefreshBest && onRefreshBest()} />}
+
+      {/* 첫 방문 코치마크 가이드 — 방/등급/연속학습/플레이 순서로 안내(1회). 타이틀→홈 전환(homeTx)이 끝난 뒤에만 표시 */}
+      <CoachMarkOverlay visible={homeReady && coach.visible} onDone={coach.dismiss} steps={COACH_STEPS} delay={160} showControls={false} />
     </FigmaScreen>
   );
 }

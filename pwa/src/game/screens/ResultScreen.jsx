@@ -4,6 +4,15 @@ import { TG, FONT_NUM, FONT_BODY, TOUCH_OPT, pickCelebratePanda } from '../tgTok
 import { useCountUp, FlameIcon } from '../tgWidgets.jsx';
 import { play as playSfx } from '../tgSfx.js';
 import { Reveal, CoachBubble } from './shared.jsx';
+import CoachMarkOverlay from '../../components/ui/CoachMarkOverlay.jsx';
+import { useTabTip } from '../../hooks/useTabTip.js';
+
+// 첫 결과 화면 코치마크 — 점수·통계·다음 액션. Reveal 등장 후 표시.
+const RESULT_COACH = [
+  { selector: '[data-coach="result-score"]', label: '이번 판 점수예요. 최고 기록을 넘기면 신기록! 🏆' },
+  { selector: '[data-coach="result-stats"]', label: '최고 콤보와 평균 반응속도도 확인할 수 있어요.' },
+  { selector: '[data-coach="result-actions"]', label: '다시 도전하거나, 아래에서 다른 모드를 골라요.' },
+];
 
 // 하단 보조 버튼 (흰 배경 아웃라인). flex:1로 단일=풀폭 / 2개=반반.
 function SecBtn({ label, onClick }) {
@@ -22,6 +31,8 @@ export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, 
   const avgSec = avgMs > 0 ? (avgMs / 1000).toFixed(1) : '-';
   const pandaSrc = pickCelebratePanda(isNewBest, maxCombo);
   const delta = score - previousBest;
+  // 첫 결과 코치마크(1회) — 연습 결과는 제외(신기록/기록 개념이 다름).
+  const tip = useTabTip('game-result', !practice);
   return (
     <>
       {/* 신기록 배지 (중앙) */}
@@ -39,7 +50,7 @@ export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, 
       </Reveal>
       {/* 점수 */}
       <Reveal i={2} style={{ position: 'absolute', left: 24, right: 24, top: 196 }}>
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+      <div data-coach="result-score" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
         <span style={{ fontFamily: FONT_NUM, fontWeight: 800, fontSize: 60, color: '#f2484c', lineHeight: 1, whiteSpace: 'nowrap' }}>{animScore.toLocaleString()}</span>
         {previousBest > 0 && (
           <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 2 }}>
@@ -55,7 +66,7 @@ export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, 
       </Reveal>
       {/* 통계 2카드 */}
       <Reveal i={3} style={{ position: 'absolute', left: 24, right: 24, top: 312 }}>
-      <div style={{ height: 128, display: 'flex', gap: 12, alignItems: 'stretch' }}>
+      <div data-coach="result-stats" style={{ height: 128, display: 'flex', gap: 12, alignItems: 'stretch' }}>
         {[
           { icon: <FlameIcon size={17} color={TG.CORAL_DK} />, ibg: 'rgba(255,107,107,0.14)', val: maxCombo, unit: '콤보', label: '최고 콤보' },
           { icon: <LightningIcon size={17} weight="fill" color="#4D8DFF" />, ibg: 'rgba(77,141,255,0.14)', val: avgSec, unit: avgSec === '-' ? '' : '초', label: '평균 반응속도' },
@@ -77,7 +88,7 @@ export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, 
       </Reveal>
       {/* 다시 도전 (하단 고정) — 최하단 '난이도 바꾸기' 위 */}
       <Reveal i={5} style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(80px + env(safe-area-inset-bottom))' }}>
-      <button onClick={() => { playSfx('button'); onRetry(); }} className="tg-press" style={{
+      <button data-coach="result-actions" onClick={() => { playSfx('button'); onRetry(); }} className="tg-press" style={{
         width: '100%', height: 62, borderRadius: 20, border: 'none', cursor: 'pointer',
         background: TG.CORAL_GRAD, boxShadow: '0px 10px 20px rgba(242,72,76,0.32)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, ...TOUCH_OPT,
       }}>
@@ -92,6 +103,7 @@ export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, 
         {onModeSelect && <SecBtn label="모드 선택" onClick={onModeSelect} />}
       </div>
       </Reveal>
+      <CoachMarkOverlay visible={tip.visible} onDone={tip.dismiss} steps={RESULT_COACH} delay={260} showControls={false} />
     </>
   );
 }

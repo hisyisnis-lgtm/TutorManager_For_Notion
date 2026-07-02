@@ -30,6 +30,7 @@ import {
 import { FigmaScreen, CountdownVisual, CdWaveEdge, GameToast, SettingsModal } from '../game/screens/shared.jsx';
 import { SplashScreen } from '../game/screens/SplashScreen.jsx';
 import { TitleScreen } from '../game/screens/TitleScreen.jsx';
+import { LoadingTip } from '../game/screens/LoadingScreen.jsx';
 import { HomeScreen } from '../game/screens/HomeScreen.jsx';
 import { LoginScreen } from '../game/screens/LoginScreen.jsx';
 import { ModeScreen } from '../game/screens/ModeScreen.jsx';
@@ -97,6 +98,7 @@ export default function ToneGamePage() {
   const [words, setWords] = useState(() => (isPreview && (previewScreen === 'game' || previewScreen === 'gameover') ? PREVIEW_WORDS : []));
   const [cdPhase, setCdPhase] = useState(cdPreview ? 'run' : null); // 카운트다운 오버레이 단계: null|'in'|'run'|'out'
   const [cdNum, setCdNum] = useState(3);
+  const [homeTx, setHomeTx] = useState(null); // 타이틀→홈 웨이브 전환: null|'in'(슬라이드 인)|'hold'(팁 강제노출)|'out'(슬라이드 아웃)
   const [wordIndex, setWordIndex] = useState(0);
   const [currentSyl, setCurrentSyl] = useState(0);
   const [entered, setEntered] = useState([]);
@@ -280,7 +282,7 @@ export default function ToneGamePage() {
       // ── 성취 레이어(P1) — 일일 스트릭 + 업적 평가. 로컬 저장(서버 동기화는 후속). 모든 모드 공통(플레이=출석) ──
       const streak = recordPlay(studentToken);
       // 보호권 알림 — 방어 성공(안도)·획득(보상). 압박 아닌 긍정 카피.
-      if (streak.freezeUsed > 0) showToast(`❄️ 보호권이 빠진 하루를 지켜줬어요! 스트릭 ${streak.current}일 유지`);
+      if (streak.freezeUsed > 0) showToast(`❄️ 보호권이 빠진 하루를 지켜줬어요! 연속학습 ${streak.current}일 유지`);
       else if (streak.freezeEarned > 0) showToast(`🔥 ${streak.current}일 달성! 보호권 +1 (❄️${streak.freezes})`);
       const masteredN = (() => {
         const map = {};
@@ -315,6 +317,15 @@ export default function ToneGamePage() {
   }, [screen, identity, studentToken, selectedDifficulty, score, maxCombo, answeredCount, totalAnswerTime, reviewMode, endlessMode, practiceMode, themeMode, selectedTheme, words, wordPoolByDiff, wordPoolByTheme, isPreview]);
 
   useEffect(() => () => clearTimers(), []);
+  // 전역 버튼음 — 눌리는 버튼(.tg-press)엔 대부분 클릭음. data-nosfx로 개별 제외(예: 성조 답 버튼=자체 정답/오답음).
+  useEffect(() => {
+    const onDown = (e) => {
+      const el = e.target && e.target.closest && e.target.closest('.tg-press:not([data-nosfx])');
+      if (el) playSfx('button');
+    };
+    document.addEventListener('pointerdown', onDown);
+    return () => document.removeEventListener('pointerdown', onDown);
+  }, []);
 
   // 카운트다운 오버레이 단계 진행: in(슬라이드 인)→run(3·2·1)→out(슬라이드 아웃)
   useEffect(() => {
@@ -334,6 +345,22 @@ export default function ToneGamePage() {
     const t = setTimeout(() => setCdPhase(null), 420);
     return () => clearTimeout(t);
   }, [cdPhase]);
+  // 타이틀→홈 웨이브 전환: in(슬라이드 인, 420ms)→ 홈 마운트 + hold(팁 강제노출 2.6s)→ out(슬라이드 아웃, 420ms)→ 종료
+  useEffect(() => {
+    if (homeTx !== 'in') return undefined;
+    const t = setTimeout(() => { setScreen('home'); setHomeTx('hold'); }, 420);
+    return () => clearTimeout(t);
+  }, [homeTx]);
+  useEffect(() => {
+    if (homeTx !== 'hold') return undefined;
+    const t = setTimeout(() => setHomeTx('out'), 2600); // 팁 강제 노출(로딩할 게 없어도)
+    return () => clearTimeout(t);
+  }, [homeTx]);
+  useEffect(() => {
+    if (homeTx !== 'out') return undefined;
+    const t = setTimeout(() => setHomeTx(null), 420);
+    return () => clearTimeout(t);
+  }, [homeTx]);
 
   useEffect(() => {
     if (screen !== 'game' || cdPhase) return; // 카운트다운 끝나야 타이머 시작
@@ -646,7 +673,7 @@ export default function ToneGamePage() {
   const exitGame = () => { if (identity.kind === 'student') navigate(`/personal/${identity.token}`); else window.location.href = '/'; };
   let content;
   if (screen === 'title') {
-    content = <TitleScreen onStart={() => setScreen('home')} onClose={exitGame} />;
+    content = <TitleScreen onStart={() => setHomeTx('in')} onClose={exitGame} />;
   } else if (screen === 'home') {
     content = <HomeScreen streak={startStreak} streakLongest={startStreakLongest} freezes={startFreezes} masteredN={masteredN} toneLevels={toneLevels}
       toneStatus={toneStatus} coachTone={coachTone} celebrateTone={celebrateTone}
@@ -657,7 +684,17 @@ export default function ToneGamePage() {
       isMemberUser={identity.kind === 'member'} memberName={identity.memberUser?.nickname || null}
       onLogout={() => { logoutMember(); window.location.reload(); }} onExit={exitGame}
       studentToken={studentToken} onRefreshBest={() => setBest(headlineBest(studentToken))}
-      onDebugIntro={import.meta.env.DEV ? (() => { setIntroPage(0); setScreen('intro'); }) : undefined} />;
+      homeReady={!homeTx}
+      onDebugIntro={import.meta.env.DEV ? (() => {
+        // 디버그 재시작 — 게임 코치마크(홈~결과) 1회 플래그 초기화 후 소개부터: 전체 가이드 재현
+        try {
+          const m = JSON.parse(localStorage.getItem('tab_tips_v1') || '{}');
+          ['game-home', 'game-mode', 'game-difficulty', 'game-play', 'game-result'].forEach((k) => delete m[k]);
+          localStorage.setItem('tab_tips_v1', JSON.stringify(m));
+          localStorage.removeItem('tg_home_intro');
+        } catch { /* noop */ }
+        setIntroPage(0); setScreen('intro');
+      }) : undefined} />;
   } else if (screen === 'login') {
     content = <FigmaScreen><LoginScreen onBack={() => setScreen('home')} onSuccess={() => { setTimeout(() => window.location.reload(), 500); }} /></FigmaScreen>;
   } else if (screen === 'mastery') {
@@ -690,7 +727,7 @@ export default function ToneGamePage() {
           onTheme={() => { playSfx('button'); setScreen('theme'); }}
           onEndless={() => { playSfx('button'); startEndless(); }}
           onPractice={() => { playSfx('button'); setDifficultyTarget('practice'); setScreen('difficulty'); }}
-          onReview={() => { if (reviewWords.length > 0) { playSfx('button'); startReview(reviewWords); } else showToast('아직 복습할 단어가 없어요. 먼저 게임을 플레이해보세요'); }}
+          onReview={() => { playSfx('button'); startReview(reviewWords); }}
           onBack={() => setScreen('home')} onLocked={showToast} />
       </FigmaScreen>
     );
@@ -742,10 +779,22 @@ export default function ToneGamePage() {
   const cdStyle = cdPhase === 'in' ? { animation: 'tg-cd-in .42s cubic-bezier(.4,0,.2,1) forwards' }
     : cdPhase === 'out' ? { animation: 'tg-cd-out .42s cubic-bezier(.4,0,.2,1) forwards' }
     : { transform: 'translateX(0)' };
+  // 타이틀→홈 전환 오버레이 슬라이드(웨이브). hold=정지(팁 노출)
+  const homeTxStyle = homeTx === 'in' ? { animation: 'tg-cd-in .42s cubic-bezier(.4,0,.2,1) forwards' }
+    : homeTx === 'out' ? { animation: 'tg-cd-out .42s cubic-bezier(.4,0,.2,1) forwards' }
+    : { transform: 'translateX(0)' };
 
   return (
     <>
       {content}
+      {homeTx && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 200, ...homeTxStyle }}>
+          {/* 게임 카운트다운과 동일한 물결·배경색(#f96c6e) */}
+          <CdWaveEdge side="left" />
+          <CdWaveEdge side="right" />
+          <FigmaScreen bg="#f96c6e"><LoadingTip /></FigmaScreen>
+        </div>
+      )}
       {cdPhase && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 200, ...cdStyle }}>
           {/* 좌우 물결 가장자리 — 컨테이너 바깥쪽이라 가운데 정렬 시엔 화면 밖(비표시), 슬라이드 중에만 보임 */}

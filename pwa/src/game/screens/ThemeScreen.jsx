@@ -8,7 +8,7 @@ import { isThemeUnlocked, themeBestScore, themeUnlockReqText, themeUnlockToastTe
 import { play as playSfx } from '../tgSfx.js';
 import { Reveal, CoachBubble, ShakeButton } from './shared.jsx';
 
-const CARD_W = 280, CARD_H = 392, GAP = 16, ROW_TOP = 206;
+const CARD_W = 280, CARD_H = 392, GAP = 16;
 // 스크롤 컨테이너 세로 패딩 — overflowY:hidden(가로 스크롤 강제)이 카드 그림자를 자르지 않게 여유 확보.
 const PAD_TOP = 12, PAD_BOTTOM = 22;
 
@@ -78,41 +78,45 @@ export function ThemeScreen({ themes, studentToken, counts = {}, onStart, onBack
           <span style={{ fontFamily: FONT_TITLE, fontSize: 22, color: '#2b2730' }}>테마 선택</span>
         </div>
       </Reveal>
-      {/* 코치 말풍선 */}
-      <Reveal i={1} style={{ position: 'absolute', left: 24, right: 24, top: 120 }}>
-        <CoachBubble text="어떤 테마로 즐겨볼까요?" />
-      </Reveal>
-      {/* 카드 가로 스냅스크롤 (항상 중앙 스냅 · 양옆 peek) */}
-      <div onScroll={onScroll} className="tg-noscroll" style={{
-        position: 'absolute', left: 0, right: 0, top: ROW_TOP, display: 'flex', gap: GAP,
-        paddingTop: PAD_TOP, paddingBottom: PAD_BOTTOM, paddingLeft: sidePad, paddingRight: sidePad,
-        overflowX: 'auto', overflowY: 'hidden', scrollSnapType: 'x mandatory',
-        WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none',
-      }}>
-        {themes.map((t) => {
-          const unlocked = isThemeUnlocked(studentToken, t);
-          return (
-            <ShakeButton key={t.id} shakeOnClick={!unlocked}
-              onClick={() => { if (unlocked) { playSfx('button'); onStart(t); } else if (onLocked) onLocked(themeUnlockToastText(t)); }}
-              className={unlocked ? 'tg-press' : ''}
-              style={{
-                flex: `0 0 ${CARD_W}px`, width: CARD_W, height: CARD_H, scrollSnapAlign: 'center',
-                position: 'relative', borderRadius: 24, overflow: 'hidden', padding: 0, border: 'none',
-                cursor: 'pointer', background: t.tint || '#eee', boxShadow: '0 5px 14px rgba(43,39,48,0.10)', ...TOUCH_OPT,
-              }}>
-              <ThemeCard theme={t} unlocked={unlocked} best={themeBestScore(studentToken, t.gameKey)} count={counts[t.id] || 0} />
-            </ShakeButton>
-          );
-        })}
-      </div>
-      {/* 페이지 닷 + 스크롤 힌트 */}
-      <div style={{ position: 'absolute', left: 0, right: 0, top: ROW_TOP + PAD_TOP + CARD_H + PAD_BOTTOM + 10, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
-        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-          {themes.map((t, i) => (
-            <div key={t.id} style={{ width: i === active ? 20 : 6, height: 6, borderRadius: 3, background: i === active ? TG.CORAL_DK : '#d8d2ca', transition: `all ${DUR.state} ease` }} />
-          ))}
+      {/* 코치+카드+닷/힌트 = 헤더 아래 공간에 세로 중앙정렬. 단 중앙정렬 영역을 모바일 높이(≤680)로 캡 —
+          모바일은 화면이 꽉 차 중앙정렬로 균형, 웹처럼 긴 화면은 상단 영역에 안정적으로 앉고 아래만 여백(가운데 붕 뜨는 것 방지). */}
+      <div style={{ position: 'absolute', left: 0, right: 0, top: 72, height: 'min(calc(100% - 72px), 680px)', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 20 }}>
+        {/* 코치 말풍선 */}
+        <Reveal i={1} style={{ paddingLeft: 24, paddingRight: 24 }}>
+          <CoachBubble text="어떤 테마로 즐겨볼까요?" />
+        </Reveal>
+        {/* 카드 가로 스냅스크롤 (항상 중앙 스냅 · 양옆 peek) */}
+        <div onScroll={onScroll} className="tg-noscroll" style={{
+          display: 'flex', gap: GAP, flexShrink: 0,
+          paddingTop: PAD_TOP, paddingBottom: PAD_BOTTOM, paddingLeft: sidePad, paddingRight: sidePad,
+          overflowX: 'auto', overflowY: 'hidden', scrollSnapType: 'x mandatory',
+          WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none',
+        }}>
+          {themes.map((t) => {
+            const unlocked = isThemeUnlocked(studentToken, t);
+            return (
+              <ShakeButton key={t.id} shakeOnClick={!unlocked}
+                onClick={() => { if (unlocked) { playSfx('button'); onStart(t); } else if (onLocked) onLocked(themeUnlockToastText(t)); }}
+                className={unlocked ? 'tg-press' : ''}
+                style={{
+                  flex: `0 0 ${CARD_W}px`, width: CARD_W, height: CARD_H, scrollSnapAlign: 'center',
+                  position: 'relative', borderRadius: 24, overflow: 'hidden', padding: 0, border: 'none',
+                  cursor: 'pointer', background: t.tint || '#eee', boxShadow: '0 5px 14px rgba(43,39,48,0.10)', ...TOUCH_OPT,
+                }}>
+                <ThemeCard theme={t} unlocked={unlocked} best={themeBestScore(studentToken, t.gameKey)} count={counts[t.id] || 0} />
+              </ShakeButton>
+            );
+          })}
         </div>
-        <span style={{ fontFamily: FONT_BODY, fontWeight: 500, fontSize: 12.5, color: TG.SUB }}>옆으로 넘겨 테마를 골라보세요</span>
+        {/* 페이지 닷 + 스크롤 힌트 */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            {themes.map((t, i) => (
+              <div key={t.id} style={{ width: i === active ? 20 : 6, height: 6, borderRadius: 3, background: i === active ? TG.CORAL_DK : '#d8d2ca', transition: `all ${DUR.state} ease` }} />
+            ))}
+          </div>
+          <span style={{ fontFamily: FONT_BODY, fontWeight: 500, fontSize: 12.5, color: TG.SUB }}>옆으로 넘겨 테마를 골라보세요</span>
+        </div>
       </div>
     </>
   );
