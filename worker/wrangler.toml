@@ -7,10 +7,13 @@ ALLOWED_ORIGIN = "https://hisyisnis-lgtm.github.io"
 LESSON_TYPE_PAGE_ID = "314838fa-f2a6-8070-82ad-e2494a9d7281"
 
 # 게임 이벤트 측정(유입 깔때기) — POST /game/event → Analytics Engine.
-# 대시보드 없이 SQL API로 조회: https://developers.cloudflare.com/analytics/analytics-engine/
-[[analytics_engine_datasets]]
-binding = "GAME_AE"
-dataset = "tone_game_events"
+# ⚠️ 비활성(2026-07-04): 계정에 Analytics Engine 미활성(deploy code 10089)이라 바인딩을 두면 워커 배포 전체가 막힌다.
+#   /game/event 라우트는 `env.GAME_AE?.writeDataPoint`로 가드돼 바인딩 없이도 안전(200 no-op).
+#   활성화 절차: ① Cloudflare 대시보드 Workers→Analytics Engine 활성화 ② 아래 3줄 주석 해제 ③ wrangler deploy.
+#   대시보드 없이 SQL API로 조회: https://developers.cloudflare.com/analytics/analytics-engine/
+# [[analytics_engine_datasets]]
+# binding = "GAME_AE"
+# dataset = "tone_game_events"
 
 # NOTION_TOKEN은 아래 명령으로 등록 (이 파일에 직접 기입 금지)
 # npx wrangler secret put NOTION_TOKEN
