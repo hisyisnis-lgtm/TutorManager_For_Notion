@@ -3,15 +3,14 @@ import { CaretLeftIcon, SpeakerHighIcon, PlayIcon } from '@phosphor-icons/react'
 import { TG, FONT_TITLE, FONT_HANZI, FONT_BODY, FONT_NUM, FONT_PINYIN, TOUCH_OPT } from '../tgTokens.js';
 import { ROUND_LENGTH } from '../../constants/toneGameWords.js';
 import { TONE_NUMS, toneAccuracy, toneAttempts } from '../toneStats.js';
-import { earTier, EAR_TIERS } from '../earProfile.js';
+import { earTier, EAR_TIERS, TIER_SPARK_POS as PARTICLE_POS } from '../earProfile.js';
 import { speakWord } from '../tgTts.js';
 import { play as playSfx } from '../tgSfx.js';
 import { Reveal, CoachBubble } from './shared.jsx';
 
 function masteryColor(acc) { return acc >= 0.8 ? TG.SUCCESS_GLOW : acc >= 0.5 ? TG.SUN : TG.CORAL; }
 
-// 엠블럼 주변 반짝임 위치 [중심대비 dx, dy, 크기] — 단계 particles 수만큼 앞에서부터 사용
-const PARTICLE_POS = [[-92, -28, 13], [86, -42, 10], [-100, 42, 9], [96, 30, 12], [4, -84, 11], [-58, 76, 9], [72, 70, 10]];
+// 엠블럼 주변 반짝임 위치 = earProfile.TIER_SPARK_POS(RankUpReveal과 공용 — 좌표는 거기 한 곳에서)
 
 // ── 성조 레이더(P2) — 성조별 정답률 5각형. toneStats(1·2·3·4·경성)로 데이터 폴리곤을 그림 ──
 const RADAR = { cx: 100, cy: 80, R: 52 };

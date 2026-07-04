@@ -21,6 +21,10 @@ export function earTier(mastered = 0) {
   return { idx, name: cur.name, emblem: cur.emblem, glow: cur.glow, spark: cur.spark, particles: cur.particles, next, toNext, progress, mastered, isMax: !next };
 }
 
+// 엠블럼 주변 반짝임 위치 [중심대비 dx, dy, 크기] — 단계 particles 수만큼 앞에서부터 사용.
+// MasteryScreen 히어로·RankUpReveal 공용(중복 정의 금지 — 좌표 조정은 여기 한 곳).
+export const TIER_SPARK_POS = [[-92, -28, 13], [86, -42, 10], [-100, 42, 9], [96, 30, 12], [4, -84, 11], [-58, 76, 9], [72, 70, 10]];
+
 // ── 최고 등급 기록(peak) — 이것만은 오르기만 함. 강등돼도 성취의 기억은 보존("최고 골드 · 현재 실버") ──
 function tierPeakKey(token) { return token ? `game_tier_peak_${token}` : 'game_tier_peak'; }
 export function loadTierPeak(token) {

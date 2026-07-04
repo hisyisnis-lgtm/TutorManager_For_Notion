@@ -7,12 +7,12 @@ import { useEffect, useState } from 'react';
 import { FONT_TITLE, FONT_BODY, haptic } from '../tgTokens.js';
 
 // 종료 사유별 헤드라인 + 원인 한 줄 — 압박 아닌 격려 톤이되, 왜 끝났는지 분명히.
-// complete=모든 문제 완료(정상) · timeout=시간 초과 · miss=무한 서든데스 오답 종료 · lives=예비(현재 미사용)
+// complete=모든 문제 완료(정상) · timeout=시간 초과 · miss=무한 서든데스 오답 종료
+// ('lives'는 서든데스 전환으로 폐기 — 하트=건너뛰기 예산이라 소진해도 게임오버 아님)
 const END = {
   complete: { title: '수고했어요!', reason: '모든 문제를 마쳤어요' },
   timeout: { title: '시간 종료!', reason: '시간 안에 풀지 못했어요' },
   miss: { title: '아쉬워요!', reason: '틀려서 게임이 끝났어요' },
-  lives: { title: '아쉬워요!', reason: '기회를 모두 사용했어요' },
 };
 
 export function GameOverBeat({ endKind = 'complete', onDone, hold = false }) {

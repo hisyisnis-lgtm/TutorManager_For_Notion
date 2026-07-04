@@ -44,9 +44,16 @@ export default function CoachMarkOverlay({ steps, visible, onDone, delay = 350, 
   const [alpha, setAlpha]     = useState(0);   // 페이드 opacity
   const stepRef = useRef(0);                   // 첫 스텝 보정 재측정 가드용
 
-  // visible → true 시 마운트 + fade-in
+  // visible → true 시 마운트 + fade-in / visible → false 시(표시 중이었다면) 페이드아웃 후 언마운트.
+  // ★false 처리 필수: 게임 결과화면처럼 표시 '후' 다른 오버레이(업적 축하 등)가 떠서 visible이 꺼지는 경우
+  //   이전엔 mounted가 남아 계속 겹쳐 보였음. onDone은 호출 안 함(소비 아님 — visible 재점등 시 처음부터 재표시).
   useEffect(() => {
-    if (!visible) return;
+    if (!visible) {
+      if (!mounted) return undefined;
+      setAlpha(0);
+      const t = setTimeout(() => { setMounted(false); setStep(0); setRect(null); }, 220);
+      return () => clearTimeout(t);
+    }
     setStep(0);
     stepRef.current = 0;
     setAlpha(0);
