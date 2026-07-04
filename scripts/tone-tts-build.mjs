@@ -23,6 +23,16 @@ const OUT_DIR = path.join(ROOT, 'pwa', 'public', 'game', 'tts');
 const VOICE = 'zh-CN-XiaoxiaoNeural';
 const FORCE = process.argv.includes('--force');
 
+// <voice> 내부 SSML을 감싸는 래퍼(override 전용).
+const WRAP = (inner) => `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="https://www.w3.org/2001/mstts" xml:lang="zh-CN"><voice name="${VOICE}">${inner}</voice></speak>`;
+
+// 단어별 SSML override(slug 기준) — 엔진 기본 읽기가 성조/억양을 틀리게 낼 때만 최소 사용. 화자는 VOICE 그대로.
+// 값 = <voice> 내부 SSML.  ⚠️ 무료 Edge 제약: 인라인 <prosody> "한 겹"만 허용(이중 중첩·contour는 빈 음성으로 거부됨).
+const OVERRIDES = {
+  // 妈妈: Xiaoxiao가 둘째 음절(경성)을 '엄마!' 부르는 억양으로 올려 읽음 → 경성 음절 피치를 낮춰 하강 교정.
+  mama_10: '妈<prosody pitch="-50%">妈</prosody>',
+};
+
 // 생성 대상 수집 — 데이터 전 단어 + 튜토리얼 단어. slug 기준 dedup(동음이의어=발음 동일=파일 공유).
 function collectWords() {
   const data = JSON.parse(fs.readFileSync(DATA_PATH, 'utf8'));
@@ -39,12 +49,13 @@ function collectWords() {
 let MsEdgeTTS, OUTPUT_FORMAT, tts = null;
 async function initTts() { tts = new MsEdgeTTS(); await tts.setMetadata(VOICE, OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3); }
 
-function synthOnce(text) {
+// ssml(override)이 있으면 rawToStream, 없으면 한자 텍스트를 toStream.
+function synthOnce(text, ssml) {
   return new Promise((resolve, reject) => {
     let done = false;
     const chunks = [];
     const timer = setTimeout(() => { if (!done) { done = true; reject(new Error('timeout')); } }, 20000);
-    const { audioStream } = tts.toStream(text);
+    const { audioStream } = ssml ? tts.rawToStream(WRAP(ssml)) : tts.toStream(text);
     audioStream.on('data', (c) => chunks.push(c));
     audioStream.on('end', () => { if (done) return; done = true; clearTimeout(timer); resolve(Buffer.concat(chunks)); });
     audioStream.on('error', (e) => { if (done) return; done = true; clearTimeout(timer); reject(e); });
@@ -52,9 +63,9 @@ function synthOnce(text) {
 }
 
 // 실패 시 클라이언트 재초기화 후 1회 재시도(WebSocket 유휴 종료 등 대비)
-async function synth(text) {
-  try { return await synthOnce(text); }
-  catch { await initTts(); return await synthOnce(text); }
+async function synth(text, ssml) {
+  try { return await synthOnce(text, ssml); }
+  catch { await initTts(); return await synthOnce(text, ssml); }
 }
 
 async function main() {
@@ -80,7 +91,7 @@ async function main() {
   const failed = [];
   for (const [slug, hanzi] of todo) {
     try {
-      const buf = await synth(hanzi);
+      const buf = await synth(hanzi, OVERRIDES[slug]);
       if (!buf || buf.length < 200) throw new Error(`빈 음성(${buf ? buf.length : 0}B)`);
       fs.writeFileSync(path.join(OUT_DIR, `${slug}.mp3`), buf);
       generated++;

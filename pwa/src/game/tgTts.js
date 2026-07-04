@@ -5,14 +5,38 @@
 
 let zhVoice = null;
 
+// 성조 정확도의 최대 변수 = "어떤 중국어 음성을 고르느냐".
+// 로컬 저품질 음성(윈도우 Huihui 등)은 성조가 평평/부정확 → 온라인·신경망 음성을 점수제로 우선.
+function scoreZhVoice(v) {
+  const lang = (v.lang || '').toLowerCase();
+  const name = v.name || '';
+  let s = 0;
+  // 1) 언어 — 표준 만다린(zh-CN / cmn-Hans) 최우선. 광둥어(zh-HK/yue)는 성조 체계가 달라 제외.
+  if (/(yue|zh[-_]?hk|zh[-_]?yue|cantonese|粤|廣東|广东)/i.test(`${lang} ${name}`)) return -1;
+  if (/^zh[-_]?cn/.test(lang) || /^cmn[-_]?hans/.test(lang) || /^cmn$/.test(lang)) s += 100;
+  else if (/^cmn/.test(lang)) s += 80;
+  else if (/^zh/.test(lang)) s += 40; // zh-TW 등 — 만다린이나 발음차 있어 후순위
+  else if (/chinese|mandarin|普通话|中文|国语|國語/i.test(name)) s += 30; // 이름 기반(lang 미표기 엔진)
+  else return -1; // 중국어 아님
+  // 2) 품질 — 온라인/신경망 우선(대개 성조 정확), 알려진 저품질 로컬 회피.
+  if (v.localService === false) s += 25;                               // 온라인 음성(구글 등) = 고품질 경향
+  if (/google/i.test(name)) s += 15;
+  if (/neural|natural|premium|enhanced|online/i.test(name)) s += 12;
+  if (/xiaoxiao|xiaoyi|yunxi|yunyang|yunjian|晓晓|云希/i.test(name)) s += 8; // 알려진 신경망 화자
+  if (/huihui|kangkang|yaoyao/i.test(name)) s -= 6;                    // 알려진 저품질 로컬 회피
+  return s;
+}
+
 function pickZhVoice() {
   try {
     const voices = window.speechSynthesis?.getVoices?.() || [];
-    zhVoice = voices.find((v) => /^zh[-_]?CN/i.test(v.lang))         // zh-CN(표준)
-      || voices.find((v) => /^zh/i.test(v.lang))                     // 기타 zh(zh-TW 등)
-      || voices.find((v) => /^cmn/i.test(v.lang))                    // 일부 엔진은 'cmn'(만다린 BCP-47)
-      || voices.find((v) => /chinese|mandarin|普通话|中文|国语/i.test(v.name)) // 이름 기반 매칭
-      || null;
+    let best = null;
+    let bestScore = -1;
+    for (const v of voices) {
+      const s = scoreZhVoice(v);
+      if (s > bestScore) { bestScore = s; best = v; }
+    }
+    zhVoice = bestScore >= 0 ? best : null;
   } catch { /* noop */ }
 }
 
