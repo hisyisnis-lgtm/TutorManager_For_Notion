@@ -63,7 +63,7 @@ export function TitleScreen({ onStart, onClose }) {
         </button>
 
         {/* 타이틀 로고 (상단) */}
-        <div style={{ position: 'absolute', top: '11%', left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: 344, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <div style={{ position: 'absolute', top: '11%', left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: 300, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           <div style={{ position: 'relative', width: '100%' }}>
             <img src={ASSETS.startTitle} alt="성조 빨리찾기" style={{ position: 'relative', zIndex: 1, display: 'block', width: '100%', height: 'auto', objectFit: 'contain', animation: 'tg-logo-pop .7s cubic-bezier(.34,1.56,.64,1) both' }} />
             <div style={{ position: 'absolute', inset: 0, zIndex: 2, pointerEvents: 'none',

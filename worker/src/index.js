@@ -11,6 +11,7 @@ import {
   MyClassesQuerySchema,
   GameKeySchema,
   GameResultSchema,
+  GameEventSchema,
   StudentAuthRequestSchema,
   StudentAuthVerifySchema,
 } from '../lib/schemas.js';
@@ -2302,6 +2303,23 @@ async function handleGameRoutes(request, env, corsHeaders, url) {
   // ※ GET /game/tone-words/:difficulty 라우트는 제거됨 (2026-06-10).
   //   단어 풀의 단일 출처가 data/tone-words.csv → 빌드 시 PWA 번들에 포함되도록 전환.
   //   더 이상 워커가 Notion 단어 DB를 조회하지 않는다. (PWA는 fetchToneWords 로컬 반환)
+
+  // POST /game/event — 게임 이벤트 카운터(유입 깔때기 측정) → Workers Analytics Engine(GAME_AE).
+  // 익명(PII 없음)·fire-and-forget. 바인딩 미설정이면 no-op으로 ok(클라이언트는 결과에 무관심).
+  // rate limit은 handleGameRoutes 상단 IP당 60/분을 공유(이벤트는 세션당 ~10건 수준).
+  if (url.pathname === '/game/event' && request.method === 'POST') {
+    const body = await request.json().catch(() => null);
+    const parsed = GameEventSchema.safeParse(body);
+    if (!parsed.success) return errRes(corsHeaders, 400, '잘못된 이벤트입니다.');
+    try {
+      env.GAME_AE?.writeDataPoint({
+        blobs: [parsed.data.e, parsed.data.m || '', parsed.data.src || '', parsed.data.k || ''],
+        doubles: [typeof parsed.data.v === 'number' ? parsed.data.v : 0],
+        indexes: [parsed.data.e],
+      });
+    } catch { /* 측정 실패는 무시 — 게임에 영향 없음 */ }
+    return new Response(JSON.stringify({ ok: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+  }
 
   // ===== 게임 계정(독립실행) — 휴대폰 OTP 회원가입/로그인 + 게임데이터 =====
   // POST /game/auth/otp — 휴대폰 → SMS 인증번호 발송

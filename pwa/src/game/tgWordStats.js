@@ -1,14 +1,17 @@
 // 단어별 숙련도 통계 — 무실수 정답률 + 평균 반응속도.
 // 하이브리드 저장: localStorage 글로벌(표시·복습선정의 source) + 난이도별 게임기록 meta.w 동기화(영구).
-// entry 형식(압축): [attempts, perfect, totalCompletedMs, completedCount]
+// entry 형식(압축): [attempts, perfect, totalCompletedMs, completedCount, mastered?]
 //   attempts        : 단어가 등장해 끝난(완료/시간초과) 횟수
 //   perfect         : 무실수 클리어(오답·시간초과 없이 한 번에) 횟수
 //   totalCompletedMs: 시간초과 아닌 완료들의 소요시간 합
 //   completedCount  : 시간초과 아닌 완료 횟수 (평균속도 분모)
-// 참조 메모리: tone_game_redesign.md (단어 숙련도/복습)
+//   mastered        : ★마스터 플래그(0/1, 히스테리시스 — 2026-07-04 등급 강등 도입). 진입 ≥80%, 해제는 <60%로
+//                     떨어질 때만 → 경계(80%) 걸친 단어의 등급 요요 방지. 레거시 4튜플은 첫 기록 때 기존 규칙으로 시드.
+// 참조 메모리: tone_game_redesign.md (단어 숙련도/복습 · 등급 강등)
 
-export const MASTER_MIN_ATTEMPTS = 2;   // 마스터 판정 최소 시도수(1회 우연 100% 방지)
-export const MASTER_ACCURACY = 0.8;     // 마스터 판정 정답률 기준
+export const MASTER_MIN_ATTEMPTS = 2;      // 마스터 판정 최소 시도수(1회 우연 100% 방지)
+export const MASTER_ACCURACY = 0.8;        // 마스터 '진입' 정답률 기준
+export const MASTER_EXIT_ACCURACY = 0.6;   // 마스터 '해제' 정답률(진입보다 낮게 — 히스테리시스)
 
 function statsKey(token) { return token ? `game_words_${token}` : 'game_words'; }
 
@@ -20,19 +23,31 @@ export function saveWordStats(token, stats) {
   try { localStorage.setItem(statsKey(token), JSON.stringify(stats)); } catch { /* quota 등 무시 */ }
 }
 
-// 한 단어 결과 1건 반영(글로벌 stats를 직접 변형 후 반환).
+// 한 단어 결과 1건 반영(글로벌 stats를 직접 변형 후 반환). 마스터 플래그(히스테리시스)도 여기서 갱신.
 export function recordWordResult(stats, hanzi, { perfect, timedOut, ms }) {
   const e = stats[hanzi] ? [...stats[hanzi]] : [0, 0, 0, 0];
+  // 이번 결과 반영 '전' 마스터 상태 — 레거시 4튜플은 기존 규칙(누적 ≥80%)으로 시드(자동 마이그레이션)
+  const prevMastered = e.length > 4 && typeof e[4] === 'number'
+    ? !!e[4]
+    : (e[0] >= MASTER_MIN_ATTEMPTS && (e[0] > 0 ? e[1] / e[0] : 0) >= MASTER_ACCURACY);
   e[0] += 1;
   if (perfect) e[1] += 1;
   if (!timedOut) { e[2] += Math.max(0, Math.round(ms || 0)); e[3] += 1; }
+  const acc = e[1] / e[0];
+  // 히스테리시스: 미마스터→진입은 ≥80%(시도 2+), 마스터→해제는 <60%일 때만(그 사이 60~80%는 현상 유지)
+  e[4] = (prevMastered ? acc >= MASTER_EXIT_ACCURACY : (e[0] >= MASTER_MIN_ATTEMPTS && acc >= MASTER_ACCURACY)) ? 1 : 0;
   stats[hanzi] = e;
   return stats;
 }
 
 export function accuracy(e) { return e && e[0] > 0 ? e[1] / e[0] : 0; }
 export function avgMs(e) { return e && e[3] > 0 ? e[2] / e[3] : 0; }
-export function isMastered(e) { return !!e && e[0] >= MASTER_MIN_ATTEMPTS && accuracy(e) >= MASTER_ACCURACY; }
+// 마스터 판정 — 플래그(히스테리시스) 우선, 플래그 없는 레거시 항목은 기존 규칙 폴백
+export function isMastered(e) {
+  if (!e) return false;
+  if (e.length > 4 && typeof e[4] === 'number') return !!e[4];
+  return e[0] >= MASTER_MIN_ATTEMPTS && accuracy(e) >= MASTER_ACCURACY;
+}
 // 리스트 노출 대상: 시도 1+ 이고 정답률 80% 미만(= 아직 약한 단어)
 export function needsReview(e) { return !!e && e[0] > 0 && accuracy(e) < MASTER_ACCURACY; }
 

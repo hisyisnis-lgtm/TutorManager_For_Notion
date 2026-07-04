@@ -39,6 +39,8 @@ export const ACHIEVEMENTS = [
     check: (s) => (s.streakLongest || 0) >= 30 },
   { id: 'tone-master', label: '성조 감별사', desc: '모든 성조 정답률 90% 이상', cond: '모든 성조 정답률 90%를 넘으면 얻어요', icon: 'Waveform',
     check: (s) => allTonesAbove(s.toneStats || {}, 0.9, 5) },
+  { id: 'review-master-5', label: '복습의 힘', desc: '복습으로 5단어를 마스터했어요', cond: '복습 모드에서 단어 5개를 마스터하면 얻어요', icon: 'ArrowsClockwise',
+    check: (s) => (s.reviewMastered || 0) >= 5 },
 ];
 
 const BY_ID = Object.fromEntries(ACHIEVEMENTS.map((a) => [a.id, a]));
@@ -63,6 +65,18 @@ export function loadAchievements(token) {
 }
 export function saveAchievements(token, ids) {
   try { localStorage.setItem(achKey(token), JSON.stringify(ids || [])); } catch { /* 무시 */ }
+}
+
+// ── 복습 성과 카운터 — 복습 런에서 새로 마스터된 단어 수 누적(업적 '복습의 힘'의 데이터) ──
+function reviewMasteredKey(token) { return token ? `game_review_mastered_${token}` : 'game_review_mastered'; }
+export function loadReviewMastered(token) {
+  try { const n = parseInt(localStorage.getItem(reviewMasteredKey(token)) || '0', 10); return Number.isFinite(n) && n > 0 ? n : 0; }
+  catch { return 0; }
+}
+export function addReviewMastered(token, delta) {
+  const next = loadReviewMastered(token) + Math.max(0, delta | 0);
+  try { localStorage.setItem(reviewMasteredKey(token), String(next)); } catch { /* 무시 */ }
+  return next;
 }
 
 // 달성 평가 → 저장. 새로 달성한 목록 반환(없으면 빈 배열). 저장은 누적 합집합.

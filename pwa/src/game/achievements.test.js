@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import {
   ACHIEVEMENTS, achievementById, evaluateAchievements, newlyUnlocked,
   loadAchievements, saveAchievements, syncAchievements,
+  loadReviewMastered, addReviewMastered,
 } from './achievements.js';
 import { TONE_NUMS } from './toneStats.js';
 
@@ -62,6 +63,28 @@ describe('evaluateAchievements — 스냅샷 판정', () => {
     expect(evaluateAchievements({ toneStats: perfectTones() })).toContain('tone-master');
     const weak = perfectTones(); weak[3] = [6, 10]; // 3성 60%
     expect(evaluateAchievements({ toneStats: weak })).not.toContain('tone-master');
+  });
+
+  it('복습의 힘 — 복습으로 마스터한 단어 5개 누적', () => {
+    expect(evaluateAchievements({ reviewMastered: 5 })).toContain('review-master-5');
+    expect(evaluateAchievements({ reviewMastered: 4 })).not.toContain('review-master-5');
+  });
+});
+
+describe('복습 성과 카운터 — loadReviewMastered / addReviewMastered', () => {
+  it('초기 0, 증가분 누적', () => {
+    expect(loadReviewMastered('u')).toBe(0);
+    expect(addReviewMastered('u', 2)).toBe(2);
+    expect(addReviewMastered('u', 3)).toBe(5);
+    expect(loadReviewMastered('u')).toBe(5);
+  });
+  it('음수·소수 증가분은 무시(0으로 클램프·정수화)', () => {
+    addReviewMastered('u', -3);
+    expect(loadReviewMastered('u')).toBe(0);
+  });
+  it('깨진 저장값은 0으로', () => {
+    localStorage.setItem('game_review_mastered_u', 'abc');
+    expect(loadReviewMastered('u')).toBe(0);
   });
 });
 

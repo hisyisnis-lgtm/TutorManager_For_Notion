@@ -122,3 +122,17 @@ export const GameResultSchema = z.object({
   meta: z.record(z.any()).optional()
     .refine((m) => m == null || JSON.stringify(m).length <= 1800, { message: 'meta가 너무 큽니다' }),
 }).strip();
+
+/**
+ * POST /game/event body — 게임 이벤트 카운터(유입 깔때기 측정, Workers Analytics Engine).
+ * 익명 설계: PII 필드 자체가 없음(전화·토큰·이름 금지). 선택 필드는 .nullish()(클라가 빈값을 null로 보냄).
+ */
+export const GameEventSchema = z.object({
+  e: z.enum(['enter', 'run_start', 'run_end', 'onboarding_done', 'cta_play_link', 'login_success'], {
+    errorMap: () => ({ message: '알 수 없는 이벤트입니다' }),
+  }),
+  m: z.string().max(24).nullish(),   // 모드·채널 등 부가 라벨 (예: easy/endless/drama, insta/youtube)
+  src: z.string().max(16).nullish(), // 유입 소스: web | standalone | twa | ios (스토어 출시 대비)
+  k: z.string().max(10).nullish(),   // 신원 종류: guest | member | student
+  v: z.number().finite().nullish(),  // 수치(선택, 예: run_end 점수)
+}).strip();

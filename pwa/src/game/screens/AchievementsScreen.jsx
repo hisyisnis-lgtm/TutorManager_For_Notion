@@ -3,6 +3,7 @@
 import {
   CaretLeftIcon, FootprintsIcon, TrophyIcon, FlameIcon, FireSimpleIcon, RocketIcon, CrownIcon,
   InfinityIcon, BookmarkSimpleIcon, BooksIcon, CalendarCheckIcon, CalendarHeartIcon, CalendarDotsIcon, FireIcon, WaveformIcon,
+  ArrowsClockwiseIcon,
 } from '@phosphor-icons/react';
 import { TG, FONT_TITLE, FONT_BODY, TOUCH_OPT } from '../tgTokens.js';
 import { ACHIEVEMENTS } from '../achievements.js';
@@ -13,7 +14,7 @@ const ACH_ICONS = {
   Footprints: FootprintsIcon, Trophy: TrophyIcon, Flame: FlameIcon, FireSimple: FireSimpleIcon,
   Rocket: RocketIcon, Crown: CrownIcon, Infinity: InfinityIcon, BookmarkSimple: BookmarkSimpleIcon,
   Books: BooksIcon, CalendarCheck: CalendarCheckIcon, CalendarHeart: CalendarHeartIcon,
-  CalendarDots: CalendarDotsIcon, Fire: FireIcon, Waveform: WaveformIcon,
+  CalendarDots: CalendarDotsIcon, Fire: FireIcon, Waveform: WaveformIcon, ArrowsClockwise: ArrowsClockwiseIcon,
 };
 
 const EARNED_BG = '#fff6e8';   // 따뜻한 금색 틴트(획득)

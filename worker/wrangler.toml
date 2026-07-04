@@ -6,5 +6,11 @@ compatibility_date = "2026-04-27"
 ALLOWED_ORIGIN = "https://hisyisnis-lgtm.github.io"
 LESSON_TYPE_PAGE_ID = "314838fa-f2a6-8070-82ad-e2494a9d7281"
 
+# 게임 이벤트 측정(유입 깔때기) — POST /game/event → Analytics Engine.
+# 대시보드 없이 SQL API로 조회: https://developers.cloudflare.com/analytics/analytics-engine/
+[[analytics_engine_datasets]]
+binding = "GAME_AE"
+dataset = "tone_game_events"
+
 # NOTION_TOKEN은 아래 명령으로 등록 (이 파일에 직접 기입 금지)
 # npx wrangler secret put NOTION_TOKEN

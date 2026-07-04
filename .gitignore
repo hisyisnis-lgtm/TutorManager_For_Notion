@@ -5,6 +5,8 @@
 # PWA 빌드 산출물 (GitHub Actions에서 자동 생성)
 pwa/dist/
 pwa/node_modules/
+# 루트 node_modules (msedge-tts 등 스크립트용 — 실수 커밋 방지)
+node_modules/
 
 # Worker
 worker/node_modules/

@@ -3,7 +3,7 @@ import { TrophyIcon, ArrowClockwiseIcon, LightningIcon } from '@phosphor-icons/r
 import { TG, FONT_NUM, FONT_BODY, TOUCH_OPT, pickCelebratePanda } from '../tgTokens.js';
 import { useCountUp, FlameIcon } from '../tgWidgets.jsx';
 import { play as playSfx } from '../tgSfx.js';
-import { Reveal, CoachBubble } from './shared.jsx';
+import { Reveal, CoachBubble, ConfettiBurst, CrispFlash, LIGHT_CONFETTI } from './shared.jsx';
 import CoachMarkOverlay from '../../components/ui/CoachMarkOverlay.jsx';
 import { useTabTip } from '../../hooks/useTabTip.js';
 
@@ -35,6 +35,10 @@ export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, 
   const tip = useTabTip('game-result', !practice);
   return (
     <>
+      {/* 신기록 축하 파티클 — 성취 순간만(실패/시간초과엔 미표시). 상단 판다/배지 위에서 색색 조각이 터져 낙하 */}
+      {isNewBest && !practice && <CrispFlash color="rgba(255,255,255,0.6)" zIndex={7} />}
+      {isNewBest && !practice && <ConfettiBurst count={32} power={1.35} size={10} zIndex={3} style={{ top: 150 }} />}
+      {isNewBest && !practice && <ConfettiBurst colors={LIGHT_CONFETTI} count={16} power={1.3} size={6} zIndex={3} style={{ top: 150 }} />}
       {/* 신기록 배지 (중앙) */}
       {isNewBest && (
         <Reveal i={0} style={{ position: 'absolute', top: 36, left: '50%', transform: 'translateX(-50%)' }}>
@@ -84,7 +88,7 @@ export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, 
       </Reveal>
       {/* 코치 — 통계카드 하단(440)과 다시 도전 CTA 사이 가용공간에 가두고 세로 중앙(짧은 화면·사파리 툴바서도 통계·CTA 양쪽과 겹침 방지) */}
       <Reveal i={4} style={{ position: 'absolute', left: 24, right: 24, top: 452, bottom: 'calc(150px + env(safe-area-inset-bottom))', display: 'flex', alignItems: 'center' }}>
-        <CoachBubble text={practice ? '잘했어요! 또 연습해볼까요?' : endReason === 'lives' ? '하트를 다 썼어요! 다시 도전해볼까요?' : '다시 도전해서 신기록을 깨볼까요?'} />
+        <CoachBubble text={practice ? '잘했어요! 또 연습해볼까요?' : endReason === 'miss' ? '아쉽게 틀렸어요! 다시 도전해볼까요?' : endReason === 'lives' ? '하트를 다 썼어요! 다시 도전해볼까요?' : '다시 도전해서 신기록을 깨볼까요?'} />
       </Reveal>
       {/* 다시 도전 (하단 고정) — 최하단 '난이도 바꾸기' 위 */}
       <Reveal i={5} style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(80px + env(safe-area-inset-bottom))' }}>

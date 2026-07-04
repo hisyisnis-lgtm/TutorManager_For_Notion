@@ -1,9 +1,10 @@
 // 게임 공용 모달 — 놀러가기(SNS)·[DEV]점수 디버그. 시작/홈 등 여러 화면에서 재사용.
 // (기존 StartScreen.jsx 내부 함수에서 추출)
 import { useState } from 'react';
-import { HandWavingIcon, InstagramLogoIcon, YoutubeLogoIcon, ArticleIcon, CaretRightIcon, ArrowsClockwiseIcon, PlayIcon } from '@phosphor-icons/react';
+import { HandWavingIcon, InstagramLogoIcon, YoutubeLogoIcon, ArticleIcon, CaretRightIcon, ArrowsClockwiseIcon, PlayIcon, InfinityIcon, StarIcon } from '@phosphor-icons/react';
 import { TG, FONT_TITLE, FONT_BODY, FONT_NUM, SHADOW, TOUCH_OPT, loadBest, saveBest } from '../tgTokens.js';
 import { GAMEKEY, loadEndlessBest, saveEndlessBest } from '../gameLogic.js';
+import { track } from '../gameAnalytics.js';
 
 // 복습 시작 모달 — 모드선택 '복습' 탭 시. 복습이 뭔지 짧게 안내 + [게임 시작] 눌러야 진입.
 // count=복습할 단어 수. 기록 미반영(startReview에서 recordToBeat=0).
@@ -38,16 +39,55 @@ export function ReviewStartModal({ count = 0, onStart, onClose }) {
   );
 }
 
+// 무한 시작 모달 — 모드선택 '무한' 카드 시. 서든데스·건너뛰기 규칙 안내 + 최고점 + [게임 시작] 눌러야 진입.
+export function EndlessStartModal({ best = 0, onStart, onClose }) {
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(26,16,20,0.55)', backdropFilter: 'blur(2px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, ...TOUCH_OPT }}>
+      <div className="tg-enter" onClick={(e) => e.stopPropagation()} style={{
+        width: '100%', maxWidth: 322, background: TG.CARD, borderRadius: 28, padding: '28px 24px 20px',
+        boxShadow: '0 20px 50px rgba(26,16,20,0.3)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16,
+      }}>
+        <div style={{ width: 72, height: 72, borderRadius: 24, background: 'linear-gradient(135deg,#ffcf5b,#F0A91E)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 10px 26px rgba(240,169,30,0.4)' }}>
+          <InfinityIcon size={40} weight="bold" color="#fff" />
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, textAlign: 'center', width: '100%' }}>
+          <span style={{ fontFamily: FONT_TITLE, fontSize: 24, color: '#2b2730' }}>무한 모드</span>
+          <span style={{ fontFamily: FONT_BODY, fontWeight: 500, fontSize: 14, lineHeight: 1.55, color: '#9a93a0' }}>
+            점점 빨라지는 문제를 계속 풀어요.<br /><b style={{ color: '#d0464a', fontWeight: 800 }}>한 번이라도 틀리면 끝!</b><br />모르는 단어는 하트로 건너뛰세요.
+          </span>
+        </div>
+        {best > 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(255,176,46,0.14)', padding: '7px 14px', borderRadius: 999 }}>
+            <StarIcon size={15} weight="fill" color={TG.SUN} />
+            <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 13, color: '#2b2730' }}>최고 {best.toLocaleString()}점</span>
+          </div>
+        )}
+        <button className="tg-press" onClick={() => { onStart && onStart(); }} style={{
+          width: '100%', height: 56, borderRadius: 18, border: 'none', cursor: 'pointer',
+          background: TG.CORAL_GRAD, boxShadow: '0px 10px 20px rgba(242,72,76,0.32)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, ...TOUCH_OPT,
+        }}>
+          <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 18, color: '#fff' }}>게임 시작</span>
+          <PlayIcon size={14} weight="fill" color="#fff" />
+        </button>
+        <button className="tg-press" onClick={onClose} style={{ width: '100%', padding: '4px 0', background: 'none', border: 'none', cursor: 'pointer', ...TOUCH_OPT }}>
+          <span style={{ fontFamily: FONT_BODY, fontWeight: 500, fontSize: 15, color: '#9a93a0' }}>닫기</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // SNS 링크 (PersonalPage와 동일 URL). 인스타그램이 메인, 유튜브·블로그는 보조.
 export const PLAY_LINKS = {
   instagram: { href: 'https://www.instagram.com/tiantian_laoshi?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==', handle: '@tiantian_laoshi' },
-  youtube: { href: 'https://www.youtube.com/@tiantian_chinese', label: '유튜브', color: '#FF0000', Icon: YoutubeLogoIcon },
-  blog: { href: 'https://blog.naver.com/tiantian_chinese/224100509217', label: '블로그', color: '#03C75A', Icon: ArticleIcon },
+  youtube: { id: 'youtube', href: 'https://www.youtube.com/@tiantian_chinese', label: '유튜브', color: '#FF0000', Icon: YoutubeLogoIcon },
+  blog: { id: 'blog', href: 'https://blog.naver.com/tiantian_chinese/224100509217', label: '블로그', color: '#03C75A', Icon: ArticleIcon },
 };
 
 // '놀러가기' 모달 — 인스타그램(메인 그라데이션) + 유튜브·블로그(보조). Figma "14. 놀러가기" 기준.
 export function PlayModal({ onClose }) {
-  const openLink = (href) => { try { window.open(href, '_blank', 'noopener,noreferrer'); } catch { /* noop */ } };
+  // 측정: 게임→채널 전환 클릭(유입 깔때기의 출구) — 채널 라벨만(PII 없음)
+  const openLink = (href, channel) => { track('cta_play_link', { m: channel }); try { window.open(href, '_blank', 'noopener,noreferrer'); } catch { /* noop */ } };
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(26,16,20,0.55)', backdropFilter: 'blur(2px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, ...TOUCH_OPT }}>
       <div className="tg-enter" onClick={(e) => e.stopPropagation()} style={{
@@ -62,7 +102,7 @@ export function PlayModal({ onClose }) {
           <span style={{ fontFamily: FONT_BODY, fontWeight: 500, fontSize: 14, color: '#9a93a0' }}>하늘쌤 채널에서 더 많은 중국어 이야기를</span>
         </div>
         <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <button className="tg-press" onClick={() => openLink(PLAY_LINKS.instagram.href)} style={{
+          <button className="tg-press" onClick={() => openLink(PLAY_LINKS.instagram.href, 'instagram')} style={{
             width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderRadius: 18, border: 'none', cursor: 'pointer',
             background: 'linear-gradient(90deg, #F58529, #DD2A7B, #8134AF)', boxShadow: '0 8px 16px rgba(221,42,123,0.3)', ...TOUCH_OPT,
           }}>
@@ -77,7 +117,7 @@ export function PlayModal({ onClose }) {
           </button>
           <div style={{ display: 'flex', gap: 10 }}>
             {[PLAY_LINKS.youtube, PLAY_LINKS.blog].map((s) => (
-              <button key={s.label} className="tg-press" onClick={() => openLink(s.href)} style={{
+              <button key={s.label} className="tg-press" onClick={() => openLink(s.href, s.id)} style={{
                 flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '12px 0', borderRadius: 14,
                 background: '#fff', border: '1.5px solid #ebe5de', cursor: 'pointer', ...TOUCH_OPT,
               }}>

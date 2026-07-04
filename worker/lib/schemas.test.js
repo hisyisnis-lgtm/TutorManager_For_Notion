@@ -7,6 +7,7 @@ import {
   HomeworkSubmitSchema,
   MyClassesQuerySchema,
   GameResultSchema,
+  GameEventSchema,
   StudentAuthRequestSchema,
   StudentAuthVerifySchema,
 } from './schemas.js';
@@ -239,5 +240,25 @@ describe('GameResultSchema', () => {
     for (let i = 0; i < 500; i++) big['k' + i] = 'x'.repeat(10);
     const r = GameResultSchema.safeParse({ score: 10, maxCombo: 8, avgMs: 1500, meta: big });
     expect(r.success).toBe(false);
+  });
+});
+
+describe('GameEventSchema — 게임 이벤트 측정(POST /game/event)', () => {
+  it('정상 이벤트 허용 (선택 필드 없이도)', () => {
+    expect(GameEventSchema.safeParse({ e: 'enter' }).success).toBe(true);
+    expect(GameEventSchema.safeParse({ e: 'run_end', m: 'easy', src: 'web', k: 'guest', v: 1200 }).success).toBe(true);
+  });
+  it('선택 필드 null 허용 (.nullish — 클라가 빈값을 null로 보냄)', () => {
+    expect(GameEventSchema.safeParse({ e: 'run_start', m: null, src: null, k: null, v: null }).success).toBe(true);
+  });
+  it('알 수 없는 이벤트명·과도한 라벨 길이 거부', () => {
+    expect(GameEventSchema.safeParse({ e: 'evil_event' }).success).toBe(false);
+    expect(GameEventSchema.safeParse({}).success).toBe(false);
+    expect(GameEventSchema.safeParse({ e: 'enter', m: 'x'.repeat(25) }).success).toBe(false);
+  });
+  it('여분 필드는 strip (PII가 실려와도 저장 경로에 못 들어감)', () => {
+    const r = GameEventSchema.safeParse({ e: 'enter', phone: '01012345678' });
+    expect(r.success).toBe(true);
+    expect('phone' in r.data).toBe(false);
   });
 });

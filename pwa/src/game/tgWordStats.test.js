@@ -2,42 +2,77 @@ import { describe, it, expect } from 'vitest';
 import {
   recordWordResult, accuracy, avgMs, isMastered, needsReview,
   buildReviewList, masteredCount, subsetForPool, mergeStats, buildRoundWords,
-  MASTER_MIN_ATTEMPTS, MASTER_ACCURACY,
+  MASTER_MIN_ATTEMPTS, MASTER_ACCURACY, MASTER_EXIT_ACCURACY,
 } from './tgWordStats.js';
 
-// entry = [attempts, perfect, totalCompletedMs, completedCount]
+// entry = [attempts, perfect, totalCompletedMs, completedCount, mastered(0/1)]
 
 describe('recordWordResult — 결과 1건 반영', () => {
-  it('새 단어는 [1, perfect, ms, completed]로 시작', () => {
+  it('새 단어는 [1, perfect, ms, completed, 플래그]로 시작', () => {
     const s = {};
     recordWordResult(s, '老师', { perfect: true, timedOut: false, ms: 3000 });
-    expect(s['老师']).toEqual([1, 1, 3000, 1]);
+    expect(s['老师']).toEqual([1, 1, 3000, 1, 0]); // 시도 1 < 2 → 아직 미마스터
   });
 
   it('무실수 아님은 perfect 증가 안 함', () => {
     const s = {};
     recordWordResult(s, '你好', { perfect: false, timedOut: false, ms: 5000 });
-    expect(s['你好']).toEqual([1, 0, 5000, 1]);
+    expect(s['你好']).toEqual([1, 0, 5000, 1, 0]);
   });
 
   it('시간초과는 시도만 늘고 완료시간/완료수에 미반영', () => {
     const s = {};
     recordWordResult(s, '谢谢', { perfect: false, timedOut: true, ms: 0 });
-    expect(s['谢谢']).toEqual([1, 0, 0, 0]);
+    expect(s['谢谢']).toEqual([1, 0, 0, 0, 0]);
   });
 
   it('누적된다', () => {
     const s = {};
     recordWordResult(s, '妈妈', { perfect: true, timedOut: false, ms: 2000 });
     recordWordResult(s, '妈妈', { perfect: false, timedOut: false, ms: 4000 });
-    expect(s['妈妈']).toEqual([2, 1, 6000, 2]);
+    expect(s['妈妈']).toEqual([2, 1, 6000, 2, 0]); // 50% < 80% → 미마스터
   });
 
   it('음수 ms는 0으로 클램프하고 반올림', () => {
     const s = {};
     recordWordResult(s, '朋友', { perfect: true, timedOut: false, ms: -50 });
     recordWordResult(s, '朋友', { perfect: true, timedOut: false, ms: 1499.6 });
-    expect(s['朋友']).toEqual([2, 2, 1500, 2]);
+    expect(s['朋友']).toEqual([2, 2, 1500, 2, 1]); // 2회 100% → 마스터 진입
+  });
+});
+
+describe('★마스터 히스테리시스 — 진입 ≥80%, 해제 <60% (등급 강등의 완충)', () => {
+  const play = (s, hz, perfect) => recordWordResult(s, hz, { perfect, timedOut: false, ms: 3000 });
+  it('상수: 진입 0.8 / 해제 0.6', () => {
+    expect(MASTER_ACCURACY).toBe(0.8);
+    expect(MASTER_EXIT_ACCURACY).toBe(0.6);
+  });
+  it('60~80% 구간에선 마스터 유지(경계 요요 방지)', () => {
+    const s = {};
+    for (let i = 0; i < 4; i++) play(s, 'A', true); // 4/4 → 마스터
+    expect(isMastered(s.A)).toBe(true);
+    play(s, 'A', false); // 4/5 = 80%
+    play(s, 'A', false); // 4/6 ≈ 67% — 예전 규칙(<80% 즉시 해제)이면 여기서 강등됐을 것
+    expect(isMastered(s.A)).toBe(true); // 히스테리시스로 유지
+  });
+  it('60% 미만으로 떨어지면 해제(진짜 무너진 단어만)', () => {
+    const s = {};
+    for (let i = 0; i < 4; i++) play(s, 'A', true);
+    for (let i = 0; i < 3; i++) play(s, 'A', false); // 4/7 ≈ 57% < 60%
+    expect(isMastered(s.A)).toBe(false);
+  });
+  it('해제 후 재진입은 다시 ≥80% 필요', () => {
+    const s = {};
+    for (let i = 0; i < 4; i++) play(s, 'A', true);
+    for (let i = 0; i < 3; i++) play(s, 'A', false); // 해제(57%)
+    play(s, 'A', true); // 5/8 = 62.5% — 60~80% 구간이지만 이미 해제 상태 → 미마스터 유지
+    expect(isMastered(s.A)).toBe(false);
+  });
+  it('레거시 4튜플은 첫 기록 때 기존 규칙으로 시드 후 히스테리시스 적용', () => {
+    const s = { A: [5, 4, 0, 0] }; // 레거시 80% = 마스터였던 단어
+    play(s, 'A', false); // 4/6 ≈ 67% — 시드(마스터) 후 히스테리시스 → 유지
+    expect(s.A.length).toBe(5);
+    expect(isMastered(s.A)).toBe(true);
   });
 });
 

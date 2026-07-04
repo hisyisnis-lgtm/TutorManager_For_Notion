@@ -1,9 +1,9 @@
 // 게임 화면 (Figma 좌표 절대배치) — 점수·일시정지·타이머·단어카드·코치·성조버튼 + 콤보/신기록 버스트 연출(P4b).
 import { useState, useEffect, useRef, useLayoutEffect } from 'react';
-import { StarIcon, PauseIcon, TimerIcon, SpeakerHighIcon, EyeIcon, HeartIcon } from '@phosphor-icons/react';
+import { StarIcon, PauseIcon, TimerIcon, SpeakerHighIcon, EyeIcon, HeartIcon, SkipForwardIcon, SkullIcon } from '@phosphor-icons/react';
 import { TG, FONT_TITLE, FONT_NUM, FONT_BODY, TOUCH_OPT } from '../tgTokens.js';
 import { play as playSfx } from '../tgSfx.js';
-import { Reveal, WordCard, ToneButtons, CoachBubble } from './shared.jsx';
+import { Reveal, WordCard, ToneButtons, CoachBubble, ConfettiBurst, CrispFlash, LIGHT_CONFETTI } from './shared.jsx';
 import { useTabTip } from '../../hooks/useTabTip.js';
 
 // 불티 온도 색 — 0 뜨거움(흰-노랑) · 1 중간(오렌지) · 2 식음(진빨강). bg=코어 그라디언트, sh=글로우색.
@@ -117,7 +117,7 @@ function CenterBurst({ data }) {
   );
 }
 
-export function GameScreen({ word, entered, currentSyl, completed, timedOut, wordIndex, wordsLen, wordTimeLimit, gaugeOffsetMs = 0, lowTime = false, paused, combo, comboFlash, floatScore, score, coachText, onTone, wrongBtn, wrongShakeKey = 0, onPause, playReveal = true, endless = false, lives = 3, runId = 0, recordToBeat = 0, practice = false, listen = false, audioOff = false, onReplay, onCantHear, onSpeak, onReveal, demoFx = null }) {
+export function GameScreen({ word, entered, currentSyl, completed, timedOut, wordIndex, wordsLen, wordTimeLimit, gaugeOffsetMs = 0, lowTime = false, paused, combo, comboFlash, floatScore, score, coachText, onTone, wrongBtn, wrongShakeKey = 0, onPause, playReveal = true, endless = false, lives = 3, showHearts = false, onSkip, showSudden = false, runId = 0, recordToBeat = 0, practice = false, listen = false, audioOff = false, onReplay, onCantHear, onHint, hintUsed = false, onSpeak, onReveal, demoFx = null }) {
   lowTime = lowTime || demoFx === 'low'; // [DEV] 미리보기 텐션 데모(?screen=game&fx=low) — 머지 전 백도어 제거 대상
   // ── 버스트 연출(P4b): 콤보 마일스톤(5·10·15…) + 라이브 신기록. 비차단·자동 소멸 ──
   const [burst, setBurst] = useState(null);
@@ -144,7 +144,7 @@ export function GameScreen({ word, entered, currentSyl, completed, timedOut, wor
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [score, recordToBeat]);
-  useEffect(() => { prevComboRef.current = 0; recordShownRef.current = false; }, [runId]); // 새 런 리셋
+  useEffect(() => { prevComboRef.current = 0; recordShownRef.current = false; setFlashKey(0); }, [runId]); // 새 런 리셋(완성 연출도 초기화)
   useEffect(() => () => { if (burstTimerRef.current) clearTimeout(burstTimerRef.current); }, []);
   useEffect(() => { // [DEV] 미리보기 버스트 데모(?screen=game&fx=combo|record) — hold로 유지(검수용). 머지 전 백도어 제거 대상
     if (demoFx !== 'combo' && demoFx !== 'record') return; // 'low'(텐션 데모) 등은 버스트 미발생
@@ -178,14 +178,31 @@ export function GameScreen({ word, entered, currentSyl, completed, timedOut, wor
   // demoFx='combo'는 [DEV] 미리보기서 화염 강제(?screen=game&fx=combo). 머지 전 백도어 제거 대상.
   const heat = demoFx === 'combo' ? 0.8 : (combo >= 2 ? Math.min((combo - 1) / 11, 1) : 0);
   const heatRef = useRef(heat); heatRef.current = heat; // rAF 불티가 매 프레임 참조(강도)
-  // 첫 실제 게임 1회 — 카운트다운이 끝나(playReveal) 라이브가 되면 타이머 힌트를 잠깐 띄우고 자동 사라짐.
-  // 딤/블로킹 없음(타이머 안 멈춤·탭 방해 없음). 조작법은 튜토리얼이 이미 가르침.
-  const firstPlay = useTabTip('game-play', true);
-  const [showHint, setShowHint] = useState(false);
+  // 하트 소모 연출 — 건너뛰기로 lives가 줄면 방금 빈 하트(index=lives)를 '팟' 튕겨 소모를 명확히 보여줌.
+  const prevLivesRef = useRef(lives);
+  const [lostHeart, setLostHeart] = useState(-1);
   useEffect(() => {
-    if (practice || !playReveal || !firstPlay.visible) return undefined;
-    const a = setTimeout(() => setShowHint(true), 300);
-    const b = setTimeout(() => { setShowHint(false); firstPlay.dismiss(); }, 5100);
+    if (lives < prevLivesRef.current) { setLostHeart(lives); const t = setTimeout(() => setLostHeart(-1), 520); prevLivesRef.current = lives; return () => clearTimeout(t); }
+    prevLivesRef.current = lives; return undefined;
+  }, [lives]);
+  useEffect(() => { prevLivesRef.current = lives; setLostHeart(-1); }, [runId]); // 새 런 리셋
+  // 1판 1힌트 큐(각 1회) — 우선순위: 타이머(game-play) → 건너뛰기(game-skip-v1) → 발음 힌트(game-hint-v1).
+  // 하트 재의미(생명→건너뛰기 예산)·발음 힌트는 기존 유저도 처음 만나는 기능이라 판마다 하나씩 순차 안내.
+  // 딤/블로킹 없음(타이머 안 멈춤·탭 방해 없음). 조작법은 튜토리얼이 이미 가르침.
+  const tipPlay = useTabTip('game-play', true);
+  const tipSkip = useTabTip('game-skip-v1', true);
+  const tipHint = useTabTip('game-hint-v1', true);
+  const [runTip, setRunTip] = useState(null);
+  useEffect(() => {
+    if (practice || !playReveal) return undefined;
+    let pick = null;
+    if (tipPlay.visible) pick = { id: 'play', dismiss: tipPlay.dismiss };
+    else if (tipSkip.visible && onSkip) pick = { id: 'skip', dismiss: tipSkip.dismiss };
+    else if (tipHint.visible && onHint && !listen) pick = { id: 'hint', dismiss: tipHint.dismiss };
+    if (!pick) return undefined;
+    const wait = showSudden ? 2600 : 300; // 서든데스 킥오프 배너(2.35s)와 겹치지 않게 배너 뒤 등장
+    const a = setTimeout(() => setRunTip(pick.id), wait);
+    const b = setTimeout(() => { setRunTip(null); pick.dismiss(); }, wait + 4800);
     return () => { clearTimeout(a); clearTimeout(b); };
   }, [playReveal, practice]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
@@ -211,15 +228,17 @@ export function GameScreen({ word, entered, currentSyl, completed, timedOut, wor
         <span style={{ fontFamily: FONT_NUM, fontWeight: 800, fontSize: 17, color: '#2b2730' }}>{score}</span>
       </div>
       </Reveal>
-      {/* 하트 HUD (좌상단) — 무한 모드만. 단어당 3개, 오답마다 하나씩 빈 하트로. */}
-      {endless && (
+      {/* 하트 HUD (좌상단) — 연습 외 전 모드. 하트 = 런당 '건너뛰기 예산' 3개. 건너뛰기마다 하나씩 빈 하트로(소모 시 팟 튕김). */}
+      {showHearts && (
         <Reveal i={0} play={playReveal} style={{ position: 'absolute', left: 20, top: 22 }}>
-          <div style={{ display: 'flex', gap: 5 }} aria-label={`남은 기회 ${lives}개`}>
+          <style>{`@keyframes tg-heartlose{0%{transform:scale(1)}28%{transform:scale(1.4) rotate(-8deg)}55%{transform:scale(.7) rotate(6deg)}100%{transform:scale(.82) rotate(0)}}`}</style>
+          <div style={{ display: 'flex', gap: 5 }} aria-label={`남은 건너뛰기 ${lives}개`}>
             {[0, 1, 2].map((i) => {
               const on = i < lives;
               return (
                 <HeartIcon key={i} size={24} weight={on ? 'fill' : 'regular'} color={on ? TG.CORAL : '#d8d0c7'}
-                  style={{ transition: 'transform 200ms ease, color 200ms ease', transform: on ? 'scale(1)' : 'scale(0.82)' }} />
+                  style={{ transition: 'transform 200ms ease, color 200ms ease', transform: on ? 'scale(1)' : 'scale(0.82)',
+                    animation: i === lostHeart ? 'tg-heartlose 520ms ease-out' : 'none' }} />
               );
             })}
           </div>
@@ -250,21 +269,30 @@ export function GameScreen({ word, entered, currentSyl, completed, timedOut, wor
         </div>
         </Reveal>
       )}
-      {/* 첫 게임 힌트(1회) — 타이머 바로 아래 작은 말풍선. 비차단(pointerEvents none)·자동 페이드 */}
-      {showHint && !practice && (
-        <div style={{ position: 'absolute', left: 20, right: 20, top: 103, display: 'flex', justifyContent: 'center', zIndex: 24, pointerEvents: 'none', animation: 'tg-hint 5.1s ease forwards' }} aria-hidden="true">
+      {/* 1판 1힌트(각 1회) — 타이머/건너뛰기/발음힌트 안내. 건너뛰기 안내만 버튼 근처(하단), 나머지는 타이머 아래. 비차단·자동 페이드 */}
+      {runTip && !practice && (
+        <div style={{ position: 'absolute', left: 20, right: 20,
+          ...(runTip === 'skip' ? { bottom: 'calc(184px + env(safe-area-inset-bottom))' } : { top: 103 }),
+          display: 'flex', justifyContent: 'center', zIndex: 24, pointerEvents: 'none', animation: 'tg-hint 5.1s ease forwards' }} aria-hidden="true">
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#2b2730', color: '#fff', fontFamily: FONT_BODY, fontWeight: 700, fontSize: 12, lineHeight: 1, padding: '7px 12px', borderRadius: 11, boxShadow: '0 4px 12px rgba(43,39,48,0.22)', whiteSpace: 'nowrap' }}>
-            <TimerIcon size={13} weight="fill" color="#ff9f6b" />타이머가 끝나기 전에 성조를 골라요!
+            {runTip === 'play' && <><TimerIcon size={13} weight="fill" color="#ff9f6b" />타이머가 끝나기 전에 성조를 골라요!</>}
+            {runTip === 'skip' && <><HeartIcon size={13} weight="fill" color={TG.CORAL} />모르는 단어는 하트로 건너뛸 수 있어요!</>}
+            {runTip === 'hint' && <><SpeakerHighIcon size={13} weight="fill" color="#ff9f6b" />발음 힌트를 들으면 콤보가 끊겨요!</>}
           </div>
         </div>
       )}
       {/* 단어카드 top129 (폭 채움) — 단어 바뀔 때마다 키 변경으로 입장 모션(tg-card-in) */}
       <Reveal i={2} play={playReveal} style={{ position: 'absolute', left: 20, right: 20, top: 129 }}>
-        <div key={`card-${runId}-${wordIndex}`} style={{ animation: 'tg-card-in .38s cubic-bezier(.22,1,.36,1) both' }}>
-        <div style={{ position: 'relative', animation: punch ? 'tg-punch .35s ease-out' : 'none' }}>
-          <WordCard word={word} entered={entered} currentSyl={currentSyl} completed={completed} timedOut={timedOut} progressText={endless ? `${wordIndex + 1}` : `${wordIndex + 1}/${wordsLen}`} combo={combo} comboFlash={comboFlash} floatScore={floatScore} listen={listen} audioOff={audioOff} onReplay={onReplay} onCantHear={onCantHear} />
-          {flashKey > 0 && <div key={flashKey} style={{ position: 'absolute', inset: 0, borderRadius: 24, background: 'radial-gradient(closest-side, rgba(255,255,255,0.9), rgba(255,255,255,0))', animation: 'tg-flash .5s ease-out forwards', pointerEvents: 'none' }} />}
-        </div>
+        <div style={{ position: 'relative' }}>
+          <div key={`card-${runId}-${wordIndex}`} style={{ animation: 'tg-card-in .38s cubic-bezier(.22,1,.36,1) both' }}>
+            <div style={{ position: 'relative', animation: punch ? 'tg-punch .35s ease-out' : 'none' }}>
+              <WordCard word={word} entered={entered} currentSyl={currentSyl} completed={completed} timedOut={timedOut} progressText={endless ? `${wordIndex + 1}` : `${wordIndex + 1}/${wordsLen}`} combo={combo} comboFlash={comboFlash} floatScore={floatScore} listen={listen} audioOff={audioOff} onReplay={onReplay} onCantHear={onCantHear} onHint={onHint} hintUsed={hintUsed} />
+            </div>
+          </div>
+          {/* 정답 완성 연출 — 크리스프 플래시(번쩍) + 색색 색종이 + 흰/골드 글리터. ★단어 키 래퍼 '밖'에 둠: 안에 두면 새 단어 등장 때마다 리마운트되어 오발. flashKey 증가(정답 완성) 시에만 발동 */}
+          {flashKey > 0 && <CrispFlash key={`fl-${flashKey}`} radial borderRadius={24} color="rgba(255,255,255,0.95)" zIndex={7} />}
+          {flashKey > 0 && <ConfettiBurst key={`cf-${flashKey}`} count={16} power={0.85} size={9} zIndex={6} />}
+          {flashKey > 0 && <ConfettiBurst key={`cg-${flashKey}`} colors={LIGHT_CONFETTI} count={9} power={0.95} size={5} zIndex={6} />}
         </div>
       </Reveal>
       {/* 코치 — 일반 모드만. 연습 모드는 카드 힌트 + 발음듣기/정답보기 버튼이 안내하고,
@@ -289,12 +317,51 @@ export function GameScreen({ word, entered, currentSyl, completed, timedOut, wor
           </div>
         </Reveal>
       )}
+      {/* 건너뛰기 — 못 풀겠는 단어를 하트 1개 쓰고 넘김. 하트 소진(0)이면 비활성(스킵만 불가, 게임은 계속). 연습 모드는 미노출(자체 정답보기). */}
+      {onSkip && (
+        <Reveal i={4} play={playReveal} style={{ position: 'absolute', left: 0, right: 0, bottom: 'calc(130px + env(safe-area-inset-bottom))', display: 'flex', justifyContent: 'center' }}>
+          {(() => {
+            const disabled = completed || lives <= 0;
+            return (
+              <button onClick={onSkip} disabled={disabled} className="tg-press"
+                aria-label={lives > 0 ? '건너뛰기 (하트 1개 소모)' : '하트를 모두 써서 건너뛸 수 없어요'}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 16px', borderRadius: 14,
+                  background: '#fff', border: '1.5px solid #ebe5de', cursor: disabled ? 'default' : 'pointer',
+                  opacity: disabled ? 0.5 : 1, boxShadow: '0px 2px 6px rgba(43,39,48,0.05)', ...TOUCH_OPT }}>
+                <SkipForwardIcon size={16} weight="fill" color={TG.SUB} />
+                <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 13, color: '#2b2730' }}>건너뛰기</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 1, fontFamily: FONT_BODY, fontWeight: 800, fontSize: 12, color: TG.CORAL }}>
+                  <HeartIcon size={12} weight="fill" color={TG.CORAL} />−1
+                </span>
+              </button>
+            );
+          })()}
+        </Reveal>
+      )}
       {/* 성조버튼 하단 고정 */}
       <Reveal i={5} play={playReveal} style={{ position: 'absolute', left: 20, right: 20, bottom: 'calc(30px + env(safe-area-inset-bottom))' }}>
         <ToneButtons onTone={onTone} wrongBtn={wrongBtn} disabled={completed} />
       </Reveal>
       {/* 콤보 마일스톤 · 라이브 신기록 버스트(P4b) */}
       <CenterBurst data={burst} />
+      {/* 무한 서든데스 킥오프 연출 — 런 시작 시 뒤 배경 딤+블러 위에 중앙 큰 '서든데스 / 한 번 틀리면 끝!'. 연출 중 타이머 정지(부모가 paused 처리). */}
+      {showSudden && (
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 40,
+          background: 'rgba(24,18,26,0.5)', backdropFilter: 'blur(5px)', WebkitBackdropFilter: 'blur(5px)',
+          animation: 'tg-suddenbg 2.35s ease forwards' }} aria-hidden="true">
+          <style>{`
+            @keyframes tg-suddenbg{0%{opacity:0}12%{opacity:1}82%{opacity:1}100%{opacity:0}}
+            @keyframes tg-sudden{0%{opacity:0;transform:scale(.6)}14%{opacity:1;transform:scale(1.1)}28%{transform:scale(1)}82%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(.96)}}
+          `}</style>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, animation: 'tg-sudden 2.35s ease forwards' }}>
+            <div style={{ width: 88, height: 88, borderRadius: 28, background: 'linear-gradient(135deg,#ff5e62,#b3050a)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 14px 40px rgba(179,5,10,0.55)' }}>
+              <SkullIcon size={50} weight="fill" color="#fff" />
+            </div>
+            <span style={{ fontFamily: FONT_TITLE, fontSize: 42, lineHeight: 1, color: '#fff', textShadow: '0 3px 18px rgba(0,0,0,0.45)' }}>서든데스</span>
+            <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 16, color: 'rgba(255,255,255,0.92)', textShadow: '0 2px 10px rgba(0,0,0,0.4)' }}>한 번 틀리면 끝!</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

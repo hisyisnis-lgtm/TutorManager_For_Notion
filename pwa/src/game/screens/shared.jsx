@@ -2,7 +2,7 @@
 // 스타일 주입(ToneGameStyles)·반응형 컨테이너(FigmaScreen)·등장 래퍼(Reveal)·코치 말풍선·
 // 단어 카드/성조 버튼·카운트다운 비주얼·토스트·흔들림 버튼.
 // 참조 메모리: tone_game_redesign.md §5(단어카드)·§10-B(FigmaScreen)·§10-C(연출)
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { LockSimpleIcon, SpeakerHighIcon, SpeakerSlashIcon, VibrateIcon, XIcon } from '@phosphor-icons/react';
 import {
   TG, FONT_NUM, FONT_BODY, FONT_HANZI, FONT_PINYIN, SHADOW, DUR, TOUCH_OPT, TONE_TINTS, TONE_BORDERS, ASSETS,
@@ -14,6 +14,136 @@ import { play as playSfx, isSfxMuted, setSfxMuted } from '../tgSfx.js';
 
 // 카운트다운 슬라이드 가장자리 진폭 폭(px) — keyframes(tg-cd-out)와 CdWaveEdge가 공유.
 export const CD_WAVE_W = 12;
+
+// 크리스프 플래시 — 카메라 플래시처럼 순간 확 밝아졌다 스냅오프. 글로우·번짐 없는 깔끔한 '번쩍'.
+// radial=중심에서 부드럽게(카드 위 등), 아니면 꽉 찬 화이트. 비차단·CSS keyframe(짧음). 재발동은 부모 key 변경.
+export function CrispFlash({ color = 'rgba(255,255,255,0.9)', dur = 0.17, radial = false, borderRadius = 0, zIndex = 24, style }) {
+  return (
+    <div aria-hidden="true" style={{ position: 'absolute', inset: 0, borderRadius, pointerEvents: 'none', zIndex,
+      background: radial ? `radial-gradient(closest-side, ${color}, rgba(255,255,255,0))` : color,
+      animation: `tg-crispflash ${dur}s ease-out forwards`, ...style }} />
+  );
+}
+
+// 1D 부드러운 값 노이즈(-1..1) — 잉걸불 좌우 난류·밝기 깜빡임용(GameScreen ComboSparks와 동일 방식).
+function emberNoise(x) {
+  const i = Math.floor(x), f = x - i, u = f * f * (3 - 2 * f);
+  const h = (n) => { const s = Math.sin(n * 127.1) * 43758.5453; return s - Math.floor(s); };
+  return (h(i) * (1 - u) + h(i + 1) * u) * 2 - 1;
+}
+// 잉걸불(rising ember) — 불꽃 위로 불티가 흔들리며 피어올라 깜빡이다 식어 사라짐(무한 루프).
+// ★rAF+노이즈(CSS 직선 아님): 상승 중 좌우 난류(위로 갈수록↑)·부력·밝기 깜빡임 → 진짜 잉걸불 움직임. 부모 position:relative 필요.
+export const EMBER_COLORS = ['#ff8f34', '#ffc23c', '#ff6b3d', '#ffd98a', '#ff5e3a'];
+export function EmberRise({ colors = EMBER_COLORS, count = 10, spread = 22, rise = 42, size = 3.4, zIndex = 0, style }) {
+  const refs = useRef([]);
+  const cfg = useRef(null);
+  if (!cfg.current) {
+    const R = Math.random;
+    cfg.current = Array.from({ length: count }, () => ({
+      x0: (R() - 0.5) * spread, amp: 2.5 + R() * 6.5, freq: 1.3 + R() * 2.4, seed: R() * 100,
+      rise: rise * (0.72 + R() * 0.55), life: 1.5 + R() * 1.5, t: -R() * 3.2, sz: size * (0.7 + R() * 0.85),
+      color: colors[(R() * colors.length) | 0],
+    }));
+  }
+  useLayoutEffect(() => {
+    let raf, alive = true, last = performance.now();
+    const tick = (now) => {
+      if (!alive) return;
+      const dt = Math.min(0.05, (now - last) / 1000); last = now;
+      for (let k = 0; k < cfg.current.length; k++) {
+        const el = refs.current[k]; const s = cfg.current[k]; if (!el) continue;
+        s.t += dt;
+        if (s.t >= s.life) s.t %= s.life;   // 루프(재점화)
+        if (s.t < 0) { el.style.opacity = '0'; continue; }
+        const t = s.t / s.life;
+        const up = -s.rise * (1 - (1 - t) * (1 - t));                     // ease-out 상승
+        const wob = emberNoise(s.seed + t * s.freq) * s.amp * (0.4 + t);  // 위로 갈수록 흔들림↑
+        const env = Math.min(1, t * 6) * Math.max(0, 1 - Math.pow(t, 1.8)); // 페이드 인/아웃
+        const flick = 0.5 + 0.5 * emberNoise(s.seed * 1.7 + t * s.freq * 3.4); // 밝기 깜빡임
+        el.style.opacity = String(Math.max(0, env * flick));
+        el.style.transform = `translate(${(s.x0 + wob).toFixed(1)}px, ${up.toFixed(1)}px) scale(${(1 - 0.5 * t).toFixed(2)})`;
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => { alive = false; cancelAnimationFrame(raf); };
+  }, []);
+  return (
+    <div aria-hidden="true" style={{ position: 'absolute', left: '50%', bottom: '28%', width: 0, height: 0, pointerEvents: 'none', zIndex, ...style }}>
+      {cfg.current.map((s, k) => (
+        <span key={k} ref={(n) => { refs.current[k] = n; }} style={{
+          position: 'absolute', left: 0, bottom: 0, width: s.sz, height: s.sz, marginLeft: -s.sz / 2,
+          borderRadius: '50%', background: s.color, boxShadow: `0 0 ${4 + s.sz * 1.4}px ${(s.sz * 0.5).toFixed(1)}px ${s.color}`,
+          opacity: 0, willChange: 'transform, opacity',
+        }} />
+      ))}
+    </div>
+  );
+}
+
+// 파티클 버스트(색종이) — 정답·축하 등 긍정 순간의 색종이 폭발. rAF 물리(초기 폭발+중력 포물선+공기저항+나풀거림+회전/3D플립).
+// 빛 알갱이(글리터)도 이 컴포넌트에 흰/골드 팔레트(LIGHT_CONFETTI)·작은 size로 겹쳐 쓰면 동일한 물리로 움직임(별도 스파크 컴포넌트 폐기 — 촌스러움).
+export const CONFETTI_COLORS = ['#FF6B6B', '#FFC23C', '#36C98D', '#4D8DFF', '#7c5cff', '#ff8f34'];
+export const LIGHT_CONFETTI = ['#ffffff', '#fff6cf', '#ffe89a', '#ffd166', '#fff0f0']; // 흰/골드 글리터(빛 알갱이)
+export function ConfettiBurst({ colors = CONFETTI_COLORS, count = 16, power = 1, size = 9, zIndex = 25, style }) {
+  const refs = useRef([]);
+  const cfg = useRef(null);
+  if (!cfg.current) {
+    const R = Math.random;
+    cfg.current = Array.from({ length: count }, () => {
+      const ang = R() * Math.PI * 2;                    // 360° 방사
+      const speed = (3.0 + R() * 4.4) * power;           // 초기 폭발 속도(px/frame)
+      const sz = size * (0.6 + R() * 0.85);
+      return {
+        x: 0, y: 0,
+        vx: Math.cos(ang) * speed,
+        vy: Math.sin(ang) * speed - (1.7 + R() * 1.6) * power, // 위로 살짝 팝(축포 느낌)
+        rot: R() * 360, vrot: (R() - 0.5) * 30,
+        sway: 0.5 + R() * 1.9, swayPh: R() * 6.283, swaySpeed: 0.05 + R() * 0.11, // 나풀거림
+        life: 64 + R() * 50, age: 0, sz, rect: R() < 0.62,
+        color: colors[(R() * colors.length) | 0], flip: 5 + R() * 13, // rect=3D 회전(종이 뒤집힘)
+      };
+    });
+  }
+  useLayoutEffect(() => {
+    let raf, alive = true, last = performance.now();
+    const GRAV = 0.19, DRAG = 0.985;
+    const tick = (now) => {
+      if (!alive) return;
+      const dt = Math.min(2.2, (now - last) / 16.667); last = now;
+      let anyAlive = false;
+      for (let k = 0; k < cfg.current.length; k++) {
+        const el = refs.current[k]; const s = cfg.current[k]; if (!el) continue;
+        s.age += dt;
+        if (s.age < s.life) anyAlive = true;
+        const drag = Math.pow(DRAG, dt);
+        s.vx *= drag; s.vy = s.vy * drag + GRAV * dt;    // 공기저항 + 중력
+        s.x += s.vx * dt; s.y += s.vy * dt;
+        s.rot += s.vrot * dt;
+        const lt = s.age / s.life;
+        const op = lt < 0.1 ? lt / 0.1 : Math.max(0, 1 - Math.pow((lt - 0.1) / 0.9, 1.7));
+        el.style.opacity = String(op);
+        const swayX = Math.sin(s.age * s.swaySpeed + s.swayPh) * s.sway;
+        const fl = s.rect ? ` rotateX(${(s.age * s.flip).toFixed(0)}deg)` : '';
+        el.style.transform = `translate(${(s.x + swayX).toFixed(1)}px, ${s.y.toFixed(1)}px) rotate(${s.rot.toFixed(0)}deg)${fl}`;
+      }
+      if (anyAlive) raf = requestAnimationFrame(tick); // 전부 소멸하면 rAF 정지(perf)
+    };
+    raf = requestAnimationFrame(tick);
+    return () => { alive = false; cancelAnimationFrame(raf); };
+  }, []);
+  return (
+    <div aria-hidden="true" style={{ position: 'absolute', left: '50%', top: '50%', width: 0, height: 0, pointerEvents: 'none', zIndex, ...style }}>
+      {cfg.current.map((s, k) => (
+        <span key={k} ref={(n) => { refs.current[k] = n; }} style={{
+          position: 'absolute', left: 0, top: 0, width: s.sz, height: s.rect ? s.sz * 0.5 : s.sz,
+          marginLeft: -s.sz / 2, marginTop: -s.sz / 2, borderRadius: s.rect ? 1.5 : '50%', background: s.color,
+          opacity: 0, willChange: 'transform, opacity',
+        }} />
+      ))}
+    </div>
+  );
+}
 
 // ── keyframes / 글로벌 게임 스타일 ─────────────────────
 export function ToneGameStyles() {
@@ -60,6 +190,10 @@ export function ToneGameStyles() {
       @keyframes tg-hint { 0%{opacity:0; transform:translateY(-5px)} 12%{opacity:1; transform:translateY(0)} 84%{opacity:1; transform:translateY(0)} 100%{opacity:0; transform:translateY(-3px)} }
       /* 콤보 불티 — rAF+노이즈로 JS에서 갱신(GameScreen ComboSparks). 여기선 외곽 글로우 플리커만. */
       @keyframes tg-emberflicker { 0%,100%{opacity:1} 42%{opacity:.66} 68%{opacity:.9} }
+      /* 크리스프 플래시 — 카메라 플래시처럼 순간 확 밝아졌다 스냅오프(글로우·번짐 없이 깔끔한 '번쩍') */
+      @keyframes tg-crispflash { 0%{opacity:0} 9%{opacity:1} 100%{opacity:0} }
+      /* 현재 글자 은은한 숨쉬기(색 대신 명도+애니로 강조) */
+      @keyframes tg-breathe { 0%,100%{transform:scale(1)} 50%{transform:scale(1.07)} }
       .tg-reveal{ animation: tg-rise .4s cubic-bezier(.22,1,.36,1) both }
       .tg-toast{ animation: tg-toast 1.7s ease both }
       @media (prefers-reduced-motion: reduce){ .tg-reveal{ animation: none !important } }
@@ -148,8 +282,10 @@ export function CoachBubble({ text }) {
 }
 
 // ── 단어 카드 (반응형 + 고정 슬롯, 메모리 §5) ──────────
-export function WordCard({ word, entered, currentSyl, completed, timedOut, progressText, combo, comboFlash, floatScore, hideProgress, listen = false, audioOff = false, onReplay, onCantHear }) {
+export function WordCard({ word, entered, currentSyl, completed, timedOut, progressText, combo, comboFlash, floatScore, hideProgress, listen = false, audioOff = false, onReplay, onCantHear, onHint, hintUsed = false }) {
   const listening = listen && !audioOff && !completed && !timedOut; // 듣기 모드: 답하기 전엔 한자 가리고 소리 패널
+  // 한자 모드 발음 힌트 — 답하기 전에만, 음소거 아닐 때만. 소리=정답이라 처음 쓰면 콤보가 끊긴다(hintUsed=이미 끊긴 상태면 무료).
+  const canHint = onHint && !listening && !completed && !timedOut && !audioOff;
   const n = word.tones.length;
   let hz, colW, gap, twoRow = false, perRow = n;
   if (n <= 4) { hz = 66; colW = 72; gap = 14; }
@@ -180,24 +316,25 @@ export function WordCard({ word, entered, currentSyl, completed, timedOut, progr
           ) : (
             <div style={{
               width: hz > 50 ? 28 : 22, height: 5, borderRadius: 999,
-              background: isCurrent ? TG.CORAL : '#E5DED5',
+              background: isCurrent ? TG.INK : '#E5DED5', // 현재 글자 표시 — 색 대신 진한 명도로(톤 색과 안 겹치게)
               animation: isCurrent ? 'tg-pulse 1.1s ease-in-out infinite' : 'none',
             }} />
           )}
         </div>
         {listening && !revealed ? (
-          // 듣기 중 미공개 글자 — 스피커(현재 글자는 코랄 강조). 맞히면 아래 한자로 공개됨
+          // 듣기 중 미공개 글자 — 스피커. 현재 글자 강조는 색 대신 명도+애니(중립 배경·진한 아이콘·breathe), 미도래는 연하게. 맞히면 아래 한자로 공개됨
           <div style={{ width: hz, height: hz, borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: isCurrent ? 'rgba(242,72,76,0.15)' : 'rgba(242,72,76,0.07)',
-            border: isCurrent ? `2px solid ${TG.CORAL}` : '2px solid transparent', transition: `all ${DUR.state} ease` }}>
-            <SpeakerHighIcon size={Math.round(hz * 0.52)} weight="fill" color={TG.CORAL_DK} />
+            background: isCurrent ? '#f2ede6' : 'transparent',
+            border: isCurrent ? '2px solid #e3dbce' : '2px solid transparent',
+            animation: isCurrent ? 'tg-breathe 1.7s ease-in-out infinite' : 'none', transition: `all ${DUR.state} ease` }}>
+            <SpeakerHighIcon size={Math.round(hz * 0.52)} weight="fill" color={isCurrent ? TG.INK : '#cbc4bb'} />
           </div>
         ) : (
           <div style={{
             fontFamily: FONT_HANZI, fontWeight: 700, fontSize: hz, lineHeight: 1.05,
-            // 정답 입력 시 글자가 성조색으로 채워짐(전환) + 팝 — 타격감 + 성조-색 각인
-            color: isCurrent ? TG.CORAL_DK : (revealed ? toneColor : TG.INK), transition: `color ${DUR.state} ease`,
-            animation: revealed ? 'tg-pop .32s cubic-bezier(.34,1.56,.64,1) both' : 'none',
+            // 강조는 색 대신 명도+애니: 현재=진한 잉크(은은한 breathe), 아직 안 푼 글자=연한 회색, 완료=성조색(전환+팝)
+            color: revealed ? toneColor : (isCurrent ? TG.INK : '#cbc4bb'), transition: `color ${DUR.state} ease`,
+            animation: revealed ? 'tg-pop .32s cubic-bezier(.34,1.56,.64,1) both' : (isCurrent ? 'tg-breathe 1.7s ease-in-out infinite' : 'none'),
           }}>{word.hanzi[i] ?? ''}</div>
         )}
         <div style={{ height: hz > 50 ? 26 : 20, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -257,8 +394,19 @@ export function WordCard({ word, entered, currentSyl, completed, timedOut, progr
           </div>
         </div>
       ) : (
-        <div style={{ height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+        <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, minHeight: 28, justifyContent: 'center' }}>
           <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 14, color: guide.color, transition: `color ${DUR.state} ease` }}>{guide.text}</span>
+          {canHint && (
+            <button onClick={onHint} className="tg-press" aria-label={hintUsed ? '발음 다시 듣기' : '발음 힌트 듣기 (콤보가 끊겨요)'} style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 13px', borderRadius: 13,
+              background: '#fff', border: `1.5px solid ${hintUsed ? '#ebe5de' : TG.CORAL_BG}`, cursor: 'pointer', ...TOUCH_OPT,
+            }}>
+              <SpeakerHighIcon size={15} weight="fill" color={hintUsed ? '#9a93a0' : TG.CORAL_DK} />
+              <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 12, color: hintUsed ? TG.SUB : TG.INK }}>
+                {hintUsed ? '다시 듣기' : '발음 힌트'}
+              </span>
+            </button>
+          )}
         </div>
       )}
     </div>

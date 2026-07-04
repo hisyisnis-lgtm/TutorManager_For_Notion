@@ -136,9 +136,25 @@ const ALL_BEST_KEYS = [...DIFF_KEYS, ENDLESS_KEY];
 // 서버 /game/me는 Notion rich_text(2000자)라 1900자 한도. 베스트 등 다른 키 여유를 빼고 단어 통계 예산.
 const WORDS_BUDGET = 1500;
 
+// ── 마스터 수 동기화 값(mc) — '트림 전 전체 통계' 기준 마스터 수의 마지막 기록(last-writer) ──
+// 목적: 단어 풀 성장(195+)으로 트림이 상시 발동 → 마스터 단어 '통계'가 동기화에서 빠져도 '수'는 안 유실되게.
+// ★고수위(max)가 아니라 last-writer(2026-07-04 등급 강등 도입): 진짜 실력 하락(마스터 해제, 히스테리시스)은
+//   그대로 전파돼야 하므로 덮어쓴다. 동기화 아티팩트(트림)만 방어 — mc는 항상 트림 '전' 전체 기준이라
+//   트림 유실이 수에 안 섞임. 등급의 '안 뺏는' 부분은 최고 등급 기록(earProfile tierPeak)이 담당.
+function masteredSyncKey(id) { return id ? `game_mastered_sync_${id}` : 'game_mastered_sync'; }
+export function loadMasteredSync(id) {
+  try { const n = parseInt(localStorage.getItem(masteredSyncKey(id)) || '0', 10); return Number.isFinite(n) && n > 0 ? n : 0; }
+  catch { return 0; }
+}
+export function storeMasteredSync(id, n) {
+  const v = Math.max(0, n | 0);
+  try { localStorage.setItem(masteredSyncKey(id), String(v)); } catch { /* noop */ }
+  return v;
+}
+
 // 단어 통계가 무한 성장하면 직렬화가 1900자를 넘어 서버 저장이 거부된다(동기화 누락).
 // → 예산 초과 시 학습상 중요한 순서로 추려 한도 내로 트림: ①미마스터(복습 대상) 우선 보존 ②시도 많은 순.
-//   (마스터된 단어 일부가 빠지면 '마스터 수'가 살짝 줄 수 있으나, 약점 단어 보존이 학습엔 더 중요)
+//   (마스터된 단어 통계가 빠져도 마스터 '수'는 위 mc가 보존)
 function trimWords(words) {
   const entries = Object.entries(words || {});
   if (entries.length === 0 || JSON.stringify(words).length <= WORDS_BUDGET) return words || {};
@@ -158,9 +174,12 @@ function trimWords(words) {
 export function collectLocalGameData(id) {
   const best = {};
   for (const k of ALL_BEST_KEYS) { const b = loadBest(id, k); if (b) best[k] = b; }
-  return { best, words: trimWords(loadWordStats(id)) };
+  const words = loadWordStats(id);
+  // mc = 트림 전 전체 통계 기준 마스터 수(last-writer 갱신 겸) — 트림으로 마스터 항목이 빠져도 수는 보존
+  const mc = storeMasteredSync(id, Object.values(words).filter((e) => isMastered(e)).length);
+  return { best, words: trimWords(words), mc };
 }
-// 서버/게스트 게임데이터를 로컬에 머지(베스트=점수 큰 쪽, 숙련도=mergeStats).
+// 서버/게스트 게임데이터를 로컬에 머지(베스트=점수 큰 쪽, 숙련도=mergeStats, 마스터 수=last-writer 덮어씀).
 function applyGameDataToLocal(id, data) {
   if (!data || typeof data !== 'object') return;
   for (const [k, sb] of Object.entries(data.best || {})) {
@@ -169,6 +188,7 @@ function applyGameDataToLocal(id, data) {
     if ((sb.bestScore || 0) >= (lb.bestScore || 0)) saveBest(id, k, { ...lb, ...sb });
   }
   if (data.words) saveWordStats(id, mergeStats(loadWordStats(id), data.words));
+  if (typeof data.mc === 'number') storeMasteredSync(id, data.mc); // 하락도 전파(진짜 실력 신호)
 }
 
 // 서버(/game/me) → 로컬 머지. 회원 진입/로그인 시.

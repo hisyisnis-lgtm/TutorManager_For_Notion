@@ -59,22 +59,22 @@ export function DifficultyScreen({ selected, studentToken, onSelect, onStart, on
               boxShadow: on ? `0px 8px 20px ${c.glow}` : (unlocked ? '0px 4px 12px rgba(43,39,48,0.05)' : 'none'),
               transition: `transform .26s cubic-bezier(0.34,1.56,0.64,1), box-shadow ${DUR.state} ease, border-color ${DUR.state} ease`, ...TOUCH_OPT,
             }}>
-              <div style={{ width: 54, height: 54, borderRadius: 18, flexShrink: 0, background: unlocked ? c.tint : '#efeae4', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ width: 52, height: 52, borderRadius: 16, flexShrink: 0, background: unlocked ? c.tint : '#efeae4', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Icon size={26} weight="fill" color={unlocked ? c.accent : '#b8b0a8'} />
               </div>
-              <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
+              {/* 설명(기초단어 등)은 라벨+별로 충분해 미표시 — 해제=최고점만, 잠금=해제조건(둘 다 2줄, 높이 통일) */}
+              <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 5 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 17, color: unlocked ? '#2b2730' : '#9a93a0' }}>{d.label}</span>
                   <div style={{ display: 'flex', gap: 2 }}>
                     {[1, 2, 3].map((s) => <StarIcon key={s} size={14} weight="fill" color={s <= meta.stars ? (unlocked ? TG.SUN : '#d8d2ca') : '#E5DED5'} />)}
                   </div>
                 </div>
-                <span style={{ fontFamily: FONT_BODY, fontWeight: 500, fontSize: 12.5, color: '#9a93a0' }}>{unlocked ? d.desc : unlockReqText(d.id)}</span>
-                {unlocked && (
-                  <span style={{ fontFamily: FONT_BODY, fontWeight: 500, fontSize: 11.5, color: '#9a93a0' }}>
-                    {best > 0 ? <>최고 <b style={{ color: '#2b2730', fontWeight: 800 }}>{best.toLocaleString()}</b>점</> : '아직 기록 없음'}
-                  </span>
-                )}
+                <span style={{ fontFamily: FONT_BODY, fontWeight: 500, fontSize: 12.5, color: '#9a93a0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {unlocked
+                    ? (best > 0 ? <>최고 <b style={{ color: '#2b2730', fontWeight: 800 }}>{best.toLocaleString()}</b>점</> : '아직 기록 없음')
+                    : unlockReqText(d.id)}
+                </span>
               </div>
               {unlocked
                 ? (on

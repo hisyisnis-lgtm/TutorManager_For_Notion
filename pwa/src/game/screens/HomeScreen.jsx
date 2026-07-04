@@ -5,13 +5,15 @@ import { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import {
   GearSixIcon, PlayIcon, HandWavingIcon, MedalIcon, TrophyIcon, FlameIcon, SnowflakeIcon,
   QuestionIcon, SignOutIcon, CaretRightIcon, SpeakerHighIcon, SpeakerSlashIcon, VibrateIcon, XIcon,
+  MusicNotesIcon, MusicNotesSimpleIcon,
 } from '@phosphor-icons/react';
 import { TG, FONT_TITLE, FONT_BODY, FONT_NUM, TOUCH_OPT, haptic, isHapticMuted, setHapticMuted } from '../tgTokens.js';
 import { TONES } from '../../constants/toneGameWords.js';
 import { ToneMark, useCountUp } from '../tgWidgets.jsx';
 import { earTier } from '../earProfile.js';
 import { play as playSfx, isSfxMuted, setSfxMuted } from '../tgSfx.js';
-import { FigmaScreen } from './shared.jsx';
+import { isBgmMuted, setBgmMuted, startBgm } from '../tgBgm.js';
+import { FigmaScreen, EmberRise } from './shared.jsx';
 import { PlayModal, DebugScoreModal } from './gameModals.jsx';
 import CoachMarkOverlay from '../../components/ui/CoachMarkOverlay.jsx';
 import { useTabTip } from '../../hooks/useTabTip.js';
@@ -109,8 +111,21 @@ function Eyes({ num, i, scale = 1 }) {
     <div key={s} style={{ position: 'absolute', left: (e.cx + s * e.gap - e.w / 2) * scale, top: (e.cy - e.h / 2) * scale, width: e.w * scale, height: e.h * scale, borderRadius: (e.w * scale) / 2, background: '#2b2730', transformOrigin: 'center', animation: `tg-blinkeye ${4.4 + (num % 5) * 0.5}s ease-in-out ${i * 0.7}s infinite`, pointerEvents: 'none', zIndex: 1 }} />
   ));
 }
-function WanderingMark({ tone, i, level = 0, prog = 0, state = 'mid', celebrate = false, introLine = null, onOpenCard }) {
+// 레벨 변화 콜아웃 — 스포트라이트 중 캐릭터 머리 위(흰 카드+꼬리). 상승=성조색 강조 / 하락=담백.
+function LevelCallout({ change, color }) {
+  const up = change.dir === 'up';
+  return (
+    <div style={{ position: 'relative', background: '#fff', borderRadius: 15, padding: '10px 18px', textAlign: 'center', boxShadow: '0 8px 22px rgba(43,39,48,0.32)' }}>
+      <div style={{ fontFamily: FONT_BODY, fontWeight: 800, fontSize: 17, color: up ? color : TG.SUB, lineHeight: 1.15 }}>{up ? '레벨 업!' : '레벨 다운'}</div>
+      <div style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 14.5, color: TG.INK, marginTop: 3, whiteSpace: 'nowrap' }}>Lv.{change.from} → Lv.{change.to}</div>
+      <div style={{ position: 'absolute', left: '50%', bottom: -8, transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '8px solid transparent', borderRight: '8px solid transparent', borderTop: '9px solid #fff' }} />
+    </div>
+  );
+}
+
+function WanderingMark({ tone, i, level = 0, prog = 0, state = 'mid', celebrate = false, reveal = null, onRevealPos, introLine = null, onOpenCard }) {
   const elRef = useRef(null);
+  const revealRef = useRef(null); // 스포트라이트 중이면 이동 정지·z 상승(rAF가 매 프레임 읽음)
   const bodyRef = useRef(null); // 몸통(원근 스케일 받음)
   const headRef = useRef(null); // 머리 위 UI(원근 스케일 영향 없음 — 위치만 추적)
   const followerRefs = useRef([]); // 레벨만큼의 작은 추종 캐릭터
@@ -135,10 +150,27 @@ function WanderingMark({ tone, i, level = 0, prog = 0, state = 'mid', celebrate 
     const id = setTimeout(() => setSparkle(false), 2400);
     return () => clearTimeout(id);
   }, [celebrate]);
+  // 레벨 스포트라이트 — 이 캐릭터 차례면 점프+(상승 시)반짝. rAF는 revealRef로 정지/z상승 판단.
+  useEffect(() => {
+    revealRef.current = reveal;
+    if (!reveal) { setSparkle(false); return undefined; }
+    doHop();
+    if (reveal.dir === 'up') setSparkle(true);
+    // 스포트라이트 구멍 위치 = 프리즈된 마크 중심(컨테이너 좌표). tick이 위치 세팅한 다음 프레임에 읽어 보고.
+    let raf1, raf2;
+    raf1 = requestAnimationFrame(() => { raf2 = requestAnimationFrame(() => {
+      const bd = bodyRef.current, el = elRef.current, par = el && el.offsetParent;
+      if (bd && par && onRevealPos) {
+        const r = bd.getBoundingClientRect(), pr = par.getBoundingClientRect();
+        onRevealPos({ x: r.left - pr.left + r.width / 2, y: r.top - pr.top + r.height / 2 });
+      }
+    }); });
+    return () => { cancelAnimationFrame(raf1); cancelAnimationFrame(raf2); };
+  }, [reveal]);
   // 첫 방문 코치 한 줄 — 약점 캐릭터 위 말풍선(살짝 뒤 등장 → 사라짐)
   useEffect(() => {
     if (!introLine) return undefined;
-    const a = setTimeout(() => setSay(introLine), 650);
+    const a = setTimeout(() => { setSay(introLine); playSfx('tone' + tone.num); }, 650);
     const b = setTimeout(() => setSay((s) => (s === introLine ? null : s)), 5400);
     return () => { clearTimeout(a); clearTimeout(b); };
   }, [introLine]);
@@ -170,7 +202,7 @@ function WanderingMark({ tone, i, level = 0, prog = 0, state = 'mid', celebrate 
       const r = Math.random();
       if (r < 0.4) { target = pickTarget(); setTilt(target.x > pos.x ? 1 : -1); mode = 'move'; setSt('walk'); }
       else if (r < 0.85) { mode = 'idle'; setSt('idle'); setTilt(0); until = now + 1800 + Math.random() * 3000; }
-      else { mode = 'talk'; setSt('talk'); setTilt(0); doHop(); const p = TALK_LINES[tone.num] || ['!']; setSay(p[Math.floor(Math.random() * p.length)]); until = now + 1900; }
+      else { mode = 'talk'; setSt('talk'); setTilt(0); doHop(); const p = TALK_LINES[tone.num] || ['!']; setSay(p[Math.floor(Math.random() * p.length)]); playSfx('tone' + tone.num); until = now + 1900; }
     };
     // 팔로워 — 메인 기준 슬롯(유지 거리·각도). 현재위치 fp가 슬롯을 lerp로 쫓아옴 → 일정 간격 두고 따라오는 느낌.
     const nf = Math.max(0, level - 1);
@@ -185,6 +217,16 @@ function WanderingMark({ tone, i, level = 0, prog = 0, state = 'mid', celebrate 
     const tick = (now) => {
       if (!alive) return;
       const dt = Math.min(0.05, (now - last) / 1000); last = now;
+      // 스포트라이트 중 — 제자리 정지 + 딤(z610) 위로(z640)
+      if (revealRef.current) {
+        v.x = 0; v.y = 0;
+        COLL.set(mId, { x: pos.x, y: pos.y, r: cr });
+        const [sx, sy, ds] = project(pos.x, pos.y, W, H);
+        el.style.left = sx + 'px'; el.style.top = sy + 'px'; el.style.zIndex = '640';
+        const bd = bodyRef.current; if (bd) bd.style.transform = `scale(${ds})`;
+        const hd = headRef.current; if (hd) hd.style.top = (44 * (1 - ds) - 8) + 'px';
+        raf = requestAnimationFrame(tick); return;
+      }
       const px0 = pos.x, py0 = pos.y;
       // 가속도 — 목표를 향해 속도가 점점 붙고, 도착 가까이서 감속(arrive)
       if (mode === 'move') {
@@ -320,8 +362,9 @@ function WanderingMark({ tone, i, level = 0, prog = 0, state = 'mid', celebrate 
         <div style={{ animation: wobble ? 'tg-needme 3.4s ease-in-out infinite' : 'none' }}>
         <div style={{ animation: jump ? 'tg-hop .54s cubic-bezier(.3,.9,.4,1)' : 'none' }}>
           <div style={{ animation: st === 'walk' ? 'tg-bob .5s ease-in-out infinite' : `tg-bob ${idleBob}s ease-in-out infinite` }}>
-            {/* 성조색 — ToneMark는 currentColor 사용 → 래퍼 color로 채색. 레벨로 크기 신호(색 변화 없음) */}
-            <div style={{ position: 'relative', display: 'inline-block', color: tone.color, transform: `rotate(${tilt * 7}deg) scale(${vScale})`, transition: 'transform .3s ease' }}>
+            {/* 성조색 — ToneMark는 currentColor 사용 → 래퍼 color로 채색. 레벨로 크기 신호(색 변화 없음). 스포트라이트 시 살짝 커짐 */}
+            <div style={{ position: 'relative', display: 'inline-block', color: tone.color, transform: `rotate(${tilt * 7}deg) scale(${vScale * (reveal ? 1.3 : 1)})`, transition: 'transform .35s cubic-bezier(.22,1,.36,1)' }}>
+              {reveal && <div aria-hidden="true" style={{ position: 'absolute', left: '50%', top: '50%', width: 100, height: 100, transform: 'translate(-50%,-50%)', borderRadius: '50%', pointerEvents: 'none', background: reveal.dir === 'up' ? `radial-gradient(closest-side, ${tone.color}55, ${tone.color}00 72%)` : 'radial-gradient(closest-side, rgba(255,255,255,0.3), rgba(255,255,255,0) 72%)' }} />}
               <ToneMark tone={tone.num} size={markSize(tone.num)} />
               <Eyes num={tone.num} i={i} />
             </div>
@@ -331,8 +374,13 @@ function WanderingMark({ tone, i, level = 0, prog = 0, state = 'mid', celebrate 
       </div>
       {/* 머리 위 UI — 원근 스케일 영향 없음(위치만 rAF로 추적). 말풍선 or Lv 배지+게이지 */}
       <div ref={headRef} style={{ position: 'absolute', left: cx, top: 0, transform: 'translate(-50%, -100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2.5, pointerEvents: 'none', zIndex: 6, willChange: 'top' }}>
-        {say ? (
-          <div style={{ background: '#3c3c3c', color: '#fff', fontFamily: FONT_BODY, fontWeight: 700, fontSize: 11, lineHeight: 1.3, textAlign: 'center', padding: '4px 9px', borderRadius: 9, whiteSpace: say.length > 7 ? 'normal' : 'nowrap', maxWidth: 150, width: 'max-content', boxShadow: '0 3px 8px rgba(43,39,48,0.18)' }}>{say}</div>
+        {reveal ? null /* 레벨 콜아웃은 딤 위(화면 레벨)에서 렌더 — 딤에 안 가려지게 */ : say ? (
+          // 말풍선 — HUD 배지(다크 알약)와 정반대: 흰 배경 + 다크 글씨 + 아래 꼬리. "말하는 것"으로 명확히 구분.
+          <div style={{ position: 'relative', background: '#fff', color: TG.INK, fontFamily: FONT_BODY, fontWeight: 700, fontSize: 11, lineHeight: 1.3, textAlign: 'center', padding: '5px 10px', borderRadius: 12, whiteSpace: say.length > 7 ? 'normal' : 'nowrap', maxWidth: 150, width: 'max-content', boxShadow: '0 4px 12px rgba(43,39,48,0.2)' }}>
+            {say}
+            {/* 아래로 향하는 꼬리 — 캐릭터 머리를 가리킴 */}
+            <div style={{ position: 'absolute', left: '50%', bottom: -6, transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderTop: '7px solid #fff' }} />
+          </div>
         ) : (
           <>
             <div style={{ height: 15, padding: '0 5px', borderRadius: 8, background: '#2b2730', display: 'flex', alignItems: 'center', boxShadow: '0 1px 3px rgba(43,39,48,0.2)' }}>
@@ -393,8 +441,10 @@ function MenuAction({ Icon, label, sub, color = TG.INK, onClick }) {
 
 function HomeMenu({ onClose, onHelp, onLogin, isMemberUser, memberName, onLogout, onExit, onDebugIntro, onDebugScore }) {
   const [sfxOn, setSfxOn] = useState(() => !isSfxMuted());
+  const [bgmOn, setBgmOn] = useState(() => !isBgmMuted());
   const [hapticOn, setHapticOn] = useState(() => !isHapticMuted());
   const toggleSfx = () => { const n = !sfxOn; setSfxOn(n); setSfxMuted(!n); if (n) playSfx('button'); };
+  const toggleBgm = () => { const n = !bgmOn; setBgmOn(n); setBgmMuted(!n); if (n) startBgm(); }; // 켜면 홈=메뉴화면이라 즉시 재생
   const toggleHaptic = () => { const n = !hapticOn; setHapticOn(n); setHapticMuted(!n); if (n) haptic(20); };
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(26,16,20,0.55)', backdropFilter: 'blur(2px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, ...TOUCH_OPT }}>
@@ -406,6 +456,7 @@ function HomeMenu({ onClose, onHelp, onLogin, isMemberUser, memberName, onLogout
           </button>
         </div>
         <MenuToggle Icon={sfxOn ? SpeakerHighIcon : SpeakerSlashIcon} label="소리" on={sfxOn} onToggle={toggleSfx} />
+        <MenuToggle Icon={bgmOn ? MusicNotesIcon : MusicNotesSimpleIcon} label="음악" on={bgmOn} onToggle={toggleBgm} />
         <MenuToggle Icon={VibrateIcon} label="햅틱" on={hapticOn} onToggle={toggleHaptic} />
         <div style={{ height: 1, background: '#efeae4' }} />
         {onHelp && <MenuAction Icon={QuestionIcon} label="게임 방법" onClick={() => { onClose(); onHelp(); }} />}
@@ -466,7 +517,10 @@ function StreakPill({ streak, freezes = 0, onClick }) {
   const tier = streakTier(streak);
   return (
     <button onClick={onClick} className="tg-press" data-coach="tg-streak" style={{ position: 'absolute', right: 72, top: 20, height: 40, display: 'flex', alignItems: 'center', gap: 5, padding: '0 12px', borderRadius: 20, background: '#fff', boxShadow: '0 5px 14px rgba(43,39,48,0.07)', border: 'none', cursor: 'pointer', zIndex: 5, ...TOUCH_OPT }}>
-      <FlameIcon size={16} weight="fill" color={tier.color} style={{ filter: streak > 0 ? `drop-shadow(0 0 5px ${tier.glow})` : 'none' }} />
+      <span style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+        {streak > 0 && <EmberRise colors={[tier.color, tier.glow]} count={6} spread={12} rise={22} size={2.4} zIndex={0} style={{ bottom: '38%' }} />}
+        <FlameIcon size={16} weight="fill" color={tier.color} style={{ position: 'relative', filter: streak > 0 ? `drop-shadow(0 0 5px ${tier.glow})` : 'none' }} />
+      </span>
       <span style={{ fontFamily: FONT_NUM, fontWeight: 800, fontSize: 15, color: '#2b2730', lineHeight: 1 }}>{animStreak}</span>
       <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 11.5, color: '#9a93a0' }}>일</span>
       {freezes > 0 && <span style={{ display: 'flex', alignItems: 'center', gap: 1, marginLeft: 3 }} aria-label={`보호권 ${freezes}개`}><SnowflakeIcon size={13} weight="fill" color="#4D8DFF" /><span style={{ fontFamily: FONT_NUM, fontWeight: 800, fontSize: 12, color: '#4D8DFF' }}>{freezes}</span></span>}
@@ -488,8 +542,9 @@ function StreakSheet({ streak, longest, freezes, onClose }) {
       <div style={{ position: 'absolute', inset: 0, background: 'rgba(26,16,20,0.5)', backdropFilter: 'blur(2px)', animation: closing ? 'tg-fade-out .28s ease forwards' : 'tg-dim-in .28s ease' }} />
       <div onClick={(e) => e.stopPropagation()} style={{ position: 'relative', width: '100%', maxWidth: 440, background: TG.CARD, borderRadius: '26px 26px 0 0', padding: '24px 22px calc(24px + env(safe-area-inset-bottom))', boxShadow: '0 -10px 40px rgba(26,16,20,0.25)', animation: closing ? 'tg-sheet-down .26s ease forwards' : 'tg-sheet-up .32s cubic-bezier(.2,.85,.25,1)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 18 }}>
-          <div style={{ width: 56, height: 56, borderRadius: 18, background: `${tier.color}1c`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <FlameIcon size={32} weight="fill" color={tier.color} style={{ filter: streak > 0 ? `drop-shadow(0 0 6px ${tier.glow})` : 'none' }} />
+          <div style={{ position: 'relative', width: 56, height: 56, borderRadius: 18, background: `${tier.color}1c`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            {streak > 0 && <EmberRise colors={[tier.color, tier.glow]} count={12} spread={26} rise={48} size={3.6} zIndex={0} style={{ bottom: '22%' }} />}
+            <FlameIcon size={32} weight="fill" color={tier.color} style={{ position: 'relative', filter: streak > 0 ? `drop-shadow(0 0 6px ${tier.glow})` : 'none' }} />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 7 }}>
@@ -518,8 +573,8 @@ function StreakSheet({ streak, longest, freezes, onClose }) {
         <div style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
           <CardStat label="최장 기록" value={`${longest}일`} />
           <div style={{ flex: 1, background: '#f7f3ee', borderRadius: 14, padding: '12px 14px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-              <SnowflakeIcon size={18} weight="fill" color="#4D8DFF" />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <SnowflakeIcon size={22} weight="fill" color="#4D8DFF" />
               <span style={{ fontFamily: FONT_NUM, fontWeight: 800, fontSize: 22, color: '#2b2730', lineHeight: 1.1 }}>{freezes}/2</span>
             </div>
             <div style={{ fontFamily: FONT_BODY, fontWeight: 600, fontSize: 11.5, color: '#9a93a0', marginTop: 2 }}>보호권</div>
@@ -581,6 +636,7 @@ function ToneCard({ tone, status, level, onClose }) {
 
 export function HomeScreen({
   streak = 0, streakLongest = 0, freezes = 0, masteredN = 0, toneLevels = {}, toneStatus = {}, coachTone = null, celebrateTone = null,
+  levelReveals = [], onRevealsDone, revealHold = false,
   homeReady = true,
   onPlay, onMastery, onAchievements, onHelp,
   onLogin, isMemberUser, memberName, onLogout, onExit, studentToken, onRefreshBest, onDebugIntro,
@@ -593,6 +649,36 @@ export function HomeScreen({
   const [streakOpen, setStreakOpen] = useState(false); // 스트릭 상세 시트
   const [showIntro, setShowIntro] = useState(() => { try { return !localStorage.getItem('tg_home_intro'); } catch { return false; } });
   const coach = useTabTip('game-home', true); // 첫 방문 코치마크 가이드(1회)
+  // 성조 레벨 변화 스포트라이트 — 홈 도착 후 바뀐 성조를 하나씩(방 딤 + 캐릭터 강조·콜아웃)
+  const [revealIdx, setRevealIdx] = useState(-1);
+  const [revealPos, setRevealPos] = useState(null);  // 스포트라이트 구멍 중심(컨테이너 좌표, 캐릭터가 보고)
+  const [holeSize, setHoleSize] = useState(2600);     // 구멍 지름 — 화면보다 크게 시작해 좁힘
+  const firstRevealRef = useRef(true);
+  const HOLE = 180;
+  const onRevealPos = (p) => {
+    setRevealPos(p);
+    if (firstRevealRef.current) { firstRevealRef.current = false; setHoleSize(2600); } // 첫 등장 = 화면보다 큰 구멍
+    else setHoleSize(HOLE + 70);                                                        // 다음 캐릭터로 슬라이드하며 살짝 조임
+    requestAnimationFrame(() => requestAnimationFrame(() => setHoleSize(HOLE)));         // → 좁혀지며 강조
+  };
+  useEffect(() => {
+    if (levelReveals.length && homeReady && revealIdx === -1) { firstRevealRef.current = true; setHoleSize(2600); setRevealIdx(0); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [levelReveals, homeReady]);
+  useEffect(() => {
+    if (revealIdx < 0) return undefined;
+    if (revealIdx >= levelReveals.length) { // 시퀀스 끝 — 구멍 넓히며 딤 해제(iris out) 후 정리
+      setHoleSize(2600);
+      const t = setTimeout(() => { setRevealPos(null); setRevealIdx(-1); onRevealsDone && onRevealsDone(); }, 600);
+      return () => clearTimeout(t);
+    }
+    playSfx('tone' + levelReveals[revealIdx].tone); // 그 성조 캐릭터가 자기 목소리로
+    if (revealHold) return undefined; // 미리보기: 자동 진행 X(딤 탭으로 넘김)
+    const id = setTimeout(() => setRevealIdx((n) => n + 1), 2200);
+    return () => clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [revealIdx]);
+  const activeReveal = revealIdx >= 0 && revealIdx < levelReveals.length ? levelReveals[revealIdx] : null;
   // 첫 방문 코치 1회 — 약점 성조가 정해지면 표시·플래그 저장, 잠시 후 종료
   useEffect(() => {
     if (!(showIntro && coachTone != null)) return undefined;
@@ -659,11 +745,24 @@ export function HomeScreen({
             const stt = toneStatus[t.num] || { state: 'unknown' };
             return <WanderingMark key={t.num} tone={t} i={i} level={Math.min(5, d.lv || 1)} prog={d.prog || 0}
               state={stt.state} celebrate={celebrateTone === t.num}
+              reveal={activeReveal && activeReveal.tone === t.num ? activeReveal : null} onRevealPos={onRevealPos}
               introLine={showIntro && coachTone === t.num ? `난 너의 ${t.name}! 같이 연습하면 무럭무럭 자라요` : null}
               onOpenCard={() => setCardTone(t.num)} />;
           })}
         </div>
       </div>
+
+      {/* 레벨 스포트라이트 — 구멍 뚫린 딤(box-shadow 홀)을 화면 레벨(z55)에 둬 UI(상단 정보·메뉴·플레이 등)까지 덮음.
+          구멍은 방 안 캐릭터(z640, 방=z0)를 뚫어 보여줌. 화면보다 큰 구멍 → 캐릭터로 좁혀지며(iris-in) 강조. */}
+      {revealPos && (
+        <div onClick={() => { if (activeReveal) setRevealIdx((n) => n + 1); }} style={{ position: 'absolute', left: revealPos.x, top: revealPos.y, transform: 'translate(-50%, -50%)', width: holeSize, height: holeSize, borderRadius: '50%', boxShadow: '0 0 0 9999px rgba(18,13,22,0.72)', transition: 'width .62s cubic-bezier(.33,0,.2,1), height .62s cubic-bezier(.33,0,.2,1), left .5s cubic-bezier(.4,0,.2,1), top .5s cubic-bezier(.4,0,.2,1)', zIndex: 55, pointerEvents: 'auto' }} />
+      )}
+      {/* 레벨 콜아웃 — 딤 위(z56)에 별도 렌더 → 딤에 절대 안 가려짐. 스포트라이트 캐릭터 머리 위에 위치. */}
+      {activeReveal && revealPos && (
+        <div style={{ position: 'absolute', left: revealPos.x, top: revealPos.y - 56, transform: 'translate(-50%, -100%)', zIndex: 56, pointerEvents: 'none' }}>
+          <LevelCallout change={activeReveal} color={(TONES.find((t) => t.num === activeReveal.tone) || {}).color} />
+        </div>
+      )}
 
       {/* 상단 HUD — 내 정보(좌) · 로고(중앙) · 메뉴(우) */}
       <MyInfo tier={tier} onClick={() => onMastery && onMastery()} />
@@ -678,7 +777,7 @@ export function HomeScreen({
 
       {/* 하단 — 플레이 CTA(은은한 펄스) + 보조 3 */}
       <div style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(86px + env(safe-area-inset-bottom))', zIndex: 3, animation: 'tg-cta-pulse 2.6s ease-in-out infinite' }}>
-        <button className="tg-press" data-coach="tg-play" onClick={() => { playSfx('button'); onPlay && onPlay(); }} style={{
+        <button className="tg-press" data-coach="tg-play" onClick={() => { playSfx('button'); if (coach.visible) coach.dismiss(); onPlay && onPlay(); }} style={{
           width: '100%', height: 60, borderRadius: 20, border: 'none', cursor: 'pointer',
           background: TG.CORAL_GRAD, boxShadow: '0px 10px 20px rgba(242,72,76,0.32)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, ...TOUCH_OPT,
         }}>
@@ -707,7 +806,7 @@ export function HomeScreen({
       {import.meta.env.DEV && debugScoreOpen && <DebugScoreModal studentToken={studentToken} onClose={() => setDebugScoreOpen(false)} onApplied={() => onRefreshBest && onRefreshBest()} />}
 
       {/* 첫 방문 코치마크 가이드 — 방/등급/연속학습/플레이 순서로 안내(1회). 타이틀→홈 전환(homeTx)이 끝난 뒤에만 표시 */}
-      <CoachMarkOverlay visible={homeReady && coach.visible} onDone={coach.dismiss} steps={COACH_STEPS} delay={160} showControls={false} />
+      <CoachMarkOverlay visible={homeReady && coach.visible} onDone={coach.dismiss} steps={COACH_STEPS} delay={160} showControls={false} forceLastStep />
     </FigmaScreen>
   );
 }

@@ -7,35 +7,54 @@ import {
 beforeEach(() => { localStorage.clear(); });
 
 describe('recordTone', () => {
-  it('새 성조는 [정답, 시도]로 시작', () => {
+  it('새 성조는 [정답, 시도, ema]로 시작 — 첫 기록 ema = 결과 그대로', () => {
     const s = {};
     recordTone(s, 3, true);
-    expect(s[3]).toEqual([1, 1]);
+    expect(s[3]).toEqual([1, 1, 1]);
   });
   it('오답은 시도만 늘린다', () => {
     const s = {};
     recordTone(s, 2, false);
-    expect(s[2]).toEqual([0, 1]);
+    expect(s[2]).toEqual([0, 1, 0]);
   });
-  it('누적된다', () => {
+  it('누적된다 + ema 갱신', () => {
     const s = {};
-    recordTone(s, 1, true);
-    recordTone(s, 1, false);
-    recordTone(s, 1, true);
-    expect(s[1]).toEqual([2, 3]);
+    recordTone(s, 1, true);   // ema 1
+    recordTone(s, 1, false);  // 1 → 0.9
+    recordTone(s, 1, true);   // 0.9 → 0.91
+    expect(s[1][0]).toBe(2);
+    expect(s[1][1]).toBe(3);
+    expect(s[1][2]).toBeCloseTo(0.91, 10);
   });
   it('경성(0)도 분리 집계', () => {
     const s = {};
     recordTone(s, 0, true);
-    expect(s[0]).toEqual([1, 1]);
+    expect(s[0]).toEqual([1, 1, 1]);
+  });
+  it('레거시 [정답,시도] 항목은 누적 정확도로 시드 후 갱신(자동 마이그레이션)', () => {
+    const s = { 2: [8, 10] }; // 누적 80%
+    recordTone(s, 2, true);
+    expect(s[2][0]).toBe(9);
+    expect(s[2][1]).toBe(11);
+    expect(s[2][2]).toBeCloseTo(0.8 + (1 - 0.8) * 0.1, 10); // 0.82
   });
 });
 
 describe('toneAccuracy / toneAttempts', () => {
-  it('정답률 = 정답/시도, 시도 0이면 0', () => {
+  it('레거시 항목은 누적 정답률 폴백, 시도 0이면 0', () => {
     expect(toneAccuracy([3, 4])).toBe(0.75);
     expect(toneAccuracy([0, 0])).toBe(0);
     expect(toneAccuracy(undefined)).toBe(0);
+  });
+  it('ema 있으면 ema 우선(최근 가중)', () => {
+    expect(toneAccuracy([3, 4, 0.5])).toBe(0.5);
+  });
+  it('★최근 가중 — 시도가 많이 쌓여도 최근 연속 오답이 정답률을 실질 반영(고착 방지)', () => {
+    const s = { 1: [90, 100] }; // 누적 90%
+    for (let i = 0; i < 5; i++) recordTone(s, 1, false); // 최근 5연속 오답
+    const cumulative = s[1][0] / s[1][1]; // 90/105 ≈ 0.857 — 누적은 거의 안 움직임
+    expect(toneAccuracy(s[1])).toBeCloseTo(0.9 * 0.9 ** 5, 10); // ema ≈ 0.531 — 크게 하락
+    expect(toneAccuracy(s[1])).toBeLessThan(cumulative - 0.3);
   });
   it('시도수', () => {
     expect(toneAttempts([3, 4])).toBe(4);

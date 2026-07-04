@@ -1,10 +1,10 @@
 // 모드 선택 — 중요도 2단. 주력 큰 카드(난이도·테마) + 보조 칩(무한·연습·복습).
 // Figma "26. 모드 선택 v2". 잠긴 카드(무한)는 흔들림+토스트.
-import { CaretLeftIcon, CaretRightIcon, StairsIcon, LightningIcon, LockSimpleIcon, GraduationCapIcon, ArrowsClockwiseIcon, CardsThreeIcon } from '@phosphor-icons/react';
+import { CaretLeftIcon, CaretRightIcon, StairsIcon, InfinityIcon, SkullIcon, LockSimpleIcon, GraduationCapIcon, ArrowsClockwiseIcon, CardsThreeIcon } from '@phosphor-icons/react';
 import { TG, FONT_TITLE, FONT_BODY, TOUCH_OPT } from '../tgTokens.js';
 import { useState } from 'react';
 import { ShakeButton, Reveal, CoachBubble } from './shared.jsx';
-import { ReviewStartModal } from './gameModals.jsx';
+import { ReviewStartModal, EndlessStartModal } from './gameModals.jsx';
 import CoachMarkOverlay from '../../components/ui/CoachMarkOverlay.jsx';
 import { useTabTip } from '../../hooks/useTabTip.js';
 
@@ -16,13 +16,15 @@ const MODE_COACH = [
 ];
 
 // 주력 큰 카드 — 아이콘 박스 + 제목 + 설명 (세로). locked면 회색+자물쇠 배지+해제조건.
-function BigTile({ Icon, iconColor, tintBg, title, desc, locked, lockText, onClick, onLocked, coachId }) {
+// dangerDesc=설명을 위험(서든데스) 톤으로: 작은 해골 + 빨간 글씨(난이도 카드와 구조는 같게, 색만 위험 신호).
+function BigTile({ Icon, iconColor, tintBg, title, desc, locked, lockText, onClick, onLocked, coachId, dangerDesc }) {
+  const showDanger = dangerDesc && !locked;
   return (
     <ShakeButton shakeOnClick={locked} onClick={locked ? onLocked : onClick} className={locked ? '' : 'tg-press'} data-coach={coachId} style={{
       flex: 1, minWidth: 0, height: 150, background: locked ? '#f7f3ee' : '#fff', border: '1.5px solid #efeae4', borderRadius: 22, cursor: 'pointer',
-      boxShadow: locked ? 'none' : '0px 4px 12px rgba(43,39,48,0.05)', padding: 18, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', textAlign: 'left', ...TOUCH_OPT,
+      boxShadow: locked ? 'none' : '0px 4px 12px rgba(43,39,48,0.05)', padding: 16, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center', gap: 12, textAlign: 'left', ...TOUCH_OPT,
     }}>
-      <div style={{ position: 'relative', width: 56, height: 56, borderRadius: 18, background: locked ? '#efeae4' : tintBg, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 'auto' }}>
+      <div style={{ position: 'relative', flexShrink: 0, width: 52, height: 52, borderRadius: 16, background: locked ? '#efeae4' : tintBg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <Icon size={28} weight="fill" color={locked ? '#b8b0a8' : iconColor} />
         {locked && (
           <div style={{ position: 'absolute', right: -5, bottom: -5, width: 22, height: 22, borderRadius: 11, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.14)' }}>
@@ -30,8 +32,13 @@ function BigTile({ Icon, iconColor, tintBg, title, desc, locked, lockText, onCli
           </div>
         )}
       </div>
-      <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 17, color: locked ? '#9a93a0' : '#2b2730' }}>{title}</span>
-      <span style={{ fontFamily: FONT_BODY, fontWeight: 500, fontSize: 12.5, color: '#9a93a0', marginTop: 4 }}>{locked ? lockText : desc}</span>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 5, minWidth: 0, alignSelf: 'stretch' }}>
+        <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 17, color: locked ? '#9a93a0' : '#2b2730' }}>{title}</span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontFamily: FONT_BODY, fontWeight: showDanger ? 700 : 500, fontSize: 12.5, color: showDanger ? '#d0464a' : '#9a93a0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          {showDanger && <SkullIcon size={13} weight="fill" color="#d0464a" style={{ flexShrink: 0 }} />}
+          {locked ? lockText : desc}
+        </span>
+      </div>
     </ShakeButton>
   );
 }
@@ -49,7 +56,7 @@ function FeatureCard({ Icon, accent, tint, border, title, desc, locked, lockText
       </div>
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
         <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 17, color: locked ? '#9a93a0' : '#2b2730' }}>{title}</span>
-        <span style={{ fontFamily: FONT_BODY, fontWeight: 500, fontSize: 12.5, color: '#9a93a0' }}>{desc}</span>
+        <span style={{ fontFamily: FONT_BODY, fontWeight: 500, fontSize: 12.5, color: '#9a93a0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{desc}</span>
       </div>
       {locked ? (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, flexShrink: 0 }}>
@@ -75,9 +82,10 @@ function ModeChip({ Icon, iconColor, label, locked, onClick, onLocked }) {
   );
 }
 
-export function ModeScreen({ endlessUnlocked, reviewCount = 0, onDifficulty, onTheme, onEndless, onPractice, onReview, onBack, onLocked }) {
+export function ModeScreen({ endlessUnlocked, endlessBest = 0, reviewCount = 0, onDifficulty, onTheme, onEndless, onPractice, onReview, onBack, onLocked }) {
   const tip = useTabTip('game-mode', true);
   const [reviewOpen, setReviewOpen] = useState(false);
+  const [endlessOpen, setEndlessOpen] = useState(false);
   return (
     <>
       <Reveal i={0} style={{ position: 'absolute', left: 24, top: 20, right: 24 }}>
@@ -97,14 +105,14 @@ export function ModeScreen({ endlessUnlocked, reviewCount = 0, onDifficulty, onT
         <Reveal i={2} style={{ paddingLeft: 24, paddingRight: 24, marginTop: 28 }}>
           <div style={{ display: 'flex', gap: 12 }}>
             <BigTile Icon={StairsIcon} iconColor={TG.CORAL_DK} tintBg="rgba(255,107,107,0.14)" title="난이도 모드" desc="초급부터 차근차근" onClick={onDifficulty} coachId="mode-difficulty" />
-            <BigTile Icon={LightningIcon} iconColor="#F0A91E" tintBg="rgba(255,194,60,0.16)" title="무한 모드" desc="점점 빨라지는 도전"
-              locked={!endlessUnlocked} lockText="고급 1,000점 달성 시" onClick={onEndless} onLocked={() => onLocked && onLocked('고급 1,000점을 달성하면 열려요')} />
+            <BigTile Icon={InfinityIcon} iconColor="#F0A91E" tintBg="rgba(255,194,60,0.16)" title="무한 모드" desc="서든데스" dangerDesc
+              locked={!endlessUnlocked} lockText="고급 1,000점 달성" onClick={() => setEndlessOpen(true)} onLocked={() => onLocked && onLocked('고급 1,000점을 달성하면 열려요')} />
           </div>
         </Reveal>
         {/* 메인 콘텐츠 — 테마(피처 카드, 풀폭·보라 강조) */}
         <Reveal i={3} style={{ paddingLeft: 24, paddingRight: 24, marginTop: 16 }}>
           <FeatureCard Icon={CardsThreeIcon} accent="#7c5cff" tint="rgba(124,92,255,0.10)" border="rgba(124,92,255,0.28)"
-            title="테마 모드" desc="드라마·여행 · 취향대로 골라 플레이" onClick={onTheme} coachId="mode-theme" />
+            title="테마 모드" desc="드라마·여행 등 취향대로" onClick={onTheme} coachId="mode-theme" />
         </Reveal>
         {/* 학습 보조 칩 2 — 연습·복습 */}
         <Reveal i={4} style={{ paddingLeft: 24, paddingRight: 24, marginTop: 16 }}>
@@ -117,6 +125,7 @@ export function ModeScreen({ endlessUnlocked, reviewCount = 0, onDifficulty, onT
       </div>
       <CoachMarkOverlay visible={tip.visible} onDone={tip.dismiss} steps={MODE_COACH} delay={160} showControls={false} />
       {reviewOpen && <ReviewStartModal count={reviewCount} onStart={() => { setReviewOpen(false); onReview && onReview(); }} onClose={() => setReviewOpen(false)} />}
+      {endlessOpen && <EndlessStartModal best={endlessBest} onStart={() => { setEndlessOpen(false); onEndless && onEndless(); }} onClose={() => setEndlessOpen(false)} />}
     </>
   );
 }

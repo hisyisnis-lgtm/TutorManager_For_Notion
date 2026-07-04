@@ -3,7 +3,7 @@ import { CaretLeftIcon, SpeakerHighIcon, PlayIcon } from '@phosphor-icons/react'
 import { TG, FONT_TITLE, FONT_HANZI, FONT_BODY, FONT_NUM, FONT_PINYIN, TOUCH_OPT } from '../tgTokens.js';
 import { ROUND_LENGTH } from '../../constants/toneGameWords.js';
 import { TONE_NUMS, toneAccuracy, toneAttempts } from '../toneStats.js';
-import { earTier } from '../earProfile.js';
+import { earTier, EAR_TIERS } from '../earProfile.js';
 import { speakWord } from '../tgTts.js';
 import { play as playSfx } from '../tgSfx.js';
 import { Reveal, CoachBubble } from './shared.jsx';
@@ -53,7 +53,7 @@ function ToneRadar({ toneStats }) {
   );
 }
 
-function WordStatRow({ word, acc, avg }) {
+function WordStatRow({ word, acc }) {
   const pct = Math.round(acc * 100);
   const c = masteryColor(acc);
   return (
@@ -65,7 +65,8 @@ function WordStatRow({ word, acc, avg }) {
         </div>
         <div style={{ fontFamily: FONT_PINYIN, fontWeight: 500, fontSize: 12, color: '#9a93a0', marginTop: 3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{(word.pinyin || []).join(' ')}</div>
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
+      {/* 정답률만(% + 바) — 평균시간은 부차적이라 제외해 왼쪽 2행과 균형 */}
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <span style={{ fontFamily: FONT_NUM, fontWeight: 800, fontSize: 20, color: c }}>{pct}</span>
           <span style={{ fontFamily: FONT_NUM, fontWeight: 800, fontSize: 12, color: c }}>%</span>
@@ -73,7 +74,6 @@ function WordStatRow({ word, acc, avg }) {
         <div style={{ width: 64, height: 6, borderRadius: 3, background: '#f0ebe4', overflow: 'hidden' }}>
           <div style={{ width: `${pct}%`, height: '100%', background: c, borderRadius: 3 }} />
         </div>
-        <span style={{ fontFamily: FONT_BODY, fontWeight: 500, fontSize: 11, color: '#9a93a0' }}>{avg > 0 && avg < 180000 ? `평균 ${(avg / 1000).toFixed(1)}초` : '—'}</span>
       </div>
       {/* 발음 듣기(TTS) */}
       <button onClick={() => speakWord(word)} aria-label="발음 듣기" className="tg-press" style={{ width: 34, height: 34, borderRadius: 12, background: '#f3efe9', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, ...TOUCH_OPT }}>
@@ -83,10 +83,13 @@ function WordStatRow({ word, acc, avg }) {
   );
 }
 
-export function MasteryScreen({ rows, masteredN, toneStats, onBack, onReview }) {
+export function MasteryScreen({ rows, masteredN, toneStats, onBack, onReview, peakTierIdx = 0 }) {
   const need = rows.length;
   const reviewN = Math.min(ROUND_LENGTH, need);
   const tier = earTier(masteredN);
+  // 최고 등급 칩 — 현재가 최고 기록보다 낮을 때만("최고 골드 · 현재 실버"). 성취의 기억 보존 + 회복 안내(압박 카피 X).
+  const peak = Math.max(peakTierIdx | 0, tier.idx) < EAR_TIERS.length ? EAR_TIERS[Math.max(peakTierIdx | 0, tier.idx)] : null;
+  const belowPeak = peak && Math.max(peakTierIdx | 0, tier.idx) > tier.idx;
   return (
     <>
       <Reveal i={0} style={{ position: 'absolute', left: 24, top: 20, right: 24 }}>
@@ -114,8 +117,16 @@ export function MasteryScreen({ rows, masteredN, toneStats, onBack, onReview }) 
               ))}
               <img src={tier.emblem} alt="" width={132} height={132} style={{ position: 'relative', filter: `drop-shadow(0 8px 18px ${tier.glow}55)` }} />
             </div>
-            {/* 단계명 */}
+            {/* 단계명 (+ 최고 기록이 더 높으면 '최고' 칩 — 강등돼도 성취는 보존) */}
             <span style={{ fontFamily: FONT_TITLE, fontSize: 22, color: '#2b2730' }}>{tier.name}</span>
+            {belowPeak && (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: '#fff6e8', padding: '4px 11px', borderRadius: 11 }}>
+                  <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 12, color: '#E0A21A' }}>🏆 최고 기록 · {peak.name}</span>
+                </div>
+                <span style={{ fontFamily: FONT_BODY, fontWeight: 500, fontSize: 12, color: '#9a93a0' }}>복습하면 금방 되찾을 수 있어요</span>
+              </div>
+            )}
             {/* 진행 */}
             {tier.isMax ? (
               <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 13, color: '#E0A21A' }}>최고 단계 달성! 🎉 · 마스터한 단어 {masteredN}개</span>
@@ -143,7 +154,7 @@ export function MasteryScreen({ rows, masteredN, toneStats, onBack, onReview }) 
             </div>
             {/* 리스트 */}
             <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {rows.map((r) => <WordStatRow key={r.word.hanzi} word={r.word} acc={r.acc} avg={r.avg} />)}
+              {rows.map((r) => <WordStatRow key={r.word.hanzi} word={r.word} acc={r.acc} />)}
             </div>
           </>
         ) : (

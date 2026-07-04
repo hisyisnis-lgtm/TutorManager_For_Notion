@@ -32,7 +32,12 @@ function resolveRect(selector) {
  *   delay   — 첫 스포트라이트 계산 전 대기(ms). 기본 350(탭 콘텐츠 async 렌더 대기).
  *             콘텐츠가 이미 떠있는 화면은 작게 줘 빠르게 표시.
  */
-export default function CoachMarkOverlay({ steps, visible, onDone, delay = 350, showControls = true }) {
+/**
+ * forceLastStep — true면 마지막 단계에서 스포트라이트(하이라이트된 요소)만 클릭 가능.
+ *   나머지 화면은 탭을 흡수(진행/건너뛰기 불가) → 사용자가 그 버튼을 실제로 눌러야만 다음으로 진행.
+ *   코치 종료는 그 버튼의 onClick 쪽에서 dismiss로 처리(여기선 탭으로 finish 안 함).
+ */
+export default function CoachMarkOverlay({ steps, visible, onDone, delay = 350, showControls = true, forceLastStep = false }) {
   const [step, setStep]       = useState(0);
   const [rect, setRect]       = useState(null);
   const [mounted, setMounted] = useState(false);
@@ -97,6 +102,8 @@ export default function CoachMarkOverlay({ steps, visible, onDone, delay = 350, 
   const vw = window.innerWidth;
   const vh = window.innerHeight;
   const current = steps[step];
+  // 강제 마지막 단계: 스포트라이트 요소만 클릭 가능(주변은 탭 흡수). rect 확정·표시 안정(alpha=1)일 때만.
+  const forcedLast = forceLastStep && step >= steps.length - 1 && !!rect && alpha === 1;
   // 툴팁·컨트롤은 게임 컬럼(가운데 최대 600px, FigmaScreen과 정합) 안에만 — 포탈(뷰포트 전체)이라 넓은 웹서 가로로 안 늘어나게.
   const COL_W = Math.min(vw, 600);
   const COL_LEFT = Math.round((vw - COL_W) / 2);
@@ -131,6 +138,7 @@ export default function CoachMarkOverlay({ steps, visible, onDone, delay = 350, 
         position: 'fixed', inset: 0, zIndex: 500,
         opacity: alpha,
         transition: 'opacity 0.22s ease-out',
+        pointerEvents: 'none', // 루트는 통과, 상호작용 자식(advance/catcher/컨트롤)만 auto — 강제 마지막의 스포트라이트 홀 클릭스루용
       }}
     >
       {/* ── 어두운 오버레이 + 스포트라이트 홀 ── */}
@@ -162,8 +170,17 @@ export default function CoachMarkOverlay({ steps, visible, onDone, delay = 350, 
         />
       </svg>
 
-      {/* ── 탭하면 다음 스텝 ── */}
-      <div style={{ position: 'absolute', inset: 0 }} onClick={advance} aria-hidden="true" />
+      {/* ── 진행 영역 ── 일반: 화면 탭=다음 스텝. 강제 마지막: 스포트라이트 홀(버튼)만 클릭 통과, 주변 4프레임은 탭 흡수 ── */}
+      {forcedLast ? (
+        <>
+          <div style={{ position: 'absolute', left: 0, top: 0, width: '100%', height: Math.max(0, rect.y), pointerEvents: 'auto' }} onClick={(e) => e.stopPropagation()} aria-hidden="true" />
+          <div style={{ position: 'absolute', left: 0, top: rect.y + rect.h, width: '100%', bottom: 0, pointerEvents: 'auto' }} onClick={(e) => e.stopPropagation()} aria-hidden="true" />
+          <div style={{ position: 'absolute', top: rect.y, left: 0, width: Math.max(0, rect.x), height: rect.h, pointerEvents: 'auto' }} onClick={(e) => e.stopPropagation()} aria-hidden="true" />
+          <div style={{ position: 'absolute', top: rect.y, left: rect.x + rect.w, right: 0, height: rect.h, pointerEvents: 'auto' }} onClick={(e) => e.stopPropagation()} aria-hidden="true" />
+        </>
+      ) : (
+        <div style={{ position: 'absolute', inset: 0, pointerEvents: 'auto' }} onClick={advance} aria-hidden="true" />
+      )}
 
       {/* ── 툴팁 (게임 컬럼 안, 가운데 정렬) ── */}
       <div
@@ -212,7 +229,7 @@ export default function CoachMarkOverlay({ steps, visible, onDone, delay = 350, 
       </div>
 
       {/* ── 하단 컨트롤 (건너뛰기 · 스텝 도트 · 다음/완료). showControls=false면 숨기고 탭으로만 진행 ── */}
-      {!showControls && (
+      {!showControls && !forcedLast && (
         <div style={{
           position: 'absolute',
           bottom: 'max(22px, calc(env(safe-area-inset-bottom) + 22px))',
