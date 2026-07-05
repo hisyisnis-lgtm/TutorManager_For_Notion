@@ -11,12 +11,13 @@ const BPM = 126;             // "신나는/경쾌" — 통통 튀는 빠른 템�
 const SEC16 = 60 / BPM / 4;
 const LOOKAHEAD = 0.14;
 const TICK = 30;
-const BARS = 8;
+const BARS = 16;            // A(1~8) + B(9~16) 두 섹션 = 반복 피로 감소
 
 const mtof = (m) => 440 * Math.pow(2, (m - 69) / 12);
 
 // ─── 곡 데이터 (C장조, 밝은 I–V–vi–IV) ────────────────────────────────
 const CHORDS = [
+  // A 섹션 (1~8): C–G–Am–F–C–G–F–G
   { pad: [64, 67], bass: 36 }, // 1 C  (3도·5도 = 피치카토 스탭용)
   { pad: [62, 67], bass: 43 }, // 2 G
   { pad: [60, 64], bass: 45 }, // 3 Am
@@ -25,9 +26,19 @@ const CHORDS = [
   { pad: [62, 67], bass: 43 }, // 6 G
   { pad: [57, 60], bass: 41 }, // 7 F
   { pad: [62, 67], bass: 43 }, // 8 G
+  // B 섹션 (9~16): F–G–Em–Am–F–G–C–G (리프트 → 해결)
+  { pad: [57, 60], bass: 41 }, // 9 F
+  { pad: [62, 67], bass: 43 }, // 10 G
+  { pad: [55, 59], bass: 40 }, // 11 Em
+  { pad: [60, 64], bass: 45 }, // 12 Am
+  { pad: [57, 60], bass: 41 }, // 13 F
+  { pad: [62, 67], bass: 43 }, // 14 G
+  { pad: [64, 67], bass: 36 }, // 15 C
+  { pad: [62, 67], bass: 43 }, // 16 G (턴어라운드)
 ];
 // 멜로디(마림바): [MIDI, 시작스텝, 길이]. 전부 C장조 5음계, 데굴데굴 굴러가는 8분 런.
 const MELODY = [
+  // A 섹션
   [[76, 0, 2], [79, 2, 2], [81, 4, 2], [84, 6, 2], [81, 8, 2], [79, 10, 2], [81, 12, 2], [79, 14, 2]], // 1
   [[76, 0, 2], [74, 2, 2], [76, 4, 2], [79, 6, 2], [81, 8, 4], [79, 12, 2], [76, 14, 2]],               // 2
   [[79, 0, 2], [81, 2, 2], [84, 4, 2], [86, 6, 2], [84, 8, 2], [81, 10, 2], [79, 12, 2], [81, 14, 2]], // 3
@@ -36,6 +47,15 @@ const MELODY = [
   [[86, 0, 2], [84, 2, 2], [81, 4, 2], [79, 6, 2], [81, 8, 2], [79, 10, 2], [76, 12, 2], [74, 14, 2]], // 6
   [[79, 0, 2], [81, 2, 2], [79, 4, 2], [76, 6, 2], [79, 8, 2], [81, 10, 2], [84, 12, 4]],               // 7
   [[81, 0, 2], [79, 2, 2], [76, 4, 2], [74, 6, 2], [72, 8, 8]],                                         // 8
+  // B 섹션 — 더 흐르고 높이 올라갔다 해결(대비)
+  [[84, 0, 4], [81, 4, 2], [79, 6, 2], [81, 8, 4], [84, 12, 4]],                                        // 9  F
+  [[86, 0, 2], [84, 2, 2], [81, 4, 2], [79, 6, 2], [81, 8, 4], [79, 12, 4]],                            // 10 G
+  [[79, 0, 4], [76, 4, 2], [74, 6, 2], [76, 8, 4], [79, 12, 4]],                                        // 11 Em
+  [[81, 0, 2], [84, 2, 2], [81, 4, 2], [79, 6, 2], [76, 8, 4], [74, 12, 4]],                            // 12 Am
+  [[76, 0, 2], [79, 2, 2], [81, 4, 2], [84, 6, 2], [86, 8, 4], [84, 12, 4]],                            // 13 F (climb)
+  [[86, 0, 2], [84, 2, 2], [86, 4, 2], [88, 6, 2], [86, 8, 4], [84, 12, 4]],                            // 14 G (peak)
+  [[84, 0, 4], [81, 4, 2], [79, 6, 2], [76, 8, 4], [79, 12, 4]],                                        // 15 C (resolve)
+  [[79, 0, 2], [81, 2, 2], [79, 4, 2], [74, 6, 2], [76, 8, 4], [74, 12, 2], [72, 14, 2]],               // 16 G (턴어라운드→1)
 ];
 // 바운시 베이스: {s,rel,v}. 걸음마 베이스(루트·5도·경과음).
 const BASSLINE = [
@@ -173,6 +193,28 @@ function shaker(t, vol) {
   const g = ctx.createGain(); g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.03);
   s.connect(hp).connect(g).connect(dryBus); s.start(t); s.stop(t + 0.045);
 }
+// 글로켄슈필 — 밝은 벨(비정수 배음+긴 링). 긴 멜로디 음 위 옥타브 반짝(리버브 살짝).
+function glock(freq, t, vol) {
+  [[1, 1, 1.1], [3.01, 0.26, 0.6], [5.4, 0.09, 0.35]].forEach(([mult, g, dec]) => {
+    const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.value = freq * mult;
+    const a = ctx.createGain();
+    a.gain.setValueAtTime(0.0001, t);
+    a.gain.linearRampToValueAtTime(vol * g, t + 0.004);
+    a.gain.exponentialRampToValueAtTime(0.0001, t + dec);
+    o.connect(a); a.connect(dryBus); a.connect(revSend);
+    o.start(t); o.stop(t + dec + 0.05);
+  });
+}
+// 소프트 심벌 스웰 — 섹션 시작 다운비트(하이패스 노이즈, 짧은 스웰).
+function cymbal(t, vol) {
+  const s = ctx.createBufferSource(); s.buffer = noiseBuf; s.loop = true;
+  const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 6000;
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.linearRampToValueAtTime(vol, t + 0.02);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.5);
+  s.connect(hp).connect(g).connect(dryBus); s.start(t); s.stop(t + 0.55);
+}
 
 // ─── 스케줄 ─────────────────────────────────────────────────────────
 function scheduleStep(absStep, t) {
@@ -185,14 +227,20 @@ function scheduleStep(absStep, t) {
   if (CLAP_STEPS.includes(pos)) clap(t, 0.15);
   if (HAT_STEPS.includes(pos)) shaker(t, pos % 4 === 2 ? 0.075 : 0.045); // 오프비트 악센트
   if (WOOD_STEPS.includes(pos)) woodblock(t, 0.17, pos === 6 ? 1200 : 900);
+  // 섹션 시작(1·9마디) 다운비트 소프트 심벌 스웰
+  if ((bar === 0 || bar === 8) && pos === 0) cymbal(t, 0.05);
+  // 프레이즈 끝(8·16마디) 뒷박 셰이커 16분 롤 크레셴도 → 루프 지점 신호
+  if ((bar === 7 || bar === 15) && pos >= 8 && pos % 2 === 1) shaker(t, 0.05 + (pos - 9) * 0.011);
   // 베이스(바운시)
   BASSLINE.forEach((b) => { if (b.s === pos) bass(mtof(chord.bass + b.rel), t, SEC16 * 1.5, 0.2 * b.v + 0.02); });
   // 피치카토 스탭(오프비트 화음 = "pah")
   if (PIZZ_STEPS.includes(pos)) {
     chord.pad.forEach((m, i) => pizz(mtof(m + 12), t, 0.06, i ? 0.35 : -0.35));
   }
-  // 멜로디(마림바)
-  MELODY[bar].forEach(([m, s]) => { if (s === pos) mallet(mtof(m), t, 0.22); });
+  // 멜로디(마림바) + 긴 음(≥4)엔 글로켄슈필 셔머(옥타브 위, 은은)
+  MELODY[bar].forEach(([m, s, len]) => {
+    if (s === pos) { mallet(mtof(m), t, 0.22); if (len >= 4) glock(mtof(m + 12), t, 0.05); }
+  });
 }
 
 function scheduler(myGen) {
