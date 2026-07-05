@@ -240,6 +240,9 @@ export default function ToneGamePage() {
     if (isPreview) { setStudent({ name: '미리보기' }); return; }
     if (identity.kind === 'member') { setStudent({ name: identity.memberUser?.nickname || '회원' }); return; } // 회원: token이 게임유저 JWT라 학생 조회 X(데이터는 pullMemberData)
     if (identity.kind === 'guest') { setStudent({ name: '플레이어' }); return; } // 게스트 독립 진입 — 학생 조회 없음
+    // 게임 단독 앱 빌드(__GAME_APP__)엔 학생 모드가 없다 — fetchStudentByToken(→bookingApi→authUtils/studentAuth)를
+    // 번들에서 DCE 제거하기 위해 학생 조회 경로 전체를 빌드플래그로 가둔다. 게임 앱은 위 게스트/회원 분기로만 도달.
+    if (__GAME_APP__) { setStudent({ name: '플레이어' }); return; }
     fetchStudentByToken(identity.token).then(setStudent).catch(() => setError(true));
   }, [identity, isPreview]);
 
