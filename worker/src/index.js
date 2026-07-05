@@ -2640,7 +2640,9 @@ async function handleFetch(request, env, ctx) {
     }
 
     const origin = request.headers.get('Origin') || '';
-    const allowed = ALLOWED_ORIGINS.has(origin) || (env.ALLOWED_ORIGIN && origin === env.ALLOWED_ORIGIN) || /^https:\/\/[a-z0-9-]+\.tiantian-chinese\.pages\.dev$/.test(origin) || /^http:\/\/localhost(:\d+)?$/.test(origin);
+    // localhost: 로컬 dev(http, 포트有) + Capacitor 네이티브 앱 웹뷰(안드로이드=https://localhost, iOS=capacitor://localhost).
+    // 게임 단독 앱이 /game/* API를 CORS로 호출하려면 이 스킴들이 허용돼야 함(민감 라우트는 JWT로 별도 게이팅).
+    const allowed = ALLOWED_ORIGINS.has(origin) || (env.ALLOWED_ORIGIN && origin === env.ALLOWED_ORIGIN) || /^https:\/\/[a-z0-9-]+\.tiantian-chinese\.pages\.dev$/.test(origin) || /^https?:\/\/localhost(:\d+)?$/.test(origin) || origin === 'capacitor://localhost';
 
     const corsHeaders = {
       'Access-Control-Allow-Origin': allowed ? origin : '',

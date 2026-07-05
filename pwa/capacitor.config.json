@@ -1,0 +1,9 @@
+{
+  "appId": "com.tiantian.tonegame",
+  "appName": "성조게임",
+  "webDir": "dist-game",
+  "backgroundColor": "#0E1730",
+  "android": {
+    "backgroundColor": "#0E1730"
+  }
+}

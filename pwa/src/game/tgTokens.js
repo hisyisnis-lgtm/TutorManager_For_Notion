@@ -110,6 +110,8 @@ const FONT_HREF =
   'https://fonts.googleapis.com/css2?family=Jua&family=Baloo+2:wght@600;700;800&family=Noto+Sans+KR:wght@400;500;700&display=swap';
 export function ensureGameFonts() {
   if (typeof document === 'undefined') return;
+  // 게임 단독 앱은 @fontsource로 폰트를 번들(main.game.jsx)하므로 CDN 주입 불필요 — 오프라인 동작.
+  if (__GAME_APP__) return;
   if (document.getElementById('tg-fonts')) return;
   // preconnect (성능)
   for (const [id, href, cross] of [
