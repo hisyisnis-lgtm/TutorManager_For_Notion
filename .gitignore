@@ -31,3 +31,13 @@ taste-skill/
 
 # Worker 빌드 산출물 검증용
 worker/dist-check/
+
+# 임시 작업/QA/MCP 산출물 (커밋 대상 아님 — VS Code Git 과다변경 경고 방지)
+.tmp_qa/
+.tmp_game/
+.playwright-mcp/
+
+# 루트에 쌓이는 개발 중 스크린샷 (서브폴더 이미지는 영향 없음)
+/*.png
+/*.jpeg
+/*.jpg
