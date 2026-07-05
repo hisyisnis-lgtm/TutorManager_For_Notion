@@ -10,6 +10,13 @@ import { antdTheme } from './constants/theme.js';
 import ToneGamePage from './pages/ToneGamePage.jsx';
 import ErrorBoundary from './components/ui/ErrorBoundary.jsx';
 import { installErrorReporter } from './utils/errorReporter.js';
+// 게임 앱 전용 폰트 번들(오프라인 대응) — 웹은 CDN 유지(ensureGameFonts). 브랜드 폰트만 로컬:
+// Jua(타이틀·한글통짜 360KB+라틴)·Baloo 2(숫자·라틴 600/700/800). 한글 본문은 시스템 폰트(Android=Noto CJK).
+import '@fontsource/jua/latin-400.css';
+import '@fontsource/jua/korean-400.css';
+import '@fontsource/baloo-2/latin-600.css';
+import '@fontsource/baloo-2/latin-700.css';
+import '@fontsource/baloo-2/latin-800.css';
 import './index.css';
 
 installErrorReporter();

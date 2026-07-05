@@ -18,16 +18,8 @@
 
     <title>성조게임 — 하늘하늘중국어</title>
 
-    <!-- 성조게임 전용 폰트 (Jua 타이틀 · Baloo 2 숫자 · Noto Sans KR 본문) -->
-    <!-- id=tg-fonts: 게임 모듈의 ensureGameFonts()가 중복 주입을 막기 위해 이 id를 확인함 -->
-    <!-- TODO(P1): 네이티브 앱 오프라인·심사 대비 로컬 폰트 번들로 전환 (CDN 의존 제거) -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      id="tg-fonts"
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Jua&family=Baloo+2:wght@600;700;800&family=Noto+Sans+KR:wght@400;500;700&display=swap"
-    />
+    <!-- 폰트는 @fontsource로 번들(main.game.jsx) — CDN 의존 없이 오프라인 동작. -->
+    <!-- Jua(타이틀)·Baloo 2(숫자)는 로컬 번들, 한글 본문은 시스템 폰트(Android=Noto CJK). -->
   </head>
   <body>
     <div id="root"></div>
