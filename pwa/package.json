@@ -9,6 +9,7 @@
     "dev:game": "vite --mode game",
     "prebuild": "node ../scripts/tone-words-build.mjs && node ../scripts/tone-tts-build.mjs",
     "build": "vite build",
+    "postbuild": "node ../scripts/gen-game-og-route.mjs",
     "prebuild:game": "node ../scripts/tone-words-build.mjs && node ../scripts/tone-tts-build.mjs",
     "build:game": "vite build --mode game",
     "preview": "vite preview",
