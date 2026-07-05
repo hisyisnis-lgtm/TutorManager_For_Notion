@@ -2,6 +2,7 @@
 // v1: 브라우저 내장 Web Speech(speechSynthesis, zh-CN). 무료·즉시.
 // 업그레이드 경로: word.audioUrl(미리 생성한 고음질 음성, 예: Edge 신경망 zh-CN)이 있으면 그걸 우선 재생.
 //   → 나중에 Notion 단어 DB에 audioUrl 컬럼 추가 + 워커 생성 파이프라인만 붙이면 이 모듈 교체 없이 동작.
+import { duckBgm, releaseBgmDuck } from './tgBgm.js'; // 발음 재생 동안 BGM 더킹(또렷하게)
 
 let zhVoice = null;
 
@@ -69,6 +70,7 @@ function speakViaSynth(word) {
     // ⚠️ 최신 크롬은 voice 미지정 시 lang만으로 중국어를 안 고르고 기본 음성(예: 한국어)으로 읽기도 함 → 중국어 보이스를 명시 지정.
     if (zhVoice) u.voice = zhVoice;
     u.rate = 0.9; // 살짝 천천히 — 성조가 또렷이 들리게
+    u.onend = releaseBgmDuck; u.onerror = releaseBgmDuck; // 발화 끝 → BGM 더킹 복귀
     synth.speak(u);
   } catch { /* noop */ }
 }
@@ -78,14 +80,16 @@ function speakViaSynth(word) {
 let currentAudio = null;
 export function speakWord(word) {
   if (!word) return;
+  duckBgm(); // 발음 나오는 동안 BGM 잠깐 낮춤(또렷하게). end/에러/안전타이머로 복귀.
   if (word.audioUrl) {
     try {
       if (currentAudio) { try { currentAudio.pause(); } catch { /* noop */ } } // 이전 재생 중단(겹침 방지)
       const a = new Audio(word.audioUrl);
       currentAudio = a;
       let fellBack = false;
-      const fallback = () => { if (fellBack) return; fellBack = true; if (currentAudio === a) currentAudio = null; speakViaSynth(word); };
+      const fallback = () => { if (fellBack) return; fellBack = true; if (currentAudio === a) currentAudio = null; speakViaSynth(word); }; // 폴백=synth가 자체 onend로 더킹 복귀
       a.addEventListener('error', fallback, { once: true }); // 파일 없음/디코딩 실패
+      a.addEventListener('ended', () => { if (currentAudio === a) currentAudio = null; releaseBgmDuck(); }, { once: true }); // 발음 끝 → 더킹 복귀
       a.play().catch(fallback); // 재생 거부(포맷 미지원 등) → 폴백
       return;
     } catch { /* fallthrough to synth */ }

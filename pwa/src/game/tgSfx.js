@@ -10,7 +10,7 @@ const mtof = (m) => 440 * Math.pow(2, (m - 69) / 12);
 // 기본 볼륨(볼륨 오버라이드 없을 때).
 const BASE = {
   tap: 0.3, button: 0.3, count: 0.4, correct: 0.5, combo: 0.5, score: 0.4,
-  go: 0.5, wrong: 0.42, timeout: 0.5, win: 0.6, gameover: 0.52, unlock: 0.6,
+  go: 0.5, wrong: 0.42, timeout: 0.5, win: 0.46, gameover: 0.47, unlock: 0.46, // win·unlock·gameover=다중 마림바라 튐 → 낮춤(음량 밸런스)
   whoosh: 0.4, locked: 0.45,
   // 성조 캐릭터 목소리(자주 나므로 낮게)
   tone1: 0.2, tone2: 0.2, tone3: 0.2, tone4: 0.2, tone0: 0.22,
