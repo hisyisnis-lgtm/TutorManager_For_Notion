@@ -4,7 +4,7 @@
 //  비트2 듣고 찾기(好): 소리만 듣고 성조 선택 → 한자 공개. 실제 라운드에 섞여 나오는 유형 대비.
 // 게임 레이아웃 + 딤 스포트라이트. 완료 후 onDone → 모드선택.
 import { useState, useEffect, useRef } from 'react';
-import { StarIcon, PauseIcon, TimerIcon, CaretRightIcon } from '@phosphor-icons/react';
+import { StarIcon, TimerIcon, CaretRightIcon } from '@phosphor-icons/react';
 import { TG, FONT_NUM, FONT_BODY, FONT_HANZI, TOUCH_OPT, TONE_TINTS, TONE_BORDERS, haptic } from '../tgTokens.js';
 import { ToneMark } from '../tgWidgets.jsx';
 import { TONES } from '../../constants/toneGameWords.js';
@@ -23,6 +23,10 @@ export function TutorialScreen({ onDone }) {
   const [wrong, setWrong] = useState(null);
   const [audioOff, setAudioOff] = useState(false); // 비트2 '지금은 못 들어요' 폴백
   const doneRef = useRef(false);
+  // 내부 setTimeout 모아두고 언마운트 시 전부 정리 — 스킵 후 뒤늦은 타이머 발화(onDone 중복 등) 방지
+  const timersRef = useRef([]);
+  const later = (fn, ms) => timersRef.current.push(setTimeout(fn, ms));
+  useEffect(() => () => { timersRef.current.forEach(clearTimeout); }, []);
 
   const word = phase === 2 ? P2_WORD : P1_WORD;
   const answer = phase >= 1 ? word.tones[currentSyl] : null;
@@ -46,13 +50,21 @@ export function TutorialScreen({ onDone }) {
       if (ne.length === word.tones.length) {
         setCompleted(true);
         playSfx('correct'); speakWord(word); // 완료 → 올바른 발음 재생(인게임과 동일)
-        if (phase === 1) setTimeout(() => goPhase(2), 1500);
-        else if (!doneRef.current) { doneRef.current = true; setTimeout(onDone, 1600); }
+        if (phase === 1) later(() => goPhase(2), 1500);
+        else if (!doneRef.current) { doneRef.current = true; later(onDone, 1600); }
       } else { playSfx('tap'); setCurrentSyl((s) => s + 1); }
     } else {
       setWrong(n); haptic(20); playSfx('wrong');
-      setTimeout(() => setWrong(null), 450);
+      later(() => setWrong(null), 450);
     }
+  };
+
+  // 건너뛰기 — 복귀 유저(localStorage 초기화 등)가 튜토리얼을 강제 완주하지 않게. doneRef로 완료 타이머와 중복 방지.
+  const skip = () => {
+    if (doneRef.current) return;
+    doneRef.current = true;
+    playSfx('button');
+    onDone();
   };
 
   const coachText = phase === 1
@@ -66,10 +78,7 @@ export function TutorialScreen({ onDone }) {
         <StarIcon size={13} weight="fill" color={TG.SUN} />
         <span style={{ fontFamily: FONT_NUM, fontWeight: 800, fontSize: 17, color: '#2b2730' }}>0</span>
       </div>
-      {/* 일시정지(정적) 우상단 */}
-      <div style={{ position: 'absolute', right: 20, top: 23, width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.4 }}>
-        <PauseIcon size={20} weight="fill" color={TG.SUB} />
-      </div>
+      {/* 우상단은 건너뛰기 버튼이 차지(정적 일시정지 아이콘은 겹쳐서 제거) */}
       {/* 타이머(정적) top69 */}
       <div style={{ position: 'absolute', left: 20, right: 20, top: 69, display: 'flex', alignItems: 'center', gap: 8 }}>
         <div style={{ width: 32, height: 32, borderRadius: 16, background: '#ff5e62', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0px 3px 4.5px rgba(255,94,98,0.45)' }}>
@@ -89,6 +98,11 @@ export function TutorialScreen({ onDone }) {
 
       {/* 딤 오버레이 — 강조(카드·코치·성조버튼) 외 어둡게. 마지막 정답 시 사라짐 */}
       <div style={{ position: 'absolute', inset: 0, zIndex: 5, background: 'rgba(43,39,48,0.5)', opacity: dimOff ? 0 : 1, transition: 'opacity .35s ease', pointerEvents: 'none' }} />
+
+      {/* 건너뛰기 — IntroScreen 우상단과 같은 스타일(텍스트만·히트영역 ≥44px). 딤 위(zIndex 7)라 색만 밝게(대비 확보) */}
+      <button onClick={skip} className="tg-press" style={{ position: 'absolute', right: 22, top: 11, zIndex: 7, padding: '13px 12px', background: 'none', border: 'none', cursor: 'pointer', ...TOUCH_OPT }}>
+        <span style={{ fontFamily: FONT_BODY, fontWeight: 500, fontSize: 13, color: 'rgba(255,255,255,0.9)' }}>건너뛰기</span>
+      </button>
 
       {/* 카드 top129 — 스포트라이트. 비트0=성조 소개, 비트1/2=단어카드 */}
       <Reveal i={0} style={{ position: 'absolute', left: 20, right: 20, top: 129, zIndex: 6 }}>

@@ -5,8 +5,8 @@ import { useEffect } from 'react';
 import { FONT_TITLE, FONT_BODY, TG, TOUCH_OPT } from '../tgTokens.js';
 import { CaretLeftIcon, MusicNotesIcon, StopIcon } from '@phosphor-icons/react';
 import { ToneGameStyles } from './shared.jsx';
-import { play as playSfx, setSfxMuted } from '../tgSfx.js';
-import { startBgm, stopBgm, setBgmMuted } from '../tgBgm.js';
+import { play as playSfx, setSfxMuted, isSfxMuted } from '../tgSfx.js';
+import { startBgm, stopBgm, setBgmMuted, isBgmMuted } from '../tgBgm.js';
 
 // [키, 라벨, 설명, 액센트색]
 const GROUPS = [
@@ -55,8 +55,12 @@ function SfxButton({ sfxKey, label, desc, accent, onPlay }) {
 }
 
 export function SfxLab({ onBack }) {
-  // 랩 진입 시 소리/음악 음소거 해제(꺼둔 상태여도 들리게). 나갈 때 BGM 정지.
-  useEffect(() => { setSfxMuted(false); setBgmMuted(false); return () => stopBgm(); }, []);
+  // 랩 진입 시 소리/음악 음소거 해제(꺼둔 상태여도 들리게). 나갈 때 BGM 정지 + 사용자 음소거 설정 원복.
+  useEffect(() => {
+    const wasSfxMuted = isSfxMuted(); const wasBgmMuted = isBgmMuted(); // 진입 전 설정 캡처
+    setSfxMuted(false); setBgmMuted(false);
+    return () => { stopBgm(); setSfxMuted(wasSfxMuted); setBgmMuted(wasBgmMuted); };
+  }, []);
 
   const onPlay = (key) => playSfx(key);
   // 콤보 피치 래더 — 콤보 2~10을 순차 재생(게임과 동일하게 음정이 반음씩 상승).

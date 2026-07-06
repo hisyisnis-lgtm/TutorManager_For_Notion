@@ -1,7 +1,7 @@
 // 테마 선택 화면 — 난이도와 별개 축. 테마별 포스터 카드를 가로 스냅스크롤로 보여줌(항상 중앙 스냅, 양옆 카드 살짝 걸침).
 // Figma "23. 테마 선택" 기준. 잠긴 테마는 흔들림+토스트(ShakeButton/onLocked), 해제조건은 자물쇠 아래 표기.
 // 참조 메모리: tone_game_redesign.md (테마 모드)
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { CaretLeftIcon, LockSimpleIcon, PlayIcon } from '@phosphor-icons/react';
 import { TG, FONT_TITLE, FONT_BODY, TOUCH_OPT, DUR } from '../tgTokens.js';
 import { isThemeUnlocked, themeBestScore, themeUnlockReqText, themeUnlockToastText } from '../gameLogic.js';
@@ -61,9 +61,17 @@ function ThemeCard({ theme, unlocked, best, count }) {
 
 export function ThemeScreen({ themes, studentToken, counts = {}, onStart, onBack, onLocked }) {
   const [active, setActive] = useState(0);
+  // 스크롤마다 setState하지 않게 rAF 스로틀 — 프레임당 1회만 활성 카드 계산
+  const scrollRafRef = useRef(0);
+  useEffect(() => () => cancelAnimationFrame(scrollRafRef.current), []);
   const onScroll = (e) => {
-    const i = Math.round(e.currentTarget.scrollLeft / (CARD_W + GAP));
-    setActive(Math.max(0, Math.min(themes.length - 1, i)));
+    const el = e.currentTarget;
+    if (scrollRafRef.current) return;
+    scrollRafRef.current = requestAnimationFrame(() => {
+      scrollRafRef.current = 0;
+      const i = Math.round(el.scrollLeft / (CARD_W + GAP));
+      setActive(Math.max(0, Math.min(themes.length - 1, i)));
+    });
   };
   // 항상 중앙 스냅 — 좌우 패딩을 (컨테이너폭-카드폭)/2 로 줘서 첫·끝 카드도 가운데에 오게.
   const sidePad = `max(24px, calc((100% - ${CARD_W}px) / 2))`;

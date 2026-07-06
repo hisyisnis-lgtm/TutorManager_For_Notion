@@ -29,6 +29,7 @@ function sparkNoise(x) {
 function ComboSparks({ heatRef }) {
   const refs = useRef([]);
   const cfg = useRef(null);
+  const startRef = useRef(null); // rAF 재시작 함수 — heat=0로 정지한 뒤 heat 재점화 시 사용
   if (!cfg.current) {
     const R = Math.random, arr = [];
     for (const [edge, n] of [['up', 9], ['down', 7], ['right', 5], ['left', 5]]) {
@@ -51,7 +52,7 @@ function ComboSparks({ heatRef }) {
     cfg.current = arr;
   }
   useLayoutEffect(() => {
-    let raf, alive = true, last = performance.now();
+    let raf, alive = true, running = false, last = 0;
     const tick = (now) => {
       if (!alive) return;
       const dt = Math.min(0.05, (now - last) / 1000); last = now;
@@ -76,11 +77,21 @@ function ComboSparks({ heatRef }) {
         el.style.opacity = String(Math.max(0, env * flick));
         el.style.transform = `translate(${tx.toFixed(1)}px, ${ty.toFixed(1)}px) scale(${(1 - 0.82 * t).toFixed(3)})`;
       }
+      // heat=0이면 위에서 전부 즉시 숨겨져 살아있는 불티가 없음 → rAF 정지(재시작은 heat 재점화 시 start)
+      if (heat > 0) raf = requestAnimationFrame(tick);
+      else running = false;
+    };
+    const start = () => {
+      if (!alive || running) return;
+      running = true; last = performance.now();
       raf = requestAnimationFrame(tick);
     };
-    raf = requestAnimationFrame(tick);
-    return () => { alive = false; cancelAnimationFrame(raf); };
+    startRef.current = start;
+    start();
+    return () => { alive = false; running = false; startRef.current = null; cancelAnimationFrame(raf); };
   }, [heatRef]);
+  // 부모 재렌더(콤보 변화)마다 확인 — 정지 상태에서 heat가 다시 오르면 rAF 재시작
+  useEffect(() => { if ((heatRef.current || 0) > 0 && startRef.current) startRef.current(); });
   return cfg.current.map((s, k) => {
     const st = SPARK_COLORS[s.c];
     return (

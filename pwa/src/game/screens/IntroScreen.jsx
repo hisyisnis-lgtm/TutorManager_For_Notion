@@ -79,8 +79,8 @@ export function IntroScreen({ page, onNext, onSkip }) {
   const cur = INTRO_PAGES[page];
   return (
     <>
-      {/* 건너뛰기 (고정) */}
-      <button onClick={() => { playSfx('button'); onSkip(); }} className="tg-press" style={{ position: 'absolute', right: 24, top: 18, zIndex: 3, padding: '6px 10px', background: 'none', border: 'none', cursor: 'pointer', ...TOUCH_OPT }}>
+      {/* 건너뛰기 (고정) — 히트영역 ≥44px(패딩 확장, top/right 보정으로 텍스트 시각 위치는 기존과 동일) */}
+      <button onClick={() => { playSfx('button'); onSkip(); }} className="tg-press" style={{ position: 'absolute', right: 22, top: 11, zIndex: 3, padding: '13px 12px', background: 'none', border: 'none', cursor: 'pointer', ...TOUCH_OPT }}>
         <span style={{ fontFamily: FONT_BODY, fontWeight: 500, fontSize: 13, color: '#9a93a0' }}>건너뛰기</span>
       </button>
 

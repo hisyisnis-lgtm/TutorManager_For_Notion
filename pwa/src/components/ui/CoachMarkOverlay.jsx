@@ -81,9 +81,12 @@ export default function CoachMarkOverlay({ steps, visible, onDone, delay = 350, 
     return () => { document.body.style.overflow = prev; };
   }, [mounted]);
 
+  const finishTimerRef = useRef(null); // finish 페이드아웃 타이머 — 언마운트 시 정리(뒤늦은 setState/onDone 방지)
+  useEffect(() => () => clearTimeout(finishTimerRef.current), []);
+
   const finish = useCallback(() => {
     setAlpha(0);
-    setTimeout(() => {
+    finishTimerRef.current = setTimeout(() => {
       setMounted(false);
       setStep(0);
       setRect(null);

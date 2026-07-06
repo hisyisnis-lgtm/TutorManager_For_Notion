@@ -24,28 +24,36 @@ export function overallBestFromServer(bests) {
 }
 
 // ── 잠금 사다리 / 무한모드 ──────────────────────────────
-// 초급(항상) → 중급(초급≥1000) → 고급(중급≥1000) → 무한(고급≥1000). 점수는 난이도별 캐시(localStorage).
+// 잠금 사다리 = DIFFICULTIES 배열 순서에서 파생: 첫 난이도(항상) → 이후는 '직전 난이도 ≥ 1000점' → 무한(마지막 난이도 ≥ 1000점).
+// 새 난이도는 toneGameWords.js DIFFICULTIES에 항목만 추가하면 잠금·문구·업적이 자동으로 따라온다(하드코딩 금지).
 export const UNLOCK_THRESHOLD = 1000;
-export const GAMEKEY = { easy: 'tone-easy', normal: 'tone-normal', hard: 'tone-hard' };
+export const GAMEKEY = Object.fromEntries(DIFFICULTIES.map((d) => [d.id, d.gameKey]));
 export const ENDLESS_BEST_KEY = 'tone-endless'; // localStorage 캐시 키(헤드라인 최고). 서버 동기화는 meta.eb.
+// 서버 meta 필드 규약(매직 스트링 단일화) — eb=무한 최고점(마지막 난이도 행에 얹음), w=단어 숙련도 부분집합.
+export const META_ENDLESS_BEST = 'eb';
+export const META_WORD_STATS = 'w';
 export function diffBestScore(token, diffId) { const b = loadBest(token, GAMEKEY[diffId]); return b ? (b.bestScore || 0) : 0; }
 export function isDifficultyUnlocked(token, diffId) {
-  if (diffId === 'easy') return true;
-  if (diffId === 'normal') return diffBestScore(token, 'easy') >= UNLOCK_THRESHOLD;
-  if (diffId === 'hard') return diffBestScore(token, 'normal') >= UNLOCK_THRESHOLD;
-  return false;
+  const idx = DIFFICULTIES.findIndex((d) => d.id === diffId);
+  if (idx < 0) return false;
+  if (idx === 0) return true;
+  return diffBestScore(token, DIFFICULTIES[idx - 1].id) >= UNLOCK_THRESHOLD;
 }
-export function isEndlessUnlocked(token) { return diffBestScore(token, 'hard') >= UNLOCK_THRESHOLD; }
+export function isEndlessUnlocked(token) { return diffBestScore(token, DIFFICULTIES[DIFFICULTIES.length - 1].id) >= UNLOCK_THRESHOLD; }
+function prevDiffLabel(diffId) {
+  const idx = DIFFICULTIES.findIndex((d) => d.id === diffId);
+  return idx > 0 ? DIFFICULTIES[idx - 1].label : null;
+}
 export function unlockReqText(diffId) {
-  if (diffId === 'normal') return '초급 1,000점 달성 시 해제';
-  if (diffId === 'hard') return '중급 1,000점 달성 시 해제';
-  return '';
+  const prev = prevDiffLabel(diffId);
+  return prev ? `${prev} ${UNLOCK_THRESHOLD.toLocaleString()}점 달성 시 해제` : '';
 }
 export function unlockToastText(diffId) {
-  if (diffId === 'normal') return '초급 1,000점을 달성하면 열려요';
-  if (diffId === 'hard') return '중급 1,000점을 달성하면 열려요';
-  return '';
+  const prev = prevDiffLabel(diffId);
+  return prev ? `${prev} ${UNLOCK_THRESHOLD.toLocaleString()}점을 달성하면 열려요` : '';
 }
+// 무한 모드 해제 연출(마지막 난이도 1000점 돌파 시) — 난이도별 연출은 DIFFICULTIES[].unlockReveal(데이터)이 담당.
+export const ENDLESS_UNLOCK_REVEAL = { icon: 'Infinity', label: '무한 모드', desc: '끝없이 이어지는 무한 모드가 열렸어요', accent: '#8B5CF6' };
 
 // ── 테마 모드(난이도와 별개 축) ──────────────────────────
 // 각 테마는 자체 gameKey라 최고점·리더보드가 난이도처럼 자동으로 붙는다(종료 처리도 normal과 동일, gameKey만 다름).

@@ -58,21 +58,53 @@ export function ttsAvailable() {
   return typeof window !== 'undefined' && (!!window.speechSynthesis || typeof Audio !== 'undefined');
 }
 
+// zh 합성 가능 여부 — 중국어 보이스가 실제로 있어야 true(매번 재선택: 온라인 zh 음성이 늦게 로드되는 경우 대비).
+function canSynthZh() {
+  if (typeof window === 'undefined' || !window.speechSynthesis) return false;
+  pickZhVoice();
+  return !!zhVoice;
+}
+
 // Web Speech(브라우저 내장) 폴백 — 미리생성 음성이 없거나 재생 실패 시.
 function speakViaSynth(word) {
-  if (typeof window === 'undefined' || !window.speechSynthesis) return;
+  // ⚠️ 중국어 보이스가 없으면 발화하지 않음 — 기기 기본 음성이 한자를 한국어로 읽으면 성조 게임에선 무음보다 해로움.
+  //   (최신 크롬은 voice 미지정 시 lang만으로 중국어를 안 고르고 기본 음성으로 읽기도 함 → 보이스 명시 지정 필수)
+  if (!canSynthZh()) { releaseBgmDuck(); return; } // 발화 없이 종료 처리(더킹 복귀)만 수행
   try {
     const synth = window.speechSynthesis;
-    pickZhVoice(); // 매 재생마다 최신 보이스 재선택(온라인 zh 음성이 늦게 로드되는 경우 대비)
     synth.cancel(); // 이전 발화 중단(연속 단어 겹침 방지)
     const u = new SpeechSynthesisUtterance(word.hanzi);
     u.lang = 'zh-CN';
-    // ⚠️ 최신 크롬은 voice 미지정 시 lang만으로 중국어를 안 고르고 기본 음성(예: 한국어)으로 읽기도 함 → 중국어 보이스를 명시 지정.
-    if (zhVoice) u.voice = zhVoice;
+    u.voice = zhVoice;
     u.rate = 0.9; // 살짝 천천히 — 성조가 또렷이 들리게
     u.onend = releaseBgmDuck; u.onerror = releaseBgmDuck; // 발화 끝 → BGM 더킹 복귀
     synth.speak(u);
-  } catch { /* noop */ }
+  } catch { releaseBgmDuck(); }
+}
+
+// ── mp3 캐시(LRU) — 같은 단어 반복 재생 시 재다운로드 방지 + 다음 단어 프리로드로 첫 재생 지연 제거 ──
+const AUDIO_CACHE_MAX = 24;
+const audioCache = new Map(); // key=audioUrl, value=Audio (Map 삽입순 = LRU 순)
+function cacheGet(url) {
+  const a = audioCache.get(url);
+  if (a) { audioCache.delete(url); audioCache.set(url, a); } // 최근 사용으로 갱신
+  return a || null;
+}
+function cachePut(url, a) {
+  if (audioCache.has(url)) audioCache.delete(url);
+  audioCache.set(url, a);
+  while (audioCache.size > AUDIO_CACHE_MAX) audioCache.delete(audioCache.keys().next().value); // 가장 오래된 것부터 방출
+}
+
+// 다음 단어 프리로드 — Audio를 만들어 캐시에 넣기만 하고 재생하지 않음(호출부: 다음 단어 노출 전).
+export function preloadTts(word) {
+  try {
+    const url = word && word.audioUrl;
+    if (!url || audioCache.has(url)) return;
+    const a = new Audio(url);
+    a.preload = 'auto';
+    cachePut(url, a);
+  } catch { /* noop — 프리로드 실패는 무해(재생 시 새로 생성) */ }
 }
 
 // 단어 발음 재생. word: { hanzi, audioUrl? }
@@ -80,16 +112,27 @@ function speakViaSynth(word) {
 let currentAudio = null;
 export function speakWord(word) {
   if (!word) return;
+  // 실제로 소리를 낼 수 있을 때만 더킹 — 무음인데 BGM만 2.5초 꺼지는 문제 방지.
+  if (!word.audioUrl && !canSynthZh()) return;
   duckBgm(); // 발음 나오는 동안 BGM 잠깐 낮춤(또렷하게). end/에러/안전타이머로 복귀.
   if (word.audioUrl) {
     try {
       if (currentAudio) { try { currentAudio.pause(); } catch { /* noop */ } } // 이전 재생 중단(겹침 방지)
-      const a = new Audio(word.audioUrl);
+      let a = cacheGet(word.audioUrl);
+      if (!a) { a = new Audio(word.audioUrl); cachePut(word.audioUrl, a); }
       currentAudio = a;
       let fellBack = false;
-      const fallback = () => { if (fellBack) return; fellBack = true; if (currentAudio === a) currentAudio = null; speakViaSynth(word); }; // 폴백=synth가 자체 onend로 더킹 복귀
-      a.addEventListener('error', fallback, { once: true }); // 파일 없음/디코딩 실패
-      a.addEventListener('ended', () => { if (currentAudio === a) currentAudio = null; releaseBgmDuck(); }, { once: true }); // 발음 끝 → 더킹 복귀
+      const fallback = () => { // 폴백=synth가 자체 onend로 더킹 복귀
+        if (fellBack) return; fellBack = true;
+        if (currentAudio !== a) return; // stale — 이미 다른 재생이 진행 중이면 뒤늦은 폴백이 그 위에 겹치지 않게 무시
+        currentAudio = null;
+        audioCache.delete(word.audioUrl); // 죽은 오디오는 캐시에서 제거(다음엔 새로 시도)
+        speakViaSynth(word);
+      };
+      // 캐시 재사용 대비 on핸들러 할당(addEventListener 누적 방지 — 재생마다 교체)
+      a.onerror = fallback; // 파일 없음/디코딩 실패
+      a.onended = () => { if (currentAudio === a) currentAudio = null; releaseBgmDuck(); }; // 발음 끝 → 더킹 복귀
+      try { a.currentTime = 0; } catch { /* noop */ } // 캐시 재사용 시 처음부터
       a.play().catch(fallback); // 재생 거부(포맷 미지원 등) → 폴백
       return;
     } catch { /* fallthrough to synth */ }

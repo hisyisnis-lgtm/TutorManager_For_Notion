@@ -6,6 +6,7 @@ import { TG, FONT_BODY, FONT_TITLE, TOUCH_OPT, ASSETS } from '../tgTokens.js';
 import { TONES } from '../../constants/toneGameWords.js';
 import { ToneMark } from '../tgWidgets.jsx';
 import { FigmaScreen } from './shared.jsx';
+import { Eyes, markSize } from './eyes.jsx';
 
 // 반짝임 파티클 — 4점 별
 function Sparkle({ s, size = 14, delay = 0 }) {
@@ -18,23 +19,7 @@ function Sparkle({ s, size = 14, delay = 0 }) {
   );
 }
 
-// 성조별 눈(홈과 동일 좌표계 — 마크 박스 기준 px). cx/cy=중심, gap=좌우, w/h=세로 캡슐.
-const EYES = {
-  1: { cx: 34, cy: 9, gap: 6, w: 4, h: 9 },
-  2: { cx: 37, cy: 10, gap: 6, w: 4, h: 9 },
-  3: { cx: 34, cy: 8, gap: 6, w: 4, h: 9 },
-  4: { cx: 31, cy: 10, gap: 6, w: 4, h: 9 },
-  0: { cx: 21, cy: 17, gap: 5, w: 4, h: 8 },
-};
-const markSize = (num) => (num === 0 ? 100 : 68);
-function Eyes({ num }) {
-  const e = EYES[num]; if (!e) return null;
-  return [-1, 1].map((s) => (
-    <div key={s} style={{ position: 'absolute', left: e.cx + s * e.gap - e.w / 2, top: e.cy - e.h / 2, width: e.w, height: e.h, borderRadius: e.w / 2, background: '#2b2730', animation: `tg-blinkeye ${4.4 + (num % 5) * 0.5}s ease-in-out ${num * 0.5}s infinite` }} />
-  ));
-}
-
-// 타이틀 캐릭터 — 정지판(둥둥 + 고정 기울임). 홈 마크 룩 그대로, 스케일만 축소.
+// 타이틀 캐릭터 — 정지판(둥둥 + 고정 기울임). 홈 마크 룩 그대로, 스케일만 축소. 눈은 공용 eyes.jsx 사용.
 const TILTS = [-8, 6, 0, -6, 8];
 function TitleMark({ tone, i }) {
   return (
@@ -44,7 +29,8 @@ function TitleMark({ tone, i }) {
       <div style={{ transform: 'scale(.8)', transformOrigin: 'center bottom', animation: `tg-bob ${2.4 + i * 0.35}s ease-in-out ${i * 0.22}s infinite` }}>
         <div style={{ position: 'relative', display: 'inline-block', color: tone.color, transform: `rotate(${TILTS[i] || 0}deg)` }}>
           <ToneMark tone={tone.num} size={markSize(tone.num)} />
-          <Eyes num={tone.num} />
+          {/* i 환산(num/1.4): 기존 이 화면의 깜빡임 딜레이(num*0.5s)를 정본 delay식(i*0.7s)으로 그대로 보존 */}
+          <Eyes num={tone.num} i={tone.num / 1.4} />
         </div>
       </div>
     </div>
