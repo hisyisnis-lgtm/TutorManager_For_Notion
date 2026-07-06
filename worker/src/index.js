@@ -2701,7 +2701,11 @@ async function handleFetch(request, env, ctx) {
       return new Response(null, { status: 204, headers: corsHeaders });
     }
 
-    if (!allowed) {
+    // 소셜 로그인 OAuth 진입/콜백은 전체 페이지 네비게이션(브라우저가 Origin 헤더를 안 붙임)이라
+    // Origin 게이트에서 예외 처리한다. 자체 보안(state 1회용·redirect 허용목록·provider 검증)으로 보호되고
+    // 응답은 302 리다이렉트라 CORS 헤더가 불필요하다. (예외 없으면 로그인 진입이 403으로 막힘)
+    const isOauthNav = /^\/game\/auth\/[^/]+\/(start|callback)$/.test(url.pathname);
+    if (!allowed && !isOauthNav) {
       return new Response(JSON.stringify({ error: '허용되지 않은 출처입니다.' }), {
         status: 403,
         headers: { 'Content-Type': 'application/json' },
