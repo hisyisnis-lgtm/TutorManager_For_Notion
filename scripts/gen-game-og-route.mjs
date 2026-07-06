@@ -47,6 +47,10 @@ setProp('og:image:height', '630');
 html = html.replace(/(<meta\s+name="description"\s+content=")[^"]*(")/i, `$1${esc(OG.description)}$2`);
 html = html.replace(/<title>[^<]*<\/title>/i, `<title>${esc(OG.title)}</title>`);
 
+// 파비콘·apple-touch-icon 도 게임용으로 (탭·홈스크린 아이콘)
+html = html.replace(/<link rel="icon"[^>]*>/i, '<link rel="icon" type="image/png" href="/favicon-game.png" />');
+html = html.replace(/<link rel="apple-touch-icon"[^>]*>/i, '<link rel="apple-touch-icon" href="/favicon-game.png" />');
+
 // twitter 카드(없으면 head에 추가)
 if (!/name="twitter:card"/i.test(html)) {
   html = html.replace(/<\/head>/i,
