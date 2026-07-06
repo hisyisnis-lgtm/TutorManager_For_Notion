@@ -2652,7 +2652,7 @@ async function handleFetch(request, env, ctx) {
 
     const corsHeaders = {
       'Access-Control-Allow-Origin': allowed ? origin : '',
-      'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE',
       'Access-Control-Allow-Headers': 'Content-Type, Authorization',
       'Access-Control-Max-Age': '86400',
       'Vary': 'Origin',
