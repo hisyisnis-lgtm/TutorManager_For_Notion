@@ -241,6 +241,20 @@ describe('GameResultSchema', () => {
     const r = GameResultSchema.safeParse({ score: 10, maxCombo: 8, avgMs: 1500, meta: big });
     expect(r.success).toBe(false);
   });
+
+  it('meta.eb(무한 최고점)에 score와 동일한 상한 강제 — 위조 방어', () => {
+    // 정상: 실제 점수 범위의 eb 허용
+    expect(GameResultSchema.safeParse({ score: 0, maxCombo: 0, avgMs: 0, meta: { eb: 0 } }).success).toBe(true);
+    expect(GameResultSchema.safeParse({ score: 0, maxCombo: 0, avgMs: 0, meta: { eb: 99999 } }).success).toBe(true);
+    // eb 없는 meta는 그대로 통과
+    expect(GameResultSchema.safeParse({ score: 0, maxCombo: 0, avgMs: 0, meta: { w: {} } }).success).toBe(true);
+    // 위조: 상한 초과·음수·소수·비숫자 eb 거부
+    expect(GameResultSchema.safeParse({ score: 0, maxCombo: 0, avgMs: 0, meta: { eb: 100000 } }).success).toBe(false);
+    expect(GameResultSchema.safeParse({ score: 0, maxCombo: 0, avgMs: 0, meta: { eb: 9999999 } }).success).toBe(false);
+    expect(GameResultSchema.safeParse({ score: 0, maxCombo: 0, avgMs: 0, meta: { eb: -1 } }).success).toBe(false);
+    expect(GameResultSchema.safeParse({ score: 0, maxCombo: 0, avgMs: 0, meta: { eb: 12.5 } }).success).toBe(false);
+    expect(GameResultSchema.safeParse({ score: 0, maxCombo: 0, avgMs: 0, meta: { eb: '99999' } }).success).toBe(false);
+  });
 });
 
 describe('GameEventSchema — 게임 이벤트 측정(POST /game/event)', () => {

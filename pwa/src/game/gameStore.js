@@ -8,6 +8,11 @@
 // 참조 메모리: game_account_standalone.md
 import { loadBest, saveBest } from './tgTokens.js';
 import { loadWordStats, saveWordStats, mergeStats, isMastered } from './tgWordStats.js';
+import { loadToneStats, saveToneStats } from './toneStats.js';
+import { loadTierPeak, bumpTierPeak } from './earProfile.js';
+import { loadAchievements, saveAchievements, loadReviewMastered, addReviewMastered } from './achievements.js';
+import { loadStreak, saveStreak, loadFreezes, saveFreezes } from './streak.js';
+import { THEMES } from '../constants/toneGameWords.js';
 import { fetchAllGameBests, submitGameResult, fetchGameMe, saveGameMe } from '../api/gameApi.js';
 
 const GUEST_ID_KEY = 'tg_guest_id';
@@ -131,10 +136,13 @@ export function logoutMember() {
 }
 export function isMember() { const m = getMemberSession(); return !!(m && m.token); }
 
-// 로컬 게임데이터 수집(회원 서버 동기화용 JSON 블롭): 베스트 4키 + 단어 숙련도.
-const ALL_BEST_KEYS = [...DIFF_KEYS, ENDLESS_KEY];
-// 서버 /game/me는 Notion rich_text(2000자)라 1900자 한도. 베스트 등 다른 키 여유를 빼고 단어 통계 예산.
-const WORDS_BUDGET = 1500;
+// 로컬 게임데이터 수집(회원 서버 동기화용 JSON 블롭): 난이도3 + 무한 + 테마별 베스트 + 단어 숙련도 등.
+// ★테마 베스트(tone-drama·tone-travel…)도 회원 동기화 대상 — THEMES에서 gameKey를 끌어와 누락 방지.
+const ALL_BEST_KEYS = [...DIFF_KEYS, ENDLESS_KEY, ...THEMES.map((t) => t.gameKey)];
+// 서버 /game/me는 D1 game_data TEXT(사실상 무제한, 남용방지 100KB 상한)로 이전(2026-07-06) → 트림 사실상 미발동.
+// (구: 노션 rich_text 2000자라 1900자 트림 압박이었음. D1 이전으로 대폭 완화.) 로직·필드는 그대로 유지.
+const WORDS_BUDGET = 88000;
+const TOTAL_BUDGET = 90000; // 서버 100KB 아래 여유. words는 나머지 필드가 쓰고 남은 만큼(사실상 전부).
 
 // ── 마스터 수 동기화 값(mc) — '트림 전 전체 통계' 기준 마스터 수의 마지막 기록(last-writer) ──
 // 목적: 단어 풀 성장(195+)으로 트림이 상시 발동 → 마스터 단어 '통계'가 동기화에서 빠져도 '수'는 안 유실되게.
@@ -155,9 +163,9 @@ export function storeMasteredSync(id, n) {
 // 단어 통계가 무한 성장하면 직렬화가 1900자를 넘어 서버 저장이 거부된다(동기화 누락).
 // → 예산 초과 시 학습상 중요한 순서로 추려 한도 내로 트림: ①미마스터(복습 대상) 우선 보존 ②시도 많은 순.
 //   (마스터된 단어 통계가 빠져도 마스터 '수'는 위 mc가 보존)
-function trimWords(words) {
+function trimWords(words, budget = WORDS_BUDGET) {
   const entries = Object.entries(words || {});
-  if (entries.length === 0 || JSON.stringify(words).length <= WORDS_BUDGET) return words || {};
+  if (entries.length === 0 || JSON.stringify(words).length <= budget) return words || {};
   entries.sort((a, b) => {
     const am = isMastered(a[1]) ? 1 : 0, bm = isMastered(b[1]) ? 1 : 0;
     if (am !== bm) return am - bm;                      // 미마스터(0) 먼저
@@ -166,9 +174,37 @@ function trimWords(words) {
   const out = {};
   for (const [hz, e] of entries) {
     out[hz] = e;
-    if (JSON.stringify(out).length > WORDS_BUDGET) { delete out[hz]; break; }
+    if (JSON.stringify(out).length > budget) { delete out[hz]; break; }
   }
   return out;
+}
+
+// 성조별 정확도 압축: [정답,시도,ema] 유지하되 ema는 소수 3자리로 반올림해 페이로드 절약. 시도 0인 성조는 생략.
+function compactToneStats(stats) {
+  const out = {};
+  for (const [t, e] of Object.entries(stats || {})) {
+    if (!Array.isArray(e) || !(e[1] > 0)) continue;
+    out[t] = typeof e[2] === 'number' ? [e[0], e[1], Math.round(e[2] * 1000) / 1000] : [e[0], e[1]];
+  }
+  return out;
+}
+// 성조별 정확도 머지 — 단어 숙련도와 동일 철학(시도 많은 쪽 채택). 게스트→회원/기기간 공통.
+function mergeToneStats(base, incoming) {
+  const out = { ...(base || {}) };
+  for (const [t, inc] of Object.entries(incoming || {})) {
+    if (!Array.isArray(inc)) continue;
+    const cur = out[t];
+    if (!Array.isArray(cur) || (inc[1] || 0) > (cur[1] || 0)) out[t] = inc;
+  }
+  return out;
+}
+// 스트릭 머지 — longest는 최댓값, current/lastDate는 더 최근 플레이(날짜 큰 쪽) 기준.
+function mergeStreak(base, inc) {
+  if (!inc) return base || null;
+  if (!base) return inc;
+  const longest = Math.max(base.longest || 0, inc.longest || 0);
+  const newer = (inc.lastDate || '') > (base.lastDate || '') ? inc : base;
+  return { lastDate: newer.lastDate, current: newer.current || 0, longest };
 }
 
 export function collectLocalGameData(id) {
@@ -177,7 +213,22 @@ export function collectLocalGameData(id) {
   const words = loadWordStats(id);
   // mc = 트림 전 전체 통계 기준 마스터 수(last-writer 갱신 겸) — 트림으로 마스터 항목이 빠져도 수는 보존
   const mc = storeMasteredSync(id, Object.values(words).filter((e) => isMastered(e)).length);
-  return { best, words: trimWords(words), mc };
+  // 베스트 외 진행도 전부 포함(성조별 정확도·최고 등급·업적·복습마스터수·스트릭·프리즈).
+  const rest = {
+    best,
+    mc,
+    tone: compactToneStats(loadToneStats(id)), // 성조별 정확도(1·2·3·4·경성)
+    tier: loadTierPeak(id),                    // 최고 등급(귀 티어) — 안 뺏김
+    ach: loadAchievements(id),                 // 획득 업적 id
+    rm: loadReviewMastered(id),                // 복습으로 마스터한 단어 수(업적)
+    frz: loadFreezes(id),                      // 스트릭 보호권
+  };
+  const streak = loadStreak(id);
+  if (streak) rest.streak = streak;            // {lastDate,current,longest}
+  // words는 서버 1900자 캡에서 나머지 필드가 쓰고 남은 예산만큼만(초과 시 학습중요도순 트림). WORDS_BUDGET(1500)도 상한.
+  const overhead = JSON.stringify({ ...rest, words: {} }).length;
+  const wordsBudget = Math.min(WORDS_BUDGET, Math.max(0, TOTAL_BUDGET - overhead));
+  return { ...rest, words: trimWords(words, wordsBudget) };
 }
 // 서버/게스트 게임데이터를 로컬에 머지(베스트=점수 큰 쪽, 숙련도=mergeStats, 마스터 수=last-writer 덮어씀).
 function applyGameDataToLocal(id, data) {
@@ -189,6 +240,16 @@ function applyGameDataToLocal(id, data) {
   }
   if (data.words) saveWordStats(id, mergeStats(loadWordStats(id), data.words));
   if (typeof data.mc === 'number') storeMasteredSync(id, data.mc); // 하락도 전파(진짜 실력 신호)
+  if (data.tone) saveToneStats(id, mergeToneStats(loadToneStats(id), data.tone)); // 성조별 정확도
+  if (typeof data.tier === 'number') bumpTierPeak(id, data.tier);                  // 최고 등급(오르기만)
+  if (Array.isArray(data.ach) && data.ach.length) {
+    saveAchievements(id, [...new Set([...loadAchievements(id), ...data.ach])]);    // 업적=합집합
+  }
+  if (typeof data.rm === 'number' && data.rm > loadReviewMastered(id)) {
+    addReviewMastered(id, data.rm - loadReviewMastered(id));                       // 복습마스터수=큰 쪽
+  }
+  if (data.streak) saveStreak(id, mergeStreak(loadStreak(id), data.streak));       // 스트릭
+  if (typeof data.frz === 'number' && data.frz > loadFreezes(id)) saveFreezes(id, data.frz); // 프리즈=큰 쪽
 }
 
 // 서버(/game/me) → 로컬 머지. 회원 진입/로그인 시.
@@ -211,33 +272,5 @@ export function mergeGuestIntoMember(identity) {
   applyGameDataToLocal(identity.id, collectLocalGameData(guestId));
 }
 
-// 학생 GAME_BEST_DB 기록(난이도별 행 + meta.w/eb) → 회원 게임데이터 형식({best, words})으로 변환.
-// 무한 최고는 별도 행이 아니라 고급 행 meta.eb에 얹혀 있으므로 거기서 추출.
-function studentBestsToGameData(bests) {
-  const best = {}; let eb = 0; let words = {};
-  for (const b of bests || []) {
-    if (!b) continue;
-    if (DIFF_KEYS.includes(b.gameKey) && (b.bestScore || 0) > 0) {
-      best[b.gameKey] = { bestScore: b.bestScore || 0, bestMaxCombo: b.bestMaxCombo || 0, bestAvgSec: b.bestAvgSec || 0, updatedAt: Date.now() };
-    }
-    if (b.meta?.eb) eb = Math.max(eb, Number(b.meta.eb) || 0);
-    if (b.meta?.w) words = mergeStats(words, b.meta.w);
-  }
-  if (eb > 0) best[ENDLESS_KEY] = { bestScore: eb, updatedAt: Date.now() };
-  return { best, words };
-}
-
-// 회원에 연결된 학생(예약코드)의 GAME_BEST 기록을 회원 로컬에 max 머지. 회원 진입 시 호출.
-// 학생→회원 과도기 이관: 점수 높은 쪽 보존(applyGameDataToLocal이 >= 머지). 흡수분은 호출부에서 pushMemberData로 서버 gameData에 영구화.
-// memberUser.studentToken은 verify 시 전화번호 매칭으로 연결됨(없으면 매칭 실패 — no-op).
-export async function mergeStudentIntoMember(identity) {
-  if (!identity || identity.kind !== 'member') return false;
-  const stoken = identity.memberUser?.studentToken;
-  if (!stoken) return false;
-  try {
-    const bests = await fetchAllGameBests(stoken);
-    if (!bests || !bests.length) return false;
-    applyGameDataToLocal(identity.id, studentBestsToGameData(bests));
-    return true;
-  } catch { return false; }
-}
+// (학생→회원 흡수 mergeStudentIntoMember/studentBestsToGameData 제거 — 게임은 학생앱과 완전 분리,
+//  회원 인증은 소셜 로그인. 학생 예약코드 연결·전화번호 매칭 경로 폐기, 2026-07-06.)

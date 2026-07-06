@@ -16,6 +16,12 @@ import {
   StudentAuthVerifySchema,
 } from '../lib/schemas.js';
 import { validateBody, validateParams, validatePathToken } from '../lib/validation.js';
+import {
+  SOCIAL_PROVIDERS, isSocialProvider, buildAuthorizeUrl, callbackUrl,
+  decodeJwtPayload, extractGoogleIdentity, extractKakaoIdentity,
+  isAllowedRedirect, redirectPrefixes, appendTokenFragment,
+} from '../lib/oauth.js';
+import { findOrCreateGameUser, getGameUserById, updateGameData } from '../lib/gameDb.js';
 
 const CLASS_DB_ID = '314838fa-f2a6-81bc-8b67-d9e1c8fb7ecb';
 const STUDENT_DB_ID = '314838fa-f2a6-8143-a6c7-e59c50f3bbdb';
@@ -30,8 +36,9 @@ const CONSULT_DB_ID = '324838fa-f2a6-815d-99a7-ff165e8f78aa';
 // ===== 미니게임 베스트 DB (학생 × 게임 = 1 row) =====
 const GAME_BEST_DB_ID = '2602021c-39b5-4517-9eda-ce4808f570bd';
 
-// ===== 게임 계정 DB (독립실행·회원/게스트, 전화번호=주 정체성) =====
-const GAME_USERS_DB_ID = 'd9c69797-2daf-4d89-8f9a-e4a4e0cbc969';
+// ===== 게임 계정(독립실행·소셜 로그인 회원) =====
+// 저장소는 Cloudflare D1(env.GAME_DB, 테이블 game_users)로 이전(2026-07-06). 노션 GAME_USERS 은퇴.
+// 코드는 worker/lib/gameDb.js. rich_text 2000자 트림 한계 제거.
 
 // ※ 성조 게임 단어는 더 이상 Notion DB가 아니라 data/tone-words.csv → PWA 번들로 관리(2026-06-10).
 //   워커는 단어 풀을 다루지 않는다(TONE_WORDS_DB_ID·난이도 매핑·tone-words 라우트 제거).
@@ -184,7 +191,6 @@ const HOMEWORK_DB_RAW = HOMEWORK_DB_ID.replace(/-/g, '');
 const BLOCKED_DATES_DB_RAW = BLOCKED_DATES_DB_ID.replace(/-/g, '');
 const CONSULT_DB_RAW = CONSULT_DB_ID.replace(/-/g, '');
 const GAME_BEST_DB_RAW = GAME_BEST_DB_ID.replace(/-/g, '');
-const GAME_USERS_DB_RAW = GAME_USERS_DB_ID.replace(/-/g, '');
 const ALLOWED_NOTION_DB_IDS = new Set([
   STUDENT_DB_RAW,
   CLASS_DB_RAW,
@@ -192,7 +198,6 @@ const ALLOWED_NOTION_DB_IDS = new Set([
   BLOCKED_DATES_DB_RAW,
   CONSULT_DB_RAW,
   GAME_BEST_DB_RAW,
-  GAME_USERS_DB_RAW,
   // 수업 유형·할인·결제·수업일지 등 강사용 추가 DB (PWA에서 사용)
   '314838faf2a681c3b4e4da87c48f9b43', // LESSON_TYPE_DB
   '314838faf2a681d39ce4c628edab065b', // DISCOUNT_DB
@@ -453,16 +458,16 @@ async function verifyGameToken(token, secret) {
   } catch { return null; }
 }
 
-// OTP 임시저장 (Cloudflare Cache API, 3분 TTL — KV 없이)
-function otpCacheKey(phone) { return new Request(`https://gameotp.local/${encodeURIComponent(phone)}`); }
-async function putGameOtp(phone, code) {
-  try { await caches.default.put(otpCacheKey(phone), new Response(code, { headers: { 'Cache-Control': 'public, max-age=180' } })); } catch { /* noop */ }
+// OAuth state 임시저장 (Cloudflare Cache API, 10분 TTL — KV 없이). CSRF 방지 + 복귀대상(redirect) 보관.
+function authStateKey(state) { return new Request(`https://gameauthstate.local/${encodeURIComponent(state)}`); }
+async function putAuthState(state, value) {
+  try { await caches.default.put(authStateKey(state), new Response(value, { headers: { 'Cache-Control': 'public, max-age=600' } })); } catch { /* noop */ }
 }
-async function getGameOtp(phone) {
-  try { const h = await caches.default.match(otpCacheKey(phone)); return h ? (await h.text()) : null; } catch { return null; }
+async function getAuthState(state) {
+  try { const h = await caches.default.match(authStateKey(state)); return h ? (await h.text()) : null; } catch { return null; }
 }
-async function clearGameOtp(phone) {
-  try { await caches.default.delete(otpCacheKey(phone)); } catch { /* noop */ }
+async function clearAuthState(state) {
+  try { await caches.default.delete(authStateKey(state)); } catch { /* noop */ }
 }
 
 // ===== 학생앱 휴대폰 인증(step-up) — OTP 저장 + 학생 조회 =====
@@ -540,46 +545,38 @@ async function sendSms(env, to, text) {
   } catch (e) { console.error('[sms] 발송 오류:', e.message); }
 }
 
-// GAME_USERS 페이지 파싱
-function parseGameUser(page) {
-  const p = page.properties || {};
-  let gameData = {};
-  try { gameData = JSON.parse(p['게임데이터']?.rich_text?.[0]?.plain_text || '{}'); } catch { /* noop */ }
-  return {
-    id: page.id,
-    phone: p['전화번호']?.phone_number || null,
-    nickname: p['닉네임']?.rich_text?.[0]?.plain_text || null,
-    studentToken: p['연결된 학생 토큰']?.rich_text?.[0]?.plain_text || null,
-    gameData,
-  };
+// 게임 회원 저장은 D1(worker/lib/gameDb.js)로 이전(2026-07-06) — findOrCreateGameUser/getGameUserById/
+// updateGameData는 거기서 import. (노션 GAME_USERS parseGameUser/find-or-create 제거: rich_text 2000자 트림 한계 탈피)
+
+// 인가코드 → 토큰 교환 (client_secret은 서버에만 보관). 실패 시 throw.
+async function exchangeCode(provider, code, redirectUri, env) {
+  const cfg = SOCIAL_PROVIDERS[provider];
+  const params = new URLSearchParams({
+    grant_type: 'authorization_code',
+    code,
+    redirect_uri: redirectUri,
+    client_id: provider === 'kakao' ? env.GAME_KAKAO_REST_KEY : env.GAME_GOOGLE_CLIENT_ID,
+  });
+  const secret = provider === 'kakao' ? env.GAME_KAKAO_CLIENT_SECRET : env.GAME_GOOGLE_CLIENT_SECRET;
+  if (secret) params.set('client_secret', secret);
+  const res = await fetch(cfg.tokenUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: params.toString(),
+  });
+  if (!res.ok) throw new Error(`token exchange ${provider} ${res.status}`);
+  return res.json();
 }
 
-// 전화번호로 게임 계정 find-or-create. 신규면 학생 DB 전화번호 매칭으로 학생 토큰 자동 연결(같은 사람이면 기록 동기화).
-async function findOrCreateGameUser(n, phone) {
-  const q = await n('POST', `/databases/${GAME_USERS_DB_ID}/query`, {
-    filter: { property: '전화번호', phone_number: { equals: phone } }, page_size: 1,
+// 카카오 사용자 정보 조회 (access_token 필요). 실패 시 throw.
+async function fetchKakaoUser(accessToken) {
+  const res = await fetch(SOCIAL_PROVIDERS.kakao.userInfoUrl, {
+    headers: { Authorization: `Bearer ${accessToken}` },
   });
-  if (q.results?.[0]) return parseGameUser(q.results[0]);
-  let studentToken = null;
-  try {
-    const sq = await n('POST', `/databases/${STUDENT_DB_ID}/query`, {
-      filter: { property: '전화번호', phone_number: { equals: phone } }, page_size: 1,
-    });
-    studentToken = sq.results?.[0]?.properties?.['예약 코드']?.rich_text?.[0]?.plain_text || null;
-  } catch { /* noop */ }
-  const userId = crypto.randomUUID();
-  const created = await n('POST', '/pages', {
-    parent: { database_id: GAME_USERS_DB_ID },
-    properties: {
-      '유저ID': { title: [{ text: { content: userId } }] },
-      '전화번호': { phone_number: phone },
-      '가입수단': { select: { name: '휴대폰' } },
-      '최종접속': { date: { start: new Date().toISOString() } },
-      ...(studentToken ? { '연결된 학생 토큰': { rich_text: [{ text: { content: studentToken } }] } } : {}),
-    },
-  });
-  return parseGameUser(created);
+  if (!res.ok) throw new Error(`kakao user ${res.status}`);
+  return res.json();
 }
+
 
 // ===== ntfy 강사 알림 발송 (멀티 토픽 + 심각도) =====
 //
@@ -2321,72 +2318,81 @@ async function handleGameRoutes(request, env, corsHeaders, url) {
     return new Response(JSON.stringify({ ok: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
 
-  // ===== 게임 계정(독립실행) — 휴대폰 OTP 회원가입/로그인 + 게임데이터 =====
-  // POST /game/auth/otp — 휴대폰 → SMS 인증번호 발송
-  if (url.pathname === '/game/auth/otp' && request.method === 'POST') {
-    const body = await request.json().catch(() => null);
-    const phone = normalizePhone(body?.phone);
-    if (!phone) return errRes(corsHeaders, 400, '올바른 휴대폰 번호가 아닙니다.');
-    const ip = clientIp(request);
-    if (!(await rateLimitCheck(`gameotp:ip:${ip}`, 8, 600)) || !(await rateLimitCheck(`gameotp:ph:${phone}`, 5, 600))) {
+  // ===== 게임 계정(독립실행) — 카카오·구글 소셜 로그인 (OAuth BFF) + 게임데이터 =====
+  // GET /game/auth/:provider/start?redirect=<복귀대상> — state 발급 후 제공자 인가 페이지로 302.
+  const authStartMatch = url.pathname.match(/^\/game\/auth\/([^/]+)\/start$/);
+  if (authStartMatch && request.method === 'GET') {
+    const provider = authStartMatch[1];
+    if (!isSocialProvider(provider)) return errRes(corsHeaders, 404, '지원하지 않는 로그인입니다.');
+    if (!(await rateLimitCheck(`gameauth:ip:${clientIp(request)}`, 30, 600))) {
       return errRes(corsHeaders, 429, '잠시 후 다시 시도해주세요.');
     }
-    const code = String(100000 + (crypto.getRandomValues(new Uint32Array(1))[0] % 900000)); // 6자리 (CSPRNG)
-    await putGameOtp(phone, code);
-    // 카카오 알림톡 인증번호 — 채널명("하늘하늘중국어")으로 발송(발신번호 노출 X). 템플릿 미승인/미설정 시 no-op.
-    await sendKakaoAlert(env, { to: phone, templateId: env.KAKAO_TPL_GAME_OTP, variables: { '#{인증번호}': code } });
-    return new Response(JSON.stringify({ ok: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    const clientId = provider === 'kakao' ? env.GAME_KAKAO_REST_KEY : env.GAME_GOOGLE_CLIENT_ID;
+    if (!clientId) return errRes(corsHeaders, 501, '로그인이 아직 설정되지 않았습니다.');
+    const redirect = url.searchParams.get('redirect') || '';
+    if (!isAllowedRedirect(redirect, redirectPrefixes(env))) return errRes(corsHeaders, 400, '허용되지 않은 복귀 주소입니다.');
+    const state = crypto.randomUUID().replace(/-/g, '');
+    await putAuthState(state, JSON.stringify({ provider, redirect }));
+    const location = buildAuthorizeUrl({ provider, clientId, redirectUri: callbackUrl(url.origin, provider), state });
+    return new Response(null, { status: 302, headers: { ...corsHeaders, Location: location } });
   }
 
-  // POST /game/auth/verify — 휴대폰+코드 검증 → find-or-create → 게임유저 JWT
-  if (url.pathname === '/game/auth/verify' && request.method === 'POST') {
-    const body = await request.json().catch(() => null);
-    const phone = normalizePhone(body?.phone);
-    const code = String(body?.code || '').trim();
-    if (!phone || !/^\d{6}$/.test(code)) return errRes(corsHeaders, 400, '입력값을 확인해주세요.');
-    // 무차별 대입 방지 — 검증 시도도 제한(발송 rate limit과 별개). OTP TTL(180s)과 같은 창에서 전화·IP당 시도 상한.
-    // 전화당 5회/180s면 6자리(1M) 추측은 사실상 불가, IP당 20회/180s로 분산(여러 전화) 시도도 차단.
-    const vip = clientIp(request);
-    if (!(await rateLimitCheck(`gameverify:ph:${phone}`, 5, 180)) || !(await rateLimitCheck(`gameverify:ip:${vip}`, 20, 180))) {
-      return errRes(corsHeaders, 429, '잠시 후 다시 시도해주세요.');
+  // GET /game/auth/:provider/callback?code=&state= — 인가코드 교환·신원조회·JWT 발급 → 복귀대상으로 302(#token=…).
+  const authCbMatch = url.pathname.match(/^\/game\/auth\/([^/]+)\/callback$/);
+  if (authCbMatch && request.method === 'GET') {
+    const provider = authCbMatch[1];
+    if (!isSocialProvider(provider)) return errRes(corsHeaders, 404, '지원하지 않는 로그인입니다.');
+    const code = url.searchParams.get('code');
+    const state = url.searchParams.get('state');
+    if (!code || !state) return errRes(corsHeaders, 400, '로그인 응답이 올바르지 않습니다.');
+    const savedRaw = await getAuthState(state);
+    if (!savedRaw) return errRes(corsHeaders, 400, '로그인 세션이 만료되었어요. 다시 시도해주세요.');
+    await clearAuthState(state); // state는 1회용(재사용 차단)
+    let saved = null; try { saved = JSON.parse(savedRaw); } catch { /* noop */ }
+    if (!saved || saved.provider !== provider || !isAllowedRedirect(saved.redirect, redirectPrefixes(env))) {
+      return errRes(corsHeaders, 400, '로그인 세션이 올바르지 않습니다.');
     }
-    const saved = await getGameOtp(phone);
-    if (!saved || saved !== code) return errRes(corsHeaders, 401, '인증번호가 일치하지 않습니다.');
-    await clearGameOtp(phone);
     if (!env.JWT_SECRET) return errRes(corsHeaders, 500, '서버 설정 오류입니다.');
-    const user = await findOrCreateGameUser(n, phone);
+
+    // 인가코드 → 토큰 교환 → 신원 추출 (client_secret은 서버에만; Google id_token은 TLS 직수신이라 재검증 불필요)
+    const redirectUri = callbackUrl(url.origin, provider);
+    let identity = null;
+    try {
+      if (provider === 'google') {
+        const tok = await exchangeCode('google', code, redirectUri, env);
+        identity = extractGoogleIdentity(decodeJwtPayload(tok.id_token));
+      } else {
+        const tok = await exchangeCode('kakao', code, redirectUri, env);
+        identity = extractKakaoIdentity(await fetchKakaoUser(tok.access_token));
+      }
+    } catch (e) {
+      console.error('[game-auth] 교환 실패:', e.message);
+    }
+    if (!identity?.socialId) return errRes(corsHeaders, 401, '로그인에 실패했어요. 다시 시도해주세요.');
+
+    const user = await findOrCreateGameUser(env.GAME_DB, provider, identity.socialId, identity.nickname);
     const token = await createGameToken(env.JWT_SECRET, user.id, 60 * 60 * 24 * 60); // 60일
-    return new Response(JSON.stringify({
-      token,
-      user: { id: user.id, phone, nickname: user.nickname, studentToken: user.studentToken, gameData: user.gameData },
-    }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    return new Response(null, { status: 302, headers: { ...corsHeaders, Location: appendTokenFragment(saved.redirect, token) } });
   }
 
-  // GET/PUT /game/me — 게임유저 JWT 인증 → 게임데이터 read/write
+  // GET/PUT /game/me — 게임유저 JWT 인증 → 게임데이터 read/write (D1 game_users)
   if (url.pathname === '/game/me' && (request.method === 'GET' || request.method === 'PUT')) {
     const auth = (request.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
     const claim = await verifyGameToken(auth, env.JWT_SECRET);
     if (!claim?.sub) return errRes(corsHeaders, 401, '로그인이 필요합니다.');
-    const page = await n('GET', `/pages/${claim.sub}`);
-    if (!page || page.object === 'error') return errRes(corsHeaders, 404, '계정을 찾을 수 없습니다.');
     if (request.method === 'GET') {
-      return new Response(JSON.stringify({ user: parseGameUser(page) }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      const user = await getGameUserById(env.GAME_DB, claim.sub);
+      if (!user) return errRes(corsHeaders, 404, '계정을 찾을 수 없습니다.'); // 옛 노션ID 토큰 등 → 재로그인 유도
+      return new Response(JSON.stringify({ user }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
     // PUT — 게임데이터 갱신(클라이언트 병합 후 최종본 덮어쓰기)
     const body = await request.json().catch(() => null);
     if (body?.gameData == null || typeof body.gameData !== 'object') return errRes(corsHeaders, 400, '게임데이터가 필요합니다.');
-    // ⚠️ slice로 자르면 JSON이 중간에서 끊겨 깨진 문자열이 저장되고, 다음 읽기 때 parseGameUser의
-    //    JSON.parse가 실패해 게임데이터가 통째로 {}로 유실된다. → 자르지 말고 한도 초과 시 이번 저장만 거부
-    //    (이전 유효 데이터 보존). 정상 클라이언트는 collectLocalGameData가 한도 내로 트림해 보낸다.
-    const json = JSON.stringify(body.gameData); // Notion rich_text 2000자 한도
-    if (json.length > 1900) return errRes(corsHeaders, 413, '게임데이터가 너무 큽니다.');
-    await n('PATCH', `/pages/${claim.sub}`, {
-      properties: {
-        '게임데이터': { rich_text: [{ text: { content: json } }] },
-        '최종접속': { date: { start: new Date().toISOString() } },
-        ...(body.nickname ? { '닉네임': { rich_text: [{ text: { content: String(body.nickname).slice(0, 40) } }] } } : {}),
-      },
-    });
+    // D1 TEXT는 사실상 무제한이지만 남용 방지 상한(100KB). 초과 시 이번 저장만 거부(이전 데이터 보존).
+    const json = JSON.stringify(body.gameData);
+    if (json.length > 100000) return errRes(corsHeaders, 413, '게임데이터가 너무 큽니다.');
+    const res = await updateGameData(env.GAME_DB, claim.sub, body.gameData, body.nickname);
+    if (res?.meta?.changes === 0) return errRes(corsHeaders, 404, '계정을 찾을 수 없습니다.'); // 대상 행 없음
     return new Response(JSON.stringify({ ok: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
 
@@ -2646,7 +2652,7 @@ async function handleFetch(request, env, ctx) {
 
     const corsHeaders = {
       'Access-Control-Allow-Origin': allowed ? origin : '',
-      'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE',
       'Access-Control-Allow-Headers': 'Content-Type, Authorization',
       'Access-Control-Max-Age': '86400',
       'Vary': 'Origin',
@@ -2656,7 +2662,11 @@ async function handleFetch(request, env, ctx) {
       return new Response(null, { status: 204, headers: corsHeaders });
     }
 
-    if (!allowed) {
+    // 소셜 로그인 OAuth 진입/콜백은 전체 페이지 네비게이션(브라우저가 Origin 헤더를 안 붙임)이라
+    // Origin 게이트에서 예외 처리한다. 자체 보안(state 1회용·redirect 허용목록·provider 검증)으로 보호되고
+    // 응답은 302 리다이렉트라 CORS 헤더가 불필요하다. (예외 없으면 로그인 진입이 403으로 막힘)
+    const isOauthNav = /^\/game\/auth\/[^/]+\/(start|callback)$/.test(url.pathname);
+    if (!allowed && !isOauthNav) {
       return new Response(JSON.stringify({ error: '허용되지 않은 출처입니다.' }), {
         status: 403,
         headers: { 'Content-Type': 'application/json' },
