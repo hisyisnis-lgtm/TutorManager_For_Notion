@@ -279,7 +279,10 @@ export default function ToneGamePage() {
         loginMember(token, user || {});
         const idn = resolveIdentity(undefined);     // 회원 신원
         mergeGuestIntoMember(idn);                   // 게스트 로컬 → 회원 로컬 1회 병합
-        await pushMemberData(idn, user?.nickname).catch(() => {});
+        // ★ 서버 기존 데이터를 로컬에 max 병합한 뒤 push해야 다른 기기 데이터를 안 덮어쓴다.
+        //   (이 pull이 빠져 있어 새 기기 로그인이 서버를 그 기기의 적은 로컬로 덮어쓰던 데이터손실 버그)
+        await pullMemberData(idn).catch(() => {});   // 서버(/game/me) → 로컬(max 병합)
+        await pushMemberData(idn, user?.nickname).catch(() => {}); // 로컬(게스트∪서버) → 서버
         track('login_success');
       } catch { /* noop */ }
       if (!done) window.location.reload();           // 회원으로 재초기화
