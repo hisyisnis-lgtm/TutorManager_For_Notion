@@ -1,114 +1,77 @@
-// 로그인(회원) — 휴대폰 + 카카오 알림톡 OTP. Figma "로그인"(182:2). 단일 통합화면(단계 상태).
-// 이름=닉네임. verify 성공 시 게스트 로컬 → 회원 로컬 병합 후 서버 업로드.
-import { useState, useEffect } from 'react';
-import { App } from 'antd';
+// 로그인(회원) — 카카오·구글 소셜 로그인(OAuth BFF). 버튼 탭 → Worker 인증 시작 URL로 전체 이동,
+// 제공자 인증 후 현재 게임 주소로 #token=… 붙여 복귀(복귀 토큰 처리는 ToneGamePage). Figma "18b. 로그인(소셜)".
 import { CaretLeftIcon } from '@phosphor-icons/react';
-import { TG, FONT_TITLE, FONT_BODY, TOUCH_OPT } from '../tgTokens.js';
-import { requestGameOtp, verifyGameOtp } from '../../api/gameApi.js';
-import { resolveIdentity, loginMember, mergeGuestIntoMember, pushMemberData } from '../gameStore.js';
+import { TG, FONT_TITLE, FONT_BODY, TOUCH_OPT, ASSETS } from '../tgTokens.js';
+import { socialLoginUrl } from '../../api/gameApi.js';
 import { play as playSfx } from '../tgSfx.js';
-import { Reveal, CoachBubble } from './shared.jsx';
+import { Reveal } from './shared.jsx';
 
-export function LoginScreen({ onBack, onSuccess }) {
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [code, setCode] = useState('');
-  const [otpSent, setOtpSent] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [timer, setTimer] = useState(0);
-  const { message } = App.useApp();
+// 카카오 심볼(공식 말풍선) — 노란 버튼 위 검정.
+function KakaoLogo() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+      <path d="M9 1.6C4.86 1.6 1.5 4.2 1.5 7.42c0 2.07 1.38 3.89 3.47 4.94-.15.54-.56 2.02-.64 2.34-.1.4.15.39.3.28.12-.08 1.9-1.29 2.68-1.82.4.06.8.09 1.19.09 4.14 0 7.5-2.6 7.5-5.82S13.14 1.6 9 1.6z" fill="#000000" />
+    </svg>
+  );
+}
+// 구글 심볼(공식 4색 G).
+function GoogleLogo() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+      <path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92c1.71-1.57 2.68-3.89 2.68-6.62z" />
+      <path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.26c-.8.54-1.84.86-3.04.86-2.34 0-4.32-1.58-5.03-3.7H.96v2.33A9 9 0 0 0 9 18z" />
+      <path fill="#FBBC05" d="M3.97 10.72a5.4 5.4 0 0 1 0-3.44V4.95H.96a9 9 0 0 0 0 8.1l3.01-2.33z" />
+      <path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58C13.46.89 11.43 0 9 0A9 9 0 0 0 .96 4.95l3.01 2.33C4.68 5.16 6.66 3.58 9 3.58z" />
+    </svg>
+  );
+}
 
-  useEffect(() => {
-    if (timer <= 0) return undefined;
-    const t = setTimeout(() => setTimer((s) => s - 1), 1000);
-    return () => clearTimeout(t);
-  }, [timer]);
-
-  const phoneDigits = phone.replace(/\D/g, '');
-  const phoneValid = /^01[016789]\d{7,8}$/.test(phoneDigits);
-  const codeValid = /^\d{6}$/.test(code);
-  const fmtTimer = `${String(Math.floor(timer / 60)).padStart(2, '0')}:${String(timer % 60).padStart(2, '0')}`;
-
-  const reqOtp = async () => {
-    if (!phoneValid || loading) { if (!phoneValid) message.error('휴대폰 번호를 확인해주세요.'); return; }
-    setLoading(true);
-    try {
-      const r = await requestGameOtp(phoneDigits);
-      setOtpSent(true); setTimer(180); playSfx('button');
-      message.success('인증번호를 보냈어요. 카카오톡을 확인해주세요.');
-      if (r?.devCode) message.info(`개발 코드: ${r.devCode}`);
-    } catch (e) { message.error(e?.message || '발송에 실패했어요.'); }
-    finally { setLoading(false); }
+export function LoginScreen({ onBack }) {
+  const go = (provider) => {
+    playSfx('button');
+    const redirect = window.location.origin + window.location.pathname; // 현재 게임 주소로 복귀
+    window.location.href = socialLoginUrl(provider, redirect);
   };
-
-  const doLogin = async () => {
-    if (!otpSent || !codeValid || loading) return;
-    setLoading(true);
-    try {
-      const { token, user } = await verifyGameOtp(phoneDigits, code);
-      const nick = name.trim() || user?.nickname || null;
-      loginMember(token, { ...user, nickname: nick });
-      const idn = resolveIdentity(undefined); // 회원 세션 반영
-      mergeGuestIntoMember(idn);              // 게스트 로컬 → 회원 로컬 병합
-      await pushMemberData(idn, nick).catch(() => {}); // 회원 로컬+이름 → 서버 업로드
-      playSfx('win');
-      onSuccess();
-    } catch (e) { message.error(e?.message || '로그인에 실패했어요.'); }
-    finally { setLoading(false); }
-  };
-
-  const ctaReady = otpSent && codeValid;
   return (
     <>
-      <Reveal i={0} style={{ position: 'absolute', left: 24, top: 20, right: 24 }}>
-        <div style={{ height: 40, display: 'flex', gap: 12, alignItems: 'center' }}>
-          <button onClick={onBack} aria-label="뒤로" className="tg-press" style={{ width: 40, height: 40, borderRadius: 20, background: '#fff', boxShadow: '0px 3px 5px rgba(43,39,48,0.08)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, ...TOUCH_OPT }}>
-            <CaretLeftIcon size={20} weight="bold" color={TG.INK} />
-          </button>
-          <span style={{ fontFamily: FONT_TITLE, fontSize: 22, color: '#2b2730' }}>로그인</span>
-        </div>
-      </Reveal>
-      <Reveal i={1} style={{ position: 'absolute', left: 24, right: 24, top: 120 }}>
-        <CoachBubble text="휴대폰 번호로 기록을 저장해드려요" />
-      </Reveal>
-      {/* 이름 입력 */}
-      <Reveal i={2} style={{ position: 'absolute', left: 24, right: 24, top: 217 }}>
-        <input value={name} onChange={(e) => setName(e.target.value.slice(0, 12))} type="text" placeholder="이름"
-          style={{ width: '100%', height: 62, borderRadius: 16, border: '1.5px solid #efeae4', background: '#fff', padding: '0 18px', fontSize: 16, fontFamily: FONT_BODY, color: '#2b2730', outline: 'none', boxSizing: 'border-box' }} />
-      </Reveal>
-      {/* 휴대폰 입력 + 인라인 '인증번호 받기' */}
-      <Reveal i={3} style={{ position: 'absolute', left: 24, right: 24, top: 291 }}>
-        <div style={{ position: 'relative', height: 62 }}>
-          <input value={phone} onChange={(e) => setPhone(e.target.value)} type="tel" inputMode="numeric" placeholder="휴대폰 번호"
-            style={{ width: '100%', height: 62, borderRadius: 16, border: '1.5px solid #efeae4', background: '#fff', padding: '0 124px 0 18px', fontSize: 16, fontFamily: FONT_BODY, color: '#2b2730', outline: 'none', boxSizing: 'border-box' }} />
-          <button onClick={reqOtp} disabled={!phoneValid || loading} className="tg-press" style={{ position: 'absolute', right: 10, top: 10, height: 42, padding: '0 14px', borderRadius: 12, border: 'none', cursor: phoneValid ? 'pointer' : 'default', background: phoneValid ? '#FFE8E8' : '#f3efe9', display: 'flex', alignItems: 'center', ...TOUCH_OPT }}>
-            <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 13, color: phoneValid ? TG.CORAL_DK : '#b8b0a8' }}>{otpSent && timer > 0 ? fmtTimer : '인증번호 받기'}</span>
-          </button>
-        </div>
-      </Reveal>
-      <Reveal i={4} style={{ position: 'absolute', left: 24, right: 24, top: 361 }}>
-        <span style={{ fontFamily: FONT_BODY, fontWeight: 500, fontSize: 13, color: '#9a93a0' }}>카카오 알림톡으로 인증번호를 보내드려요</span>
-      </Reveal>
-      {/* 인증번호 입력 (받기 전 비활성) */}
-      <Reveal i={5} style={{ position: 'absolute', left: 24, right: 24, top: 385 }}>
-        <input value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))} type="tel" inputMode="numeric" maxLength={6} placeholder="인증번호 6자리" disabled={!otpSent}
-          style={{ width: '100%', height: 62, borderRadius: 16, border: '1.5px solid #efeae4', background: otpSent ? '#fff' : '#f7f3ee', padding: '0 18px', fontSize: 16, fontFamily: FONT_BODY, color: '#2b2730', outline: 'none', boxSizing: 'border-box', letterSpacing: 3 }} />
-      </Reveal>
-      {otpSent && (
-        <Reveal i={6} style={{ position: 'absolute', left: 24, right: 24, top: 455 }}>
-          <button onClick={reqOtp} disabled={timer > 0 || loading} style={{ background: 'none', border: 'none', cursor: timer > 0 ? 'default' : 'pointer', padding: 0, ...TOUCH_OPT }}>
-            <span style={{ fontFamily: FONT_BODY, fontWeight: 600, fontSize: 13, color: timer > 0 ? '#c4bdb4' : TG.CORAL_DK }}>인증번호 다시 받기</span>
-          </button>
-        </Reveal>
-      )}
-      <Reveal i={7} style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(30px + env(safe-area-inset-bottom))' }}>
-        <button onClick={doLogin} disabled={!ctaReady || loading} className="tg-press" style={{
-          width: '100%', height: 62, borderRadius: 20, border: 'none', cursor: ctaReady ? 'pointer' : 'default',
-          background: ctaReady ? TG.CORAL_GRAD : '#e8e2da', boxShadow: ctaReady ? '0px 10px 20px rgba(242,72,76,0.32)' : 'none',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', ...TOUCH_OPT,
-        }}>
-          <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 19, color: '#fff' }}>{loading ? '잠시만요…' : '로그인'}</span>
+      {/* 뒤로 */}
+      <Reveal i={0} style={{ position: 'absolute', left: 24, top: 20 }}>
+        <button onClick={onBack} aria-label="뒤로" className="tg-press" style={{ width: 40, height: 40, borderRadius: 20, background: '#fff', boxShadow: '0px 3px 5px rgba(43,39,48,0.08)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', ...TOUCH_OPT }}>
+          <CaretLeftIcon size={20} weight="bold" color={TG.INK} />
         </button>
+      </Reveal>
+
+      {/* 판다 히어로 (가운데) */}
+      <Reveal i={1} style={{ position: 'absolute', left: 0, right: 0, top: 168, display: 'flex', justifyContent: 'center' }}>
+        <img src={ASSETS.pandaCoach} alt="" width={140} style={{ height: 'auto', filter: 'drop-shadow(0px 6px 14px rgba(43,39,48,0.12))', animation: 'tg-bob 3s ease-in-out infinite' }} />
+      </Reveal>
+
+      {/* 헤드라인 */}
+      <Reveal i={2} style={{ position: 'absolute', left: 24, right: 24, top: 330, textAlign: 'center' }}>
+        <span style={{ fontFamily: FONT_TITLE, fontSize: 24, color: TG.INK }}>로그인하고 기록을 지켜요</span>
+      </Reveal>
+      {/* 보조문구 */}
+      <Reveal i={3} style={{ position: 'absolute', left: 24, right: 24, top: 374, textAlign: 'center' }}>
+        <span style={{ fontFamily: FONT_BODY, fontSize: 14, color: '#9a93a0' }}>기기를 바꿔도 최고 점수·진도가 그대로예요</span>
+      </Reveal>
+
+      {/* 카카오 로그인 */}
+      <Reveal i={4} style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(122px + env(safe-area-inset-bottom))' }}>
+        <button onClick={() => go('kakao')} className="tg-press" style={{ width: '100%', height: 56, borderRadius: 16, border: 'none', background: '#FEE500', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, cursor: 'pointer', ...TOUCH_OPT }}>
+          <KakaoLogo />
+          <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 16, color: 'rgba(0,0,0,0.85)' }}>카카오로 시작하기</span>
+        </button>
+      </Reveal>
+      {/* 구글 로그인 */}
+      <Reveal i={5} style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(54px + env(safe-area-inset-bottom))' }}>
+        <button onClick={() => go('google')} className="tg-press" style={{ width: '100%', height: 56, borderRadius: 16, border: '1px solid #747775', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, cursor: 'pointer', ...TOUCH_OPT }}>
+          <GoogleLogo />
+          <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 16, color: '#1f1f1f' }}>Google로 계속하기</span>
+        </button>
+      </Reveal>
+      {/* 안내 */}
+      <Reveal i={6} style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(24px + env(safe-area-inset-bottom))', textAlign: 'center' }}>
+        <span style={{ fontFamily: FONT_BODY, fontSize: 12.5, color: '#9a93a0' }}>로그인 정보는 기록 저장·동기화에만 써요</span>
       </Reveal>
     </>
   );

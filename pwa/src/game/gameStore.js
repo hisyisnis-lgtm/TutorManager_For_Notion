@@ -211,33 +211,5 @@ export function mergeGuestIntoMember(identity) {
   applyGameDataToLocal(identity.id, collectLocalGameData(guestId));
 }
 
-// 학생 GAME_BEST_DB 기록(난이도별 행 + meta.w/eb) → 회원 게임데이터 형식({best, words})으로 변환.
-// 무한 최고는 별도 행이 아니라 고급 행 meta.eb에 얹혀 있으므로 거기서 추출.
-function studentBestsToGameData(bests) {
-  const best = {}; let eb = 0; let words = {};
-  for (const b of bests || []) {
-    if (!b) continue;
-    if (DIFF_KEYS.includes(b.gameKey) && (b.bestScore || 0) > 0) {
-      best[b.gameKey] = { bestScore: b.bestScore || 0, bestMaxCombo: b.bestMaxCombo || 0, bestAvgSec: b.bestAvgSec || 0, updatedAt: Date.now() };
-    }
-    if (b.meta?.eb) eb = Math.max(eb, Number(b.meta.eb) || 0);
-    if (b.meta?.w) words = mergeStats(words, b.meta.w);
-  }
-  if (eb > 0) best[ENDLESS_KEY] = { bestScore: eb, updatedAt: Date.now() };
-  return { best, words };
-}
-
-// 회원에 연결된 학생(예약코드)의 GAME_BEST 기록을 회원 로컬에 max 머지. 회원 진입 시 호출.
-// 학생→회원 과도기 이관: 점수 높은 쪽 보존(applyGameDataToLocal이 >= 머지). 흡수분은 호출부에서 pushMemberData로 서버 gameData에 영구화.
-// memberUser.studentToken은 verify 시 전화번호 매칭으로 연결됨(없으면 매칭 실패 — no-op).
-export async function mergeStudentIntoMember(identity) {
-  if (!identity || identity.kind !== 'member') return false;
-  const stoken = identity.memberUser?.studentToken;
-  if (!stoken) return false;
-  try {
-    const bests = await fetchAllGameBests(stoken);
-    if (!bests || !bests.length) return false;
-    applyGameDataToLocal(identity.id, studentBestsToGameData(bests));
-    return true;
-  } catch { return false; }
-}
+// (학생→회원 흡수 mergeStudentIntoMember/studentBestsToGameData 제거 — 게임은 학생앱과 완전 분리,
+//  회원 인증은 소셜 로그인. 학생 예약코드 연결·전화번호 매칭 경로 폐기, 2026-07-06.)

@@ -24,14 +24,28 @@ async function gameFetch(method, path, body, token) {
   return data;
 }
 
-// ── 게임 계정(독립실행) 회원 — 휴대폰 OTP 가입/로그인 + 게임데이터 동기화 ──
-/** 휴대폰으로 인증번호(알림톡) 발송 요청. @returns {Promise<{ok, devCode?}>} */
-export async function requestGameOtp(phone) {
-  return gameFetch('POST', '/game/auth/otp', { phone });
+// ── 게임 계정(독립실행) 회원 — 카카오·구글 소셜 로그인(OAuth BFF) + 게임데이터 동기화 ──
+/**
+ * 소셜 로그인 시작 URL. 브라우저를 이 URL로 보내면 Worker가 제공자 인증을 거쳐
+ * redirect(현재 게임 주소)로 되돌아오며 location.hash에 #token=… 을 붙인다.
+ * @param {'kakao'|'google'} provider
+ * @param {string} redirect 로그인 후 복귀할 주소(현재 게임 URL)
+ */
+export function socialLoginUrl(provider, redirect) {
+  return `${WORKER_URL}/game/auth/${encodeURIComponent(provider)}/start?redirect=${encodeURIComponent(redirect)}`;
 }
-/** 인증번호 검증 → 회원 find-or-create → 게임유저 JWT. @returns {Promise<{token, user}>} */
-export async function verifyGameOtp(phone, code) {
-  return gameFetch('POST', '/game/auth/verify', { phone, code });
+/** 복귀 URL의 location.hash에서 게임유저 JWT(#token=…)를 꺼내고 주소에서 제거한다. 없으면 null. */
+export function takeTokenFromHash() {
+  const h = (typeof window !== 'undefined' && window.location.hash) || '';
+  const m = h.match(/[#&]token=([^&]+)/);
+  if (!m) return null;
+  const token = decodeURIComponent(m[1]);
+  try {
+    const rest = h.replace(/[#&]token=[^&]+/, '').replace(/^#&?/, '#');
+    const clean = rest === '#' ? '' : rest;
+    window.history.replaceState(null, '', window.location.pathname + window.location.search + clean);
+  } catch { /* noop */ }
+  return token;
 }
 /** 게임유저 JWT로 내 계정·게임데이터 조회. @returns {Promise<{user}>} */
 export async function fetchGameMe(token) {

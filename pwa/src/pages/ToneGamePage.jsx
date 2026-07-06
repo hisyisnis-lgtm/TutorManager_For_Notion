@@ -7,11 +7,11 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { App } from 'antd';
 import { fetchStudentByToken } from '../api/bookingApi.js';
-import { fetchToneWords } from '../api/gameApi.js';
+import { fetchToneWords, fetchGameMe, takeTokenFromHash } from '../api/gameApi.js';
 import { track } from '../game/gameAnalytics.js';
 import {
   resolveIdentity, fetchBests, submitResult, mergeGuestIntoStudent,
-  pullMemberData, pushMemberData, mergeStudentIntoMember, logoutMember,
+  pullMemberData, pushMemberData, loginMember, mergeGuestIntoMember, logoutMember,
   loadMasteredSync, storeMasteredSync,
 } from '../game/gameStore.js';
 import { earTier, loadTierPeak, bumpTierPeak } from '../game/earProfile.js';
@@ -266,6 +266,27 @@ export default function ToneGamePage() {
     });
   }, []);
 
+  // 소셜 로그인 복귀 — Worker 콜백이 현재 주소에 #token=… 을 붙여 되돌려보낸다.
+  // 토큰이 있으면 회원 세션을 세우고 게스트 로컬 기록을 흡수한 뒤 회원으로 재초기화.
+  useEffect(() => {
+    const token = takeTokenFromHash();
+    if (!token) return undefined;
+    let done = false;
+    (async () => {
+      try {
+        loginMember(token, {});                    // 임시 세션(닉네임은 아래서 채움)
+        const { user } = await fetchGameMe(token);
+        loginMember(token, user || {});
+        const idn = resolveIdentity(undefined);     // 회원 신원
+        mergeGuestIntoMember(idn);                   // 게스트 로컬 → 회원 로컬 1회 병합
+        await pushMemberData(idn, user?.nickname).catch(() => {});
+        track('login_success');
+      } catch { /* noop */ }
+      if (!done) window.location.reload();           // 회원으로 재초기화
+    })();
+    return () => { done = true; };
+  }, []);
+
   // 게스트→학생 1회 병합(같은 기기) → 통합 최고점수·숙련도 로컬 로드 → 서버(학생만) 동기화. 게스트는 로컬만.
   useEffect(() => {
     if (isPreview) return undefined;
@@ -276,10 +297,6 @@ export default function ToneGamePage() {
       if (identity.kind === 'member') {
         await pullMemberData(identity).catch(() => {}); // 회원: 서버(/game/me) → 로컬 머지
         if (cancelled) return;
-        // 연결된 학생(예약코드)의 GAME_BEST 기록을 회원 로컬에 max 흡수 → 학생→회원 이관(점수 높은 쪽 보존). 흡수 시 서버 gameData에도 반영.
-        const absorbed = await mergeStudentIntoMember(identity).catch(() => false);
-        if (cancelled) return;
-        if (absorbed) pushMemberData(identity).catch(() => {});
       }
       wordStatsRef.current = loadWordStats(studentToken);
       toneStatsRef.current = loadToneStats(studentToken);
@@ -866,7 +883,7 @@ export default function ToneGamePage() {
         setIntroPage(0); setScreen('intro');
       }) : undefined} />;
   } else if (screen === 'login') {
-    content = <FigmaScreen><LoginScreen onBack={() => setScreen('home')} onSuccess={() => { track('login_success'); setTimeout(() => window.location.reload(), 500); }} /></FigmaScreen>;
+    content = <FigmaScreen><LoginScreen onBack={() => setScreen('home')} /></FigmaScreen>;
   } else if (screen === 'mastery') {
     content = (
       <FigmaScreen>
