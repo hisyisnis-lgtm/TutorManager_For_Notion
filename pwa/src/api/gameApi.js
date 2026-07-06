@@ -1,7 +1,8 @@
-// 미니게임 베스트 API — Worker /game/best/* 라우트 호출
+// 미니게임 베스트 API — Worker /game/best/* + /game/me(회원) + /game/auth(소셜) 라우트 호출
 //
-// 학생 토큰 + 게임 키 기반 공개 API. JWT 인증 불필요.
-// localStorage 캐시 패턴과 함께 사용 — 진입 시 fetchOne으로 동기화, 종료 시 submit (fire-and-forget).
+// 베스트 라우트는 학생 토큰 + 게임 키 기반이며 studentBearer(인증 게이트 통과 시)로 Authorization을 첨부한다.
+// localStorage 캐시 패턴과 함께 사용 — 진입 시 fetchAllGameBests로 로컬 캐시 복원(serverToCache),
+// 종료 시 submit(fire-and-forget — 실패해도 다음 종료 때 로컬 최고점을 다시 보내 수렴).
 import { WORKER_URL } from '../config.js';
 import { SEED_WORDS } from '../constants/toneGameWords.js';
 import { studentBearer } from './studentAuth.js';
@@ -92,10 +93,10 @@ export async function submitGameResult(studentToken, gameKey, result) {
 }
 
 /**
- * 성조 게임 단어 풀 조회 — CSV(data/tone-words.csv)에서 빌드 변환된 로컬 데이터를 반환.
+ * 성조 게임 단어 풀 조회 — CSV(data/tone-words-*.csv, 난이도·테마별 분할)에서 빌드 변환된 로컬 데이터를 반환.
  * 단어는 모든 유저 동일·소량이라 클라이언트 번들에 포함 → 네트워크/워커/Notion 불필요.
  * async 시그니처는 호출부(await fetchToneWords) 호환을 위해 유지.
- * @param {'easy'|'normal'|'hard'} difficulty
+ * @param {string} difficulty 난이도('easy'|'normal'|'hard') 또는 테마 id('drama'|'travel'…)
  * @returns {Promise<Array<{hanzi: string, pinyin: string[], tones: number[], meaning: string}>>}
  */
 export async function fetchToneWords(difficulty) {

@@ -29,22 +29,24 @@ const THEME_FILES = [
   ['tone-words-travel.csv', 'travel'],
 ];
 
-// 병음 성조 부호 → 숫자
+// 병음 성조 부호 → 숫자 (대문자 병음도 지원)
 const TONE_MARK = {
-  ā: 1, ē: 1, ī: 1, ō: 1, ū: 1, ǖ: 1,
-  á: 2, é: 2, í: 2, ó: 2, ú: 2, ǘ: 2,
-  ǎ: 3, ě: 3, ǐ: 3, ǒ: 3, ǔ: 3, ǚ: 3,
-  à: 4, è: 4, ì: 4, ò: 4, ù: 4, ǜ: 4,
+  ā: 1, ē: 1, ī: 1, ō: 1, ū: 1, ǖ: 1, Ā: 1, Ē: 1, Ī: 1, Ō: 1, Ū: 1, Ǖ: 1,
+  á: 2, é: 2, í: 2, ó: 2, ú: 2, ǘ: 2, Á: 2, É: 2, Í: 2, Ó: 2, Ú: 2, Ǘ: 2,
+  ǎ: 3, ě: 3, ǐ: 3, ǒ: 3, ǔ: 3, ǚ: 3, Ǎ: 3, Ě: 3, Ǐ: 3, Ǒ: 3, Ǔ: 3, Ǚ: 3,
+  à: 4, è: 4, ì: 4, ò: 4, ù: 4, ǜ: 4, À: 4, È: 4, Ì: 4, Ò: 4, Ù: 4, Ǜ: 4,
 };
 function toneOfSyllable(syl) {
   for (const ch of syl) { if (TONE_MARK[ch]) return TONE_MARK[ch]; }
   return 0; // 성조 부호 없음 = 경성
 }
 
-// 따옴표·콤마·이스케이프 처리하는 최소 CSV 파서
+// 따옴표·콤마·이스케이프 처리하는 최소 CSV 파서 (줄 단위 — 셀 내 개행 미지원, 미닫힘 따옴표는 throw)
 function parseCsv(text) {
   const out = [];
-  for (const raw of text.replace(/\r\n/g, '\n').split('\n')) {
+  const lines = text.replace(/\r\n/g, '\n').split('\n');
+  for (let ln = 0; ln < lines.length; ln++) {
+    const raw = lines[ln];
     if (raw.length === 0) continue;
     const cells = []; let cur = ''; let q = false;
     for (let i = 0; i < raw.length; i++) {
@@ -56,10 +58,19 @@ function parseCsv(text) {
       else if (c === ',') { cells.push(cur); cur = ''; }
       else cur += c;
     }
+    if (q) throw new Error(`${ln + 1}행: 닫히지 않은 따옴표(") — 셀 안 줄바꿈은 지원하지 않습니다`);
     cells.push(cur);
     out.push(cells);
   }
   return out;
+}
+
+// 기대 헤더 — 첫 행이 이와 다르면(헤더 누락·컬럼 순서 변경) 빌드 중단
+const EXPECTED_HEADER = ['한자', '병음', '의미', '활성'];
+function headerError(row) {
+  const cells = (row || []).map((c) => c.replace(/^\uFEFF/, '').trim()); // 엑셀 UTF-8 BOM 허용
+  const ok = EXPECTED_HEADER.every((h, i) => cells[i] === h) && cells.slice(EXPECTED_HEADER.length).every((c) => c === '');
+  return ok ? null : `헤더가 '${EXPECTED_HEADER.join(',')}'이(가) 아닙니다 (실제: '${(row || []).join(',')}')`;
 }
 
 function build() {
@@ -72,8 +83,15 @@ function build() {
   function processFile(file, key, dedupMap) {
     const fp = path.join(DATA_DIR, file);
     if (!fs.existsSync(fp)) { errors.push(`단어 파일이 없습니다: data/${file}`); return; }
-    const rows = parseCsv(fs.readFileSync(fp, 'utf8'));
-    rows.shift(); // 헤더(한자,병음,의미,활성) 제거
+    let rows;
+    try {
+      rows = parseCsv(fs.readFileSync(fp, 'utf8'));
+    } catch (e) {
+      errors.push(`${file} ${e.message}`); // 미닫힘 따옴표 등 파싱 불가
+      return;
+    }
+    const headerErr = headerError(rows.shift()); // 헤더(한자,병음,의미,활성) 검증 후 제거
+    if (headerErr) { errors.push(`${file} 1행: ${headerErr}`); return; }
 
     rows.forEach((cells, idx) => {
       const ln = idx + 2; // 1-base + 헤더

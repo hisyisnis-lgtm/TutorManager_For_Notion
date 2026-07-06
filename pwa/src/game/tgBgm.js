@@ -16,6 +16,13 @@ let wantPlaying = false;    // 재생 의도(화면상태 무관) — 백그라�
 let fadeRaf = null;
 let ducked = false;
 let duckReleaseT = null;
+// ⚠️ iOS Safari는 HTMLAudioElement.volume 세터를 무시(항상 풀 볼륨) → 페이드·마스터·더킹 전부 무효.
+//   → Web Audio 경유: 엘리먼트를 MediaElementSource로 물려 GainNode.gain으로 볼륨 제어.
+//   AudioContext 미지원/생성 실패 시엔 기존 el.volume 방식으로 폴백.
+let actx = null;
+let gain = null;            // 볼륨 제어 GainNode(있으면 이걸로, 없으면 el.volume)
+let srcNode = null;         // createMediaElementSource는 엘리먼트당 1회만 가능 — 엘리먼트와 함께 보관
+let vol = 0;                // 현재 논리 볼륨(0~1) — iOS에선 el.volume이 신뢰 불가라 자체 보관
 
 function ensureAudio() {
   if (audio) return audio;
@@ -24,10 +31,30 @@ function ensureAudio() {
     audio.loop = true;
     audio.preload = 'auto';
     audio.volume = 0;
+    vol = 0;
     // 파일 없음/디코딩 실패는 조용히 무음(에러로 앱 안 죽게).
     audio.addEventListener('error', () => { /* noop — BGM만 안 나옴 */ });
+    // Web Audio 경유 볼륨 제어 연결(1회) — 실패하면 el.volume 폴백 그대로.
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) {
+        actx = new AC();
+        srcNode = actx.createMediaElementSource(audio);
+        gain = actx.createGain();
+        gain.gain.value = 0;
+        srcNode.connect(gain).connect(actx.destination);
+        audio.volume = 1; // 볼륨은 이제 GainNode가 담당(el.volume은 소스에 곱해지므로 1로 고정)
+      }
+    } catch { actx = null; gain = null; srcNode = null; }
   } catch { audio = null; }
   return audio;
+}
+
+// 현재 볼륨 적용 — GainNode 우선(iOS 대응), 없으면 el.volume.
+function setVol(v) {
+  vol = Math.max(0, Math.min(1, v));
+  if (gain) { try { gain.gain.value = vol; } catch { /* noop */ } }
+  else if (audio) { try { audio.volume = vol; } catch { /* noop */ } }
 }
 
 // 볼륨 페이드(rAF). target=0이면 끝나고 pause.
@@ -35,12 +62,12 @@ function fadeTo(target, ms, thenPause) {
   const a = audio;
   if (!a) return;
   if (fadeRaf) { cancelAnimationFrame(fadeRaf); fadeRaf = null; }
-  const from = a.volume;
+  const from = vol;
   let t0 = null;
   const step = (ts) => {
     if (t0 == null) t0 = ts;
     const k = ms > 0 ? Math.min(1, (ts - t0) / ms) : 1;
-    a.volume = Math.max(0, Math.min(1, from + (target - from) * k));
+    setVol(from + (target - from) * k);
     if (k < 1) { fadeRaf = requestAnimationFrame(step); }
     else { fadeRaf = null; if (thenPause) { try { a.pause(); } catch { /* noop */ } } }
   };
@@ -50,6 +77,7 @@ function fadeTo(target, ms, thenPause) {
 function tryPlay() {
   const a = ensureAudio();
   if (!a) return;
+  if (actx && actx.state !== 'running') actx.resume().catch(() => {}); // Web Audio 언락(suspended/iOS interrupted 복구)
   const p = a.play();
   if (p && p.catch) p.catch(() => {}); // autoplay 차단 시 조용히 — 다음 제스처(unlockOnGesture)에서 재시도
   fadeTo(ducked ? MASTER * DUCK : MASTER, FADE_IN, false); // 더킹 중이면 낮은 볼륨으로 시작
@@ -67,6 +95,7 @@ export function setBgmMuted(m) {
 
 // 첫 사용자 제스처에서 오디오 언락 — autoplay 정책상 첫 재생은 제스처 필요.
 function unlockOnGesture() {
+  if (actx && actx.state !== 'running') actx.resume().catch(() => {}); // 제스처 안에서 Web Audio ctx도 함께 언락
   if (wantPlaying && !muted && audio && audio.paused
     && !(typeof document !== 'undefined' && document.hidden)) tryPlay();
 }

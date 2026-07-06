@@ -12,14 +12,14 @@ import { loadToneStats, saveToneStats } from './toneStats.js';
 import { loadTierPeak, bumpTierPeak } from './earProfile.js';
 import { loadAchievements, saveAchievements, loadReviewMastered, addReviewMastered } from './achievements.js';
 import { loadStreak, saveStreak, loadFreezes, saveFreezes } from './streak.js';
-import { THEMES } from '../constants/toneGameWords.js';
+import { DIFFICULTIES, THEMES } from '../constants/toneGameWords.js';
 import { fetchAllGameBests, submitGameResult, fetchGameMe, saveGameMe } from '../api/gameApi.js';
 
 const GUEST_ID_KEY = 'tg_guest_id';
 const MEMBER_TOKEN_KEY = 'tg_member_token';
 const MEMBER_USER_KEY = 'tg_member_user';
-// 병합 대상 베스트 키 (난이도 3 + 무한). ToneGamePage의 GAMEKEY/ENDLESS_BEST_KEY와 일치 유지.
-const DIFF_KEYS = ['tone-easy', 'tone-normal', 'tone-hard'];
+// 병합 대상 베스트 키 — DIFFICULTIES에서 파생(새 난이도 자동 포함). 무한 키는 gameLogic ENDLESS_BEST_KEY와 일치 유지.
+const DIFF_KEYS = DIFFICULTIES.map((d) => d.gameKey);
 const ENDLESS_KEY = 'tone-endless';
 
 // 게스트 고유 ID — 최초 1회 생성해 localStorage 보관. 기기 단위(기기 바뀌면 새 게스트).
@@ -160,7 +160,7 @@ export function storeMasteredSync(id, n) {
   return v;
 }
 
-// 단어 통계가 무한 성장하면 직렬화가 1900자를 넘어 서버 저장이 거부된다(동기화 누락).
+// 단어 통계가 무한 성장하면 직렬화가 서버 예산(100KB 아래 TOTAL_BUDGET)을 넘어 저장이 거부된다(동기화 누락).
 // → 예산 초과 시 학습상 중요한 순서로 추려 한도 내로 트림: ①미마스터(복습 대상) 우선 보존 ②시도 많은 순.
 //   (마스터된 단어 통계가 빠져도 마스터 '수'는 위 mc가 보존)
 function trimWords(words, budget = WORDS_BUDGET) {
@@ -199,11 +199,14 @@ function mergeToneStats(base, incoming) {
   return out;
 }
 // 스트릭 머지 — longest는 최댓값, current/lastDate는 더 최근 플레이(날짜 큰 쪽) 기준.
+// 같은 날짜(동률)면 current 큰 쪽 — 게스트로 오늘 1판 후 로그인해도 서버의 긴 스트릭이 1로 안 덮이게.
 function mergeStreak(base, inc) {
   if (!inc) return base || null;
   if (!base) return inc;
   const longest = Math.max(base.longest || 0, inc.longest || 0);
-  const newer = (inc.lastDate || '') > (base.lastDate || '') ? inc : base;
+  const bd = base.lastDate || '', id = inc.lastDate || '';
+  if (bd === id) return { lastDate: bd, current: Math.max(base.current || 0, inc.current || 0), longest };
+  const newer = id > bd ? inc : base;
   return { lastDate: newer.lastDate, current: newer.current || 0, longest };
 }
 
@@ -225,7 +228,7 @@ export function collectLocalGameData(id) {
   };
   const streak = loadStreak(id);
   if (streak) rest.streak = streak;            // {lastDate,current,longest}
-  // words는 서버 1900자 캡에서 나머지 필드가 쓰고 남은 예산만큼만(초과 시 학습중요도순 트림). WORDS_BUDGET(1500)도 상한.
+  // words는 서버 예산(TOTAL_BUDGET)에서 나머지 필드가 쓰고 남은 만큼만(초과 시 학습중요도순 트림). WORDS_BUDGET도 상한.
   const overhead = JSON.stringify({ ...rest, words: {} }).length;
   const wordsBudget = Math.min(WORDS_BUDGET, Math.max(0, TOTAL_BUDGET - overhead));
   return { ...rest, words: trimWords(words, wordsBudget) };
@@ -236,7 +239,8 @@ function applyGameDataToLocal(id, data) {
   for (const [k, sb] of Object.entries(data.best || {})) {
     if (!sb) continue;
     const lb = loadBest(id, k) || {};
-    if ((sb.bestScore || 0) >= (lb.bestScore || 0)) saveBest(id, k, { ...lb, ...sb });
+    // playCount는 항상 큰 쪽 보존 — 점수 동률일 때 들어온 레코드가 로컬 playCount를 깎지 않게(업적 판정 지연 방지).
+    if ((sb.bestScore || 0) >= (lb.bestScore || 0)) saveBest(id, k, { ...lb, ...sb, playCount: Math.max(lb.playCount || 0, sb.playCount || 0) });
   }
   if (data.words) saveWordStats(id, mergeStats(loadWordStats(id), data.words));
   if (typeof data.mc === 'number') storeMasteredSync(id, data.mc); // 하락도 전파(진짜 실력 신호)

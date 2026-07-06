@@ -169,7 +169,8 @@ export function getTimeLimitForCombo(combo, multiplier = 1) {
 }
 
 // ── 베스트 기록 캐시 (localStorage) ────────────────────
-// Notion DB가 single source of truth. localStorage는 빠른 표시용 캐시.
+// 학생=서버(D1 GAME_BEST)가 single source of truth고 localStorage는 빠른 표시용 캐시(진입 시 serverToCache로 복원).
+// 게스트=로컬이 전부, 회원=/game/me JSON 블롭과 양방향 머지(gameStore).
 export function getBestKey(studentToken, gameKey) {
   return studentToken ? `game_best_${gameKey}_${studentToken}` : `game_best_${gameKey}`;
 }
@@ -182,7 +183,7 @@ export function loadBest(studentToken, gameKey) {
 export function saveBest(studentToken, gameKey, data) {
   try { localStorage.setItem(getBestKey(studentToken, gameKey), JSON.stringify(data)); } catch { /* noop */ }
 }
-// Notion 응답(서버) → localStorage 캐시 형태(클라이언트) 변환
+// 서버 베스트 응답 → localStorage 캐시 형태(클라이언트) 변환 — 진입 시 로컬 복원(잠금 사다리·최고점 유지)에 사용
 export function serverToCache(serverBest) {
   if (!serverBest) return null;
   return {

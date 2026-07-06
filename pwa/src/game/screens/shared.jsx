@@ -15,6 +15,13 @@ import { play as playSfx, isSfxMuted, setSfxMuted } from '../tgSfx.js';
 // 카운트다운 슬라이드 가장자리 진폭 폭(px) — keyframes(tg-cd-out)와 CdWaveEdge가 공유.
 export const CD_WAVE_W = 12;
 
+// 모션 최소화(접근성) — matchMedia 1회 조회 캐시. 장식성 파티클(ConfettiBurst·EmberRise) 생략 판단용.
+let _reducedMotion = null;
+export function prefersReducedMotion() {
+  if (_reducedMotion === null) _reducedMotion = typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+  return _reducedMotion;
+}
+
 // 크리스프 플래시 — 카메라 플래시처럼 순간 확 밝아졌다 스냅오프. 글로우·번짐 없는 깔끔한 '번쩍'.
 // radial=중심에서 부드럽게(카드 위 등), 아니면 꽉 찬 화이트. 비차단·CSS keyframe(짧음). 재발동은 부모 key 변경.
 export function CrispFlash({ color = 'rgba(255,255,255,0.9)', dur = 0.17, radial = false, borderRadius = 0, zIndex = 24, style }) {
@@ -34,7 +41,12 @@ function emberNoise(x) {
 // 잉걸불(rising ember) — 불꽃 위로 불티가 흔들리며 피어올라 깜빡이다 식어 사라짐(무한 루프).
 // ★rAF+노이즈(CSS 직선 아님): 상승 중 좌우 난류(위로 갈수록↑)·부력·밝기 깜빡임 → 진짜 잉걸불 움직임. 부모 position:relative 필요.
 export const EMBER_COLORS = ['#ff8f34', '#ffc23c', '#ff6b3d', '#ffd98a', '#ff5e3a'];
-export function EmberRise({ colors = EMBER_COLORS, count = 10, spread = 22, rise = 42, size = 3.4, zIndex = 0, style }) {
+// 래퍼 — 모션 최소화 설정이면 장식 파티클 생략(훅 없는 바깥에서 분기해 훅 규칙 안전).
+export function EmberRise(props) {
+  if (prefersReducedMotion()) return null;
+  return <EmberRiseInner {...props} />;
+}
+function EmberRiseInner({ colors = EMBER_COLORS, count = 10, spread = 22, rise = 42, size = 3.4, zIndex = 0, style }) {
   const refs = useRef([]);
   const cfg = useRef(null);
   if (!cfg.current) {
@@ -85,7 +97,12 @@ export function EmberRise({ colors = EMBER_COLORS, count = 10, spread = 22, rise
 // 빛 알갱이(글리터)도 이 컴포넌트에 흰/골드 팔레트(LIGHT_CONFETTI)·작은 size로 겹쳐 쓰면 동일한 물리로 움직임(별도 스파크 컴포넌트 폐기 — 촌스러움).
 export const CONFETTI_COLORS = ['#FF6B6B', '#FFC23C', '#36C98D', '#4D8DFF', '#7c5cff', '#ff8f34'];
 export const LIGHT_CONFETTI = ['#ffffff', '#fff6cf', '#ffe89a', '#ffd166', '#fff0f0']; // 흰/골드 글리터(빛 알갱이)
-export function ConfettiBurst({ colors = CONFETTI_COLORS, count = 16, power = 1, size = 9, zIndex = 25, style }) {
+// 래퍼 — 모션 최소화 설정이면 장식 파티클 생략(훅 없는 바깥에서 분기해 훅 규칙 안전).
+export function ConfettiBurst(props) {
+  if (prefersReducedMotion()) return null;
+  return <ConfettiBurstInner {...props} />;
+}
+function ConfettiBurstInner({ colors = CONFETTI_COLORS, count = 16, power = 1, size = 9, zIndex = 25, style }) {
   const refs = useRef([]);
   const cfg = useRef(null);
   if (!cfg.current) {
@@ -146,9 +163,8 @@ export function ConfettiBurst({ colors = CONFETTI_COLORS, count = 16, power = 1,
 }
 
 // ── keyframes / 글로벌 게임 스타일 ─────────────────────
-export function ToneGameStyles() {
-  return (
-    <style>{`
+// FigmaScreen마다 <style>이 중복 주입돼 화면 전환 중 시트가 2벌 존재하던 것 → 모듈 로드 시 document.head에 1회만 주입.
+const TONE_GAME_CSS = `
       @keyframes tg-shake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-6px)} 40%{transform:translateX(6px)} 60%{transform:translateX(-4px)} 80%{transform:translateX(4px)} }
       @keyframes tg-pulse { 0%,100%{opacity:.35} 50%{opacity:.9} }
       @keyframes tg-heartbeat { 0%,100%{transform:scale(1)} 28%{transform:scale(1.2)} 42%{transform:scale(1)} 58%{transform:scale(1.12)} 72%{transform:scale(1)} }
@@ -204,8 +220,21 @@ export function ToneGameStyles() {
       .tg-press:active{ transform: scale(.95); transition: transform .09s ease-out }
       .tg-root, .tg-root *, .tg-root *::before, .tg-root *::after { box-sizing: border-box; }
       .tg-noscroll::-webkit-scrollbar { display: none; }
-    `}</style>
-  );
+`;
+let tgStylesInjected = false;
+function injectToneGameStyles() {
+  if (tgStylesInjected || typeof document === 'undefined') return;
+  tgStylesInjected = true;
+  const el = document.createElement('style');
+  el.dataset.tgStyles = '1';
+  el.textContent = TONE_GAME_CSS;
+  document.head.appendChild(el);
+}
+injectToneGameStyles(); // import 시 1회 주입
+
+// 호환용 no-op — 기존 <ToneGameStyles /> 사용처(FigmaScreen·랩)는 그대로 두되 실제 주입은 위에서 1회만.
+export function ToneGameStyles() {
+  return null;
 }
 
 // ── 반응형 화면 컨테이너 ────────────────────────────────
@@ -417,14 +446,29 @@ export function WordCard({ word, entered, currentSyl, completed, timedOut, progr
 export function ToneButtons({ onTone, wrongBtn, disabled }) {
   const [ripple, setRipple] = useState(null); // { num, key } — 탭 순간 성조색 리플
   const seqRef = useRef(0);
+  const downRef = useRef({ num: null, at: 0 }); // 직전 pointerdown 판정 기록 — 뒤따르는 click 중복 실행 방지
   const handle = (num) => { seqRef.current += 1; setRipple({ num, key: seqRef.current }); onTone(num); };
+  // 손가락이 닿는 순간(pointerdown) 바로 판정 — 뗄 때(click) 판정보다 체감 반응이 빠름.
+  const handleDown = (e, num) => {
+    if (disabled) return;
+    if (e.button != null && e.button !== 0) return; // 우클릭 등 주 버튼 외 무시
+    downRef.current = { num, at: performance.now() };
+    handle(num);
+  };
+  // click은 키보드(Enter/Space) 접근성 경로 유지 — 직전 400ms 내 같은 버튼 pointerdown이 이미 처리했으면 무시.
+  const handleClick = (num) => {
+    if (disabled) return;
+    const d = downRef.current;
+    if (d.num === num && performance.now() - d.at < 400) return;
+    handle(num);
+  };
   return (
     <div style={{ display: 'flex', gap: 9, height: 81, alignItems: 'stretch' }}>
       {TONES.map((t) => {
         const isWrong = wrongBtn === t.num;
         return (
           <button
-            key={t.num} onClick={() => handle(t.num)} disabled={disabled} aria-label={t.name} data-nosfx="true"
+            key={t.num} onPointerDown={(e) => handleDown(e, t.num)} onClick={() => handleClick(t.num)} disabled={disabled} aria-label={t.name} data-nosfx="true"
             className={`tg-press ${isWrong ? 'tg-shake' : ''}`}
             style={{
               position: 'relative', overflow: 'hidden',
@@ -561,9 +605,12 @@ export function SettingsModal({ onClose }) {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 18, color: TG.INK }}>설정</span>
+          {/* 히트영역 44×44(음수 마진으로 레이아웃 자리는 30 유지), 시각 크기는 안쪽 30×30 원 그대로 */}
           <button onClick={onClose} aria-label="닫기" className="tg-press"
-            style={{ width: 30, height: 30, borderRadius: 15, border: 'none', background: '#f3efe9', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', ...TOUCH_OPT }}>
-            <XIcon size={14} weight="bold" color={TG.SUB} />
+            style={{ width: 44, height: 44, margin: -7, padding: 0, border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', ...TOUCH_OPT }}>
+            <span style={{ width: 30, height: 30, borderRadius: 15, background: '#f3efe9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <XIcon size={14} weight="bold" color={TG.SUB} />
+            </span>
           </button>
         </div>
         <SettingRow Icon={sfxOn ? SpeakerHighIcon : SpeakerSlashIcon} label="소리" on={sfxOn} onToggle={toggleSfx} />

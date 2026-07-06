@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { TG, FONT_BODY } from '../tgTokens.js';
 import { TONES } from '../../constants/toneGameWords.js';
 import { ToneMark } from '../tgWidgets.jsx';
+import { Eyes, markSize } from './eyes.jsx';
 
 // { t: 팁, tone: 연관 성조(null=일반→랜덤 캐릭터) }
 const TIPS = [
@@ -16,22 +17,6 @@ const TIPS = [
   { t: '정확도가 높을수록 성조 친구가 무럭무럭 자라요.', tone: null },
   { t: '헷갈리는 성조는 천천히 여러 번 — 귀가 곧 트여요.', tone: null },
 ];
-
-// 성조별 눈(홈/타이틀과 동일 좌표계 — 마크 박스 기준 px)
-const EYES = {
-  1: { cx: 34, cy: 9, gap: 6, w: 4, h: 9 },
-  2: { cx: 37, cy: 10, gap: 6, w: 4, h: 9 },
-  3: { cx: 34, cy: 8, gap: 6, w: 4, h: 9 },
-  4: { cx: 31, cy: 10, gap: 6, w: 4, h: 9 },
-  0: { cx: 21, cy: 17, gap: 5, w: 4, h: 8 },
-};
-const markSize = (num) => (num === 0 ? 100 : 68);
-function Eyes({ num }) {
-  const e = EYES[num]; if (!e) return null;
-  return [-1, 1].map((s) => (
-    <div key={s} style={{ position: 'absolute', left: e.cx + s * e.gap - e.w / 2, top: e.cy - e.h / 2, width: e.w, height: e.h, borderRadius: e.w / 2, background: '#2b2730', animation: `tg-blinkeye ${4.4 + (num % 5) * 0.5}s ease-in-out infinite` }} />
-  ));
-}
 
 export function LoadingTip() {
   const [pick] = useState(() => TIPS[Math.floor(Math.random() * TIPS.length)]);
@@ -46,7 +31,8 @@ export function LoadingTip() {
         <div style={{ position: 'relative', color: tone.color, animation: 'tg-bob 2.4s ease-in-out infinite' }}>
           <div style={{ position: 'relative', display: 'inline-block' }}>
             <ToneMark tone={tone.num} size={markSize(tone.num)} />
-            <Eyes num={tone.num} />
+            {/* 캐릭터 1개뿐이라 시차 불필요 — i=0(기존 딜레이 없음과 동일) */}
+            <Eyes num={tone.num} i={0} />
           </div>
         </div>
       </div>

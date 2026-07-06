@@ -174,7 +174,7 @@ export function isSfxMuted() { try { return localStorage.getItem('tg_sfx_muted')
 export function setSfxMuted(m) { muted = !!m; try { localStorage.setItem('tg_sfx_muted', m ? '1' : '0'); } catch { /* noop */ } }
 
 // 첫 사용자 제스처에서 오디오 언락.
-function unlockOnGesture() { if (ctx && ctx.state === 'suspended') ctx.resume().catch(() => {}); }
+function unlockOnGesture() { if (ctx && ctx.state !== 'running') ctx.resume().catch(() => {}); } // iOS 비표준 'interrupted' 상태도 복구
 
 // 진입 시 1회 — 음소거 상태만 읽어둠(ctx는 첫 재생 시 지연 생성). 제스처 언락 리스너 등록.
 export function initSfx() {
@@ -196,7 +196,7 @@ export function play(key, volOverride, rate) {
   }
   const c = ensureCtx();
   if (!c) return;
-  if (c.state === 'suspended') c.resume().catch(() => {}); // 첫 제스처에서 unlock
+  if (c.state !== 'running') c.resume().catch(() => {}); // 첫 제스처에서 unlock(iOS 'interrupted' 포함)
   const fn = SYNTH[key];
   if (!fn) return;
   const vol = volOverride != null ? volOverride : (BASE[key] ?? 0.4);

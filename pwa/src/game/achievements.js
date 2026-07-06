@@ -4,6 +4,25 @@
 // 참조 메모리: tone_game_redesign.md (성취 레이어 P1)
 import { UNLOCK_THRESHOLD } from './gameLogic.js';
 import { allTonesAbove } from './toneStats.js';
+import { DIFFICULTIES } from '../constants/toneGameWords.js';
+
+// 모드 해제 업적 — DIFFICULTIES 배열 순서에서 자동 파생(새 난이도 추가 시 코드 수정 불필요).
+// id는 저장 호환을 위해 기존 규약(`unlock-<난이도id>`, 무한=`unlock-endless`) 유지.
+const LAST_DIFF = DIFFICULTIES[DIFFICULTIES.length - 1];
+const UNLOCK_ACHIEVEMENTS = [
+  ...DIFFICULTIES.slice(1).map((d, i) => {
+    const prev = DIFFICULTIES[i];
+    return {
+      id: `unlock-${d.id}`, label: `${d.label} 입성`, desc: `${d.label} 모드를 열었어요`,
+      cond: `${prev.label}에서 ${UNLOCK_THRESHOLD.toLocaleString()}점을 넘으면 얻어요`,
+      icon: d.unlockReveal?.icon || 'Rocket',
+      check: (s) => (s.bestByDiff?.[prev.id] || 0) >= UNLOCK_THRESHOLD,
+    };
+  }),
+  { id: 'unlock-endless', label: '무한의 문', desc: '무한 모드를 열었어요',
+    cond: `${LAST_DIFF.label}에서 ${UNLOCK_THRESHOLD.toLocaleString()}점을 넘으면 얻어요`, icon: 'Infinity',
+    check: (s) => (s.bestByDiff?.[LAST_DIFF.id] || 0) >= UNLOCK_THRESHOLD },
+];
 
 // 스냅샷 형태:
 //  { playCount, bestScoreAny, maxComboEver, bestByDiff:{easy,normal,hard}, endlessBest,
@@ -19,12 +38,7 @@ export const ACHIEVEMENTS = [
     check: (s) => (s.maxComboEver || 0) >= 10 },
   { id: 'combo-20', label: '불꽃 손가락', desc: '콤보 20을 달성했어요', cond: '콤보 20을 달성하면 얻어요', icon: 'FireSimple',
     check: (s) => (s.maxComboEver || 0) >= 20 },
-  { id: 'unlock-normal', label: '중급 입성', desc: '중급 모드를 열었어요', cond: '초급에서 1,000점을 넘으면 얻어요', icon: 'Rocket',
-    check: (s) => (s.bestByDiff?.easy || 0) >= UNLOCK_THRESHOLD },
-  { id: 'unlock-hard', label: '고급 입성', desc: '고급 모드를 열었어요', cond: '중급에서 1,000점을 넘으면 얻어요', icon: 'Crown',
-    check: (s) => (s.bestByDiff?.normal || 0) >= UNLOCK_THRESHOLD },
-  { id: 'unlock-endless', label: '무한의 문', desc: '무한 모드를 열었어요', cond: '고급에서 1,000점을 넘으면 얻어요', icon: 'Infinity',
-    check: (s) => (s.bestByDiff?.hard || 0) >= UNLOCK_THRESHOLD },
+  ...UNLOCK_ACHIEVEMENTS,
   { id: 'master-10', label: '단어 수집가', desc: '10단어를 마스터했어요', cond: '단어 10개를 마스터하면 얻어요', icon: 'BookmarkSimple',
     check: (s) => (s.masteredCount || 0) >= 10 },
   { id: 'master-30', label: '단어 달인', desc: '30단어를 마스터했어요', cond: '단어 30개를 마스터하면 얻어요', icon: 'Books',
