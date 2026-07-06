@@ -15,6 +15,8 @@ const DIST = path.join(ROOT, 'pwa', 'dist');
 const SRC = path.join(DIST, 'index.html');
 
 const ORIGIN = 'https://tiantian-chinese.pages.dev';
+// 파비콘 캐시 무력화용 버전 — 배포마다 오르므로 파비콘 변경이 새로고침 없이 반영됨.
+const { version } = JSON.parse(readFileSync(path.join(ROOT, 'pwa', 'package.json'), 'utf8'));
 const OG = {
   title: '성조 빨리찾기 — 중국어 4성 게임',
   description: '중국어 4성을 게임으로 빠르게 익히기. 하늘하늘중국어 성조 트레이닝.',
@@ -48,8 +50,9 @@ html = html.replace(/(<meta\s+name="description"\s+content=")[^"]*(")/i, `$1${es
 html = html.replace(/<title>[^<]*<\/title>/i, `<title>${esc(OG.title)}</title>`);
 
 // 파비콘·apple-touch-icon 도 게임용으로 (탭·홈스크린 아이콘)
-html = html.replace(/<link rel="icon"[^>]*>/i, '<link rel="icon" type="image/png" href="/favicon-game.png" />');
-html = html.replace(/<link rel="apple-touch-icon"[^>]*>/i, '<link rel="apple-touch-icon" href="/favicon-game.png" />');
+const favicon = `/favicon-game.png?v=${version}`; // ?v로 브라우저 파비콘 캐시 무력화
+html = html.replace(/<link rel="icon"[^>]*>/i, `<link rel="icon" type="image/png" href="${favicon}" />`);
+html = html.replace(/<link rel="apple-touch-icon"[^>]*>/i, `<link rel="apple-touch-icon" href="${favicon}" />`);
 
 // twitter 카드(없으면 head에 추가)
 if (!/name="twitter:card"/i.test(html)) {
