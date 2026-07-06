@@ -246,6 +246,17 @@ export default function ToneGamePage() {
     fetchStudentByToken(identity.token).then(setStudent).catch(() => setError(true));
   }, [identity, isPreview]);
 
+  // 탭 파비콘을 게임용으로 교체. 서비스워커가 /game/tone에 index.html(메인 파비콘)을 서빙하므로
+  // 정적 HTML(/game/tone.html)이 아니라 클라이언트에서 직접 바꿔야 실사용자 탭에 게임 파비콘이 뜬다.
+  // ?v=버전으로 브라우저 파비콘 캐시 무력화. 게임 이탈 시 원래 파비콘 복원.
+  useEffect(() => {
+    const link = document.querySelector("link[rel~='icon']");
+    if (!link) return undefined;
+    const prev = link.getAttribute('href');
+    link.setAttribute('href', `/favicon-game.png?v=${__APP_VERSION__}`);
+    return () => { if (prev != null) link.setAttribute('href', prev); };
+  }, []);
+
   useEffect(() => {
     DIFFICULTIES.forEach((d) => {
       fetchToneWords(d.id).then((w) => { if (Array.isArray(w) && w.length > 0) setWordPoolByDiff((prev) => ({ ...prev, [d.id]: w })); }).catch(() => {});
