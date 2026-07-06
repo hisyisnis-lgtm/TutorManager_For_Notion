@@ -19,8 +19,9 @@ import { validateBody, validateParams, validatePathToken } from '../lib/validati
 import {
   SOCIAL_PROVIDERS, isSocialProvider, buildAuthorizeUrl, callbackUrl,
   decodeJwtPayload, extractGoogleIdentity, extractKakaoIdentity,
-  socialUserKey, isAllowedRedirect, redirectPrefixes, appendTokenFragment,
+  isAllowedRedirect, redirectPrefixes, appendTokenFragment,
 } from '../lib/oauth.js';
+import { findOrCreateGameUser, getGameUserById, updateGameData } from '../lib/gameDb.js';
 
 const CLASS_DB_ID = '314838fa-f2a6-81bc-8b67-d9e1c8fb7ecb';
 const STUDENT_DB_ID = '314838fa-f2a6-8143-a6c7-e59c50f3bbdb';
@@ -35,8 +36,9 @@ const CONSULT_DB_ID = '324838fa-f2a6-815d-99a7-ff165e8f78aa';
 // ===== 미니게임 베스트 DB (학생 × 게임 = 1 row) =====
 const GAME_BEST_DB_ID = '2602021c-39b5-4517-9eda-ce4808f570bd';
 
-// ===== 게임 계정 DB (독립실행·회원/게스트, 소셜 로그인 provider:socialId=주 정체성) =====
-const GAME_USERS_DB_ID = 'd9c69797-2daf-4d89-8f9a-e4a4e0cbc969';
+// ===== 게임 계정(독립실행·소셜 로그인 회원) =====
+// 저장소는 Cloudflare D1(env.GAME_DB, 테이블 game_users)로 이전(2026-07-06). 노션 GAME_USERS 은퇴.
+// 코드는 worker/lib/gameDb.js. rich_text 2000자 트림 한계 제거.
 
 // ※ 성조 게임 단어는 더 이상 Notion DB가 아니라 data/tone-words.csv → PWA 번들로 관리(2026-06-10).
 //   워커는 단어 풀을 다루지 않는다(TONE_WORDS_DB_ID·난이도 매핑·tone-words 라우트 제거).
@@ -189,7 +191,6 @@ const HOMEWORK_DB_RAW = HOMEWORK_DB_ID.replace(/-/g, '');
 const BLOCKED_DATES_DB_RAW = BLOCKED_DATES_DB_ID.replace(/-/g, '');
 const CONSULT_DB_RAW = CONSULT_DB_ID.replace(/-/g, '');
 const GAME_BEST_DB_RAW = GAME_BEST_DB_ID.replace(/-/g, '');
-const GAME_USERS_DB_RAW = GAME_USERS_DB_ID.replace(/-/g, '');
 const ALLOWED_NOTION_DB_IDS = new Set([
   STUDENT_DB_RAW,
   CLASS_DB_RAW,
@@ -197,7 +198,6 @@ const ALLOWED_NOTION_DB_IDS = new Set([
   BLOCKED_DATES_DB_RAW,
   CONSULT_DB_RAW,
   GAME_BEST_DB_RAW,
-  GAME_USERS_DB_RAW,
   // 수업 유형·할인·결제·수업일지 등 강사용 추가 DB (PWA에서 사용)
   '314838faf2a681c3b4e4da87c48f9b43', // LESSON_TYPE_DB
   '314838faf2a681d39ce4c628edab065b', // DISCOUNT_DB
@@ -545,21 +545,8 @@ async function sendSms(env, to, text) {
   } catch (e) { console.error('[sms] 발송 오류:', e.message); }
 }
 
-// GAME_USERS 페이지 파싱 — 소셜 계정. 유저ID(title) = "provider:socialId"가 조회 키.
-function parseGameUser(page) {
-  const p = page.properties || {};
-  let gameData = {};
-  try { gameData = JSON.parse(p['게임데이터']?.rich_text?.[0]?.plain_text || '{}'); } catch { /* noop */ }
-  const key = p['유저ID']?.title?.[0]?.plain_text || '';
-  const ci = key.indexOf(':');
-  return {
-    id: page.id,
-    provider: ci > 0 ? key.slice(0, ci) : null,
-    socialId: ci > 0 ? key.slice(ci + 1) : null,
-    nickname: p['닉네임']?.rich_text?.[0]?.plain_text || null,
-    gameData,
-  };
-}
+// 게임 회원 저장은 D1(worker/lib/gameDb.js)로 이전(2026-07-06) — findOrCreateGameUser/getGameUserById/
+// updateGameData는 거기서 import. (노션 GAME_USERS parseGameUser/find-or-create 제거: rich_text 2000자 트림 한계 탈피)
 
 // 인가코드 → 토큰 교환 (client_secret은 서버에만 보관). 실패 시 throw.
 async function exchangeCode(provider, code, redirectUri, env) {
@@ -590,25 +577,6 @@ async function fetchKakaoUser(accessToken) {
   return res.json();
 }
 
-// 소셜 신원(provider+socialId)으로 게임 계정 find-or-create. 조회 키 = 유저ID(title) "provider:socialId".
-async function findOrCreateGameUser(n, provider, socialId, nickname) {
-  const key = socialUserKey(provider, socialId);
-  const q = await n('POST', `/databases/${GAME_USERS_DB_ID}/query`, {
-    filter: { property: '유저ID', title: { equals: key } }, page_size: 1,
-  });
-  if (q.results?.[0]) return parseGameUser(q.results[0]);
-  const providerLabel = provider === 'kakao' ? '카카오' : '구글';
-  const created = await n('POST', '/pages', {
-    parent: { database_id: GAME_USERS_DB_ID },
-    properties: {
-      '유저ID': { title: [{ text: { content: key } }] },
-      '가입수단': { select: { name: providerLabel } },
-      '최종접속': { date: { start: new Date().toISOString() } },
-      ...(nickname ? { '닉네임': { rich_text: [{ text: { content: String(nickname).slice(0, 40) } }] } } : {}),
-    },
-  });
-  return parseGameUser(created);
-}
 
 // ===== ntfy 강사 알림 발송 (멀티 토픽 + 심각도) =====
 //
@@ -2402,36 +2370,29 @@ async function handleGameRoutes(request, env, corsHeaders, url) {
     }
     if (!identity?.socialId) return errRes(corsHeaders, 401, '로그인에 실패했어요. 다시 시도해주세요.');
 
-    const user = await findOrCreateGameUser(n, provider, identity.socialId, identity.nickname);
+    const user = await findOrCreateGameUser(env.GAME_DB, provider, identity.socialId, identity.nickname);
     const token = await createGameToken(env.JWT_SECRET, user.id, 60 * 60 * 24 * 60); // 60일
     return new Response(null, { status: 302, headers: { ...corsHeaders, Location: appendTokenFragment(saved.redirect, token) } });
   }
 
-  // GET/PUT /game/me — 게임유저 JWT 인증 → 게임데이터 read/write
+  // GET/PUT /game/me — 게임유저 JWT 인증 → 게임데이터 read/write (D1 game_users)
   if (url.pathname === '/game/me' && (request.method === 'GET' || request.method === 'PUT')) {
     const auth = (request.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
     const claim = await verifyGameToken(auth, env.JWT_SECRET);
     if (!claim?.sub) return errRes(corsHeaders, 401, '로그인이 필요합니다.');
-    const page = await n('GET', `/pages/${claim.sub}`);
-    if (!page || page.object === 'error') return errRes(corsHeaders, 404, '계정을 찾을 수 없습니다.');
     if (request.method === 'GET') {
-      return new Response(JSON.stringify({ user: parseGameUser(page) }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      const user = await getGameUserById(env.GAME_DB, claim.sub);
+      if (!user) return errRes(corsHeaders, 404, '계정을 찾을 수 없습니다.'); // 옛 노션ID 토큰 등 → 재로그인 유도
+      return new Response(JSON.stringify({ user }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
     // PUT — 게임데이터 갱신(클라이언트 병합 후 최종본 덮어쓰기)
     const body = await request.json().catch(() => null);
     if (body?.gameData == null || typeof body.gameData !== 'object') return errRes(corsHeaders, 400, '게임데이터가 필요합니다.');
-    // ⚠️ slice로 자르면 JSON이 중간에서 끊겨 깨진 문자열이 저장되고, 다음 읽기 때 parseGameUser의
-    //    JSON.parse가 실패해 게임데이터가 통째로 {}로 유실된다. → 자르지 말고 한도 초과 시 이번 저장만 거부
-    //    (이전 유효 데이터 보존). 정상 클라이언트는 collectLocalGameData가 한도 내로 트림해 보낸다.
-    const json = JSON.stringify(body.gameData); // Notion rich_text 2000자 한도
-    if (json.length > 1900) return errRes(corsHeaders, 413, '게임데이터가 너무 큽니다.');
-    await n('PATCH', `/pages/${claim.sub}`, {
-      properties: {
-        '게임데이터': { rich_text: [{ text: { content: json } }] },
-        '최종접속': { date: { start: new Date().toISOString() } },
-        ...(body.nickname ? { '닉네임': { rich_text: [{ text: { content: String(body.nickname).slice(0, 40) } }] } } : {}),
-      },
-    });
+    // D1 TEXT는 사실상 무제한이지만 남용 방지 상한(100KB). 초과 시 이번 저장만 거부(이전 데이터 보존).
+    const json = JSON.stringify(body.gameData);
+    if (json.length > 100000) return errRes(corsHeaders, 413, '게임데이터가 너무 큽니다.');
+    const res = await updateGameData(env.GAME_DB, claim.sub, body.gameData, body.nickname);
+    if (res?.meta?.changes === 0) return errRes(corsHeaders, 404, '계정을 찾을 수 없습니다.'); // 대상 행 없음
     return new Response(JSON.stringify({ ok: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
 

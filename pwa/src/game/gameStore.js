@@ -139,9 +139,10 @@ export function isMember() { const m = getMemberSession(); return !!(m && m.toke
 // 로컬 게임데이터 수집(회원 서버 동기화용 JSON 블롭): 난이도3 + 무한 + 테마별 베스트 + 단어 숙련도 등.
 // ★테마 베스트(tone-drama·tone-travel…)도 회원 동기화 대상 — THEMES에서 gameKey를 끌어와 누락 방지.
 const ALL_BEST_KEYS = [...DIFF_KEYS, ENDLESS_KEY, ...THEMES.map((t) => t.gameKey)];
-// 서버 /game/me는 Notion rich_text(2000자)라 1900자 한도. 다른 키(베스트·성조·업적·스트릭 등) 여유를 빼고 단어 통계 예산.
-const WORDS_BUDGET = 1500;
-const TOTAL_BUDGET = 1850; // 서버 저장 한도(1900자) 아래 여유. words는 나머지 필드가 쓰고 남은 만큼만 채운다.
+// 서버 /game/me는 D1 game_data TEXT(사실상 무제한, 남용방지 100KB 상한)로 이전(2026-07-06) → 트림 사실상 미발동.
+// (구: 노션 rich_text 2000자라 1900자 트림 압박이었음. D1 이전으로 대폭 완화.) 로직·필드는 그대로 유지.
+const WORDS_BUDGET = 88000;
+const TOTAL_BUDGET = 90000; // 서버 100KB 아래 여유. words는 나머지 필드가 쓰고 남은 만큼(사실상 전부).
 
 // ── 마스터 수 동기화 값(mc) — '트림 전 전체 통계' 기준 마스터 수의 마지막 기록(last-writer) ──
 // 목적: 단어 풀 성장(195+)으로 트림이 상시 발동 → 마스터 단어 '통계'가 동기화에서 빠져도 '수'는 안 유실되게.

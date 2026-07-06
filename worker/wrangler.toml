@@ -13,5 +13,12 @@ LESSON_TYPE_PAGE_ID = "314838fa-f2a6-8070-82ad-e2494a9d7281"
 binding = "GAME_AE"
 dataset = "tone_game_events"
 
+# 게임 회원 계정 저장소 — Notion GAME_USERS에서 이전(2026-07-06). rich_text 2000자 트림 한계 제거.
+# 스키마: migrations/0001_game_users.sql. 회원 데이터(게임데이터 JSON)를 game_data TEXT(무캡)에 저장.
+[[d1_databases]]
+binding = "GAME_DB"
+database_name = "tone-game-users"
+database_id = "1cb6265b-95e4-47cc-a0c8-5ac00266b9fa"
+
 # NOTION_TOKEN은 아래 명령으로 등록 (이 파일에 직접 기입 금지)
 # npx wrangler secret put NOTION_TOKEN

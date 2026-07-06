@@ -1,7 +1,7 @@
-// gameStore — 회원 동기화 데이터 수집(트림·마스터 수 mc) 회귀 테스트.
-// 배경: /game/me는 Notion rich_text 1900자 캡 → 단어 통계는 1500자 예산으로 트림.
-// 단어 풀 195+ 시대엔 트림이 상시 발동 → 마스터 단어 통계가 빠져 '마스터 수(등급)'가 기기 간
-// 유실될 수 있던 것을 mc 필드로 방어. mc = last-writer(고수위 아님) — 진짜 강등은 전파, 트림 유실만 차단.
+// gameStore — 회원 동기화 데이터 수집(예산·마스터 수 mc) 회귀 테스트.
+// 배경: /game/me 저장소가 Notion rich_text(1900자) → D1 game_data TEXT(100KB)로 이전(2026-07-06)되며
+// 예산이 대폭 완화(88KB)돼 트림은 사실상 미발동. trimWords 메커니즘은 극단 안전장치로 코드에 유지.
+// mc = 트림 대비 마스터 수 보존 안전장치(last-writer, 고수위 아님) — 진짜 강등은 전파, 트림 유실만 차단.
 // 참조: tone_game_redesign.md (등급 강등 · 히스테리시스)
 import { describe, it, expect, beforeEach } from 'vitest';
 import { collectLocalGameData, mergeGuestIntoMember, loadMasteredSync, storeMasteredSync } from './gameStore.js';
@@ -25,17 +25,16 @@ function bigStats(n = 195) {
 }
 
 describe('collectLocalGameData — 트림 + 마스터 수 고수위(mc)', () => {
-  it('★195단어: words는 1500자 예산 내로 트림되지만 mc는 전체 기준 마스터 수 보존', () => {
+  it('★195단어: D1 이전으로 예산 대폭 완화(88KB) → 트림 없이 전부 보존 + mc = 전체 마스터 수', () => {
     const stats = bigStats();
     saveWordStats('u', stats);
     const data = collectLocalGameData('u');
-    expect(JSON.stringify(data.words).length).toBeLessThanOrEqual(1500); // 예산 준수
-    expect(Object.keys(data.words).length).toBeLessThan(195);            // 트림 발동 확인
     const fullMastered = Object.values(stats).filter(isMastered).length; // 98
     expect(fullMastered).toBeGreaterThan(0);
-    // 트림된 words만으로 세면 마스터 수가 줄어든다(미마스터 우선 보존이라) — mc가 그 손실을 보존
-    const trimmedMastered = Object.values(data.words).filter(isMastered).length;
-    expect(trimmedMastered).toBeLessThan(fullMastered);
+    // D1(game_data TEXT, 100KB)로 이전 → 195단어(수천 자)는 예산 안이라 트림 미발동: 전부 보존
+    expect(Object.keys(data.words).length).toBe(195);
+    expect(Object.values(data.words).filter(isMastered).length).toBe(fullMastered);
+    // mc(트림돼도 마스터 수 보존하는 안전장치)는 여전히 전체 통계 기준으로 정확 — 트림 안 돼도 값 동일
     expect(data.mc).toBe(fullMastered);
     expect(loadMasteredSync('u')).toBe(fullMastered); // 수집 시 동기화 값도 갱신
   });
