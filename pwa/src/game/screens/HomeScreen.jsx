@@ -81,7 +81,12 @@ function project(x, y, W, H) {
 // 원근 방(못 가는 경계=벽) — 못 가는 영역을 벽으로 빈틈없이 꽉 채움 + 사다리꼴 바닥. SVG.
 // 뒤 벽(상단 띠) + 좌·우 벽(뒤로 수렴)이 컨테이너 위/옆을 전부 덮고, 그 안에 바닥 사다리꼴.
 function Room3D() {
-  const bl = 50 - BACK_CONV * 50, br = 50 + BACK_CONV * 50, tb = FLOOR_TOP * 100; // 14, 86, 16(바닥 뒤 모서리)
+  const bl = 50 - BACK_CONV * 50, br = 50 + BACK_CONV * 50, tb = FLOOR_TOP * 100; // 7, 93, 17(바닥 뒤 모서리)
+  const BH = 2.4;                 // 걸레받이(baseboard) 두께(viewBox y-units)
+  // 걸레받이 = 벽↔바닥 이음선 바로 위(벽 쪽) 띠. 뒤·좌·우 3면(창문은 위로 올려 걸레받이와 간격 확보).
+  const baseBack = `${bl},${tb - BH} ${br},${tb - BH} ${br},${tb} ${bl},${tb}`;
+  const baseLeft = `0,100 ${bl},${tb} ${bl},${tb - BH} 0,${100 - BH}`;
+  const baseRight = `${br},${tb} 100,100 100,${100 - BH} ${br},${tb - BH}`;
   return (
     <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }} aria-hidden="true">
       <defs>
@@ -89,6 +94,10 @@ function Room3D() {
         <linearGradient id="tgSideL" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stopColor="#C8BCA7" /><stop offset="1" stopColor="#DCD3C2" /></linearGradient>
         <linearGradient id="tgSideR" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stopColor="#DCD3C2" /><stop offset="1" stopColor="#C8BCA7" /></linearGradient>
         <linearGradient id="tgFloor" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#EFE8DB" /><stop offset="0.5" stopColor="#FBF8F3" /><stop offset="1" stopColor="#FEFDFB" /></linearGradient>
+        {/* 걸레받이 트림(밝은 오프화이트·상단 밝고 하단 살짝 음영) */}
+        <linearGradient id="tgBase" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#F2EDE3" /><stop offset="1" stopColor="#E1D8C8" /></linearGradient>
+        {/* 벽지 무늬 — 은은한 세로 줄무늬(톤온톤). 벽 3면에만 오버레이. */}
+        <pattern id="tgWP" patternUnits="userSpaceOnUse" width="3.2" height="4"><rect x="0" y="0" width="1.7" height="4" fill="#7A6B4E" opacity="0.06" /></pattern>
       </defs>
       {/* 뒤 벽(상단 전체 띠) */}
       <polygon points={`${bl},0 ${br},0 ${br},${tb} ${bl},${tb}`} fill="url(#tgBackW)" />
@@ -98,8 +107,18 @@ function Room3D() {
       <polygon points={`${br},0 100,0 100,100 ${br},${tb}`} fill="url(#tgSideR)" />
       {/* 바닥(사다리꼴) */}
       <polygon points={`${bl},${tb} ${br},${tb} 100,100 0,100`} fill="url(#tgFloor)" />
-      {/* 벽↔바닥 접합 그림자(뒤·좌·우 모서리) */}
-      <polyline points={`0,100 ${bl},${tb} ${br},${tb} 100,100`} fill="none" stroke="rgba(120,105,80,0.13)" strokeWidth="0.9" />
+      {/* 벽지 무늬(세로 줄무늬) — 벽 3면에만(바닥 제외) */}
+      <polygon points={`${bl},0 ${br},0 ${br},${tb} ${bl},${tb}`} fill="url(#tgWP)" />
+      <polygon points={`0,0 ${bl},0 ${bl},${tb} 0,100`} fill="url(#tgWP)" />
+      <polygon points={`${br},0 100,0 100,100 ${br},${tb}`} fill="url(#tgWP)" />
+      {/* 걸레받이(baseboard) 띠 — 뒤·좌·우 3면 */}
+      <polygon points={baseBack} fill="url(#tgBase)" />
+      <polygon points={baseLeft} fill="url(#tgBase)" />
+      <polygon points={baseRight} fill="url(#tgBase)" />
+      {/* 걸레받이 상단 몰딩 하이라이트(벽 경계선) */}
+      <polyline points={`0,${100 - BH} ${bl},${tb - BH} ${br},${tb - BH} 100,${100 - BH}`} fill="none" stroke="#F7F2E9" strokeWidth="0.5" strokeLinejoin="round" />
+      {/* 벽↔바닥 접합 그림자(그라운딩) */}
+      <polyline points={`0,100 ${bl},${tb} ${br},${tb} 100,100`} fill="none" stroke="rgba(120,105,80,0.13)" strokeWidth="0.9" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -754,7 +773,7 @@ export function HomeScreen({
               </svg>
               {/* 상단 벽 세로 십자창(4분할) — 개구부 중심 = 바닥 빛 back 중심(fX(fc,0)) */}
               {WINS.map((fc, i) => (
-                <div key={i} style={{ position: 'absolute', left: `${fX(fc, 0)}%`, top: '3%', width: '16%', height: '11%', transform: 'translateX(-50%)', borderRadius: 6, boxSizing: 'border-box', background: '#BCA986', padding: 'clamp(2px, 2%, 4px)', boxShadow: '0 0 22px rgba(255,240,205,0.55), 0 2px 6px rgba(120,105,80,0.18)', display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gap: 'clamp(2px, 2%, 4px)', pointerEvents: 'none' }}>
+                <div key={i} style={{ position: 'absolute', left: `${fX(fc, 0)}%`, top: '1.5%', width: '16%', height: '10.5%', transform: 'translateX(-50%)', borderRadius: 6, boxSizing: 'border-box', background: '#BCA986', padding: 'clamp(2px, 2%, 4px)', boxShadow: '0 0 22px rgba(255,240,205,0.55), 0 2px 6px rgba(120,105,80,0.18)', display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gap: 'clamp(2px, 2%, 4px)', pointerEvents: 'none' }}>
                   {[0, 1, 2, 3].map((k) => <div key={k} style={{ borderRadius: 2, background: 'linear-gradient(135deg, #FEFAF0, #F3E7CC)' }} />)}
                 </div>
               ))}
