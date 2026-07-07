@@ -92,6 +92,7 @@ function buildAchSnapshot(token, masteredN, toneStats, streakLongest) {
 import { IntroScreen } from '../game/screens/IntroScreen.jsx';
 import { TutorialScreen } from '../game/screens/TutorialScreen.jsx';
 import { PauseModal } from '../game/screens/PauseModal.jsx';
+import { HelpStartModal } from '../game/screens/gameModals.jsx';
 
 // 미리보기 모드(?screen=game)에서 게임 화면 렌더용 샘플 단어 (DEV 검수 전용)
 const PREVIEW_WORDS = [
@@ -233,6 +234,8 @@ export default function ToneGamePage() {
     ? [achievementById('score-1000'), achievementById('unlock-normal')].filter(Boolean) : []));
   const [recordToBeat, setRecordToBeat] = useState(0); // 이번 런 시작 시점의 직전 최고기록(라이브 신기록 배너 기준, P4b). 연습·복습=0
   const [introPage, setIntroPage] = useState(() => (isPreview ? Number(qs('introPage') || 0) : 0)); // 소개 캐러셀 페이지 (0~2)
+  const [tutorialFromHelp, setTutorialFromHelp] = useState(false); // 메뉴 '게임 방법'으로 튜토리얼 진입 — 완료 시 온보딩(모드선택) 대신 홈 복귀·플래그 미변경
+  const [helpOpen, setHelpOpen] = useState(false); // 메뉴 '게임 방법' 확인 팝업
 
   const timersRef = useRef([]);
   const addTimer = (id) => { timersRef.current.push(id); };
@@ -945,7 +948,7 @@ export default function ToneGamePage() {
       levelReveals={toneLevelChanges} onRevealsDone={() => setToneLevelChanges([])} revealHold={isPreview && previewScreen === 'tonelevel'}
       onPlay={goFromStart}
       onMastery={() => setScreen('mastery')} onAchievements={() => setScreen('achievements')}
-      onHelp={() => { setIntroPage(0); setScreen('intro'); }}
+      onHelp={() => setHelpOpen(true)}
       onLogin={identity.kind === 'guest' ? () => setScreen('login') : null}
       isMemberUser={identity.kind === 'member'} memberName={identity.memberUser?.nickname || null}
       onLogout={() => { logoutMember(); window.location.reload(); }} onExit={exitGame}
@@ -986,7 +989,8 @@ export default function ToneGamePage() {
       </FigmaScreen>
     );
   } else if (screen === 'tutorial') {
-    content = <FigmaScreen><TutorialScreen onDone={finishOnboard} /></FigmaScreen>;
+    // 온보딩 경로면 완료 시 모드선택(finishOnboard) · 메뉴 '게임 방법' 경로면 홈 복귀(플래그 미변경)
+    content = <FigmaScreen><TutorialScreen onDone={tutorialFromHelp ? () => { setTutorialFromHelp(false); setScreen('home'); } : finishOnboard} /></FigmaScreen>;
   } else if (screen === 'modeselect') {
     content = (
       <FigmaScreen>
@@ -1088,6 +1092,8 @@ export default function ToneGamePage() {
           }} />
       )}
       {toast && <GameToast key={toast.key} msg={toast.msg} />}
+      {/* 게임 방법 확인 팝업 — 확인 시 인게임 튜토리얼로(완료 후 홈 복귀) */}
+      {helpOpen && <HelpStartModal onStart={() => { setHelpOpen(false); setTutorialFromHelp(true); setScreen('tutorial'); }} onClose={() => setHelpOpen(false)} />}
       {/* 게임오버 비트 — 게임 화면 위 오버레이(결과화면 직전). ~1.3초 후 결과('end')로 진행 */}
       {showGameOverBeat && (
         <GameOverBeat endKind={endKind}
