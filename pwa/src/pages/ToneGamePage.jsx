@@ -951,6 +951,7 @@ export default function ToneGamePage() {
       onHelp={() => setHelpOpen(true)}
       onLogin={identity.kind === 'guest' ? () => setScreen('login') : null}
       isMemberUser={identity.kind === 'member'} memberName={identity.memberUser?.nickname || null}
+      nickname={isPreview ? (qs('nick') || '하늘') : identity.kind === 'member' ? (identity.memberUser?.nickname || null) : identity.kind === 'student' ? (student?.name || null) : null}
       onLogout={() => { logoutMember(); window.location.reload(); }} onExit={exitGame}
       studentToken={studentToken} onRefreshBest={() => setBest(headlineBest(studentToken))}
       homeReady={!homeTx}
@@ -1022,13 +1023,14 @@ export default function ToneGamePage() {
     content = (
       <FigmaScreen>
         <ResultScreen score={score} maxCombo={maxCombo} avgMs={avgMsForResult}
-          isNewBest={(reviewMode || practiceMode) ? false : isNewBest} previousBest={(reviewMode || practiceMode) ? 0 : previousBest}
+          isNewBest={(reviewMode || practiceMode) ? false : (isNewBest || (isPreview && qs('newbest') === '1'))} previousBest={(reviewMode || practiceMode) ? 0 : (isPreview && qs('newbest') === '1' ? 800 : previousBest)}
           suggestPractice={(suggestPractice && !practiceMode && !reviewMode && !endlessMode && !themeMode && selectedDifficulty.id === 'easy') || (isPreview && previewScreen === 'end' && qs('suggest') === '1')}
           coachReady={!showGameOverBeat && !rankUp && !modeUnlock && celebrationQueue.length === 0} /* 결과 코치+연습유도 둘 다 이 게이트 뒤에서만 */
           practice={practiceMode} endless={endlessMode} endKind={endKind}
           onRetry={practiceMode ? () => startPractice(selectedDifficulty) : endlessMode ? () => startEndless() : reviewMode ? () => startReview(reviewWords) : themeMode ? () => startTheme(selectedTheme) : () => startGame(selectedDifficulty)}
           onChangeDiff={endlessMode ? () => setScreen('modeselect') : reviewMode ? () => setScreen('mastery') : practiceMode ? () => { setDifficultyTarget('practice'); setScreen('difficulty'); } : themeMode ? () => setScreen('theme') : () => setScreen('difficulty')}
           onModeSelect={!endlessMode ? () => setScreen('modeselect') : undefined}
+          onLogin={identity.kind === 'guest' ? () => setScreen('login') : null}
           retryLabel={practiceMode ? '한 번 더 연습' : reviewMode ? '한 번 더 복습' : undefined}
           changeLabel={endlessMode ? '모드 선택으로' : reviewMode ? '숙련도로 돌아가기' : themeMode ? '테마 바꾸기' : '난이도 바꾸기'} />
       </FigmaScreen>

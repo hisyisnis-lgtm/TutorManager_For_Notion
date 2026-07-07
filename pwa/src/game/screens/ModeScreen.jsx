@@ -31,14 +31,17 @@ function ToneBurstInner({ color, count }) {
   const cfg = useRef(null);
   if (!cfg.current) {
     const R = Math.random;
-    cfg.current = Array.from({ length: count }, () => ({
-      ang: R() * Math.PI * 2,          // 방사 각도
-      speed: 12 + R() * 13,            // 바깥 이동 속도(px/s)
-      life: 2.8 + R() * 1.6,           // 수명(s)
-      t: -R() * 4.5,                   // 시차 시작(음수 = 아직 미출현)
-      sz: 7 + R() * 6,                 // 점 크기
-      op: 0.5 + R() * 0.35,            // 최대 불투명도
-    }));
+    cfg.current = Array.from({ length: count }, () => {
+      const life = 2.8 + R() * 1.6;    // 수명(s)
+      return {
+        ang: R() * Math.PI * 2,        // 방사 각도
+        speed: 12 + R() * 13,          // 바깥 이동 속도(px/s)
+        life,
+        t: R() * life,                 // 수명 구간의 임의 지점에서 시작 → 진입 즉시 이미 재생 중(퍼지는 중)
+        sz: 7 + R() * 6,               // 점 크기
+        op: 0.5 + R() * 0.35,          // 최대 불투명도
+      };
+    });
   }
   useLayoutEffect(() => {
     let raf, alive = true, last = performance.now();
