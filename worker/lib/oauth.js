@@ -104,3 +104,37 @@ export function appendTokenFragment(target, token) {
   const sep = target.includes('#') ? '&' : '#';
   return `${target}${sep}token=${encodeURIComponent(token)}`;
 }
+
+// ── OAuth state — 무상태 서명 토큰 (colo별 Cache 조회 실패="세션 만료" 오탐 제거) ─────────────
+// state를 서버(Cache API)에 저장하지 않고 {provider, redirect, exp}를 JWT_SECRET로 HMAC-SHA256 서명해
+// 그대로 들려보낸다. 콜백은 저장소 조회 없이 서명·만료만 검증 → /start와 /callback이 다른 데이터센터로
+// 라우팅돼도 안전. 인가코드가 제공자에서 1회용이라 콜백 재사용(replay)은 코드 교환 실패로 자연 차단됨.
+const b64urlEncode = (str) => btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const b64urlDecode = (b64) => atob(b64.replace(/-/g, '+').replace(/_/g, '/'));
+
+async function hmacKey(secret, usage) {
+  return crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, usage);
+}
+
+// {provider, redirect}에 만료(now+ttl)를 붙여 서명한 state 문자열 반환. state는 URL 쿼리에 실리므로 base64url.
+export async function signAuthState(secret, { provider, redirect }, ttlSeconds = 600) {
+  const body = b64urlEncode(JSON.stringify({ p: provider, r: redirect, exp: Math.floor(Date.now() / 1000) + ttlSeconds }));
+  const key = await hmacKey(secret, ['sign']);
+  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(body));
+  return `${body}.${b64urlEncode(String.fromCharCode(...new Uint8Array(sig)))}`;
+}
+
+// 서명·만료 검증 → { provider, redirect } 또는 null(위조·만료·형식오류). 콜백은 이 값으로 provider 일치·redirect 허용을 재확인.
+export async function verifyAuthState(secret, state) {
+  const parts = String(state || '').split('.');
+  if (parts.length !== 2 || !secret) return null;
+  try {
+    const key = await hmacKey(secret, ['verify']);
+    const sigBytes = Uint8Array.from(b64urlDecode(parts[1]), (c) => c.charCodeAt(0));
+    const ok = await crypto.subtle.verify('HMAC', key, sigBytes, new TextEncoder().encode(parts[0]));
+    if (!ok) return null;
+    const obj = JSON.parse(b64urlDecode(parts[0]));
+    if (!(obj.exp > Math.floor(Date.now() / 1000))) return null;
+    return { provider: obj.p, redirect: obj.r };
+  } catch { return null; }
+}

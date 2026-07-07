@@ -12,6 +12,7 @@ import {
   GameKeySchema,
   GameResultSchema,
   GameEventSchema,
+  GameNicknameSchema,
   StudentAuthRequestSchema,
   StudentAuthVerifySchema,
 } from '../lib/schemas.js';
@@ -20,6 +21,7 @@ import {
   SOCIAL_PROVIDERS, isSocialProvider, buildAuthorizeUrl, callbackUrl,
   decodeJwtPayload, extractGoogleIdentity, extractKakaoIdentity,
   isAllowedRedirect, redirectPrefixes, appendTokenFragment,
+  signAuthState, verifyAuthState,
 } from '../lib/oauth.js';
 import { findOrCreateGameUser, getGameUserById, updateGameData } from '../lib/gameDb.js';
 
@@ -456,18 +458,6 @@ async function verifyGameToken(token, secret) {
     const claim = JSON.parse(atob(parts[0]));
     return claim.exp > Math.floor(Date.now() / 1000) ? claim : null;
   } catch { return null; }
-}
-
-// OAuth state 임시저장 (Cloudflare Cache API, 10분 TTL — KV 없이). CSRF 방지 + 복귀대상(redirect) 보관.
-function authStateKey(state) { return new Request(`https://gameauthstate.local/${encodeURIComponent(state)}`); }
-async function putAuthState(state, value) {
-  try { await caches.default.put(authStateKey(state), new Response(value, { headers: { 'Cache-Control': 'public, max-age=600' } })); } catch { /* noop */ }
-}
-async function getAuthState(state) {
-  try { const h = await caches.default.match(authStateKey(state)); return h ? (await h.text()) : null; } catch { return null; }
-}
-async function clearAuthState(state) {
-  try { await caches.default.delete(authStateKey(state)); } catch { /* noop */ }
 }
 
 // ===== 학생앱 휴대폰 인증(step-up) — OTP 저장 + 학생 조회 =====
@@ -2329,10 +2319,11 @@ async function handleGameRoutes(request, env, corsHeaders, url) {
     }
     const clientId = provider === 'kakao' ? env.GAME_KAKAO_REST_KEY : env.GAME_GOOGLE_CLIENT_ID;
     if (!clientId) return errRes(corsHeaders, 501, '로그인이 아직 설정되지 않았습니다.');
+    if (!env.JWT_SECRET) return errRes(corsHeaders, 500, '서버 설정 오류입니다.'); // state 서명 키
     const redirect = url.searchParams.get('redirect') || '';
     if (!isAllowedRedirect(redirect, redirectPrefixes(env))) return errRes(corsHeaders, 400, '허용되지 않은 복귀 주소입니다.');
-    const state = crypto.randomUUID().replace(/-/g, '');
-    await putAuthState(state, JSON.stringify({ provider, redirect }));
+    // state = {provider, redirect, exp} 서명 토큰(무상태). 서버 저장 없음 → colo 무관.
+    const state = await signAuthState(env.JWT_SECRET, { provider, redirect });
     const location = buildAuthorizeUrl({ provider, clientId, redirectUri: callbackUrl(url.origin, provider), state });
     return new Response(null, { status: 302, headers: { ...corsHeaders, Location: location } });
   }
@@ -2345,14 +2336,13 @@ async function handleGameRoutes(request, env, corsHeaders, url) {
     const code = url.searchParams.get('code');
     const state = url.searchParams.get('state');
     if (!code || !state) return errRes(corsHeaders, 400, '로그인 응답이 올바르지 않습니다.');
-    const savedRaw = await getAuthState(state);
-    if (!savedRaw) return errRes(corsHeaders, 400, '로그인 세션이 만료되었어요. 다시 시도해주세요.');
-    await clearAuthState(state); // state는 1회용(재사용 차단)
-    let saved = null; try { saved = JSON.parse(savedRaw); } catch { /* noop */ }
-    if (!saved || saved.provider !== provider || !isAllowedRedirect(saved.redirect, redirectPrefixes(env))) {
+    if (!env.JWT_SECRET) return errRes(corsHeaders, 500, '서버 설정 오류입니다.');
+    // 무상태 state — 서명·만료 검증(저장소 조회 없음). 위조/만료면 재로그인 유도.
+    const saved = await verifyAuthState(env.JWT_SECRET, state);
+    if (!saved) return errRes(corsHeaders, 400, '로그인 세션이 만료되었어요. 다시 시도해주세요.');
+    if (saved.provider !== provider || !isAllowedRedirect(saved.redirect, redirectPrefixes(env))) {
       return errRes(corsHeaders, 400, '로그인 세션이 올바르지 않습니다.');
     }
-    if (!env.JWT_SECRET) return errRes(corsHeaders, 500, '서버 설정 오류입니다.');
 
     // 인가코드 → 토큰 교환 → 신원 추출 (client_secret은 서버에만; Google id_token은 TLS 직수신이라 재검증 불필요)
     const redirectUri = callbackUrl(url.origin, provider);
@@ -2391,7 +2381,14 @@ async function handleGameRoutes(request, env, corsHeaders, url) {
     // D1 TEXT는 사실상 무제한이지만 남용 방지 상한(100KB). 초과 시 이번 저장만 거부(이전 데이터 보존).
     const json = JSON.stringify(body.gameData);
     if (json.length > 100000) return errRes(corsHeaders, 413, '게임데이터가 너무 큽니다.');
-    const res = await updateGameData(env.GAME_DB, claim.sub, body.gameData, body.nickname);
+    // nickname은 사용자 자유입력(소셜 로그인 후 직접 설정) — 있을 때만 신뢰경계 검증(없으면 기존값 유지).
+    let nickname = null;
+    if (body.nickname != null) {
+      const nk = GameNicknameSchema.safeParse(body.nickname);
+      if (!nk.success) return errRes(corsHeaders, 400, nk.error.issues[0]?.message || '닉네임이 올바르지 않습니다.');
+      nickname = nk.data;
+    }
+    const res = await updateGameData(env.GAME_DB, claim.sub, body.gameData, nickname);
     if (res?.meta?.changes === 0) return errRes(corsHeaders, 404, '계정을 찾을 수 없습니다.'); // 대상 행 없음
     return new Response(JSON.stringify({ ok: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }

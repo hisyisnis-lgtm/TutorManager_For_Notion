@@ -8,6 +8,7 @@ import {
   MyClassesQuerySchema,
   GameResultSchema,
   GameEventSchema,
+  GameNicknameSchema,
   StudentAuthRequestSchema,
   StudentAuthVerifySchema,
 } from './schemas.js';
@@ -274,5 +275,28 @@ describe('GameEventSchema — 게임 이벤트 측정(POST /game/event)', () => 
     const r = GameEventSchema.safeParse({ e: 'enter', phone: '01012345678' });
     expect(r.success).toBe(true);
     expect('phone' in r.data).toBe(false);
+  });
+});
+
+describe('GameNicknameSchema — 닉네임 자유입력(PUT /game/me)', () => {
+  it('정상 닉네임 허용 + 앞뒤 공백 trim', () => {
+    expect(GameNicknameSchema.safeParse('하늘').success).toBe(true);
+    const r = GameNicknameSchema.safeParse('  판다123  ');
+    expect(r.success).toBe(true);
+    expect(r.data).toBe('판다123');
+  });
+  it('빈 값·공백만·길이 초과 거부', () => {
+    expect(GameNicknameSchema.safeParse('').success).toBe(false);
+    expect(GameNicknameSchema.safeParse('   ').success).toBe(false);
+    expect(GameNicknameSchema.safeParse('a'.repeat(13)).success).toBe(false);
+    expect(GameNicknameSchema.safeParse('가나다라마바사아자차카타').success).toBe(true); // 12자 경계
+  });
+  it('제어문자(개행·탭 등) 거부', () => {
+    expect(GameNicknameSchema.safeParse('줄\n바꿈').success).toBe(false);
+    expect(GameNicknameSchema.safeParse('탭\t문자').success).toBe(false);
+  });
+  it('숫자·객체 등 문자열 아님 거부', () => {
+    expect(GameNicknameSchema.safeParse(123).success).toBe(false);
+    expect(GameNicknameSchema.safeParse(null).success).toBe(false);
   });
 });

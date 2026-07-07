@@ -144,3 +144,14 @@ export const GameEventSchema = z.object({
   k: z.string().max(10).nullish(),   // 신원 종류: guest | member | student
   v: z.number().finite().nullish(),  // 수치(선택, 예: run_end 점수)
 }).strip();
+
+/**
+ * PUT /game/me 의 nickname(선택) — 소셜 로그인 직후 사용자가 직접 입력하는 자유 텍스트.
+ * 제공자가 주던 값과 달리 신뢰할 수 없으므로 신뢰경계에서 검증한다(길이·제어문자).
+ * 상한 12자는 클라이언트 NicknameScreen(NICKNAME_MAX)와 반드시 동일하게 유지.
+ */
+export const GameNicknameSchema = z.string()
+  .trim()
+  .min(1, '닉네임을 입력해주세요')
+  .max(12, '닉네임은 12자 이내로 입력해주세요')
+  .refine((s) => !/[\u0000-\u001f\u007f]/.test(s), { message: '닉네임에 사용할 수 없는 문자가 있어요' });

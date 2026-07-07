@@ -12,7 +12,7 @@ import { track } from '../game/gameAnalytics.js';
 import {
   resolveIdentity, fetchBests, submitResult, mergeGuestIntoStudent,
   pullMemberData, pushMemberData, loginMember, mergeGuestIntoMember, logoutMember,
-  loadMasteredSync, storeMasteredSync,
+  getMemberSession, loadMasteredSync, storeMasteredSync,
 } from '../game/gameStore.js';
 import { earTier, loadTierPeak, bumpTierPeak } from '../game/earProfile.js';
 import { ROUND_LENGTH, DIFFICULTIES, THEMES } from '../constants/toneGameWords.js';
@@ -38,6 +38,7 @@ import { TitleScreen } from '../game/screens/TitleScreen.jsx';
 import { LoadingTip } from '../game/screens/LoadingScreen.jsx';
 import { HomeScreen } from '../game/screens/HomeScreen.jsx';
 import { LoginScreen } from '../game/screens/LoginScreen.jsx';
+import { NicknameScreen } from '../game/screens/NicknameScreen.jsx';
 import { ModeScreen } from '../game/screens/ModeScreen.jsx';
 import { ParticleLab } from '../game/screens/_ParticleLab.jsx'; // [임시·DEV] 파티클 검수용 — 검수 후 삭제
 import { SfxLab } from '../game/screens/_SfxLab.jsx'; // [임시·DEV] 효과음/배경음 검수용 — 검수 후 삭제
@@ -238,6 +239,9 @@ export default function ToneGamePage() {
   const [introPage, setIntroPage] = useState(() => (isPreview ? Number(qs('introPage') || 0) : 0)); // 소개 캐러셀 페이지 (0~2)
   const [tutorialFromHelp, setTutorialFromHelp] = useState(false); // 메뉴 '게임 방법'으로 튜토리얼 진입 — 완료 시 온보딩(모드선택) 대신 홈 복귀·플래그 미변경
   const [helpOpen, setHelpOpen] = useState(false); // 메뉴 '게임 방법' 확인 팝업
+  // 소셜 로그인 직후 닉네임 설정 게이트 — {token, prefill}. 확정 전까지 홈 대신 이 화면을 띄운다(로그인하면 항상).
+  const [nicknameSetup, setNicknameSetup] = useState(null);
+  const [savingNick, setSavingNick] = useState(false);
 
   const timersRef = useRef([]);
   const addTimer = (id) => { timersRef.current.push(id); };
@@ -309,16 +313,18 @@ export default function ToneGamePage() {
   }, []);
 
   // 소셜 로그인 복귀 — Worker 콜백이 현재 주소에 #token=… 을 붙여 되돌려보낸다.
-  // 토큰이 있으면 회원 세션을 세우고 게스트 로컬 기록을 흡수한 뒤 회원으로 재초기화.
+  // 토큰이 있으면 회원 세션을 세우고 게스트 로컬 기록을 흡수한 뒤, 닉네임 설정 화면으로 넘긴다(로그인하면 항상).
   useEffect(() => {
     const token = takeTokenFromHash();
     if (!token) return undefined;
     let done = false;
     (async () => {
+      let prefill = '';
       try {
-        loginMember(token, {});                    // 임시 세션(닉네임은 아래서 채움)
+        loginMember(token, {});                    // 임시 세션(닉네임은 닉네임 화면에서 확정)
         const { user } = await fetchGameMe(token);
         loginMember(token, user || {});
+        prefill = (user && user.nickname) || '';    // 제공자가 준 닉네임 있으면 입력칸에 프리필
         const idn = resolveIdentity(undefined);     // 회원 신원
         mergeGuestIntoMember(idn);                   // 게스트 로컬 → 회원 로컬 1회 병합
         // ★ 서버 기존 데이터를 로컬에 max 병합한 뒤 push해야 다른 기기 데이터를 안 덮어쓴다.
@@ -327,10 +333,24 @@ export default function ToneGamePage() {
         await pushMemberData(idn, user?.nickname).catch(() => {}); // 로컬(게스트∪서버) → 서버
         track('login_success');
       } catch { /* noop */ }
-      if (!done) window.location.reload();           // 회원으로 재초기화
+      if (!done) setNicknameSetup({ token, prefill }); // 스플래시 대신 닉네임 설정 화면 표시
     })();
     return () => { done = true; };
   }, []);
+
+  // 닉네임 확정 → 세션·서버에 저장 후 회원으로 재초기화(reload). 이후 홈에 바로 반영된다.
+  const submitNickname = async (nick) => {
+    if (savingNick || !nicknameSetup) return;
+    setSavingNick(true);
+    const token = nicknameSetup.token;
+    try {
+      const sess = getMemberSession();
+      loginMember(token, { ...((sess && sess.user) || {}), nickname: nick }); // 세션 닉네임 갱신(reload 후 표시)
+      const idn = resolveIdentity(undefined);
+      await pushMemberData(idn, nick).catch(() => {});                          // 서버(GAME_USERS.nickname) 저장
+    } catch { /* noop */ }
+    window.location.reload();
+  };
 
   // 게스트→학생 1회 병합(같은 기기) → 통합 최고점수·숙련도 로컬 로드 → 서버(학생만) 동기화. 게스트는 로컬만.
   useEffect(() => {
@@ -916,6 +936,8 @@ export default function ToneGamePage() {
   const avgMsForResult = answeredCount > 0 ? totalAnswerTime / answeredCount : 0;
 
   if (error) return <div style={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: TG.DANGER, fontSize: 14, background: TG.BG }}>정보를 불러오지 못했어요</div>;
+  // 소셜 로그인 직후 닉네임 설정 게이트 — 스플래시·홈보다 우선(로그인하면 항상 이 화면부터).
+  if (nicknameSetup) return <FigmaScreen><NicknameScreen defaultName={nicknameSetup.prefill} saving={savingNick} onSubmit={submitNickname} /></FigmaScreen>;
   if (splash || !student) return <SplashScreen />; // 스플래시가 로딩 상태도 겸함
 
   // 온보딩 2단계 — 소개(tg_intro_seen: 스플래시 다음, 홈 앞)·튜토리얼(tg_onboarded: 홈 강제코치 다음, 게임 앞).
@@ -992,6 +1014,8 @@ export default function ToneGamePage() {
         } catch { /* noop */ }
         setIntroPage(0); setScreen('intro');
       }) : undefined} />;
+  } else if (isPreview && previewScreen === 'nickname') { // [DEV] 닉네임 설정 미리보기(?screen=nickname&nick=…)
+    content = <FigmaScreen><NicknameScreen defaultName={qs('nick') || '카카오친구'} onSubmit={() => {}} /></FigmaScreen>;
   } else if (screen === 'login') {
     content = <FigmaScreen><LoginScreen onBack={() => setScreen('home')} /></FigmaScreen>;
   } else if (screen === 'mastery') {

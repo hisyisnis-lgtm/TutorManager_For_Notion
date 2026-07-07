@@ -11,6 +11,8 @@ import {
   redirectPrefixes,
   appendTokenFragment,
   DEFAULT_REDIRECT_PREFIXES,
+  signAuthState,
+  verifyAuthState,
 } from './oauth.js';
 
 describe('isSocialProvider', () => {
@@ -137,5 +139,37 @@ describe('appendTokenFragment', () => {
   it('# 없으면 #token=, 있으면 &token=', () => {
     expect(appendTokenFragment('https://w.dev/game', 'ABC')).toBe('https://w.dev/game#token=ABC');
     expect(appendTokenFragment('https://w.dev/game#x=1', 'A B')).toBe('https://w.dev/game#x=1&token=A%20B');
+  });
+});
+
+describe('signAuthState / verifyAuthState — 무상태 서명 state', () => {
+  const SECRET = 'test-secret-key';
+  it('round-trip: 서명한 state를 검증하면 provider·redirect 복원', async () => {
+    const state = await signAuthState(SECRET, { provider: 'kakao', redirect: 'http://localhost:5178/game/tone' });
+    const out = await verifyAuthState(SECRET, state);
+    expect(out).toEqual({ provider: 'kakao', redirect: 'http://localhost:5178/game/tone' });
+  });
+  it('state는 URL-safe(base64url) — +/= 없음', async () => {
+    const state = await signAuthState(SECRET, { provider: 'google', redirect: 'https://tiantian-chinese.pages.dev/game/tone' });
+    expect(state).not.toMatch(/[+/=]/);
+    expect(state.split('.')).toHaveLength(2);
+  });
+  it('다른 시크릿·변조된 state는 null(위조 차단)', async () => {
+    const state = await signAuthState(SECRET, { provider: 'kakao', redirect: 'http://localhost/game' });
+    expect(await verifyAuthState('wrong-secret', state)).toBe(null);
+    const [body] = state.split('.');
+    expect(await verifyAuthState(SECRET, `${body}.AAAA`)).toBe(null);   // 서명 변조
+    // payload 변조(서명 불일치)
+    const forged = `${btoa(JSON.stringify({ p: 'kakao', r: 'https://evil.com', exp: 9999999999 })).replace(/=+$/, '')}.${state.split('.')[1]}`;
+    expect(await verifyAuthState(SECRET, forged)).toBe(null);
+  });
+  it('만료된 state는 null (ttl 음수)', async () => {
+    const state = await signAuthState(SECRET, { provider: 'kakao', redirect: 'http://localhost/game' }, -1);
+    expect(await verifyAuthState(SECRET, state)).toBe(null);
+  });
+  it('형식 오류·빈 시크릿은 null', async () => {
+    expect(await verifyAuthState(SECRET, '')).toBe(null);
+    expect(await verifyAuthState(SECRET, 'onlyonepart')).toBe(null);
+    expect(await verifyAuthState('', 'a.b')).toBe(null);
   });
 });
