@@ -1,8 +1,7 @@
 // 타이틀 화면 — 배경 아트 + 큰 타이틀 로고(프리미엄 효과) + 태그라인 + 성조 캐릭터 무대 + "터치하여 시작하기".
 // 화면 어디든 터치하면 홈 허브로(onStart). 좌상단 닫기로 게임 나가기(onClose).
 // Figma "24. 타이틀". 스플래시(로딩) 다음의 영구 진입 관문. 캐릭터=홈 성조마크 룩 재사용(가벼운 정적판).
-import { CaretLeftIcon } from '@phosphor-icons/react';
-import { TG, FONT_BODY, FONT_TITLE, TOUCH_OPT, ASSETS } from '../tgTokens.js';
+import { FONT_BODY, FONT_TITLE, TOUCH_OPT, ASSETS } from '../tgTokens.js';
 import { TONES } from '../../constants/toneGameWords.js';
 import { ToneMark } from '../tgWidgets.jsx';
 import { FigmaScreen } from './shared.jsx';
@@ -37,17 +36,11 @@ function TitleMark({ tone, i }) {
   );
 }
 
-export function TitleScreen({ onStart, onClose }) {
+export function TitleScreen({ onStart }) {
   return (
     <FigmaScreen bgImage={ASSETS.startBg}>
-      {/* 화면 전체 터치 시작 */}
+      {/* 화면 전체 터치 시작 (뒤로가기 버튼 없음 — 나가기는 홈 메뉴에서) */}
       <div onClick={() => onStart && onStart()} style={{ position: 'absolute', inset: 0, cursor: 'pointer', ...TOUCH_OPT }}>
-        {/* 닫기(나가기) */}
-        <button onClick={(e) => { e.stopPropagation(); onClose && onClose(); }} aria-label="닫기" className="tg-press"
-          style={{ position: 'absolute', left: 24, top: 20, width: 40, height: 40, borderRadius: 20, background: '#fff', boxShadow: '0px 3px 5px rgba(43,39,48,0.08)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 4, ...TOUCH_OPT }}>
-          <CaretLeftIcon weight="bold" size={20} color={TG.INK} />
-        </button>
-
         {/* 타이틀 로고 (상단) */}
         <div style={{ position: 'absolute', top: '11%', left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: 300, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           <div style={{ position: 'relative', width: '100%' }}>

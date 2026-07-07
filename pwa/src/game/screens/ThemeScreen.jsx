@@ -86,9 +86,9 @@ export function ThemeScreen({ themes, studentToken, counts = {}, onStart, onBack
           <span style={{ fontFamily: FONT_TITLE, fontSize: 22, color: '#2b2730' }}>테마 선택</span>
         </div>
       </Reveal>
-      {/* 코치+카드+닷/힌트 = 헤더 아래 공간에 세로 중앙정렬. 단 중앙정렬 영역을 모바일 높이(≤680)로 캡 —
-          모바일은 화면이 꽉 차 중앙정렬로 균형, 웹처럼 긴 화면은 상단 영역에 안정적으로 앉고 아래만 여백(가운데 붕 뜨는 것 방지). */}
-      <div style={{ position: 'absolute', left: 0, right: 0, top: 72, height: 'min(calc(100% - 72px), 680px)', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 20 }}>
+      {/* 코치+카드+닷/힌트 = 헤더 바로 아래 상단정렬(모드/난이도 화면과 동일 리듬 — 큰 카드가 아래로 쏠리지 않게).
+          카드(392)가 커서 상단정렬만으로 화면을 충분히 채우고, 아래는 breathing. */}
+      <div style={{ position: 'absolute', left: 0, right: 0, top: 80, display: 'flex', flexDirection: 'column', gap: 18 }}>
         {/* 코치 말풍선 */}
         <Reveal i={1} style={{ paddingLeft: 24, paddingRight: 24 }}>
           <CoachBubble text="어떤 테마로 즐겨볼까요?" />
