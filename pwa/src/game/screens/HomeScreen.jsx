@@ -479,6 +479,8 @@ function HomeMenu({ onClose, onHelp, onLogin, isMemberUser, memberName, onLogout
             </div>
           </>
         )}
+        {/* 버전 — 배포 빌드에서 태그로 동기화되는 __APP_VERSION__ (담백하게 하단 표기) */}
+        <div style={{ textAlign: 'center', fontFamily: FONT_BODY, fontWeight: 600, fontSize: 11, color: '#c2bbb2', marginTop: 2, letterSpacing: 0.2 }}>버전 {__APP_VERSION__}</div>
       </div>
     </div>
   );
