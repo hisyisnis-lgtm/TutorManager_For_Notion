@@ -73,6 +73,22 @@ function deriveToneLevels(toneStats) {
   }
   return out;
 }
+
+// 업적 화면 진행도 스냅샷 — 저장된 베스트/통계에서 집계(종료 이펙트 스냅샷과 같은 필드, 런 무관 저장값만).
+// 난이도·테마·무한 전 기록을 DIFFICULTIES/THEMES에서 파생(하드코딩 없음). 각 업적 progress(snapshot)이 이 필드를 읽음.
+function buildAchSnapshot(token, masteredN, toneStats, streakLongest) {
+  const bestByDiff = {}; let playCount = 0; let maxComboEver = 0;
+  for (const d of DIFFICULTIES) { const b = loadBest(token, d.gameKey); bestByDiff[d.id] = b?.bestScore || 0; playCount += b?.playCount || 0; maxComboEver = Math.max(maxComboEver, b?.bestMaxCombo || 0); }
+  const themeRecs = THEMES.map((t) => loadBest(token, t.gameKey));
+  for (const b of themeRecs) { playCount += b?.playCount || 0; maxComboEver = Math.max(maxComboEver, b?.bestMaxCombo || 0); }
+  const eb = loadEndlessBest(token); const endlessBest = eb?.bestScore || 0;
+  playCount += eb?.playCount || 0; maxComboEver = Math.max(maxComboEver, eb?.bestMaxCombo || 0);
+  return {
+    playCount, maxComboEver, bestByDiff, endlessBest, masteredCount: masteredN,
+    bestScoreAny: Math.max(...Object.values(bestByDiff), endlessBest, ...themeRecs.map((b) => b?.bestScore || 0)),
+    streakLongest: streakLongest || 0, toneStats: toneStats || {}, reviewMastered: loadReviewMastered(token),
+  };
+}
 import { IntroScreen } from '../game/screens/IntroScreen.jsx';
 import { TutorialScreen } from '../game/screens/TutorialScreen.jsx';
 import { PauseModal } from '../game/screens/PauseModal.jsx';
@@ -908,6 +924,12 @@ export default function ToneGamePage() {
   // 첫 코치 안내가 가리킬 약점 성조(시도 3+ 중 정답률 최저). 없으면 null.
   const coachTone = !showStartData ? null : isPreview ? 1 : ((weakestTone(toneStatsRef.current || {}, 3) || {}).tone ?? null);
 
+  // 업적 화면 진행도 스냅샷 — 업적 화면에서만 집계(다른 화면 렌더 비용 0). 미리보기는 샘플.
+  const achSnapshot = screen !== 'achievements' ? null
+    : isPreview
+      ? { playCount: 8, maxComboEver: 13, bestByDiff: { easy: 1350, normal: 600, hard: 0 }, endlessBest: 0, masteredCount: 12, bestScoreAny: 1350, streakLongest: 5, toneStats: PREVIEW_TONE, reviewMastered: 2 }
+      : buildAchSnapshot(studentToken, masteredN, toneStatsRef.current, startStreakLongest);
+
   // 화면별 본문 (카운트다운 오버레이/일시정지 모달은 아래에서 위에 덧댐)
   const exitGame = () => { if (identity.kind === 'student') navigate(`/personal/${identity.token}`); else window.location.href = '/'; };
   let content;
@@ -916,7 +938,7 @@ export default function ToneGamePage() {
   } else if (isPreview && previewScreen === 'sfxlab') { // [임시·DEV] 효과음/배경음 검수 랩 (?screen=sfxlab) — 검수 후 이 분기 + _SfxLab.jsx 삭제
     content = <SfxLab onBack={exitGame} />;
   } else if (screen === 'title') {
-    content = <TitleScreen onStart={() => setHomeTx('in')} onClose={exitGame} />;
+    content = <TitleScreen onStart={() => setHomeTx('in')} />;
   } else if (screen === 'home') {
     content = <HomeScreen streak={startStreak} streakLongest={startStreakLongest} freezes={startFreezes} masteredN={masteredN} toneLevels={toneLevels}
       toneStatus={toneStatus} coachTone={coachTone} celebrateTone={celebrateTone}
@@ -952,7 +974,7 @@ export default function ToneGamePage() {
   } else if (screen === 'achievements') {
     content = (
       <FigmaScreen>
-        <AchievementsScreen earned={startAchievements} onBack={() => setScreen('home')} onToast={showToast} />
+        <AchievementsScreen earned={startAchievements} snapshot={achSnapshot} onBack={() => setScreen('home')} onToast={showToast} />
       </FigmaScreen>
     );
   } else if (screen === 'intro') {
@@ -968,7 +990,7 @@ export default function ToneGamePage() {
   } else if (screen === 'modeselect') {
     content = (
       <FigmaScreen>
-        <ModeScreen endlessUnlocked={isPreview || isEndlessUnlocked(studentToken)} endlessBest={loadEndlessBest(studentToken)?.bestScore || 0} reviewCount={reviewWords.length}
+        <ModeScreen endlessUnlocked={isPreview ? qs('locked') !== '1' : isEndlessUnlocked(studentToken)} endlessBest={loadEndlessBest(studentToken)?.bestScore || 0} reviewCount={reviewWords.length}
           onDifficulty={() => { playSfx('button'); setDifficultyTarget('normal'); setScreen('difficulty'); }}
           onTheme={() => { playSfx('button'); setScreen('theme'); }}
           onEndless={() => { playSfx('button'); startEndless(); }}

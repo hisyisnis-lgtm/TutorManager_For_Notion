@@ -34,14 +34,14 @@ export function DifficultyScreen({ selected, studentToken, onSelect, onStart, on
         <span style={{ fontFamily: FONT_TITLE, fontSize: 22, color: '#2b2730' }}>{forPractice ? '연습할 난이도' : '난이도 선택'}</span>
       </div>
       </Reveal>
-      {/* 코치+카드 = 헤더와 하단 CTA 사이 공간에 세로중앙 + 모바일 높이 캡(웹 긴 화면서 붕 뜨는 것 방지) */}
-      <div style={{ position: 'absolute', left: 0, right: 0, top: 72, height: 'min(calc(100% - 72px - 118px), 470px)', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+      {/* 코치+카드 = 헤더 바로 아래 상단정렬(모드 선택 화면과 동일 리듬). CTA는 하단 고정. */}
+      <div style={{ position: 'absolute', left: 0, right: 0, top: 84, display: 'flex', flexDirection: 'column' }}>
       {/* 판다 다이얼로그 */}
       <Reveal i={1} style={{ paddingLeft: 24, paddingRight: 24 }}>
         <CoachBubble text={forPractice ? '어떤 단어로 공부할까요?' : '실력에 맞는 단계를 골라보세요'} />
       </Reveal>
       {/* 카드 */}
-      <div data-coach="diff-list" style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingLeft: 24, paddingRight: 24, marginTop: 28 }}>
+      <div data-coach="diff-list" style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingLeft: 24, paddingRight: 24, marginTop: 22 }}>
         {DIFFICULTIES.map((d, idx) => {
           const meta = DIFF_META[d.id];
           const c = DIFF_COLORS[d.id];

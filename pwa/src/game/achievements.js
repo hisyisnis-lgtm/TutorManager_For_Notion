@@ -3,8 +3,19 @@
 // 스냅샷은 호출부(ToneGamePage)가 기존 저장소에서 모아 만든다 — 이 모듈은 저장소를 직접 안 읽음(순수).
 // 참조 메모리: tone_game_redesign.md (성취 레이어 P1)
 import { UNLOCK_THRESHOLD } from './gameLogic.js';
-import { allTonesAbove } from './toneStats.js';
+import { allTonesAbove, countTonesAbove } from './toneStats.js';
 import { DIFFICULTIES } from '../constants/toneGameWords.js';
+
+// 업적 카테고리 — 업적 화면에서 분류·색상 구분(색은 게임 팔레트에서). label=섹션 제목, color=아이콘/틴트 강조색.
+// 순서 = 화면 섹션 순서. 각 업적의 cat 필드가 여기 id를 참조.
+export const ACH_CATEGORIES = [
+  { id: 'start',  label: '시작',       color: '#FF6B6B' }, // 코랄
+  { id: 'score',  label: '점수 · 콤보', color: '#F0A91E' }, // 골드
+  { id: 'unlock', label: '모드 해제',   color: '#7C5CFF' }, // 퍼플
+  { id: 'master', label: '단어 마스터', color: '#36C98D' }, // 그린
+  { id: 'streak', label: '연속 학습',   color: '#FF8A3D' }, // 오렌지
+  { id: 'skill',  label: '성조 · 복습', color: '#4D8DFF' }, // 블루
+];
 
 // 모드 해제 업적 — DIFFICULTIES 배열 순서에서 자동 파생(새 난이도 추가 시 코드 수정 불필요).
 // id는 저장 호환을 위해 기존 규약(`unlock-<난이도id>`, 무한=`unlock-endless`) 유지.
@@ -15,46 +26,49 @@ const UNLOCK_ACHIEVEMENTS = [
     return {
       id: `unlock-${d.id}`, label: `${d.label} 입성`, desc: `${d.label} 모드를 열었어요`,
       cond: `${prev.label}에서 ${UNLOCK_THRESHOLD.toLocaleString()}점을 넘으면 얻어요`,
-      icon: d.unlockReveal?.icon || 'Rocket',
+      icon: d.unlockReveal?.icon || 'Rocket', cat: 'unlock',
       check: (s) => (s.bestByDiff?.[prev.id] || 0) >= UNLOCK_THRESHOLD,
+      progress: (s) => ({ cur: s.bestByDiff?.[prev.id] || 0, target: UNLOCK_THRESHOLD }),
     };
   }),
   { id: 'unlock-endless', label: '무한의 문', desc: '무한 모드를 열었어요',
-    cond: `${LAST_DIFF.label}에서 ${UNLOCK_THRESHOLD.toLocaleString()}점을 넘으면 얻어요`, icon: 'Infinity',
-    check: (s) => (s.bestByDiff?.[LAST_DIFF.id] || 0) >= UNLOCK_THRESHOLD },
+    cond: `${LAST_DIFF.label}에서 ${UNLOCK_THRESHOLD.toLocaleString()}점을 넘으면 얻어요`, icon: 'Infinity', cat: 'unlock',
+    check: (s) => (s.bestByDiff?.[LAST_DIFF.id] || 0) >= UNLOCK_THRESHOLD,
+    progress: (s) => ({ cur: s.bestByDiff?.[LAST_DIFF.id] || 0, target: UNLOCK_THRESHOLD }) },
 ];
 
 // 스냅샷 형태:
 //  { playCount, bestScoreAny, maxComboEver, bestByDiff:{easy,normal,hard}, endlessBest,
 //    masteredCount, streakLongest, toneStats }
-// 각 업적: id·label(한글)·desc(한글)·icon(Phosphor 이름, UI가 해석)·check(snapshot)→bool.
+// 각 업적: id·label(한글)·desc(한글)·icon(Phosphor 이름, UI가 해석)·cat(ACH_CATEGORIES id)·check(snapshot)→bool.
+//  progress(snapshot)→{cur,target}: 업적 화면 진행도 바(획득 전 현재/목표). cur는 목표 초과 가능(바는 클램프).
 // cond = 미획득 시 안내 토스트용 '얻는 조건'(desc는 획득 후 완료형). 잠금 배지 탭 시 표시(P4 후속).
 export const ACHIEVEMENTS = [
-  { id: 'first-play', label: '첫걸음', desc: '처음으로 게임을 완주했어요', cond: '게임을 한 판 완주하면 얻어요', icon: 'Footprints',
-    check: (s) => (s.playCount || 0) >= 1 },
-  { id: 'score-1000', label: '천 점 클럽', desc: '한 게임에서 1,000점을 넘었어요', cond: '한 게임에서 1,000점을 넘으면 얻어요', icon: 'Trophy',
-    check: (s) => (s.bestScoreAny || 0) >= 1000 },
-  { id: 'combo-10', label: '콤보 마스터', desc: '콤보 10을 달성했어요', cond: '콤보 10을 달성하면 얻어요', icon: 'Flame',
-    check: (s) => (s.maxComboEver || 0) >= 10 },
-  { id: 'combo-20', label: '불꽃 손가락', desc: '콤보 20을 달성했어요', cond: '콤보 20을 달성하면 얻어요', icon: 'FireSimple',
-    check: (s) => (s.maxComboEver || 0) >= 20 },
+  { id: 'first-play', label: '첫걸음', desc: '처음으로 게임을 완주했어요', cond: '게임을 한 판 완주하면 얻어요', icon: 'Footprints', cat: 'start',
+    check: (s) => (s.playCount || 0) >= 1, progress: (s) => ({ cur: Math.min(s.playCount || 0, 1), target: 1 }) },
+  { id: 'score-1000', label: '천 점 클럽', desc: '한 게임에서 1,000점을 넘었어요', cond: '한 게임에서 1,000점을 넘으면 얻어요', icon: 'Trophy', cat: 'score',
+    check: (s) => (s.bestScoreAny || 0) >= 1000, progress: (s) => ({ cur: s.bestScoreAny || 0, target: 1000 }) },
+  { id: 'combo-10', label: '콤보 마스터', desc: '콤보 10을 달성했어요', cond: '콤보 10을 달성하면 얻어요', icon: 'Flame', cat: 'score',
+    check: (s) => (s.maxComboEver || 0) >= 10, progress: (s) => ({ cur: s.maxComboEver || 0, target: 10 }) },
+  { id: 'combo-20', label: '불꽃 손가락', desc: '콤보 20을 달성했어요', cond: '콤보 20을 달성하면 얻어요', icon: 'FireSimple', cat: 'score',
+    check: (s) => (s.maxComboEver || 0) >= 20, progress: (s) => ({ cur: s.maxComboEver || 0, target: 20 }) },
   ...UNLOCK_ACHIEVEMENTS,
-  { id: 'master-10', label: '단어 수집가', desc: '10단어를 마스터했어요', cond: '단어 10개를 마스터하면 얻어요', icon: 'BookmarkSimple',
-    check: (s) => (s.masteredCount || 0) >= 10 },
-  { id: 'master-30', label: '단어 달인', desc: '30단어를 마스터했어요', cond: '단어 30개를 마스터하면 얻어요', icon: 'Books',
-    check: (s) => (s.masteredCount || 0) >= 30 },
-  { id: 'streak-3', label: '사흘 개근', desc: '3일 연속 플레이했어요', cond: '3일 연속 플레이하면 얻어요', icon: 'CalendarCheck',
-    check: (s) => (s.streakLongest || 0) >= 3 },
-  { id: 'streak-7', label: '일주일 개근', desc: '7일 연속 플레이했어요', cond: '7일 연속 플레이하면 얻어요', icon: 'CalendarHeart',
-    check: (s) => (s.streakLongest || 0) >= 7 },
-  { id: 'streak-14', label: '2주 개근', desc: '14일 연속 플레이했어요', cond: '14일 연속 플레이하면 얻어요', icon: 'CalendarDots',
-    check: (s) => (s.streakLongest || 0) >= 14 },
-  { id: 'streak-30', label: '한 달 개근', desc: '30일 연속 플레이했어요', cond: '30일 연속 플레이하면 얻어요', icon: 'Fire',
-    check: (s) => (s.streakLongest || 0) >= 30 },
-  { id: 'tone-master', label: '성조 감별사', desc: '모든 성조 정답률 90% 이상', cond: '모든 성조 정답률 90%를 넘으면 얻어요', icon: 'Waveform',
-    check: (s) => allTonesAbove(s.toneStats || {}, 0.9, 5) },
-  { id: 'review-master-5', label: '복습의 힘', desc: '복습으로 5단어를 마스터했어요', cond: '복습 모드에서 단어 5개를 마스터하면 얻어요', icon: 'ArrowsClockwise',
-    check: (s) => (s.reviewMastered || 0) >= 5 },
+  { id: 'master-10', label: '단어 수집가', desc: '10단어를 마스터했어요', cond: '단어 10개를 마스터하면 얻어요', icon: 'BookmarkSimple', cat: 'master',
+    check: (s) => (s.masteredCount || 0) >= 10, progress: (s) => ({ cur: s.masteredCount || 0, target: 10 }) },
+  { id: 'master-30', label: '단어 달인', desc: '30단어를 마스터했어요', cond: '단어 30개를 마스터하면 얻어요', icon: 'Books', cat: 'master',
+    check: (s) => (s.masteredCount || 0) >= 30, progress: (s) => ({ cur: s.masteredCount || 0, target: 30 }) },
+  { id: 'streak-3', label: '사흘 개근', desc: '3일 연속 플레이했어요', cond: '3일 연속 플레이하면 얻어요', icon: 'CalendarCheck', cat: 'streak',
+    check: (s) => (s.streakLongest || 0) >= 3, progress: (s) => ({ cur: s.streakLongest || 0, target: 3 }) },
+  { id: 'streak-7', label: '일주일 개근', desc: '7일 연속 플레이했어요', cond: '7일 연속 플레이하면 얻어요', icon: 'CalendarHeart', cat: 'streak',
+    check: (s) => (s.streakLongest || 0) >= 7, progress: (s) => ({ cur: s.streakLongest || 0, target: 7 }) },
+  { id: 'streak-14', label: '2주 개근', desc: '14일 연속 플레이했어요', cond: '14일 연속 플레이하면 얻어요', icon: 'CalendarDots', cat: 'streak',
+    check: (s) => (s.streakLongest || 0) >= 14, progress: (s) => ({ cur: s.streakLongest || 0, target: 14 }) },
+  { id: 'streak-30', label: '한 달 개근', desc: '30일 연속 플레이했어요', cond: '30일 연속 플레이하면 얻어요', icon: 'Fire', cat: 'streak',
+    check: (s) => (s.streakLongest || 0) >= 30, progress: (s) => ({ cur: s.streakLongest || 0, target: 30 }) },
+  { id: 'tone-master', label: '성조 감별사', desc: '모든 성조 정답률 90% 이상', cond: '모든 성조 정답률 90%를 넘으면 얻어요', icon: 'Waveform', cat: 'skill',
+    check: (s) => allTonesAbove(s.toneStats || {}, 0.9, 5), progress: (s) => ({ cur: countTonesAbove(s.toneStats || {}, 0.9, 5), target: 5 }) },
+  { id: 'review-master-5', label: '복습의 힘', desc: '복습으로 5단어를 마스터했어요', cond: '복습 모드에서 단어 5개를 마스터하면 얻어요', icon: 'ArrowsClockwise', cat: 'skill',
+    check: (s) => (s.reviewMastered || 0) >= 5, progress: (s) => ({ cur: s.reviewMastered || 0, target: 5 }) },
 ];
 
 const BY_ID = Object.fromEntries(ACHIEVEMENTS.map((a) => [a.id, a]));

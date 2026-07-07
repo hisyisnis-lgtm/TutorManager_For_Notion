@@ -52,6 +52,16 @@ export function allTonesAbove(stats, threshold = 0.9, minAttempts = 5) {
   return true;
 }
 
+// 조건(시도 minAttempts 이상 + 정답률 threshold 이상)을 만족하는 성조 수(0~5). 성조 마스터 업적 진행도용.
+export function countTonesAbove(stats, threshold = 0.9, minAttempts = 5) {
+  let n = 0;
+  for (const t of TONE_NUMS) {
+    const e = (stats || {})[t];
+    if (e && e[1] >= minAttempts && toneAccuracy(e) >= threshold) n++;
+  }
+  return n;
+}
+
 // ── localStorage ──────────────────────────────────────
 function toneKey(token) { return token ? `game_tone_${token}` : 'game_tone'; }
 export function loadToneStats(token) {
