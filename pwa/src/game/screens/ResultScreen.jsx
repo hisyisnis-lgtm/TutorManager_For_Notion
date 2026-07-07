@@ -1,12 +1,22 @@
 // 결과 화면 — 신기록 배지·축하 판다·점수(카운트업)·통계 2카드·코치·다시도전/난이도 바꾸기.
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { TrophyIcon, ArrowClockwiseIcon, LightningIcon } from '@phosphor-icons/react';
 import { TG, FONT_NUM, FONT_BODY, TOUCH_OPT, pickCelebratePanda } from '../tgTokens.js';
 import { useCountUp, FlameIcon } from '../tgWidgets.jsx';
 import { play as playSfx } from '../tgSfx.js';
 import { Reveal, CoachBubble, ConfettiBurst, CrispFlash, LIGHT_CONFETTI } from './shared.jsx';
+import { LoginNudgeModal } from './gameModals.jsx';
 import CoachMarkOverlay from '../../components/ui/CoachMarkOverlay.jsx';
 import { useTabTip } from '../../hooks/useTabTip.js';
+
+// 로그인 유도(게스트가 이전 기록 넘긴 순간) — game=유입 깔때기라 '성취 순간'에만 부드럽게. 세션 1회 + 닫으면 쿨다운(잔소리 방지).
+let sessionNudged = false; // 앱 세션당 1회(리로드 시 리셋)
+const NUDGE_COOLDOWN = 5 * 24 * 60 * 60 * 1000; // 닫은 뒤 5일
+function nudgeAllowed() {
+  if (sessionNudged) return false;
+  try { const t = parseInt(localStorage.getItem('tg_login_nudge') || '0', 10); if (t && Date.now() - t < NUDGE_COOLDOWN) return false; } catch { /* noop */ }
+  return true;
+}
 
 // 첫 결과 화면 코치마크 — 점수·통계·다음 액션. Reveal 등장 후 표시.
 const RESULT_COACH = [
@@ -31,8 +41,19 @@ function SecBtn({ label, onClick, coachId }) {
   );
 }
 
-export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, onRetry, onChangeDiff, onModeSelect, retryLabel = '다시 도전', changeLabel = '난이도 바꾸기', practice = false, endKind = null, suggestPractice = false, coachReady = true }) {
+export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, onRetry, onChangeDiff, onModeSelect, onLogin = null, retryLabel = '다시 도전', changeLabel = '난이도 바꾸기', practice = false, endKind = null, suggestPractice = false, coachReady = true }) {
   const animScore = useCountUp(score, 1100);
+  // 로그인 유도 모달(게스트가 '이전 기록'을 실제로 넘긴 순간) — 마운트 때 1회 판정(세션·쿨다운).
+  //  previousBest>0: 첫 판(항상 신기록·이전0) 코치마크와 안 겹치고, 재도전+향상=투자 있는 성취에만.
+  //  신기록 축하(파티클·점수 카운트업)를 먼저 보이게 1.3s 뒤 등장. coachReady로 다른 오버레이와 겹침 방지.
+  const [nudgeEligible] = useState(() => !!(onLogin && isNewBest && previousBest > 0 && !practice && nudgeAllowed()));
+  const [nudgeOpen, setNudgeOpen] = useState(false);
+  useEffect(() => {
+    if (!nudgeEligible) return undefined;
+    const t = setTimeout(() => { setNudgeOpen(true); sessionNudged = true; }, 1300);
+    return () => clearTimeout(t);
+  }, [nudgeEligible]);
+  const dismissNudge = () => { setNudgeOpen(false); try { localStorage.setItem('tg_login_nudge', String(Date.now())); } catch { /* noop */ } };
   const avgSec = avgMs > 0 ? (avgMs / 1000).toFixed(1) : '-';
   const pandaSrc = pickCelebratePanda(isNewBest, maxCombo);
   const delta = score - previousBest;
@@ -96,7 +117,7 @@ export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, 
         ))}
       </div>
       </Reveal>
-      {/* 코치 — 통계카드 하단(440)과 다시 도전 CTA 사이 가용공간에 가두고 세로 중앙(짧은 화면·사파리 툴바서도 통계·CTA 양쪽과 겹침 방지) */}
+      {/* 코치 — 통계카드 하단과 CTA 사이 가용공간 세로중앙. */}
       <Reveal i={4} style={{ position: 'absolute', left: 24, right: 24, top: 452, bottom: 'calc(150px + env(safe-area-inset-bottom))', display: 'flex', alignItems: 'center' }}>
         <CoachBubble text={suggestPractice ? '초급이 어렵나요? 천천히 익혀봐요' : practice ? '잘했어요! 또 연습해볼까요?' : endKind === 'miss' ? '아쉽게 틀렸어요! 다시 도전해볼까요?' : '다시 도전해서 신기록을 깨볼까요?'} />
       </Reveal>
@@ -122,6 +143,8 @@ export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, 
           ★coachReady 없으면 tip이 게이트로 묶여 있는 동안(!tip.visible) 이 오버레이가 축하 연출 위에 겹쳐 뜸.
           forceLastStep: 주변 탭 흡수 → '모드 선택'을 실제로 눌러야만 진행(버튼 onClick=onModeSelect가 화면 전환). */}
       <CoachMarkOverlay visible={suggestPractice && coachReady && !!onModeSelect && !tip.visible && !suggestSeen} onDone={() => setSuggestSeen(true)} steps={SUGGEST_COACH} delay={500} showControls={false} forceLastStep />
+      {/* 로그인 유도 모달 — 게스트 신기록(이전기록 넘김) 축하 뒤. 다른 축하 오버레이·코치와 겹치지 않게 coachReady 게이트. */}
+      {nudgeOpen && coachReady && <LoginNudgeModal onLogin={onLogin} onClose={dismissNudge} />}
     </>
   );
 }

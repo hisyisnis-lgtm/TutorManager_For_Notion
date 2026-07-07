@@ -486,22 +486,24 @@ function HomeMenu({ onClose, onHelp, onLogin, isMemberUser, memberName, onLogout
   );
 }
 
-// 내 정보 카드 — 등급 앰블럼 + 등급명 + 진행 게이지. 탭 → 등급 상세.
-function MyInfo({ tier, onClick }) {
+// 내 정보 카드 — 등급 앰블럼 + 닉네임(상단) + 등급명 + 진행 게이지(하단). 탭 → 등급 상세.
+// 상단=닉네임(회원=소셜 닉네임·학생=이름·게스트='플레이어'), 아래=현재 등급명 + 다음 등급까지 진행 게이지.
+function MyInfo({ tier, nickname, onClick }) {
+  const displayName = nickname || '게스트'; // 게스트(로그인 안 함) 폴백
+  const pct = tier.isMax ? 100 : Math.round(tier.progress * 100);
   return (
     <button onClick={onClick} className="tg-press" data-coach="tg-myinfo" style={{
-      position: 'absolute', left: 24, top: 20, width: 168, height: 60, display: 'flex', alignItems: 'center', gap: 11,
-      padding: '0 14px 0 11px', borderRadius: 18, background: '#fff', border: 'none', cursor: 'pointer',
+      position: 'absolute', left: 24, top: 20, width: 172, height: 60, display: 'flex', alignItems: 'center', gap: 11,
+      padding: '0 14px 0 9px', borderRadius: 18, background: '#fff', border: 'none', cursor: 'pointer',
       boxShadow: '0 5px 14px rgba(43,39,48,0.07)', zIndex: 5, ...TOUCH_OPT,
     }}>
-      {/* 앰블럼 — 은은한 틴트 소켓에 앉혀 그라운딩(뜬 느낌 제거·게임 아이콘 타일 스타일과 통일) */}
-      <div style={{ flexShrink: 0, width: 48, height: 48, borderRadius: 15, background: `${tier.glow}22`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <img src={tier.emblem} alt="" width={44} height={44} style={{ display: 'block' }} />
-      </div>
-      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: 6 }}>
-        <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 13, color: '#2b2730', textAlign: 'left', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{tier.name}</span>
-        <div style={{ width: '100%', height: 6, borderRadius: 3, background: '#ece6dd', overflow: 'hidden' }}>
-          <div style={{ width: `${Math.round(tier.progress * 100)}%`, height: '100%', borderRadius: 3, background: TG.CORAL_GRAD, transition: 'width .5s ease' }} />
+      {/* 앰블럼 — 자체 완결 배지라 소켓(색 사각) 제거로 정리. 등급명은 앰블럼이 대표(카드엔 텍스트 생략). */}
+      <img src={tier.emblem} alt="" width={48} height={48} style={{ display: 'block', flexShrink: 0 }} />
+      {/* 닉네임(전체 폭 한 줄, 길면 말줄임) + 게이지. 등급명 텍스트를 안 둬 어떤 길이 닉네임도 안전. */}
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 8 }}>
+        <span style={{ fontFamily: FONT_BODY, fontWeight: 800, fontSize: 14.5, color: '#2b2730', textAlign: 'left', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{displayName}</span>
+        <div style={{ width: '100%', height: 6, borderRadius: 3, background: '#ece5da', overflow: 'hidden' }}>
+          <div style={{ width: `${pct}%`, height: '100%', borderRadius: 3, background: TG.CORAL_GRAD, transition: 'width .5s ease' }} />
         </div>
       </div>
     </button>
@@ -654,7 +656,7 @@ export function HomeScreen({
   levelReveals = [], onRevealsDone, revealHold = false,
   homeReady = true,
   onPlay, onMastery, onAchievements, onHelp,
-  onLogin, isMemberUser, memberName, onLogout, onExit, studentToken, onRefreshBest, onDebugIntro,
+  onLogin, isMemberUser, memberName, nickname = null, onLogout, onExit, studentToken, onRefreshBest, onDebugIntro,
 }) {
   const tier = earTier(masteredN);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -799,7 +801,7 @@ export function HomeScreen({
       )}
 
       {/* 상단 HUD — 내 정보(좌) · 로고(중앙) · 메뉴(우) */}
-      <MyInfo tier={tier} onClick={() => onMastery && onMastery()} />
+      <MyInfo tier={tier} nickname={nickname} onClick={() => onMastery && onMastery()} />
       <StreakPill streak={streak} freezes={freezes} onClick={() => setStreakOpen(true)} />
       <button onClick={() => setMenuOpen(true)} aria-label="메뉴" className="tg-press"
         style={{ position: 'absolute', right: 24, top: 20, width: 40, height: 40, borderRadius: 20, background: '#fff', boxShadow: '0 5px 14px rgba(43,39,48,0.07)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 5, ...TOUCH_OPT }}>
