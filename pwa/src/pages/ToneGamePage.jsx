@@ -49,6 +49,7 @@ import { MasteryScreen } from '../game/screens/MasteryScreen.jsx';
 import { AchievementsScreen } from '../game/screens/AchievementsScreen.jsx';
 import { CelebrationOverlay } from '../game/screens/CelebrationOverlay.jsx';
 import { GameOverBeat } from '../game/screens/GameOverBeat.jsx';
+import { NewRecordBeat } from '../game/screens/NewRecordBeat.jsx';
 import { RankUpReveal } from '../game/screens/RankUpReveal.jsx';
 import { ModeUnlockReveal } from '../game/screens/ModeUnlockReveal.jsx';
 
@@ -209,6 +210,7 @@ export default function ToneGamePage() {
   const [modeUnlock, setModeUnlock] = useState(() => (isPreview && previewScreen === 'modeunlock'
     ? { icon: 'Infinity', label: '무한 모드', desc: '끝없이 이어지는 무한 모드가 열렸어요', accent: '#8B5CF6' } : null));
   const endHandledRef = useRef(false); // 결과화면 1회 처리 가드(다시하기로 score 리셋 시 재실행·중복 사운드 방지)
+  const beatSfxRef = useRef(false);   // 신기록 비트가 축하 효과음을 이미 울렸는지 — end-effect의 중복 재생 방지(런마다 resetRunState서 리셋)
   const [suggestPractice, setSuggestPractice] = useState(false); // 초급 2연속 저조 → 모드선택서 연습 카드 코치마크 유도
   // 듣기 문제 여부 = 라운드 시작 시 단어별로 미리 결정(listenRollsRef). 렌더에서 파생 → 예전 state 방식의
   // '새 단어 렌더 후 effect가 뒤늦게 set' 프레임(듣기→일반 순간전환 flicker) 제거. [i>0 && rand<0.35]
@@ -499,10 +501,33 @@ export default function ToneGamePage() {
       // 측정: 런 종료(모드 라벨 + 점수) — 유입 깔때기의 '플레이' 카운트
       track('run_end', { m: mode === 'normal' ? (themeMode ? selectedTheme.id : selectedDifficulty.id) : mode, k: identity.kind, v: score });
     }
-    playSfx(outcome.sfx);
+    // 신기록 비트가 이미 축하음(win/unlock)을 울렸으면 여기서 재생 안 함(2.3초 전 비트에서 울림). 아니면(게임오버 등) 여기서 재생.
+    if (!beatSfxRef.current) playSfx(outcome.sfx);
   }, [screen, identity, studentToken, selectedDifficulty, score, maxCombo, answeredCount, totalAnswerTime, gameMode, selectedTheme, words, wordPoolByDiff, wordPoolByTheme, isPreview]);
 
   useEffect(() => () => clearTimers(), []);
+
+  // ── 신기록 비트 사전 판정 ─────────────────────────────
+  // 게임오버 비트가 뜰 때(showGameOverBeat) 이번 판이 신기록인지 미리 계산 → 신기록이면 축하 비트, 아니면 기존 게임오버 비트.
+  //  ★타이밍 안전: setShowGameOverBeat(true)는 항상 addPausable(1.2~1.7s) 안에서 호출돼, 비트가 뜨는 이 시점 score/maxCombo는 최종값(settled).
+  //  resolveEndOutcome은 순수함수라 end-effect와 동일 결과(중복 계산이지만 저렴 — 부수효과 없음).
+  const beatOutcome = useMemo(() => {
+    if (!showGameOverBeat || isPreview || reviewMode || practiceMode) return null;
+    const m = themeMode ? 'normal' : gameMode;
+    if (m !== 'normal' && m !== 'endless') return null;
+    const gk = themeMode ? selectedTheme?.gameKey : selectedDifficulty?.gameKey;
+    if (m === 'normal' && !gk) return null;
+    const prevRecord = m === 'endless' ? loadEndlessBest(studentToken) : loadBest(studentToken, gk);
+    const avgMsVal = answeredCount > 0 ? totalAnswerTime / answeredCount : 0;
+    return resolveEndOutcome({ mode: m, prev: prevRecord, score, maxCombo, avgMs: avgMsVal });
+  }, [showGameOverBeat, isPreview, reviewMode, practiceMode, themeMode, gameMode, selectedTheme, selectedDifficulty, studentToken, answeredCount, totalAnswerTime, score, maxCombo]);
+  const beatRecord = !!beatOutcome?.isNewBest;
+  // 신기록 비트 등장 순간 축하 효과음(win/unlock)을 여기서 1회 재생 → 결과화면 도착까지 기다리지 않고 비트와 소리를 동기화.
+  //  end-effect는 beatSfxRef 가드로 같은 소리를 재생하지 않음(중복 방지). 게임오버(비신기록)는 비트가 소리를 안 울리므로 end-effect가 담당.
+  useEffect(() => {
+    if (beatRecord && !beatSfxRef.current) { beatSfxRef.current = true; playSfx(beatOutcome.sfx); }
+  }, [beatRecord]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // 측정: 게임 진입 1회(유입 깔때기 상단) — 익명(신원 종류만)
   useEffect(() => { if (!isPreview) track('enter', { k: identity.kind }); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   // 전역 버튼음 — 눌리는 버튼(.tg-press)엔 대부분 클릭음. data-nosfx로 개별 제외(예: 성조 답 버튼=자체 정답/오답음).
@@ -629,7 +654,7 @@ export default function ToneGamePage() {
     setWordIndex(0); setCurrentSyl(0); setEntered([]); setCompleted(false);
     setCombo(0); setMaxCombo(0); setScore(0); setHasMistake(false);
     setTotalAnswerTime(0); setAnsweredCount(0); setIsNewBest(false); setPreviousBest(0); setTimedOut(false); setPaused(false);
-    setEndKind('complete'); setWrongShakeKey(0); setShowGameOverBeat(false); // 게임오버 비트 헤드라인·셰이크·오버레이 초기화
+    setEndKind('complete'); setWrongShakeKey(0); setShowGameOverBeat(false); beatSfxRef.current = false; // 게임오버 비트 헤드라인·셰이크·오버레이 + 신기록 비트 축하음 가드 초기화
     // ★오답 잔상 리셋 — clearTimers()가 wrongBtn 자동 해제 타이머(450ms)를 죽이므로 여기서 직접 초기화하지 않으면
     //   오답 직후 재시작 시 wrongBtn이 non-null로 고착 → handleTone 연타 가드가 모든 오답 입력을 영구 무시(치팅 버그).
     setWrongBtn(null); setShowWrong(false); setFloatScore(null); setComboFlash(false);
@@ -1096,20 +1121,31 @@ export default function ToneGamePage() {
       {toast && <GameToast key={toast.key} msg={toast.msg} />}
       {/* 게임 방법 확인 팝업 — 확인 시 인게임 튜토리얼로(완료 후 홈 복귀) */}
       {helpOpen && <HelpStartModal onStart={() => { setHelpOpen(false); setTutorialFromHelp(true); setScreen('tutorial'); }} onClose={() => setHelpOpen(false)} />}
-      {/* 게임오버 비트 — 게임 화면 위 오버레이(결과화면 직전). ~1.3초 후 결과('end')로 진행 */}
-      {showGameOverBeat && (
-        <GameOverBeat endKind={endKind}
-          hold={isPreview && previewScreen === 'gameover'}
-          onDone={() => {
-            setShowGameOverBeat(false);
-            const now = currentMastered();
-            const prevN = masteredAtStartRef.current;
-            // 새 마스터=진행 연출 / 등급(티어)이 실제로 내려간 판=하락 연출(RankUpReveal down 분기, 담백).
-            // 마스터 수만 줄고 티어는 그대로면 조용히 결과로(잔소리 방지).
-            if (!isPreview && (now > prevN || earTier(now).idx < earTier(prevN).idx)) setRankUp({ prev: prevN, now });
-            else setScreen('end');
-          }} />
-      )}
+      {/* 게임오버 비트 — 게임 화면 위 오버레이(결과화면 직전). ~2초 후 결과('end')로 진행.
+          신기록 판이면 어두운 게임오버 대신 밝은 '신기록!' 축하 비트로 교체(정확한 인지 + 기분좋게). onDone 로직은 공통. */}
+      {showGameOverBeat && (() => {
+        const finishBeat = () => {
+          setShowGameOverBeat(false);
+          const now = currentMastered();
+          const prevN = masteredAtStartRef.current;
+          // 새 마스터=진행 연출 / 등급(티어)이 실제로 내려간 판=하락 연출(RankUpReveal down 분기, 담백).
+          // 마스터 수만 줄고 티어는 그대로면 조용히 결과로(잔소리 방지).
+          if (!isPreview && (now > prevN || earTier(now).idx < earTier(prevN).idx)) setRankUp({ prev: prevN, now });
+          else setScreen('end');
+        };
+        // 미리보기: ?screen=gameover&newbest=1 로 신기록 비트 확인(샘플 812 / 이전 800).
+        const previewNewBest = isPreview && previewScreen === 'gameover' && qs('newbest') === '1';
+        const hold = isPreview && previewScreen === 'gameover';
+        if (beatRecord || previewNewBest) {
+          return (
+            <NewRecordBeat
+              score={previewNewBest ? 812 : score}
+              previousBest={previewNewBest ? 800 : (beatOutcome?.previousBest ?? 0)}
+              hold={hold} onDone={finishBeat} />
+          );
+        }
+        return <GameOverBeat endKind={endKind} hold={hold} onDone={finishBeat} />;
+      })()}
       {/* 등급 진행/하락 연출 — 비트 다음·결과 전(새 마스터 또는 티어 하락 시). 미리보기 ?screen=rankup / ?screen=rankdown */}
       {(rankUp || (isPreview && (previewScreen === 'rankup' || previewScreen === 'rankdown'))) && (
         <RankUpReveal
