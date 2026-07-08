@@ -11,8 +11,12 @@ import { Reveal } from './shared.jsx';
 
 export { NICKNAME_MAX };
 
-export function NicknameScreen({ onSubmit, saving = false }) {
-  const [value, setValue] = useState(() => randomNickname());
+// defaultName: 제공자(카카오·구글)가 준 닉네임. 있으면 그걸 기본값으로, 없으면 랜덤 자동생성.
+export function NicknameScreen({ defaultName = '', onSubmit, saving = false }) {
+  const [value, setValue] = useState(() => {
+    const provided = (defaultName || '').trim();
+    return provided ? provided.slice(0, NICKNAME_MAX) : randomNickname();
+  });
   const trimmed = value.trim();
   const canSubmit = trimmed.length >= 1 && !saving;
   const reroll = () => { playSfx('button'); setValue(randomNickname()); };

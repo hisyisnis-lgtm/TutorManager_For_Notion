@@ -319,10 +319,12 @@ export default function ToneGamePage() {
     if (!token) return undefined;
     let done = false;
     (async () => {
+      let prefill = '';
       try {
         loginMember(token, {});                    // 임시 세션(닉네임은 닉네임 화면에서 확정)
         const { user } = await fetchGameMe(token);
         loginMember(token, user || {});
+        prefill = (user && user.nickname) || '';    // 제공자가 준 닉네임 우선(없으면 화면서 랜덤 자동생성)
         const idn = resolveIdentity(undefined);     // 회원 신원
         mergeGuestIntoMember(idn);                   // 게스트 로컬 → 회원 로컬 1회 병합
         // ★ 서버 기존 데이터를 로컬에 max 병합한 뒤 push해야 다른 기기 데이터를 안 덮어쓴다.
@@ -331,7 +333,7 @@ export default function ToneGamePage() {
         await pushMemberData(idn, user?.nickname).catch(() => {}); // 로컬(게스트∪서버) → 서버
         track('login_success');
       } catch { /* noop */ }
-      if (!done) setNicknameSetup({ token }); // 스플래시 대신 닉네임 설정 화면 표시(랜덤 닉네임 자동채움)
+      if (!done) setNicknameSetup({ token, prefill }); // 스플래시 대신 닉네임 설정 화면(제공자 닉네임 있으면 프리필, 없으면 랜덤)
     })();
     return () => { done = true; };
   }, []);
@@ -935,7 +937,7 @@ export default function ToneGamePage() {
 
   if (error) return <div style={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: TG.DANGER, fontSize: 14, background: TG.BG }}>정보를 불러오지 못했어요</div>;
   // 소셜 로그인 직후 닉네임 설정 게이트 — 스플래시·홈보다 우선(로그인하면 항상 이 화면부터).
-  if (nicknameSetup) return <FigmaScreen><NicknameScreen saving={savingNick} onSubmit={submitNickname} /></FigmaScreen>;
+  if (nicknameSetup) return <FigmaScreen><NicknameScreen defaultName={nicknameSetup.prefill} saving={savingNick} onSubmit={submitNickname} /></FigmaScreen>;
   if (splash || !student) return <SplashScreen />; // 스플래시가 로딩 상태도 겸함
 
   // 온보딩 2단계 — 소개(tg_intro_seen: 스플래시 다음, 홈 앞)·튜토리얼(tg_onboarded: 홈 강제코치 다음, 게임 앞).
@@ -1012,8 +1014,8 @@ export default function ToneGamePage() {
         } catch { /* noop */ }
         setIntroPage(0); setScreen('intro');
       }) : undefined} />;
-  } else if (isPreview && previewScreen === 'nickname') { // [DEV] 닉네임 설정 미리보기(?screen=nickname)
-    content = <FigmaScreen><NicknameScreen onSubmit={() => {}} /></FigmaScreen>;
+  } else if (isPreview && previewScreen === 'nickname') { // [DEV] 닉네임 설정 미리보기(?screen=nickname&nick=… 로 제공자 프리필 테스트)
+    content = <FigmaScreen><NicknameScreen defaultName={qs('nick') || ''} onSubmit={() => {}} /></FigmaScreen>;
   } else if (screen === 'login') {
     content = <FigmaScreen><LoginScreen onBack={() => setScreen('home')} /></FigmaScreen>;
   } else if (screen === 'mastery') {
