@@ -1,18 +1,21 @@
-// 닉네임 설정 — 소셜 로그인 직후 '항상' 표시. 제공자(카카오·구글)가 준 이름이 있으면 프리필.
-// 게임에서 보일 이름을 직접 정하게 해, 카카오 닉네임 동의를 안 눌러도 '게스트'로 남지 않게 한다.
+// 닉네임 설정 — 소셜 로그인 직후 '항상' 표시. 랜덤 닉네임을 자동으로 채우고('다시 뽑기'로 재생성),
+// 사용자가 그대로 시작하거나 직접 고쳐 쓸 수 있다. 카카오 닉네임 동의를 안 눌러도 '게스트'로 안 남는다.
 // 레이아웃/톤은 LoginScreen과 통일(판다 히어로·헤드라인·CTA). 입력+버튼은 화면 중앙에 모아
 // 모바일 키보드가 하단에서 올라와도 CTA를 가리지 않게 한다(하단 고정 안 함).
 import { useState } from 'react';
+import { ArrowsClockwiseIcon } from '@phosphor-icons/react';
 import { TG, FONT_TITLE, FONT_BODY, TOUCH_OPT, ASSETS } from '../tgTokens.js';
 import { play as playSfx } from '../tgSfx.js';
+import { randomNickname, NICKNAME_MAX } from '../nickname.js';
 import { Reveal } from './shared.jsx';
 
-export const NICKNAME_MAX = 12; // 서버 검증(worker GameNicknameSchema)과 반드시 동일하게 유지
+export { NICKNAME_MAX };
 
-export function NicknameScreen({ defaultName = '', onSubmit, saving = false }) {
-  const [value, setValue] = useState(() => (defaultName || '').slice(0, NICKNAME_MAX));
+export function NicknameScreen({ onSubmit, saving = false }) {
+  const [value, setValue] = useState(() => randomNickname());
   const trimmed = value.trim();
   const canSubmit = trimmed.length >= 1 && !saving;
+  const reroll = () => { playSfx('button'); setValue(randomNickname()); };
   const submit = () => {
     if (!canSubmit) return;
     playSfx('button');
@@ -31,10 +34,10 @@ export function NicknameScreen({ defaultName = '', onSubmit, saving = false }) {
       </Reveal>
       {/* 보조문구 */}
       <Reveal i={2} style={{ position: 'absolute', left: 24, right: 24, top: 302, textAlign: 'center' }}>
-        <span style={{ fontFamily: FONT_BODY, fontSize: 14, color: TG.SUB }}>게임에서 이 이름으로 표시돼요</span>
+        <span style={{ fontFamily: FONT_BODY, fontSize: 14, color: TG.SUB }}>마음에 들면 그대로, 아니면 바꿔도 돼요</span>
       </Reveal>
 
-      {/* 닉네임 입력 */}
+      {/* 닉네임 입력 + (다시 뽑기 · 글자수) 한 줄 */}
       <Reveal i={3} style={{ position: 'absolute', left: 24, right: 24, top: 348 }}>
         <input
           value={value}
@@ -50,13 +53,21 @@ export function NicknameScreen({ defaultName = '', onSubmit, saving = false }) {
             color: TG.INK, outline: 'none', textAlign: 'center', ...TOUCH_OPT,
           }}
         />
-        <div style={{ marginTop: 6, paddingRight: 4, textAlign: 'right' }}>
-          <span style={{ fontFamily: FONT_BODY, fontSize: 12, color: TG.SUB }}>{trimmed.length}/{NICKNAME_MAX}</span>
+        {/* 좌: 다시 뽑기 / 우: 글자수 — 정해진 높이 한 줄이라 아래 CTA와 겹치지 않음 */}
+        <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <button onClick={reroll} className="tg-press" aria-label="닉네임 다시 뽑기" style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 12,
+            background: '#fff', border: `1.5px solid ${TG.CORAL_BG}`, cursor: 'pointer', ...TOUCH_OPT,
+          }}>
+            <ArrowsClockwiseIcon size={15} weight="bold" color={TG.CORAL_DK} />
+            <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 13, color: TG.INK }}>다시 뽑기</span>
+          </button>
+          <span style={{ fontFamily: FONT_BODY, fontSize: 12, color: TG.SUB, paddingRight: 4 }}>{trimmed.length}/{NICKNAME_MAX}</span>
         </div>
       </Reveal>
 
-      {/* 시작하기 — 입력 바로 아래(키보드에 안 가리게 하단 고정 안 함) */}
-      <Reveal i={4} style={{ position: 'absolute', left: 24, right: 24, top: 424 }}>
+      {/* 시작하기 — 입력+한줄(입력56+여백10+버튼34≈100) 아래로 띄워 겹침 방지. 키보드에 안 가리게 하단 고정 안 함. */}
+      <Reveal i={4} style={{ position: 'absolute', left: 24, right: 24, top: 462 }}>
         <button onClick={submit} disabled={!canSubmit} className="tg-press" style={{
           width: '100%', height: 56, borderRadius: 16, border: 'none',
           background: canSubmit ? TG.CORAL_DK : '#e7e0d8', cursor: canSubmit ? 'pointer' : 'default',
