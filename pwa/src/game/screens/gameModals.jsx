@@ -85,7 +85,7 @@ export function EndlessStartModal({ best = 0, onStart, onClose }) {
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, textAlign: 'center', width: '100%' }}>
           <span style={{ fontFamily: FONT_TITLE, fontSize: 24, color: '#2b2730' }}>무한 모드</span>
           <span style={{ fontFamily: FONT_BODY, fontWeight: 500, fontSize: 14, lineHeight: 1.55, color: '#9a93a0' }}>
-            점점 빨라지는 문제를 계속 풀어요.<br /><b style={{ color: '#d0464a', fontWeight: 800 }}>한 번이라도 틀리면 끝!</b><br />모르는 단어는 하트로 건너뛰세요.
+            점점 빨라지는 문제를 계속 풀어요.<br /><b style={{ color: '#d0464a', fontWeight: 800 }}>한 번이라도 틀리면 끝!</b><br />모르는 단어는 건너뛰기 패스로 넘기세요.
           </span>
         </div>
         {best > 0 && (

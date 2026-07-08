@@ -1,6 +1,6 @@
 // 게임 화면 (Figma 좌표 절대배치) — 점수·일시정지·타이머·단어카드·코치·성조버튼 + 콤보/신기록 버스트 연출(P4b).
 import { useState, useEffect, useRef, useLayoutEffect } from 'react';
-import { StarIcon, PauseIcon, TimerIcon, SpeakerHighIcon, EyeIcon, HeartIcon, SkipForwardIcon, SkullIcon } from '@phosphor-icons/react';
+import { StarIcon, PauseIcon, TimerIcon, SpeakerHighIcon, EyeIcon, TicketIcon, SkipForwardIcon, SkullIcon } from '@phosphor-icons/react';
 import { TG, FONT_TITLE, FONT_NUM, FONT_BODY, TOUCH_OPT } from '../tgTokens.js';
 import { play as playSfx } from '../tgSfx.js';
 import { Reveal, WordCard, ToneButtons, CoachBubble, ConfettiBurst, CrispFlash, LIGHT_CONFETTI } from './shared.jsx';
@@ -196,7 +196,7 @@ export function GameScreen({ word, entered, currentSyl, completed, timedOut, wor
   // demoFx='combo'는 [DEV] 미리보기서 화염 강제(?screen=game&fx=combo). 머지 전 백도어 제거 대상.
   const heat = demoFx === 'combo' ? 0.8 : (combo >= 2 ? Math.min((combo - 1) / 11, 1) : 0);
   const heatRef = useRef(heat); heatRef.current = heat; // rAF 불티가 매 프레임 참조(강도)
-  // 하트 소모 연출 — 건너뛰기로 lives가 줄면 방금 빈 하트(index=lives)를 '팟' 튕겨 소모를 명확히 보여줌.
+  // 건너뛰기 패스 소모 연출 — 건너뛰기로 lives가 줄면 방금 빈 티켓(index=lives)을 '팟' 튕겨 소모를 명확히 보여줌.
   const prevLivesRef = useRef(lives);
   const [lostHeart, setLostHeart] = useState(-1);
   useEffect(() => {
@@ -205,7 +205,7 @@ export function GameScreen({ word, entered, currentSyl, completed, timedOut, wor
   }, [lives]);
   useEffect(() => { prevLivesRef.current = lives; setLostHeart(-1); }, [runId]); // 새 런 리셋
   // 1판 1힌트 큐(각 1회) — 우선순위: 타이머(game-play) → 건너뛰기(game-skip-v1) → 발음 힌트(game-hint-v1).
-  // 하트 재의미(생명→건너뛰기 예산)·발음 힌트는 기존 유저도 처음 만나는 기능이라 판마다 하나씩 순차 안내.
+  // 건너뛰기 패스(옛 하트, 생명 아님)·발음 힌트는 기존 유저도 처음 만나는 기능이라 판마다 하나씩 순차 안내.
   // 딤/블로킹 없음(타이머 안 멈춤·탭 방해 없음). 조작법은 튜토리얼이 이미 가르침.
   const tipPlay = useTabTip('game-play', true);
   const tipSkip = useTabTip('game-skip-v1', true);
@@ -248,19 +248,23 @@ export function GameScreen({ word, entered, currentSyl, completed, timedOut, wor
         <span style={{ fontFamily: FONT_NUM, fontWeight: 800, fontSize: 17, color: '#2b2730' }}>{score}</span>
       </div>
       </Reveal>
-      {/* 하트 HUD (좌상단) — 연습 외 전 모드. 하트 = 런당 '건너뛰기 예산' 3개. 건너뛰기마다 하나씩 빈 하트로(소모 시 팟 튕김). */}
+      {/* 건너뛰기 예산 HUD (좌상단) — 연습 외 전 모드. 하트(=목숨 오해) 대신 '건너뛰기 패스' 티켓 3개 + 라벨.
+          건너뛰기마다 하나씩 빈 티켓으로(소모 시 팟 튕김). 목숨 아님 — 틀려도 안 죽고 예산만 소진. */}
       {showHearts && (
-        <Reveal i={0} play={playReveal} style={{ position: 'absolute', left: 20, top: 22 }}>
-          <style>{`@keyframes tg-heartlose{0%{transform:scale(1)}28%{transform:scale(1.4) rotate(-8deg)}55%{transform:scale(.7) rotate(6deg)}100%{transform:scale(.82) rotate(0)}}`}</style>
-          <div style={{ display: 'flex', gap: 5 }} aria-label={`남은 건너뛰기 ${lives}개`}>
-            {[0, 1, 2].map((i) => {
-              const on = i < lives;
-              return (
-                <HeartIcon key={i} size={24} weight={on ? 'fill' : 'regular'} color={on ? TG.CORAL : '#d8d0c7'}
-                  style={{ transition: 'transform 200ms ease, color 200ms ease', transform: on ? 'scale(1)' : 'scale(0.82)',
-                    animation: i === lostHeart ? 'tg-heartlose 520ms ease-out' : 'none' }} />
-              );
-            })}
+        <Reveal i={0} play={playReveal} style={{ position: 'absolute', left: 20, top: 17 }}>
+          <style>{`@keyframes tg-skiplose{0%{transform:scale(1)}28%{transform:scale(1.4) rotate(-8deg)}55%{transform:scale(.7) rotate(6deg)}100%{transform:scale(.82) rotate(0)}}`}</style>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2 }}>
+            <div style={{ display: 'flex', gap: 5 }} aria-label={`남은 건너뛰기 ${lives}개`}>
+              {[0, 1, 2].map((i) => {
+                const on = i < lives;
+                return (
+                  <TicketIcon key={i} size={22} weight={on ? 'fill' : 'regular'} color={on ? TG.CORAL : '#d8d0c7'}
+                    style={{ transition: 'transform 200ms ease, color 200ms ease', transform: on ? 'scale(1)' : 'scale(0.82)',
+                      animation: i === lostHeart ? 'tg-skiplose 520ms ease-out' : 'none' }} />
+                );
+              })}
+            </div>
+            <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 9.5, color: TG.SUB, lineHeight: 1, letterSpacing: '-0.01em', paddingLeft: 1 }}>건너뛰기</span>
           </div>
         </Reveal>
       )}
@@ -296,7 +300,7 @@ export function GameScreen({ word, entered, currentSyl, completed, timedOut, wor
           display: 'flex', justifyContent: 'center', zIndex: 24, pointerEvents: 'none', animation: 'tg-hint 5.1s ease forwards' }} aria-hidden="true">
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#2b2730', color: '#fff', fontFamily: FONT_BODY, fontWeight: 700, fontSize: 12, lineHeight: 1, padding: '7px 12px', borderRadius: 11, boxShadow: '0 4px 12px rgba(43,39,48,0.22)', whiteSpace: 'nowrap' }}>
             {runTip === 'play' && <><TimerIcon size={13} weight="fill" color="#ff9f6b" />타이머가 끝나기 전에 성조를 골라요!</>}
-            {runTip === 'skip' && <><HeartIcon size={13} weight="fill" color={TG.CORAL} />모르는 단어는 하트로 건너뛸 수 있어요!</>}
+            {runTip === 'skip' && <><TicketIcon size={13} weight="fill" color={TG.CORAL} />틀려도 안 죽어요 · 어려우면 건너뛰기!</>}
             {runTip === 'hint' && <><SpeakerHighIcon size={13} weight="fill" color="#ff9f6b" />발음 힌트를 들으면 콤보가 끊겨요!</>}
           </div>
         </div>
@@ -339,21 +343,21 @@ export function GameScreen({ word, entered, currentSyl, completed, timedOut, wor
           </div>
         </Reveal>
       )}
-      {/* 건너뛰기 — 못 풀겠는 단어를 하트 1개 쓰고 넘김. 하트 소진(0)이면 비활성(스킵만 불가, 게임은 계속). 연습 모드는 미노출(자체 정답보기). */}
+      {/* 건너뛰기 — 못 풀겠는 단어를 건너뛰기 패스 1개 쓰고 넘김. 소진(0)이면 비활성(스킵만 불가, 게임은 계속). 연습 모드는 미노출(자체 정답보기). */}
       {onSkip && (
         <Reveal i={4} play={playReveal} style={{ position: 'absolute', left: 0, right: 0, bottom: 'calc(130px + env(safe-area-inset-bottom))', display: 'flex', justifyContent: 'center' }}>
           {(() => {
             const disabled = completed || lives <= 0;
             return (
               <button onClick={onSkip} disabled={disabled} className="tg-press"
-                aria-label={lives > 0 ? '건너뛰기 (하트 1개 소모)' : '하트를 모두 써서 건너뛸 수 없어요'}
+                aria-label={lives > 0 ? '건너뛰기 (1회 소모)' : '건너뛰기를 다 써서 넘길 수 없어요'}
                 style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 16px', borderRadius: 14,
                   background: '#fff', border: '1.5px solid #ebe5de', cursor: disabled ? 'default' : 'pointer',
                   opacity: disabled ? 0.5 : 1, boxShadow: '0px 2px 6px rgba(43,39,48,0.05)', ...TOUCH_OPT }}>
                 <SkipForwardIcon size={16} weight="fill" color={TG.SUB} />
                 <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 13, color: '#2b2730' }}>건너뛰기</span>
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 1, fontFamily: FONT_BODY, fontWeight: 800, fontSize: 12, color: TG.CORAL }}>
-                  <HeartIcon size={12} weight="fill" color={TG.CORAL} />−1
+                  <TicketIcon size={12} weight="fill" color={TG.CORAL} />−1
                 </span>
               </button>
             );
