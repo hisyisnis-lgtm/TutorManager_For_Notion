@@ -5,7 +5,7 @@ import { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import {
   GearSixIcon, PlayIcon, HandWavingIcon, MedalIcon, TrophyIcon, FlameIcon, SnowflakeIcon,
   QuestionIcon, SignOutIcon, CaretRightIcon, SpeakerHighIcon, SpeakerSlashIcon, VibrateIcon, XIcon,
-  MusicNotesIcon, MusicNotesSimpleIcon,
+  MusicNotesIcon, MusicNotesSimpleIcon, PencilSimpleIcon,
 } from '@phosphor-icons/react';
 import { TG, FONT_TITLE, FONT_BODY, FONT_NUM, TOUCH_OPT, haptic, isHapticMuted, setHapticMuted } from '../tgTokens.js';
 import { TONES } from '../../constants/toneGameWords.js';
@@ -16,6 +16,7 @@ import { isBgmMuted, setBgmMuted, startBgm } from '../tgBgm.js';
 import { FigmaScreen, EmberRise } from './shared.jsx';
 import { markSize, Eyes } from './eyes.jsx';
 import { PlayModal, DebugScoreModal } from './gameModals.jsx';
+import { NicknameEditModal } from './NicknameEditModal.jsx';
 import CoachMarkOverlay from '../../components/ui/CoachMarkOverlay.jsx';
 import { useTabTip } from '../../hooks/useTabTip.js';
 
@@ -462,7 +463,7 @@ function MenuAction({ Icon, label, sub, color = TG.INK, onClick }) {
   );
 }
 
-function HomeMenu({ onClose, onHelp, onLogin, isMemberUser, memberName, onLogout, onExit, onDebugIntro, onDebugScore }) {
+function HomeMenu({ onClose, onHelp, onLogin, isMemberUser, memberName, onEditNickname, onLogout, onExit, onDebugIntro, onDebugScore }) {
   const [sfxOn, setSfxOn] = useState(() => !isSfxMuted());
   const [bgmOn, setBgmOn] = useState(() => !isBgmMuted());
   const [hapticOn, setHapticOn] = useState(() => !isHapticMuted());
@@ -487,7 +488,8 @@ function HomeMenu({ onClose, onHelp, onLogin, isMemberUser, memberName, onLogout
         <div style={{ height: 1, background: '#efeae4' }} />
         {onHelp && <MenuAction Icon={QuestionIcon} label="게임 방법" onClick={() => { onClose(); onHelp(); }} />}
         {onLogin && <MenuAction Icon={SignOutIcon} label="로그인" sub="기록 저장" color={TG.CORAL_DK} onClick={() => { onClose(); onLogin(); }} />}
-        {isMemberUser && <MenuAction Icon={SignOutIcon} label="로그아웃" sub={memberName || ''} onClick={() => { onClose(); onLogout && onLogout(); }} />}
+        {isMemberUser && onEditNickname && <MenuAction Icon={PencilSimpleIcon} label="닉네임 변경" sub={memberName || ''} onClick={() => { onClose(); onEditNickname(); }} />}
+        {isMemberUser && <MenuAction Icon={SignOutIcon} label="로그아웃" onClick={() => { onClose(); onLogout && onLogout(); }} />}
         <MenuAction Icon={SignOutIcon} label="게임 나가기" onClick={() => { onClose(); onExit && onExit(); }} />
         {import.meta.env.DEV && onDebugIntro && (
           <>
@@ -675,10 +677,11 @@ export function HomeScreen({
   levelReveals = [], onRevealsDone, revealHold = false,
   homeReady = true,
   onPlay, onMastery, onAchievements, onHelp,
-  onLogin, isMemberUser, memberName, nickname = null, onLogout, onExit, studentToken, onRefreshBest, onDebugIntro,
+  onLogin, isMemberUser, memberName, nickname = null, onEditNickname, onLogout, onExit, studentToken, onRefreshBest, onDebugIntro,
 }) {
   const tier = earTier(masteredN);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [nickEditOpen, setNickEditOpen] = useState(false);
   const [playOpen, setPlayOpen] = useState(false);
   const [debugScoreOpen, setDebugScoreOpen] = useState(false);
   const [cardTone, setCardTone] = useState(null); // 탭한 성조 미니 카드
@@ -856,7 +859,8 @@ export function HomeScreen({
 
       {cardTone != null && <ToneCard tone={TONES.find((t) => t.num === cardTone)} status={toneStatus[cardTone]} level={Math.min(5, (toneLevels[cardTone] || {}).lv || 1)} onClose={() => setCardTone(null)} />}
       {streakOpen && <StreakSheet streak={streak} longest={streakLongest} freezes={freezes} onClose={() => setStreakOpen(false)} />}
-      {menuOpen && <HomeMenu onClose={() => setMenuOpen(false)} onHelp={onHelp} onLogin={onLogin} isMemberUser={isMemberUser} memberName={memberName} onLogout={onLogout} onExit={onExit} onDebugIntro={onDebugIntro} onDebugScore={() => setDebugScoreOpen(true)} />}
+      {menuOpen && <HomeMenu onClose={() => setMenuOpen(false)} onHelp={onHelp} onLogin={onLogin} isMemberUser={isMemberUser} memberName={memberName} onEditNickname={onEditNickname ? () => setNickEditOpen(true) : null} onLogout={onLogout} onExit={onExit} onDebugIntro={onDebugIntro} onDebugScore={() => setDebugScoreOpen(true)} />}
+      {nickEditOpen && <NicknameEditModal current={nickname || memberName || ''} onSave={onEditNickname} onClose={() => setNickEditOpen(false)} />}
       {playOpen && <PlayModal onClose={() => setPlayOpen(false)} />}
       {import.meta.env.DEV && debugScoreOpen && <DebugScoreModal studentToken={studentToken} onClose={() => setDebugScoreOpen(false)} onApplied={() => onRefreshBest && onRefreshBest()} />}
 

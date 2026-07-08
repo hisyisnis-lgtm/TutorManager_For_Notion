@@ -39,6 +39,7 @@ import { LoadingTip } from '../game/screens/LoadingScreen.jsx';
 import { HomeScreen } from '../game/screens/HomeScreen.jsx';
 import { LoginScreen } from '../game/screens/LoginScreen.jsx';
 import { NicknameScreen } from '../game/screens/NicknameScreen.jsx';
+import { NicknameEditModal } from '../game/screens/NicknameEditModal.jsx';
 import { ModeScreen } from '../game/screens/ModeScreen.jsx';
 import { ParticleLab } from '../game/screens/_ParticleLab.jsx'; // [임시·DEV] 파티클 검수용 — 검수 후 삭제
 import { SfxLab } from '../game/screens/_SfxLab.jsx'; // [임시·DEV] 효과음/배경음 검수용 — 검수 후 삭제
@@ -239,9 +240,11 @@ export default function ToneGamePage() {
   const [introPage, setIntroPage] = useState(() => (isPreview ? Number(qs('introPage') || 0) : 0)); // 소개 캐러셀 페이지 (0~2)
   const [tutorialFromHelp, setTutorialFromHelp] = useState(false); // 메뉴 '게임 방법'으로 튜토리얼 진입 — 완료 시 온보딩(모드선택) 대신 홈 복귀·플래그 미변경
   const [helpOpen, setHelpOpen] = useState(false); // 메뉴 '게임 방법' 확인 팝업
-  // 소셜 로그인 직후 닉네임 설정 게이트 — {token, prefill}. 확정 전까지 홈 대신 이 화면을 띄운다(로그인하면 항상).
+  // 소셜 로그인 직후 닉네임 설정 게이트 — {token}. 닉네임 없을 때만 홈 대신 이 화면을 띄운다.
   const [nicknameSetup, setNicknameSetup] = useState(null);
   const [savingNick, setSavingNick] = useState(false);
+  // 회원 표시 닉네임 — 세션값으로 시작하고, 홈 메뉴 '닉네임 변경'에서 즉시 갱신(reload 없이 반영).
+  const [memberNick, setMemberNick] = useState(identity.memberUser?.nickname || null);
 
   const timersRef = useRef([]);
   const addTimer = (id) => { timersRef.current.push(id); };
@@ -313,18 +316,19 @@ export default function ToneGamePage() {
   }, []);
 
   // 소셜 로그인 복귀 — Worker 콜백이 현재 주소에 #token=… 을 붙여 되돌려보낸다.
-  // 토큰이 있으면 회원 세션을 세우고 게스트 로컬 기록을 흡수한 뒤, 닉네임 설정 화면으로 넘긴다(로그인하면 항상).
+  // 토큰이 있으면 회원 세션을 세우고 게스트 로컬 기록을 흡수한다. 닉네임이 아직 없을 때만 설정 화면으로,
+  // 이미 있으면(재로그인·제공자 제공) 건너뛰고 바로 회원으로 재초기화(매 로그인 반복 프롬프트 방지).
   useEffect(() => {
     const token = takeTokenFromHash();
     if (!token) return undefined;
     let done = false;
     (async () => {
-      let prefill = '';
+      let hasNickname = false;
       try {
         loginMember(token, {});                    // 임시 세션(닉네임은 닉네임 화면에서 확정)
         const { user } = await fetchGameMe(token);
         loginMember(token, user || {});
-        prefill = (user && user.nickname) || '';    // 제공자가 준 닉네임 우선(없으면 화면서 랜덤 자동생성)
+        hasNickname = !!(user && user.nickname && String(user.nickname).trim()); // 이미 닉네임 있는 계정?
         const idn = resolveIdentity(undefined);     // 회원 신원
         mergeGuestIntoMember(idn);                   // 게스트 로컬 → 회원 로컬 1회 병합
         // ★ 서버 기존 데이터를 로컬에 max 병합한 뒤 push해야 다른 기기 데이터를 안 덮어쓴다.
@@ -333,10 +337,23 @@ export default function ToneGamePage() {
         await pushMemberData(idn, user?.nickname).catch(() => {}); // 로컬(게스트∪서버) → 서버
         track('login_success');
       } catch { /* noop */ }
-      if (!done) setNicknameSetup({ token, prefill }); // 스플래시 대신 닉네임 설정 화면(제공자 닉네임 있으면 프리필, 없으면 랜덤)
+      if (done) return;
+      // 닉네임 있으면 화면 건너뛰고 회원으로 재초기화, 없으면 닉네임 설정 화면(랜덤 자동채움).
+      if (hasNickname) window.location.reload();
+      else setNicknameSetup({ token });
     })();
     return () => { done = true; };
   }, []);
+
+  // 홈 메뉴 '닉네임 변경' → 세션·서버에 저장 + 화면 즉시 갱신(reload 없이). 회원만.
+  const editNickname = async (nick) => {
+    const clean = (nick || '').trim();
+    if (!clean) return;
+    const sess = getMemberSession();
+    loginMember(identity.token, { ...((sess && sess.user) || {}), nickname: clean }); // 세션 갱신
+    setMemberNick(clean);                                                              // 홈 표시 즉시 반영
+    await pushMemberData(identity, clean).catch(() => {});                             // 서버(game_users.nickname) 저장
+  };
 
   // 닉네임 확정 → 세션·서버에 저장 후 회원으로 재초기화(reload). 이후 홈에 바로 반영된다.
   const submitNickname = async (nick) => {
@@ -997,8 +1014,9 @@ export default function ToneGamePage() {
       onMastery={() => setScreen('mastery')} onAchievements={() => setScreen('achievements')}
       onHelp={() => setHelpOpen(true)}
       onLogin={identity.kind === 'guest' ? () => setScreen('login') : null}
-      isMemberUser={identity.kind === 'member'} memberName={identity.memberUser?.nickname || null}
-      nickname={isPreview ? (qs('nick') || '하늘') : identity.kind === 'member' ? (identity.memberUser?.nickname || null) : identity.kind === 'student' ? (student?.name || null) : null}
+      isMemberUser={identity.kind === 'member'} memberName={identity.kind === 'member' ? memberNick : null}
+      nickname={isPreview ? (qs('nick') || '하늘') : identity.kind === 'member' ? memberNick : identity.kind === 'student' ? (student?.name || null) : null}
+      onEditNickname={identity.kind === 'member' ? editNickname : null}
       onLogout={() => { logoutMember(); window.location.reload(); }} onExit={exitGame}
       studentToken={studentToken} onRefreshBest={() => setBest(headlineBest(studentToken))}
       homeReady={!homeTx}
@@ -1016,6 +1034,8 @@ export default function ToneGamePage() {
       }) : undefined} />;
   } else if (isPreview && previewScreen === 'nickname') { // [DEV] 닉네임 설정 미리보기(?screen=nickname&nick=… 로 제공자 프리필 테스트)
     content = <FigmaScreen><NicknameScreen defaultName={qs('nick') || ''} onSubmit={() => {}} /></FigmaScreen>;
+  } else if (isPreview && previewScreen === 'nickedit') { // [DEV] 닉네임 변경 모달 미리보기(?screen=nickedit&nick=…)
+    content = <FigmaScreen bg={TG.BG}><NicknameEditModal current={qs('nick') || '졸린토끼'} onSave={() => {}} onClose={() => {}} /></FigmaScreen>;
   } else if (screen === 'login') {
     content = <FigmaScreen><LoginScreen onBack={() => setScreen('home')} /></FigmaScreen>;
   } else if (screen === 'mastery') {
