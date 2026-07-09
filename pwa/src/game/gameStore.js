@@ -256,16 +256,24 @@ function applyGameDataToLocal(id, data) {
   if (typeof data.frz === 'number' && data.frz > loadFreezes(id)) saveFreezes(id, data.frz); // 프리즈=큰 쪽
 }
 
+// 토큰 만료(60일)·계정없음 등 인증 실패면 세션을 정리(조용한 무기한 동기화실패 방지). 그 외(네트워크 등)는 유지.
+function logoutIfAuthError(e) {
+  if (e && (e.status === 401 || e.status === 403 || e.status === 404)) logoutMember();
+}
 // 서버(/game/me) → 로컬 머지. 회원 진입/로그인 시.
 export async function pullMemberData(identity) {
   if (!identity || identity.kind !== 'member') return;
-  const { user } = await fetchGameMe(identity.token);
-  applyGameDataToLocal(identity.id, user?.gameData);
+  try {
+    const { user } = await fetchGameMe(identity.token);
+    applyGameDataToLocal(identity.id, user?.gameData);
+  } catch (e) { logoutIfAuthError(e); throw e; }
 }
 // 로컬 → 서버(/game/me) 업로드. 게임 종료 시. nickname 주면 함께 저장(로그인 시 이름 입력).
 export async function pushMemberData(identity, nickname) {
   if (!identity || identity.kind !== 'member') return;
-  await saveGameMe(identity.token, collectLocalGameData(identity.id), nickname || undefined);
+  try {
+    await saveGameMe(identity.token, collectLocalGameData(identity.id), nickname || undefined);
+  } catch (e) { logoutIfAuthError(e); throw e; }
 }
 // 게스트 로컬 기록을 회원 로컬에 1회 병합(로그인 직후). 이후 pull/push로 서버 동기화.
 export function mergeGuestIntoMember(identity) {

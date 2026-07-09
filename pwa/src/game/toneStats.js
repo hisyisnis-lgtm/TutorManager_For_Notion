@@ -11,7 +11,7 @@ export const EMA_ALPHA = 0.1; // 최근 가중치 — 크면 요요(레벨 널�
 
 // 탭 1건 반영(stats를 직접 변형 후 반환). tone=기대 성조, correct=맞췄는지.
 export function recordTone(stats, tone, correct) {
-  const e = stats[tone] ? [...stats[tone]] : [0, 0];
+  const e = Array.isArray(stats[tone]) ? [...stats[tone]] : [0, 0]; // 손상·레거시 비배열 엔트리 spread TypeError 방지
   const x = correct ? 1 : 0;
   // ema 시드: 기존 ema > 레거시 누적 정확도 > 첫 기록이면 이번 결과
   const seed = typeof e[2] === 'number' ? e[2] : (e[1] > 0 ? e[0] / e[1] : x);

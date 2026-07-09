@@ -183,6 +183,8 @@ export default function ToneGamePage() {
   const wordElapsedRef = useRef(0); // 현재 단어의 누적 '진행' 시간(일시정지·카운트다운 제외)
   const segStartRef = useRef(0);    // 현재 진행 구간 시작 시각
   const livesRef = useRef(3);        // lives 동기 읽기용(setState 비동기·연타 stale 방지)
+  const completedRef = useRef(false); // completed 동기 읽기용 — 같은 tick 더블탭(멀티터치·연타) 재진입 방지. setState는 비동기라 stale.
+  const enteredRef = useRef([]);      // entered 동기 읽기용 — 더블탭 시 currentSyl/entered desync·점수 이중가산 방지(입력마다 한 슬롯만 전진)
   const [totalAnswerTime, setTotalAnswerTime] = useState(0);
   const [answeredCount, setAnsweredCount] = useState(0);
 
@@ -352,6 +354,7 @@ export default function ToneGamePage() {
     const sess = getMemberSession();
     loginMember(identity.token, { ...((sess && sess.user) || {}), nickname: clean }); // 세션 갱신
     setMemberNick(clean);                                                              // 홈 표시 즉시 반영
+    await pullMemberData(identity).catch(() => {});                                    // ★push 전 pull — 다른 기기 진행분을 로컬에 max 병합(전체 덮어쓰기로 인한 유실 방지)
     await pushMemberData(identity, clean).catch(() => {});                             // 서버(game_users.nickname) 저장
   };
 
@@ -364,6 +367,7 @@ export default function ToneGamePage() {
       const sess = getMemberSession();
       loginMember(token, { ...((sess && sess.user) || {}), nickname: nick }); // 세션 닉네임 갱신(reload 후 표시)
       const idn = resolveIdentity(undefined);
+      await pullMemberData(idn).catch(() => {});                                // ★push 전 pull — 로그인 콜백에서 fetchGameMe 실패로 pull을 못 했어도 여기서 서버→로컬 max 병합 → 빈 로컬이 서버 진행분을 덮어쓰는 데이터손실 방지
       await pushMemberData(idn, nick).catch(() => {});                          // 서버(GAME_USERS.nickname) 저장
     } catch { /* noop */ }
     window.location.reload();
@@ -651,6 +655,7 @@ export default function ToneGamePage() {
     const timer = setTimeout(() => {
       const word = words[wordIndex];
       if (!word) return;
+      completedRef.current = true; enteredRef.current = word.tones; // 동기 가드 — 시간초과 순간 입력 재진입 차단
       setTimedOut(true); setCompleted(true); setCombo(0); setEntered(word.tones);
       setEndKind('timeout');
       haptic([60, 30, 60]); playSfx('timeout');
@@ -659,7 +664,7 @@ export default function ToneGamePage() {
       if (!isPreview) { recordWordResult(wordStatsRef.current, word.hanzi, { perfect: false, timedOut: true, ms: 0 }); saveWordStats(studentToken, wordStatsRef.current); }
       addPausable(() => {
         if (endlessMode || wordIndex + 1 >= words.length) setShowGameOverBeat(true); // 무한: 첫 시간초과 = 종료
-        else { setWordIndex((i) => i + 1); setCurrentSyl(0); setEntered([]); setCompleted(false); setHasMistake(false); setGaugeOffsetMs(0); }
+        else { enteredRef.current = []; completedRef.current = false; setWordIndex((i) => i + 1); setCurrentSyl(0); setEntered([]); setCompleted(false); setHasMistake(false); setGaugeOffsetMs(0); }
       }, 1700);
     }, remaining);
     return () => {
@@ -688,6 +693,7 @@ export default function ToneGamePage() {
   const resetRunState = () => {
     clearTimers(); // 이전 런의 진행/플로트 타이머가 새 런에 끼어들지 않게(runId 가드 보강)
     setCelebrationQueue([]); // 이전 종료의 축하 큐 잔여 정리
+    completedRef.current = false; enteredRef.current = []; // 동기 가드 초기화(새 런)
     setWordIndex(0); setCurrentSyl(0); setEntered([]); setCompleted(false);
     setCombo(0); setMaxCombo(0); setScore(0); setHasMistake(false);
     setTotalAnswerTime(0); setAnsweredCount(0); setIsNewBest(false); setPreviousBest(0); setTimedOut(false); setPaused(false);
@@ -803,20 +809,21 @@ export default function ToneGamePage() {
   };
 
   const handleTone = useCallback((toneNum) => {
-    if (completed || paused || cdPhase || suddenIntro) return; // 서든데스 연출 중 입력 무시
+    if (completedRef.current || paused || cdPhase || suddenIntro) return; // 완성/전환 중(동기 가드) — 같은 tick 더블탭·멀티터치 재진입 차단
     const word = words[wordIndex];
     if (!word) return;
-    const expected = word.tones[currentSyl];
+    const cur = enteredRef.current;            // 동기 소스 — 이 tick에서 이미 전진했으면 다음 슬롯을 본다(stale state 미참조)
+    const expected = word.tones[cur.length];
     // 오답 흔들림(450ms) 중 연타 — 하트 순삭·중복 패널티 방지(무시). 가벼운 햅틱만(무반응이면 "안 눌렸나?" 체감).
     // ★통계(recordTone)보다 먼저 가드 — 무시하는 연타가 성조 정답률(EMA)에 오답으로 쌓이던 비일관 제거.
     if (toneNum !== expected && wrongBtn !== null) { haptic(10); return; }
     if (!isPreview) { recordTone(toneStatsRef.current, expected, toneNum === expected); saveToneStats(studentToken, toneStatsRef.current); } // 성조별 정답률(기대 성조 기준)
     if (toneNum === expected) {
       setShowWrong(false); // 정답 — 오답 메시지 해제
-      const ne = [...entered, toneNum];
-      setEntered(ne);
+      const ne = [...cur, toneNum];
+      enteredRef.current = ne; setEntered(ne);
       if (ne.length === word.tones.length) {
-        setCompleted(true); setEndKind('complete');
+        completedRef.current = true; setCompleted(true); setEndKind('complete');
         speakWord(word); // 정답 완성 → 올바른 발음 자동 재생(성조 강화)
         const answerTime = wordElapsedRef.current + (Date.now() - segStartRef.current);
         const remaining = practiceMode ? 0 : Math.max(0, wordTimeLimitRef.current - answerTime); // 연습=시간보너스 없음
@@ -840,14 +847,15 @@ export default function ToneGamePage() {
         addTimer(setTimeout(() => setFloatScore(null), 1300));
         addPausable(() => {
           if (wordIndex + 1 >= words.length) setShowGameOverBeat(true);
-          else { setWordIndex((i) => i + 1); setCurrentSyl(0); setEntered([]); setCompleted(false); setHasMistake(false); setGaugeOffsetMs(0); }
+          else { enteredRef.current = []; completedRef.current = false; setWordIndex((i) => i + 1); setCurrentSyl(0); setEntered([]); setCompleted(false); setHasMistake(false); setGaugeOffsetMs(0); }
         }, 1500);
-      } else { haptic(8); playSfx('tap'); setCurrentSyl((s) => s + 1); }
+      } else { haptic(8); playSfx('tap'); setCurrentSyl(ne.length); }
     } else {
       setHasMistake(true); setCombo(0); setWrongBtn(toneNum); setShowWrong(true); setWrongShakeKey((k) => k + 1); haptic([40, 30, 40]); playSfx('wrong');
       addTimer(setTimeout(() => setWrongBtn(null), 450)); // 버튼 흔들림만 해제, 코치 메시지는 유지
       // 무한 = 서든데스: 오답 1번 = 즉시 종료(정답 공개 후 게임오버). 난타 방지 장치. 모르는 단어는 건너뛰기(하트)로 안전 통과.
       if (endlessMode) {
+        completedRef.current = true; enteredRef.current = word.tones; // 동기 가드 — 서든데스 종료 순간 재진입 차단
         setCompleted(true); setEntered(word.tones); setEndKind('miss');
         speakWord(word); // 정답 공개 → 올바른 발음 들려주기
         if (!isPreview) { recordWordResult(wordStatsRef.current, word.hanzi, { perfect: false, timedOut: false, ms: 0 }); saveWordStats(studentToken, wordStatsRef.current); }
@@ -867,34 +875,36 @@ export default function ToneGamePage() {
   // 건너뛰기 — 못 풀겠는 단어를 하트 1개 소모하고 넘김. 정답 공개+발음(학습) · 콤보 끊김 · 0점 · 숙련도 미반영.
   // 하트는 런당 3개 예산(모든 모드 공통). 0개면 버튼 비활성 → 스킵만 불가, 게임은 계속. 연습 모드는 자체 '정답 보기'라 미제공.
   const skipWord = useCallback(() => {
-    if (completed || paused || cdPhase || practiceMode) return;
+    if (completedRef.current || paused || cdPhase || practiceMode) return; // 동기 가드 — 건너뛰기 더블탭 시 패스 이중소모·단어 2칸 이동 방지
     if (livesRef.current <= 0) return; // 하트 소진 — 더 못 건너뜀
     const word = words[wordIndex];
     if (!word) return;
     const remain = livesRef.current - 1;
     livesRef.current = remain; setLives(remain);
+    completedRef.current = true; enteredRef.current = word.tones; // 동기 가드 세팅
     setCompleted(true); setEntered(word.tones); setCombo(0); setHasMistake(true); setShowWrong(false); setEndKind('complete');
     haptic(20); playSfx('wrong', 0.4); // 부드러운 '못 풀었어요' 큐(시간초과 버저보다 약하게)
     speakWord(word); // 올바른 발음 들려주기(학습 기회)
     if (!isPreview) { recordWordResult(wordStatsRef.current, word.hanzi, { perfect: false, timedOut: false, ms: 0 }); saveWordStats(studentToken, wordStatsRef.current); }
     addPausable(() => {
       if (!endlessMode && wordIndex + 1 >= words.length) setShowGameOverBeat(true); // 무한은 스트림이 길어 계속 진행
-      else { setWordIndex((i) => i + 1); setCurrentSyl(0); setEntered([]); setCompleted(false); setHasMistake(false); setGaugeOffsetMs(0); }
+      else { enteredRef.current = []; completedRef.current = false; setWordIndex((i) => i + 1); setCurrentSyl(0); setEntered([]); setCompleted(false); setHasMistake(false); setGaugeOffsetMs(0); }
     }, 1200);
   }, [completed, paused, cdPhase, practiceMode, words, wordIndex, endlessMode, isPreview, studentToken]);
 
   // 연습 모드 '정답 보기' — 현재 단어 정답 공개(점수·콤보 없음, 무실수 아님 기록) 후 다음 단어로.
   const revealAnswer = useCallback(() => {
-    if (completed || paused || cdPhase) return;
+    if (completedRef.current || paused || cdPhase) return; // 동기 가드
     const w = words[wordIndex];
     if (!w) return;
+    completedRef.current = true; enteredRef.current = w.tones; // 동기 가드 세팅
     setCompleted(true); setEntered(w.tones); setCombo(0); setHasMistake(true); setShowWrong(false); setEndKind('complete');
     speakWord(w);
     if (!isPreview) { recordWordResult(wordStatsRef.current, w.hanzi, { perfect: false, timedOut: false, ms: 0 }); saveWordStats(studentToken, wordStatsRef.current); }
     setAnsweredCount((c) => c + 1);
     addPausable(() => {
       if (wordIndex + 1 >= words.length) setShowGameOverBeat(true);
-      else { setWordIndex((i) => i + 1); setCurrentSyl(0); setEntered([]); setCompleted(false); setHasMistake(false); }
+      else { enteredRef.current = []; completedRef.current = false; setWordIndex((i) => i + 1); setCurrentSyl(0); setEntered([]); setCompleted(false); setHasMistake(false); }
     }, 1500);
   }, [completed, paused, cdPhase, words, wordIndex, isPreview, studentToken]);
 

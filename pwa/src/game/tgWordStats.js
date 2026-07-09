@@ -25,7 +25,7 @@ export function saveWordStats(token, stats) {
 
 // 한 단어 결과 1건 반영(글로벌 stats를 직접 변형 후 반환). 마스터 플래그(히스테리시스)도 여기서 갱신.
 export function recordWordResult(stats, hanzi, { perfect, timedOut, ms }) {
-  const e = stats[hanzi] ? [...stats[hanzi]] : [0, 0, 0, 0];
+  const e = Array.isArray(stats[hanzi]) ? [...stats[hanzi]] : [0, 0, 0, 0]; // 손상·레거시 비배열 엔트리 spread TypeError 방지
   // 이번 결과 반영 '전' 마스터 상태 — 레거시 4튜플은 기존 규칙(누적 ≥80%)으로 시드(자동 마이그레이션)
   const prevMastered = e.length > 4 && typeof e[4] === 'number'
     ? !!e[4]
