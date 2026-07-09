@@ -185,6 +185,7 @@ export default function ToneGamePage() {
   const livesRef = useRef(3);        // lives 동기 읽기용(setState 비동기·연타 stale 방지)
   const completedRef = useRef(false); // completed 동기 읽기용 — 같은 tick 더블탭(멀티터치·연타) 재진입 방지. setState는 비동기라 stale.
   const enteredRef = useRef([]);      // entered 동기 읽기용 — 더블탭 시 currentSyl/entered desync·점수 이중가산 방지(입력마다 한 슬롯만 전진)
+  const hintUsedRef = useRef(false);  // 이 단어에서 발음 힌트(보기=발음힌트 / 연습=발음듣기)를 써서 정답 발음을 들었는지 — 들었으면 성조 정확도(recordTone) 미반영(단어별, 전진 시 리셋). 듣기 문제의 정당한 청취는 제외.
   const [totalAnswerTime, setTotalAnswerTime] = useState(0);
   const [answeredCount, setAnsweredCount] = useState(0);
 
@@ -664,7 +665,7 @@ export default function ToneGamePage() {
       if (!isPreview) { recordWordResult(wordStatsRef.current, word.hanzi, { perfect: false, timedOut: true, ms: 0 }); saveWordStats(studentToken, wordStatsRef.current); }
       addPausable(() => {
         if (endlessMode || wordIndex + 1 >= words.length) setShowGameOverBeat(true); // 무한: 첫 시간초과 = 종료
-        else { enteredRef.current = []; completedRef.current = false; setWordIndex((i) => i + 1); setCurrentSyl(0); setEntered([]); setCompleted(false); setHasMistake(false); setGaugeOffsetMs(0); }
+        else { enteredRef.current = []; completedRef.current = false; hintUsedRef.current = false; setWordIndex((i) => i + 1); setCurrentSyl(0); setEntered([]); setCompleted(false); setHasMistake(false); setGaugeOffsetMs(0); }
       }, 1700);
     }, remaining);
     return () => {
@@ -693,7 +694,7 @@ export default function ToneGamePage() {
   const resetRunState = () => {
     clearTimers(); // 이전 런의 진행/플로트 타이머가 새 런에 끼어들지 않게(runId 가드 보강)
     setCelebrationQueue([]); // 이전 종료의 축하 큐 잔여 정리
-    completedRef.current = false; enteredRef.current = []; // 동기 가드 초기화(새 런)
+    completedRef.current = false; enteredRef.current = []; hintUsedRef.current = false; // 동기 가드·힌트 플래그 초기화(새 런)
     setWordIndex(0); setCurrentSyl(0); setEntered([]); setCompleted(false);
     setCombo(0); setMaxCombo(0); setScore(0); setHasMistake(false);
     setTotalAnswerTime(0); setAnsweredCount(0); setIsNewBest(false); setPreviousBest(0); setTimedOut(false); setPaused(false);
@@ -817,7 +818,8 @@ export default function ToneGamePage() {
     // 오답 흔들림(450ms) 중 연타 — 하트 순삭·중복 패널티 방지(무시). 가벼운 햅틱만(무반응이면 "안 눌렸나?" 체감).
     // ★통계(recordTone)보다 먼저 가드 — 무시하는 연타가 성조 정답률(EMA)에 오답으로 쌓이던 비일관 제거.
     if (toneNum !== expected && wrongBtn !== null) { haptic(10); return; }
-    if (!isPreview) { recordTone(toneStatsRef.current, expected, toneNum === expected); saveToneStats(studentToken, toneStatsRef.current); } // 성조별 정답률(기대 성조 기준)
+    // 성조별 정답률(기대 성조 기준). ★발음 힌트를 써서 정답 발음을 들은 단어는 미반영 — 힌트 후 정답이 실력으로 오인돼 정확도가 부풀던 것 방지.
+    if (!isPreview && !hintUsedRef.current) { recordTone(toneStatsRef.current, expected, toneNum === expected); saveToneStats(studentToken, toneStatsRef.current); }
     if (toneNum === expected) {
       setShowWrong(false); // 정답 — 오답 메시지 해제
       const ne = [...cur, toneNum];
@@ -847,7 +849,7 @@ export default function ToneGamePage() {
         addTimer(setTimeout(() => setFloatScore(null), 1300));
         addPausable(() => {
           if (wordIndex + 1 >= words.length) setShowGameOverBeat(true);
-          else { enteredRef.current = []; completedRef.current = false; setWordIndex((i) => i + 1); setCurrentSyl(0); setEntered([]); setCompleted(false); setHasMistake(false); setGaugeOffsetMs(0); }
+          else { enteredRef.current = []; completedRef.current = false; hintUsedRef.current = false; setWordIndex((i) => i + 1); setCurrentSyl(0); setEntered([]); setCompleted(false); setHasMistake(false); setGaugeOffsetMs(0); }
         }, 1500);
       } else { haptic(8); playSfx('tap'); setCurrentSyl(ne.length); }
     } else {
@@ -888,7 +890,7 @@ export default function ToneGamePage() {
     if (!isPreview) { recordWordResult(wordStatsRef.current, word.hanzi, { perfect: false, timedOut: false, ms: 0 }); saveWordStats(studentToken, wordStatsRef.current); }
     addPausable(() => {
       if (!endlessMode && wordIndex + 1 >= words.length) setShowGameOverBeat(true); // 무한은 스트림이 길어 계속 진행
-      else { enteredRef.current = []; completedRef.current = false; setWordIndex((i) => i + 1); setCurrentSyl(0); setEntered([]); setCompleted(false); setHasMistake(false); setGaugeOffsetMs(0); }
+      else { enteredRef.current = []; completedRef.current = false; hintUsedRef.current = false; setWordIndex((i) => i + 1); setCurrentSyl(0); setEntered([]); setCompleted(false); setHasMistake(false); setGaugeOffsetMs(0); }
     }, 1200);
   }, [completed, paused, cdPhase, practiceMode, words, wordIndex, endlessMode, isPreview, studentToken]);
 
@@ -904,7 +906,7 @@ export default function ToneGamePage() {
     setAnsweredCount((c) => c + 1);
     addPausable(() => {
       if (wordIndex + 1 >= words.length) setShowGameOverBeat(true);
-      else { enteredRef.current = []; completedRef.current = false; setWordIndex((i) => i + 1); setCurrentSyl(0); setEntered([]); setCompleted(false); setHasMistake(false); }
+      else { enteredRef.current = []; completedRef.current = false; hintUsedRef.current = false; setWordIndex((i) => i + 1); setCurrentSyl(0); setEntered([]); setCompleted(false); setHasMistake(false); }
     }, 1500);
   }, [completed, paused, cdPhase, words, wordIndex, isPreview, studentToken]);
 
@@ -1124,9 +1126,9 @@ export default function ToneGamePage() {
             onTone={handleTone} wrongBtn={wrongBtn} wrongShakeKey={wrongShakeKey} onPause={() => setPaused(true)} playReveal={!cdPhase}
             practice={practiceMode} listen={wordIsListen} audioOff={audioOff}
             onReplay={() => word && speakWord(word)} onCantHear={() => { audioOffRef.current = true; setAudioOff(true); }}
-            onHint={practiceMode ? undefined : () => { if (!word) return; speakWord(word); if (!hasMistake) { setHasMistake(true); setCombo(0); } }} hintUsed={hasMistake}
+            onHint={practiceMode ? undefined : () => { if (!word) return; hintUsedRef.current = true; speakWord(word); if (!hasMistake) { setHasMistake(true); setCombo(0); } }} hintUsed={hasMistake}
             onSkip={practiceMode ? undefined : skipWord}
-            onSpeak={() => word && speakWord(word)} onReveal={revealAnswer}
+            onSpeak={() => { if (!word) return; hintUsedRef.current = true; speakWord(word); }} onReveal={revealAnswer}
             demoFx={isPreview ? qs('fx') : null} />
         )}
       </FigmaScreen>
