@@ -79,10 +79,19 @@ export function socialUserKey(provider, socialId) {
   return `${provider}:${socialId}`;
 }
 
-// 복귀(redirect) 대상 검증 — 허용 prefix로 시작하는지. 오픈 리다이렉트·토큰 유출 방지.
+// 복귀(redirect) 대상 검증 — 오픈 리다이렉트·토큰 유출 방지.
+// ★startsWith(prefix)는 경계가 없어 `https://허용도메인.evil.com` 같은 접미사 부착 도메인이 통과(토큰 탈취).
+//   프로토콜+호스트를 '정확히' 일치시킨다(포트·경로는 허용 — 로컬 dev 포트, capacitor 등 기존 동작 유지).
 export function isAllowedRedirect(target, allowedPrefixes) {
   if (!target || typeof target !== 'string') return false;
-  return allowedPrefixes.some((p) => p && target.startsWith(p));
+  let url;
+  try { url = new URL(target); } catch { return false; } // 절대 URL만 허용(상대·형식오류 거부)
+  return allowedPrefixes.some((p) => {
+    if (!p) return false;
+    let pu;
+    try { pu = new URL(p); } catch { return false; }
+    return url.protocol === pu.protocol && url.hostname === pu.hostname;
+  });
 }
 
 // 기본 허용 복귀 prefix. env.GAME_AUTH_REDIRECTS(콤마 구분)로 덮어쓸 수 있음.

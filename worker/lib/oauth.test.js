@@ -120,6 +120,16 @@ describe('isAllowedRedirect', () => {
     // prefix가 부분일치라도 시작이 아니면 차단
     expect(isAllowedRedirect('https://evil.com/https://localhost', prefixes)).toBe(false);
   });
+  it('접미사 부착 도메인 차단(토큰 탈취 방지) — startsWith 경계 취약점 회귀', () => {
+    // 허용 도메인을 접두어로 가진 공격자 도메인: startsWith였으면 통과했음
+    expect(isAllowedRedirect('https://tiantian-chinese.pages.dev.evil.com/game', prefixes)).toBe(false);
+    expect(isAllowedRedirect('http://localhost.evil.com/game', prefixes)).toBe(false);
+    // 다른 프로토콜(http)로 허용 호스트 위장
+    expect(isAllowedRedirect('http://tiantian-chinese.pages.dev/game', prefixes)).toBe(false);
+    // 상대·형식오류 URL 거부
+    expect(isAllowedRedirect('//evil.com', prefixes)).toBe(false);
+    expect(isAllowedRedirect('/game/tone', prefixes)).toBe(false);
+  });
 });
 
 describe('redirectPrefixes', () => {
