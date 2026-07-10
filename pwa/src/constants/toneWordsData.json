@@ -1782,5 +1782,371 @@
       "meaning": "얼마예요",
       "audioUrl": "/game/tts/duoshaoqian_102.mp3"
     }
+  ],
+  "slang": [
+    {
+      "hanzi": "网红",
+      "pinyin": [
+        "wǎng",
+        "hóng"
+      ],
+      "tones": [
+        3,
+        2
+      ],
+      "meaning": "인플루언서",
+      "audioUrl": "/game/tts/wanghong_32.mp3"
+    },
+    {
+      "hanzi": "内卷",
+      "pinyin": [
+        "nèi",
+        "juǎn"
+      ],
+      "tones": [
+        4,
+        3
+      ],
+      "meaning": "치열한 경쟁",
+      "audioUrl": "/game/tts/neijuan_43.mp3"
+    },
+    {
+      "hanzi": "躺平",
+      "pinyin": [
+        "tǎng",
+        "píng"
+      ],
+      "tones": [
+        3,
+        2
+      ],
+      "meaning": "드러눕기(무기력)",
+      "audioUrl": "/game/tts/tangping_32.mp3"
+    },
+    {
+      "hanzi": "破防",
+      "pinyin": [
+        "pò",
+        "fáng"
+      ],
+      "tones": [
+        4,
+        2
+      ],
+      "meaning": "멘탈 붕괴",
+      "audioUrl": "/game/tts/pofang_42.mp3"
+    },
+    {
+      "hanzi": "摆烂",
+      "pinyin": [
+        "bǎi",
+        "làn"
+      ],
+      "tones": [
+        3,
+        4
+      ],
+      "meaning": "자포자기",
+      "audioUrl": "/game/tts/bailan_34.mp3"
+    },
+    {
+      "hanzi": "打卡",
+      "pinyin": [
+        "dǎ",
+        "kǎ"
+      ],
+      "tones": [
+        3,
+        3
+      ],
+      "meaning": "인증(체크인)",
+      "audioUrl": "/game/tts/daka_33.mp3"
+    },
+    {
+      "hanzi": "秒杀",
+      "pinyin": [
+        "miǎo",
+        "shā"
+      ],
+      "tones": [
+        3,
+        1
+      ],
+      "meaning": "순식간에 해치움",
+      "audioUrl": "/game/tts/miaosha_31.mp3"
+    },
+    {
+      "hanzi": "吐槽",
+      "pinyin": [
+        "tǔ",
+        "cáo"
+      ],
+      "tones": [
+        3,
+        2
+      ],
+      "meaning": "디스하다",
+      "audioUrl": "/game/tts/tucao_32.mp3"
+    },
+    {
+      "hanzi": "点赞",
+      "pinyin": [
+        "diǎn",
+        "zàn"
+      ],
+      "tones": [
+        3,
+        4
+      ],
+      "meaning": "좋아요",
+      "audioUrl": "/game/tts/dianzan_34.mp3"
+    },
+    {
+      "hanzi": "追星",
+      "pinyin": [
+        "zhuī",
+        "xīng"
+      ],
+      "tones": [
+        1,
+        1
+      ],
+      "meaning": "덕질하다",
+      "audioUrl": "/game/tts/zhuixing_11.mp3"
+    },
+    {
+      "hanzi": "佛系",
+      "pinyin": [
+        "fó",
+        "xì"
+      ],
+      "tones": [
+        2,
+        4
+      ],
+      "meaning": "욕심 없는(마이웨이)",
+      "audioUrl": "/game/tts/foxi_24.mp3"
+    },
+    {
+      "hanzi": "学霸",
+      "pinyin": [
+        "xué",
+        "bà"
+      ],
+      "tones": [
+        2,
+        4
+      ],
+      "meaning": "공부의 신",
+      "audioUrl": "/game/tts/xueba_24.mp3"
+    },
+    {
+      "hanzi": "剁手",
+      "pinyin": [
+        "duò",
+        "shǒu"
+      ],
+      "tones": [
+        4,
+        3
+      ],
+      "meaning": "지름신(과소비)",
+      "audioUrl": "/game/tts/duoshou_43.mp3"
+    },
+    {
+      "hanzi": "熬夜",
+      "pinyin": [
+        "áo",
+        "yè"
+      ],
+      "tones": [
+        2,
+        4
+      ],
+      "meaning": "밤새우다",
+      "audioUrl": "/game/tts/aoye_24.mp3"
+    },
+    {
+      "hanzi": "尴尬",
+      "pinyin": [
+        "gān",
+        "gà"
+      ],
+      "tones": [
+        1,
+        4
+      ],
+      "meaning": "민망하다",
+      "audioUrl": "/game/tts/ganga_14.mp3"
+    },
+    {
+      "hanzi": "治愈",
+      "pinyin": [
+        "zhì",
+        "yù"
+      ],
+      "tones": [
+        4,
+        4
+      ],
+      "meaning": "힐링되다",
+      "audioUrl": "/game/tts/zhiyu_44.mp3"
+    },
+    {
+      "hanzi": "干饭",
+      "pinyin": [
+        "gàn",
+        "fàn"
+      ],
+      "tones": [
+        4,
+        4
+      ],
+      "meaning": "밥 먹기(먹방)",
+      "audioUrl": "/game/tts/ganfan_44.mp3"
+    },
+    {
+      "hanzi": "翻车",
+      "pinyin": [
+        "fān",
+        "chē"
+      ],
+      "tones": [
+        1,
+        1
+      ],
+      "meaning": "실패하다",
+      "audioUrl": "/game/tts/fanche_11.mp3"
+    },
+    {
+      "hanzi": "上头",
+      "pinyin": [
+        "shàng",
+        "tóu"
+      ],
+      "tones": [
+        4,
+        2
+      ],
+      "meaning": "푹 빠지다",
+      "audioUrl": "/game/tts/shangtou_42.mp3"
+    },
+    {
+      "hanzi": "出圈",
+      "pinyin": [
+        "chū",
+        "quān"
+      ],
+      "tones": [
+        1,
+        1
+      ],
+      "meaning": "대세가 되다",
+      "audioUrl": "/game/tts/chuquan_11.mp3"
+    },
+    {
+      "hanzi": "硬核",
+      "pinyin": [
+        "yìng",
+        "hé"
+      ],
+      "tones": [
+        4,
+        2
+      ],
+      "meaning": "하드코어",
+      "audioUrl": "/game/tts/yinghe_42.mp3"
+    },
+    {
+      "hanzi": "种草",
+      "pinyin": [
+        "zhòng",
+        "cǎo"
+      ],
+      "tones": [
+        4,
+        3
+      ],
+      "meaning": "사고 싶어지다",
+      "audioUrl": "/game/tts/zhongcao_43.mp3"
+    },
+    {
+      "hanzi": "吃瓜",
+      "pinyin": [
+        "chī",
+        "guā"
+      ],
+      "tones": [
+        1,
+        1
+      ],
+      "meaning": "구경하다(가십)",
+      "audioUrl": "/game/tts/chigua_11.mp3"
+    },
+    {
+      "hanzi": "逆袭",
+      "pinyin": [
+        "nì",
+        "xí"
+      ],
+      "tones": [
+        4,
+        2
+      ],
+      "meaning": "인생 역전",
+      "audioUrl": "/game/tts/nixi_42.mp3"
+    },
+    {
+      "hanzi": "神仙",
+      "pinyin": [
+        "shén",
+        "xiān"
+      ],
+      "tones": [
+        2,
+        1
+      ],
+      "meaning": "최고(신급)",
+      "audioUrl": "/game/tts/shenxian_21.mp3"
+    },
+    {
+      "hanzi": "官宣",
+      "pinyin": [
+        "guān",
+        "xuān"
+      ],
+      "tones": [
+        1,
+        1
+      ],
+      "meaning": "공식 발표",
+      "audioUrl": "/game/tts/guanxuan_11.mp3"
+    },
+    {
+      "hanzi": "爆款",
+      "pinyin": [
+        "bào",
+        "kuǎn"
+      ],
+      "tones": [
+        4,
+        3
+      ],
+      "meaning": "대박 상품",
+      "audioUrl": "/game/tts/baokuan_43.mp3"
+    },
+    {
+      "hanzi": "反转",
+      "pinyin": [
+        "fǎn",
+        "zhuǎn"
+      ],
+      "tones": [
+        3,
+        3
+      ],
+      "meaning": "반전",
+      "audioUrl": "/game/tts/fanzhuan_33.mp3"
+    }
   ]
 }
