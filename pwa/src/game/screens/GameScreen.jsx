@@ -1,6 +1,6 @@
 // 게임 화면 (Figma 좌표 절대배치) — 점수·일시정지·타이머·단어카드·코치·성조버튼 + 콤보/신기록 버스트 연출(P4b).
 import { useState, useEffect, useRef, useLayoutEffect } from 'react';
-import { StarIcon, PauseIcon, TimerIcon, SpeakerHighIcon, EyeIcon, TicketIcon, SkipForwardIcon, SkullIcon } from '@phosphor-icons/react';
+import { StarIcon, PauseIcon, TimerIcon, SpeakerHighIcon, EyeIcon, TicketIcon, SkullIcon } from '@phosphor-icons/react';
 import { TG, FONT_TITLE, FONT_NUM, FONT_BODY, TOUCH_OPT } from '../tgTokens.js';
 import { play as playSfx } from '../tgSfx.js';
 import { Reveal, WordCard, ToneButtons, DrawPad, CoachBubble, ConfettiBurst, CrispFlash, LIGHT_CONFETTI } from './shared.jsx';
@@ -135,7 +135,7 @@ function CenterBurst({ data }) {
   );
 }
 
-export function GameScreen({ word, entered, currentSyl, completed, timedOut, wordIndex, wordsLen, wordTimeLimit, gaugeOffsetMs = 0, lowTime = false, paused, combo, comboFlash, floatScore, score, coachText, onTone, wrongBtn, wrongShakeKey = 0, onPause, playReveal = true, endless = false, lives = 3, showHearts = false, onSkip, showSudden = false, runId = 0, recordToBeat = 0, practice = false, listen = false, audioOff = false, onReplay, onCantHear, onHint, hintUsed = false, onSpeak, onReveal, draw = false, drawExpectedTone, onDraw, drawResetKey = 0, demoFx = null }) {
+export function GameScreen({ word, entered, currentSyl, completed, timedOut, wordIndex, wordsLen, wordTimeLimit, gaugeOffsetMs = 0, lowTime = false, paused, combo, comboFlash, floatScore, score, coachText, onTone, wrongBtn, wrongShakeKey = 0, onPause, playReveal = true, endless = false, lives = 3, onSkip, showSudden = false, runId = 0, recordToBeat = 0, practice = false, listen = false, audioOff = false, onReplay, onCantHear, onHint, hintUsed = false, onSpeak, onReveal, draw = false, drawExpectedTone, onDraw, drawResetKey = 0, demoFx = null }) {
   lowTime = lowTime || demoFx === 'low'; // [DEV] 미리보기 텐션 데모(?screen=game&fx=low) — 머지 전 백도어 제거 대상
   // ── 버스트 연출(P4b): 콤보 마일스톤(5·10·15…) + 라이브 신기록. 비차단·자동 소멸 ──
   const [burst, setBurst] = useState(null);
@@ -248,26 +248,6 @@ export function GameScreen({ word, entered, currentSyl, completed, timedOut, wor
         <span style={{ fontFamily: FONT_NUM, fontWeight: 800, fontSize: 17, color: '#2b2730' }}>{score}</span>
       </div>
       </Reveal>
-      {/* 건너뛰기 예산 HUD (좌상단) — 연습 외 전 모드. 하트(=목숨 오해) 대신 '건너뛰기 패스' 티켓 3개 + 라벨.
-          건너뛰기마다 하나씩 빈 티켓으로(소모 시 팟 튕김). 목숨 아님 — 틀려도 안 죽고 예산만 소진. */}
-      {showHearts && (
-        <Reveal i={0} play={playReveal} style={{ position: 'absolute', left: 20, top: 17 }}>
-          <style>{`@keyframes tg-skiplose{0%{transform:scale(1)}28%{transform:scale(1.4) rotate(-8deg)}55%{transform:scale(.7) rotate(6deg)}100%{transform:scale(.82) rotate(0)}}`}</style>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2 }}>
-            <div style={{ display: 'flex', gap: 5 }} aria-label={`남은 건너뛰기 ${lives}개`}>
-              {[0, 1, 2].map((i) => {
-                const on = i < lives;
-                return (
-                  <TicketIcon key={i} size={22} weight={on ? 'fill' : 'regular'} color={on ? TG.CORAL : '#d8d0c7'}
-                    style={{ transition: 'transform 200ms ease, color 200ms ease', transform: on ? 'scale(1)' : 'scale(0.82)',
-                      animation: i === lostHeart ? 'tg-skiplose 520ms ease-out' : 'none' }} />
-                );
-              })}
-            </div>
-            <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 9.5, color: TG.SUB, lineHeight: 1, letterSpacing: '-0.01em', paddingLeft: 1 }}>건너뛰기</span>
-          </div>
-        </Reveal>
-      )}
       {/* 일시정지 (우상단) */}
       <Reveal i={0} play={playReveal} style={{ position: 'absolute', right: 20, top: 23 }}>
       <button onClick={onPause} aria-label="일시정지" className="tg-press" style={{ width: 40, height: 40, border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', ...TOUCH_OPT }}>
@@ -343,21 +323,29 @@ export function GameScreen({ word, entered, currentSyl, completed, timedOut, wor
           </div>
         </Reveal>
       )}
-      {/* 건너뛰기 — 못 풀겠는 단어를 건너뛰기 패스 1개 쓰고 넘김. 소진(0)이면 비활성(스킵만 불가, 게임은 계속). 연습 모드는 미노출(자체 정답보기). */}
+      {/* 건너뛰기 — 못 풀겠는 단어를 건너뛰기 패스 1개 쓰고 넘김. 남은 티켓 3칸을 버튼 안에 함께 표시(예산 HUD 통합):
+          fill=남음·흐림=소진, 소모 시 방금 빈 티켓을 '팟' 튕겨(tg-skiplose) 소진을 명확히. 0이면 비활성(스킵만 불가, 게임은 계속). 연습 모드는 미노출. */}
       {onSkip && (
         <Reveal i={4} play={playReveal} style={{ position: 'absolute', left: 0, right: 0, bottom: draw ? 'calc(40px + env(safe-area-inset-bottom))' : 'calc(130px + env(safe-area-inset-bottom))', display: 'flex', justifyContent: 'center' }}>
+          <style>{`@keyframes tg-skiplose{0%{transform:rotate(45deg) scale(1)}28%{transform:rotate(37deg) scale(1.4)}55%{transform:rotate(51deg) scale(.7)}100%{transform:rotate(45deg) scale(.82)}}`}</style>
           {(() => {
             const disabled = completed || lives <= 0;
             return (
               <button onClick={onSkip} disabled={disabled} className="tg-press"
-                aria-label={lives > 0 ? '건너뛰기 (1회 소모)' : '건너뛰기를 다 써서 넘길 수 없어요'}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 16px', borderRadius: 14,
+                aria-label={lives > 0 ? `건너뛰기 · 남은 ${lives}개 (1회 소모)` : '건너뛰기를 다 써서 넘길 수 없어요'}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '9px 16px', borderRadius: 14,
                   background: '#fff', border: '1.5px solid #ebe5de', cursor: disabled ? 'default' : 'pointer',
                   opacity: disabled ? 0.5 : 1, boxShadow: '0px 2px 6px rgba(43,39,48,0.05)', ...TOUCH_OPT }}>
-                <SkipForwardIcon size={16} weight="fill" color={TG.SUB} />
                 <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 13, color: '#2b2730' }}>건너뛰기</span>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 1, fontFamily: FONT_BODY, fontWeight: 800, fontSize: 12, color: TG.CORAL }}>
-                  <TicketIcon size={12} weight="fill" color={TG.CORAL} />−1
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }} aria-hidden="true">
+                  {[0, 1, 2].map((i) => {
+                    const on = i < lives;
+                    return (
+                      <TicketIcon key={i} size={17} weight={on ? 'fill' : 'regular'} color={on ? TG.CORAL : '#d8d0c7'}
+                        style={{ transition: 'transform 200ms ease, color 200ms ease', transform: on ? 'rotate(45deg) scale(1)' : 'rotate(45deg) scale(0.82)',
+                          animation: i === lostHeart ? 'tg-skiplose 520ms ease-out' : 'none' }} />
+                    );
+                  })}
                 </span>
               </button>
             );

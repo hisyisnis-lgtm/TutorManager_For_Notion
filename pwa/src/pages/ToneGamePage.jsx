@@ -1138,7 +1138,7 @@ export default function ToneGamePage() {
       <FigmaScreen>
         {word && (
           <GameScreen word={word} entered={entered} currentSyl={currentSyl} completed={completed} timedOut={timedOut}
-            wordIndex={wordIndex} wordsLen={words.length} wordTimeLimit={wordTimeLimit} gaugeOffsetMs={gaugeOffsetMs} lowTime={lowTime} paused={paused || !!cdPhase || suddenIntro} endless={endlessMode || (isPreview && qs('endless') === '1')} lives={lives} showHearts={!practiceMode} showSudden={suddenIntro} runId={runId} recordToBeat={recordToBeat}
+            wordIndex={wordIndex} wordsLen={words.length} wordTimeLimit={wordTimeLimit} gaugeOffsetMs={gaugeOffsetMs} lowTime={lowTime} paused={paused || !!cdPhase || suddenIntro} endless={endlessMode || (isPreview && qs('endless') === '1')} lives={lives} showSudden={suddenIntro} runId={runId} recordToBeat={recordToBeat}
             combo={combo} comboFlash={comboFlash} floatScore={floatScore} score={score} coachText={coach.text}
             onTone={handleTone} wrongBtn={wrongBtn} wrongShakeKey={wrongShakeKey} onPause={() => setPaused(true)} playReveal={!cdPhase}
             practice={practiceMode} listen={wordIsListen} audioOff={audioOff}
