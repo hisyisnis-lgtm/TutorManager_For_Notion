@@ -7,6 +7,8 @@ const withAudio = (w) => ({ ...w, audioUrl: ttsAudioUrl(w) });
 // 보고 찾기(비트1) · 듣고 찾기(비트2)
 export const P1_WORD = withAudio({ hanzi: '妈妈', pinyin: ['mā', 'ma'], tones: [1, 0], meaning: '엄마' });
 export const P2_WORD = withAudio({ hanzi: '好', pinyin: ['hǎo'], tones: [3], meaning: '좋다' });
+// 연음 규칙(비트4) — 3성 뒤 2성이면 앞 3성을 반만 내렸다 이어서 발음(반3성 연음). 대표 단어.
+export const LY_WORD = withAudio({ hanzi: '美国', pinyin: ['měi', 'guó'], tones: [3, 2], meaning: '미국' });
 
 // 성조 소개(비트0) — 같은 'ma'가 성조에 따라 뜻이 달라짐(고전 예시).
 export const TONE_SAMPLES = {
@@ -19,4 +21,4 @@ export const TONE_SAMPLES = {
 export const SAMPLE_ORDER = [1, 2, 3, 4, 0];
 
 // 튜토리얼에서 음성 생성이 필요한 전체 단어(빌드 스크립트용)
-export const TUTORIAL_TTS_WORDS = [P1_WORD, P2_WORD, ...SAMPLE_ORDER.map((n) => TONE_SAMPLES[n])];
+export const TUTORIAL_TTS_WORDS = [P1_WORD, P2_WORD, LY_WORD, ...SAMPLE_ORDER.map((n) => TONE_SAMPLES[n])];

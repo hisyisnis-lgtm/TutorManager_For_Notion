@@ -1,8 +1,9 @@
-// 첫 진입 인게임 튜토리얼 — 실제 라운드를 압축한 4비트 미니 플로우(짧게).
+// 첫 진입 인게임 튜토리얼 — 실제 라운드를 압축한 5비트 미니 플로우(짧게).
 //  비트0 성조 익히기: 같은 'ma' 5성(妈麻马骂吗) 탭해서 소리 듣기 → 성조=오르내림 각인.
 //  비트1 보고 찾기(妈妈): 한자 보고 성조 선택(정답 강조) → 완료 시 발음 재생(추측→확인 루프).
 //  비트2 듣고 찾기(好): 소리만 듣고 성조 선택 → 한자 공개. 실제 라운드에 섞여 나오는 유형 대비.
 //  비트3 그려서 찾기(好): 한자 보고 성조를 손가락으로 그려서 맞히기(DrawPad). 그리기 문제 유형 대비.
+//  비트4 연음 규칙(美国): 3성+2성 답한 뒤 완성 순간 연음 마크 등장 → 하늘쌤 반3성 연음 규칙 각인.
 // 게임 레이아웃 + 딤 스포트라이트. 완료 후 onDone → 모드선택.
 import { useState, useEffect, useRef } from 'react';
 import { StarIcon, TimerIcon, CaretRightIcon } from '@phosphor-icons/react';
@@ -12,9 +13,10 @@ import { TONES } from '../../constants/toneGameWords.js';
 import { speakWord } from '../tgTts.js';
 import { play as playSfx } from '../tgSfx.js';
 import { WordCard, CoachBubble, Reveal, DrawPad } from './shared.jsx';
-import { P1_WORD, P2_WORD, TONE_SAMPLES, SAMPLE_ORDER } from '../tutorialWords.js';
+import { P1_WORD, P2_WORD, LY_WORD, TONE_SAMPLES, SAMPLE_ORDER } from '../tutorialWords.js';
+import { findLianyin } from '../lianyin.js';
 
-const PHASE_LABEL = ['성조 익히기', '보고 찾기', '듣고 찾기', '그려서 찾기'];
+const PHASE_LABEL = ['성조 익히기', '보고 찾기', '듣고 찾기', '그려서 찾기', '연음 규칙'];
 
 export function TutorialScreen({ onDone }) {
   const [phase, setPhase] = useState(0);       // 0 성조소개 · 1 보고찾기 · 2 듣고찾기 · 3 그려서찾기
@@ -29,9 +31,10 @@ export function TutorialScreen({ onDone }) {
   const later = (fn, ms) => timersRef.current.push(setTimeout(fn, ms));
   useEffect(() => () => { timersRef.current.forEach(clearTimeout); }, []);
 
-  const word = phase >= 2 ? P2_WORD : P1_WORD; // 비트2 듣기·비트3 그리기 모두 好(단음절)
+  const word = phase === 4 ? LY_WORD : phase >= 2 ? P2_WORD : P1_WORD; // 비트4 연음=美国, 비트2/3=好(단음절)
   const answer = phase >= 1 ? word.tones[currentSyl] : null;
-  const dimOff = (phase === 2 || phase === 3) && completed; // 마지막 정답 시 딤 해제(해방감)
+  const lyAt = phase === 4 ? findLianyin(word.tones) : -1; // 비트4 완성 시 연음 마크 표시
+  const dimOff = (phase === 2 || phase === 3 || phase === 4) && completed; // 정답 시 딤 해제(해방감·마크 강조)
 
   // 비트2 진입 시 발음 자동 재생(듣기 문제)
   useEffect(() => {
@@ -53,7 +56,8 @@ export function TutorialScreen({ onDone }) {
         playSfx('correct'); speakWord(word); // 완료 → 올바른 발음 재생(인게임과 동일)
         if (phase === 1) later(() => goPhase(2), 1500);
         else if (phase === 2) later(() => goPhase(3), 1500);
-        else if (!doneRef.current) { doneRef.current = true; later(onDone, 1600); } // 비트3 = 마지막
+        else if (phase === 3) later(() => goPhase(4), 1500);
+        else if (!doneRef.current) { doneRef.current = true; later(onDone, 2200); } // 비트4 연음 = 마지막(마크·규칙 볼 시간 여유)
       } else { playSfx('tap'); setCurrentSyl((s) => s + 1); }
     } else {
       setWrong(n); haptic(20); playSfx('wrong');
@@ -73,7 +77,9 @@ export function TutorialScreen({ onDone }) {
     ? (completed ? '맞히면 올바른 발음이 들려요 👂' : `${currentSyl + 1}번째 글자의 성조를 눌러요`)
     : phase === 2
     ? (completed ? '잘했어요! 다음은 그리기예요 ✏️' : '이번엔 소리만 듣고 성조를 찾아요')
-    : (completed ? '멋져요! 이제 시작해요' : '성조를 손가락으로 그려서 맞혀요 ✏️');
+    : phase === 3
+    ? (completed ? '좋아요! 마지막 규칙 하나 🔗' : '성조를 손가락으로 그려서 맞혀요 ✏️')
+    : (completed ? '연음! 반3성으로 이어서 🔗' : '3성 뒤 2성! 성조를 눌러요');
 
   return (
     <>
@@ -93,7 +99,7 @@ export function TutorialScreen({ onDone }) {
       {/* 진행 표시(3점) + 단계 라벨 — top70 중앙 */}
       <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', top: 70, display: 'flex', alignItems: 'center', gap: 8, background: '#fff1f1', padding: '8px 14px', borderRadius: 14, zIndex: 7 }}>
         <div style={{ display: 'flex', gap: 5 }}>
-          {[0, 1, 2, 3].map((i) => (
+          {[0, 1, 2, 3, 4].map((i) => (
             <div key={i} style={{ width: i === phase ? 16 : 6, height: 6, borderRadius: 3, background: i === phase ? '#f2484c' : '#f4c4c4', transition: 'width .25s ease' }} />
           ))}
         </div>
@@ -125,7 +131,7 @@ export function TutorialScreen({ onDone }) {
         ) : (
           <WordCard word={word} entered={entered} currentSyl={currentSyl} completed={completed} timedOut={false}
             progressText="1/1" combo={0} comboFlash={false} floatScore={null} hideProgress
-            listen={phase === 2} draw={phase === 3} audioOff={audioOff} onReplay={() => speakWord(word)} onCantHear={() => setAudioOff(true)} />
+            listen={phase === 2} draw={phase === 3} lianyinAt={lyAt} audioOff={audioOff} onReplay={() => speakWord(word)} onCantHear={() => setAudioOff(true)} />
         )}
       </Reveal>
 

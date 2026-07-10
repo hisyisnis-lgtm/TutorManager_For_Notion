@@ -22,6 +22,7 @@ import {
   buildReviewList, masteredCount, buildRoundWords,
 } from '../game/tgWordStats.js';
 import { recordTone, loadToneStats, saveToneStats, weakestTone, toneAccuracy } from '../game/toneStats.js';
+import { findLianyin } from '../game/lianyin.js';
 import { recordPlay, loadStreak, effectiveCurrent, dateKeyKST, loadFreezes } from '../game/streak.js';
 import { syncAchievements, loadAchievements, achievementById, loadReviewMastered, addReviewMastered } from '../game/achievements.js';
 import { initTts, speakWord, preloadTts } from '../game/tgTts.js';
@@ -104,6 +105,12 @@ const PREVIEW_WORDS = [
   { hanzi: '咖啡', pinyin: ['kā', 'fēi'], tones: [1, 1], meaning: '커피', audioUrl: '/game/tts/kafei_11.mp3' },
 ];
 
+// 미리보기(?screen=game&lianyin=1)용 — 연음(3성+2성) 각인 마크 검수 전용
+const PREVIEW_LIANYIN = [
+  { hanzi: '美国', pinyin: ['měi', 'guó'], tones: [3, 2], meaning: '미국' },
+  { hanzi: '可能', pinyin: ['kě', 'néng'], tones: [3, 2], meaning: '아마도' },
+];
+
 // 미리보기(?screen=mastery)용 샘플 — 복습필요 3 + 마스터 12 (DEV 검수 전용)
 const PREVIEW_MASTERY = (() => {
   const review = [
@@ -151,7 +158,9 @@ export default function ToneGamePage() {
 
   const [screen, setScreen] = useState(initialScreen); // start | difficulty | game | end | intro | tutorial
   const [paused, setPaused] = useState(false);
-  const [words, setWords] = useState(() => (isPreview && (previewScreen === 'game' || previewScreen === 'gameover') ? PREVIEW_WORDS : []));
+  const [words, setWords] = useState(() => (
+    isPreview && qs('lianyin') === '1' ? PREVIEW_LIANYIN
+      : isPreview && (previewScreen === 'game' || previewScreen === 'gameover') ? PREVIEW_WORDS : []));
   const [cdPhase, setCdPhase] = useState(cdPreview ? 'run' : null); // 카운트다운 오버레이 단계: null|'in'|'run'|'out'
   const [cdNum, setCdNum] = useState(3);
   const [homeTx, setHomeTx] = useState(null); // 타이틀→홈 웨이브 전환: null|'in'(슬라이드 인)|'hold'(팁 강제노출)|'out'(슬라이드 아웃)
@@ -980,6 +989,8 @@ export default function ToneGamePage() {
 
   const word = words[wordIndex];
   const avgMsForResult = answeredCount > 0 ? totalAnswerTime / answeredCount : 0;
+  // 연음(반3성) 각인 — 3성+2성 단어면 완성 순간 두 글자 위에 마크 표시. 일반·테마·복습만(연습·무한 제외).
+  const wordLianyin = (word && !practiceMode && !endlessMode) ? findLianyin(word.tones) : -1;
 
   if (error) return <div style={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: TG.DANGER, fontSize: 14, background: TG.BG }}>정보를 불러오지 못했어요</div>;
   // 소셜 로그인 직후 닉네임 설정 게이트 — 스플래시·홈보다 우선(로그인하면 항상 이 화면부터).
@@ -1142,7 +1153,7 @@ export default function ToneGamePage() {
             combo={combo} comboFlash={comboFlash} floatScore={floatScore} score={score} coachText={coach.text}
             onTone={handleTone} wrongBtn={wrongBtn} wrongShakeKey={wrongShakeKey} onPause={() => setPaused(true)} playReveal={!cdPhase}
             practice={practiceMode} listen={wordIsListen} audioOff={audioOff}
-            draw={wordIsDraw} drawExpectedTone={word ? word.tones[currentSyl] : undefined} onDraw={handleTone} drawResetKey={`${runId}-${wordIndex}-${currentSyl}`}
+            draw={wordIsDraw} drawExpectedTone={word ? word.tones[currentSyl] : undefined} onDraw={handleTone} drawResetKey={`${runId}-${wordIndex}-${currentSyl}`} lianyinAt={wordLianyin}
             onReplay={() => word && speakWord(word)} onCantHear={() => { audioOffRef.current = true; setAudioOff(true); }}
             onHint={(practiceMode || wordIsDraw) ? undefined : () => { if (!word) return; hintUsedRef.current = true; speakWord(word); if (!hasMistake) { setHasMistake(true); setCombo(0); } }} hintUsed={hasMistake}
             onSkip={practiceMode ? undefined : skipWord}

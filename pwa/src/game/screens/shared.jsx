@@ -211,6 +211,12 @@ const TONE_GAME_CSS = `
       @keyframes tg-crispflash { 0%{opacity:0} 9%{opacity:1} 100%{opacity:0} }
       /* 현재 글자 은은한 숨쉬기(색 대신 명도+애니로 강조) */
       @keyframes tg-breathe { 0%,100%{transform:scale(1)} 50%{transform:scale(1.07)} }
+      /* 연음 마크 — 정답 순간 획이 그려지고(반3성→2성 이어짐) 화살촉이 뒤이어 나타남 */
+      @keyframes tg-lianyin-draw { from{stroke-dashoffset:100} to{stroke-dashoffset:0} }
+      @keyframes tg-lianyin-in { to{opacity:1} }
+      .tg-lianyin-stroke{ stroke-dasharray:100; stroke-dashoffset:100; animation: tg-lianyin-draw .5s ease-out .12s forwards }
+      .tg-lianyin-barb{ opacity:0; animation: tg-lianyin-in .16s ease-out .58s forwards }
+      @media (prefers-reduced-motion: reduce){ .tg-lianyin-stroke{ stroke-dashoffset:0; animation:none !important } .tg-lianyin-barb{ opacity:1; animation:none !important } }
       .tg-reveal{ animation: tg-rise .4s cubic-bezier(.22,1,.36,1) both }
       .tg-toast{ animation: tg-toast 1.7s ease both }
       @media (prefers-reduced-motion: reduce){ .tg-reveal{ animation: none !important } }
@@ -312,7 +318,19 @@ export function CoachBubble({ text }) {
 }
 
 // ── 단어 카드 (반응형 + 고정 슬롯, 메모리 §5) ──────────
-export function WordCard({ word, entered, currentSyl, completed, timedOut, progressText, combo, comboFlash, floatScore, hideProgress, listen = false, audioOff = false, onReplay, onCantHear, onHint, hintUsed = false, draw = false }) {
+// 연음(반3성) 마크 — 하늘쌤 판서 이음 기호. 좌우 대칭 ˇ(3성) + 오른쪽 화살촉으로
+// "반만 내렸다 2성으로 이어짐"을 나타낸다. 정답 순간 두 글자 위에 그려져 규칙을 각인.
+export const LIANYIN_COLOR = '#7c5cff';
+export function LianyinMark({ width = 108, color = LIANYIN_COLOR, stroke = 7, animate = true }) {
+  return (
+    <svg width={width} height={width * 48 / 80} viewBox="22 8 80 48" fill="none" aria-hidden="true" style={{ display: 'block', overflow: 'visible' }}>
+      <path d="M 30 20 L 60 47 L 94 16" stroke={color} strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" className={animate ? 'tg-lianyin-stroke' : ''} />
+      <path d="M 94 16 L 92 31 M 94 16 L 79 17" stroke={color} strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" className={animate ? 'tg-lianyin-barb' : ''} />
+    </svg>
+  );
+}
+
+export function WordCard({ word, entered, currentSyl, completed, timedOut, progressText, combo, comboFlash, floatScore, hideProgress, listen = false, audioOff = false, onReplay, onCantHear, onHint, hintUsed = false, draw = false, lianyinAt = -1 }) {
   const listening = listen && !audioOff && !completed && !timedOut; // 듣기 모드: 답하기 전엔 한자 가리고 소리 패널
   // 한자 모드 발음 힌트 — 답하기 전에만, 음소거 아닐 때만. 소리=정답이라 처음 쓰면 콤보가 끊긴다(hintUsed=이미 끊긴 상태면 무료).
   const canHint = onHint && !listening && !completed && !timedOut && !audioOff;
@@ -332,10 +350,12 @@ export function WordCard({ word, entered, currentSyl, completed, timedOut, progr
     const tone = revealed ? entered[i] : null;
     const toneColor = tone != null ? (TONES.find((t) => t.num === tone)?.color ?? TG.INK) : TG.INK;
     const isCurrent = i === currentSyl && !completed;
+    // 연음 쌍(3성·2성)은 완성 시 성조칩을 숨기고 그 자리에 연음 마크를 얹는다(칩과 겹침 방지).
+    const inLianyin = completed && lianyinAt >= 0 && (i === lianyinAt || i === lianyinAt + 1);
     return (
       <div key={i} style={{ width: colW, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
         <div style={{ height: hz > 50 ? 34 : 26, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          {revealed ? (
+          {inLianyin ? null : revealed ? (
             <span style={{
               display: 'inline-flex', alignItems: 'center', gap: 3, padding: '3px 8px', borderRadius: 999,
               background: toneColor, color: '#fff', animation: 'tg-pop .3s cubic-bezier(.34,1.56,.64,1) both',
@@ -378,6 +398,12 @@ export function WordCard({ word, entered, currentSyl, completed, timedOut, progr
 
   const cols = Array.from({ length: n }, (_, i) => i);
   const rows = twoRow ? [cols.slice(0, perRow), cols.slice(perRow)] : [cols];
+  // 연음(반3성) 마크 — 완성 순간 3성+2성 두 글자 위(성조칩 자리)에 걸치게. 단일 행에서만.
+  const step = colW + gap;
+  const totalW = n * colW + (n - 1) * gap;
+  const showLianyin = completed && !timedOut && lianyinAt >= 0 && lianyinAt + 1 < n && !twoRow;
+  const lyOffset = showLianyin ? (lianyinAt * step + colW / 2 + step / 2 - totalW / 2) : 0;
+  const lyW = colW + Math.round(gap) + 22;
 
   return (
     <div style={{
@@ -405,7 +431,14 @@ export function WordCard({ word, entered, currentSyl, completed, timedOut, progr
       {/* 음절 — 듣기 중 미공개 글자는 스피커, 맞히면 한자 공개 */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 6 }}>
         {rows.map((row, ri) => (
-          <div key={ri} style={{ display: 'flex', justifyContent: 'center', gap }}>{row.map((i) => Syllable(i))}</div>
+          <div key={ri} style={{ position: 'relative', display: 'flex', justifyContent: 'center', gap }}>
+            {row.map((i) => Syllable(i))}
+            {showLianyin && ri === 0 && (
+              <div style={{ position: 'absolute', top: -8, left: `calc(50% + ${lyOffset}px)`, transform: 'translateX(-50%)', pointerEvents: 'none', zIndex: 3 }}>
+                <LianyinMark width={lyW} />
+              </div>
+            )}
+          </div>
         ))}
       </div>
       {/* 하단 — 듣기면 안내 + 다시듣기/못들어요, 아니면 가이드 */}
@@ -426,6 +459,9 @@ export function WordCard({ word, entered, currentSyl, completed, timedOut, progr
       ) : (
         <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, minHeight: 28, justifyContent: 'center' }}>
           <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 14, color: guide.color, transition: `color ${DUR.state} ease` }}>{guide.text}</span>
+          {showLianyin && (
+            <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 12, color: LIANYIN_COLOR }}>연음 · 3성+2성은 반3성으로 이어서</span>
+          )}
           {canHint && (
             <button onClick={onHint} className="tg-press" aria-label={hintUsed ? '발음 다시 듣기' : '발음 힌트 듣기 (콤보가 끊겨요)'} style={{
               display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 13px', borderRadius: 13,
