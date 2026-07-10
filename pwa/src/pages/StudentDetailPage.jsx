@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { stripEmoji } from '../utils/stringUtils.js';
-import { Button, Card, message } from 'antd';
+import { Button, Card, Switch, message } from 'antd';
 import { LinkIcon, FileTextIcon } from '@phosphor-icons/react';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import Badge from '../components/ui/Badge.jsx';
@@ -9,9 +9,9 @@ import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import ErrorMessage from '../components/ui/ErrorMessage.jsx';
 import { getPage, deletePage } from '../api/notionClient.js';
 import ConfirmDialog from '../components/ui/ConfirmDialog.jsx';
-import { parseStudent, statusColor, STATUS_OPTIONS, updateStudentStatus, markStudentSharedIfEmpty } from '../api/students.js';
+import { parseStudent, statusColor, STATUS_OPTIONS, updateStudentStatus, updateStudentVip, markStudentSharedIfEmpty } from '../api/students.js';
 import { SITE_ORIGIN } from '../constants.js';
-import { PRIMARY, PRIMARY_BG, STATUS_ERROR_BORDER, TEXT_PRIMARY } from '../constants/theme.js';
+import { PRIMARY, PRIMARY_BG, STATUS_ERROR_BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '../constants/theme.js';
 import SectionHeading from '../components/ui/SectionHeading.jsx';
 import { fetchClassesPage, parseClass, classStatusColor } from '../api/classes.js';
 import { fetchPaymentsPage, parsePayment, paymentStatusColor, refundSessions, formatSessions } from '../api/payments.js';
@@ -29,6 +29,7 @@ export default function StudentDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [updating, setUpdating] = useState(false);
+  const [vipUpdating, setVipUpdating] = useState(false);
   const [showStatusMenu, setShowStatusMenu] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -77,6 +78,18 @@ export default function StudentDetailPage() {
       message.error(`상태 변경 실패: ${e.message}`);
     } finally {
       setUpdating(false);
+    }
+  };
+
+  const handleVipToggle = async (checked) => {
+    setVipUpdating(true);
+    try {
+      await updateStudentVip(id, checked);
+      setStudent((s) => ({ ...s, vip: checked }));
+    } catch (e) {
+      message.error(`VIP 변경 실패: ${e.message}`);
+    } finally {
+      setVipUpdating(false);
     }
   };
 
@@ -173,6 +186,19 @@ export default function StudentDetailPage() {
                 <p className="text-sm text-gray-700">{student.memo}</p>
               </div>
             )}
+            {/* 숙제 관리 대상(VIP) 토글 — 켜야 숙제 등록/관리 진입 가능 */}
+            <div className="pt-3 border-t border-gray-50 flex items-center justify-between gap-3">
+              <div style={{ minWidth: 0 }}>
+                <p className="text-sm font-semibold" style={{ color: TEXT_PRIMARY, margin: 0 }}>숙제 관리 대상 (VIP)</p>
+                <p className="text-xs" style={{ color: TEXT_SECONDARY, margin: 0 }}>켜면 이 학생에게 숙제를 등록할 수 있어요</p>
+              </div>
+              <Switch
+                checked={!!student.vip}
+                onChange={handleVipToggle}
+                loading={vipUpdating}
+                aria-label="숙제 관리 대상(VIP) 설정"
+              />
+            </div>
             {student.bookingCode && (
               <div className="pt-3 border-t border-gray-50 space-y-2">
                 <button
@@ -202,24 +228,27 @@ export default function StudentDetailPage() {
                   <LinkIcon weight="fill" size={14} />
                   학생 페이지 공유
                 </button>
-                <button
-                  type="button"
-                  onClick={() => navigate(`/students/${id}/homework`)}
-                  style={{
-                    width: '100%', height: 44, cursor: 'pointer', borderRadius: 12,
-                    background: PRIMARY_BG, border: `1.5px solid ${STATUS_ERROR_BORDER}`,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                    fontSize: 14, fontWeight: 600, color: PRIMARY,
-                    WebkitTapHighlightColor: 'transparent',
-                    transition: 'transform 0.12s ease, opacity 0.12s ease',
-                  }}
-                  onPointerDown={e => e.currentTarget.style.transform = 'scale(0.96)'}
-                  onPointerUp={e => e.currentTarget.style.transform = 'scale(1)'}
-                  onPointerLeave={e => e.currentTarget.style.transform = 'scale(1)'}
-                >
-                  <FileTextIcon weight="fill" size={14} />
-                  숙제 관리
-                </button>
+                {/* 숙제 관리·등록은 VIP(숙제 관리 대상) 학생만 — 일반 학생 오등록 방지 */}
+                {student.vip && (
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/students/${id}/homework`)}
+                    style={{
+                      width: '100%', height: 44, cursor: 'pointer', borderRadius: 12,
+                      background: PRIMARY_BG, border: `1.5px solid ${STATUS_ERROR_BORDER}`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                      fontSize: 14, fontWeight: 600, color: PRIMARY,
+                      WebkitTapHighlightColor: 'transparent',
+                      transition: 'transform 0.12s ease, opacity 0.12s ease',
+                    }}
+                    onPointerDown={e => e.currentTarget.style.transform = 'scale(0.96)'}
+                    onPointerUp={e => e.currentTarget.style.transform = 'scale(1)'}
+                    onPointerLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+                  >
+                    <FileTextIcon weight="fill" size={14} />
+                    숙제 관리
+                  </button>
+                )}
               </div>
             )}
           </div>

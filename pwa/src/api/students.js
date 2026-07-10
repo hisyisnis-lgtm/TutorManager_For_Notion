@@ -9,6 +9,7 @@ import {
   getCreatedTime,
   getFormulaNumber,
   getRollupNumber,
+  getCheckbox,
 } from '../utils/notionProp.js';
 
 export const STUDENTS_DB = '314838fa-f2a6-8143-a6c7-e59c50f3bbdb';
@@ -39,6 +40,13 @@ export async function fetchStudentsPage(statusFilter, cursor) {
 export async function updateStudentStatus(pageId, status) {
   return updatePage(pageId, {
     상태: { select: { name: status } },
+  });
+}
+
+/** 학생 VIP(숙제 관리 대상) 토글 — 켜야 숙제 등록/관리 진입 가능 */
+export async function updateStudentVip(pageId, vip) {
+  return updatePage(pageId, {
+    VIP: { checkbox: !!vip },
   });
 }
 
@@ -102,6 +110,8 @@ export function parseStudent(page) {
     memo: getRichText(p['메모']),
     bookingCode: getRichText(p['예약 코드']),
     createdAt: getCreatedTime(p['등록일']),
+    // 숙제 관리 대상(VIP) 여부 — 숙제 등록/관리 진입은 VIP 학생만 허용
+    vip: getCheckbox(p['VIP']),
   };
 }
 
