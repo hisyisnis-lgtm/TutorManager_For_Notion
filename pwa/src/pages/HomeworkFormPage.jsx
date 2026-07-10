@@ -36,6 +36,7 @@ export default function HomeworkFormPage() {
   const { message } = App.useApp();
 
   const [students, setStudents] = useState([]);
+  const [studentsLoaded, setStudentsLoaded] = useState(false);
   const [studentId, setStudentId] = useState(presetStudentId || '');
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
@@ -56,11 +57,17 @@ export default function HomeworkFormPage() {
   const docInputRef = useRef(null);
 
   useEffect(() => {
-    queryAll(STUDENT_DB, { property: '상태', select: { equals: '🟢 수강중' } }, [
+    // 숙제는 VIP(숙제 관리 대상) 학생만 — 일반 학생 오등록/알림톡 오발송 방지
+    queryAll(STUDENT_DB, {
+      and: [
+        { property: '상태', select: { equals: '🟢 수강중' } },
+        { property: 'VIP', checkbox: { equals: true } },
+      ],
+    }, [
       { property: '이름', direction: 'ascending' },
     ]).then((pages) => {
       setStudents(pages.map(parseStudent));
-    }).catch(() => {});
+    }).catch(() => {}).finally(() => setStudentsLoaded(true));
   }, []);
 
   const pendingTotal = pendingAudio.length + pendingDocs.length;
@@ -176,6 +183,7 @@ export default function HomeworkFormPage() {
   };
 
   const handleSubmit = async () => {
+    if (presetBlocked) { setError('숙제 관리 대상(VIP) 학생이 아니에요.'); return; }
     if (!studentId) { setError('학생을 선택해주세요.'); return; }
     if (!title.trim()) { setError('숙제 제목을 입력해주세요.'); return; }
 
@@ -209,6 +217,10 @@ export default function HomeworkFormPage() {
     label: s.name.replace(/^[\p{Emoji_Presentation}\p{Extended_Pictographic}]\s*/gu, '').trim(),
   }));
 
+  // presetStudentId(상세화면·직접 URL)가 VIP 목록에 없으면 비VIP → 등록 차단
+  const presetOption = presetStudentId ? studentOptions.find((o) => o.value === presetStudentId) : null;
+  const presetBlocked = !!presetStudentId && studentsLoaded && !presetOption;
+
   const modalTitle = (() => {
     if (modalView === 'record') return '음성 녹음';
     if (modalView === 'naming') return '파일 이름 입력';
@@ -226,9 +238,19 @@ export default function HomeworkFormPage() {
         <div>
           <label style={LABEL}>학생</label>
           {presetStudentId ? (
-            <div style={{ fontSize: 15, fontWeight: 600, color: TEXT_PRIMARY, padding: '8px 0' }}>
-              {studentOptions.find((o) => o.value === presetStudentId)?.label ?? '…'}
-            </div>
+            presetBlocked ? (
+              <Alert
+                type="warning"
+                showIcon
+                message="숙제 관리 대상 학생이 아니에요"
+                description="숙제는 VIP(숙제 관리 대상) 학생에게만 등록할 수 있어요."
+                style={{ borderRadius: 12 }}
+              />
+            ) : (
+              <div style={{ fontSize: 15, fontWeight: 600, color: TEXT_PRIMARY, padding: '8px 0' }}>
+                {presetOption?.label ?? '…'}
+              </div>
+            )
           ) : (
             <Select
               value={studentId || undefined}
@@ -317,6 +339,7 @@ export default function HomeworkFormPage() {
           size="large"
           onClick={handleSubmit}
           loading={saving}
+          disabled={presetBlocked}
           style={{ borderRadius: 12, fontWeight: 600, height: 44 }}
         >
           등록하기{pendingTotal > 0 ? ` (${pendingTotal}개 파일)` : ''}
