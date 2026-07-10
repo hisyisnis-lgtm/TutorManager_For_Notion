@@ -3,7 +3,7 @@ import { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { StarIcon, PauseIcon, TimerIcon, SpeakerHighIcon, EyeIcon, TicketIcon, SkipForwardIcon, SkullIcon } from '@phosphor-icons/react';
 import { TG, FONT_TITLE, FONT_NUM, FONT_BODY, TOUCH_OPT } from '../tgTokens.js';
 import { play as playSfx } from '../tgSfx.js';
-import { Reveal, WordCard, ToneButtons, CoachBubble, ConfettiBurst, CrispFlash, LIGHT_CONFETTI } from './shared.jsx';
+import { Reveal, WordCard, ToneButtons, DrawPad, CoachBubble, ConfettiBurst, CrispFlash, LIGHT_CONFETTI } from './shared.jsx';
 import { useTabTip } from '../../hooks/useTabTip.js';
 import CoachMarkOverlay from '../../components/ui/CoachMarkOverlay.jsx';
 
@@ -135,7 +135,7 @@ function CenterBurst({ data }) {
   );
 }
 
-export function GameScreen({ word, entered, currentSyl, completed, timedOut, wordIndex, wordsLen, wordTimeLimit, gaugeOffsetMs = 0, lowTime = false, paused, combo, comboFlash, floatScore, score, coachText, onTone, wrongBtn, wrongShakeKey = 0, onPause, playReveal = true, endless = false, lives = 3, showHearts = false, onSkip, showSudden = false, runId = 0, recordToBeat = 0, practice = false, listen = false, audioOff = false, onReplay, onCantHear, onHint, hintUsed = false, onSpeak, onReveal, demoFx = null }) {
+export function GameScreen({ word, entered, currentSyl, completed, timedOut, wordIndex, wordsLen, wordTimeLimit, gaugeOffsetMs = 0, lowTime = false, paused, combo, comboFlash, floatScore, score, coachText, onTone, wrongBtn, wrongShakeKey = 0, onPause, playReveal = true, endless = false, lives = 3, showHearts = false, onSkip, showSudden = false, runId = 0, recordToBeat = 0, practice = false, listen = false, audioOff = false, onReplay, onCantHear, onHint, hintUsed = false, onSpeak, onReveal, draw = false, drawExpectedTone, onDraw, drawResetKey = 0, demoFx = null }) {
   lowTime = lowTime || demoFx === 'low'; // [DEV] 미리보기 텐션 데모(?screen=game&fx=low) — 머지 전 백도어 제거 대상
   // ── 버스트 연출(P4b): 콤보 마일스톤(5·10·15…) + 라이브 신기록. 비차단·자동 소멸 ──
   const [burst, setBurst] = useState(null);
@@ -213,7 +213,7 @@ export function GameScreen({ word, entered, currentSyl, completed, timedOut, wor
   const pracTip = useTabTip('game-practice', true); // 연습 첫 진입 코치마크(1회, 딤 스포트라이트)
   const [runTip, setRunTip] = useState(null);
   useEffect(() => {
-    if (practice || !playReveal) return undefined;
+    if (practice || !playReveal || draw) return undefined; // 그리기 문제는 탭 기준 팁(문구·위치)이 안 맞아 생략 — 다음 탭 문제에서 표시
     let pick = null;
     if (tipPlay.visible) pick = { id: 'play', dismiss: tipPlay.dismiss };
     else if (tipSkip.visible && onSkip) pick = { id: 'skip', dismiss: tipSkip.dismiss };
@@ -224,7 +224,7 @@ export function GameScreen({ word, entered, currentSyl, completed, timedOut, wor
     const b = setTimeout(() => { setRunTip(null); pick.dismiss(); }, wait + 4800);
     return () => { clearTimeout(a); clearTimeout(b); };
     // showSudden도 deps에: 배너가 effect 실행 '후'에 켜지면(무한 첫 팁) 팁이 배너 아래 깔림 → 재스케줄로 배너 뒤 등장 보장
-  }, [playReveal, practice, showSudden]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [playReveal, practice, showSudden, draw]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <div ref={shakeRef} data-tg-shake-root="1" style={{ position: 'absolute', inset: 0 }}>
       {/* 콤보 화염 — '불붙는다'는 긍정적 모멘텀(피격 비네트 아님). 사방 외곽에서 불씨가 피어오름 + 골드 글로우 플리커. 콘텐츠 뒤(zIndex0)·비차단 */}
@@ -310,7 +310,7 @@ export function GameScreen({ word, entered, currentSyl, completed, timedOut, wor
         <div style={{ position: 'relative' }}>
           <div key={`card-${runId}-${wordIndex}`} style={{ animation: 'tg-card-in .38s cubic-bezier(.22,1,.36,1) both' }}>
             <div style={{ position: 'relative', animation: punch ? 'tg-punch .35s ease-out' : 'none' }}>
-              <WordCard word={word} entered={entered} currentSyl={currentSyl} completed={completed} timedOut={timedOut} progressText={endless ? `${wordIndex + 1}` : `${wordIndex + 1}/${wordsLen}`} combo={combo} comboFlash={comboFlash} floatScore={floatScore} listen={listen} audioOff={audioOff} onReplay={onReplay} onCantHear={onCantHear} onHint={onHint} hintUsed={hintUsed} />
+              <WordCard word={word} entered={entered} currentSyl={currentSyl} completed={completed} timedOut={timedOut} progressText={endless ? `${wordIndex + 1}` : `${wordIndex + 1}/${wordsLen}`} combo={combo} comboFlash={comboFlash} floatScore={floatScore} listen={listen} audioOff={audioOff} onReplay={onReplay} onCantHear={onCantHear} onHint={onHint} hintUsed={hintUsed} draw={draw} />
             </div>
           </div>
           {/* 정답 완성 연출 — 크리스프 플래시(번쩍) + 색색 색종이 + 흰/골드 글리터. ★단어 키 래퍼 '밖'에 둠: 안에 두면 새 단어 등장 때마다 리마운트되어 오발. flashKey 증가(정답 완성) 시에만 발동 */}
@@ -323,7 +323,7 @@ export function GameScreen({ word, entered, currentSyl, completed, timedOut, wor
           4겹(카드·코치·연습버튼·성조버튼)이라 짧은 화면서 겹쳐 미표시.
           ★top 고정 금지: 단어카드 하단(129+292=421)~건너뛰기 행 위(bottom 130+버튼38+여유) 사이 밴드에 flex 세로중앙 —
           짧은 화면(사파리 툴바 ~660-720px)서 하단 고정 건너뛰기 버튼과 겹치지 않게(시작/결과화면과 동일 원칙). */}
-      {!practice && (
+      {!practice && !draw && (
         <Reveal i={3} play={playReveal} style={{ position: 'absolute', left: 24, right: 24, top: 428, bottom: 'calc(178px + env(safe-area-inset-bottom))', display: 'flex', alignItems: 'center' }}>
           <CoachBubble text={coachText} />
         </Reveal>
@@ -345,7 +345,7 @@ export function GameScreen({ word, entered, currentSyl, completed, timedOut, wor
       )}
       {/* 건너뛰기 — 못 풀겠는 단어를 건너뛰기 패스 1개 쓰고 넘김. 소진(0)이면 비활성(스킵만 불가, 게임은 계속). 연습 모드는 미노출(자체 정답보기). */}
       {onSkip && (
-        <Reveal i={4} play={playReveal} style={{ position: 'absolute', left: 0, right: 0, bottom: 'calc(130px + env(safe-area-inset-bottom))', display: 'flex', justifyContent: 'center' }}>
+        <Reveal i={4} play={playReveal} style={{ position: 'absolute', left: 0, right: 0, bottom: draw ? 'calc(40px + env(safe-area-inset-bottom))' : 'calc(130px + env(safe-area-inset-bottom))', display: 'flex', justifyContent: 'center' }}>
           {(() => {
             const disabled = completed || lives <= 0;
             return (
@@ -364,10 +364,18 @@ export function GameScreen({ word, entered, currentSyl, completed, timedOut, wor
           })()}
         </Reveal>
       )}
-      {/* 성조버튼 하단 고정 */}
-      <Reveal i={5} play={playReveal} style={{ position: 'absolute', left: 20, right: 20, bottom: 'calc(30px + env(safe-area-inset-bottom))' }}>
-        <ToneButtons onTone={onTone} wrongBtn={wrongBtn} disabled={completed} />
-      </Reveal>
+      {/* 하단 입력 — 그리기 문제면 그리기 패드, 아니면 성조버튼.
+          ★패드는 top/bottom으로 높이를 잡으므로 Reveal(이중 div, 안쪽 height 없음) 대신 단일 positioned div로 감싸 height:100%가 살게 함 */}
+      {draw ? (
+        <div className={playReveal ? 'tg-reveal' : undefined}
+          style={{ position: 'absolute', left: 20, right: 20, top: 436, bottom: 'calc(90px + env(safe-area-inset-bottom))', animationDelay: '430ms', ...(playReveal ? {} : { opacity: 0 }) }}>
+          <DrawPad expectedTone={drawExpectedTone} onDraw={onDraw} disabled={completed || !playReveal || paused} resetKey={drawResetKey} />
+        </div>
+      ) : (
+        <Reveal i={5} play={playReveal} style={{ position: 'absolute', left: 20, right: 20, bottom: 'calc(30px + env(safe-area-inset-bottom))' }}>
+          <ToneButtons onTone={onTone} wrongBtn={wrongBtn} disabled={completed} />
+        </Reveal>
+      )}
       {/* 콤보 마일스톤 · 라이브 신기록 버스트(P4b) */}
       <CenterBurst data={burst} />
       {/* 연습 첫 진입 코치마크 — 카운트다운 끝나 배지·버튼 뜬 뒤 스포트라이트(연습은 타이머 없어 딤 안전) */}

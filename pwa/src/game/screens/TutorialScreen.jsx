@@ -1,7 +1,8 @@
-// 첫 진입 인게임 튜토리얼 — 실제 라운드를 압축한 3비트 미니 플로우(짧게).
+// 첫 진입 인게임 튜토리얼 — 실제 라운드를 압축한 4비트 미니 플로우(짧게).
 //  비트0 성조 익히기: 같은 'ma' 5성(妈麻马骂吗) 탭해서 소리 듣기 → 성조=오르내림 각인.
 //  비트1 보고 찾기(妈妈): 한자 보고 성조 선택(정답 강조) → 완료 시 발음 재생(추측→확인 루프).
 //  비트2 듣고 찾기(好): 소리만 듣고 성조 선택 → 한자 공개. 실제 라운드에 섞여 나오는 유형 대비.
+//  비트3 그려서 찾기(好): 한자 보고 성조를 손가락으로 그려서 맞히기(DrawPad). 그리기 문제 유형 대비.
 // 게임 레이아웃 + 딤 스포트라이트. 완료 후 onDone → 모드선택.
 import { useState, useEffect, useRef } from 'react';
 import { StarIcon, TimerIcon, CaretRightIcon } from '@phosphor-icons/react';
@@ -10,13 +11,13 @@ import { ToneMark } from '../tgWidgets.jsx';
 import { TONES } from '../../constants/toneGameWords.js';
 import { speakWord } from '../tgTts.js';
 import { play as playSfx } from '../tgSfx.js';
-import { WordCard, CoachBubble, Reveal } from './shared.jsx';
+import { WordCard, CoachBubble, Reveal, DrawPad } from './shared.jsx';
 import { P1_WORD, P2_WORD, TONE_SAMPLES, SAMPLE_ORDER } from '../tutorialWords.js';
 
-const PHASE_LABEL = ['성조 익히기', '보고 찾기', '듣고 찾기'];
+const PHASE_LABEL = ['성조 익히기', '보고 찾기', '듣고 찾기', '그려서 찾기'];
 
 export function TutorialScreen({ onDone }) {
-  const [phase, setPhase] = useState(0);       // 0 성조소개 · 1 보고찾기 · 2 듣고찾기
+  const [phase, setPhase] = useState(0);       // 0 성조소개 · 1 보고찾기 · 2 듣고찾기 · 3 그려서찾기
   const [entered, setEntered] = useState([]);
   const [currentSyl, setCurrentSyl] = useState(0);
   const [completed, setCompleted] = useState(false);
@@ -28,9 +29,9 @@ export function TutorialScreen({ onDone }) {
   const later = (fn, ms) => timersRef.current.push(setTimeout(fn, ms));
   useEffect(() => () => { timersRef.current.forEach(clearTimeout); }, []);
 
-  const word = phase === 2 ? P2_WORD : P1_WORD;
+  const word = phase >= 2 ? P2_WORD : P1_WORD; // 비트2 듣기·비트3 그리기 모두 好(단음절)
   const answer = phase >= 1 ? word.tones[currentSyl] : null;
-  const dimOff = phase === 2 && completed; // 마지막 정답 시 딤 해제(해방감)
+  const dimOff = (phase === 2 || phase === 3) && completed; // 마지막 정답 시 딤 해제(해방감)
 
   // 비트2 진입 시 발음 자동 재생(듣기 문제)
   useEffect(() => {
@@ -51,7 +52,8 @@ export function TutorialScreen({ onDone }) {
         setCompleted(true);
         playSfx('correct'); speakWord(word); // 완료 → 올바른 발음 재생(인게임과 동일)
         if (phase === 1) later(() => goPhase(2), 1500);
-        else if (!doneRef.current) { doneRef.current = true; later(onDone, 1600); }
+        else if (phase === 2) later(() => goPhase(3), 1500);
+        else if (!doneRef.current) { doneRef.current = true; later(onDone, 1600); } // 비트3 = 마지막
       } else { playSfx('tap'); setCurrentSyl((s) => s + 1); }
     } else {
       setWrong(n); haptic(20); playSfx('wrong');
@@ -69,7 +71,9 @@ export function TutorialScreen({ onDone }) {
 
   const coachText = phase === 1
     ? (completed ? '맞히면 올바른 발음이 들려요 👂' : `${currentSyl + 1}번째 글자의 성조를 눌러요`)
-    : (completed ? '잘했어요! 이제 시작해요' : '이번엔 소리만 듣고 성조를 찾아요');
+    : phase === 2
+    ? (completed ? '잘했어요! 다음은 그리기예요 ✏️' : '이번엔 소리만 듣고 성조를 찾아요')
+    : (completed ? '멋져요! 이제 시작해요' : '성조를 손가락으로 그려서 맞혀요 ✏️');
 
   return (
     <>
@@ -89,7 +93,7 @@ export function TutorialScreen({ onDone }) {
       {/* 진행 표시(3점) + 단계 라벨 — top70 중앙 */}
       <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', top: 70, display: 'flex', alignItems: 'center', gap: 8, background: '#fff1f1', padding: '8px 14px', borderRadius: 14, zIndex: 7 }}>
         <div style={{ display: 'flex', gap: 5 }}>
-          {[0, 1, 2].map((i) => (
+          {[0, 1, 2, 3].map((i) => (
             <div key={i} style={{ width: i === phase ? 16 : 6, height: 6, borderRadius: 3, background: i === phase ? '#f2484c' : '#f4c4c4', transition: 'width .25s ease' }} />
           ))}
         </div>
@@ -121,13 +125,13 @@ export function TutorialScreen({ onDone }) {
         ) : (
           <WordCard word={word} entered={entered} currentSyl={currentSyl} completed={completed} timedOut={false}
             progressText="1/1" combo={0} comboFlash={false} floatScore={null} hideProgress
-            listen={phase === 2} audioOff={audioOff} onReplay={() => speakWord(word)} onCantHear={() => setAudioOff(true)} />
+            listen={phase === 2} draw={phase === 3} audioOff={audioOff} onReplay={() => speakWord(word)} onCantHear={() => setAudioOff(true)} />
         )}
       </Reveal>
 
-      {/* 비트1/2 코치 top470 — 스포트라이트 */}
+      {/* 비트1/2/3 코치 — 스포트라이트. 비트3(그리기)은 패드 자리 확보 위해 카드 바로 아래로 */}
       {phase !== 0 && (
-        <Reveal i={1} style={{ position: 'absolute', left: 24, right: 24, top: 470, zIndex: 6 }}>
+        <Reveal i={1} style={{ position: 'absolute', left: 24, right: 24, top: phase === 3 ? 430 : 470, zIndex: 6 }}>
           <CoachBubble text={coachText} />
         </Reveal>
       )}
@@ -142,7 +146,16 @@ export function TutorialScreen({ onDone }) {
         </Reveal>
       )}
 
-      {/* 성조버튼 하단 고정 — 비트0=탭해서 듣기(정답 강조 없음), 비트1/2=정답 강조 + 나머지 흐림 */}
+      {/* 비트3 그리기 패드 — 성조버튼 대신. 스포트라이트(딤 위 zIndex6). 그려서 성조 맞히기.
+          ★Reveal(이중 div, 안쪽 height 없음)로 감싸면 height:100% 패드가 접힘 → 단일 positioned div(top/bottom로 높이 확보) */}
+      {phase === 3 && (
+        <div className="tg-reveal" style={{ position: 'absolute', left: 20, right: 20, top: 490, bottom: 'calc(30px + env(safe-area-inset-bottom))', zIndex: 6, animationDelay: '220ms' }}>
+          <DrawPad expectedTone={answer} onDraw={tap} disabled={completed} resetKey={phase} />
+        </div>
+      )}
+
+      {/* 성조버튼 하단 고정 — 비트0=탭해서 듣기(정답 강조 없음), 비트1/2=정답 강조 + 나머지 흐림. 비트3(그리기)은 미표시 */}
+      {phase !== 3 && (
       <Reveal i={2} style={{ position: 'absolute', left: 20, right: 20, bottom: 'calc(30px + env(safe-area-inset-bottom))', zIndex: 6 }}>
         <div style={{ height: 81, display: 'flex', gap: 9 }}>
           {TONES.map((t) => {
@@ -176,6 +189,7 @@ export function TutorialScreen({ onDone }) {
           })}
         </div>
       </Reveal>
+      )}
     </>
   );
 }

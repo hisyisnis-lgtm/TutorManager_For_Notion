@@ -99,8 +99,9 @@ import { HelpStartModal } from '../game/screens/gameModals.jsx';
 
 // 미리보기 모드(?screen=game)에서 게임 화면 렌더용 샘플 단어 (DEV 검수 전용)
 const PREVIEW_WORDS = [
-  { hanzi: '老师', pinyin: ['lǎo', 'shī'], tones: [3, 1], meaning: '선생님' },
-  { hanzi: '咖啡', pinyin: ['kā', 'fēi'], tones: [1, 1], meaning: '커피' },
+  { hanzi: '老师', pinyin: ['lǎo', 'shī'], tones: [3, 1], meaning: '선생님', audioUrl: '/game/tts/laoshi_31.mp3' },
+  { hanzi: '妈妈', pinyin: ['mā', 'ma'], tones: [1, 0], meaning: '엄마', audioUrl: '/game/tts/mama_10.mp3' }, // 경성 포함 — 그리기 모드 자동통과 검수용
+  { hanzi: '咖啡', pinyin: ['kā', 'fēi'], tones: [1, 1], meaning: '커피', audioUrl: '/game/tts/kafei_11.mp3' },
 ];
 
 // 미리보기(?screen=mastery)용 샘플 — 복습필요 3 + 마스터 12 (DEV 검수 전용)
@@ -220,6 +221,9 @@ export default function ToneGamePage() {
   // 듣기 문제 여부 = 라운드 시작 시 단어별로 미리 결정(listenRollsRef). 렌더에서 파생 → 예전 state 방식의
   // '새 단어 렌더 후 effect가 뒤늦게 set' 프레임(듣기→일반 순간전환 flicker) 제거. [i>0 && rand<0.35]
   const listenRollsRef = useRef([]);
+  // 그리기 문제 여부 = 라운드 시작 시 단어별로 미리 결정(drawRollsRef). 듣기와 상호배타·더 드물게(≈16%).
+  // '그려서 답하기' — 성조버튼 대신 그리기 패드로 입력, classifyStroke가 판별해 handleTone에 투입.
+  const drawRollsRef = useRef([]);
   const [audioOff, setAudioOff] = useState(false); // '지금은 못 들어요' — 그 판 한정 듣기 문제 미출제(한자 공개·자동재생 중지)
   const audioOffRef = useRef(false); // word-start effect서 최신값 동기 읽기
   const [difficultyTarget, setDifficultyTarget] = useState('normal'); // 난이도 화면 진입 목적: 'normal'|'practice'
@@ -735,8 +739,18 @@ export default function ToneGamePage() {
 
   // 라운드 단어별 듣기문제 여부 미리 굴림(첫 단어 제외·약 35%). 일반·복습·테마만 사용(연습/무한=빈 배열).
   const rollListen = (arr) => (arr || []).map((_, i) => i > 0 && Math.random() < 0.35);
-  // 라운드 설정 — words와 듣기 롤을 '항상 함께' 갱신(한쪽만 바꾸는 실수 방지). listen=false → 듣기 미출제(연습·무한).
-  const setRound = (arr, { listen = true } = {}) => { setWords(arr); listenRollsRef.current = listen ? rollListen(arr) : []; };
+  // 그리기문제 롤 — 듣기와 상호배타(듣기로 뽑힌 칸 제외)·첫 단어 제외·더 드물게(≈16%).
+  // 경성(0)이 섞인 단어도 출제 — 경성 음절은 곡선으로 그리기 애매하므로 DrawPad에서 자동 정답 처리(그리기 불필요).
+  const rollDraw = (arr, listenRolls) => (arr || []).map((_, i) => (
+    i > 0 && !listenRolls[i] && Math.random() < 0.16
+  ));
+  // 라운드 설정 — words·듣기롤·그리기롤을 '항상 함께' 갱신(한쪽만 바꾸는 실수 방지). listen=false → 듣기·그리기 미출제(연습·무한).
+  const setRound = (arr, { listen = true } = {}) => {
+    setWords(arr);
+    const lr = listen ? rollListen(arr) : [];
+    listenRollsRef.current = lr;
+    drawRollsRef.current = listen ? rollDraw(arr, lr) : [];
+  };
 
   const startGame = (difficulty) => {
     const d = difficulty || selectedDifficulty;
@@ -926,6 +940,9 @@ export default function ToneGamePage() {
   // 듣기 문제 여부 — 렌더에서 파생(미리 굴린 listenRollsRef + 현재 모드/audioOff). state 아님 → 새 단어 전환 시 flicker 없음.
   const wordIsListen = (!practiceMode && !endlessMode && !audioOff && !!listenRollsRef.current[wordIndex])
     || (isPreview && previewScreen === 'game' && qs('listen') === '1');
+  // 그리기 문제 여부 — 렌더 파생(미리 굴린 drawRollsRef). 듣기와 상호배타. DEV 미리보기는 ?draw=1.
+  const wordIsDraw = (!practiceMode && !endlessMode && !!drawRollsRef.current[wordIndex])
+    || (isPreview && previewScreen === 'game' && qs('draw') === '1');
 
   const coach = (() => {
     if (timedOut) return { text: '시간 끝! 다시 도전해요', tone: 'danger' };
@@ -1125,8 +1142,9 @@ export default function ToneGamePage() {
             combo={combo} comboFlash={comboFlash} floatScore={floatScore} score={score} coachText={coach.text}
             onTone={handleTone} wrongBtn={wrongBtn} wrongShakeKey={wrongShakeKey} onPause={() => setPaused(true)} playReveal={!cdPhase}
             practice={practiceMode} listen={wordIsListen} audioOff={audioOff}
+            draw={wordIsDraw} drawExpectedTone={word ? word.tones[currentSyl] : undefined} onDraw={handleTone} drawResetKey={`${runId}-${wordIndex}-${currentSyl}`}
             onReplay={() => word && speakWord(word)} onCantHear={() => { audioOffRef.current = true; setAudioOff(true); }}
-            onHint={practiceMode ? undefined : () => { if (!word) return; hintUsedRef.current = true; speakWord(word); if (!hasMistake) { setHasMistake(true); setCombo(0); } }} hintUsed={hasMistake}
+            onHint={(practiceMode || wordIsDraw) ? undefined : () => { if (!word) return; hintUsedRef.current = true; speakWord(word); if (!hasMistake) { setHasMistake(true); setCombo(0); } }} hintUsed={hasMistake}
             onSkip={practiceMode ? undefined : skipWord}
             onSpeak={() => { if (!word) return; hintUsedRef.current = true; speakWord(word); }} onReveal={revealAnswer}
             demoFx={isPreview ? qs('fx') : null} />

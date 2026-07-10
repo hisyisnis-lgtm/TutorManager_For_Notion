@@ -5,12 +5,13 @@
 import { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { LockSimpleIcon, SpeakerHighIcon, SpeakerSlashIcon, VibrateIcon, XIcon } from '@phosphor-icons/react';
 import {
-  TG, FONT_NUM, FONT_BODY, FONT_HANZI, FONT_PINYIN, SHADOW, DUR, TOUCH_OPT, TONE_TINTS, TONE_BORDERS, ASSETS,
+  TG, FONT_NUM, FONT_BODY, FONT_HANZI, FONT_PINYIN, SHADOW, DUR, TOUCH_OPT, TONE_TINTS, TONE_BORDERS, TONE_COLORS, ASSETS,
   haptic, isHapticMuted, setHapticMuted,
 } from '../tgTokens.js';
 import { ToneMark, ComboChip } from '../tgWidgets.jsx';
 import { TONES } from '../../constants/toneGameWords.js';
 import { play as playSfx, isSfxMuted, setSfxMuted } from '../tgSfx.js';
+import { classifyStroke } from '../toneDraw.js';
 
 // 카운트다운 슬라이드 가장자리 진폭 폭(px) — keyframes(tg-cd-out)와 CdWaveEdge가 공유.
 export const CD_WAVE_W = 12;
@@ -311,7 +312,7 @@ export function CoachBubble({ text }) {
 }
 
 // ── 단어 카드 (반응형 + 고정 슬롯, 메모리 §5) ──────────
-export function WordCard({ word, entered, currentSyl, completed, timedOut, progressText, combo, comboFlash, floatScore, hideProgress, listen = false, audioOff = false, onReplay, onCantHear, onHint, hintUsed = false }) {
+export function WordCard({ word, entered, currentSyl, completed, timedOut, progressText, combo, comboFlash, floatScore, hideProgress, listen = false, audioOff = false, onReplay, onCantHear, onHint, hintUsed = false, draw = false }) {
   const listening = listen && !audioOff && !completed && !timedOut; // 듣기 모드: 답하기 전엔 한자 가리고 소리 패널
   // 한자 모드 발음 힌트 — 답하기 전에만, 음소거 아닐 때만. 소리=정답이라 처음 쓰면 콤보가 끊긴다(hintUsed=이미 끊긴 상태면 무료).
   const canHint = onHint && !listening && !completed && !timedOut && !audioOff;
@@ -324,7 +325,7 @@ export function WordCard({ word, entered, currentSyl, completed, timedOut, progr
   const glow = completed && !timedOut ? SHADOW.correctGlow : timedOut ? SHADOW.timeoutGlow : SHADOW.card;
   const guide = completed && !timedOut ? { text: '정답', color: TG.SUCCESS }
     : timedOut ? { text: '시간초과', color: TG.DANGER }
-    : { text: `${currentSyl + 1}번째 글자의 성조를 누르세요`, color: TG.GUIDE };
+    : { text: `${currentSyl + 1}번째 글자의 성조를 ${draw ? '그려보세요' : '누르세요'}`, color: TG.GUIDE };
 
   const Syllable = (i) => {
     const revealed = i < entered.length;
@@ -491,6 +492,127 @@ export function ToneButtons({ onTone, wrongBtn, disabled }) {
           </button>
         );
       })}
+    </div>
+  );
+}
+
+// ── 그리기 패드 ('그려서 답하기' 문제) ──────────────────
+// 손가락/마우스로 성조 곡선을 그으면 classifyStroke가 1~4성으로 판별해 onDraw로 넘김(→ 기존 handleTone 재사용).
+// 성조 버튼을 대체. Pointer Events라 터치·마우스 공용. 힌트 없음(빈 캔버스 + 안내 문구만).
+// expectedTone: 현재 음절의 정답 성조 — '떼는 순간' 로컬 플래시(초록/빨강) 색만 결정(그리기 전엔 안 보임 = 힌트 아님).
+// resetKey: 값이 바뀌면(음절/단어 전환) 획 초기화.
+export function DrawPad({ expectedTone, onDraw, disabled = false, resetKey = 0 }) {
+  const boxRef = useRef(null);
+  const ptsRef = useRef([]);
+  const drawingRef = useRef(false);
+  const [pts, setPtsState] = useState([]);
+  const [flash, setFlash] = useState(null); // { ok, tone } | null
+  const flashTimerRef = useRef(null);
+  const setPts = (next) => { ptsRef.current = next; setPtsState(next); };
+
+  useEffect(() => { // 음절/단어 전환 초기화
+    if (flashTimerRef.current) clearTimeout(flashTimerRef.current);
+    drawingRef.current = false; setFlash(null); setPts([]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resetKey]);
+  useEffect(() => () => { if (flashTimerRef.current) clearTimeout(flashTimerRef.current); }, []);
+
+  // 경성(0) 음절 = 그리기 애매 → 자동 정답 처리(잠깐 안내 후 onDraw(0)로 통과). 카운트다운·일시정지·완료 시엔 대기.
+  const neutral = expectedTone === 0;
+  useEffect(() => {
+    if (!neutral || disabled) return undefined; // disabled=완료·카운트다운·일시정지 중엔 자동통과 보류(해제되면 재실행)
+    const t = setTimeout(() => onDraw(0), 500);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [neutral, disabled, resetKey]);
+
+  const localPt = (e) => {
+    const r = boxRef.current.getBoundingClientRect();
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
+  };
+  const start = (e) => {
+    if (disabled || flash || neutral) return; // 경성 음절은 자동 통과 — 그리기 입력 무시
+    if (e.button != null && e.button !== 0) return; // 주 버튼(좌클릭/터치)만
+    drawingRef.current = true;
+    try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* noop */ }
+    setPts([localPt(e)]);
+  };
+  const move = (e) => {
+    if (!drawingRef.current) return;
+    const p = localPt(e);
+    const arr = ptsRef.current;
+    const last = arr[arr.length - 1];
+    if (last && Math.hypot(p.x - last.x, p.y - last.y) < 3) return; // 거리 스로틀
+    setPts([...arr, p]);
+  };
+  const end = () => {
+    if (!drawingRef.current) return;
+    drawingRef.current = false;
+    const guess = classifyStroke(ptsRef.current);
+    if (guess == null) { setPts([]); return; } // 탭/너무 작음 — 조용히 비움(판정·패널티 없음)
+    const ok = guess === expectedTone;
+    setFlash({ ok, tone: guess });
+    haptic(ok ? [10, 20, 30] : [40, 30, 40]);
+    onDraw(guess);
+    flashTimerRef.current = setTimeout(() => { setFlash(null); setPts([]); }, ok ? 380 : 560);
+  };
+
+  const strokeCol = flash ? (flash.ok ? TG.SUCCESS : TG.DANGER) : TG.CORAL;
+  const borderCol = flash ? (flash.ok ? TG.SUCCESS : TG.DANGER) : 'rgba(255,107,107,0.45)';
+  const bg = flash ? (flash.ok ? '#F2FCF7' : '#FFF3F3') : '#fff';
+  const tail = pts[pts.length - 1];
+  const guessName = flash ? (TONES.find((t) => t.num === flash.tone)?.name || `${flash.tone}성`) : '';
+  return (
+    <div ref={boxRef} data-coach="draw-pad"
+      onPointerDown={start} onPointerMove={move} onPointerUp={end} onPointerCancel={end}
+      className={flash && !flash.ok ? 'tg-shake' : ''}
+      style={{
+        position: 'relative', width: '100%', height: '100%', borderRadius: 24,
+        background: bg, border: `2px ${flash ? 'solid' : 'dashed'} ${borderCol}`,
+        boxShadow: flash && flash.ok ? SHADOW.correctGlow : SHADOW.card,
+        touchAction: 'none', WebkitTapHighlightColor: 'transparent', userSelect: 'none',
+        cursor: disabled ? 'default' : 'crosshair', overflow: 'hidden',
+        transition: 'border-color .15s ease, background .15s ease',
+      }}>
+      {/* 경성 음절 — 자동 통과 안내(그리기 불가) */}
+      {neutral ? (
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 7, pointerEvents: 'none', padding: 8 }}>
+          <div style={{ width: 52, height: 52, borderRadius: 26, background: '#eef0f3', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: TONE_COLORS[0] }}>
+            <ToneMark tone={0} size={30} />
+          </div>
+          <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 16, color: TG.INK }}>경성이에요</span>
+          <span style={{ fontFamily: FONT_BODY, fontWeight: 500, fontSize: 12.5, color: TG.SUB }}>자동으로 넘어가요</span>
+        </div>
+      ) : (pts.length === 0 && !flash && (
+        /* 빈 상태 안내 — 힌트 없이 '여기 그려요'만 */
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 7, pointerEvents: 'none', padding: 8 }}>
+          <div style={{ width: 52, height: 52, borderRadius: 26, background: TG.CORAL_BG, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <svg width={30} height={30} viewBox="0 0 60 60" fill="none" aria-hidden="true">
+              <path d="M 14 38 C 20 22 26 22 30 30 C 34 38 40 38 46 22" stroke={TG.CORAL} strokeWidth={4} strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+          <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 16, color: TG.INK }}>성조를 그려보세요</span>
+          <span style={{ fontFamily: FONT_BODY, fontWeight: 500, fontSize: 12.5, color: TG.SUB }}>손가락으로 획을 그으면 돼요</span>
+        </div>
+      ))}
+      {/* 그린 획 */}
+      {pts.length > 1 && (
+        <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }} aria-hidden="true">
+          <polyline points={pts.map((p) => `${p.x},${p.y}`).join(' ')} fill="none" stroke={strokeCol} strokeWidth={7} strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      )}
+      {/* 지문 끝점 표시(그리는 중) */}
+      {!flash && tail && drawingRef.current && (
+        <span aria-hidden="true" style={{ position: 'absolute', left: tail.x, top: tail.y, width: 14, height: 14, marginLeft: -7, marginTop: -7, borderRadius: '50%', background: TG.CORAL, boxShadow: `0 0 8px ${TG.CORAL}`, pointerEvents: 'none' }} />
+      )}
+      {/* 인식 결과 라벨(떼는 순간) — 무엇으로 읽었는지 투명하게 */}
+      {flash && (
+        <div style={{ position: 'absolute', left: 0, right: 0, bottom: 12, display: 'flex', justifyContent: 'center', pointerEvents: 'none' }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontFamily: FONT_BODY, fontWeight: 800, fontSize: 14, color: flash.ok ? TG.SUCCESS : TG.DANGER, background: '#fff', padding: '5px 12px', borderRadius: 12, boxShadow: '0 2px 8px rgba(43,39,48,0.1)' }}>
+            {flash.ok ? `${guessName} · 정답!` : `${guessName}으로 그렸어요`}
+          </span>
+        </div>
+      )}
     </div>
   );
 }
