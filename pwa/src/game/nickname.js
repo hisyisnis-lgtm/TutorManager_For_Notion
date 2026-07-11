@@ -18,3 +18,16 @@ const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 export function randomNickname() {
   return `${pick(NICK_ADJ)}${pick(NICK_NOUN)}`;
 }
+
+// 게스트 표시용 닉네임 — 한 번 뽑아 로컬에 저장(세션마다 안 바뀌게). 게스트는 수정 불가(회원만 변경),
+// 로그인하면 회원 닉네임으로 대체된다. 게스트 결과는 로컬 전용이라 이 값은 순수 표시용.
+const GUEST_NICK_KEY = 'tg_guest_nick';
+export function loadGuestNickname() {
+  try {
+    const cur = localStorage.getItem(GUEST_NICK_KEY);
+    if (cur && cur.trim()) return cur;
+    const nick = randomNickname();
+    localStorage.setItem(GUEST_NICK_KEY, nick);
+    return nick;
+  } catch { return randomNickname(); }
+}

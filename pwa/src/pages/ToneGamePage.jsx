@@ -25,6 +25,7 @@ import { recordTone, loadToneStats, saveToneStats, weakestTone, toneAccuracy } f
 import { findLianyin } from '../game/lianyin.js';
 import { recordPlay, loadStreak, effectiveCurrent, dateKeyKST, loadFreezes } from '../game/streak.js';
 import { syncAchievements, loadAchievements, achievementById, loadReviewMastered, addReviewMastered } from '../game/achievements.js';
+import { loadGuestNickname } from '../game/nickname.js';
 import { initTts, speakWord, preloadTts } from '../game/tgTts.js';
 import { initSfx, play as playSfx } from '../game/tgSfx.js';
 import { initBgm, startBgm, stopBgm } from '../game/tgBgm.js';
@@ -261,6 +262,8 @@ export default function ToneGamePage() {
   const [savingNick, setSavingNick] = useState(false);
   // 회원 표시 닉네임 — 세션값으로 시작하고, 홈 메뉴 '닉네임 변경'에서 즉시 갱신(reload 없이 반영).
   const [memberNick, setMemberNick] = useState(identity.memberUser?.nickname || null);
+  // 게스트 표시 닉네임 — 로컬에 한 번 뽑아 저장(수정 불가, 로그인하면 회원 닉네임으로 대체).
+  const guestNick = useMemo(() => (identity.kind === 'guest' ? loadGuestNickname() : null), [identity.kind]);
 
   const timersRef = useRef([]);
   const addTimer = (id) => { timersRef.current.push(id); };
@@ -1055,7 +1058,7 @@ export default function ToneGamePage() {
       onHelp={() => setHelpOpen(true)}
       onLogin={identity.kind === 'guest' ? () => setScreen('login') : null}
       isMemberUser={identity.kind === 'member'} memberName={identity.kind === 'member' ? memberNick : null}
-      nickname={isPreview ? (qs('nick') || '하늘') : identity.kind === 'member' ? memberNick : identity.kind === 'student' ? (student?.name || null) : null}
+      nickname={isPreview ? (qs('nick') || '하늘') : identity.kind === 'member' ? memberNick : identity.kind === 'student' ? (student?.name || null) : guestNick}
       onEditNickname={identity.kind === 'member' ? editNickname : null}
       onLogout={() => { logoutMember(); window.location.reload(); }} onExit={exitGame}
       studentToken={studentToken} onRefreshBest={() => setBest(headlineBest(studentToken))}

@@ -17,6 +17,7 @@ import { FigmaScreen, EmberRise } from './shared.jsx';
 import { markSize, Eyes } from './eyes.jsx';
 import { PlayModal, DebugScoreModal } from './gameModals.jsx';
 import { NicknameEditModal } from './NicknameEditModal.jsx';
+import { ProfileModal } from './ProfileModal.jsx';
 import CoachMarkOverlay from '../../components/ui/CoachMarkOverlay.jsx';
 import { useTabTip } from '../../hooks/useTabTip.js';
 
@@ -507,15 +508,14 @@ function HomeMenu({ onClose, onHelp, onLogin, isMemberUser, memberName, onEditNi
   );
 }
 
-// 내 정보 카드 — 등급 앰블럼 + 닉네임(상단) + 진행 게이지(하단). 탭 → 등급 상세.
-// 게스트(비로그인)는 게이지 대신 '로그인하고 기록 저장 →' 어포던스로 바꾸고, 카드 탭 = 로그인(발견성 ↑).
-// 등급 상세는 홈 하단 '등급' 버튼으로도 열 수 있어 게스트가 카드 탭을 로그인에 내줘도 손실 없음.
-function MyInfo({ tier, nickname, isGuest, onLogin, onClick }) {
+// 내 정보 카드 — 등급 앰블럼 + 닉네임(상단) + 진행 게이지(하단).
+// 탭 → 게스트·회원 공통으로 프로필 모달(로그인 상태·닉네임·수정·등급·SNS로그인)을 먼저 띄운다.
+function MyInfo({ tier, nickname, onClick }) {
   const displayName = nickname || '게스트'; // 게스트(로그인 안 함) 폴백
   const pct = tier.isMax ? 100 : Math.round(tier.progress * 100);
   return (
-    <button onClick={isGuest ? onLogin : onClick} className="tg-press" data-coach="tg-myinfo"
-      aria-label={isGuest ? '로그인하고 기록 저장' : undefined} style={{
+    <button onClick={onClick} className="tg-press" data-coach="tg-myinfo"
+      aria-label="내 프로필 열기" style={{
       position: 'absolute', left: 24, top: 20, width: 172, height: 60, display: 'flex', alignItems: 'center', gap: 11,
       padding: '0 14px 0 9px', borderRadius: 18, background: '#fff', border: 'none', cursor: 'pointer',
       boxShadow: '0 5px 14px rgba(43,39,48,0.07)', zIndex: 5, ...TOUCH_OPT,
@@ -529,7 +529,6 @@ function MyInfo({ tier, nickname, isGuest, onLogin, onClick }) {
           <div style={{ width: `${pct}%`, height: '100%', borderRadius: 3, background: TG.CORAL_GRAD, transition: 'width .5s ease' }} />
         </div>
       </div>
-      {/* 게스트: 표식 없이 카드 탭 = 로그인(발견성은 aria-label + '게스트' 라벨로만). */}
     </button>
   );
 }
@@ -683,7 +682,9 @@ export function HomeScreen({
   onLogin, isMemberUser, memberName, nickname = null, onEditNickname, onLogout, onExit, studentToken, onRefreshBest, onDebugIntro,
 }) {
   const tier = earTier(masteredN);
+  const isGuest = !!onLogin; // onLogin은 게스트일 때만 내려온다(회원/학생은 null)
   const [menuOpen, setMenuOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
   const [nickEditOpen, setNickEditOpen] = useState(false);
   const [playOpen, setPlayOpen] = useState(false);
   const [debugScoreOpen, setDebugScoreOpen] = useState(false);
@@ -826,7 +827,7 @@ export function HomeScreen({
       )}
 
       {/* 상단 HUD — 내 정보(좌) · 로고(중앙) · 메뉴(우) */}
-      <MyInfo tier={tier} nickname={nickname} isGuest={!!onLogin} onLogin={onLogin} onClick={() => onMastery && onMastery()} />
+      <MyInfo tier={tier} nickname={nickname} onClick={() => setProfileOpen(true)} />
       <StreakPill streak={streak} freezes={freezes} onClick={() => setStreakOpen(true)} />
       <button onClick={() => setMenuOpen(true)} aria-label="메뉴" className="tg-press"
         style={{ position: 'absolute', right: 24, top: 20, width: 40, height: 40, borderRadius: 20, background: '#fff', boxShadow: '0 5px 14px rgba(43,39,48,0.07)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 5, ...TOUCH_OPT }}>
@@ -862,6 +863,10 @@ export function HomeScreen({
 
       {cardTone != null && <ToneCard tone={TONES.find((t) => t.num === cardTone)} status={toneStatus[cardTone]} level={Math.min(5, (toneLevels[cardTone] || {}).lv || 1)} onClose={() => setCardTone(null)} />}
       {streakOpen && <StreakSheet streak={streak} longest={streakLongest} freezes={freezes} onClose={() => setStreakOpen(false)} />}
+      {profileOpen && <ProfileModal tier={tier} nickname={nickname} isGuest={isGuest} isMemberUser={isMemberUser} userId={studentToken}
+        onEditNickname={onEditNickname ? () => { setProfileOpen(false); setNickEditOpen(true); } : null}
+        onLogout={onLogout} onMastery={() => { setProfileOpen(false); onMastery && onMastery(); }}
+        onClose={() => setProfileOpen(false)} />}
       {menuOpen && <HomeMenu onClose={() => setMenuOpen(false)} onHelp={onHelp} onLogin={onLogin} isMemberUser={isMemberUser} memberName={memberName} onEditNickname={onEditNickname ? () => setNickEditOpen(true) : null} onLogout={onLogout} onExit={onExit} onDebugIntro={onDebugIntro} onDebugScore={() => setDebugScoreOpen(true)} />}
       {nickEditOpen && <NicknameEditModal current={nickname || memberName || ''} onSave={onEditNickname} onClose={() => setNickEditOpen(false)} />}
       {playOpen && <PlayModal onClose={() => setPlayOpen(false)} />}

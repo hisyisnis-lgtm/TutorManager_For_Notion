@@ -6,8 +6,15 @@ import { socialLoginUrl } from '../../api/gameApi.js';
 import { play as playSfx } from '../tgSfx.js';
 import { Reveal } from './shared.jsx';
 
+// 소셜 로그인 시작 — 제공자 인증 URL로 전체 이동(복귀는 현재 게임 주소로 #token=…). LoginScreen·ProfileModal 공용.
+export function startSocialLogin(provider) {
+  playSfx('button');
+  const redirect = window.location.origin + window.location.pathname; // 현재 게임 주소로 복귀
+  window.location.href = socialLoginUrl(provider, redirect);
+}
+
 // 카카오 심볼(공식 말풍선) — 노란 버튼 위 검정.
-function KakaoLogo() {
+export function KakaoLogo() {
   return (
     <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
       <path d="M9 1.6C4.86 1.6 1.5 4.2 1.5 7.42c0 2.07 1.38 3.89 3.47 4.94-.15.54-.56 2.02-.64 2.34-.1.4.15.39.3.28.12-.08 1.9-1.29 2.68-1.82.4.06.8.09 1.19.09 4.14 0 7.5-2.6 7.5-5.82S13.14 1.6 9 1.6z" fill="#000000" />
@@ -15,7 +22,7 @@ function KakaoLogo() {
   );
 }
 // 구글 심볼(공식 4색 G).
-function GoogleLogo() {
+export function GoogleLogo() {
   return (
     <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
       <path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92c1.71-1.57 2.68-3.89 2.68-6.62z" />
@@ -27,11 +34,7 @@ function GoogleLogo() {
 }
 
 export function LoginScreen({ onBack }) {
-  const go = (provider) => {
-    playSfx('button');
-    const redirect = window.location.origin + window.location.pathname; // 현재 게임 주소로 복귀
-    window.location.href = socialLoginUrl(provider, redirect);
-  };
+  const go = (provider) => startSocialLogin(provider);
   return (
     <>
       {/* 뒤로 */}
