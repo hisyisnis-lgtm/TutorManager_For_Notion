@@ -14,7 +14,8 @@ import {
   pullMemberData, pushMemberData, loginMember, mergeGuestIntoMember, logoutMember,
   getMemberSession, loadMasteredSync, storeMasteredSync,
 } from '../game/gameStore.js';
-import { earTier, loadTierPeak, bumpTierPeak } from '../game/earProfile.js';
+import { earTier, loadTierPeak } from '../game/earProfile.js';
+import { gameXpGain, xpTier, loadXp, addXp, seedXpIfMissing } from '../game/gameXp.js';
 import { ROUND_LENGTH, DIFFICULTIES, THEMES } from '../constants/toneGameWords.js';
 import { TG, ensureGameFonts, haptic, shuffle, getTimeLimitForCombo, loadBest, saveBest, serverToCache } from '../game/tgTokens.js';
 import {
@@ -187,7 +188,7 @@ export default function ToneGamePage() {
   const [wrongShakeKey, setWrongShakeKey] = useState(0); // 오답마다 +1 — 화면 셰이크 트리거(같은 버튼 연타·연속 오답도 매번 발동)
   // 게임오버 비트 — 결과화면 직전, 게임 화면 '위 오버레이'로 표시(전 종료 공통). 미리보기 ?screen=gameover면 시작부터 표시.
   const [showGameOverBeat, setShowGameOverBeat] = useState(() => isPreview && previewScreen === 'gameover');
-  const [rankUp, setRankUp] = useState(null); // 등급 진행 연출 {prev, now} — 새 마스터 시 비트 다음·결과 전
+  const [rankUp, setRankUp] = useState(null); // 등급 상승 연출 {prevIdx, nowIdx} — XP 임계 넘겨 승급 시 비트 다음·결과 전
   const masteredAtStartRef = useRef(0); // 판 시작 시 마스터 단어 수 스냅샷 — 종료 시 증가분 판정
 
   const wordTimeLimitRef = useRef(7000);
@@ -264,6 +265,10 @@ export default function ToneGamePage() {
   const [memberNick, setMemberNick] = useState(identity.memberUser?.nickname || null);
   // 게스트 표시 닉네임 — 로컬에 한 번 뽑아 저장(수정 불가, 로그인하면 회원 닉네임으로 대체).
   const guestNick = useMemo(() => (identity.kind === 'guest' ? loadGuestNickname() : null), [identity.kind]);
+  // 누적 경험치(등급 산정) — 최초 1회 마이그레이션 시딩(현재 마스터/최고 등급 보존 → 0으로 리셋 방지), 이후 저장값.
+  const [xp, setXp] = useState(() => (isPreview
+    ? Number(qs('xp') || 0)
+    : seedXpIfMissing(studentToken, Math.max(earTier(loadMasteredSync(studentToken)).idx, loadTierPeak(studentToken)))));
 
   const timersRef = useRef([]);
   const addTimer = (id) => { timersRef.current.push(id); };
@@ -498,10 +503,8 @@ export default function ToneGamePage() {
         const reviewDelta = masteredN - masteredAtStartRef.current;
         if (reviewDelta > 0) addReviewMastered(studentToken, reviewDelta);
       }
-      // 마스터 수 last-writer 기록 — 등급은 이제 정직하게 오르내림(강등 전파). 트림 아티팩트 방어는 mc가 담당.
-      // 최고 등급(peak)만 고수위로 보존 — 강등돼도 성취의 기억은 안 뺏음.
+      // 마스터 수 last-writer 기록 — 복습·약점 학습 통계(mc)로 계속 동기화. 등급은 XP로 분리됨(gameXp).
       storeMasteredSync(studentToken, masteredN);
-      bumpTierPeak(studentToken, earTier(masteredN).idx);
       // 업적 스냅샷 집계 — 난이도·테마·무한 전 기록을 DIFFICULTIES/THEMES에서 파생(하드코딩 없음).
       // 테마 기록도 포함: 테마 1,500점이 '천 점 클럽'에 안 잡히던 불일치 해소.
       const bestByDiff = {}; let playCount = 0; let maxComboEver = maxCombo; // 콤보 업적은 이번 런 포함(기록 아니어도 달성)
@@ -971,7 +974,7 @@ export default function ToneGamePage() {
   // ★useMemo — 예전엔 매 렌더마다 전 단어 spread 복제+정렬+localStorage 파싱이 무조건 실행(게임 중 탭 하나에도 수백 객체 재생성).
   //   게임 중엔 안 쓰는 데이터라 화면 전환(screen)·풀 로드 시에만 재계산. wordStatsRef는 ref(비반응)지만
   //   통계가 바뀐 뒤 이 데이터를 읽는 경로(런 종료→end→홈/숙련도/모드선택)가 전부 screen 전환을 동반해 항상 신선하다.
-  const { masteryTones, reviewRows, masteredN, tierPeakIdx, reviewWords } = useMemo(() => {
+  const { masteryTones, reviewRows, masteredN, reviewWords } = useMemo(() => {
     const pv = isPreview && previewScreen === 'mastery';
     const stats = pv ? (qs('empty') ? {} : PREVIEW_MASTERY.stats) : wordStatsRef.current;
     const map = pv ? PREVIEW_MASTERY.map
@@ -983,8 +986,6 @@ export default function ToneGamePage() {
       // 등급 표시용 마스터 수 = max(현재 통계, 동기화 mc) — mc는 last-writer라 진짜 강등은 반영되고,
       // 트림된 동기화 사본(현재 통계가 부분집합인 기기)에서만 mc가 하한 역할(아티팩트 강등 방지).
       masteredN: Math.max(masteredCount(stats, map), isPreview ? 0 : loadMasteredSync(studentToken)),
-      // 최고 등급(내 등급 화면 '최고' 칩). [DEV] 미리보기 `?screen=mastery&peak=1` = 강등 상태(최고 4단계·현재 골드) 검수
-      tierPeakIdx: isPreview ? (qs('peak') ? 3 : 0) : loadTierPeak(studentToken),
       reviewWords: rows.slice(0, ROUND_LENGTH).map((r) => r.word),
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1050,7 +1051,7 @@ export default function ToneGamePage() {
   } else if (screen === 'title') {
     content = <TitleScreen onStart={() => setHomeTx('in')} />;
   } else if (screen === 'home') {
-    content = <HomeScreen streak={startStreak} streakLongest={startStreakLongest} freezes={startFreezes} masteredN={masteredN} toneLevels={toneLevels}
+    content = <HomeScreen streak={startStreak} streakLongest={startStreakLongest} freezes={startFreezes} xp={xp} toneLevels={toneLevels}
       toneStatus={toneStatus} coachTone={coachTone} celebrateTone={celebrateTone}
       levelReveals={toneLevelChanges} onRevealsDone={() => setToneLevelChanges([])} revealHold={isPreview && previewScreen === 'tonelevel'}
       onPlay={goFromStart}
@@ -1084,7 +1085,7 @@ export default function ToneGamePage() {
   } else if (screen === 'mastery') {
     content = (
       <FigmaScreen>
-        <MasteryScreen rows={reviewRows} masteredN={masteredN} toneStats={masteryTones} peakTierIdx={tierPeakIdx} onBack={() => setScreen('home')} onReview={() => startReview(reviewWords)} />
+        <MasteryScreen rows={reviewRows} masteredN={masteredN} xp={xp} toneStats={masteryTones} onBack={() => setScreen('home')} onReview={() => startReview(reviewWords)} />
       </FigmaScreen>
     );
   } else if (screen === 'achievements') {
@@ -1214,11 +1215,17 @@ export default function ToneGamePage() {
       {showGameOverBeat && (() => {
         const finishBeat = () => {
           setShowGameOverBeat(false);
-          const now = currentMastered();
-          const prevN = masteredAtStartRef.current;
-          // 새 마스터=진행 연출 / 등급(티어)이 실제로 내려간 판=하락 연출(RankUpReveal down 분기, 담백).
-          // 마스터 수만 줄고 티어는 그대로면 조용히 결과로(잔소리 방지).
-          if (!isPreview && (now > prevN || earTier(now).idx < earTier(prevN).idx)) setRankUp({ prev: prevN, now });
+          // XP 적립 + 등급 상승 판정 — 일반·무한·테마만(beatOutcome이 그 외엔 null). 신기록 비트와 같은 사전판정(beatOutcome) 재사용.
+          //  결과화면(screen 'end') 이펙트는 이 시점 이후라, 여기서 먼저 XP를 적립해야 rankUp 판정·회원 동기화가 최신값을 본다.
+          let rankUpNext = null;
+          if (!isPreview && beatOutcome) {
+            const prevXp = loadXp(studentToken) ?? 0;
+            const newXp = addXp(studentToken, gameXpGain({ score, correct: answeredCount, isNewBest: beatOutcome.isNewBest }));
+            setXp(newXp);
+            const pIdx = xpTier(prevXp).idx, nIdx = xpTier(newXp).idx;
+            if (nIdx > pIdx) rankUpNext = { prevIdx: pIdx, nowIdx: nIdx }; // 임계 넘겨 승급 → 상승 연출(Phase 2: 승급 시험으로 교체)
+          }
+          if (rankUpNext) setRankUp(rankUpNext);
           else setScreen('end');
         };
         // 미리보기: ?screen=gameover&newbest=1 로 신기록 비트 확인(샘플 812 / 이전 800).
@@ -1234,13 +1241,12 @@ export default function ToneGamePage() {
         }
         return <GameOverBeat endKind={endKind} hold={hold} onDone={finishBeat} />;
       })()}
-      {/* 등급 진행/하락 연출 — 비트 다음·결과 전(새 마스터 또는 티어 하락 시). 미리보기 ?screen=rankup / ?screen=rankdown */}
-      {(rankUp || (isPreview && (previewScreen === 'rankup' || previewScreen === 'rankdown'))) && (
+      {/* 등급 상승 연출 — 비트 다음·결과 전(누적 XP가 다음 등급 임계를 넘겼을 때). 강등 없음. 미리보기 ?screen=rankup */}
+      {(rankUp || (isPreview && previewScreen === 'rankup')) && (
         <RankUpReveal
-          prev={rankUp ? rankUp.prev : (previewScreen === 'rankdown' ? 12 : 9)}
-          now={rankUp ? rankUp.now : (previewScreen === 'rankdown' ? 8 : 12)}
-          peakIdx={isPreview ? (previewScreen === 'rankdown' ? 3 : 0) : tierPeakIdx}
-          hold={isPreview && (previewScreen === 'rankup' || previewScreen === 'rankdown')}
+          prevIdx={rankUp ? rankUp.prevIdx : 1}
+          nowIdx={rankUp ? rankUp.nowIdx : 2}
+          hold={isPreview && previewScreen === 'rankup'}
           onDone={() => { setRankUp(null); setScreen('end'); }} />
       )}
       {/* [DEV] 설정 모달 미리보기(?screen=settings) — 머지 전 백도어 제거 대상 */}

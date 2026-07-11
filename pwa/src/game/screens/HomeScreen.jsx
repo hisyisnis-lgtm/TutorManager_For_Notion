@@ -10,7 +10,7 @@ import {
 import { TG, FONT_TITLE, FONT_BODY, FONT_NUM, TOUCH_OPT, haptic, isHapticMuted, setHapticMuted } from '../tgTokens.js';
 import { TONES } from '../../constants/toneGameWords.js';
 import { ToneMark, useCountUp } from '../tgWidgets.jsx';
-import { earTier } from '../earProfile.js';
+import { xpTier } from '../gameXp.js';
 import { play as playSfx, isSfxMuted, setSfxMuted } from '../tgSfx.js';
 import { isBgmMuted, setBgmMuted, startBgm } from '../tgBgm.js';
 import { FigmaScreen, EmberRise } from './shared.jsx';
@@ -675,13 +675,13 @@ function ToneCard({ tone, status, level, onClose }) {
 }
 
 export function HomeScreen({
-  streak = 0, streakLongest = 0, freezes = 0, masteredN = 0, toneLevels = {}, toneStatus = {}, coachTone = null, celebrateTone = null,
+  streak = 0, streakLongest = 0, freezes = 0, xp = 0, toneLevels = {}, toneStatus = {}, coachTone = null, celebrateTone = null,
   levelReveals = [], onRevealsDone, revealHold = false,
   homeReady = true,
   onPlay, onMastery, onAchievements, onHelp,
   onLogin, isMemberUser, memberName, nickname = null, onEditNickname, onLogout, onExit, studentToken, onRefreshBest, onDebugIntro,
 }) {
-  const tier = earTier(masteredN);
+  const tier = xpTier(xp);
   const isGuest = !!onLogin; // onLogin은 게스트일 때만 내려온다(회원/학생은 null)
   const [menuOpen, setMenuOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);

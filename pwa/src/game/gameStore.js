@@ -10,6 +10,7 @@ import { loadBest, saveBest } from './tgTokens.js';
 import { loadWordStats, saveWordStats, mergeStats, isMastered } from './tgWordStats.js';
 import { loadToneStats, saveToneStats } from './toneStats.js';
 import { loadTierPeak, bumpTierPeak } from './earProfile.js';
+import { loadXp, saveXp, mergeXp } from './gameXp.js';
 import { loadAchievements, saveAchievements, loadReviewMastered, addReviewMastered } from './achievements.js';
 import { loadStreak, saveStreak, loadFreezes, saveFreezes } from './streak.js';
 import { DIFFICULTIES, THEMES } from '../constants/toneGameWords.js';
@@ -222,6 +223,7 @@ export function collectLocalGameData(id) {
     mc,
     tone: compactToneStats(loadToneStats(id)), // 성조별 정확도(1·2·3·4·경성)
     tier: loadTierPeak(id),                    // 최고 등급(귀 티어) — 안 뺏김
+    xp: loadXp(id) ?? 0,                        // 누적 경험치(등급 산정) — 병합은 max(멱등)
     ach: loadAchievements(id),                 // 획득 업적 id
     rm: loadReviewMastered(id),                // 복습으로 마스터한 단어 수(업적)
     frz: loadFreezes(id),                      // 스트릭 보호권
@@ -246,6 +248,7 @@ function applyGameDataToLocal(id, data) {
   if (typeof data.mc === 'number') storeMasteredSync(id, data.mc); // 하락도 전파(진짜 실력 신호)
   if (data.tone) saveToneStats(id, mergeToneStats(loadToneStats(id), data.tone)); // 성조별 정확도
   if (typeof data.tier === 'number') bumpTierPeak(id, data.tier);                  // 최고 등급(오르기만)
+  if (typeof data.xp === 'number') saveXp(id, mergeXp(loadXp(id) ?? 0, data.xp));  // 누적 XP = max(멱등 — pull마다 인플레 금지)
   if (Array.isArray(data.ach) && data.ach.length) {
     saveAchievements(id, [...new Set([...loadAchievements(id), ...data.ach])]);    // 업적=합집합
   }

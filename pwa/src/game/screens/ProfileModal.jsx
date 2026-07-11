@@ -71,6 +71,7 @@ export function ProfileModal({
             <div style={{ marginTop: 8, width: '100%', height: 6, borderRadius: 3, background: '#ece5da', overflow: 'hidden' }}>
               <div style={{ width: `${pct}%`, height: '100%', borderRadius: 3, background: TG.CORAL_GRAD, transition: 'width .5s ease' }} />
             </div>
+            <span style={{ display: 'block', marginTop: 5, fontFamily: FONT_BODY, fontWeight: 600, fontSize: 11.5, color: TG.SUB }}>{tier.isMax ? '최고 등급이에요 🎉' : `다음 등급까지 ${tier.toNext.toLocaleString()} XP`}</span>
           </div>
         </div>
 
@@ -81,7 +82,6 @@ export function ProfileModal({
               <MedalIcon size={17} weight="fill" color="#F0A91E" />
             </div>
             <span style={{ flex: 1, textAlign: 'left', fontFamily: FONT_BODY, fontWeight: 700, fontSize: 14, color: TG.INK, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>등급 자세히 보기</span>
-            <span style={{ fontFamily: FONT_BODY, fontWeight: 600, fontSize: 12.5, color: TG.SUB, flexShrink: 0, whiteSpace: 'nowrap' }}>{tier.isMax ? '최고 등급' : `다음까지 ${tier.toNext}개`}</span>
             <CaretRightIcon size={16} weight="bold" color="#c9c2bb" />
           </button>
         )}
