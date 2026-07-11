@@ -185,7 +185,7 @@ const TONE_GAME_CSS = `
       @keyframes tg-hop { 0%,100%{transform:translateY(0)} 38%{transform:translateY(-15px)} }
       @keyframes tg-blinkeye { 0%,90%,100%{transform:scaleY(1)} 95%{transform:scaleY(.1)} }
       @keyframes tg-cta-pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.018)} }
-      @keyframes tg-ping { 0%{transform:scale(1);opacity:.5} 75%,100%{transform:scale(2.4);opacity:0} }
+      @keyframes tg-dotpulse { 0%,100%{transform:scale(.85)} 50%{transform:scale(1.3)} }
       @keyframes tg-needme { 0%,68%,100%{transform:rotate(0)} 76%{transform:rotate(-6deg)} 84%{transform:rotate(6deg)} 92%{transform:rotate(-3deg)} }
       @keyframes tg-sheet-up { from{transform:translateY(100%)} to{transform:translateY(0)} }
       @keyframes tg-sheet-down { from{transform:translateY(0)} to{transform:translateY(100%)} }

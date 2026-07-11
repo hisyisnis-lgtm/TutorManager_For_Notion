@@ -860,13 +860,8 @@ export function HomeScreen({
             position: 'relative', flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '9px 0', borderRadius: 16,
             background: '#fff', border: 'none', boxShadow: '0 5px 14px rgba(43,39,48,0.07)', cursor: 'pointer', ...TOUCH_OPT,
           }}>
-            {/* 레드닷 — 알림/할 일 있음. 단순한 빨간 점 + 핑(강조) 애니메이션. */}
-            {dot && (
-              <span aria-hidden="true" style={{ position: 'absolute', top: 7, right: 9, width: 8, height: 8 }}>
-                <span style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: '#F2484C', animation: 'tg-ping 1.6s cubic-bezier(0,0,.2,1) infinite' }} />
-                <span style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: '#F2484C' }} />
-              </span>
-            )}
+            {/* 레드닷 — 알림/할 일 있음. 점 자체가 커졌다 작아졌다(스케일 펄스)로 강조. */}
+            {dot && <span aria-hidden="true" style={{ position: 'absolute', top: 7, right: 9, width: 8, height: 8, borderRadius: '50%', background: '#F2484C', animation: 'tg-dotpulse 1.1s ease-in-out infinite' }} />}
             <div style={{ width: 26, height: 26, borderRadius: 9, background: tint, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <Icon size={16} weight="fill" color={color} />
             </div>
