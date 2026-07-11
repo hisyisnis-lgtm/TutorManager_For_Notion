@@ -56,6 +56,7 @@ import { CelebrationOverlay } from '../game/screens/CelebrationOverlay.jsx';
 import { GameOverBeat } from '../game/screens/GameOverBeat.jsx';
 import { NewRecordBeat } from '../game/screens/NewRecordBeat.jsx';
 import { RankUpReveal } from '../game/screens/RankUpReveal.jsx';
+import { XpGainReveal } from '../game/screens/XpGainReveal.jsx';
 import { ModeUnlockReveal } from '../game/screens/ModeUnlockReveal.jsx';
 
 // [DEV] 미리보기 쿼리 단일 창구 — ?screen=·endless=1·practice=1 등 백도어 파라미터. 렌더마다 URLSearchParams를
@@ -1201,10 +1202,6 @@ export default function ToneGamePage() {
           suggestPractice={(suggestPractice && !practiceMode && !reviewMode && !endlessMode && !themeMode && selectedDifficulty.id === 'easy') || (isPreview && previewScreen === 'end' && qs('suggest') === '1')}
           coachReady={!showGameOverBeat && !rankUp && !modeUnlock && celebrationQueue.length === 0} /* 결과 코치+연습유도 둘 다 이 게이트 뒤에서만 */
           practice={practiceMode} endless={endlessMode} endKind={endKind}
-          rank={rank}
-          xpGain={isPreview
-            ? (qs('xpgain') != null ? { gained: Number(qs('xpgain')), prevXp: Number(qs('xp') || 3000), newXp: Number(qs('xp') || 3000) + Number(qs('xpgain')), score: Number(qs('score') || 800), correct: Number(qs('correct') || 12), isNewBest: qs('newbest') === '1' } : null)
-            : xpGain}
           onRetry={practiceMode ? () => startPractice(selectedDifficulty) : endlessMode ? () => startEndless() : reviewMode ? () => startReview(reviewWords) : themeMode ? () => startTheme(selectedTheme) : () => startGame(selectedDifficulty)}
           onChangeDiff={endlessMode ? () => setScreen('modeselect') : reviewMode ? () => setScreen('mastery') : practiceMode ? () => { setDifficultyTarget('practice'); setScreen('difficulty'); } : themeMode ? () => setScreen('theme') : () => setScreen('difficulty')}
           onModeSelect={!endlessMode ? () => setScreen('modeselect') : undefined}
@@ -1300,8 +1297,11 @@ export default function ToneGamePage() {
             const prevXp = loadXp(studentToken) ?? 0;
             const newXp = addXp(studentToken, gained);
             setXp(newXp);
-            // 결과화면 연출용 — 획득량 + 내역(점수·정답수·신기록) + 이전/이후 XP(게이지 차오름)
-            setXpGain(gained > 0 ? { gained, prevXp, newXp, score, correct: answeredCount, isNewBest: beatOutcome.isNewBest } : null);
+            if (gained > 0) {
+              // XP 획득 연출(등급업 연출 자리) — 요소 하나씩 '쾅' + 게이지 차오름 → onDone에서 결과화면.
+              setXpGain({ gained, prevXp, newXp, score, correct: answeredCount, isNewBest: beatOutcome.isNewBest });
+              return;
+            }
           }
           setScreen('end');
         };
@@ -1326,6 +1326,14 @@ export default function ToneGamePage() {
           hold={isPreview && previewScreen === 'rankup'}
           onDone={() => { setRankUp(null); setScreen(examResult ? 'examresult' : 'end'); }} />
       )}
+      {/* 경험치 획득 연출 — 비트 다음·결과 전. 요소 하나씩 '쾅' + 게이지 차오름. 미리보기 ?screen=xpgain */}
+      {((xpGain && !isPreview && screen === 'game') || (isPreview && previewScreen === 'xpgain')) && (() => {
+        const g = isPreview
+          ? { gained: Number(qs('xpgain') || 936), prevXp: Number(qs('xp') || 3000), newXp: Number(qs('xp') || 3000) + Number(qs('xpgain') || 936), score: Number(qs('score') || 800), correct: Number(qs('correct') || 12), isNewBest: qs('newbest') === '1' }
+          : xpGain;
+        return <XpGainReveal gained={g.gained} prevXp={g.prevXp} newXp={g.newXp} score={g.score} correct={g.correct} isNewBest={g.isNewBest}
+          rank={isPreview ? Number(qs('rank') || 0) : rank} onDone={() => { if (!isPreview) setScreen('end'); }} />;
+      })()}
       {/* [DEV] 설정 모달 미리보기(?screen=settings) — 머지 전 백도어 제거 대상 */}
       {isPreview && previewScreen === 'settings' && <SettingsModal onClose={() => {}} />}
       {/* 모드 잠금해제 연출 — 결과 위, 업적보다 먼저. 미리보기 ?screen=modeunlock */}

@@ -2,7 +2,6 @@
 import { useState, useEffect } from 'react';
 import { TrophyIcon, ArrowClockwiseIcon, LightningIcon } from '@phosphor-icons/react';
 import { TG, FONT_NUM, FONT_BODY, TOUCH_OPT, pickCelebratePanda } from '../tgTokens.js';
-import { displayTier, XP_PER_CORRECT, XP_NEWBEST_BONUS } from '../gameXp.js';
 import { useCountUp, FlameIcon } from '../tgWidgets.jsx';
 import { play as playSfx } from '../tgSfx.js';
 import { Reveal, CoachBubble, ConfettiBurst, CrispFlash, LIGHT_CONFETTI } from './shared.jsx';
@@ -42,42 +41,7 @@ function SecBtn({ label, onClick, coachId }) {
   );
 }
 
-// 게임 종료 XP 획득 연출 — 획득량(카운트업) + 환산 내역(점수·정답·신기록) + 등급 게이지 차오름(이전→새 XP).
-function XpGainBar({ gained, prevXp, newXp, score, correct, isNewBest, rank = 0 }) {
-  const prevT = displayTier(rank, prevXp);
-  const nowT = displayTier(rank, newXp);
-  const animGained = useCountUp(gained, 1000);
-  const [w, setW] = useState(Math.round(prevT.progress * 100));
-  const justReady = !prevT.examReady && nowT.examReady; // 이번 판에 게이지 만땅 → 승급 시험 열림
-  useEffect(() => { const t = setTimeout(() => setW(Math.round(nowT.progress * 100)), 400); return () => clearTimeout(t); }, [nowT.progress]);
-  const parts = [
-    `점수 +${Math.max(0, Math.round(score || 0)).toLocaleString()}`,
-    `정답 ${correct || 0}개 +${Math.max(0, (correct || 0) * XP_PER_CORRECT)}`,
-    ...(isNewBest ? [`신기록 +${XP_NEWBEST_BONUS}`] : []),
-  ];
-  return (
-    <div style={{ width: '100%', maxWidth: 320, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-      {/* 획득량 */}
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 5 }}>
-        <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 13, color: '#9a93a0' }}>획득 경험치</span>
-        <span style={{ fontFamily: FONT_NUM, fontWeight: 800, fontSize: 24, color: TG.CORAL_DK, lineHeight: 1 }}>+{animGained.toLocaleString()}</span>
-        <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 13, color: '#9a93a0' }}>XP</span>
-      </div>
-      {/* 환산 내역 — 어떤 수치들로 XP가 됐는지 */}
-      <div style={{ fontFamily: FONT_BODY, fontWeight: 600, fontSize: 12, color: '#9a93a0', textAlign: 'center', lineHeight: 1.6 }}>{parts.join('   ·   ')}</div>
-      {/* 등급 게이지 (이전 → 새 XP 차오름) */}
-      <div style={{ width: '100%', height: 8, borderRadius: 4, background: '#f0ebe4', overflow: 'hidden', marginTop: 2 }}>
-        <div style={{ width: `${w}%`, height: '100%', borderRadius: 4, background: TG.CORAL_GRAD, transition: 'width 1.1s cubic-bezier(.4,0,.2,1)' }} />
-      </div>
-      <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-        <span style={{ fontFamily: FONT_BODY, fontWeight: 600, fontSize: 11.5, color: '#9a93a0' }}>{nowT.name}</span>
-        <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 11.5, color: justReady ? TG.CORAL_DK : '#9a93a0' }}>{nowT.isMax ? '최고 등급' : justReady ? '🎖 승급 시험 열림!' : `다음까지 ${nowT.toNext.toLocaleString()} XP`}</span>
-      </div>
-    </div>
-  );
-}
-
-export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, onRetry, onChangeDiff, onModeSelect, onLogin = null, retryLabel = '다시 도전', changeLabel = '난이도 바꾸기', practice = false, endKind = null, suggestPractice = false, coachReady = true, xpGain = null, rank = 0 }) {
+export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, onRetry, onChangeDiff, onModeSelect, onLogin = null, retryLabel = '다시 도전', changeLabel = '난이도 바꾸기', practice = false, endKind = null, suggestPractice = false, coachReady = true }) {
   const animScore = useCountUp(score, 1100);
   // 로그인 유도 모달(게스트가 '이전 기록'을 실제로 넘긴 순간) — 마운트 때 1회 판정(세션·쿨다운).
   //  previousBest>0: 첫 판(항상 신기록·이전0) 코치마크와 안 겹치고, 재도전+향상=투자 있는 성취에만.
@@ -153,11 +117,9 @@ export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, 
         ))}
       </div>
       </Reveal>
-      {/* 통계카드 하단과 CTA 사이 — XP 획득 연출(있으면) 또는 코치. 세로중앙. */}
-      <Reveal i={4} style={{ position: 'absolute', left: 24, right: 24, top: 452, bottom: 'calc(150px + env(safe-area-inset-bottom))', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        {xpGain
-          ? <XpGainBar gained={xpGain.gained} prevXp={xpGain.prevXp} newXp={xpGain.newXp} score={xpGain.score} correct={xpGain.correct} isNewBest={xpGain.isNewBest} rank={rank} />
-          : <CoachBubble text={suggestPractice ? '초급이 어렵나요? 천천히 익혀봐요' : practice ? '잘했어요! 또 연습해볼까요?' : endKind === 'miss' ? '아쉽게 틀렸어요! 다시 도전해볼까요?' : '다시 도전해서 신기록을 깨볼까요?'} />}
+      {/* 코치 — 통계카드 하단과 CTA 사이 가용공간 세로중앙. */}
+      <Reveal i={4} style={{ position: 'absolute', left: 24, right: 24, top: 452, bottom: 'calc(150px + env(safe-area-inset-bottom))', display: 'flex', alignItems: 'center' }}>
+        <CoachBubble text={suggestPractice ? '초급이 어렵나요? 천천히 익혀봐요' : practice ? '잘했어요! 또 연습해볼까요?' : endKind === 'miss' ? '아쉽게 틀렸어요! 다시 도전해볼까요?' : '다시 도전해서 신기록을 깨볼까요?'} />
       </Reveal>
       {/* 다시 도전 (하단 고정) — 최하단 '난이도 바꾸기' 위 */}
       <Reveal i={5} style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(80px + env(safe-area-inset-bottom))' }}>
