@@ -277,6 +277,7 @@ export default function ToneGamePage() {
     ? (qs('rank') != null ? Number(qs('rank')) : xpTier(Number(qs('xp') || 0)).idx)
     : seedRankIfMissing(studentToken, loadXp(studentToken) ?? 0)));
   const [examResult, setExamResult] = useState(null); // 승급 시험 결과 {correct,total,passed}
+  const [examPromptPending, setExamPromptPending] = useState(() => isPreview && qs('examprompt') === '1'); // 자격 새로 생김 → 홈 복귀 시 응시 권유 모달
   const [xpGain, setXpGain] = useState(null); // 이번 판 XP 획득 연출용 {gained, prevXp, newXp} (결과화면)
   const examCorrectRef = useRef(0); // 시험 중 무실수 정답 수(무실수+힌트미사용 완성만)
   const examEndedRef = useRef(false); // 시험 종료 판정 1회 가드
@@ -1111,7 +1112,8 @@ export default function ToneGamePage() {
   } else if (screen === 'title') {
     content = <TitleScreen onStart={() => setHomeTx('in')} />;
   } else if (screen === 'home') {
-    content = <HomeScreen streak={startStreak} streakLongest={startStreakLongest} freezes={startFreezes} xp={xp} rank={rank} onExam={() => startExam()} toneLevels={toneLevels}
+    content = <HomeScreen streak={startStreak} streakLongest={startStreakLongest} freezes={startFreezes} xp={xp} rank={rank} onExam={() => startExam()}
+      examPrompt={examPromptPending} onExamPromptClose={() => setExamPromptPending(false)} toneLevels={toneLevels}
       toneStatus={toneStatus} coachTone={coachTone} celebrateTone={celebrateTone}
       levelReveals={toneLevelChanges} onRevealsDone={() => setToneLevelChanges([])} revealHold={isPreview && previewScreen === 'tonelevel'}
       onPlay={goFromStart}
@@ -1297,6 +1299,8 @@ export default function ToneGamePage() {
             const prevXp = loadXp(studentToken) ?? 0;
             const newXp = addXp(studentToken, gained);
             setXp(newXp);
+            // 이번 판에 '승급 시험 자격'이 새로 생겼으면(게이지 만땅 크로싱) → 홈 복귀 시 응시 권유 모달 1회.
+            if (!displayTier(rank, prevXp).examReady && displayTier(rank, newXp).examReady) setExamPromptPending(true);
             if (gained > 0) {
               // XP 획득 연출(등급업 연출 자리) — 요소 하나씩 '쾅' + 게이지 차오름 → onDone에서 결과화면.
               setXpGain({ gained, prevXp, newXp, score, correct: answeredCount, isNewBest: beatOutcome.isNewBest });

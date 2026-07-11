@@ -678,8 +678,28 @@ function ToneCard({ tone, status, level, onClose }) {
   );
 }
 
+// 승급 시험 권유 모달 — 자격이 새로 생겨 홈에 돌아왔을 때 1회. '지금 응시' 또는 '나중에'.
+function ExamPromptModal({ tier, onExam, onClose }) {
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 62, background: 'rgba(26,16,20,0.55)', backdropFilter: 'blur(2px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, ...TOUCH_OPT }}>
+      <div className="tg-enter" onClick={(e) => e.stopPropagation()} style={{
+        width: '100%', maxWidth: 320, background: TG.CARD, borderRadius: 24, padding: '24px 22px 20px',
+        boxShadow: '0 20px 50px rgba(26,16,20,0.3)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+      }}>
+        <img src={tier.emblem} alt="" width={64} height={64} style={{ display: 'block', filter: `drop-shadow(0 4px 10px ${tier.glow}66)` }} />
+        <span style={{ fontFamily: FONT_TITLE, fontSize: 20, color: TG.INK, marginTop: 4 }}>승급 시험 준비 완료!</span>
+        <p style={{ margin: '2px 0 14px', textAlign: 'center', fontFamily: FONT_BODY, fontWeight: 500, fontSize: 13.5, lineHeight: 1.5, color: TG.SUB }}>경험치가 가득 찼어요. 승급 시험에 도전해 등급을 올려볼까요?</p>
+        <div style={{ display: 'flex', gap: 10, width: '100%' }}>
+          <button onClick={onClose} className="tg-press" style={{ flex: 1, height: 50, borderRadius: 14, border: '1.5px solid #ebe5de', background: '#fff', cursor: 'pointer', fontFamily: FONT_BODY, fontWeight: 700, fontSize: 15, color: TG.SUB, ...TOUCH_OPT }}>나중에</button>
+          <button onClick={() => { onClose(); onExam && onExam(); }} className="tg-press" style={{ flex: 1.4, height: 50, borderRadius: 14, border: 'none', background: TG.CORAL_GRAD, boxShadow: '0 8px 18px rgba(242,72,76,0.3)', cursor: 'pointer', fontFamily: FONT_BODY, fontWeight: 700, fontSize: 15, color: '#fff', ...TOUCH_OPT }}>지금 응시</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function HomeScreen({
-  streak = 0, streakLongest = 0, freezes = 0, xp = 0, rank = 0, onExam, toneLevels = {}, toneStatus = {}, coachTone = null, celebrateTone = null,
+  streak = 0, streakLongest = 0, freezes = 0, xp = 0, rank = 0, onExam, examPrompt = false, onExamPromptClose, toneLevels = {}, toneStatus = {}, coachTone = null, celebrateTone = null,
   levelReveals = [], onRevealsDone, revealHold = false,
   homeReady = true,
   onPlay, onMastery, onAchievements, achDot = false, onHelp,
@@ -872,6 +892,10 @@ export function HomeScreen({
 
       {cardTone != null && <ToneCard tone={TONES.find((t) => t.num === cardTone)} status={toneStatus[cardTone]} level={Math.min(5, (toneLevels[cardTone] || {}).lv || 1)} onClose={() => setCardTone(null)} />}
       {streakOpen && <StreakSheet streak={streak} longest={streakLongest} freezes={freezes} onClose={() => setStreakOpen(false)} />}
+      {/* 승급 시험 권유 — 자격이 새로 생겨 홈에 돌아왔을 때. 전환 완료 + 레벨 스포트라이트·코치와 안 겹치게. */}
+      {examPrompt && homeReady && revealIdx < 0 && !coach.visible && (
+        <ExamPromptModal tier={tier} onExam={onExam} onClose={() => onExamPromptClose && onExamPromptClose()} />
+      )}
       {profileOpen && <ProfileModal tier={tier} nickname={nickname} isGuest={isGuest} isMemberUser={isMemberUser} userId={studentToken}
         onEditNickname={onEditNickname ? () => { setProfileOpen(false); setNickEditOpen(true); } : null}
         onExam={onExam && tier.examReady ? () => { setProfileOpen(false); onExam(); } : null}
