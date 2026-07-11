@@ -95,6 +95,23 @@ export function saveAchievements(token, ids) {
   try { localStorage.setItem(achKey(token), JSON.stringify(ids || [])); } catch { /* 무시 */ }
 }
 
+// ── 업적 '확인함'(seen) — 홈 업적 버튼 레드닷용. 업적 화면을 열면 현재 획득분을 seen에 저장 → 이후 새 획득만 dot ──
+function achSeenKey(token) { return token ? `game_ach_seen_${token}` : 'game_ach_seen'; }
+export function loadSeenAchievements(token) {
+  try { const raw = localStorage.getItem(achSeenKey(token)); const v = raw ? JSON.parse(raw) : []; return Array.isArray(v) ? v : []; }
+  catch { return []; }
+}
+export function markAchievementsSeen(token, ids) {
+  try { localStorage.setItem(achSeenKey(token), JSON.stringify([...new Set(ids || [])])); } catch { /* 무시 */ }
+}
+// 미확인 획득 업적이 있으면 true(레드닷). 획득분 중 seen에 없는 게 하나라도 있으면.
+export function hasUnseenAchievements(token) {
+  const earned = loadAchievements(token);
+  if (!earned.length) return false;
+  const seen = new Set(loadSeenAchievements(token));
+  return earned.some((id) => !seen.has(id));
+}
+
 // ── 복습 성과 카운터 — 복습 런에서 새로 마스터된 단어 수 누적(업적 '복습의 힘'의 데이터) ──
 function reviewMasteredKey(token) { return token ? `game_review_mastered_${token}` : 'game_review_mastered'; }
 export function loadReviewMastered(token) {

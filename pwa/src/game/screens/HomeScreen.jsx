@@ -682,7 +682,7 @@ export function HomeScreen({
   streak = 0, streakLongest = 0, freezes = 0, xp = 0, rank = 0, onExam, toneLevels = {}, toneStatus = {}, coachTone = null, celebrateTone = null,
   levelReveals = [], onRevealsDone, revealHold = false,
   homeReady = true,
-  onPlay, onMastery, onAchievements, onHelp,
+  onPlay, onMastery, onAchievements, achDot = false, onHelp,
   onLogin, isMemberUser, memberName, nickname = null, onEditNickname, onLogout, onExit, studentToken, onRefreshBest, onDebugIntro,
 }) {
   const tier = displayTier(rank, xp);
@@ -690,6 +690,9 @@ export function HomeScreen({
   const [menuOpen, setMenuOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [nickEditOpen, setNickEditOpen] = useState(false);
+  // 놀러가기 첫 방문 유도 레드닷 — 한 번 열면 사라짐(로컬 플래그). 채널 유입 넛지.
+  const [playDot, setPlayDot] = useState(() => { try { return !localStorage.getItem('tg_play_visited'); } catch { return false; } });
+  const openPlay = () => { setPlayOpen(true); setPlayDot(false); try { localStorage.setItem('tg_play_visited', '1'); } catch { /* noop */ } };
   const [playOpen, setPlayOpen] = useState(false);
   const [debugScoreOpen, setDebugScoreOpen] = useState(false);
   const [cardTone, setCardTone] = useState(null); // 탭한 성조 미니 카드
@@ -740,9 +743,9 @@ export function HomeScreen({
     return () => clearTimeout(id);
   }, [introActive, coachTone]);
   const aux = [
-    { key: 'play', Icon: HandWavingIcon, label: '놀러가기', color: TG.CORAL_DK, tint: 'rgba(242,72,76,0.12)', onClick: () => setPlayOpen(true) },
-    { key: 'rank', Icon: MedalIcon, label: '등급', color: '#F0A91E', tint: 'rgba(240,169,30,0.14)', onClick: onMastery },
-    { key: 'ach', Icon: TrophyIcon, label: '업적', color: '#8B5CF6', tint: 'rgba(139,92,246,0.13)', onClick: () => onAchievements && onAchievements() },
+    { key: 'play', Icon: HandWavingIcon, label: '놀러가기', color: TG.CORAL_DK, tint: 'rgba(242,72,76,0.12)', onClick: openPlay, dot: playDot },
+    { key: 'rank', Icon: MedalIcon, label: '등급', color: '#F0A91E', tint: 'rgba(240,169,30,0.14)', onClick: onMastery, dot: tier.examReady }, // 승급 시험 가능
+    { key: 'ach', Icon: TrophyIcon, label: '업적', color: '#8B5CF6', tint: 'rgba(139,92,246,0.13)', onClick: () => onAchievements && onAchievements(), dot: achDot }, // 미확인 획득
   ];
   return (
     <FigmaScreen bg={OUTSIDE}>
@@ -852,11 +855,13 @@ export function HomeScreen({
         </button>
       </div>
       <div style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(20px + env(safe-area-inset-bottom))', zIndex: 3, display: 'flex', gap: 10 }}>
-        {aux.map(({ key, Icon, label, color, tint, onClick }) => (
-          <button key={key} className="tg-press" onClick={onClick} style={{
-            flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '9px 0', borderRadius: 16,
+        {aux.map(({ key, Icon, label, color, tint, onClick, dot }) => (
+          <button key={key} className="tg-press" onClick={onClick} aria-label={dot ? `${label} · 새 소식` : undefined} style={{
+            position: 'relative', flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '9px 0', borderRadius: 16,
             background: '#fff', border: 'none', boxShadow: '0 5px 14px rgba(43,39,48,0.07)', cursor: 'pointer', ...TOUCH_OPT,
           }}>
+            {/* 레드닷 — 알림/할 일 있음. 흰 테두리로 카드와 분리, 우상단 */}
+            {dot && <span aria-hidden="true" style={{ position: 'absolute', top: 6, right: 8, width: 9, height: 9, borderRadius: '50%', background: '#F2484C', border: '1.5px solid #fff', boxShadow: '0 1px 3px rgba(242,72,76,0.4)' }} />}
             <div style={{ width: 26, height: 26, borderRadius: 9, background: tint, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <Icon size={16} weight="fill" color={color} />
             </div>

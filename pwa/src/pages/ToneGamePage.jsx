@@ -25,7 +25,7 @@ import {
 import { recordTone, loadToneStats, saveToneStats, weakestTone, toneAccuracy } from '../game/toneStats.js';
 import { findLianyin } from '../game/lianyin.js';
 import { recordPlay, loadStreak, effectiveCurrent, dateKeyKST, loadFreezes } from '../game/streak.js';
-import { syncAchievements, loadAchievements, achievementById, loadReviewMastered, addReviewMastered } from '../game/achievements.js';
+import { syncAchievements, loadAchievements, achievementById, loadReviewMastered, addReviewMastered, markAchievementsSeen, hasUnseenAchievements } from '../game/achievements.js';
 import { loadGuestNickname } from '../game/nickname.js';
 import { initTts, speakWord, preloadTts } from '../game/tgTts.js';
 import { initSfx, play as playSfx } from '../game/tgSfx.js';
@@ -1029,7 +1029,7 @@ export default function ToneGamePage() {
   // ★useMemo — 예전엔 매 렌더마다 전 단어 spread 복제+정렬+localStorage 파싱이 무조건 실행(게임 중 탭 하나에도 수백 객체 재생성).
   //   게임 중엔 안 쓰는 데이터라 화면 전환(screen)·풀 로드 시에만 재계산. wordStatsRef는 ref(비반응)지만
   //   통계가 바뀐 뒤 이 데이터를 읽는 경로(런 종료→end→홈/숙련도/모드선택)가 전부 screen 전환을 동반해 항상 신선하다.
-  const { masteryTones, reviewRows, masteredN, reviewWords } = useMemo(() => {
+  const { masteryTones, reviewRows, masteredN, reviewWords, achDot } = useMemo(() => {
     const pv = isPreview && previewScreen === 'mastery';
     const stats = pv ? (qs('empty') ? {} : PREVIEW_MASTERY.stats) : wordStatsRef.current;
     const map = pv ? PREVIEW_MASTERY.map
@@ -1042,6 +1042,8 @@ export default function ToneGamePage() {
       // 트림된 동기화 사본(현재 통계가 부분집합인 기기)에서만 mc가 하한 역할(아티팩트 강등 방지).
       masteredN: Math.max(masteredCount(stats, map), isPreview ? 0 : loadMasteredSync(studentToken)),
       reviewWords: rows.slice(0, ROUND_LENGTH).map((r) => r.word),
+      achDot: isPreview ? qs('achdot') === '1' : hasUnseenAchievements(studentToken), // 홈 '업적' 레드닷(미확인 획득)
+
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [screen, wordPoolByDiff, isPreview, previewScreen, studentToken]);
@@ -1110,7 +1112,9 @@ export default function ToneGamePage() {
       toneStatus={toneStatus} coachTone={coachTone} celebrateTone={celebrateTone}
       levelReveals={toneLevelChanges} onRevealsDone={() => setToneLevelChanges([])} revealHold={isPreview && previewScreen === 'tonelevel'}
       onPlay={goFromStart}
-      onMastery={() => setScreen('mastery')} onAchievements={() => setScreen('achievements')}
+      onMastery={() => setScreen('mastery')}
+      onAchievements={() => { if (!isPreview) markAchievementsSeen(studentToken, loadAchievements(studentToken)); setScreen('achievements'); }}
+      achDot={achDot}
       onHelp={() => setHelpOpen(true)}
       onLogin={identity.kind === 'guest' ? () => setScreen('login') : null}
       isMemberUser={identity.kind === 'member'} memberName={identity.kind === 'member' ? memberNick : null}
