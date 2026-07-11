@@ -64,17 +64,15 @@ export function XpGainReveal({ gained, prevXp = 0, newXp = 0, score = 0, correct
           </div>
         ))}
       </div>
-      {/* 등급 게이지 — 왼쪽 등급 엠블럼 + 게이지(항목 공개마다 차오름) */}
-      <div style={{ width: '100%', maxWidth: 280, display: 'flex', alignItems: 'center', gap: 12 }}>
-        <img src={nowT.emblem} alt="" width={42} height={42} style={{ display: 'block', flexShrink: 0, filter: `drop-shadow(0 3px 8px ${nowT.glow}55)` }} />
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ height: 9, borderRadius: 5, background: 'rgba(255,255,255,0.16)', overflow: 'hidden' }}>
-            <div style={{ width: `${pct}%`, height: '100%', borderRadius: 5, background: TG.CORAL_GRAD, transition: 'width .5s cubic-bezier(.4,0,.2,1)' }} />
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 7 }}>
-            <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 12, color: 'rgba(255,255,255,0.72)' }}>{nowT.name}</span>
-            <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 12, color: nowT.examReady ? '#FFC94D' : 'rgba(255,255,255,0.55)' }}>{nowT.isMax ? '최고 등급' : nowT.examReady ? '가득 참!' : `다음까지 ${nowT.toNext.toLocaleString()} XP`}</span>
-          </div>
+      {/* 등급 게이지 — 위: 엠블럼 + 등급명 … 다음까지 N XP / 아래: 게이지 풀폭(항목 공개마다 차오름) */}
+      <div style={{ width: '100%', maxWidth: 280, display: 'flex', flexDirection: 'column', gap: 9 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <img src={nowT.emblem} alt="" width={38} height={38} style={{ display: 'block', flexShrink: 0, filter: `drop-shadow(0 3px 8px ${nowT.glow}55)` }} />
+          <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 13, color: 'rgba(255,255,255,0.82)' }}>{nowT.name}</span>
+          <span style={{ marginLeft: 'auto', fontFamily: FONT_BODY, fontWeight: 700, fontSize: 12, color: nowT.examReady ? '#FFC94D' : 'rgba(255,255,255,0.55)' }}>{nowT.isMax ? '최고 등급' : nowT.examReady ? '가득 참!' : `다음까지 ${nowT.toNext.toLocaleString()} XP`}</span>
+        </div>
+        <div style={{ height: 9, borderRadius: 5, background: 'rgba(255,255,255,0.16)', overflow: 'hidden' }}>
+          <div style={{ width: `${pct}%`, height: '100%', borderRadius: 5, background: TG.CORAL_GRAD, transition: 'width .5s cubic-bezier(.4,0,.2,1)' }} />
         </div>
       </div>
       {/* 승급 가능 배너 — 게이지 만땅 순간 */}
