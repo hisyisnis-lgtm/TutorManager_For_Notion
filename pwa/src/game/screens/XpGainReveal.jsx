@@ -41,7 +41,8 @@ export function XpGainReveal({ gained, prevXp = 0, newXp = 0, score = 0, correct
 
   const pct = Math.round(nowT.progress * 100);
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 130, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(28,24,32,0.88)', padding: 24 }}>
+    <div onClick={() => { if (!hold && done) onDone && onDone(); }}
+      style={{ position: 'fixed', inset: 0, zIndex: 130, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(28,24,32,0.88)', padding: 24, cursor: done && !hold ? 'pointer' : 'default' }}>
       <style>{`
         @keyframes xg-bang{0%{opacity:0;transform:scale(1.7)}45%{opacity:1;transform:scale(.9)}72%{transform:scale(1.05)}100%{transform:scale(1)}}
         @keyframes xg-punch{0%{transform:scale(1)}30%{transform:scale(1.16)}100%{transform:scale(1)}}
@@ -79,9 +80,9 @@ export function XpGainReveal({ gained, prevXp = 0, newXp = 0, score = 0, correct
           <span style={{ fontFamily: FONT_BODY, fontWeight: 800, fontSize: 14.5, color: '#fff' }}>🎖 승급 시험 가능!</span>
         </div>
       )}
-      {/* 확인 — 다 끝나면 등장 */}
+      {/* 탭하여 계속 — 다 끝나면 텍스트 안내(화면 아무 곳이나 탭하면 결과로) */}
       {!hold && done && (
-        <button onClick={onDone} className="tg-press" style={{ marginTop: 34, padding: '13px 46px', borderRadius: 16, border: 'none', cursor: 'pointer', background: '#fff', fontFamily: FONT_BODY, fontWeight: 700, fontSize: 16, color: TG.INK, animation: 'xg-pop .4s ease .1s both' }}>확인</button>
+        <span style={{ marginTop: 34, fontFamily: FONT_BODY, fontWeight: 600, fontSize: 13.5, color: 'rgba(255,255,255,0.5)', animation: 'xg-pop .4s ease .1s both' }}>탭하여 계속</span>
       )}
     </div>
   );
