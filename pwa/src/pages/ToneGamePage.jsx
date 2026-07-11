@@ -276,6 +276,7 @@ export default function ToneGamePage() {
     ? (qs('rank') != null ? Number(qs('rank')) : xpTier(Number(qs('xp') || 0)).idx)
     : seedRankIfMissing(studentToken, loadXp(studentToken) ?? 0)));
   const [examResult, setExamResult] = useState(null); // 승급 시험 결과 {correct,total,passed}
+  const [xpGain, setXpGain] = useState(null); // 이번 판 XP 획득 연출용 {gained, prevXp, newXp} (결과화면)
   const examCorrectRef = useRef(0); // 시험 중 무실수 정답 수(무실수+힌트미사용 완성만)
   const examEndedRef = useRef(false); // 시험 종료 판정 1회 가드
 
@@ -759,6 +760,7 @@ export default function ToneGamePage() {
     { const ts = toneStatsRef.current || {}, snap = {}; for (const t of [1, 2, 3, 4, 0]) snap[t] = (ts[t] && ts[t][0]) || 0; toneSnapRef.current = snap; } // 성조별 정답수 스냅샷(성장 축하용)
     toneLevelSnapRef.current = deriveToneLevels(toneStatsRef.current); setToneLevelChanges([]); setModeUnlock(null); // 성조 레벨 스냅샷(업/다운 연출용) + 모드해제 연출 초기화
     wordElapsedRef.current = 0; setGaugeOffsetMs(0); setRunId((n) => n + 1);
+    setXpGain(null); // 새 런 — 이전 판 XP 획득 연출 정리
     setCdNum(3); setCdPhase('in'); // 카운트다운 오버레이 시작(현재 화면 위로 슬라이드 인 → 게임 전환 → 슬라이드 아웃)
   };
 
@@ -1199,6 +1201,10 @@ export default function ToneGamePage() {
           suggestPractice={(suggestPractice && !practiceMode && !reviewMode && !endlessMode && !themeMode && selectedDifficulty.id === 'easy') || (isPreview && previewScreen === 'end' && qs('suggest') === '1')}
           coachReady={!showGameOverBeat && !rankUp && !modeUnlock && celebrationQueue.length === 0} /* 결과 코치+연습유도 둘 다 이 게이트 뒤에서만 */
           practice={practiceMode} endless={endlessMode} endKind={endKind}
+          rank={rank}
+          xpGain={isPreview
+            ? (qs('xpgain') != null ? { gained: Number(qs('xpgain')), prevXp: Number(qs('xp') || 3000), newXp: Number(qs('xp') || 3000) + Number(qs('xpgain')), score: Number(qs('score') || 800), correct: Number(qs('correct') || 12), isNewBest: qs('newbest') === '1' } : null)
+            : xpGain}
           onRetry={practiceMode ? () => startPractice(selectedDifficulty) : endlessMode ? () => startEndless() : reviewMode ? () => startReview(reviewWords) : themeMode ? () => startTheme(selectedTheme) : () => startGame(selectedDifficulty)}
           onChangeDiff={endlessMode ? () => setScreen('modeselect') : reviewMode ? () => setScreen('mastery') : practiceMode ? () => { setDifficultyTarget('practice'); setScreen('difficulty'); } : themeMode ? () => setScreen('theme') : () => setScreen('difficulty')}
           onModeSelect={!endlessMode ? () => setScreen('modeselect') : undefined}
@@ -1290,8 +1296,12 @@ export default function ToneGamePage() {
           // XP 적립 — 일반·무한·테마만(beatOutcome이 그 외엔 null). 게이지만 채움: 등급 승급은 승급 시험 합격으로만(자동승급 없음).
           //  결과화면(screen 'end') 이펙트는 이 시점 이후라, 여기서 먼저 적립해야 회원 동기화가 최신 XP를 본다.
           if (!isPreview && beatOutcome) {
-            const newXp = addXp(studentToken, gameXpGain({ score, correct: answeredCount, isNewBest: beatOutcome.isNewBest }));
+            const gained = gameXpGain({ score, correct: answeredCount, isNewBest: beatOutcome.isNewBest });
+            const prevXp = loadXp(studentToken) ?? 0;
+            const newXp = addXp(studentToken, gained);
             setXp(newXp);
+            // 결과화면 연출용 — 획득량 + 내역(점수·정답수·신기록) + 이전/이후 XP(게이지 차오름)
+            setXpGain(gained > 0 ? { gained, prevXp, newXp, score, correct: answeredCount, isNewBest: beatOutcome.isNewBest } : null);
           }
           setScreen('end');
         };
