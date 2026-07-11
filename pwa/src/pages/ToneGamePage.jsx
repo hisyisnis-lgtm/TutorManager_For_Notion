@@ -15,7 +15,7 @@ import {
   getMemberSession, loadMasteredSync, storeMasteredSync,
 } from '../game/gameStore.js';
 import { earTier, loadTierPeak } from '../game/earProfile.js';
-import { gameXpGain, xpTier, loadXp, addXp, seedXpIfMissing } from '../game/gameXp.js';
+import { gameXpGain, xpTier, loadXp, saveXp, addXp, seedXpIfMissing, loadRank, saveRank, seedRankIfMissing, displayTier, examPassed, examFailXp, EXAM_QUESTIONS } from '../game/gameXp.js';
 import { ROUND_LENGTH, DIFFICULTIES, THEMES } from '../constants/toneGameWords.js';
 import { TG, ensureGameFonts, haptic, shuffle, getTimeLimitForCombo, loadBest, saveBest, serverToCache } from '../game/tgTokens.js';
 import {
@@ -49,7 +49,7 @@ import { SfxLab } from '../game/screens/_SfxLab.jsx'; // [임시·DEV] 효과음
 import { DifficultyScreen } from '../game/screens/DifficultyScreen.jsx';
 import { ThemeScreen } from '../game/screens/ThemeScreen.jsx';
 import { GameScreen } from '../game/screens/GameScreen.jsx';
-import { ResultScreen } from '../game/screens/ResultScreen.jsx';
+import { ResultScreen, ExamResultScreen } from '../game/screens/ResultScreen.jsx';
 import { MasteryScreen } from '../game/screens/MasteryScreen.jsx';
 import { AchievementsScreen } from '../game/screens/AchievementsScreen.jsx';
 import { CelebrationOverlay } from '../game/screens/CelebrationOverlay.jsx';
@@ -213,6 +213,8 @@ export default function ToneGamePage() {
   const practiceMode = gameMode === 'practice'; // 연습(시간 무제한·기록 미반영·정답 보기)
   const reviewMode = gameMode === 'review';     // 복습(약한 단어 10개·기록 미반영)
   const themeMode = gameMode === 'theme';       // 테마(드라마·여행 등) — 종료처리는 normal과 동일(gameKey만 테마 것)
+  const examMode = gameMode === 'exam';         // 승급 시험(20문제·무실수 정답률 80% 합격·불합격 XP차감) — 기록·XP·스트릭 미반영
+  const examModeRef = useRef(false); examModeRef.current = examMode; // handleTone 등 useCallback 클로저에서 최신 모드 참조
   const [selectedTheme, setSelectedTheme] = useState(THEMES[0]);
   const [wordPoolByTheme, setWordPoolByTheme] = useState({});
   const wordStatsRef = useRef({});  // 단어별 숙련도 글로벌(localStorage 동기화)
@@ -269,6 +271,13 @@ export default function ToneGamePage() {
   const [xp, setXp] = useState(() => (isPreview
     ? Number(qs('xp') || 0)
     : seedXpIfMissing(studentToken, Math.max(earTier(loadMasteredSync(studentToken)).idx, loadTierPeak(studentToken)))));
+  // 등급(rank) — XP와 분리(승급 시험 합격으로만 오름). 최초엔 현재 XP 도달 등급으로 시딩(Phase1 자동승급 승계).
+  const [rank, setRank] = useState(() => (isPreview
+    ? (qs('rank') != null ? Number(qs('rank')) : xpTier(Number(qs('xp') || 0)).idx)
+    : seedRankIfMissing(studentToken, loadXp(studentToken) ?? 0)));
+  const [examResult, setExamResult] = useState(null); // 승급 시험 결과 {correct,total,passed}
+  const examCorrectRef = useRef(0); // 시험 중 무실수 정답 수(무실수+힌트미사용 완성만)
+  const examEndedRef = useRef(false); // 시험 종료 판정 1회 가드
 
   const timersRef = useRef([]);
   const addTimer = (id) => { timersRef.current.push(id); };
@@ -573,7 +582,7 @@ export default function ToneGamePage() {
   //  ★타이밍 안전: setShowGameOverBeat(true)는 항상 addPausable(1.2~1.7s) 안에서 호출돼, 비트가 뜨는 이 시점 score/maxCombo는 최종값(settled).
   //  resolveEndOutcome은 순수함수라 end-effect와 동일 결과(중복 계산이지만 저렴 — 부수효과 없음).
   const beatOutcome = useMemo(() => {
-    if (!showGameOverBeat || isPreview || reviewMode || practiceMode) return null;
+    if (!showGameOverBeat || isPreview || reviewMode || practiceMode || examMode) return null;
     const m = themeMode ? 'normal' : gameMode;
     if (m !== 'normal' && m !== 'endless') return null;
     const gk = themeMode ? selectedTheme?.gameKey : selectedDifficulty?.gameKey;
@@ -583,6 +592,29 @@ export default function ToneGamePage() {
     return resolveEndOutcome({ mode: m, prev: prevRecord, score, maxCombo, avgMs: avgMsVal });
   }, [showGameOverBeat, isPreview, reviewMode, practiceMode, themeMode, gameMode, selectedTheme, selectedDifficulty, studentToken, answeredCount, totalAnswerTime, score, maxCombo]);
   const beatRecord = !!beatOutcome?.isNewBest;
+  // 승급 시험 종료 — 20문제가 끝나 showGameOverBeat가 서면(examMode) 비트 없이 즉시 판정. examEndedRef로 1회만.
+  useEffect(() => {
+    if (!showGameOverBeat || !examMode || examEndedRef.current) return undefined;
+    examEndedRef.current = true;
+    setShowGameOverBeat(false);
+    const correct = examCorrectRef.current;
+    const total = words.length || EXAM_QUESTIONS;
+    const passed = examPassed(correct, total);
+    if (passed) {
+      const prevIdx = rank, nowIdx = rank + 1;
+      saveRank(studentToken, nowIdx); setRank(nowIdx);      // 등급 +1(시험 합격으로만 오름)
+      setExamResult({ correct, total, passed: true });
+      setRankUp({ prevIdx, nowIdx });                       // 합격 연출(RankUpReveal 재활용) → onDone에서 결과화면
+    } else {
+      const newXp = examFailXp(rank, loadXp(studentToken) ?? xp); // XP 15% 차감(등급 base 아래로는 안 내려감)
+      saveXp(studentToken, newXp); setXp(newXp);
+      setExamResult({ correct, total, passed: false });
+      setScreen('examresult');
+    }
+    if (!isPreview && identity.kind === 'member') pushMemberData(identity).catch(() => {}); // 회원: 등급/XP 서버 동기화
+    if (!isPreview) track('exam_end', { m: DIFFICULTIES[Math.min(rank, DIFFICULTIES.length - 1)]?.id, k: identity.kind, v: correct });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showGameOverBeat, examMode]);
   // 신기록 비트 등장 순간 축하 효과음(win/unlock)을 여기서 1회 재생 → 결과화면 도착까지 기다리지 않고 비트와 소리를 동기화.
   //  end-effect는 beatSfxRef 가드로 같은 소리를 재생하지 않음(중복 방지). 게임오버(비신기록)는 비트가 소리를 안 울리므로 end-effect가 담당.
   useEffect(() => {
@@ -838,6 +870,27 @@ export default function ToneGamePage() {
     resetRunState();
   };
 
+  // 승급 시험 — 게이지 만땅(examReady) 시 응시. 현재 등급 난이도 풀에서 무작위 20문제(순수 성조 식별).
+  // 일반 라운드 메커니즘 재활용(타이머·하트·힌트 그대로). '정답' = 무실수+힌트미사용 완성(handleTone에서 집계).
+  // 20문제 끝 → 비트 없이 판정(examEnd effect): 합격 등급+1·상승 연출 / 불합격 XP 15%차감. 기록·XP적립·스트릭 미반영.
+  const startExam = () => {
+    const rIdx = Math.min(rank, DIFFICULTIES.length - 1);
+    if (rank >= DIFFICULTIES.length) return; // 최고 등급은 시험 없음(방어)
+    const d = DIFFICULTIES[rIdx];
+    const pool = wordPoolByDiff[d.id];
+    if (!pool || pool.length === 0) {
+      message.error('단어를 불러오지 못했어요. 잠시 후 다시 시도해주세요.');
+      fetchToneWords(d.id).then((w) => { if (Array.isArray(w) && w.length > 0) setWordPoolByDiff((prev) => ({ ...prev, [d.id]: w })); }).catch(() => {});
+      return;
+    }
+    setSelectedDifficulty(d); // 시험 타이머 페이스 = 해당 등급 난이도
+    setGameMode('exam');    setRecordToBeat(0);
+    examCorrectRef.current = 0; examEndedRef.current = false; setExamResult(null);
+    setRound(shuffle(pool).slice(0, EXAM_QUESTIONS), { listen: false }); // 시험=듣기/그리기 미출제(순수 성조 식별)
+    if (!isPreview) track('run_start', { m: 'exam', k: identity.kind });
+    resetRunState();
+  };
+
   const handleTone = useCallback((toneNum) => {
     if (completedRef.current || paused || cdPhase || suddenIntro) return; // 완성/전환 중(동기 가드) — 같은 tick 더블탭·멀티터치 재진입 차단
     const word = words[wordIndex];
@@ -860,6 +913,8 @@ export default function ToneGamePage() {
         const remaining = practiceMode ? 0 : Math.max(0, wordTimeLimitRef.current - answerTime); // 연습=시간보너스 없음
         let earned;
         if (!hasMistake) {
+          // 승급 시험 정답 집계 — 무실수 완성 + 힌트 미사용만 '정답'(공정성). 시험은 점수 대신 정답률로 판정.
+          if (examModeRef.current && !hintUsedRef.current) examCorrectRef.current += 1;
           const newCombo = combo + 1;
           earned = computeScore({ perfect: true, newCombo, remainingMs: remaining });
           setCombo(newCombo); setMaxCombo((m) => Math.max(m, newCombo));
@@ -1051,7 +1106,7 @@ export default function ToneGamePage() {
   } else if (screen === 'title') {
     content = <TitleScreen onStart={() => setHomeTx('in')} />;
   } else if (screen === 'home') {
-    content = <HomeScreen streak={startStreak} streakLongest={startStreakLongest} freezes={startFreezes} xp={xp} toneLevels={toneLevels}
+    content = <HomeScreen streak={startStreak} streakLongest={startStreakLongest} freezes={startFreezes} xp={xp} rank={rank} onExam={() => startExam()} toneLevels={toneLevels}
       toneStatus={toneStatus} coachTone={coachTone} celebrateTone={celebrateTone}
       levelReveals={toneLevelChanges} onRevealsDone={() => setToneLevelChanges([])} revealHold={isPreview && previewScreen === 'tonelevel'}
       onPlay={goFromStart}
@@ -1085,7 +1140,7 @@ export default function ToneGamePage() {
   } else if (screen === 'mastery') {
     content = (
       <FigmaScreen>
-        <MasteryScreen rows={reviewRows} masteredN={masteredN} xp={xp} toneStats={masteryTones} onBack={() => setScreen('home')} onReview={() => startReview(reviewWords)} />
+        <MasteryScreen rows={reviewRows} masteredN={masteredN} xp={xp} rank={rank} onExam={() => startExam()} toneStats={masteryTones} onBack={() => setScreen('home')} onReview={() => startReview(reviewWords)} />
       </FigmaScreen>
     );
   } else if (screen === 'achievements') {
@@ -1146,6 +1201,19 @@ export default function ToneGamePage() {
           onLogin={identity.kind === 'guest' ? () => setScreen('login') : null}
           retryLabel={practiceMode ? '한 번 더 연습' : reviewMode ? '한 번 더 복습' : undefined}
           changeLabel={endlessMode ? '모드 선택으로' : reviewMode ? '숙련도로 돌아가기' : themeMode ? '테마 바꾸기' : '난이도 바꾸기'} />
+      </FigmaScreen>
+    );
+  } else if (screen === 'examresult') {
+    // [DEV] 미리보기 ?screen=examresult&pass=1&correct=18 로 합격/불합격 화면 검수
+    const er = examResult || (isPreview
+      ? { correct: qs('correct') != null ? Number(qs('correct')) : (qs('pass') === '1' ? 18 : 12), total: EXAM_QUESTIONS, passed: qs('pass') === '1' }
+      : { correct: 0, total: EXAM_QUESTIONS, passed: false });
+    content = (
+      <FigmaScreen>
+        <ExamResultScreen correct={er.correct} total={er.total} passed={er.passed}
+          canRetry={!er.passed && (isPreview ? qs('retry') === '1' : displayTier(rank, xp).examReady)}
+          onRetry={() => startExam()}
+          onHome={() => { setGameMode('normal'); setScreen('home'); }} />
       </FigmaScreen>
     );
   } else { // game
@@ -1212,21 +1280,16 @@ export default function ToneGamePage() {
       {helpOpen && <HelpStartModal onStart={() => { setHelpOpen(false); setTutorialFromHelp(true); setScreen('tutorial'); }} onClose={() => setHelpOpen(false)} />}
       {/* 게임오버 비트 — 게임 화면 위 오버레이(결과화면 직전). ~2초 후 결과('end')로 진행.
           신기록 판이면 어두운 게임오버 대신 밝은 '신기록!' 축하 비트로 교체(정확한 인지 + 기분좋게). onDone 로직은 공통. */}
-      {showGameOverBeat && (() => {
+      {showGameOverBeat && !examMode && (() => {
         const finishBeat = () => {
           setShowGameOverBeat(false);
-          // XP 적립 + 등급 상승 판정 — 일반·무한·테마만(beatOutcome이 그 외엔 null). 신기록 비트와 같은 사전판정(beatOutcome) 재사용.
-          //  결과화면(screen 'end') 이펙트는 이 시점 이후라, 여기서 먼저 XP를 적립해야 rankUp 판정·회원 동기화가 최신값을 본다.
-          let rankUpNext = null;
+          // XP 적립 — 일반·무한·테마만(beatOutcome이 그 외엔 null). 게이지만 채움: 등급 승급은 승급 시험 합격으로만(자동승급 없음).
+          //  결과화면(screen 'end') 이펙트는 이 시점 이후라, 여기서 먼저 적립해야 회원 동기화가 최신 XP를 본다.
           if (!isPreview && beatOutcome) {
-            const prevXp = loadXp(studentToken) ?? 0;
             const newXp = addXp(studentToken, gameXpGain({ score, correct: answeredCount, isNewBest: beatOutcome.isNewBest }));
             setXp(newXp);
-            const pIdx = xpTier(prevXp).idx, nIdx = xpTier(newXp).idx;
-            if (nIdx > pIdx) rankUpNext = { prevIdx: pIdx, nowIdx: nIdx }; // 임계 넘겨 승급 → 상승 연출(Phase 2: 승급 시험으로 교체)
           }
-          if (rankUpNext) setRankUp(rankUpNext);
-          else setScreen('end');
+          setScreen('end');
         };
         // 미리보기: ?screen=gameover&newbest=1 로 신기록 비트 확인(샘플 812 / 이전 800).
         const previewNewBest = isPreview && previewScreen === 'gameover' && qs('newbest') === '1';
@@ -1247,7 +1310,7 @@ export default function ToneGamePage() {
           prevIdx={rankUp ? rankUp.prevIdx : 1}
           nowIdx={rankUp ? rankUp.nowIdx : 2}
           hold={isPreview && previewScreen === 'rankup'}
-          onDone={() => { setRankUp(null); setScreen('end'); }} />
+          onDone={() => { setRankUp(null); setScreen(examResult ? 'examresult' : 'end'); }} />
       )}
       {/* [DEV] 설정 모달 미리보기(?screen=settings) — 머지 전 백도어 제거 대상 */}
       {isPreview && previewScreen === 'settings' && <SettingsModal onClose={() => {}} />}

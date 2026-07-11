@@ -9,7 +9,7 @@ import { startSocialLogin, KakaoLogo, GoogleLogo } from './LoginScreen.jsx';
 
 export function ProfileModal({
   tier, nickname, isGuest, isMemberUser, userId,
-  onEditNickname, onLogout, onMastery, onClose,
+  onEditNickname, onExam, onLogout, onMastery, onClose,
 }) {
   const displayName = nickname || '게스트';
   const pct = tier.isMax ? 100 : Math.round(tier.progress * 100);
@@ -71,9 +71,17 @@ export function ProfileModal({
             <div style={{ marginTop: 8, width: '100%', height: 6, borderRadius: 3, background: '#ece5da', overflow: 'hidden' }}>
               <div style={{ width: `${pct}%`, height: '100%', borderRadius: 3, background: TG.CORAL_GRAD, transition: 'width .5s ease' }} />
             </div>
-            <span style={{ display: 'block', marginTop: 5, fontFamily: FONT_BODY, fontWeight: 600, fontSize: 11.5, color: TG.SUB }}>{tier.isMax ? '최고 등급이에요 🎉' : `다음 등급까지 ${tier.toNext.toLocaleString()} XP`}</span>
+            <span style={{ display: 'block', marginTop: 5, fontFamily: FONT_BODY, fontWeight: 600, fontSize: 11.5, color: TG.SUB }}>{tier.isMax ? '최고 등급이에요 🎉' : (tier.examReady ? '승급 시험을 볼 수 있어요!' : `다음 등급까지 ${tier.toNext.toLocaleString()} XP`)}</span>
           </div>
         </div>
+
+        {/* 승급 시험 CTA — 게이지 만땅(examReady)일 때만. 합격하면 등급 상승. */}
+        {onExam && (
+          <button onClick={onExam} className="tg-press" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', height: 52, borderRadius: 14, border: 'none', cursor: 'pointer', background: TG.CORAL_GRAD, boxShadow: '0 8px 18px rgba(242,72,76,0.3)', ...TOUCH_OPT }}>
+            <MedalIcon size={19} weight="fill" color="#fff" />
+            <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 15.5, color: '#fff' }}>승급 시험 보기</span>
+          </button>
+        )}
 
         {/* 등급 자세히 — 기존 카드 탭(→ 등급 화면) 동선 보존 */}
         {onMastery && (

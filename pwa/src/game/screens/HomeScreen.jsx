@@ -10,7 +10,7 @@ import {
 import { TG, FONT_TITLE, FONT_BODY, FONT_NUM, TOUCH_OPT, haptic, isHapticMuted, setHapticMuted } from '../tgTokens.js';
 import { TONES } from '../../constants/toneGameWords.js';
 import { ToneMark, useCountUp } from '../tgWidgets.jsx';
-import { xpTier } from '../gameXp.js';
+import { displayTier } from '../gameXp.js';
 import { play as playSfx, isSfxMuted, setSfxMuted } from '../tgSfx.js';
 import { isBgmMuted, setBgmMuted, startBgm } from '../tgBgm.js';
 import { FigmaScreen, EmberRise } from './shared.jsx';
@@ -520,6 +520,10 @@ function MyInfo({ tier, nickname, onClick }) {
       padding: '0 14px 0 9px', borderRadius: 18, background: '#fff', border: 'none', cursor: 'pointer',
       boxShadow: '0 5px 14px rgba(43,39,48,0.07)', zIndex: 5, ...TOUCH_OPT,
     }}>
+      {/* 승급 시험 준비 완료 — 게이지 만땅 시 배지로 알림(탭하면 프로필 모달에서 응시) */}
+      {tier.examReady && (
+        <span aria-hidden="true" style={{ position: 'absolute', top: -7, right: -7, padding: '3px 9px', borderRadius: 10, background: TG.CORAL_GRAD, boxShadow: '0 3px 8px rgba(242,72,76,0.35)', fontFamily: FONT_BODY, fontWeight: 800, fontSize: 10.5, color: '#fff', whiteSpace: 'nowrap', animation: 'tg-cta-pulse 2s ease-in-out infinite' }}>승급 시험</span>
+      )}
       {/* 앰블럼 — 자체 완결 배지라 소켓(색 사각) 제거로 정리. 등급명은 앰블럼이 대표(카드엔 텍스트 생략). */}
       <img src={tier.emblem} alt="" width={48} height={48} style={{ display: 'block', flexShrink: 0 }} />
       {/* 닉네임(전체 폭 한 줄, 길면 말줄임) + 등급 게이지. */}
@@ -675,13 +679,13 @@ function ToneCard({ tone, status, level, onClose }) {
 }
 
 export function HomeScreen({
-  streak = 0, streakLongest = 0, freezes = 0, xp = 0, toneLevels = {}, toneStatus = {}, coachTone = null, celebrateTone = null,
+  streak = 0, streakLongest = 0, freezes = 0, xp = 0, rank = 0, onExam, toneLevels = {}, toneStatus = {}, coachTone = null, celebrateTone = null,
   levelReveals = [], onRevealsDone, revealHold = false,
   homeReady = true,
   onPlay, onMastery, onAchievements, onHelp,
   onLogin, isMemberUser, memberName, nickname = null, onEditNickname, onLogout, onExit, studentToken, onRefreshBest, onDebugIntro,
 }) {
-  const tier = xpTier(xp);
+  const tier = displayTier(rank, xp);
   const isGuest = !!onLogin; // onLogin은 게스트일 때만 내려온다(회원/학생은 null)
   const [menuOpen, setMenuOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -865,6 +869,7 @@ export function HomeScreen({
       {streakOpen && <StreakSheet streak={streak} longest={streakLongest} freezes={freezes} onClose={() => setStreakOpen(false)} />}
       {profileOpen && <ProfileModal tier={tier} nickname={nickname} isGuest={isGuest} isMemberUser={isMemberUser} userId={studentToken}
         onEditNickname={onEditNickname ? () => { setProfileOpen(false); setNickEditOpen(true); } : null}
+        onExam={onExam && tier.examReady ? () => { setProfileOpen(false); onExam(); } : null}
         onLogout={onLogout} onMastery={() => { setProfileOpen(false); onMastery && onMastery(); }}
         onClose={() => setProfileOpen(false)} />}
       {menuOpen && <HomeMenu onClose={() => setMenuOpen(false)} onHelp={onHelp} onLogin={onLogin} isMemberUser={isMemberUser} memberName={memberName} onEditNickname={onEditNickname ? () => setNickEditOpen(true) : null} onLogout={onLogout} onExit={onExit} onDebugIntro={onDebugIntro} onDebugScore={() => setDebugScoreOpen(true)} />}

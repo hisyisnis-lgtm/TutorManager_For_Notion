@@ -1,10 +1,10 @@
 // 단어 숙련도 화면 (Figma "15. 단어 숙련도") — 성조 레이더 + 복습필요 리스트 + 마스터 수 + 복습 CTA.
-import { CaretLeftIcon, SpeakerHighIcon, PlayIcon } from '@phosphor-icons/react';
+import { CaretLeftIcon, SpeakerHighIcon, PlayIcon, MedalIcon } from '@phosphor-icons/react';
 import { TG, FONT_TITLE, FONT_HANZI, FONT_BODY, FONT_NUM, FONT_PINYIN, TOUCH_OPT } from '../tgTokens.js';
 import { ROUND_LENGTH } from '../../constants/toneGameWords.js';
 import { TONE_NUMS, toneAccuracy, toneAttempts } from '../toneStats.js';
 import { TIER_SPARK_POS as PARTICLE_POS } from '../earProfile.js';
-import { xpTier } from '../gameXp.js';
+import { displayTier } from '../gameXp.js';
 import { speakWord } from '../tgTts.js';
 import { play as playSfx } from '../tgSfx.js';
 import { Reveal, CoachBubble } from './shared.jsx';
@@ -83,10 +83,10 @@ function WordStatRow({ word, acc }) {
   );
 }
 
-export function MasteryScreen({ rows, masteredN, xp = 0, toneStats, onBack, onReview }) {
+export function MasteryScreen({ rows, masteredN, xp = 0, rank = 0, onExam, toneStats, onBack, onReview }) {
   const need = rows.length;
   const reviewN = Math.min(ROUND_LENGTH, need);
-  const tier = xpTier(xp); // 등급 = 누적 XP(강등 없음). 마스터 수는 아래 복습·약점 학습 통계로 계속 표시.
+  const tier = displayTier(rank, xp); // 등급 = 저장 rank(승급 시험 게이트). 게이지는 XP 진행. 마스터 수는 복습 학습 통계로 별도 표시.
   return (
     <>
       <Reveal i={0} style={{ position: 'absolute', left: 24, top: 20, right: 24 }}>
@@ -124,8 +124,18 @@ export function MasteryScreen({ rows, masteredN, xp = 0, toneStats, onBack, onRe
                 <div style={{ width: 220, height: 8, borderRadius: 4, background: '#f0ebe4', overflow: 'hidden' }}>
                   <div style={{ width: `${Math.round(tier.progress * 100)}%`, height: '100%', borderRadius: 4, background: TG.CORAL_GRAD, transition: 'width .4s ease' }} />
                 </div>
-                <span style={{ fontFamily: FONT_BODY, fontWeight: 500, fontSize: 12.5, color: '#9a93a0' }}>다음 등급까지 {tier.toNext.toLocaleString()} XP · 누적 {xp.toLocaleString()} XP</span>
+                <span style={{ fontFamily: FONT_BODY, fontWeight: 500, fontSize: 12.5, color: '#9a93a0' }}>{tier.examReady ? '승급 시험 준비 완료!' : `다음 등급까지 ${tier.toNext.toLocaleString()} XP`} · 누적 {xp.toLocaleString()} XP</span>
               </>
+            )}
+            {/* 승급 시험 CTA — 게이지 만땅(examReady)일 때만. 합격하면 등급 상승. */}
+            {tier.examReady && onExam && (
+              <button onClick={() => { playSfx('button'); onExam(); }} className="tg-press" style={{
+                marginTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '12px 22px', borderRadius: 16,
+                border: 'none', cursor: 'pointer', background: TG.CORAL_GRAD, boxShadow: '0 8px 18px rgba(242,72,76,0.3)', ...TOUCH_OPT,
+              }}>
+                <MedalIcon size={19} weight="fill" color="#fff" />
+                <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 16, color: '#fff' }}>승급 시험 보기</span>
+              </button>
             )}
           </div>
         </Reveal>

@@ -71,3 +71,59 @@ export function seedXpIfMissing(token, currentTierIdx = 0) {
   saveXp(token, seed);
   return seed;
 }
+
+// ── 등급(rank) — XP와 분리 저장(Phase 2). 등급은 '승급 시험' 합격으로만 오르며, XP가 임계를 넘어도
+//   시험 전엔 승급하지 않는다. 우상향(강등 없음) → 병합·저장 모두 max. ──
+function rankKey(token) { return token ? `game_rank_${token}` : 'game_rank'; }
+const clampRank = (i) => Math.max(0, Math.min(XP_TIER_MIN.length - 1, Math.floor(i || 0)));
+export function loadRank(token) {
+  try {
+    const v = localStorage.getItem(rankKey(token));
+    if (v == null) return null;
+    const n = parseInt(v, 10);
+    return Number.isFinite(n) && n >= 0 ? clampRank(n) : null;
+  } catch { return null; }
+}
+export function saveRank(token, idx) {
+  try { localStorage.setItem(rankKey(token), String(clampRank(idx))); } catch { /* noop */ }
+}
+export function mergeRank(local, incoming) { return Math.max(clampRank(local), clampRank(incoming)); } // 우상향
+// 없으면 현재 XP가 도달한 등급으로 1회 시딩(Phase 1 자동승급 상태를 승계). 이후엔 시험 합격으로만 오름.
+export function seedRankIfMissing(token, totalXp) {
+  const cur = loadRank(token);
+  if (cur != null) return cur;
+  const seed = xpTier(totalXp).idx;
+  saveRank(token, seed);
+  return seed;
+}
+
+// 표시 등급 — 저장된 rank 기준(시험 게이트). 게이지는 XP 진행(현재 rank 밴드 내, 상한 100%).
+// examReady = XP가 다음 등급 임계 도달(게이지 만땅) → '승급 시험' 응시 가능.
+export function displayTier(rank, totalXp) {
+  const idx = clampRank(rank);
+  const cur = EAR_TIERS[idx];
+  const next = EAR_TIERS[idx + 1] || null;
+  const curMin = XP_TIER_MIN[idx];
+  const nextMin = idx + 1 < XP_TIER_MIN.length ? XP_TIER_MIN[idx + 1] : null;
+  const xp = Math.max(0, Math.floor(totalXp || 0));
+  const toNext = nextMin != null ? Math.max(0, nextMin - xp) : 0;
+  const progress = nextMin != null ? Math.min(1, Math.max(0, (xp - curMin) / (nextMin - curMin))) : 1;
+  const examReady = nextMin != null && xp >= nextMin;
+  return { idx, name: cur.name, emblem: cur.emblem, glow: cur.glow, spark: cur.spark, particles: cur.particles, next, toNext, progress, xp, isMax: !next, examReady };
+}
+
+// ── 승급 시험 판정 ──
+export const EXAM_QUESTIONS = 20;
+export const EXAM_PASS_RATIO = 0.8;    // 80% (16/20)
+export const EXAM_FAIL_PENALTY = 0.15; // 불합격 시 현재 등급 밴드 요구 XP의 15% 차감
+export function examPassed(correct, total = EXAM_QUESTIONS) {
+  return total > 0 && (correct | 0) / total >= EXAM_PASS_RATIO;
+}
+// 불합격 XP — 현재 등급 밴드(다음까지 필요 XP)의 15% 차감. 단, 현재 등급 base 아래로는 안 내려감(등급 유지·재응시 위해 재충전 필요).
+export function examFailXp(rank, totalXp) {
+  const idx = clampRank(rank);
+  const curMin = XP_TIER_MIN[idx];
+  const nextMin = idx + 1 < XP_TIER_MIN.length ? XP_TIER_MIN[idx + 1] : curMin;
+  const penalty = Math.round(Math.max(0, nextMin - curMin) * EXAM_FAIL_PENALTY);
+  return Math.max(curMin, Math.floor(totalXp || 0) - penalty);
+}

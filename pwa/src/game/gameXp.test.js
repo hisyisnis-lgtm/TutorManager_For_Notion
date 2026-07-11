@@ -2,6 +2,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import {
   gameXpGain, xpTier, XP_TIER_MIN, loadXp, saveXp, addXp, mergeXp, seedXpIfMissing,
+  loadRank, saveRank, mergeRank, seedRankIfMissing, displayTier,
+  examPassed, examFailXp, EXAM_QUESTIONS, EXAM_PASS_RATIO,
 } from './gameXp.js';
 
 beforeEach(() => { localStorage.clear(); });
@@ -89,5 +91,65 @@ describe('seedXpIfMissing — 마이그레이션(현재 등급 보존)', () => {
     expect(seedXpIfMissing('t1', 0)).toBe(0);
     expect(loadXp('t1')).toBe(0); // 이후 재시딩 안 함
     expect(seedXpIfMissing('t1', 3)).toBe(0);
+  });
+});
+
+describe('등급(rank) 저장 — XP와 분리, 우상향', () => {
+  it('없으면 null, 저장/로드/상한', () => {
+    expect(loadRank('t1')).toBe(null);
+    saveRank('t1', 2);
+    expect(loadRank('t1')).toBe(2);
+    saveRank('t1', 99);
+    expect(loadRank('t1')).toBe(XP_TIER_MIN.length - 1); // 상한 클램프
+  });
+  it('mergeRank = max(우상향)', () => {
+    expect(mergeRank(1, 3)).toBe(3);
+    expect(mergeRank(3, 1)).toBe(3);
+  });
+  it('seedRankIfMissing = 현재 XP 도달 등급으로 1회(Phase1 승계)', () => {
+    saveXp('t1', XP_TIER_MIN[2] + 10);
+    expect(seedRankIfMissing('t1', loadXp('t1'))).toBe(2);
+    expect(loadRank('t1')).toBe(2);
+    // 이미 있으면 그대로
+    saveXp('t1', XP_TIER_MIN[3]);
+    expect(seedRankIfMissing('t1', loadXp('t1'))).toBe(2);
+  });
+});
+
+describe('displayTier — 저장 등급 기준 + examReady 게이트', () => {
+  it('XP가 다음 임계 넘어도 등급은 저장 rank 유지, examReady=true', () => {
+    const t = displayTier(1, XP_TIER_MIN[2] + 5000); // rank 1인데 XP는 2단계 초과
+    expect(t.idx).toBe(1);          // 등급은 안 오름(시험 전)
+    expect(t.progress).toBe(1);     // 게이지 만땅
+    expect(t.examReady).toBe(true); // 응시 가능
+  });
+  it('밴드 중간이면 examReady=false', () => {
+    const mid = (XP_TIER_MIN[1] + XP_TIER_MIN[2]) / 2;
+    const t = displayTier(1, mid);
+    expect(t.examReady).toBe(false);
+    expect(t.progress).toBeCloseTo(0.5, 5);
+  });
+  it('최고 등급은 examReady=false·isMax', () => {
+    const t = displayTier(XP_TIER_MIN.length - 1, 999999);
+    expect(t.isMax).toBe(true);
+    expect(t.examReady).toBe(false);
+  });
+});
+
+describe('승급 시험 판정', () => {
+  it('합격 = 정답률 80% 이상(16/20)', () => {
+    expect(examPassed(16)).toBe(true);
+    expect(examPassed(15)).toBe(false);
+    expect(examPassed(20)).toBe(true);
+    expect(EXAM_QUESTIONS).toBe(20);
+    expect(EXAM_PASS_RATIO).toBe(0.8);
+  });
+  it('불합격 XP = 현재 밴드 15% 차감, 등급 base 아래로 안 내려감', () => {
+    const band = XP_TIER_MIN[2] - XP_TIER_MIN[1];
+    const penalty = Math.round(band * 0.15);
+    // rank 1, XP가 밴드 상단(다음 임계)일 때
+    expect(examFailXp(1, XP_TIER_MIN[2])).toBe(XP_TIER_MIN[2] - penalty);
+    // 차감이 base 아래로 가면 base로 바닥
+    expect(examFailXp(1, XP_TIER_MIN[1] + 10)).toBe(XP_TIER_MIN[1]);
   });
 });

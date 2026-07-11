@@ -148,3 +148,67 @@ export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, 
     </>
   );
 }
+
+// 승급 시험 결과 — 결과화면 디자인 재활용(판다·배지·통계·코치·버튼). 점수 대신 정답률(합격/불합격).
+//  합격 축하 연출은 앞선 RankUpReveal이 담당 → 여긴 담백한 요약 + 홈/재도전.
+export function ExamResultScreen({ correct = 0, total = 20, passed = false, canRetry = false, onRetry, onHome }) {
+  const pct = total > 0 ? Math.round((correct / total) * 100) : 0;
+  const animCorrect = useCountUp(correct, 900);
+  const pandaSrc = pickCelebratePanda(passed, passed ? 5 : 0);
+  return (
+    <>
+      {passed && <CrispFlash color="rgba(255,255,255,0.6)" zIndex={7} />}
+      {passed && <ConfettiBurst count={30} power={1.3} size={10} zIndex={3} style={{ top: 150 }} />}
+      {passed && <ConfettiBurst colors={LIGHT_CONFETTI} count={15} power={1.25} size={6} zIndex={3} style={{ top: 150 }} />}
+      {/* 합격/불합격 배지 */}
+      <Reveal i={0} style={{ position: 'absolute', top: 36, left: '50%', transform: 'translateX(-50%)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 16,
+          background: passed ? 'linear-gradient(90deg, #36C98D, #1fa86a)' : '#efeae4',
+          boxShadow: passed ? '0px 6px 14px rgba(31,168,106,0.28)' : 'none' }}>
+          {passed && <TrophyIcon size={13} weight="fill" color="#fff" />}
+          <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 15, color: passed ? '#fff' : '#9a93a0', whiteSpace: 'nowrap' }}>{passed ? '승급 시험 합격!' : '승급 시험 불합격'}</span>
+        </div>
+      </Reveal>
+      {/* 축하/격려 판다 */}
+      <Reveal i={1} style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', top: 64 }}>
+        <img src={pandaSrc} alt="" width={150} height={150} style={{ display: 'block', objectFit: 'contain' }} />
+      </Reveal>
+      {/* 정답률(점수 자리) */}
+      <Reveal i={2} style={{ position: 'absolute', left: 24, right: 24, top: 196 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+            <span style={{ fontFamily: FONT_NUM, fontWeight: 800, fontSize: 60, color: passed ? '#1fa86a' : '#f2484c', lineHeight: 1 }}>{animCorrect}</span>
+            <span style={{ fontFamily: FONT_NUM, fontWeight: 700, fontSize: 30, color: '#9a93a0' }}>/ {total}</span>
+          </div>
+          <span style={{ fontFamily: FONT_BODY, fontWeight: 600, fontSize: 13, color: '#9a93a0', marginTop: 4 }}>정답률 {pct}% · 합격 기준 80%</span>
+        </div>
+      </Reveal>
+      {/* 코치 */}
+      <Reveal i={4} style={{ position: 'absolute', left: 24, right: 24, top: 300, bottom: 'calc(150px + env(safe-area-inset-bottom))', display: 'flex', alignItems: 'center' }}>
+        <CoachBubble text={passed ? '축하해요! 등급이 한 단계 올랐어요 🎉' : (canRetry ? '아쉬워요! 바로 다시 도전할 수 있어요' : '조금만 더! 경험치를 더 채우면 다시 도전할 수 있어요')} />
+      </Reveal>
+      {/* 불합격 + 재응시 가능 시에만 '다시 도전' */}
+      {!passed && canRetry && (
+        <Reveal i={5} style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(80px + env(safe-area-inset-bottom))' }}>
+          <button onClick={() => { playSfx('button'); onRetry(); }} className="tg-press" style={{
+            width: '100%', height: 62, borderRadius: 20, border: 'none', cursor: 'pointer',
+            background: TG.CORAL_GRAD, boxShadow: '0px 10px 20px rgba(242,72,76,0.32)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, ...TOUCH_OPT,
+          }}>
+            <ArrowClockwiseIcon size={19} weight="bold" color="#fff" />
+            <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 19, color: '#fff' }}>다시 도전</span>
+          </button>
+        </Reveal>
+      )}
+      {/* 홈으로 */}
+      <Reveal i={6} style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(18px + env(safe-area-inset-bottom))' }}>
+        <button onClick={() => { playSfx('button'); onHome(); }} className="tg-press" style={{
+          width: '100%', height: 54, borderRadius: 18, background: (!passed && canRetry) ? '#fff' : TG.CORAL_GRAD,
+          border: (!passed && canRetry) ? '1.5px solid #ebe5de' : 'none', cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', ...TOUCH_OPT,
+        }}>
+          <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 17, color: (!passed && canRetry) ? '#9a93a0' : '#fff' }}>홈으로</span>
+        </button>
+      </Reveal>
+    </>
+  );
+}
