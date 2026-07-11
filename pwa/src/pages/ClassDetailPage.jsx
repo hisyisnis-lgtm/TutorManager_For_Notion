@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { useCachedResource } from '../hooks/useCachedResource.js';
 import { Button, Card } from 'antd';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
@@ -24,18 +24,11 @@ function Row({ label, value }) {
 export default function ClassDetailPage() {
   const { id } = useParams();
   const { studentNameMap, classTypeMap } = useData();
-  const [cls, setCls] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    getPage(id)
-      .then((p) => { if (!cancelled) setCls(parseClass(p)); })
-      .catch((e) => { if (!cancelled) setError(e.message); })
-      .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
-  }, [id]);
+  // 수업 상세 캐시(항목별 키). 재방문 즉시 표시 + 백그라운드 갱신.
+  const clsRes = useCachedResource(`class:detail:${id}`, async () => parseClass(await getPage(id)));
+  const cls = clsRes.data ?? null;
+  const loading = clsRes.loading;
+  const error = clsRes.error;
 
   if (loading) return <><PageHeader title="수업 상세" back /><LoadingSpinner /></>;
   if (error || !cls) return <><PageHeader title="수업 상세" back /><ErrorMessage message={error || '불러올 수 없습니다'} /></>;

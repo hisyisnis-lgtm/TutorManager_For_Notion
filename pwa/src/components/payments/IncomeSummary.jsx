@@ -1,5 +1,6 @@
 import { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { Card, Modal } from 'antd';
+import { useCachedResource } from '../../hooks/useCachedResource.js';
 import { CaretRightIcon } from '@phosphor-icons/react';
 import { useData } from '../../context/DataContext.jsx';
 import { queryPage } from '../../api/notionClient.js';
@@ -39,38 +40,29 @@ function estimateIntervalByAmount(amount) {
 const IncomeSummary = forwardRef(function IncomeSummary(_props, ref) {
   const { studentNameMap, classTypeMap, students } = useData();
 
-  const [monthPayments, setMonthPayments] = useState([]);
-  const [monthLoading, setMonthLoading] = useState(true);
+  // 이번 달 결제 요약 — 캐시(기억+갱신). 예상 수익 계산은 그대로 라이브 유지.
+  const monthRes = useCachedResource('payments:monthSummary', async () => {
+    const monthStart = getMonthStart();
+    const monthEnd = getMonthEnd();
+    const paymentData = await queryPage(
+      PAYMENTS_DB,
+      { and: [
+        { property: '결제일', date: { on_or_after: monthStart } },
+        { property: '결제일', date: { on_or_before: monthEnd } },
+      ] },
+      undefined, undefined, 100,
+    );
+    return (paymentData?.results ?? []).map(parsePayment);
+  });
+  const monthPayments = monthRes.data ?? [];
+  const monthLoading = monthRes.loading;
+
   const [forecastThisMonth, setForecastThisMonth] = useState(0);
   const [forecastNextMonth, setForecastNextMonth] = useState(0);
   const [forecastLoading, setForecastLoading] = useState(true);
   const [forecastBreakdown, setForecastBreakdown] = useState([]); // 학생별 예상 상세
   const [breakdownModalOpen, setBreakdownModalOpen] = useState(false);
   const [breakdownBucket, setBreakdownBucket] = useState(null); // 'thisMonth' | 'nextMonth'
-
-  const loadMonthSummary = async () => {
-    setMonthLoading(true);
-    try {
-      const monthStart = getMonthStart();
-      const monthEnd = getMonthEnd();
-      const paymentData = await queryPage(
-        PAYMENTS_DB,
-        {
-          and: [
-            { property: '결제일', date: { on_or_after: monthStart } },
-            { property: '결제일', date: { on_or_before: monthEnd } },
-          ] },
-        undefined,
-        undefined,
-        100
-      );
-      setMonthPayments((paymentData?.results ?? []).map(parsePayment));
-    } catch (e) {
-      console.error('[결제] 이번 달 요약 오류', e);
-    } finally {
-      setMonthLoading(false);
-    }
-  };
 
   /**
    * 예상 결제 수익 계산 (이번 달·다음 달)
@@ -301,10 +293,6 @@ const IncomeSummary = forwardRef(function IncomeSummary(_props, ref) {
     }
   };
 
-  useEffect(() => {
-    loadMonthSummary();
-  }, []);
-
   // 학생 데이터가 로드된 후 예상 결제 수익 계산 (students 의존)
   useEffect(() => {
     if (students.length > 0) {
@@ -314,7 +302,7 @@ const IncomeSummary = forwardRef(function IncomeSummary(_props, ref) {
 
   // PullToRefresh 등 외부에서 새로고침 트리거
   useImperativeHandle(ref, () => ({
-    reload: () => Promise.all([loadMonthSummary(), loadForecast()]),
+    reload: () => Promise.all([monthRes.refresh(), loadForecast()]),
   }));
 
   return (

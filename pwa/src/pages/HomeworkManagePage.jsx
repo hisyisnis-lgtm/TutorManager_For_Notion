@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Input } from 'antd';
+import { useCachedResource } from '../hooks/useCachedResource.js';
 import { MagnifyingGlassIcon } from '@phosphor-icons/react';
 import Card from 'antd/es/card/Card';
 import PageHeader from '../components/layout/PageHeader.jsx';
@@ -32,49 +33,38 @@ export default function HomeworkManagePage() {
   const [filter, setFilter] = useState('전체');
   const [search, setSearch] = useState('');
 
-  // 학생별 숙제 카운트 — { [studentId]: { pending, submitted } }
-  const [counts, setCounts] = useState({});
-  const [countsLoading, setCountsLoading] = useState(true);
-  const [countsError, setCountsError] = useState(null);
-
-  const loadCounts = useCallback(async () => {
-    setCountsLoading(true);
-    setCountsError(null);
-    try {
-      // 진행 중 숙제만 (미제출 / 제출완료) — 피드백완료는 강사 액션 불필요
-      const data = await queryPage(
-        HOMEWORK_DB,
-        {
-          or: [
-            { property: '제출 상태', select: { equals: '미제출' } },
-            { property: '제출 상태', select: { equals: '제출완료' } },
-          ],
-        },
-        undefined,
-        undefined,
-        100
-      );
-      const map = {};
-      for (const page of data?.results ?? []) {
-        const hw = parseHomework(page);
-        for (const sid of hw.studentIds) {
-          if (!map[sid]) map[sid] = { pending: 0, submitted: 0 };
-          if (hw.status === '미제출') map[sid].pending += 1;
-          else if (hw.status === '제출완료') map[sid].submitted += 1;
-        }
+  // 학생별 진행중 숙제 카운트 { [studentId]: { pending, submitted } } — 캐시(기억+갱신).
+  const countsRes = useCachedResource('homework:counts', async () => {
+    // 진행 중 숙제만 (미제출 / 제출완료) — 피드백완료는 강사 액션 불필요
+    const data = await queryPage(
+      HOMEWORK_DB,
+      {
+        or: [
+          { property: '제출 상태', select: { equals: '미제출' } },
+          { property: '제출 상태', select: { equals: '제출완료' } },
+        ],
+      },
+      undefined,
+      undefined,
+      100,
+    );
+    const map = {};
+    for (const page of data?.results ?? []) {
+      const hw = parseHomework(page);
+      for (const sid of hw.studentIds) {
+        if (!map[sid]) map[sid] = { pending: 0, submitted: 0 };
+        if (hw.status === '미제출') map[sid].pending += 1;
+        else if (hw.status === '제출완료') map[sid].submitted += 1;
       }
-      setCounts(map);
-    } catch (e) {
-      setCountsError(e.message);
-    } finally {
-      setCountsLoading(false);
     }
-  }, []);
-
-  useEffect(() => { loadCounts(); }, [loadCounts]);
+    return map;
+  });
+  const counts = countsRes.data ?? {};
+  const countsLoading = countsRes.loading;
+  const countsError = countsRes.error;
 
   const handleRefresh = async () => {
-    await Promise.all([refreshStudents(), loadCounts()]);
+    await Promise.all([refreshStudents(), countsRes.refresh()]);
   };
 
   const filtered = students

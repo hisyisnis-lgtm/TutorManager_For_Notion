@@ -14,6 +14,12 @@ import { getToken, clearAuth } from './authUtils.js';
 const BUCKET_CAPACITY = 3;
 const REFILL_INTERVAL_MS = 350; // ≈ 2.8 req/s — Notion 평균 3/s 한도 아래 안전마진
 
+// 단일 요청이 이보다 오래 매달리면 중단한다. 네트워크가 끊기거나 Notion이 연결을
+// 물고 놓지 않을 때 스피너가 몇 분씩 도는 것을 막는 안전망. 워커측 429 backoff가
+// 최악 ~20초까지 정상적으로 걸릴 수 있으므로, 그보다 넉넉히 잡아 정상 지연을
+// 오탐하지 않으면서 '무한 매달림'만 잘라낸다.
+const REQUEST_TIMEOUT_MS = 25000;
+
 let tokens = BUCKET_CAPACITY;
 let lastRefill = Date.now();
 const waiters = [];
@@ -52,14 +58,30 @@ function acquireToken() {
 
 async function notionFetch(method, path, body, attempt = 0) {
   await acquireToken();
-  const res = await fetch(`${WORKER_URL}${path}`, {
-    method,
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${getToken()}`,
-    },
-    body: body ? JSON.stringify(body) : undefined,
-  });
+
+  // 타임아웃: 요청이 REQUEST_TIMEOUT_MS를 넘기면 abort. 쓰기(POST/PATCH)는 서버에
+  // 이미 도달했을 수 있어 자동 재시도하지 않고 명확한 오류로 던진다(이중 쓰기 방지).
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  let res;
+  try {
+    res = await fetch(`${WORKER_URL}${path}`, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${getToken()}`,
+      },
+      body: body ? JSON.stringify(body) : undefined,
+      signal: controller.signal,
+    });
+  } catch (e) {
+    if (e.name === 'AbortError') {
+      throw new Error('요청 시간이 초과됐어요. 네트워크를 확인하고 잠시 후 다시 시도해주세요.');
+    }
+    throw e;
+  } finally {
+    clearTimeout(timer);
+  }
 
   // Notion rate limit(429): 워커가 이미 Retry-After backoff 재시도를 하지만, 그래도
   // 드물게 올라오면 클라이언트에서 한 번 더 backoff 재시도한다. 429는 요청이 처리되기

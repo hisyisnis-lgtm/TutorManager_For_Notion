@@ -5,6 +5,7 @@ import { Alert, Button, Input, Select, Typography } from 'antd';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import { getPage, deletePage } from '../api/notionClient.js';
+import { invalidateCache } from '../hooks/useCachedResource.js';
 import ConfirmDialog from '../components/ui/ConfirmDialog.jsx';
 import {
   parseClass,
@@ -363,6 +364,8 @@ export default function ClassFormPage() {
         }
       }
       refreshAll();
+      invalidateCache('class');
+      invalidateCache('pending');
       navigate(-1);
     } catch (e) {
       setError(e.message);
@@ -384,6 +387,8 @@ export default function ClassFormPage() {
         await createClass(pendingSubmit.payload);
       }
       refreshAll();
+      invalidateCache('class');
+      invalidateCache('pending');
       navigate(-1);
     } catch (e) {
       setError(e.message);
@@ -396,6 +401,8 @@ export default function ClassFormPage() {
     setDeleting(true);
     try {
       await deletePage(id);
+      invalidateCache('class');
+      invalidateCache('pending');
       navigate(-1);
     } catch (e) {
       setError(e.message);

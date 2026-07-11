@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useData } from '../context/DataContext.jsx';
+import { useCachedResource } from '../hooks/useCachedResource.js';
 import { queryPage } from '../api/notionClient.js';
 import { CLASSES_DB, parseClass } from '../api/classes.js';
 import PageHeader from '../components/layout/PageHeader.jsx';
@@ -26,39 +27,31 @@ export default function PendingClassesPage() {
   const navigate = useNavigate();
   const { studentNameMap } = useData();
   const { state: pendingState, setHwDone, setDismissed, dismissMany } = usePendingClassState();
-  const [todayClasses, setTodayClasses] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [showConfirm, setShowConfirm] = useState(false);
 
   const today = getKSTToday();
   const pad = (n) => String(n).padStart(2, '0');
   const todayStr = `${today.year}-${pad(today.month + 1)}-${pad(today.day)}`;
 
-  const load = async () => {
-    setLoading(true);
-    try {
-      const data = await queryPage(
-        CLASSES_DB,
-        {
-          and: [
-            { property: '수업 일시', date: { on_or_after: `${todayStr}T00:00:00+09:00` } },
-            { property: '수업 일시', date: { on_or_before: `${todayStr}T23:59:59+09:00` } },
-            { property: '특이사항', select: { does_not_equal: '🚫 취소' } },
-          ],
-        },
-        [{ property: '수업 일시', direction: 'ascending' }],
-        undefined,
-        50
-      );
-      setTodayClasses((data?.results ?? []).map(parseClass));
-    } catch (e) {
-      console.error('[수업 마무리] 불러오기 오류', e);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => { load(); }, []);
+  // 오늘 수업 목록 캐시(당일 키). 재방문 즉시 표시.
+  const todayRes = useCachedResource(`pending:today:${todayStr}`, async () => {
+    const data = await queryPage(
+      CLASSES_DB,
+      {
+        and: [
+          { property: '수업 일시', date: { on_or_after: `${todayStr}T00:00:00+09:00` } },
+          { property: '수업 일시', date: { on_or_before: `${todayStr}T23:59:59+09:00` } },
+          { property: '특이사항', select: { does_not_equal: '🚫 취소' } },
+        ],
+      },
+      [{ property: '수업 일시', direction: 'ascending' }],
+      undefined,
+      50,
+    );
+    return (data?.results ?? []).map(parseClass);
+  });
+  const todayClasses = todayRes.data ?? [];
+  const loading = todayRes.loading;
 
   const nowMs = Date.now();
   const pending = todayClasses.filter((cls) => {
@@ -72,8 +65,9 @@ export default function PendingClassesPage() {
   });
 
   useEffect(() => {
-    if (!loading && pending.length === 0) navigate('/home', { replace: true });
-  }, [loading, pending.length, navigate]);
+    // 최신 데이터가 확정된 뒤(캐시 갱신 완료)에만 홈으로 — 옛 캐시가 비었다고 성급히 넘기지 않게.
+    if (!loading && !todayRes.refreshing && pending.length === 0) navigate('/home', { replace: true });
+  }, [loading, todayRes.refreshing, pending.length, navigate]);
 
   const handleDismissAll = () => {
     dismissMany(pending.map((c) => c.id));
@@ -82,7 +76,7 @@ export default function PendingClassesPage() {
   };
 
   return (
-    <PullToRefresh onRefresh={load}>
+    <PullToRefresh onRefresh={todayRes.refresh}>
       <PageHeader
         title="수업 마무리"
         back

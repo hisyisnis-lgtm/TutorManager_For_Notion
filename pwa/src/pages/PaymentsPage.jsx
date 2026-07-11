@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { Button, Input, Card, Select } from 'antd';
+import { Button, Input, Card, Select, message } from 'antd';
+import { useCachedResource } from '../hooks/useCachedResource.js';
 import { MagnifyingGlassIcon } from '@phosphor-icons/react';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import Badge from '../components/ui/Badge.jsx';
@@ -21,64 +22,79 @@ const KST = 'Asia/Seoul';
 
 export default function PaymentsPage() {
   const { students, classTypes, studentNameMap, classTypeMap } = useData();
-  const [payments, setPayments] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [nameInput, setNameInput] = useState('');
   const [studentFilter, setStudentFilter] = useState('');
   const [classTypeFilter, setClassTypeFilter] = useState('');
-  const [hasMore, setHasMore] = useState(false);
-  const [cursor, setCursor] = useState(null);
-  // 차트용 최근 6개월 결제 (페이지네이션과 별도 fetch)
-  const [trendPayments, setTrendPayments] = useState([]);
-  const [trendLoading, setTrendLoading] = useState(true);
   const incomeRef = useRef(null);
 
-  const load = useCallback(async (reset = true, nextCursor = null) => {
-    if (reset) setLoading(true);
-    setError(null);
+  // 결제 목록: 필터 조합별 첫 페이지 캐시(기억+갱신) + "더 보기" 라이브 이어붙임.
+  const listKey = `payments:list:${studentFilter}:${classTypeFilter}`;
+  const listRes = useCachedResource(listKey, async () => {
+    const data = await fetchPaymentsPage({
+      studentId: studentFilter || undefined,
+      classTypeId: classTypeFilter || undefined,
+      cursor: null,
+    });
+    return {
+      payments: data.results.map(parsePayment),
+      hasMore: data.has_more,
+      nextCursor: data.next_cursor,
+    };
+  });
+
+  const [extra, setExtra] = useState([]);
+  const [pageCursor, setPageCursor] = useState(undefined);
+  const [pageHasMore, setPageHasMore] = useState(undefined);
+  const [loadingMore, setLoadingMore] = useState(false);
+
+  useEffect(() => {
+    setExtra([]);
+    setPageCursor(undefined);
+    setPageHasMore(undefined);
+  }, [listKey]);
+
+  const firstPayments = listRes.data?.payments ?? [];
+  const payments = useMemo(() => [...firstPayments, ...extra], [firstPayments, extra]);
+  const hasMore = pageHasMore ?? listRes.data?.hasMore ?? false;
+  const nextCursor = pageCursor ?? listRes.data?.nextCursor ?? null;
+  const loading = listRes.loading;
+  const error = listRes.error;
+
+  const loadMore = async () => {
+    if (!nextCursor) return;
+    setLoadingMore(true);
     try {
       const data = await fetchPaymentsPage({
         studentId: studentFilter || undefined,
         classTypeId: classTypeFilter || undefined,
         cursor: nextCursor,
       });
-      const parsed = data.results.map(parsePayment);
-      setPayments((prev) => (reset ? parsed : [...prev, ...parsed]));
-      setHasMore(data.has_more);
-      setCursor(data.next_cursor);
+      setExtra((prev) => [...prev, ...data.results.map(parsePayment)]);
+      setPageHasMore(data.has_more);
+      setPageCursor(data.next_cursor);
     } catch (e) {
-      setError(e.message);
+      message.error(e.message);
     } finally {
-      setLoading(false);
+      setLoadingMore(false);
     }
-  }, [studentFilter, classTypeFilter]);
+  };
 
-  useEffect(() => { load(true); }, [load]);
-
-  // 차트용 — 최근 6개월 결제 fetch (학생 필터와 무관, client-side에서 필터 적용)
-  const loadTrend = useCallback(async () => {
-    setTrendLoading(true);
-    try {
-      const todayKstStr = new Date().toLocaleDateString('en-CA', { timeZone: KST });
-      const [y, m] = todayKstStr.split('-').map(Number);
-      // 5개월 전 1일 KST → on_or_after
-      const start = new Date(y, m - 1 - 5, 1);
-      const startStr = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}-01T00:00:00+09:00`;
-      const results = await queryAll(
-        PAYMENTS_DB,
-        { property: '결제일', date: { on_or_after: startStr } },
-        [{ property: '결제일', direction: 'descending' }]
-      );
-      setTrendPayments(results.map(parsePayment));
-    } catch (e) {
-      console.error('[결제] 추이 데이터 오류', e);
-    } finally {
-      setTrendLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { loadTrend(); }, [loadTrend]);
+  // 차트용 최근 6개월 결제 — 캐시(학생 필터와 무관, client-side에서 필터 적용).
+  const trendRes = useCachedResource('payments:trend', async () => {
+    const todayKstStr = new Date().toLocaleDateString('en-CA', { timeZone: KST });
+    const [y, m] = todayKstStr.split('-').map(Number);
+    // 5개월 전 1일 KST → on_or_after
+    const start = new Date(y, m - 1 - 5, 1);
+    const startStr = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}-01T00:00:00+09:00`;
+    const results = await queryAll(
+      PAYMENTS_DB,
+      { property: '결제일', date: { on_or_after: startStr } },
+      [{ property: '결제일', direction: 'descending' }],
+    );
+    return results.map(parsePayment);
+  });
+  const trendPayments = trendRes.data ?? [];
+  const trendLoading = trendRes.loading;
 
   const sortByDate = (arr) =>
     [...arr].sort((a, b) => {
@@ -90,8 +106,15 @@ export default function PaymentsPage() {
 
   const filtered = sortByDate(payments);
 
+  const handleRefresh = async () => {
+    setExtra([]);
+    setPageCursor(undefined);
+    setPageHasMore(undefined);
+    await Promise.all([listRes.refresh(), trendRes.refresh(), incomeRef.current?.reload()]);
+  };
+
   return (
-    <PullToRefresh onRefresh={() => Promise.all([load(true), loadTrend(), incomeRef.current?.reload()])}>
+    <PullToRefresh onRefresh={handleRefresh}>
       <PageHeader
         title="결제 내역"
         action={
@@ -175,7 +198,7 @@ export default function PaymentsPage() {
       </div>
 
       {loading && <LoadingSpinner />}
-      {error && <ErrorMessage message={error} onRetry={() => load(true)} />}
+      {error && <ErrorMessage message={error} onRetry={listRes.refresh} />}
 
       {!loading && !error && (
         <>
@@ -197,7 +220,8 @@ export default function PaymentsPage() {
             <div className="px-4 pb-24">
               <Button
                 block
-                onClick={() => load(false, cursor)}
+                loading={loadingMore}
+                onClick={loadMore}
                 style={{ borderRadius: 12 }}
               >
                 더 보기

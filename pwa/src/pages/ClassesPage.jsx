@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Button, Input, Card, DatePicker, Select } from 'antd';
+import { Button, Input, Card, DatePicker, Select, message } from 'antd';
+import { useCachedResource } from '../hooks/useCachedResource.js';
 import dayjs from 'dayjs';
 import { MagnifyingGlassIcon, MapPinIcon, WarningCircleIcon, CalendarBlankIcon, InfoIcon } from '@phosphor-icons/react';
 import { PRIMARY, PRIMARY_BG, TEXT_PRIMARY, TEXT_SECONDARY, TEXT_TERTIARY, BORDER_DEFAULT, PRIMARY_ALPHA_25, STATUS_ERROR_TEXT, STATUS_ERROR_BG } from '../constants/theme.js';
@@ -95,13 +96,7 @@ function getDateRange(period) {
 
 export default function ClassesPage() {
   const { studentNameMap, classTypeMap, classTypes } = useData();
-  const [classes, setClasses] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [error, setError] = useState(null);
   const [period, setPeriod] = useState('upcoming');
-  const [hasMore, setHasMore] = useState(false);
-  const [cursor, setCursor] = useState(null);
   const [search, setSearch] = useState('');
   const [classTypeFilter, setClassTypeFilter] = useState('');
   // 날짜 범위 필터 (YYYY-MM-DD). 비어있으면 period 기본값 사용.
@@ -113,60 +108,89 @@ export default function ClassesPage() {
   const todayStr = `${today.year}-${pad(today.month + 1)}-${pad(today.day)}`;
   const [calYear, setCalYear] = useState(today.year);
   const [calMonth, setCalMonth] = useState(today.month);
-  const [calClasses, setCalClasses] = useState([]);
-  const [calLoading, setCalLoading] = useState(false);
   const [selectedDay, setSelectedDay] = useState(null);
 
-  const load = useCallback(async (reset = true, nextCursor = null) => {
-    if (reset) setLoading(true);
-    else setLoadingMore(true);
-    setError(null);
+  // ── 수업 목록: 필터 조합별로 첫 페이지를 캐시(기억+갱신) → 재방문 즉시 표시.
+  //    "더 보기"로 받은 다음 페이지는 라이브로 이어붙인다(extra). 필터가 바뀌면 리셋.
+  const listKey = `classes:list:${period}:${dateFrom}:${dateTo}:${classTypeFilter}`;
+  const buildRange = () => {
+    const range = getDateRange(period);
+    return {
+      finalFrom: dateFrom ? `${dateFrom}T00:00:00+09:00` : range.dateFrom,
+      finalTo: dateTo ? `${dateTo}T23:59:59+09:00` : range.dateTo,
+      completedOnly: period === 'completed',
+    };
+  };
+  const listRes = useCachedResource(listKey, async () => {
+    const { finalFrom, finalTo, completedOnly } = buildRange();
+    const data = await fetchClassesPage({
+      dateFrom: finalFrom, dateTo: finalTo, cursor: null,
+      completedOnly, classTypeId: classTypeFilter || undefined,
+    });
+    return {
+      classes: data.results.map(parseClass),
+      hasMore: data.has_more,
+      nextCursor: data.next_cursor,
+    };
+  });
+
+  const [extra, setExtra] = useState([]);
+  const [pageCursor, setPageCursor] = useState(undefined);
+  const [pageHasMore, setPageHasMore] = useState(undefined);
+  const [loadingMore, setLoadingMore] = useState(false);
+
+  // 필터 조합(listKey)이 바뀌면 페이지네이션 이어붙임 상태를 초기화.
+  useEffect(() => {
+    setExtra([]);
+    setPageCursor(undefined);
+    setPageHasMore(undefined);
+  }, [listKey]);
+
+  const firstClasses = listRes.data?.classes ?? [];
+  const classes = useMemo(() => [...firstClasses, ...extra], [firstClasses, extra]);
+  const hasMore = pageHasMore ?? listRes.data?.hasMore ?? false;
+  const nextCursor = pageCursor ?? listRes.data?.nextCursor ?? null;
+  const loading = listRes.loading;
+  const error = listRes.error;
+
+  const loadMore = async () => {
+    if (!nextCursor) return;
+    setLoadingMore(true);
     try {
-      const range = getDateRange(period);
-      // 날짜 필터 입력이 있으면 우선 적용. 없는 칸은 period 기본값 사용.
-      const finalFrom = dateFrom ? `${dateFrom}T00:00:00+09:00` : range.dateFrom;
-      const finalTo = dateTo ? `${dateTo}T23:59:59+09:00` : range.dateTo;
-      const completedOnly = period === 'completed';
-      const data = await fetchClassesPage({ dateFrom: finalFrom, dateTo: finalTo, cursor: nextCursor, completedOnly, classTypeId: classTypeFilter || undefined });
-      const parsed = data.results.map(parseClass);
-      setClasses((prev) => (reset ? parsed : [...prev, ...parsed]));
-      setHasMore(data.has_more);
-      setCursor(data.next_cursor);
+      const { finalFrom, finalTo, completedOnly } = buildRange();
+      const data = await fetchClassesPage({
+        dateFrom: finalFrom, dateTo: finalTo, cursor: nextCursor,
+        completedOnly, classTypeId: classTypeFilter || undefined,
+      });
+      setExtra((prev) => [...prev, ...data.results.map(parseClass)]);
+      setPageHasMore(data.has_more);
+      setPageCursor(data.next_cursor);
     } catch (e) {
-      setError(e.message);
+      message.error(e.message);
     } finally {
-      setLoading(false);
       setLoadingMore(false);
     }
-  }, [period, dateFrom, dateTo, classTypeFilter]);
+  };
 
-  const loadCalendar = useCallback(async (year, month) => {
-    setCalLoading(true);
-    try {
-      const mm = String(month + 1).padStart(2, '0');
-      const dd = String(new Date(year, month + 1, 0).getDate()).padStart(2, '0');
-      // queryAll: 자동 페이지네이션. 한 달 수업이 100건을 넘으면 queryPage(단일 100건)는
-      // 오름차순 정렬 때문에 월말 수업부터 잘려나간다 → 캘린더 카운트·목록 누락. 전체를 가져온다.
-      const results = await queryAll(
-        CLASSES_DB,
-        {
-          and: [
-            { property: '수업 일시', date: { on_or_after: `${year}-${mm}-01T00:00:00+09:00` } },
-            { property: '수업 일시', date: { on_or_before: `${year}-${mm}-${dd}T23:59:59+09:00` } },
-          ],
-        },
-        [{ property: '수업 일시', direction: 'ascending' }]
-      );
-      setCalClasses((results ?? []).map(parseClass));
-    } catch {
-      setCalClasses([]);
-    } finally {
-      setCalLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { load(true); }, [load]);
-  useEffect(() => { loadCalendar(calYear, calMonth); }, [calYear, calMonth, loadCalendar]);
+  // ── 월별 캘린더: 연-월별로 캐시. 같은 달 재방문 시 즉시 표시.
+  //    queryAll: 자동 페이지네이션. 한 달 수업이 100건을 넘어도 월말까지 전부 가져온다.
+  const mm = String(calMonth + 1).padStart(2, '0');
+  const calRes = useCachedResource(`classes:cal:${calYear}-${mm}`, async () => {
+    const dd = String(new Date(calYear, calMonth + 1, 0).getDate()).padStart(2, '0');
+    const results = await queryAll(
+      CLASSES_DB,
+      {
+        and: [
+          { property: '수업 일시', date: { on_or_after: `${calYear}-${mm}-01T00:00:00+09:00` } },
+          { property: '수업 일시', date: { on_or_before: `${calYear}-${mm}-${dd}T23:59:59+09:00` } },
+        ],
+      },
+      [{ property: '수업 일시', direction: 'ascending' }],
+    );
+    return (results ?? []).map(parseClass);
+  });
+  const calClasses = calRes.data ?? [];
+  const calLoading = calRes.loading;
 
   const classCountMap = {};
   calClasses.forEach((cls) => {
@@ -202,7 +226,10 @@ export default function ClassesPage() {
   });
 
   const handleRefresh = async () => {
-    await Promise.all([load(true), loadCalendar(calYear, calMonth)]);
+    setExtra([]);
+    setPageCursor(undefined);
+    setPageHasMore(undefined);
+    await Promise.all([listRes.refresh(), calRes.refresh()]);
   };
 
   return (
@@ -401,7 +428,7 @@ export default function ClassesPage() {
       </div>
 
       {loading && <LoadingSpinner />}
-      {error && <ErrorMessage message={error} onRetry={() => load(true)} />}
+      {error && <ErrorMessage message={error} onRetry={listRes.refresh} />}
 
       {!loading && !error && (
         <>
@@ -429,7 +456,7 @@ export default function ClassesPage() {
               <Button
                 block
                 loading={loadingMore}
-                onClick={() => load(false, cursor)}
+                onClick={loadMore}
                 style={{ borderRadius: 12 }}
               >
                 {loadingMore ? '불러오는 중…' : '더 보기'}

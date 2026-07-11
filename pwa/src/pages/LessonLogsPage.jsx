@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Button, Input, Card } from 'antd';
+import { Button, Input, Card, message } from 'antd';
 import { MagnifyingGlassIcon } from '@phosphor-icons/react';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
@@ -8,35 +8,59 @@ import ErrorMessage from '../components/ui/ErrorMessage.jsx';
 import EmptyState from '../components/ui/EmptyState.jsx';
 import { fetchLessonLogsPage, parseLessonLog, isEmpty } from '../api/lessonLogs.js';
 import { useData } from '../context/DataContext.jsx';
+import { useCachedResource } from '../hooks/useCachedResource.js';
 import PullToRefresh from '../components/ui/PullToRefresh.jsx';
 import { TEXT_TERTIARY } from '../constants/theme.js';
 
 export default function LessonLogsPage() {
-  const { students, studentNameMap } = useData();
-  const [logs, setLogs] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const { studentNameMap } = useData();
   const [search, setSearch] = useState('');
-  const [hasMore, setHasMore] = useState(false);
-  const [cursor, setCursor] = useState(null);
 
-  const load = useCallback(async (reset = true, nextCursor = null) => {
-    if (reset) setLoading(true);
-    setError(null);
+  // 첫 페이지는 캐시(기억+갱신) → 재방문 시 즉시 표시. "더 보기"로 받은 다음
+  // 페이지들은 라이브로 이어붙인다(extra). 새로고침/갱신 시 extra는 리셋.
+  // 저장은 Notion 원본이 아니라 가공한 최소 데이터만 → localStorage 용량 부담 최소화.
+  const firstPage = useCachedResource('lessonLogs:first', async () => {
+    const data = await fetchLessonLogsPage({ cursor: null });
+    return {
+      logs: data.results.map(parseLessonLog),
+      hasMore: data.has_more,
+      nextCursor: data.next_cursor,
+    };
+  });
+  const [extra, setExtra] = useState([]);
+  const [pageCursor, setPageCursor] = useState(undefined); // undefined = 아직 '더 보기' 안 함
+  const [pageHasMore, setPageHasMore] = useState(undefined);
+  const [loadingMore, setLoadingMore] = useState(false);
+
+  const firstLogs = firstPage.data?.logs ?? [];
+  const logs = useMemo(() => [...firstLogs, ...extra], [firstLogs, extra]);
+  const hasMore = pageHasMore ?? firstPage.data?.hasMore ?? false;
+  const nextCursor = pageCursor ?? firstPage.data?.nextCursor ?? null;
+
+  const loading = firstPage.loading;
+  const error = firstPage.error;
+
+  const loadMore = async () => {
+    if (!nextCursor) return;
+    setLoadingMore(true);
     try {
       const data = await fetchLessonLogsPage({ cursor: nextCursor });
-      const parsed = data.results.map(parseLessonLog);
-      setLogs((prev) => (reset ? parsed : [...prev, ...parsed]));
-      setHasMore(data.has_more);
-      setCursor(data.next_cursor);
+      setExtra((prev) => [...prev, ...data.results.map(parseLessonLog)]);
+      setPageHasMore(data.has_more);
+      setPageCursor(data.next_cursor);
     } catch (e) {
-      setError(e.message);
+      message.error(e.message);
     } finally {
-      setLoading(false);
+      setLoadingMore(false);
     }
-  }, []);
+  };
 
-  useEffect(() => { load(true); }, [load]);
+  const handleRefresh = async () => {
+    setExtra([]);
+    setPageCursor(undefined);
+    setPageHasMore(undefined);
+    await firstPage.refresh();
+  };
 
   const filteredLogs = logs.filter((log) => {
     if (!search.trim()) return true;
@@ -45,7 +69,7 @@ export default function LessonLogsPage() {
   });
 
   return (
-    <PullToRefresh onRefresh={load}>
+    <PullToRefresh onRefresh={handleRefresh}>
       <PageHeader title="수업 일지" />
 
       {/* 학생 검색 */}
@@ -62,7 +86,7 @@ export default function LessonLogsPage() {
       </div>
 
       {loading && <LoadingSpinner />}
-      {error && <ErrorMessage message={error} onRetry={() => load(true)} />}
+      {error && <ErrorMessage message={error} onRetry={firstPage.refresh} />}
 
       {!loading && !error && (
         <>
@@ -83,7 +107,8 @@ export default function LessonLogsPage() {
             <div className="px-4 pb-24">
               <Button
                 block
-                onClick={() => load(false, cursor)}
+                loading={loadingMore}
+                onClick={loadMore}
                 style={{ borderRadius: 12, height: 44 }}
               >
                 더 보기

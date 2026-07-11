@@ -25,7 +25,7 @@ import {
   fetchHomeworkFileBlobUrlTeacher,
 } from '../api/homework.js';
 import { getPage, deletePage } from '../api/notionClient.js';
-import { parseStudent } from '../api/students.js';
+import { useData } from '../context/DataContext.jsx';
 import { formatDateTimeCompact } from '../utils/dateUtils.js';
 import {
   validateFile,
@@ -48,6 +48,7 @@ export default function HomeworkDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { message } = App.useApp();
+  const { studentNameMap } = useData();
 
   const [hw, setHw] = useState(null);
   const [studentName, setStudentName] = useState('');
@@ -122,11 +123,6 @@ export default function HomeworkDetailPage() {
       setHw(parsed);
       setFeedbackText(parsed.feedbackText || '');
       setSavedFeedbackText(parsed.feedbackText || '');
-      if (parsed.studentIds?.[0]) {
-        const studentPage = await getPage(parsed.studentIds[0]);
-        const s = parseStudent(studentPage);
-        setStudentName(s.name?.replace(/^[\p{Emoji_Presentation}\p{Extended_Pictographic}]\s*/gu, '').trim() ?? '');
-      }
     } catch (e) {
       setError(e.message);
     } finally {
@@ -135,6 +131,14 @@ export default function HomeworkDetailPage() {
   }, [id]);
 
   useEffect(() => { load(); }, [load]);
+
+  // 학생 이름은 캐시(DataContext)에서 파생 — getPage(학생) 왕복 제거.
+  useEffect(() => {
+    const sid = hw?.studentIds?.[0];
+    if (!sid) return;
+    const nm = studentNameMap[sid] || '';
+    setStudentName(nm.replace(/^[\p{Emoji_Presentation}\p{Extended_Pictographic}]\s*/gu, '').trim());
+  }, [hw, studentNameMap]);
 
   const getFreshParsed = useCallback(async () => {
     const page = await getPage(id);
@@ -296,14 +300,12 @@ export default function HomeworkDetailPage() {
         const existingNames = (hw?.feedbackFiles ?? []).map((f) => f.name);
         const allNames = dedupeFileNames([...existingNames, ...files.map((pf) => pf.baseName + pf.ext)]);
         const newNames = allNames.slice(existingNames.length);
-        uploadedFiles = [];
-        for (let i = 0; i < files.length; i += 1) {
-          const pf = files[i];
+        // 여러 파일은 순차 대신 동시 업로드(업로드는 토큰버킷과 무관한 별도 엔드포인트).
+        uploadedFiles = await Promise.all(files.map((pf, i) => {
           const fullName = newNames[i];
           const namedFile = new File([pf.file], fullName, { type: pf.file.type });
-          const { fileUploadId } = await uploadTeacherFile(namedFile);
-          uploadedFiles.push({ fileUploadId, fileName: fullName });
-        }
+          return uploadTeacherFile(namedFile).then(({ fileUploadId }) => ({ fileUploadId, fileName: fullName }));
+        }));
         if (hw.feedbackFiles?.length > 0) {
           const freshPage = await getPage(id);
           existingFiles = freshPage.properties['피드백 파일']?.files ?? [];
@@ -318,11 +320,25 @@ export default function HomeworkDetailPage() {
       if (hasNewFiles || hasNewText) {
         notifyHomework('feedback', id);
       }
+      // 저장 성공 → 재조회 없이 결과를 즉시 반영(낙관적). 저장에 필요한 왕복은 PATCH 1번뿐.
+      // (재조회를 안 하므로 Notion read-after-write 지연에 옛값으로 덮일 위험도 없음)
+      const savedFiles = hasNewFiles
+        ? [
+            ...(hw?.feedbackFiles ?? []),
+            ...uploadedFiles.map(({ fileName }) => ({ name: fileName, url: null })),
+          ]
+        : (hw?.feedbackFiles ?? []);
+      setHw((prev) => (prev ? {
+        ...prev,
+        feedbackText,
+        status: '피드백완료',
+        feedbackDate: new Date().toISOString(),
+        feedbackFiles: savedFiles,
+      } : prev));
       setSavedFeedbackText(feedbackText);
       setPendingFeedbackAudio([]);
       setPendingFeedbackDocs([]);
       closeModal();
-      await load();
     } catch (e) {
       message.error(`저장 실패: ${e.message}`);
     } finally {

@@ -5,6 +5,7 @@ import { Alert, Button, Input, Select, Typography } from 'antd';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import { getPage, deletePage } from '../api/notionClient.js';
+import { invalidateCache } from '../hooks/useCachedResource.js';
 import ConfirmDialog from '../components/ui/ConfirmDialog.jsx';
 import {
   parsePayment,
@@ -152,6 +153,7 @@ export default function PaymentFormPage() {
       return;
     }
     refreshAll();
+    invalidateCache('payment');
     setSaving(false);
     if (keepOpen) {
       // 수업종류·결제일·결제수단은 유지, 이름·금액·비고만 비워 다음 사람 바로 입력
@@ -196,6 +198,7 @@ export default function PaymentFormPage() {
         await createPayment(payload);
       }
       refreshAll();
+      invalidateCache('payment');
       navigate(-1);
     } catch (e) {
       setError(e.message);
@@ -208,6 +211,7 @@ export default function PaymentFormPage() {
     setDeleting(true);
     try {
       await deletePage(id);
+      invalidateCache('payment');
       navigate(-1);
     } catch (e) {
       setError(e.message);

@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import { fetchBlockedDates, createBlockedDate, deleteBlockedDate } from '../api/bookingApi.js';
+import { useCachedResource } from '../hooks/useCachedResource.js';
 import { Alert, Card, Input, Button, message } from 'antd';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import EmptyState from '../components/ui/EmptyState.jsx';
@@ -31,9 +32,12 @@ function formatBlockedLabel(item) {
 }
 
 export default function BookingsManagePage() {
-  const [blocked, setBlocked] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  // 예약 불가 목록 캐시(기억+갱신). 쓰기(추가/삭제) 후 refresh()로 즉시 최신화.
+  const blockedRes = useCachedResource('bookings:blocked', fetchBlockedDates);
+  const blocked = blockedRes.data ?? [];
+  const loading = blockedRes.loading;
+  const error = blockedRes.error;
+
   const [showForm, setShowForm] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
 
@@ -48,21 +52,6 @@ export default function BookingsManagePage() {
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState(null);
   const [confirmItem, setConfirmItem] = useState(null);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await fetchBlockedDates();
-      setBlocked(data);
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { load(); }, [load]);
 
   const toggleDay = (day) => {
     setForm(f => ({
@@ -97,7 +86,7 @@ export default function BookingsManagePage() {
       });
       resetForm();
       setShowForm(false);
-      load();
+      blockedRes.refresh();
     } catch (e) {
       setFormError(e.message);
     } finally {
@@ -111,7 +100,7 @@ export default function BookingsManagePage() {
     setDeletingId(item.id);
     try {
       await deleteBlockedDate(item.id);
-      setBlocked(prev => prev.filter(b => b.id !== item.id));
+      await blockedRes.refresh();
     } catch (e) {
       message.error(`삭제 실패: ${e.message}`);
     } finally {
@@ -296,7 +285,7 @@ export default function BookingsManagePage() {
       )}
 
       {loading && <LoadingSpinner />}
-      {error && <ErrorMessage message={error} onRetry={load} />}
+      {error && <ErrorMessage message={error} onRetry={blockedRes.refresh} />}
       {!loading && !error && blocked.length === 0 && (
         <EmptyState icon="🚫" title="등록된 예약 불가 설정이 없습니다" />
       )}

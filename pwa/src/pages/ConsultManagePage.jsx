@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Button, Card, message } from 'antd';
+import { useCachedResource } from '../hooks/useCachedResource.js';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import EmptyState from '../components/ui/EmptyState.jsx';
@@ -97,33 +98,24 @@ function ConsultCard({ consult: c, onConfirm, confirming }) {
 }
 
 export default function ConsultManagePage() {
-  const [consults, setConsults] = useState([]);
-  const [loading, setLoading] = useState(true);
+  // 상담 신청 목록 캐시(기억+갱신). 확인 처리 후 refresh()로 즉시 최신화.
+  const consultsRes = useCachedResource('consult:all', async () => {
+    const results = await queryAll(
+      CONSULT_DB,
+      undefined,
+      [{ timestamp: 'created_time', direction: 'descending' }],
+    );
+    return results.map(parseConsult);
+  });
+  const consults = consultsRes.data ?? [];
+  const loading = consultsRes.loading;
   const [confirming, setConfirming] = useState(null);
-
-  const load = async () => {
-    setLoading(true);
-    try {
-      const results = await queryAll(
-        CONSULT_DB,
-        undefined,
-        [{ timestamp: 'created_time', direction: 'descending' }]
-      );
-      setConsults(results.map(parseConsult));
-    } catch (e) {
-      console.error('[상담관리] 불러오기 오류', e);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => { load(); }, []);
 
   const handleConfirm = async (id) => {
     setConfirming(id);
     try {
       await updatePage(id, { '상태': { select: { name: '확인됨' } } });
-      setConsults(prev => prev.map(c => c.id === id ? { ...c, status: '확인됨' } : c));
+      await consultsRes.refresh();
     } catch (e) {
       message.error(`처리 실패: ${e.message}`);
     } finally {
@@ -136,7 +128,7 @@ export default function ConsultManagePage() {
   const others = consults.filter(c => c.status !== '신청됨' && new Date(c.appliedAt).getTime() > oneDayAgo);
 
   return (
-    <PullToRefresh onRefresh={load}>
+    <PullToRefresh onRefresh={consultsRes.refresh}>
       <PageHeader title="무료상담 신청" back />
       <div className="px-4 pt-4 pb-24">
         {loading ? (

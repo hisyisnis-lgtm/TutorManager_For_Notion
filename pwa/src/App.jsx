@@ -6,6 +6,7 @@ import { isAuthed } from './api/authUtils.js';
 import { PRIMARY, antdTheme } from './constants/theme.js';
 import { DataProvider } from './context/DataContext.jsx';
 import BottomNav from './components/layout/BottomNav.jsx';
+import FreshnessIndicator from './components/layout/FreshnessIndicator.jsx';
 import LoginPage from './pages/LoginPage.jsx';
 
 import StudentsPage from './pages/StudentsPage.jsx';
@@ -371,6 +372,7 @@ export default function App() {
             <Route path="*" element={<Navigate to="/home" replace />} />
           </Routes>
         </div>
+        <FreshnessIndicator />
         <BottomNav />
       </HashRouter>
     </DataProvider>
