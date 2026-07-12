@@ -18,6 +18,10 @@
       "rollup_property_name": "수업 회차",
       "function": "sum"
     },
+    "VIP": {
+      "type": "checkbox",
+      "id": "D%3D%7DP"
+    },
     "피드백 확인 먹이": {
       "type": "rollup",
       "id": "HGQK",
