@@ -150,18 +150,37 @@ function clientMain() {
   }
   function kpi(label, value, spark, chip, sub) { return '<div class="kpi"><div class="kpi-top"><span class="kpi-label">' + label + '</span>' + (chip || '') + '</div><div class="kpi-num">' + value + '</div>' + (spark ? '<div class="kpi-spark">' + spark + '</div>' : '<div class="kpi-sub">' + (sub || '') + '</div>') + '</div>'; }
 
-  // 회원 목록 — 닉네임·가입수단·최근접속·최고점. 선택 기간 접속=활성 배지(범위 반응).
+  // 회원 목록 — 닉네임·가입수단·최근접속·최고점 + 자세히 버튼. 선택 기간 접속=활성 배지(범위 반응).
+  var memSorted = [];
   function memberList(start, end) {
     if (!members.length) return '<div class="empty">아직 가입한 회원이 없어요.</div>';
     var pcol = { kakao: '#f7c948', google: '#4c8dff' };
-    var rows = members.slice().sort(function (a, b) { return (b.seen || '').localeCompare(a.seen || ''); });
-    return '<div class="mem">' + rows.map(function (m) {
+    memSorted = members.slice().sort(function (a, b) { return (b.seen || '').localeCompare(a.seen || ''); });
+    return '<div class="mem">' + memSorted.map(function (m, idx) {
       var top = Math.max.apply(null, [0].concat(Object.keys(m.best || {}).map(function (k) { return m.best[k] || 0; })));
       var active = m.seen && m.seen >= start && m.seen <= end;
       var nm = m.nickname && m.nickname.trim() ? esc(m.nickname) : '<span class="dim">(이름없음)</span>';
-      return '<div class="memrow"><span class="mdot" style="background:' + (pcol[m.provider] || '#8b98a8') + '" title="' + esc(m.provider) + '"></span><span class="mname">' + nm + '</span>' + (active ? '<span class="mact">활성</span>' : '') + '<span class="mseen">' + (m.seen || '—') + '</span><span class="mtop">' + num(top) + '</span></div>';
+      return '<div class="memrow"><span class="mdot" style="background:' + (pcol[m.provider] || '#8b98a8') + '" title="' + esc(m.provider) + '"></span><span class="mname">' + nm + '</span>' + (active ? '<span class="mact">활성</span>' : '') + '<span class="mseen">' + (m.seen || '—') + '</span><span class="mtop">' + num(top) + '</span><button class="mdetail" data-i="' + idx + '">자세히</button></div>';
     }).join('') + '</div>';
   }
+  // 회원 상세 모달 — 그 회원의 전체 정보(가입·접속·모드별 최고점/플레이·성조 정확도·스트릭·XP).
+  function openMember(m) {
+    if (!m) return;
+    var pcol = { kakao: '#f7c948', google: '#4c8dff' };
+    var nm = m.nickname && m.nickname.trim() ? esc(m.nickname) : '(이름없음)';
+    var totalPlays = Object.keys(m.plays || {}).reduce(function (s, k) { return s + (m.plays[k] || 0); }, 0);
+    var modeRows = Object.keys(m.best || {}).map(function (k) { return { label: lab(L.key, k), best: m.best[k] || 0, plays: (m.plays && m.plays[k]) || 0 }; }).sort(function (a, b) { return b.best - a.best; });
+    var toneAcc = [1, 2, 3, 4, 0].map(function (t) { var e = m.tone && m.tone[t]; var c = e ? e[0] : 0, a = e ? e[1] : 0; return { label: t === 0 ? '경성' : t + '성', acc: a > 0 ? c / a : 0, attempts: a }; });
+    var modeTbl = modeRows.length ? '<table class="mm-tbl"><thead><tr><th>모드</th><th class="r">최고점</th><th class="r">플레이</th></tr></thead><tbody>' + modeRows.map(function (r) { return '<tr><td>' + r.label + '</td><td class="r">' + num(r.best) + '</td><td class="r">' + num(r.plays) + '</td></tr>'; }).join('') + '</tbody></table>' : '<div class="empty">아직 기록 없음</div>';
+    $('memModalCard').innerHTML = '<div class="mm-head"><span class="mm-title"><span class="mdot" style="background:' + (pcol[m.provider] || '#8b98a8') + '"></span>' + nm + '</span><button class="mm-x" id="mmX" aria-label="닫기">✕</button></div>'
+      + '<div class="mm-meta">' + esc(m.provider) + ' · 가입 ' + (m.created || '—') + ' · 최근접속 ' + (m.seen || '—') + '</div>'
+      + '<div class="mm-stats"><div class="mm-st"><span>최고 스트릭</span><b>' + num(m.streak) + '일</b></div><div class="mm-st"><span>누적 XP</span><b>' + num(m.xp) + '</b></div><div class="mm-st"><span>총 플레이</span><b>' + num(totalPlays) + '</b></div></div>'
+      + '<div class="mm-sec">모드별 최고점</div>' + modeTbl
+      + '<div class="mm-sec">성조별 정확도</div>' + toneBars(toneAcc);
+    $('memModal').classList.add('open');
+    document.getElementById('mmX').addEventListener('click', closeMember);
+  }
+  function closeMember() { $('memModal').classList.remove('open'); }
 
   function agg(start, end) {
     var sel = days.filter(function (d) { return d >= start && d <= end; });
@@ -223,6 +242,9 @@ function clientMain() {
   $('d1').min = firstDay; $('d1').max = lastDay; $('d2').min = firstDay; $('d2').max = lastDay;
   Array.prototype.forEach.call(document.querySelectorAll('.seg'), function (b) { b.addEventListener('click', function () { preset(+b.dataset.n); }); });
   $('d1').addEventListener('change', custom); $('d2').addEventListener('change', custom);
+  // 회원 '자세히' 클릭 → 상세 모달. 목록은 렌더마다 갱신되므로 이벤트 위임(한 번만 바인딩).
+  $('memberlist').addEventListener('click', function (e) { var b = e.target.closest && e.target.closest('.mdetail'); if (b) openMember(memSorted[+b.getAttribute('data-i')]); });
+  $('memModal').addEventListener('click', function (e) { if (e.target === $('memModal')) closeMember(); });
   preset(7);
 }
 
@@ -307,6 +329,26 @@ export const DASH_CSS = `
   .mact{font-size:10px;font-weight:700;color:var(--green);background:#3fb95018;border-radius:5px;padding:2px 7px;flex:none}
   .mseen{font-family:var(--mono);font-size:11px;color:var(--muted);min-width:58px;text-align:right;flex:none}
   .mtop{font-family:var(--mono);font-size:12px;color:var(--ink);min-width:56px;text-align:right;flex:none;font-variant-numeric:tabular-nums}
+  .mdetail{background:var(--panel2);border:1px solid var(--line);color:var(--muted);font:inherit;font-size:11px;font-weight:600;padding:3px 9px;border-radius:6px;cursor:pointer;flex:none}
+  .mdetail:hover{color:var(--ink);border-color:var(--brand)}
+  .modal{position:fixed;inset:0;background:#000a;display:none;align-items:center;justify-content:center;z-index:100;padding:18px}
+  .modal.open{display:flex}
+  .modal-card{background:var(--panel);border:1px solid var(--line);border-radius:16px;max-width:440px;width:100%;max-height:88vh;overflow-y:auto;padding:20px;box-shadow:0 16px 48px #000b}
+  .mm-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px}
+  .mm-title{display:flex;align-items:center;gap:9px;font-size:16px;font-weight:700}
+  .mm-x{background:none;border:0;color:var(--muted);font-size:17px;cursor:pointer;line-height:1;padding:4px 6px;border-radius:6px}
+  .mm-x:hover{color:var(--ink);background:var(--panel2)}
+  .mm-meta{font-size:12px;color:var(--muted);font-family:var(--mono);margin-bottom:16px}
+  .mm-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:6px}
+  .mm-st{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+  .mm-st span{display:block;font-size:11px;color:var(--muted);margin-bottom:2px}
+  .mm-st b{font-family:var(--mono);font-size:18px;font-variant-numeric:tabular-nums}
+  .mm-sec{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.03em;font-weight:600;margin:16px 0 8px}
+  .mm-tbl{width:100%;border-collapse:collapse;font-size:12.5px}
+  .mm-tbl th{font-size:10.5px;color:var(--muted);text-transform:uppercase;text-align:left;padding:5px 8px;border-bottom:1px solid var(--line);font-weight:600}
+  .mm-tbl td{padding:6px 8px;border-bottom:1px solid var(--line)}
+  .mm-tbl tr:last-child td{border-bottom:none}
+  .mm-tbl .r{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
   .foot{margin-top:22px;padding-top:15px;border-top:1px solid var(--line);font-size:11.5px;color:var(--dim);line-height:1.8}
   .foot code{font-family:var(--mono);color:var(--muted);background:var(--panel2);padding:1px 6px;border-radius:5px;font-size:11px}
   @media (prefers-reduced-motion:reduce){*{transition:none!important}}
@@ -354,6 +396,7 @@ export function renderDashboard({ byDay, days, members, maxDays, generatedAt, so
   <div class="panel memberpanel"><div class="panel-h"><span>회원</span><span class="tag">활성 = 선택 기간 접속 · 닉네임=본인 설정</span></div><div id="memberlist"></div></div>
 
   <div class="foot">게임은 Notion과 완전 분리 — 지표는 Analytics Engine(유입·시계열) + D1(회원·점수)에서만.<br>최근 ${maxDays}일 원본 내장 · ${source} · 생성 ${generatedAt}</div>
+  <div class="modal" id="memModal"><div class="modal-card" id="memModalCard"></div></div>
 </div>
 <script id="gad" type="application/json">${json}</script>
 <script>var __name=function(f){return f};(${clientMain.toString()})();</script>`;
