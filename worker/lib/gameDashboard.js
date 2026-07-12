@@ -72,19 +72,54 @@ function clientMain() {
     var last = pts[pts.length - 1] || [w, h];
     return '<svg class="spark" viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none"><defs><linearGradient id="sp' + id + '" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="' + color + '" stop-opacity=".32"/><stop offset="1" stop-color="' + color + '" stop-opacity="0"/></linearGradient></defs><path d="' + line + ' L' + w + ' ' + h + ' L0 ' + h + ' Z" fill="url(#sp' + id + ')"/><path d="' + line + '" fill="none" stroke="' + color + '" stroke-width="1.8" vector-effect="non-scaling-stroke" stroke-linejoin="round"/><circle cx="' + last[0].toFixed(1) + '" cy="' + last[1].toFixed(1) + '" r="2.4" fill="' + color + '"/></svg>';
   }
-  function areaSvg(daily) {
-    var W = 720, H = 230, pL = 34, pR = 18, pT = 18, pB = 30, iw = W - pL - pR, ih = H - pT - pB, n = daily.length;
+  var CH = { W: 720, H: 230, pL: 34, pR: 18, pT: 18, pB: 30 };
+  function chartGeom(daily) {
+    var iw = CH.W - CH.pL - CH.pR, ih = CH.H - CH.pT - CH.pB, n = daily.length;
     var maxRaw = Math.max.apply(null, [1].concat(daily.map(function (d) { return Math.max(d.enter, d.play); })));
     var st = Math.pow(10, Math.floor(Math.log(maxRaw) / Math.LN10)); var maxV = Math.ceil(maxRaw / st) * st;
-    var X = function (i) { return pL + (n <= 1 ? iw / 2 : (i / (n - 1)) * iw); };
-    var Y = function (v) { return pT + ih - (v / maxV) * ih; };
+    return { iw: iw, ih: ih, n: n, maxV: maxV,
+      X: function (i) { return CH.pL + (n <= 1 ? iw / 2 : (i / (n - 1)) * iw); },
+      Y: function (v) { return CH.pT + ih - (v / maxV) * ih; } };
+  }
+  function areaSvg(daily) {
+    var g = chartGeom(daily), n = g.n, X = g.X, Y = g.Y, base = (CH.pT + g.ih).toFixed(1);
     var path = function (key) { return 'M' + daily.map(function (d, i) { return X(i).toFixed(1) + ' ' + Y(d[key]).toFixed(1); }).join(' L'); };
-    var area = function (key) { return path(key) + ' L' + X(n - 1).toFixed(1) + ' ' + (pT + ih).toFixed(1) + ' L' + X(0).toFixed(1) + ' ' + (pT + ih).toFixed(1) + ' Z'; };
-    var grid = [0, 0.25, 0.5, 0.75, 1].map(function (f) { var gy = pT + ih - f * ih; return '<line x1="' + pL + '" x2="' + (W - pR) + '" y1="' + gy.toFixed(1) + '" y2="' + gy.toFixed(1) + '" class="grid"/><text x="' + (pL - 6) + '" y="' + (gy + 3).toFixed(1) + '" class="ytick">' + Math.round(f * maxV) + '</text>'; }).join('');
+    var area = function (key) { return path(key) + ' L' + X(n - 1).toFixed(1) + ' ' + base + ' L' + X(0).toFixed(1) + ' ' + base + ' Z'; };
+    var grid = [0, 0.25, 0.5, 0.75, 1].map(function (f) { var gy = CH.pT + g.ih - f * g.ih; return '<line x1="' + CH.pL + '" x2="' + (CH.W - CH.pR) + '" y1="' + gy.toFixed(1) + '" y2="' + gy.toFixed(1) + '" class="grid"/><text x="' + (CH.pL - 6) + '" y="' + (gy + 3).toFixed(1) + '" class="ytick">' + Math.round(f * g.maxV) + '</text>'; }).join('');
     var step = Math.ceil(n / 8);
-    var xlab = daily.map(function (d, i) { return (i % step === 0 || i === n - 1) ? '<text x="' + X(i).toFixed(1) + '" y="' + (H - 10) + '" class="xtick">' + d.label + '</text>' : ''; }).join('');
+    var xlab = daily.map(function (d, i) { return (i % step === 0 || i === n - 1) ? '<text x="' + X(i).toFixed(1) + '" y="' + (CH.H - 10) + '" class="xtick">' + d.label + '</text>' : ''; }).join('');
     var dot = function (key, c) { var i = n - 1; return '<circle cx="' + X(i).toFixed(1) + '" cy="' + Y(daily[i][key]).toFixed(1) + '" r="3.4" fill="' + c + '" stroke="var(--panel)" stroke-width="1.5"/>'; };
-    return '<svg viewBox="0 0 ' + W + ' ' + H + '" class="chart"><defs><linearGradient id="gE" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="var(--cyan)" stop-opacity=".26"/><stop offset="1" stop-color="var(--cyan)" stop-opacity="0"/></linearGradient><linearGradient id="gP" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="var(--brand)" stop-opacity=".22"/><stop offset="1" stop-color="var(--brand)" stop-opacity="0"/></linearGradient></defs>' + grid + '<path d="' + area('enter') + '" fill="url(#gE)"/><path d="' + area('play') + '" fill="url(#gP)"/><path d="' + path('enter') + '" fill="none" stroke="var(--cyan)" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/><path d="' + path('play') + '" fill="none" stroke="var(--brand)" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>' + dot('enter', 'var(--cyan)') + dot('play', 'var(--brand)') + xlab + '</svg>';
+    // 호버/터치 인터랙션용(기본 숨김): 크로스헤어·강조점·투명 히트영역
+    var inter = '<line class="cross" y1="' + CH.pT + '" y2="' + base + '" style="display:none"/><circle class="hdot he" r="4.2" fill="var(--cyan)" style="display:none"/><circle class="hdot hp" r="4.2" fill="var(--brand)" style="display:none"/><rect class="hit" x="' + CH.pL + '" y="' + CH.pT + '" width="' + g.iw + '" height="' + g.ih + '" fill="transparent"/>';
+    return '<svg viewBox="0 0 ' + CH.W + ' ' + CH.H + '" class="chart"><defs><linearGradient id="gE" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="var(--cyan)" stop-opacity=".26"/><stop offset="1" stop-color="var(--cyan)" stop-opacity="0"/></linearGradient><linearGradient id="gP" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="var(--brand)" stop-opacity=".22"/><stop offset="1" stop-color="var(--brand)" stop-opacity="0"/></linearGradient></defs>' + grid + '<path d="' + area('enter') + '" fill="url(#gE)"/><path d="' + area('play') + '" fill="url(#gP)"/><path d="' + path('enter') + '" fill="none" stroke="var(--cyan)" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/><path d="' + path('play') + '" fill="none" stroke="var(--brand)" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>' + dot('enter', 'var(--cyan)') + dot('play', 'var(--brand)') + xlab + inter + '</svg>';
+  }
+  // 차트 렌더 후 호출 — 마우스 호버/터치 드래그로 가장 가까운 날짜의 수치를 툴팁으로 표시.
+  function wireChart(daily) {
+    var host = $('chart'), svg = host.querySelector('svg'); if (!svg) return;
+    var outer = host.parentNode, tip = $('chartTip'), g = chartGeom(daily), n = g.n;
+    var cross = svg.querySelector('.cross'), he = svg.querySelector('.he'), hp = svg.querySelector('.hp'), hit = svg.querySelector('.hit');
+    function show(clientX) {
+      var r = svg.getBoundingClientRect(); if (!r.width) return;
+      var i = Math.round((((clientX - r.left) / r.width * CH.W) - CH.pL) / g.iw * (n - 1));
+      if (i < 0) i = 0; if (i > n - 1) i = n - 1;
+      var x = g.X(i), ye = g.Y(daily[i].enter), yp = g.Y(daily[i].play);
+      cross.setAttribute('x1', x); cross.setAttribute('x2', x); cross.style.display = '';
+      he.setAttribute('cx', x); he.setAttribute('cy', ye); he.style.display = '';
+      hp.setAttribute('cx', x); hp.setAttribute('cy', yp); hp.style.display = '';
+      tip.innerHTML = '<b>' + daily[i].label + '</b><span><i class="tc"></i>진입 ' + num(daily[i].enter) + '</span><span><i class="tp"></i>판 시작 ' + num(daily[i].play) + '</span>';
+      tip.style.display = 'block';
+      var oR = outer.getBoundingClientRect(), tw = tip.offsetWidth, th = tip.offsetHeight;
+      var left = (r.left - oR.left) + x / CH.W * r.width - tw / 2;
+      if (left < 2) left = 2; if (left + tw > outer.clientWidth) left = outer.clientWidth - tw - 2;
+      var top = (r.top - oR.top) + Math.min(ye, yp) / CH.H * r.height - th - 10;
+      if (top < 0) top = 0;
+      tip.style.left = left + 'px'; tip.style.top = top + 'px';
+    }
+    function hide() { cross.style.display = 'none'; he.style.display = 'none'; hp.style.display = 'none'; tip.style.display = 'none'; }
+    hit.addEventListener('pointerdown', function (e) { show(e.clientX); });
+    hit.addEventListener('pointermove', function (e) { show(e.clientX); });
+    hit.addEventListener('pointerleave', hide);
+    hit.addEventListener('pointercancel', hide);
   }
   function donutSvg(segs, total) {
     var s = 132, cx = 66, cy = 66, r = 48, sw = 15, C = 2 * Math.PI * r, acc = 0;
@@ -143,7 +178,7 @@ function clientMain() {
       kpi('판 시작', num(rs), sparkSvg(plS, '#4c8dff', 'p'), trendChip.apply(null, t2(plS))) +
       kpi('완주율', pct(re, rs), '', '', '판 종료 ' + num(re) + ' / 시작 ' + num(rs)) +
       kpi('활성 회원', num(a.active), '', '', '신규 ' + num(a.nw) + '명');
-    $('chart').innerHTML = enter || rs ? areaSvg(a.daily) : '<div class="empty">이 기간에 데이터 없음</div>';
+    if (enter || rs) { $('chart').innerHTML = areaSvg(a.daily); wireChart(a.daily); } else { $('chart').innerHTML = '<div class="empty">이 기간에 데이터 없음</div>'; }
     var steps = [['진입', enter, null], ['온보딩 완료', e.onboarding_done || 0, enter], ['로그인', e.login_success || 0, enter], ['판 시작', rs, enter], ['판 종료', re, rs], ['CTA 클릭', e.cta_play_link || 0, enter]];
     $('funnel').innerHTML = enter ? '<div class="funnel">' + steps.map(function (s) { var w = enter > 0 ? Math.max(3, (s[1] / enter) * 100) : 3; return '<div class="frow"><div class="flabel">' + s[0] + '</div><div class="ftrack"><div class="fbar" style="width:' + w.toFixed(1) + '%"></div></div><div class="fnum">' + num(s[1]) + (s[2] != null ? '<span class="frate">' + pct(s[1], s[2]) + '</span>' : '') + '</div></div>'; }).join('') + '</div><div class="hl">진입 → CTA <b>' + pct(e.cta_play_link || 0, enter) + '</b></div>' : '<div class="empty">데이터 없음</div>';
     var toItems = function (obj, dict) { return Object.keys(obj).filter(function (k) { return k !== ''; }).map(function (k) { return { label: lab(dict, k), value: obj[k] }; }).sort(function (x, y) { return y.value - x.value; }); };
@@ -216,6 +251,15 @@ export const DASH_CSS = `
   .chart{width:100%;height:auto;min-width:420px;display:block}
   .chart-wrap{width:100%;overflow-x:auto}
   .chart .grid{stroke:var(--line);stroke-width:1}.chart .ytick{fill:var(--dim);font-size:10px;text-anchor:end;font-family:var(--mono)}.chart .xtick{fill:var(--muted);font-size:10px;text-anchor:middle;font-family:var(--mono)}
+  .chart-outer{position:relative}
+  .hit{touch-action:none;cursor:crosshair}
+  .cross{stroke:var(--muted);stroke-width:1;stroke-dasharray:3 3;pointer-events:none}
+  .hdot{pointer-events:none;stroke:var(--panel);stroke-width:1.5}
+  .chart-tip{position:absolute;display:none;pointer-events:none;z-index:5;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:7px 10px;font-size:11.5px;box-shadow:0 4px 16px #000a;white-space:nowrap}
+  .chart-tip b{display:block;font-family:var(--mono);color:var(--ink);font-size:11px;margin-bottom:4px}
+  .chart-tip span{display:flex;align-items:center;gap:6px;color:var(--muted);font-family:var(--mono);line-height:1.7}
+  .chart-tip i{width:8px;height:8px;border-radius:2px;display:inline-block}
+  .chart-tip .tc{background:var(--cyan)}.chart-tip .tp{background:var(--brand)}
   .funnel{display:flex;flex-direction:column;gap:10px}
   .frow{display:grid;grid-template-columns:70px 1fr auto;align-items:center;gap:11px}
   .flabel{font-size:12px;color:var(--muted);font-weight:600}
@@ -264,7 +308,7 @@ export function renderDashboard({ byDay, days, members, maxDays, generatedAt, so
 
   <div class="kpis" id="kpis"></div>
   <div class="grid2">
-    <div class="panel"><div class="panel-h"><span>일자별 활동</span><div class="legend"><span class="lg"><i style="background:var(--cyan)"></i>진입</span><span class="lg"><i style="background:var(--brand)"></i>판 시작</span></div></div><div class="chart-wrap" id="chart"></div></div>
+    <div class="panel"><div class="panel-h"><span>일자별 활동</span><div class="legend"><span class="lg"><i style="background:var(--cyan)"></i>진입</span><span class="lg"><i style="background:var(--brand)"></i>판 시작</span></div></div><div class="chart-outer"><div class="chart-wrap" id="chart"></div><div class="chart-tip" id="chartTip"></div></div></div>
     <div class="panel"><div class="panel-h"><span>유입 퍼널</span></div><div id="funnel"></div></div>
   </div>
   <div class="grid3">
