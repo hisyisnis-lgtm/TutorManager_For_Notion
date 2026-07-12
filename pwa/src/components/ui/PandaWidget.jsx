@@ -159,7 +159,9 @@ export default function PandaWidget({ foodSources = [], storageKey = DEFAULT_FEE
   }, []);
 
   const triggerArrival = useCallback((newFed, isLevelUp) => {
-    localStorage.setItem(storageKey, String(newFed));
+    // setItem이 throw(사파리 프라이빗 모드·쿼터 초과)해도 먹이주기 버튼이 isFeeding=true로
+    // 고착되지 않게 가드 — 저장 실패 시 세션 내 카운트만 유지되고 새로고침 시 사라짐(무해)
+    try { localStorage.setItem(storageKey, String(newFed)); } catch { /* noop */ }
     setFedTotal(newFed);
     const pRect = pandaRef.current?.getBoundingClientRect();
     if (pRect) {
@@ -311,7 +313,7 @@ export default function PandaWidget({ foodSources = [], storageKey = DEFAULT_FEE
               color: 'white', fontWeight: 700, fontSize: 12,
               padding: '5px 16px', borderRadius: 20,
               zIndex: 10, whiteSpace: 'nowrap',
-              boxShadow: '0 4px 14px rgba(127,0,5,0.35)',
+              boxShadow: 'var(--shadow-brand-button)',
               animationName: 'panda-badge-in',
               animationDuration: '0.35s',
               animationTimingFunction: 'ease-out',

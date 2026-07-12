@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { FilePdfIcon, ImageIcon, DownloadSimpleIcon, TrashIcon, XIcon } from '@phosphor-icons/react';
 import AudioPlayer from './AudioPlayer.jsx';
 import {
@@ -76,6 +76,11 @@ function ImagePreview({ fileName, fetchInlineBlobUrl, onDownload, onDelete, dele
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [fullscreen, setFullscreen] = useState(false);
+  // 호출부가 인라인 화살표로 fetcher를 넘겨도(렌더마다 새 함수) 재fetch되지 않도록
+  // ref에 최신 fetcher만 보관하고, effect는 fileName 기준으로만 실행한다.
+  // (이전엔 deps가 [fetchInlineBlobUrl]이라 부모 타이핑마다 표시 중인 blob을 revoke하고 재다운로드했음)
+  const fetcherRef = useRef(fetchInlineBlobUrl);
+  useEffect(() => { fetcherRef.current = fetchInlineBlobUrl; });
 
   useEffect(() => {
     let cancelled = false;
@@ -84,13 +89,13 @@ function ImagePreview({ fileName, fetchInlineBlobUrl, onDownload, onDelete, dele
     setError(null);
     setBlobUrl(null);
 
-    if (!fetchInlineBlobUrl) {
+    if (!fetcherRef.current) {
       setLoading(false);
       setError('미리보기를 불러올 수 없어요');
       return;
     }
 
-    fetchInlineBlobUrl()
+    fetcherRef.current()
       .then((url) => {
         if (cancelled) {
           URL.revokeObjectURL(url);
@@ -110,7 +115,8 @@ function ImagePreview({ fileName, fetchInlineBlobUrl, onDownload, onDelete, dele
       cancelled = true;
       if (currentUrl) URL.revokeObjectURL(currentUrl);
     };
-  }, [fetchInlineBlobUrl]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fileName]);
 
   return (
     <>

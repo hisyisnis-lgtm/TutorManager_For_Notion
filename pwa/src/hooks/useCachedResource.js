@@ -20,6 +20,41 @@ import { useState, useEffect, useCallback, useRef, useSyncExternalStore } from '
 
 const PREFIX = 'swr_';
 
+// ── 캐시 GC ──────────────────────────────────────────────────────────
+// 날짜·월 파라미터가 든 키(classes:cal:2026-07, pending:today:… 등)는 시간이 지나면
+// 다시는 읽히지 않는데 지워지지도 않아 무한 누적됐다 — 쿼터 초과 시 writeCache가
+// 조용히 전부 실패해 캐시 기능이 통째로 죽는 원인. 키별 마지막 쓰기 시각을 별도
+// 인덱스에 기록하고, 모듈 로드(앱 부팅) 시 1회 오래된 항목을 청소한다.
+const INDEX_KEY = 'swr_index_v1';
+const GC_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000; // 14일 — 활성 키는 방문마다 다시 써져 갱신됨
+
+function touchIndex(storageKey) {
+  try {
+    const idx = JSON.parse(localStorage.getItem(INDEX_KEY) || '{}');
+    idx[storageKey] = Date.now();
+    localStorage.setItem(INDEX_KEY, JSON.stringify(idx));
+  } catch { /* noop */ }
+}
+
+(function gcOldEntries() {
+  try {
+    const idx = JSON.parse(localStorage.getItem(INDEX_KEY) || '{}');
+    const now = Date.now();
+    let changed = false;
+    for (let i = localStorage.length - 1; i >= 0; i -= 1) {
+      const k = localStorage.key(i);
+      if (!k || k === INDEX_KEY || !k.startsWith(PREFIX)) continue;
+      const t = idx[k];
+      if (t === undefined) { idx[k] = now; changed = true; continue; } // 인덱스 도입 전 캐시 — 지금부터 추적
+      if (now - t > GC_MAX_AGE_MS) { localStorage.removeItem(k); delete idx[k]; changed = true; }
+    }
+    for (const k of Object.keys(idx)) {
+      if (localStorage.getItem(k) === null) { delete idx[k]; changed = true; }
+    }
+    if (changed) localStorage.setItem(INDEX_KEY, JSON.stringify(idx));
+  } catch { /* noop */ }
+})();
+
 /**
  * 캐시 무효화 — 주어진 접두사로 시작하는 모든 캐시 키를 지운다.
  * 편집(생성/수정/삭제) 직후 호출하면, 해당 목록·상세를 다음에 열 때 옛값 대신
@@ -100,6 +135,7 @@ function readCache(storageKey) {
 function writeCache(storageKey, value) {
   try {
     localStorage.setItem(storageKey, JSON.stringify(value));
+    touchIndex(storageKey);
   } catch {
     // 용량 초과 등은 조용히 무시 — 캐시는 부가기능이라 실패해도 흐름을 막지 않는다.
   }

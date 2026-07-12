@@ -1,19 +1,19 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Button, Input, Card, Modal, App, Spin } from 'antd';
-import { ArrowLeftIcon, MicrophoneIcon, ImageSquareIcon, ClipboardTextIcon, PaperPlaneTiltIcon, ChatTeardropTextIcon } from '@phosphor-icons/react';
+import { Button, Input, Card, App, Spin } from 'antd';
+import { MicrophoneIcon, ImageSquareIcon, ClipboardTextIcon, PaperPlaneTiltIcon, ChatTeardropTextIcon } from '@phosphor-icons/react';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import ErrorMessage from '../components/ui/ErrorMessage.jsx';
 import ConfirmDialog from '../components/ui/ConfirmDialog.jsx';
 import FilePreview from '../components/ui/FilePreview.jsx';
-import AudioRecorder from '../components/ui/AudioRecorder.jsx';
+import FileAttachModal from '../components/homework/FileAttachModal.jsx';
 import Badge from '../components/ui/Badge.jsx';
 import SectionHeading from '../components/ui/SectionHeading.jsx';
 import {
   PRIMARY, PRIMARY_BG,
   TEXT_PRIMARY, TEXT_SECONDARY, TEXT_TERTIARY, TEXT_DISABLED,
-  BORDER_DEFAULT, BORDER_NEUTRAL,
+  BORDER_DEFAULT,
 } from '../constants/theme.js';
 import {
   parseHomework,
@@ -25,22 +25,19 @@ import {
   fetchHomeworkFileBlobUrlTeacher,
 } from '../api/homework.js';
 import { getPage, deletePage } from '../api/notionClient.js';
+import { invalidateCache } from '../hooks/useCachedResource.js';
+import useFileAttach, { MAX_FILES } from '../hooks/useFileAttach.js';
 import { useData } from '../context/DataContext.jsx';
 import { formatDateTimeCompact } from '../utils/dateUtils.js';
 import {
-  validateFile,
-  splitFileName,
   dedupeFileNames,
   isImageByName,
   isPdfByName,
-  ACCEPT_AUDIO,
-  ACCEPT_DOCUMENT,
 } from '../utils/audioFile.js';
 
-const MAX_FILES = 5;
-
 function genFeedbackName(title, index) {
-  const base = title.replace(/[^\w가-힣]/g, '').slice(0, 20) || '숙제';
+  // 한자(\p{Script=Han})도 보존 — "声调练习" 같은 중국어 제목이 통째로 지워지지 않게
+  const base = title.replace(/[^\w가-힣\p{Script=Han}]/gu, '').slice(0, 20) || '숙제';
   return `${base}_피드백_${String(index).padStart(2, '0')}`;
 }
 
@@ -60,21 +57,12 @@ export default function HomeworkDetailPage() {
   const [pendingFeedbackAudio, setPendingFeedbackAudio] = useState([]);
   const [pendingFeedbackDocs, setPendingFeedbackDocs] = useState([]);
 
-  // 모달 — kind null이면 닫힘. 'audio' | 'document'
-  const [modalKind, setModalKind] = useState(null);
-  const [modalView, setModalView] = useState('list'); // 'list' | 'record' | 'naming'
-  const [sessionFiles, setSessionFiles] = useState([]);
-
-  const [namingFile, setNamingFile] = useState(null);
-  const [namingInput, setNamingInput] = useState('');
   const [saving, setSaving] = useState(false);
   const [deletingFeedbackFileName, setDeletingFeedbackFileName] = useState(null);
   const [deleteFileConfirmName, setDeleteFileConfirmName] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [savedFeedbackText, setSavedFeedbackText] = useState('');
-  const audioInputRef = useRef(null);
-  const docInputRef = useRef(null);
 
   const pendingTotal = pendingFeedbackAudio.length + pendingFeedbackDocs.length;
   const isDirty = feedbackText !== savedFeedbackText || pendingTotal > 0;
@@ -146,146 +134,24 @@ export default function HomeworkDetailPage() {
   }, [id]);
 
   const fixedCount = (hw?.feedbackFiles?.length ?? 0) + pendingFeedbackAudio.length + pendingFeedbackDocs.length;
-  const totalCount = fixedCount + sessionFiles.length;
 
-  const openModal = (kind) => {
-    setSessionFiles([]);
-    setNamingFile(null);
-    setModalView('list');
-    setModalKind(kind);
-  };
-  const closeModal = () => {
-    // antd v6 Modal 의 destroyOnHidden 가 children unmount 를 처리하므로 view·session 리셋을
-    // setTimeout 으로 미룰 필요가 없다. 옛 패턴(300ms 후 리셋)이 닫힘 애니메이션 + destroyOnHidden 와
-    // race 를 일으켜 "확인 후 녹음 시작 화면이 뜨는" 버그를 만들었다. 동기 처리로 단순화.
-    setModalKind(null);
-    setModalView('list');
-    setSessionFiles([]);
-    setNamingFile(null);
-  };
+  // 파일 첨부 모달 로직 — 공용 훅 (state·picker·검증·이름 짓기)
+  const attach = useFileAttach({
+    genName: (index) => genFeedbackName(hw?.title ?? '숙제', index),
+    fixedCount,
+    message,
+    onConfirm: (kind, files) => {
+      if (kind === 'audio') {
+        setPendingFeedbackAudio((prev) => [...prev, ...files]);
+      } else if (kind === 'document') {
+        setPendingFeedbackDocs((prev) => [...prev, ...files]);
+      }
+    },
+  });
+  const { openModal, closeModal } = attach;
 
   const removePendingAudio = (tempId) => setPendingFeedbackAudio((prev) => prev.filter((f) => f.tempId !== tempId));
   const removePendingDoc = (tempId) => setPendingFeedbackDocs((prev) => prev.filter((f) => f.tempId !== tempId));
-  const removeSessionFile = (tempId) => setSessionFiles((prev) => prev.filter((f) => f.tempId !== tempId));
-
-  const addToSession = (file, baseName, ext) => {
-    const safeBase = (baseName || '').trim();
-    setSessionFiles((prev) => [
-      ...prev,
-      { tempId: Date.now() + Math.random(), file, baseName: safeBase, ext: ext || '' },
-    ]);
-    setModalView('list');
-    setNamingFile(null);
-  };
-
-  const tryOpenAudioPicker = () => {
-    if (totalCount >= MAX_FILES) {
-      message.error(`파일은 최대 ${MAX_FILES}개까지 첨부할 수 있어요`);
-      return;
-    }
-    audioInputRef.current?.click();
-  };
-  const tryOpenDocPicker = () => {
-    if (totalCount >= MAX_FILES) {
-      message.error(`파일은 최대 ${MAX_FILES}개까지 첨부할 수 있어요`);
-      return;
-    }
-    docInputRef.current?.click();
-  };
-  const tryOpenRecord = () => {
-    if (totalCount >= MAX_FILES) {
-      message.error(`파일은 최대 ${MAX_FILES}개까지 첨부할 수 있어요`);
-      return;
-    }
-    setModalView('record');
-  };
-
-  // 녹음 파일 picker — 단일은 naming, 다중은 자동 이름.
-  const handleAudioPickChange = (e) => {
-    const files = Array.from(e.target.files ?? []);
-    e.target.value = '';
-    if (files.length === 0) return;
-
-    for (const f of files) {
-      const v = validateFile(f, { expectedCategory: 'audio' });
-      if (!v.ok) { message.error(v.error); return; }
-    }
-    if (totalCount + files.length > MAX_FILES) {
-      message.error(`파일은 최대 ${MAX_FILES}개까지 첨부할 수 있어요`);
-      return;
-    }
-
-    if (files.length === 1) {
-      const file = files[0];
-      const { ext } = splitFileName(file.name);
-      setNamingInput(genFeedbackName(hw?.title ?? '숙제', totalCount + 1));
-      setNamingFile({ file, ext });
-      setModalView('naming');
-      return;
-    }
-    const baseStart = totalCount;
-    const newOnes = files.map((file, i) => {
-      const { ext } = splitFileName(file.name);
-      return {
-        tempId: Date.now() + Math.random() + i,
-        file,
-        baseName: genFeedbackName(hw?.title ?? '숙제', baseStart + i + 1),
-        ext: ext || '',
-      };
-    });
-    setSessionFiles((prev) => [...prev, ...newOnes]);
-  };
-
-  // 이미지·PDF picker — 원본 파일명 그대로.
-  const handleDocPickChange = (e) => {
-    const files = Array.from(e.target.files ?? []);
-    e.target.value = '';
-    if (files.length === 0) return;
-
-    for (const f of files) {
-      const v = validateFile(f, { expectedCategory: 'document' });
-      if (!v.ok) { message.error(v.error); return; }
-    }
-    if (totalCount + files.length > MAX_FILES) {
-      message.error(`파일은 최대 ${MAX_FILES}개까지 첨부할 수 있어요`);
-      return;
-    }
-
-    const newOnes = files.map((file, i) => {
-      const { base, ext } = splitFileName(file.name);
-      return {
-        tempId: Date.now() + Math.random() + i,
-        file,
-        baseName: base || `file_${totalCount + i + 1}`,
-        ext: ext || '',
-      };
-    });
-    setSessionFiles((prev) => [...prev, ...newOnes]);
-  };
-
-  const handleNamingConfirm = () => {
-    if (!namingInput.trim() || !namingFile) return;
-    addToSession(namingFile.file, namingInput, namingFile.ext);
-  };
-
-  const handleSessionConfirm = () => {
-    if (sessionFiles.length > 0) {
-      if (modalKind === 'audio') {
-        setPendingFeedbackAudio((prev) => [...prev, ...sessionFiles]);
-      } else if (modalKind === 'document') {
-        setPendingFeedbackDocs((prev) => [...prev, ...sessionFiles]);
-      }
-    }
-    closeModal();
-  };
-
-  const modalTitle = (() => {
-    if (modalView === 'record') return '음성 녹음';
-    if (modalView === 'naming') return '파일 이름 입력';
-    if (modalKind === 'audio') return '녹음 파일';
-    if (modalKind === 'document') return '이미지·PDF';
-    return '피드백 파일';
-  })();
 
   const uploadAndSave = async (files) => {
     setSaving(true);
@@ -338,6 +204,7 @@ export default function HomeworkDetailPage() {
       setSavedFeedbackText(feedbackText);
       setPendingFeedbackAudio([]);
       setPendingFeedbackDocs([]);
+      invalidateCache('homework'); // 홈 '피드백 대기'·숙제 관리 카운트 stale 방지
       closeModal();
     } catch (e) {
       message.error(`저장 실패: ${e.message}`);
@@ -354,7 +221,8 @@ export default function HomeworkDetailPage() {
       const freshPage = await getPage(id);
       const existingFiles = (freshPage.properties['피드백 파일']?.files ?? [])
         .filter((f) => f.name !== fileName);
-      await saveFeedback(id, { feedbackText, files: [], existingFiles });
+      // filesOnly: 파일 삭제가 입력 중 텍스트 커밋·피드백일 리셋·상태 변경을 일으키지 않게
+      await saveFeedback(id, { files: [], existingFiles, filesOnly: true });
       await load();
     } catch (e) {
       message.error(`삭제 실패: ${e.message}`);
@@ -375,6 +243,7 @@ export default function HomeworkDetailPage() {
     setDeleting(true);
     try {
       await deletePage(id);
+      invalidateCache('homework');
       navigate(-1);
     } catch (e) {
       message.error(`삭제 실패: ${e.message}`);
@@ -584,194 +453,15 @@ export default function HomeworkDetailPage() {
         </Card>
       </div>
 
-      {/* ===== 파일 추가 팝업 — kind 분기 ===== */}
-      <Modal
-        open={modalKind !== null}
-        onCancel={closeModal}
-        footer={null}
-        closable={false}
-        maskClosable={false}
-        keyboard={false}
-        title={
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            {modalView !== 'list' && (
-              <button
-                type="button"
-                onClick={() => setModalView('list')}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: TEXT_SECONDARY, padding: '0 4px 0 0', display: 'flex', alignItems: 'center' }}
-                aria-label="뒤로"
-              ><ArrowLeftIcon size={18} weight="bold" /></button>
-            )}
-            <span style={{ fontSize: 16, fontWeight: 700 }}>{modalTitle}</span>
-          </div>
-        }
-        centered
-        destroyOnHidden
-        styles={{ body: { paddingTop: 8, paddingBottom: 4 } }}
-      >
-        <input
-          ref={audioInputRef}
-          type="file"
-          accept={ACCEPT_AUDIO}
-          multiple
-          style={{ display: 'none' }}
-          onChange={handleAudioPickChange}
-        />
-        <input
-          ref={docInputRef}
-          type="file"
-          accept={ACCEPT_DOCUMENT}
-          multiple
-          style={{ display: 'none' }}
-          onChange={handleDocPickChange}
-        />
-
-        {modalView === 'list' && (
-          <div>
-            {sessionFiles.length > 0 ? (
-              <div style={{ marginBottom: 12 }}>
-                <p style={{ fontSize: 13, fontWeight: 600, color: TEXT_SECONDARY, margin: '0 0 6px' }}>
-                  추가된 파일 ({sessionFiles.length}개)
-                </p>
-                {sessionFiles.map((pf) => (
-                  <div key={pf.tempId} style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    padding: '8px 12px', background: '#f6ffed', border: '1px solid #b7eb8f',
-                    borderRadius: 12, marginBottom: 6,
-                  }}>
-                    <span style={{ fontSize: 13, color: TEXT_PRIMARY, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {pf.baseName + pf.ext}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => removeSessionFile(pf.tempId)}
-                      style={{ marginLeft: 10, background: 'none', border: 'none', cursor: 'pointer', color: TEXT_DISABLED, fontSize: 18, flexShrink: 0, padding: 0, lineHeight: 1 }}
-                      aria-label="삭제"
-                    >×</button>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p style={{
-                fontSize: 13, color: TEXT_TERTIARY, textAlign: 'center',
-                padding: '14px 0 16px', margin: 0, lineHeight: 1.6,
-              }}>
-                {modalKind === 'audio'
-                  ? '추가할 녹음 파일을 선택하거나 직접 녹음해주세요'
-                  : '추가할 이미지 또는 PDF 파일을 선택해주세요'}
-              </p>
-            )}
-
-            {modalKind === 'audio' ? (
-              <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-                <button
-                  type="button"
-                  onClick={tryOpenAudioPicker}
-                  className="duration-150 ease-out"
-                  style={{
-                    flex: 1, height: 44, borderRadius: 12,
-                    background: 'white', border: `1.5px solid ${BORDER_NEUTRAL}`, color: TEXT_SECONDARY,
-                    fontSize: 14, fontWeight: 600, cursor: 'pointer',
-                    WebkitTapHighlightColor: 'transparent',
-                  }}
-                >
-                  파일 추가
-                </button>
-                <button
-                  type="button"
-                  onClick={tryOpenRecord}
-                  className="duration-150 ease-out"
-                  style={{
-                    flex: 1, height: 44, borderRadius: 12,
-                    background: 'white', border: `1.5px solid ${BORDER_NEUTRAL}`, color: TEXT_SECONDARY,
-                    fontSize: 14, fontWeight: 600, cursor: 'pointer',
-                    WebkitTapHighlightColor: 'transparent',
-                  }}
-                >
-                  바로 녹음
-                </button>
-              </div>
-            ) : (
-              <div style={{ marginBottom: 10 }}>
-                <button
-                  type="button"
-                  onClick={tryOpenDocPicker}
-                  className="duration-150 ease-out"
-                  style={{
-                    width: '100%', height: 44, borderRadius: 12,
-                    background: 'white', border: `1.5px solid ${BORDER_NEUTRAL}`, color: TEXT_SECONDARY,
-                    fontSize: 14, fontWeight: 600, cursor: 'pointer',
-                    WebkitTapHighlightColor: 'transparent',
-                  }}
-                >
-                  파일 추가
-                </button>
-              </div>
-            )}
-
-            <Button
-              type="primary"
-              block
-              onClick={handleSessionConfirm}
-              style={{ borderRadius: 12, height: 48, fontWeight: 700, fontSize: 15 }}
-            >
-              확인{sessionFiles.length > 0 ? ` (${sessionFiles.length}개 추가)` : ''}
-            </Button>
-          </div>
-        )}
-
-        {modalView === 'record' && modalKind === 'audio' && (
-          <AudioRecorder
-            defaultName={genFeedbackName(hw?.title ?? '숙제', totalCount + 1)}
-            onFile={(file) => {
-              const { base, ext } = splitFileName(file.name);
-              addToSession(file, base, ext);
-            }}
-            onCancel={() => setModalView('list')}
-            hideCancel
-          />
-        )}
-
-        {modalView === 'naming' && namingFile && (
-          <div>
-            <p style={{ fontSize: 13, color: TEXT_SECONDARY, margin: '0 0 8px' }}>파일 이름을 입력하세요</p>
-            <div style={{ position: 'relative', marginBottom: 12 }}>
-              <input
-                type="text"
-                value={namingInput}
-                onChange={(e) => setNamingInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleNamingConfirm()}
-                maxLength={50}
-                autoFocus
-                style={{
-                  width: '100%', height: 44, borderRadius: 12, border: '1.5px solid #d9d9d9',
-                  padding: namingFile.ext ? '0 56px 0 14px' : '0 14px',
-                  fontSize: 15, color: TEXT_PRIMARY,
-                  boxSizing: 'border-box', outline: 'none',
-                }}
-                onFocus={(e) => e.target.select()}
-              />
-              {namingFile.ext && (
-                <span style={{
-                  position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)',
-                  fontSize: 13, color: TEXT_TERTIARY, pointerEvents: 'none',
-                }}>
-                  {namingFile.ext}
-                </span>
-              )}
-            </div>
-            <Button
-              type="primary"
-              block
-              onClick={handleNamingConfirm}
-              disabled={!namingInput.trim()}
-              style={{ height: 48, borderRadius: 12, fontWeight: 700, fontSize: 15 }}
-            >
-              추가
-            </Button>
-          </div>
-        )}
-      </Modal>
+      {/* ===== 파일 추가 팝업 — 공용 모달 (kind 분기) ===== */}
+      <FileAttachModal
+        attach={attach}
+        titles={{ audio: '녹음 파일', document: '이미지·PDF', fallback: '피드백 파일' }}
+        hints={{
+          audio: '추가할 녹음 파일을 선택하거나 직접 녹음해주세요',
+          document: '추가할 이미지 또는 PDF 파일을 선택해주세요',
+        }}
+      />
 
       {/* 업로드/삭제 중 딤 오버레이 */}
       {(saving || deletingFeedbackFileName !== null) && (

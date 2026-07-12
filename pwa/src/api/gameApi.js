@@ -6,11 +6,12 @@
 import { WORKER_URL } from '../config.js';
 import { SEED_WORDS } from '../constants/toneGameWords.js';
 import { studentBearer } from './studentAuth.js';
+import { fetchWithTimeout } from './fetchTimeout.js';
 
 async function gameFetch(method, path, body, token) {
   const headers = { 'Content-Type': 'application/json' };
   if (token) headers.Authorization = `Bearer ${token}`;
-  const res = await fetch(`${WORKER_URL}${path}`, {
+  const res = await fetchWithTimeout(`${WORKER_URL}${path}`, {
     method,
     headers,
     body: body ? JSON.stringify(body) : undefined,

@@ -3,16 +3,16 @@ import { Card, Modal } from 'antd';
 import { useCachedResource } from '../../hooks/useCachedResource.js';
 import { CaretRightIcon } from '@phosphor-icons/react';
 import { useData } from '../../context/DataContext.jsx';
-import { queryPage } from '../../api/notionClient.js';
+import { queryPage, queryAll } from '../../api/notionClient.js';
 import { CLASSES_DB, parseClass } from '../../api/classes.js';
 import { PAYMENTS_DB, parsePayment } from '../../api/payments.js';
-import { formatKRW, getMonthStart, getMonthEnd, getTodayStart } from '../../utils/dateUtils.js';
+import { formatKRW, getMonthStart, getMonthEnd, getTodayStart, KST } from '../../utils/dateUtils.js';
+import { stripEmoji } from '../../utils/stringUtils.js';
+import { isFixedPriceTitle } from '../../utils/classTypeKind.js';
 import SectionHeading from '../ui/SectionHeading.jsx';
 import {
   PRIMARY, PRIMARY_BG,
   TEXT_PRIMARY, TEXT_TERTIARY, TEXT_DISABLED } from '../../constants/theme.js';
-
-const KST = 'Asia/Seoul';
 
 // 순 결제액(매출) = 실제 결제 − 환불. 확정 매출 집계에만 사용.
 // ⚠️ forecast(예상 수익)의 기준액(lastPayment.actualAmount)에는 적용하지 않음 — 다음 정기결제 예측 왜곡 방지.
@@ -44,15 +44,12 @@ const IncomeSummary = forwardRef(function IncomeSummary(_props, ref) {
   const monthRes = useCachedResource('payments:monthSummary', async () => {
     const monthStart = getMonthStart();
     const monthEnd = getMonthEnd();
-    const paymentData = await queryPage(
-      PAYMENTS_DB,
-      { and: [
-        { property: '결제일', date: { on_or_after: monthStart } },
-        { property: '결제일', date: { on_or_before: monthEnd } },
-      ] },
-      undefined, undefined, 100,
-    );
-    return (paymentData?.results ?? []).map(parsePayment);
+    // 월 단위 집계는 queryAll 필수 — queryPage 단발 100건은 결제 100건 초과 월에 매출 과소 표시
+    const results = await queryAll(PAYMENTS_DB, { and: [
+      { property: '결제일', date: { on_or_after: monthStart } },
+      { property: '결제일', date: { on_or_before: monthEnd } },
+    ] });
+    return (results ?? []).map(parsePayment);
   });
   const monthPayments = monthRes.data ?? [];
   const monthLoading = monthRes.loading;
@@ -60,6 +57,7 @@ const IncomeSummary = forwardRef(function IncomeSummary(_props, ref) {
   const [forecastThisMonth, setForecastThisMonth] = useState(0);
   const [forecastNextMonth, setForecastNextMonth] = useState(0);
   const [forecastLoading, setForecastLoading] = useState(true);
+  const [forecastError, setForecastError] = useState(false); // 실패를 ₩0 정상값처럼 표시하지 않기
   const [forecastBreakdown, setForecastBreakdown] = useState([]); // 학생별 예상 상세
   const [breakdownModalOpen, setBreakdownModalOpen] = useState(false);
   const [breakdownBucket, setBreakdownBucket] = useState(null); // 'thisMonth' | 'nextMonth'
@@ -117,7 +115,7 @@ const IncomeSummary = forwardRef(function IncomeSummary(_props, ref) {
       for (const pmt of payments) {
         if (!pmt.paymentDate) continue;
         const ct = classTypeMap[pmt.classTypeId];
-        if (ct?.title?.includes('원데이클래스') || ct?.title?.includes('체험수업')) continue; // 일회성·체험 결제 제외
+        if (isFixedPriceTitle(ct?.title)) continue; // 일회성·체험 결제 제외
         for (const sid of pmt.studentIds) {
           if (!paymentsByStudent.has(sid)) paymentsByStudent.set(sid, []);
           paymentsByStudent.get(sid).push(pmt);
@@ -144,7 +142,7 @@ const IncomeSummary = forwardRef(function IncomeSummary(_props, ref) {
       for (const pmt of payments) {
         if (!pmt.paymentDate) continue;
         const ct = classTypeMap[pmt.classTypeId];
-        if (ct?.title?.includes('원데이클래스') || ct?.title?.includes('체험수업')) continue;
+        if (isFixedPriceTitle(ct?.title)) continue;
         const py = parseInt(new Date(pmt.paymentDate).toLocaleString('en-CA', { timeZone: KST, year: 'numeric' }), 10);
         const pm = parseInt(new Date(pmt.paymentDate).toLocaleString('en-CA', { timeZone: KST, month: '2-digit' }), 10) - 1;
         if (py === thisYear && pm === thisMonth) {
@@ -286,8 +284,10 @@ const IncomeSummary = forwardRef(function IncomeSummary(_props, ref) {
       setForecastThisMonth(thisMonthTotal);
       setForecastNextMonth(nextMonthTotal);
       setForecastBreakdown(breakdownEntries);
+      setForecastError(false);
     } catch (e) {
       console.error('[결제] 예상 결제 수익 계산 오류', e);
+      setForecastError(true);
     } finally {
       setForecastLoading(false);
     }
@@ -347,6 +347,8 @@ const IncomeSummary = forwardRef(function IncomeSummary(_props, ref) {
             </span>
             {forecastLoading ? (
               <span className="w-1.5 h-1.5 rounded-full bg-brand-400 animate-pulse" />
+            ) : forecastError ? (
+              <span style={{ fontSize: 13, color: TEXT_TERTIARY }}>계산 실패 · 새로고침</span>
             ) : (() => {
               const confirmed = monthPayments.reduce((s, p) => s + netPaid(p), 0);
               const totalThisMonth = confirmed + forecastThisMonth;
@@ -373,6 +375,8 @@ const IncomeSummary = forwardRef(function IncomeSummary(_props, ref) {
             </span>
             {forecastLoading ? (
               <span className="w-1.5 h-1.5 rounded-full bg-brand-400 animate-pulse" />
+            ) : forecastError ? (
+              <span style={{ fontSize: 13, color: TEXT_TERTIARY }}>계산 실패 · 새로고침</span>
             ) : (
               <span className="tabular-nums" style={{ fontSize: 14, fontWeight: 600, color: TEXT_TERTIARY }}>
                 {formatKRW(forecastNextMonth) || '₩0'}
@@ -459,7 +463,7 @@ const IncomeSummary = forwardRef(function IncomeSummary(_props, ref) {
                           const studentName = p.studentIds
                             .map((id) => studentNameMap[id])
                             .filter(Boolean)
-                            .map((n) => n.replace(/^[\p{Emoji_Presentation}\p{Extended_Pictographic}]\s*/gu, '').trim())
+                            .map((n) => stripEmoji(n))
                             .join(', ') || '—';
                           const ctTitle = classTypeMap[p.classTypeId]?.title || '';
                           const paymentDateStr = p.paymentDate

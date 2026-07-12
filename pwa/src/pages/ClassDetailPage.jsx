@@ -9,6 +9,7 @@ import { getPage } from '../api/notionClient.js';
 import { parseClass, classStatusColor, notesColor } from '../api/classes.js';
 import { useData } from '../context/DataContext.jsx';
 import { stripEmoji } from '../utils/stringUtils.js';
+import { isOnlineGroupTitle } from '../utils/classTypeKind.js';
 import { PRIMARY, TEXT_PRIMARY, TEXT_TERTIARY } from '../constants/theme.js';
 
 function Row({ label, value }) {
@@ -35,7 +36,7 @@ export default function ClassDetailPage() {
 
   const studentNames = cls.studentIds.map((sid) => studentNameMap[sid]).filter(Boolean).join(', ');
   const ct = classTypeMap[cls.classTypeId];
-  const isGroup = ct?.title?.includes('온라인그룹수업') ?? false;
+  const isGroup = isOnlineGroupTitle(ct?.title);
   const dt = cls.datetime
     ? new Date(cls.datetime).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', year: 'numeric', month: 'long', day: 'numeric', weekday: 'short', hour: '2-digit', minute: '2-digit' })
     : '';

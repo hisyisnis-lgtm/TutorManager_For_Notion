@@ -11,7 +11,8 @@ export const HOMEWORK_DB = '5ce7d5ef-7b80-4795-843f-325f4ca868e2';
 
 import { WORKER_URL } from '../config.js';
 import { getToken } from './authUtils.js';
-import { studentBearer } from './studentAuth.js';
+import { studentBearer, handleStudentAuthExpiry } from './studentAuth.js';
+import { fetchWithTimeout, UPLOAD_TIMEOUT_MS } from './fetchTimeout.js';
 import {
   STATUS_SUCCESS_BG,
   STATUS_SUCCESS_DARK,
@@ -93,11 +94,11 @@ export async function createHomework({ studentPageId, title, content, files }) {
 export async function uploadTeacherFile(file) {
   const form = new FormData();
   form.append('file', file);
-  const res = await fetch(`${WORKER_URL}/homework/upload`, {
+  const res = await fetchWithTimeout(`${WORKER_URL}/homework/upload`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${getToken()}` },
     body: form,
-  });
+  }, UPLOAD_TIMEOUT_MS);
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
     throw new Error(data.error || '파일 업로드 실패');
@@ -110,10 +111,13 @@ export async function uploadTeacherFile(file) {
  * - files: [{fileUploadId, fileName}]   새로 업로드할 파일 목록
  * - existingFiles: [{name, url}]        보존할 기존 파일 (fresh URL 필요)
  * - 둘 다 없으면 피드백 파일 속성을 건드리지 않음 (기존 유지)
+ * - filesOnly: true면 파일 속성만 수정 — 텍스트·제출 상태·피드백일은 건드리지 않음.
+ *   (파일 삭제 경로용: 이게 없으면 삭제만 해도 입력 중이던 미저장 텍스트가 커밋되고
+ *    피드백일이 리셋되며, 미제출 숙제도 '피드백완료'로 바뀌는 부작용이 있었음)
  */
-export async function saveFeedback(id, { feedbackText, files, existingFiles }) {
+export async function saveFeedback(id, { feedbackText, files, existingFiles, filesOnly = false }) {
   const nowIso = new Date().toISOString();
-  const properties = {
+  const properties = filesOnly ? {} : {
     '피드백 텍스트': { rich_text: [{ text: { content: feedbackText || '' } }] },
     '제출 상태': { select: { name: '피드백완료' } },
     피드백일: { date: { start: nowIso } },
@@ -187,7 +191,11 @@ async function studentFetch(method, path, body, studentToken) {
     clearTimeout(timer);
   }
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+  if (!res.ok) {
+    // 학생 세션 만료 → 세션 정리 후 리로드(인증 게이트 재진입)
+    if (res.status === 401) handleStudentAuthExpiry(studentToken);
+    throw new Error(data.error || `HTTP ${res.status}`);
+  }
   return data;
 }
 
@@ -206,9 +214,10 @@ export async function fetchMyHomework(studentToken) {
 export async function uploadStudentFile(studentToken, file) {
   const form = new FormData();
   form.append('file', file);
-  const res = await fetch(
+  const res = await fetchWithTimeout(
     `${WORKER_URL}/homework/student-upload/${encodeURIComponent(studentToken)}`,
-    { method: 'POST', body: form, cache: 'no-store', headers: studentAuthHeader(studentToken) }
+    { method: 'POST', body: form, cache: 'no-store', headers: studentAuthHeader(studentToken) },
+    UPLOAD_TIMEOUT_MS
   );
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
@@ -255,7 +264,8 @@ function triggerBlobDownload(blob, fileName) {
 }
 
 async function fetchOrThrow(url, init) {
-  const res = await fetch(url, { cache: 'no-store', ...init });
+  // 파일 다운로드/미리보기 — 대용량 가능성이 있어 업로드와 같은 긴 타임아웃
+  const res = await fetchWithTimeout(url, { cache: 'no-store', ...init }, UPLOAD_TIMEOUT_MS);
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.error || `요청 실패 (${res.status})`);

@@ -1,4 +1,4 @@
-import { PRIMARY } from '../../constants/theme';
+import { GRADIENTS } from '../../constants/theme';
 
 const HANZI_PARTICLES = [
   { char: '好', left: '6%',  bottom: '10%', size: 24, delay: '0s',   dur: '7s'   },
@@ -26,7 +26,7 @@ export default function HeroSection({ children, sectionRef, style }) {
     <section
       ref={sectionRef}
       style={{
-        background: `linear-gradient(150deg, #6b0004 0%, ${PRIMARY} 50%, #9a0007 100%)`,
+        background: GRADIENTS.hero,
         position: 'relative',
         overflow: 'hidden',
         borderRadius: '0 0 28px 28px',

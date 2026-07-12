@@ -17,6 +17,7 @@ import {
   LOCATION_OPTIONS,
 } from '../api/classes.js';
 import { toDatetimeLocal, toNotionDate, DAY_KR, toISOLocalKST } from '../utils/dateUtils.js';
+import { isOnlineGroupTitle, isFreeConsultTitle, isFixedPriceTitle } from '../utils/classTypeKind.js';
 import { useData } from '../context/DataContext.jsx';
 import { fetchTimeSlotsForTeacher, checkConflict } from '../api/bookingApi.js';
 import { TEXT_SECONDARY, TEXT_INACTIVE } from '../constants/theme.js';
@@ -221,11 +222,11 @@ export default function ClassFormPage() {
   // 수업 유형별 분기
   const selectedClassType = classTypes.find(ct => ct.id === form.classTypeId);
   // 무료상담: 신규 방문자 대상이라 학생 선택 없이 이름/전화번호 입력 허용
-  const isFreeConsult = selectedClassType?.title?.includes('무료상담') ?? false;
+  const isFreeConsult = isFreeConsultTitle(selectedClassType?.title);
   // 원데이클래스: 기존 등록된 학생만 선택 가능 (일반 수업과 동일)
-  const isOneDayClass = (selectedClassType?.title?.includes('원데이클래스') || selectedClassType?.title?.includes('체험수업')) ?? false;
+  const isOneDayClass = isFixedPriceTitle(selectedClassType?.title);
   // 온라인그룹수업: 학생앱 미등록자 대상. 학생 선택 없이 제목(이름)만 입력해 일정 생성 (전화번호·D-1 알림 없음)
-  const isOnlineGroup = selectedClassType?.title?.includes('온라인그룹수업') ?? false;
+  const isOnlineGroup = isOnlineGroupTitle(selectedClassType?.title);
   // 학생 없이 제목만으로 진행 가능한 유형 (무료상담·온라인그룹수업)
   const isGuestType = isFreeConsult || isOnlineGroup;
   // 30/60/90분 짧은 시간 옵션을 쓰는 체험성 수업
@@ -310,17 +311,22 @@ export default function ClassFormPage() {
         // 반복 수업 충돌 검사 — 충돌 있어도 확인 팝업 후 진행
         const pad = (n) => String(n).padStart(2, '0');
         const conflicts = [];
+        let checkFailedCount = 0;
         for (const date of recurDates) {
           const dateStr = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
           const timeStr = `${pad(date.getHours())}:${pad(date.getMinutes())}`;
           const result = await checkConflict(dateStr, timeStr, parseInt(form.duration));
           if (result.conflict) conflicts.push(`${dateStr} ${timeStr} (기존 수업 ${result.conflictTime} 근접)`);
+          if (result.checkFailed) checkFailedCount += 1;
         }
-        if (conflicts.length > 0) {
+        if (conflicts.length > 0 || checkFailedCount > 0) {
+          const parts = [];
+          if (conflicts.length > 0) parts.push(`다음 ${conflicts.length}개 수업이 기존 수업과 30분 이내 겹칩니다:\n${conflicts.join('\n')}`);
+          if (checkFailedCount > 0) parts.push(`${checkFailedCount}개 날짜는 네트워크 문제로 충돌 확인에 실패했어요 (겹침 여부 알 수 없음).`);
           setPendingSubmit({
             kind: 'recurring',
             items,
-            message: `다음 ${conflicts.length}개 수업이 기존 수업과 30분 이내 겹칩니다:\n${conflicts.join('\n')}\n\n그래도 등록하시겠습니까?`,
+            message: `${parts.join('\n\n')}\n\n그래도 등록하시겠습니까?`,
           });
           setSaving(false);
           return;
@@ -348,11 +354,13 @@ export default function ClassFormPage() {
         // 일회성 수업 충돌 검사 — 충돌 있어도 확인 팝업 후 진행
         const [dateStr, timeStr] = form.datetime.split('T');
         const conflictRes = await checkConflict(dateStr, timeStr.slice(0, 5), parseInt(form.duration), isEdit ? id : '');
-        if (conflictRes.conflict) {
+        if (conflictRes.conflict || conflictRes.checkFailed) {
           setPendingSubmit({
             kind: 'single',
             payload,
-            message: `기존 수업(${conflictRes.conflictTime})과 30분 이내 겹칩니다.\n\n그래도 등록하시겠습니까?`,
+            message: conflictRes.conflict
+              ? `기존 수업(${conflictRes.conflictTime})과 30분 이내 겹칩니다.\n\n그래도 등록하시겠습니까?`
+              : '네트워크 문제로 기존 수업과의 겹침 확인에 실패했어요.\n\n확인 없이 등록하시겠습니까?',
           });
           setSaving(false);
           return;
@@ -369,6 +377,11 @@ export default function ClassFormPage() {
       navigate(-1);
     } catch (e) {
       setError(e.message);
+      // 반복 등록 부분 실패 — 이미 생성된 수업이 목록에 바로 보이도록 캐시 무효화
+      if (e.createdCount > 0) {
+        invalidateCache('class');
+        invalidateCache('pending');
+      }
     } finally {
       setSaving(false);
     }
@@ -431,7 +444,7 @@ export default function ClassFormPage() {
             value={form.classTypeId || undefined}
             onChange={(value) => {
               const ct = classTypes.find(c => c.id === value);
-              const isShortDur = (ct?.title?.includes('무료상담') || ct?.title?.includes('원데이클래스') || ct?.title?.includes('체험수업')) ?? false;
+              const isShortDur = isFreeConsultTitle(ct?.title) || isFixedPriceTitle(ct?.title);
               setForm((f) => ({
                 ...f,
                 classTypeId: value,

@@ -36,6 +36,9 @@ export default function AudioPlayer({ url, fileName, onGetFreshUrl, onDelete, de
   const [src, setSrc] = useState(url);
   const [hoverBar, setHoverBar] = useState(false);
   const pendingPlayRef = useRef(false);
+  // onError 재시도 카운터 — fresh URL이 매번 달라지는 Notion 서명 URL 특성상
+  // 제한 없이 재시도하면 (예: iOS Safari가 webm을 못 여는 경우) 무한 재조회 루프가 됨.
+  const errorRetryRef = useRef(0);
 
   useEffect(() => {
     setSrc(url);
@@ -43,6 +46,7 @@ export default function AudioPlayer({ url, fileName, onGetFreshUrl, onDelete, de
     setCurrentTime(0);
     setDuration(0);
     setError(null);
+    errorRetryRef.current = 0;
   }, [url]);
 
   function formatTime(sec) {
@@ -123,11 +127,12 @@ export default function AudioPlayer({ url, fileName, onGetFreshUrl, onDelete, de
         src={src}
         onTimeUpdate={() => setCurrentTime(audioRef.current?.currentTime ?? 0)}
         onDurationChange={() => setDuration(audioRef.current?.duration ?? 0)}
-        onPlay={() => setPlaying(true)}
+        onPlay={() => { setPlaying(true); errorRetryRef.current = 0; }}
         onPause={() => setPlaying(false)}
         onEnded={() => { setPlaying(false); setCurrentTime(0); }}
         onError={async () => {
-          if (onGetFreshUrl) {
+          if (onGetFreshUrl && errorRetryRef.current < 1) {
+            errorRetryRef.current += 1;
             try {
               setLoading(true);
               const freshUrl = await onGetFreshUrl();
@@ -139,7 +144,8 @@ export default function AudioPlayer({ url, fileName, onGetFreshUrl, onDelete, de
               setLoading(false);
             }
           } else {
-            setError('재생 실패. URL이 만료되었을 수 있습니다.');
+            // 새 URL로도 실패 = 만료가 아니라 재생 불가(코덱 미지원 등) — 다운로드 유도
+            setError('재생할 수 없는 파일이에요. 다운로드해서 들어주세요.');
           }
         }}
         preload="metadata"
@@ -287,7 +293,7 @@ export default function AudioPlayer({ url, fileName, onGetFreshUrl, onDelete, de
           onMouseEnter={(e) => { if (!deleteDisabled) e.currentTarget.style.color = STATUS_ERROR; }}
           onMouseLeave={(e) => { e.currentTarget.style.color = deleteDisabled ? BORDER_NEUTRAL : TEXT_DISABLED; }}
         >
-          <TrashIcon size={16} weight="regular" />
+          <TrashIcon size={16} weight="bold" />
         </button>
       )}
     </div>

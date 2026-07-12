@@ -26,7 +26,7 @@ const SLIDES = [
     Icon: CalendarBlankIcon,
     tag: '내 수업',
     title: '수업 일정을\n한눈에 확인해요',
-    desc: '예정된 수업과 완료된 수업을 볼 수 있어요.\n수업 취소도 여기서 가능해요.',
+    desc: '예정된 수업과 완료된 수업,\n남은 수업 시간까지 볼 수 있어요.',
   },
   {
     id: 'homework',

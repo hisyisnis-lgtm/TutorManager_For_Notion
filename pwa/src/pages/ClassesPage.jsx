@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button, Input, Card, DatePicker, Select, message } from 'antd';
-import { useCachedResource } from '../hooks/useCachedResource.js';
+import { useCachedResource, invalidateCache } from '../hooks/useCachedResource.js';
 import dayjs from 'dayjs';
 import { MagnifyingGlassIcon, MapPinIcon, WarningCircleIcon, CalendarBlankIcon, InfoIcon } from '@phosphor-icons/react';
-import { PRIMARY, PRIMARY_BG, TEXT_PRIMARY, TEXT_SECONDARY, TEXT_TERTIARY, BORDER_DEFAULT, PRIMARY_ALPHA_25, STATUS_ERROR_TEXT, STATUS_ERROR_BG } from '../constants/theme.js';
+import { PRIMARY, PRIMARY_BG, TEXT_PRIMARY, TEXT_SECONDARY, TEXT_TERTIARY, BORDER_DEFAULT, PRIMARY_ALPHA_25, STATUS_ERROR_TEXT, STATUS_ERROR_BG, STATUS_WARNING_TEXT, STATUS_WARNING_BG } from '../constants/theme.js';
 import { createLessonLog } from '../api/lessonLogs.js';
 import { queryAll } from '../api/notionClient.js';
 import PageHeader from '../components/layout/PageHeader.jsx';
@@ -14,12 +14,10 @@ import ErrorMessage from '../components/ui/ErrorMessage.jsx';
 import EmptyState from '../components/ui/EmptyState.jsx';
 import MonthCalendar from '../components/ui/MonthCalendar.jsx';
 import { fetchClassesPage, parseClass, classStatusColor, notesColor, CLASSES_DB } from '../api/classes.js';
-import { formatDateTime, formatTime } from '../utils/dateUtils.js';
+import { formatDateTime, formatTime, KST } from '../utils/dateUtils.js';
 import { stripEmoji } from '../utils/stringUtils.js';
 import { useData } from '../context/DataContext.jsx';
 import PullToRefresh from '../components/ui/PullToRefresh.jsx';
-
-const KST = 'Asia/Seoul';
 
 function getKSTToday() {
   const now = new Date();
@@ -500,8 +498,10 @@ function ClassCard({ cls, studentNameMap }) {
         classId: cls.id,
         studentIds: cls.studentIds,
       });
+      invalidateCache('lessonLogs');
       navigate(`/logs/${created.id}/edit`);
-    } catch {
+    } catch (e) {
+      message.error(`일지 생성 실패: ${e.message}`);
       setCreatingLog(false);
     }
   };
@@ -556,7 +556,7 @@ function ClassCard({ cls, studentNameMap }) {
         {(cls.sessionShortage || cls.conflictDetected) && (
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
             {cls.sessionShortage && (
-              <span style={{ fontSize: 12, color: '#d46b08', background: '#fff7e6', padding: '2px 8px', borderRadius: 20 }}>
+              <span style={{ fontSize: 12, color: STATUS_WARNING_TEXT, background: STATUS_WARNING_BG, padding: '2px 8px', borderRadius: 20 }}>
                 {cls.sessionShortage}
               </span>
             )}

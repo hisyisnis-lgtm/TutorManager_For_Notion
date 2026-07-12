@@ -4,6 +4,7 @@ import { Alert, Button, Input, Typography } from 'antd';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import { getPage, deletePage } from '../api/notionClient.js';
+import { invalidateCache } from '../hooks/useCachedResource.js';
 import ConfirmDialog from '../components/ui/ConfirmDialog.jsx';
 import { parseLessonLog, updateLessonLog, ENGAGEMENT_OPTIONS } from '../api/lessonLogs.js';
 import { useData } from '../context/DataContext.jsx';
@@ -62,6 +63,8 @@ export default function LessonLogFormPage() {
     setError(null);
     try {
       await updateLessonLog(id, form);
+      invalidateCache('lessonLogs');
+      invalidateCache('class'); // 수업 상세의 일지 연결 정보도 stale 방지
       navigate(-1);
     } catch (e) {
       setError(e.message);
@@ -73,6 +76,8 @@ export default function LessonLogFormPage() {
     setDeleting(true);
     try {
       await deletePage(id);
+      invalidateCache('lessonLogs');
+      invalidateCache('class');
       navigate(-1);
     } catch (e) {
       setError(e.message);

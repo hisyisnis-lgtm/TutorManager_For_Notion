@@ -1,14 +1,15 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { App } from 'antd';
 import { CheckIcon } from '@phosphor-icons/react';
 import { createLessonLog } from '../../api/lessonLogs.js';
-import { formatTime } from '../../utils/dateUtils.js';
+import { invalidateCache } from '../../hooks/useCachedResource.js';
+import { formatTime, KST } from '../../utils/dateUtils.js';
 import { PRIMARY, PRIMARY_BG, TEXT_PRIMARY, TEXT_TERTIARY } from '../../constants/theme.js';
-
-const KST = 'Asia/Seoul';
 
 export default function PendingClassCard({ cls, studentName, hwDone, onHwClick, onDismiss }) {
   const navigate = useNavigate();
+  const { message } = App.useApp();
   const [creatingLog, setCreatingLog] = useState(false);
 
   const logId = cls.lessonLogIds?.[0];
@@ -43,8 +44,10 @@ export default function PendingClassCard({ cls, studentName, hwDone, onHwClick, 
         classId: cls.id,
         studentIds: cls.studentIds,
       });
+      invalidateCache('lessonLogs');
       navigate(`/logs/${created.id}/edit`);
-    } catch {
+    } catch (e) {
+      message.error(`일지 생성 실패: ${e.message}`);
       setCreatingLog(false);
     }
   };

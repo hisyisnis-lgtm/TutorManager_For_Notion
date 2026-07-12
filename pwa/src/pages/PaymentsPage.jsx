@@ -10,15 +10,13 @@ import ErrorMessage from '../components/ui/ErrorMessage.jsx';
 import EmptyState from '../components/ui/EmptyState.jsx';
 import { fetchPaymentsPage, parsePayment, paymentStatusColor, refundSessions, formatSessions, PAYMENTS_DB } from '../api/payments.js';
 import { queryAll } from '../api/notionClient.js';
-import { formatKRW } from '../utils/dateUtils.js';
+import { formatKRW, KST } from '../utils/dateUtils.js';
 import { stripEmoji } from '../utils/stringUtils.js';
 import { useData } from '../context/DataContext.jsx';
 import PullToRefresh from '../components/ui/PullToRefresh.jsx';
 import PaymentTrendChart from '../components/payments/PaymentTrendChart.jsx';
 import IncomeSummary from '../components/payments/IncomeSummary.jsx';
 import { TEXT_PRIMARY, TEXT_TERTIARY, STATUS_ERROR_TEXT } from '../constants/theme.js';
-
-const KST = 'Asia/Seoul';
 
 export default function PaymentsPage() {
   const { students, classTypes, studentNameMap, classTypeMap } = useData();

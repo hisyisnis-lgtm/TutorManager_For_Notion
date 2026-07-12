@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { HashRouter, BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { useState, useEffect, lazy, Suspense } from 'react';
+import { HashRouter, BrowserRouter, Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom';
 import { ConfigProvider, App as AntApp } from 'antd';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { isAuthed } from './api/authUtils.js';
@@ -30,7 +30,9 @@ import PersonalPage from './pages/PersonalPage.jsx';
 import PersonalHomeworkDetailPage from './pages/PersonalHomeworkDetailPage.jsx';
 import PandaPage from './pages/PandaPage.jsx';
 import PandaTestPage from './pages/PandaTestPage.jsx';
-import ToneGamePage from './pages/ToneGamePage.jsx';
+// 성조게임은 앱에서 가장 큰 코드 덩어리 — lazy 분리로 게임 진입 시에만 로드.
+// (게임 단독 앱 빌드(main.game.jsx)는 별도 엔트리라 여기 lazy와 무관하게 정적 import 유지)
+const ToneGamePage = lazy(() => import('./pages/ToneGamePage.jsx'));
 import BookingsManagePage from './pages/BookingsManagePage.jsx';
 import ConsultManagePage from './pages/ConsultManagePage.jsx';
 import HomeworkFormPage from './pages/HomeworkFormPage.jsx';
@@ -79,6 +81,15 @@ function ScrollToTop() {
   return null;
 }
 
+
+// 해시(#/personal/{token}) 라우트용 인증 게이트 래퍼 — path 라우트와 동일하게 보호.
+// 새 문서 로드는 부트스트랩이 해시를 path로 변환해 게이트를 타지만, 공개 해시 페이지를
+// 열어둔 채 주소창에서 해시만 바꾸는 같은-문서 내비게이션은 변환 없이 이 블록으로
+// 직행하므로 여기에도 게이트가 없으면 OTP를 우회할 수 있다.
+function GatedStudentRoute({ children }) {
+  const { studentToken } = useParams();
+  return <StudentAuthGate token={studentToken}>{children}</StudentAuthGate>;
+}
 
 // 현재 hash가 공개 페이지인지 확인 (로그인 불필요)
 function isPublicBookingRoute() {
@@ -264,9 +275,9 @@ export default function App() {
             <Route path="/personal/:studentToken" element={<PersonalPage />} />
             <Route path="/personal/:studentToken/homework/:hwId" element={<PersonalHomeworkDetailPage />} />
             <Route path="/personal/:studentToken/panda" element={<PandaPage />} />
-            <Route path="/personal/:studentToken/game/tone" element={<ToneGamePage />} />
+            <Route path="/personal/:studentToken/game/tone" element={<Suspense fallback={<SplashScreen />}><ToneGamePage /></Suspense>} />
             {/* 게스트 독립 진입 (학생 토큰 없음) — 채널 유입 깔때기. ToneGamePage가 토큰 부재를 게스트로 처리 */}
-            <Route path="/game/tone" element={<ToneGamePage />} />
+            <Route path="/game/tone" element={<Suspense fallback={<SplashScreen />}><ToneGamePage /></Suspense>} />
           </Routes>
         </BrowserRouter>
         <FreshnessIndicator />
@@ -299,10 +310,10 @@ export default function App() {
             {/* 학생 자가예약 화면 폐기 (2026-06-10) — 옛 /book* 링크는 인트로로 보냄 */}
             <Route path="/book/*" element={<Navigate to="/intro" replace />} />
             <Route path="/personal" element={<PersonalEntryPage />} />
-            <Route path="/personal/:studentToken" element={<PersonalPage />} />
-            <Route path="/personal/:studentToken/homework/:hwId" element={<PersonalHomeworkDetailPage />} />
-            <Route path="/personal/:studentToken/panda" element={<PandaPage />} />
-            <Route path="/personal/:studentToken/game/tone" element={<ToneGamePage />} />
+            <Route path="/personal/:studentToken" element={<GatedStudentRoute><PersonalPage /></GatedStudentRoute>} />
+            <Route path="/personal/:studentToken/homework/:hwId" element={<GatedStudentRoute><PersonalHomeworkDetailPage /></GatedStudentRoute>} />
+            <Route path="/personal/:studentToken/panda" element={<GatedStudentRoute><PandaPage /></GatedStudentRoute>} />
+            <Route path="/personal/:studentToken/game/tone" element={<GatedStudentRoute><Suspense fallback={<SplashScreen />}><ToneGamePage /></Suspense></GatedStudentRoute>} />
             <Route path="/panda-test" element={<PandaTestPage />} />
           </Routes>
         </HashRouter>

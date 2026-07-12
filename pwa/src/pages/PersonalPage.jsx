@@ -5,9 +5,11 @@ import { useCachedResource, peekCache, writeCacheValue, trackRevalidation } from
 import {
   fetchStudentByToken,
   fetchMyClasses } from '../api/bookingApi.js';
-import { fetchMyHomework, parseHomework, submitHomework, uploadStudentFile, homeworkStatusColor } from '../api/homework.js';
+import { fetchMyHomework, parseHomework, homeworkStatusColor } from '../api/homework.js';
+import { clearStudentSession } from '../api/studentAuth.js';
 import { Card, Button, Spin, message } from 'antd';
 import { DAY_KR, timeToMin, formatDuration, formatYearMonth, addMonths } from '../utils/dateUtils.js';
+import { getViewedMap, HW_VIEWED_KEY } from '../utils/homeworkViewed.js';
 import HomeworkFilterBar from '../components/homework/HomeworkFilterBar.jsx';
 import HomeworkSection from '../components/homework/HomeworkSection.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
@@ -25,7 +27,7 @@ import {
   PRIMARY, PRIMARY_LIGHT, PRIMARY_BG,
   TEXT_PRIMARY, TEXT_SECONDARY, TEXT_TERTIARY, TEXT_INACTIVE, TEXT_DISABLED,
   BG_APP, BG_ICON_NEUTRAL, BG_SUCCESS,
-  BORDER_SUBTLE,
+  BORDER_SUBTLE, BORDER_NEUTRAL,
   STATUS_SUCCESS_DARK, STATUS_SUCCESS_BG,
   STATUS_ERROR_TEXT, STATUS_ERROR_BG, STATUS_ERROR_BORDER,
   STATUS_INFO_DARK } from '../constants/theme.js';
@@ -108,21 +110,7 @@ function ClassCard({ cls, todayStr, nowMin }) {
   );
 }
 
-// ===== 발음 보관함 — localStorage 유틸 =====
-const HW_VIEWED_KEY = (token) => `hw_viewed_${token}`;
-
-function getViewedMap(token) {
-  try { return JSON.parse(localStorage.getItem(HW_VIEWED_KEY(token)) || '{}'); }
-  catch { return {}; }
-}
-
-function markViewed(token, hwId) {
-  const map = getViewedMap(token);
-  if (!map[hwId]) {
-    map[hwId] = Date.now();
-    localStorage.setItem(HW_VIEWED_KEY(token), JSON.stringify(map));
-  }
-}
+// ===== 발음 보관함 — 확인 기록은 utils/homeworkViewed.js 단일 출처 =====
 
 // 보관함 판정: 학생이 본 적이 있고(viewedAt 존재) AND 강사의 마지막 피드백일이 viewedAt 이전.
 // - viewedAt 없음 → 본 적 없음 → 홈/피드백 섹션에 노출
@@ -297,9 +285,9 @@ function ArchiveTab({ studentToken }) {
   if (archivedList.length === 0) {
     return (
       <EmptyState
-        icon={<SpeakerHighIcon size={44} weight="thin" style={{ color: '#d9d9d9' }} />}
+        icon={<SpeakerHighIcon size={44} weight="thin" style={{ color: BORDER_NEUTRAL }} />}
         title="아직 보관된 발음이 없어요"
-        description={"피드백을 확인한 숙제는\n하루 뒤 여기에 자동으로 쌓여요"}
+        description={"피드백을 확인한 숙제는\n여기에 자동으로 쌓여요"}
       />
     );
   }
@@ -403,7 +391,7 @@ function MyClassesTab({ studentToken, month, onMonthChange }) {
       {loading && <LoadingSpinner />}
       {error && <ErrorMessage message={error} onRetry={classesRes.refresh} />}
       {!loading && !error && classes.length === 0 && (
-        <EmptyState icon={<CalendarBlankIcon size={44} weight="thin" style={{ color: '#d9d9d9' }} />} title="이 달에 수업이 없어요" description="다른 달을 선택해 보세요" />
+        <EmptyState icon={<CalendarBlankIcon size={44} weight="thin" style={{ color: BORDER_NEUTRAL }} />} title="이 달에 수업이 없어요" description="다른 달을 선택해 보세요" />
       )}
 
       {!loading && !error && classes.length > 0 && (
@@ -500,7 +488,7 @@ function NextClassHeroCard({ cls, todayStr, nowMin }) {
         </span>
         {cls.location && (
           <>
-            <span style={{ color: '#d9d9d9', fontSize: 13 }}>·</span>
+            <span style={{ color: BORDER_NEUTRAL, fontSize: 13 }}>·</span>
             <span style={{ fontSize: 13, fontWeight: 500, color: TEXT_INACTIVE }}>
               {cls.location}
             </span>
@@ -542,6 +530,8 @@ function HomeTab({ studentToken, foodSources, studentLoaded, remainingHours, rem
 
   const [upcoming, setUpcoming] = useState([]);
   const [upcomingLoading, setUpcomingLoading] = useState(true);
+  // 캐시 없는 첫 방문에서 네트워크 실패를 "수업 없음" 빈 상태로 위장하지 않기
+  const [upcomingError, setUpcomingError] = useState(false);
 
   const loadInitialData = useCallback(async () => {
     // 캐시 있으면 즉시 표시(홈 첫 화면 빠르게), 뒤에서 갱신. dot 판정(onUpcomingLoaded)은
@@ -566,10 +556,11 @@ function HomeTab({ studentToken, foodSources, studentLoaded, remainingHours, rem
         .sort((a, b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime));
       const upcomingSlice = all.slice(0, 5);
       setUpcoming(upcomingSlice);
+      setUpcomingError(false);
       writeCacheValue(CK, upcomingSlice);
       onUpcomingLoaded?.(upcomingSlice);
     } catch {
-      if (!cached) setUpcoming([]);
+      if (!cached) { setUpcoming([]); setUpcomingError(true); }
     } finally {
       setUpcomingLoading(false);
     }
@@ -593,6 +584,13 @@ function HomeTab({ studentToken, foodSources, studentLoaded, remainingHours, rem
             boxShadow: 'var(--shadow-card)',
             display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Spin size="small" />
+          </div>
+        ) : upcomingError ? (
+          <div style={{
+            borderRadius: 12, background: '#fff',
+            boxShadow: 'var(--shadow-border)', padding: '20px', textAlign: 'center' }}>
+            <p style={{ fontSize: 14, color: TEXT_TERTIARY, margin: '0 0 10px' }}>수업 정보를 불러오지 못했어요</p>
+            <Button size="small" onClick={loadInitialData}>다시 시도</Button>
           </div>
         ) : visibleUpcoming.length === 0 ? (
           <div style={{
@@ -1062,7 +1060,8 @@ export default function PersonalPage() {
               ...(install.isInstalled ? [] : [{ label: '홈 화면에 추가', onClick: handleInstallAction }]),
               { label: '가이드 보기', onClick: () => { resetAllTabTips(); setTipResetKey(k => k + 1); } },
               { label: '문제 신고하기', onClick: () => window.open('https://forms.gle/dCwXvZAdfG12AxoJ9', '_blank', 'noopener,noreferrer') },
-              { label: '로그아웃', onClick: () => { localStorage.removeItem('personal_student_token'); navigate('/personal'); } },
+              // 공용 기기 대비 — 저장 토큰과 함께 OTP 출입 세션도 정리
+              { label: '로그아웃', onClick: () => { localStorage.removeItem(SAVED_TOKEN_KEY); clearStudentSession(studentToken); navigate('/personal'); } },
             ].map((item, i) => (
               <button
                 key={item.label}
@@ -1121,7 +1120,7 @@ export default function PersonalPage() {
         )}
         {tab === '공지' && (
           <EmptyState
-            icon={<MegaphoneIcon size={44} weight="thin" style={{ color: '#d9d9d9' }} />}
+            icon={<MegaphoneIcon size={44} weight="thin" style={{ color: BORDER_NEUTRAL }} />}
             title="공지사항 준비 중이에요"
             description="선생님이 공지를 등록하면 여기에 표시돼요"
           />

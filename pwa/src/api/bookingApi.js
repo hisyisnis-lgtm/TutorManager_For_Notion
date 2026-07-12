@@ -1,6 +1,6 @@
 import { WORKER_URL } from '../config.js';
 import { getToken } from './authUtils.js';
-import { studentBearer } from './studentAuth.js';
+import { studentBearer, handleStudentAuthExpiry } from './studentAuth.js';
 
 // 단일 요청이 이보다 오래 매달리면 중단 — 무한 스피너 방지(강사앱 notionClient와 동일 정책).
 const REQUEST_TIMEOUT_MS = 25000;
@@ -36,6 +36,8 @@ async function bookingFetch(method, path, body, { auth = false, studentToken = '
   const data = await res.json().catch(() => ({}));
 
   if (!res.ok) {
+    // 학생 세션 만료 → 세션 정리 후 리로드(인증 게이트 재진입). 강사(auth) 호출은 대상 아님.
+    if (res.status === 401 && !auth && studentToken) handleStudentAuthExpiry(studentToken);
     const message = data?.error || `HTTP ${res.status}`;
     const err = new Error(message);
     err.status = res.status;
@@ -78,13 +80,14 @@ export async function deleteBlockedDate(id) {
   return bookingFetch('DELETE', `/booking/blocked/${id}`, undefined, { auth: true });
 }
 
-/** 시간 충돌 여부 확인 (강사용 수업 등록 폼) */
+/** 시간 충돌 여부 확인 (강사용 수업 등록 폼).
+ * 확인 실패를 "충돌 없음"으로 위장하지 않도록 checkFailed 플래그를 함께 반환 — 호출부가 안내 표시. */
 export async function checkConflict(date, startTime, duration, excludeId = '') {
   const params = new URLSearchParams({ date, startTime, duration: String(duration) });
   if (excludeId) params.set('excludeId', excludeId);
   try {
     return await bookingFetch('GET', `/booking/check-conflict?${params}`);
   } catch {
-    return { conflict: false };
+    return { conflict: false, checkFailed: true };
   }
 }

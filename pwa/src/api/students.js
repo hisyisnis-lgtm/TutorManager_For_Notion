@@ -1,4 +1,4 @@
-import { queryAll, queryPage, updatePage, createPage, getPage } from './notionClient.js';
+import { queryAll, updatePage, createPage, getPage } from './notionClient.js';
 import { stripEmoji } from '../utils/stringUtils.js';
 import {
   getTitle,
@@ -24,16 +24,6 @@ const STATUS_ORDER = { '🟢 수강중': 0, '🟡 일시중단': 1, '⚫ 수강�
 /** 전체 학생 조회 (DataContext 초기화용) */
 export async function fetchAllStudents() {
   return queryAll(STUDENTS_DB, undefined, SORTS);
-}
-
-/** 페이지별 학생 조회 (목록 UI용) */
-export async function fetchStudentsPage(statusFilter, cursor) {
-  const filter =
-    statusFilter && statusFilter !== '전체'
-      ? { property: '상태', select: { equals: statusFilter } }
-      : undefined;
-
-  return queryPage(STUDENTS_DB, filter, SORTS, cursor, 50);
 }
 
 /** 학생 상태 변경 */

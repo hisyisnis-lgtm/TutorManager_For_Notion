@@ -10,7 +10,7 @@ import { STATUS_ERROR_TEXT, STATUS_INFO_DARK, TEXT_TERTIARY } from '../constants
 import { queryAll, updatePage } from '../api/notionClient.js';
 import { CONSULT_DB } from '../constants.js';
 
-const KST = 'Asia/Seoul';
+import { KST } from '../utils/dateUtils.js';
 
 function formatKST(iso) {
   if (!iso) return '';

@@ -1,20 +1,12 @@
-const KST = 'Asia/Seoul';
+/** IANA 타임존 문자열 — toLocale* 옵션에 쓰는 단일 출처 (파일마다 재정의 금지) */
+export const KST = 'Asia/Seoul';
 
 /** 요일 배열 (KST 기준, JS getDay() 인덱스와 일치) */
 export const DAY_KR = ['일', '월', '화', '수', '목', '금', '토'];
 
-/** "YYYY-MM-DD" → "1/1(수)" — 예약 UI 컴팩트 날짜 표시 */
-export function formatDateMD(dateStr) {
-  if (!dateStr) return '';
-  const d = new Date(dateStr + 'T00:00:00+09:00');
-  return `${d.getMonth() + 1}/${d.getDate()}(${DAY_KR[d.getDay()]})`;
-}
-
-/** "YYYY-MM-DD" → "1월 1일 (수)" — 예약 상태 페이지 날짜 표시 */
-export function formatDateKO(dateStr) {
-  if (!dateStr) return '';
-  const d = new Date(dateStr + 'T00:00:00+09:00');
-  return `${d.getMonth() + 1}월 ${d.getDate()}일 (${DAY_KR[d.getDay()]})`;
+/** 오늘 날짜 "YYYY-MM-DD" (KST) — 기기 타임존과 무관 */
+export function todayKST() {
+  return new Date().toLocaleDateString('en-CA', { timeZone: KST });
 }
 
 /** ISO 문자열 → "2025.1.1" — 숙제 등록일/제출일 컴팩트 표시 */
@@ -152,18 +144,6 @@ export function toNotionDate(datetimeLocal) {
   return `${datetimeLocal}:00+09:00`;
 }
 
-/** 오늘 날짜의 이번 주 월요일 ISO 문자열 (KST) */
-export function getWeekStart() {
-  const dateStr = new Date().toLocaleDateString('en-CA', { timeZone: KST }); // "YYYY-MM-DD"
-  const [year, month, day] = dateStr.split('-').map(Number);
-  const tempDate = new Date(year, month - 1, day);
-  const dayOfWeek = tempDate.getDay(); // 0=일, 1=월...
-  const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-  const monday = new Date(year, month - 1, day + diff);
-  const mondayStr = `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, '0')}-${String(monday.getDate()).padStart(2, '0')}`;
-  return `${mondayStr}T00:00:00+09:00`;
-}
-
 /** 오늘 00:00 KST ISO 문자열 */
 export function getTodayStart() {
   const dateStr = new Date().toLocaleDateString('en-CA', { timeZone: KST }); // "YYYY-MM-DD"
@@ -175,18 +155,6 @@ export function getMonthStart() {
   const dateStr = new Date().toLocaleDateString('en-CA', { timeZone: KST }); // "YYYY-MM-DD"
   const [year, month] = dateStr.split('-');
   return `${year}-${month}-01T00:00:00+09:00`;
-}
-
-/** 이번 주 일요일 23:59 ISO 문자열 (월요일 시작 기준) */
-export function getWeekEnd() {
-  const dateStr = new Date().toLocaleDateString('en-CA', { timeZone: KST });
-  const [year, month, day] = dateStr.split('-').map(Number);
-  const tempDate = new Date(year, month - 1, day);
-  const dayOfWeek = tempDate.getDay(); // 0=일, 1=월...
-  const diff = dayOfWeek === 0 ? 0 : 7 - dayOfWeek;
-  const sunday = new Date(year, month - 1, day + diff);
-  const sundayStr = `${sunday.getFullYear()}-${String(sunday.getMonth() + 1).padStart(2, '0')}-${String(sunday.getDate()).padStart(2, '0')}`;
-  return `${sundayStr}T23:59:59+09:00`;
 }
 
 /** 이번 달 말일 23:59 ISO 문자열 */

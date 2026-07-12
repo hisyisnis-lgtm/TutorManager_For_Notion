@@ -125,9 +125,10 @@ export default function PandaPage() {
               내 팬더를 키워보세요!
             </p>
             <div style={{ fontSize: 14, color: TEXT_SECONDARY, lineHeight: 1.65, margin: '0 0 20px', wordBreak: 'keep-all' }}>
-              <p style={{ margin: '0 0 8px' }}>수업 <strong style={{ color: PRIMARY }}>30분</strong>마다 <strong style={{ color: PRIMARY }}>먹이</strong>가 생겨요.</p>
-              <p style={{ margin: '0 0 8px' }}><strong style={{ color: PRIMARY }}>먹이주기</strong>를 누르면 팬더가 성장해요.</p>
-              <p style={{ margin: 0 }}><strong style={{ color: PRIMARY }}>쓰다듬기</strong>로 팬더를 응원해 주세요 ❤️</p>
+              {/* 본문 강조는 굵기로 — 빨강 텍스트 강조는 디자인 시스템 금지(강조는 600 또는 PRIMARY_BG 박스) */}
+              <p style={{ margin: '0 0 8px' }}>수업 <strong style={{ fontWeight: 600, color: TEXT_PRIMARY }}>30분</strong>마다 <strong style={{ fontWeight: 600, color: TEXT_PRIMARY }}>먹이</strong>가 생겨요.</p>
+              <p style={{ margin: '0 0 8px' }}><strong style={{ fontWeight: 600, color: TEXT_PRIMARY }}>먹이주기</strong>를 누르면 팬더가 성장해요.</p>
+              <p style={{ margin: 0 }}><strong style={{ fontWeight: 600, color: TEXT_PRIMARY }}>쓰다듬기</strong>로 팬더를 응원해 주세요 ❤️</p>
             </div>
             <button
               onClick={dismissCoach}

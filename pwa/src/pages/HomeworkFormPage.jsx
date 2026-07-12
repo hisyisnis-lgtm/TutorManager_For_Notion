@@ -1,31 +1,24 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Alert, Button, Input, Modal, Select, Spin, App } from 'antd';
-import { ArrowLeftIcon, MicrophoneIcon, ImageSquareIcon } from '@phosphor-icons/react';
+import { Alert, Button, Input, Select, Spin, App } from 'antd';
+import { MicrophoneIcon, ImageSquareIcon } from '@phosphor-icons/react';
 import PageHeader from '../components/layout/PageHeader.jsx';
-import AudioRecorder from '../components/ui/AudioRecorder.jsx';
+import FileAttachModal from '../components/homework/FileAttachModal.jsx';
 import { createHomework, notifyHomework, uploadTeacherFile } from '../api/homework.js';
 import { queryAll } from '../api/notionClient.js';
-import { parseStudent } from '../api/students.js';
+import { invalidateCache } from '../hooks/useCachedResource.js';
+import useFileAttach, { MAX_FILES } from '../hooks/useFileAttach.js';
+import { parseStudent, STUDENTS_DB } from '../api/students.js';
 import {
   PRIMARY, PRIMARY_BG,
   TEXT_PRIMARY, TEXT_SECONDARY, TEXT_TERTIARY, TEXT_DISABLED,
-  BORDER_NEUTRAL,
 } from '../constants/theme.js';
-import {
-  validateFile,
-  splitFileName,
-  ACCEPT_AUDIO,
-  ACCEPT_DOCUMENT,
-} from '../utils/audioFile.js';
-
-const STUDENT_DB = '314838fa-f2a6-8143-a6c7-e59c50f3bbdb';
-const MAX_FILES = 5;
 
 const LABEL = { fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6, fontWeight: 600 };
 
 function genAssignmentName(title, index) {
-  const base = (title || '숙제').replace(/[^\w가-힣]/g, '').slice(0, 20) || '숙제';
+  // 한자(\p{Script=Han})도 보존 — 중국어 과외 특성상 "声调练习" 같은 제목이 통째로 지워지면 안 됨
+  const base = (title || '숙제').replace(/[^\w가-힣\p{Script=Han}]/gu, '').slice(0, 20) || '숙제';
   return `${base}_숙제_${String(index).padStart(2, '0')}`;
 }
 
@@ -37,6 +30,7 @@ export default function HomeworkFormPage() {
 
   const [students, setStudents] = useState([]);
   const [studentsLoaded, setStudentsLoaded] = useState(false);
+  const [studentsLoadError, setStudentsLoadError] = useState(false);
   const [studentId, setStudentId] = useState(presetStudentId || '');
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
@@ -47,18 +41,9 @@ export default function HomeworkFormPage() {
   const [pendingAudio, setPendingAudio] = useState([]);
   const [pendingDocs, setPendingDocs] = useState([]);
 
-  // 모달
-  const [modalKind, setModalKind] = useState(null); // 'audio' | 'document' | null
-  const [modalView, setModalView] = useState('list'); // 'list' | 'record' | 'naming'
-  const [sessionFiles, setSessionFiles] = useState([]);
-  const [namingFile, setNamingFile] = useState(null);
-  const [namingInput, setNamingInput] = useState('');
-  const audioInputRef = useRef(null);
-  const docInputRef = useRef(null);
-
   useEffect(() => {
     // 숙제는 VIP(숙제 관리 대상) 학생만 — 일반 학생 오등록/알림톡 오발송 방지
-    queryAll(STUDENT_DB, {
+    queryAll(STUDENTS_DB, {
       and: [
         { property: '상태', select: { equals: '🟢 수강중' } },
         { property: 'VIP', checkbox: { equals: true } },
@@ -67,120 +52,32 @@ export default function HomeworkFormPage() {
       { property: '이름', direction: 'ascending' },
     ]).then((pages) => {
       setStudents(pages.map(parseStudent));
-    }).catch(() => {}).finally(() => setStudentsLoaded(true));
+    }).catch(() => {
+      // 무음 실패 금지 — 로드 실패를 "비VIP 학생"으로 오판(presetBlocked)하지 않도록 구분
+      setStudentsLoadError(true);
+    }).finally(() => setStudentsLoaded(true));
   }, []);
 
   const pendingTotal = pendingAudio.length + pendingDocs.length;
   const fixedCount = pendingTotal; // 등록 단계라 "기존 저장본"이 없음
-  const totalCount = fixedCount + sessionFiles.length;
 
-  const openModal = (kind) => {
-    setSessionFiles([]);
-    setNamingFile(null);
-    setModalView('list');
-    setModalKind(kind);
-  };
-  const closeModal = () => {
-    // antd v6 Modal 의 destroyOnHidden 가 children unmount 를 처리하므로 setTimeout 으로 미룰 필요 없음.
-    setModalKind(null);
-    setModalView('list');
-    setSessionFiles([]);
-    setNamingFile(null);
-  };
+  // 파일 첨부 모달 로직 — 공용 훅 (state·picker·검증·이름 짓기)
+  const attach = useFileAttach({
+    genName: (index) => genAssignmentName(title, index),
+    fixedCount,
+    message,
+    onConfirm: (kind, files) => {
+      if (kind === 'audio') {
+        setPendingAudio((prev) => [...prev, ...files]);
+      } else if (kind === 'document') {
+        setPendingDocs((prev) => [...prev, ...files]);
+      }
+    },
+  });
+  const { openModal } = attach;
 
   const removePendingAudio = (tempId) => setPendingAudio((prev) => prev.filter((f) => f.tempId !== tempId));
   const removePendingDoc = (tempId) => setPendingDocs((prev) => prev.filter((f) => f.tempId !== tempId));
-  const removeSessionFile = (tempId) => setSessionFiles((prev) => prev.filter((f) => f.tempId !== tempId));
-
-  const addToSession = (file, baseName, ext) => {
-    setSessionFiles((prev) => [
-      ...prev,
-      { tempId: Date.now() + Math.random(), file, baseName: (baseName || '').trim(), ext: ext || '' },
-    ]);
-    setModalView('list');
-    setNamingFile(null);
-  };
-
-  const tryOpenAudioPicker = () => {
-    if (totalCount >= MAX_FILES) { message.error(`파일은 최대 ${MAX_FILES}개까지 첨부할 수 있어요`); return; }
-    audioInputRef.current?.click();
-  };
-  const tryOpenDocPicker = () => {
-    if (totalCount >= MAX_FILES) { message.error(`파일은 최대 ${MAX_FILES}개까지 첨부할 수 있어요`); return; }
-    docInputRef.current?.click();
-  };
-  const tryOpenRecord = () => {
-    if (totalCount >= MAX_FILES) { message.error(`파일은 최대 ${MAX_FILES}개까지 첨부할 수 있어요`); return; }
-    setModalView('record');
-  };
-
-  const handleAudioPickChange = (e) => {
-    const files = Array.from(e.target.files ?? []);
-    e.target.value = '';
-    if (files.length === 0) return;
-    for (const f of files) {
-      const v = validateFile(f, { expectedCategory: 'audio' });
-      if (!v.ok) { message.error(v.error); return; }
-    }
-    if (totalCount + files.length > MAX_FILES) {
-      message.error(`파일은 최대 ${MAX_FILES}개까지 첨부할 수 있어요`); return;
-    }
-    if (files.length === 1) {
-      const file = files[0];
-      const { ext } = splitFileName(file.name);
-      setNamingInput(genAssignmentName(title, totalCount + 1));
-      setNamingFile({ file, ext });
-      setModalView('naming');
-      return;
-    }
-    const baseStart = totalCount;
-    const newOnes = files.map((file, i) => {
-      const { ext } = splitFileName(file.name);
-      return {
-        tempId: Date.now() + Math.random() + i,
-        file,
-        baseName: genAssignmentName(title, baseStart + i + 1),
-        ext: ext || '',
-      };
-    });
-    setSessionFiles((prev) => [...prev, ...newOnes]);
-  };
-
-  const handleDocPickChange = (e) => {
-    const files = Array.from(e.target.files ?? []);
-    e.target.value = '';
-    if (files.length === 0) return;
-    for (const f of files) {
-      const v = validateFile(f, { expectedCategory: 'document' });
-      if (!v.ok) { message.error(v.error); return; }
-    }
-    if (totalCount + files.length > MAX_FILES) {
-      message.error(`파일은 최대 ${MAX_FILES}개까지 첨부할 수 있어요`); return;
-    }
-    const newOnes = files.map((file, i) => {
-      const { base, ext } = splitFileName(file.name);
-      return {
-        tempId: Date.now() + Math.random() + i,
-        file,
-        baseName: base || `file_${totalCount + i + 1}`,
-        ext: ext || '',
-      };
-    });
-    setSessionFiles((prev) => [...prev, ...newOnes]);
-  };
-
-  const handleNamingConfirm = () => {
-    if (!namingInput.trim() || !namingFile) return;
-    addToSession(namingFile.file, namingInput, namingFile.ext);
-  };
-
-  const handleSessionConfirm = () => {
-    if (sessionFiles.length > 0) {
-      if (modalKind === 'audio') setPendingAudio((prev) => [...prev, ...sessionFiles]);
-      else if (modalKind === 'document') setPendingDocs((prev) => [...prev, ...sessionFiles]);
-    }
-    closeModal();
-  };
 
   const handleSubmit = async () => {
     if (presetBlocked) { setError('숙제 관리 대상(VIP) 학생이 아니에요.'); return; }
@@ -205,6 +102,7 @@ export default function HomeworkFormPage() {
         files: uploaded.length > 0 ? uploaded : undefined,
       });
       if (created?.id) notifyHomework('assign', created.id);
+      invalidateCache('homework');
       navigate(-1);
     } catch (e) {
       setError(e.message);
@@ -218,16 +116,9 @@ export default function HomeworkFormPage() {
   }));
 
   // presetStudentId(상세화면·직접 URL)가 VIP 목록에 없으면 비VIP → 등록 차단
+  // 로드 실패 시엔 판정 보류 (실패를 "비VIP"로 오판하면 VIP 학생 등록이 오탐 차단됨)
   const presetOption = presetStudentId ? studentOptions.find((o) => o.value === presetStudentId) : null;
-  const presetBlocked = !!presetStudentId && studentsLoaded && !presetOption;
-
-  const modalTitle = (() => {
-    if (modalView === 'record') return '음성 녹음';
-    if (modalView === 'naming') return '파일 이름 입력';
-    if (modalKind === 'audio') return '녹음 파일';
-    if (modalKind === 'document') return '이미지·PDF';
-    return '숙제 파일';
-  })();
+  const presetBlocked = !!presetStudentId && studentsLoaded && !studentsLoadError && !presetOption;
 
   return (
     <>
@@ -237,6 +128,14 @@ export default function HomeworkFormPage() {
         {/* 학생 선택 */}
         <div>
           <label style={LABEL}>학생</label>
+          {studentsLoadError && (
+            <Alert
+              type="error" showIcon
+              message="학생 목록을 불러오지 못했어요"
+              description="네트워크 확인 후 페이지를 새로고침해주세요."
+              style={{ borderRadius: 12, marginBottom: 8 }}
+            />
+          )}
           {presetStudentId ? (
             presetBlocked ? (
               <Alert
@@ -346,176 +245,15 @@ export default function HomeworkFormPage() {
         </Button>
       </div>
 
-      {/* ===== 파일 추가 팝업 — kind 분기 ===== */}
-      <Modal
-        open={modalKind !== null}
-        onCancel={closeModal}
-        footer={null}
-        closable={false}
-        maskClosable={false}
-        keyboard={false}
-        title={
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            {modalView !== 'list' && (
-              <button
-                type="button"
-                onClick={() => setModalView('list')}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: TEXT_SECONDARY, padding: '0 4px 0 0', display: 'flex', alignItems: 'center' }}
-                aria-label="뒤로"
-              ><ArrowLeftIcon size={18} weight="bold" /></button>
-            )}
-            <span style={{ fontSize: 16, fontWeight: 700 }}>{modalTitle}</span>
-          </div>
-        }
-        centered
-        destroyOnHidden
-        styles={{ body: { paddingTop: 8, paddingBottom: 4 } }}
-      >
-        <input
-          ref={audioInputRef}
-          type="file"
-          accept={ACCEPT_AUDIO}
-          multiple
-          style={{ display: 'none' }}
-          onChange={handleAudioPickChange}
-        />
-        <input
-          ref={docInputRef}
-          type="file"
-          accept={ACCEPT_DOCUMENT}
-          multiple
-          style={{ display: 'none' }}
-          onChange={handleDocPickChange}
-        />
-
-        {modalView === 'list' && (
-          <div>
-            {sessionFiles.length > 0 ? (
-              <div style={{ marginBottom: 12 }}>
-                <p style={{ fontSize: 13, fontWeight: 600, color: TEXT_SECONDARY, margin: '0 0 6px' }}>
-                  추가된 파일 ({sessionFiles.length}개)
-                </p>
-                {sessionFiles.map((pf) => (
-                  <div key={pf.tempId} style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    padding: '8px 12px', background: '#f6ffed', border: '1px solid #b7eb8f',
-                    borderRadius: 12, marginBottom: 6,
-                  }}>
-                    <span style={{ fontSize: 13, color: TEXT_PRIMARY, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {pf.baseName + pf.ext}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => removeSessionFile(pf.tempId)}
-                      style={{ marginLeft: 10, background: 'none', border: 'none', cursor: 'pointer', color: TEXT_DISABLED, fontSize: 18, flexShrink: 0, padding: 0, lineHeight: 1 }}
-                      aria-label="삭제"
-                    >×</button>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p style={{
-                fontSize: 13, color: TEXT_TERTIARY, textAlign: 'center',
-                padding: '14px 0 16px', margin: 0, lineHeight: 1.6,
-              }}>
-                {modalKind === 'audio'
-                  ? '추가할 녹음 파일을 선택하거나 직접 녹음해주세요'
-                  : '추가할 이미지 또는 PDF 파일을 선택해주세요'}
-              </p>
-            )}
-
-            {modalKind === 'audio' ? (
-              <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-                <button
-                  type="button"
-                  onClick={tryOpenAudioPicker}
-                  style={{ flex: 1, height: 44, borderRadius: 12, background: 'white', border: `1.5px solid ${BORDER_NEUTRAL}`, color: TEXT_SECONDARY, fontSize: 14, fontWeight: 600, cursor: 'pointer', WebkitTapHighlightColor: 'transparent' }}
-                >
-                  파일 추가
-                </button>
-                <button
-                  type="button"
-                  onClick={tryOpenRecord}
-                  style={{ flex: 1, height: 44, borderRadius: 12, background: 'white', border: `1.5px solid ${BORDER_NEUTRAL}`, color: TEXT_SECONDARY, fontSize: 14, fontWeight: 600, cursor: 'pointer', WebkitTapHighlightColor: 'transparent' }}
-                >
-                  바로 녹음
-                </button>
-              </div>
-            ) : (
-              <div style={{ marginBottom: 10 }}>
-                <button
-                  type="button"
-                  onClick={tryOpenDocPicker}
-                  style={{ width: '100%', height: 44, borderRadius: 12, background: 'white', border: `1.5px solid ${BORDER_NEUTRAL}`, color: TEXT_SECONDARY, fontSize: 14, fontWeight: 600, cursor: 'pointer', WebkitTapHighlightColor: 'transparent' }}
-                >
-                  파일 추가
-                </button>
-              </div>
-            )}
-
-            <Button
-              type="primary"
-              block
-              onClick={handleSessionConfirm}
-              style={{ borderRadius: 12, height: 48, fontWeight: 700, fontSize: 15 }}
-            >
-              확인{sessionFiles.length > 0 ? ` (${sessionFiles.length}개 추가)` : ''}
-            </Button>
-          </div>
-        )}
-
-        {modalView === 'record' && modalKind === 'audio' && (
-          <AudioRecorder
-            defaultName={genAssignmentName(title, totalCount + 1)}
-            onFile={(file) => {
-              const { base, ext } = splitFileName(file.name);
-              addToSession(file, base, ext);
-            }}
-            onCancel={() => setModalView('list')}
-            hideCancel
-          />
-        )}
-
-        {modalView === 'naming' && namingFile && (
-          <div>
-            <p style={{ fontSize: 13, color: TEXT_SECONDARY, margin: '0 0 8px' }}>파일 이름을 입력하세요</p>
-            <div style={{ position: 'relative', marginBottom: 12 }}>
-              <input
-                type="text"
-                value={namingInput}
-                onChange={(e) => setNamingInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleNamingConfirm()}
-                maxLength={50}
-                autoFocus
-                style={{
-                  width: '100%', height: 44, borderRadius: 12, border: '1.5px solid #d9d9d9',
-                  padding: namingFile.ext ? '0 56px 0 14px' : '0 14px',
-                  fontSize: 15, color: TEXT_PRIMARY,
-                  boxSizing: 'border-box', outline: 'none',
-                }}
-                onFocus={(e) => e.target.select()}
-              />
-              {namingFile.ext && (
-                <span style={{
-                  position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)',
-                  fontSize: 13, color: TEXT_TERTIARY, pointerEvents: 'none',
-                }}>
-                  {namingFile.ext}
-                </span>
-              )}
-            </div>
-            <Button
-              type="primary"
-              block
-              onClick={handleNamingConfirm}
-              disabled={!namingInput.trim()}
-              style={{ height: 48, borderRadius: 12, fontWeight: 700, fontSize: 15 }}
-            >
-              추가
-            </Button>
-          </div>
-        )}
-      </Modal>
+      {/* ===== 파일 추가 팝업 — 공용 모달 (kind 분기) ===== */}
+      <FileAttachModal
+        attach={attach}
+        titles={{ audio: '녹음 파일', document: '이미지·PDF', fallback: '숙제 파일' }}
+        hints={{
+          audio: '추가할 녹음 파일을 선택하거나 직접 녹음해주세요',
+          document: '추가할 이미지 또는 PDF 파일을 선택해주세요',
+        }}
+      />
 
       {/* 업로드 중 딤 오버레이 */}
       {saving && (

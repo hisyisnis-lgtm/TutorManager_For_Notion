@@ -12,7 +12,7 @@ import PendingClassCard from '../components/home/PendingClassCard.jsx';
 import { usePendingClassState } from '../hooks/usePendingClassState.js';
 import { PRIMARY } from '../constants/theme.js';
 
-const KST = 'Asia/Seoul';
+import { KST } from '../utils/dateUtils.js';
 
 function getKSTToday() {
   const now = new Date();

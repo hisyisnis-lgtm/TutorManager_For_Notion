@@ -7,13 +7,12 @@ import ErrorMessage from '../components/ui/ErrorMessage.jsx';
 import Badge from '../components/ui/Badge.jsx';
 import ConfirmDialog from '../components/ui/ConfirmDialog.jsx';
 import { getPage } from '../api/notionClient.js';
+import { invalidateCache } from '../hooks/useCachedResource.js';
 import { parsePayment, paymentStatusColor, updatePayment, refundSessions, formatSessions, isWholeSession } from '../api/payments.js';
 import { useData } from '../context/DataContext.jsx';
 import { stripEmoji } from '../utils/stringUtils.js';
-import { formatKRW } from '../utils/dateUtils.js';
+import { formatKRW, todayKST } from '../utils/dateUtils.js';
 import { PRIMARY, PRIMARY_BG, TEXT_SECONDARY, TEXT_PRIMARY, TEXT_TERTIARY } from '../constants/theme.js';
-
-const todayKST = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' });
 
 function Row({ label, value }) {
   if (value === null || value === undefined || value === '') return null;
@@ -94,6 +93,7 @@ export default function PaymentDetailPage() {
       });
       const page = await getPage(id);
       setP(parsePayment(page));
+      invalidateCache('payment'); // 환불 반영 — 결제 목록·월 매출 요약 stale 방지
       setRefundConfirm(false);
       setRefundOpen(false);
     } catch (e) {

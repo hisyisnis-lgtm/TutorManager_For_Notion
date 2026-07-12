@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { PRIMARY, PRIMARY_BG, TEXT_PRIMARY, TEXT_TERTIARY, TEXT_DISABLED } from '../../constants/theme.js';
 
-const KST = 'Asia/Seoul';
+import { KST } from '../../utils/dateUtils.js';
 
 /**
  * 최근 6개월 결제 추이 꺾은선 그래프.

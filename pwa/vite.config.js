@@ -19,12 +19,21 @@ export default defineConfig(({ mode }) => {
   },
   build: {
     sourcemap: false,
-    ...(isGameApp
-      ? {
-          outDir: 'dist-game',
-          rollupOptions: { input: fileURLToPath(new URL('./game.html', import.meta.url)) },
-        }
-      : {}),
+    rollupOptions: {
+      ...(isGameApp
+        ? { input: fileURLToPath(new URL('./game.html', import.meta.url)) }
+        : {}),
+      output: {
+        // 단일 2MB 청크 방지 — 벤더를 분리해 앱 코드 변경 시 벤더 캐시가 유지되고,
+        // 첫 방문(특히 게임 게스트 유입) 파싱 비용을 줄인다. ToneGamePage는 App.jsx에서
+        // React.lazy로 분리되어 게임 코드는 게임 진입 시에만 로드된다.
+        // 벤더를 둘로 쪼개면(antd/react) 상호 참조로 순환 청크가 생기므로 단일 vendor로.
+        manualChunks(id) {
+          return id.includes('node_modules') ? 'vendor' : undefined;
+        },
+      },
+    },
+    ...(isGameApp ? { outDir: 'dist-game' } : {}),
   },
   plugins: [
     react(),

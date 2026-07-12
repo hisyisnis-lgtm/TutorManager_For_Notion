@@ -5,6 +5,7 @@
 // 강사 기기(강사앱 로그인 흔적)는 OTP 없이 강사 JWT로 우회 — 학생 페이지 미리보기/공유용.
 import { WORKER_URL } from '../config.js';
 import { getToken } from './authUtils.js';
+import { fetchWithTimeout } from './fetchTimeout.js';
 
 const sessionKey = (token) => `student_session_${token}`;
 
@@ -39,8 +40,21 @@ export function studentBearer(token) {
   return getStudentSession(token);
 }
 
+// 학생 세션 401 처리 — 만료·폐기된 세션을 지우고 리로드해 인증 게이트가 다시 뜨게 한다.
+// 이게 없으면 hard enforce(STUDENT_AUTH_ENFORCE=1) 시 만료 기기는 OTP 재인증 경로 없이
+// 화면마다 401 에러만 반복하는 막다른 길. 강사 기기(강사 JWT 사용)는 대상 아님.
+// 처리했으면 true 반환(호출부는 에러 표시 생략 가능).
+export function handleStudentAuthExpiry(token) {
+  if (isTeacherDevice()) return false;
+  if (!token || !getStudentSession(token)) return false;
+  clearStudentSession(token);
+  window.location.reload();
+  return true;
+}
+
 async function authFetch(method, path, body) {
-  const res = await fetch(`${WORKER_URL}${path}`, {
+  // OTP 발송/검증은 사용자가 화면에서 기다리는 경로 — 타임아웃 없으면 무한 스피너
+  const res = await fetchWithTimeout(`${WORKER_URL}${path}`, {
     method,
     headers: { 'Content-Type': 'application/json' },
     body: body ? JSON.stringify(body) : undefined,

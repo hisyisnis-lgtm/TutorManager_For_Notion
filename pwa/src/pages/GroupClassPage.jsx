@@ -349,7 +349,7 @@ export default function GroupClassPage() {
                     </Flex>
 
                     {/* 월말 1:1 녹음 피드백 — 회색 밴드 위 흰 카드로 강조 */}
-                    <div style={{ background: '#fff', borderRadius: 14, padding: 16, marginTop: 14, boxShadow: '0 1px 3px rgba(20,20,20,0.06), 0 0 0 1px rgba(20,20,20,0.04)' }}>
+                    <div style={{ background: '#fff', borderRadius: 12, padding: 16, marginTop: 14, boxShadow: 'var(--shadow-border)' }}>
                       <Flex align="center" gap={7} style={{ marginBottom: 10 }}>
                         <MicrophoneStageIcon weight="fill" size={16} style={{ color: PRIMARY, flexShrink: 0 }} />
                         <Text strong style={{ fontSize: 13.5, color: TEXT_BODY }}>1:1 녹음 피드백</Text>
@@ -504,7 +504,7 @@ export default function GroupClassPage() {
                 items={POLICY.map(({ key, title, items }) => ({
                   key,
                   label: <Text strong style={{ fontSize: 14, color: TEXT_BODY }}>{title}</Text>,
-                  style: { backgroundColor: '#ffffff', borderRadius: 12, marginBottom: 10, overflow: 'hidden', boxShadow: '0 1px 2px rgba(20,20,20,0.04), 0 0 0 1px rgba(20,20,20,0.04)' },
+                  style: { backgroundColor: '#ffffff', borderRadius: 12, marginBottom: 10, overflow: 'hidden', boxShadow: 'var(--shadow-border)' },
                   children: (
                     <Flex vertical gap={10}>
                       {items.map(([label, value], i) => (

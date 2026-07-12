@@ -13,12 +13,12 @@ import {
   updatePayment,
   PAYMENT_METHODS,
   calcPaymentAmount,
+  validatePaymentForm,
 } from '../api/payments.js';
-import { formatKRW } from '../utils/dateUtils.js';
+import { formatKRW, todayKST } from '../utils/dateUtils.js';
+import { isOnlineGroupTitle, isFixedPriceTitle } from '../utils/classTypeKind.js';
 import { useData } from '../context/DataContext.jsx';
 import { TEXT_SECONDARY, TEXT_INACTIVE } from '../constants/theme.js';
-
-const todayKST = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' });
 
 export default function PaymentFormPage() {
   const { id } = useParams();
@@ -86,12 +86,12 @@ export default function PaymentFormPage() {
   const unitPrice = selectedClassType?.unitPrice ?? 0;
 
   // 온라인그룹수업: 학생앱 미등록자. 학생 없이 수강생 이름·금액만 기록(시간회차·할인·고정가격 미사용).
-  const isOnlineGroup = selectedClassType?.title?.includes('온라인그룹수업') ?? false;
+  const isOnlineGroup = isOnlineGroupTitle(selectedClassType?.title);
   // 신규 등록 + 온라인그룹수업일 때만 "수강생 이름 + 저장하고 계속" 단건 반복 UI
   const isGroupCreate = isOnlineGroup && !isEdit;
 
   // 고정 가격 상품 (원데이클래스만): 1인 단가가 시간당 기준으로 저장됨 → 총액으로 표시·자동 채움.
-  const isFixedPriceClass = (selectedClassType?.title?.includes('원데이클래스') || selectedClassType?.title?.includes('체험수업')) ?? false;
+  const isFixedPriceClass = isFixedPriceTitle(selectedClassType?.title);
   const fixedSessionCount = selectedClassType ? (selectedClassType.duration || 60) / 60 : 0;
   const fixedTotalPrice = selectedClassType ? Math.round(unitPrice * fixedSessionCount) : 0;
 
@@ -117,7 +117,7 @@ export default function PaymentFormPage() {
   // 수업 종류 선택 → 원데이클래스(고정가격)만 시간회차·금액 자동 채움
   const onSelectClassType = (value) => {
     const ct = classTypes.find((c) => c.id === value);
-    const isFixed = (ct?.title?.includes('원데이클래스') || ct?.title?.includes('체험수업')) ?? false;
+    const isFixed = isFixedPriceTitle(ct?.title);
     if (isFixed) {
       const sc = (ct.duration || 60) / 60;
       const price = Math.round(ct.unitPrice * sc);
@@ -171,13 +171,8 @@ export default function PaymentFormPage() {
     // 온라인그룹수업 신규는 saveGroup으로 처리 (Enter 제출 시 닫기 저장)
     if (isGroupCreate) { saveGroup(false); return; }
 
-    // 일반 결제 검증
-    if (!form.sessionCount || isNaN(parseFloat(form.sessionCount))) { setError('시간 회차를 입력하세요.'); return; }
-    if (parseFloat(form.sessionCount) <= 0) { setError('시간 회차는 0보다 커야 합니다.'); return; }
-    if (form.actualAmount === '' || isNaN(parseFloat(form.actualAmount))) { setError('실제 결제 금액을 입력하세요.'); return; }
-    if (parseFloat(form.actualAmount) < 0) { setError('결제 금액은 0 이상이어야 합니다.'); return; }
-    // 신규일 때만 학생 필수 (편집은 기존 학생 관계 유지)
-    if (!isEdit && !form.studentId) { setError('학생을 선택하세요.'); return; }
+    const validationError = validatePaymentForm(form, { isOnlineGroup, isEdit });
+    if (validationError) { setError(validationError); return; }
 
     setSaving(true);
     setError(null);
@@ -187,7 +182,7 @@ export default function PaymentFormPage() {
         studentId: form.studentId,
         classTypeId: form.classTypeId,
         discountEventId: form.discountEventId || null,
-        sessionCount: parseFloat(form.sessionCount),
+        sessionCount: isOnlineGroup ? 0 : parseFloat(form.sessionCount),
         actualAmount: parseFloat(form.actualAmount),
         paymentMethod: form.paymentMethod || null,
         paymentDate: form.paymentDate || null,
@@ -248,8 +243,8 @@ export default function PaymentFormPage() {
             disabled={isEdit && isOnlineGroup}
           >
             {classTypes.map((ct) => {
-              const optGroup = ct.title?.includes('온라인그룹수업') ?? false;
-              const optFixed = (ct.title?.includes('원데이클래스') || ct.title?.includes('체험수업')) ?? false;
+              const optGroup = isOnlineGroupTitle(ct.title);
+              const optFixed = isFixedPriceTitle(ct.title);
               const totalPrice = Math.round(ct.unitPrice * (ct.duration || 60) / 60);
               return (
                 <Select.Option key={ct.id} value={ct.id}>

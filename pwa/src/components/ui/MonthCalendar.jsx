@@ -151,7 +151,7 @@ export default function MonthCalendar({
                       : isPast && hasClass
                         ? 'bg-gray-100 text-gray-400'
                         : hasClass
-                          ? 'bg-[#fff0f1] text-brand-600'
+                          ? 'bg-brand-50 text-brand-600'
                           : dow === 0
                             ? 'text-red-400'
                             : dow === 6

@@ -9,7 +9,8 @@ import { CLASSES_DB, parseClass } from '../api/classes.js';
 import { HOMEWORK_DB, parseHomework } from '../api/homework.js';
 import { parseLessonLog } from '../api/lessonLogs.js';
 import { CONSULT_DB } from '../constants.js';
-import { formatShort, formatDateTime, formatTime } from '../utils/dateUtils.js';
+import { formatShort, formatDateTime, formatTime, KST } from '../utils/dateUtils.js';
+import { isOnlineGroupTitle, isFreeConsultTitle, isFixedPriceTitle } from '../utils/classTypeKind.js';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import PullToRefresh from '../components/ui/PullToRefresh.jsx';
 import SectionHeading from '../components/ui/SectionHeading.jsx';
@@ -18,11 +19,10 @@ import { usePendingClassState } from '../hooks/usePendingClassState.js';
 import {
   PRIMARY, PRIMARY_BG,
   TEXT_PRIMARY, TEXT_TERTIARY, TEXT_DISABLED,
-  STATUS_ERROR_TEXT } from '../constants/theme.js';
+  STATUS_ERROR_TEXT, STATUS_ERROR_BG,
+  STATUS_WARNING_BG, STATUS_WARNING_BORDER, STATUS_WARNING_TEXT, STATUS_WARNING_TEXT_DARK } from '../constants/theme.js';
 import { BADGE_SMALL } from '../constants/styles.js';
 import { getInstructorName, getNtfyTopic } from './SettingsPage.jsx';
-
-const KST = 'Asia/Seoul';
 
 function getKSTToday() {
   const now = new Date();
@@ -44,6 +44,8 @@ export default function HomePage() {
   const [todayClasses, setTodayClasses] = useState([]);
   const [todayLoading, setTodayLoading] = useState(true);
   const [tomorrowPrepCount, setTomorrowPrepCount] = useState(0);
+  // 로더 실패 시 빈 상태("오늘 수업 없음")로 위장하지 않도록 실패 배너 표시용
+  const [loadFailed, setLoadFailed] = useState(false);
   const [instructorName, setInstructorName] = useState(getInstructorName);
 
   // 피드백 대기 숙제 가로 스크롤 (Embla 자유 스크롤 — 드래그·관성·끝 저항, 마우스+터치)
@@ -84,7 +86,7 @@ export default function HomePage() {
       setClasses(list);
       loadUpcomingPrep(list[0]);
     } catch (e) {
-      console.error('[홈] 수업 불러오기 오류', e);
+      console.error('[홈] 수업 불러오기 오류', e); setLoadFailed(true);
     } finally {
       setLoading(false);
     }
@@ -134,7 +136,7 @@ export default function HomePage() {
       );
       setSubmittedHomework((data?.results ?? []).map(parseHomework));
     } catch (e) {
-      console.error('[홈] 제출된 숙제 불러오기 오류', e);
+      console.error('[홈] 제출된 숙제 불러오기 오류', e); setLoadFailed(true);
     }
   };
 
@@ -149,7 +151,7 @@ export default function HomePage() {
       );
       setConsultCount(data?.results?.length ?? 0);
     } catch (e) {
-      console.error('[홈] 상담 수 불러오기 오류', e);
+      console.error('[홈] 상담 수 불러오기 오류', e); setLoadFailed(true);
     }
   };
 
@@ -170,7 +172,7 @@ export default function HomePage() {
       );
       setTodayClasses((data?.results ?? []).map(parseClass));
     } catch (e) {
-      console.error('[홈] 오늘 수업 불러오기 오류', e);
+      console.error('[홈] 오늘 수업 불러오기 오류', e); setLoadFailed(true);
     } finally {
       setTodayLoading(false);
     }
@@ -196,7 +198,7 @@ export default function HomePage() {
       (data?.results ?? []).map(parseClass).forEach((c) => c.studentIds.forEach((id) => ids.add(id)));
       setTomorrowPrepCount(ids.size);
     } catch (e) {
-      console.error('[홈] 내일 수업 수 불러오기 오류', e);
+      console.error('[홈] 내일 수업 수 불러오기 오류', e); setLoadFailed(true);
     }
   };
 
@@ -220,6 +222,7 @@ export default function HomePage() {
 
   const handleRefresh = async () => {
     // refreshData()가 students를 갱신 → lowSessionCount는 derive로 자동 재계산됨
+    setLoadFailed(false);
     await Promise.all([
       loadUpcoming(),
       loadConsultCount(),
@@ -289,6 +292,33 @@ export default function HomePage() {
         </button>
         </div>
       </div>
+
+      {/* 로드 실패 배너 — 오류를 "수업 없음" 빈 상태로 위장하지 않기 */}
+      {loadFailed && (
+        <div className="px-4 pt-2">
+          <div
+            role="alert"
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+              padding: '10px 14px', borderRadius: 12,
+              background: STATUS_ERROR_BG,
+              color: STATUS_ERROR_TEXT, fontSize: 13, fontWeight: 500,
+            }}
+          >
+            <span>일부 정보를 불러오지 못했어요 — 표시가 실제와 다를 수 있어요.</span>
+            <button
+              type="button"
+              onClick={handleRefresh}
+              style={{
+                flexShrink: 0, border: 'none', background: 'transparent', cursor: 'pointer',
+                color: STATUS_ERROR_TEXT, fontWeight: 700, fontSize: 13, padding: '6px 4px', minHeight: 32,
+              }}
+            >
+              다시 시도
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* 빠른 실행 */}
       <div
@@ -420,7 +450,7 @@ export default function HomePage() {
           >
             <Card
               variant="borderless"
-              style={{ borderRadius: 16, backgroundColor: '#fff1f0', boxShadow: 'var(--shadow-danger-border)' }}
+              style={{ borderRadius: 16, backgroundColor: STATUS_ERROR_BG, boxShadow: 'var(--shadow-danger-border)' }}
               styles={{ body: { padding: '12px 16px' } }}
             >
               <div className="flex items-center justify-between">
@@ -449,13 +479,13 @@ export default function HomePage() {
           >
             <Card
               variant="borderless"
-              style={{ borderRadius: 16, backgroundColor: '#fff7e6', boxShadow: '0 0 0 1px #ffd591 inset' }}
+              style={{ borderRadius: 16, backgroundColor: STATUS_WARNING_BG, boxShadow: `0 0 0 1px ${STATUS_WARNING_BORDER} inset` }}
               styles={{ body: { padding: '12px 16px' } }}
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <HourglassLowIcon size={18} weight="fill" color="#d46b08" />
-                  <span className="text-sm font-semibold tabular-nums" style={{ color: '#ad4e00' }}>
+                  <HourglassLowIcon size={18} weight="fill" color={STATUS_WARNING_TEXT} />
+                  <span className="text-sm font-semibold tabular-nums" style={{ color: STATUS_WARNING_TEXT_DARK }}>
                     잔여 회차 부족 {lowSessionCount}명
                   </span>
                 </div>
@@ -628,9 +658,9 @@ export default function HomePage() {
                       )}
                       {(() => {
                         const typeTitle = classTypeMap[cls.classTypeId]?.title ?? '';
-                        const isFree = typeTitle.includes('무료상담');
-                        const isOneDay = typeTitle.includes('원데이') || typeTitle.includes('체험');
-                        const isGroup = typeTitle.includes('온라인그룹수업');
+                        const isFree = isFreeConsultTitle(typeTitle);
+                        const isOneDay = isFixedPriceTitle(typeTitle);
+                        const isGroup = isOnlineGroupTitle(typeTitle);
                         if (isFree || isOneDay || isGroup) {
                           return (
                             <div style={{ marginTop: 8 }}>

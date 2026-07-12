@@ -154,6 +154,25 @@ export function calcPaymentAmount(sessionCount, unitPrice, discountRate) {
 }
 
 /**
+ * 결제 폼 제출 검증 — 통과 시 null, 실패 시 에러 문구 반환.
+ * 온라인그룹수업은 시간 회차 개념이 없어(0으로 저장) 회차 검증을 건너뛴다.
+ * (이전 버그: 그룹수업 편집 시 회차 검증에 걸려 저장 자체가 불가능했음)
+ * @param {{ classTypeId, sessionCount, actualAmount, studentId }} form
+ * @param {{ isOnlineGroup:boolean, isEdit:boolean }} ctx
+ */
+export function validatePaymentForm(form, { isOnlineGroup, isEdit }) {
+  if (!form.classTypeId) return '수업 종류를 선택하세요.';
+  if (!isOnlineGroup) {
+    if (!form.sessionCount || isNaN(parseFloat(form.sessionCount))) return '시간 회차를 입력하세요.';
+    if (parseFloat(form.sessionCount) <= 0) return '시간 회차는 0보다 커야 합니다.';
+  }
+  if (form.actualAmount === '' || isNaN(parseFloat(form.actualAmount))) return '실제 결제 금액을 입력하세요.';
+  if (parseFloat(form.actualAmount) < 0) return '결제 금액은 0 이상이어야 합니다.';
+  if (!isEdit && !form.studentId) return '학생을 선택하세요.';
+  return null;
+}
+
+/**
  * 환불 금액 → 환산 시간 회차 (할인 적용 단가 기준, 반올림 없이 소수 그대로).
  * Notion '유효 시간 회차' formula의 차감식과 동일하게 단가 0이면 0 반환(div-by-zero 가드).
  * 학생 없는 결제(단가 0)는 0이라 회차 개념 미적용.

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, forwardRef } from 'react';
 import { CaretLeftIcon, CaretRightIcon, CaretDownIcon, DownloadSimpleIcon, ImageIcon, StackIcon, ClockIcon, MapPinIcon } from '@phosphor-icons/react';
-import { App as AntApp, Dropdown } from 'antd';
+import { App as AntApp, Button, Dropdown } from 'antd';
 import useEmblaCarousel from 'embla-carousel-react';
 import { domToPng } from 'modern-screenshot';
 import { useData } from '../context/DataContext.jsx';
@@ -18,7 +18,7 @@ import {
 } from '../constants/theme.js';
 import { BADGE_SMALL } from '../constants/styles.js';
 
-const KST = 'Asia/Seoul';
+import { KST } from '../utils/dateUtils.js';
 const pad = (n) => String(n).padStart(2, '0');
 
 /** KST 기준 내일 "YYYY-MM-DD" */
@@ -50,7 +50,17 @@ export default function TomorrowPrepPage() {
   const { studentNameMap } = useData();
   const [slides, setSlides] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [downloading, setDownloading] = useState(false);
+
+  // 콜드 스타트(마스터 캐시 없음)로 직진하면 load 시점에 이름 맵이 비어 전부 '학생'으로
+  // 굳던 문제 — 맵이 늦게 도착해도 슬라이드 이름을 재해석해 갱신한다.
+  useEffect(() => {
+    setSlides((prev) => prev.map((s) => {
+      const name = stripEmoji(studentNameMap[s.studentId] || '') || s.studentName;
+      return name === s.studentName ? s : { ...s, studentName: name };
+    }));
+  }, [studentNameMap]);
 
   // Embla 캐러셀 (드래그·스냅·끝 러버밴드·마우스+터치 모두 처리)
   const [emblaRef, emblaApi] = useEmblaCarousel({ align: 'start', containScroll: false });
@@ -160,8 +170,10 @@ export default function TomorrowPrepPage() {
       );
 
       setSlides(built);
+      setLoadError(false);
     } catch (e) {
       console.error('[내일 수업 준비] 불러오기 오류', e);
+      setLoadError(true); // 오류를 "수업 없음"으로 위장하지 않기
     } finally {
       setLoading(false);
     }
@@ -257,6 +269,13 @@ export default function TomorrowPrepPage() {
 
       {loading ? (
         <div className="px-4 pt-8"><LoadingSpinner /></div>
+      ) : loadError ? (
+        <div className="text-center" style={{ padding: '64px 0' }}>
+          <p style={{ fontSize: 14, color: TEXT_TERTIARY, marginBottom: 12 }}>
+            내일 수업 정보를 불러오지 못했어요.
+          </p>
+          <Button onClick={load}>다시 시도</Button>
+        </div>
       ) : slides.length === 0 ? (
         <p className="text-center" style={{ fontSize: 14, color: TEXT_TERTIARY, padding: '64px 0' }}>
           내일 예정된 수업이 없습니다.

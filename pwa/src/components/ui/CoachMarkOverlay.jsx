@@ -263,7 +263,7 @@ export default function CoachMarkOverlay({ steps, visible, onDone, delay = 350, 
           onClick={(e) => { e.stopPropagation(); finish(); }}
           style={{
             background: 'none', border: 'none', cursor: 'pointer',
-            color: 'rgba(255,255,255,0.5)', fontSize: 14, fontWeight: 500,
+            color: 'rgba(255,255,255,0.8)', fontSize: 14, fontWeight: 500,
             padding: '10px 4px', minWidth: 60,
             WebkitTapHighlightColor: 'transparent',
           }}

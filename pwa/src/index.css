@@ -70,16 +70,6 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
   50%       { transform: rotate(6deg); }
 }
 
-@keyframes tip-card-in {
-  from { opacity: 0; transform: translateY(-8px) scaleY(0.94); filter: blur(3px); }
-  to   { opacity: 1; transform: translateY(0)    scaleY(1);    filter: blur(0);   }
-}
-
-@keyframes tip-card-out {
-  from { opacity: 1; transform: translateY(0)    scaleY(1);    max-height: 200px; margin-bottom: 0; }
-  to   { opacity: 0; transform: translateY(-6px) scaleY(0.92); max-height: 0;     margin-bottom: 0; }
-}
-
 @font-face {
   font-family: 'KimjungchulGothic';
   font-weight: 300;
@@ -312,11 +302,6 @@ html {
 @keyframes fadeSlideUp {
   from { opacity: 0; transform: translateY(16px); }
   to   { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes shimmer {
-  0%   { background-position: -200% center; }
-  100% { background-position: 200% center; }
 }
 
 /* ── 학생 인증 게이트 ───────────────────────── */

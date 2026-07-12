@@ -24,7 +24,11 @@ export async function fetchClassesPage(opts = {}) {
   const nowIso = new Date().toISOString();
 
   if (completedOnly) {
-    filters.push({ property: '수업 일시', date: { on_or_before: nowIso } });
+    // 완료 = 현재 시각 이전. 날짜 범위 필터와 병합 (이전엔 completedOnly가 dateFrom/dateTo를
+    // 조용히 무시해 완료 탭에서 기간 칩·DatePicker가 무동작이었음)
+    const upper = dateTo && dateTo < nowIso ? dateTo : nowIso;
+    filters.push({ property: '수업 일시', date: { on_or_before: upper } });
+    if (dateFrom) filters.push({ property: '수업 일시', date: { on_or_after: dateFrom } });
   } else {
     if (dateFrom) filters.push({ property: '수업 일시', date: { on_or_after: dateFrom } });
     if (dateTo) filters.push({ property: '수업 일시', date: { on_or_before: dateTo } });
@@ -78,12 +82,24 @@ export async function createClass({ studentIds, classTypeId, datetime, duration,
   return createPage(CLASSES_DB, properties);
 }
 
-/** 반복 수업 일괄 생성 */
+/** 반복 수업 일괄 생성.
+ * 중간 실패 시 "몇 개까지 생성됐는지"를 에러에 담아 던진다 — 이게 없으면 사용자가
+ * 통째로 재시도해서 이미 생성된 앞부분이 중복 등록됨. err.createdCount = 생성 성공 수. */
 export async function bulkCreateClasses(items) {
   // items: Array<{ studentIds, classTypeId, datetime (ISO string), duration, notes }>
   const results = [];
   for (const item of items) {
-    results.push(await createClass(item));
+    try {
+      results.push(await createClass(item));
+    } catch (e) {
+      const err = new Error(
+        `${items.length}개 중 ${results.length}개 등록 후 실패했어요 (${e.message}). ` +
+        `이미 등록된 ${results.length}개는 캘린더에 남아 있으니, 남은 수업만 다시 등록해주세요.`
+      );
+      err.createdCount = results.length;
+      err.cause = e;
+      throw err;
+    }
   }
   return results;
 }
