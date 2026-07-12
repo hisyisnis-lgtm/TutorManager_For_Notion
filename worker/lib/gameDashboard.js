@@ -148,22 +148,24 @@ function clientMain() {
     var up = d > 0, rate = prev > 0 ? Math.round((d / prev) * 100) : 100;
     return '<span class="chip-tr ' + (up ? 'up' : 'down') + '">' + (up ? '▲' : '▼') + ' ' + Math.abs(rate) + '%</span>';
   }
-  function kpi(label, value, spark, chip, sub) { return '<div class="kpi"><div class="kpi-top"><span class="kpi-label">' + label + '</span>' + (chip || '') + '</div><div class="kpi-num">' + value + '</div>' + (spark ? '<div class="kpi-spark">' + spark + '</div>' : '<div class="kpi-sub">' + (sub || '') + '</div>') + '</div>'; }
+  function kpi(label, value, spark, chip, sub, more) { return '<div class="kpi"><div class="kpi-top"><span class="kpi-label">' + label + '</span>' + (chip || '') + '</div><div class="kpi-num">' + value + '</div>' + (spark ? '<div class="kpi-spark">' + spark + '</div>' : '<div class="kpi-sub">' + (sub || '') + (more ? '<button class="kpi-more" id="' + more + '">자세히 ›</button>' : '') + '</div>') + '</div>'; }
 
-  // 회원 목록 — 닉네임·가입수단·최근접속·최고점 + 자세히 버튼. 선택 기간 접속=활성 배지(범위 반응).
-  var memSorted = [];
-  function memberList(start, end) {
-    if (!members.length) return '<div class="empty">아직 가입한 회원이 없어요.</div>';
+  // ── 회원: '활성 회원' 카드의 '자세히' → 목록 모달 → 회원 눌러 개별 상세(‹ 로 목록 복귀) ──
+  var curStart = '', curEnd = '', activeList = [];
+  function memRow(m, idx) {
     var pcol = { kakao: '#f7c948', google: '#4c8dff' };
-    memSorted = members.slice().sort(function (a, b) { return (b.seen || '').localeCompare(a.seen || ''); });
-    return '<div class="mem">' + memSorted.map(function (m, idx) {
-      var top = Math.max.apply(null, [0].concat(Object.keys(m.best || {}).map(function (k) { return m.best[k] || 0; })));
-      var active = m.seen && m.seen >= start && m.seen <= end;
-      var nm = m.nickname && m.nickname.trim() ? esc(m.nickname) : '<span class="dim">(이름없음)</span>';
-      return '<div class="memrow"><span class="mdot" style="background:' + (pcol[m.provider] || '#8b98a8') + '" title="' + esc(m.provider) + '"></span><span class="mname">' + nm + '</span>' + (active ? '<span class="mact">활성</span>' : '') + '<span class="mseen">' + (m.seen || '—') + '</span><span class="mtop">' + num(top) + '</span><button class="mdetail" data-i="' + idx + '">자세히</button></div>';
-    }).join('') + '</div>';
+    var top = Math.max.apply(null, [0].concat(Object.keys(m.best || {}).map(function (k) { return m.best[k] || 0; })));
+    var nm = m.nickname && m.nickname.trim() ? esc(m.nickname) : '<span class="dim">(이름없음)</span>';
+    return '<div class="memrow clk" data-i="' + idx + '"><span class="mdot" style="background:' + (pcol[m.provider] || '#8b98a8') + '"></span><span class="mname">' + nm + '</span><span class="mseen">' + (m.seen || '—') + '</span><span class="mtop">' + num(top) + '</span><span class="mchev">›</span></div>';
   }
-  // 회원 상세 모달 — 그 회원의 전체 정보(가입·접속·모드별 최고점/플레이·성조 정확도·스트릭·XP).
+  function showActiveList() {
+    activeList = members.filter(function (m) { return m.seen && m.seen >= curStart && m.seen <= curEnd; }).sort(function (a, b) { return (b.seen || '').localeCompare(a.seen || ''); });
+    var body = activeList.length ? '<div class="mem">' + activeList.map(function (m, i) { return memRow(m, i); }).join('') + '</div>' : '<div class="empty">이 기간에 접속한 회원이 없어요.</div>';
+    $('memModalCard').innerHTML = '<div class="mm-head"><span class="mm-title">활성 회원 · ' + num(activeList.length) + '명</span><button class="mm-x" id="mmX" aria-label="닫기">✕</button></div><div class="mm-meta">' + curStart + ' ~ ' + curEnd + ' 접속 · 눌러서 상세</div>' + body;
+    $('memModal').classList.add('open');
+    document.getElementById('mmX').addEventListener('click', closeMember);
+  }
+  // 회원 개별 상세 — 전체 정보(가입·접속·모드별 최고점/플레이·성조 정확도·스트릭·XP). ‹ 로 목록 복귀.
   function openMember(m) {
     if (!m) return;
     var pcol = { kakao: '#f7c948', google: '#4c8dff' };
@@ -172,13 +174,14 @@ function clientMain() {
     var modeRows = Object.keys(m.best || {}).map(function (k) { return { label: lab(L.key, k), best: m.best[k] || 0, plays: (m.plays && m.plays[k]) || 0 }; }).sort(function (a, b) { return b.best - a.best; });
     var toneAcc = [1, 2, 3, 4, 0].map(function (t) { var e = m.tone && m.tone[t]; var c = e ? e[0] : 0, a = e ? e[1] : 0; return { label: t === 0 ? '경성' : t + '성', acc: a > 0 ? c / a : 0, attempts: a }; });
     var modeTbl = modeRows.length ? '<table class="mm-tbl"><thead><tr><th>모드</th><th class="r">최고점</th><th class="r">플레이</th></tr></thead><tbody>' + modeRows.map(function (r) { return '<tr><td>' + r.label + '</td><td class="r">' + num(r.best) + '</td><td class="r">' + num(r.plays) + '</td></tr>'; }).join('') + '</tbody></table>' : '<div class="empty">아직 기록 없음</div>';
-    $('memModalCard').innerHTML = '<div class="mm-head"><span class="mm-title"><span class="mdot" style="background:' + (pcol[m.provider] || '#8b98a8') + '"></span>' + nm + '</span><button class="mm-x" id="mmX" aria-label="닫기">✕</button></div>'
+    $('memModalCard').innerHTML = '<div class="mm-head"><span class="mm-title"><button class="mm-back" id="mmBack" aria-label="목록">‹</button><span class="mdot" style="background:' + (pcol[m.provider] || '#8b98a8') + '"></span>' + nm + '</span><button class="mm-x" id="mmX" aria-label="닫기">✕</button></div>'
       + '<div class="mm-meta">' + esc(m.provider) + ' · 가입 ' + (m.created || '—') + ' · 최근접속 ' + (m.seen || '—') + '</div>'
       + '<div class="mm-stats"><div class="mm-st"><span>최고 스트릭</span><b>' + num(m.streak) + '일</b></div><div class="mm-st"><span>누적 XP</span><b>' + num(m.xp) + '</b></div><div class="mm-st"><span>총 플레이</span><b>' + num(totalPlays) + '</b></div></div>'
       + '<div class="mm-sec">모드별 최고점</div>' + modeTbl
       + '<div class="mm-sec">성조별 정확도</div>' + toneBars(toneAcc);
     $('memModal').classList.add('open');
     document.getElementById('mmX').addEventListener('click', closeMember);
+    document.getElementById('mmBack').addEventListener('click', showActiveList);
   }
   function closeMember() { $('memModal').classList.remove('open'); }
 
@@ -211,7 +214,9 @@ function clientMain() {
       kpi('진입', num(enter), sparkSvg(enS, '#39d0d8', 'e'), trendChip.apply(null, t2(enS))) +
       kpi('판 시작', num(rs), sparkSvg(plS, '#4c8dff', 'p'), trendChip.apply(null, t2(plS))) +
       kpi('완주율', pct(re, rs), '', '', '판 종료 ' + num(re) + ' / 시작 ' + num(rs)) +
-      kpi('활성 회원', num(a.active), '', '', '신규 ' + num(a.nw) + '명');
+      kpi('활성 회원', num(a.active), '', '', '신규 ' + num(a.nw) + '명', 'activeMore');
+    curStart = start; curEnd = end;
+    var _am = $('activeMore'); if (_am) _am.addEventListener('click', showActiveList);
     if (enter || rs) { $('chart').innerHTML = areaSvg(a.daily); wireChart(a.daily); } else { $('chart').innerHTML = '<div class="empty">이 기간에 데이터 없음</div>'; }
     var steps = [['진입', enter, null], ['온보딩 완료', e.onboarding_done || 0, enter], ['로그인', e.login_success || 0, enter], ['판 시작', rs, enter], ['판 종료', re, rs], ['CTA 클릭', e.cta_play_link || 0, enter]];
     $('funnel').innerHTML = enter ? '<div class="funnel">' + steps.map(function (s) { var w = enter > 0 ? Math.max(3, (s[1] / enter) * 100) : 3; return '<div class="frow"><div class="flabel">' + s[0] + '</div><div class="ftrack"><div class="fbar" style="width:' + w.toFixed(1) + '%"></div></div><div class="fnum">' + num(s[1]) + (s[2] != null ? '<span class="frate">' + pct(s[1], s[2]) + '</span>' : '') + '</div></div>'; }).join('') + '</div><div class="hl">진입 → CTA <b>' + pct(e.cta_play_link || 0, enter) + '</b></div>' : '<div class="empty">데이터 없음</div>';
@@ -226,7 +231,6 @@ function clientMain() {
     $('prov').innerHTML = cum.total ? '<div class="prov"><div class="prov-donut">' + donutSvg(segs, cum.total) + '</div><div class="prov-list">' +
       segs.map(function (s) { return '<div class="prow"><span class="pdot" style="background:' + s.color + '"></span><span class="pname">' + s.label + '</span><span class="pval">' + num(s.value) + '</span></div>'; }).join('') +
       '<div class="prow sep"><span class="pname dim">활성 · 기간</span><span class="pval">' + num(a.active) + '</span></div><div class="prow"><span class="pname dim">신규 · 기간</span><span class="pval">' + num(a.nw) + '</span></div><div class="prow"><span class="pname dim">최고 스트릭</span><span class="pval">' + num(cum.streakMax) + '일</span></div><div class="prow"><span class="pname dim">평균 XP</span><span class="pval">' + num(cum.xpAvg) + '</span></div></div></div>' : '<div class="empty">회원 없음</div>';
-    $('memberlist').innerHTML = memberList(start, end);
   }
 
   $('tone').innerHTML = toneBars(cum.toneAcc);
@@ -243,7 +247,7 @@ function clientMain() {
   Array.prototype.forEach.call(document.querySelectorAll('.seg'), function (b) { b.addEventListener('click', function () { preset(+b.dataset.n); }); });
   $('d1').addEventListener('change', custom); $('d2').addEventListener('change', custom);
   // 회원 '자세히' 클릭 → 상세 모달. 목록은 렌더마다 갱신되므로 이벤트 위임(한 번만 바인딩).
-  $('memberlist').addEventListener('click', function (e) { var b = e.target.closest && e.target.closest('.mdetail'); if (b) openMember(memSorted[+b.getAttribute('data-i')]); });
+  $('memModalCard').addEventListener('click', function (e) { var r = e.target.closest && e.target.closest('.memrow.clk'); if (r) openMember(activeList[+r.getAttribute('data-i')]); });
   $('memModal').addEventListener('click', function (e) { if (e.target === $('memModal')) closeMember(); });
   preset(7);
 }
@@ -331,6 +335,13 @@ export const DASH_CSS = `
   .mtop{font-family:var(--mono);font-size:12px;color:var(--ink);min-width:56px;text-align:right;flex:none;font-variant-numeric:tabular-nums}
   .mdetail{background:var(--panel2);border:1px solid var(--line);color:var(--muted);font:inherit;font-size:11px;font-weight:600;padding:3px 9px;border-radius:6px;cursor:pointer;flex:none}
   .mdetail:hover{color:var(--ink);border-color:var(--brand)}
+  .kpi-more{background:none;border:0;color:var(--brand);font:inherit;font-size:11px;font-weight:600;cursor:pointer;padding:0;margin-left:6px}
+  .kpi-more:hover{text-decoration:underline}
+  .memrow.clk{cursor:pointer;border-radius:8px;margin:0 -6px;padding-left:8px;padding-right:8px}
+  .memrow.clk:hover{background:var(--panel2)}
+  .mchev{color:var(--dim);font-size:16px;flex:none}
+  .mm-back{background:none;border:0;color:var(--brand);font-size:20px;cursor:pointer;padding:0 4px 0 0;line-height:1}
+  .mm-back:hover{color:var(--ink)}
   .modal{position:fixed;inset:0;background:#000a;display:none;align-items:center;justify-content:center;z-index:100;padding:18px}
   .modal.open{display:flex}
   .modal-card{background:var(--panel);border:1px solid var(--line);border-radius:16px;max-width:440px;width:100%;max-height:88vh;overflow-y:auto;padding:20px;box-shadow:0 16px 48px #000b}
@@ -392,8 +403,6 @@ export function renderDashboard({ byDay, days, members, maxDays, generatedAt, so
     <div class="panel"><div class="panel-h"><span>모드별 최고점</span><span class="tag">누적 · 회원</span></div><div id="modebest"></div></div>
     <div class="panel"><div class="panel-h"><span>가입 수단 · 학습</span></div><div id="prov"></div></div>
   </div>
-
-  <div class="panel memberpanel"><div class="panel-h"><span>회원</span><span class="tag">활성 = 선택 기간 접속 · 닉네임=본인 설정</span></div><div id="memberlist"></div></div>
 
   <div class="foot">게임은 Notion과 완전 분리 — 지표는 Analytics Engine(유입·시계열) + D1(회원·점수)에서만.<br>최근 ${maxDays}일 원본 내장 · ${source} · 생성 ${generatedAt}</div>
   <div class="modal" id="memModal"><div class="modal-card" id="memModalCard"></div></div>
