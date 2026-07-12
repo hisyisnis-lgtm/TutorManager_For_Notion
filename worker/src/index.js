@@ -2291,7 +2291,7 @@ async function handleGameDashboard(request, env, url) {
   ]);
   const now = new Date().toISOString().replace('T', ' ').slice(0, 16) + ' UTC';
   const body = renderDashboard({ byDay: byday.byDay, days: byday.days, members, maxDays: MAX_DAYS, generatedAt: now, source: '워커 라이브(/game/dashboard)' });
-  return new Response(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>성조게임 Analytics</title></head><body style="margin:0">${body}</body></html>`, { headers: H });
+  return new Response(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="icon" href="data:,"><title>성조게임 Analytics</title></head><body style="margin:0">${body}</body></html>`, { headers: H });
 }
 
 async function handleGameRoutes(request, env, corsHeaders, url) {

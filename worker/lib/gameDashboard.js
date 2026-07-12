@@ -284,5 +284,7 @@ export function renderDashboard({ byDay, days, members, maxDays, generatedAt, so
   <div class="foot">게임은 Notion과 완전 분리 — 지표는 Analytics Engine(유입·시계열) + D1(회원·점수)에서만.<br>최근 ${maxDays}일 원본 내장 · ${source} · 생성 ${generatedAt}</div>
 </div>
 <script id="gad" type="application/json">${json}</script>
-<script>(${clientMain.toString()})();</script>`;
+<script>var __name=function(f){return f};(${clientMain.toString()})();</script>`;
+// ↑ __name shim: 워커 번들러(esbuild keepNames)가 clientMain에 __name(fn,'name') 래퍼를 주입하는데
+//   브라우저엔 그 헬퍼가 없어 ReferenceError가 난다. no-op으로 정의해 흡수(로컬 Node 빌드엔 무해).
 }

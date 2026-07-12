@@ -93,7 +93,7 @@ async function getByDay() {
 async function getMemberEmbed() { return embedMembers(await runD1Sql('SELECT provider, game_data, created_at, last_seen_at FROM game_users')); }
 
 function writeHtmlFile(body) {
-  writeFileSync('game-report.html', `<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>성조게임 Analytics</title></head><body style="margin:0">${body}</body></html>`, 'utf8');
+  writeFileSync('game-report.html', `<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="icon" href="data:,"><title>성조게임 Analytics</title></head><body style="margin:0">${body}</body></html>`, 'utf8');
   console.log('✅ game-report.html 생성 — 브라우저로 열어 보세요.');
 }
 
