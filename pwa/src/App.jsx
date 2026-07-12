@@ -269,6 +269,7 @@ export default function App() {
             <Route path="/game/tone" element={<ToneGamePage />} />
           </Routes>
         </BrowserRouter>
+        <FreshnessIndicator />
         </StudentAuthGate>
         </AntApp>
       </ConfigProvider>
@@ -305,6 +306,7 @@ export default function App() {
             <Route path="/panda-test" element={<PandaTestPage />} />
           </Routes>
         </HashRouter>
+        <FreshnessIndicator />
         </AntApp>
       </ConfigProvider>
     );

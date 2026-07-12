@@ -68,6 +68,26 @@ export function useIsRevalidating() {
   );
 }
 
+// 명령형 코드(imperative fetch)에서 stale-while-revalidate를 직접 구현할 때 쓰는 프리미티브.
+// useCachedResource와 같은 키 공간(swr_<key>)을 공유하므로 훅/명령형이 캐시를 함께 쓴다.
+/** 캐시 값 즉시 읽기(동기). 없으면 undefined. */
+export function peekCache(key) {
+  return readCache(PREFIX + key);
+}
+/** 캐시 값 쓰기 — 명령형 fetch 성공 후 캐시 갱신용. */
+export function writeCacheValue(key, value) {
+  writeCache(PREFIX + key, value);
+}
+/** 명령형 fetch를 전역 "업데이트 중" 표시에 반영 — promise를 감싸 갱신 카운터를 증감. */
+export async function trackRevalidation(promise) {
+  beginRevalidate();
+  try {
+    return await promise;
+  } finally {
+    endRevalidate();
+  }
+}
+
 function readCache(storageKey) {
   try {
     const raw = localStorage.getItem(storageKey);

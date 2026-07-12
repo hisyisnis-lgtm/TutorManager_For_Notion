@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { usePullToRefresh, PullIndicator } from '../hooks/usePullToRefresh.jsx';
+import { useCachedResource, peekCache, writeCacheValue, trackRevalidation } from '../hooks/useCachedResource.js';
 import {
   fetchStudentByToken,
   fetchMyClasses } from '../api/bookingApi.js';
@@ -258,27 +259,16 @@ function ArchiveHwCard({ hw, studentToken }) {
 
 // ===== 발음 보관함 탭 =====
 function ArchiveTab({ studentToken }) {
-  const [homeworkList, setHomeworkList] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [searchText, setSearchText] = useState('');
   const [searchType, setSearchType] = useState('title');
   const [filterMonth, setFilterMonth] = useState('');
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const pages = await fetchMyHomework(studentToken);
-      setHomeworkList(pages.map(parseHomework));
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
-    }
-  }, [studentToken]);
-
-  useEffect(() => { load(); }, [load]);
+  // 숙제 목록 캐시(토큰별) — 보관함은 옛 피드백 다시 보기라 캐시 적합. 열 때마다 백그라운드 갱신.
+  const hwRes = useCachedResource(`student:homework:${studentToken}`, async () =>
+    (await fetchMyHomework(studentToken)).map(parseHomework));
+  const homeworkList = hwRes.data ?? [];
+  const loading = hwRes.loading;
+  const error = hwRes.error;
 
   const archivedList = homeworkList.filter(
     (h) => h.status === '피드백완료' && isArchived(studentToken, h.id, h.feedbackDate)
@@ -302,7 +292,7 @@ function ArchiveTab({ studentToken }) {
   });
 
   if (loading) return <LoadingSpinner />;
-  if (error) return <ErrorMessage message={error} onRetry={load} />;
+  if (error) return <ErrorMessage message={error} onRetry={hwRes.refresh} />;
 
   if (archivedList.length === 0) {
     return (
@@ -355,24 +345,11 @@ function ArchiveTab({ studentToken }) {
 
 // ===== 내 수업 탭 =====
 function MyClassesTab({ studentToken, month, onMonthChange }) {
-  const [classes, setClasses] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await fetchMyClasses(studentToken, month);
-      setClasses(data);
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
-    }
-  }, [studentToken, month]);
-
-  useEffect(() => { load(); }, [load]);
+  // 수업 목록 캐시(토큰·월별) — 재방문 즉시 표시 + 백그라운드 갱신.
+  const classesRes = useCachedResource(`student:classes:${studentToken}:${month}`, () => fetchMyClasses(studentToken, month));
+  const classes = classesRes.data ?? [];
+  const loading = classesRes.loading;
+  const error = classesRes.error;
 
   const _nowKST = new Date(Date.now() + 9 * 60 * 60 * 1000);
   const todayStr = _nowKST.toISOString().slice(0, 10);
@@ -424,7 +401,7 @@ function MyClassesTab({ studentToken, month, onMonthChange }) {
       </div>
 
       {loading && <LoadingSpinner />}
-      {error && <ErrorMessage message={error} onRetry={load} />}
+      {error && <ErrorMessage message={error} onRetry={classesRes.refresh} />}
       {!loading && !error && classes.length === 0 && (
         <EmptyState icon={<CalendarBlankIcon size={44} weight="thin" style={{ color: '#d9d9d9' }} />} title="이 달에 수업이 없어요" description="다른 달을 선택해 보세요" />
       )}
@@ -567,22 +544,32 @@ function HomeTab({ studentToken, foodSources, studentLoaded, remainingHours, rem
   const [upcomingLoading, setUpcomingLoading] = useState(true);
 
   const loadInitialData = useCallback(async () => {
-    setUpcomingLoading(true);
+    // 캐시 있으면 즉시 표시(홈 첫 화면 빠르게), 뒤에서 갱신. dot 판정(onUpcomingLoaded)은
+    // 최신 데이터로만 — 옛 목록으로 새 수업 점을 잘못 띄우지 않게.
+    const CK = `student:upcoming:${studentToken}`;
+    const cached = peekCache(CK);
+    if (cached) {
+      setUpcoming(cached);
+      setUpcomingLoading(false);
+    } else {
+      setUpcomingLoading(true);
+    }
     try {
       const kst = new Date(Date.now() + 9 * 60 * 60 * 1000);
       const thisMonth = `${kst.getUTCFullYear()}-${pad(kst.getUTCMonth() + 1)}`;
-      const [curr, next] = await Promise.all([
+      const [curr, next] = await trackRevalidation(Promise.all([
         fetchMyClasses(studentToken, thisMonth),
         fetchMyClasses(studentToken, addMonths(thisMonth, 1)),
-      ]);
+      ]));
       const all = [...curr, ...next]
         .filter(c => !c.isCancelled && c.date >= todayStr)
         .sort((a, b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime));
       const upcomingSlice = all.slice(0, 5);
       setUpcoming(upcomingSlice);
+      writeCacheValue(CK, upcomingSlice);
       onUpcomingLoaded?.(upcomingSlice);
     } catch {
-      setUpcoming([]);
+      if (!cached) setUpcoming([]);
     } finally {
       setUpcomingLoading(false);
     }
@@ -851,21 +838,27 @@ export default function PersonalPage() {
   }, [studentToken]);
 
   const checkDots = useCallback(async () => {
+    const CK = `student:homework:${studentToken}`;
+    // 홈 숙제 섹션(제출전/제출완료/피드백) 계산 — 표시용.
+    const computeAlerts = (list) => {
+      setHwAlerts({
+        pending: list.filter(h => h.status === '미제출'),
+        submitted: list.filter(h => h.status === '제출완료'),
+        // 피드백 완료 — 아직 확인 안 함 + 강사가 viewedAt 이후 새 피드백 준 항목.
+        feedback: list.filter(h => h.status === '피드백완료' && !isArchived(studentToken, h.id, h.feedbackDate)),
+      });
+    };
+    // 캐시 있으면 즉시 표시(홈 빠르게). '새 피드백' 여부는 아래 fresh로 ~1초 뒤 갱신.
+    const cached = peekCache(CK);
+    if (cached) computeAlerts(cached);
     try {
-      const pages = await fetchMyHomework(studentToken);
+      const pages = await trackRevalidation(fetchMyHomework(studentToken));
       const list = pages.map(parseHomework);
+      writeCacheValue(CK, list); // ArchiveTab과 캐시 공유
+      computeAlerts(list);
+
+      // 보관함 dot: 마지막 보관함 방문 이후 새로 archived된 항목 (최신 기준)
       const viewedMap = getViewedMap(studentToken);
-
-      const pendingList = list.filter(h => h.status === '미제출');
-      const submittedList = list.filter(h => h.status === '제출완료');
-      // 피드백 완료 — 학생이 아직 확인하지 않은 항목 + 강사가 viewedAt 이후 새 피드백을 준 항목.
-      // (확인 시 forceArchive 로 즉시 보관함 이동, 다만 강사가 또 피드백을 주면 다시 홈에 등장)
-      const feedbackList = list.filter(h => h.status === '피드백완료' && !isArchived(studentToken, h.id, h.feedbackDate));
-
-      // 홈 탭 숙제 섹션
-      setHwAlerts({ pending: pendingList, submitted: submittedList, feedback: feedbackList });
-
-      // 보관함 dot: 마지막 보관함 방문 이후 새로 archived된 항목
       const lastSeenTime = parseInt(localStorage.getItem(ARCHIVE_SEEN_KEY) || '0', 10);
       setArchiveDot(
         list.some(h => {

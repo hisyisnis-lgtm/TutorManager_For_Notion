@@ -2,6 +2,9 @@ import { WORKER_URL } from '../config.js';
 import { getToken } from './authUtils.js';
 import { studentBearer } from './studentAuth.js';
 
+// 단일 요청이 이보다 오래 매달리면 중단 — 무한 스피너 방지(강사앱 notionClient와 동일 정책).
+const REQUEST_TIMEOUT_MS = 25000;
+
 async function bookingFetch(method, path, body, { auth = false, studentToken = '' } = {}) {
   const headers = { 'Content-Type': 'application/json' };
   if (auth) headers['Authorization'] = `Bearer ${getToken()}`;
@@ -10,12 +13,25 @@ async function bookingFetch(method, path, body, { auth = false, studentToken = '
     if (bearer) headers['Authorization'] = `Bearer ${bearer}`;
   }
 
-  const res = await fetch(`${WORKER_URL}${path}`, {
-    method,
-    headers,
-    body: body ? JSON.stringify(body) : undefined,
-    cache: 'no-store',
-  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  let res;
+  try {
+    res = await fetch(`${WORKER_URL}${path}`, {
+      method,
+      headers,
+      body: body ? JSON.stringify(body) : undefined,
+      cache: 'no-store',
+      signal: controller.signal,
+    });
+  } catch (e) {
+    if (e.name === 'AbortError') {
+      throw new Error('요청 시간이 초과됐어요. 네트워크를 확인하고 잠시 후 다시 시도해주세요.');
+    }
+    throw e;
+  } finally {
+    clearTimeout(timer);
+  }
 
   const data = await res.json().catch(() => ({}));
 

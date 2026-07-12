@@ -162,15 +162,30 @@ export async function notifyHomework(kind, homeworkId) {
 
 // ===== 학생용 (Worker 공개 엔드포인트 — 예약 코드 인증) =====
 
+// 단일 요청이 이보다 오래 매달리면 중단 — 무한 스피너 방지(강사앱 notionClient와 동일 정책).
+const STUDENT_REQUEST_TIMEOUT_MS = 25000;
+
 async function studentFetch(method, path, body, studentToken) {
   const headers = { 'Content-Type': 'application/json' };
   if (studentToken) {
     const bearer = studentBearer(studentToken);
     if (bearer) headers['Authorization'] = `Bearer ${bearer}`;
   }
-  const opts = { method, headers, cache: 'no-store' };
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), STUDENT_REQUEST_TIMEOUT_MS);
+  const opts = { method, headers, cache: 'no-store', signal: controller.signal };
   if (body) opts.body = JSON.stringify(body);
-  const res = await fetch(`${WORKER_URL}${path}`, opts);
+  let res;
+  try {
+    res = await fetch(`${WORKER_URL}${path}`, opts);
+  } catch (e) {
+    if (e.name === 'AbortError') {
+      throw new Error('요청 시간이 초과됐어요. 네트워크를 확인하고 잠시 후 다시 시도해주세요.');
+    }
+    throw e;
+  } finally {
+    clearTimeout(timer);
+  }
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
   return data;
