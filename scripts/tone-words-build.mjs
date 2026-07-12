@@ -28,6 +28,7 @@ const THEME_FILES = [
   ['tone-words-drama.csv', 'drama'],
   ['tone-words-travel.csv', 'travel'],
   ['tone-words-slang.csv', 'slang'],
+  ['tone-words-cooking.csv', 'cooking'],
 ];
 
 // 병음 성조 부호 → 숫자 (대문자 병음도 지원)
@@ -75,7 +76,7 @@ function headerError(row) {
 }
 
 function build() {
-  const out = { easy: [], normal: [], hard: [], drama: [], travel: [], slang: [] };
+  const out = { easy: [], normal: [], hard: [], drama: [], travel: [], slang: [], cooking: [] };
   const errors = [];
   const warnings = [];
 
@@ -135,11 +136,11 @@ function build() {
 
   const diffTotal = out.easy.length + out.normal.length + out.hard.length;
   if (diffTotal === 0) { console.error('❌ 활성 난이도 단어가 0개입니다.'); process.exit(1); }
-  const themeTotal = out.drama.length + out.travel.length + out.slang.length;
+  const themeTotal = out.drama.length + out.travel.length + out.slang.length + out.cooking.length;
 
   fs.mkdirSync(path.dirname(OUT_PATH), { recursive: true });
   fs.writeFileSync(OUT_PATH, JSON.stringify(out, null, 2) + '\n', 'utf8');
-  console.log(`✅ 단어 변환 완료 → toneWordsData.json · 난이도 ${diffTotal}개 (초급 ${out.easy.length} · 중급 ${out.normal.length} · 고급 ${out.hard.length}) · 테마 ${themeTotal}개 (드라마 ${out.drama.length} · 여행 ${out.travel.length} · 신조어 ${out.slang.length})`);
+  console.log(`✅ 단어 변환 완료 → toneWordsData.json · 난이도 ${diffTotal}개 (초급 ${out.easy.length} · 중급 ${out.normal.length} · 고급 ${out.hard.length}) · 테마 ${themeTotal}개 (드라마 ${out.drama.length} · 여행 ${out.travel.length} · 신조어 ${out.slang.length} · 요리 ${out.cooking.length})`);
 }
 
 build();

@@ -2148,5 +2148,371 @@
       "meaning": "반전",
       "audioUrl": "/game/tts/fanzhuan_33.mp3"
     }
+  ],
+  "cooking": [
+    {
+      "hanzi": "米饭",
+      "pinyin": [
+        "mǐ",
+        "fàn"
+      ],
+      "tones": [
+        3,
+        4
+      ],
+      "meaning": "쌀밥",
+      "audioUrl": "/game/tts/mifan_34.mp3"
+    },
+    {
+      "hanzi": "面条",
+      "pinyin": [
+        "miàn",
+        "tiáo"
+      ],
+      "tones": [
+        4,
+        2
+      ],
+      "meaning": "국수",
+      "audioUrl": "/game/tts/miantiao_42.mp3"
+    },
+    {
+      "hanzi": "饺子",
+      "pinyin": [
+        "jiǎo",
+        "zi"
+      ],
+      "tones": [
+        3,
+        0
+      ],
+      "meaning": "만두",
+      "audioUrl": "/game/tts/jiaozi_30.mp3"
+    },
+    {
+      "hanzi": "火锅",
+      "pinyin": [
+        "huǒ",
+        "guō"
+      ],
+      "tones": [
+        3,
+        1
+      ],
+      "meaning": "훠궈",
+      "audioUrl": "/game/tts/huoguo_31.mp3"
+    },
+    {
+      "hanzi": "麻辣",
+      "pinyin": [
+        "má",
+        "là"
+      ],
+      "tones": [
+        2,
+        4
+      ],
+      "meaning": "맵고 얼얼하다",
+      "audioUrl": "/game/tts/mala_24.mp3"
+    },
+    {
+      "hanzi": "炒饭",
+      "pinyin": [
+        "chǎo",
+        "fàn"
+      ],
+      "tones": [
+        3,
+        4
+      ],
+      "meaning": "볶음밥",
+      "audioUrl": "/game/tts/chaofan_34.mp3"
+    },
+    {
+      "hanzi": "烤鸭",
+      "pinyin": [
+        "kǎo",
+        "yā"
+      ],
+      "tones": [
+        3,
+        1
+      ],
+      "meaning": "오리구이",
+      "audioUrl": "/game/tts/kaoya_31.mp3"
+    },
+    {
+      "hanzi": "豆腐",
+      "pinyin": [
+        "dòu",
+        "fu"
+      ],
+      "tones": [
+        4,
+        0
+      ],
+      "meaning": "두부",
+      "audioUrl": "/game/tts/doufu_40.mp3"
+    },
+    {
+      "hanzi": "鸡蛋",
+      "pinyin": [
+        "jī",
+        "dàn"
+      ],
+      "tones": [
+        1,
+        4
+      ],
+      "meaning": "달걀",
+      "audioUrl": "/game/tts/jidan_14.mp3"
+    },
+    {
+      "hanzi": "牛肉",
+      "pinyin": [
+        "niú",
+        "ròu"
+      ],
+      "tones": [
+        2,
+        4
+      ],
+      "meaning": "소고기",
+      "audioUrl": "/game/tts/niurou_24.mp3"
+    },
+    {
+      "hanzi": "猪肉",
+      "pinyin": [
+        "zhū",
+        "ròu"
+      ],
+      "tones": [
+        1,
+        4
+      ],
+      "meaning": "돼지고기",
+      "audioUrl": "/game/tts/zhurou_14.mp3"
+    },
+    {
+      "hanzi": "羊肉",
+      "pinyin": [
+        "yáng",
+        "ròu"
+      ],
+      "tones": [
+        2,
+        4
+      ],
+      "meaning": "양고기",
+      "audioUrl": "/game/tts/yangrou_24.mp3"
+    },
+    {
+      "hanzi": "海鲜",
+      "pinyin": [
+        "hǎi",
+        "xiān"
+      ],
+      "tones": [
+        3,
+        1
+      ],
+      "meaning": "해산물",
+      "audioUrl": "/game/tts/haixian_31.mp3"
+    },
+    {
+      "hanzi": "蔬菜",
+      "pinyin": [
+        "shū",
+        "cài"
+      ],
+      "tones": [
+        1,
+        4
+      ],
+      "meaning": "채소",
+      "audioUrl": "/game/tts/shucai_14.mp3"
+    },
+    {
+      "hanzi": "水果",
+      "pinyin": [
+        "shuǐ",
+        "guǒ"
+      ],
+      "tones": [
+        3,
+        3
+      ],
+      "meaning": "과일",
+      "audioUrl": "/game/tts/shuiguo_33.mp3"
+    },
+    {
+      "hanzi": "甜点",
+      "pinyin": [
+        "tián",
+        "diǎn"
+      ],
+      "tones": [
+        2,
+        3
+      ],
+      "meaning": "디저트",
+      "audioUrl": "/game/tts/tiandian_23.mp3"
+    },
+    {
+      "hanzi": "奶茶",
+      "pinyin": [
+        "nǎi",
+        "chá"
+      ],
+      "tones": [
+        3,
+        2
+      ],
+      "meaning": "밀크티",
+      "audioUrl": "/game/tts/naicha_32.mp3"
+    },
+    {
+      "hanzi": "啤酒",
+      "pinyin": [
+        "pí",
+        "jiǔ"
+      ],
+      "tones": [
+        2,
+        3
+      ],
+      "meaning": "맥주",
+      "audioUrl": "/game/tts/pijiu_23.mp3"
+    },
+    {
+      "hanzi": "好喝",
+      "pinyin": [
+        "hǎo",
+        "hē"
+      ],
+      "tones": [
+        3,
+        1
+      ],
+      "meaning": "(음료가) 맛있다",
+      "audioUrl": "/game/tts/haohe_31.mp3"
+    },
+    {
+      "hanzi": "点菜",
+      "pinyin": [
+        "diǎn",
+        "cài"
+      ],
+      "tones": [
+        3,
+        4
+      ],
+      "meaning": "주문하다",
+      "audioUrl": "/game/tts/diancai_34.mp3"
+    },
+    {
+      "hanzi": "买单",
+      "pinyin": [
+        "mǎi",
+        "dān"
+      ],
+      "tones": [
+        3,
+        1
+      ],
+      "meaning": "계산하다",
+      "audioUrl": "/game/tts/maidan_31.mp3"
+    },
+    {
+      "hanzi": "干杯",
+      "pinyin": [
+        "gān",
+        "bēi"
+      ],
+      "tones": [
+        1,
+        1
+      ],
+      "meaning": "건배",
+      "audioUrl": "/game/tts/ganbei_11.mp3"
+    },
+    {
+      "hanzi": "味道",
+      "pinyin": [
+        "wèi",
+        "dao"
+      ],
+      "tones": [
+        4,
+        0
+      ],
+      "meaning": "맛",
+      "audioUrl": "/game/tts/weidao_40.mp3"
+    },
+    {
+      "hanzi": "辣椒",
+      "pinyin": [
+        "là",
+        "jiāo"
+      ],
+      "tones": [
+        4,
+        1
+      ],
+      "meaning": "고추",
+      "audioUrl": "/game/tts/lajiao_41.mp3"
+    },
+    {
+      "hanzi": "小吃",
+      "pinyin": [
+        "xiǎo",
+        "chī"
+      ],
+      "tones": [
+        3,
+        1
+      ],
+      "meaning": "간식(길거리 음식)",
+      "audioUrl": "/game/tts/xiaochi_31.mp3"
+    },
+    {
+      "hanzi": "厨房",
+      "pinyin": [
+        "chú",
+        "fáng"
+      ],
+      "tones": [
+        2,
+        2
+      ],
+      "meaning": "주방",
+      "audioUrl": "/game/tts/chufang_22.mp3"
+    },
+    {
+      "hanzi": "做饭",
+      "pinyin": [
+        "zuò",
+        "fàn"
+      ],
+      "tones": [
+        4,
+        4
+      ],
+      "meaning": "요리하다",
+      "audioUrl": "/game/tts/zuofan_44.mp3"
+    },
+    {
+      "hanzi": "筷子",
+      "pinyin": [
+        "kuài",
+        "zi"
+      ],
+      "tones": [
+        4,
+        0
+      ],
+      "meaning": "젓가락",
+      "audioUrl": "/game/tts/kuaizi_40.mp3"
+    }
   ]
 }

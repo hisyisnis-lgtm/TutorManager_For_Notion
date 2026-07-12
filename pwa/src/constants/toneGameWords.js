@@ -30,6 +30,7 @@ export const THEMES = [
   { id: 'travel', gameKey: 'tone-travel', label: '여행 중국어', desc: '공항·호텔·주문 실전 단어', timeMultiplier: 2.8571, unlock: { byGameKey: 'tone-drama', score: 1000 }, image: '/game/themes/travel.png', tint: '#c9d3e4', placeholder: '여행 이미지',
     unlockReveal: { icon: 'MapPin', label: '여행 테마', desc: '여행 중국어 테마가 열렸어요', accent: '#7C5CFF' } },
   { id: 'slang', gameKey: 'tone-slang', label: '신조어 중국어', desc: '요즘 중국 인터넷 유행어', timeMultiplier: 2.8571, unlock: null, image: '/game/themes/slang.png', tint: '#cfe8d8', placeholder: '신조어 이미지' },
+  { id: 'cooking', gameKey: 'tone-cooking', label: '요리 중국어', desc: '음식·맛·주방 필수 단어', timeMultiplier: 2.8571, unlock: null, image: null, tint: '#f7e3c3', placeholder: '요리 이미지' },
 ];
 
 // 성조 정의 — 학습 도구 특성상 5색 매핑은 디자인 시스템 단일 액센트 원칙의 합리적 예외.
