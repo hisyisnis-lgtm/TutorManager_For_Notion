@@ -41,3 +41,6 @@ worker/dist-check/
 /*.png
 /*.jpeg
 /*.jpg
+
+# 성조게임 지표 리포트 생성물(로컬 전용)
+game-report.html

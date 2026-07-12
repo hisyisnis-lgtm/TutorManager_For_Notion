@@ -22,6 +22,7 @@ import {
   signAuthState, verifyAuthState,
 } from '../lib/oauth.js';
 import { findOrCreateGameUser, getGameUserById, updateGameData } from '../lib/gameDb.js';
+import { assembleByDay, embedMembers, renderDashboard } from '../lib/gameDashboard.js';
 
 const CLASS_DB_ID = '314838fa-f2a6-81bc-8b67-d9e1c8fb7ecb';
 const STUDENT_DB_ID = '314838fa-f2a6-8143-a6c7-e59c50f3bbdb';
@@ -36,6 +37,9 @@ const CONSULT_DB_ID = '324838fa-f2a6-815d-99a7-ff165e8f78aa';
 // ===== 게임 계정(독립실행·소셜 로그인 회원) =====
 // 저장소는 Cloudflare D1(env.GAME_DB, 테이블 game_users)로 이전(2026-07-06). 노션 GAME_USERS 은퇴.
 // 코드는 worker/lib/gameDb.js. rich_text 2000자 트림 한계 제거.
+
+// 게임 지표 대시보드(라이브) — AE SQL API 조회용 계정 ID(비밀 아님). AE 토큰은 시크릿 CF_ANALYTICS_TOKEN.
+const AE_ACCOUNT_ID = '6bb3d7a51e3f42a7ba6367187ee8be16';
 
 // ※ 성조 게임 단어는 더 이상 Notion DB가 아니라 data/tone-words.csv → PWA 번들로 관리(2026-06-10).
 //   워커는 단어 풀을 다루지 않는다(TONE_WORDS_DB_ID·난이도 매핑·tone-words 라우트 제거).
@@ -2246,10 +2250,59 @@ async function handleHomeworkRoutes(request, env, corsHeaders, url) {
 // ===== 게임 라우트 (Notion과 분리) =====
 // /game/event(AE 유입측정) · /game/auth/*(OAuth 소셜로그인) · /game/me(D1 회원 게임데이터).
 // 학생 토큰 기반 /game/best·GAME_BEST_DB(Notion)는 제거됨 — 게임은 플레이어를 구분하지 않는다(2026-07-12).
+// ── 게임 지표 대시보드(라이브) — worker/lib/gameDashboard.js 공용 렌더 사용 ──
+// key 시크릿 상수시간 비교(타이밍 누출 방지). 데이터: AE(토큰 fetch) + D1(GAME_DB 바인딩).
+function timingSafeEqual(a, b) {
+  if (typeof a !== 'string' || typeof b !== 'string' || a.length !== b.length) return false;
+  let d = 0;
+  for (let i = 0; i < a.length; i++) d |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return d === 0;
+}
+async function aeQueryAll(env, maxDays) {
+  if (!env.CF_ANALYTICS_TOKEN) return { days: [], byDay: {} };
+  const apiUrl = `https://api.cloudflare.com/client/v4/accounts/${AE_ACCOUNT_ID}/analytics_engine/sql`;
+  const ae = async (sql) => {
+    const res = await fetch(apiUrl, { method: 'POST', headers: { Authorization: `Bearer ${env.CF_ANALYTICS_TOKEN}`, 'Content-Type': 'text/plain' }, body: sql });
+    if (!res.ok) throw new Error(`AE ${res.status}`);
+    return (await res.json()).data || [];
+  };
+  const DS = 'tone_game_events', W = `timestamp > NOW() - INTERVAL '${maxDays}' DAY`, B = "toStartOfInterval(timestamp, INTERVAL '1' DAY)";
+  const [ev, ch, src, mp, ms, id] = await Promise.all([
+    ae(`SELECT ${B} AS day, blob1 AS k, SUM(_sample_interval) AS n FROM ${DS} WHERE ${W} GROUP BY day, k`),
+    ae(`SELECT ${B} AS day, blob2 AS k, SUM(_sample_interval) AS n FROM ${DS} WHERE blob1='cta_play_link' AND ${W} GROUP BY day, k`),
+    ae(`SELECT ${B} AS day, blob3 AS k, SUM(_sample_interval) AS n FROM ${DS} WHERE blob1='enter' AND ${W} GROUP BY day, k`),
+    ae(`SELECT ${B} AS day, blob2 AS k, SUM(_sample_interval) AS n FROM ${DS} WHERE blob1='run_start' AND ${W} GROUP BY day, k`),
+    ae(`SELECT ${B} AS day, blob2 AS k, SUM(double1*_sample_interval) AS sv, SUM(_sample_interval) AS sn FROM ${DS} WHERE blob1='run_end' AND ${W} GROUP BY day, k`),
+    ae(`SELECT ${B} AS day, blob4 AS k, SUM(_sample_interval) AS n FROM ${DS} WHERE blob1='run_start' AND ${W} GROUP BY day, k`),
+  ]);
+  return assembleByDay({ ev, ch, src, mp, ms, id }, maxDays, Date.now());
+}
+async function handleGameDashboard(request, env, url) {
+  const H = { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'X-Frame-Options': 'SAMEORIGIN', 'Referrer-Policy': 'no-referrer' };
+  const page = (status, msg) => new Response(`<!doctype html><meta charset="utf-8"><body style="font-family:system-ui;background:#0d1117;color:#e7edf4;padding:48px;font-size:15px">${msg}`, { status, headers: H });
+  if (!env.GAME_DASH_KEY) return page(501, '대시보드가 아직 설정되지 않았어요. (GAME_DASH_KEY 미설정)');
+  if (!timingSafeEqual(url.searchParams.get('key') || '', env.GAME_DASH_KEY)) return page(401, '접근 키가 올바르지 않아요.');
+  const MAX_DAYS = 30;
+  const [byday, members] = await Promise.all([
+    aeQueryAll(env, MAX_DAYS).catch(() => ({ days: [], byDay: {} })),
+    (env.GAME_DB
+      ? env.GAME_DB.prepare('SELECT provider, game_data, created_at, last_seen_at FROM game_users').all().then((r) => embedMembers(r.results || []))
+      : Promise.resolve([])).catch(() => []),
+  ]);
+  const now = new Date().toISOString().replace('T', ' ').slice(0, 16) + ' UTC';
+  const body = renderDashboard({ byDay: byday.byDay, days: byday.days, members, maxDays: MAX_DAYS, generatedAt: now, source: '워커 라이브(/game/dashboard)' });
+  return new Response(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>성조게임 Analytics</title></head><body style="margin:0">${body}</body></html>`, { headers: H });
+}
+
 async function handleGameRoutes(request, env, corsHeaders, url) {
   // IP당 분당 60회 rate limit
   if (!(await rateLimitCheck(`game:${clientIp(request)}`, 60, 60))) {
     return errRes(corsHeaders, 429, '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.');
+  }
+
+  // GET /game/dashboard?key=… — 라이브 지표 대시보드(노션 링크용). key 시크릿 게이팅, HTML 반환.
+  if (url.pathname === '/game/dashboard' && request.method === 'GET') {
+    return handleGameDashboard(request, env, url);
   }
 
   // ※ GET /game/tone-words/:difficulty 라우트는 제거됨 (2026-06-10).
@@ -2477,7 +2530,9 @@ async function handleFetch(request, env, ctx) {
     // Origin 게이트에서 예외 처리한다. 자체 보안(state 1회용·redirect 허용목록·provider 검증)으로 보호되고
     // 응답은 302 리다이렉트라 CORS 헤더가 불필요하다. (예외 없으면 로그인 진입이 403으로 막힘)
     const isOauthNav = /^\/game\/auth\/[^/]+\/(start|callback)$/.test(url.pathname);
-    if (!allowed && !isOauthNav) {
+    // 지표 대시보드도 전체 페이지 네비(브라우저가 Origin 미첨부) — ?key= 시크릿으로 게이팅되므로 Origin 예외.
+    const isDashNav = url.pathname === '/game/dashboard';
+    if (!allowed && !isOauthNav && !isDashNav) {
       return new Response(JSON.stringify({ error: '허용되지 않은 출처입니다.' }), {
         status: 403,
         headers: { 'Content-Type': 'application/json' },
