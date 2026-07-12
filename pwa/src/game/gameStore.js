@@ -14,7 +14,7 @@ import { loadXp, saveXp, mergeXp, loadRank, saveRank, mergeRank } from './gameXp
 import { loadAchievements, saveAchievements, loadReviewMastered, addReviewMastered } from './achievements.js';
 import { loadStreak, saveStreak, loadFreezes, saveFreezes } from './streak.js';
 import { DIFFICULTIES, THEMES } from '../constants/toneGameWords.js';
-import { fetchAllGameBests, submitGameResult, fetchGameMe, saveGameMe } from '../api/gameApi.js';
+import { fetchGameMe, saveGameMe } from '../api/gameApi.js';
 
 const GUEST_ID_KEY = 'tg_guest_id';
 const MEMBER_TOKEN_KEY = 'tg_member_token';
@@ -38,82 +38,13 @@ export function getOrCreateGuestId() {
   } catch { return 'g_local'; }
 }
 
-// URL 토큰 → identity. 학생(routeToken) > 회원(세션) > 게스트 순.
-// member.server=false: 난이도별 GAME_BEST_DB(fetchBests/submitResult)는 안 쓰고, /game/me JSON 통째 동기화(pull/push)로 별도 처리.
+// URL 토큰 → identity. 회원(세션) > 게스트 순. (게임은 Notion·학생과 완전 분리 — 학생 토큰 경로 폐기, 2026-07-12)
+// 회원은 /game/me JSON 통째 동기화(pull/push), 게스트·프리뷰는 로컬 전용. 서버 베스트(GAME_BEST_DB) 경로 없음.
 export function resolveIdentity(routeToken) {
-  if (routeToken === 'preview') return { kind: 'preview', id: 'preview', server: false, token: null };
-  if (routeToken) return { kind: 'student', id: routeToken, server: true, token: routeToken };
+  if (routeToken === 'preview') return { kind: 'preview', id: 'preview', token: null };
   const m = getMemberSession();
-  if (m && m.token) return { kind: 'member', id: m.user?.id || 'member', server: false, token: m.token, memberUser: m.user || null };
-  return { kind: 'guest', id: getOrCreateGuestId(), server: false, token: null };
-}
-
-// 서버 베스트 조회 — 학생만. 게스트/프리뷰는 null(로컬 캐시만 사용).
-export function fetchBests(identity) {
-  if (!identity || !identity.server) return Promise.resolve(null);
-  return fetchAllGameBests(identity.token);
-}
-
-// 게임 결과 서버 저장 — 학생만. 게스트/프리뷰는 no-op(로컬만).
-export function submitResult(identity, gameKey, result) {
-  if (!identity || !identity.server) return Promise.resolve({ isNewBest: false, best: null });
-  return submitGameResult(identity.token, gameKey, result);
-}
-
-// 게스트 → 학생 1회 병합(같은 기기). 게스트로 쌓은 로컬 베스트·숙련도를 학생 쪽에 합치고 서버에 반영.
-// 학생앱에서 게임 진입할 때 호출. flag로 중복 병합 방지. 다른 기기 간 동기화는 Phase 2(서버 계정) 영역.
-export async function mergeGuestIntoStudent(identity) {
-  if (!identity || identity.kind !== 'student') return false;
-  let guestId = null;
-  try { guestId = localStorage.getItem(GUEST_ID_KEY); } catch { /* noop */ }
-  if (!guestId || guestId === identity.id) return false;
-  const flagKey = `tg_guest_merged_${identity.id}`;
-  try { if (localStorage.getItem(flagKey)) return false; } catch { /* noop */ }
-
-  // 난이도 베스트: 게스트 점수가 더 높으면 학생 로컬 갱신 + 서버에 실제 점수 submit
-  for (const key of DIFF_KEYS) {
-    const g = loadBest(guestId, key);
-    if (!g || !(g.bestScore > 0)) continue;
-    const s = loadBest(identity.id, key) || {};
-    if ((g.bestScore || 0) > (s.bestScore || 0)) {
-      const merged = {
-        bestScore: g.bestScore,
-        bestMaxCombo: Math.max(s.bestMaxCombo || 0, g.bestMaxCombo || 0),
-        bestAvgMs: g.bestAvgMs || s.bestAvgMs || 0,
-        playCount: (s.playCount || 0) + (g.playCount || 0),
-        updatedAt: Date.now(),
-      };
-      saveBest(identity.id, key, merged);
-      await submitResult(identity, key, {
-        score: merged.bestScore, maxCombo: merged.bestMaxCombo, avgMs: merged.bestAvgMs || 0,
-      }).catch(() => {});
-    }
-  }
-
-  // 무한 베스트: 게스트가 더 높으면 학생 로컬 갱신 + 서버 meta.eb(고급행에 0점 submit)로 영구화
-  const ge = loadBest(guestId, ENDLESS_KEY);
-  if (ge && ge.bestScore > 0) {
-    const se = loadBest(identity.id, ENDLESS_KEY) || {};
-    if ((ge.bestScore || 0) > (se.bestScore || 0)) {
-      saveBest(identity.id, ENDLESS_KEY, {
-        bestScore: ge.bestScore,
-        bestMaxCombo: Math.max(se.bestMaxCombo || 0, ge.bestMaxCombo || 0),
-        bestAvgMs: ge.bestAvgMs || se.bestAvgMs || 0,
-        playCount: (se.playCount || 0) + (ge.playCount || 0),
-        updatedAt: Date.now(),
-      });
-      await submitResult(identity, 'tone-hard', { score: 0, maxCombo: 0, avgMs: 0, meta: { eb: ge.bestScore } }).catch(() => {});
-    }
-  }
-
-  // 단어 숙련도: 학생 쪽에 게스트 통계 병합(attempts 많은 쪽 우선). 서버 meta.w는 다음 플레이 종료 시 동기화됨.
-  try {
-    const merged = mergeStats(loadWordStats(identity.id), loadWordStats(guestId));
-    saveWordStats(identity.id, merged);
-  } catch { /* noop */ }
-
-  try { localStorage.setItem(flagKey, '1'); } catch { /* noop */ }
-  return true;
+  if (m && m.token) return { kind: 'member', id: m.user?.id || 'member', token: m.token, memberUser: m.user || null };
+  return { kind: 'guest', id: getOrCreateGuestId(), token: null };
 }
 
 // ===== 회원(member) — 휴대폰 OTP 가입/로그인 + 기기간 서버 동기화 (Phase 2) =====

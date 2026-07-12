@@ -20,7 +20,7 @@ export const DIFFICULTIES = [
 ];
 
 // 테마 모드 — 난이도와 별개 축. 난이도 잠금 사다리와 무관, 각 테마가 자체 gameKey라
-// 최고점·리더보드(loadBest/submitResult)가 난이도처럼 자동으로 붙는다.
+// 최고점(loadBest)이 난이도처럼 자동으로 붙는다.
 // timeMultiplier: 테마는 난이도를 안 가르므로 중급(≈20초) 페이스로 통일.
 // unlock: null=처음부터 오픈. { byGameKey, score }=해당 게임키 최고점이 score 이상이면 해제.
 // image: 포스터 이미지 경로(5:7 세로, 카드 cover). null이면 tint 배경 + placeholder 라벨로 표시 → 이미지 준비되면 경로만 채우면 됨.

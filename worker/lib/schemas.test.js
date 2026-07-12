@@ -6,7 +6,6 @@ import {
   ConsultSchema,
   HomeworkSubmitSchema,
   MyClassesQuerySchema,
-  GameResultSchema,
   GameEventSchema,
   GameNicknameSchema,
   StudentAuthRequestSchema,
@@ -220,41 +219,6 @@ describe('MyClassesQuerySchema', () => {
 
   it('잘못된 month 형식 거부', () => {
     expect(MyClassesQuerySchema.safeParse({ month: '2026-4' }).success).toBe(false);
-  });
-});
-
-describe('GameResultSchema', () => {
-  it('정상 결과 허용 (meta 없거나 작은 경우)', () => {
-    expect(GameResultSchema.safeParse({ score: 1200, maxCombo: 8, avgMs: 1500 }).success).toBe(true);
-    expect(GameResultSchema.safeParse({ score: 0, maxCombo: 0, avgMs: 0, meta: { w: { 老师: [3, 2, 4000, 2] }, eb: 800 } }).success).toBe(true);
-  });
-
-  it('범위를 벗어난 점수/콤보/시간 거부', () => {
-    expect(GameResultSchema.safeParse({ score: 100000, maxCombo: 8, avgMs: 1500 }).success).toBe(false);
-    expect(GameResultSchema.safeParse({ score: -1, maxCombo: 8, avgMs: 1500 }).success).toBe(false);
-    expect(GameResultSchema.safeParse({ score: 10, maxCombo: 100, avgMs: 1500 }).success).toBe(false);
-    expect(GameResultSchema.safeParse({ score: 10, maxCombo: 8, avgMs: 60001 }).success).toBe(false);
-  });
-
-  it('직렬화 1800자를 초과하는 meta 거부 (Notion rich_text 한도 방어)', () => {
-    const big = {};
-    for (let i = 0; i < 500; i++) big['k' + i] = 'x'.repeat(10);
-    const r = GameResultSchema.safeParse({ score: 10, maxCombo: 8, avgMs: 1500, meta: big });
-    expect(r.success).toBe(false);
-  });
-
-  it('meta.eb(무한 최고점)에 score와 동일한 상한 강제 — 위조 방어', () => {
-    // 정상: 실제 점수 범위의 eb 허용
-    expect(GameResultSchema.safeParse({ score: 0, maxCombo: 0, avgMs: 0, meta: { eb: 0 } }).success).toBe(true);
-    expect(GameResultSchema.safeParse({ score: 0, maxCombo: 0, avgMs: 0, meta: { eb: 99999 } }).success).toBe(true);
-    // eb 없는 meta는 그대로 통과
-    expect(GameResultSchema.safeParse({ score: 0, maxCombo: 0, avgMs: 0, meta: { w: {} } }).success).toBe(true);
-    // 위조: 상한 초과·음수·소수·비숫자 eb 거부
-    expect(GameResultSchema.safeParse({ score: 0, maxCombo: 0, avgMs: 0, meta: { eb: 100000 } }).success).toBe(false);
-    expect(GameResultSchema.safeParse({ score: 0, maxCombo: 0, avgMs: 0, meta: { eb: 9999999 } }).success).toBe(false);
-    expect(GameResultSchema.safeParse({ score: 0, maxCombo: 0, avgMs: 0, meta: { eb: -1 } }).success).toBe(false);
-    expect(GameResultSchema.safeParse({ score: 0, maxCombo: 0, avgMs: 0, meta: { eb: 12.5 } }).success).toBe(false);
-    expect(GameResultSchema.safeParse({ score: 0, maxCombo: 0, avgMs: 0, meta: { eb: '99999' } }).success).toBe(false);
   });
 });
 

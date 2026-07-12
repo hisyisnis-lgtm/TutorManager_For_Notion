@@ -93,45 +93,6 @@ export const MyClassesQuerySchema = z.object({
 // ===== /game/best/:token/:gameKey (미니게임 베스트) =====
 
 /**
- * 게임 종류 키 — 새 게임/난이도 추가 시 enum 옵션만 늘림.
- * Notion DB의 '게임' select 옵션과 1:1 대응.
- * 'tone'은 레거시(난이도 도입 전), 'tone-easy/normal/hard'는 난이도별.
- */
-export const GameKeySchema = z.enum(['tone', 'tone-easy', 'tone-normal', 'tone-hard'], {
-  errorMap: () => ({ message: '알 수 없는 게임 키입니다' }),
-});
-
-/**
- * 성조 게임 난이도 — GET /game/tone-words/:difficulty
- * Notion DB '난이도' select 옵션과 매핑.
- */
-export const ToneDifficultySchema = z.enum(['easy', 'normal', 'hard'], {
-  errorMap: () => ({ message: '알 수 없는 난이도입니다 (easy/normal/hard)' }),
-});
-
-/**
- * POST /game/best/:token/:gameKey body — 게임 결과 1회분.
- * meta는 게임별 고유 데이터 (Notion '메타' 필드에 JSON 직렬화).
- */
-export const GameResultSchema = z.object({
-  score: z.number().int().min(0).max(99999),
-  maxCombo: z.number().int().min(0).max(99),
-  avgMs: z.number().min(0).max(60000),
-  // meta는 자유 형식이지만 Notion '메타' rich_text(2000자 한도)에 저장되므로 직렬화 크기를 제한.
-  // 정상 클라이언트는 난이도별 subset(w/eb)이라 1800자 이내. 초과 페이로드는 입력단에서 거부.
-  meta: z.record(z.any()).optional()
-    .refine((m) => m == null || JSON.stringify(m).length <= 1800, { message: 'meta가 너무 큽니다' })
-    // meta.eb(무한모드 헤드라인 최고점)는 score 필드를 우회해 meta로 들어오므로 점수와 동일한 상한을 강제.
-    // 없으면 무한 최고가 무제한이 되어 위조 가능. 정상 eb는 실제 점수(≤99999 정수)라 오탐 없음.
-    // (게스트→학생 병합 등 다른 세션 값이 섞이는 score↔maxCombo 관계 검증은 정상 병합을 거부하므로 넣지 않음.)
-    .refine(
-      (m) => m == null || m.eb == null
-        || (typeof m.eb === 'number' && Number.isInteger(m.eb) && m.eb >= 0 && m.eb <= 99999),
-      { message: 'meta.eb 값이 유효하지 않습니다' },
-    ),
-}).strip();
-
-/**
  * POST /game/event body — 게임 이벤트 카운터(유입 깔때기 측정, Workers Analytics Engine).
  * 익명 설계: PII 필드 자체가 없음(전화·토큰·이름 금지). 선택 필드는 .nullish()(클라가 빈값을 null로 보냄).
  */

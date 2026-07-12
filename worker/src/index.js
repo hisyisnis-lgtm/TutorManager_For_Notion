@@ -9,8 +9,6 @@ import {
   StudentTokenSchema,
   NotionPageIdSchema,
   MyClassesQuerySchema,
-  GameKeySchema,
-  GameResultSchema,
   GameEventSchema,
   GameNicknameSchema,
   StudentAuthRequestSchema,
@@ -35,31 +33,12 @@ const BLOCKED_DATES_DB_ID = '31e838fa-f2a6-81d3-b034-c47a4f0e5f3e';
 // ===== 무료상담 신청 DB =====
 const CONSULT_DB_ID = '324838fa-f2a6-815d-99a7-ff165e8f78aa';
 
-// ===== 미니게임 베스트 DB (학생 × 게임 = 1 row) =====
-const GAME_BEST_DB_ID = '2602021c-39b5-4517-9eda-ce4808f570bd';
-
 // ===== 게임 계정(독립실행·소셜 로그인 회원) =====
 // 저장소는 Cloudflare D1(env.GAME_DB, 테이블 game_users)로 이전(2026-07-06). 노션 GAME_USERS 은퇴.
 // 코드는 worker/lib/gameDb.js. rich_text 2000자 트림 한계 제거.
 
 // ※ 성조 게임 단어는 더 이상 Notion DB가 아니라 data/tone-words.csv → PWA 번들로 관리(2026-06-10).
 //   워커는 단어 풀을 다루지 않는다(TONE_WORDS_DB_ID·난이도 매핑·tone-words 라우트 제거).
-
-// 게임 키 ↔ Notion '게임' select 옵션 이름 매핑.
-// 새 게임/난이도 추가 시: (1) Notion DB 'select' 옵션 추가, (2) 여기 매핑 추가, (3) GameKeySchema enum에 키 추가.
-// 'tone'은 레거시(난이도 도입 전), 'tone-easy/normal/hard'는 난이도별 분리.
-const GAME_KEY_TO_NAME = {
-  'tone': '성조 찾기',
-  'tone-easy': '성조 찾기 (초급)',
-  'tone-normal': '성조 찾기 (중급)',
-  'tone-hard': '성조 찾기 (고급)',
-};
-const GAME_NAME_TO_KEY = {
-  '성조 찾기': 'tone',
-  '성조 찾기 (초급)': 'tone-easy',
-  '성조 찾기 (중급)': 'tone-normal',
-  '성조 찾기 (고급)': 'tone-hard',
-};
 
 const DAY_KR = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -192,14 +171,12 @@ const CLASS_DB_RAW = CLASS_DB_ID.replace(/-/g, '');
 const HOMEWORK_DB_RAW = HOMEWORK_DB_ID.replace(/-/g, '');
 const BLOCKED_DATES_DB_RAW = BLOCKED_DATES_DB_ID.replace(/-/g, '');
 const CONSULT_DB_RAW = CONSULT_DB_ID.replace(/-/g, '');
-const GAME_BEST_DB_RAW = GAME_BEST_DB_ID.replace(/-/g, '');
 const ALLOWED_NOTION_DB_IDS = new Set([
   STUDENT_DB_RAW,
   CLASS_DB_RAW,
   HOMEWORK_DB_RAW,
   BLOCKED_DATES_DB_RAW,
   CONSULT_DB_RAW,
-  GAME_BEST_DB_RAW,
   // 수업 유형·할인·결제·수업일지 등 강사용 추가 DB (PWA에서 사용)
   '314838faf2a681c3b4e4da87c48f9b43', // LESSON_TYPE_DB
   '314838faf2a681d39ce4c628edab065b', // DISCOUNT_DB
@@ -2266,26 +2243,14 @@ async function handleHomeworkRoutes(request, env, corsHeaders, url) {
   });
 }
 
-// ===== 미니게임 베스트 라우트 (학생 토큰 기반 공개 API) =====
-//
-// GET  /game/best/:token              → 학생의 모든 게임 베스트 [{ gameKey, ... }]
-// GET  /game/best/:token/:gameKey     → 특정 게임 베스트 (없으면 null)
-// POST /game/best/:token/:gameKey     → 결과 1회 저장 + 베스트 비교
-//
-// Body (POST): { score, maxCombo, avgMs, meta? } — GameResultSchema로 검증.
-// 응답 (POST): { isNewBest: bool, best: { ... } }
-//
-// 새 게임 추가 절차:
-//  1. Notion DB '게임' select에 옵션 추가
-//  2. GAME_KEY_TO_NAME / GAME_NAME_TO_KEY 매핑 추가
-//  3. GameKeySchema enum에 키 추가
+// ===== 게임 라우트 (Notion과 분리) =====
+// /game/event(AE 유입측정) · /game/auth/*(OAuth 소셜로그인) · /game/me(D1 회원 게임데이터).
+// 학생 토큰 기반 /game/best·GAME_BEST_DB(Notion)는 제거됨 — 게임은 플레이어를 구분하지 않는다(2026-07-12).
 async function handleGameRoutes(request, env, corsHeaders, url) {
   // IP당 분당 60회 rate limit
   if (!(await rateLimitCheck(`game:${clientIp(request)}`, 60, 60))) {
     return errRes(corsHeaders, 429, '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.');
   }
-
-  const n = makeNotion(env.NOTION_TOKEN);
 
   // ※ GET /game/tone-words/:difficulty 라우트는 제거됨 (2026-06-10).
   //   단어 풀의 단일 출처가 data/tone-words.csv → 빌드 시 PWA 번들에 포함되도록 전환.
@@ -2391,157 +2356,6 @@ async function handleGameRoutes(request, env, corsHeaders, url) {
     const res = await updateGameData(env.GAME_DB, claim.sub, body.gameData, nickname);
     if (res?.meta?.changes === 0) return errRes(corsHeaders, 404, '계정을 찾을 수 없습니다.'); // 대상 행 없음
     return new Response(JSON.stringify({ ok: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-  }
-
-  async function findStudentByToken(token) {
-    const res = await n('POST', `/databases/${STUDENT_DB_ID}/query`, {
-      filter: { property: '예약 코드', rich_text: { equals: token } },
-      page_size: 1,
-    });
-    return res.results?.[0] ?? null;
-  }
-
-  function parseBest(page) {
-    const p = page.properties || {};
-    const gameName = p['게임']?.select?.name || '';
-    let meta = {};
-    try { meta = JSON.parse(p['메타']?.rich_text?.[0]?.plain_text || '{}'); } catch { /* noop */ }
-    return {
-      gameKey: GAME_NAME_TO_KEY[gameName] || null,
-      gameName,
-      bestScore: p['최고 점수']?.number ?? 0,
-      playCount: p['플레이 수']?.number ?? 0,
-      bestMaxCombo: p['최대 콤보']?.number ?? 0,
-      bestAvgSec: p['평균 답변(초)']?.number ?? 0,
-      lastPlayedAt: p['최근 플레이']?.date?.start ?? null,
-      meta,
-      pageId: page.id,
-    };
-  }
-
-  // GET /game/best/:token  (전체)
-  // GET /game/best/:token/:gameKey  (단일)
-  const allMatch = url.pathname.match(/^\/game\/best\/([^/]+)$/);
-  const oneMatch = url.pathname.match(/^\/game\/best\/([^/]+)\/([^/]+)$/);
-
-  if (request.method === 'GET' && (allMatch || oneMatch)) {
-    const token = decodeURIComponent((allMatch || oneMatch)[1]);
-    const tv = validatePathToken(StudentTokenSchema, token, corsHeaders, '학생 토큰');
-    if (!tv.ok) return tv.response;
-    const gate = await enforceStudentSession(request, env, corsHeaders, token, 'game/best:get');
-    if (gate) return gate;
-
-    const studentPage = await findStudentByToken(token);
-    if (!studentPage) {
-      return errRes(corsHeaders, 404, '등록된 학생이 아닙니다.');
-    }
-
-    let filter = { property: '학생', relation: { contains: studentPage.id } };
-    let gameKeyFilter = null;
-    if (oneMatch) {
-      gameKeyFilter = decodeURIComponent(oneMatch[2]);
-      const gv = validatePathToken(GameKeySchema, gameKeyFilter, corsHeaders, '게임 키');
-      if (!gv.ok) return gv.response;
-      const gameName = GAME_KEY_TO_NAME[gameKeyFilter];
-      filter = {
-        and: [
-          filter,
-          { property: '게임', select: { equals: gameName } },
-        ],
-      };
-    }
-
-    const results = await queryAllNotion(n, GAME_BEST_DB_ID, { filter });
-    const bests = results.map(parseBest).filter(b => b.gameKey);
-
-    const payload = oneMatch ? (bests[0] || null) : bests;
-    return new Response(JSON.stringify(payload), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  }
-
-  // POST /game/best/:token/:gameKey
-  if (request.method === 'POST' && oneMatch) {
-    const token = decodeURIComponent(oneMatch[1]);
-    const gameKey = decodeURIComponent(oneMatch[2]);
-    const tv = validatePathToken(StudentTokenSchema, token, corsHeaders, '학생 토큰');
-    if (!tv.ok) return tv.response;
-    const gv = validatePathToken(GameKeySchema, gameKey, corsHeaders, '게임 키');
-    if (!gv.ok) return gv.response;
-    const gate = await enforceStudentSession(request, env, corsHeaders, token, 'game/best:post');
-    if (gate) return gate;
-
-    const body = await request.json().catch(() => ({}));
-    const bv = validateBody(GameResultSchema, body, corsHeaders);
-    if (!bv.ok) return bv.response;
-    const data = bv.data;
-
-    const studentPage = await findStudentByToken(token);
-    if (!studentPage) {
-      return errRes(corsHeaders, 404, '등록된 학생이 아닙니다.');
-    }
-
-    const studentName = stripEmoji(studentPage.properties?.['이름']?.title?.[0]?.plain_text ?? '');
-    const gameName = GAME_KEY_TO_NAME[gameKey];
-    const titleText = `${studentName || '학생'} - ${gameName}`;
-
-    // 기존 row 검색 (학생 × 게임 = 1 row 보장)
-    const existing = await n('POST', `/databases/${GAME_BEST_DB_ID}/query`, {
-      filter: {
-        and: [
-          { property: '학생', relation: { contains: studentPage.id } },
-          { property: '게임', select: { equals: gameName } },
-        ],
-      },
-      page_size: 1,
-    });
-    const existingPage = existing.results?.[0];
-    const prev = existingPage
-      ? parseBest(existingPage)
-      : { bestScore: 0, playCount: 0, bestMaxCombo: 0, bestAvgSec: 0, meta: {} };
-
-    const isNewBest = data.score > prev.bestScore;
-    const newAvgSec = Number((data.avgMs / 1000).toFixed(1));
-    // 심층 방어 — 입력단(zod)에서 meta를 1800자로 제한하지만, 기존 meta와 병합 누적해도
-    // Notion '메타' rich_text(2000자 한도)를 넘지 않도록 최종 가드. 초과 시 이번 meta는 버리고 이전 값 유지(데이터 손상 방지).
-    const mergedMeta = { ...(prev.meta || {}), ...(data.meta || {}) };
-    const safeMeta = JSON.stringify(mergedMeta).length <= 1900 ? mergedMeta : (prev.meta || {});
-    const updated = {
-      bestScore: isNewBest ? data.score : prev.bestScore,
-      bestMaxCombo: isNewBest ? data.maxCombo : prev.bestMaxCombo,
-      bestAvgSec: isNewBest ? newAvgSec : prev.bestAvgSec,
-      playCount: (prev.playCount || 0) + 1,
-      lastPlayedAt: new Date().toISOString(),
-      meta: safeMeta,
-    };
-
-    const properties = {
-      '이름': { title: [{ text: { content: titleText } }] },
-      '학생': { relation: [{ id: studentPage.id }] },
-      '게임': { select: { name: gameName } },
-      '최고 점수': { number: updated.bestScore },
-      '최대 콤보': { number: updated.bestMaxCombo },
-      '평균 답변(초)': { number: updated.bestAvgSec },
-      '플레이 수': { number: updated.playCount },
-      '최근 플레이': { date: { start: updated.lastPlayedAt } },
-      '메타': { rich_text: [{ text: { content: JSON.stringify(updated.meta) } }] },
-    };
-
-    if (existingPage) {
-      await n('PATCH', `/pages/${existingPage.id}`, { properties });
-    } else {
-      await n('POST', '/pages', {
-        parent: { database_id: GAME_BEST_DB_ID },
-        properties,
-      });
-    }
-
-    return new Response(JSON.stringify({
-      isNewBest,
-      best: { gameKey, gameName, ...updated },
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
   }
 
   return errRes(corsHeaders, 404, '요청한 항목을 찾을 수 없습니다.');

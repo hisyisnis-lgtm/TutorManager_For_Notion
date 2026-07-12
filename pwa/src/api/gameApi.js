@@ -1,11 +1,8 @@
-// 미니게임 베스트 API — Worker /game/best/* + /game/me(회원) + /game/auth(소셜) 라우트 호출
-//
-// 베스트 라우트는 학생 토큰 + 게임 키 기반이며 studentBearer(인증 게이트 통과 시)로 Authorization을 첨부한다.
-// localStorage 캐시 패턴과 함께 사용 — 진입 시 fetchAllGameBests로 로컬 캐시 복원(serverToCache),
-// 종료 시 submit(fire-and-forget — 실패해도 다음 종료 때 로컬 최고점을 다시 보내 수렴).
+// 게임 계정 API — Worker /game/me(회원 게임데이터) + /game/auth(소셜 로그인) 라우트 호출.
+// 게임은 Notion과 완전 분리 — 학생 토큰 기반 /game/best 호출은 제거됨(2026-07-12).
+// 회원 동기화는 /game/me JSON 통째 pull/push(gameStore), 단어 풀은 번들(fetchToneWords).
 import { WORKER_URL } from '../config.js';
 import { SEED_WORDS } from '../constants/toneGameWords.js';
-import { studentBearer } from './studentAuth.js';
 import { fetchWithTimeout } from './fetchTimeout.js';
 
 async function gameFetch(method, path, body, token) {
@@ -56,41 +53,6 @@ export async function fetchGameMe(token) {
 /** 게임데이터(JSON 통째) 저장. */
 export async function saveGameMe(token, gameData, nickname) {
   return gameFetch('PUT', '/game/me', { gameData, ...(nickname ? { nickname } : {}) }, token);
-}
-
-/**
- * 학생의 모든 게임 베스트 조회.
- * @param {string} studentToken
- * @returns {Promise<Array<{gameKey, gameName, bestScore, bestMaxCombo, bestAvgSec, playCount, lastPlayedAt, meta}>>}
- */
-export async function fetchAllGameBests(studentToken) {
-  return gameFetch('GET', `/game/best/${encodeURIComponent(studentToken)}`, undefined, studentBearer(studentToken));
-}
-
-/**
- * 특정 게임 베스트 조회.
- * 없으면 null 반환 (첫 플레이 전).
- * @param {string} studentToken
- * @param {string} gameKey - 'tone' 등
- */
-export async function fetchGameBest(studentToken, gameKey) {
-  return gameFetch('GET', `/game/best/${encodeURIComponent(studentToken)}/${encodeURIComponent(gameKey)}`, undefined, studentBearer(studentToken));
-}
-
-/**
- * 게임 결과 1회분 저장. Worker가 베스트 비교 후 갱신, playCount 증가.
- * @param {string} studentToken
- * @param {string} gameKey
- * @param {object} result - { score, maxCombo, avgMs, meta? }
- * @returns {Promise<{isNewBest, best}>}
- */
-export async function submitGameResult(studentToken, gameKey, result) {
-  return gameFetch(
-    'POST',
-    `/game/best/${encodeURIComponent(studentToken)}/${encodeURIComponent(gameKey)}`,
-    result,
-    studentBearer(studentToken)
-  );
 }
 
 /**

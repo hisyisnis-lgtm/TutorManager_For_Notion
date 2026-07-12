@@ -4,22 +4,21 @@
 // 화면 컴포넌트는 game/screens/* 로 분리, 순수 로직은 game/gameLogic.js, 디자인/저장은 game/* 모듈.
 // 디자인 사양: 메모리 tone_game_redesign.md
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { App } from 'antd';
-import { fetchStudentByToken } from '../api/bookingApi.js';
 import { fetchToneWords, fetchGameMe, takeTokenFromHash } from '../api/gameApi.js';
 import { track } from '../game/gameAnalytics.js';
 import {
-  resolveIdentity, fetchBests, submitResult, mergeGuestIntoStudent,
+  resolveIdentity,
   pullMemberData, pushMemberData, loginMember, mergeGuestIntoMember, logoutMember,
   getMemberSession, loadMasteredSync, storeMasteredSync,
 } from '../game/gameStore.js';
 import { earTier, loadTierPeak } from '../game/earProfile.js';
 import { gameXpGain, xpTier, loadXp, saveXp, addXp, seedXpIfMissing, loadRank, saveRank, seedRankIfMissing, displayTier, examPassed, examFailXp, EXAM_QUESTIONS } from '../game/gameXp.js';
 import { ROUND_LENGTH, DIFFICULTIES, THEMES } from '../constants/toneGameWords.js';
-import { TG, ensureGameFonts, haptic, shuffle, getTimeLimitForCombo, loadBest, saveBest, serverToCache } from '../game/tgTokens.js';
+import { TG, ensureGameFonts, haptic, shuffle, getTimeLimitForCombo, loadBest, saveBest } from '../game/tgTokens.js';
 import {
-  loadWordStats, saveWordStats, recordWordResult, subsetForPool, mergeStats,
+  loadWordStats, saveWordStats, recordWordResult,
   buildReviewList, masteredCount, buildRoundWords,
 } from '../game/tgWordStats.js';
 import { recordTone, loadToneStats, saveToneStats, weakestTone, toneAccuracy } from '../game/toneStats.js';
@@ -33,7 +32,7 @@ import { initBgm, startBgm, stopBgm } from '../game/tgBgm.js';
 import {
   getEndlessTimeLimit, computeScore, resolveEndOutcome, UNLOCK_THRESHOLD,
   loadEndlessBest, saveEndlessBest, headlineBest, isEndlessUnlocked,
-  ENDLESS_UNLOCK_REVEAL, META_ENDLESS_BEST, META_WORD_STATS,
+  ENDLESS_UNLOCK_REVEAL,
 } from '../game/gameLogic.js';
 import { FigmaScreen, CountdownVisual, CdWaveEdge, GameToast, SettingsModal } from '../game/screens/shared.jsx';
 import { SplashScreen } from '../game/screens/SplashScreen.jsx';
@@ -134,10 +133,9 @@ const PREVIEW_TONE = { 1: [27, 30], 2: [18, 30], 3: [25, 30], 4: [21, 30], 0: [2
 // ════════════════════════════════════════════════════════
 export default function ToneGamePage() {
   const { studentToken: routeToken } = useParams();
-  // 정체성 추상화: 학생(토큰)/게스트(로컬UUID·독립진입)/프리뷰를 동일 처리. 로컬 저장키=identity.id, 서버호출은 identity로 게이팅.
+  // 정체성 추상화: 게스트(로컬UUID·독립진입)/회원(소셜)/프리뷰를 동일 처리. 로컬 저장키=identity.id. (학생·Notion 분리, 2026-07-12)
   const identity = useMemo(() => resolveIdentity(routeToken), [routeToken]);
-  const studentToken = identity.id; // 로컬 저장 키(학생토큰/게스트ID/'preview'). 서버 호출은 fetchBests/submitResult(identity)로.
-  const navigate = useNavigate();
+  const studentToken = identity.id; // 로컬 저장 키(게스트ID/회원ID/'preview'). 게임은 Notion 분리 — 서버 베스트 호출 없음.
   const { message } = App.useApp();
   const [student, setStudent] = useState(null);
   const [error, setError] = useState(false);
@@ -324,11 +322,9 @@ export default function ToneGamePage() {
   useEffect(() => {
     if (isPreview) { setStudent({ name: '미리보기' }); return; }
     if (identity.kind === 'member') { setStudent({ name: identity.memberUser?.nickname || '회원' }); return; } // 회원: token이 게임유저 JWT라 학생 조회 X(데이터는 pullMemberData)
-    if (identity.kind === 'guest') { setStudent({ name: '플레이어' }); return; } // 게스트 독립 진입 — 학생 조회 없음
-    // 게임 단독 앱 빌드(__GAME_APP__)엔 학생 모드가 없다 — fetchStudentByToken(→bookingApi→authUtils/studentAuth)를
-    // 번들에서 DCE 제거하기 위해 학생 조회 경로 전체를 빌드플래그로 가둔다. 게임 앱은 위 게스트/회원 분기로만 도달.
-    if (__GAME_APP__) { setStudent({ name: '플레이어' }); return; }
-    fetchStudentByToken(identity.token).then(setStudent).catch(() => setError(true));
+    if (identity.kind === 'guest') { setStudent({ name: '플레이어' }); return; } // 게스트 독립 진입
+    // 게임은 학생과 완전 분리(2026-07-12) — resolveIdentity는 preview/member/guest만 반환. 학생 토큰 조회 경로 없음.
+    setStudent({ name: '플레이어' }); // 방어(미래 kind 추가 대비) — 로딩 게이트(!student)가 안 걸리게 항상 설정
   }, [identity, isPreview]);
 
   // 탭 파비콘을 게임용으로 교체. 서비스워커가 /game/tone에 index.html(메인 파비콘)을 서빙하므로
@@ -407,13 +403,12 @@ export default function ToneGamePage() {
     window.location.reload();
   };
 
-  // 게스트→학생 1회 병합(같은 기기) → 통합 최고점수·숙련도 로컬 로드 → 서버(학생만) 동기화. 게스트는 로컬만.
+  // 진입 시: 회원이면 게스트 로컬 병합 + 서버(/game/me) pull, 그다음 로컬 통계·헤드라인 로드. 게스트/프리뷰는 로컬만.
+  // (게임은 Notion·학생과 완전 분리 — 학생 서버 베스트(GAME_BEST_DB) 복원 경로 제거, 2026-07-12. 회원은 /game/me JSON으로 기기간 동기화)
   useEffect(() => {
     if (isPreview) return undefined;
     let cancelled = false;
     (async () => {
-      await mergeGuestIntoStudent(identity).catch(() => {}); // 학생 진입 시 게스트 로컬 기록을 학생 쪽에 병합(학생일 때만 동작)
-      if (cancelled) return;
       if (identity.kind === 'member') {
         // 게스트→회원 병합은 멱등(max·합집합) — 로그인 콜백에서 fetchGameMe가 실패해 병합을 못 했어도 다음 진입에서 흡수.
         mergeGuestIntoMember(identity);
@@ -422,29 +417,7 @@ export default function ToneGamePage() {
       }
       wordStatsRef.current = loadWordStats(studentToken);
       toneStatsRef.current = loadToneStats(studentToken);
-      setBest(headlineBest(studentToken)); // 즉시 캐시 기반 헤드라인(무한 우선)
-      const bests = await fetchBests(identity).catch(() => null); // 서버 베스트(학생만, 게스트=null)
-      if (cancelled || !bests) return;
-      // ★서버 → 로컬 베스트 복원(난이도·테마 공통) — 새 기기/localStorage 초기화에도 잠금 사다리·최고점 유지.
-      //   (isDifficultyUnlocked 등은 로컬 캐시만 읽으므로, 이 복원이 빠지면 서버 기록이 있어도 다시 잠긴다)
-      for (const b of bests) {
-        if (!b?.gameKey) continue;
-        const cached = serverToCache(b);
-        const local = loadBest(studentToken, b.gameKey);
-        if (cached && (cached.bestScore || 0) > (local?.bestScore || 0)) {
-          saveBest(studentToken, b.gameKey, { ...(local || {}), ...cached, playCount: Math.max(local?.playCount || 0, cached.playCount || 0) });
-        }
-      }
-      // 서버 meta.eb(무한 최고) 복구 → 캐시에 반영
-      let eb = 0;
-      for (const b of bests) { if (b?.meta?.[META_ENDLESS_BEST]) eb = Math.max(eb, Number(b.meta[META_ENDLESS_BEST]) || 0); }
-      if (eb > (loadEndlessBest(studentToken)?.bestScore || 0)) saveEndlessBest(studentToken, { ...(loadEndlessBest(studentToken) || {}), bestScore: eb, updatedAt: Date.now() });
-      setBest(headlineBest(studentToken));
-      // 단어 통계 병합
-      let merged = wordStatsRef.current;
-      for (const b of bests) { if (b?.meta?.[META_WORD_STATS]) merged = mergeStats(merged, b.meta[META_WORD_STATS]); }
-      wordStatsRef.current = merged;
-      saveWordStats(studentToken, merged);
+      setBest(headlineBest(studentToken)); // 캐시 기반 헤드라인(무한 우선)
     })();
     return () => { cancelled = true; };
   }, [identity, isPreview]);
@@ -455,23 +428,12 @@ export default function ToneGamePage() {
     if (endHandledRef.current) return; // 이미 이 결과 처리함 — 다시하기로 score=0 리셋돼도 재실행·중복 사운드 방지
     endHandledRef.current = true;
     const avgMsVal = answeredCount > 0 ? totalAnswerTime / answeredCount : 0;
-    // 영향받은 난이도 단어통계 동기화(복습·무한 공용). 무한 스트림은 단어가 수천 개라
-    // Set(played)로 O(전체 풀) 1회 스캔 — 예전 이중루프 some()은 종료 프레임에 수십만 회 비교 스파이크.
-    const syncWordStats = () => {
-      const played = new Set(words.map((w) => w.hanzi));
-      for (const d of DIFFICULTIES) {
-        if (!(wordPoolByDiff[d.id] || []).some((x) => played.has(x.hanzi))) continue;
-        const sub = subsetForPool(wordStatsRef.current, wordPoolByDiff[d.id] || []);
-        submitResult(identity, d.gameKey, { score: 0, maxCombo: 0, avgMs: 0, meta: { [META_WORD_STATS]: sub } }).catch(() => {});
-      }
-    };
 
     // 모드별 종료 판정(최고기록·신기록·효과음)은 순수함수 resolveEndOutcome에 모음.
     //  normal=난이도별 best · endless=무한 best · practice/review=기록 미반영(단어통계만).
     // 테마 모드는 난이도(normal)와 동일 메커니즘(난이도별 best) — gameKey·단어풀만 테마 것으로 치환.
     const mode = themeMode ? 'normal' : gameMode;
     const gameKey = themeMode ? selectedTheme.gameKey : selectedDifficulty.gameKey;
-    const statsPool = themeMode ? (wordPoolByTheme[selectedTheme.id] || []) : (wordPoolByDiff[selectedDifficulty.id] || []);
     const prevRecord = mode === 'endless' ? loadEndlessBest(studentToken)
       : mode === 'normal' ? loadBest(studentToken, gameKey) : null;
     const outcome = resolveEndOutcome({ mode, prev: prevRecord, score, maxCombo, avgMs: avgMsVal });
@@ -480,25 +442,17 @@ export default function ToneGamePage() {
 
     if (!isPreview) {
       if (mode === 'endless') {
-        // 무한 — 헤드라인 best. meta.eb로 영구화(고급 행에 얹음, best 비교엔 0 submit). 단어통계는 별도 동기화.
+        // 무한 — 헤드라인 best. meta.eb로 로컬 영구화. 회원은 아래 pushMemberData로 서버(/game/me) 동기화.
         const updated = { ...outcome.updated, updatedAt: Date.now() };
         saveEndlessBest(studentToken, updated);
         setBest(headlineBest(studentToken));
-        syncWordStats();
-        submitResult(identity, DIFFICULTIES[DIFFICULTIES.length - 1].gameKey, { score: 0, maxCombo: 0, avgMs: 0, meta: { [META_ENDLESS_BEST]: updated.bestScore } }).catch(() => {});
       } else if (mode === 'normal') {
-        // 난이도 — best 갱신 + 단어통계(meta.w)를 점수 submit에 함께 실어 한 번에 보낸다.
+        // 난이도 — best 로컬 갱신. 회원은 아래 pushMemberData로 서버(/game/me) 동기화.
         const updated = { ...outcome.updated, updatedAt: Date.now() };
         saveBest(studentToken, gameKey, updated);
         setBest(headlineBest(studentToken)); // 헤드라인(무한 우선, 없으면 통합) 갱신
-        const wSub = subsetForPool(wordStatsRef.current, statsPool);
-        // ★이번 런 점수가 아니라 '병합된 로컬 최고'를 보낸다 — 신기록 런의 전송이 한 번 실패해도
-        //   다음 종료 때 같은 최고점이 다시 올라가 서버가 자가 치유(재시도 큐 없이 수렴).
-        submitResult(identity, gameKey, { score: updated.bestScore, maxCombo: updated.bestMaxCombo, avgMs: updated.bestAvgMs || avgMsVal, ...(Object.keys(wSub).length ? { meta: { [META_WORD_STATS]: wSub } } : {}) }).catch(() => {});
-      } else {
-        // 연습·복습 — 최고기록 미반영, 영향받은 난이도 단어통계만 동기화
-        syncWordStats();
       }
+      // 연습·복습(else)은 최고기록 미반영 — 로컬 단어통계는 플레이 중 이미 저장됨(별도 동기화 불필요).
 
       // ── 성취 레이어(P1) — 일일 스트릭 + 업적 평가. 로컬 저장(서버 동기화는 후속). 모든 모드 공통(플레이=출석) ──
       const streak = recordPlay(studentToken);
@@ -1103,7 +1057,7 @@ export default function ToneGamePage() {
       : buildAchSnapshot(studentToken, masteredN, toneStatsRef.current, startStreakLongest);
 
   // 화면별 본문 (카운트다운 오버레이/일시정지 모달은 아래에서 위에 덧댐)
-  const exitGame = () => { if (identity.kind === 'student') navigate(`/personal/${identity.token}`); else window.location.href = '/'; };
+  const exitGame = () => { window.location.href = '/'; }; // 게임은 독립 — 항상 게임 홈으로(학생앱 복귀 경로 폐기, 2026-07-12)
   let content;
   if (isPreview && previewScreen === 'fx') { // [임시·DEV] 파티클 검수 랩 (?screen=fx) — 검수 후 이 분기 + _ParticleLab.jsx 삭제
     content = <ParticleLab onBack={exitGame} />;
@@ -1123,7 +1077,7 @@ export default function ToneGamePage() {
       onHelp={() => setHelpOpen(true)}
       onLogin={identity.kind === 'guest' ? () => setScreen('login') : null}
       isMemberUser={identity.kind === 'member'} memberName={identity.kind === 'member' ? memberNick : null}
-      nickname={isPreview ? (qs('nick') || '하늘') : identity.kind === 'member' ? memberNick : identity.kind === 'student' ? (student?.name || null) : guestNick}
+      nickname={isPreview ? (qs('nick') || '하늘') : identity.kind === 'member' ? memberNick : guestNick}
       onEditNickname={identity.kind === 'member' ? editNickname : null}
       onLogout={() => { logoutMember(); window.location.reload(); }} onExit={exitGame}
       studentToken={studentToken} onRefreshBest={() => setBest(headlineBest(studentToken))}
