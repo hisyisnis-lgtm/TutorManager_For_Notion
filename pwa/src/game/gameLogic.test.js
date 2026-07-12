@@ -5,6 +5,7 @@ import {
   unlockReqText, unlockToastText, bestLabelForKey,
   overallBestFromLocal, overallBestFromServer,
   loadEndlessBest, saveEndlessBest, headlineBest, resolveEndOutcome,
+  themeStars, themeNextStarScore,
 } from './gameLogic.js';
 import { saveBest } from './tgTokens.js';
 
@@ -208,5 +209,23 @@ describe('resolveEndOutcome — 게임 종료 판정', () => {
     expect(o.previousBest).toBe(0);
     expect(o.isNewBest).toBe(true);
     expect(o.updated.playCount).toBe(1);
+  });
+});
+
+describe('themeStars / themeNextStarScore — 테마 성취 별(500/1000/1800)', () => {
+  it('점수 구간별 별 0~3개', () => {
+    expect(themeStars(0)).toBe(0);
+    expect(themeStars(499)).toBe(0);
+    expect(themeStars(500)).toBe(1);
+    expect(themeStars(1000)).toBe(2);
+    expect(themeStars(1799)).toBe(2);
+    expect(themeStars(1800)).toBe(3);
+  });
+
+  it('다음 별 목표 점수 — 별 3개면 null', () => {
+    expect(themeNextStarScore(0)).toBe(500);
+    expect(themeNextStarScore(740)).toBe(1000);
+    expect(themeNextStarScore(1200)).toBe(1800);
+    expect(themeNextStarScore(1800)).toBe(null);
   });
 });

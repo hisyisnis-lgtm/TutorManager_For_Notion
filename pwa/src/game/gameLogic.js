@@ -76,6 +76,12 @@ export function themeUnlockToastText(theme) {
   if (!theme || !theme.unlock) return '';
   return `${labelForGameKey(theme.unlock.byGameKey)} ${theme.unlock.score.toLocaleString()}점을 달성하면 열려요`;
 }
+// 테마 성취 별(0~3) — 테마 최고점 구간별 별 개수. 카드에 표기해 재도전 동기 부여.
+// ★2=1000은 잠금 해제 기준(UNLOCK_THRESHOLD)과 정합. 임계값은 점수 분포 보고 튜닝 여지.
+export const THEME_STAR_SCORES = [500, 1000, 1800];
+export function themeStars(best) { return THEME_STAR_SCORES.filter((s) => best >= s).length; }
+// 다음 별의 목표 점수(이미 별 3개면 null)
+export function themeNextStarScore(best) { return THEME_STAR_SCORES.find((s) => best < s) ?? null; }
 // 무한모드 제한시간 — 두 축으로 단축(둘 다):
 //  ① 클리어 램프: 30초 시작 → 단어당 1.4초씩 → 10초(약 14단어에 도달)
 //  ② 콤보 가속: 콤보 쌓이면 추가로 빨라짐(콤보당 -5%, 콤보7+면 65%), 끊기면 회복
