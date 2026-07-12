@@ -90,7 +90,7 @@ async function getByDay() {
   ]);
   return assembleByDay({ ev, ch, src, mp, ms, id }, MAX_DAYS, Date.now());
 }
-async function getMemberEmbed() { return embedMembers(await runD1Sql('SELECT provider, game_data, created_at, last_seen_at FROM game_users')); }
+async function getMemberEmbed() { return embedMembers(await runD1Sql('SELECT nickname, provider, game_data, created_at, last_seen_at FROM game_users')); }
 
 function writeHtmlFile(body) {
   writeFileSync('game-report.html', `<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="icon" href="data:,"><title>성조게임 Analytics</title></head><body style="margin:0">${body}</body></html>`, 'utf8');

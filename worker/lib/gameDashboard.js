@@ -36,7 +36,7 @@ export function embedMembers(rows) {
     const best = {}, plays = {}, tone = {};
     for (const [k, b] of Object.entries(gd.best || {})) { if (!b) continue; best[k] = b.bestScore || 0; plays[k] = b.playCount || 0; }
     if (gd.tone) for (const t of [0, 1, 2, 3, 4]) { const e = gd.tone[t]; if (Array.isArray(e)) tone[t] = [e[0] || 0, e[1] || 0]; }
-    return { provider: r.provider || '(미상)', created: (r.created_at || '').slice(0, 10), seen: (r.last_seen_at || '').slice(0, 10), best, plays, tone, streak: gd.streak?.longest || 0, xp: gd.xp || 0 };
+    return { nickname: r.nickname || '', provider: r.provider || '(미상)', created: (r.created_at || '').slice(0, 10), seen: (r.last_seen_at || '').slice(0, 10), best, plays, tone, streak: gd.streak?.longest || 0, xp: gd.xp || 0 };
   });
 }
 
@@ -50,6 +50,8 @@ function clientMain() {
   var pct = function (a, b) { return b > 0 ? ((a / b) * 100).toFixed(1) + '%' : '—'; };
   var lab = function (d, k) { return (d && d[k]) || k || '(미상)'; };
   var mmdd = function (s) { var p = s.split('-'); return (+p[1]) + '/' + (+p[2]); };
+  // 닉네임은 사용자 입력 → innerHTML 삽입 전 반드시 이스케이프(저장형 XSS 방지).
+  var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
 
   var cum = (function () {
     var byProvider = {}, agg = {}, tone = { 0: [0, 0], 1: [0, 0], 2: [0, 0], 3: [0, 0], 4: [0, 0] }, sMax = 0, xpS = 0, cnt = 0;
@@ -148,6 +150,19 @@ function clientMain() {
   }
   function kpi(label, value, spark, chip, sub) { return '<div class="kpi"><div class="kpi-top"><span class="kpi-label">' + label + '</span>' + (chip || '') + '</div><div class="kpi-num">' + value + '</div>' + (spark ? '<div class="kpi-spark">' + spark + '</div>' : '<div class="kpi-sub">' + (sub || '') + '</div>') + '</div>'; }
 
+  // 회원 목록 — 닉네임·가입수단·최근접속·최고점. 선택 기간 접속=활성 배지(범위 반응).
+  function memberList(start, end) {
+    if (!members.length) return '<div class="empty">아직 가입한 회원이 없어요.</div>';
+    var pcol = { kakao: '#f7c948', google: '#4c8dff' };
+    var rows = members.slice().sort(function (a, b) { return (b.seen || '').localeCompare(a.seen || ''); });
+    return '<div class="mem">' + rows.map(function (m) {
+      var top = Math.max.apply(null, [0].concat(Object.keys(m.best || {}).map(function (k) { return m.best[k] || 0; })));
+      var active = m.seen && m.seen >= start && m.seen <= end;
+      var nm = m.nickname && m.nickname.trim() ? esc(m.nickname) : '<span class="dim">(이름없음)</span>';
+      return '<div class="memrow"><span class="mdot" style="background:' + (pcol[m.provider] || '#8b98a8') + '" title="' + esc(m.provider) + '"></span><span class="mname">' + nm + '</span>' + (active ? '<span class="mact">활성</span>' : '') + '<span class="mseen">' + (m.seen || '—') + '</span><span class="mtop">' + num(top) + '</span></div>';
+    }).join('') + '</div>';
+  }
+
   function agg(start, end) {
     var sel = days.filter(function (d) { return d >= start && d <= end; });
     var ev = {}, ch = {}, src = {}, mode = {}, ident = {}, daily = [];
@@ -192,6 +207,7 @@ function clientMain() {
     $('prov').innerHTML = cum.total ? '<div class="prov"><div class="prov-donut">' + donutSvg(segs, cum.total) + '</div><div class="prov-list">' +
       segs.map(function (s) { return '<div class="prow"><span class="pdot" style="background:' + s.color + '"></span><span class="pname">' + s.label + '</span><span class="pval">' + num(s.value) + '</span></div>'; }).join('') +
       '<div class="prow sep"><span class="pname dim">활성 · 기간</span><span class="pval">' + num(a.active) + '</span></div><div class="prow"><span class="pname dim">신규 · 기간</span><span class="pval">' + num(a.nw) + '</span></div><div class="prow"><span class="pname dim">최고 스트릭</span><span class="pval">' + num(cum.streakMax) + '일</span></div><div class="prow"><span class="pname dim">평균 XP</span><span class="pval">' + num(cum.xpAvg) + '</span></div></div></div>' : '<div class="empty">회원 없음</div>';
+    $('memberlist').innerHTML = memberList(start, end);
   }
 
   $('tone').innerHTML = toneBars(cum.toneAcc);
@@ -281,6 +297,16 @@ export const DASH_CSS = `
   .prov-list{flex:1;display:flex;flex-direction:column;gap:8px}
   .prow{display:flex;align-items:center;gap:9px;font-size:12.5px}.prow.sep{border-top:1px solid var(--line);padding-top:9px;margin-top:3px}
   .pdot{width:9px;height:9px;border-radius:50%;flex:none}.pname{flex:1}.pname.dim{color:var(--muted)}.pval{font-family:var(--mono);font-variant-numeric:tabular-nums}
+  .memberpanel{margin-bottom:14px}
+  .mem{display:flex;flex-direction:column}
+  .memrow{display:flex;align-items:center;gap:9px;padding:8px 2px;border-bottom:1px solid var(--line);font-size:12.5px}
+  .memrow:last-child{border-bottom:none}
+  .mdot{width:9px;height:9px;border-radius:50%;flex:none}
+  .mname{flex:1;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .mname .dim{color:var(--dim);font-weight:400}
+  .mact{font-size:10px;font-weight:700;color:var(--green);background:#3fb95018;border-radius:5px;padding:2px 7px;flex:none}
+  .mseen{font-family:var(--mono);font-size:11px;color:var(--muted);min-width:58px;text-align:right;flex:none}
+  .mtop{font-family:var(--mono);font-size:12px;color:var(--ink);min-width:56px;text-align:right;flex:none;font-variant-numeric:tabular-nums}
   .foot{margin-top:22px;padding-top:15px;border-top:1px solid var(--line);font-size:11.5px;color:var(--dim);line-height:1.8}
   .foot code{font-family:var(--mono);color:var(--muted);background:var(--panel2);padding:1px 6px;border-radius:5px;font-size:11px}
   @media (prefers-reduced-motion:reduce){*{transition:none!important}}
@@ -324,6 +350,8 @@ export function renderDashboard({ byDay, days, members, maxDays, generatedAt, so
     <div class="panel"><div class="panel-h"><span>모드별 최고점</span><span class="tag">누적 · 회원</span></div><div id="modebest"></div></div>
     <div class="panel"><div class="panel-h"><span>가입 수단 · 학습</span></div><div id="prov"></div></div>
   </div>
+
+  <div class="panel memberpanel"><div class="panel-h"><span>회원</span><span class="tag">활성 = 선택 기간 접속 · 닉네임=본인 설정</span></div><div id="memberlist"></div></div>
 
   <div class="foot">게임은 Notion과 완전 분리 — 지표는 Analytics Engine(유입·시계열) + D1(회원·점수)에서만.<br>최근 ${maxDays}일 원본 내장 · ${source} · 생성 ${generatedAt}</div>
 </div>

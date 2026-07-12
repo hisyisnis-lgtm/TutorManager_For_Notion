@@ -2286,7 +2286,7 @@ async function handleGameDashboard(request, env, url) {
   const [byday, members] = await Promise.all([
     aeQueryAll(env, MAX_DAYS).catch(() => ({ days: [], byDay: {} })),
     (env.GAME_DB
-      ? env.GAME_DB.prepare('SELECT provider, game_data, created_at, last_seen_at FROM game_users').all().then((r) => embedMembers(r.results || []))
+      ? env.GAME_DB.prepare('SELECT nickname, provider, game_data, created_at, last_seen_at FROM game_users').all().then((r) => embedMembers(r.results || []))
       : Promise.resolve([])).catch(() => []),
   ]);
   const now = new Date().toISOString().replace('T', ' ').slice(0, 16) + ' UTC';
