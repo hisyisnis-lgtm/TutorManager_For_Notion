@@ -16,6 +16,12 @@ import { classifyStroke } from '../toneDraw.js';
 // 카운트다운 슬라이드 가장자리 진폭 폭(px) — keyframes(tg-cd-out)와 CdWaveEdge가 공유.
 export const CD_WAVE_W = 12;
 
+// 성조 발사체 타이밍(ms) — GameScreen(발사체)과 WordCard(착탄 동기 팝 지연)가 공유.
+// 판정·점수는 탭 순간 즉시(연출 전용 지연). 시퀀스: 글자 근처 '뿅' 생성 → 제자리 둥실 → 직선 가속 착탄(사용자 확정안).
+export const TONE_SHOT_HOVER_MS = 300; // 생성 후 정지 시간(1000은 너무 길다 — 사용자 튜닝 0.3초)
+export const TONE_FLIGHT_MS = 160;      // 가속 직선 비행 시간
+export const TONE_IMPACT_MS = TONE_SHOT_HOVER_MS + TONE_FLIGHT_MS; // 탭 → 착탄까지(글자 팝·히트스톱 동기 기준)
+
 // 모션 최소화(접근성) — matchMedia 1회 조회 캐시. 장식성 파티클(ConfettiBurst·EmberRise) 생략 판단용.
 let _reducedMotion = null;
 export function prefersReducedMotion() {
@@ -170,12 +176,17 @@ const TONE_GAME_CSS = `
       @keyframes tg-pulse { 0%,100%{opacity:.35} 50%{opacity:.9} }
       @keyframes tg-heartbeat { 0%,100%{transform:scale(1)} 28%{transform:scale(1.2)} 42%{transform:scale(1)} 58%{transform:scale(1.12)} 72%{transform:scale(1)} }
       @keyframes tg-screenshake { 0%,100%{transform:translate(0,0)} 15%{transform:translate(-7px,2px)} 30%{transform:translate(6px,-2px)} 45%{transform:translate(-5px,1px)} 60%{transform:translate(4px,-1px)} 80%{transform:translate(-2px,0)} }
-      @keyframes tg-punch { 0%{transform:scale(1)} 35%{transform:scale(1.06)} 100%{transform:scale(1)} }
+      @keyframes tg-punch { 0%{transform:scale(1)} 35%{transform:scale(var(--tg-punch-s,1.06))} 100%{transform:scale(1)} }
+      /* 콤보 브레이크 — 콤보 칩이 기울며 떨어져 사라짐(상실 연출) + 가장자리 붉은 원샷 플래시 */
+      @keyframes tg-combodrop { 0%{opacity:1; transform:translateY(0) rotate(0deg)} 18%{transform:translateY(-6px) rotate(-5deg)} 100%{opacity:0; transform:translateY(74px) rotate(17deg)} }
+      @keyframes tg-redflash { 0%{opacity:0} 14%{opacity:1} 100%{opacity:0} }
       @keyframes tg-flash { 0%{opacity:0} 18%{opacity:.7} 100%{opacity:0} }
       @keyframes tg-fade-out { to { opacity:0 } }
       @keyframes tg-vignette { 0%,100%{opacity:.45} 50%{opacity:1} }
       @keyframes tg-card-in { 0%{opacity:0;transform:translateY(16px) scale(.965)} 100%{opacity:1;transform:translateY(0) scale(1)} }
       @keyframes tg-pop { 0%{transform:scale(.6);opacity:0} 60%{transform:scale(1.15)} 100%{transform:scale(1);opacity:1} }
+      /* 착탄 임팩트 팝 — 이미 보이는 글자가 사라지지 않고 그 자리에서 튀어오름(발사체 착탄용, opacity 무변) */
+      @keyframes tg-pop-impact { 0%{transform:scale(1)} 55%{transform:scale(1.24)} 100%{transform:scale(1)} }
       @keyframes tg-float { 0%{transform:translateY(0) scale(.9);opacity:0} 20%{opacity:1} 100%{transform:translateY(-28px) scale(1.05);opacity:0} }
       @keyframes tg-enter { 0%{transform:translateY(10px);opacity:0} 100%{transform:translateY(0);opacity:1} }
       @keyframes tg-count { 0%{transform:scale(.4);opacity:0} 45%{transform:scale(1.06);opacity:1} 100%{transform:scale(1);opacity:1} }
@@ -348,6 +359,9 @@ export function WordCard({ word, entered, currentSyl, completed, timedOut, progr
     : timedOut ? { text: '시간초과', color: TG.DANGER }
     : { text: `${currentSyl + 1}번째 글자의 성조를 ${draw ? '그려보세요' : '누르세요'}`, color: TG.GUIDE };
 
+  // 발사체 착탄 동기 — 공개 팝을 착탄 시점(생성 정지+비행)만큼 지연해 '마크가 부딪히는 순간 채워지는' 인과로 보이게.
+  // 그리기 문제(발사체 없음)·모션 최소화는 즉시 공개(기존 동작).
+  const popDelay = (!draw && !prefersReducedMotion()) ? `${TONE_IMPACT_MS}ms` : '0ms';
   const Syllable = (i) => {
     const revealed = i < entered.length;
     const tone = revealed ? entered[i] : null;
@@ -361,7 +375,7 @@ export function WordCard({ word, entered, currentSyl, completed, timedOut, progr
           {inLianyin ? null : revealed ? (
             <span style={{
               display: 'inline-flex', alignItems: 'center', gap: 3, padding: '3px 8px', borderRadius: 999,
-              background: toneColor, color: '#fff', animation: 'tg-pop .3s cubic-bezier(.34,1.56,.64,1) both',
+              background: toneColor, color: '#fff', animation: `tg-pop .3s cubic-bezier(.34,1.56,.64,1) ${popDelay} both`,
             }}>
               <ToneMark tone={tone} size={hz > 50 ? 16 : 13} />
               <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: hz > 50 ? 12 : 10 }}>{tone === 0 ? '경' : `${tone}성`}</span>
@@ -376,23 +390,28 @@ export function WordCard({ word, entered, currentSyl, completed, timedOut, progr
         </div>
         {listening && !revealed ? (
           // 듣기 중 미공개 글자 — 스피커. 현재 글자 강조는 색 대신 명도+애니(중립 배경·진한 아이콘·breathe), 미도래는 연하게. 맞히면 아래 한자로 공개됨
-          <div style={{ width: hz, height: hz, borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          <div data-syl={i} style={{ width: hz, height: hz, borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center',
             background: isCurrent ? '#f2ede6' : 'transparent',
             border: isCurrent ? '2px solid #e3dbce' : '2px solid transparent',
             animation: isCurrent ? 'tg-breathe 1.7s ease-in-out infinite' : 'none', transition: `all ${DUR.state} ease` }}>
             <SpeakerHighIcon size={Math.round(hz * 0.52)} weight="fill" color={isCurrent ? TG.INK : '#cbc4bb'} />
           </div>
         ) : (
-          <div style={{
+          <div data-syl={i} style={{
             fontFamily: FONT_HANZI, fontWeight: 700, fontSize: hz, lineHeight: 1.05,
-            // 강조는 색 대신 명도+애니: 현재=진한 잉크(은은한 breathe), 아직 안 푼 글자=연한 회색, 완료=성조색(전환+팝)
-            color: revealed ? toneColor : (isCurrent ? TG.INK : '#cbc4bb'), transition: `color ${DUR.state} ease`,
-            animation: revealed ? 'tg-pop .32s cubic-bezier(.34,1.56,.64,1) both' : (isCurrent ? 'tg-breathe 1.7s ease-in-out infinite' : 'none'),
+            // 강조는 색 대신 명도+애니: 현재=진한 잉크(은은한 breathe), 아직 안 푼 글자=연한 회색, 완료=성조색(착탄 동기 지연).
+            // 이미 보이는 글자는 사라지면 안 됨 → 임팩트 팝(opacity 무변)+색 전환 지연. 듣기 모드는 글자가 '새로 등장'이라 기존 숨김 팝.
+            color: revealed ? toneColor : (isCurrent ? TG.INK : '#cbc4bb'),
+            transition: `color ${DUR.state} ease ${revealed && !listen ? popDelay : '0ms'}`,
+            animation: revealed
+              ? `${listen ? 'tg-pop' : 'tg-pop-impact'} .32s cubic-bezier(.34,1.56,.64,1) ${popDelay} both`
+              : (isCurrent ? 'tg-breathe 1.7s ease-in-out infinite' : 'none'),
           }}>{word.hanzi[i] ?? ''}</div>
         )}
         <div style={{ height: hz > 50 ? 26 : 20, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           {completed && (
-            <span style={{ fontFamily: FONT_PINYIN, fontWeight: 600, fontSize: hz > 50 ? 17 : 14, color: TG.SUB }}>{word.pinyin[i] ?? ''}</span>
+            <span style={{ fontFamily: FONT_PINYIN, fontWeight: 600, fontSize: hz > 50 ? 17 : 14, color: TG.SUB,
+              animation: timedOut ? 'none' : `tg-pop .3s cubic-bezier(.34,1.56,.64,1) ${popDelay} both` }}>{word.pinyin[i] ?? ''}</span>
           )}
         </div>
       </div>
@@ -461,7 +480,9 @@ export function WordCard({ word, entered, currentSyl, completed, timedOut, progr
         </div>
       ) : (
         <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, minHeight: 28, justifyContent: 'center' }}>
-          <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 14, color: guide.color, transition: `color ${DUR.state} ease` }}>{guide.text}</span>
+          <span key={guide.text} style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 14, color: guide.color, transition: `color ${DUR.state} ease`,
+            // '정답'은 착탄 순간 등장(발사체 동기) — 진행 안내·시간초과는 즉시
+            animation: (completed && !timedOut) ? `tg-pop .25s cubic-bezier(.34,1.56,.64,1) ${popDelay} both` : 'none' }}>{guide.text}</span>
           {showLianyin && (
             <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 12, color: LIANYIN_COLOR }}>연음 · 3성+2성은 반3성으로 이어서</span>
           )}
@@ -483,7 +504,8 @@ export function WordCard({ word, entered, currentSyl, completed, timedOut, progr
 }
 
 // ── 성조 버튼 5개 (성조색 소프트 틴트 배경) ────────────
-export function ToneButtons({ onTone, wrongBtn, disabled }) {
+// heat(0~1, 콤보 고조) — 리플이 콤보와 함께 커져 타격감이 자람.
+export function ToneButtons({ onTone, wrongBtn, disabled, heat = 0 }) {
   const [ripple, setRipple] = useState(null); // { num, key } — 탭 순간 성조색 리플
   const seqRef = useRef(0);
   const downRef = useRef({ num: null, at: 0 }); // 직전 pointerdown 판정 기록 — 뒤따르는 click 중복 실행 방지
@@ -522,7 +544,7 @@ export function ToneButtons({ onTone, wrongBtn, disabled }) {
             {/* 탭 순간 성조색 리플 — 타격감 + 성조-색 각인 */}
             {ripple && ripple.num === t.num && (
               <span key={ripple.key} aria-hidden="true" style={{
-                position: 'absolute', left: '50%', top: '50%', width: 90, height: 90, borderRadius: '50%',
+                position: 'absolute', left: '50%', top: '50%', width: 90 + heat * 50, height: 90 + heat * 50, borderRadius: '50%',
                 background: t.color, animation: 'tg-ripple .5s ease-out forwards', pointerEvents: 'none', zIndex: 0,
               }} />
             )}

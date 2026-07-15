@@ -877,7 +877,7 @@ export default function ToneGamePage() {
           earned = computeScore({ perfect: true, newCombo, remainingMs: remaining });
           setCombo(newCombo); setMaxCombo((m) => Math.max(m, newCombo));
           if (newCombo >= 2) { setComboFlash(true); addTimer(setTimeout(() => setComboFlash(false), 700)); }
-          haptic([10, 20, 30]);
+          haptic(newCombo >= 8 ? [16, 24, 52] : newCombo >= 4 ? [12, 22, 40] : [10, 20, 30]); // 콤보 고조 시 완성 진동도 묵직하게
           // 콤보 피치 래더 — 연속 정답마다 음정 반음↑(1옥타브=12 캡). "쌓인다"는 손맛.
           const pitchRate = Math.pow(2, Math.min(newCombo - 1, 12) / 12);
           playSfx(newCombo >= 2 ? 'combo' : 'correct', undefined, pitchRate);

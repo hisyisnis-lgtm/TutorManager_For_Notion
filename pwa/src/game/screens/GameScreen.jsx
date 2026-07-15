@@ -3,7 +3,9 @@ import { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { StarIcon, PauseIcon, TimerIcon, SpeakerHighIcon, EyeIcon, TicketIcon, SkullIcon } from '@phosphor-icons/react';
 import { TG, FONT_TITLE, FONT_NUM, FONT_BODY, TOUCH_OPT } from '../tgTokens.js';
 import { play as playSfx } from '../tgSfx.js';
-import { Reveal, WordCard, ToneButtons, DrawPad, CoachBubble, ConfettiBurst, CrispFlash, LIGHT_CONFETTI } from './shared.jsx';
+import { Reveal, WordCard, ToneButtons, DrawPad, CoachBubble, ConfettiBurst, CrispFlash, LIGHT_CONFETTI, prefersReducedMotion, TONE_SHOT_HOVER_MS, TONE_FLIGHT_MS, TONE_IMPACT_MS } from './shared.jsx';
+import { ComboChip, ToneMark } from '../tgWidgets.jsx';
+import { TONES } from '../../constants/toneGameWords.js';
 import { useTabTip } from '../../hooks/useTabTip.js';
 import CoachMarkOverlay from '../../components/ui/CoachMarkOverlay.jsx';
 
@@ -104,6 +106,126 @@ function ComboSparks({ heatRef }) {
   });
 }
 
+// 성조 발사체 — 누른 버튼에서 현재 글자로 날아가 정답=꽂힘(WordCard 착탄 동기 팝이 임팩트), 오답=글자가 쳐내 회전하며 튕겨 떨어짐.
+// 판정·점수·타이머는 탭 순간 이미 끝난 상태(연출 전용) — 즉시 판정(pointerdown) 손맛과 공정성 유지.
+// 건너뛰기 티켓 소모 연출 — 버튼에서 티켓이 뿅 떠올라 카드로 날아가 도착 순간(TONE_IMPACT_MS ≈ 글자 공개) 흡수 페이드.
+function SkipTicketFx({ fx, onDone }) {
+  const ref = useRef(null);
+  const doneRef = useRef(onDone); doneRef.current = onDone;
+  useLayoutEffect(() => {
+    const el = ref.current; if (!el) return undefined;
+    let alive = true;
+    const dx = fx.to.x - fx.from.x, dy = fx.to.y - fx.from.y;
+    const at = (x, y, sc, rot) => `translate(-50%,-50%) translate(${x.toFixed(1)}px,${y.toFixed(1)}px) scale(${sc}) rotate(${rot}deg)`;
+    // 도착 시점 = 전체의 0.8 지점 → duration을 역산해 TONE_IMPACT_MS에 정확히 착지
+    const anim = el.animate([
+      { transform: at(0, 0, 0.4, 0), opacity: 0, easing: 'cubic-bezier(.34,1.7,.64,1)' },
+      { transform: at(0, -16, 1, -8), opacity: 1, offset: 0.2, easing: 'cubic-bezier(.5,0,.55,1)' }, // 뿅 떠오름
+      { transform: at(dx, dy, 1, 10), opacity: 1, offset: 0.8, easing: 'ease-out' },                 // 카드로 비행
+      { transform: at(dx, dy, 1.5, 10), opacity: 0 },                                                // 흡수 페이드
+    ], { duration: Math.round(TONE_IMPACT_MS / 0.8), fill: 'forwards' });
+    anim.onfinish = () => { if (alive) doneRef.current(); };
+    return () => { alive = false; anim.cancel(); };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  return (
+    <div aria-hidden="true" data-skipfx="1" style={{ position: 'absolute', left: fx.from.x, top: fx.from.y, zIndex: 22, pointerEvents: 'none' }}>
+      <span ref={ref} style={{
+        position: 'absolute', left: 0, top: 0, display: 'flex', width: 44, height: 44, alignItems: 'center', justifyContent: 'center',
+        borderRadius: '50%', background: '#fff', willChange: 'transform, opacity',
+        boxShadow: `0 4px 12px rgba(43,39,48,0.20), 0 0 16px 3px ${TG.CORAL}55`,
+      }}>
+        <TicketIcon size={26} weight="fill" color={TG.CORAL} style={{ transform: 'rotate(45deg)' }} />
+      </span>
+    </div>
+  );
+}
+
+// 잔상 고스트 — 발사 구간에서만 본체를 지연 추적(모션블러 느낌). 진짜 방향성 블러 필터는 모바일 성능 리스크라 트레일로.
+const SHOT_GHOSTS = [{ delay: 40, opacity: 0.35, blur: 1 }, { delay: 80, opacity: 0.16, blur: 2 }];
+function ToneShot({ shot, onDone, onMissImpact }) {
+  const ref = useRef(null);
+  const ghostRefs = useRef([]);
+  const doneRef = useRef(onDone); doneRef.current = onDone;
+  const missRef = useRef(onMissImpact); missRef.current = onMissImpact;
+  useLayoutEffect(() => {
+    const el = ref.current; if (!el) return undefined;
+    let alive = true;
+    const dx = shot.to.x - shot.from.x, dy = shot.to.y - shot.from.y;
+    // 시퀀스(사용자 확정): '뿅' 바운스 생성 → 제자리 둥실(TONE_SHOT_HOVER_MS) → 직선 가속 착탄(TONE_FLIGHT_MS).
+    // 곡선 폐기 — 근거리에선 직선+가속이 더 명확. 세그먼트별 easing은 각 키프레임의 easing이 다음 구간에 적용됨.
+    const at = (x, y, sc) => `translate(-50%,-50%) translate(${x.toFixed(1)}px,${y.toFixed(1)}px) scale(${sc})`;
+    const total = TONE_IMPACT_MS;
+    const oPop = Math.min(240, TONE_SHOT_HOVER_MS * 0.8) / total; // 뿅 (바운스 오버슈트) — 정지 시간 안에서
+    const oHold = TONE_SHOT_HOVER_MS / total;                     // 정지 끝 = 발사 시점
+    const frames = [
+      { transform: at(0, 0, 0.1), opacity: 0, easing: 'cubic-bezier(.34,1.7,.64,1)' },
+      { transform: at(0, 0, 1), opacity: 1, offset: oPop, easing: 'linear' },
+      { transform: at(0, 0, 1), opacity: 1, offset: oHold, easing: 'cubic-bezier(.65,-0.05,.95,.5)' }, // 발사 — 강한 가속
+      { transform: at(dx, dy, 1.05), opacity: 1 },
+    ];
+    const fly = el.animate(frames, { duration: total, fill: 'forwards' });
+    // 사운드 동기 — 발사 '슉'은 정지가 끝나는 순간(생성음은 과해서 뺌 — 사용자 결정. 음소거는 play()가 처리)
+    const flyTimer = setTimeout(() => { if (alive) playSfx('shotFly'); }, TONE_SHOT_HOVER_MS);
+    // 잔상 — 본체와 같은 궤적을 지연 재생(transform)·발사 직후 빠르게 나타남(opacity 별도 트랙, 한 트랙에 섞으면 착탄 직전에야 보임)
+    const ghostAnims = [];
+    SHOT_GHOSTS.forEach((g, gi) => {
+      const gel = ghostRefs.current[gi]; if (!gel) return;
+      ghostAnims.push(gel.animate(frames.map(({ opacity, ...rest }) => rest), { duration: total, delay: g.delay, fill: 'both' }));
+      ghostAnims.push(gel.animate([
+        { opacity: 0 }, { opacity: 0, offset: oHold }, { opacity: g.opacity, offset: Math.min(0.99, oHold + 0.07) }, { opacity: g.opacity },
+      ], { duration: total, delay: g.delay, fill: 'both' }));
+    });
+    const hideGhosts = () => {
+      ghostAnims.forEach((a) => a.cancel());
+      ghostRefs.current.forEach((g) => { if (g) g.style.opacity = '0'; });
+    };
+    fly.onfinish = () => {
+      if (!alive) return;
+      hideGhosts(); // 착탄 순간 트레일 소멸 — 임팩트가 잔상을 삼킨 듯이
+      if (shot.ok) { playSfx('shotHit'); doneRef.current(shot.key); return; } // 착탄 '톡' — 임팩트 비주얼은 칩 팝(동기 지연)이 맡음
+      playSfx('shotMiss'); // 튕김 '팅'
+      missRef.current?.(shot); // 한자 쳐냄 반응(밀렸다 복귀) — 마크 반사와 같은 순간
+      // 오답 — 들어온 방향 그대로 반사 + 중력 낙하(사용자 확정안). 탄도(반발 속도 + 중력)를 8구간 샘플링.
+      const L = Math.hypot(dx, dy) || 1;
+      const ux = -dx / L, uy = -dy / L;              // 반사 방향(입사 반대)
+      const S = Math.min(320, 140 + L * 0.6);        // 반발 속도(px/s) — 멀리서 온 만큼 세게 튕김
+      const G = 1500;                                 // 중력(px/s²)
+      const T = 0.52;
+      const NB = 8;
+      const bframes = Array.from({ length: NB + 1 }, (_, k) => {
+        const t = (k / NB) * T;
+        const bx = dx + ux * S * t;
+        const by = dy + uy * S * t + 0.5 * G * t * t;
+        const o = t < T * 0.55 ? 1 : Math.max(0, 1 - (t - T * 0.55) / (T * 0.45));
+        return { transform: `translate(-50%,-50%) translate(${bx.toFixed(1)}px,${by.toFixed(1)}px) rotate(${Math.round(ux * 260 * t)}deg) scale(${(1 - 0.25 * (t / T)).toFixed(2)})`, opacity: o.toFixed(2) };
+      });
+      const bounce = el.animate(bframes, { duration: T * 1000, easing: 'linear', fill: 'forwards' });
+      bounce.onfinish = () => { if (alive) doneRef.current(shot.key); };
+    };
+    return () => { alive = false; clearTimeout(flyTimer); fly.cancel(); ghostAnims.forEach((a) => a.cancel()); };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // 성조색 원판 + 흰 마크(성조 칩과 동일 문법) — 흰 원판보다 흰 카드 위 시인성·구분이 좋음(사용자 피드백)
+  const toneColor = TONES.find((t) => t.num === shot.tone)?.color ?? TG.CORAL;
+  const puck = (
+    <span style={{
+      display: 'flex', width: 44, height: 44, alignItems: 'center', justifyContent: 'center', borderRadius: '50%',
+      background: toneColor, color: '#fff',
+      boxShadow: `0 4px 12px rgba(43,39,48,0.20), 0 0 16px 3px ${toneColor}55`,
+    }}>
+      <ToneMark tone={shot.tone} size={26} />
+    </span>
+  );
+  return (
+    <div aria-hidden="true" data-shot={shot.ok ? 'ok' : 'miss'} style={{ position: 'absolute', left: shot.from.x, top: shot.from.y, zIndex: 22, pointerEvents: 'none' }}>
+      {/* 본체가 첫 자식(QA가 firstElementChild로 위치 추적) — 잔상은 zIndex로 본체 아래 깔림 */}
+      <span ref={ref} style={{ position: 'absolute', left: 0, top: 0, display: 'block', zIndex: 1, willChange: 'transform, opacity' }}>{puck}</span>
+      {SHOT_GHOSTS.map((g, i) => (
+        <span key={i} ref={(n) => { ghostRefs.current[i] = n; }} style={{ position: 'absolute', left: 0, top: 0, display: 'block', zIndex: 0, opacity: 0, filter: `blur(${g.blur}px)`, willChange: 'transform, opacity' }}>{puck}</span>
+      ))}
+    </div>
+  );
+}
+
 // 화면 중앙 버스트(P4b) — 콤보 마일스톤·신기록 순간 별 파티클 + 큰 텍스트가 팝하고 사라짐. 비차단.
 function CenterBurst({ data }) {
   if (!data) return null;
@@ -149,9 +271,15 @@ export function GameScreen({ word, entered, currentSyl, completed, timedOut, wor
     if (burstTimerRef.current) clearTimeout(burstTimerRef.current);
     burstTimerRef.current = setTimeout(() => setBurst(null), 1250);
   };
-  useEffect(() => { // 콤보 마일스톤(5의 배수, 증가 시점만)
+  useEffect(() => { // 콤보 마일스톤(5의 배수, 증가 시점만) + 콤보 브레이크(5 이상에서 끊김 — 칩 낙하·붉은 플래시)
     const prev = prevComboRef.current; prevComboRef.current = combo;
     if (combo > prev && combo >= 5 && combo % 5 === 0) fireBurst({ text: `콤보 ${combo}!`, color: TG.CORAL_DK, particleColor: TG.SUN });
+    if (combo === 0 && prev >= 5) {
+      breakSeqRef.current += 1;
+      setComboBreak({ key: breakSeqRef.current, combo: prev });
+      if (breakTimerRef.current) clearTimeout(breakTimerRef.current);
+      breakTimerRef.current = setTimeout(() => setComboBreak(null), 750);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [combo]);
   useEffect(() => { // 라이브 신기록 — 진행 중 이전 최고기록 돌파(1회)
@@ -162,8 +290,8 @@ export function GameScreen({ word, entered, currentSyl, completed, timedOut, wor
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [score, recordToBeat]);
-  useEffect(() => { prevComboRef.current = 0; recordShownRef.current = false; setFlashKey(0); }, [runId]); // 새 런 리셋(완성 연출도 초기화)
-  useEffect(() => () => { if (burstTimerRef.current) clearTimeout(burstTimerRef.current); }, []);
+  useEffect(() => { prevComboRef.current = 0; recordShownRef.current = false; setFlashKey(0); setComboBreak(null); setFreeze(false); setPunch(false); }, [runId]); // 새 런 리셋(완성 연출도 초기화)
+  useEffect(() => () => { if (burstTimerRef.current) clearTimeout(burstTimerRef.current); if (breakTimerRef.current) clearTimeout(breakTimerRef.current); }, []);
   useEffect(() => { // [DEV] 미리보기 버스트 데모(?screen=game&fx=combo|record) — hold로 유지(검수용). 머지 전 백도어 제거 대상
     if (demoFx !== 'combo' && demoFx !== 'record') return; // 'low'(텐션 데모) 등은 버스트 미발생
     burstSeqRef.current += 1;
@@ -172,10 +300,116 @@ export function GameScreen({ word, entered, currentSyl, completed, timedOut, wor
       : { key: burstSeqRef.current, hold: true, text: '콤보 10!', color: TG.CORAL_DK, particleColor: TG.SUN });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [demoFx]);
-  // ── 임팩트 연출: 오답=화면 셰이크, 정답 완성=카드 펀치+화이트 플래시 ──
+  useEffect(() => { // [DEV] 콤보 브레이크 데모(?screen=game&fx=break) — 1.6s 간격 반복 발동(검수용). 머지 전 백도어 제거 대상
+    if (demoFx !== 'break') return undefined;
+    const fire = () => { breakSeqRef.current += 1; setComboBreak({ key: breakSeqRef.current, combo: 8 }); };
+    fire();
+    const iv = setInterval(fire, 1600);
+    return () => clearInterval(iv);
+  }, [demoFx]);
+  // ── 임팩트 연출: 오답=화면 셰이크, 정답 완성=임팩트 프레임(히트스톱)→카드 펀치+화이트 플래시, 콤보 브레이크=칩 낙하+붉은 플래시 ──
   const shakeRef = useRef(null);
   const [punch, setPunch] = useState(false);
+  const [freeze, setFreeze] = useState(false); // 히트스톱 — 완성 순간 카드가 살짝 확대된 채 정지, 이후 펀치·플래시가 터짐
   const [flashKey, setFlashKey] = useState(0);
+  const [comboBreak, setComboBreak] = useState(null); // { key, combo } — 방금 잃은 콤보
+  const breakSeqRef = useRef(0);
+  const breakTimerRef = useRef(null);
+  // ── 성조 발사체(연출 전용 — 판정은 onTone에서 즉시) ──
+  const [shots, setShots] = useState([]); // [{ key, tone, ok, from, to }]
+  const shotSeqRef = useRef(0);
+  const shotIdxRef = useRef(0); // 연타 대응 — entered prop 재렌더 전에 정답 탭이 겹치면 낙관적으로 다음 음절을 겨냥
+  useEffect(() => { shotIdxRef.current = entered.length; }, [entered]);
+  useEffect(() => { setShots([]); setSkipFx(null); shotIdxRef.current = 0; }, [wordIndex, runId]); // 단어 전환·새 런 — 비행 중 발사체·티켓 연출 정리
+  const removeShot = (key) => setShots((s) => s.filter((x) => x.key !== key));
+  // 발사 지오메트리 — 글자 주변 반경 80~130px 랜덤 방향(고정 위치는 단조롭다 — 사용자 피드백). 화면 밖·HUD 침범 클램프 +
+  // 다른 한자와 겹치면 리샘플(최대 12회) — 옆 글자 위에 뿅 나타나면 어느 글자를 겨냥하는지 헷갈림.
+  const spawnShot = (num, idx, ok) => {
+    const root = shakeRef.current; if (!root) return;
+    const chip = root.querySelector(`[data-syl="${idx}"]`);
+    if (!chip) return;
+    const rr = root.getBoundingClientRect(); const cr = chip.getBoundingClientRect();
+    const cx = cr.left + cr.width / 2 - rr.left; const cy = cr.top + cr.height / 2 - rr.top;
+    const sylRects = [...root.querySelectorAll('[data-syl]')].map((el) => el.getBoundingClientRect());
+    const PUCK = 26; // 원판 반경+여유
+    let fx = cx, fy = cy + 110; // 폴백(전부 겹치면) — 글자 아래
+    for (let tryN = 0; tryN < 12; tryN++) {
+      const ang = Math.random() * Math.PI * 2;
+      const rad = 80 + Math.random() * 50;
+      const px = Math.max(26, Math.min(rr.width - 26, cx + Math.cos(ang) * rad));
+      const py = Math.max(84, Math.min(rr.height - 170, cy + Math.sin(ang) * rad));
+      const gx = px + rr.left, gy = py + rr.top;
+      const hit = sylRects.some((q) => gx > q.left - PUCK && gx < q.right + PUCK && gy > q.top - PUCK && gy < q.bottom + PUCK);
+      if (!hit) { fx = px; fy = py; break; }
+    }
+    shotSeqRef.current += 1;
+    setShots((s) => [...s.slice(-9), { // 안전 상한 10개 — 오답 연타도 연달아 보이게(사용자 결정 5~10개)
+      key: shotSeqRef.current, tone: num, ok, idx,
+      from: { x: fx, y: fy },
+      to: { x: cx, y: cy },
+    }]);
+  };
+  const fireShot = (num) => {
+    if (draw || completed || !word || prefersReducedMotion()) return;
+    const idx = Math.max(entered.length, shotIdxRef.current);
+    if (idx >= word.tones.length) return;
+    const expected = word.tones[idx];
+    // 오답 잠금(450ms) 중 반복 오답도 발사체는 나온다 — 판정·패널티는 handleTone이 계속 무시(연출만, 사용자 결정 "연달아 나와도")
+    const ok = num === expected;
+    if (ok) shotIdxRef.current = idx + 1;
+    spawnShot(num, idx, ok);
+  };
+  // 건너뛰기 연출 — 성조 마크가 아니라 '티켓 소모'가 보여야 맞음(사용자 지적: 성조 버튼을 안 눌렀는데 성조가 나오면 이상).
+  // 버튼에서 티켓이 뿅 떠올라 카드로 날아가 도착 순간(TONE_IMPACT_MS, 글자 공개와 동기) 흡수되며 사라짐 — 완성 히트스톱·플래시가 임팩트를 받음.
+  const [skipFx, setSkipFx] = useState(null); // { key, from, to }
+  const handleSkip = onSkip ? (e) => {
+    if (!prefersReducedMotion()) {
+      const root = shakeRef.current;
+      const br = e.currentTarget.getBoundingClientRect();
+      if (root) {
+        const rr = root.getBoundingClientRect();
+        shotSeqRef.current += 1;
+        setSkipFx({
+          key: shotSeqRef.current,
+          from: { x: br.left + br.width / 2 - rr.left, y: br.top + br.height / 2 - rr.top },
+          to: { x: rr.width / 2, y: 129 + 146 }, // 단어 카드 중앙(top129 + h292/2)
+        });
+        playSfx('shotFly');
+      }
+    }
+    onSkip();
+  } : undefined;
+  const handleToneTap = (num) => { fireShot(num); onTone(num); };
+  // 키보드(1~5·0)도 발사체 연출 — 판정용 전역 keydown(ToneGamePage handleTone)은 GameScreen을 우회하므로 연출만 여기서 미러.
+  // 가드도 handleTone과 동일하게(일시정지·카운트다운·서든데스 인트로), 키 맵도 동일.
+  const fireShotRef = useRef(fireShot); fireShotRef.current = fireShot;
+  const shotGateRef = useRef(false); shotGateRef.current = paused || !playReveal || showSudden;
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.repeat || shotGateRef.current) return;
+      const map = { 1: 1, 2: 2, 3: 3, 4: 4, 0: 0, 5: 0 };
+      const tone = map[e.key];
+      if (tone === undefined) return;
+      fireShotRef.current(tone);
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
+  // 오답 착탄 — 한자가 마크를 쳐냄: 들어온 방향으로 밀렸다가 탄성 복귀(WAAPI, breathe와 잠깐 겹쳐도 종료 후 복원)
+  const onMissImpact = (s) => {
+    const el = shakeRef.current?.querySelector(`[data-syl="${s.idx}"]`);
+    if (!el) return;
+    const ddx = s.to.x - s.from.x, ddy = s.to.y - s.from.y;
+    const l = Math.hypot(ddx, ddy) || 1;
+    const px = (ddx / l) * 9, py = (ddy / l) * 9;
+    const rot = px >= 0 ? 5 : -5;
+    el.animate([
+      { transform: 'translate(0px,0px) rotate(0deg)' },
+      { transform: `translate(${px.toFixed(1)}px,${py.toFixed(1)}px) rotate(${rot}deg)`, offset: 0.28 },
+      { transform: `translate(${(-px * 0.35).toFixed(1)}px,${(-py * 0.35).toFixed(1)}px) rotate(${-rot * 0.5}deg)`, offset: 0.62 },
+      { transform: 'translate(0px,0px) rotate(0deg)' },
+    ], { duration: 320, easing: 'ease-out' });
+  };
   useEffect(() => { // 오답마다 화면 전체 셰이크 — Web Animations API로 매번 처음부터 무조건 재생(React 토글의 배칭/재시작 불안정 회피)
     if (wrongShakeKey === 0 || !shakeRef.current) return; // 초기값 — 게임 시작·재시작 시 미발동
     shakeRef.current.animate(
@@ -186,11 +420,16 @@ export function GameScreen({ word, entered, currentSyl, completed, timedOut, wor
       { duration: 420, easing: 'ease-in-out' },
     );
   }, [wrongShakeKey]);
-  useEffect(() => { // 정답으로 단어 완성(시간초과 제외) — 카드 펀치 + 플래시
+  useEffect(() => { // 정답으로 단어 완성(시간초과 제외) — 발사체 착탄 대기 → 임팩트 프레임(60~100ms 정지, 콤보 고조 시 길게) → 카드 펀치 + 플래시
     if (!completed || timedOut) return undefined;
-    setPunch(true); setFlashKey((n) => n + 1);
-    const t = setTimeout(() => setPunch(false), 360);
-    return () => clearTimeout(t);
+    if (prefersReducedMotion()) { setFlashKey((n) => n + 1); return undefined; } // 모션 최소화 — 정지·펀치 없이 플래시만
+    const lead = draw ? 0 : TONE_IMPACT_MS; // 마지막 발사체가 글자에 닿는 순간부터 임팩트 시퀀스(그리기는 발사체 없음)
+    const freezeMs = 60 + Math.round(heatRef.current * 40);
+    const t0 = setTimeout(() => setFreeze(true), lead);
+    const a = setTimeout(() => { setFreeze(false); setPunch(true); setFlashKey((n) => n + 1); }, lead + freezeMs);
+    const b = setTimeout(() => setPunch(false), lead + freezeMs + 360);
+    return () => { clearTimeout(t0); clearTimeout(a); clearTimeout(b); setFreeze(false); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [completed, timedOut]);
   // 콤보 히트 — 콤보가 오를수록 0→1로 고조(콤보2부터, 12에서 최대). 콤보 화염(외곽 불씨+글로우) 강도에 사용.
   // demoFx='combo'는 [DEV] 미리보기서 화염 강제(?screen=game&fx=combo). 머지 전 백도어 제거 대상.
@@ -236,6 +475,15 @@ export function GameScreen({ word, entered, currentSyl, completed, timedOut, wor
           <ComboSparks heatRef={heatRef} />
         </div>
       )}
+      {/* 콤보 브레이크 붉은 플래시 — 콤보를 '잃었다'는 원샷 큐(저시간 비네트의 무한 맥동과 달리 1회 페이드). 비차단 */}
+      {comboBreak && (
+        <div key={`cbf-${comboBreak.key}`} aria-hidden="true" style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 3,
+          boxShadow: 'inset 0 0 70px 20px rgba(242,72,76,0.45)', animation: 'tg-redflash .55s ease-out forwards' }} />
+      )}
+      {/* 성조 발사체 — 버튼→현재 글자 비행(정답=착탄 팝 동기, 오답=튕겨 낙하). 비차단·연출 전용 */}
+      {shots.map((s) => <ToneShot key={s.key} shot={s} onDone={removeShot} onMissImpact={onMissImpact} />)}
+      {/* 건너뛰기 티켓 소모 — 버튼→카드 비행 후 흡수(글자 공개와 동기) */}
+      {skipFx && <SkipTicketFx key={skipFx.key} fx={skipFx} onDone={() => setSkipFx(null)} />}
       {/* 저시간 비네트 — 막바지에 화면 가장자리 붉은 맥동(텐션 램프 보강·게이지 심박과 동기). 비차단 */}
       {lowTime && !practice && (
         <div aria-hidden="true" style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 3,
@@ -289,14 +537,20 @@ export function GameScreen({ word, entered, currentSyl, completed, timedOut, wor
       <Reveal i={2} play={playReveal} style={{ position: 'absolute', left: 20, right: 20, top: 129 }}>
         <div style={{ position: 'relative' }}>
           <div key={`card-${runId}-${wordIndex}`} style={{ animation: 'tg-card-in .38s cubic-bezier(.22,1,.36,1) both' }}>
-            <div style={{ position: 'relative', animation: punch ? 'tg-punch .35s ease-out' : 'none' }}>
+            <div style={{ position: 'relative', transform: freeze ? 'scale(1.035)' : 'none', animation: punch ? 'tg-punch .35s ease-out' : 'none', '--tg-punch-s': (1.05 + heat * 0.05).toFixed(3) }}>
               <WordCard word={word} entered={entered} currentSyl={currentSyl} completed={completed} timedOut={timedOut} progressText={endless ? `${wordIndex + 1}` : `${wordIndex + 1}/${wordsLen}`} combo={combo} comboFlash={comboFlash} floatScore={floatScore} listen={listen} audioOff={audioOff} onReplay={onReplay} onCantHear={onCantHear} onHint={onHint} hintUsed={hintUsed} draw={draw} lianyinAt={lianyinAt} />
             </div>
           </div>
           {/* 정답 완성 연출 — 크리스프 플래시(번쩍) + 색색 색종이 + 흰/골드 글리터. ★단어 키 래퍼 '밖'에 둠: 안에 두면 새 단어 등장 때마다 리마운트되어 오발. flashKey 증가(정답 완성) 시에만 발동 */}
           {flashKey > 0 && <CrispFlash key={`fl-${flashKey}`} radial borderRadius={24} color="rgba(255,255,255,0.95)" zIndex={7} />}
-          {flashKey > 0 && <ConfettiBurst key={`cf-${flashKey}`} count={16} power={0.85} size={9} zIndex={6} />}
-          {flashKey > 0 && <ConfettiBurst key={`cg-${flashKey}`} colors={LIGHT_CONFETTI} count={9} power={0.95} size={5} zIndex={6} />}
+          {flashKey > 0 && <ConfettiBurst key={`cf-${flashKey}`} count={16 + Math.round(heat * 12)} power={0.85 + heat * 0.35} size={9} zIndex={6} />}
+          {flashKey > 0 && <ConfettiBurst key={`cg-${flashKey}`} colors={LIGHT_CONFETTI} count={9 + Math.round(heat * 7)} power={0.95 + heat * 0.3} size={5} zIndex={6} />}
+          {/* 콤보 브레이크 — 방금 잃은 콤보 칩이 기울며 떨어져 사라짐(상실을 보여줘야 다음 판에 지키고 싶어짐). 칩 실제 위치(right16 top14)에서 낙하 */}
+          {comboBreak && !prefersReducedMotion() && (
+            <div key={`cb-${comboBreak.key}`} aria-hidden="true" style={{ position: 'absolute', right: 16, top: 14, zIndex: 8, pointerEvents: 'none', animation: 'tg-combodrop .6s cubic-bezier(.5,-0.1,.85,.5) forwards' }}>
+              <ComboChip combo={comboBreak.combo} />
+            </div>
+          )}
         </div>
       </Reveal>
       {/* 코치 — 일반 모드만. 연습 모드는 카드 힌트 + 발음듣기/정답보기 버튼이 안내하고,
@@ -331,7 +585,7 @@ export function GameScreen({ word, entered, currentSyl, completed, timedOut, wor
           {(() => {
             const disabled = completed || lives <= 0;
             return (
-              <button onClick={onSkip} disabled={disabled} className="tg-press"
+              <button onClick={handleSkip} disabled={disabled} className="tg-press"
                 aria-label={lives > 0 ? `건너뛰기 · 남은 ${lives}개 (1회 소모)` : '건너뛰기를 다 써서 넘길 수 없어요'}
                 style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '9px 16px', borderRadius: 14,
                   background: '#fff', border: '1.5px solid #ebe5de', cursor: disabled ? 'default' : 'pointer',
@@ -361,7 +615,7 @@ export function GameScreen({ word, entered, currentSyl, completed, timedOut, wor
         </div>
       ) : (
         <Reveal i={5} play={playReveal} style={{ position: 'absolute', left: 20, right: 20, bottom: 'calc(30px + env(safe-area-inset-bottom))' }}>
-          <ToneButtons onTone={onTone} wrongBtn={wrongBtn} disabled={completed} />
+          <ToneButtons onTone={handleToneTap} wrongBtn={wrongBtn} disabled={completed} heat={heat} />
         </Reveal>
       )}
       {/* 콤보 마일스톤 · 라이브 신기록 버스트(P4b) */}

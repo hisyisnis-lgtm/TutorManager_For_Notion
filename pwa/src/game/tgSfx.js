@@ -12,6 +12,8 @@ const BASE = {
   tap: 0.3, button: 0.3, count: 0.4, correct: 0.5, combo: 0.5, score: 0.4,
   go: 0.5, wrong: 0.42, timeout: 0.5, win: 0.46, gameover: 0.47, unlock: 0.46, // win·unlock·gameover=다중 마림바라 튐 → 낮춤(음량 밸런스)
   whoosh: 0.4, locked: 0.45,
+  shotFly: 0.2, shotHit: 0.3, shotMiss: 0.32, // 성조 발사체(슉·톡·팅) — 판정음 아래 겹치는 레이어라 낮게
+
   // 성조 캐릭터 목소리(자주 나므로 낮게)
   tone1: 0.2, tone2: 0.2, tone3: 0.2, tone4: 0.2, tone0: 0.22,
 };
@@ -161,6 +163,10 @@ const SYNTH = {
   },
   whoosh: (t, v) => noiseSweep(t, 0.25, v, 600, 6000, 'bandpass'),             // 전환: 휘익
   locked: (t, v) => { blip(150, t, 0.1, v, 'square'); blip(150, t + 0.13, 0.12, v, 'square'); }, // 거절 "부-부"
+  // 성조 발사체 시퀀스(슉 발사 → 톡 착탄 / 팅 튕김). 생성음(뿅)은 판정음과 겹쳐 과해서 제거 — 재추가 금지(사용자 결정)
+  shotFly: (t, v) => noiseSweep(t, 0.15, v, 900, 5600, 'bandpass'),            // 슉: 짧고 빠른 상승 스윕(비행 160ms에 맞춤)
+  shotHit: (t, v) => woodblock(760, t, v),                                     // 톡: 가벼운 우드블록 착탄
+  shotMiss: (t, v) => { blip(1250, t, 0.08, v, 'square', 720); woodblock(420, t, v * 0.6); }, // 팅: 금속성 하강 + 둔탁한 몸통
   // 성조 캐릭터 목소리(말할 때) — 각 성조 음높이 곡선
   tone1: (t, v) => toneVoice(1, t, v),
   tone2: (t, v) => toneVoice(2, t, v),
