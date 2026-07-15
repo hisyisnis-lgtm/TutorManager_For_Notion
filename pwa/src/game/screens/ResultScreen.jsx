@@ -1,6 +1,6 @@
 // 결과 화면 — 신기록 배지·축하 판다·점수(카운트업)·통계 2카드·코치·다시도전/난이도 바꾸기.
 import { useState, useEffect } from 'react';
-import { TrophyIcon, ArrowClockwiseIcon, LightningIcon } from '@phosphor-icons/react';
+import { TrophyIcon, ArrowClockwiseIcon, LightningIcon, CheckCircleIcon, XCircleIcon } from '@phosphor-icons/react';
 import { TG, FONT_NUM, FONT_BODY, TOUCH_OPT, pickCelebratePanda } from '../tgTokens.js';
 import { useCountUp, FlameIcon } from '../tgWidgets.jsx';
 import { play as playSfx } from '../tgSfx.js';
@@ -154,7 +154,10 @@ export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, 
 export function ExamResultScreen({ correct = 0, total = 20, passed = false, canRetry = false, onRetry, onHome }) {
   const pct = total > 0 ? Math.round((correct / total) * 100) : 0;
   const animCorrect = useCountUp(correct, 900);
+  const animPct = useCountUp(pct, 900, 1); // 게이지 전용 — 정수 카운트업은 문제 1개당 5%씩 점프해서 소수로 따로 돌림
   const pandaSrc = pickCelebratePanda(passed, passed ? 5 : 0);
+  const wrong = Math.max(0, total - correct);
+  const needMore = Math.max(0, Math.ceil(total * 0.8) - correct); // 합격까지 더 맞혀야 하는 문제 수(80% 기준)
   return (
     <>
       {passed && <CrispFlash color="rgba(255,255,255,0.6)" zIndex={7} />}
@@ -180,12 +183,46 @@ export function ExamResultScreen({ correct = 0, total = 20, passed = false, canR
             <span style={{ fontFamily: FONT_NUM, fontWeight: 800, fontSize: 60, color: passed ? '#1fa86a' : '#f2484c', lineHeight: 1 }}>{animCorrect}</span>
             <span style={{ fontFamily: FONT_NUM, fontWeight: 700, fontSize: 30, color: '#9a93a0' }}>/ {total}</span>
           </div>
-          <span style={{ fontFamily: FONT_BODY, fontWeight: 600, fontSize: 13, color: '#9a93a0', marginTop: 4 }}>정답률 {pct}% · 합격 기준 80%</span>
+          {/* 합격선 게이지 — 채움은 카운트업과 동기. 합격 기준(80%)까지는 빨강, 넘어선 만큼만 초록(틱 없이 색 경계가 곧 합격선). */}
+          {(() => {
+            const fillPct = Math.min(100, animPct);
+            const redFrac = fillPct > 0 ? (Math.min(80, fillPct) / fillPct) * 100 : 0; // 래퍼 내 빨강 비율 — 80% 경계를 트랙 좌표에 고정
+            return (
+              <div style={{ position: 'relative', width: '100%', height: 12, borderRadius: 6, background: '#efeae4', marginTop: 14, overflow: 'hidden' }}>
+                {/* 채움 래퍼가 둥근 끝을 만들고(overflow hidden), 안의 빨강/초록 렉트를 클리핑 */}
+                {fillPct > 0 && (
+                  <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${fillPct}%`, borderRadius: 6, overflow: 'hidden' }}>
+                    <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${redFrac}%`, background: TG.CORAL_GRAD }} />
+                    {fillPct > 80 && <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: `${100 - redFrac}%`, background: 'linear-gradient(90deg, #36C98D, #1fa86a)' }} />}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+          <span style={{ fontFamily: FONT_BODY, fontWeight: 600, fontSize: 13, color: '#9a93a0', marginTop: 8 }}>정답률 {pct}% · 합격 기준 80%</span>
+        </div>
+      </Reveal>
+      {/* 통계 2카드(맞힌/틀린 문제) — 일반 결과 화면과 동일 기하·카드 스타일(빈 화면 방지) */}
+      <Reveal i={3} style={{ position: 'absolute', left: 24, right: 24, top: 312 }}>
+        <div style={{ height: 128, display: 'flex', gap: 12, alignItems: 'stretch' }}>
+          {[
+            { icon: <CheckCircleIcon size={24} weight="fill" color="#1fa86a" />, ibg: 'rgba(54,201,141,0.16)', val: correct, label: '맞힌 문제' },
+            { icon: <XCircleIcon size={24} weight="fill" color={TG.CORAL_DK} />, ibg: 'rgba(255,107,107,0.14)', val: wrong, label: '틀린 문제' },
+          ].map((s) => (
+            <div key={s.label} style={{ flex: 1, minWidth: 0, background: '#fff', borderRadius: 22, boxShadow: '0px 5px 14px rgba(43,39,48,0.06)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+              <div style={{ width: 40, height: 40, borderRadius: 20, background: s.ibg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{s.icon}</div>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 2 }}>
+                <span style={{ fontFamily: FONT_NUM, fontWeight: 800, fontSize: 26, color: '#2b2730' }}>{s.val}</span>
+                <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 13, color: '#9a93a0' }}>개</span>
+              </div>
+              <span style={{ fontFamily: FONT_BODY, fontWeight: 500, fontSize: 12, color: '#9a93a0' }}>{s.label}</span>
+            </div>
+          ))}
         </div>
       </Reveal>
       {/* 코치 */}
-      <Reveal i={4} style={{ position: 'absolute', left: 24, right: 24, top: 300, bottom: 'calc(150px + env(safe-area-inset-bottom))', display: 'flex', alignItems: 'center' }}>
-        <CoachBubble text={passed ? '축하해요! 등급이 한 단계 올랐어요 🎉' : (canRetry ? '아쉬워요! 바로 다시 도전할 수 있어요' : '조금만 더! 경험치를 더 채우면 다시 도전할 수 있어요')} />
+      <Reveal i={4} style={{ position: 'absolute', left: 24, right: 24, top: 452, bottom: 'calc(150px + env(safe-area-inset-bottom))', display: 'flex', alignItems: 'center' }}>
+        <CoachBubble text={passed ? '축하해요! 등급이 한 단계 올랐어요 🎉' : (canRetry ? `합격까지 ${needMore}문제! 바로 다시 도전해봐요` : '조금만 더! 경험치를 더 채우면 다시 도전할 수 있어요')} />
       </Reveal>
       {/* 불합격 + 재응시 가능 시에만 '다시 도전' */}
       {!passed && canRetry && (
