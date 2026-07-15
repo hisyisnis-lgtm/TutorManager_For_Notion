@@ -16,6 +16,7 @@ import { isBgmMuted, setBgmMuted, startBgm } from '../tgBgm.js';
 import { FigmaScreen, EmberRise } from './shared.jsx';
 import { markSize, Eyes } from './eyes.jsx';
 import { PlayModal, DebugScoreModal } from './gameModals.jsx';
+import { LinkHubScreen } from './LinkHubScreen.jsx';
 import { NicknameEditModal } from './NicknameEditModal.jsx';
 import { ProfileModal } from './ProfileModal.jsx';
 import CoachMarkOverlay from '../../components/ui/CoachMarkOverlay.jsx';
@@ -714,6 +715,10 @@ export function HomeScreen({
   const [playDot, setPlayDot] = useState(() => { try { return !localStorage.getItem('tg_play_visited'); } catch { return false; } });
   const openPlay = () => { setPlayOpen(true); setPlayDot(false); try { localStorage.setItem('tg_play_visited', '1'); } catch { /* noop */ } };
   const [playOpen, setPlayOpen] = useState(false);
+  // 하늘하늘중국어 링크 허브(우측 플로팅 天 버튼) — 놀러가기와 동일한 첫 방문 레드닷 패턴
+  const [hubOpen, setHubOpen] = useState(false);
+  const [hubDot, setHubDot] = useState(() => { try { return !localStorage.getItem('tg_hub_visited'); } catch { return false; } });
+  const openHub = () => { setHubOpen(true); setHubDot(false); try { localStorage.setItem('tg_hub_visited', '1'); } catch { /* noop */ } };
   const [debugScoreOpen, setDebugScoreOpen] = useState(false);
   const [cardTone, setCardTone] = useState(null); // 탭한 성조 미니 카드
   const [streakOpen, setStreakOpen] = useState(false); // 스트릭 상세 시트
@@ -861,6 +866,19 @@ export function HomeScreen({
         <GearSixIcon size={20} weight="fill" color={TG.INK} />
       </button>
 
+      {/* 하늘하늘중국어 링크 허브 입구 — 둥근 사각 아이콘(天) + 아래 '하늘하늘' 라벨 (사용자 선택 C안) */}
+      <button className="tg-press" onClick={() => { playSfx('button'); openHub(); }} aria-label={hubDot ? '하늘하늘 · 새 소식' : '하늘하늘'} style={{
+        position: 'absolute', right: 14, top: 110, zIndex: 4, padding: 0, background: 'none', border: 'none', cursor: 'pointer',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, ...TOUCH_OPT,
+      }}>
+        <span style={{ position: 'relative', width: 48, height: 48, borderRadius: 16, background: '#fff', boxShadow: '0 4px 10px rgba(26,16,20,0.10)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <img src="/symbol-red.png" alt="" style={{ width: 24, height: 24, objectFit: 'contain' }} />
+          {hubDot && <span aria-hidden="true" style={{ position: 'absolute', top: -2, right: -2, width: 10, height: 10, borderRadius: '50%', background: '#F2484C', border: '2px solid #fff', animation: 'tg-dotpulse 1.1s ease-in-out infinite' }} />}
+        </span>
+        {/* 흰 스트록(8방향 섀도) — 벽지·창문 등 배경 위 가독성. -webkit-text-stroke는 paint-order 미지원 시 글자 속이 파여 섀도 방식 사용 */}
+        <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 11, color: '#6b6572', textShadow: '-1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, -1px 0 0 #fff, 1px 0 0 #fff, 0 -1px 0 #fff, 0 1px 0 #fff' }}>하늘하늘</span>
+      </button>
+
       {/* 하단 컨트롤 도크 배경 — 깔끔한 흰색·라운드 없음(사용자 요청). 상단 그림자로만 방과 분리 */}
       <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 'calc(166px + env(safe-area-inset-bottom))', background: '#fff', boxShadow: '0 -6px 18px rgba(43,39,48,0.06)', pointerEvents: 'none', zIndex: 2 }} />
 
@@ -904,6 +922,7 @@ export function HomeScreen({
       {menuOpen && <HomeMenu onClose={() => setMenuOpen(false)} onHelp={onHelp} onLogin={onLogin} isMemberUser={isMemberUser} memberName={memberName} onEditNickname={onEditNickname ? () => setNickEditOpen(true) : null} onLogout={onLogout} onExit={onExit} onDebugIntro={onDebugIntro} onDebugScore={() => setDebugScoreOpen(true)} />}
       {nickEditOpen && <NicknameEditModal current={nickname || memberName || ''} onSave={onEditNickname} onClose={() => setNickEditOpen(false)} />}
       {playOpen && <PlayModal onClose={() => setPlayOpen(false)} />}
+      {hubOpen && <LinkHubScreen onClose={() => setHubOpen(false)} />}
       {import.meta.env.DEV && debugScoreOpen && <DebugScoreModal studentToken={studentToken} onClose={() => setDebugScoreOpen(false)} onApplied={() => onRefreshBest && onRefreshBest()} />}
 
       {/* 첫 방문 코치마크 가이드 — 방/등급/연속학습/플레이 순서로 안내(1회). 타이틀→홈 전환(homeTx)이 끝난 뒤에만 표시 */}

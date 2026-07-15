@@ -1,4 +1,4 @@
-// 게임 공용 모달 — 놀러가기(SNS)·[DEV]점수 디버그. 시작/홈 등 여러 화면에서 재사용.
+// 게임 공용 모달 — 놀러가기(SNS)·복습 시작·게임방법·무한 안내·로그인 유도·[DEV]점수 디버그. 시작/홈 등 여러 화면에서 재사용.
 // (기존 StartScreen.jsx 내부 함수에서 추출)
 import { useState } from 'react';
 import { HandWavingIcon, InstagramLogoIcon, YoutubeLogoIcon, ArticleIcon, CaretRightIcon, ArrowsClockwiseIcon, PlayIcon, InfinityIcon, StarIcon, QuestionIcon, DevicesIcon, SignInIcon } from '@phosphor-icons/react';

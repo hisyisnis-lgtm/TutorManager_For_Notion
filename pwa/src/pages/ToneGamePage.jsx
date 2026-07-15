@@ -312,10 +312,10 @@ export default function ToneGamePage() {
   // 언마운트 시 배경음 정지(페이지 이탈).
   useEffect(() => () => stopBgm(), []);
 
-  // 스플래시 자동 해제(실제 진입만 1.6초; 미리보기 splash는 검수용으로 유지)
+  // 스플래시 자동 해제(실제 진입만 2.7초 = 브랜드 컷 1.1s + 게임 로고; 미리보기 splash는 검수용으로 유지)
   useEffect(() => {
     if (!splash || isPreview) return undefined;
-    const t = setTimeout(() => setSplash(false), 1600);
+    const t = setTimeout(() => setSplash(false), 2700);
     return () => clearTimeout(t);
   }, [splash, isPreview]);
 
@@ -905,6 +905,18 @@ export default function ToneGamePage() {
         if (!isPreview) { recordWordResult(wordStatsRef.current, word.hanzi, { perfect: false, timedOut: false, ms: 0 }); saveWordStats(studentToken, wordStatsRef.current); }
         addPausable(() => setShowGameOverBeat(true), 1700); // 정답 공개 후 게임오버 비트
         return; // 종료 — 시간 패널티 불필요
+      }
+      // 승급 시험 = 오답 즉시 확정: 무실수 완성만 정답 집계라 이 문제는 이미 오답 — 재시도 없이 정답 공개 후 다음 문제로.
+      if (examModeRef.current) {
+        completedRef.current = true; enteredRef.current = word.tones; // 동기 가드 — 확정 순간 입력 재진입 차단
+        setCompleted(true); setEntered(word.tones);
+        speakWord(word); // 정답 공개 → 올바른 발음 들려주기
+        if (!isPreview) { recordWordResult(wordStatsRef.current, word.hanzi, { perfect: false, timedOut: false, ms: 0 }); saveWordStats(studentToken, wordStatsRef.current); }
+        addPausable(() => {
+          if (wordIndex + 1 >= words.length) setShowGameOverBeat(true); // 마지막 문제 → examEnd effect가 판정
+          else { enteredRef.current = []; completedRef.current = false; hintUsedRef.current = false; setWordIndex((i) => i + 1); setCurrentSyl(0); setEntered([]); setCompleted(false); setHasMistake(false); setGaugeOffsetMs(0); }
+        }, 1500);
+        return; // 다음 문제로 — 시간 패널티 불필요
       }
       // 오답 0.5초 패널티(연습·미리보기 제외) — 경과시간에 500ms 더해 남은시간 차감. setGaugeOffsetMs가 게이지 재마운트(음수 delay)+타이머 effect 재실행 유발.
       if (!practiceMode && !isPreview) {

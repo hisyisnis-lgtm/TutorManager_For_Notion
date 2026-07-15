@@ -202,6 +202,8 @@ const TONE_GAME_CSS = `
       @keyframes tg-toast { 0%{opacity:0; transform:translateY(8px)} 12%{opacity:1; transform:translateY(0)} 86%{opacity:1; transform:translateY(0)} 100%{opacity:0; transform:translateY(-4px)} }
       /* 타이틀 로고 효과 */
       @keyframes tg-logo-pop { 0%{opacity:0; transform:scale(.7)} 60%{opacity:1; transform:scale(1.05)} 100%{opacity:1; transform:scale(1)} }
+      /* 브랜드 스플래시 컷(제작사 오프닝) — 페이드 인 → 유지 → 페이드 아웃 */
+      @keyframes tg-brandcut { 0%{opacity:0; transform:scale(.94)} 22%{opacity:1; transform:scale(1)} 78%{opacity:1; transform:scale(1)} 100%{opacity:0; transform:scale(1.02)} }
       @keyframes tg-shine { 0%{background-position:160% 0} 22%{background-position:-60% 0} 100%{background-position:-60% 0} }
       @keyframes tg-sparkle { 0%,100%{opacity:0; transform:scale(0) rotate(0deg)} 50%{opacity:1; transform:scale(1) rotate(45deg)} }
       /* 첫 게임 논블로킹 힌트 — 페이드 인 → 유지 → 페이드 아웃(1회, 타이머 방해 없음) */
