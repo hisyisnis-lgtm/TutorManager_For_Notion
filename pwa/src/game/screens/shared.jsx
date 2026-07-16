@@ -9,7 +9,7 @@ import {
   haptic, isHapticMuted, setHapticMuted,
 } from '../tgTokens.js';
 import { ToneMark, ComboChip } from '../tgWidgets.jsx';
-import { TONES } from '../../constants/toneGameWords.js';
+import { TONES, DIFFICULTIES } from '../../constants/toneGameWords.js';
 import { play as playSfx, isSfxMuted, setSfxMuted } from '../tgSfx.js';
 import { classifyStroke } from '../toneDraw.js';
 
@@ -683,9 +683,9 @@ export function DrawPad({ expectedTone, onDraw, disabled = false, resetKey = 0 }
 }
 
 // ── 카운트다운 비주얼 (난이도 핀 포함) ──────────────────
-const DIFF_HANZI = { easy: '初', normal: '中', hard: '高' };
+const DIFF_HANZI = Object.fromEntries(DIFFICULTIES.map((d) => [d.id, d.hanzi])); // 라벨·한자는 DIFFICULTIES에서 파생
 export function CountdownVisual({ n, difficulty }) {
-  const pinHz = DIFF_HANZI[difficulty?.id]; // 테마 등 난이도 외엔 한자 핀 생략
+  const pinHz = DIFF_HANZI[difficulty?.tier || difficulty?.id]; // 스테이지는 tier로 조회. 테마 등 난이도 외엔 생략
   return (
     <>
       {/* 숫자 + 안내 (Figma top290.5 = 34.4%) */}
@@ -701,7 +701,7 @@ export function CountdownVisual({ n, difficulty }) {
       <Reveal i={2} base={140} style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', top: '68.2%' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#fff3d6', padding: '10px 16px', borderRadius: 16 }}>
         {pinHz && <span style={{ fontFamily: FONT_HANZI, fontWeight: 700, fontSize: 15, color: '#e0a21a' }}>{pinHz}</span>}
-        <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 13, color: '#b07d12' }}>{difficulty?.label || '중급'}</span>
+        <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 13, color: '#b07d12' }}>{difficulty?.label || DIFFICULTIES[0].label}</span>
       </div>
       </Reveal>
     </>
@@ -754,7 +754,7 @@ export function GameToast({ msg }) {
     <div style={{ position: 'fixed', top: 'env(safe-area-inset-top)', bottom: 0, left: 0, right: 0, zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', padding: '24px 24px calc(24px + 12vh)' }}>
       <div className="tg-toast" style={{ display: 'flex', alignItems: 'center', gap: 7, background: 'rgba(43,39,48,0.94)', boxShadow: '0 8px 22px rgba(26,16,20,0.28)', borderRadius: 14, padding: '12px 18px 12px 16px', maxWidth: '90%' }}>
         <LockSimpleIcon size={16} weight="fill" color="#fff" style={{ flexShrink: 0 }} />
-        <span style={{ fontFamily: FONT_BODY, fontWeight: 500, fontSize: 14, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{msg}</span>
+        <span style={{ fontFamily: FONT_BODY, fontWeight: 500, fontSize: 14, color: '#fff', whiteSpace: 'normal', lineHeight: 1.35, wordBreak: 'keep-all' }}>{msg}</span>
       </div>
     </div>
   );

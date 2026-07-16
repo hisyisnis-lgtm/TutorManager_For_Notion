@@ -32,7 +32,7 @@ import { initBgm, startBgm, stopBgm } from '../game/tgBgm.js';
 import {
   getEndlessTimeLimit, computeScore, resolveEndOutcome, UNLOCK_THRESHOLD,
   loadEndlessBest, saveEndlessBest, headlineBest, isEndlessUnlocked,
-  ENDLESS_UNLOCK_REVEAL,
+  ENDLESS_UNLOCK_REVEAL, STAGES, stageRoundPool, saveStageScore,
 } from '../game/gameLogic.js';
 import { FigmaScreen, CountdownVisual, CdWaveEdge, GameToast, SettingsModal } from '../game/screens/shared.jsx';
 import { SplashScreen } from '../game/screens/SplashScreen.jsx';
@@ -200,7 +200,7 @@ export default function ToneGamePage() {
   const [totalAnswerTime, setTotalAnswerTime] = useState(0);
   const [answeredCount, setAnsweredCount] = useState(0);
 
-  const [selectedDifficulty, setSelectedDifficulty] = useState(DIFFICULTIES[0]);
+  const [selectedDifficulty, setSelectedDifficulty] = useState(STAGES[0]); // 스테이지 객체(티어+밴드) — 난이도처럼 gameKey·timeMultiplier 보유
   const [wordPoolByDiff, setWordPoolByDiff] = useState({});
   // 런 모드 단일 enum — 'normal'(난이도)|'practice'|'review'|'endless'|'theme'.
   // (기존 4-불리언 플래그가 시작/종료/그만두기마다 수동 동기화 필요 → 한 곳 빠뜨리면 기록 오염. enum 단일화로 원천 차단)
@@ -447,9 +447,11 @@ export default function ToneGamePage() {
         saveEndlessBest(studentToken, updated);
         setBest(headlineBest(studentToken));
       } else if (mode === 'normal') {
-        // 난이도 — best 로컬 갱신. 회원은 아래 pushMemberData로 서버(/game/me) 동기화.
+        // 난이도 — 티어 best 로컬 갱신(gameKey=티어). 회원은 아래 pushMemberData로 서버(/game/me) 동기화.
         const updated = { ...outcome.updated, updatedAt: Date.now() };
         saveBest(studentToken, gameKey, updated);
+        // 스테이지별 최고점 별도 저장(별·순차해제용) — 테마 아니고 스테이지(bandIndex)일 때만.
+        if (!themeMode && selectedDifficulty.bandIndex != null) saveStageScore(studentToken, selectedDifficulty.id, score);
         setBest(headlineBest(studentToken)); // 헤드라인(무한 우선, 없으면 통합) 갱신
       }
       // 연습·복습(else)은 최고기록 미반영 — 로컬 단어통계는 플레이 중 이미 저장됨(별도 동기화 불필요).
@@ -507,16 +509,19 @@ export default function ToneGamePage() {
             && outcome.previousBest < x.unlock.score && outcome.updated.bestScore >= x.unlock.score);
           mu = t?.unlockReveal || null;
         } else if (outcome.previousBest < UNLOCK_THRESHOLD && outcome.updated.bestScore >= UNLOCK_THRESHOLD) {
-          const idx = DIFFICULTIES.findIndex((d) => d.id === selectedDifficulty.id);
-          // 다음 난이도가 있으면 그 난이도의 해제 연출, 마지막 난이도면 무한 모드 해제.
-          mu = idx >= 0 && idx + 1 < DIFFICULTIES.length ? (DIFFICULTIES[idx + 1].unlockReveal || null) : ENDLESS_UNLOCK_REVEAL;
+          // 티어 best가 1000을 처음 넘음. 스테이지 체계에선 급 전환은 별 7개 게이트라 중간 연출 없음 —
+          // 마지막 급(고급) 티어만 무한 모드 해제 연출(무한은 여전히 고급 best 1000 기준).
+          const idx = DIFFICULTIES.findIndex((d) => d.id === (selectedDifficulty.tier || selectedDifficulty.id));
+          const isStage = selectedDifficulty.bandIndex != null;
+          if (idx === DIFFICULTIES.length - 1) mu = ENDLESS_UNLOCK_REVEAL;
+          else if (!isStage && idx >= 0) mu = DIFFICULTIES[idx + 1].unlockReveal || null;
         }
         if (mu) setModeUnlock(mu);
       }
 
       // 초급 노멀 저조 연속 감지 → 2연속이면 연습 모드 유도 플래그(모드선택 코치마크). 격려 톤(강요 아님).
       // 신호=최고 콤보(막 누르기 방어 — 점수는 오답 클리어 50점 누적으로 부풀어 실력 구분 불가).
-      if (mode === 'normal' && !themeMode && selectedDifficulty.id === 'easy') {
+      if (mode === 'normal' && !themeMode && (selectedDifficulty.tier || selectedDifficulty.id) === 'easy') {
         const lowKey = `game_easy_low_${studentToken}`;
         let lowN = 0; try { lowN = parseInt(localStorage.getItem(lowKey) || '0', 10) || 0; } catch { /* noop */ }
         lowN = maxCombo < LOW_EASY_MAX_COMBO ? lowN + 1 : 0;
@@ -760,15 +765,17 @@ export default function ToneGamePage() {
   const startGame = (difficulty) => {
     const d = difficulty || selectedDifficulty;
     if (difficulty && difficulty.id !== selectedDifficulty.id) setSelectedDifficulty(d);
-    const pool = wordPoolByDiff[d.id];
+    const poolId = d.tier || d.id; // 스테이지는 티어 풀 참조(밴드로 슬라이스), 일반 난이도는 자기 풀
+    const pool = wordPoolByDiff[poolId];
     if (!pool || pool.length === 0) {
       message.error('단어를 불러오지 못했어요. 잠시 후 다시 시도해주세요.');
       setScreen('difficulty');
-      fetchToneWords(d.id).then((w) => { if (Array.isArray(w) && w.length > 0) setWordPoolByDiff((prev) => ({ ...prev, [d.id]: w })); }).catch(() => {});
+      fetchToneWords(poolId).then((w) => { if (Array.isArray(w) && w.length > 0) setWordPoolByDiff((prev) => ({ ...prev, [poolId]: w })); }).catch(() => {});
       return;
     }
-    setGameMode('normal');    setRecordToBeat(loadBest(studentToken, d.gameKey)?.bestScore || 0); // 라이브 신기록 기준(이 난이도 직전 최고)
-    setRound(buildRoundWords(pool, wordStatsRef.current, ROUND_LENGTH)); // 교육적 가중 추첨(약점 우선·은은하게)
+    setGameMode('normal');    setRecordToBeat(loadBest(studentToken, d.gameKey)?.bestScore || 0); // 라이브 신기록 기준(티어 직전 최고)
+    const roundPool = d.bandIndex != null ? stageRoundPool(pool, d.bandIndex) : pool; // 스테이지=난이도 밴드(부족분 인접 보충)
+    setRound(buildRoundWords(roundPool, wordStatsRef.current, ROUND_LENGTH)); // 교육적 가중 추첨(약점 우선·은은하게)
     if (!isPreview) track('run_start', { m: d.id, k: identity.kind });
     resetRunState();
   };
@@ -777,15 +784,17 @@ export default function ToneGamePage() {
   const startPractice = (difficulty) => {
     const d = difficulty || selectedDifficulty;
     if (difficulty && difficulty.id !== selectedDifficulty.id) setSelectedDifficulty(d);
-    const pool = wordPoolByDiff[d.id];
+    const poolId = d.tier || d.id;
+    const pool = wordPoolByDiff[poolId];
     if (!pool || pool.length === 0) {
       message.error('단어를 불러오지 못했어요. 잠시 후 다시 시도해주세요.');
       setScreen('difficulty');
-      fetchToneWords(d.id).then((w) => { if (Array.isArray(w) && w.length > 0) setWordPoolByDiff((prev) => ({ ...prev, [d.id]: w })); }).catch(() => {});
+      fetchToneWords(poolId).then((w) => { if (Array.isArray(w) && w.length > 0) setWordPoolByDiff((prev) => ({ ...prev, [poolId]: w })); }).catch(() => {});
       return;
     }
     setGameMode('practice');    setRecordToBeat(0); // 연습=기록 미반영
-    setRound(buildRoundWords(pool, wordStatsRef.current, ROUND_LENGTH), { listen: false }); // 연습=듣기문제 없음(자체 발음듣기)
+    const roundPool = d.bandIndex != null ? stageRoundPool(pool, d.bandIndex) : pool;
+    setRound(buildRoundWords(roundPool, wordStatsRef.current, ROUND_LENGTH), { listen: false }); // 연습=듣기문제 없음(자체 발음듣기)
     if (!isPreview) track('run_start', { m: 'practice', k: identity.kind });
     resetRunState();
   };
@@ -1167,7 +1176,7 @@ export default function ToneGamePage() {
       <FigmaScreen>
         <ResultScreen score={score} maxCombo={maxCombo} avgMs={avgMsForResult}
           isNewBest={(reviewMode || practiceMode) ? false : (isNewBest || (isPreview && qs('newbest') === '1'))} previousBest={(reviewMode || practiceMode) ? 0 : (isPreview && qs('newbest') === '1' ? 800 : previousBest)}
-          suggestPractice={(suggestPractice && !practiceMode && !reviewMode && !endlessMode && !themeMode && selectedDifficulty.id === 'easy') || (isPreview && previewScreen === 'end' && qs('suggest') === '1')}
+          suggestPractice={(suggestPractice && !practiceMode && !reviewMode && !endlessMode && !themeMode && (selectedDifficulty.tier || selectedDifficulty.id) === 'easy') || (isPreview && previewScreen === 'end' && qs('suggest') === '1')}
           coachReady={!showGameOverBeat && !rankUp && !modeUnlock && celebrationQueue.length === 0} /* 결과 코치+연습유도 둘 다 이 게이트 뒤에서만 */
           practice={practiceMode} endless={endlessMode} endKind={endKind}
           onRetry={practiceMode ? () => startPractice(selectedDifficulty) : endlessMode ? () => startEndless() : reviewMode ? () => startReview(reviewWords) : themeMode ? () => startTheme(selectedTheme) : () => startGame(selectedDifficulty)}

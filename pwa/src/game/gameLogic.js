@@ -1,11 +1,11 @@
 // 성조게임 — 잠금 사다리 / 무한모드 / 헤드라인 최고점 등 순수 로직 헬퍼.
 // React 무관. localStorage 베스트 캐시(tgTokens) 위에서 동작 → 화면 컴포넌트·상태머신이 공유.
 // 참조 메모리: tone_game_redesign.md (잠금 사다리·무한·헤드라인)
-import { loadBest, saveBest } from './tgTokens.js';
-import { DIFFICULTIES, THEMES } from '../constants/toneGameWords.js';
+import { loadBest, saveBest, getTimeLimitForCombo } from './tgTokens.js';
+import { DIFFICULTIES, THEMES, ROUND_LENGTH } from '../constants/toneGameWords.js';
 
 // 통합 최고점수 — 3난이도 기록 중 최고(+ 그 난이도 라벨). 타이틀 카드는 '내 최고 실력'을 보여줌.
-export function bestLabelForKey(gameKey) { const d = DIFFICULTIES.find((x) => x.gameKey === gameKey); return d ? d.label : '초급'; }
+export function bestLabelForKey(gameKey) { const d = DIFFICULTIES.find((x) => x.gameKey === gameKey); return d ? d.label : (DIFFICULTIES[0]?.label || ''); }
 export function overallBestFromLocal(token) {
   let top = null;
   for (const d of DIFFICULTIES) {
@@ -54,6 +54,112 @@ export function unlockToastText(diffId) {
 }
 // 무한 모드 해제 연출(마지막 난이도 1000점 돌파 시) — 난이도별 연출은 DIFFICULTIES[].unlockReveal(데이터)이 담당.
 export const ENDLESS_UNLOCK_REVEAL = { icon: 'Infinity', label: '무한 모드', desc: '끝없이 이어지는 무한 모드가 열렸어요', accent: '#8B5CF6' };
+
+// ── 스테이지(난이도 세분화, 2026-07-16) ─────────────────
+// 각 난이도(티어)를 난이도순 5밴드로 나눔. 밴드=티어 풀을 난이도순 5구간으로 나눠 플레이. 새 단어 안 만들고 정렬만.
+// gameKey는 티어 유지(무한·업적·헤드라인·서버 동기 호환) — 스테이지별 점수는 별도 경량 저장(stageScores)으로 별·해제 계산.
+export const STAGES_PER_TIER = 5;
+export const STARS_PER_STAGE = 3;
+// 급 전환(초→중→고): 이전 급을 '다 깨야'(모든 스테이지 별 1개↑) — 비연속 잠금 없이 깔끔한 순차(2026-07-16 사용자 결정, 구 별7개 폐기)
+export const STAGES = DIFFICULTIES.flatMap((d) => Array.from({ length: STAGES_PER_TIER }, (_, i) => ({
+  tier: d.id, tierLabel: d.label, bandIndex: i,
+  id: `${d.id}-${i + 1}`, label: `${d.label} ${i + 1}`,
+  gameKey: d.gameKey, timeMultiplier: d.timeMultiplier, // 기록·페이스는 티어 공유
+})));
+// 1판(ROUND_LENGTH단어) 이론상 최고점 — 무실수+즉답(콤보 보너스 i*20 + 시간보너스 timeLimit/100). 별 임계 기준.
+export function tierMaxScore(mult) {
+  let sum = 0;
+  for (let i = 1; i <= ROUND_LENGTH; i += 1) {
+    const tl = Math.max(4000, getTimeLimitForCombo(i - 1, mult)); // 단어 i 타이머 = 콤보(i-1) 기준
+    sum += 100 + i * 20 + Math.floor(tl / 100);
+  }
+  return sum;
+}
+// 스테이지 별 3개 임계 = 1판 최고점의 1/3·2/3·3/3(사용자 결정 2026-07-16)
+export function stageStarScores(mult) {
+  const m = tierMaxScore(mult);
+  return [Math.round(m / 3), Math.round((m * 2) / 3), m];
+}
+// 스테이지별 최고 점수 — 경량 별도 저장(기록 gameKey는 티어 공유라 스테이지 구분 불가 → 여기서 별 계산)
+function stageScoresKey(token) { return `game_stage_scores_${token}`; }
+export function loadStageScores(token) { try { return JSON.parse(localStorage.getItem(stageScoresKey(token)) || '{}') || {}; } catch { return {}; } }
+export function stageScoreOf(token, id) { return loadStageScores(token)[id] || 0; }
+export function saveStageScore(token, id, score) {
+  try { const m = loadStageScores(token); if ((score || 0) > (m[id] || 0)) { m[id] = score; localStorage.setItem(stageScoresKey(token), JSON.stringify(m)); } } catch { /* noop */ }
+}
+export function stageStars(token, stage) {
+  const best = stageScoreOf(token, stage.id);
+  return stageStarScores(stage.timeMultiplier).filter((s) => best >= s).length;
+}
+export function stageStarFlags(token, stage) {
+  const best = stageScoreOf(token, stage.id);
+  return stageStarScores(stage.timeMultiplier).map((s) => best >= s);
+}
+export function tierTotalStars(token, tierId) {
+  return STAGES.filter((s) => s.tier === tierId).reduce((sum, s) => sum + stageStars(token, s), 0);
+}
+// 급 클리어 진행 — 별 1개 이상인 스테이지 수 / 5
+export function tierClearedCount(token, tierId) {
+  return STAGES.filter((s) => s.tier === tierId).filter((s) => stageStars(token, s) >= 1).length;
+}
+export function isTierCleared(token, tierId) {
+  return tierClearedCount(token, tierId) >= STAGES_PER_TIER;
+}
+// 단어 난이도 추정 — 음절 수 지배 + 성조 난이도(3성>경성>2성>1·4성). 강사님 단어가 들어와도 자동 정렬됨.
+export function wordDifficulty(w) {
+  const tones = (w && w.tones) || [];
+  let tone = 0;
+  for (const t of tones) tone += (t === 3 ? 3 : t === 0 ? 2 : t === 2 ? 1 : 0);
+  return tones.length * 100 + tone;
+}
+// 티어 풀 → 난이도순 5밴드(각 밴드 = 단어 배열)
+export function stageBands(pool) {
+  const sorted = [...(pool || [])].sort((a, b) => wordDifficulty(a) - wordDifficulty(b));
+  const bands = Array.from({ length: STAGES_PER_TIER }, () => []);
+  const n = sorted.length || 1;
+  sorted.forEach((w, i) => bands[Math.min(STAGES_PER_TIER - 1, Math.floor((i * STAGES_PER_TIER) / n))].push(w));
+  return bands;
+}
+// 스테이지 한 판 단어 풀 = 해당 밴드 + 부족분을 인접 밴드에서 보충(≥minCount). 단어가 늘면 밴드만으로 참.
+export function stageRoundPool(pool, bandIndex, minCount = 10) {
+  const bands = stageBands(pool);
+  let out = [...(bands[bandIndex] || [])];
+  for (let dd = 1; dd < STAGES_PER_TIER && out.length < minCount; dd++) {
+    if (bands[bandIndex - dd]) out = out.concat(bands[bandIndex - dd]);
+    if (out.length < minCount && bands[bandIndex + dd]) out = out.concat(bands[bandIndex + dd]);
+  }
+  return out.length ? out : (pool || []);
+}
+function prevStageOf(stage) { return stage.bandIndex > 0 ? STAGES.find((s) => s.tier === stage.tier && s.bandIndex === stage.bandIndex - 1) : null; }
+// 해제 규칙: 급 첫 스테이지=이전 급 별 총합 ≥ TIER_ADVANCE_STARS(초급1은 항상). 그 외=직전 스테이지 별 ≥ 1.
+export function isStageUnlocked(token, stage) {
+  if (stage.bandIndex === 0) {
+    const tierIdx = DIFFICULTIES.findIndex((d) => d.id === stage.tier);
+    if (tierIdx <= 0) return true;
+    return isTierCleared(token, DIFFICULTIES[tierIdx - 1].id); // 이전 급 전부 클리어
+  }
+  const prev = prevStageOf(stage);
+  return prev ? stageStars(token, prev) >= 1 : true; // 급 내: 직전 스테이지 별 1개↑
+}
+// 해제 진행(게이지·문구용) — 급경계=이전 급 클리어 수({kind:'cleared',cur,need:5}), 급내=직전 스테이지 별1 점수({kind:'score',cur,need}). 열려있으면 null.
+export function stageUnlockProgress(token, stage) {
+  if (isStageUnlocked(token, stage)) return null;
+  if (stage.bandIndex === 0) {
+    const tierIdx = DIFFICULTIES.findIndex((d) => d.id === stage.tier);
+    const prevTier = tierIdx > 0 ? DIFFICULTIES[tierIdx - 1] : null;
+    return { kind: 'cleared', cur: prevTier ? tierClearedCount(token, prevTier.id) : 0, need: STAGES_PER_TIER, prevLabel: prevTier ? prevTier.label : '' };
+  }
+  const prev = prevStageOf(stage);
+  const firstStar = stageStarScores(prev.timeMultiplier)[0];
+  return { kind: 'score', cur: stageScoreOf(token, prev.id), need: firstStar, prevLabel: prev.label };
+}
+export function stageUnlockToastText(token, stage) {
+  const p = stageUnlockProgress(token, stage);
+  if (!p) return '';
+  return p.kind === 'cleared'
+    ? `${p.prevLabel} 모두 깨면 열려요`
+    : `${p.prevLabel} 별 하나면 열려요`;
+}
 
 // ── 테마 모드(난이도와 별개 축) ──────────────────────────
 // 각 테마는 자체 gameKey라 최고점·리더보드가 난이도처럼 자동으로 붙는다(종료 처리도 normal과 동일, gameKey만 다름).

@@ -11,12 +11,14 @@ import toneWordsData from './toneWordsData.json';
 
 // timeMultiplier: 단어당 시간 배수(base 7000ms × 배수). 콤보0 기준 초급30·중급20·고급10초(균등 10초 간격), 콤보 쌓이면 기존처럼 가속.
 // unlockReveal: '이 난이도가 열렸을 때'의 전용 연출 데이터(아이콘·카피·액센트). 첫 난이도는 항상 열려 있어 없음.
+// 라벨: 입문/실전/고수(2026-07-16 사용자 결정, 구 초급/중급/고급). id·gameKey는 유지(기록·잠금 호환).
+// hanzi: 카운트다운 핀에 붙는 급 상징 한자(入门·实战·高手). 라벨과 한 곳에서 관리하려고 여기 둠(구 shared.jsx DIFF_HANZI).
 export const DIFFICULTIES = [
-  { id: 'easy', gameKey: 'tone-easy', label: '초급', desc: '기초 단어', timeMultiplier: 4.2857 },   // 콤보0 ≈30초
-  { id: 'normal', gameKey: 'tone-normal', label: '중급', desc: '일상 회화', timeMultiplier: 2.8571, // 콤보0 ≈20초
-    unlockReveal: { icon: 'Rocket', label: '중급 모드', desc: '중급 난이도에 도전할 수 있어요', accent: '#F2484C' } },
-  { id: 'hard', gameKey: 'tone-hard', label: '고급', desc: '도전 단어', timeMultiplier: 1.4286,   // 콤보0 ≈10초
-    unlockReveal: { icon: 'Crown', label: '고급 모드', desc: '고급 난이도에 도전할 수 있어요', accent: '#F0A91E' } },
+  { id: 'easy', gameKey: 'tone-easy', label: '입문', hanzi: '入', desc: '기초 단어', timeMultiplier: 4.2857 },   // 콤보0 ≈30초
+  { id: 'normal', gameKey: 'tone-normal', label: '실전', hanzi: '战', desc: '일상 회화', timeMultiplier: 2.8571, // 콤보0 ≈20초
+    unlockReveal: { icon: 'Rocket', label: '실전 모드', desc: '실전에 도전할 수 있어요', accent: '#F2484C' } },
+  { id: 'hard', gameKey: 'tone-hard', label: '고수', hanzi: '高', desc: '도전 단어', timeMultiplier: 1.4286,   // 콤보0 ≈10초
+    unlockReveal: { icon: 'Crown', label: '고수 모드', desc: '고수에 도전할 수 있어요', accent: '#F0A91E' } },
 ];
 
 // 테마 모드 — 난이도와 별개 축. 각 테마가 자체 gameKey라 최고점(loadBest)이 난이도처럼 자동으로 붙는다.

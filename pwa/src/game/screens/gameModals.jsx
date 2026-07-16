@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { HandWavingIcon, InstagramLogoIcon, YoutubeLogoIcon, ArticleIcon, CaretRightIcon, ArrowsClockwiseIcon, PlayIcon, InfinityIcon, StarIcon, QuestionIcon, DevicesIcon, SignInIcon } from '@phosphor-icons/react';
 import { TG, FONT_TITLE, FONT_BODY, FONT_NUM, SHADOW, TOUCH_OPT, loadBest, saveBest } from '../tgTokens.js';
 import { GAMEKEY, loadEndlessBest, saveEndlessBest } from '../gameLogic.js';
+import { DIFFICULTIES } from '../../constants/toneGameWords.js';
 import { track } from '../gameAnalytics.js';
 
 // 복습 시작 모달 — 모드선택 '복습' 탭 시. 복습이 뭔지 짧게 안내 + [게임 시작] 눌러야 진입.
@@ -207,7 +208,7 @@ export function DebugScoreModal({ studentToken, onClose, onApplied }) {
     hard: loadBest(studentToken, GAMEKEY.hard)?.bestScore || 0,
     endless: loadEndlessBest(studentToken)?.bestScore || 0,
   }));
-  const rows = [['easy', '초급'], ['normal', '중급'], ['hard', '고급'], ['endless', '무한']];
+  const rows = [...DIFFICULTIES.map((d) => [d.id, d.label]), ['endless', '무한']];
   const apply = () => {
     for (const id of ['easy', 'normal', 'hard']) {
       const prev = loadBest(studentToken, GAMEKEY[id]) || {};

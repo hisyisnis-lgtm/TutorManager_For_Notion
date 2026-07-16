@@ -94,20 +94,20 @@ describe('잠금 사다리 — diffBestScore / isDifficultyUnlocked / isEndlessU
 
 describe('해제 안내 문구', () => {
   it('unlockReqText / unlockToastText는 난이도별 조건을 안내', () => {
-    expect(unlockReqText('normal')).toContain('초급');
-    expect(unlockReqText('hard')).toContain('중급');
+    expect(unlockReqText('normal')).toContain('입문');
+    expect(unlockReqText('hard')).toContain('실전');
     expect(unlockReqText('easy')).toBe('');
-    expect(unlockToastText('normal')).toContain('초급');
-    expect(unlockToastText('hard')).toContain('중급');
+    expect(unlockToastText('normal')).toContain('입문');
+    expect(unlockToastText('hard')).toContain('실전');
   });
 });
 
 describe('최고점 라벨 / 통합 최고', () => {
   it('bestLabelForKey는 gameKey를 난이도 라벨로', () => {
-    expect(bestLabelForKey('tone-easy')).toBe('초급');
-    expect(bestLabelForKey('tone-normal')).toBe('중급');
-    expect(bestLabelForKey('tone-hard')).toBe('고급');
-    expect(bestLabelForKey('unknown')).toBe('초급'); // 폴백
+    expect(bestLabelForKey('tone-easy')).toBe('입문');
+    expect(bestLabelForKey('tone-normal')).toBe('실전');
+    expect(bestLabelForKey('tone-hard')).toBe('고수');
+    expect(bestLabelForKey('unknown')).toBe('입문'); // 폴백
   });
 
   it('overallBestFromLocal은 3난이도 중 최고 점수+라벨', () => {
@@ -116,7 +116,7 @@ describe('최고점 라벨 / 통합 최고', () => {
     saveBest(TOKEN, GAMEKEY.hard, { bestScore: 1200 });
     const top = overallBestFromLocal(TOKEN);
     expect(top.bestScore).toBe(1500);
-    expect(top.label).toBe('중급');
+    expect(top.label).toBe('실전');
   });
 
   it('overallBestFromLocal은 기록이 전혀 없으면 null', () => {
@@ -129,7 +129,7 @@ describe('최고점 라벨 / 통합 최고', () => {
       { gameKey: 'tone-hard', bestScore: 1800, bestMaxCombo: 7, bestAvgSec: 2 },
     ]);
     expect(top.bestScore).toBe(1800);
-    expect(top.label).toBe('고급');
+    expect(top.label).toBe('고수');
     expect(top.bestAvgMs).toBe(2000);
   });
 });
@@ -147,7 +147,7 @@ describe('headlineBest — 무한 우선', () => {
     saveBest(TOKEN, GAMEKEY.normal, { bestScore: 900 });
     const h = headlineBest(TOKEN);
     expect(h.bestScore).toBe(900);
-    expect(h.label).toBe('중급');
+    expect(h.label).toBe('실전');
   });
 
   it('아무 기록도 없으면 null', () => {

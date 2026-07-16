@@ -7,10 +7,16 @@ import { ShakeButton, Reveal, CoachBubble, prefersReducedMotion } from './shared
 import { ReviewStartModal, EndlessStartModal } from './gameModals.jsx';
 import CoachMarkOverlay from '../../components/ui/CoachMarkOverlay.jsx';
 import { useTabTip } from '../../hooks/useTabTip.js';
+import { DIFFICULTIES } from '../../constants/toneGameWords.js';
+import { UNLOCK_THRESHOLD } from '../gameLogic.js';
+
+const FIRST_LABEL = DIFFICULTIES[0].label;                       // 난이도 사다리 첫 급(현재 '입문')
+const LAST_LABEL = DIFFICULTIES[DIFFICULTIES.length - 1].label;  // 마지막 급(현재 '고수') — 무한 해제 조건
+const ENDLESS_REQ = `${LAST_LABEL} ${UNLOCK_THRESHOLD.toLocaleString()}점`;
 
 // 첫 진입 코치마크 — 난이도 경로 안내. Reveal 등장(≈0.9s)이 끝난 뒤 표시(ready 게이트).
 const MODE_COACH = [
-  { selector: '[data-coach="mode-difficulty"]', label: '여기서 난이도를 골라요. 초급부터 차근차근 시작해보세요!' },
+  { selector: '[data-coach="mode-difficulty"]', label: `여기서 난이도를 골라요. ${FIRST_LABEL}부터 차근차근 시작해보세요!` },
   { selector: '[data-coach="mode-theme"]', label: '드라마·여행 등 취향대로 즐기는 테마 모드도 있어요.' },
   { selector: '[data-coach="mode-aux"]', label: '가볍게 연습하거나, 틀린 단어만 모아 복습할 수 있어요.' },
 ];
@@ -181,9 +187,9 @@ export function ModeScreen({ endlessUnlocked, endlessBest = 0, reviewCount = 0, 
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
           <Reveal i={2} style={{ paddingLeft: 24, paddingRight: 24 }}>
             <div style={{ display: 'flex', gap: 12 }}>
-              <BigTile Icon={StairsIcon} grad="linear-gradient(150deg, #FF8A6B 0%, #F2484C 100%)" glow="rgba(242,72,76,0.30)" dot="#F2484C" title="난이도 모드" desc="초급부터 차근차근" onClick={onDifficulty} coachId="mode-difficulty" />
+              <BigTile Icon={StairsIcon} grad="linear-gradient(150deg, #FF8A6B 0%, #F2484C 100%)" glow="rgba(242,72,76,0.30)" dot="#F2484C" title="난이도 모드" desc={`${FIRST_LABEL}부터 차근차근`} onClick={onDifficulty} coachId="mode-difficulty" />
               <BigTile Icon={InfinityIcon} grad="linear-gradient(150deg, #FFC85C 0%, #F0A11E 100%)" glow="rgba(240,161,30,0.32)" dot="#F0A91E" title="무한 모드" desc="서든데스" dangerDesc
-                locked={!endlessUnlocked} lockText="고급 1,000점 달성" onClick={() => setEndlessOpen(true)} onLocked={() => onLocked && onLocked('고급 1,000점을 달성하면 열려요')} />
+                locked={!endlessUnlocked} lockText={`${ENDLESS_REQ} 달성`} onClick={() => setEndlessOpen(true)} onLocked={() => onLocked && onLocked(`${ENDLESS_REQ}을 달성하면 열려요`)} />
             </div>
           </Reveal>
         </div>
