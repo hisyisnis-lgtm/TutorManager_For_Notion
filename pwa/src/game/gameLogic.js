@@ -141,6 +141,22 @@ export function isStageUnlocked(token, stage) {
   const prev = prevStageOf(stage);
   return prev ? stageStars(token, prev) >= 1 : true; // 급 내: 직전 스테이지 별 1개↑
 }
+// 트레이닝 풀 = 현재 '열린' 스테이지들의 밴드 단어 합집합(hanzi 중복 제거). 진도 따라 자동 확장 —
+//   입문1만 열렸으면 입문1 단어만, 스테이지가 열릴수록 범위가 넓어진다. 잠긴 스테이지 단어는 안 섞임.
+//   wordPoolByDiff: { [tier]: word[] }. 밴드는 티어별 1회만 계산(sort 반복 방지). 선정 가중은 호출부 buildRoundWords가 담당.
+export function unlockedTrainingPool(token, wordPoolByDiff) {
+  const seen = new Set(); const out = []; const bandsByTier = {};
+  for (const stage of STAGES) {
+    if (!isStageUnlocked(token, stage)) continue;
+    const pool = (wordPoolByDiff && wordPoolByDiff[stage.tier]) || [];
+    if (pool.length === 0) continue;
+    const bands = bandsByTier[stage.tier] || (bandsByTier[stage.tier] = stageBands(pool));
+    for (const w of (bands[stage.bandIndex] || [])) {
+      if (!seen.has(w.hanzi)) { seen.add(w.hanzi); out.push(w); }
+    }
+  }
+  return out;
+}
 // 해제 진행(게이지·문구용) — 급경계=이전 급 클리어 수({kind:'cleared',cur,need:5}), 급내=직전 스테이지 별1 점수({kind:'score',cur,need}). 열려있으면 null.
 export function stageUnlockProgress(token, stage) {
   if (isStageUnlocked(token, stage)) return null;

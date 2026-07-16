@@ -11,7 +11,7 @@ import CoachMarkOverlay from '../../components/ui/CoachMarkOverlay.jsx';
 
 // 연습 모드 첫 진입 코치마크(1회) — 시간 제한 없음 + 발음듣기/정답보기 안내. 연습은 타이머가 없어 딤 오버레이가 안전.
 const PRACTICE_COACH = [
-  { selector: '[data-coach="prac-badge"]', label: '연습 모드예요. 시간 제한이 없으니 천천히 생각해도 괜찮아요.' },
+  { selector: '[data-coach="prac-badge"]', label: '트레이닝 모드예요. 시간 제한이 없으니 천천히 생각해도 괜찮아요.' },
   { selector: '[data-coach="prac-actions"]', label: '발음을 듣거나 정답을 볼 수 있어요. 부담 없이 익혀봐요! 🐼' },
 ];
 
@@ -506,7 +506,7 @@ export function GameScreen({ word, entered, currentSyl, completed, timedOut, wor
       {practice ? (
         <Reveal i={1} play={playReveal} style={{ position: 'absolute', left: 20, right: 20, top: 69, display: 'flex', justifyContent: 'center' }}>
           <div data-coach="prac-badge" style={{ display: 'inline-flex', alignItems: 'center', padding: '8px 14px', borderRadius: 16, background: 'rgba(54,201,141,0.14)' }}>
-            <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 13, color: TG.SUCCESS }}>연습 모드 · 시간 제한 없음</span>
+            <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 13, color: TG.SUCCESS }}>트레이닝 · 시간 제한 없음</span>
           </div>
         </Reveal>
       ) : (

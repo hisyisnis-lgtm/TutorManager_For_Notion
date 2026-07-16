@@ -27,7 +27,7 @@ const RESULT_COACH = [
 ];
 // 초급 저조 시 연습 유도 코치마크 — '모드 선택' 버튼만 스포트라이트(조건부·결과화면 1회).
 const SUGGEST_COACH = [
-  { selector: '[data-coach="result-modeselect"]', label: "여기서 '연습 모드'를 골라 천천히 연습해봐요! 🐼" },
+  { selector: '[data-coach="result-modeselect"]', label: "여기서 '트레이닝'을 골라 천천히 익혀봐요! 🐼" },
 ];
 
 // 하단 보조 버튼 (흰 배경 아웃라인). flex:1로 단일=풀폭 / 2개=반반.
@@ -120,7 +120,7 @@ export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, 
       </Reveal>
       {/* 코치 — 통계카드 하단과 CTA 사이 가용공간 세로중앙. */}
       <Reveal i={4} style={{ position: 'absolute', left: 24, right: 24, top: 452, bottom: 'calc(150px + env(safe-area-inset-bottom))', display: 'flex', alignItems: 'center' }}>
-        <CoachBubble text={suggestPractice ? `${DIFFICULTIES[0].label} 단계가 어렵나요? 천천히 익혀봐요` : practice ? '잘했어요! 또 연습해볼까요?' : endKind === 'miss' ? '아쉽게 틀렸어요! 다시 도전해볼까요?' : '다시 도전해서 신기록을 깨볼까요?'} />
+        <CoachBubble text={suggestPractice ? `${DIFFICULTIES[0].label} 단계가 어렵나요? 천천히 익혀봐요` : practice ? '잘했어요! 또 해볼까요?' : endKind === 'miss' ? '아쉽게 틀렸어요! 다시 도전해볼까요?' : '다시 도전해서 신기록을 깨볼까요?'} />
       </Reveal>
       {/* 다시 도전 (하단 고정) — 최하단 '난이도 바꾸기' 위 */}
       <Reveal i={5} style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(80px + env(safe-area-inset-bottom))' }}>

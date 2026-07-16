@@ -21,8 +21,8 @@ const DIFF_COACH = [
   { selector: '[data-coach="diff-start"]', label: '가운데 스테이지로 시작하려면 이 버튼을 눌러요!' },
 ];
 
-export function DifficultyScreen({ selected, studentToken, onSelect, onStart, onBack, onLocked, forPractice = false }) {
-  const tip = useTabTip('game-difficulty', !forPractice);
+export function DifficultyScreen({ selected, studentToken, onSelect, onStart, onBack, onLocked }) {
+  const tip = useTabTip('game-difficulty', true);
   const scrollerRef = useRef(null);
   const rowRefs = useRef([]);
   const rafRef = useRef(0);
@@ -77,11 +77,11 @@ export function DifficultyScreen({ selected, studentToken, onSelect, onStart, on
 
   const focused = V_STAGES[active] || V_STAGES[V_STAGES.length - 1];
   const centerY = (i) => padY + i * SLOT_H + SLOT_H / 2;
-  const stageUnlocked = (s) => forPractice || isStageUnlocked(studentToken, s);
+  const stageUnlocked = (s) => isStageUnlocked(studentToken, s);
   // 게이지는 '바로 다음에 열릴' 한 스테이지에만 — 난이도순 첫 잠금 스테이지(비연속 해제도 안전).
   const firstLocked = STAGES.find((s) => !stageUnlocked(s));
   const nextLockedVIdx = firstLocked ? V_STAGES.findIndex((s) => s.id === firstLocked.id) : -1;
-  const focusedUnlocked = forPractice || isStageUnlocked(studentToken, focused);
+  const focusedUnlocked = isStageUnlocked(studentToken, focused);
 
   return (
     <>
@@ -94,7 +94,7 @@ export function DifficultyScreen({ selected, studentToken, onSelect, onStart, on
           <button onClick={onBack} aria-label="뒤로" className="tg-press" style={{ width: 40, height: 40, borderRadius: 20, background: '#fff', boxShadow: '0px 3px 6px rgba(43,79,120,0.12)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, ...TOUCH_OPT }}>
             <CaretLeftIcon size={20} weight="bold" color={TG.INK} />
           </button>
-          <span style={{ fontFamily: FONT_TITLE, fontSize: 22, color: '#2b2730' }}>{forPractice ? '연습할 스테이지' : '난이도 선택'}</span>
+          <span style={{ fontFamily: FONT_TITLE, fontSize: 22, color: '#2b2730' }}>난이도 선택</span>
         </div>
       </Reveal>
 
@@ -106,7 +106,7 @@ export function DifficultyScreen({ selected, studentToken, onSelect, onStart, on
       }}>
         {/* 스테이지 사이를 잇는 트레일 — 구간별. 위 스테이지에 도달(해제)했으면 골드 실선(깬 길), 아니면 옅은 점선(남은 길). 카드 뒤(간격에서 보임) */}
         {padY > 0 && V_STAGES.slice(0, -1).map((s, i) => {
-          const climbed = forPractice || stageStarFlags(studentToken, V_STAGES[i + 1])[0]; // 아래 칸(쉬움)을 '깼으면'(별1+) 이 구간 오른 걸로 → 골드
+          const climbed = stageStarFlags(studentToken, V_STAGES[i + 1])[0]; // 아래 칸(쉬움)을 '깼으면'(별1+) 이 구간 오른 걸로 → 골드
           return (
             <div key={`seg-${s.id}`} aria-hidden="true" style={{
               position: 'absolute', left: '50%', top: centerY(i), height: centerY(i + 1) - centerY(i),
@@ -121,7 +121,7 @@ export function DifficultyScreen({ selected, studentToken, onSelect, onStart, on
           const isActive = idx === active;
           const c = DIFF_COLORS[s.tier];
           const Icon = STAGE_ICONS[s.bandIndex] || LeafIcon;
-          const unlocked = forPractice || isStageUnlocked(studentToken, s);
+          const unlocked = isStageUnlocked(studentToken, s);
           const prog = unlocked ? null : stageUnlockProgress(studentToken, s);
           return (
             <div key={s.id} ref={(n) => { rowRefs.current[idx] = n; }}
@@ -206,7 +206,7 @@ export function DifficultyScreen({ selected, studentToken, onSelect, onStart, on
           }}>
           {focusedUnlocked ? (
             <>
-              <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 19, color: '#fff' }}>{focused.label} {forPractice ? '연습' : '시작'}</span>
+              <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 19, color: '#fff' }}>{focused.label} 시작</span>
               <PlayIcon size={13} weight="fill" color="#fff" />
             </>
           ) : (

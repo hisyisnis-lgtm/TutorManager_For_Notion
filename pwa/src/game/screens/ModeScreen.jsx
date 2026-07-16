@@ -1,10 +1,10 @@
 // 모드 선택 — 중요도 2단. 주력 큰 카드(난이도·테마) + 보조 칩(무한·연습·복습).
 // Figma "26. 모드 선택 v2". 잠긴 카드(무한)는 흔들림+토스트.
-import { CaretLeftIcon, CaretRightIcon, StairsIcon, InfinityIcon, SkullIcon, LockSimpleIcon, GraduationCapIcon, ArrowsClockwiseIcon, CardsThreeIcon } from '@phosphor-icons/react';
+import { CaretLeftIcon, CaretRightIcon, StairsIcon, InfinityIcon, SkullIcon, LockSimpleIcon, GraduationCapIcon, CardsThreeIcon } from '@phosphor-icons/react';
 import { TG, FONT_TITLE, FONT_BODY, TOUCH_OPT } from '../tgTokens.js';
 import { useState, useRef, useLayoutEffect } from 'react';
 import { ShakeButton, Reveal, CoachBubble, prefersReducedMotion } from './shared.jsx';
-import { ReviewStartModal, EndlessStartModal } from './gameModals.jsx';
+import { EndlessStartModal } from './gameModals.jsx';
 import CoachMarkOverlay from '../../components/ui/CoachMarkOverlay.jsx';
 import { useTabTip } from '../../hooks/useTabTip.js';
 import { DIFFICULTIES } from '../../constants/toneGameWords.js';
@@ -18,11 +18,11 @@ const ENDLESS_REQ = `${LAST_LABEL} ${UNLOCK_THRESHOLD.toLocaleString()}점`;
 const MODE_COACH = [
   { selector: '[data-coach="mode-difficulty"]', label: `여기서 난이도를 골라요. ${FIRST_LABEL}부터 차근차근 시작해보세요!` },
   { selector: '[data-coach="mode-theme"]', label: '드라마·여행 등 취향대로 즐기는 테마 모드도 있어요.' },
-  { selector: '[data-coach="mode-aux"]', label: '가볍게 연습하거나, 틀린 단어만 모아 복습할 수 있어요.' },
+  { selector: '[data-coach="mode-aux"]', label: '내 실력 범위에서 약한 단어를 골라 자유롭게 트레이닝할 수 있어요.' },
 ];
-// 초급 저조 시 연습 유도 코치마크(조건부·1회). 연습 칩만 스포트라이트.
+// 입문 저조 시 트레이닝 유도 코치마크(조건부·1회). 트레이닝 칩만 스포트라이트.
 const PRACTICE_NUDGE = [
-  { selector: '[data-coach="mode-practice"]', label: '시간 제한 없이 천천히 연습할 수 있어요. 여기를 눌러 연습해봐요! 🐼' },
+  { selector: '[data-coach="mode-practice"]', label: '시간 제한 없이 약한 단어를 천천히 트레이닝할 수 있어요. 여기를 눌러봐요! 🐼' },
 ];
 
 // 색상 점 파티클 이미터 — 원 뒤에서 모드 색상의 작은 원이 방사형으로 퍼지며 '작아지면서' 사라짐(앰비언트).
@@ -163,9 +163,8 @@ function ModeChip({ Icon, iconColor, tint, label, locked, onClick, onLocked, coa
   );
 }
 
-export function ModeScreen({ endlessUnlocked, endlessBest = 0, reviewCount = 0, onDifficulty, onTheme, onEndless, onPractice, onReview, onBack, onLocked, highlightPractice = false, onHighlightDone }) {
+export function ModeScreen({ endlessUnlocked, endlessBest = 0, onDifficulty, onTheme, onEndless, onTraining, onBack, onLocked, highlightPractice = false, onHighlightDone }) {
   const tip = useTabTip('game-mode', true);
-  const [reviewOpen, setReviewOpen] = useState(false);
   const [endlessOpen, setEndlessOpen] = useState(false);
   return (
     <>
@@ -201,18 +200,15 @@ export function ModeScreen({ endlessUnlocked, endlessBest = 0, reviewCount = 0, 
           </Reveal>
           <Reveal i={4} style={{ paddingLeft: 24, paddingRight: 24 }}>
             <div data-coach="mode-aux" style={{ display: 'flex', gap: 11 }}>
-              <ModeChip Icon={GraduationCapIcon} iconColor={TG.SUCCESS_GLOW} tint="rgba(54,201,141,0.14)" label="연습" onClick={onPractice} coachId="mode-practice" />
-              <ModeChip Icon={ArrowsClockwiseIcon} iconColor="#4D8DFF" tint="rgba(77,141,255,0.14)" label="복습"
-                onClick={() => { if (reviewCount > 0) setReviewOpen(true); else onLocked && onLocked('아직 복습할 단어가 없어요. 먼저 게임을 플레이해보세요'); }} />
+              <ModeChip Icon={GraduationCapIcon} iconColor={TG.SUCCESS_GLOW} tint="rgba(54,201,141,0.14)" label="트레이닝" onClick={onTraining} coachId="mode-practice" />
             </div>
           </Reveal>
         </div>
       </div>
       <CoachMarkOverlay visible={tip.visible} onDone={tip.dismiss} steps={MODE_COACH} delay={160} showControls={false} />
-      {/* 초급 저조 유도 — 첫 진입 코치와 안 겹치게(그게 끝난 뒤에만), 연습 칩만 강조.
-          forceLastStep: 주변 탭 흡수 → 연습 칩을 실제로 눌러야만 진행(칩 onClick=onPractice가 플래그 해제+연습 진입). */}
+      {/* 입문 저조 유도 — 첫 진입 코치와 안 겹치게(그게 끝난 뒤에만), 트레이닝 칩만 강조.
+          forceLastStep: 주변 탭 흡수 → 트레이닝 칩을 실제로 눌러야만 진행(칩 onClick=onTraining이 플래그 해제+트레이닝 진입). */}
       <CoachMarkOverlay visible={highlightPractice && !tip.visible} onDone={() => onHighlightDone && onHighlightDone()} steps={PRACTICE_NUDGE} delay={200} showControls={false} forceLastStep />
-      {reviewOpen && <ReviewStartModal count={reviewCount} onStart={() => { setReviewOpen(false); onReview && onReview(); }} onClose={() => setReviewOpen(false)} />}
       {endlessOpen && <EndlessStartModal best={endlessBest} onStart={() => { setEndlessOpen(false); onEndless && onEndless(); }} onClose={() => setEndlessOpen(false)} />}
     </>
   );
