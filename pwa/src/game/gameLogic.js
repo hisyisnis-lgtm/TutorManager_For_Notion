@@ -76,12 +76,11 @@ export function themeUnlockToastText(theme) {
   if (!theme || !theme.unlock) return '';
   return `${labelForGameKey(theme.unlock.byGameKey)} ${theme.unlock.score.toLocaleString()}점을 달성하면 열려요`;
 }
-// 테마 성취 별(0~3) — 테마 최고점 구간별 별 개수. 카드에 표기해 재도전 동기 부여.
-// ★2=1000은 잠금 해제 기준(UNLOCK_THRESHOLD)과 정합. 임계값은 점수 분포 보고 튜닝 여지.
+// 테마 성취 별(0~3) — 한 판 최고점 구간별 별 개수. **콤보 조건 없이 순수 점수 기준**(2026-07-16 사용자 결정).
+// 점수 임계가 오름차순이라 별은 항상 왼쪽부터 연속 채워짐(구멍 없음). ★2=1000은 잠금 해제 기준(UNLOCK_THRESHOLD)과 정합.
+// 임계값(특히 ③1800)은 점수 분포 보고 튜닝 여지. 1판 이론상 최고 ≈3,440(무실수+즉답), 현실 풀콤보 ≈2,500~2,900.
 export const THEME_STAR_SCORES = [500, 1000, 1800];
 export function themeStars(best) { return THEME_STAR_SCORES.filter((s) => best >= s).length; }
-// 다음 별의 목표 점수(이미 별 3개면 null)
-export function themeNextStarScore(best) { return THEME_STAR_SCORES.find((s) => best < s) ?? null; }
 // 무한모드 제한시간 — 두 축으로 단축(둘 다):
 //  ① 클리어 램프: 30초 시작 → 단어당 1.4초씩 → 10초(약 14단어에 도달)
 //  ② 콤보 가속: 콤보 쌓이면 추가로 빨라짐(콤보당 -5%, 콤보7+면 65%), 끊기면 회복

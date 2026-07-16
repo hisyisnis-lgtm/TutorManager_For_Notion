@@ -2,10 +2,10 @@
 // 기존엔 난이도·무한이 제네릭 업적 카드로만, 테마는 연출 전무(gap)였음 → 통합 전용 연출로.
 // 톤: 게임오버·레벨 연출과 통일한 프로스티드 딤 + 미니멀(오버슛·컨페티 없음), 단 잠금해제라 아이콘+글로우로 살짝 축하.
 import { useEffect, useState } from 'react';
-import { RocketIcon, CrownIcon, InfinityIcon, MapPinIcon, LockKeyOpenIcon } from '@phosphor-icons/react';
+import { RocketIcon, CrownIcon, InfinityIcon, MapPinIcon, ForkKnifeIcon, SparkleIcon, LockKeyOpenIcon } from '@phosphor-icons/react';
 import { FONT_TITLE, FONT_BODY, haptic } from '../tgTokens.js';
 
-const ICONS = { Rocket: RocketIcon, Crown: CrownIcon, Infinity: InfinityIcon, MapPin: MapPinIcon };
+const ICONS = { Rocket: RocketIcon, Crown: CrownIcon, Infinity: InfinityIcon, MapPin: MapPinIcon, ForkKnife: ForkKnifeIcon, Sparkle: SparkleIcon };
 
 export function ModeUnlockReveal({ unlock, onDone, hold = false }) {
   const [closing, setClosing] = useState(false);

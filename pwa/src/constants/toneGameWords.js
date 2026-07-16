@@ -19,18 +19,22 @@ export const DIFFICULTIES = [
     unlockReveal: { icon: 'Crown', label: '고급 모드', desc: '고급 난이도에 도전할 수 있어요', accent: '#F0A91E' } },
 ];
 
-// 테마 모드 — 난이도와 별개 축. 난이도 잠금 사다리와 무관, 각 테마가 자체 gameKey라
-// 최고점(loadBest)이 난이도처럼 자동으로 붙는다.
+// 테마 모드 — 난이도와 별개 축. 각 테마가 자체 gameKey라 최고점(loadBest)이 난이도처럼 자동으로 붙는다.
 // timeMultiplier: 테마는 난이도를 안 가르므로 중급(≈20초) 페이스로 통일.
-// unlock: null=처음부터 오픈. { byGameKey, score }=해당 게임키 최고점이 score 이상이면 해제.
-// image: 포스터 이미지 경로(5:7 세로, 카드 cover). null이면 tint 배경 + placeholder 라벨로 표시 → 이미지 준비되면 경로만 채우면 됨.
-// unlockReveal: 이 테마가 열렸을 때의 전용 연출 데이터 — 해제 감지(ToneGamePage)가 unlock 메타와 함께 자동으로 사용.
+// ── 순차 잠금 사다리(2026-07-16) ──: 배열 순서 = 진열·해제 순서(왼→오 하나씩). 드라마(입문 자석)만 오픈,
+//   이후는 '직전 테마 500점(별 ①)'으로 해제 — 취향 다양성 축이라 게이트는 가볍게(난이도 사다리 1000보다 낮음).
+//   순서는 접근성(구체어→문화지식): 드라마 → 요리 → 여행 → 신조어. 새 테마는 배열 끝에 추가하고 unlock.byGameKey를 직전 테마로.
+// unlock: null=오픈. { byGameKey, score }=그 게임키 최고점 ≥ score면 해제(themeUnlockReqText·진행 게이지·해제 연출이 전부 이 메타에서 파생).
+// image: 포스터 경로(5:7 세로). null이면 tint+placeholder. unlockReveal: 해제 순간 연출(ToneGamePage가 unlock 메타로 자동 트리거).
+const THEME_UNLOCK_SCORE = 500; // 별 ① 임계와 정합
 export const THEMES = [
   { id: 'drama', gameKey: 'tone-drama', label: '드라마 중국어', desc: '드라마 속 사랑·감정 표현', timeMultiplier: 2.8571, unlock: null, image: '/game/themes/drama.png', tint: '#f1d7cf', placeholder: '드라마 이미지' },
-  { id: 'travel', gameKey: 'tone-travel', label: '여행 중국어', desc: '공항·호텔·주문 실전 단어', timeMultiplier: 2.8571, unlock: { byGameKey: 'tone-drama', score: 1000 }, image: '/game/themes/travel.png', tint: '#c9d3e4', placeholder: '여행 이미지',
+  { id: 'cooking', gameKey: 'tone-cooking', label: '요리 중국어', desc: '음식·맛·주방 필수 단어', timeMultiplier: 2.8571, unlock: { byGameKey: 'tone-drama', score: THEME_UNLOCK_SCORE }, image: '/game/themes/cooking.jpg', tint: '#f7e3c3', placeholder: '요리 이미지', // jpg — 그림 특성상 png 1.3MB→jpg 160KB(600×800 리사이즈)
+    unlockReveal: { icon: 'ForkKnife', label: '요리 테마', desc: '요리 중국어 테마가 열렸어요', accent: '#E8912C' } },
+  { id: 'travel', gameKey: 'tone-travel', label: '여행 중국어', desc: '공항·호텔·주문 실전 단어', timeMultiplier: 2.8571, unlock: { byGameKey: 'tone-cooking', score: THEME_UNLOCK_SCORE }, image: '/game/themes/travel.png', tint: '#c9d3e4', placeholder: '여행 이미지',
     unlockReveal: { icon: 'MapPin', label: '여행 테마', desc: '여행 중국어 테마가 열렸어요', accent: '#7C5CFF' } },
-  { id: 'slang', gameKey: 'tone-slang', label: '신조어 중국어', desc: '요즘 중국 인터넷 유행어', timeMultiplier: 2.8571, unlock: null, image: '/game/themes/slang.png', tint: '#cfe8d8', placeholder: '신조어 이미지' },
-  { id: 'cooking', gameKey: 'tone-cooking', label: '요리 중국어', desc: '음식·맛·주방 필수 단어', timeMultiplier: 2.8571, unlock: null, image: null, tint: '#f7e3c3', placeholder: '요리 이미지' },
+  { id: 'slang', gameKey: 'tone-slang', label: '신조어 중국어', desc: '요즘 중국 인터넷 유행어', timeMultiplier: 2.8571, unlock: { byGameKey: 'tone-travel', score: THEME_UNLOCK_SCORE }, image: '/game/themes/slang.png', tint: '#cfe8d8', placeholder: '신조어 이미지',
+    unlockReveal: { icon: 'Sparkle', label: '신조어 테마', desc: '신조어 중국어 테마가 열렸어요', accent: '#16B364' } },
 ];
 
 // 성조 정의 — 학습 도구 특성상 5색 매핑은 디자인 시스템 단일 액센트 원칙의 합리적 예외.
