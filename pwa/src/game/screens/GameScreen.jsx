@@ -1,6 +1,6 @@
 // 게임 화면 (Figma 좌표 절대배치) — 점수·일시정지·타이머·단어카드·코치·성조버튼 + 콤보/신기록 버스트 연출(P4b).
 import { useState, useEffect, useRef, useLayoutEffect } from 'react';
-import { StarIcon, PauseIcon, TimerIcon, SpeakerHighIcon, EyeIcon, TicketIcon, SkullIcon } from '@phosphor-icons/react';
+import { StarIcon, PauseIcon, TimerIcon, SpeakerHighIcon, EyeIcon, TicketIcon, SkullIcon, SignOutIcon } from '@phosphor-icons/react';
 import { TG, FONT_TITLE, FONT_NUM, FONT_BODY, TOUCH_OPT } from '../tgTokens.js';
 import { play as playSfx } from '../tgSfx.js';
 import { Reveal, WordCard, ToneButtons, DrawPad, CoachBubble, ConfettiBurst, CrispFlash, LIGHT_CONFETTI, prefersReducedMotion, TONE_SHOT_HOVER_MS, TONE_FLIGHT_MS, TONE_IMPACT_MS } from './shared.jsx';
@@ -257,7 +257,7 @@ function CenterBurst({ data }) {
   );
 }
 
-export function GameScreen({ word, entered, currentSyl, completed, timedOut, wordIndex, wordsLen, wordTimeLimit, gaugeOffsetMs = 0, lowTime = false, paused, combo, comboFlash, floatScore, score, coachText, onTone, wrongBtn, wrongShakeKey = 0, onPause, playReveal = true, endless = false, lives = 3, onSkip, showSudden = false, runId = 0, recordToBeat = 0, practice = false, listen = false, audioOff = false, onReplay, onCantHear, onHint, hintUsed = false, onSpeak, onReveal, draw = false, drawExpectedTone, onDraw, drawResetKey = 0, lianyinAt = -1, demoFx = null }) {
+export function GameScreen({ word, entered, currentSyl, completed, timedOut, wordIndex, wordsLen, wordTimeLimit, gaugeOffsetMs = 0, lowTime = false, paused, combo, comboFlash, floatScore, score, coachText, onTone, wrongBtn, wrongShakeKey = 0, onPause, onEndTraining, playReveal = true, endless = false, lives = 3, onSkip, showSudden = false, runId = 0, recordToBeat = 0, practice = false, endKind = 'complete', listen = false, audioOff = false, onReplay, onCantHear, onHint, hintUsed = false, onSpeak, onReveal, draw = false, drawExpectedTone, onDraw, drawResetKey = 0, lianyinAt = -1, demoFx = null }) {
   lowTime = lowTime || demoFx === 'low'; // [DEV] 미리보기 텐션 데모(?screen=game&fx=low) — 머지 전 백도어 제거 대상
   // ── 버스트 연출(P4b): 콤보 마일스톤(5·10·15…) + 라이브 신기록. 비차단·자동 소멸 ──
   const [burst, setBurst] = useState(null);
@@ -421,7 +421,7 @@ export function GameScreen({ word, entered, currentSyl, completed, timedOut, wor
     );
   }, [wrongShakeKey]);
   useEffect(() => { // 정답으로 단어 완성(시간초과 제외) — 발사체 착탄 대기 → 임팩트 프레임(60~100ms 정지, 콤보 고조 시 길게) → 카드 펀치 + 플래시
-    if (!completed || timedOut) return undefined;
+    if (!completed || timedOut || endKind === 'reveal') return undefined; // 정답보기는 발사체가 없어 축하 임팩트 생략(차분히 공개)
     if (prefersReducedMotion()) { setFlashKey((n) => n + 1); return undefined; } // 모션 최소화 — 정지·펀치 없이 플래시만
     const lead = draw ? 0 : TONE_IMPACT_MS; // 마지막 발사체가 글자에 닿는 순간부터 임팩트 시퀀스(그리기는 발사체 없음)
     const freezeMs = 60 + Math.round(heatRef.current * 40);
@@ -496,7 +496,7 @@ export function GameScreen({ word, entered, currentSyl, completed, timedOut, wor
         <span style={{ fontFamily: FONT_NUM, fontWeight: 800, fontSize: 17, color: '#2b2730' }}>{score}</span>
       </div>
       </Reveal>
-      {/* 일시정지 (우상단) */}
+      {/* 일시정지 (우상단) — 계속/다시하기/그만두기 메뉴 포함 */}
       <Reveal i={0} play={playReveal} style={{ position: 'absolute', right: 20, top: 23 }}>
       <button onClick={onPause} aria-label="일시정지" className="tg-press" style={{ width: 40, height: 40, border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', ...TOUCH_OPT }}>
         <PauseIcon size={20} weight="fill" color={TG.SUB} />
@@ -538,7 +538,7 @@ export function GameScreen({ word, entered, currentSyl, completed, timedOut, wor
         <div style={{ position: 'relative' }}>
           <div key={`card-${runId}-${wordIndex}`} style={{ animation: 'tg-card-in .38s cubic-bezier(.22,1,.36,1) both' }}>
             <div style={{ position: 'relative', transform: freeze ? 'scale(1.035)' : 'none', animation: punch ? 'tg-punch .35s ease-out' : 'none', '--tg-punch-s': (1.05 + heat * 0.05).toFixed(3) }}>
-              <WordCard word={word} entered={entered} currentSyl={currentSyl} completed={completed} timedOut={timedOut} progressText={endless ? `${wordIndex + 1}` : `${wordIndex + 1}/${wordsLen}`} combo={combo} comboFlash={comboFlash} floatScore={floatScore} listen={listen} audioOff={audioOff} onReplay={onReplay} onCantHear={onCantHear} onHint={onHint} hintUsed={hintUsed} draw={draw} lianyinAt={lianyinAt} />
+              <WordCard word={word} entered={entered} currentSyl={currentSyl} completed={completed} timedOut={timedOut} progressText={endless ? `${wordIndex + 1}` : `${wordIndex + 1}/${wordsLen}`} hideProgress={practice} combo={combo} comboFlash={comboFlash} floatScore={floatScore} listen={listen} audioOff={audioOff} onReplay={onReplay} onCantHear={onCantHear} onHint={onHint} hintUsed={hintUsed} draw={draw} lianyinAt={lianyinAt} />
             </div>
           </div>
           {/* 정답 완성 연출 — 크리스프 플래시(번쩍) + 색색 색종이 + 흰/골드 글리터. ★단어 키 래퍼 '밖'에 둠: 안에 두면 새 단어 등장 때마다 리마운트되어 오발. flashKey 증가(정답 완성) 시에만 발동 */}
@@ -560,6 +560,15 @@ export function GameScreen({ word, entered, currentSyl, completed, timedOut, wor
       {!practice && !draw && (
         <Reveal i={3} play={playReveal} style={{ position: 'absolute', left: 24, right: 24, top: 428, bottom: 'calc(178px + env(safe-area-inset-bottom))', display: 'flex', alignItems: 'center' }}>
           <CoachBubble text={coachText} />
+        </Reveal>
+      )}
+      {/* 트레이닝 종료 — 무한이라 자발적 종료용. 발음듣기/정답보기 '위'(자주 쓰는 버튼보다 멀리)라 오터치로 안 끊김 */}
+      {practice && onEndTraining && (
+        <Reveal i={3} play={playReveal} style={{ position: 'absolute', left: 0, right: 0, bottom: 'calc(192px + env(safe-area-inset-bottom))', display: 'flex', justifyContent: 'center' }}>
+          <button onClick={onEndTraining} className="tg-press" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 18px', borderRadius: 14, background: '#fff', border: '1.5px solid #ebe5de', boxShadow: '0px 2px 6px rgba(43,39,48,0.05)', cursor: 'pointer', ...TOUCH_OPT }}>
+            <SignOutIcon size={15} weight="bold" color={TG.SUB} />
+            <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 14, color: TG.SUB }}>트레이닝 종료</span>
+          </button>
         </Reveal>
       )}
       {/* 연습 모드 — 발음 듣기 / 정답 보기 (성조버튼 위) */}

@@ -164,7 +164,8 @@ export default function ToneGamePage() {
       : isPreview && (previewScreen === 'game' || previewScreen === 'gameover') ? PREVIEW_WORDS : []));
   const [cdPhase, setCdPhase] = useState(cdPreview ? 'run' : null); // 카운트다운 오버레이 단계: null|'in'|'run'|'out'
   const [cdNum, setCdNum] = useState(3);
-  const [homeTx, setHomeTx] = useState(null); // 타이틀→홈 웨이브 전환: null|'in'(슬라이드 인)|'hold'(팁 강제노출)|'out'(슬라이드 아웃)
+  const [homeTx, setHomeTx] = useState(null); // '오늘의 팁' 웨이브 전환: null|'in'(슬라이드 인)|'hold'(팁 강제노출)|'out'(슬라이드 아웃). 타이틀→홈 + 인게임→아웃게임 이탈 공용
+  const [txTarget, setTxTarget] = useState('home'); // 전환 도착 화면(홈·모드선택·난이도·테마 등). homeTx 'in'이 이 화면으로 setScreen
   const [wordIndex, setWordIndex] = useState(0);
   const [currentSyl, setCurrentSyl] = useState(0);
   const [entered, setEntered] = useState([]);
@@ -614,9 +615,10 @@ export default function ToneGamePage() {
   // 타이틀→홈 웨이브 전환: in(슬라이드 인, 420ms)→ 홈 마운트 + hold(팁 강제노출 2.6s)→ out(슬라이드 아웃, 420ms)→ 종료
   useEffect(() => {
     if (homeTx !== 'in') return undefined;
-    const t = setTimeout(() => { setScreen('home'); setHomeTx('hold'); }, 420);
+    // 웨이브가 화면을 덮은 시점에 목적 화면 전환 + 런 모드 리셋(인게임 이탈 시 뒤 화면 모드 깜빡임 방지). 타이틀→홈은 이미 normal이라 무해.
+    const t = setTimeout(() => { setScreen(txTarget); setGameMode('normal'); setHomeTx('hold'); }, 420);
     return () => clearTimeout(t);
-  }, [homeTx]);
+  }, [homeTx, txTarget]);
   useEffect(() => {
     if (homeTx !== 'hold') return undefined;
     const t = setTimeout(() => setHomeTx('out'), 2600); // 팁 강제 노출(로딩할 게 없어도)
@@ -789,10 +791,17 @@ export default function ToneGamePage() {
       return;
     }
     setGameMode('practice');    setRecordToBeat(0); // 트레이닝=기록 미반영(내부 모드는 practice=무제한 타이머 공유)
-    setRound(buildRoundWords(pool, wordStatsRef.current, ROUND_LENGTH), { listen: false }); // 듣기문제 없음(자체 발음듣기)
+    // 무한 트레이닝 — 약점가중 배치를 여러 번 이어붙여 긴 스트림(사실상 끝나지 않음; '종료' 버튼·그만두기로 끝냄).
+    let stream = [];
+    while (stream.length < 200) stream = stream.concat(buildRoundWords(pool, wordStatsRef.current, ROUND_LENGTH));
+    setRound(stream, { listen: false }); // 듣기문제 없음(자체 발음듣기)
     if (!isPreview) track('run_start', { m: 'training', k: identity.kind });
     resetRunState();
   };
+  // 인게임(문제풀이·결과화면) → 아웃게임 이탈은 '오늘의 팁' 웨이브 전환으로 목적 화면 진입. 잔존 타이머·오버레이 정리(기록 오염 방지)
+  //   후 트리거. gameMode 리셋은 homeTx 'in'이 전환이 화면을 덮는 시점에 처리(뒤 화면 모드 깜빡임 방지).
+  const tipTransitionTo = (target) => { clearTimers(); setShowGameOverBeat(false); setPaused(false); setTxTarget(target); setHomeTx('in'); };
+  const endTraining = () => tipTransitionTo('home'); // 트레이닝 종료(무한) — 결과화면 없이 홈 허브로
 
   // 무한 모드 — 전 난이도 랜덤 스트림. 점점 가속, 첫 시간초과 종료, 헤드라인 최고점.
   const startEndless = () => {
@@ -885,8 +894,8 @@ export default function ToneGamePage() {
         if (!isPreview) { recordWordResult(wordStatsRef.current, word.hanzi, { perfect: !hasMistake, timedOut: false, ms: answerTime }); saveWordStats(studentToken, wordStatsRef.current); }
         addTimer(setTimeout(() => setFloatScore(null), 1300));
         addPausable(() => {
-          if (wordIndex + 1 >= words.length) setShowGameOverBeat(true);
-          else { enteredRef.current = []; completedRef.current = false; hintUsedRef.current = false; setWordIndex((i) => i + 1); setCurrentSyl(0); setEntered([]); setCompleted(false); setHasMistake(false); setGaugeOffsetMs(0); }
+          if (!practiceMode && wordIndex + 1 >= words.length) setShowGameOverBeat(true); // 트레이닝(무한)은 스트림 끝에서 순환 → 종료화면 없음
+          else { enteredRef.current = []; completedRef.current = false; hintUsedRef.current = false; setWordIndex((i) => practiceMode ? (i + 1) % words.length : i + 1); setCurrentSyl(0); setEntered([]); setCompleted(false); setHasMistake(false); setGaugeOffsetMs(0); }
         }, 1500);
       } else { haptic(8); playSfx('tap'); setCurrentSyl(ne.length); }
     } else {
@@ -949,13 +958,13 @@ export default function ToneGamePage() {
     const w = words[wordIndex];
     if (!w) return;
     completedRef.current = true; enteredRef.current = w.tones; // 동기 가드 세팅
-    setCompleted(true); setEntered(w.tones); setCombo(0); setHasMistake(true); setShowWrong(false); setEndKind('complete');
+    setCompleted(true); setEntered(w.tones); setCombo(0); setHasMistake(true); setShowWrong(false); setEndKind('reveal'); // reveal=정답보기: 축하 연출(히트스톱·펀치) 없이 차분히 공개
     speakWord(w);
     if (!isPreview) { recordWordResult(wordStatsRef.current, w.hanzi, { perfect: false, timedOut: false, ms: 0 }); saveWordStats(studentToken, wordStatsRef.current); }
     setAnsweredCount((c) => c + 1);
     addPausable(() => {
-      if (wordIndex + 1 >= words.length) setShowGameOverBeat(true);
-      else { enteredRef.current = []; completedRef.current = false; hintUsedRef.current = false; setWordIndex((i) => i + 1); setCurrentSyl(0); setEntered([]); setCompleted(false); setHasMistake(false); }
+      // 정답보기는 트레이닝(무한) 전용 — 스트림 끝에서 순환(종료화면 없음)
+      enteredRef.current = []; completedRef.current = false; hintUsedRef.current = false; setWordIndex((i) => (i + 1) % words.length); setCurrentSyl(0); setEntered([]); setCompleted(false); setHasMistake(false);
     }, 1500);
   }, [completed, paused, cdPhase, words, wordIndex, isPreview, studentToken]);
 
@@ -1071,7 +1080,7 @@ export default function ToneGamePage() {
   } else if (isPreview && previewScreen === 'sfxlab') { // [임시·DEV] 효과음/배경음 검수 랩 (?screen=sfxlab) — 검수 후 이 분기 + _SfxLab.jsx 삭제
     content = <SfxLab onBack={exitGame} />;
   } else if (screen === 'title') {
-    content = <TitleScreen onStart={() => setHomeTx('in')} />;
+    content = <TitleScreen onStart={() => tipTransitionTo('home')} />;
   } else if (screen === 'home') {
     content = <HomeScreen streak={startStreak} streakLongest={startStreakLongest} freezes={startFreezes} xp={xp} rank={rank} onExam={() => startExam()}
       examPrompt={examPromptPending} onExamPromptClose={() => setExamPromptPending(false)} toneLevels={toneLevels}
@@ -1165,8 +1174,8 @@ export default function ToneGamePage() {
           coachReady={!showGameOverBeat && !rankUp && !modeUnlock && celebrationQueue.length === 0} /* 결과 코치+트레이닝유도 둘 다 이 게이트 뒤에서만 */
           practice={practiceMode} endless={endlessMode} endKind={endKind}
           onRetry={practiceMode ? () => startTraining() : endlessMode ? () => startEndless() : themeMode ? () => startTheme(selectedTheme) : () => startGame(selectedDifficulty)}
-          onChangeDiff={endlessMode ? () => setScreen('modeselect') : practiceMode ? () => setScreen('modeselect') : themeMode ? () => setScreen('theme') : () => setScreen('difficulty')}
-          onModeSelect={!endlessMode ? () => setScreen('modeselect') : undefined}
+          onChangeDiff={endlessMode ? () => tipTransitionTo('modeselect') : practiceMode ? () => tipTransitionTo('modeselect') : themeMode ? () => tipTransitionTo('theme') : () => tipTransitionTo('difficulty')}
+          onModeSelect={!endlessMode ? () => tipTransitionTo('modeselect') : undefined}
           onLogin={identity.kind === 'guest' ? () => setScreen('login') : null}
           retryLabel={practiceMode ? '한 번 더 트레이닝' : undefined}
           changeLabel={endlessMode ? '모드 선택으로' : practiceMode ? '모드 선택으로' : themeMode ? '테마 바꾸기' : '난이도 바꾸기'} />
@@ -1182,7 +1191,7 @@ export default function ToneGamePage() {
         <ExamResultScreen correct={er.correct} total={er.total} passed={er.passed}
           canRetry={!er.passed && (isPreview ? qs('retry') === '1' : displayTier(rank, xp).examReady)}
           onRetry={() => startExam()}
-          onHome={() => { setGameMode('normal'); setScreen('home'); }} />
+          onHome={() => tipTransitionTo('home')} /> {/* 승급시험 결과(인게임) → 홈(아웃게임): 팁 전환 */}
       </FigmaScreen>
     );
   } else { // game
@@ -1192,11 +1201,11 @@ export default function ToneGamePage() {
           <GameScreen word={word} entered={entered} currentSyl={currentSyl} completed={completed} timedOut={timedOut}
             wordIndex={wordIndex} wordsLen={words.length} wordTimeLimit={wordTimeLimit} gaugeOffsetMs={gaugeOffsetMs} lowTime={lowTime} paused={paused || !!cdPhase || suddenIntro} endless={endlessMode || (isPreview && qs('endless') === '1')} lives={lives} showSudden={suddenIntro} runId={runId} recordToBeat={recordToBeat}
             combo={combo} comboFlash={comboFlash} floatScore={floatScore} score={score} coachText={coach.text}
-            onTone={handleTone} wrongBtn={wrongBtn} wrongShakeKey={wrongShakeKey} onPause={() => setPaused(true)} playReveal={!cdPhase}
-            practice={practiceMode} listen={wordIsListen} audioOff={audioOff}
+            onTone={handleTone} wrongBtn={wrongBtn} wrongShakeKey={wrongShakeKey} onPause={() => setPaused(true)} onEndTraining={endTraining} playReveal={!cdPhase}
+            practice={practiceMode} endKind={endKind} listen={wordIsListen} audioOff={audioOff}
             draw={wordIsDraw} drawExpectedTone={word ? word.tones[currentSyl] : undefined} onDraw={handleTone} drawResetKey={`${runId}-${wordIndex}-${currentSyl}`} lianyinAt={wordLianyin}
             onReplay={() => word && speakWord(word)} onCantHear={() => { audioOffRef.current = true; setAudioOff(true); }}
-            onHint={(practiceMode || wordIsDraw) ? undefined : () => { if (!word) return; hintUsedRef.current = true; speakWord(word); if (!hasMistake) { setHasMistake(true); setCombo(0); } }} hintUsed={hasMistake}
+            onHint={practiceMode ? undefined : () => { if (!word) return; hintUsedRef.current = true; speakWord(word); if (!hasMistake) { setHasMistake(true); setCombo(0); } }} hintUsed={hasMistake}
             onSkip={practiceMode ? undefined : skipWord}
             onSpeak={() => { if (!word) return; hintUsedRef.current = true; speakWord(word); }} onReveal={revealAnswer}
             demoFx={isPreview ? qs('fx') : null} />
@@ -1234,15 +1243,10 @@ export default function ToneGamePage() {
         </div>
       )}
       {paused && (
+        // onQuit=인게임 이탈 → 홈: '오늘의 팁' 웨이브 전환. tipTransitionTo가 clearTimers로 보류 큐까지 비워 기록 오염(2026-07-07 버그) 방지.
         <PauseModal score={score} combo={combo} onResume={() => setPaused(false)}
           onRestart={() => { setPaused(false); if (endlessMode) startEndless(); else if (practiceMode) startTraining(); else if (themeMode) startTheme(selectedTheme); else startGame(selectedDifficulty); }}
-          onQuit={() => {
-            // ★잔존 타이머·오버레이 정리 필수 — 마지막 단어 전환 대기(1.2~1.7s) 중 그만두기 시,
-            //   남은 타이머가 홈 위에서 게임오버 비트를 띄우고 모드 플래그가 이미 리셋돼 '복습 점수가 난이도 best로
-            //   저장·전송'되는 기록 오염까지 이어지던 버그(2026-07-07 검수). clearTimers가 보류 큐도 함께 비운다.
-            clearTimers(); setShowGameOverBeat(false);
-            setPaused(false); setGameMode('normal'); setScreen('home');
-          }} />
+          onQuit={() => tipTransitionTo('home')} />
       )}
       {toast && <GameToast key={toast.key} msg={toast.msg} />}
       {/* 게임 방법 확인 팝업 — 확인 시 인게임 튜토리얼로(완료 후 홈 복귀) */}

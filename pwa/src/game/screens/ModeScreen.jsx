@@ -1,10 +1,10 @@
-// 모드 선택 — 중요도 2단. 주력 큰 카드(난이도·테마) + 보조 칩(무한·연습·복습).
+// 모드 선택 — 주력 큰 원형(난이도·무한) + 풀폭 카드(테마·트레이닝).
 // Figma "26. 모드 선택 v2". 잠긴 카드(무한)는 흔들림+토스트.
 import { CaretLeftIcon, CaretRightIcon, StairsIcon, InfinityIcon, SkullIcon, LockSimpleIcon, GraduationCapIcon, CardsThreeIcon } from '@phosphor-icons/react';
 import { TG, FONT_TITLE, FONT_BODY, TOUCH_OPT } from '../tgTokens.js';
 import { useState, useRef, useLayoutEffect } from 'react';
 import { ShakeButton, Reveal, CoachBubble, prefersReducedMotion } from './shared.jsx';
-import { EndlessStartModal } from './gameModals.jsx';
+import { EndlessStartModal, TrainingStartModal } from './gameModals.jsx';
 import CoachMarkOverlay from '../../components/ui/CoachMarkOverlay.jsx';
 import { useTabTip } from '../../hooks/useTabTip.js';
 import { DIFFICULTIES } from '../../constants/toneGameWords.js';
@@ -18,7 +18,7 @@ const ENDLESS_REQ = `${LAST_LABEL} ${UNLOCK_THRESHOLD.toLocaleString()}점`;
 const MODE_COACH = [
   { selector: '[data-coach="mode-difficulty"]', label: `여기서 난이도를 골라요. ${FIRST_LABEL}부터 차근차근 시작해보세요!` },
   { selector: '[data-coach="mode-theme"]', label: '드라마·여행 등 취향대로 즐기는 테마 모드도 있어요.' },
-  { selector: '[data-coach="mode-aux"]', label: '내 실력 범위에서 약한 단어를 골라 자유롭게 트레이닝할 수 있어요.' },
+  { selector: '[data-coach="mode-practice"]', label: '내 실력 범위에서 약한 단어를 골라 자유롭게 트레이닝할 수 있어요.' },
 ];
 // 입문 저조 시 트레이닝 유도 코치마크(조건부·1회). 트레이닝 칩만 스포트라이트.
 const PRACTICE_NUDGE = [
@@ -148,24 +148,11 @@ function FeatureCard({ Icon, accent, tint, border, title, desc, locked, lockText
 }
 
 // 보조 칩 — 테마 카드와 같은 '아이콘 배경 + 라벨' 구조로 통일(비율 균형). 주력(원형)보다 가볍게. locked면 회색+자물쇠.
-function ModeChip({ Icon, iconColor, tint, label, locked, onClick, onLocked, coachId }) {
-  return (
-    <ShakeButton shakeOnClick={locked} onClick={locked ? onLocked : onClick} className={locked ? '' : 'tg-press'} data-coach={coachId} style={{
-      flex: 1, minWidth: 0, height: 66, background: locked ? '#f3eee7' : '#fff', border: '1.5px solid #efeae4', borderRadius: 18, cursor: 'pointer',
-      boxShadow: locked ? 'none' : '0px 3px 9px rgba(43,39,48,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9, ...TOUCH_OPT,
-    }}>
-      <div style={{ width: 36, height: 36, borderRadius: 12, flexShrink: 0, background: locked ? '#e7e0d6' : tint, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <Icon size={20} weight="fill" color={locked ? '#b8b0a8' : iconColor} />
-      </div>
-      <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 15, color: locked ? '#9a93a0' : '#2b2730' }}>{label}</span>
-      {locked && <LockSimpleIcon size={13} weight="fill" color="#b8b0a8" style={{ marginLeft: -2 }} />}
-    </ShakeButton>
-  );
-}
 
 export function ModeScreen({ endlessUnlocked, endlessBest = 0, onDifficulty, onTheme, onEndless, onTraining, onBack, onLocked, highlightPractice = false, onHighlightDone }) {
   const tip = useTabTip('game-mode', true);
   const [endlessOpen, setEndlessOpen] = useState(false);
+  const [trainingOpen, setTrainingOpen] = useState(false);
   return (
     <>
       <Reveal i={0} style={{ position: 'absolute', left: 24, top: 20, right: 24 }}>
@@ -199,9 +186,8 @@ export function ModeScreen({ endlessUnlocked, endlessBest = 0, onDifficulty, onT
               title="테마 모드" desc="드라마·여행 등 취향대로" onClick={onTheme} coachId="mode-theme" />
           </Reveal>
           <Reveal i={4} style={{ paddingLeft: 24, paddingRight: 24 }}>
-            <div data-coach="mode-aux" style={{ display: 'flex', gap: 11 }}>
-              <ModeChip Icon={GraduationCapIcon} iconColor={TG.SUCCESS_GLOW} tint="rgba(54,201,141,0.14)" label="트레이닝" onClick={onTraining} coachId="mode-practice" />
-            </div>
+            <FeatureCard Icon={GraduationCapIcon} accent="#2BB583" tint="rgba(43,181,131,0.10)" border="rgba(43,181,131,0.28)"
+              title="트레이닝" desc="약한 단어를 시간 제한 없이 무제한" onClick={() => setTrainingOpen(true)} coachId="mode-practice" />
           </Reveal>
         </div>
       </div>
@@ -209,6 +195,7 @@ export function ModeScreen({ endlessUnlocked, endlessBest = 0, onDifficulty, onT
       {/* 입문 저조 유도 — 첫 진입 코치와 안 겹치게(그게 끝난 뒤에만), 트레이닝 칩만 강조.
           forceLastStep: 주변 탭 흡수 → 트레이닝 칩을 실제로 눌러야만 진행(칩 onClick=onTraining이 플래그 해제+트레이닝 진입). */}
       <CoachMarkOverlay visible={highlightPractice && !tip.visible} onDone={() => onHighlightDone && onHighlightDone()} steps={PRACTICE_NUDGE} delay={200} showControls={false} forceLastStep />
+      {trainingOpen && <TrainingStartModal onStart={() => { setTrainingOpen(false); onTraining && onTraining(); }} onClose={() => setTrainingOpen(false)} />}
       {endlessOpen && <EndlessStartModal best={endlessBest} onStart={() => { setEndlessOpen(false); onEndless && onEndless(); }} onClose={() => setEndlessOpen(false)} />}
     </>
   );

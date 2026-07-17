@@ -1,7 +1,7 @@
 // 게임 공용 모달 — 놀러가기(SNS)·복습 시작·게임방법·무한 안내·로그인 유도·[DEV]점수 디버그. 시작/홈 등 여러 화면에서 재사용.
 // (기존 StartScreen.jsx 내부 함수에서 추출)
 import { useState } from 'react';
-import { HandWavingIcon, InstagramLogoIcon, YoutubeLogoIcon, ArticleIcon, CaretRightIcon, PlayIcon, InfinityIcon, StarIcon, QuestionIcon, DevicesIcon, SignInIcon } from '@phosphor-icons/react';
+import { HandWavingIcon, InstagramLogoIcon, YoutubeLogoIcon, ArticleIcon, CaretRightIcon, PlayIcon, InfinityIcon, StarIcon, QuestionIcon, DevicesIcon, SignInIcon, GraduationCapIcon } from '@phosphor-icons/react';
 import { TG, FONT_TITLE, FONT_BODY, FONT_NUM, SHADOW, TOUCH_OPT, loadBest, saveBest } from '../tgTokens.js';
 import { GAMEKEY, loadEndlessBest, saveEndlessBest } from '../gameLogic.js';
 import { DIFFICULTIES } from '../../constants/toneGameWords.js';
@@ -67,6 +67,41 @@ export function EndlessStartModal({ best = 0, onStart, onClose }) {
           background: TG.CORAL_GRAD, boxShadow: '0px 10px 20px rgba(242,72,76,0.32)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, ...TOUCH_OPT,
         }}>
           <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 18, color: '#fff' }}>게임 시작</span>
+          <PlayIcon size={14} weight="fill" color="#fff" />
+        </button>
+        <button className="tg-press" onClick={onClose} style={{ width: '100%', padding: '4px 0', background: 'none', border: 'none', cursor: 'pointer', ...TOUCH_OPT }}>
+          <span style={{ fontFamily: FONT_BODY, fontWeight: 500, fontSize: 15, color: '#9a93a0' }}>닫기</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// 트레이닝 시작 모달 — 모드선택 '트레이닝' 카드 시. 무엇을 하는 모드인지 안내 + [트레이닝 시작] 눌러야 진입.
+//   트레이닝 = 열린 스테이지 범위의 약점가중 단어를 시간제한 없이 무한 반복(기록 미반영).
+export function TrainingStartModal({ onStart, onClose }) {
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(26,16,20,0.55)', backdropFilter: 'blur(2px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, ...TOUCH_OPT }}>
+      <div className="tg-enter" onClick={(e) => e.stopPropagation()} style={{
+        width: '100%', maxWidth: 322, background: TG.CARD, borderRadius: 28, padding: '28px 24px 20px',
+        boxShadow: '0 20px 50px rgba(26,16,20,0.3)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16,
+      }}>
+        <div style={{ width: 72, height: 72, borderRadius: 24, background: 'linear-gradient(135deg,#4ad4a0,#2bb583)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 10px 26px rgba(43,181,131,0.4)' }}>
+          <GraduationCapIcon size={38} weight="fill" color="#fff" />
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, textAlign: 'center', width: '100%' }}>
+          <span style={{ fontFamily: FONT_TITLE, fontSize: 24, color: '#2b2730' }}>트레이닝</span>
+          <span style={{ fontFamily: FONT_BODY, fontWeight: 500, fontSize: 14, lineHeight: 1.6, color: '#9a93a0' }}>
+            지금 열린 범위에서 <b style={{ color: '#2b2730', fontWeight: 700 }}>약한 단어 위주</b>로 골라줘요.<br />
+            <b style={{ color: '#2bb583', fontWeight: 800 }}>시간 제한 없이</b> 계속 이어서 연습해요.<br />
+            기록에는 반영되지 않으니 부담 없이!
+          </span>
+        </div>
+        <button className="tg-press" onClick={() => { onStart && onStart(); }} style={{
+          width: '100%', height: 56, borderRadius: 18, border: 'none', cursor: 'pointer',
+          background: 'linear-gradient(135deg,#3ccf97,#2bb583)', boxShadow: '0px 10px 20px rgba(43,181,131,0.32)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, ...TOUCH_OPT,
+        }}>
+          <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 18, color: '#fff' }}>트레이닝 시작</span>
           <PlayIcon size={14} weight="fill" color="#fff" />
         </button>
         <button className="tg-press" onClick={onClose} style={{ width: '100%', padding: '4px 0', background: 'none', border: 'none', cursor: 'pointer', ...TOUCH_OPT }}>
