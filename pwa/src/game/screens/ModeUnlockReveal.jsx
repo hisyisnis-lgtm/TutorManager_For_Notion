@@ -24,12 +24,9 @@ export function ModeUnlockReveal({ unlock, onDone, hold = false }) {
     <div onClick={() => !hold && onDone && onDone()} style={{
       position: 'fixed', inset: 0, zIndex: 135, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
       background: 'rgba(24,20,28,0.74)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', padding: 24,
-      animation: closing ? 'mu-out .3s ease forwards' : 'mu-in .35s ease both',
+      animation: closing ? 'tg-fade-out .3s ease forwards' : 'tg-dim-in .35s ease both', // 페이드=공용 프리미티브(shared.jsx)
     }}>
       <style>{`
-        @keyframes mu-in { from{opacity:0} to{opacity:1} }
-        @keyframes mu-out { from{opacity:1} to{opacity:0} }
-        @keyframes mu-rise { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
         @keyframes mu-icon { from{opacity:0;transform:scale(.7)} to{opacity:1;transform:scale(1)} }
       `}</style>
       {/* 아이콘 원 + 은은한 글로우(맥동 없음) */}
@@ -39,10 +36,10 @@ export function ModeUnlockReveal({ unlock, onDone, hold = false }) {
           <Icon size={44} weight="fill" color={accent} />
         </div>
       </div>
-      <span style={{ fontFamily: FONT_BODY, fontWeight: 800, fontSize: 13, color: accent, letterSpacing: 0.5, marginTop: 20, animation: 'mu-rise .5s cubic-bezier(.22,1,.36,1) .16s both' }}>새 모드 열림</span>
-      <span style={{ fontFamily: FONT_TITLE, fontSize: 28, color: '#fff', marginTop: 6, animation: 'mu-rise .5s cubic-bezier(.22,1,.36,1) .22s both' }}>{unlock.label}</span>
-      <span style={{ fontFamily: FONT_BODY, fontWeight: 500, fontSize: 13.5, color: 'rgba(255,255,255,0.7)', marginTop: 10, textAlign: 'center', animation: 'mu-rise .5s cubic-bezier(.22,1,.36,1) .3s both' }}>{unlock.desc}</span>
-      {!hold && <span style={{ fontFamily: FONT_BODY, fontWeight: 500, fontSize: 12, color: 'rgba(255,255,255,0.4)', marginTop: 22, animation: 'mu-rise .5s ease .5s both' }}>탭하여 계속</span>}
+      <span style={{ fontFamily: FONT_BODY, fontWeight: 800, fontSize: 13, color: accent, letterSpacing: 0.5, marginTop: 20, animation: 'tg-rise .5s cubic-bezier(.22,1,.36,1) .16s both' }}>새 모드 열림</span>
+      <span style={{ fontFamily: FONT_TITLE, fontSize: 28, color: '#fff', marginTop: 6, animation: 'tg-rise .5s cubic-bezier(.22,1,.36,1) .22s both' }}>{unlock.label}</span>
+      <span style={{ fontFamily: FONT_BODY, fontWeight: 500, fontSize: 13.5, color: 'rgba(255,255,255,0.7)', marginTop: 10, textAlign: 'center', animation: 'tg-rise .5s cubic-bezier(.22,1,.36,1) .3s both' }}>{unlock.desc}</span>
+      {!hold && <span style={{ fontFamily: FONT_BODY, fontWeight: 500, fontSize: 12, color: 'rgba(255,255,255,0.4)', marginTop: 22, animation: 'tg-rise .5s ease .5s both' }}>탭하여 계속</span>}
     </div>
   );
 }

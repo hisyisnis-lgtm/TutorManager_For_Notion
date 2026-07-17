@@ -30,28 +30,23 @@ export function GameOverBeat({ endKind = 'complete', onDone, hold = false }) {
     <div style={{
       position: 'fixed', inset: 0, zIndex: 120, display: 'flex', alignItems: 'center', justifyContent: 'center',
       background: 'rgba(24,20,28,0.72)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
-      animation: closing ? 'gob-out .3s ease forwards' : 'gob-in .35s ease both',
+      animation: closing ? 'tg-fade-out .3s ease forwards' : 'tg-dim-in .35s ease both', // 공용 프리미티브(shared.jsx)
     }}>
-      <style>{`
-        @keyframes gob-in { from{opacity:0} to{opacity:1} }
-        @keyframes gob-out { from{opacity:1} to{opacity:0} }
-        @keyframes gob-rise { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
-      `}</style>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: -8 }}>
         {/* 헤드라인 — 클린 타이포, 부드럽게 떠오르며 페이드(오버슛 없음) */}
         <span style={{
           fontFamily: FONT_TITLE, fontSize: 38, color: '#fff', letterSpacing: '-0.01em',
-          animation: 'gob-rise .55s cubic-bezier(.22,1,.36,1) .05s both',
+          animation: 'tg-rise .55s cubic-bezier(.22,1,.36,1) .05s both',
         }}>{e.title}</span>
         {/* 원인 한 줄 — 왜 끝났는지 명시(인지) */}
         <span style={{
           fontFamily: FONT_BODY, fontWeight: 600, fontSize: 15, color: 'rgba(255,255,255,0.82)', marginTop: 10,
-          animation: 'gob-rise .55s cubic-bezier(.22,1,.36,1) .16s both',
+          animation: 'tg-rise .55s cubic-bezier(.22,1,.36,1) .16s both',
         }}>{e.reason}</span>
         {/* 진행 힌트 */}
         <span style={{
           fontFamily: FONT_BODY, fontWeight: 500, fontSize: 12.5, color: 'rgba(255,255,255,0.45)', marginTop: 18,
-          animation: 'gob-rise .55s cubic-bezier(.22,1,.36,1) .3s both',
+          animation: 'tg-rise .55s cubic-bezier(.22,1,.36,1) .3s both',
         }}>결과 보기로 이동 중…</span>
       </div>
     </div>

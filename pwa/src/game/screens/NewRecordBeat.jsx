@@ -26,14 +26,11 @@ export function NewRecordBeat({ score = 0, previousBest = 0, onDone, hold = fals
       position: 'fixed', inset: 0, zIndex: 120, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
       background: 'radial-gradient(120% 80% at 50% 34%, rgba(255,247,230,0.94), rgba(255,251,244,0.9))',
       backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
-      animation: closing ? 'nrb-out .3s ease forwards' : 'nrb-in .32s ease both', cursor: 'pointer',
+      animation: closing ? 'tg-fade-out .3s ease forwards' : 'tg-dim-in .32s ease both', cursor: 'pointer', // 페이드=공용 프리미티브(shared.jsx)
     }}>
       <style>{`
-        @keyframes nrb-in { from{opacity:0} to{opacity:1} }
-        @keyframes nrb-out { from{opacity:1} to{opacity:0} }
         @keyframes nrb-pop { 0%{opacity:0;transform:scale(.4)} 62%{opacity:1;transform:scale(1.12)} 100%{transform:scale(1)} }
         @keyframes nrb-badge { 0%{opacity:0;transform:scale(0) rotate(-32deg)} 66%{opacity:1;transform:scale(1.14) rotate(7deg)} 100%{transform:scale(1) rotate(0)} }
-        @keyframes nrb-rise { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
       `}</style>
       {/* 크리스프 플래시 — 등장 순간 화이트 스냅(번쩍) */}
       <CrispFlash color="rgba(255,255,255,0.72)" zIndex={1} />
@@ -62,7 +59,7 @@ export function NewRecordBeat({ score = 0, previousBest = 0, onDone, hold = fals
           animation: 'nrb-pop .52s cubic-bezier(.34,1.56,.64,1) .22s both',
         }}>{score.toLocaleString()}</span>
         {/* 이전 기록 대비 — 첫 기록이면 격려, 아니면 '이전 최고 N ▲증가폭' */}
-        <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 8, animation: 'nrb-rise .5s cubic-bezier(.22,1,.36,1) .38s both' }}>
+        <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 8, animation: 'tg-rise .5s cubic-bezier(.22,1,.36,1) .38s both' }}>
           {firstRecord ? (
             <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 14, color: '#c98a2e' }}>첫 기록을 세웠어요! 🎉</span>
           ) : (
@@ -79,7 +76,7 @@ export function NewRecordBeat({ score = 0, previousBest = 0, onDone, hold = fals
         {/* 진행 힌트 */}
         <span style={{
           marginTop: 22, fontFamily: FONT_BODY, fontWeight: 500, fontSize: 12.5, color: 'rgba(90,80,70,0.5)',
-          animation: 'nrb-rise .5s cubic-bezier(.22,1,.36,1) .5s both',
+          animation: 'tg-rise .5s cubic-bezier(.22,1,.36,1) .5s both',
         }}>결과 보기로 이동 중…</span>
       </div>
     </div>

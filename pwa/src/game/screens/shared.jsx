@@ -196,8 +196,8 @@ const TONE_GAME_CSS = `
       @keyframes tg-hop { 0%,100%{transform:translateY(0)} 38%{transform:translateY(-15px)} }
       @keyframes tg-blinkeye { 0%,90%,100%{transform:scaleY(1)} 95%{transform:scaleY(.1)} }
       @keyframes tg-cta-pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.018)} }
-      /* 테마 카드 플레이 FAB 강조 — 포커스 카드에서만(스케일+글로우 호흡) */
-      @keyframes tg-fab-pulse { 0%,100%{transform:scale(1); box-shadow:0 5px 12px rgba(242,72,76,0.42)} 50%{transform:scale(1.09); box-shadow:0 7px 20px rgba(242,72,76,0.62)} }
+      /* 시작 버튼 강조(공용) — 스케일+글로우 호흡. 글로우 색은 --fab-glow(/-lg)로 파라미터화(기본=코랄). 테마 카드·난이도 카드 공용. */
+      @keyframes tg-fab-pulse { 0%,100%{transform:scale(1); box-shadow:0 5px 12px var(--fab-glow,rgba(242,72,76,0.42))} 50%{transform:scale(1.09); box-shadow:0 7px 20px var(--fab-glow-lg,rgba(242,72,76,0.62))} }
       /* 채워진 성취 별 반짝임 — 주기 대부분은 평상, 끝자락에 밝아졌다 복귀(별마다 시차) */
       @keyframes tg-star-shine { 0%,70%,100%{filter:brightness(1)} 80%{filter:brightness(1.8) drop-shadow(0 0 5px rgba(255,194,60,0.9))} 90%{filter:brightness(1)} }
       @keyframes tg-dotpulse { 0%,100%{transform:scale(.85)} 50%{transform:scale(1.3)} }

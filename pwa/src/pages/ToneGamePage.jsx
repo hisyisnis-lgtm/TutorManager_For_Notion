@@ -1227,7 +1227,8 @@ export default function ToneGamePage() {
     <>
       {content}
       {homeTx && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 200, ...homeTxStyle }}>
+        // 화면전환은 항상 최상단 — 토스트(300)·축하(300)·비트(120~135)까지 모두 덮음
+        <div style={{ position: 'fixed', inset: 0, zIndex: 500, ...homeTxStyle }}>
           {/* 게임 카운트다운과 동일한 물결·배경색(#f96c6e) */}
           <CdWaveEdge side="left" />
           <CdWaveEdge side="right" />
@@ -1235,7 +1236,8 @@ export default function ToneGamePage() {
         </div>
       )}
       {cdPhase && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 200, ...cdStyle }}>
+        // 카운트다운 전환도 항상 최상단(위와 동일 원칙)
+        <div style={{ position: 'fixed', inset: 0, zIndex: 500, ...cdStyle }}>
           {/* 좌우 물결 가장자리 — 컨테이너 바깥쪽이라 가운데 정렬 시엔 화면 밖(비표시), 슬라이드 중에만 보임 */}
           <CdWaveEdge side="left" />
           <CdWaveEdge side="right" />
