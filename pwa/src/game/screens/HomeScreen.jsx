@@ -126,6 +126,11 @@ function Room3D() {
   );
 }
 const depthZ = (d) => 300 + Math.round(d * 300); // 깊이 → zIndex(앞이 위)
+// 홈 방이 실제로 화면에 보이는 중인지 — 성조 캐릭터 목소리(playSfx 'tone*') 게이트.
+// 오버레이(허브·메뉴·프로필·시트 등)가 방을 덮고 있거나 앱이 백그라운드면 소리 안 냄("홈 방을 보고있지 않으면 안 남").
+// 모듈 스코프: WanderingMark(캐릭터)와 메인 HomeScreen이 같은 파일이라 공유. 홈은 동시에 하나만 마운트됨.
+let homeRoomActive = false;
+const charCanSpeak = () => homeRoomActive && (typeof document === 'undefined' || document.visibilityState === 'visible');
 // 레벨 변화 콜아웃 — 스포트라이트 중 캐릭터 머리 위(흰 카드+꼬리). 상승=성조색 강조 / 하락=담백.
 function LevelCallout({ change, color }) {
   const up = change.dir === 'up';
@@ -185,7 +190,7 @@ function WanderingMark({ tone, i, level = 0, prog = 0, state = 'mid', celebrate 
   // 첫 방문 코치 한 줄 — 약점 캐릭터 위 말풍선(살짝 뒤 등장 → 사라짐)
   useEffect(() => {
     if (!introLine) return undefined;
-    const a = setTimeout(() => { setSay(introLine); playSfx('tone' + tone.num); }, 650);
+    const a = setTimeout(() => { setSay(introLine); if (charCanSpeak()) playSfx('tone' + tone.num); }, 650);
     const b = setTimeout(() => setSay((s) => (s === introLine ? null : s)), 5400);
     return () => { clearTimeout(a); clearTimeout(b); };
   }, [introLine]);
@@ -226,7 +231,7 @@ function WanderingMark({ tone, i, level = 0, prog = 0, state = 'mid', celebrate 
       const r = Math.random();
       if (r < 0.4) { target = pickTarget(); setTilt(target.x > pos.x ? 1 : -1); mode = 'move'; setSt('walk'); }
       else if (r < 0.85) { mode = 'idle'; setSt('idle'); setTilt(0); until = now + 1800 + Math.random() * 3000; }
-      else { mode = 'talk'; setSt('talk'); setTilt(0); doHop(); const p = TALK_LINES[tone.num] || ['!']; setSay(p[Math.floor(Math.random() * p.length)]); playSfx('tone' + tone.num); until = now + 1900; }
+      else { mode = 'talk'; setSt('talk'); setTilt(0); doHop(); const p = TALK_LINES[tone.num] || ['!']; setSay(p[Math.floor(Math.random() * p.length)]); if (charCanSpeak()) playSfx('tone' + tone.num); until = now + 1900; }
     };
     // 팔로워 — 메인 기준 슬롯(유지 거리·각도). 현재위치 fp가 슬롯을 lerp로 쫓아옴 → 일정 간격 두고 따라오는 느낌.
     // 레벨 변동 시 effect 재실행 없이 tick 안에서 슬롯을 추가/정리(레벨은 levelRef로 읽음).
@@ -724,6 +729,11 @@ export function HomeScreen({
   const [streakOpen, setStreakOpen] = useState(false); // 스트릭 상세 시트
   const [showIntro, setShowIntro] = useState(() => { try { return !localStorage.getItem('tg_home_intro'); } catch { return false; } });
   const coach = useTabTip('game-home', true); // 첫 방문 코치마크 가이드(1회)
+  // 캐릭터 목소리 게이트 — 오버레이가 방을 덮으면 정지("홈 방을 보고있지 않으면 안 남"). 백그라운드는 charCanSpeak가 visibilityState로 별도 처리. 언마운트(다른 화면) 시 false.
+  useEffect(() => {
+    homeRoomActive = !(menuOpen || profileOpen || nickEditOpen || playOpen || hubOpen || streakOpen || debugScoreOpen || !!cardTone || showIntro);
+    return () => { homeRoomActive = false; };
+  }, [menuOpen, profileOpen, nickEditOpen, playOpen, hubOpen, streakOpen, debugScoreOpen, cardTone, showIntro]);
   // 성조 레벨 변화 스포트라이트 — 홈 도착 후 바뀐 성조를 하나씩(방 딤 + 캐릭터 강조·콜아웃)
   const [revealIdx, setRevealIdx] = useState(-1);
   const [revealPos, setRevealPos] = useState(null);  // 스포트라이트 구멍 중심(컨테이너 좌표, 캐릭터가 보고)
@@ -747,7 +757,7 @@ export function HomeScreen({
       const t = setTimeout(() => { setRevealPos(null); setRevealIdx(-1); onRevealsDone && onRevealsDone(); }, 600);
       return () => clearTimeout(t);
     }
-    playSfx('tone' + levelReveals[revealIdx].tone); // 그 성조 캐릭터가 자기 목소리로
+    if (charCanSpeak()) playSfx('tone' + levelReveals[revealIdx].tone); // 그 성조 캐릭터가 자기 목소리로(홈 방 보고있을 때만)
     if (revealHold) return undefined; // 미리보기: 자동 진행 X(딤 탭으로 넘김)
     const id = setTimeout(() => setRevealIdx((n) => n + 1), 2200);
     return () => clearTimeout(id);
