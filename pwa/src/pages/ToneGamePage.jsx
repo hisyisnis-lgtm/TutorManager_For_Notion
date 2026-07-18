@@ -530,8 +530,9 @@ export default function ToneGamePage() {
       }
 
       if (identity.kind === 'member') pushMemberData(identity).catch(() => {}); // 회원: 로컬 → 서버(/game/me) 통째 동기화
-      // 측정: 런 종료(모드 라벨 + 점수) — 유입 깔때기의 '플레이' 카운트
-      track('run_end', { m: mode === 'normal' ? (themeMode ? selectedTheme.id : selectedDifficulty.id) : mode, k: identity.kind, v: score });
+      // 측정: 런 종료(모드 라벨 + 점수) — 유입 깔때기의 '플레이' 카운트.
+      //  트레이닝은 내부 모드가 'practice'지만 run_start와 라벨을 맞춰 'training'으로(깔때기 시작↔종료 정합).
+      track('run_end', { m: mode === 'normal' ? (themeMode ? selectedTheme.id : selectedDifficulty.id) : mode === 'practice' ? 'training' : mode, k: identity.kind, v: score });
     }
     // 신기록 비트가 이미 축하음(win/unlock)을 울렸으면 여기서 재생 안 함(2.3초 전 비트에서 울림). 아니면(게임오버 등) 여기서 재생.
     if (!beatSfxRef.current) playSfx(eff.sfx);
