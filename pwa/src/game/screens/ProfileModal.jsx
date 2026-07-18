@@ -42,7 +42,7 @@ export function ProfileModal({
           {/* 히트영역 44×44(음수 마진으로 레이아웃 자리는 30 유지) */}
           <button onClick={onClose} aria-label="닫기" className="tg-press"
             style={{ width: 44, height: 44, margin: -7, padding: 0, border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', ...TOUCH_OPT }}>
-            <span style={{ width: 30, height: 30, borderRadius: 15, background: '#f3efe9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ width: 30, height: 30, borderRadius: 15, background: TG.SURFACE, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <XIcon size={14} weight="bold" color={TG.SUB} />
             </span>
           </button>
@@ -65,7 +65,7 @@ export function ProfileModal({
               )}
             </div>
             <span style={{ ...TYPE.labelSm, color: TG.SUB }}>{tier.name}</span>
-            <div style={{ marginTop: 8, width: '100%', height: 6, borderRadius: 3, background: '#ece5da', overflow: 'hidden' }}>
+            <div style={{ marginTop: 8, width: '100%', height: 6, borderRadius: 3, background: TG.BORDER, overflow: 'hidden' }}>
               <div style={{ width: `${pct}%`, height: '100%', borderRadius: 3, background: TG.CORAL_GRAD, transition: 'width .5s ease' }} />
             </div>
             <span style={{ display: 'block', marginTop: 5, ...TYPE.meta, color: TG.SUB }}>{tier.isMax ? '최고 등급이에요 🎉' : (tier.examReady ? '승급 시험을 볼 수 있어요!' : `다음 등급까지 ${tier.toNext.toLocaleString()} XP`)}</span>
@@ -82,7 +82,7 @@ export function ProfileModal({
 
         {/* 등급 자세히 — 기존 카드 탭(→ 등급 화면) 동선 보존 */}
         {onMastery && (
-          <button onClick={onMastery} className="tg-press" style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '11px 12px', borderRadius: 14, background: '#f7f3ee', border: 'none', cursor: 'pointer', ...TOUCH_OPT }}>
+          <button onClick={onMastery} className="tg-press" style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '11px 12px', borderRadius: 14, background: TG.SURFACE, border: 'none', cursor: 'pointer', ...TOUCH_OPT }}>
             <div style={{ width: 30, height: 30, borderRadius: 9, background: 'rgba(240,169,30,0.14)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <MedalIcon size={17} weight="fill" color="#F0A91E" />
             </div>
@@ -91,7 +91,7 @@ export function ProfileModal({
           </button>
         )}
 
-        <div style={{ height: 1, background: '#efeae4' }} />
+        <div style={{ height: 1, background: TG.BORDER }} />
 
         {/* 로그인 상태 */}
         {isGuest ? (
@@ -117,13 +117,13 @@ export function ProfileModal({
 
         {/* 고유 ID + 복사 — 계정 문제 문의 시 필요. 담백하게 카드 하단. */}
         {userId && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', borderRadius: 12, background: '#f7f3ee' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', borderRadius: 12, background: TG.SURFACE }}>
             <span style={{ ...TYPE.labelSm, color: TG.SUB, flexShrink: 0 }}>UID</span>
             <span style={{ flex: 1, minWidth: 0, ...TYPE.num, fontSize: 12, color: TG.INK, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{userId}</span>
             <button onClick={copyId} aria-label="UID 복사" className="tg-press"
               style={{ display: 'inline-flex', alignItems: 'center', gap: 5, height: 30, padding: '0 10px', borderRadius: 9, border: 'none', cursor: 'pointer', flexShrink: 0, background: copied ? 'rgba(54,201,141,0.14)' : '#fff', boxShadow: copied ? 'none' : '0 1px 3px rgba(43,39,48,0.1)', ...TOUCH_OPT }}>
               {copied ? <CheckIcon size={13} weight="bold" color="#36C98D" /> : <CopyIcon size={13} weight="fill" color={TG.SUB} />}
-              <span style={{ ...TYPE.labelSm, color: copied ? '#36C98D' : TG.SUB }}>{copied ? '복사됨' : '복사'}</span>
+              <span style={{ ...TYPE.labelSm, color: copied ? TG.SUCCESS_GLOW : TG.SUB }}>{copied ? '복사됨' : '복사'}</span>
             </button>
           </div>
         )}

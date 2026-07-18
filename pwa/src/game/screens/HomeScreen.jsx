@@ -409,7 +409,7 @@ function WanderingMark({ tone, i, level = 0, prog = 0, state = 'mid', celebrate 
           </div>
         ) : (
           <>
-            <div style={{ height: 15, padding: '0 5px', borderRadius: 8, background: '#2b2730', display: 'flex', alignItems: 'center', boxShadow: '0 1px 3px rgba(43,39,48,0.2)' }}>
+            <div style={{ height: 15, padding: '0 5px', borderRadius: 8, background: TG.INK, display: 'flex', alignItems: 'center', boxShadow: '0 1px 3px rgba(43,39,48,0.2)' }}>
               <span style={{ ...TYPE.micro, fontWeight: 800, fontSize: 9, color: '#fff', lineHeight: 1, whiteSpace: 'nowrap' }}>Lv.{level}</span>
             </div>
             <div style={{ width: 28, height: 4, borderRadius: 2, background: 'rgba(43,39,48,0.16)', overflow: 'hidden' }}>
@@ -438,13 +438,13 @@ function MenuToggle({ Icon, label, on, onToggle }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <div style={{ width: 34, height: 34, borderRadius: 10, background: on ? 'rgba(242,72,76,0.12)' : '#f0ebe4', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Icon size={19} weight="fill" color={on ? TG.CORAL_DK : '#b8b0a8'} />
+        <div style={{ width: 34, height: 34, borderRadius: 10, background: on ? 'rgba(242,72,76,0.12)' : TG.TRACK, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Icon size={19} weight="fill" color={on ? TG.CORAL_DK : TG.MUTED} />
         </div>
         <span style={{ ...TYPE.btnSm, color: TG.INK }}>{label}</span>
       </div>
       <button onClick={onToggle} role="switch" aria-checked={on} aria-label={label} className="tg-press"
-        style={{ width: 46, height: 27, borderRadius: 14, border: 'none', cursor: 'pointer', padding: 0, background: on ? TG.CORAL_DK : '#d8d0c7', position: 'relative', transition: 'background .2s ease', ...TOUCH_OPT }}>
+        style={{ width: 46, height: 27, borderRadius: 14, border: 'none', cursor: 'pointer', padding: 0, background: on ? TG.CORAL_DK : TG.MUTED, position: 'relative', transition: 'background .2s ease', ...TOUCH_OPT }}>
         <span style={{ position: 'absolute', top: 3, left: on ? 22 : 3, width: 21, height: 21, borderRadius: 11, background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left .18s ease' }} />
       </button>
     </div>
@@ -455,11 +455,11 @@ function MenuToggle({ Icon, label, on, onToggle }) {
 function MenuAction({ Icon, label, sub, color = TG.INK, onClick }) {
   return (
     <button onClick={onClick} className="tg-press" style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', padding: '10px 4px', background: 'none', border: 'none', cursor: 'pointer', ...TOUCH_OPT }}>
-      <div style={{ width: 34, height: 34, borderRadius: 10, background: '#f0ebe4', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+      <div style={{ width: 34, height: 34, borderRadius: 10, background: TG.TRACK, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
         <Icon size={18} weight="fill" color={color} />
       </div>
       <span style={{ flex: 1, textAlign: 'left', ...TYPE.btnSm, color }}>{label}</span>
-      {sub && <span style={{ ...TYPE.meta, color: '#9a93a0' }}>{sub}</span>}
+      {sub && <span style={{ ...TYPE.meta, color: TG.SUB }}>{sub}</span>}
       <CaretRightIcon size={18} weight="bold" color="#c9c2bb" />
     </button>
   );
@@ -479,7 +479,7 @@ function HomeMenu({ onClose, onHelp, onLogin, isMemberUser, memberName, onEditNi
           <span style={{ ...TYPE.head, fontSize: 18, color: TG.INK }}>메뉴</span>
           {/* 히트영역 44×44(음수 마진으로 레이아웃 자리는 30 유지), 시각 크기는 안쪽 30×30 원 그대로 */}
           <button onClick={onClose} aria-label="닫기" className="tg-press" style={{ width: 44, height: 44, margin: -7, padding: 0, border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', ...TOUCH_OPT }}>
-            <span style={{ width: 30, height: 30, borderRadius: 15, background: '#f3efe9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ width: 30, height: 30, borderRadius: 15, background: TG.SURFACE, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <XIcon size={14} weight="bold" color={TG.SUB} />
             </span>
           </button>
@@ -487,7 +487,7 @@ function HomeMenu({ onClose, onHelp, onLogin, isMemberUser, memberName, onEditNi
         <MenuToggle Icon={sfxOn ? SpeakerHighIcon : SpeakerSlashIcon} label="소리" on={sfxOn} onToggle={toggleSfx} />
         <MenuToggle Icon={bgmOn ? MusicNotesIcon : MusicNotesSimpleIcon} label="음악" on={bgmOn} onToggle={toggleBgm} />
         <MenuToggle Icon={VibrateIcon} label="햅틱" on={hapticOn} onToggle={toggleHaptic} />
-        <div style={{ height: 1, background: '#efeae4' }} />
+        <div style={{ height: 1, background: TG.BORDER }} />
         {onHelp && <MenuAction Icon={QuestionIcon} label="게임 방법" onClick={() => { onClose(); onHelp(); }} />}
         {onLogin && <MenuAction Icon={SignOutIcon} label="로그인" sub="기록 저장" color={TG.CORAL_DK} onClick={() => { onClose(); onLogin(); }} />}
         {isMemberUser && onEditNickname && <MenuAction Icon={PencilSimpleIcon} label="닉네임 변경" sub={memberName || ''} onClick={() => { onClose(); onEditNickname(); }} />}
@@ -495,10 +495,10 @@ function HomeMenu({ onClose, onHelp, onLogin, isMemberUser, memberName, onEditNi
         <MenuAction Icon={SignOutIcon} label="게임 나가기" onClick={() => { onClose(); onExit && onExit(); }} />
         {import.meta.env.DEV && onDebugIntro && (
           <>
-            <div style={{ height: 1, background: '#efeae4' }} />
+            <div style={{ height: 1, background: TG.BORDER }} />
             <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={() => { onClose(); onDebugIntro(); }} className="tg-press" style={{ flex: 1, height: 36, borderRadius: 12, border: '1.5px solid #ebe5de', background: '#fff', cursor: 'pointer', ...TYPE.labelSm, color: '#2b2730', ...TOUCH_OPT }}>🛠 소개부터</button>
-              <button onClick={() => { onClose(); onDebugScore(); }} className="tg-press" style={{ flex: 1, height: 36, borderRadius: 12, border: '1.5px solid #ebe5de', background: '#fff', cursor: 'pointer', ...TYPE.labelSm, color: '#2b2730', ...TOUCH_OPT }}>🛠 점수</button>
+              <button onClick={() => { onClose(); onDebugIntro(); }} className="tg-press" style={{ flex: 1, height: 36, borderRadius: 12, border: '1.5px solid #ebe5de', background: '#fff', cursor: 'pointer', ...TYPE.labelSm, color: TG.INK, ...TOUCH_OPT }}>🛠 소개부터</button>
+              <button onClick={() => { onClose(); onDebugScore(); }} className="tg-press" style={{ flex: 1, height: 36, borderRadius: 12, border: '1.5px solid #ebe5de', background: '#fff', cursor: 'pointer', ...TYPE.labelSm, color: TG.INK, ...TOUCH_OPT }}>🛠 점수</button>
             </div>
           </>
         )}
@@ -529,8 +529,8 @@ function MyInfo({ tier, nickname, onClick }) {
       <img src={tier.emblem} alt="" width={48} height={48} style={{ display: 'block', flexShrink: 0 }} />
       {/* 닉네임(전체 폭 한 줄, 길면 말줄임) + 등급 게이지. */}
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 8 }}>
-        <span style={{ ...TYPE.label, fontWeight: 800, color: '#2b2730', textAlign: 'left', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{displayName}</span>
-        <div style={{ width: '100%', height: 6, borderRadius: 3, background: '#ece5da', overflow: 'hidden' }}>
+        <span style={{ ...TYPE.label, fontWeight: 800, color: TG.INK, textAlign: 'left', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{displayName}</span>
+        <div style={{ width: '100%', height: 6, borderRadius: 3, background: TG.BORDER, overflow: 'hidden' }}>
           <div style={{ width: `${pct}%`, height: '100%', borderRadius: 3, background: TG.CORAL_GRAD, transition: 'width .5s ease' }} />
         </div>
       </div>
@@ -542,7 +542,7 @@ function MyInfo({ tier, nickname, onClick }) {
 const STREAK_TIERS = [
   { min: 30, label: '불기둥', color: '#8B5CF6', glow: '#B79CF2' },
   { min: 14, label: '이글이글', color: '#4D8DFF', glow: '#8FBEFF' },
-  { min: 7, label: '활활', color: '#F2484C', glow: '#FF9A6B' },
+  { min: 7, label: '활활', color: TG.CORAL_DK, glow: '#FF9A6B' },
   { min: 3, label: '불꽃', color: '#F0A91E', glow: '#FFC94D' },
   { min: 1, label: '불씨', color: '#F5B942', glow: '#FFD98A' },
   { min: 0, label: '꺼진 재', color: '#b9a89f', glow: 'transparent' },
@@ -560,8 +560,8 @@ function StreakPill({ streak, freezes = 0, onClick }) {
         {streak > 0 && <EmberRise colors={[tier.color, tier.glow]} count={6} spread={12} rise={22} size={2.4} zIndex={0} style={{ bottom: '38%' }} />}
         <FlameIcon size={16} weight="fill" color={tier.color} style={{ position: 'relative', filter: streak > 0 ? `drop-shadow(0 0 5px ${tier.glow})` : 'none' }} />
       </span>
-      <span style={{ ...TYPE.numMd, fontSize: 15, color: '#2b2730', lineHeight: 1 }}>{animStreak}</span>
-      <span style={{ ...TYPE.labelSm, color: '#9a93a0' }}>일</span>
+      <span style={{ ...TYPE.numMd, fontSize: 15, color: TG.INK, lineHeight: 1 }}>{animStreak}</span>
+      <span style={{ ...TYPE.labelSm, color: TG.SUB }}>일</span>
       {freezes > 0 && <span style={{ display: 'flex', alignItems: 'center', gap: 1, marginLeft: 3 }} aria-label={`보호권 ${freezes}개`}><SnowflakeIcon size={13} weight="fill" color="#4D8DFF" /><span style={{ ...TYPE.numMd, fontSize: 12, color: '#4D8DFF' }}>{freezes}</span></span>}
     </button>
   );
@@ -590,11 +590,11 @@ function StreakSheet({ streak, longest, freezes, onClose }) {
               <span style={{ ...TYPE.titleLg, color: TG.INK }}>{streak}일</span>
               <span style={{ ...TYPE.labelSm, color: tier.color }}>{tier.label}</span>
             </div>
-            <span style={{ ...TYPE.meta, color: '#9a93a0' }}>{sub}</span>
+            <span style={{ ...TYPE.meta, color: TG.SUB }}>{sub}</span>
           </div>
           {/* 히트영역 44×44(음수 마진으로 레이아웃 자리는 30 유지), 시각 크기는 안쪽 30×30 원 그대로 */}
           <button onClick={close} aria-label="닫기" className="tg-press" style={{ width: 44, height: 44, margin: -7, padding: 0, border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, ...TOUCH_OPT }}>
-            <span style={{ width: 30, height: 30, borderRadius: 15, background: '#f3efe9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ width: 30, height: 30, borderRadius: 15, background: TG.SURFACE, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <XIcon size={14} weight="bold" color={TG.SUB} />
             </span>
           </button>
@@ -602,7 +602,7 @@ function StreakSheet({ streak, longest, freezes, onClose }) {
         {next ? (
           <div style={{ marginBottom: 16 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-              <span style={{ ...TYPE.meta, color: '#9a93a0' }}>다음 목표 {next}일</span>
+              <span style={{ ...TYPE.meta, color: TG.SUB }}>다음 목표 {next}일</span>
               <span style={{ ...TYPE.labelSm, color: TG.INK }}>{Math.max(0, next - streak)}일 남음</span>
             </div>
             <div style={{ height: 8, borderRadius: 4, background: '#ece6dd', overflow: 'hidden' }}>
@@ -610,19 +610,19 @@ function StreakSheet({ streak, longest, freezes, onClose }) {
             </div>
           </div>
         ) : (
-          <div style={{ marginBottom: 16, ...TYPE.labelSm, color: '#36C98D' }}>모든 마일스톤 달성! 🎉</div>
+          <div style={{ marginBottom: 16, ...TYPE.labelSm, color: TG.SUCCESS_GLOW }}>모든 마일스톤 달성! 🎉</div>
         )}
         <div style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
           <CardStat label="최장 기록" value={`${longest}일`} />
-          <div style={{ flex: 1, background: '#f7f3ee', borderRadius: 14, padding: '12px 14px' }}>
+          <div style={{ flex: 1, background: TG.SURFACE, borderRadius: 14, padding: '12px 14px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <SnowflakeIcon size={22} weight="fill" color="#4D8DFF" />
-              <span style={{ ...TYPE.numMd, fontSize: 22, color: '#2b2730', lineHeight: 1.1 }}>{freezes}/2</span>
+              <span style={{ ...TYPE.numMd, fontSize: 22, color: TG.INK, lineHeight: 1.1 }}>{freezes}/2</span>
             </div>
-            <div style={{ ...TYPE.meta, color: '#9a93a0', marginTop: 2 }}>보호권</div>
+            <div style={{ ...TYPE.meta, color: TG.SUB, marginTop: 2 }}>보호권</div>
           </div>
         </div>
-        <p style={{ margin: 0, ...TYPE.meta, lineHeight: 1.5, color: '#8a8580' }}>보호권은 하루 빠져도 연속학습을 지켜줘요. 7일마다 하나씩 모여요.</p>
+        <p style={{ margin: 0, ...TYPE.meta, lineHeight: 1.5, color: TG.SUB }}>보호권은 하루 빠져도 연속학습을 지켜줘요. 7일마다 하나씩 모여요.</p>
       </div>
     </div>
   );
@@ -631,13 +631,13 @@ function StreakSheet({ streak, longest, freezes, onClose }) {
 // 성조 미니 카드 — 캐릭터 탭 시. 순수 진단(정확도·시도·상태). 하단 시트(슬라이드 업/다운).
 // 연습/복습 CTA는 뺌(사용자 지적): 성조 하나만 나오는 문제는 만들 수 없고, 안다고 풀면 성조 학습 의미가 없음.
 const STATE_LABEL = { unknown: '아직 데이터가 적어요', weak: '아직 헷갈려요', mid: '꽤 익숙해요', strong: '탄탄해요' };
-const STATE_COLOR = { unknown: '#9a93a0', weak: TG.CORAL_DK, mid: '#F0A91E', strong: '#36C98D' };
+const STATE_COLOR = { unknown: TG.SUB, weak: TG.CORAL_DK, mid: '#F0A91E', strong: TG.SUCCESS_GLOW };
 const STATE_NOTE = { unknown: '게임을 더 하면 이 성조 실력이 보여요.', weak: '게임에서 이 성조가 나올 때 귀 기울여보세요.', mid: '조금만 더 하면 탄탄해져요.', strong: '이 성조는 거의 마스터했어요! 👍' };
 function CardStat({ label, value }) {
   return (
-    <div style={{ flex: 1, background: '#f7f3ee', borderRadius: 14, padding: '12px 14px' }}>
-      <div style={{ ...TYPE.numMd, fontSize: 22, color: '#2b2730', lineHeight: 1.1 }}>{value}</div>
-      <div style={{ ...TYPE.meta, color: '#9a93a0', marginTop: 2 }}>{label}</div>
+    <div style={{ flex: 1, background: TG.SURFACE, borderRadius: 14, padding: '12px 14px' }}>
+      <div style={{ ...TYPE.numMd, fontSize: 22, color: TG.INK, lineHeight: 1.1 }}>{value}</div>
+      <div style={{ ...TYPE.meta, color: TG.SUB, marginTop: 2 }}>{label}</div>
     </div>
   );
 }
@@ -658,13 +658,13 @@ function ToneCard({ tone, status, level, onClose }) {
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{ ...TYPE.head, color: TG.INK }}>{tone.name}</span>
-              <span style={{ ...TYPE.micro, fontWeight: 800, color: '#fff', background: '#2b2730', padding: '2px 7px', borderRadius: 8 }}>Lv.{level}</span>
+              <span style={{ ...TYPE.micro, fontWeight: 800, color: '#fff', background: TG.INK, padding: '2px 7px', borderRadius: 8 }}>Lv.{level}</span>
             </div>
             <span style={{ ...TYPE.labelSm, color: STATE_COLOR[s.state] }}>{STATE_LABEL[s.state]}</span>
           </div>
           {/* 히트영역 44×44(음수 마진으로 레이아웃 자리는 30 유지), 시각 크기는 안쪽 30×30 원 그대로 */}
           <button onClick={close} aria-label="닫기" className="tg-press" style={{ width: 44, height: 44, margin: -7, padding: 0, border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, ...TOUCH_OPT }}>
-            <span style={{ width: 30, height: 30, borderRadius: 15, background: '#f3efe9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ width: 30, height: 30, borderRadius: 15, background: TG.SURFACE, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <XIcon size={14} weight="bold" color={TG.SUB} />
             </span>
           </button>
@@ -673,7 +673,7 @@ function ToneCard({ tone, status, level, onClose }) {
           <CardStat label="정확도" value={accTxt} />
           <CardStat label="시도" value={`${s.attempts}`} />
         </div>
-        <p style={{ margin: 0, ...TYPE.meta, lineHeight: 1.5, color: '#8a8580' }}>{STATE_NOTE[s.state]}</p>
+        <p style={{ margin: 0, ...TYPE.meta, lineHeight: 1.5, color: TG.SUB }}>{STATE_NOTE[s.state]}</p>
       </div>
     </div>
   );
@@ -874,7 +874,7 @@ export function HomeScreen({
       }}>
         <span style={{ position: 'relative', width: 44, height: 44, borderRadius: 13, background: 'rgba(127,0,5,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <img src="/symbol-red.png" alt="" style={{ width: 24, height: 24, objectFit: 'contain' }} />
-          {hubDot && <span aria-hidden="true" style={{ position: 'absolute', top: -5, right: -5, width: 10, height: 10, borderRadius: '50%', background: '#F2484C', border: '2px solid #fff', animation: 'tg-dotpulse 1.1s ease-in-out infinite' }} />}
+          {hubDot && <span aria-hidden="true" style={{ position: 'absolute', top: -5, right: -5, width: 10, height: 10, borderRadius: '50%', background: TG.CORAL_DK, border: '2px solid #fff', animation: 'tg-dotpulse 1.1s ease-in-out infinite' }} />}
         </span>
         <span style={{ ...TYPE.micro, fontWeight: 800, letterSpacing: '-0.02em', color: TG.INK }}>하늘하늘</span>
       </button>
@@ -899,11 +899,11 @@ export function HomeScreen({
             background: '#fff', border: 'none', boxShadow: '0 5px 14px rgba(43,39,48,0.07)', cursor: 'pointer', ...TOUCH_OPT,
           }}>
             {/* 레드닷 — 알림/할 일 있음. 점 자체가 커졌다 작아졌다(스케일 펄스)로 강조. */}
-            {dot && <span aria-hidden="true" style={{ position: 'absolute', top: 7, right: 9, width: 8, height: 8, borderRadius: '50%', background: '#F2484C', animation: 'tg-dotpulse 1.1s ease-in-out infinite' }} />}
+            {dot && <span aria-hidden="true" style={{ position: 'absolute', top: 7, right: 9, width: 8, height: 8, borderRadius: '50%', background: TG.CORAL_DK, animation: 'tg-dotpulse 1.1s ease-in-out infinite' }} />}
             <div style={{ width: 26, height: 26, borderRadius: 9, background: tint, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <Icon size={16} weight="fill" color={color} />
             </div>
-            <span style={{ ...TYPE.labelSm, color: '#2b2730' }}>{label}</span>
+            <span style={{ ...TYPE.labelSm, color: TG.INK }}>{label}</span>
           </button>
         ))}
       </div>

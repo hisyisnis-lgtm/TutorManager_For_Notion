@@ -52,7 +52,7 @@ export function LoginScreen({ onBack }) {
       </Reveal>
       {/* 보조문구 */}
       <Reveal i={3} style={{ position: 'absolute', left: 24, right: 24, top: 374, textAlign: 'center' }}>
-        <span style={{ ...TYPE.sub, color: '#9a93a0' }}>기기를 바꿔도 최고 점수·진도가 그대로예요</span>
+        <span style={{ ...TYPE.sub, color: TG.SUB }}>기기를 바꿔도 최고 점수·진도가 그대로예요</span>
       </Reveal>
 
       {/* 카카오 로그인 */}
@@ -71,7 +71,7 @@ export function LoginScreen({ onBack }) {
       </Reveal>
       {/* 안내 */}
       <Reveal i={6} style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(24px + env(safe-area-inset-bottom))', textAlign: 'center' }}>
-        <span style={{ ...TYPE.meta, color: '#9a93a0' }}>로그인 정보는 기록 저장·동기화에만 써요</span>
+        <span style={{ ...TYPE.meta, color: TG.SUB }}>로그인 정보는 기록 저장·동기화에만 써요</span>
       </Reveal>
     </>
   );

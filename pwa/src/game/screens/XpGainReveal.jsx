@@ -8,7 +8,7 @@ import { play as playSfx } from '../tgSfx.js';
 import { useCountUp } from '../tgWidgets.jsx';
 
 // 스파크 색 — 게이지 그라데이션(#FF7A7A→#F2484C)과 동일.
-const SPARK_COLORS = ['#FF7A7A', '#F2484C'];
+const SPARK_COLORS = ['#FF7A7A', TG.CORAL_DK];
 const SPARK_POOL = 28; // 재사용 DOM 노드 풀
 
 // 게이지 + 끝에서 튀는 스파크 — rAF 파티클 시스템.

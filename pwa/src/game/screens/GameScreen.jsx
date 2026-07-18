@@ -493,7 +493,7 @@ export function GameScreen({ word, entered, currentSyl, completed, timedOut, wor
       <Reveal i={0} play={playReveal} style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', top: 20 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 5, background: '#fff', padding: '9px 14px', borderRadius: 15, boxShadow: '0px 3px 8px rgba(43,39,48,0.06)' }}>
         <StarIcon size={13} weight="fill" color={TG.SUN} />
-        <span style={{ ...TYPE.numMd, fontSize: 17, color: '#2b2730' }}>{score}</span>
+        <span style={{ ...TYPE.numMd, fontSize: 17, color: TG.INK }}>{score}</span>
       </div>
       </Reveal>
       {/* 일시정지 (우상단) — 계속/다시하기/그만두기 메뉴 포함 */}
@@ -512,10 +512,10 @@ export function GameScreen({ word, entered, currentSyl, completed, timedOut, wor
       ) : (
         <Reveal i={1} play={playReveal} style={{ position: 'absolute', left: 20, right: 20, top: 69 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <div style={{ width: 32, height: 32, borderRadius: 16, background: lowTime ? '#f2484c' : '#ff5e62', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: lowTime ? '0px 0px 10px rgba(242,72,76,0.7)' : '0px 3px 4.5px rgba(255,94,98,0.45)', animation: lowTime ? 'tg-heartbeat .85s ease-in-out infinite' : 'none' }}>
+          <div style={{ width: 32, height: 32, borderRadius: 16, background: lowTime ? TG.CORAL_DK : '#ff5e62', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: lowTime ? '0px 0px 10px rgba(242,72,76,0.7)' : '0px 3px 4.5px rgba(255,94,98,0.45)', animation: lowTime ? 'tg-heartbeat .85s ease-in-out infinite' : 'none' }}>
             <TimerIcon size={20} weight="fill" color="#fff" />
           </div>
-          <div style={{ flex: 1, height: 12, borderRadius: 6, background: '#f0ebe4', overflow: 'hidden', boxShadow: lowTime ? '0 0 0 2px rgba(242,72,76,0.35)' : 'none', transition: 'box-shadow .2s ease' }}>
+          <div style={{ flex: 1, height: 12, borderRadius: 6, background: TG.TRACK, overflow: 'hidden', boxShadow: lowTime ? '0 0 0 2px rgba(242,72,76,0.35)' : 'none', transition: 'box-shadow .2s ease' }}>
             <div key={`${runId}-${wordIndex}-${wordTimeLimit}-${gaugeOffsetMs}`} style={{ height: '100%', width: '100%', borderRadius: 6, background: lowTime ? 'linear-gradient(90deg,#ff5e62,#f2484c)' : 'linear-gradient(90deg,#ffc23c,#ff6b6b)', animation: `tg-timer ${wordTimeLimit}ms linear forwards`, animationDelay: `-${gaugeOffsetMs}ms`, animationPlayState: (paused || completed) ? 'paused' : 'running' }} />
           </div>
         </div>
@@ -526,7 +526,7 @@ export function GameScreen({ word, entered, currentSyl, completed, timedOut, wor
         <div style={{ position: 'absolute', left: 20, right: 20,
           ...(runTip === 'skip' ? { bottom: 'calc(184px + env(safe-area-inset-bottom))' } : { top: 103 }),
           display: 'flex', justifyContent: 'center', zIndex: 24, pointerEvents: 'none', animation: 'tg-hint 5.1s ease forwards' }} aria-hidden="true">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#2b2730', color: '#fff', ...TYPE.labelSm, lineHeight: 1, padding: '7px 12px', borderRadius: 11, boxShadow: '0 4px 12px rgba(43,39,48,0.22)', whiteSpace: 'nowrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: TG.INK, color: '#fff', ...TYPE.labelSm, lineHeight: 1, padding: '7px 12px', borderRadius: 11, boxShadow: '0 4px 12px rgba(43,39,48,0.22)', whiteSpace: 'nowrap' }}>
             {runTip === 'play' && <><TimerIcon size={13} weight="fill" color="#ff9f6b" />타이머가 끝나기 전에 성조를 골라요!</>}
             {runTip === 'skip' && <><TicketIcon size={13} weight="fill" color={TG.CORAL} />틀려도 안 죽어요 · 어려우면 건너뛰기!</>}
             {runTip === 'hint' && <><SpeakerHighIcon size={13} weight="fill" color="#ff9f6b" />발음 힌트를 들으면 콤보가 끊겨요!</>}
@@ -577,11 +577,11 @@ export function GameScreen({ word, entered, currentSyl, completed, timedOut, wor
           <div data-coach="prac-actions" style={{ display: 'flex', gap: 10 }}>
             <button onClick={onSpeak} className="tg-press" style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '13px 0', borderRadius: 16, background: '#fff', border: '1.5px solid #ebe5de', cursor: 'pointer', ...TOUCH_OPT }}>
               <SpeakerHighIcon size={20} weight="fill" color={TG.SUCCESS_GLOW} />
-              <span style={{ ...TYPE.label, color: '#2b2730' }}>발음 듣기</span>
+              <span style={{ ...TYPE.label, color: TG.INK }}>발음 듣기</span>
             </button>
             <button onClick={onReveal} disabled={completed} className="tg-press" style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '13px 0', borderRadius: 16, background: '#fff', border: '1.5px solid #ebe5de', cursor: completed ? 'default' : 'pointer', opacity: completed ? 0.5 : 1, ...TOUCH_OPT }}>
               <EyeIcon size={20} weight="fill" color="#767676" />
-              <span style={{ ...TYPE.label, color: '#2b2730' }}>정답 보기</span>
+              <span style={{ ...TYPE.label, color: TG.INK }}>정답 보기</span>
             </button>
           </div>
         </Reveal>
@@ -599,12 +599,12 @@ export function GameScreen({ word, entered, currentSyl, completed, timedOut, wor
                 style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '9px 16px', borderRadius: 14,
                   background: '#fff', border: '1.5px solid #ebe5de', cursor: disabled ? 'default' : 'pointer',
                   opacity: disabled ? 0.5 : 1, boxShadow: '0px 2px 6px rgba(43,39,48,0.05)', ...TOUCH_OPT }}>
-                <span style={{ ...TYPE.labelSm, color: '#2b2730' }}>건너뛰기</span>
+                <span style={{ ...TYPE.labelSm, color: TG.INK }}>건너뛰기</span>
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }} aria-hidden="true">
                   {[0, 1, 2].map((i) => {
                     const on = i < lives;
                     return (
-                      <TicketIcon key={i} size={17} weight={on ? 'fill' : 'regular'} color={on ? TG.CORAL : '#d8d0c7'}
+                      <TicketIcon key={i} size={17} weight={on ? 'fill' : 'regular'} color={on ? TG.CORAL : TG.MUTED}
                         style={{ transition: 'transform 200ms ease, color 200ms ease', transform: on ? 'rotate(45deg) scale(1)' : 'rotate(45deg) scale(0.82)',
                           animation: i === lostHeart ? 'tg-skiplose 520ms ease-out' : 'none' }} />
                     );

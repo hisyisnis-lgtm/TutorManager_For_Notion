@@ -28,7 +28,7 @@ export function NicknameEditModal({ current = '', onSave, onClose }) {
           <span style={{ ...TYPE.head, fontSize: 18, color: TG.INK }}>닉네임 변경</span>
           <button onClick={onClose} aria-label="닫기" className="tg-press"
             style={{ width: 44, height: 44, margin: -7, padding: 0, border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', ...TOUCH_OPT }}>
-            <span style={{ width: 30, height: 30, borderRadius: 15, background: '#f3efe9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ width: 30, height: 30, borderRadius: 15, background: TG.SURFACE, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <XIcon size={14} weight="bold" color={TG.SUB} />
             </span>
           </button>
@@ -66,8 +66,8 @@ export function NicknameEditModal({ current = '', onSave, onClose }) {
           }}>취소</button>
           <button onClick={save} disabled={!canSave} className="tg-press" style={{
             flex: 1.4, height: 48, borderRadius: 14, border: 'none',
-            background: canSave ? TG.CORAL_DK : '#e7e0d8', cursor: canSave ? 'pointer' : 'default',
-            ...TYPE.btnSm, color: canSave ? '#fff' : '#b8b0a8', ...TOUCH_OPT,
+            background: canSave ? TG.CORAL_DK : TG.BORDER, cursor: canSave ? 'pointer' : 'default',
+            ...TYPE.btnSm, color: canSave ? '#fff' : TG.MUTED, ...TOUCH_OPT,
           }}>저장</button>
         </div>
       </div>

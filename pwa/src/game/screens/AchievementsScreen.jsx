@@ -22,8 +22,8 @@ const CAT_COLOR = Object.fromEntries(ACH_CATEGORIES.map((c) => [c.id, c.color]))
 
 const DEFAULT_EARNED = '#FFB02E'; // 기본 획득 금색(축하 오버레이 등 색 미지정 시)
 const LOCKED_BG = '#f1ece5';      // 회색 틴트(미획득 배지 안쪽)
-const LOCKED_FG = '#c9c2b8';      // 회색 아이콘
-const RING_TRACK = '#ece7e0';     // 링 트랙(빈 부분)
+const LOCKED_FG = TG.MUTED;      // 회색 아이콘
+const RING_TRACK = TG.BORDER;     // 링 트랙(빈 부분)
 
 const tint = (hex, a = 0.14) => {
   const n = parseInt(hex.slice(1), 16);
@@ -80,13 +80,13 @@ function AchRow({ ach, earned, snapshot, onToast, last }) {
       style={{ display: 'flex', alignItems: 'center', gap: 14, width: '100%', textAlign: 'left', padding: '13px 4px', background: 'none', border: 'none', borderBottom: last ? 'none' : '1px solid rgba(43,39,48,0.06)', cursor: 'pointer', ...TOUCH_OPT }}>
       <RingBadge ach={ach} got={got} color={color} pct={pct} />
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
-        <span style={{ ...TYPE.btnSm, color: got ? '#2b2730' : '#8b8580' }}>{ach.label}</span>
-        <span style={{ ...TYPE.meta, color: '#a49da6', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ach.desc}</span>
+        <span style={{ ...TYPE.btnSm, color: got ? TG.INK : TG.SUB }}>{ach.label}</span>
+        <span style={{ ...TYPE.meta, color: TG.SUB, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ach.desc}</span>
       </div>
       {/* 우측 — 획득은 링·체크가 말하므로 비움, 진행 중만 담백한 수치 */}
       {!got && (
         <span style={{ ...TYPE.labelSm, color, flexShrink: 0 }}>
-          {p.cur.toLocaleString()}<span style={{ color: '#c9c2b8' }}> / {p.target.toLocaleString()}</span>
+          {p.cur.toLocaleString()}<span style={{ color: TG.MUTED }}> / {p.target.toLocaleString()}</span>
         </span>
       )}
     </button>
@@ -101,8 +101,8 @@ export function AchievementsScreen({ earned, snapshot, onBack, onToast }) {
     <>
       <GameHeader title="업적" onBack={onBack} right={
         /* 달성 수 — 헤더 우측에 담백한 텍스트 */
-        <span style={{ marginLeft: 'auto', ...TYPE.body, color: '#b4ada6' }}>
-          <b style={{ ...TYPE.head, fontWeight: 400, fontSize: 19, color: '#2b2730' }}>{n}</b> / {total}
+        <span style={{ marginLeft: 'auto', ...TYPE.body, color: TG.MUTED }}>
+          <b style={{ ...TYPE.head, fontWeight: 400, fontSize: 19, color: TG.INK }}>{n}</b> / {total}
         </span>
       } />
       {/* 하나의 리스트 — 섹션 없이 흐르고, 카테고리 구분은 링/아이콘 색으로만 */}

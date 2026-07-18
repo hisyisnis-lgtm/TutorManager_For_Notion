@@ -86,7 +86,7 @@ export function TutorialScreen({ onDone }) {
       {/* 점수(정적) 상단 중앙 */}
       <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', top: 20, display: 'flex', alignItems: 'center', gap: 5, background: '#fff', padding: '9px 14px', borderRadius: 15, boxShadow: '0px 3px 8px rgba(43,39,48,0.06)' }}>
         <StarIcon size={13} weight="fill" color={TG.SUN} />
-        <span style={{ ...TYPE.numMd, fontSize: 17, color: '#2b2730' }}>0</span>
+        <span style={{ ...TYPE.numMd, fontSize: 17, color: TG.INK }}>0</span>
       </div>
       {/* 우상단은 건너뛰기 버튼이 차지(정적 일시정지 아이콘은 겹쳐서 제거) */}
       {/* 타이머(정적) top69 */}
@@ -94,16 +94,16 @@ export function TutorialScreen({ onDone }) {
         <div style={{ width: 32, height: 32, borderRadius: 16, background: '#ff5e62', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0px 3px 4.5px rgba(255,94,98,0.45)' }}>
           <TimerIcon size={20} weight="fill" color="#fff" />
         </div>
-        <div style={{ flex: 1, height: 12, borderRadius: 6, background: '#f0ebe4' }} />
+        <div style={{ flex: 1, height: 12, borderRadius: 6, background: TG.TRACK }} />
       </div>
       {/* 진행 표시(3점) + 단계 라벨 — top70 중앙 */}
       <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', top: 70, display: 'flex', alignItems: 'center', gap: 8, background: '#fff1f1', padding: '8px 14px', borderRadius: 14, zIndex: 7 }}>
         <div style={{ display: 'flex', gap: 5 }}>
           {[0, 1, 2, 3, 4].map((i) => (
-            <div key={i} style={{ width: i === phase ? 16 : 6, height: 6, borderRadius: 3, background: i === phase ? '#f2484c' : '#f4c4c4', transition: 'width .25s ease' }} />
+            <div key={i} style={{ width: i === phase ? 16 : 6, height: 6, borderRadius: 3, background: i === phase ? TG.CORAL_DK : '#f4c4c4', transition: 'width .25s ease' }} />
           ))}
         </div>
-        <span style={{ ...TYPE.labelSm, color: '#f2484c', whiteSpace: 'nowrap' }}>{PHASE_LABEL[phase]}</span>
+        <span style={{ ...TYPE.labelSm, color: TG.CORAL_DK, whiteSpace: 'nowrap' }}>{PHASE_LABEL[phase]}</span>
       </div>
 
       {/* 딤 오버레이 — 강조(카드·코치·성조버튼) 외 어둡게. 마지막 정답 시 사라짐 */}
@@ -122,11 +122,11 @@ export function TutorialScreen({ onDone }) {
               {SAMPLE_ORDER.map((n) => (
                 <div key={n} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7, color: TONES.find((t) => t.num === n)?.color }}>
                   <ToneMark tone={n} size={22} />
-                  <span style={{ fontFamily: FONT_HANZI, fontWeight: 700, fontSize: 34, color: '#2b2730', lineHeight: 1 }}>{TONE_SAMPLES[n].hanzi}</span>
+                  <span style={{ fontFamily: FONT_HANZI, fontWeight: 700, fontSize: 34, color: TG.INK, lineHeight: 1 }}>{TONE_SAMPLES[n].hanzi}</span>
                 </div>
               ))}
             </div>
-            <span style={{ ...TYPE.sub, color: '#8a8580', textAlign: 'center', lineHeight: 1.55 }}>같은 소리도 <b style={{ color: TG.CORAL_DK, fontWeight: 800 }}>성조</b>에 따라 뜻이 달라져요<br />아래 버튼을 눌러 들어보세요 👂</span>
+            <span style={{ ...TYPE.sub, color: TG.SUB, textAlign: 'center', lineHeight: 1.55 }}>같은 소리도 <b style={{ color: TG.CORAL_DK, fontWeight: 800 }}>성조</b>에 따라 뜻이 달라져요<br />아래 버튼을 눌러 들어보세요 👂</span>
           </div>
         ) : (
           <WordCard word={word} entered={entered} currentSyl={currentSyl} completed={completed} timedOut={false}

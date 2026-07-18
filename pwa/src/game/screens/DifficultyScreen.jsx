@@ -185,10 +185,10 @@ export function DifficultyScreen({ studentToken, onSelect, onStart, onBack, onLo
                       <Icon size={26} weight="fill" color={c.accent} />
                     </div>
                     <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 7 }}>
-                      <span style={{ ...TYPE.h1, lineHeight: 1, color: '#2b2730' }}>{s.label}</span>
+                      <span style={{ ...TYPE.h1, lineHeight: 1, color: TG.INK }}>{s.label}</span>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
                         <StarRow filled={stars.filter(Boolean).length} size={17} gap={5} off="#e4dece" />
-                        <span style={{ ...TYPE.num, color: best > 0 ? '#9a93a0' : '#c3bcb2', whiteSpace: 'nowrap' }}>
+                        <span style={{ ...TYPE.num, color: best > 0 ? TG.SUB : TG.MUTED, whiteSpace: 'nowrap' }}>
                           {best > 0 ? `최고 ${best.toLocaleString()}` : '기록 없음'}
                         </span>
                       </div>
@@ -205,7 +205,7 @@ export function DifficultyScreen({ studentToken, onSelect, onStart, onBack, onLo
                     <div style={{ width: 26, height: 26, borderRadius: 9, flexShrink: 0, background: c.tint, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <Icon size={15} weight="fill" color={c.accent} />
                     </div>
-                    <span style={{ flex: 1, ...TYPE.label, color: '#4a4550', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.label}</span>
+                    <span style={{ flex: 1, ...TYPE.label, color: TG.INK_SOFT, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.label}</span>
                     <StarRow filled={stars.filter(Boolean).length} size={12} gap={2} off="#d8d2c8" style={{ flexShrink: 0 }} />
                   </div>
                 ) : (
@@ -229,7 +229,7 @@ export function DifficultyScreen({ studentToken, onSelect, onStart, onBack, onLo
           onClick={() => { if (focusedUnlocked) { playSfx('button'); onStart(focused); } else onLocked && onLocked(stageUnlockToastText(studentToken, focused)); }}
           className="tg-press" style={{
             width: '100%', height: 62, borderRadius: 20, border: 'none', cursor: 'pointer',
-            background: focusedUnlocked ? TG.CORAL_GRAD : '#d8d2ca',
+            background: focusedUnlocked ? TG.CORAL_GRAD : TG.MUTED,
             boxShadow: focusedUnlocked ? '0px 10px 22px rgba(242,72,76,0.34)' : 'none',
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, ...TOUCH_OPT,
           }}>

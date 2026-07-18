@@ -14,8 +14,8 @@ const INTRO_PAGES = [
     cta: '다음', tcolTop: '41.9%',
   },
   {
-    kind: 'icon', Icon: LightningIcon, iconColor: '#F2484C', circleBg: 'rgba(255,107,107,0.14)',
-    tag: '성조를 빠르게 캐치!', tagColor: '#f2484c', tagBg: 'rgba(255,107,107,0.16)',
+    kind: 'icon', Icon: LightningIcon, iconColor: TG.CORAL_DK, circleBg: 'rgba(255,107,107,0.14)',
+    tag: '성조를 빠르게 캐치!', tagColor: TG.CORAL_DK, tagBg: 'rgba(255,107,107,0.16)',
     title: '눈이 아니라 반응으로',
     body: ['성조를 빠르게 알아채는 게 회화의 진짜', '실력이에요. 반복해서 찾다 보면 머리가', '아니라 입이 먼저 기억해요.'],
     cta: '다음', tcolTop: '43.1%',
@@ -41,7 +41,7 @@ function IntroPanel({ p }) {
               {[['我', 3], ['爱', 4], ['你', 3]].map(([ch, tn]) => (
                 <div key={ch} style={{ display: 'flex', flexDirection: 'column', gap: 7, alignItems: 'center', color: TONES.find((t) => t.num === tn)?.color }}>
                   <ToneMark tone={tn} size={26} />
-                  <span style={{ fontFamily: FONT_HANZI, fontWeight: 700, fontSize: 52, color: '#2b2730', lineHeight: 1 }}>{ch}</span>
+                  <span style={{ fontFamily: FONT_HANZI, fontWeight: 700, fontSize: 52, color: TG.INK, lineHeight: 1 }}>{ch}</span>
                 </div>
               ))}
             </div>
@@ -65,8 +65,8 @@ function IntroPanel({ p }) {
       )}
       <Reveal i={1} style={{ position: 'absolute', left: 24, right: 24, top: p.tcolTop }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center', textAlign: 'center' }}>
-        <span style={{ ...TYPE.titleLg, fontSize: 28, color: '#2b2730', letterSpacing: -0.3, width: '100%' }}>{p.title}</span>
-        <div style={{ width: '100%', ...TYPE.body, color: '#9a93a0', lineHeight: 1.65 }}>
+        <span style={{ ...TYPE.titleLg, fontSize: 28, color: TG.INK, letterSpacing: -0.3, width: '100%' }}>{p.title}</span>
+        <div style={{ width: '100%', ...TYPE.body, color: TG.SUB, lineHeight: 1.65 }}>
           {p.body.map((line, i) => <div key={i}>{line}</div>)}
         </div>
       </div>
@@ -81,7 +81,7 @@ export function IntroScreen({ page, onNext, onSkip }) {
     <>
       {/* 건너뛰기 (고정) — 히트영역 ≥44px(패딩 확장, top/right 보정으로 텍스트 시각 위치는 기존과 동일) */}
       <button onClick={() => { playSfx('button'); onSkip(); }} className="tg-press" style={{ position: 'absolute', right: 22, top: 11, zIndex: 3, padding: '13px 12px', background: 'none', border: 'none', cursor: 'pointer', ...TOUCH_OPT }}>
-        <span style={{ ...TYPE.sub, color: '#9a93a0' }}>건너뛰기</span>
+        <span style={{ ...TYPE.sub, color: TG.SUB }}>건너뛰기</span>
       </button>
 
       {/* 슬라이딩 트랙 — 일러스트+제목+본문이 좌우로 슬라이드 */}
@@ -98,7 +98,7 @@ export function IntroScreen({ page, onNext, onSkip }) {
       {/* 점 인디케이터 (고정) — CTA(89.35%) 위 gap 유지 */}
       <div style={{ position: 'absolute', left: 24, right: 24, top: '84.85%', zIndex: 3, height: 28, display: 'flex', gap: 7, alignItems: 'center', justifyContent: 'center' }}>
         {[0, 1, 2].map((i) => (
-          <div key={i} style={{ height: 8, width: i === page ? 22 : 8, borderRadius: 4, background: i === page ? '#ff6b6b' : '#e2dbd3', transition: 'width .25s ease, background .25s ease' }} />
+          <div key={i} style={{ height: 8, width: i === page ? 22 : 8, borderRadius: 4, background: i === page ? TG.CORAL : '#e2dbd3', transition: 'width .25s ease, background .25s ease' }} />
         ))}
       </div>
 

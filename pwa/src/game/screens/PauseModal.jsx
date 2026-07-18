@@ -17,7 +17,7 @@ export function PauseModal({ score, combo, onResume, onRestart, onQuit }) {
       }}>
         {/* 설정 ⚙️ — 카드 우상단 */}
         <button onClick={() => setSettingsOpen(true)} aria-label="설정" className="tg-press"
-          style={{ position: 'absolute', right: 16, top: 16, width: 34, height: 34, borderRadius: 17, border: 'none', background: '#f3efe9', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', ...TOUCH_OPT }}>
+          style={{ position: 'absolute', right: 16, top: 16, width: 34, height: 34, borderRadius: 17, border: 'none', background: TG.SURFACE, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', ...TOUCH_OPT }}>
           <GearSixIcon size={18} weight="fill" color={TG.SUB} />
         </button>
         <div style={{ width: 56, height: 56, borderRadius: 999, background: TG.CORAL_BG, margin: '0 auto 14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

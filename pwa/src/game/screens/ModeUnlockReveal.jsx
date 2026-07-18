@@ -3,7 +3,7 @@
 // 톤: 게임오버·레벨 연출과 통일한 프로스티드 딤 + 미니멀(오버슛·컨페티 없음), 단 잠금해제라 아이콘+글로우로 살짝 축하.
 import { useEffect, useState } from 'react';
 import { RocketIcon, CrownIcon, InfinityIcon, MapPinIcon, ForkKnifeIcon, SparkleIcon, LockKeyOpenIcon } from '@phosphor-icons/react';
-import { TYPE, haptic } from '../tgTokens.js';
+import { TG, TYPE, haptic } from '../tgTokens.js';
 
 const ICONS = { Rocket: RocketIcon, Crown: CrownIcon, Infinity: InfinityIcon, MapPin: MapPinIcon, ForkKnife: ForkKnifeIcon, Sparkle: SparkleIcon };
 
@@ -19,7 +19,7 @@ export function ModeUnlockReveal({ unlock, onDone, hold = false }) {
   }, []);
   if (!unlock) return null;
   const Icon = ICONS[unlock.icon] || LockKeyOpenIcon;
-  const accent = unlock.accent || '#F2484C';
+  const accent = unlock.accent || TG.CORAL_DK;
   return (
     <div onClick={() => !hold && onDone && onDone()} style={{
       position: 'fixed', inset: 0, zIndex: 135, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',

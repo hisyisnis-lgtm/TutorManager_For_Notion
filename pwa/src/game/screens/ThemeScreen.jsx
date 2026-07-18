@@ -16,7 +16,7 @@ const PAD_TOP = 12, PAD_BOTTOM = 22;
 // 짧은 화면(640 이하)에서 카드가 이만큼 빼고 줄어들어 하단 힌트까지 안 잘림.
 const RESERVED_H = 264;
 // 패널 텍스트 색 (화이트 패널 위)
-const PANEL_SUB = '#6B6572';
+const PANEL_SUB = TG.SUB;
 const CHIP_BG = '#F5F1EA';
 const GOLD_BG = 'rgba(255,194,60,0.18)', GOLD_TX = '#A46A00';
 const GAUGE_BG = '#EFEAE2';
@@ -319,7 +319,7 @@ export function ThemeScreen({ themes, studentToken, counts = {}, onStart, onBack
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
             {themes.map((t, i) => (
-              <div key={t.id} style={{ width: i === active ? 20 : 6, height: 6, borderRadius: 3, background: i === active ? TG.CORAL_DK : '#d8d2ca', transition: `all ${DUR.state} ease` }} />
+              <div key={t.id} style={{ width: i === active ? 20 : 6, height: 6, borderRadius: 3, background: i === active ? TG.CORAL_DK : TG.MUTED, transition: `all ${DUR.state} ease` }} />
             ))}
           </div>
           <span style={{ ...TYPE.meta, color: TG.SUB }}>

@@ -5,7 +5,7 @@ import { TG, TYPE, TOUCH_OPT } from '../tgTokens.js';
 import { play as playSfx } from '../tgSfx.js';
 import { AchBadge } from './AchievementsScreen.jsx';
 
-const CONFETTI = ['#FF4D6D', '#FF9F40', '#36C98D', '#4D8DFF', '#FFC23C', '#FF6B6B'];
+const CONFETTI = ['#FF4D6D', '#FF9F40', TG.SUCCESS_GLOW, '#4D8DFF', TG.SUN, TG.CORAL];
 // 컨페티 입자 — index로 결정적 분포(좌우 퍼짐·낙하 속도·회전 다양화)
 const PARTICLES = Array.from({ length: 16 }, (_, i) => ({
   left: (i * 6.1 + 4) % 96,
@@ -43,8 +43,8 @@ export function CelebrationOverlay({ achievement, remaining = 0, onNext }) {
           </div>
         </div>
         <span style={{ ...TYPE.labelSm, color: TG.CORAL_DK, letterSpacing: 0.5 }}>업적 달성!</span>
-        <span style={{ ...TYPE.titleLg, fontSize: 25, color: '#2b2730', textAlign: 'center' }}>{achievement.label}</span>
-        <span style={{ ...TYPE.sub, color: '#9a93a0', textAlign: 'center', lineHeight: 1.4 }}>{achievement.desc}</span>
+        <span style={{ ...TYPE.titleLg, fontSize: 25, color: TG.INK, textAlign: 'center' }}>{achievement.label}</span>
+        <span style={{ ...TYPE.sub, color: TG.SUB, textAlign: 'center', lineHeight: 1.4 }}>{achievement.desc}</span>
         <button onClick={onNext} className="tg-press" style={{ marginTop: 14, width: '100%', height: 52, borderRadius: 18, border: 'none', cursor: 'pointer', background: TG.CORAL_GRAD, boxShadow: '0px 8px 16px rgba(242,72,76,0.32)', ...TYPE.btn, color: '#fff', ...TOUCH_OPT }}>
           {remaining > 0 ? `다음 (${remaining})` : '좋아요!'}
         </button>

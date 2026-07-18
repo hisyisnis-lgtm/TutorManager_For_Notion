@@ -5,7 +5,7 @@
 // 아이덴티티 톤: 링·글로우·블룸 없이(이 앱엔 촌스러움) 크리스프 플래시 + 색종이 물리로 임팩트. 참조: tone_game_redesign.md §파티클.
 import { useEffect, useState } from 'react';
 import { TrophyIcon } from '@phosphor-icons/react';
-import { TYPE, haptic } from '../tgTokens.js';
+import { TG, TYPE, haptic } from '../tgTokens.js';
 import { ConfettiBurst, CrispFlash, LIGHT_CONFETTI } from './shared.jsx';
 
 export function NewRecordBeat({ score = 0, previousBest = 0, onDone, hold = false }) {
@@ -55,7 +55,7 @@ export function NewRecordBeat({ score = 0, previousBest = 0, onDone, hold = fals
         }}>신기록!</span>
         {/* 점수 — 큰 숫자 팝 */}
         <span style={{
-          marginTop: 12, ...TYPE.numHero, fontSize: 58, lineHeight: 1, color: '#f2484c', whiteSpace: 'nowrap',
+          marginTop: 12, ...TYPE.numHero, fontSize: 58, lineHeight: 1, color: TG.CORAL_DK, whiteSpace: 'nowrap',
           animation: 'nrb-pop .52s cubic-bezier(.34,1.56,.64,1) .22s both',
         }}>{score.toLocaleString()}</span>
         {/* 이전 기록 대비 — 첫 기록이면 격려, 아니면 '이전 최고 N ▲증가폭' */}
@@ -67,7 +67,7 @@ export function NewRecordBeat({ score = 0, previousBest = 0, onDone, hold = fals
               <span style={{ ...TYPE.sub, color: '#9a8f80', whiteSpace: 'nowrap' }}>이전 최고 {previousBest.toLocaleString()}</span>
               {delta > 0 && (
                 <span style={{ display: 'flex', alignItems: 'center', padding: '3px 9px', borderRadius: 11, background: 'rgba(54,201,141,0.18)' }}>
-                  <span style={{ ...TYPE.num, color: '#1fa86a', whiteSpace: 'nowrap' }}>▲ {delta.toLocaleString()}</span>
+                  <span style={{ ...TYPE.num, color: TG.SUCCESS, whiteSpace: 'nowrap' }}>▲ {delta.toLocaleString()}</span>
                 </span>
               )}
             </>

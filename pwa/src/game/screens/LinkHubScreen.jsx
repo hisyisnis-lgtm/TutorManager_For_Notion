@@ -47,7 +47,7 @@ export function LinkHubScreen({ onClose }) {
               background: '#fff', border: 'none', cursor: 'pointer', boxShadow: '0 5px 14px rgba(26,16,20,0.07)', textAlign: 'left', ...TOUCH_OPT,
             }}>
               {/* 상단 썸네일 — OG 표준 비율(1200×630). 이미지 없는 항목은 tint+라벨 */}
-              <div style={{ width: '100%', aspectRatio: '1200 / 630', background: l.image ? '#f4efe8' : l.tint, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ width: '100%', aspectRatio: '1200 / 630', background: l.image ? TG.SURFACE : l.tint, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 {l.image
                   ? <img src={l.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   : <span style={{ ...TYPE.btn, color: 'rgba(255,255,255,0.92)' }}>{l.title}</span>}

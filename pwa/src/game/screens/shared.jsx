@@ -47,7 +47,7 @@ function emberNoise(x) {
 }
 // 잉걸불(rising ember) — 불꽃 위로 불티가 흔들리며 피어올라 깜빡이다 식어 사라짐(무한 루프).
 // ★rAF+노이즈(CSS 직선 아님): 상승 중 좌우 난류(위로 갈수록↑)·부력·밝기 깜빡임 → 진짜 잉걸불 움직임. 부모 position:relative 필요.
-export const EMBER_COLORS = ['#ff8f34', '#ffc23c', '#ff6b3d', '#ffd98a', '#ff5e3a'];
+export const EMBER_COLORS = ['#ff8f34', TG.SUN, '#ff6b3d', '#ffd98a', '#ff5e3a'];
 // 래퍼 — 모션 최소화 설정이면 장식 파티클 생략(훅 없는 바깥에서 분기해 훅 규칙 안전).
 export function EmberRise(props) {
   if (prefersReducedMotion()) return null;
@@ -102,7 +102,7 @@ function EmberRiseInner({ colors = EMBER_COLORS, count = 10, spread = 22, rise =
 
 // 파티클 버스트(색종이) — 정답·축하 등 긍정 순간의 색종이 폭발. rAF 물리(초기 폭발+중력 포물선+공기저항+나풀거림+회전/3D플립).
 // 빛 알갱이(글리터)도 이 컴포넌트에 흰/골드 팔레트(LIGHT_CONFETTI)·작은 size로 겹쳐 쓰면 동일한 물리로 움직임(별도 스파크 컴포넌트 폐기 — 촌스러움).
-export const CONFETTI_COLORS = ['#FF6B6B', '#FFC23C', '#36C98D', '#4D8DFF', '#7c5cff', '#ff8f34'];
+export const CONFETTI_COLORS = [TG.CORAL, TG.SUN, TG.SUCCESS_GLOW, '#4D8DFF', '#7c5cff', '#ff8f34'];
 export const LIGHT_CONFETTI = ['#ffffff', '#fff6cf', '#ffe89a', '#ffd166', '#fff0f0']; // 흰/골드 글리터(빛 알갱이)
 // 래퍼 — 모션 최소화 설정이면 장식 파티클 생략(훅 없는 바깥에서 분기해 훅 규칙 안전).
 export function ConfettiBurst(props) {
@@ -321,7 +321,7 @@ export function GameHeader({ title, onBack, right = null, bg = '#fff' }) {
       <Reveal i={0} style={{ position: 'absolute', left: 24, top: 6, right: 24, zIndex: 3 }}>
         <div style={{ height: 40, display: 'flex', gap: 8, alignItems: 'center' }}>
           <BackButton onClick={onBack} />
-          <span style={{ flex: 1, minWidth: 0, ...TYPE.head, color: '#2b2730', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{title}</span>
+          <span style={{ flex: 1, minWidth: 0, ...TYPE.head, color: TG.INK, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{title}</span>
           {right}
         </div>
       </Reveal>
@@ -464,7 +464,7 @@ export function WordCard({ word, entered, currentSyl, completed, timedOut, progr
           ) : (
             <div style={{
               width: hz > 50 ? 28 : 22, height: 5, borderRadius: 999,
-              background: isCurrent ? TG.INK : '#E5DED5', // 현재 글자 표시 — 색 대신 진한 명도로(톤 색과 안 겹치게)
+              background: isCurrent ? TG.INK : TG.BORDER, // 현재 글자 표시 — 색 대신 진한 명도로(톤 색과 안 겹치게)
               animation: isCurrent ? 'tg-pulse 1.1s ease-in-out infinite' : 'none',
             }} />
           )}
@@ -475,14 +475,14 @@ export function WordCard({ word, entered, currentSyl, completed, timedOut, progr
             background: isCurrent ? '#f2ede6' : 'transparent',
             border: isCurrent ? '2px solid #e3dbce' : '2px solid transparent',
             animation: isCurrent ? 'tg-breathe 1.7s ease-in-out infinite' : 'none', transition: `all ${DUR.state} ease` }}>
-            <SpeakerHighIcon size={Math.round(hz * 0.52)} weight="fill" color={isCurrent ? TG.INK : '#cbc4bb'} />
+            <SpeakerHighIcon size={Math.round(hz * 0.52)} weight="fill" color={isCurrent ? TG.INK : TG.MUTED} />
           </div>
         ) : (
           <div data-syl={i} style={{
             fontFamily: FONT_HANZI, fontWeight: 700, fontSize: hz, lineHeight: 1.05,
             // 강조는 색 대신 명도+애니: 현재=진한 잉크(은은한 breathe), 아직 안 푼 글자=연한 회색, 완료=성조색(착탄 동기 지연).
             // 이미 보이는 글자는 사라지면 안 됨 → 임팩트 팝(opacity 무변)+색 전환 지연. 듣기 모드는 글자가 '새로 등장'이라 기존 숨김 팝.
-            color: revealed ? toneColor : (isCurrent ? TG.INK : '#cbc4bb'),
+            color: revealed ? toneColor : (isCurrent ? TG.INK : TG.MUTED),
             transition: `color ${DUR.state} ease ${revealed && !listen ? popDelay : '0ms'}`,
             animation: revealed
               ? `${listen ? 'tg-pop' : 'tg-pop-impact'} .32s cubic-bezier(.34,1.56,.64,1) ${popDelay} both`
@@ -515,9 +515,9 @@ export function WordCard({ word, entered, currentSyl, completed, timedOut, progr
     }}>
       {!hideProgress && (
         <div style={{ position: 'absolute', left: 16, top: 16, ...TYPE.num, fontSize: 16, display: 'flex', gap: 3, alignItems: 'center' }}>
-          <span style={{ color: '#f2484c' }}>{progressText.split('/')[0]}</span>
+          <span style={{ color: TG.CORAL_DK }}>{progressText.split('/')[0]}</span>
           {/* 분모(총 문제수)는 있을 때만 — 무한모드는 숫자만이라 '/ ' 안 보이게 */}
-          {progressText.split('/')[1] && <span style={{ color: '#9a93a0', fontSize: 14 }}>/ {progressText.split('/')[1]}</span>}
+          {progressText.split('/')[1] && <span style={{ color: TG.SUB, fontSize: 14 }}>/ {progressText.split('/')[1]}</span>}
         </div>
       )}
       <div style={{ position: 'absolute', right: 16, top: 14 }}><ComboChip combo={combo} flash={comboFlash} /></div>
@@ -570,9 +570,9 @@ export function WordCard({ word, entered, currentSyl, completed, timedOut, progr
           {canHint && (
             <button onClick={onHint} className="tg-press" aria-label={hintUsed ? '발음 다시 듣기' : '발음 힌트 듣기 (콤보가 끊겨요)'} style={{
               display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 13px', borderRadius: 13,
-              background: '#fff', border: `1.5px solid ${hintUsed ? '#ebe5de' : TG.CORAL_BG}`, cursor: 'pointer', ...TOUCH_OPT,
+              background: '#fff', border: `1.5px solid ${hintUsed ? TG.BORDER : TG.CORAL_BG}`, cursor: 'pointer', ...TOUCH_OPT,
             }}>
-              <SpeakerHighIcon size={15} weight="fill" color={hintUsed ? '#9a93a0' : TG.CORAL_DK} />
+              <SpeakerHighIcon size={15} weight="fill" color={hintUsed ? TG.SUB : TG.CORAL_DK} />
               <span style={{ ...TYPE.labelSm, color: hintUsed ? TG.SUB : TG.INK }}>
                 {hintUsed ? '다시 듣기' : '발음 힌트'}
               </span>
@@ -843,13 +843,13 @@ function SettingRow({ Icon, label, on, onToggle }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <div style={{ width: 36, height: 36, borderRadius: 11, background: on ? 'rgba(242,72,76,0.12)' : '#f0ebe4', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Icon size={20} weight="fill" color={on ? TG.CORAL_DK : '#b8b0a8'} />
+        <div style={{ width: 36, height: 36, borderRadius: 11, background: on ? 'rgba(242,72,76,0.12)' : TG.TRACK, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Icon size={20} weight="fill" color={on ? TG.CORAL_DK : TG.MUTED} />
         </div>
         <span style={{ ...TYPE.btnSm, color: TG.INK }}>{label}</span>
       </div>
       <button onClick={onToggle} role="switch" aria-checked={on} aria-label={label} className="tg-press"
-        style={{ width: 48, height: 28, borderRadius: 14, border: 'none', cursor: 'pointer', padding: 0, background: on ? TG.CORAL_DK : '#d8d0c7', position: 'relative', transition: 'background .2s ease', ...TOUCH_OPT }}>
+        style={{ width: 48, height: 28, borderRadius: 14, border: 'none', cursor: 'pointer', padding: 0, background: on ? TG.CORAL_DK : TG.MUTED, position: 'relative', transition: 'background .2s ease', ...TOUCH_OPT }}>
         <span style={{ position: 'absolute', top: 3, left: on ? 23 : 3, width: 22, height: 22, borderRadius: 11, background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left .18s ease' }} />
       </button>
     </div>
@@ -872,7 +872,7 @@ export function SettingsModal({ onClose }) {
           {/* 히트영역 44×44(음수 마진으로 레이아웃 자리는 30 유지), 시각 크기는 안쪽 30×30 원 그대로 */}
           <button onClick={onClose} aria-label="닫기" className="tg-press"
             style={{ width: 44, height: 44, margin: -7, padding: 0, border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', ...TOUCH_OPT }}>
-            <span style={{ width: 30, height: 30, borderRadius: 15, background: '#f3efe9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ width: 30, height: 30, borderRadius: 15, background: TG.SURFACE, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <XIcon size={14} weight="bold" color={TG.SUB} />
             </span>
           </button>

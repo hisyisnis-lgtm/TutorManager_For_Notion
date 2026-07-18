@@ -74,10 +74,10 @@ export function NicknameScreen({ defaultName = '', onSubmit, saving = false }) {
       <Reveal i={4} style={{ position: 'absolute', left: 24, right: 24, top: 462 }}>
         <button onClick={submit} disabled={!canSubmit} className="tg-press" style={{
           width: '100%', height: 56, borderRadius: 16, border: 'none',
-          background: canSubmit ? TG.CORAL_DK : '#e7e0d8', cursor: canSubmit ? 'pointer' : 'default',
+          background: canSubmit ? TG.CORAL_DK : TG.BORDER, cursor: canSubmit ? 'pointer' : 'default',
           display: 'flex', alignItems: 'center', justifyContent: 'center', ...TOUCH_OPT,
         }}>
-          <span style={{ ...TYPE.btn, color: canSubmit ? '#fff' : '#b8b0a8' }}>
+          <span style={{ ...TYPE.btn, color: canSubmit ? '#fff' : TG.MUTED }}>
             {saving ? '저장 중…' : '시작하기'}
           </span>
         </button>

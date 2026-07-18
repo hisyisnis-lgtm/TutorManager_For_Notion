@@ -37,7 +37,7 @@ function SecBtn({ label, onClick, coachId }) {
       flex: 1, minWidth: 0, height: 54, borderRadius: 18, background: '#fff', border: '1.5px solid #ebe5de', cursor: 'pointer',
       display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 8px', ...TOUCH_OPT,
     }}>
-      <span style={{ ...TYPE.btnSm, color: '#9a93a0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
+      <span style={{ ...TYPE.btnSm, color: TG.SUB, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
     </button>
   );
 }
@@ -87,13 +87,13 @@ export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, 
       {/* 점수 */}
       <Reveal i={2} style={{ position: 'absolute', left: 24, right: 24, top: 196 }}>
       <div data-coach="result-score" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-        <span style={{ ...TYPE.numHero, color: '#f2484c', lineHeight: 1, whiteSpace: 'nowrap' }}>{animScore.toLocaleString()}</span>
+        <span style={{ ...TYPE.numHero, color: TG.CORAL_DK, lineHeight: 1, whiteSpace: 'nowrap' }}>{animScore.toLocaleString()}</span>
         {previousBest > 0 && (
           <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 2 }}>
-            <span style={{ ...TYPE.sub, color: '#9a93a0', whiteSpace: 'nowrap' }}>이전 최고 {previousBest.toLocaleString()}</span>
+            <span style={{ ...TYPE.sub, color: TG.SUB, whiteSpace: 'nowrap' }}>이전 최고 {previousBest.toLocaleString()}</span>
             {isNewBest && delta > 0 && (
               <span style={{ display: 'flex', alignItems: 'center', padding: '3px 8px', borderRadius: 10, background: 'rgba(54,201,141,0.16)' }}>
-                <span style={{ ...TYPE.num, color: '#1fa86a', whiteSpace: 'nowrap' }}>▲ {delta.toLocaleString()}</span>
+                <span style={{ ...TYPE.num, color: TG.SUCCESS, whiteSpace: 'nowrap' }}>▲ {delta.toLocaleString()}</span>
               </span>
             )}
           </div>
@@ -110,10 +110,10 @@ export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, 
           <div key={s.label} style={{ flex: 1, minWidth: 0, background: '#fff', borderRadius: 22, boxShadow: '0px 5px 14px rgba(43,39,48,0.06)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
             <div style={{ width: 40, height: 40, borderRadius: 20, background: s.ibg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{s.icon}</div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 2 }}>
-              <span style={{ ...TYPE.numLg, color: '#2b2730' }}>{s.val}</span>
-              {s.unit && <span style={{ ...TYPE.label, color: '#9a93a0' }}>{s.unit}</span>}
+              <span style={{ ...TYPE.numLg, color: TG.INK }}>{s.val}</span>
+              {s.unit && <span style={{ ...TYPE.label, color: TG.SUB }}>{s.unit}</span>}
             </div>
-            <span style={{ ...TYPE.meta, color: '#9a93a0' }}>{s.label}</span>
+            <span style={{ ...TYPE.meta, color: TG.SUB }}>{s.label}</span>
           </div>
         ))}
       </div>
@@ -131,7 +131,7 @@ export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, 
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, ...TOUCH_OPT,
           }}>
             <ArrowClockwiseIcon size={18} weight="bold" color="#9a93a0" />
-            <span style={{ ...TYPE.btn, color: '#9a93a0', whiteSpace: 'nowrap' }}>다시하기</span>
+            <span style={{ ...TYPE.btn, color: TG.SUB, whiteSpace: 'nowrap' }}>다시하기</span>
           </button>
           <button onClick={() => { playSfx('button'); onNextLevel(); }} className="tg-press" style={{
             flex: 1, minWidth: 0, height: 62, borderRadius: 20, border: 'none', cursor: 'pointer',
@@ -186,10 +186,10 @@ export function ExamResultScreen({ correct = 0, total = 20, passed = false, canR
       {/* 합격/불합격 배지 */}
       <Reveal i={0} style={{ position: 'absolute', top: 36, left: '50%', transform: 'translateX(-50%)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 16,
-          background: passed ? 'linear-gradient(90deg, #36C98D, #1fa86a)' : '#efeae4',
+          background: passed ? 'linear-gradient(90deg, #36C98D, #1fa86a)' : TG.BORDER,
           boxShadow: passed ? '0px 6px 14px rgba(31,168,106,0.28)' : 'none' }}>
           {passed && <TrophyIcon size={13} weight="fill" color="#fff" />}
-          <span style={{ ...TYPE.btnSm, color: passed ? '#fff' : '#9a93a0', whiteSpace: 'nowrap' }}>{passed ? '승급 시험 합격!' : '승급 시험 불합격'}</span>
+          <span style={{ ...TYPE.btnSm, color: passed ? '#fff' : TG.SUB, whiteSpace: 'nowrap' }}>{passed ? '승급 시험 합격!' : '승급 시험 불합격'}</span>
         </div>
       </Reveal>
       {/* 축하/격려 판다 */}
@@ -200,15 +200,15 @@ export function ExamResultScreen({ correct = 0, total = 20, passed = false, canR
       <Reveal i={2} style={{ position: 'absolute', left: 24, right: 24, top: 196 }}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-            <span style={{ ...TYPE.numHero, color: passed ? '#1fa86a' : '#f2484c', lineHeight: 1 }}>{animCorrect}</span>
-            <span style={{ ...TYPE.num, fontSize: 30, color: '#9a93a0' }}>/ {total}</span>
+            <span style={{ ...TYPE.numHero, color: passed ? TG.SUCCESS : TG.CORAL_DK, lineHeight: 1 }}>{animCorrect}</span>
+            <span style={{ ...TYPE.num, fontSize: 30, color: TG.SUB }}>/ {total}</span>
           </div>
           {/* 합격선 게이지 — 채움은 카운트업과 동기. 합격 기준(80%)까지는 빨강, 넘어선 만큼만 초록(틱 없이 색 경계가 곧 합격선). */}
           {(() => {
             const fillPct = Math.min(100, animPct);
             const redFrac = fillPct > 0 ? (Math.min(80, fillPct) / fillPct) * 100 : 0; // 래퍼 내 빨강 비율 — 80% 경계를 트랙 좌표에 고정
             return (
-              <div style={{ position: 'relative', width: '100%', height: 12, borderRadius: 6, background: '#efeae4', marginTop: 14, overflow: 'hidden' }}>
+              <div style={{ position: 'relative', width: '100%', height: 12, borderRadius: 6, background: TG.BORDER, marginTop: 14, overflow: 'hidden' }}>
                 {/* 채움 래퍼가 둥근 끝을 만들고(overflow hidden), 안의 빨강/초록 렉트를 클리핑 */}
                 {fillPct > 0 && (
                   <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${fillPct}%`, borderRadius: 6, overflow: 'hidden' }}>
@@ -219,7 +219,7 @@ export function ExamResultScreen({ correct = 0, total = 20, passed = false, canR
               </div>
             );
           })()}
-          <span style={{ ...TYPE.sub, color: '#9a93a0', marginTop: 8 }}>정답률 {pct}% · 합격 기준 80%</span>
+          <span style={{ ...TYPE.sub, color: TG.SUB, marginTop: 8 }}>정답률 {pct}% · 합격 기준 80%</span>
         </div>
       </Reveal>
       {/* 통계 2카드(맞힌/틀린 문제) — 일반 결과 화면과 동일 기하·카드 스타일(빈 화면 방지) */}
@@ -232,10 +232,10 @@ export function ExamResultScreen({ correct = 0, total = 20, passed = false, canR
             <div key={s.label} style={{ flex: 1, minWidth: 0, background: '#fff', borderRadius: 22, boxShadow: '0px 5px 14px rgba(43,39,48,0.06)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
               <div style={{ width: 40, height: 40, borderRadius: 20, background: s.ibg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{s.icon}</div>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 2 }}>
-                <span style={{ ...TYPE.numLg, color: '#2b2730' }}>{s.val}</span>
-                <span style={{ ...TYPE.label, color: '#9a93a0' }}>개</span>
+                <span style={{ ...TYPE.numLg, color: TG.INK }}>{s.val}</span>
+                <span style={{ ...TYPE.label, color: TG.SUB }}>개</span>
               </div>
-              <span style={{ ...TYPE.meta, color: '#9a93a0' }}>{s.label}</span>
+              <span style={{ ...TYPE.meta, color: TG.SUB }}>{s.label}</span>
             </div>
           ))}
         </div>
@@ -263,7 +263,7 @@ export function ExamResultScreen({ correct = 0, total = 20, passed = false, canR
           border: (!passed && canRetry) ? '1.5px solid #ebe5de' : 'none', cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center', ...TOUCH_OPT,
         }}>
-          <span style={{ ...TYPE.btn, color: (!passed && canRetry) ? '#9a93a0' : '#fff' }}>홈으로</span>
+          <span style={{ ...TYPE.btn, color: (!passed && canRetry) ? TG.SUB : '#fff' }}>홈으로</span>
         </button>
       </Reveal>
     </>
