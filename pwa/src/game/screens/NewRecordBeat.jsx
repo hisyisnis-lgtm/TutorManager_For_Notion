@@ -5,7 +5,7 @@
 // 아이덴티티 톤: 링·글로우·블룸 없이(이 앱엔 촌스러움) 크리스프 플래시 + 색종이 물리로 임팩트. 참조: tone_game_redesign.md §파티클.
 import { useEffect, useState } from 'react';
 import { TrophyIcon } from '@phosphor-icons/react';
-import { TG, TYPE, haptic, RADIUS } from '../tgTokens.js';
+import { TG, TYPE, haptic, RADIUS, SPACE } from '../tgTokens.js';
 import { ConfettiBurst, CrispFlash, LIGHT_CONFETTI } from './shared.jsx';
 
 export function NewRecordBeat({ score = 0, previousBest = 0, onDone, hold = false }) {
@@ -37,7 +37,7 @@ export function NewRecordBeat({ score = 0, previousBest = 0, onDone, hold = fals
       {/* 색종이 폭발 + 흰/골드 글리터 — 상단 트로피 위에서 터져 낙하 */}
       <ConfettiBurst count={34} power={1.4} size={10} zIndex={2} style={{ top: '30%' }} />
       <ConfettiBurst colors={LIGHT_CONFETTI} count={18} power={1.35} size={6} zIndex={2} style={{ top: '30%' }} />
-      <div style={{ position: 'relative', zIndex: 3, display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: -8, padding: 24 }}>
+      <div style={{ position: 'relative', zIndex: 3, display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: -8, padding: SPACE.x4 }}>
         {/* 트로피 — 골드 원 안에서 팝(회전 오버슛) */}
         <div style={{
           width: 84, height: 84, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -48,18 +48,18 @@ export function NewRecordBeat({ score = 0, previousBest = 0, onDone, hold = fals
         </div>
         {/* 헤드라인 — 골드 그라디언트 '신기록!' */}
         <span style={{
-          marginTop: 16, ...TYPE.titleLg, fontSize: 42, letterSpacing: '-0.01em', lineHeight: 1,
+          marginTop: SPACE.x2, ...TYPE.titleLg, fontSize: 42, letterSpacing: '-0.01em', lineHeight: 1,
           background: 'linear-gradient(92deg, #ffb020, #ff7a34)', WebkitBackgroundClip: 'text', backgroundClip: 'text',
           WebkitTextFillColor: 'transparent', color: '#ff8f34',
           animation: 'nrb-pop .5s cubic-bezier(.34,1.56,.64,1) .12s both',
         }}>신기록!</span>
         {/* 점수 — 큰 숫자 팝 */}
         <span style={{
-          marginTop: 12, ...TYPE.numHero, fontSize: 58, lineHeight: 1, color: TG.CORAL_DK, whiteSpace: 'nowrap',
+          marginTop: SPACE.xl, ...TYPE.numHero, fontSize: 58, lineHeight: 1, color: TG.CORAL_DK, whiteSpace: 'nowrap',
           animation: 'nrb-pop .52s cubic-bezier(.34,1.56,.64,1) .22s both',
         }}>{score.toLocaleString()}</span>
         {/* 이전 기록 대비 — 첫 기록이면 격려, 아니면 '이전 최고 N ▲증가폭' */}
-        <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 8, animation: 'tg-rise .5s cubic-bezier(.22,1,.36,1) .38s both' }}>
+        <div style={{ marginTop: SPACE.lg, display: 'flex', alignItems: 'center', gap: SPACE.md, animation: 'tg-rise .5s cubic-bezier(.22,1,.36,1) .38s both' }}>
           {firstRecord ? (
             <span style={{ ...TYPE.label, color: '#c98a2e' }}>첫 기록을 세웠어요! 🎉</span>
           ) : (
@@ -75,7 +75,7 @@ export function NewRecordBeat({ score = 0, previousBest = 0, onDone, hold = fals
         </div>
         {/* 진행 힌트 */}
         <span style={{
-          marginTop: 22, ...TYPE.meta, color: 'rgba(90,80,70,0.5)',
+          marginTop: SPACE.x4, ...TYPE.meta, color: 'rgba(90,80,70,0.5)',
           animation: 'tg-rise .5s cubic-bezier(.22,1,.36,1) .5s both',
         }}>결과 보기로 이동 중…</span>
       </div>

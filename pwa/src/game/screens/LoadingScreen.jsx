@@ -2,7 +2,7 @@
 // 성조 캐릭터 1개(랜덤)가 팁을 건네는 톤. 팁이 특정 성조 설명이면 그 성조 캐릭터를 보여줌.
 // 배경(빨강)·웨이브 슬라이드는 감싸는 오버레이가 제공 → 캐릭터 뒤 흰 원으로 성조색 대비 확보.
 import { useState } from 'react';
-import { TG, TYPE, RADIUS } from '../tgTokens.js';
+import { TG, TYPE, RADIUS, SPACE } from '../tgTokens.js';
 import { TONES } from '../../constants/toneGameWords.js';
 import { ToneMark } from '../tgWidgets.jsx';
 import { Eyes, markSize } from './eyes.jsx';
@@ -37,12 +37,12 @@ export function LoadingTip() {
         </div>
       </div>
       {/* 팁 카드 */}
-      <div className="tg-enter" style={{ marginTop: 20, width: '100%', maxWidth: 320, background: TG.CARD, borderRadius: RADIUS.xl, padding: '18px 20px', boxShadow: '0 8px 24px rgba(43,39,48,0.08)', textAlign: 'center' }}>
+      <div className="tg-enter" style={{ marginTop: SPACE.x3, width: '100%', maxWidth: 320, background: TG.CARD, borderRadius: RADIUS.xl, padding: '18px 20px', boxShadow: '0 8px 24px rgba(43,39,48,0.08)', textAlign: 'center' }}>
         <span style={{ ...TYPE.labelSm, color: TG.CORAL_DK, letterSpacing: 0.3 }}>💡 오늘의 팁</span>
         <p style={{ margin: '8px 0 0', ...TYPE.body, lineHeight: 1.55, color: TG.INK }}>{pick.t}</p>
       </div>
       {/* 진행바 — 오버레이가 덮은 동안 채워짐(hold~약 2.8s). 빨강 배경 대비 위해 흰색 */}
-      <div style={{ marginTop: 22, width: 170, height: 7, borderRadius: RADIUS.xs, background: 'rgba(255,255,255,0.28)', overflow: 'hidden' }}>
+      <div style={{ marginTop: SPACE.x4, width: 170, height: 7, borderRadius: RADIUS.xs, background: 'rgba(255,255,255,0.28)', overflow: 'hidden' }}>
         <div style={{ height: '100%', borderRadius: RADIUS.xs, background: '#fff', animation: 'tg-loadbar 2800ms cubic-bezier(.35,0,.25,1) forwards' }} />
       </div>
     </div>

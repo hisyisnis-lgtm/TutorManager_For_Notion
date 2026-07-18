@@ -1,7 +1,7 @@
 // 모드 선택 — 주력 큰 원형(난이도·무한) + 풀폭 카드(테마·트레이닝).
 // Figma "26. 모드 선택 v2". 잠긴 카드(무한)는 흔들림+토스트.
 import { StairsIcon, InfinityIcon, SkullIcon, LockSimpleIcon, GraduationCapIcon, CardsThreeIcon } from '@phosphor-icons/react';
-import { TG, TYPE, TOUCH_OPT, RADIUS } from '../tgTokens.js';
+import { TG, TYPE, TOUCH_OPT, RADIUS, SPACE } from '../tgTokens.js';
 import { useState, useRef, useLayoutEffect } from 'react';
 import { ShakeButton, Reveal, GameHeader, CoachBubble, prefersReducedMotion } from './shared.jsx';
 import { EndlessStartModal, TrainingStartModal } from './gameModals.jsx';
@@ -91,7 +91,7 @@ function BigTile({ Icon, grad, glow, dot, title, desc, locked, lockText, onClick
   return (
     <ShakeButton shakeOnClick={locked} onClick={locked ? onLocked : onClick} className={locked ? '' : 'tg-press'} data-coach={coachId} style={{
       flex: 1, minWidth: 0, background: 'none', border: 'none', cursor: 'pointer',
-      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 15, padding: '6px 4px', ...TOUCH_OPT,
+      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: SPACE.x2, padding: '6px 4px', ...TOUCH_OPT,
     }}>
       {/* 스테이지 — 파티클(뒤·zIndex0)과 원(앞·zIndex1)을 겹침. 원이 안쪽 파티클을 가려 '뒤에서 퍼지는' 효과 */}
       <div style={{ position: 'relative', width: ORB, height: ORB, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -110,9 +110,9 @@ function BigTile({ Icon, grad, glow, dot, title, desc, locked, lockText, onClick
           )}
         </div>
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: SPACE.xs }}>
         <span style={{ ...TYPE.h1, color: locked ? TG.SUB : TG.INK }}>{title}</span>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 3, ...TYPE.meta, color: showDanger ? '#d0464a' : TG.SUB }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: SPACE.xs, ...TYPE.meta, color: showDanger ? '#d0464a' : TG.SUB }}>
           {showDanger && <SkullIcon size={12} weight="fill" color="#d0464a" style={{ flexShrink: 0 }} />}
           {locked ? lockText : desc}
         </span>
@@ -125,19 +125,19 @@ function BigTile({ Icon, grad, glow, dot, title, desc, locked, lockText, onClick
 function FeatureCard({ Icon, accent, title, desc, locked, lockText, onClick, onLocked, coachId }) {
   return (
     <ShakeButton shakeOnClick={locked} onClick={locked ? onLocked : onClick} className={locked ? '' : 'tg-press'} data-coach={coachId} style={{
-      width: '100%', height: 76, display: 'flex', alignItems: 'center', gap: 14, textAlign: 'left', padding: '0 18px', borderRadius: RADIUS.xl, cursor: 'pointer',
+      width: '100%', height: 76, display: 'flex', alignItems: 'center', gap: SPACE.x2, textAlign: 'left', padding: '0 18px', borderRadius: RADIUS.xl, cursor: 'pointer',
       background: locked ? TG.SURFACE : '#fff', border: 'none',
       boxShadow: locked ? 'none' : '0 6px 18px rgba(43,39,48,0.07)', ...TOUCH_OPT,
     }}>
       <div style={{ width: 48, height: 48, borderRadius: RADIUS.lg, flexShrink: 0, background: locked ? '#e7e0d6' : accent, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: locked ? 'none' : `0 4px 11px ${accent}3a` }}>
         <Icon size={25} weight="fill" color={locked ? TG.MUTED : '#fff'} />
       </div>
-      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: SPACE.xs }}>
         <span style={{ ...TYPE.h2, letterSpacing: '-0.01em', color: locked ? TG.SUB : TG.INK }}>{title}</span>
         <span style={{ ...TYPE.meta, color: TG.SUB, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{desc}</span>
       </div>
       {locked && (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, flexShrink: 0 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: SPACE.xs, flexShrink: 0 }}>
           <LockSimpleIcon size={20} weight="fill" color="#b8b0a8" />
           <span style={{ ...TYPE.micro, color: TG.SUB, whiteSpace: 'nowrap' }}>{lockText}</span>
         </div>
@@ -158,13 +158,13 @@ export function ModeScreen({ endlessUnlocked, endlessBest = 0, onDifficulty, onT
       {/* 코치=상단 / 주력 원형 버튼=중앙 밴드 / 나머지=하단. 원형 주력이 화면 중앙을 채워 '빈 중간'이 사라진다.
           (space-between은 남는 공간을 전부 가운데로 몰아 중간이 비었음 — 주력을 중앙에 앉히는 방식으로 교체) */}
       <div style={{ position: 'absolute', left: 0, right: 0, top: 84, bottom: 'calc(26px + env(safe-area-inset-bottom))', display: 'flex', flexDirection: 'column' }}>
-        <Reveal i={1} style={{ paddingLeft: 24, paddingRight: 24 }}>
+        <Reveal i={1} style={{ paddingLeft: SPACE.x4, paddingRight: SPACE.x4 }}>
           <CoachBubble text="무엇으로 플레이할까요?" />
         </Reveal>
         {/* 주력 난이도·무한 — 남는 중앙 공간(flex:1)에 세로 중앙정렬로 앉혀 화면 한가운데를 차지 */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-          <Reveal i={2} style={{ paddingLeft: 24, paddingRight: 24 }}>
-            <div style={{ display: 'flex', gap: 12 }}>
+          <Reveal i={2} style={{ paddingLeft: SPACE.x4, paddingRight: SPACE.x4 }}>
+            <div style={{ display: 'flex', gap: SPACE.xl }}>
               <BigTile Icon={StairsIcon} grad="linear-gradient(150deg, #FF8A6B 0%, #F2484C 100%)" glow="rgba(242,72,76,0.30)" dot="#F2484C" title="난이도 모드" desc={`${FIRST_LABEL}부터 차근차근`} onClick={onDifficulty} coachId="mode-difficulty" />
               <BigTile Icon={InfinityIcon} grad="linear-gradient(150deg, #FFC85C 0%, #F0A11E 100%)" glow="rgba(240,161,30,0.32)" dot="#F0A91E" title="무한 모드" desc="서든데스" dangerDesc
                 locked={!endlessUnlocked} lockText={`${ENDLESS_REQ} 달성`} onClick={() => setEndlessOpen(true)} onLocked={() => onLocked && onLocked(`${ENDLESS_REQ}을 달성하면 열려요`)} />
@@ -172,12 +172,12 @@ export function ModeScreen({ endlessUnlocked, endlessBest = 0, onDifficulty, onT
           </Reveal>
         </div>
         {/* 나머지 — 테마 + 연습/복습, 하단 */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
-          <Reveal i={3} style={{ paddingLeft: 24, paddingRight: 24 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.xl }}>
+          <Reveal i={3} style={{ paddingLeft: SPACE.x4, paddingRight: SPACE.x4 }}>
             <FeatureCard Icon={CardsThreeIcon} accent="#7c5cff"
               title="테마 모드" desc="드라마·여행 등 취향대로 즐겨요" onClick={onTheme} coachId="mode-theme" />
           </Reveal>
-          <Reveal i={4} style={{ paddingLeft: 24, paddingRight: 24 }}>
+          <Reveal i={4} style={{ paddingLeft: SPACE.x4, paddingRight: SPACE.x4 }}>
             <FeatureCard Icon={GraduationCapIcon} accent="#2BB583"
               title="트레이닝" desc="약한 단어만 골라 무제한 연습"
               onClick={() => { onHighlightDone && onHighlightDone(); setTrainingOpen(true); }} /* 넛지 코치마크는 이 카드 onClick에서 dismiss(forceLastStep 구조) */

@@ -6,7 +6,7 @@ import {
   InfinityIcon, BookmarkSimpleIcon, BooksIcon, CalendarCheckIcon, CalendarHeartIcon, CalendarDotsIcon, FireIcon, WaveformIcon,
   ArrowsClockwiseIcon,
 } from '@phosphor-icons/react';
-import { TG, TYPE, TOUCH_OPT, RADIUS } from '../tgTokens.js';
+import { TG, TYPE, TOUCH_OPT, RADIUS, SPACE } from '../tgTokens.js';
 import { ACHIEVEMENTS, ACH_CATEGORIES } from '../achievements.js';
 import { Reveal, GameHeader } from './shared.jsx';
 
@@ -77,9 +77,9 @@ function AchRow({ ach, earned, snapshot, onToast, last }) {
   const pct = Math.min(100, Math.round((p.cur / (p.target || 1)) * 100));
   return (
     <button className="tg-press" onClick={() => onToast && onToast(got ? '이미 달성한 업적이에요!' : ach.cond)}
-      style={{ display: 'flex', alignItems: 'center', gap: 14, width: '100%', textAlign: 'left', padding: '13px 4px', background: 'none', border: 'none', borderBottom: last ? 'none' : '1px solid rgba(43,39,48,0.06)', cursor: 'pointer', ...TOUCH_OPT }}>
+      style={{ display: 'flex', alignItems: 'center', gap: SPACE.x2, width: '100%', textAlign: 'left', padding: '13px 4px', background: 'none', border: 'none', borderBottom: last ? 'none' : '1px solid rgba(43,39,48,0.06)', cursor: 'pointer', ...TOUCH_OPT }}>
       <RingBadge ach={ach} got={got} color={color} pct={pct} />
-      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: SPACE.xxs }}>
         <span style={{ ...TYPE.btnSm, color: got ? TG.INK : TG.SUB }}>{ach.label}</span>
         <span style={{ ...TYPE.meta, color: TG.SUB, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ach.desc}</span>
       </div>
@@ -107,7 +107,7 @@ export function AchievementsScreen({ earned, snapshot, onBack, onToast }) {
       } />
       {/* 하나의 리스트 — 섹션 없이 흐르고, 카테고리 구분은 링/아이콘 색으로만 */}
       <Reveal i={1} style={{
-        position: 'absolute', left: 24, right: 24, top: 52, bottom: 'calc(20px + env(safe-area-inset-bottom))', overflowY: 'auto', zIndex: 2, paddingTop: 6,
+        position: 'absolute', left: 24, right: 24, top: 52, bottom: 'calc(20px + env(safe-area-inset-bottom))', overflowY: 'auto', zIndex: 2, paddingTop: SPACE.sm,
         // 헤더 바(52px) 바닥에 딱 붙는 위·아래 가장자리 페이드(난이도 선택 화면과 동일 방식)
         maskImage: 'linear-gradient(to bottom, transparent 0, #000 20px, #000 calc(100% - 48px), transparent 100%)',
         WebkitMaskImage: 'linear-gradient(to bottom, transparent 0, #000 20px, #000 calc(100% - 48px), transparent 100%)',

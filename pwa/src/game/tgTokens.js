@@ -132,6 +132,11 @@ export const SHADOW = {
   timeoutGlow: '0 10px 28px rgba(43,39,48,0.07), 0 0 40px rgba(242,72,76,0.22), 0 2px 16px rgba(242,72,76,0.16)',
 };
 
+// ── 스페이싱 토큰 ──────────────────────────────────────
+// 4px 기반 스케일. gap·margin·단일 padding 등 개별 숫자값에 사용. 근접값은 스냅(예 7→md 8, 14·15→x2 16).
+// 복합 shorthand padding('14px 16px')은 레이아웃 특화·가독성 위해 토큰화 대상 아님(리터럴 유지).
+export const SPACE = { xxs: 2, xs: 4, sm: 6, md: 8, lg: 10, xl: 12, x2: 16, x3: 20, x4: 24 };
+
 // ── 모션 토큰 ──────────────────────────────────────────
 export const DUR = { micro: '150ms', state: '220ms', enter: '360ms' };
 

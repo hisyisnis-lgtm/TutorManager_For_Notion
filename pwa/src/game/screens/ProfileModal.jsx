@@ -4,7 +4,7 @@
 // 시각 패턴은 NicknameEditModal·HomeMenu와 통일(다크 오버레이 + 카드). SNS 버튼/로그인 시작은 LoginScreen 공용.
 import { useState } from 'react';
 import { PencilSimpleIcon, XIcon, CaretRightIcon, MedalIcon, CopyIcon, CheckIcon } from '@phosphor-icons/react';
-import { TG, TYPE, TOUCH_OPT, RADIUS } from '../tgTokens.js';
+import { TG, TYPE, TOUCH_OPT, RADIUS, SPACE } from '../tgTokens.js';
 import { startSocialLogin, KakaoLogo, GoogleLogo } from './LoginScreen.jsx';
 import { ModalCard } from './shared.jsx';
 
@@ -49,11 +49,11 @@ export function ProfileModal({
         </div>
 
         {/* 프로필 — 엠블럼 + 닉네임(+수정) + 등급명·게이지 */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.x2 }}>
           <img src={tier.emblem} alt="" width={64} height={64} style={{ display: 'block', flexShrink: 0 }} />
           <div style={{ flex: 1, minWidth: 0 }}>
             {/* 닉네임 + 수정 */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
               <span style={{ ...TYPE.h1, color: TG.INK, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{displayName}</span>
               {onEditNickname && (
                 <button onClick={onEditNickname} aria-label="닉네임 수정" className="tg-press"
@@ -65,16 +65,16 @@ export function ProfileModal({
               )}
             </div>
             <span style={{ ...TYPE.labelSm, color: TG.SUB }}>{tier.name}</span>
-            <div style={{ marginTop: 8, width: '100%', height: 6, borderRadius: RADIUS.xs, background: TG.BORDER, overflow: 'hidden' }}>
+            <div style={{ marginTop: SPACE.md, width: '100%', height: 6, borderRadius: RADIUS.xs, background: TG.BORDER, overflow: 'hidden' }}>
               <div style={{ width: `${pct}%`, height: '100%', borderRadius: RADIUS.xs, background: TG.CORAL_GRAD, transition: 'width .5s ease' }} />
             </div>
-            <span style={{ display: 'block', marginTop: 5, ...TYPE.meta, color: TG.SUB }}>{tier.isMax ? '최고 등급이에요 🎉' : (tier.examReady ? '승급 시험을 볼 수 있어요!' : `다음 등급까지 ${tier.toNext.toLocaleString()} XP`)}</span>
+            <span style={{ display: 'block', marginTop: SPACE.sm, ...TYPE.meta, color: TG.SUB }}>{tier.isMax ? '최고 등급이에요 🎉' : (tier.examReady ? '승급 시험을 볼 수 있어요!' : `다음 등급까지 ${tier.toNext.toLocaleString()} XP`)}</span>
           </div>
         </div>
 
         {/* 승급 시험 CTA — 게이지 만땅(examReady)일 때만. 합격하면 등급 상승. */}
         {onExam && (
-          <button onClick={onExam} className="tg-press" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', height: 52, borderRadius: RADIUS.lg, border: 'none', cursor: 'pointer', background: TG.CORAL_GRAD, boxShadow: '0 8px 18px rgba(242,72,76,0.3)', ...TOUCH_OPT }}>
+          <button onClick={onExam} className="tg-press" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: SPACE.md, width: '100%', height: 52, borderRadius: RADIUS.lg, border: 'none', cursor: 'pointer', background: TG.CORAL_GRAD, boxShadow: '0 8px 18px rgba(242,72,76,0.3)', ...TOUCH_OPT }}>
             <MedalIcon size={19} weight="fill" color="#fff" />
             <span style={{ ...TYPE.btnSm, color: '#fff' }}>승급 시험 보기</span>
           </button>
@@ -82,7 +82,7 @@ export function ProfileModal({
 
         {/* 등급 자세히 — 기존 카드 탭(→ 등급 화면) 동선 보존 */}
         {onMastery && (
-          <button onClick={onMastery} className="tg-press" style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '11px 12px', borderRadius: RADIUS.lg, background: TG.SURFACE, border: 'none', cursor: 'pointer', ...TOUCH_OPT }}>
+          <button onClick={onMastery} className="tg-press" style={{ display: 'flex', alignItems: 'center', gap: SPACE.lg, width: '100%', padding: '11px 12px', borderRadius: RADIUS.lg, background: TG.SURFACE, border: 'none', cursor: 'pointer', ...TOUCH_OPT }}>
             <div style={{ width: 30, height: 30, borderRadius: RADIUS.md, background: 'rgba(240,169,30,0.14)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <MedalIcon size={17} weight="fill" color="#F0A91E" />
             </div>
@@ -95,19 +95,19 @@ export function ProfileModal({
 
         {/* 로그인 상태 */}
         {isGuest ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.lg }}>
             <span style={{ ...TYPE.sub, color: TG.SUB, textAlign: 'center' }}>로그인하면 기기를 바꿔도 기록이 그대로예요</span>
-            <button onClick={() => startSocialLogin('kakao')} className="tg-press" style={{ width: '100%', height: 52, borderRadius: RADIUS.lg, border: 'none', background: '#FEE500', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, cursor: 'pointer', ...TOUCH_OPT }}>
+            <button onClick={() => startSocialLogin('kakao')} className="tg-press" style={{ width: '100%', height: 52, borderRadius: RADIUS.lg, border: 'none', background: '#FEE500', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: SPACE.md, cursor: 'pointer', ...TOUCH_OPT }}>
               <KakaoLogo />
               <span style={{ ...TYPE.btnSm, color: 'rgba(0,0,0,0.85)' }}>카카오로 시작하기</span>
             </button>
-            <button onClick={() => startSocialLogin('google')} className="tg-press" style={{ width: '100%', height: 52, borderRadius: RADIUS.lg, border: '1px solid #747775', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, cursor: 'pointer', ...TOUCH_OPT }}>
+            <button onClick={() => startSocialLogin('google')} className="tg-press" style={{ width: '100%', height: 52, borderRadius: RADIUS.lg, border: '1px solid #747775', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: SPACE.lg, cursor: 'pointer', ...TOUCH_OPT }}>
               <GoogleLogo />
               <span style={{ ...TYPE.btnSm, color: '#1f1f1f' }}>Google로 계속하기</span>
             </button>
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.lg }}>
             <span style={{ ...TYPE.sub, color: TG.SUB, textAlign: 'center' }}>로그인됨 · 기록이 안전하게 저장되고 있어요</span>
             {isMemberUser && onLogout && (
               <button onClick={onLogout} className="tg-press" style={{ width: '100%', height: 48, borderRadius: RADIUS.lg, border: '1.5px solid #ebe5de', background: '#fff', cursor: 'pointer', ...TYPE.btnSm, color: TG.SUB, ...TOUCH_OPT }}>로그아웃</button>
@@ -117,11 +117,11 @@ export function ProfileModal({
 
         {/* 고유 ID + 복사 — 계정 문제 문의 시 필요. 담백하게 카드 하단. */}
         {userId && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', borderRadius: RADIUS.md, background: TG.SURFACE }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.md, padding: '10px 12px', borderRadius: RADIUS.md, background: TG.SURFACE }}>
             <span style={{ ...TYPE.labelSm, color: TG.SUB, flexShrink: 0 }}>UID</span>
             <span style={{ flex: 1, minWidth: 0, ...TYPE.num, fontSize: 12, color: TG.INK, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{userId}</span>
             <button onClick={copyId} aria-label="UID 복사" className="tg-press"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 5, height: 30, padding: '0 10px', borderRadius: RADIUS.md, border: 'none', cursor: 'pointer', flexShrink: 0, background: copied ? 'rgba(54,201,141,0.14)' : '#fff', boxShadow: copied ? 'none' : '0 1px 3px rgba(43,39,48,0.1)', ...TOUCH_OPT }}>
+              style={{ display: 'inline-flex', alignItems: 'center', gap: SPACE.sm, height: 30, padding: '0 10px', borderRadius: RADIUS.md, border: 'none', cursor: 'pointer', flexShrink: 0, background: copied ? 'rgba(54,201,141,0.14)' : '#fff', boxShadow: copied ? 'none' : '0 1px 3px rgba(43,39,48,0.1)', ...TOUCH_OPT }}>
               {copied ? <CheckIcon size={13} weight="bold" color="#36C98D" /> : <CopyIcon size={13} weight="fill" color={TG.SUB} />}
               <span style={{ ...TYPE.labelSm, color: copied ? TG.SUCCESS_GLOW : TG.SUB }}>{copied ? '복사됨' : '복사'}</span>
             </button>

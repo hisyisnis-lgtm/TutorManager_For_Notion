@@ -1,6 +1,6 @@
 // 소개 화면 (3페이지 캐러셀, Figma 좌표 절대배치) — 게임 기원 스토리.
 import { LightningIcon, TrophyIcon } from '@phosphor-icons/react';
-import { TG, TYPE, FONT_HANZI, TOUCH_OPT, RADIUS } from '../tgTokens.js';
+import { TG, TYPE, FONT_HANZI, TOUCH_OPT, RADIUS, SPACE } from '../tgTokens.js';
 import { ToneMark } from '../tgWidgets.jsx';
 import { TONES } from '../../constants/toneGameWords.js';
 import { play as playSfx } from '../tgSfx.js';
@@ -36,10 +36,10 @@ function IntroPanel({ p }) {
       {p.kind === 'note' ? (
         <Reveal i={0} style={{ position: 'absolute', left: 0, right: 0, top: '16.5%' }}>
         <div style={{ display: 'flex', justifyContent: 'center' }}>
-          <div style={{ background: '#fff', borderRadius: RADIUS.card, boxShadow: '0px 10px 28px rgba(43,39,48,0.08)', padding: '26px 30px 22px', display: 'flex', flexDirection: 'column', gap: 16, alignItems: 'center' }}>
-            <div style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
+          <div style={{ background: '#fff', borderRadius: RADIUS.card, boxShadow: '0px 10px 28px rgba(43,39,48,0.08)', padding: '26px 30px 22px', display: 'flex', flexDirection: 'column', gap: SPACE.x2, alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: SPACE.x3, alignItems: 'center' }}>
               {[['我', 3], ['爱', 4], ['你', 3]].map(([ch, tn]) => (
-                <div key={ch} style={{ display: 'flex', flexDirection: 'column', gap: 7, alignItems: 'center', color: TONES.find((t) => t.num === tn)?.color }}>
+                <div key={ch} style={{ display: 'flex', flexDirection: 'column', gap: SPACE.md, alignItems: 'center', color: TONES.find((t) => t.num === tn)?.color }}>
                   <ToneMark tone={tn} size={26} />
                   <span style={{ fontFamily: FONT_HANZI, fontWeight: 700, fontSize: 52, color: TG.INK, lineHeight: 1 }}>{ch}</span>
                 </div>
@@ -53,7 +53,7 @@ function IntroPanel({ p }) {
         </Reveal>
       ) : (
         <Reveal i={0} style={{ position: 'absolute', left: 0, right: 0, top: '19.8%' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, alignItems: 'center' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.x2, alignItems: 'center' }}>
           <div style={{ width: 112, height: 112, borderRadius: 56, background: p.circleBg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <p.Icon size={52} weight="fill" color={p.iconColor} />
           </div>
@@ -64,7 +64,7 @@ function IntroPanel({ p }) {
         </Reveal>
       )}
       <Reveal i={1} style={{ position: 'absolute', left: 24, right: 24, top: p.tcolTop }}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center', textAlign: 'center' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.xl, alignItems: 'center', textAlign: 'center' }}>
         <span style={{ ...TYPE.titleLg, fontSize: 28, color: TG.INK, letterSpacing: -0.3, width: '100%' }}>{p.title}</span>
         <div style={{ width: '100%', ...TYPE.body, color: TG.SUB, lineHeight: 1.65 }}>
           {p.body.map((line, i) => <div key={i}>{line}</div>)}
@@ -96,7 +96,7 @@ export function IntroScreen({ page, onNext, onSkip }) {
       </div>
 
       {/* 점 인디케이터 (고정) — CTA(89.35%) 위 gap 유지 */}
-      <div style={{ position: 'absolute', left: 24, right: 24, top: '84.85%', zIndex: 3, height: 28, display: 'flex', gap: 7, alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ position: 'absolute', left: 24, right: 24, top: '84.85%', zIndex: 3, height: 28, display: 'flex', gap: SPACE.md, alignItems: 'center', justifyContent: 'center' }}>
         {[0, 1, 2].map((i) => (
           <div key={i} style={{ height: 8, width: i === page ? 22 : 8, borderRadius: RADIUS.xs, background: i === page ? TG.CORAL : '#e2dbd3', transition: 'width .25s ease, background .25s ease' }} />
         ))}

@@ -7,7 +7,7 @@
 // 게임 레이아웃 + 딤 스포트라이트. 완료 후 onDone → 모드선택.
 import { useState, useEffect, useRef } from 'react';
 import { StarIcon, TimerIcon, CaretRightIcon } from '@phosphor-icons/react';
-import { TG, TYPE, FONT_HANZI, TOUCH_OPT, TONE_TINTS, TONE_BORDERS, haptic, RADIUS } from '../tgTokens.js';
+import { TG, TYPE, FONT_HANZI, TOUCH_OPT, TONE_TINTS, TONE_BORDERS, haptic, RADIUS, SPACE } from '../tgTokens.js';
 import { ToneMark } from '../tgWidgets.jsx';
 import { TONES } from '../../constants/toneGameWords.js';
 import { speakWord } from '../tgTts.js';
@@ -84,21 +84,21 @@ export function TutorialScreen({ onDone }) {
   return (
     <>
       {/* 점수(정적) 상단 중앙 */}
-      <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', top: 20, display: 'flex', alignItems: 'center', gap: 5, background: '#fff', padding: '9px 14px', borderRadius: RADIUS.lg, boxShadow: '0px 3px 8px rgba(43,39,48,0.06)' }}>
+      <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', top: 20, display: 'flex', alignItems: 'center', gap: SPACE.sm, background: '#fff', padding: '9px 14px', borderRadius: RADIUS.lg, boxShadow: '0px 3px 8px rgba(43,39,48,0.06)' }}>
         <StarIcon size={13} weight="fill" color={TG.SUN} />
         <span style={{ ...TYPE.numMd, fontSize: 17, color: TG.INK }}>0</span>
       </div>
       {/* 우상단은 건너뛰기 버튼이 차지(정적 일시정지 아이콘은 겹쳐서 제거) */}
       {/* 타이머(정적) top69 */}
-      <div style={{ position: 'absolute', left: 20, right: 20, top: 69, display: 'flex', alignItems: 'center', gap: 8 }}>
+      <div style={{ position: 'absolute', left: 20, right: 20, top: 69, display: 'flex', alignItems: 'center', gap: SPACE.md }}>
         <div style={{ width: 32, height: 32, borderRadius: RADIUS.lg, background: '#ff5e62', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0px 3px 4.5px rgba(255,94,98,0.45)' }}>
           <TimerIcon size={20} weight="fill" color="#fff" />
         </div>
         <div style={{ flex: 1, height: 12, borderRadius: RADIUS.sm, background: TG.TRACK }} />
       </div>
       {/* 진행 표시(3점) + 단계 라벨 — top70 중앙 */}
-      <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', top: 70, display: 'flex', alignItems: 'center', gap: 8, background: '#fff1f1', padding: '8px 14px', borderRadius: RADIUS.lg, zIndex: 7 }}>
-        <div style={{ display: 'flex', gap: 5 }}>
+      <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', top: 70, display: 'flex', alignItems: 'center', gap: SPACE.md, background: '#fff1f1', padding: '8px 14px', borderRadius: RADIUS.lg, zIndex: 7 }}>
+        <div style={{ display: 'flex', gap: SPACE.sm }}>
           {[0, 1, 2, 3, 4].map((i) => (
             <div key={i} style={{ width: i === phase ? 16 : 6, height: 6, borderRadius: RADIUS.xs, background: i === phase ? TG.CORAL_DK : '#f4c4c4', transition: 'width .25s ease' }} />
           ))}
@@ -117,10 +117,10 @@ export function TutorialScreen({ onDone }) {
       {/* 카드 top129 — 스포트라이트. 비트0=성조 소개, 비트1/2=단어카드 */}
       <Reveal i={0} style={{ position: 'absolute', left: 20, right: 20, top: 129, zIndex: 6 }}>
         {phase === 0 ? (
-          <div style={{ background: TG.CARD, borderRadius: RADIUS.card, minHeight: 200, padding: '28px 22px', boxShadow: '0 10px 28px rgba(43,39,48,0.08)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 18 }}>
-            <div style={{ display: 'flex', gap: 14 }}>
+          <div style={{ background: TG.CARD, borderRadius: RADIUS.card, minHeight: 200, padding: '28px 22px', boxShadow: '0 10px 28px rgba(43,39,48,0.08)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: SPACE.x3 }}>
+            <div style={{ display: 'flex', gap: SPACE.x2 }}>
               {SAMPLE_ORDER.map((n) => (
-                <div key={n} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7, color: TONES.find((t) => t.num === n)?.color }}>
+                <div key={n} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: SPACE.md, color: TONES.find((t) => t.num === n)?.color }}>
                   <ToneMark tone={n} size={22} />
                   <span style={{ fontFamily: FONT_HANZI, fontWeight: 700, fontSize: 34, color: TG.INK, lineHeight: 1 }}>{TONE_SAMPLES[n].hanzi}</span>
                 </div>
@@ -145,7 +145,7 @@ export function TutorialScreen({ onDone }) {
       {/* 비트0 '다음' 버튼 — 성조버튼 위. 스포트라이트 */}
       {phase === 0 && (
         <Reveal i={1} style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(130px + env(safe-area-inset-bottom))', zIndex: 6 }}>
-          <button onClick={() => goPhase(1)} className="tg-press" style={{ width: '100%', height: 52, borderRadius: RADIUS.lg, border: 'none', cursor: 'pointer', background: TG.CORAL_GRAD, boxShadow: '0px 8px 18px rgba(242,72,76,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, ...TOUCH_OPT }}>
+          <button onClick={() => goPhase(1)} className="tg-press" style={{ width: '100%', height: 52, borderRadius: RADIUS.lg, border: 'none', cursor: 'pointer', background: TG.CORAL_GRAD, boxShadow: '0px 8px 18px rgba(242,72,76,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: SPACE.sm, ...TOUCH_OPT }}>
             <span style={{ ...TYPE.btn, color: '#fff' }}>다음</span>
             <CaretRightIcon size={14} weight="bold" color="#fff" />
           </button>
@@ -163,7 +163,7 @@ export function TutorialScreen({ onDone }) {
       {/* 성조버튼 하단 고정 — 비트0=탭해서 듣기(정답 강조 없음), 비트1/2=정답 강조 + 나머지 흐림. 비트3(그리기)은 미표시 */}
       {phase !== 3 && (
       <Reveal i={2} style={{ position: 'absolute', left: 20, right: 20, bottom: 'calc(30px + env(safe-area-inset-bottom))', zIndex: 6 }}>
-        <div style={{ height: 81, display: 'flex', gap: 9 }}>
+        <div style={{ height: 81, display: 'flex', gap: SPACE.lg }}>
           {TONES.map((t) => {
             const isAnswer = phase !== 0 && t.num === answer && !completed;
             const isWrong = wrong === t.num;
@@ -174,7 +174,7 @@ export function TutorialScreen({ onDone }) {
                 background: `linear-gradient(${TONE_TINTS[t.num]}, ${TONE_TINTS[t.num]}), ${TG.BG}`,
                 border: isAnswer ? `3px solid ${t.color}` : `1.5px solid ${TONE_BORDERS[t.num]}`,
                 color: t.color,
-                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, paddingTop: 16, paddingBottom: 12,
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: SPACE.xs, paddingTop: SPACE.x2, paddingBottom: SPACE.xl,
                 boxShadow: isAnswer ? `0 0 0 4px ${t.color}22` : 'none',
                 transition: 'box-shadow .2s ease', ...TOUCH_OPT,
               }}>
@@ -186,7 +186,7 @@ export function TutorialScreen({ onDone }) {
                     animation: `tg-ripple 1500ms ease-out ${delay}ms infinite`,
                   }} />
                 ))}
-                <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: SPACE.xs }}>
                   <ToneMark tone={t.num} size={34} />
                   <span style={{ ...TYPE.labelSm, color: t.color }}>{t.name}</span>
                 </div>

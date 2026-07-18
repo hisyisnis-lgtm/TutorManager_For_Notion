@@ -3,7 +3,7 @@
 // 시각 패턴은 SettingsModal과 통일(다크 오버레이 + 카드). 입력 규칙은 NicknameScreen과 동일(≤12자·비어있지 않음).
 import { useState } from 'react';
 import { ArrowsClockwiseIcon, XIcon } from '@phosphor-icons/react';
-import { TG, TYPE, TOUCH_OPT, RADIUS } from '../tgTokens.js';
+import { TG, TYPE, TOUCH_OPT, RADIUS, SPACE } from '../tgTokens.js';
 import { play as playSfx } from '../tgSfx.js';
 import { randomNickname, NICKNAME_MAX } from '../nickname.js';
 
@@ -19,10 +19,10 @@ export function NicknameEditModal({ current = '', onSave, onClose }) {
     onClose();
   };
   return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(26,16,20,0.55)', backdropFilter: 'blur(2px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, ...TOUCH_OPT }}>
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(26,16,20,0.55)', backdropFilter: 'blur(2px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: SPACE.x4, ...TOUCH_OPT }}>
       <div className="tg-enter" onClick={(e) => e.stopPropagation()} style={{
         width: '100%', maxWidth: 320, background: TG.CARD, borderRadius: RADIUS.xxl, padding: '20px 22px 22px',
-        boxShadow: '0 20px 50px rgba(26,16,20,0.3)', display: 'flex', flexDirection: 'column', gap: 16,
+        boxShadow: '0 20px 50px rgba(26,16,20,0.3)', display: 'flex', flexDirection: 'column', gap: SPACE.x2,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <span style={{ ...TYPE.head, fontSize: 18, color: TG.INK }}>닉네임 변경</span>
@@ -48,18 +48,18 @@ export function NicknameEditModal({ current = '', onSave, onClose }) {
               color: TG.INK, outline: 'none', textAlign: 'center', ...TOUCH_OPT,
             }}
           />
-          <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ marginTop: SPACE.lg, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <button onClick={reroll} className="tg-press" aria-label="닉네임 다시 뽑기" style={{
-              display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: RADIUS.md,
+              display: 'inline-flex', alignItems: 'center', gap: SPACE.sm, padding: '7px 12px', borderRadius: RADIUS.md,
               background: '#fff', border: `1.5px solid ${TG.CORAL_BG}`, cursor: 'pointer', ...TOUCH_OPT,
             }}>
               <ArrowsClockwiseIcon size={14} weight="bold" color={TG.CORAL_DK} />
               <span style={{ ...TYPE.labelSm, color: TG.INK }}>다시 뽑기</span>
             </button>
-            <span style={{ ...TYPE.meta, color: TG.SUB, paddingRight: 4 }}>{trimmed.length}/{NICKNAME_MAX}</span>
+            <span style={{ ...TYPE.meta, color: TG.SUB, paddingRight: SPACE.xs }}>{trimmed.length}/{NICKNAME_MAX}</span>
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 10 }}>
+        <div style={{ display: 'flex', gap: SPACE.lg }}>
           <button onClick={onClose} className="tg-press" style={{
             flex: 1, height: 48, borderRadius: RADIUS.lg, border: '1.5px solid #ebe5de', background: '#fff', cursor: 'pointer',
             ...TYPE.btnSm, color: TG.SUB, ...TOUCH_OPT,

@@ -1,7 +1,7 @@
 // 타이틀 화면 — 배경 아트 + 큰 타이틀 로고(프리미엄 효과) + 태그라인 + 성조 캐릭터 무대 + "터치하여 시작하기".
 // 화면 어디든 터치하면 홈 허브로(onStart). 좌상단 닫기로 게임 나가기(onClose).
 // Figma "24. 타이틀". 스플래시(로딩) 다음의 영구 진입 관문. 캐릭터=홈 성조마크 룩 재사용(가벼운 정적판).
-import { TYPE, TOUCH_OPT, ASSETS, RADIUS } from '../tgTokens.js';
+import { TYPE, TOUCH_OPT, ASSETS, RADIUS, SPACE } from '../tgTokens.js';
 import { TONES } from '../../constants/toneGameWords.js';
 import { ToneMark } from '../tgWidgets.jsx';
 import { FigmaScreen } from './shared.jsx';
@@ -69,7 +69,7 @@ export function TitleScreen({ onStart }) {
         </div>
 
         {/* 성조 캐릭터 무대 (가운데 빈 공간) */}
-        <div style={{ position: 'absolute', left: 0, right: 0, top: '58%', display: 'flex', justifyContent: 'center', alignItems: 'flex-end', gap: 6, pointerEvents: 'none' }}>
+        <div style={{ position: 'absolute', left: 0, right: 0, top: '58%', display: 'flex', justifyContent: 'center', alignItems: 'flex-end', gap: SPACE.sm, pointerEvents: 'none' }}>
           {TONES.map((t, i) => <TitleMark key={t.num} tone={t} i={i} />)}
         </div>
 

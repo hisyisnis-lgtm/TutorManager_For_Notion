@@ -4,7 +4,7 @@
 // 미니멀 타이포 연출(토스풍): 프로스티드 딤 위로 헤드라인 + 원인 한 줄이 부드럽게 떠오름(오버슛 없음).
 // ~2초 체류 후 자동 소멸(onDone). SFX는 end-effect 담당, 여긴 햅틱만.
 import { useEffect, useState } from 'react';
-import { TYPE, haptic } from '../tgTokens.js';
+import { TYPE, haptic, SPACE } from '../tgTokens.js';
 
 // 종료 사유별 헤드라인 + 원인 한 줄 — 압박 아닌 격려 톤이되, 왜 끝났는지 분명히.
 // complete=모든 문제 완료(정상) · timeout=시간 초과 · miss=무한 서든데스 오답 종료
@@ -40,12 +40,12 @@ export function GameOverBeat({ endKind = 'complete', onDone, hold = false }) {
         }}>{e.title}</span>
         {/* 원인 한 줄 — 왜 끝났는지 명시(인지) */}
         <span style={{
-          ...TYPE.body, color: 'rgba(255,255,255,0.82)', marginTop: 10,
+          ...TYPE.body, color: 'rgba(255,255,255,0.82)', marginTop: SPACE.lg,
           animation: 'tg-rise .55s cubic-bezier(.22,1,.36,1) .16s both',
         }}>{e.reason}</span>
         {/* 진행 힌트 */}
         <span style={{
-          ...TYPE.meta, color: 'rgba(255,255,255,0.45)', marginTop: 18,
+          ...TYPE.meta, color: 'rgba(255,255,255,0.45)', marginTop: SPACE.x3,
           animation: 'tg-rise .55s cubic-bezier(.22,1,.36,1) .3s both',
         }}>결과 보기로 이동 중…</span>
       </div>

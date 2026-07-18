@@ -4,7 +4,7 @@
 // 모바일 키보드가 하단에서 올라와도 CTA를 가리지 않게 한다(하단 고정 안 함).
 import { useState } from 'react';
 import { ArrowsClockwiseIcon } from '@phosphor-icons/react';
-import { TG, TYPE, TOUCH_OPT, ASSETS, RADIUS } from '../tgTokens.js';
+import { TG, TYPE, TOUCH_OPT, ASSETS, RADIUS, SPACE } from '../tgTokens.js';
 import { play as playSfx } from '../tgSfx.js';
 import { randomNickname, NICKNAME_MAX } from '../nickname.js';
 import { Reveal } from './shared.jsx';
@@ -58,15 +58,15 @@ export function NicknameScreen({ defaultName = '', onSubmit, saving = false }) {
           }}
         />
         {/* 좌: 다시 뽑기 / 우: 글자수 — 정해진 높이 한 줄이라 아래 CTA와 겹치지 않음 */}
-        <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ marginTop: SPACE.lg, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <button onClick={reroll} className="tg-press" aria-label="닉네임 다시 뽑기" style={{
-            display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: RADIUS.md,
+            display: 'inline-flex', alignItems: 'center', gap: SPACE.sm, padding: '8px 14px', borderRadius: RADIUS.md,
             background: '#fff', border: `1.5px solid ${TG.CORAL_BG}`, cursor: 'pointer', ...TOUCH_OPT,
           }}>
             <ArrowsClockwiseIcon size={15} weight="bold" color={TG.CORAL_DK} />
             <span style={{ ...TYPE.labelSm, color: TG.INK }}>다시 뽑기</span>
           </button>
-          <span style={{ ...TYPE.meta, color: TG.SUB, paddingRight: 4 }}>{trimmed.length}/{NICKNAME_MAX}</span>
+          <span style={{ ...TYPE.meta, color: TG.SUB, paddingRight: SPACE.xs }}>{trimmed.length}/{NICKNAME_MAX}</span>
         </div>
       </Reveal>
 

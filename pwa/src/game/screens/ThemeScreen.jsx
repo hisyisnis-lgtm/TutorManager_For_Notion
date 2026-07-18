@@ -4,7 +4,7 @@
 // 참조 메모리: tone_game_redesign.md (테마 모드)
 import { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { CaretLeftIcon, CaretRightIcon, LockSimpleIcon, PlayIcon } from '@phosphor-icons/react';
-import { TG, TYPE, TOUCH_OPT, DUR, RADIUS } from '../tgTokens.js';
+import { TG, TYPE, TOUCH_OPT, DUR, RADIUS, SPACE } from '../tgTokens.js';
 import { isThemeUnlocked, themeBestScore, themeUnlockReqText, themeUnlockToastText, themeStars } from '../gameLogic.js';
 import { play as playSfx } from '../tgSfx.js';
 import { Reveal, GameHeader, StarRow, CoachBubble, ShakeButton, prefersReducedMotion } from './shared.jsx';
@@ -161,14 +161,14 @@ function ThemeCard({ theme, unlocked, best, count, cardH, imgH, unlockCur, focus
           ? { position: 'absolute', left: 18, top: '50%', transform: 'translateY(-50%)', right: 74 }
           : { position: 'absolute', left: 18, top: panelH >= 130 ? 15 : 11, right: 18 }}>
           <div style={{ ...TYPE.title, color: TG.INK, lineHeight: 1.15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{theme.label}</div>
-          <div style={{ marginTop: 5, ...TYPE.sub, color: PANEL_SUB, lineHeight: 1.4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          <div style={{ marginTop: SPACE.sm, ...TYPE.sub, color: PANEL_SUB, lineHeight: 1.4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {unlocked ? (theme.desc || `${count}단어`) : themeUnlockReqText(theme)}
           </div>
         </div>
         {!unlocked && (
           /* 진행 게이지 — 해제 조건 대비 현재 최고점(잠금이 벽이 아니라 목표로 읽히게) */
           <div style={{ position: 'absolute', left: 18, right: 18, bottom: panelH >= 130 ? 17 : 13 }}>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 6 }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: SPACE.sm }}>
               <span style={{ ...TYPE.labelSm, color: GOLD_TX }}>
                 {unlockCur.toLocaleString()} / {theme.unlock.score.toLocaleString()}
               </span>
@@ -269,9 +269,9 @@ export function ThemeScreen({ themes, studentToken, counts = {}, onStart, onBack
       {/* 헤더 — 공용 GameHeader */}
       <GameHeader title="테마 선택" onBack={onBack} />
       {/* 코치+카드+닷/힌트 = 헤더 바로 아래 상단정렬(모드/난이도 화면과 동일 리듬 — 큰 카드가 아래로 쏠리지 않게). */}
-      <div style={{ position: 'absolute', left: 0, right: 0, top: 80, display: 'flex', flexDirection: 'column', gap: 18 }}>
+      <div style={{ position: 'absolute', left: 0, right: 0, top: 80, display: 'flex', flexDirection: 'column', gap: SPACE.x3 }}>
         {/* 코치 말풍선 */}
-        <Reveal i={1} style={{ paddingLeft: 24, paddingRight: 24 }}>
+        <Reveal i={1} style={{ paddingLeft: SPACE.x4, paddingRight: SPACE.x4 }}>
           <CoachBubble text="어떤 테마로 즐겨볼까요?" />
         </Reveal>
         {/* 카드 가로 스냅스크롤 (항상 중앙 스냅 · 양옆 peek 축소·딤) — PC는 좌우 화살표·휠로 넘김 */}
@@ -316,8 +316,8 @@ export function ThemeScreen({ themes, studentToken, counts = {}, onStart, onBack
         )}
         </div>
         {/* 페이지 닷 + 스크롤 힌트 */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
-          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: SPACE.xl }}>
+          <div style={{ display: 'flex', gap: SPACE.sm, alignItems: 'center' }}>
             {themes.map((t, i) => (
               <div key={t.id} style={{ width: i === active ? 20 : 6, height: 6, borderRadius: RADIUS.xs, background: i === active ? TG.CORAL_DK : TG.MUTED, transition: `all ${DUR.state} ease` }} />
             ))}
