@@ -2,7 +2,7 @@
 // (기존 StartScreen.jsx 내부 함수에서 추출)
 import { useState } from 'react';
 import { HandWavingIcon, InstagramLogoIcon, YoutubeLogoIcon, ArticleIcon, CaretRightIcon, PlayIcon, InfinityIcon, StarIcon, QuestionIcon, DevicesIcon, SignInIcon, GraduationCapIcon } from '@phosphor-icons/react';
-import { TG, TYPE, SHADOW, TOUCH_OPT, loadBest, saveBest } from '../tgTokens.js';
+import { TG, TYPE, SHADOW, TOUCH_OPT, loadBest, saveBest, RADIUS } from '../tgTokens.js';
 import { GAMEKEY, loadEndlessBest, saveEndlessBest } from '../gameLogic.js';
 import { DIFFICULTIES } from '../../constants/toneGameWords.js';
 import { track } from '../gameAnalytics.js';
@@ -36,7 +36,7 @@ export function HelpStartModal({ onStart, onClose }) {
 export function EndlessStartModal({ best = 0, onStart, onClose }) {
   return (
     <ModalCard onClose={onClose}>
-      <div style={{ width: 72, height: 72, borderRadius: 24, background: 'linear-gradient(135deg,#ffcf5b,#F0A91E)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 10px 26px rgba(240,169,30,0.4)' }}>
+      <div style={{ width: 72, height: 72, borderRadius: RADIUS.xxl, background: 'linear-gradient(135deg,#ffcf5b,#F0A91E)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 10px 26px rgba(240,169,30,0.4)' }}>
         <InfinityIcon size={40} weight="bold" color="#fff" />
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, textAlign: 'center', width: '100%' }}>
@@ -46,7 +46,7 @@ export function EndlessStartModal({ best = 0, onStart, onClose }) {
         </span>
       </div>
       {best > 0 && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(255,176,46,0.14)', padding: '7px 14px', borderRadius: 999 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(255,176,46,0.14)', padding: '7px 14px', borderRadius: RADIUS.pill }}>
           <StarIcon size={15} weight="fill" color={TG.SUN} />
           <span style={{ ...TYPE.labelSm, color: TG.INK }}>최고 {best.toLocaleString()}점</span>
         </div>
@@ -67,7 +67,7 @@ export function EndlessStartModal({ best = 0, onStart, onClose }) {
 export function TrainingStartModal({ onStart, onClose }) {
   return (
     <ModalCard onClose={onClose}>
-      <div style={{ width: 72, height: 72, borderRadius: 24, background: 'linear-gradient(135deg,#4ad4a0,#2bb583)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 10px 26px rgba(43,181,131,0.4)' }}>
+      <div style={{ width: 72, height: 72, borderRadius: RADIUS.xxl, background: 'linear-gradient(135deg,#4ad4a0,#2bb583)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 10px 26px rgba(43,181,131,0.4)' }}>
         <GraduationCapIcon size={38} weight="fill" color="#fff" />
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, textAlign: 'center', width: '100%' }}>
@@ -135,10 +135,10 @@ export function PlayModal({ onClose }) {
         </div>
         <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 10 }}>
           <button className="tg-press" onClick={() => openLink(PLAY_LINKS.instagram.href, 'instagram')} style={{
-            width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderRadius: 18, border: 'none', cursor: 'pointer',
+            width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderRadius: RADIUS.btn, border: 'none', cursor: 'pointer',
             background: 'linear-gradient(90deg, #F58529, #DD2A7B, #8134AF)', boxShadow: '0 8px 16px rgba(221,42,123,0.3)', ...TOUCH_OPT,
           }}>
-            <div style={{ width: 48, height: 48, borderRadius: 24, background: 'rgba(255,255,255,0.22)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <div style={{ width: 48, height: 48, borderRadius: RADIUS.xxl, background: 'rgba(255,255,255,0.22)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <InstagramLogoIcon size={26} weight="fill" color="#fff" />
             </div>
             <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3, alignItems: 'flex-start' }}>
@@ -150,7 +150,7 @@ export function PlayModal({ onClose }) {
           <div style={{ display: 'flex', gap: 10 }}>
             {[PLAY_LINKS.youtube, PLAY_LINKS.blog].map((s) => (
               <button key={s.label} className="tg-press" onClick={() => openLink(s.href, s.id)} style={{
-                flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '12px 0', borderRadius: 14,
+                flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '12px 0', borderRadius: RADIUS.lg,
                 background: '#fff', border: '1.5px solid #ebe5de', cursor: 'pointer', ...TOUCH_OPT,
               }}>
                 <s.Icon size={20} weight="fill" color={s.color} />
@@ -191,14 +191,14 @@ export function DebugScoreModal({ studentToken, onClose, onApplied }) {
           <div key={k} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
             <span style={{ ...TYPE.label, color: TG.INK }}>{label}</span>
             <input type="number" value={v[k]} onChange={(e) => setV((s) => ({ ...s, [k]: e.target.value }))}
-              style={{ width: 120, height: 38, borderRadius: 10, border: '1.5px solid #ebe5de', padding: '0 12px', textAlign: 'right', ...TYPE.num, fontSize: 15, color: TG.INK, background: '#fff' }} />
+              style={{ width: 120, height: 38, borderRadius: RADIUS.md, border: '1.5px solid #ebe5de', padding: '0 12px', textAlign: 'right', ...TYPE.num, fontSize: 15, color: TG.INK, background: '#fff' }} />
           </div>
         ))}
         <div style={{ display: 'flex', gap: 8, marginTop: 2 }}>
-          <button onClick={() => setV((s) => ({ ...s, easy: 1000, normal: 1000, hard: 1000 }))} className="tg-press" style={{ flex: 1, height: 40, borderRadius: 12, border: '1.5px solid #ebe5de', background: '#fff', cursor: 'pointer', ...TYPE.labelSm, color: TG.INK, ...TOUCH_OPT }}>난이도 모두 1000</button>
-          <button onClick={() => setV({ easy: 0, normal: 0, hard: 0, endless: 0 })} className="tg-press" style={{ flex: 1, height: 40, borderRadius: 12, border: '1.5px solid #ebe5de', background: '#fff', cursor: 'pointer', ...TYPE.labelSm, color: TG.SUB, ...TOUCH_OPT }}>초기화</button>
+          <button onClick={() => setV((s) => ({ ...s, easy: 1000, normal: 1000, hard: 1000 }))} className="tg-press" style={{ flex: 1, height: 40, borderRadius: RADIUS.md, border: '1.5px solid #ebe5de', background: '#fff', cursor: 'pointer', ...TYPE.labelSm, color: TG.INK, ...TOUCH_OPT }}>난이도 모두 1000</button>
+          <button onClick={() => setV({ easy: 0, normal: 0, hard: 0, endless: 0 })} className="tg-press" style={{ flex: 1, height: 40, borderRadius: RADIUS.md, border: '1.5px solid #ebe5de', background: '#fff', cursor: 'pointer', ...TYPE.labelSm, color: TG.SUB, ...TOUCH_OPT }}>초기화</button>
         </div>
-        <button onClick={apply} className="tg-press" style={{ width: '100%', height: 50, borderRadius: 16, border: 'none', cursor: 'pointer', background: TG.CORAL_GRAD, boxShadow: SHADOW.btn, color: '#fff', ...TYPE.btn, marginTop: 4, ...TOUCH_OPT }}>적용</button>
+        <button onClick={apply} className="tg-press" style={{ width: '100%', height: 50, borderRadius: RADIUS.lg, border: 'none', cursor: 'pointer', background: TG.CORAL_GRAD, boxShadow: SHADOW.btn, color: '#fff', ...TYPE.btn, marginTop: 4, ...TOUCH_OPT }}>적용</button>
         <button onClick={onClose} className="tg-press" style={{ width: '100%', padding: '4px 0', background: 'none', border: 'none', cursor: 'pointer', ...TYPE.sub, color: TG.SUB, ...TOUCH_OPT }}>닫기</button>
     </ModalCard>
   );

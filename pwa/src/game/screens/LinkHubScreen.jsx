@@ -3,7 +3,7 @@
 // 항목은 전부 데이터(HUB_LINKS) — 특강·교재·단어장 등 새 링크는 배열에 추가만 하면 됨.
 // image: 썸네일 경로(권장 2:1 가로형). 없으면 tint+라벨 — 파일 없는 경로 금지(깨진 아이콘 뜸). SNS는 놀러가기 모달 전담.
 import { CaretLeftIcon, CaretRightIcon } from '@phosphor-icons/react';
-import { TG, TYPE, TOUCH_OPT } from '../tgTokens.js';
+import { TG, TYPE, TOUCH_OPT, RADIUS } from '../tgTokens.js';
 import { track } from '../gameAnalytics.js';
 
 const SITE = 'https://tiantian-chinese.pages.dev';
@@ -26,7 +26,7 @@ export function LinkHubScreen({ onClose }) {
       <div style={{ position: 'relative', minHeight: '100%', paddingBottom: 'calc(40px + env(safe-area-inset-bottom))' }}>
         {/* 뒤로 */}
         <button aria-label="뒤로" className="tg-press" onClick={onClose} style={{
-          position: 'absolute', left: 24, top: 'calc(20px + env(safe-area-inset-top))', width: 40, height: 40, borderRadius: 20,
+          position: 'absolute', left: 24, top: 'calc(20px + env(safe-area-inset-top))', width: 40, height: 40, borderRadius: RADIUS.xl,
           background: '#fff', border: 'none', cursor: 'pointer', boxShadow: '0 3px 8px rgba(26,16,20,0.08)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', ...TOUCH_OPT,
         }}>
@@ -43,7 +43,7 @@ export function LinkHubScreen({ onClose }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: '34px 24px 0' }}>
           {HUB_LINKS.map((l) => (
             <button key={l.id} className="tg-press" onClick={() => openLink(l.href, l.id)} style={{
-              display: 'block', width: '100%', padding: 0, borderRadius: 20, overflow: 'hidden',
+              display: 'block', width: '100%', padding: 0, borderRadius: RADIUS.xl, overflow: 'hidden',
               background: '#fff', border: 'none', cursor: 'pointer', boxShadow: '0 5px 14px rgba(26,16,20,0.07)', textAlign: 'left', ...TOUCH_OPT,
             }}>
               {/* 상단 썸네일 — OG 표준 비율(1200×630). 이미지 없는 항목은 tint+라벨 */}
@@ -58,7 +58,7 @@ export function LinkHubScreen({ onClose }) {
                   <span style={{ ...TYPE.btn, color: TG.INK }}>{l.title}</span>
                   <span style={{ ...TYPE.sub, color: TG.SUB, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{l.desc}</span>
                 </div>
-                <span aria-hidden="true" style={{ width: 34, height: 34, borderRadius: 17, flexShrink: 0, background: `${l.tint}14`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <span aria-hidden="true" style={{ width: 34, height: 34, borderRadius: RADIUS.lg, flexShrink: 0, background: `${l.tint}14`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <CaretRightIcon size={17} weight="bold" color={l.tint} />
                 </span>
               </div>

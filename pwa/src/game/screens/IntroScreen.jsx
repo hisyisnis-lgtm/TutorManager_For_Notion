@@ -1,6 +1,6 @@
 // 소개 화면 (3페이지 캐러셀, Figma 좌표 절대배치) — 게임 기원 스토리.
 import { LightningIcon, TrophyIcon } from '@phosphor-icons/react';
-import { TG, TYPE, FONT_HANZI, TOUCH_OPT } from '../tgTokens.js';
+import { TG, TYPE, FONT_HANZI, TOUCH_OPT, RADIUS } from '../tgTokens.js';
 import { ToneMark } from '../tgWidgets.jsx';
 import { TONES } from '../../constants/toneGameWords.js';
 import { play as playSfx } from '../tgSfx.js';
@@ -36,7 +36,7 @@ function IntroPanel({ p }) {
       {p.kind === 'note' ? (
         <Reveal i={0} style={{ position: 'absolute', left: 0, right: 0, top: '16.5%' }}>
         <div style={{ display: 'flex', justifyContent: 'center' }}>
-          <div style={{ background: '#fff', borderRadius: 26, boxShadow: '0px 10px 28px rgba(43,39,48,0.08)', padding: '26px 30px 22px', display: 'flex', flexDirection: 'column', gap: 16, alignItems: 'center' }}>
+          <div style={{ background: '#fff', borderRadius: RADIUS.card, boxShadow: '0px 10px 28px rgba(43,39,48,0.08)', padding: '26px 30px 22px', display: 'flex', flexDirection: 'column', gap: 16, alignItems: 'center' }}>
             <div style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
               {[['我', 3], ['爱', 4], ['你', 3]].map(([ch, tn]) => (
                 <div key={ch} style={{ display: 'flex', flexDirection: 'column', gap: 7, alignItems: 'center', color: TONES.find((t) => t.num === tn)?.color }}>
@@ -45,7 +45,7 @@ function IntroPanel({ p }) {
                 </div>
               ))}
             </div>
-            <div style={{ background: '#fff6e8', padding: '7px 14px', borderRadius: 14 }}>
+            <div style={{ background: '#fff6e8', padding: '7px 14px', borderRadius: RADIUS.lg }}>
               <span style={{ ...TYPE.labelSm, color: '#b07d12', whiteSpace: 'nowrap' }}>병음 없이 · 성조만 직접 표기</span>
             </div>
           </div>
@@ -57,7 +57,7 @@ function IntroPanel({ p }) {
           <div style={{ width: 112, height: 112, borderRadius: 56, background: p.circleBg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <p.Icon size={52} weight="fill" color={p.iconColor} />
           </div>
-          <div style={{ background: p.tagBg, padding: '7px 14px', borderRadius: 14 }}>
+          <div style={{ background: p.tagBg, padding: '7px 14px', borderRadius: RADIUS.lg }}>
             <span style={{ ...TYPE.labelSm, color: p.tagColor, whiteSpace: 'nowrap' }}>{p.tag}</span>
           </div>
         </div>
@@ -98,12 +98,12 @@ export function IntroScreen({ page, onNext, onSkip }) {
       {/* 점 인디케이터 (고정) — CTA(89.35%) 위 gap 유지 */}
       <div style={{ position: 'absolute', left: 24, right: 24, top: '84.85%', zIndex: 3, height: 28, display: 'flex', gap: 7, alignItems: 'center', justifyContent: 'center' }}>
         {[0, 1, 2].map((i) => (
-          <div key={i} style={{ height: 8, width: i === page ? 22 : 8, borderRadius: 4, background: i === page ? TG.CORAL : '#e2dbd3', transition: 'width .25s ease, background .25s ease' }} />
+          <div key={i} style={{ height: 8, width: i === page ? 22 : 8, borderRadius: RADIUS.xs, background: i === page ? TG.CORAL : '#e2dbd3', transition: 'width .25s ease, background .25s ease' }} />
         ))}
       </div>
 
       {/* CTA (고정) — 하단 여백 30px 상당(=89.35%) */}
-      <button onClick={() => { playSfx('button'); onNext(); }} className="tg-press" style={{ position: 'absolute', left: 24, right: 24, top: '89.35%', zIndex: 3, height: 60, borderRadius: 20, border: 'none', cursor: 'pointer', background: TG.CORAL_GRAD, boxShadow: '0px 10px 20px rgba(242,72,76,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', ...TOUCH_OPT }}>
+      <button onClick={() => { playSfx('button'); onNext(); }} className="tg-press" style={{ position: 'absolute', left: 24, right: 24, top: '89.35%', zIndex: 3, height: 60, borderRadius: RADIUS.xl, border: 'none', cursor: 'pointer', background: TG.CORAL_GRAD, boxShadow: '0px 10px 20px rgba(242,72,76,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', ...TOUCH_OPT }}>
         <span style={{ ...TYPE.cta, color: '#fff' }}>{cur.cta}</span>
       </button>
     </>

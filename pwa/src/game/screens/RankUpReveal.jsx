@@ -5,7 +5,7 @@
 //  ★XP 등급 전환(2026-07-11): 등급은 이제 누적 XP로 오르며 강등이 없다 → 상승 연출만 남김(하락/게이지/마스터 문구 제거).
 //    prevIdx/nowIdx = 등급 인덱스(EAR_TIERS). Phase 2(승급 시험)에서도 합격 시 이 연출을 그대로 재활용.
 import { useEffect, useRef, useState } from 'react';
-import { TG, TYPE, haptic } from '../tgTokens.js';
+import { TG, TYPE, haptic, RADIUS } from '../tgTokens.js';
 import { EAR_TIERS, TIER_SPARK_POS as PARTICLE_POS } from '../earProfile.js';
 import { CrispFlash, ConfettiBurst, LIGHT_CONFETTI } from './shared.jsx';
 const CHARGE_MS = 1500; // 차징 지속(짠! 까지) — 기대감 형성 구간
@@ -106,7 +106,7 @@ export function RankUpReveal({ prevIdx = 0, nowIdx = 0, onDone, hold = false }) 
       )}
       {/* 확인 — 차징 중엔 숨김(짠! 이후 등장) */}
       {!hold && done && (
-        <button onClick={onDone} className="tg-press" style={{ marginTop: 40, padding: '14px 44px', borderRadius: 16, border: 'none', cursor: 'pointer', background: TG.CORAL_GRAD, boxShadow: '0 10px 24px rgba(242,72,76,0.32)', ...TYPE.btn, color: '#fff' }}>확인</button>
+        <button onClick={onDone} className="tg-press" style={{ marginTop: 40, padding: '14px 44px', borderRadius: RADIUS.lg, border: 'none', cursor: 'pointer', background: TG.CORAL_GRAD, boxShadow: '0 10px 24px rgba(242,72,76,0.32)', ...TYPE.btn, color: '#fff' }}>확인</button>
       )}
     </div>
   );

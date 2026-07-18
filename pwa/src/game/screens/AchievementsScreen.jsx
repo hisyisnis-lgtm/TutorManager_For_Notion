@@ -6,7 +6,7 @@ import {
   InfinityIcon, BookmarkSimpleIcon, BooksIcon, CalendarCheckIcon, CalendarHeartIcon, CalendarDotsIcon, FireIcon, WaveformIcon,
   ArrowsClockwiseIcon,
 } from '@phosphor-icons/react';
-import { TG, TYPE, TOUCH_OPT } from '../tgTokens.js';
+import { TG, TYPE, TOUCH_OPT, RADIUS } from '../tgTokens.js';
 import { ACHIEVEMENTS, ACH_CATEGORIES } from '../achievements.js';
 import { Reveal, GameHeader } from './shared.jsx';
 
@@ -61,7 +61,7 @@ function RingBadge({ ach, got, color, pct, size = 54 }) {
         <Icon size={Math.round(size * 0.4)} weight="fill" color={got ? color : LOCKED_FG} />
       </div>
       {got && (
-        <div style={{ position: 'absolute', right: -2, bottom: -2, width: 19, height: 19, borderRadius: 10, background: color, border: '2.5px solid #FFFDF8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ position: 'absolute', right: -2, bottom: -2, width: 19, height: 19, borderRadius: RADIUS.md, background: color, border: '2.5px solid #FFFDF8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <CheckIcon size={9} weight="bold" color="#fff" />
         </div>
       )}

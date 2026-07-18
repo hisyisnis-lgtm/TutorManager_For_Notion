@@ -4,7 +4,7 @@
 // 모바일 키보드가 하단에서 올라와도 CTA를 가리지 않게 한다(하단 고정 안 함).
 import { useState } from 'react';
 import { ArrowsClockwiseIcon } from '@phosphor-icons/react';
-import { TG, TYPE, TOUCH_OPT, ASSETS } from '../tgTokens.js';
+import { TG, TYPE, TOUCH_OPT, ASSETS, RADIUS } from '../tgTokens.js';
 import { play as playSfx } from '../tgSfx.js';
 import { randomNickname, NICKNAME_MAX } from '../nickname.js';
 import { Reveal } from './shared.jsx';
@@ -52,7 +52,7 @@ export function NicknameScreen({ defaultName = '', onSubmit, saving = false }) {
           aria-label="닉네임"
           enterKeyHint="done"
           style={{
-            width: '100%', height: 56, borderRadius: 16, border: `1.5px solid ${TG.CORAL_BG}`,
+            width: '100%', height: 56, borderRadius: RADIUS.lg, border: `1.5px solid ${TG.CORAL_BG}`,
             background: '#fff', padding: '0 18px', ...TYPE.body,
             color: TG.INK, outline: 'none', textAlign: 'center', ...TOUCH_OPT,
           }}
@@ -60,7 +60,7 @@ export function NicknameScreen({ defaultName = '', onSubmit, saving = false }) {
         {/* 좌: 다시 뽑기 / 우: 글자수 — 정해진 높이 한 줄이라 아래 CTA와 겹치지 않음 */}
         <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <button onClick={reroll} className="tg-press" aria-label="닉네임 다시 뽑기" style={{
-            display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 12,
+            display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: RADIUS.md,
             background: '#fff', border: `1.5px solid ${TG.CORAL_BG}`, cursor: 'pointer', ...TOUCH_OPT,
           }}>
             <ArrowsClockwiseIcon size={15} weight="bold" color={TG.CORAL_DK} />
@@ -73,7 +73,7 @@ export function NicknameScreen({ defaultName = '', onSubmit, saving = false }) {
       {/* 시작하기 — 입력+한줄(입력56+여백10+버튼34≈100) 아래로 띄워 겹침 방지. 키보드에 안 가리게 하단 고정 안 함. */}
       <Reveal i={4} style={{ position: 'absolute', left: 24, right: 24, top: 462 }}>
         <button onClick={submit} disabled={!canSubmit} className="tg-press" style={{
-          width: '100%', height: 56, borderRadius: 16, border: 'none',
+          width: '100%', height: 56, borderRadius: RADIUS.lg, border: 'none',
           background: canSubmit ? TG.CORAL_DK : TG.BORDER, cursor: canSubmit ? 'pointer' : 'default',
           display: 'flex', alignItems: 'center', justifyContent: 'center', ...TOUCH_OPT,
         }}>

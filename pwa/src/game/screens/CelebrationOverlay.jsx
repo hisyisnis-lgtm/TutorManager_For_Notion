@@ -1,7 +1,7 @@
 // 업적 획득 축하 오버레이(P4) — 게임 종료 후 새로 달성한 업적마다 1장씩(큐). 잠금해제·마스터도 업적이라 함께 커버.
 // 톤 원칙: 성취 = 격려·축하(서비스 정체성). 딤+카드+글로우 배지+컨페티+CTA. 참조: tone_game_redesign.md (P4)
 import { useEffect } from 'react';
-import { TG, TYPE, TOUCH_OPT } from '../tgTokens.js';
+import { TG, TYPE, TOUCH_OPT, RADIUS } from '../tgTokens.js';
 import { play as playSfx } from '../tgSfx.js';
 import { AchBadge } from './AchievementsScreen.jsx';
 
@@ -34,7 +34,7 @@ export function CelebrationOverlay({ achievement, remaining = 0, onNext }) {
         <div key={i} style={{ position: 'absolute', top: 110, left: `${p.left}%`, width: p.w, height: p.h, background: p.color, borderRadius: p.round ? '50%' : 2, '--tgc-r': `${p.rot}deg`, animation: `tgc-fall ${p.dur}s ease-in ${p.delay}s forwards`, pointerEvents: 'none' }} />
       ))}
       {/* 카드(팝인) */}
-      <div onClick={(e) => e.stopPropagation()} style={{ position: 'relative', width: '100%', maxWidth: 300, background: TG.CARD, borderRadius: 28, padding: '56px 24px 24px', boxShadow: '0 20px 50px rgba(26,16,20,0.3)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, animation: 'tgc-pop .5s cubic-bezier(.34,1.56,.64,1) both' }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ position: 'relative', width: '100%', maxWidth: 300, background: TG.CARD, borderRadius: RADIUS.card, padding: '56px 24px 24px', boxShadow: '0 20px 50px rgba(26,16,20,0.3)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, animation: 'tgc-pop .5s cubic-bezier(.34,1.56,.64,1) both' }}>
         {/* 배지 — 카드 상단 걸침 + 글로우(맥동) */}
         <div style={{ position: 'absolute', top: -36, left: '50%', transform: 'translateX(-50%)' }}>
           <div style={{ position: 'absolute', inset: -18, borderRadius: '50%', background: 'rgba(255,176,46,0.24)', animation: 'tgc-glow 2.2s ease-in-out infinite' }} />
@@ -45,7 +45,7 @@ export function CelebrationOverlay({ achievement, remaining = 0, onNext }) {
         <span style={{ ...TYPE.labelSm, color: TG.CORAL_DK, letterSpacing: 0.5 }}>업적 달성!</span>
         <span style={{ ...TYPE.titleLg, fontSize: 25, color: TG.INK, textAlign: 'center' }}>{achievement.label}</span>
         <span style={{ ...TYPE.sub, color: TG.SUB, textAlign: 'center', lineHeight: 1.4 }}>{achievement.desc}</span>
-        <button onClick={onNext} className="tg-press" style={{ marginTop: 14, width: '100%', height: 52, borderRadius: 18, border: 'none', cursor: 'pointer', background: TG.CORAL_GRAD, boxShadow: '0px 8px 16px rgba(242,72,76,0.32)', ...TYPE.btn, color: '#fff', ...TOUCH_OPT }}>
+        <button onClick={onNext} className="tg-press" style={{ marginTop: 14, width: '100%', height: 52, borderRadius: RADIUS.btn, border: 'none', cursor: 'pointer', background: TG.CORAL_GRAD, boxShadow: '0px 8px 16px rgba(242,72,76,0.32)', ...TYPE.btn, color: '#fff', ...TOUCH_OPT }}>
           {remaining > 0 ? `다음 (${remaining})` : '좋아요!'}
         </button>
       </div>

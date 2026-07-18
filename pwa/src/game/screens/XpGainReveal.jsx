@@ -2,7 +2,7 @@
 //  환산 요소(점수·정답·신기록)가 하나씩 '쾅' 팝인하며 총 XP가 오르고 등급 게이지가 차오른다.
 //  게이지가 가득 차는 순간(examReady) '승급 시험 가능' 정보 노출. XP 적립 판(일반·무한·테마)만.
 import { useEffect, useState, useRef, useLayoutEffect } from 'react';
-import { TG, TYPE, haptic } from '../tgTokens.js';
+import { TG, TYPE, haptic, RADIUS } from '../tgTokens.js';
 import { displayTier, XP_PER_CORRECT, XP_NEWBEST_BONUS } from '../gameXp.js';
 import { play as playSfx } from '../tgSfx.js';
 import { useCountUp } from '../tgWidgets.jsx';
@@ -71,8 +71,8 @@ function SparkGauge({ pct }) {
   }, []);
   return (
     <div ref={barRef} style={{ position: 'relative', width: '100%', height: 9 }}>
-      <div style={{ position: 'absolute', inset: 0, borderRadius: 5, background: 'rgba(255,255,255,0.16)', overflow: 'hidden' }}>
-        <div ref={fillRef} style={{ height: '100%', borderRadius: 5, background: TG.CORAL_GRAD }} />
+      <div style={{ position: 'absolute', inset: 0, borderRadius: RADIUS.xs, background: 'rgba(255,255,255,0.16)', overflow: 'hidden' }}>
+        <div ref={fillRef} style={{ height: '100%', borderRadius: RADIUS.xs, background: TG.CORAL_GRAD }} />
       </div>
       {/* 스파크 레이어 — 파티클은 방출 위치(월드 좌표)를 지키고 자연 페이드. top=바 세로중앙 */}
       <div style={{ position: 'absolute', left: 0, top: 4.5, width: 0, height: 0, pointerEvents: 'none' }}>
@@ -148,7 +148,7 @@ export function XpGainReveal({ gained, prevXp = 0, newXp = 0, score = 0, correct
       {/* 환산 내역 — 하나씩 '쾅' 등장(어떤 수치로 됐는지) */}
       <div style={{ width: '100%', maxWidth: 280, display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 22 }}>
         {sources.map((s, i) => (
-          <div key={s.key} style={{ position: 'relative', overflow: 'hidden', height: 40, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px', borderRadius: 12, background: 'rgba(255,255,255,0.08)', opacity: i < step ? 1 : 0, animation: i < step ? 'xg-bang .42s cubic-bezier(.3,1.4,.5,1) both' : 'none' }}>
+          <div key={s.key} style={{ position: 'relative', overflow: 'hidden', height: 40, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px', borderRadius: RADIUS.md, background: 'rgba(255,255,255,0.08)', opacity: i < step ? 1 : 0, animation: i < step ? 'xg-bang .42s cubic-bezier(.3,1.4,.5,1) both' : 'none' }}>
             {/* 박스 번쩍 — 이 항목이 찍히는 순간 박스 전체가 하얗게 번쩍(등장 시 1회) */}
             {i < step && <span aria-hidden="true" style={{ position: 'absolute', inset: 0, background: '#fff', opacity: 0, animation: 'xg-boxflash .4s ease-out both', pointerEvents: 'none' }} />}
             <span style={{ position: 'relative', ...TYPE.sub, color: 'rgba(255,255,255,0.82)' }}>{s.label}</span>
@@ -167,7 +167,7 @@ export function XpGainReveal({ gained, prevXp = 0, newXp = 0, score = 0, correct
       </div>
       {/* 승급 가능 배너 — 게이지 만땅 순간 */}
       {justReady && (
-        <div style={{ marginTop: 18, display: 'flex', alignItems: 'center', gap: 7, padding: '9px 18px', borderRadius: 14, background: TG.CORAL_GRAD, boxShadow: '0 8px 20px rgba(242,72,76,0.4)', animation: 'xg-pop .5s cubic-bezier(.34,1.56,.64,1) both' }}>
+        <div style={{ marginTop: 18, display: 'flex', alignItems: 'center', gap: 7, padding: '9px 18px', borderRadius: RADIUS.lg, background: TG.CORAL_GRAD, boxShadow: '0 8px 20px rgba(242,72,76,0.4)', animation: 'xg-pop .5s cubic-bezier(.34,1.56,.64,1) both' }}>
           <span style={{ ...TYPE.h2, color: '#fff' }}>🎖 승급 시험 가능!</span>
         </div>
       )}

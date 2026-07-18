@@ -1,6 +1,6 @@
 // 로그인(회원) — 카카오·구글 소셜 로그인(OAuth BFF). 버튼 탭 → Worker 인증 시작 URL로 전체 이동,
 // 제공자 인증 후 현재 게임 주소로 #token=… 붙여 복귀(복귀 토큰 처리는 ToneGamePage). Figma "18b. 로그인(소셜)".
-import { TG, TYPE, TOUCH_OPT, ASSETS } from '../tgTokens.js';
+import { TG, TYPE, TOUCH_OPT, ASSETS, RADIUS } from '../tgTokens.js';
 import { socialLoginUrl } from '../../api/gameApi.js';
 import { play as playSfx } from '../tgSfx.js';
 import { Reveal, BackButton } from './shared.jsx';
@@ -57,14 +57,14 @@ export function LoginScreen({ onBack }) {
 
       {/* 카카오 로그인 */}
       <Reveal i={4} style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(122px + env(safe-area-inset-bottom))' }}>
-        <button onClick={() => go('kakao')} className="tg-press" style={{ width: '100%', height: 56, borderRadius: 16, border: 'none', background: '#FEE500', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, cursor: 'pointer', ...TOUCH_OPT }}>
+        <button onClick={() => go('kakao')} className="tg-press" style={{ width: '100%', height: 56, borderRadius: RADIUS.lg, border: 'none', background: '#FEE500', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, cursor: 'pointer', ...TOUCH_OPT }}>
           <KakaoLogo />
           <span style={{ ...TYPE.btn, color: 'rgba(0,0,0,0.85)' }}>카카오로 시작하기</span>
         </button>
       </Reveal>
       {/* 구글 로그인 */}
       <Reveal i={5} style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(54px + env(safe-area-inset-bottom))' }}>
-        <button onClick={() => go('google')} className="tg-press" style={{ width: '100%', height: 56, borderRadius: 16, border: '1px solid #747775', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, cursor: 'pointer', ...TOUCH_OPT }}>
+        <button onClick={() => go('google')} className="tg-press" style={{ width: '100%', height: 56, borderRadius: RADIUS.lg, border: '1px solid #747775', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, cursor: 'pointer', ...TOUCH_OPT }}>
           <GoogleLogo />
           <span style={{ ...TYPE.btn, color: '#1f1f1f' }}>Google로 계속하기</span>
         </button>

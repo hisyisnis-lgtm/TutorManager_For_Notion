@@ -1,7 +1,7 @@
 // 모드 선택 — 주력 큰 원형(난이도·무한) + 풀폭 카드(테마·트레이닝).
 // Figma "26. 모드 선택 v2". 잠긴 카드(무한)는 흔들림+토스트.
 import { StairsIcon, InfinityIcon, SkullIcon, LockSimpleIcon, GraduationCapIcon, CardsThreeIcon } from '@phosphor-icons/react';
-import { TG, TYPE, TOUCH_OPT } from '../tgTokens.js';
+import { TG, TYPE, TOUCH_OPT, RADIUS } from '../tgTokens.js';
 import { useState, useRef, useLayoutEffect } from 'react';
 import { ShakeButton, Reveal, GameHeader, CoachBubble, prefersReducedMotion } from './shared.jsx';
 import { EndlessStartModal, TrainingStartModal } from './gameModals.jsx';
@@ -104,7 +104,7 @@ function BigTile({ Icon, grad, glow, dot, title, desc, locked, lockText, onClick
         }}>
           <Icon size={52} weight="fill" color={locked ? TG.MUTED : '#fff'} />
           {locked && (
-            <div style={{ position: 'absolute', right: 3, bottom: 3, width: 29, height: 29, borderRadius: 15, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 6px rgba(0,0,0,0.16)' }}>
+            <div style={{ position: 'absolute', right: 3, bottom: 3, width: 29, height: 29, borderRadius: RADIUS.lg, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 6px rgba(0,0,0,0.16)' }}>
               <LockSimpleIcon size={15} weight="fill" color="#9a93a0" />
             </div>
           )}
@@ -125,11 +125,11 @@ function BigTile({ Icon, grad, glow, dot, title, desc, locked, lockText, onClick
 function FeatureCard({ Icon, accent, title, desc, locked, lockText, onClick, onLocked, coachId }) {
   return (
     <ShakeButton shakeOnClick={locked} onClick={locked ? onLocked : onClick} className={locked ? '' : 'tg-press'} data-coach={coachId} style={{
-      width: '100%', height: 76, display: 'flex', alignItems: 'center', gap: 14, textAlign: 'left', padding: '0 18px', borderRadius: 20, cursor: 'pointer',
+      width: '100%', height: 76, display: 'flex', alignItems: 'center', gap: 14, textAlign: 'left', padding: '0 18px', borderRadius: RADIUS.xl, cursor: 'pointer',
       background: locked ? TG.SURFACE : '#fff', border: 'none',
       boxShadow: locked ? 'none' : '0 6px 18px rgba(43,39,48,0.07)', ...TOUCH_OPT,
     }}>
-      <div style={{ width: 48, height: 48, borderRadius: 15, flexShrink: 0, background: locked ? '#e7e0d6' : accent, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: locked ? 'none' : `0 4px 11px ${accent}3a` }}>
+      <div style={{ width: 48, height: 48, borderRadius: RADIUS.lg, flexShrink: 0, background: locked ? '#e7e0d6' : accent, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: locked ? 'none' : `0 4px 11px ${accent}3a` }}>
         <Icon size={25} weight="fill" color={locked ? TG.MUTED : '#fff'} />
       </div>
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>

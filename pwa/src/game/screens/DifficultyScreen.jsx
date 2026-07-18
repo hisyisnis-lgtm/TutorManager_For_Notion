@@ -5,7 +5,7 @@
 // 기록·페이스는 티어 단위(gameLogic), 스테이지는 난이도 밴드 + 티어 점수 순차 해제.
 import { useState, useRef, useLayoutEffect, useEffect } from 'react';
 import { LockSimpleIcon, PlayIcon, PlantIcon, LeafIcon, FlameIcon, LightningIcon, CrownIcon } from '@phosphor-icons/react';
-import { TG, TYPE, TOUCH_OPT, DIFF_COLORS } from '../tgTokens.js';
+import { TG, TYPE, TOUCH_OPT, DIFF_COLORS, RADIUS } from '../tgTokens.js';
 import { STAGES, isStageUnlocked, stageUnlockToastText, stageStarFlags, stageScoreOf } from '../gameLogic.js';
 import { play as playSfx } from '../tgSfx.js';
 import { Reveal, GameHeader, StarRow, prefersReducedMotion } from './shared.jsx';
@@ -145,8 +145,8 @@ export function DifficultyScreen({ studentToken, onSelect, onStart, onBack, onLo
               position: 'absolute', left: '50%', top: centerY(i), height: centerY(i + 1) - centerY(i),
               transform: 'translateX(-50%)', zIndex: 0, pointerEvents: 'none',
               ...(climbed
-                ? { width: 5, borderRadius: 3, background: TG.SUN, boxShadow: '0 0 6px rgba(255,194,60,0.5)' }
-                : { width: 4, borderRadius: 2, backgroundImage: 'repeating-linear-gradient(180deg, rgba(255,255,255,0.6) 0 7px, transparent 7px 15px)' }),
+                ? { width: 5, borderRadius: RADIUS.xs, background: TG.SUN, boxShadow: '0 0 6px rgba(255,194,60,0.5)' }
+                : { width: 4, borderRadius: RADIUS.xs, backgroundImage: 'repeating-linear-gradient(180deg, rgba(255,255,255,0.6) 0 7px, transparent 7px 15px)' }),
             }} />
           );
         })}
@@ -178,10 +178,10 @@ export function DifficultyScreen({ studentToken, onSelect, onStart, onBack, onLo
                 {isSelected ? (
                   /* 선택(확대) 카드 — 항상 해제된 것만(잠긴 건 선택 불가·토스트). 좌 아이콘 · 중앙 라벨+별 · 우 시작 */
                   <div style={{
-                    display: 'flex', alignItems: 'center', gap: 13, padding: '0 16px 0 14px', height: 78, borderRadius: 22,
+                    display: 'flex', alignItems: 'center', gap: 13, padding: '0 16px 0 14px', height: 78, borderRadius: RADIUS.xxl,
                     background: '#fff', border: `2.5px solid ${c.accent}`, boxShadow: `0 12px 26px ${c.glow}`,
                   }}>
-                    <div style={{ width: 50, height: 50, borderRadius: 16, flexShrink: 0, background: c.tint, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ width: 50, height: 50, borderRadius: RADIUS.lg, flexShrink: 0, background: c.tint, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <Icon size={26} weight="fill" color={c.accent} />
                     </div>
                     <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 7 }}>
@@ -195,14 +195,14 @@ export function DifficultyScreen({ studentToken, onSelect, onStart, onBack, onLo
                     </div>
                     <div onClick={(e) => { e.stopPropagation(); playSfx('button'); onStart(s); }}
                       role="button" aria-label={`${s.label} 시작`}
-                      style={{ width: 40, height: 40, borderRadius: 20, flexShrink: 0, cursor: 'pointer', background: c.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 5px 12px ${c.glow}`, '--fab-glow': c.glow, '--fab-glow-lg': c.glow, animation: reduceMotion ? 'none' : 'tg-fab-pulse 1.5s ease-in-out infinite', ...TOUCH_OPT }}>
+                      style={{ width: 40, height: 40, borderRadius: RADIUS.xl, flexShrink: 0, cursor: 'pointer', background: c.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 5px 12px ${c.glow}`, '--fab-glow': c.glow, '--fab-glow-lg': c.glow, animation: reduceMotion ? 'none' : 'tg-fab-pulse 1.5s ease-in-out infinite', ...TOUCH_OPT }}>
                       <PlayIcon size={16} weight="fill" color="#fff" />
                     </div>
                   </div>
                 ) : unlocked ? (
                   /* 간략(해제) — 아이콘 + 라벨 + 미니 별 */
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '0 15px', height: 46, borderRadius: 23, background: 'rgba(255,255,255,0.9)', boxShadow: '0 3px 9px rgba(43,79,120,0.1)' }}>
-                    <div style={{ width: 26, height: 26, borderRadius: 9, flexShrink: 0, background: c.tint, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '0 15px', height: 46, borderRadius: RADIUS.xxl, background: 'rgba(255,255,255,0.9)', boxShadow: '0 3px 9px rgba(43,79,120,0.1)' }}>
+                    <div style={{ width: 26, height: 26, borderRadius: RADIUS.md, flexShrink: 0, background: c.tint, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <Icon size={15} weight="fill" color={c.accent} />
                     </div>
                     <span style={{ flex: 1, ...TYPE.label, color: TG.INK_SOFT, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.label}</span>
@@ -210,8 +210,8 @@ export function DifficultyScreen({ studentToken, onSelect, onStart, onBack, onLo
                   </div>
                 ) : (
                   /* 간략(잠금) — 자물쇠 + 라벨, 급 색(티어 tint/accent)으로 물들이되 살짝 눌러 잠금 느낌 */
-                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: 9, padding: '0 15px', height: 46, borderRadius: 23, background: '#fff', boxShadow: '0 3px 9px rgba(43,79,120,0.1)' }}>
-                    <div style={{ width: 26, height: 26, borderRadius: 9, flexShrink: 0, background: c.tint, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: 9, padding: '0 15px', height: 46, borderRadius: RADIUS.xxl, background: '#fff', boxShadow: '0 3px 9px rgba(43,79,120,0.1)' }}>
+                    <div style={{ width: 26, height: 26, borderRadius: RADIUS.md, flexShrink: 0, background: c.tint, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <LockSimpleIcon size={15} weight="fill" color={c.accent} />
                     </div>
                     <span style={{ ...TYPE.label, color: c.accent, whiteSpace: 'nowrap' }}>{s.label}</span>
@@ -228,7 +228,7 @@ export function DifficultyScreen({ studentToken, onSelect, onStart, onBack, onLo
         <button data-coach="diff-start"
           onClick={() => { if (focusedUnlocked) { playSfx('button'); onStart(focused); } else onLocked && onLocked(stageUnlockToastText(studentToken, focused)); }}
           className="tg-press" style={{
-            width: '100%', height: 62, borderRadius: 20, border: 'none', cursor: 'pointer',
+            width: '100%', height: 62, borderRadius: RADIUS.xl, border: 'none', cursor: 'pointer',
             background: focusedUnlocked ? TG.CORAL_GRAD : TG.MUTED,
             boxShadow: focusedUnlocked ? '0px 10px 22px rgba(242,72,76,0.34)' : 'none',
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, ...TOUCH_OPT,

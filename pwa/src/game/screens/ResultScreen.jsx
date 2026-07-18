@@ -1,7 +1,7 @@
 // 결과 화면 — 신기록 배지·축하 판다·점수(카운트업)·통계 2카드·코치·다시도전/난이도 바꾸기.
 import { useState, useEffect } from 'react';
 import { TrophyIcon, ArrowClockwiseIcon, LightningIcon, CheckCircleIcon, XCircleIcon, CaretRightIcon } from '@phosphor-icons/react';
-import { TG, TYPE, TOUCH_OPT, pickCelebratePanda } from '../tgTokens.js';
+import { TG, TYPE, TOUCH_OPT, pickCelebratePanda, RADIUS } from '../tgTokens.js';
 import { useCountUp, FlameIcon } from '../tgWidgets.jsx';
 import { play as playSfx } from '../tgSfx.js';
 import { Reveal, CoachBubble, ConfettiBurst, CrispFlash, LIGHT_CONFETTI } from './shared.jsx';
@@ -34,7 +34,7 @@ const SUGGEST_COACH = [
 function SecBtn({ label, onClick, coachId }) {
   return (
     <button onClick={() => { playSfx('button'); onClick(); }} className="tg-press" data-coach={coachId} style={{
-      flex: 1, minWidth: 0, height: 54, borderRadius: 18, background: '#fff', border: '1.5px solid #ebe5de', cursor: 'pointer',
+      flex: 1, minWidth: 0, height: 54, borderRadius: RADIUS.btn, background: '#fff', border: '1.5px solid #ebe5de', cursor: 'pointer',
       display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 8px', ...TOUCH_OPT,
     }}>
       <span style={{ ...TYPE.btnSm, color: TG.SUB, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
@@ -74,7 +74,7 @@ export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, 
       {/* 신기록 배지 (중앙) */}
       {isNewBest && (
         <Reveal i={0} style={{ position: 'absolute', top: 36, left: '50%', transform: 'translateX(-50%)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 16, background: 'linear-gradient(90deg, #ffd24d, #ff9f40)', boxShadow: '0px 6px 14px rgba(255,159,64,0.28)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: RADIUS.lg, background: 'linear-gradient(90deg, #ffd24d, #ff9f40)', boxShadow: '0px 6px 14px rgba(255,159,64,0.28)' }}>
           <TrophyIcon size={13} weight="fill" color="#fff" />
           <span style={{ ...TYPE.btnSm, color: '#fff', whiteSpace: 'nowrap' }}>신기록 달성!</span>
         </div>
@@ -92,7 +92,7 @@ export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, 
           <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 2 }}>
             <span style={{ ...TYPE.sub, color: TG.SUB, whiteSpace: 'nowrap' }}>이전 최고 {previousBest.toLocaleString()}</span>
             {isNewBest && delta > 0 && (
-              <span style={{ display: 'flex', alignItems: 'center', padding: '3px 8px', borderRadius: 10, background: 'rgba(54,201,141,0.16)' }}>
+              <span style={{ display: 'flex', alignItems: 'center', padding: '3px 8px', borderRadius: RADIUS.md, background: 'rgba(54,201,141,0.16)' }}>
                 <span style={{ ...TYPE.num, color: TG.SUCCESS, whiteSpace: 'nowrap' }}>▲ {delta.toLocaleString()}</span>
               </span>
             )}
@@ -107,8 +107,8 @@ export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, 
           { icon: <FlameIcon size={17} color={TG.CORAL_DK} />, ibg: 'rgba(255,107,107,0.14)', val: maxCombo, unit: '콤보', label: '최고 콤보' },
           { icon: <LightningIcon size={17} weight="fill" color="#4D8DFF" />, ibg: 'rgba(77,141,255,0.14)', val: avgSec, unit: avgSec === '-' ? '' : '초', label: '평균 반응속도' },
         ].map((s) => (
-          <div key={s.label} style={{ flex: 1, minWidth: 0, background: '#fff', borderRadius: 22, boxShadow: '0px 5px 14px rgba(43,39,48,0.06)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
-            <div style={{ width: 40, height: 40, borderRadius: 20, background: s.ibg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{s.icon}</div>
+          <div key={s.label} style={{ flex: 1, minWidth: 0, background: '#fff', borderRadius: RADIUS.xxl, boxShadow: '0px 5px 14px rgba(43,39,48,0.06)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+            <div style={{ width: 40, height: 40, borderRadius: RADIUS.xl, background: s.ibg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{s.icon}</div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 2 }}>
               <span style={{ ...TYPE.numLg, color: TG.INK }}>{s.val}</span>
               {s.unit && <span style={{ ...TYPE.label, color: TG.SUB }}>{s.unit}</span>}
@@ -127,14 +127,14 @@ export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, 
       {onNextLevel ? (
         <div data-coach="result-actions" style={{ display: 'flex', gap: 10 }}>
           <button onClick={() => { playSfx('button'); onRetry(); }} className="tg-press" style={{
-            flex: 1, minWidth: 0, height: 62, borderRadius: 20, border: '1.5px solid #ebe5de', background: '#fff', cursor: 'pointer',
+            flex: 1, minWidth: 0, height: 62, borderRadius: RADIUS.xl, border: '1.5px solid #ebe5de', background: '#fff', cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, ...TOUCH_OPT,
           }}>
             <ArrowClockwiseIcon size={18} weight="bold" color="#9a93a0" />
             <span style={{ ...TYPE.btn, color: TG.SUB, whiteSpace: 'nowrap' }}>다시하기</span>
           </button>
           <button onClick={() => { playSfx('button'); onNextLevel(); }} className="tg-press" style={{
-            flex: 1, minWidth: 0, height: 62, borderRadius: 20, border: 'none', cursor: 'pointer',
+            flex: 1, minWidth: 0, height: 62, borderRadius: RADIUS.xl, border: 'none', cursor: 'pointer',
             background: TG.CORAL_GRAD, boxShadow: '0px 10px 20px rgba(242,72,76,0.32)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, ...TOUCH_OPT,
           }}>
             <span style={{ ...TYPE.btn, color: '#fff', whiteSpace: 'nowrap' }}>다음 스테이지</span>
@@ -143,7 +143,7 @@ export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, 
         </div>
       ) : (
         <button data-coach="result-actions" onClick={() => { playSfx('button'); onRetry(); }} className="tg-press" style={{
-          width: '100%', height: 62, borderRadius: 20, border: 'none', cursor: 'pointer',
+          width: '100%', height: 62, borderRadius: RADIUS.xl, border: 'none', cursor: 'pointer',
           background: TG.CORAL_GRAD, boxShadow: '0px 10px 20px rgba(242,72,76,0.32)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, ...TOUCH_OPT,
         }}>
           <ArrowClockwiseIcon size={19} weight="bold" color="#fff" />
@@ -185,7 +185,7 @@ export function ExamResultScreen({ correct = 0, total = 20, passed = false, canR
       {passed && <ConfettiBurst colors={LIGHT_CONFETTI} count={15} power={1.25} size={6} zIndex={3} style={{ top: 150 }} />}
       {/* 합격/불합격 배지 */}
       <Reveal i={0} style={{ position: 'absolute', top: 36, left: '50%', transform: 'translateX(-50%)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 16,
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: RADIUS.lg,
           background: passed ? 'linear-gradient(90deg, #36C98D, #1fa86a)' : TG.BORDER,
           boxShadow: passed ? '0px 6px 14px rgba(31,168,106,0.28)' : 'none' }}>
           {passed && <TrophyIcon size={13} weight="fill" color="#fff" />}
@@ -208,10 +208,10 @@ export function ExamResultScreen({ correct = 0, total = 20, passed = false, canR
             const fillPct = Math.min(100, animPct);
             const redFrac = fillPct > 0 ? (Math.min(80, fillPct) / fillPct) * 100 : 0; // 래퍼 내 빨강 비율 — 80% 경계를 트랙 좌표에 고정
             return (
-              <div style={{ position: 'relative', width: '100%', height: 12, borderRadius: 6, background: TG.BORDER, marginTop: 14, overflow: 'hidden' }}>
+              <div style={{ position: 'relative', width: '100%', height: 12, borderRadius: RADIUS.sm, background: TG.BORDER, marginTop: 14, overflow: 'hidden' }}>
                 {/* 채움 래퍼가 둥근 끝을 만들고(overflow hidden), 안의 빨강/초록 렉트를 클리핑 */}
                 {fillPct > 0 && (
-                  <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${fillPct}%`, borderRadius: 6, overflow: 'hidden' }}>
+                  <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${fillPct}%`, borderRadius: RADIUS.sm, overflow: 'hidden' }}>
                     <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${redFrac}%`, background: TG.CORAL_GRAD }} />
                     {fillPct > 80 && <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: `${100 - redFrac}%`, background: 'linear-gradient(90deg, #36C98D, #1fa86a)' }} />}
                   </div>
@@ -229,8 +229,8 @@ export function ExamResultScreen({ correct = 0, total = 20, passed = false, canR
             { icon: <CheckCircleIcon size={24} weight="fill" color="#1fa86a" />, ibg: 'rgba(54,201,141,0.16)', val: correct, label: '맞힌 문제' },
             { icon: <XCircleIcon size={24} weight="fill" color={TG.CORAL_DK} />, ibg: 'rgba(255,107,107,0.14)', val: wrong, label: '틀린 문제' },
           ].map((s) => (
-            <div key={s.label} style={{ flex: 1, minWidth: 0, background: '#fff', borderRadius: 22, boxShadow: '0px 5px 14px rgba(43,39,48,0.06)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
-              <div style={{ width: 40, height: 40, borderRadius: 20, background: s.ibg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{s.icon}</div>
+            <div key={s.label} style={{ flex: 1, minWidth: 0, background: '#fff', borderRadius: RADIUS.xxl, boxShadow: '0px 5px 14px rgba(43,39,48,0.06)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+              <div style={{ width: 40, height: 40, borderRadius: RADIUS.xl, background: s.ibg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{s.icon}</div>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 2 }}>
                 <span style={{ ...TYPE.numLg, color: TG.INK }}>{s.val}</span>
                 <span style={{ ...TYPE.label, color: TG.SUB }}>개</span>
@@ -248,7 +248,7 @@ export function ExamResultScreen({ correct = 0, total = 20, passed = false, canR
       {!passed && canRetry && (
         <Reveal i={5} style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(80px + env(safe-area-inset-bottom))' }}>
           <button onClick={() => { playSfx('button'); onRetry(); }} className="tg-press" style={{
-            width: '100%', height: 62, borderRadius: 20, border: 'none', cursor: 'pointer',
+            width: '100%', height: 62, borderRadius: RADIUS.xl, border: 'none', cursor: 'pointer',
             background: TG.CORAL_GRAD, boxShadow: '0px 10px 20px rgba(242,72,76,0.32)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, ...TOUCH_OPT,
           }}>
             <ArrowClockwiseIcon size={19} weight="bold" color="#fff" />
@@ -259,7 +259,7 @@ export function ExamResultScreen({ correct = 0, total = 20, passed = false, canR
       {/* 홈으로 */}
       <Reveal i={6} style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(18px + env(safe-area-inset-bottom))' }}>
         <button onClick={() => { playSfx('button'); onHome(); }} className="tg-press" style={{
-          width: '100%', height: 54, borderRadius: 18, background: (!passed && canRetry) ? '#fff' : TG.CORAL_GRAD,
+          width: '100%', height: 54, borderRadius: RADIUS.btn, background: (!passed && canRetry) ? '#fff' : TG.CORAL_GRAD,
           border: (!passed && canRetry) ? '1.5px solid #ebe5de' : 'none', cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center', ...TOUCH_OPT,
         }}>

@@ -122,7 +122,8 @@ export const TYPE = {
 };
 
 // ── 반경 / 그림자 ──────────────────────────────────────
-export const RADIUS = { card: 28, btn: 18, chip: 12 };
+// 스케일(4px 기반) + 의미 별칭(chip/btn/card). 근접값은 스케일로 스냅(예 14·15→lg 16, 22·23→xxl 24). pill=완전 둥근 알약.
+export const RADIUS = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24, pill: 999, chip: 12, btn: 18, card: 28 };
 export const SHADOW = {
   card: '0 10px 28px rgba(43,39,48,0.08)',
   btn: '0 6px 16px rgba(242,72,76,0.28)',

@@ -4,10 +4,8 @@
 // 참조 메모리: tone_game_redesign.md §5(단어카드)·§10-B(FigmaScreen)·§10-C(연출)
 import { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { LockSimpleIcon, SpeakerHighIcon, SpeakerSlashIcon, VibrateIcon, XIcon, CaretLeftIcon, StarIcon } from '@phosphor-icons/react';
-import {
-  TG, FONT_HANZI, FONT_PINYIN, TYPE, SHADOW, DUR, TOUCH_OPT, TONE_TINTS, TONE_BORDERS, TONE_COLORS, ASSETS,
-  haptic, isHapticMuted, setHapticMuted,
-} from '../tgTokens.js';
+import { TG, FONT_HANZI, FONT_PINYIN, TYPE, SHADOW, DUR, TOUCH_OPT, TONE_TINTS, TONE_BORDERS, TONE_COLORS, ASSETS,
+  haptic, isHapticMuted, setHapticMuted, RADIUS } from '../tgTokens.js';
 import { ToneMark, ComboChip } from '../tgWidgets.jsx';
 import { TONES, DIFFICULTIES } from '../../constants/toneGameWords.js';
 import { play as playSfx, isSfxMuted, setSfxMuted } from '../tgSfx.js';
@@ -299,7 +297,7 @@ export function Reveal({ i = 0, base = 80, step = 70, play = true, style, childr
 export function BackButton({ onClick, style }) {
   return (
     <button onClick={onClick} aria-label="뒤로" className="tg-press" style={{
-      width: 40, height: 40, marginLeft: -8, borderRadius: 20, background: 'none', boxShadow: 'none',
+      width: 40, height: 40, marginLeft: -8, borderRadius: RADIUS.xl, background: 'none', boxShadow: 'none',
       border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, ...TOUCH_OPT, ...style,
     }}>
       <CaretLeftIcon size={24} weight="bold" color={TG.INK} />
@@ -398,7 +396,7 @@ export function CoachBubble({ text }) {
       {/* 판다·말풍선 분리 — 같은 주기(3s)에 고정 위상차(-1s)만. 항상 일정 간격으로 따라다녀 깔끔 */}
       <img src={ASSETS.pandaCoach} width={73} height={63} alt="" style={{ flexShrink: 0, filter: 'drop-shadow(0px 4px 10px rgba(43,39,48,0.08))', animation: 'tg-bob 3s ease-in-out infinite', animationDelay: '-1s' }} />
       <div style={{ position: 'relative', marginLeft: 8.8, animation: 'tg-bob 3s ease-in-out infinite' }}>
-        <div onClick={(e) => { if (!done) { e.stopPropagation(); skip(); } }} style={{ background: '#3c3c3c', padding: '10px 14px', borderRadius: 10, cursor: done ? 'default' : 'pointer' }}>
+        <div onClick={(e) => { if (!done) { e.stopPropagation(); skip(); } }} style={{ background: '#3c3c3c', padding: '10px 14px', borderRadius: RADIUS.md, cursor: done ? 'default' : 'pointer' }}>
           <span className={done ? '' : 'tg-caret'} style={{ ...TYPE.sub, color: '#fff', whiteSpace: 'nowrap' }}>{shown}</span>
         </div>
         {/* 꼬리 — Figma 벡터(41:39) 그대로, 회전 없음(이미 왼쪽 향함). 말풍선 좌측 -8.8px·top 9.27 (Figma 절대좌표) */}
@@ -455,7 +453,7 @@ export function WordCard({ word, entered, currentSyl, completed, timedOut, progr
         <div style={{ height: hz > 50 ? 34 : 26, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           {inLianyin ? null : revealed ? (
             <span style={{
-              display: 'inline-flex', alignItems: 'center', gap: 3, padding: '3px 8px', borderRadius: 999,
+              display: 'inline-flex', alignItems: 'center', gap: 3, padding: '3px 8px', borderRadius: RADIUS.pill,
               background: toneColor, color: '#fff', animation: `tg-pop .3s cubic-bezier(.34,1.56,.64,1) ${popDelay} both`,
             }}>
               <ToneMark tone={tone} size={hz > 50 ? 16 : 13} />
@@ -463,7 +461,7 @@ export function WordCard({ word, entered, currentSyl, completed, timedOut, progr
             </span>
           ) : (
             <div style={{
-              width: hz > 50 ? 28 : 22, height: 5, borderRadius: 999,
+              width: hz > 50 ? 28 : 22, height: 5, borderRadius: RADIUS.pill,
               background: isCurrent ? TG.INK : TG.BORDER, // 현재 글자 표시 — 색 대신 진한 명도로(톤 색과 안 겹치게)
               animation: isCurrent ? 'tg-pulse 1.1s ease-in-out infinite' : 'none',
             }} />
@@ -471,7 +469,7 @@ export function WordCard({ word, entered, currentSyl, completed, timedOut, progr
         </div>
         {listening && !revealed ? (
           // 듣기 중 미공개 글자 — 스피커. 현재 글자 강조는 색 대신 명도+애니(중립 배경·진한 아이콘·breathe), 미도래는 연하게. 맞히면 아래 한자로 공개됨
-          <div data-syl={i} style={{ width: hz, height: hz, borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          <div data-syl={i} style={{ width: hz, height: hz, borderRadius: RADIUS.lg, display: 'flex', alignItems: 'center', justifyContent: 'center',
             background: isCurrent ? '#f2ede6' : 'transparent',
             border: isCurrent ? '2px solid #e3dbce' : '2px solid transparent',
             animation: isCurrent ? 'tg-breathe 1.7s ease-in-out infinite' : 'none', transition: `all ${DUR.state} ease` }}>
@@ -510,7 +508,7 @@ export function WordCard({ word, entered, currentSyl, completed, timedOut, progr
 
   return (
     <div style={{
-      position: 'relative', background: TG.CARD, borderRadius: 28, width: '100%', height: 292, padding: 20, overflow: 'hidden',
+      position: 'relative', background: TG.CARD, borderRadius: RADIUS.card, width: '100%', height: 292, padding: 20, overflow: 'hidden',
       display: 'flex', flexDirection: 'column', boxShadow: glow, transition: `box-shadow ${DUR.state} ease`,
     }}>
       {!hideProgress && (
@@ -549,11 +547,11 @@ export function WordCard({ word, entered, currentSyl, completed, timedOut, progr
         <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, paddingTop: 2 }}>
           <span style={{ ...TYPE.labelSm, color: TG.GUIDE }}>{`${currentSyl + 1}번째 글자의 성조를 들어보세요`}</span>
           <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={onReplay} className="tg-press" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 16px', borderRadius: 14, background: '#fff', border: `1.5px solid ${TG.CORAL_BG}`, cursor: 'pointer', ...TOUCH_OPT }}>
+            <button onClick={onReplay} className="tg-press" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 16px', borderRadius: RADIUS.lg, background: '#fff', border: `1.5px solid ${TG.CORAL_BG}`, cursor: 'pointer', ...TOUCH_OPT }}>
               <SpeakerHighIcon size={17} weight="fill" color={TG.CORAL_DK} />
               <span style={{ ...TYPE.labelSm, color: TG.INK }}>다시 듣기</span>
             </button>
-            <button onClick={onCantHear} className="tg-press" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 16px', borderRadius: 14, background: '#fff', border: '1.5px solid #ebe5de', cursor: 'pointer', ...TOUCH_OPT }}>
+            <button onClick={onCantHear} className="tg-press" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 16px', borderRadius: RADIUS.lg, background: '#fff', border: '1.5px solid #ebe5de', cursor: 'pointer', ...TOUCH_OPT }}>
               <SpeakerSlashIcon size={17} weight="fill" color="#767676" />
               <span style={{ ...TYPE.labelSm, color: TG.INK }}>지금은 못 들어요</span>
             </button>
@@ -569,7 +567,7 @@ export function WordCard({ word, entered, currentSyl, completed, timedOut, progr
           )}
           {canHint && (
             <button onClick={onHint} className="tg-press" aria-label={hintUsed ? '발음 다시 듣기' : '발음 힌트 듣기 (콤보가 끊겨요)'} style={{
-              display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 13px', borderRadius: 13,
+              display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 13px', borderRadius: RADIUS.md,
               background: '#fff', border: `1.5px solid ${hintUsed ? TG.BORDER : TG.CORAL_BG}`, cursor: 'pointer', ...TOUCH_OPT,
             }}>
               <SpeakerHighIcon size={15} weight="fill" color={hintUsed ? TG.SUB : TG.CORAL_DK} />
@@ -615,7 +613,7 @@ export function ToneButtons({ onTone, wrongBtn, disabled, heat = 0 }) {
             className={`tg-press ${isWrong ? 'tg-shake' : ''}`}
             style={{
               position: 'relative', overflow: 'hidden',
-              flex: 1, minWidth: 0, height: '100%', cursor: disabled ? 'default' : 'pointer', borderRadius: 20,
+              flex: 1, minWidth: 0, height: '100%', cursor: disabled ? 'default' : 'pointer', borderRadius: RADIUS.xl,
               background: isWrong ? '#FFD9D9' : TONE_TINTS[t.num],
               border: `1.5px solid ${isWrong ? TG.DANGER : TONE_BORDERS[t.num]}`,
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
@@ -709,7 +707,7 @@ export function DrawPad({ expectedTone, onDraw, disabled = false, resetKey = 0 }
       onPointerDown={start} onPointerMove={move} onPointerUp={end} onPointerCancel={end}
       className={flash && !flash.ok ? 'tg-shake' : ''}
       style={{
-        position: 'relative', width: '100%', height: '100%', borderRadius: 24,
+        position: 'relative', width: '100%', height: '100%', borderRadius: RADIUS.xxl,
         background: bg, border: `2px ${flash ? 'solid' : 'dashed'} ${borderCol}`,
         boxShadow: flash && flash.ok ? SHADOW.correctGlow : SHADOW.card,
         touchAction: 'none', WebkitTapHighlightColor: 'transparent', userSelect: 'none',
@@ -719,7 +717,7 @@ export function DrawPad({ expectedTone, onDraw, disabled = false, resetKey = 0 }
       {/* 경성 음절 — 자동 통과 안내(그리기 불가) */}
       {neutral ? (
         <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 7, pointerEvents: 'none', padding: 8 }}>
-          <div style={{ width: 52, height: 52, borderRadius: 26, background: '#eef0f3', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: TONE_COLORS[0] }}>
+          <div style={{ width: 52, height: 52, borderRadius: RADIUS.card, background: '#eef0f3', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: TONE_COLORS[0] }}>
             <ToneMark tone={0} size={30} />
           </div>
           <span style={{ ...TYPE.btn, color: TG.INK }}>경성이에요</span>
@@ -728,7 +726,7 @@ export function DrawPad({ expectedTone, onDraw, disabled = false, resetKey = 0 }
       ) : (pts.length === 0 && !flash && (
         /* 빈 상태 안내 — 힌트 없이 '여기 그려요'만 */
         <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 7, pointerEvents: 'none', padding: 8 }}>
-          <div style={{ width: 52, height: 52, borderRadius: 26, background: TG.CORAL_BG, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <div style={{ width: 52, height: 52, borderRadius: RADIUS.card, background: TG.CORAL_BG, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             <svg width={30} height={30} viewBox="0 0 60 60" fill="none" aria-hidden="true">
               <path d="M 14 38 C 20 22 26 22 30 30 C 34 38 40 38 46 22" stroke={TG.CORAL} strokeWidth={4} strokeLinecap="round" strokeLinejoin="round" />
             </svg>
@@ -750,7 +748,7 @@ export function DrawPad({ expectedTone, onDraw, disabled = false, resetKey = 0 }
       {/* 인식 결과 라벨(떼는 순간) — 무엇으로 읽었는지 투명하게 */}
       {flash && (
         <div style={{ position: 'absolute', left: 0, right: 0, bottom: 12, display: 'flex', justifyContent: 'center', pointerEvents: 'none' }}>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, ...TYPE.h2, color: flash.ok ? TG.SUCCESS : TG.DANGER, background: '#fff', padding: '5px 12px', borderRadius: 12, boxShadow: '0 2px 8px rgba(43,39,48,0.1)' }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, ...TYPE.h2, color: flash.ok ? TG.SUCCESS : TG.DANGER, background: '#fff', padding: '5px 12px', borderRadius: RADIUS.md, boxShadow: '0 2px 8px rgba(43,39,48,0.1)' }}>
             {flash.ok ? `${guessName} · 정답!` : `${guessName}으로 그렸어요`}
           </span>
         </div>
@@ -776,7 +774,7 @@ export function CountdownVisual({ n, difficulty }) {
       </div>
       {/* 난이도 핀 (Figma top575.5 = 68.2%) */}
       <Reveal i={2} base={140} style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', top: '68.2%' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#fff3d6', padding: '10px 16px', borderRadius: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#fff3d6', padding: '10px 16px', borderRadius: RADIUS.lg }}>
         {pinHz && <span style={{ fontFamily: FONT_HANZI, fontWeight: 700, fontSize: 15, color: '#e0a21a' }}>{pinHz}</span>}
         <span style={{ ...TYPE.labelSm, color: '#b07d12' }}>{difficulty?.label || DIFFICULTIES[0].label}</span>
       </div>
@@ -829,7 +827,7 @@ export function GameToast({ msg }) {
   // 애니메이션(tg-toast)이 transform:translateY를 쓰므로 토스트 박스가 아닌 바깥 컨테이너 패딩으로 올림. safe-area-top도 함께 정합.
   return (
     <div style={{ position: 'fixed', top: 'env(safe-area-inset-top)', bottom: 0, left: 0, right: 0, zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', padding: '24px 24px calc(24px + 12vh)' }}>
-      <div className="tg-toast" style={{ display: 'flex', alignItems: 'center', gap: 7, background: 'rgba(43,39,48,0.94)', boxShadow: '0 8px 22px rgba(26,16,20,0.28)', borderRadius: 14, padding: '12px 18px 12px 16px', maxWidth: '90%' }}>
+      <div className="tg-toast" style={{ display: 'flex', alignItems: 'center', gap: 7, background: 'rgba(43,39,48,0.94)', boxShadow: '0 8px 22px rgba(26,16,20,0.28)', borderRadius: RADIUS.lg, padding: '12px 18px 12px 16px', maxWidth: '90%' }}>
         <LockSimpleIcon size={16} weight="fill" color="#fff" style={{ flexShrink: 0 }} />
         <span style={{ ...TYPE.sub, color: '#fff', whiteSpace: 'normal', lineHeight: 1.35, wordBreak: 'keep-all' }}>{msg}</span>
       </div>
@@ -843,14 +841,14 @@ function SettingRow({ Icon, label, on, onToggle }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <div style={{ width: 36, height: 36, borderRadius: 11, background: on ? 'rgba(242,72,76,0.12)' : TG.TRACK, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ width: 36, height: 36, borderRadius: RADIUS.md, background: on ? 'rgba(242,72,76,0.12)' : TG.TRACK, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <Icon size={20} weight="fill" color={on ? TG.CORAL_DK : TG.MUTED} />
         </div>
         <span style={{ ...TYPE.btnSm, color: TG.INK }}>{label}</span>
       </div>
       <button onClick={onToggle} role="switch" aria-checked={on} aria-label={label} className="tg-press"
-        style={{ width: 48, height: 28, borderRadius: 14, border: 'none', cursor: 'pointer', padding: 0, background: on ? TG.CORAL_DK : TG.MUTED, position: 'relative', transition: 'background .2s ease', ...TOUCH_OPT }}>
-        <span style={{ position: 'absolute', top: 3, left: on ? 23 : 3, width: 22, height: 22, borderRadius: 11, background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left .18s ease' }} />
+        style={{ width: 48, height: 28, borderRadius: RADIUS.lg, border: 'none', cursor: 'pointer', padding: 0, background: on ? TG.CORAL_DK : TG.MUTED, position: 'relative', transition: 'background .2s ease', ...TOUCH_OPT }}>
+        <span style={{ position: 'absolute', top: 3, left: on ? 23 : 3, width: 22, height: 22, borderRadius: RADIUS.md, background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left .18s ease' }} />
       </button>
     </div>
   );
@@ -864,7 +862,7 @@ export function SettingsModal({ onClose }) {
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(26,16,20,0.55)', backdropFilter: 'blur(2px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, ...TOUCH_OPT }}>
       <div className="tg-enter" onClick={(e) => e.stopPropagation()} style={{
-        width: '100%', maxWidth: 300, background: TG.CARD, borderRadius: 24, padding: '20px 22px 22px',
+        width: '100%', maxWidth: 300, background: TG.CARD, borderRadius: RADIUS.xxl, padding: '20px 22px 22px',
         boxShadow: '0 20px 50px rgba(26,16,20,0.3)', display: 'flex', flexDirection: 'column', gap: 16,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -872,7 +870,7 @@ export function SettingsModal({ onClose }) {
           {/* 히트영역 44×44(음수 마진으로 레이아웃 자리는 30 유지), 시각 크기는 안쪽 30×30 원 그대로 */}
           <button onClick={onClose} aria-label="닫기" className="tg-press"
             style={{ width: 44, height: 44, margin: -7, padding: 0, border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', ...TOUCH_OPT }}>
-            <span style={{ width: 30, height: 30, borderRadius: 15, background: TG.SURFACE, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ width: 30, height: 30, borderRadius: RADIUS.lg, background: TG.SURFACE, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <XIcon size={14} weight="bold" color={TG.SUB} />
             </span>
           </button>

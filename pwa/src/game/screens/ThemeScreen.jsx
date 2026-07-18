@@ -4,7 +4,7 @@
 // 참조 메모리: tone_game_redesign.md (테마 모드)
 import { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { CaretLeftIcon, CaretRightIcon, LockSimpleIcon, PlayIcon } from '@phosphor-icons/react';
-import { TG, TYPE, TOUCH_OPT, DUR } from '../tgTokens.js';
+import { TG, TYPE, TOUCH_OPT, DUR, RADIUS } from '../tgTokens.js';
 import { isThemeUnlocked, themeBestScore, themeUnlockReqText, themeUnlockToastText, themeStars } from '../gameLogic.js';
 import { play as playSfx } from '../tgSfx.js';
 import { Reveal, GameHeader, StarRow, CoachBubble, ShakeButton, prefersReducedMotion } from './shared.jsx';
@@ -117,7 +117,7 @@ function AmbientParticlesInner({ themeId }) {
 }
 
 const metaChip = (bg, color, bold) => ({
-  display: 'inline-flex', alignItems: 'center', padding: '5px 10px', borderRadius: 13,
+  display: 'inline-flex', alignItems: 'center', padding: '5px 10px', borderRadius: RADIUS.md,
   background: bg, ...(bold ? TYPE.labelSm : TYPE.meta), color,
 });
 
@@ -128,7 +128,7 @@ function ThemeCard({ theme, unlocked, best, count, cardH, imgH, unlockCur, focus
   const panelH = cardH - imgH;
   const stars = themeStars(best); // 0~3, 한 판 최고점 기준(점수 오름차순이라 항상 연속 채움)
   return (
-    <div style={{ position: 'absolute', inset: 0, borderRadius: 24, overflow: 'hidden', background: '#fff' }}>
+    <div style={{ position: 'absolute', inset: 0, borderRadius: RADIUS.xxl, overflow: 'hidden', background: '#fff' }}>
       {/* 이미지 영역(상단 65%) */}
       <div style={{ position: 'absolute', left: 0, right: 0, top: 0, height: imgH, background: theme.tint || '#eee' }}>
         {theme.image
@@ -141,7 +141,7 @@ function ThemeCard({ theme, unlocked, best, count, cardH, imgH, unlockCur, focus
         {!unlocked && (
           <>
             <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)' }} />
-            <div style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: 56, height: 56, borderRadius: 28, background: 'rgba(0,0,0,0.42)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: 56, height: 56, borderRadius: RADIUS.card, background: 'rgba(0,0,0,0.42)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <LockSimpleIcon size={26} weight="fill" color="#fff" />
             </div>
           </>
@@ -149,7 +149,7 @@ function ThemeCard({ theme, unlocked, best, count, cardH, imgH, unlockCur, focus
         {/* 성취 별 배지 — 우상단(유일한 배지). 한 판 최고점 500/1000/1800 구간별 0~3개(점수 오름차순=항상 연속 채움).
             점수 숫자는 카드에서 제거(중복·정보과다, 2026-07-16 사용자 결정: 최고점은 결과화면에서 확인). 채운 별은 시차 반짝임 */}
         {unlocked && (
-          <div style={{ position: 'absolute', right: 12, top: 12, display: 'flex', alignItems: 'center', padding: '6px 10px', borderRadius: 15, background: 'rgba(0,0,0,0.48)' }}>
+          <div style={{ position: 'absolute', right: 12, top: 12, display: 'flex', alignItems: 'center', padding: '6px 10px', borderRadius: RADIUS.lg, background: 'rgba(0,0,0,0.48)' }}>
             <StarRow filled={stars} size={17} gap={4} off="rgba(255,255,255,0.5)" shine />
           </div>
         )}
@@ -173,8 +173,8 @@ function ThemeCard({ theme, unlocked, best, count, cardH, imgH, unlockCur, focus
                 {unlockCur.toLocaleString()} / {theme.unlock.score.toLocaleString()}
               </span>
             </div>
-            <div style={{ height: 8, borderRadius: 4, background: GAUGE_BG, overflow: 'hidden' }}>
-              <div style={{ height: '100%', borderRadius: 4, background: TG.SUN, width: `${Math.min(100, (unlockCur / theme.unlock.score) * 100)}%` }} />
+            <div style={{ height: 8, borderRadius: RADIUS.xs, background: GAUGE_BG, overflow: 'hidden' }}>
+              <div style={{ height: '100%', borderRadius: RADIUS.xs, background: TG.SUN, width: `${Math.min(100, (unlockCur / theme.unlock.score) * 100)}%` }} />
             </div>
           </div>
         )}
@@ -183,7 +183,7 @@ function ThemeCard({ theme, unlocked, best, count, cardH, imgH, unlockCur, focus
       {/* 시작 버튼(오픈만) — 패널 우측 세로중앙. 포커스 카드에서만 맥동 강조 */}
       {unlocked && (
         <div style={{
-          position: 'absolute', right: 16, top: imgH + (panelH - 46) / 2, width: 46, height: 46, borderRadius: 23,
+          position: 'absolute', right: 16, top: imgH + (panelH - 46) / 2, width: 46, height: 46, borderRadius: RADIUS.xxl,
           background: TG.CORAL_DK, boxShadow: '0 5px 12px rgba(242,72,76,0.42)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           animation: (focused && !prefersReducedMotion()) ? 'tg-fab-pulse 1.5s ease-in-out infinite' : 'none',
@@ -255,7 +255,7 @@ export function ThemeScreen({ themes, studentToken, counts = {}, onStart, onBack
     scrollToIndex(active + (d > 0 ? 1 : -1));
   };
   const navBtn = (disabled) => ({
-    position: 'absolute', top: PAD_TOP + boxH / 2 - 20, width: 40, height: 40, borderRadius: 20,
+    position: 'absolute', top: PAD_TOP + boxH / 2 - 20, width: 40, height: 40, borderRadius: RADIUS.xl,
     background: '#fff', boxShadow: '0px 3px 5px rgba(43,39,48,0.14)', border: 'none', zIndex: 2,
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     cursor: disabled ? 'default' : 'pointer', opacity: disabled ? 0.35 : 1, ...TOUCH_OPT,
@@ -293,7 +293,7 @@ export function ThemeScreen({ themes, studentToken, counts = {}, onStart, onBack
                   position: 'relative', padding: 0, border: 'none', background: 'transparent',
                   cursor: 'pointer', ...TOUCH_OPT,
                 }}>
-                <div ref={(n) => { fxRefs.current[idx] = n; }} style={{ position: 'absolute', inset: 0, borderRadius: 24, boxShadow: '0 5px 14px rgba(43,39,48,0.10)' }}>
+                <div ref={(n) => { fxRefs.current[idx] = n; }} style={{ position: 'absolute', inset: 0, borderRadius: RADIUS.xxl, boxShadow: '0 5px 14px rgba(43,39,48,0.10)' }}>
                   <ThemeCard theme={t} unlocked={unlocked} best={themeBestScore(studentToken, t.gameKey)}
                     count={counts[t.id] || 0} cardH={boxH} imgH={imgH} focused={idx === active}
                     unlockCur={t.unlock ? themeBestScore(studentToken, t.unlock.byGameKey) : 0} />
@@ -319,7 +319,7 @@ export function ThemeScreen({ themes, studentToken, counts = {}, onStart, onBack
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
             {themes.map((t, i) => (
-              <div key={t.id} style={{ width: i === active ? 20 : 6, height: 6, borderRadius: 3, background: i === active ? TG.CORAL_DK : TG.MUTED, transition: `all ${DUR.state} ease` }} />
+              <div key={t.id} style={{ width: i === active ? 20 : 6, height: 6, borderRadius: RADIUS.xs, background: i === active ? TG.CORAL_DK : TG.MUTED, transition: `all ${DUR.state} ease` }} />
             ))}
           </div>
           <span style={{ ...TYPE.meta, color: TG.SUB }}>
