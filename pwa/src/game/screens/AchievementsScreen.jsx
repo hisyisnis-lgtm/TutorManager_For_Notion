@@ -76,7 +76,7 @@ function AchRow({ ach, earned, snapshot, onToast, last }) {
   const got = earned || p.cur >= p.target;
   const pct = Math.min(100, Math.round((p.cur / (p.target || 1)) * 100));
   return (
-    <button className="tg-press" onClick={() => onToast && onToast(got ? '이미 달성한 업적이에요!' : ach.cond)}
+    <button className="tg-press" onClick={() => onToast && onToast(got ? '이미 달성한 업적이에요!' : ach.cond, got ? 'done' : 'lock')}
       style={{ display: 'flex', alignItems: 'center', gap: SPACE.x2, width: '100%', textAlign: 'left', padding: '13px 4px', background: 'none', border: 'none', borderBottom: last ? 'none' : '1px solid rgba(43,39,48,0.06)', cursor: 'pointer', ...TOUCH_OPT }}>
       <RingBadge ach={ach} got={got} color={color} pct={pct} />
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: SPACE.xxs }}>

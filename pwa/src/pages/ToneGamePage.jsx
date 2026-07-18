@@ -243,9 +243,9 @@ export default function ToneGamePage() {
   const [splash, setSplash] = useState(isPreview ? previewScreen === 'splash' : true); // 진입 스플래시(실제 진입만, 미리보기는 ?screen=splash)
   const [toast, setToast] = useState(null); // 중앙 토스트(잠금 안내 등)
   const toastTimerRef = useRef(null);
-  const showToast = useCallback((msg) => {
+  const showToast = useCallback((msg, kind = 'lock') => {
     if (!msg) return;
-    setToast({ msg, key: Date.now() });
+    setToast({ msg, kind, key: Date.now() });
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
     toastTimerRef.current = setTimeout(() => setToast(null), 1700);
   }, []);
@@ -463,8 +463,8 @@ export default function ToneGamePage() {
       // ── 성취 레이어(P1) — 일일 스트릭 + 업적 평가. 로컬 저장(서버 동기화는 후속). 모든 모드 공통(플레이=출석) ──
       const streak = recordPlay(studentToken);
       // 보호권 알림 — 방어 성공(안도)·획득(보상). 압박 아닌 긍정 카피.
-      if (streak.freezeUsed > 0) showToast(`❄️ 보호권이 빠진 하루를 지켜줬어요! 연속학습 ${streak.current}일 유지`);
-      else if (streak.freezeEarned > 0) showToast(`🔥 ${streak.current}일 달성! 보호권 +1 (❄️${streak.freezes})`);
+      if (streak.freezeUsed > 0) showToast(`❄️ 보호권이 빠진 하루를 지켜줬어요! 연속학습 ${streak.current}일 유지`, 'info');
+      else if (streak.freezeEarned > 0) showToast(`🔥 ${streak.current}일 달성! 보호권 +1 (❄️${streak.freezes})`, 'info');
       const masteredN = (() => {
         const map = {};
         for (const d of DIFFICULTIES) for (const w of (wordPoolByDiff[d.id] || [])) map[w.hanzi] = w;
@@ -1259,7 +1259,7 @@ export default function ToneGamePage() {
           onRestart={() => { setPaused(false); if (endlessMode) startEndless(); else if (practiceMode) startTraining(); else if (themeMode) startTheme(selectedTheme); else startGame(selectedDifficulty); }}
           onQuit={() => tipTransitionTo('home')} />
       )}
-      {toast && <GameToast key={toast.key} msg={toast.msg} />}
+      {toast && <GameToast key={toast.key} msg={toast.msg} kind={toast.kind} />}
       {/* 게임 방법 확인 팝업 — 확인 시 인게임 튜토리얼로(완료 후 홈 복귀) */}
       {helpOpen && <HelpStartModal onStart={() => { setHelpOpen(false); setTutorialFromHelp(true); setScreen('tutorial'); }} onClose={() => setHelpOpen(false)} />}
       {/* 게임오버 비트 — 게임 화면 위 오버레이(결과화면 직전). ~2초 후 결과('end')로 진행.
