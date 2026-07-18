@@ -1,7 +1,7 @@
 // 결과 화면 — 신기록 배지·축하 판다·점수(카운트업)·통계 2카드·코치·다시도전/난이도 바꾸기.
 import { useState, useEffect } from 'react';
-import { TrophyIcon, ArrowClockwiseIcon, LightningIcon, CheckCircleIcon, XCircleIcon } from '@phosphor-icons/react';
-import { TG, FONT_NUM, FONT_BODY, TOUCH_OPT, pickCelebratePanda } from '../tgTokens.js';
+import { TrophyIcon, ArrowClockwiseIcon, LightningIcon, CheckCircleIcon, XCircleIcon, CaretRightIcon } from '@phosphor-icons/react';
+import { TG, TYPE, TOUCH_OPT, pickCelebratePanda } from '../tgTokens.js';
 import { useCountUp, FlameIcon } from '../tgWidgets.jsx';
 import { play as playSfx } from '../tgSfx.js';
 import { Reveal, CoachBubble, ConfettiBurst, CrispFlash, LIGHT_CONFETTI } from './shared.jsx';
@@ -37,12 +37,12 @@ function SecBtn({ label, onClick, coachId }) {
       flex: 1, minWidth: 0, height: 54, borderRadius: 18, background: '#fff', border: '1.5px solid #ebe5de', cursor: 'pointer',
       display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 8px', ...TOUCH_OPT,
     }}>
-      <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 15, color: '#9a93a0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
+      <span style={{ ...TYPE.btnSm, color: '#9a93a0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
     </button>
   );
 }
 
-export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, onRetry, onChangeDiff, onModeSelect, onLogin = null, retryLabel = '다시 도전', changeLabel = '난이도 바꾸기', practice = false, endKind = null, suggestPractice = false, coachReady = true }) {
+export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, onRetry, onChangeDiff, onModeSelect, onNextLevel = null, onLogin = null, retryLabel = '다시 도전', changeLabel = '난이도 바꾸기', practice = false, endKind = null, suggestPractice = false, coachReady = true }) {
   const animScore = useCountUp(score, 1100);
   // 로그인 유도 모달(게스트가 '이전 기록'을 실제로 넘긴 순간) — 마운트 때 1회 판정(세션·쿨다운).
   //  previousBest>0: 첫 판(항상 신기록·이전0) 코치마크와 안 겹치고, 재도전+향상=투자 있는 성취에만.
@@ -76,7 +76,7 @@ export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, 
         <Reveal i={0} style={{ position: 'absolute', top: 36, left: '50%', transform: 'translateX(-50%)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 16, background: 'linear-gradient(90deg, #ffd24d, #ff9f40)', boxShadow: '0px 6px 14px rgba(255,159,64,0.28)' }}>
           <TrophyIcon size={13} weight="fill" color="#fff" />
-          <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 15, color: '#fff', whiteSpace: 'nowrap' }}>신기록 달성!</span>
+          <span style={{ ...TYPE.btnSm, color: '#fff', whiteSpace: 'nowrap' }}>신기록 달성!</span>
         </div>
         </Reveal>
       )}
@@ -87,13 +87,13 @@ export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, 
       {/* 점수 */}
       <Reveal i={2} style={{ position: 'absolute', left: 24, right: 24, top: 196 }}>
       <div data-coach="result-score" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-        <span style={{ fontFamily: FONT_NUM, fontWeight: 800, fontSize: 60, color: '#f2484c', lineHeight: 1, whiteSpace: 'nowrap' }}>{animScore.toLocaleString()}</span>
+        <span style={{ ...TYPE.numHero, color: '#f2484c', lineHeight: 1, whiteSpace: 'nowrap' }}>{animScore.toLocaleString()}</span>
         {previousBest > 0 && (
           <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 2 }}>
-            <span style={{ fontFamily: FONT_BODY, fontWeight: 500, fontSize: 13, color: '#9a93a0', whiteSpace: 'nowrap' }}>이전 최고 {previousBest.toLocaleString()}</span>
+            <span style={{ ...TYPE.sub, color: '#9a93a0', whiteSpace: 'nowrap' }}>이전 최고 {previousBest.toLocaleString()}</span>
             {isNewBest && delta > 0 && (
               <span style={{ display: 'flex', alignItems: 'center', padding: '3px 8px', borderRadius: 10, background: 'rgba(54,201,141,0.16)' }}>
-                <span style={{ fontFamily: FONT_NUM, fontWeight: 700, fontSize: 12, color: '#1fa86a', whiteSpace: 'nowrap' }}>▲ {delta.toLocaleString()}</span>
+                <span style={{ ...TYPE.num, color: '#1fa86a', whiteSpace: 'nowrap' }}>▲ {delta.toLocaleString()}</span>
               </span>
             )}
           </div>
@@ -110,27 +110,46 @@ export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, 
           <div key={s.label} style={{ flex: 1, minWidth: 0, background: '#fff', borderRadius: 22, boxShadow: '0px 5px 14px rgba(43,39,48,0.06)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
             <div style={{ width: 40, height: 40, borderRadius: 20, background: s.ibg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{s.icon}</div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 2 }}>
-              <span style={{ fontFamily: FONT_NUM, fontWeight: 800, fontSize: 26, color: '#2b2730' }}>{s.val}</span>
-              {s.unit && <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 13, color: '#9a93a0' }}>{s.unit}</span>}
+              <span style={{ ...TYPE.numLg, color: '#2b2730' }}>{s.val}</span>
+              {s.unit && <span style={{ ...TYPE.label, color: '#9a93a0' }}>{s.unit}</span>}
             </div>
-            <span style={{ fontFamily: FONT_BODY, fontWeight: 500, fontSize: 12, color: '#9a93a0' }}>{s.label}</span>
+            <span style={{ ...TYPE.meta, color: '#9a93a0' }}>{s.label}</span>
           </div>
         ))}
       </div>
       </Reveal>
       {/* 코치 — 통계카드 하단과 CTA 사이 가용공간 세로중앙. */}
       <Reveal i={4} style={{ position: 'absolute', left: 24, right: 24, top: 452, bottom: 'calc(150px + env(safe-area-inset-bottom))', display: 'flex', alignItems: 'center' }}>
-        <CoachBubble text={suggestPractice ? `${DIFFICULTIES[0].label} 단계가 어렵나요? 천천히 익혀봐요` : practice ? '잘했어요! 또 해볼까요?' : endKind === 'miss' ? '아쉽게 틀렸어요! 다시 도전해볼까요?' : '다시 도전해서 신기록을 깨볼까요?'} />
+        <CoachBubble text={onNextLevel ? '다음 스테이지에 도전할 수 있어요! 🎉' : suggestPractice ? `${DIFFICULTIES[0].label} 단계가 어렵나요? 천천히 익혀봐요` : practice ? '잘했어요! 또 해볼까요?' : endKind === 'miss' ? '아쉽게 틀렸어요! 다시 도전해볼까요?' : '다시 도전해서 신기록을 깨볼까요?'} />
       </Reveal>
-      {/* 다시 도전 (하단 고정) — 최하단 '난이도 바꾸기' 위 */}
+      {/* 메인 CTA (하단 고정) — 다음 스테이지가 열렸으면 [다시하기 | 다음 스테이지] 반반, 아니면 '다시 도전' 풀폭 */}
       <Reveal i={5} style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(80px + env(safe-area-inset-bottom))' }}>
-      <button data-coach="result-actions" onClick={() => { playSfx('button'); onRetry(); }} className="tg-press" style={{
-        width: '100%', height: 62, borderRadius: 20, border: 'none', cursor: 'pointer',
-        background: TG.CORAL_GRAD, boxShadow: '0px 10px 20px rgba(242,72,76,0.32)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, ...TOUCH_OPT,
-      }}>
-        <ArrowClockwiseIcon size={19} weight="bold" color="#fff" />
-        <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 19, color: '#fff' }}>{retryLabel}</span>
-      </button>
+      {onNextLevel ? (
+        <div data-coach="result-actions" style={{ display: 'flex', gap: 10 }}>
+          <button onClick={() => { playSfx('button'); onRetry(); }} className="tg-press" style={{
+            flex: 1, minWidth: 0, height: 62, borderRadius: 20, border: '1.5px solid #ebe5de', background: '#fff', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, ...TOUCH_OPT,
+          }}>
+            <ArrowClockwiseIcon size={18} weight="bold" color="#9a93a0" />
+            <span style={{ ...TYPE.btn, color: '#9a93a0', whiteSpace: 'nowrap' }}>다시하기</span>
+          </button>
+          <button onClick={() => { playSfx('button'); onNextLevel(); }} className="tg-press" style={{
+            flex: 1, minWidth: 0, height: 62, borderRadius: 20, border: 'none', cursor: 'pointer',
+            background: TG.CORAL_GRAD, boxShadow: '0px 10px 20px rgba(242,72,76,0.32)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, ...TOUCH_OPT,
+          }}>
+            <span style={{ ...TYPE.btn, color: '#fff', whiteSpace: 'nowrap' }}>다음 스테이지</span>
+            <CaretRightIcon size={16} weight="bold" color="#fff" />
+          </button>
+        </div>
+      ) : (
+        <button data-coach="result-actions" onClick={() => { playSfx('button'); onRetry(); }} className="tg-press" style={{
+          width: '100%', height: 62, borderRadius: 20, border: 'none', cursor: 'pointer',
+          background: TG.CORAL_GRAD, boxShadow: '0px 10px 20px rgba(242,72,76,0.32)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, ...TOUCH_OPT,
+        }}>
+          <ArrowClockwiseIcon size={19} weight="bold" color="#fff" />
+          <span style={{ ...TYPE.cta, color: '#fff' }}>{retryLabel}</span>
+        </button>
+      )}
       </Reveal>
       {/* 하단 보조 — onModeSelect 있으면 [변경 | 모드 선택] 2분할, 없으면 단일(풀폭) */}
       <Reveal i={6} style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(18px + env(safe-area-inset-bottom))' }}>
@@ -170,7 +189,7 @@ export function ExamResultScreen({ correct = 0, total = 20, passed = false, canR
           background: passed ? 'linear-gradient(90deg, #36C98D, #1fa86a)' : '#efeae4',
           boxShadow: passed ? '0px 6px 14px rgba(31,168,106,0.28)' : 'none' }}>
           {passed && <TrophyIcon size={13} weight="fill" color="#fff" />}
-          <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 15, color: passed ? '#fff' : '#9a93a0', whiteSpace: 'nowrap' }}>{passed ? '승급 시험 합격!' : '승급 시험 불합격'}</span>
+          <span style={{ ...TYPE.btnSm, color: passed ? '#fff' : '#9a93a0', whiteSpace: 'nowrap' }}>{passed ? '승급 시험 합격!' : '승급 시험 불합격'}</span>
         </div>
       </Reveal>
       {/* 축하/격려 판다 */}
@@ -181,8 +200,8 @@ export function ExamResultScreen({ correct = 0, total = 20, passed = false, canR
       <Reveal i={2} style={{ position: 'absolute', left: 24, right: 24, top: 196 }}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-            <span style={{ fontFamily: FONT_NUM, fontWeight: 800, fontSize: 60, color: passed ? '#1fa86a' : '#f2484c', lineHeight: 1 }}>{animCorrect}</span>
-            <span style={{ fontFamily: FONT_NUM, fontWeight: 700, fontSize: 30, color: '#9a93a0' }}>/ {total}</span>
+            <span style={{ ...TYPE.numHero, color: passed ? '#1fa86a' : '#f2484c', lineHeight: 1 }}>{animCorrect}</span>
+            <span style={{ ...TYPE.num, fontSize: 30, color: '#9a93a0' }}>/ {total}</span>
           </div>
           {/* 합격선 게이지 — 채움은 카운트업과 동기. 합격 기준(80%)까지는 빨강, 넘어선 만큼만 초록(틱 없이 색 경계가 곧 합격선). */}
           {(() => {
@@ -200,7 +219,7 @@ export function ExamResultScreen({ correct = 0, total = 20, passed = false, canR
               </div>
             );
           })()}
-          <span style={{ fontFamily: FONT_BODY, fontWeight: 600, fontSize: 13, color: '#9a93a0', marginTop: 8 }}>정답률 {pct}% · 합격 기준 80%</span>
+          <span style={{ ...TYPE.sub, color: '#9a93a0', marginTop: 8 }}>정답률 {pct}% · 합격 기준 80%</span>
         </div>
       </Reveal>
       {/* 통계 2카드(맞힌/틀린 문제) — 일반 결과 화면과 동일 기하·카드 스타일(빈 화면 방지) */}
@@ -213,10 +232,10 @@ export function ExamResultScreen({ correct = 0, total = 20, passed = false, canR
             <div key={s.label} style={{ flex: 1, minWidth: 0, background: '#fff', borderRadius: 22, boxShadow: '0px 5px 14px rgba(43,39,48,0.06)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
               <div style={{ width: 40, height: 40, borderRadius: 20, background: s.ibg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{s.icon}</div>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 2 }}>
-                <span style={{ fontFamily: FONT_NUM, fontWeight: 800, fontSize: 26, color: '#2b2730' }}>{s.val}</span>
-                <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 13, color: '#9a93a0' }}>개</span>
+                <span style={{ ...TYPE.numLg, color: '#2b2730' }}>{s.val}</span>
+                <span style={{ ...TYPE.label, color: '#9a93a0' }}>개</span>
               </div>
-              <span style={{ fontFamily: FONT_BODY, fontWeight: 500, fontSize: 12, color: '#9a93a0' }}>{s.label}</span>
+              <span style={{ ...TYPE.meta, color: '#9a93a0' }}>{s.label}</span>
             </div>
           ))}
         </div>
@@ -233,7 +252,7 @@ export function ExamResultScreen({ correct = 0, total = 20, passed = false, canR
             background: TG.CORAL_GRAD, boxShadow: '0px 10px 20px rgba(242,72,76,0.32)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, ...TOUCH_OPT,
           }}>
             <ArrowClockwiseIcon size={19} weight="bold" color="#fff" />
-            <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 19, color: '#fff' }}>다시 도전</span>
+            <span style={{ ...TYPE.cta, color: '#fff' }}>다시 도전</span>
           </button>
         </Reveal>
       )}
@@ -244,7 +263,7 @@ export function ExamResultScreen({ correct = 0, total = 20, passed = false, canR
           border: (!passed && canRetry) ? '1.5px solid #ebe5de' : 'none', cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center', ...TOUCH_OPT,
         }}>
-          <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 17, color: (!passed && canRetry) ? '#9a93a0' : '#fff' }}>홈으로</span>
+          <span style={{ ...TYPE.btn, color: (!passed && canRetry) ? '#9a93a0' : '#fff' }}>홈으로</span>
         </button>
       </Reveal>
     </>

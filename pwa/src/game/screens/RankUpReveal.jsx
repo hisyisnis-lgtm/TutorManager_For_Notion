@@ -5,7 +5,7 @@
 //  ★XP 등급 전환(2026-07-11): 등급은 이제 누적 XP로 오르며 강등이 없다 → 상승 연출만 남김(하락/게이지/마스터 문구 제거).
 //    prevIdx/nowIdx = 등급 인덱스(EAR_TIERS). Phase 2(승급 시험)에서도 합격 시 이 연출을 그대로 재활용.
 import { useEffect, useRef, useState } from 'react';
-import { TG, FONT_TITLE, FONT_BODY, haptic } from '../tgTokens.js';
+import { TG, TYPE, haptic } from '../tgTokens.js';
 import { EAR_TIERS, TIER_SPARK_POS as PARTICLE_POS } from '../earProfile.js';
 import { CrispFlash, ConfettiBurst, LIGHT_CONFETTI } from './shared.jsx';
 const CHARGE_MS = 1500; // 차징 지속(짠! 까지) — 기대감 형성 구간
@@ -55,7 +55,7 @@ export function RankUpReveal({ prevIdx = 0, nowIdx = 0, onDone, hold = false }) 
         @keyframes ru-converge{0%{opacity:0;transform:translate(var(--fx),var(--fy)) scale(1)}22%{opacity:.95}100%{opacity:0;transform:translate(0,0) scale(.2)}}
       `}</style>
       {/* eyebrow */}
-      <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 16, marginBottom: 8,
+      <span style={{ ...TYPE.btn, marginBottom: 8,
         color: charging ? 'rgba(255,255,255,0.66)' : '#FFC94D',
         animation: charging ? 'ru-hintpulse 1s ease-in-out infinite' : 'ru-pop .5s cubic-bezier(.34,1.56,.64,1) both' }}>
         {charging ? '등급이 오르고 있어요…' : '✨ 등급 상승!'}
@@ -102,11 +102,11 @@ export function RankUpReveal({ prevIdx = 0, nowIdx = 0, onDone, hold = false }) 
       </div>
       {/* 단계명 — 차징 중엔 숨겨 짠! 때 등장(반전 강조) */}
       {done && (
-        <span style={{ fontFamily: FONT_TITLE, fontSize: 22, color: '#fff', marginTop: 4, animation: 'ru-pop .5s cubic-bezier(.34,1.56,.64,1) .12s both' }}>{nowT.name}</span>
+        <span style={{ ...TYPE.title, color: '#fff', marginTop: 4, animation: 'ru-pop .5s cubic-bezier(.34,1.56,.64,1) .12s both' }}>{nowT.name}</span>
       )}
       {/* 확인 — 차징 중엔 숨김(짠! 이후 등장) */}
       {!hold && done && (
-        <button onClick={onDone} className="tg-press" style={{ marginTop: 40, padding: '14px 44px', borderRadius: 16, border: 'none', cursor: 'pointer', background: TG.CORAL_GRAD, boxShadow: '0 10px 24px rgba(242,72,76,0.32)', fontFamily: FONT_BODY, fontWeight: 700, fontSize: 17, color: '#fff' }}>확인</button>
+        <button onClick={onDone} className="tg-press" style={{ marginTop: 40, padding: '14px 44px', borderRadius: 16, border: 'none', cursor: 'pointer', background: TG.CORAL_GRAD, boxShadow: '0 10px 24px rgba(242,72,76,0.32)', ...TYPE.btn, color: '#fff' }}>확인</button>
       )}
     </div>
   );

@@ -1,18 +1,17 @@
 // 모드 선택 — 주력 큰 원형(난이도·무한) + 풀폭 카드(테마·트레이닝).
 // Figma "26. 모드 선택 v2". 잠긴 카드(무한)는 흔들림+토스트.
-import { CaretLeftIcon, CaretRightIcon, StairsIcon, InfinityIcon, SkullIcon, LockSimpleIcon, GraduationCapIcon, CardsThreeIcon } from '@phosphor-icons/react';
-import { TG, FONT_TITLE, FONT_BODY, TOUCH_OPT } from '../tgTokens.js';
+import { StairsIcon, InfinityIcon, SkullIcon, LockSimpleIcon, GraduationCapIcon, CardsThreeIcon } from '@phosphor-icons/react';
+import { TG, TYPE, TOUCH_OPT } from '../tgTokens.js';
 import { useState, useRef, useLayoutEffect } from 'react';
-import { ShakeButton, Reveal, CoachBubble, prefersReducedMotion } from './shared.jsx';
+import { ShakeButton, Reveal, GameHeader, CoachBubble, prefersReducedMotion } from './shared.jsx';
 import { EndlessStartModal, TrainingStartModal } from './gameModals.jsx';
 import CoachMarkOverlay from '../../components/ui/CoachMarkOverlay.jsx';
 import { useTabTip } from '../../hooks/useTabTip.js';
 import { DIFFICULTIES } from '../../constants/toneGameWords.js';
-import { UNLOCK_THRESHOLD } from '../gameLogic.js';
 
 const FIRST_LABEL = DIFFICULTIES[0].label;                       // 난이도 사다리 첫 급(현재 '입문')
-const LAST_LABEL = DIFFICULTIES[DIFFICULTIES.length - 1].label;  // 마지막 급(현재 '고수') — 무한 해제 조건
-const ENDLESS_REQ = `${LAST_LABEL} ${UNLOCK_THRESHOLD.toLocaleString()}점`;
+const LAST_LABEL = DIFFICULTIES[DIFFICULTIES.length - 1].label;  // 마지막 급(현재 '고수')
+const ENDLESS_REQ = `${LAST_LABEL} 마지막 단계`;                 // 무한 해제 = 사다리 끝(고수5) 도달(2026-07-18 변경, 구 '1000점' 폐기)
 
 // 첫 진입 코치마크 — 난이도 경로 안내. Reveal 등장(≈0.9s)이 끝난 뒤 표시(ready 게이트).
 const MODE_COACH = [
@@ -112,8 +111,8 @@ function BigTile({ Icon, grad, glow, dot, title, desc, locked, lockText, onClick
         </div>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-        <span style={{ fontFamily: FONT_BODY, fontWeight: 800, fontSize: 17.5, color: locked ? '#9a93a0' : '#2b2730' }}>{title}</span>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontFamily: FONT_BODY, fontWeight: 600, fontSize: 12, color: showDanger ? '#d0464a' : '#9a93a0' }}>
+        <span style={{ ...TYPE.h1, color: locked ? '#9a93a0' : '#2b2730' }}>{title}</span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 3, ...TYPE.meta, color: showDanger ? '#d0464a' : '#9a93a0' }}>
           {showDanger && <SkullIcon size={12} weight="fill" color="#d0464a" style={{ flexShrink: 0 }} />}
           {locked ? lockText : desc}
         </span>
@@ -122,27 +121,27 @@ function BigTile({ Icon, grad, glow, dot, title, desc, locked, lockText, onClick
   );
 }
 
-// 피처 카드 — 메인 모드를 풀폭으로 강조(accent 색 범용). locked면 회색+자물쇠+조건.
-function FeatureCard({ Icon, accent, tint, border, title, desc, locked, lockText, onClick, onLocked, coachId }) {
+// 피처 카드 — 흰 카드 + 컬러 아이콘 칩(앱 고유 언어: 원형 타일·모달과 통일). 꺾쇠 없이 카드 자체가 액션.
+function FeatureCard({ Icon, accent, title, desc, locked, lockText, onClick, onLocked, coachId }) {
   return (
     <ShakeButton shakeOnClick={locked} onClick={locked ? onLocked : onClick} className={locked ? '' : 'tg-press'} data-coach={coachId} style={{
-      width: '100%', height: 74, display: 'flex', alignItems: 'center', gap: 13, textAlign: 'left', padding: '0 16px', borderRadius: 18, cursor: 'pointer',
-      background: locked ? '#f3eee7' : tint, border: `1.5px solid ${locked ? '#efeae4' : border}`,
-      boxShadow: locked ? 'none' : `0px 5px 14px ${accent}22`, ...TOUCH_OPT,
+      width: '100%', height: 76, display: 'flex', alignItems: 'center', gap: 14, textAlign: 'left', padding: '0 18px', borderRadius: 20, cursor: 'pointer',
+      background: locked ? '#f4efe8' : '#fff', border: 'none',
+      boxShadow: locked ? 'none' : '0 6px 18px rgba(43,39,48,0.07)', ...TOUCH_OPT,
     }}>
-      <div style={{ width: 46, height: 46, borderRadius: 14, flexShrink: 0, background: locked ? '#e7e0d6' : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: locked ? 'none' : `0 2px 6px ${accent}33` }}>
-        <Icon size={25} weight="fill" color={locked ? '#b8b0a8' : accent} />
+      <div style={{ width: 48, height: 48, borderRadius: 15, flexShrink: 0, background: locked ? '#e7e0d6' : accent, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: locked ? 'none' : `0 4px 11px ${accent}3a` }}>
+        <Icon size={25} weight="fill" color={locked ? '#b8b0a8' : '#fff'} />
       </div>
-      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
-        <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 16, color: locked ? '#9a93a0' : '#2b2730' }}>{title}</span>
-        <span style={{ fontFamily: FONT_BODY, fontWeight: 500, fontSize: 12, color: '#9a93a0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{desc}</span>
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <span style={{ ...TYPE.h2, letterSpacing: '-0.01em', color: locked ? '#9a93a0' : '#2b2730' }}>{title}</span>
+        <span style={{ ...TYPE.meta, color: '#8f887f', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{desc}</span>
       </div>
-      {locked ? (
+      {locked && (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, flexShrink: 0 }}>
           <LockSimpleIcon size={20} weight="fill" color="#b8b0a8" />
-          <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 10.5, color: '#9a93a0', whiteSpace: 'nowrap' }}>{lockText}</span>
+          <span style={{ ...TYPE.micro, color: '#9a93a0', whiteSpace: 'nowrap' }}>{lockText}</span>
         </div>
-      ) : <CaretRightIcon size={22} weight="bold" color={accent} style={{ flexShrink: 0, opacity: 0.55 }} />}
+      )}
     </ShakeButton>
   );
 }
@@ -155,14 +154,7 @@ export function ModeScreen({ endlessUnlocked, endlessBest = 0, onDifficulty, onT
   const [trainingOpen, setTrainingOpen] = useState(false);
   return (
     <>
-      <Reveal i={0} style={{ position: 'absolute', left: 24, top: 20, right: 24 }}>
-        <div style={{ height: 40, display: 'flex', gap: 12, alignItems: 'center' }}>
-          <button onClick={onBack} aria-label="뒤로" className="tg-press" style={{ width: 40, height: 40, borderRadius: 20, background: '#fff', boxShadow: '0px 3px 5px rgba(43,39,48,0.08)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, ...TOUCH_OPT }}>
-            <CaretLeftIcon size={20} weight="bold" color={TG.INK} />
-          </button>
-          <span style={{ fontFamily: FONT_TITLE, fontSize: 22, color: '#2b2730' }}>모드 선택</span>
-        </div>
-      </Reveal>
+      <GameHeader title="모드 선택" onBack={onBack} />
       {/* 코치=상단 / 주력 원형 버튼=중앙 밴드 / 나머지=하단. 원형 주력이 화면 중앙을 채워 '빈 중간'이 사라진다.
           (space-between은 남는 공간을 전부 가운데로 몰아 중간이 비었음 — 주력을 중앙에 앉히는 방식으로 교체) */}
       <div style={{ position: 'absolute', left: 0, right: 0, top: 84, bottom: 'calc(26px + env(safe-area-inset-bottom))', display: 'flex', flexDirection: 'column' }}>
@@ -182,12 +174,14 @@ export function ModeScreen({ endlessUnlocked, endlessBest = 0, onDifficulty, onT
         {/* 나머지 — 테마 + 연습/복습, 하단 */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
           <Reveal i={3} style={{ paddingLeft: 24, paddingRight: 24 }}>
-            <FeatureCard Icon={CardsThreeIcon} accent="#7c5cff" tint="rgba(124,92,255,0.10)" border="rgba(124,92,255,0.28)"
-              title="테마 모드" desc="드라마·여행 등 취향대로" onClick={onTheme} coachId="mode-theme" />
+            <FeatureCard Icon={CardsThreeIcon} accent="#7c5cff"
+              title="테마 모드" desc="드라마·여행 등 취향대로 즐겨요" onClick={onTheme} coachId="mode-theme" />
           </Reveal>
           <Reveal i={4} style={{ paddingLeft: 24, paddingRight: 24 }}>
-            <FeatureCard Icon={GraduationCapIcon} accent="#2BB583" tint="rgba(43,181,131,0.10)" border="rgba(43,181,131,0.28)"
-              title="트레이닝" desc="약한 단어를 시간 제한 없이 무제한" onClick={() => setTrainingOpen(true)} coachId="mode-practice" />
+            <FeatureCard Icon={GraduationCapIcon} accent="#2BB583"
+              title="트레이닝" desc="약한 단어만 골라 무제한 연습"
+              onClick={() => { onHighlightDone && onHighlightDone(); setTrainingOpen(true); }} /* 넛지 코치마크는 이 카드 onClick에서 dismiss(forceLastStep 구조) */
+              coachId="mode-practice" />
           </Reveal>
         </div>
       </div>

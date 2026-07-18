@@ -4,7 +4,7 @@
 // 모바일 키보드가 하단에서 올라와도 CTA를 가리지 않게 한다(하단 고정 안 함).
 import { useState } from 'react';
 import { ArrowsClockwiseIcon } from '@phosphor-icons/react';
-import { TG, FONT_TITLE, FONT_BODY, TOUCH_OPT, ASSETS } from '../tgTokens.js';
+import { TG, TYPE, TOUCH_OPT, ASSETS } from '../tgTokens.js';
 import { play as playSfx } from '../tgSfx.js';
 import { randomNickname, NICKNAME_MAX } from '../nickname.js';
 import { Reveal } from './shared.jsx';
@@ -34,11 +34,11 @@ export function NicknameScreen({ defaultName = '', onSubmit, saving = false }) {
 
       {/* 헤드라인 */}
       <Reveal i={1} style={{ position: 'absolute', left: 24, right: 24, top: 258, textAlign: 'center' }}>
-        <span style={{ fontFamily: FONT_TITLE, fontSize: 24, color: TG.INK }}>어떻게 불러드릴까요?</span>
+        <span style={{ ...TYPE.titleLg, color: TG.INK }}>어떻게 불러드릴까요?</span>
       </Reveal>
       {/* 보조문구 */}
       <Reveal i={2} style={{ position: 'absolute', left: 24, right: 24, top: 302, textAlign: 'center' }}>
-        <span style={{ fontFamily: FONT_BODY, fontSize: 14, color: TG.SUB }}>마음에 들면 그대로, 아니면 바꿔도 돼요</span>
+        <span style={{ ...TYPE.sub, color: TG.SUB }}>마음에 들면 그대로, 아니면 바꿔도 돼요</span>
       </Reveal>
 
       {/* 닉네임 입력 + (다시 뽑기 · 글자수) 한 줄 */}
@@ -53,7 +53,7 @@ export function NicknameScreen({ defaultName = '', onSubmit, saving = false }) {
           enterKeyHint="done"
           style={{
             width: '100%', height: 56, borderRadius: 16, border: `1.5px solid ${TG.CORAL_BG}`,
-            background: '#fff', padding: '0 18px', fontFamily: FONT_BODY, fontSize: 16, fontWeight: 600,
+            background: '#fff', padding: '0 18px', ...TYPE.body,
             color: TG.INK, outline: 'none', textAlign: 'center', ...TOUCH_OPT,
           }}
         />
@@ -64,9 +64,9 @@ export function NicknameScreen({ defaultName = '', onSubmit, saving = false }) {
             background: '#fff', border: `1.5px solid ${TG.CORAL_BG}`, cursor: 'pointer', ...TOUCH_OPT,
           }}>
             <ArrowsClockwiseIcon size={15} weight="bold" color={TG.CORAL_DK} />
-            <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 13, color: TG.INK }}>다시 뽑기</span>
+            <span style={{ ...TYPE.labelSm, color: TG.INK }}>다시 뽑기</span>
           </button>
-          <span style={{ fontFamily: FONT_BODY, fontSize: 12, color: TG.SUB, paddingRight: 4 }}>{trimmed.length}/{NICKNAME_MAX}</span>
+          <span style={{ ...TYPE.meta, color: TG.SUB, paddingRight: 4 }}>{trimmed.length}/{NICKNAME_MAX}</span>
         </div>
       </Reveal>
 
@@ -77,7 +77,7 @@ export function NicknameScreen({ defaultName = '', onSubmit, saving = false }) {
           background: canSubmit ? TG.CORAL_DK : '#e7e0d8', cursor: canSubmit ? 'pointer' : 'default',
           display: 'flex', alignItems: 'center', justifyContent: 'center', ...TOUCH_OPT,
         }}>
-          <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 16, color: canSubmit ? '#fff' : '#b8b0a8' }}>
+          <span style={{ ...TYPE.btn, color: canSubmit ? '#fff' : '#b8b0a8' }}>
             {saving ? '저장 중…' : '시작하기'}
           </span>
         </button>

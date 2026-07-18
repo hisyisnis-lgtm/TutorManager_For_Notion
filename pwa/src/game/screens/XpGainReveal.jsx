@@ -2,7 +2,7 @@
 //  환산 요소(점수·정답·신기록)가 하나씩 '쾅' 팝인하며 총 XP가 오르고 등급 게이지가 차오른다.
 //  게이지가 가득 차는 순간(examReady) '승급 시험 가능' 정보 노출. XP 적립 판(일반·무한·테마)만.
 import { useEffect, useState, useRef, useLayoutEffect } from 'react';
-import { TG, FONT_BODY, FONT_NUM, haptic } from '../tgTokens.js';
+import { TG, TYPE, haptic } from '../tgTokens.js';
 import { displayTier, XP_PER_CORRECT, XP_NEWBEST_BONUS } from '../gameXp.js';
 import { play as playSfx } from '../tgSfx.js';
 import { useCountUp } from '../tgWidgets.jsx';
@@ -139,11 +139,11 @@ export function XpGainReveal({ gained, prevXp = 0, newXp = 0, score = 0, correct
         @keyframes xg-boxflash{0%{opacity:1}45%{opacity:.7}100%{opacity:0}}
       `}</style>
       {/* eyebrow */}
-      <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 15, color: 'rgba(255,255,255,0.6)', marginBottom: 6, animation: 'xg-pop .4s ease both' }}>경험치 획득</span>
+      <span style={{ ...TYPE.btnSm, color: 'rgba(255,255,255,0.6)', marginBottom: 6, animation: 'xg-pop .4s ease both' }}>경험치 획득</span>
       {/* 총 XP — 쾅마다 punch */}
       <div key={step} style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 22, animation: step > 0 ? 'xg-punch .3s ease' : 'none' }}>
-        <span style={{ fontFamily: FONT_NUM, fontWeight: 800, fontSize: 52, color: '#fff', lineHeight: 1 }}>+{animTotal.toLocaleString()}</span>
-        <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 18, color: 'rgba(255,255,255,0.6)' }}>XP</span>
+        <span style={{ ...TYPE.numHero, fontSize: 52, color: '#fff', lineHeight: 1 }}>+{animTotal.toLocaleString()}</span>
+        <span style={{ ...TYPE.cta, color: 'rgba(255,255,255,0.6)' }}>XP</span>
       </div>
       {/* 환산 내역 — 하나씩 '쾅' 등장(어떤 수치로 됐는지) */}
       <div style={{ width: '100%', maxWidth: 280, display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 22 }}>
@@ -151,8 +151,8 @@ export function XpGainReveal({ gained, prevXp = 0, newXp = 0, score = 0, correct
           <div key={s.key} style={{ position: 'relative', overflow: 'hidden', height: 40, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px', borderRadius: 12, background: 'rgba(255,255,255,0.08)', opacity: i < step ? 1 : 0, animation: i < step ? 'xg-bang .42s cubic-bezier(.3,1.4,.5,1) both' : 'none' }}>
             {/* 박스 번쩍 — 이 항목이 찍히는 순간 박스 전체가 하얗게 번쩍(등장 시 1회) */}
             {i < step && <span aria-hidden="true" style={{ position: 'absolute', inset: 0, background: '#fff', opacity: 0, animation: 'xg-boxflash .4s ease-out both', pointerEvents: 'none' }} />}
-            <span style={{ position: 'relative', fontFamily: FONT_BODY, fontWeight: 600, fontSize: 14, color: 'rgba(255,255,255,0.82)' }}>{s.label}</span>
-            <span style={{ position: 'relative', fontFamily: FONT_NUM, fontWeight: 800, fontSize: 16, color: '#FFC94D' }}>+{s.val.toLocaleString()}</span>
+            <span style={{ position: 'relative', ...TYPE.sub, color: 'rgba(255,255,255,0.82)' }}>{s.label}</span>
+            <span style={{ position: 'relative', ...TYPE.numMd, fontSize: 16, color: '#FFC94D' }}>+{s.val.toLocaleString()}</span>
           </div>
         ))}
       </div>
@@ -160,20 +160,20 @@ export function XpGainReveal({ gained, prevXp = 0, newXp = 0, score = 0, correct
       <div style={{ width: '100%', maxWidth: 280, display: 'flex', flexDirection: 'column', gap: 9 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <img src={showT.emblem} alt="" width={38} height={38} style={{ display: 'block', flexShrink: 0, filter: `drop-shadow(0 3px 8px ${showT.glow}55)` }} />
-          <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 13, color: 'rgba(255,255,255,0.82)' }}>{showT.name}</span>
-          <span style={{ marginLeft: 'auto', fontFamily: FONT_BODY, fontWeight: 700, fontSize: 12, color: showT.examReady ? '#FFC94D' : 'rgba(255,255,255,0.55)' }}>{showT.isMax ? '최고 등급' : showT.examReady ? '가득 참!' : `다음까지 ${showT.toNext.toLocaleString()} XP`}</span>
+          <span style={{ ...TYPE.labelSm, color: 'rgba(255,255,255,0.82)' }}>{showT.name}</span>
+          <span style={{ marginLeft: 'auto', ...TYPE.labelSm, color: showT.examReady ? '#FFC94D' : 'rgba(255,255,255,0.55)' }}>{showT.isMax ? '최고 등급' : showT.examReady ? '가득 참!' : `다음까지 ${showT.toNext.toLocaleString()} XP`}</span>
         </div>
         <SparkGauge pct={pct} />
       </div>
       {/* 승급 가능 배너 — 게이지 만땅 순간 */}
       {justReady && (
         <div style={{ marginTop: 18, display: 'flex', alignItems: 'center', gap: 7, padding: '9px 18px', borderRadius: 14, background: TG.CORAL_GRAD, boxShadow: '0 8px 20px rgba(242,72,76,0.4)', animation: 'xg-pop .5s cubic-bezier(.34,1.56,.64,1) both' }}>
-          <span style={{ fontFamily: FONT_BODY, fontWeight: 800, fontSize: 14.5, color: '#fff' }}>🎖 승급 시험 가능!</span>
+          <span style={{ ...TYPE.h2, color: '#fff' }}>🎖 승급 시험 가능!</span>
         </div>
       )}
       {/* 탭하여 계속 — 게이지까지 다 찬 뒤 텍스트 안내(화면 아무 곳이나 탭하면 결과로) */}
       {!hold && gaugeFilled && (
-        <span style={{ marginTop: 34, fontFamily: FONT_BODY, fontWeight: 600, fontSize: 13.5, color: 'rgba(255,255,255,0.5)', animation: 'xg-pop .4s ease .1s both' }}>탭하여 계속</span>
+        <span style={{ marginTop: 34, ...TYPE.sub, color: 'rgba(255,255,255,0.5)', animation: 'xg-pop .4s ease .1s both' }}>탭하여 계속</span>
       )}
     </div>
   );

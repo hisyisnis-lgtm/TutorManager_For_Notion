@@ -1,7 +1,7 @@
 // 타이틀 화면 — 배경 아트 + 큰 타이틀 로고(프리미엄 효과) + 태그라인 + 성조 캐릭터 무대 + "터치하여 시작하기".
 // 화면 어디든 터치하면 홈 허브로(onStart). 좌상단 닫기로 게임 나가기(onClose).
 // Figma "24. 타이틀". 스플래시(로딩) 다음의 영구 진입 관문. 캐릭터=홈 성조마크 룩 재사용(가벼운 정적판).
-import { FONT_BODY, FONT_TITLE, TOUCH_OPT, ASSETS } from '../tgTokens.js';
+import { TYPE, TOUCH_OPT, ASSETS } from '../tgTokens.js';
 import { TONES } from '../../constants/toneGameWords.js';
 import { ToneMark } from '../tgWidgets.jsx';
 import { FigmaScreen } from './shared.jsx';
@@ -60,7 +60,7 @@ export function TitleScreen({ onStart }) {
         {/* 바깥=정렬(translateX-50%), 안쪽=등장 애니(tg-reveal의 transform이 정렬을 안 덮게 분리) */}
         <div style={{ position: 'absolute', left: '50%', top: '49%', transform: 'translateX(-50%)' }}>
           <div className="tg-reveal" style={{ animationDelay: '.55s' }}>
-            <div style={{ position: 'relative', background: '#3c3c3c', color: '#fff', fontFamily: FONT_TITLE, fontSize: 16, padding: '10px 18px', borderRadius: 16, boxShadow: '0 5px 14px rgba(43,39,48,0.2)', whiteSpace: 'nowrap' }}>
+            <div style={{ position: 'relative', background: '#3c3c3c', color: '#fff', ...TYPE.head, fontSize: 16, padding: '10px 18px', borderRadius: 16, boxShadow: '0 5px 14px rgba(43,39,48,0.2)', whiteSpace: 'nowrap' }}>
               듣고 빠르게! 성조 찾기
               {/* 꼬리 */}
               <div style={{ position: 'absolute', left: '50%', bottom: -8, transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '8px solid transparent', borderRight: '8px solid transparent', borderTop: '9px solid #3c3c3c' }} />
@@ -75,7 +75,7 @@ export function TitleScreen({ onStart }) {
 
         {/* 터치 힌트 — 맥동 + 둥둥 */}
         <div style={{ position: 'absolute', left: 0, right: 0, bottom: 'calc(96px + env(safe-area-inset-bottom))', display: 'flex', justifyContent: 'center', animation: 'tg-pulse 1.8s ease-in-out infinite' }}>
-          <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 15, color: '#fff', background: 'rgba(43,39,48,0.55)', padding: '9px 20px', borderRadius: 999, boxShadow: '0 4px 12px rgba(43,39,48,0.18)' }}>터치하여 시작하기</span>
+          <span style={{ ...TYPE.btnSm, color: '#fff', background: 'rgba(43,39,48,0.55)', padding: '9px 20px', borderRadius: 999, boxShadow: '0 4px 12px rgba(43,39,48,0.18)' }}>터치하여 시작하기</span>
         </div>
       </div>
     </FigmaScreen>

@@ -3,7 +3,7 @@
 // 톤: 게임오버·레벨 연출과 통일한 프로스티드 딤 + 미니멀(오버슛·컨페티 없음), 단 잠금해제라 아이콘+글로우로 살짝 축하.
 import { useEffect, useState } from 'react';
 import { RocketIcon, CrownIcon, InfinityIcon, MapPinIcon, ForkKnifeIcon, SparkleIcon, LockKeyOpenIcon } from '@phosphor-icons/react';
-import { FONT_TITLE, FONT_BODY, haptic } from '../tgTokens.js';
+import { TYPE, haptic } from '../tgTokens.js';
 
 const ICONS = { Rocket: RocketIcon, Crown: CrownIcon, Infinity: InfinityIcon, MapPin: MapPinIcon, ForkKnife: ForkKnifeIcon, Sparkle: SparkleIcon };
 
@@ -36,10 +36,10 @@ export function ModeUnlockReveal({ unlock, onDone, hold = false }) {
           <Icon size={44} weight="fill" color={accent} />
         </div>
       </div>
-      <span style={{ fontFamily: FONT_BODY, fontWeight: 800, fontSize: 13, color: accent, letterSpacing: 0.5, marginTop: 20, animation: 'tg-rise .5s cubic-bezier(.22,1,.36,1) .16s both' }}>새 모드 열림</span>
-      <span style={{ fontFamily: FONT_TITLE, fontSize: 28, color: '#fff', marginTop: 6, animation: 'tg-rise .5s cubic-bezier(.22,1,.36,1) .22s both' }}>{unlock.label}</span>
-      <span style={{ fontFamily: FONT_BODY, fontWeight: 500, fontSize: 13.5, color: 'rgba(255,255,255,0.7)', marginTop: 10, textAlign: 'center', animation: 'tg-rise .5s cubic-bezier(.22,1,.36,1) .3s both' }}>{unlock.desc}</span>
-      {!hold && <span style={{ fontFamily: FONT_BODY, fontWeight: 500, fontSize: 12, color: 'rgba(255,255,255,0.4)', marginTop: 22, animation: 'tg-rise .5s ease .5s both' }}>탭하여 계속</span>}
+      <span style={{ ...TYPE.labelSm, color: accent, letterSpacing: 0.5, marginTop: 20, animation: 'tg-rise .5s cubic-bezier(.22,1,.36,1) .16s both' }}>새 모드 열림</span>
+      <span style={{ ...TYPE.titleLg, fontSize: 28, color: '#fff', marginTop: 6, animation: 'tg-rise .5s cubic-bezier(.22,1,.36,1) .22s both' }}>{unlock.label}</span>
+      <span style={{ ...TYPE.sub, color: 'rgba(255,255,255,0.7)', marginTop: 10, textAlign: 'center', animation: 'tg-rise .5s cubic-bezier(.22,1,.36,1) .3s both' }}>{unlock.desc}</span>
+      {!hold && <span style={{ ...TYPE.meta, color: 'rgba(255,255,255,0.4)', marginTop: 22, animation: 'tg-rise .5s ease .5s both' }}>탭하여 계속</span>}
     </div>
   );
 }

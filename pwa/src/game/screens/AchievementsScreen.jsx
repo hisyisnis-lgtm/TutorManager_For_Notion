@@ -2,13 +2,13 @@
 // 진행 링이 진행도를 겸해 별도 바·중복 표기 제거. 획득=색 채움, 미획득=회색+색 링(진행분).
 // 톤 원칙: 미획득도 실제 아이콘을 회색으로 — '다음 목표'로 보이게(압박 아님). 참조: tone_game_redesign.md
 import {
-  CaretLeftIcon, CheckIcon, FootprintsIcon, TrophyIcon, FlameIcon, FireSimpleIcon, RocketIcon, CrownIcon,
+  CheckIcon, FootprintsIcon, TrophyIcon, FlameIcon, FireSimpleIcon, RocketIcon, CrownIcon,
   InfinityIcon, BookmarkSimpleIcon, BooksIcon, CalendarCheckIcon, CalendarHeartIcon, CalendarDotsIcon, FireIcon, WaveformIcon,
   ArrowsClockwiseIcon,
 } from '@phosphor-icons/react';
-import { TG, FONT_TITLE, FONT_BODY, TOUCH_OPT } from '../tgTokens.js';
+import { TG, TYPE, TOUCH_OPT } from '../tgTokens.js';
 import { ACHIEVEMENTS, ACH_CATEGORIES } from '../achievements.js';
-import { Reveal } from './shared.jsx';
+import { Reveal, GameHeader } from './shared.jsx';
 
 // 업적 icon 문자열 → Phosphor 컴포넌트 (achievements.js의 icon 필드와 일치)
 const ACH_ICONS = {
@@ -80,12 +80,12 @@ function AchRow({ ach, earned, snapshot, onToast, last }) {
       style={{ display: 'flex', alignItems: 'center', gap: 14, width: '100%', textAlign: 'left', padding: '13px 4px', background: 'none', border: 'none', borderBottom: last ? 'none' : '1px solid rgba(43,39,48,0.06)', cursor: 'pointer', ...TOUCH_OPT }}>
       <RingBadge ach={ach} got={got} color={color} pct={pct} />
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
-        <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 15.5, color: got ? '#2b2730' : '#8b8580' }}>{ach.label}</span>
-        <span style={{ fontFamily: FONT_BODY, fontWeight: 500, fontSize: 12, color: '#a49da6', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ach.desc}</span>
+        <span style={{ ...TYPE.btnSm, color: got ? '#2b2730' : '#8b8580' }}>{ach.label}</span>
+        <span style={{ ...TYPE.meta, color: '#a49da6', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ach.desc}</span>
       </div>
       {/* 우측 — 획득은 링·체크가 말하므로 비움, 진행 중만 담백한 수치 */}
       {!got && (
-        <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 12.5, color, flexShrink: 0 }}>
+        <span style={{ ...TYPE.labelSm, color, flexShrink: 0 }}>
           {p.cur.toLocaleString()}<span style={{ color: '#c9c2b8' }}> / {p.target.toLocaleString()}</span>
         </span>
       )}
@@ -99,20 +99,19 @@ export function AchievementsScreen({ earned, snapshot, onBack, onToast }) {
   const total = ACHIEVEMENTS.length;
   return (
     <>
-      <Reveal i={0} style={{ position: 'absolute', left: 24, top: 20, right: 24 }}>
-        <div style={{ height: 40, display: 'flex', gap: 12, alignItems: 'center' }}>
-          <button onClick={onBack} aria-label="뒤로" className="tg-press" style={{ width: 40, height: 40, borderRadius: 20, background: '#fff', boxShadow: '0px 3px 5px rgba(43,39,48,0.08)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, ...TOUCH_OPT }}>
-            <CaretLeftIcon size={20} weight="bold" color={TG.INK} />
-          </button>
-          <span style={{ fontFamily: FONT_TITLE, fontSize: 22, color: '#2b2730' }}>업적</span>
-          {/* 달성 수 — 알약 칩(대시보드 느낌) 대신 헤더에 녹인 담백한 텍스트 */}
-          <span style={{ marginLeft: 'auto', fontFamily: FONT_BODY, fontWeight: 600, fontSize: 14.5, color: '#b4ada6' }}>
-            <b style={{ fontFamily: FONT_TITLE, fontWeight: 400, fontSize: 19, color: '#2b2730' }}>{n}</b> / {total}
-          </span>
-        </div>
-      </Reveal>
+      <GameHeader title="업적" onBack={onBack} right={
+        /* 달성 수 — 헤더 우측에 담백한 텍스트 */
+        <span style={{ marginLeft: 'auto', ...TYPE.body, color: '#b4ada6' }}>
+          <b style={{ ...TYPE.head, fontWeight: 400, fontSize: 19, color: '#2b2730' }}>{n}</b> / {total}
+        </span>
+      } />
       {/* 하나의 리스트 — 섹션 없이 흐르고, 카테고리 구분은 링/아이콘 색으로만 */}
-      <Reveal i={1} style={{ position: 'absolute', left: 24, right: 24, top: 76, bottom: 'calc(20px + env(safe-area-inset-bottom))', overflowY: 'auto' }}>
+      <Reveal i={1} style={{
+        position: 'absolute', left: 24, right: 24, top: 52, bottom: 'calc(20px + env(safe-area-inset-bottom))', overflowY: 'auto', zIndex: 2, paddingTop: 6,
+        // 헤더 바(52px) 바닥에 딱 붙는 위·아래 가장자리 페이드(난이도 선택 화면과 동일 방식)
+        maskImage: 'linear-gradient(to bottom, transparent 0, #000 20px, #000 calc(100% - 48px), transparent 100%)',
+        WebkitMaskImage: 'linear-gradient(to bottom, transparent 0, #000 20px, #000 calc(100% - 48px), transparent 100%)',
+      }}>
         {ACHIEVEMENTS.map((a, i) => (
           <AchRow key={a.id} ach={a} earned={earnedSet.has(a.id)} snapshot={snapshot} onToast={onToast} last={i === ACHIEVEMENTS.length - 1} />
         ))}

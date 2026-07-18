@@ -1,6 +1,6 @@
 // 성조게임 공용 위젯 — ToneMark(성조 마크 SVG) · useCountUp(숫자 카운트업) · 콤보 칩 · 불꽃 아이콘
 import { useState, useEffect } from 'react';
-import { TG, FONT_NUM } from './tgTokens.js';
+import { TG, TYPE } from './tgTokens.js';
 
 // 성조 마크 SVG — 폰트별 두께 편차 제거 위해 동일 stroke-width로 직접 렌더. currentColor 상속.
 export function ToneMark({ tone, size = 20 }) {
@@ -71,7 +71,7 @@ export function ComboChip({ combo, flash }) {
       transition: 'transform 220ms cubic-bezier(0.34,1.56,0.64,1)',
     }}>
       <FlameIcon size={14} color={TG.CORAL_DK} />
-      <span style={{ fontFamily: FONT_NUM, fontWeight: 800, fontSize: 18, lineHeight: 1, color: TG.CORAL_DK }}>{combo}</span>
+      <span style={{ ...TYPE.numMd, fontSize: 18, lineHeight: 1, color: TG.CORAL_DK }}>{combo}</span>
       <span style={{ fontFamily: 'inherit', fontWeight: 700, fontSize: 11, color: TG.CORAL_DK, opacity: 0.72 }}>콤보</span>
     </div>
   );

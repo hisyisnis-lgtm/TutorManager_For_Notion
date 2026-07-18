@@ -39,7 +39,8 @@ export function isDifficultyUnlocked(token, diffId) {
   if (idx === 0) return true;
   return diffBestScore(token, DIFFICULTIES[idx - 1].id) >= UNLOCK_THRESHOLD;
 }
-export function isEndlessUnlocked(token) { return diffBestScore(token, DIFFICULTIES[DIFFICULTIES.length - 1].id) >= UNLOCK_THRESHOLD; }
+// 무한 모드 해제 = 마지막 스테이지(고수5)가 열림 = 사다리 전체 통과(2026-07-18 사용자 결정, 구 '고수 티어 1000점' 폐기).
+export function isEndlessUnlocked(token) { return isStageUnlocked(token, STAGES[STAGES.length - 1]); }
 function prevDiffLabel(diffId) {
   const idx = DIFFICULTIES.findIndex((d) => d.id === diffId);
   return idx > 0 ? DIFFICULTIES[idx - 1].label : null;
@@ -248,6 +249,15 @@ export function resolveEndOutcome({ mode, prev, score, maxCombo = 0, avgMs = 0 }
   const justUnlocked = mode === 'normal' && previousBest < UNLOCK_THRESHOLD && updated.bestScore >= UNLOCK_THRESHOLD;
   const sfx = justUnlocked ? 'unlock' : (isNewBest ? 'win' : 'gameover');
   return { tracksBest: true, isNewBest, previousBest, updated, sfx };
+}
+// 스테이지 단위 신기록 판정 — 입문4의 기록은 입문4끼리만 비교(티어 공유 아님, 2026-07-18 사용자 결정).
+//  티어 best(resolveEndOutcome)는 헤드라인·서버·업적·무한해제용으로 그대로 유지하고, 여기서 display/비트/사운드만
+//  스테이지 baseline으로 덮어쓴다. 무한 해제음(unlock)은 티어 1000점 임계 기준이라 그대로 둔다.
+export function stageOutcome(token, stage, tierOutcome, score) {
+  const previousBest = stageScoreOf(token, stage.id);
+  const isNewBest = score > previousBest;
+  const sfx = tierOutcome.sfx === 'unlock' ? 'unlock' : (isNewBest ? 'win' : 'gameover');
+  return { ...tierOutcome, isNewBest, previousBest, sfx };
 }
 
 // 무한모드 베스트 캐시(localStorage)

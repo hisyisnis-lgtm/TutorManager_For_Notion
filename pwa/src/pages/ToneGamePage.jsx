@@ -30,9 +30,10 @@ import { initTts, speakWord, preloadTts } from '../game/tgTts.js';
 import { initSfx, play as playSfx } from '../game/tgSfx.js';
 import { initBgm, startBgm, stopBgm } from '../game/tgBgm.js';
 import {
-  getEndlessTimeLimit, computeScore, resolveEndOutcome, UNLOCK_THRESHOLD,
+  getEndlessTimeLimit, computeScore, resolveEndOutcome,
   loadEndlessBest, saveEndlessBest, headlineBest, isEndlessUnlocked,
-  ENDLESS_UNLOCK_REVEAL, STAGES, stageRoundPool, saveStageScore, unlockedTrainingPool,
+  ENDLESS_UNLOCK_REVEAL, STAGES, stageRoundPool, saveStageScore, unlockedTrainingPool, isStageUnlocked,
+  stageScoreOf, stageOutcome,
 } from '../game/gameLogic.js';
 import { FigmaScreen, CountdownVisual, CdWaveEdge, GameToast, SettingsModal } from '../game/screens/shared.jsx';
 import { SplashScreen } from '../game/screens/SplashScreen.jsx';
@@ -436,10 +437,14 @@ export default function ToneGamePage() {
     const prevRecord = mode === 'endless' ? loadEndlessBest(studentToken)
       : mode === 'normal' ? loadBest(studentToken, gameKey) : null;
     const outcome = resolveEndOutcome({ mode, prev: prevRecord, score, maxCombo, avgMs: avgMsVal });
-    setIsNewBest(outcome.isNewBest);
-    setPreviousBest(outcome.previousBest);
+    // 신기록/이전최고 표시는 스테이지 단위(입문4는 입문4끼리). 티어 best(outcome)는 저장·업적·무한해제엔 그대로 쓰고, display/사운드만 덮어씀.
+    const isStagePlay = mode === 'normal' && !themeMode && selectedDifficulty.bandIndex != null;
+    const eff = isStagePlay ? stageOutcome(studentToken, selectedDifficulty, outcome, score) : outcome;
+    setIsNewBest(eff.isNewBest);
+    setPreviousBest(eff.previousBest);
 
     if (!isPreview) {
+      const endlessWasUnlocked = isEndlessUnlocked(studentToken); // 무한 해제 연출용 — 스테이지 점수 저장 전 상태(저장 후 비교로 '이번 판에 열림' 판정)
       if (mode === 'endless') {
         // 무한 — 헤드라인 best. meta.eb로 로컬 영구화. 회원은 아래 pushMemberData로 서버(/game/me) 동기화.
         const updated = { ...outcome.updated, updatedAt: Date.now() };
@@ -507,13 +512,9 @@ export default function ToneGamePage() {
           const t = THEMES.find((x) => x.unlock && x.unlock.byGameKey === gameKey
             && outcome.previousBest < x.unlock.score && outcome.updated.bestScore >= x.unlock.score);
           mu = t?.unlockReveal || null;
-        } else if (outcome.previousBest < UNLOCK_THRESHOLD && outcome.updated.bestScore >= UNLOCK_THRESHOLD) {
-          // 티어 best가 1000을 처음 넘음. 스테이지 체계에선 급 전환은 별 7개 게이트라 중간 연출 없음 —
-          // 마지막 급(고급) 티어만 무한 모드 해제 연출(무한은 여전히 고급 best 1000 기준).
-          const idx = DIFFICULTIES.findIndex((d) => d.id === (selectedDifficulty.tier || selectedDifficulty.id));
-          const isStage = selectedDifficulty.bandIndex != null;
-          if (idx === DIFFICULTIES.length - 1) mu = ENDLESS_UNLOCK_REVEAL;
-          else if (!isStage && idx >= 0) mu = DIFFICULTIES[idx + 1].unlockReveal || null;
+        } else if (selectedDifficulty.bandIndex != null && !endlessWasUnlocked && isEndlessUnlocked(studentToken)) {
+          // 무한 게이트=마지막 스테이지(고수5) 해제. 이번 판(고수4 클리어)으로 고수5가 새로 열리면 무한 모드 해제 연출.
+          mu = ENDLESS_UNLOCK_REVEAL;
         }
         if (mu) setModeUnlock(mu);
       }
@@ -533,7 +534,7 @@ export default function ToneGamePage() {
       track('run_end', { m: mode === 'normal' ? (themeMode ? selectedTheme.id : selectedDifficulty.id) : mode, k: identity.kind, v: score });
     }
     // 신기록 비트가 이미 축하음(win/unlock)을 울렸으면 여기서 재생 안 함(2.3초 전 비트에서 울림). 아니면(게임오버 등) 여기서 재생.
-    if (!beatSfxRef.current) playSfx(outcome.sfx);
+    if (!beatSfxRef.current) playSfx(eff.sfx);
   }, [screen, identity, studentToken, selectedDifficulty, score, maxCombo, answeredCount, totalAnswerTime, gameMode, selectedTheme, words, wordPoolByDiff, wordPoolByTheme, isPreview]);
 
   useEffect(() => () => clearTimers(), []);
@@ -550,7 +551,10 @@ export default function ToneGamePage() {
     if (m === 'normal' && !gk) return null;
     const prevRecord = m === 'endless' ? loadEndlessBest(studentToken) : loadBest(studentToken, gk);
     const avgMsVal = answeredCount > 0 ? totalAnswerTime / answeredCount : 0;
-    return resolveEndOutcome({ mode: m, prev: prevRecord, score, maxCombo, avgMs: avgMsVal });
+    const oc = resolveEndOutcome({ mode: m, prev: prevRecord, score, maxCombo, avgMs: avgMsVal });
+    // 비트(신기록 밝은/게임오버 어두운)·비트 사운드도 스테이지 단위 판정과 일치시킴.
+    return (m === 'normal' && !themeMode && selectedDifficulty?.bandIndex != null)
+      ? stageOutcome(studentToken, selectedDifficulty, oc, score) : oc;
   }, [showGameOverBeat, isPreview, practiceMode, themeMode, gameMode, selectedTheme, selectedDifficulty, studentToken, answeredCount, totalAnswerTime, score, maxCombo]);
   const beatRecord = !!beatOutcome?.isNewBest;
   // 승급 시험 종료 — 20문제가 끝나 showGameOverBeat가 서면(examMode) 비트 없이 즉시 판정. examEndedRef로 1회만.
@@ -772,7 +776,7 @@ export default function ToneGamePage() {
       fetchToneWords(poolId).then((w) => { if (Array.isArray(w) && w.length > 0) setWordPoolByDiff((prev) => ({ ...prev, [poolId]: w })); }).catch(() => {});
       return;
     }
-    setGameMode('normal');    setRecordToBeat(loadBest(studentToken, d.gameKey)?.bestScore || 0); // 라이브 신기록 기준(티어 직전 최고)
+    setGameMode('normal');    setRecordToBeat(d.bandIndex != null ? stageScoreOf(studentToken, d.id) : (loadBest(studentToken, d.gameKey)?.bestScore || 0)); // 라이브 신기록 기준 = 스테이지 최고(스테이지면), 아니면 티어 최고
     const roundPool = d.bandIndex != null ? stageRoundPool(pool, d.bandIndex) : pool; // 스테이지=난이도 밴드(부족분 인접 보충)
     setRound(buildRoundWords(roundPool, wordStatsRef.current, ROUND_LENGTH)); // 교육적 가중 추첨(약점 우선·은은하게)
     if (!isPreview) track('run_start', { m: d.id, k: identity.kind });
@@ -1166,9 +1170,14 @@ export default function ToneGamePage() {
       </FigmaScreen>
     );
   } else if (screen === 'end') {
+    // 난이도(스테이지) 모드 — 다음 스테이지가 '해제 상태'면 결과화면에 바로 도전 버튼. 스테이지 점수는 종료 이펙트에서 저장돼 이 시점 해제상태는 최신.
+    const ci = STAGES.findIndex((s) => s.id === selectedDifficulty.id);
+    const nextStage = (!practiceMode && !endlessMode && !themeMode && selectedDifficulty.bandIndex != null && ci >= 0) ? STAGES[ci + 1] : null;
+    const canNextStage = !!(nextStage && isStageUnlocked(studentToken, nextStage));
     content = (
       <FigmaScreen>
         <ResultScreen score={score} maxCombo={maxCombo} avgMs={avgMsForResult}
+          onNextLevel={canNextStage ? () => startGame(nextStage) : undefined}
           isNewBest={practiceMode ? false : (isNewBest || (isPreview && qs('newbest') === '1'))} previousBest={practiceMode ? 0 : (isPreview && qs('newbest') === '1' ? 800 : previousBest)}
           suggestPractice={(suggestPractice && !practiceMode && !endlessMode && !themeMode && (selectedDifficulty.tier || selectedDifficulty.id) === 'easy') || (isPreview && previewScreen === 'end' && qs('suggest') === '1')}
           coachReady={!showGameOverBeat && !rankUp && !modeUnlock && celebrationQueue.length === 0} /* 결과 코치+트레이닝유도 둘 다 이 게이트 뒤에서만 */
@@ -1227,8 +1236,8 @@ export default function ToneGamePage() {
     <>
       {content}
       {homeTx && (
-        // 화면전환은 항상 최상단 — 토스트(300)·축하(300)·비트(120~135)까지 모두 덮음
-        <div style={{ position: 'fixed', inset: 0, zIndex: 500, ...homeTxStyle }}>
+        // 화면전환은 항상 최상단 — 코치마크(500)·토스트/축하(300)·비트(120~135)까지 모두 덮음
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1000, ...homeTxStyle }}>
           {/* 게임 카운트다운과 동일한 물결·배경색(#f96c6e) */}
           <CdWaveEdge side="left" />
           <CdWaveEdge side="right" />
@@ -1237,7 +1246,7 @@ export default function ToneGamePage() {
       )}
       {cdPhase && (
         // 카운트다운 전환도 항상 최상단(위와 동일 원칙)
-        <div style={{ position: 'fixed', inset: 0, zIndex: 500, ...cdStyle }}>
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1000, ...cdStyle }}>
           {/* 좌우 물결 가장자리 — 컨테이너 바깥쪽이라 가운데 정렬 시엔 화면 밖(비표시), 슬라이드 중에만 보임 */}
           <CdWaveEdge side="left" />
           <CdWaveEdge side="right" />

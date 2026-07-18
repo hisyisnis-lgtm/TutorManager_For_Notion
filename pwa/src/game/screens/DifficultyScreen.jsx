@@ -4,11 +4,11 @@
 // 배경 = 하늘: 위로 오를수록(고수) 깊은 파랑, 아래(입문)는 지평선 톤. 스크롤에 따라 실시간 변화.
 // 기록·페이스는 티어 단위(gameLogic), 스테이지는 난이도 밴드 + 티어 점수 순차 해제.
 import { useState, useRef, useLayoutEffect, useEffect } from 'react';
-import { CaretLeftIcon, LockSimpleIcon, PlayIcon, StarIcon, PlantIcon, LeafIcon, FlameIcon, LightningIcon, CrownIcon } from '@phosphor-icons/react';
-import { TG, FONT_TITLE, FONT_BODY, TOUCH_OPT, DIFF_COLORS } from '../tgTokens.js';
-import { STAGES, isStageUnlocked, stageUnlockToastText, stageStarFlags } from '../gameLogic.js';
+import { LockSimpleIcon, PlayIcon, PlantIcon, LeafIcon, FlameIcon, LightningIcon, CrownIcon } from '@phosphor-icons/react';
+import { TG, TYPE, TOUCH_OPT, DIFF_COLORS } from '../tgTokens.js';
+import { STAGES, isStageUnlocked, stageUnlockToastText, stageStarFlags, stageScoreOf } from '../gameLogic.js';
 import { play as playSfx } from '../tgSfx.js';
-import { Reveal, prefersReducedMotion } from './shared.jsx';
+import { Reveal, GameHeader, StarRow, prefersReducedMotion } from './shared.jsx';
 import CoachMarkOverlay from '../../components/ui/CoachMarkOverlay.jsx';
 import { useTabTip } from '../../hooks/useTabTip.js';
 
@@ -125,15 +125,8 @@ export function DifficultyScreen({ studentToken, onSelect, onStart, onBack, onLo
       {/* 하늘 배경 — 스크롤 진행도로 실시간 색 변화(위=고수=깊은 파랑, 아래=입문=지평선 톤) */}
       <div ref={bgRef} aria-hidden="true" style={{ position: 'absolute', inset: 0, background: skyGradient(0) }} />
 
-      {/* 헤더 */}
-      <Reveal i={0} style={{ position: 'absolute', left: 24, top: 20, right: 24, zIndex: 3 }}>
-        <div style={{ height: 40, display: 'flex', gap: 12, alignItems: 'center' }}>
-          <button onClick={onBack} aria-label="뒤로" className="tg-press" style={{ width: 40, height: 40, borderRadius: 20, background: '#fff', boxShadow: '0px 3px 6px rgba(43,79,120,0.14)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, ...TOUCH_OPT }}>
-            <CaretLeftIcon size={20} weight="bold" color={TG.INK} />
-          </button>
-          <span style={{ fontFamily: FONT_TITLE, fontSize: 22, color: '#2b2730' }}>난이도 선택</span>
-        </div>
-      </Reveal>
+      {/* 헤더 — 공용 GameHeader */}
+      <GameHeader title="난이도 선택" onBack={onBack} />
 
       {/* 세로 스크롤 — 선택(탭)된 스테이지만 확대, 나머지 간략 */}
       <div data-coach="diff-list" ref={scrollerRef} onScroll={onScroll} className="tg-noscroll" style={{
@@ -163,6 +156,7 @@ export function DifficultyScreen({ studentToken, onSelect, onStart, onBack, onLo
           const Icon = STAGE_ICONS[s.bandIndex] || LeafIcon;
           const unlocked = isStageUnlocked(studentToken, s);
           const stars = unlocked ? stageStarFlags(studentToken, s) : null;
+          const best = unlocked ? stageScoreOf(studentToken, s.id) : 0; // 스테이지 최고 점수(선택 카드에 표시)
           return (
             <div key={s.id} ref={(n) => { rowRefs.current[idx] = n; }}
               className={shake.idx === idx && shake.on ? 'tg-shake' : ''}
@@ -191,9 +185,12 @@ export function DifficultyScreen({ studentToken, onSelect, onStart, onBack, onLo
                       <Icon size={26} weight="fill" color={c.accent} />
                     </div>
                     <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 7 }}>
-                      <span style={{ fontFamily: FONT_BODY, fontWeight: 800, fontSize: 18, lineHeight: 1, color: '#2b2730' }}>{s.label}</span>
-                      <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
-                        {stars.map((f, si) => <StarIcon key={si} size={17} weight="fill" color={f ? TG.SUN : '#e4dece'} />)}
+                      <span style={{ ...TYPE.h1, lineHeight: 1, color: '#2b2730' }}>{s.label}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                        <StarRow filled={stars.filter(Boolean).length} size={17} gap={5} off="#e4dece" />
+                        <span style={{ ...TYPE.num, color: best > 0 ? '#9a93a0' : '#c3bcb2', whiteSpace: 'nowrap' }}>
+                          {best > 0 ? `최고 ${best.toLocaleString()}` : '기록 없음'}
+                        </span>
                       </div>
                     </div>
                     <div onClick={(e) => { e.stopPropagation(); playSfx('button'); onStart(s); }}
@@ -208,10 +205,8 @@ export function DifficultyScreen({ studentToken, onSelect, onStart, onBack, onLo
                     <div style={{ width: 26, height: 26, borderRadius: 9, flexShrink: 0, background: c.tint, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <Icon size={15} weight="fill" color={c.accent} />
                     </div>
-                    <span style={{ flex: 1, fontFamily: FONT_BODY, fontWeight: 700, fontSize: 14, color: '#4a4550', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.label}</span>
-                    <div style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
-                      {stars.map((f, si) => <StarIcon key={si} size={12} weight="fill" color={f ? TG.SUN : '#d8d2c8'} />)}
-                    </div>
+                    <span style={{ flex: 1, ...TYPE.label, color: '#4a4550', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.label}</span>
+                    <StarRow filled={stars.filter(Boolean).length} size={12} gap={2} off="#d8d2c8" style={{ flexShrink: 0 }} />
                   </div>
                 ) : (
                   /* 간략(잠금) — 자물쇠 + 라벨, 급 색(티어 tint/accent)으로 물들이되 살짝 눌러 잠금 느낌 */
@@ -219,7 +214,7 @@ export function DifficultyScreen({ studentToken, onSelect, onStart, onBack, onLo
                     <div style={{ width: 26, height: 26, borderRadius: 9, flexShrink: 0, background: c.tint, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <LockSimpleIcon size={15} weight="fill" color={c.accent} />
                     </div>
-                    <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 14, color: c.accent, whiteSpace: 'nowrap' }}>{s.label}</span>
+                    <span style={{ ...TYPE.label, color: c.accent, whiteSpace: 'nowrap' }}>{s.label}</span>
                   </div>
                 )}
               </div>
@@ -240,13 +235,13 @@ export function DifficultyScreen({ studentToken, onSelect, onStart, onBack, onLo
           }}>
           {focusedUnlocked ? (
             <>
-              <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 19, color: '#fff' }}>{focused.label} 시작</span>
+              <span style={{ ...TYPE.cta, color: '#fff' }}>{focused.label} 시작</span>
               <PlayIcon size={13} weight="fill" color="#fff" />
             </>
           ) : (
             <>
               <LockSimpleIcon size={16} weight="fill" color="#fff" />
-              <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 15, color: '#fff' }}>더 높은 점수로 열려요</span>
+              <span style={{ ...TYPE.btnSm, color: '#fff' }}>더 높은 점수로 열려요</span>
             </>
           )}
         </button>

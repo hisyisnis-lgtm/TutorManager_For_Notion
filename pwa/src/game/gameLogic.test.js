@@ -5,7 +5,7 @@ import {
   unlockReqText, unlockToastText, bestLabelForKey,
   overallBestFromLocal, overallBestFromServer,
   loadEndlessBest, saveEndlessBest, headlineBest, resolveEndOutcome,
-  themeStars,
+  themeStars, STAGES, saveStageScore,
 } from './gameLogic.js';
 import { saveBest } from './tgTokens.js';
 
@@ -78,9 +78,12 @@ describe('잠금 사다리 — diffBestScore / isDifficultyUnlocked / isEndlessU
     expect(isDifficultyUnlocked(TOKEN, 'hard')).toBe(true);
   });
 
-  it('무한은 고급 1000점 달성 시 열림', () => {
+  it('무한은 마지막 스테이지(고수5)가 열려야 열림 — 직전 스테이지 별 1개↑', () => {
     expect(isEndlessUnlocked(TOKEN)).toBe(false);
-    saveBest(TOKEN, GAMEKEY.hard, { bestScore: UNLOCK_THRESHOLD });
+    saveBest(TOKEN, GAMEKEY.hard, { bestScore: UNLOCK_THRESHOLD }); // 티어 best만으론 이제 안 열림
+    expect(isEndlessUnlocked(TOKEN)).toBe(false);
+    const prevStage = STAGES[STAGES.length - 2]; // 고수4
+    saveStageScore(TOKEN, prevStage.id, 99999);  // 고수4 별 획득 → 고수5(=무한) 해제
     expect(isEndlessUnlocked(TOKEN)).toBe(true);
   });
 

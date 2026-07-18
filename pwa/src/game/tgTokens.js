@@ -85,6 +85,35 @@ export const FONT_PINYIN = '-apple-system, BlinkMacSystemFont, "Segoe UI", Robot
 // 한자 — 용량 큰 Noto SC 웹폰트 대신 시스템 스택(OS 설치 폰트)으로 처리.
 export const FONT_HANZI = '"Noto Sans SC", "PingFang SC", "Microsoft YaHei", "Heiti SC", sans-serif';
 
+// ── 타이포 스케일(2026-07-18) ──────────────────────────
+// 흩어진 fontSize 하드코딩(35종)을 의미 기반 프리셋으로 통일. family+weight+size만 묶고 색·letterSpacing은 개별 지정.
+//   사용: style={{ ...TYPE.h1, color: TG.INK }}  ·  적용 시 근처 값은 스케일에 스냅(예 16.5→16, 12.5→12).
+//   숫자 히어로(결과 60·XP 52 등)는 원오프라 TYPE.numHero에 fontSize 오버라이드로 사용.
+export const TYPE = {
+  // 타이틀(FONT_TITLE — 단일 굵기 디스플레이체, weight 불필요)
+  titleLg: { fontFamily: FONT_TITLE, fontSize: 24 },  // 모달·히어로 제목
+  title:   { fontFamily: FONT_TITLE, fontSize: 22 },  // 등급명·테마명 등 히어로
+  head:    { fontFamily: FONT_TITLE, fontSize: 21 },  // 화면 헤더
+  // 디스플레이 숫자(FONT_NUM)
+  numHero: { fontFamily: FONT_NUM, fontWeight: 800, fontSize: 60 }, // 결과 점수(원오프는 size 오버라이드)
+  numLg:   { fontFamily: FONT_NUM, fontWeight: 800, fontSize: 26 }, // 통계 수치
+  numMd:   { fontFamily: FONT_NUM, fontWeight: 800, fontSize: 20 }, // 소형 수치
+  num:     { fontFamily: FONT_NUM, fontWeight: 700, fontSize: 13 }, // 인라인 미니 수치
+  // 본문 강조(FONT_BODY) — 제목·버튼
+  h1:      { fontFamily: FONT_BODY, fontWeight: 800, fontSize: 18 }, // 카드·섹션 강조 제목
+  h2:      { fontFamily: FONT_BODY, fontWeight: 800, fontSize: 16 }, // 소제목 강조
+  cta:     { fontFamily: FONT_BODY, fontWeight: 700, fontSize: 18 }, // 주요 CTA 라벨
+  btn:     { fontFamily: FONT_BODY, fontWeight: 700, fontSize: 16 }, // 버튼·리스트 항목
+  btnSm:   { fontFamily: FONT_BODY, fontWeight: 700, fontSize: 15 }, // 보조 버튼
+  // 본문/라벨(FONT_BODY)
+  label:   { fontFamily: FONT_BODY, fontWeight: 700, fontSize: 14 }, // 라벨(강)
+  labelSm: { fontFamily: FONT_BODY, fontWeight: 700, fontSize: 12 }, // 소형 라벨/배지
+  body:    { fontFamily: FONT_BODY, fontWeight: 500, fontSize: 15 }, // 기본 본문
+  sub:     { fontFamily: FONT_BODY, fontWeight: 500, fontSize: 13 }, // 보조 설명
+  meta:    { fontFamily: FONT_BODY, fontWeight: 500, fontSize: 12 }, // 메타·캡션
+  micro:   { fontFamily: FONT_BODY, fontWeight: 500, fontSize: 11 }, // 초소형
+};
+
 // ── 반경 / 그림자 ──────────────────────────────────────
 export const RADIUS = { card: 28, btn: 18, chip: 12 };
 export const SHADOW = {

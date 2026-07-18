@@ -1,10 +1,9 @@
 // 로그인(회원) — 카카오·구글 소셜 로그인(OAuth BFF). 버튼 탭 → Worker 인증 시작 URL로 전체 이동,
 // 제공자 인증 후 현재 게임 주소로 #token=… 붙여 복귀(복귀 토큰 처리는 ToneGamePage). Figma "18b. 로그인(소셜)".
-import { CaretLeftIcon } from '@phosphor-icons/react';
-import { TG, FONT_TITLE, FONT_BODY, TOUCH_OPT, ASSETS } from '../tgTokens.js';
+import { TG, TYPE, TOUCH_OPT, ASSETS } from '../tgTokens.js';
 import { socialLoginUrl } from '../../api/gameApi.js';
 import { play as playSfx } from '../tgSfx.js';
-import { Reveal } from './shared.jsx';
+import { Reveal, BackButton } from './shared.jsx';
 
 // 소셜 로그인 시작 — 제공자 인증 URL로 전체 이동(복귀는 현재 게임 주소로 #token=…). LoginScreen·ProfileModal 공용.
 export function startSocialLogin(provider) {
@@ -37,11 +36,9 @@ export function LoginScreen({ onBack }) {
   const go = (provider) => startSocialLogin(provider);
   return (
     <>
-      {/* 뒤로 */}
+      {/* 뒤로 — 공용 BackButton */}
       <Reveal i={0} style={{ position: 'absolute', left: 24, top: 20 }}>
-        <button onClick={onBack} aria-label="뒤로" className="tg-press" style={{ width: 40, height: 40, borderRadius: 20, background: '#fff', boxShadow: '0px 3px 5px rgba(43,39,48,0.08)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', ...TOUCH_OPT }}>
-          <CaretLeftIcon size={20} weight="bold" color={TG.INK} />
-        </button>
+        <BackButton onClick={onBack} />
       </Reveal>
 
       {/* 판다 히어로 (가운데) */}
@@ -51,30 +48,30 @@ export function LoginScreen({ onBack }) {
 
       {/* 헤드라인 */}
       <Reveal i={2} style={{ position: 'absolute', left: 24, right: 24, top: 330, textAlign: 'center' }}>
-        <span style={{ fontFamily: FONT_TITLE, fontSize: 24, color: TG.INK }}>로그인하고 기록을 지켜요</span>
+        <span style={{ ...TYPE.titleLg, color: TG.INK }}>로그인하고 기록을 지켜요</span>
       </Reveal>
       {/* 보조문구 */}
       <Reveal i={3} style={{ position: 'absolute', left: 24, right: 24, top: 374, textAlign: 'center' }}>
-        <span style={{ fontFamily: FONT_BODY, fontSize: 14, color: '#9a93a0' }}>기기를 바꿔도 최고 점수·진도가 그대로예요</span>
+        <span style={{ ...TYPE.sub, color: '#9a93a0' }}>기기를 바꿔도 최고 점수·진도가 그대로예요</span>
       </Reveal>
 
       {/* 카카오 로그인 */}
       <Reveal i={4} style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(122px + env(safe-area-inset-bottom))' }}>
         <button onClick={() => go('kakao')} className="tg-press" style={{ width: '100%', height: 56, borderRadius: 16, border: 'none', background: '#FEE500', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, cursor: 'pointer', ...TOUCH_OPT }}>
           <KakaoLogo />
-          <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 16, color: 'rgba(0,0,0,0.85)' }}>카카오로 시작하기</span>
+          <span style={{ ...TYPE.btn, color: 'rgba(0,0,0,0.85)' }}>카카오로 시작하기</span>
         </button>
       </Reveal>
       {/* 구글 로그인 */}
       <Reveal i={5} style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(54px + env(safe-area-inset-bottom))' }}>
         <button onClick={() => go('google')} className="tg-press" style={{ width: '100%', height: 56, borderRadius: 16, border: '1px solid #747775', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, cursor: 'pointer', ...TOUCH_OPT }}>
           <GoogleLogo />
-          <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 16, color: '#1f1f1f' }}>Google로 계속하기</span>
+          <span style={{ ...TYPE.btn, color: '#1f1f1f' }}>Google로 계속하기</span>
         </button>
       </Reveal>
       {/* 안내 */}
       <Reveal i={6} style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(24px + env(safe-area-inset-bottom))', textAlign: 'center' }}>
-        <span style={{ fontFamily: FONT_BODY, fontSize: 12.5, color: '#9a93a0' }}>로그인 정보는 기록 저장·동기화에만 써요</span>
+        <span style={{ ...TYPE.meta, color: '#9a93a0' }}>로그인 정보는 기록 저장·동기화에만 써요</span>
       </Reveal>
     </>
   );

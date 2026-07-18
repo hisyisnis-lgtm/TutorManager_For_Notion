@@ -7,7 +7,7 @@ import {
   QuestionIcon, SignOutIcon, CaretRightIcon, SpeakerHighIcon, SpeakerSlashIcon, VibrateIcon, XIcon,
   MusicNotesIcon, MusicNotesSimpleIcon, PencilSimpleIcon,
 } from '@phosphor-icons/react';
-import { TG, FONT_TITLE, FONT_BODY, FONT_NUM, TOUCH_OPT, haptic, isHapticMuted, setHapticMuted } from '../tgTokens.js';
+import { TG, TYPE, TOUCH_OPT, haptic, isHapticMuted, setHapticMuted } from '../tgTokens.js';
 import { TONES } from '../../constants/toneGameWords.js';
 import { ToneMark, useCountUp } from '../tgWidgets.jsx';
 import { displayTier } from '../gameXp.js';
@@ -131,8 +131,8 @@ function LevelCallout({ change, color }) {
   const up = change.dir === 'up';
   return (
     <div style={{ position: 'relative', background: '#fff', borderRadius: 15, padding: '10px 18px', textAlign: 'center', boxShadow: '0 8px 22px rgba(43,39,48,0.32)' }}>
-      <div style={{ fontFamily: FONT_BODY, fontWeight: 800, fontSize: 17, color: up ? color : TG.SUB, lineHeight: 1.15 }}>{up ? '레벨 업!' : '레벨 다운'}</div>
-      <div style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 14.5, color: TG.INK, marginTop: 3, whiteSpace: 'nowrap' }}>Lv.{change.from} → Lv.{change.to}</div>
+      <div style={{ ...TYPE.h1, color: up ? color : TG.SUB, lineHeight: 1.15 }}>{up ? '레벨 업!' : '레벨 다운'}</div>
+      <div style={{ ...TYPE.label, color: TG.INK, marginTop: 3, whiteSpace: 'nowrap' }}>Lv.{change.from} → Lv.{change.to}</div>
       <div style={{ position: 'absolute', left: '50%', bottom: -8, transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '8px solid transparent', borderRight: '8px solid transparent', borderTop: '9px solid #fff' }} />
     </div>
   );
@@ -402,7 +402,7 @@ function WanderingMark({ tone, i, level = 0, prog = 0, state = 'mid', celebrate 
       <div ref={headRef} style={{ position: 'absolute', left: cx, top: 0, transform: 'translate(-50%, -100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2.5, pointerEvents: 'none', zIndex: 6, willChange: 'transform' }}>
         {reveal ? null /* 레벨 콜아웃은 딤 위(화면 레벨)에서 렌더 — 딤에 안 가려지게 */ : say ? (
           // 말풍선 — HUD 배지(다크 알약)와 정반대: 흰 배경 + 다크 글씨 + 아래 꼬리. "말하는 것"으로 명확히 구분.
-          <div style={{ position: 'relative', background: '#fff', color: TG.INK, fontFamily: FONT_BODY, fontWeight: 700, fontSize: 11, lineHeight: 1.3, textAlign: 'center', padding: '5px 10px', borderRadius: 12, whiteSpace: say.length > 7 ? 'normal' : 'nowrap', maxWidth: 150, width: 'max-content', boxShadow: '0 4px 12px rgba(43,39,48,0.2)' }}>
+          <div style={{ position: 'relative', background: '#fff', color: TG.INK, ...TYPE.labelSm, lineHeight: 1.3, textAlign: 'center', padding: '5px 10px', borderRadius: 12, whiteSpace: say.length > 7 ? 'normal' : 'nowrap', maxWidth: 150, width: 'max-content', boxShadow: '0 4px 12px rgba(43,39,48,0.2)' }}>
             {say}
             {/* 아래로 향하는 꼬리 — 캐릭터 머리를 가리킴 */}
             <div style={{ position: 'absolute', left: '50%', bottom: -6, transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderTop: '7px solid #fff' }} />
@@ -410,7 +410,7 @@ function WanderingMark({ tone, i, level = 0, prog = 0, state = 'mid', celebrate 
         ) : (
           <>
             <div style={{ height: 15, padding: '0 5px', borderRadius: 8, background: '#2b2730', display: 'flex', alignItems: 'center', boxShadow: '0 1px 3px rgba(43,39,48,0.2)' }}>
-              <span style={{ fontFamily: FONT_BODY, fontWeight: 800, fontSize: 9, color: '#fff', lineHeight: 1, whiteSpace: 'nowrap' }}>Lv.{level}</span>
+              <span style={{ ...TYPE.micro, fontWeight: 800, fontSize: 9, color: '#fff', lineHeight: 1, whiteSpace: 'nowrap' }}>Lv.{level}</span>
             </div>
             <div style={{ width: 28, height: 4, borderRadius: 2, background: 'rgba(43,39,48,0.16)', overflow: 'hidden' }}>
               <div style={{ width: `${Math.round((prog || 0) * 100)}%`, height: '100%', borderRadius: 2, background: tone.color, transition: 'width .4s ease' }} />
@@ -441,7 +441,7 @@ function MenuToggle({ Icon, label, on, onToggle }) {
         <div style={{ width: 34, height: 34, borderRadius: 10, background: on ? 'rgba(242,72,76,0.12)' : '#f0ebe4', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <Icon size={19} weight="fill" color={on ? TG.CORAL_DK : '#b8b0a8'} />
         </div>
-        <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 15, color: TG.INK }}>{label}</span>
+        <span style={{ ...TYPE.btnSm, color: TG.INK }}>{label}</span>
       </div>
       <button onClick={onToggle} role="switch" aria-checked={on} aria-label={label} className="tg-press"
         style={{ width: 46, height: 27, borderRadius: 14, border: 'none', cursor: 'pointer', padding: 0, background: on ? TG.CORAL_DK : '#d8d0c7', position: 'relative', transition: 'background .2s ease', ...TOUCH_OPT }}>
@@ -458,8 +458,8 @@ function MenuAction({ Icon, label, sub, color = TG.INK, onClick }) {
       <div style={{ width: 34, height: 34, borderRadius: 10, background: '#f0ebe4', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
         <Icon size={18} weight="fill" color={color} />
       </div>
-      <span style={{ flex: 1, textAlign: 'left', fontFamily: FONT_BODY, fontWeight: 700, fontSize: 15, color }}>{label}</span>
-      {sub && <span style={{ fontFamily: FONT_BODY, fontWeight: 500, fontSize: 12.5, color: '#9a93a0' }}>{sub}</span>}
+      <span style={{ flex: 1, textAlign: 'left', ...TYPE.btnSm, color }}>{label}</span>
+      {sub && <span style={{ ...TYPE.meta, color: '#9a93a0' }}>{sub}</span>}
       <CaretRightIcon size={18} weight="bold" color="#c9c2bb" />
     </button>
   );
@@ -476,7 +476,7 @@ function HomeMenu({ onClose, onHelp, onLogin, isMemberUser, memberName, onEditNi
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(26,16,20,0.55)', backdropFilter: 'blur(2px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, ...TOUCH_OPT }}>
       <div className="tg-enter" onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 320, background: TG.CARD, borderRadius: 24, padding: '20px 22px 18px', boxShadow: '0 20px 50px rgba(26,16,20,0.3)', display: 'flex', flexDirection: 'column', gap: 14 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontFamily: FONT_TITLE, fontSize: 18, color: TG.INK }}>메뉴</span>
+          <span style={{ ...TYPE.head, fontSize: 18, color: TG.INK }}>메뉴</span>
           {/* 히트영역 44×44(음수 마진으로 레이아웃 자리는 30 유지), 시각 크기는 안쪽 30×30 원 그대로 */}
           <button onClick={onClose} aria-label="닫기" className="tg-press" style={{ width: 44, height: 44, margin: -7, padding: 0, border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', ...TOUCH_OPT }}>
             <span style={{ width: 30, height: 30, borderRadius: 15, background: '#f3efe9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -497,13 +497,13 @@ function HomeMenu({ onClose, onHelp, onLogin, isMemberUser, memberName, onEditNi
           <>
             <div style={{ height: 1, background: '#efeae4' }} />
             <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={() => { onClose(); onDebugIntro(); }} className="tg-press" style={{ flex: 1, height: 36, borderRadius: 12, border: '1.5px solid #ebe5de', background: '#fff', cursor: 'pointer', fontFamily: FONT_BODY, fontWeight: 700, fontSize: 12.5, color: '#2b2730', ...TOUCH_OPT }}>🛠 소개부터</button>
-              <button onClick={() => { onClose(); onDebugScore(); }} className="tg-press" style={{ flex: 1, height: 36, borderRadius: 12, border: '1.5px solid #ebe5de', background: '#fff', cursor: 'pointer', fontFamily: FONT_BODY, fontWeight: 700, fontSize: 12.5, color: '#2b2730', ...TOUCH_OPT }}>🛠 점수</button>
+              <button onClick={() => { onClose(); onDebugIntro(); }} className="tg-press" style={{ flex: 1, height: 36, borderRadius: 12, border: '1.5px solid #ebe5de', background: '#fff', cursor: 'pointer', ...TYPE.labelSm, color: '#2b2730', ...TOUCH_OPT }}>🛠 소개부터</button>
+              <button onClick={() => { onClose(); onDebugScore(); }} className="tg-press" style={{ flex: 1, height: 36, borderRadius: 12, border: '1.5px solid #ebe5de', background: '#fff', cursor: 'pointer', ...TYPE.labelSm, color: '#2b2730', ...TOUCH_OPT }}>🛠 점수</button>
             </div>
           </>
         )}
         {/* 버전 — 배포 빌드에서 태그로 동기화되는 __APP_VERSION__ (담백하게 하단 표기) */}
-        <div style={{ textAlign: 'center', fontFamily: FONT_BODY, fontWeight: 600, fontSize: 11, color: '#c2bbb2', marginTop: 2, letterSpacing: 0.2 }}>버전 {__APP_VERSION__}</div>
+        <div style={{ textAlign: 'center', ...TYPE.micro, color: '#c2bbb2', marginTop: 2, letterSpacing: 0.2 }}>버전 {__APP_VERSION__}</div>
       </div>
     </div>
   );
@@ -523,13 +523,13 @@ function MyInfo({ tier, nickname, onClick }) {
     }}>
       {/* 승급 시험 준비 완료 — 게이지 만땅 시 배지로 알림(탭하면 프로필 모달에서 응시) */}
       {tier.examReady && (
-        <span aria-hidden="true" style={{ position: 'absolute', top: -7, right: -7, padding: '3px 9px', borderRadius: 10, background: TG.CORAL_GRAD, boxShadow: '0 3px 8px rgba(242,72,76,0.35)', fontFamily: FONT_BODY, fontWeight: 800, fontSize: 10.5, color: '#fff', whiteSpace: 'nowrap', animation: 'tg-cta-pulse 2s ease-in-out infinite' }}>승급 시험</span>
+        <span aria-hidden="true" style={{ position: 'absolute', top: -7, right: -7, padding: '3px 9px', borderRadius: 10, background: TG.CORAL_GRAD, boxShadow: '0 3px 8px rgba(242,72,76,0.35)', ...TYPE.micro, fontWeight: 800, fontSize: 10.5, color: '#fff', whiteSpace: 'nowrap', animation: 'tg-cta-pulse 2s ease-in-out infinite' }}>승급 시험</span>
       )}
       {/* 앰블럼 — 자체 완결 배지라 소켓(색 사각) 제거로 정리. 등급명은 앰블럼이 대표(카드엔 텍스트 생략). */}
       <img src={tier.emblem} alt="" width={48} height={48} style={{ display: 'block', flexShrink: 0 }} />
       {/* 닉네임(전체 폭 한 줄, 길면 말줄임) + 등급 게이지. */}
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 8 }}>
-        <span style={{ fontFamily: FONT_BODY, fontWeight: 800, fontSize: 14.5, color: '#2b2730', textAlign: 'left', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{displayName}</span>
+        <span style={{ ...TYPE.label, fontWeight: 800, color: '#2b2730', textAlign: 'left', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{displayName}</span>
         <div style={{ width: '100%', height: 6, borderRadius: 3, background: '#ece5da', overflow: 'hidden' }}>
           <div style={{ width: `${pct}%`, height: '100%', borderRadius: 3, background: TG.CORAL_GRAD, transition: 'width .5s ease' }} />
         </div>
@@ -560,9 +560,9 @@ function StreakPill({ streak, freezes = 0, onClick }) {
         {streak > 0 && <EmberRise colors={[tier.color, tier.glow]} count={6} spread={12} rise={22} size={2.4} zIndex={0} style={{ bottom: '38%' }} />}
         <FlameIcon size={16} weight="fill" color={tier.color} style={{ position: 'relative', filter: streak > 0 ? `drop-shadow(0 0 5px ${tier.glow})` : 'none' }} />
       </span>
-      <span style={{ fontFamily: FONT_NUM, fontWeight: 800, fontSize: 15, color: '#2b2730', lineHeight: 1 }}>{animStreak}</span>
-      <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 11.5, color: '#9a93a0' }}>일</span>
-      {freezes > 0 && <span style={{ display: 'flex', alignItems: 'center', gap: 1, marginLeft: 3 }} aria-label={`보호권 ${freezes}개`}><SnowflakeIcon size={13} weight="fill" color="#4D8DFF" /><span style={{ fontFamily: FONT_NUM, fontWeight: 800, fontSize: 12, color: '#4D8DFF' }}>{freezes}</span></span>}
+      <span style={{ ...TYPE.numMd, fontSize: 15, color: '#2b2730', lineHeight: 1 }}>{animStreak}</span>
+      <span style={{ ...TYPE.labelSm, color: '#9a93a0' }}>일</span>
+      {freezes > 0 && <span style={{ display: 'flex', alignItems: 'center', gap: 1, marginLeft: 3 }} aria-label={`보호권 ${freezes}개`}><SnowflakeIcon size={13} weight="fill" color="#4D8DFF" /><span style={{ ...TYPE.numMd, fontSize: 12, color: '#4D8DFF' }}>{freezes}</span></span>}
     </button>
   );
 }
@@ -587,10 +587,10 @@ function StreakSheet({ streak, longest, freezes, onClose }) {
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 7 }}>
-              <span style={{ fontFamily: FONT_TITLE, fontSize: 24, color: TG.INK }}>{streak}일</span>
-              <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 13, color: tier.color }}>{tier.label}</span>
+              <span style={{ ...TYPE.titleLg, color: TG.INK }}>{streak}일</span>
+              <span style={{ ...TYPE.labelSm, color: tier.color }}>{tier.label}</span>
             </div>
-            <span style={{ fontFamily: FONT_BODY, fontWeight: 600, fontSize: 12.5, color: '#9a93a0' }}>{sub}</span>
+            <span style={{ ...TYPE.meta, color: '#9a93a0' }}>{sub}</span>
           </div>
           {/* 히트영역 44×44(음수 마진으로 레이아웃 자리는 30 유지), 시각 크기는 안쪽 30×30 원 그대로 */}
           <button onClick={close} aria-label="닫기" className="tg-press" style={{ width: 44, height: 44, margin: -7, padding: 0, border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, ...TOUCH_OPT }}>
@@ -602,27 +602,27 @@ function StreakSheet({ streak, longest, freezes, onClose }) {
         {next ? (
           <div style={{ marginBottom: 16 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-              <span style={{ fontFamily: FONT_BODY, fontWeight: 600, fontSize: 12, color: '#9a93a0' }}>다음 목표 {next}일</span>
-              <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 12, color: TG.INK }}>{Math.max(0, next - streak)}일 남음</span>
+              <span style={{ ...TYPE.meta, color: '#9a93a0' }}>다음 목표 {next}일</span>
+              <span style={{ ...TYPE.labelSm, color: TG.INK }}>{Math.max(0, next - streak)}일 남음</span>
             </div>
             <div style={{ height: 8, borderRadius: 4, background: '#ece6dd', overflow: 'hidden' }}>
               <div style={{ width: `${Math.round(prog * 100)}%`, height: '100%', borderRadius: 4, background: tier.color, transition: 'width .5s ease' }} />
             </div>
           </div>
         ) : (
-          <div style={{ marginBottom: 16, fontFamily: FONT_BODY, fontWeight: 700, fontSize: 13, color: '#36C98D' }}>모든 마일스톤 달성! 🎉</div>
+          <div style={{ marginBottom: 16, ...TYPE.labelSm, color: '#36C98D' }}>모든 마일스톤 달성! 🎉</div>
         )}
         <div style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
           <CardStat label="최장 기록" value={`${longest}일`} />
           <div style={{ flex: 1, background: '#f7f3ee', borderRadius: 14, padding: '12px 14px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <SnowflakeIcon size={22} weight="fill" color="#4D8DFF" />
-              <span style={{ fontFamily: FONT_NUM, fontWeight: 800, fontSize: 22, color: '#2b2730', lineHeight: 1.1 }}>{freezes}/2</span>
+              <span style={{ ...TYPE.numMd, fontSize: 22, color: '#2b2730', lineHeight: 1.1 }}>{freezes}/2</span>
             </div>
-            <div style={{ fontFamily: FONT_BODY, fontWeight: 600, fontSize: 11.5, color: '#9a93a0', marginTop: 2 }}>보호권</div>
+            <div style={{ ...TYPE.meta, color: '#9a93a0', marginTop: 2 }}>보호권</div>
           </div>
         </div>
-        <p style={{ margin: 0, fontFamily: FONT_BODY, fontWeight: 500, fontSize: 12.5, lineHeight: 1.5, color: '#8a8580' }}>보호권은 하루 빠져도 연속학습을 지켜줘요. 7일마다 하나씩 모여요.</p>
+        <p style={{ margin: 0, ...TYPE.meta, lineHeight: 1.5, color: '#8a8580' }}>보호권은 하루 빠져도 연속학습을 지켜줘요. 7일마다 하나씩 모여요.</p>
       </div>
     </div>
   );
@@ -636,8 +636,8 @@ const STATE_NOTE = { unknown: '게임을 더 하면 이 성조 실력이 보여�
 function CardStat({ label, value }) {
   return (
     <div style={{ flex: 1, background: '#f7f3ee', borderRadius: 14, padding: '12px 14px' }}>
-      <div style={{ fontFamily: FONT_NUM, fontWeight: 800, fontSize: 22, color: '#2b2730', lineHeight: 1.1 }}>{value}</div>
-      <div style={{ fontFamily: FONT_BODY, fontWeight: 600, fontSize: 11.5, color: '#9a93a0', marginTop: 2 }}>{label}</div>
+      <div style={{ ...TYPE.numMd, fontSize: 22, color: '#2b2730', lineHeight: 1.1 }}>{value}</div>
+      <div style={{ ...TYPE.meta, color: '#9a93a0', marginTop: 2 }}>{label}</div>
     </div>
   );
 }
@@ -657,10 +657,10 @@ function ToneCard({ tone, status, level, onClose }) {
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontFamily: FONT_TITLE, fontSize: 20, color: TG.INK }}>{tone.name}</span>
-              <span style={{ fontFamily: FONT_BODY, fontWeight: 800, fontSize: 11, color: '#fff', background: '#2b2730', padding: '2px 7px', borderRadius: 8 }}>Lv.{level}</span>
+              <span style={{ ...TYPE.head, color: TG.INK }}>{tone.name}</span>
+              <span style={{ ...TYPE.micro, fontWeight: 800, color: '#fff', background: '#2b2730', padding: '2px 7px', borderRadius: 8 }}>Lv.{level}</span>
             </div>
-            <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 12.5, color: STATE_COLOR[s.state] }}>{STATE_LABEL[s.state]}</span>
+            <span style={{ ...TYPE.labelSm, color: STATE_COLOR[s.state] }}>{STATE_LABEL[s.state]}</span>
           </div>
           {/* 히트영역 44×44(음수 마진으로 레이아웃 자리는 30 유지), 시각 크기는 안쪽 30×30 원 그대로 */}
           <button onClick={close} aria-label="닫기" className="tg-press" style={{ width: 44, height: 44, margin: -7, padding: 0, border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, ...TOUCH_OPT }}>
@@ -673,7 +673,7 @@ function ToneCard({ tone, status, level, onClose }) {
           <CardStat label="정확도" value={accTxt} />
           <CardStat label="시도" value={`${s.attempts}`} />
         </div>
-        <p style={{ margin: 0, fontFamily: FONT_BODY, fontWeight: 500, fontSize: 12.5, lineHeight: 1.5, color: '#8a8580' }}>{STATE_NOTE[s.state]}</p>
+        <p style={{ margin: 0, ...TYPE.meta, lineHeight: 1.5, color: '#8a8580' }}>{STATE_NOTE[s.state]}</p>
       </div>
     </div>
   );
@@ -688,11 +688,11 @@ function ExamPromptModal({ tier, onExam, onClose }) {
         boxShadow: '0 20px 50px rgba(26,16,20,0.3)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
       }}>
         <img src={tier.emblem} alt="" width={64} height={64} style={{ display: 'block', filter: `drop-shadow(0 4px 10px ${tier.glow}66)` }} />
-        <span style={{ fontFamily: FONT_TITLE, fontSize: 20, color: TG.INK, marginTop: 4 }}>승급 시험 준비 완료!</span>
-        <p style={{ margin: '2px 0 14px', textAlign: 'center', fontFamily: FONT_BODY, fontWeight: 500, fontSize: 13.5, lineHeight: 1.5, color: TG.SUB }}>경험치가 가득 찼어요. 승급 시험에 도전해 등급을 올려볼까요?</p>
+        <span style={{ ...TYPE.head, color: TG.INK, marginTop: 4 }}>승급 시험 준비 완료!</span>
+        <p style={{ margin: '2px 0 14px', textAlign: 'center', ...TYPE.sub, lineHeight: 1.5, color: TG.SUB }}>경험치가 가득 찼어요. 승급 시험에 도전해 등급을 올려볼까요?</p>
         <div style={{ display: 'flex', gap: 10, width: '100%' }}>
-          <button onClick={onClose} className="tg-press" style={{ flex: 1, height: 50, borderRadius: 14, border: '1.5px solid #ebe5de', background: '#fff', cursor: 'pointer', fontFamily: FONT_BODY, fontWeight: 700, fontSize: 15, color: TG.SUB, ...TOUCH_OPT }}>나중에</button>
-          <button onClick={() => { onClose(); onExam && onExam(); }} className="tg-press" style={{ flex: 1.4, height: 50, borderRadius: 14, border: 'none', background: TG.CORAL_GRAD, boxShadow: '0 8px 18px rgba(242,72,76,0.3)', cursor: 'pointer', fontFamily: FONT_BODY, fontWeight: 700, fontSize: 15, color: '#fff', ...TOUCH_OPT }}>지금 응시</button>
+          <button onClick={onClose} className="tg-press" style={{ flex: 1, height: 50, borderRadius: 14, border: '1.5px solid #ebe5de', background: '#fff', cursor: 'pointer', ...TYPE.btnSm, color: TG.SUB, ...TOUCH_OPT }}>나중에</button>
+          <button onClick={() => { onClose(); onExam && onExam(); }} className="tg-press" style={{ flex: 1.4, height: 50, borderRadius: 14, border: 'none', background: TG.CORAL_GRAD, boxShadow: '0 8px 18px rgba(242,72,76,0.3)', cursor: 'pointer', ...TYPE.btnSm, color: '#fff', ...TOUCH_OPT }}>지금 응시</button>
         </div>
       </div>
     </div>
@@ -866,17 +866,17 @@ export function HomeScreen({
         <GearSixIcon size={20} weight="fill" color={TG.INK} />
       </button>
 
-      {/* 하늘하늘중국어 링크 허브 입구 — 둥근 사각 아이콘(天) + 아래 '하늘하늘' 라벨 (사용자 선택 C안) */}
+      {/* 하늘하늘중국어 링크 허브 입구 — 아이콘+라벨을 흰 타일로 묶어 한 덩어리로(라벨 흐림·분리감 개선). 벽지 위 가독성은 타일 흰 배경이 담당(스트록 불필요) */}
       <button className="tg-press" onClick={() => { playSfx('button'); openHub(); }} aria-label={hubDot ? '하늘하늘 · 새 소식' : '하늘하늘'} style={{
-        position: 'absolute', right: 14, top: 110, zIndex: 4, padding: 0, background: 'none', border: 'none', cursor: 'pointer',
-        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, ...TOUCH_OPT,
+        position: 'absolute', right: 14, top: 110, zIndex: 4, padding: '7px 8px 8px', background: '#fff', border: 'none', borderRadius: 18,
+        boxShadow: '0 5px 14px rgba(26,16,20,0.12)', cursor: 'pointer',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, ...TOUCH_OPT,
       }}>
-        <span style={{ position: 'relative', width: 48, height: 48, borderRadius: 16, background: '#fff', boxShadow: '0 4px 10px rgba(26,16,20,0.10)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <span style={{ position: 'relative', width: 44, height: 44, borderRadius: 13, background: 'rgba(127,0,5,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <img src="/symbol-red.png" alt="" style={{ width: 24, height: 24, objectFit: 'contain' }} />
-          {hubDot && <span aria-hidden="true" style={{ position: 'absolute', top: -2, right: -2, width: 10, height: 10, borderRadius: '50%', background: '#F2484C', border: '2px solid #fff', animation: 'tg-dotpulse 1.1s ease-in-out infinite' }} />}
+          {hubDot && <span aria-hidden="true" style={{ position: 'absolute', top: -5, right: -5, width: 10, height: 10, borderRadius: '50%', background: '#F2484C', border: '2px solid #fff', animation: 'tg-dotpulse 1.1s ease-in-out infinite' }} />}
         </span>
-        {/* 흰 스트록(8방향 섀도) — 벽지·창문 등 배경 위 가독성. -webkit-text-stroke는 paint-order 미지원 시 글자 속이 파여 섀도 방식 사용 */}
-        <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 11, color: '#6b6572', textShadow: '-1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, -1px 0 0 #fff, 1px 0 0 #fff, 0 -1px 0 #fff, 0 1px 0 #fff' }}>하늘하늘</span>
+        <span style={{ ...TYPE.micro, fontWeight: 800, letterSpacing: '-0.02em', color: TG.INK }}>하늘하늘</span>
       </button>
 
       {/* 하단 컨트롤 도크 배경 — 깔끔한 흰색·라운드 없음(사용자 요청). 상단 그림자로만 방과 분리 */}
@@ -888,7 +888,7 @@ export function HomeScreen({
           width: '100%', height: 60, borderRadius: 20, border: 'none', cursor: 'pointer',
           background: TG.CORAL_GRAD, boxShadow: '0px 10px 20px rgba(242,72,76,0.32)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, ...TOUCH_OPT,
         }}>
-          <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 19, color: '#fff' }}>플레이</span>
+          <span style={{ ...TYPE.cta, color: '#fff' }}>플레이</span>
           <PlayIcon size={14} weight="fill" color="#fff" />
         </button>
       </div>
@@ -903,7 +903,7 @@ export function HomeScreen({
             <div style={{ width: 26, height: 26, borderRadius: 9, background: tint, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <Icon size={16} weight="fill" color={color} />
             </div>
-            <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 13, color: '#2b2730' }}>{label}</span>
+            <span style={{ ...TYPE.labelSm, color: '#2b2730' }}>{label}</span>
           </button>
         ))}
       </div>

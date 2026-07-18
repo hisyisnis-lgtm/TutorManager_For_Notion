@@ -7,7 +7,7 @@
 // 게임 레이아웃 + 딤 스포트라이트. 완료 후 onDone → 모드선택.
 import { useState, useEffect, useRef } from 'react';
 import { StarIcon, TimerIcon, CaretRightIcon } from '@phosphor-icons/react';
-import { TG, FONT_NUM, FONT_BODY, FONT_HANZI, TOUCH_OPT, TONE_TINTS, TONE_BORDERS, haptic } from '../tgTokens.js';
+import { TG, TYPE, FONT_HANZI, TOUCH_OPT, TONE_TINTS, TONE_BORDERS, haptic } from '../tgTokens.js';
 import { ToneMark } from '../tgWidgets.jsx';
 import { TONES } from '../../constants/toneGameWords.js';
 import { speakWord } from '../tgTts.js';
@@ -86,7 +86,7 @@ export function TutorialScreen({ onDone }) {
       {/* 점수(정적) 상단 중앙 */}
       <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', top: 20, display: 'flex', alignItems: 'center', gap: 5, background: '#fff', padding: '9px 14px', borderRadius: 15, boxShadow: '0px 3px 8px rgba(43,39,48,0.06)' }}>
         <StarIcon size={13} weight="fill" color={TG.SUN} />
-        <span style={{ fontFamily: FONT_NUM, fontWeight: 800, fontSize: 17, color: '#2b2730' }}>0</span>
+        <span style={{ ...TYPE.numMd, fontSize: 17, color: '#2b2730' }}>0</span>
       </div>
       {/* 우상단은 건너뛰기 버튼이 차지(정적 일시정지 아이콘은 겹쳐서 제거) */}
       {/* 타이머(정적) top69 */}
@@ -103,7 +103,7 @@ export function TutorialScreen({ onDone }) {
             <div key={i} style={{ width: i === phase ? 16 : 6, height: 6, borderRadius: 3, background: i === phase ? '#f2484c' : '#f4c4c4', transition: 'width .25s ease' }} />
           ))}
         </div>
-        <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 12.5, color: '#f2484c', whiteSpace: 'nowrap' }}>{PHASE_LABEL[phase]}</span>
+        <span style={{ ...TYPE.labelSm, color: '#f2484c', whiteSpace: 'nowrap' }}>{PHASE_LABEL[phase]}</span>
       </div>
 
       {/* 딤 오버레이 — 강조(카드·코치·성조버튼) 외 어둡게. 마지막 정답 시 사라짐 */}
@@ -111,7 +111,7 @@ export function TutorialScreen({ onDone }) {
 
       {/* 건너뛰기 — IntroScreen 우상단과 같은 스타일(텍스트만·히트영역 ≥44px). 딤 위(zIndex 7)라 색만 밝게(대비 확보) */}
       <button onClick={skip} className="tg-press" style={{ position: 'absolute', right: 22, top: 11, zIndex: 7, padding: '13px 12px', background: 'none', border: 'none', cursor: 'pointer', ...TOUCH_OPT }}>
-        <span style={{ fontFamily: FONT_BODY, fontWeight: 500, fontSize: 13, color: 'rgba(255,255,255,0.9)' }}>건너뛰기</span>
+        <span style={{ ...TYPE.sub, color: 'rgba(255,255,255,0.9)' }}>건너뛰기</span>
       </button>
 
       {/* 카드 top129 — 스포트라이트. 비트0=성조 소개, 비트1/2=단어카드 */}
@@ -126,7 +126,7 @@ export function TutorialScreen({ onDone }) {
                 </div>
               ))}
             </div>
-            <span style={{ fontFamily: FONT_BODY, fontWeight: 600, fontSize: 14, color: '#8a8580', textAlign: 'center', lineHeight: 1.55 }}>같은 소리도 <b style={{ color: TG.CORAL_DK, fontWeight: 800 }}>성조</b>에 따라 뜻이 달라져요<br />아래 버튼을 눌러 들어보세요 👂</span>
+            <span style={{ ...TYPE.sub, color: '#8a8580', textAlign: 'center', lineHeight: 1.55 }}>같은 소리도 <b style={{ color: TG.CORAL_DK, fontWeight: 800 }}>성조</b>에 따라 뜻이 달라져요<br />아래 버튼을 눌러 들어보세요 👂</span>
           </div>
         ) : (
           <WordCard word={word} entered={entered} currentSyl={currentSyl} completed={completed} timedOut={false}
@@ -146,7 +146,7 @@ export function TutorialScreen({ onDone }) {
       {phase === 0 && (
         <Reveal i={1} style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(130px + env(safe-area-inset-bottom))', zIndex: 6 }}>
           <button onClick={() => goPhase(1)} className="tg-press" style={{ width: '100%', height: 52, borderRadius: 16, border: 'none', cursor: 'pointer', background: TG.CORAL_GRAD, boxShadow: '0px 8px 18px rgba(242,72,76,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, ...TOUCH_OPT }}>
-            <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 16, color: '#fff' }}>다음</span>
+            <span style={{ ...TYPE.btn, color: '#fff' }}>다음</span>
             <CaretRightIcon size={14} weight="bold" color="#fff" />
           </button>
         </Reveal>
@@ -188,7 +188,7 @@ export function TutorialScreen({ onDone }) {
                 ))}
                 <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
                   <ToneMark tone={t.num} size={34} />
-                  <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 12, color: t.color }}>{t.name}</span>
+                  <span style={{ ...TYPE.labelSm, color: t.color }}>{t.name}</span>
                 </div>
               </button>
             );

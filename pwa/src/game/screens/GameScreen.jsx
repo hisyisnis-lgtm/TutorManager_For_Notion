@@ -1,7 +1,7 @@
 // 게임 화면 (Figma 좌표 절대배치) — 점수·일시정지·타이머·단어카드·코치·성조버튼 + 콤보/신기록 버스트 연출(P4b).
 import { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { StarIcon, PauseIcon, TimerIcon, SpeakerHighIcon, EyeIcon, TicketIcon, SkullIcon, SignOutIcon } from '@phosphor-icons/react';
-import { TG, FONT_TITLE, FONT_NUM, FONT_BODY, TOUCH_OPT } from '../tgTokens.js';
+import { TG, TYPE, TOUCH_OPT } from '../tgTokens.js';
 import { play as playSfx } from '../tgSfx.js';
 import { Reveal, WordCard, ToneButtons, DrawPad, CoachBubble, ConfettiBurst, CrispFlash, LIGHT_CONFETTI, prefersReducedMotion, TONE_SHOT_HOVER_MS, TONE_FLIGHT_MS, TONE_IMPACT_MS } from './shared.jsx';
 import { ComboChip, ToneMark } from '../tgWidgets.jsx';
@@ -249,8 +249,8 @@ function CenterBurst({ data }) {
           );
         })}
         <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-          <span style={{ fontFamily: FONT_TITLE, fontSize: 40, color: data.color, textShadow: '0 0 8px #fffdf8, 0 0 8px #fffdf8, 0px 4px 12px rgba(43,39,48,0.18)', whiteSpace: 'nowrap' }}>{data.text}</span>
-          {data.sub && <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 13, color: data.subColor, textShadow: '0 0 6px #fffdf8, 0 0 6px #fffdf8' }}>{data.sub}</span>}
+          <span style={{ ...TYPE.titleLg, fontSize: 40, color: data.color, textShadow: '0 0 8px #fffdf8, 0 0 8px #fffdf8, 0px 4px 12px rgba(43,39,48,0.18)', whiteSpace: 'nowrap' }}>{data.text}</span>
+          {data.sub && <span style={{ ...TYPE.labelSm, color: data.subColor, textShadow: '0 0 6px #fffdf8, 0 0 6px #fffdf8' }}>{data.sub}</span>}
         </div>
       </div>
     </div>
@@ -493,7 +493,7 @@ export function GameScreen({ word, entered, currentSyl, completed, timedOut, wor
       <Reveal i={0} play={playReveal} style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', top: 20 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 5, background: '#fff', padding: '9px 14px', borderRadius: 15, boxShadow: '0px 3px 8px rgba(43,39,48,0.06)' }}>
         <StarIcon size={13} weight="fill" color={TG.SUN} />
-        <span style={{ fontFamily: FONT_NUM, fontWeight: 800, fontSize: 17, color: '#2b2730' }}>{score}</span>
+        <span style={{ ...TYPE.numMd, fontSize: 17, color: '#2b2730' }}>{score}</span>
       </div>
       </Reveal>
       {/* 일시정지 (우상단) — 계속/다시하기/그만두기 메뉴 포함 */}
@@ -506,7 +506,7 @@ export function GameScreen({ word, entered, currentSyl, completed, timedOut, wor
       {practice ? (
         <Reveal i={1} play={playReveal} style={{ position: 'absolute', left: 20, right: 20, top: 69, display: 'flex', justifyContent: 'center' }}>
           <div data-coach="prac-badge" style={{ display: 'inline-flex', alignItems: 'center', padding: '8px 14px', borderRadius: 16, background: 'rgba(54,201,141,0.14)' }}>
-            <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 13, color: TG.SUCCESS }}>트레이닝 · 시간 제한 없음</span>
+            <span style={{ ...TYPE.labelSm, color: TG.SUCCESS }}>트레이닝 · 시간 제한 없음</span>
           </div>
         </Reveal>
       ) : (
@@ -526,7 +526,7 @@ export function GameScreen({ word, entered, currentSyl, completed, timedOut, wor
         <div style={{ position: 'absolute', left: 20, right: 20,
           ...(runTip === 'skip' ? { bottom: 'calc(184px + env(safe-area-inset-bottom))' } : { top: 103 }),
           display: 'flex', justifyContent: 'center', zIndex: 24, pointerEvents: 'none', animation: 'tg-hint 5.1s ease forwards' }} aria-hidden="true">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#2b2730', color: '#fff', fontFamily: FONT_BODY, fontWeight: 700, fontSize: 12, lineHeight: 1, padding: '7px 12px', borderRadius: 11, boxShadow: '0 4px 12px rgba(43,39,48,0.22)', whiteSpace: 'nowrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#2b2730', color: '#fff', ...TYPE.labelSm, lineHeight: 1, padding: '7px 12px', borderRadius: 11, boxShadow: '0 4px 12px rgba(43,39,48,0.22)', whiteSpace: 'nowrap' }}>
             {runTip === 'play' && <><TimerIcon size={13} weight="fill" color="#ff9f6b" />타이머가 끝나기 전에 성조를 골라요!</>}
             {runTip === 'skip' && <><TicketIcon size={13} weight="fill" color={TG.CORAL} />틀려도 안 죽어요 · 어려우면 건너뛰기!</>}
             {runTip === 'hint' && <><SpeakerHighIcon size={13} weight="fill" color="#ff9f6b" />발음 힌트를 들으면 콤보가 끊겨요!</>}
@@ -567,7 +567,7 @@ export function GameScreen({ word, entered, currentSyl, completed, timedOut, wor
         <Reveal i={3} play={playReveal} style={{ position: 'absolute', left: 0, right: 0, bottom: 'calc(192px + env(safe-area-inset-bottom))', display: 'flex', justifyContent: 'center' }}>
           <button onClick={onEndTraining} className="tg-press" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 18px', borderRadius: 14, background: '#fff', border: '1.5px solid #ebe5de', boxShadow: '0px 2px 6px rgba(43,39,48,0.05)', cursor: 'pointer', ...TOUCH_OPT }}>
             <SignOutIcon size={15} weight="bold" color={TG.SUB} />
-            <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 14, color: TG.SUB }}>트레이닝 종료</span>
+            <span style={{ ...TYPE.label, color: TG.SUB }}>트레이닝 종료</span>
           </button>
         </Reveal>
       )}
@@ -577,11 +577,11 @@ export function GameScreen({ word, entered, currentSyl, completed, timedOut, wor
           <div data-coach="prac-actions" style={{ display: 'flex', gap: 10 }}>
             <button onClick={onSpeak} className="tg-press" style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '13px 0', borderRadius: 16, background: '#fff', border: '1.5px solid #ebe5de', cursor: 'pointer', ...TOUCH_OPT }}>
               <SpeakerHighIcon size={20} weight="fill" color={TG.SUCCESS_GLOW} />
-              <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 14, color: '#2b2730' }}>발음 듣기</span>
+              <span style={{ ...TYPE.label, color: '#2b2730' }}>발음 듣기</span>
             </button>
             <button onClick={onReveal} disabled={completed} className="tg-press" style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '13px 0', borderRadius: 16, background: '#fff', border: '1.5px solid #ebe5de', cursor: completed ? 'default' : 'pointer', opacity: completed ? 0.5 : 1, ...TOUCH_OPT }}>
               <EyeIcon size={20} weight="fill" color="#767676" />
-              <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 14, color: '#2b2730' }}>정답 보기</span>
+              <span style={{ ...TYPE.label, color: '#2b2730' }}>정답 보기</span>
             </button>
           </div>
         </Reveal>
@@ -599,7 +599,7 @@ export function GameScreen({ word, entered, currentSyl, completed, timedOut, wor
                 style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '9px 16px', borderRadius: 14,
                   background: '#fff', border: '1.5px solid #ebe5de', cursor: disabled ? 'default' : 'pointer',
                   opacity: disabled ? 0.5 : 1, boxShadow: '0px 2px 6px rgba(43,39,48,0.05)', ...TOUCH_OPT }}>
-                <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 13, color: '#2b2730' }}>건너뛰기</span>
+                <span style={{ ...TYPE.labelSm, color: '#2b2730' }}>건너뛰기</span>
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }} aria-hidden="true">
                   {[0, 1, 2].map((i) => {
                     const on = i < lives;
@@ -644,8 +644,8 @@ export function GameScreen({ word, entered, currentSyl, completed, timedOut, wor
             <div style={{ width: 88, height: 88, borderRadius: 28, background: 'linear-gradient(135deg,#ff5e62,#b3050a)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 14px 40px rgba(179,5,10,0.55)' }}>
               <SkullIcon size={50} weight="fill" color="#fff" />
             </div>
-            <span style={{ fontFamily: FONT_TITLE, fontSize: 42, lineHeight: 1, color: '#fff', textShadow: '0 3px 18px rgba(0,0,0,0.45)' }}>서든데스</span>
-            <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 16, color: 'rgba(255,255,255,0.92)', textShadow: '0 2px 10px rgba(0,0,0,0.4)' }}>한 번 틀리면 끝!</span>
+            <span style={{ ...TYPE.titleLg, fontSize: 42, lineHeight: 1, color: '#fff', textShadow: '0 3px 18px rgba(0,0,0,0.45)' }}>서든데스</span>
+            <span style={{ ...TYPE.btn, color: 'rgba(255,255,255,0.92)', textShadow: '0 2px 10px rgba(0,0,0,0.4)' }}>한 번 틀리면 끝!</span>
           </div>
         </div>
       )}

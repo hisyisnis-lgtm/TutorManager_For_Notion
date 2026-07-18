@@ -1,13 +1,13 @@
 // 단어 숙련도 화면 (Figma "15. 단어 숙련도") — 성조 레이더 + 복습필요 리스트 + 마스터 수 + 복습 CTA.
-import { CaretLeftIcon, SpeakerHighIcon, PlayIcon, MedalIcon } from '@phosphor-icons/react';
-import { TG, FONT_TITLE, FONT_HANZI, FONT_BODY, FONT_NUM, FONT_PINYIN, TOUCH_OPT } from '../tgTokens.js';
+import { SpeakerHighIcon, PlayIcon, MedalIcon } from '@phosphor-icons/react';
+import { TG, FONT_HANZI, FONT_BODY, FONT_PINYIN, TOUCH_OPT, TYPE } from '../tgTokens.js';
 import { ROUND_LENGTH } from '../../constants/toneGameWords.js';
 import { TONE_NUMS, toneAccuracy, toneAttempts } from '../toneStats.js';
 import { TIER_SPARK_POS as PARTICLE_POS } from '../earProfile.js';
 import { displayTier } from '../gameXp.js';
 import { speakWord } from '../tgTts.js';
 import { play as playSfx } from '../tgSfx.js';
-import { Reveal, CoachBubble } from './shared.jsx';
+import { Reveal, GameHeader, CoachBubble } from './shared.jsx';
 
 function masteryColor(acc) { return acc >= 0.8 ? TG.SUCCESS_GLOW : acc >= 0.5 ? TG.SUN : TG.CORAL; }
 
@@ -29,7 +29,7 @@ function ToneRadar({ toneStats }) {
   const dataPts = accs.map((a, i) => vtx(i, hasData ? Math.max(0.06, a.acc) : 0).map((n) => n.toFixed(1)).join(',')).join(' ');
   return (
     <div style={{ background: '#fff', border: '1.5px solid #efeae4', borderRadius: 18, padding: '16px 18px 10px' }}>
-      <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 13, color: '#2b2730' }}>내 귀 지도 · 성조별 정답률</span>
+      <span style={{ ...TYPE.labelSm, color: '#2b2730' }}>내 귀 지도 · 성조별 정답률</span>
       <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', marginTop: 2 }}>
         <svg width={200} height={150} viewBox="0 0 200 150" style={{ display: 'block', overflow: 'visible' }} aria-hidden="true">
           {/* 그리드(외곽+50%) */}
@@ -44,7 +44,7 @@ function ToneRadar({ toneStats }) {
           {TONE_NUMS.map((t, i) => { const [x, y] = vtx(i, 1.22); return <text key={`lb${t}`} x={x} y={y} fontFamily={FONT_BODY} fontSize={11} fontWeight={500} fill={TONE_COLOR[t]} textAnchor="middle" dominantBaseline="middle">{TONE_LABEL[t]}</text>; })}
         </svg>
         {!hasData && (
-          <span style={{ position: 'absolute', top: '54%', left: 0, right: 0, transform: 'translateY(-50%)', textAlign: 'center', fontFamily: FONT_BODY, fontWeight: 500, fontSize: 12, color: '#9a93a0', padding: '0 28px' }}>
+          <span style={{ position: 'absolute', top: '54%', left: 0, right: 0, transform: 'translateY(-50%)', textAlign: 'center', ...TYPE.meta, color: '#9a93a0', padding: '0 28px' }}>
             더 플레이하면 성조별 실력이 보여요
           </span>
         )}
@@ -61,15 +61,15 @@ function WordStatRow({ word, acc }) {
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
           <span style={{ fontFamily: FONT_HANZI, fontWeight: 700, fontSize: 24, color: '#2b2730' }}>{word.hanzi}</span>
-          <span style={{ fontFamily: FONT_BODY, fontWeight: 500, fontSize: 13, color: '#9a93a0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{word.meaning}</span>
+          <span style={{ ...TYPE.sub, color: '#9a93a0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{word.meaning}</span>
         </div>
         <div style={{ fontFamily: FONT_PINYIN, fontWeight: 500, fontSize: 12, color: '#9a93a0', marginTop: 3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{(word.pinyin || []).join(' ')}</div>
       </div>
       {/* 정답률만(% + 바) — 평균시간은 부차적이라 제외해 왼쪽 2행과 균형 */}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <span style={{ fontFamily: FONT_NUM, fontWeight: 800, fontSize: 20, color: c }}>{pct}</span>
-          <span style={{ fontFamily: FONT_NUM, fontWeight: 800, fontSize: 12, color: c }}>%</span>
+          <span style={{ ...TYPE.numMd, color: c }}>{pct}</span>
+          <span style={{ ...TYPE.numMd, fontSize: 12, color: c }}>%</span>
         </div>
         <div style={{ width: 64, height: 6, borderRadius: 3, background: '#f0ebe4', overflow: 'hidden' }}>
           <div style={{ width: `${pct}%`, height: '100%', background: c, borderRadius: 3 }} />
@@ -89,16 +89,15 @@ export function MasteryScreen({ rows, masteredN, xp = 0, rank = 0, onExam, toneS
   const tier = displayTier(rank, xp); // 등급 = 저장 rank(승급 시험 게이트). 게이지는 XP 진행. 마스터 수는 복습 학습 통계로 별도 표시.
   return (
     <>
-      <Reveal i={0} style={{ position: 'absolute', left: 24, top: 20, right: 24 }}>
-      <div style={{ height: 40, display: 'flex', gap: 12, alignItems: 'center' }}>
-        <button onClick={onBack} aria-label="뒤로" className="tg-press" style={{ width: 40, height: 40, borderRadius: 20, background: '#fff', boxShadow: '0px 3px 5px rgba(43,39,48,0.08)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, ...TOUCH_OPT }}>
-          <CaretLeftIcon size={20} weight="bold" color={TG.INK} />
-        </button>
-        <span style={{ fontFamily: FONT_TITLE, fontSize: 22, color: '#2b2730' }}>내 등급</span>
-      </div>
-      </Reveal>
+      <GameHeader title="내 등급" onBack={onBack} />
       {/* 스크롤 영역 — 코치 + 레이더 + 소제목 + 리스트를 함께 스크롤(모바일서 리스트가 좁은 고정영역에 갇히지 않게) */}
-      <div style={{ position: 'absolute', left: 0, right: 0, top: 72, bottom: need > 0 ? 'calc(102px + env(safe-area-inset-bottom))' : 'calc(24px + env(safe-area-inset-bottom))', overflowY: 'auto', WebkitOverflowScrolling: 'touch', padding: '12px 24px 10px' }}>
+      <div style={{
+        position: 'absolute', left: 0, right: 0, top: 52, bottom: need > 0 ? 'calc(102px + env(safe-area-inset-bottom))' : 'calc(24px + env(safe-area-inset-bottom))',
+        overflowY: 'auto', WebkitOverflowScrolling: 'touch', padding: '14px 24px 10px', zIndex: 2,
+        // 헤더 바(52px) 바닥에 딱 붙는 위·아래 가장자리 페이드(난이도 선택 화면과 동일 방식). 위는 엠블럼 안 흐리게 얕게, 아래는 리스트가 부드럽게 사라지게
+        maskImage: 'linear-gradient(to bottom, transparent 0, #000 20px, #000 calc(100% - 48px), transparent 100%)',
+        WebkitMaskImage: 'linear-gradient(to bottom, transparent 0, #000 20px, #000 calc(100% - 48px), transparent 100%)',
+      }}>
         {/* 성장 엠블럼 히어로 — 중앙 대형 엠블럼 + 단계별 글로우/파티클 + 단계명 + 진행 */}
         <Reveal i={1}>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, padding: '6px 0 2px' }}>
@@ -115,16 +114,16 @@ export function MasteryScreen({ rows, masteredN, xp = 0, rank = 0, onExam, toneS
               <img src={tier.emblem} alt="" width={132} height={132} style={{ position: 'relative', filter: `drop-shadow(0 8px 18px ${tier.glow}55)` }} />
             </div>
             {/* 단계명 */}
-            <span style={{ fontFamily: FONT_TITLE, fontSize: 22, color: '#2b2730' }}>{tier.name}</span>
+            <span style={{ ...TYPE.title, color: '#2b2730' }}>{tier.name}</span>
             {/* 진행 — 누적 XP 게이지 */}
             {tier.isMax ? (
-              <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 13, color: '#E0A21A' }}>최고 등급 달성! 🎉 · 누적 {xp.toLocaleString()} XP</span>
+              <span style={{ ...TYPE.labelSm, color: '#E0A21A' }}>최고 등급 달성! 🎉 · 누적 {xp.toLocaleString()} XP</span>
             ) : (
               <>
                 <div style={{ width: 220, height: 8, borderRadius: 4, background: '#f0ebe4', overflow: 'hidden' }}>
                   <div style={{ width: `${Math.round(tier.progress * 100)}%`, height: '100%', borderRadius: 4, background: TG.CORAL_GRAD, transition: 'width .4s ease' }} />
                 </div>
-                <span style={{ fontFamily: FONT_BODY, fontWeight: 500, fontSize: 12.5, color: '#9a93a0' }}>{tier.examReady ? '승급 시험 준비 완료!' : `다음 등급까지 ${tier.toNext.toLocaleString()} XP`} · 누적 {xp.toLocaleString()} XP</span>
+                <span style={{ ...TYPE.meta, color: '#9a93a0' }}>{tier.examReady ? '승급 시험 준비 완료!' : `다음 등급까지 ${tier.toNext.toLocaleString()} XP`} · 누적 {xp.toLocaleString()} XP</span>
               </>
             )}
             {/* 승급 시험 CTA — 게이지 만땅(examReady)일 때만. 합격하면 등급 상승. */}
@@ -134,7 +133,7 @@ export function MasteryScreen({ rows, masteredN, xp = 0, rank = 0, onExam, toneS
                 border: 'none', cursor: 'pointer', background: TG.CORAL_GRAD, boxShadow: '0 8px 18px rgba(242,72,76,0.3)', ...TOUCH_OPT,
               }}>
                 <MedalIcon size={19} weight="fill" color="#fff" />
-                <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 16, color: '#fff' }}>승급 시험 보기</span>
+                <span style={{ ...TYPE.btn, color: '#fff' }}>승급 시험 보기</span>
               </button>
             )}
           </div>
@@ -146,9 +145,9 @@ export function MasteryScreen({ rows, masteredN, xp = 0, rank = 0, onExam, toneS
           <>
             {/* 소제목 */}
             <div style={{ marginTop: 18, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 13, color: '#2b2730' }}>복습 필요 {need}개</span>
+              <span style={{ ...TYPE.labelSm, color: '#2b2730' }}>복습 필요 {need}개</span>
               <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'rgba(54,201,141,0.14)', padding: '5px 11px', borderRadius: 12 }}>
-                <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 12, color: TG.SUCCESS }}>✓ 마스터 {masteredN}개</span>
+                <span style={{ ...TYPE.labelSm, color: TG.SUCCESS }}>✓ 마스터 {masteredN}개</span>
               </div>
             </div>
             {/* 리스트 */}
@@ -158,8 +157,8 @@ export function MasteryScreen({ rows, masteredN, xp = 0, rank = 0, onExam, toneS
           </>
         ) : (
           <div style={{ marginTop: 28, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, textAlign: 'center' }}>
-            <span style={{ fontFamily: FONT_TITLE, fontSize: 18, color: '#2b2730' }}>아직 복습할 단어가 없어요</span>
-            <span style={{ fontFamily: FONT_BODY, fontWeight: 500, fontSize: 13, color: '#9a93a0' }}>게임을 플레이하면 약한 단어가 모여요</span>
+            <span style={{ ...TYPE.head, fontSize: 18, color: '#2b2730' }}>아직 복습할 단어가 없어요</span>
+            <span style={{ ...TYPE.sub, color: '#9a93a0' }}>게임을 플레이하면 약한 단어가 모여요</span>
           </div>
         )}
       </div>
@@ -170,7 +169,7 @@ export function MasteryScreen({ rows, masteredN, xp = 0, rank = 0, onExam, toneS
           width: '100%', height: 60, borderRadius: 20, border: 'none', cursor: 'pointer', background: TG.CORAL_GRAD,
           boxShadow: '0px 10px 20px rgba(242,72,76,0.32)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, ...TOUCH_OPT,
         }}>
-          <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 18, color: '#fff' }}>약한 단어 {reviewN}개 복습하기</span>
+          <span style={{ ...TYPE.cta, color: '#fff' }}>약한 단어 {reviewN}개 복습하기</span>
           <PlayIcon size={14} weight="fill" color="#fff" />
         </button>
         </Reveal>

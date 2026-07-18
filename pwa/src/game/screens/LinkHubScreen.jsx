@@ -2,8 +2,8 @@
 // 카드는 카카오톡 링크 공유 미리보기 스타일(상단 썸네일 + 제목/설명/도메인)의 세로 리스트.
 // 항목은 전부 데이터(HUB_LINKS) — 특강·교재·단어장 등 새 링크는 배열에 추가만 하면 됨.
 // image: 썸네일 경로(권장 2:1 가로형). 없으면 tint+라벨 — 파일 없는 경로 금지(깨진 아이콘 뜸). SNS는 놀러가기 모달 전담.
-import { CaretLeftIcon } from '@phosphor-icons/react';
-import { TG, FONT_BODY, TOUCH_OPT } from '../tgTokens.js';
+import { CaretLeftIcon, CaretRightIcon } from '@phosphor-icons/react';
+import { TG, TYPE, TOUCH_OPT } from '../tgTokens.js';
 import { track } from '../gameAnalytics.js';
 
 const SITE = 'https://tiantian-chinese.pages.dev';
@@ -33,9 +33,10 @@ export function LinkHubScreen({ onClose }) {
           <CaretLeftIcon size={20} weight="bold" color={TG.INK} />
         </button>
 
-        {/* 히어로 — 브랜드 로고 */}
-        <div style={{ paddingTop: 'calc(96px + env(safe-area-inset-top))', display: 'flex', justifyContent: 'center' }}>
-          <img src="/logo/logo-red.png" alt="하늘하늘중국어" style={{ width: 200, height: 'auto', objectFit: 'contain' }} />
+        {/* 히어로 — 브랜드 로고 + 화면 목적(맥락) */}
+        <div style={{ paddingTop: 'calc(92px + env(safe-area-inset-top))', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+          <img src="/logo/logo-red.png" alt="하늘하늘중국어" style={{ width: 188, height: 'auto', objectFit: 'contain' }} />
+          <span style={{ ...TYPE.sub, color: TG.SUB, letterSpacing: '-0.01em' }}>관심 있는 주제를 눌러 둘러보세요</span>
         </div>
 
         {/* 링크 카드 — 카톡 공유 미리보기 스타일 세로 리스트 */}
@@ -49,13 +50,17 @@ export function LinkHubScreen({ onClose }) {
               <div style={{ width: '100%', aspectRatio: '1200 / 630', background: l.image ? '#f4efe8' : l.tint, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 {l.image
                   ? <img src={l.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  : <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 17, color: 'rgba(255,255,255,0.92)' }}>{l.title}</span>}
+                  : <span style={{ ...TYPE.btn, color: 'rgba(255,255,255,0.92)' }}>{l.title}</span>}
               </div>
-              {/* 하단 텍스트 패널 — 제목/설명/도메인 */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 3, padding: '14px 16px 15px' }}>
-                <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 16, color: TG.INK }}>{l.title}</span>
-                <span style={{ fontFamily: FONT_BODY, fontWeight: 500, fontSize: 13, color: TG.SUB }}>{l.desc}</span>
-                <span style={{ fontFamily: FONT_BODY, fontWeight: 500, fontSize: 11, color: '#B8B2BE', marginTop: 3 }}>{new URL(l.href).host}</span>
+              {/* 하단 텍스트 패널 — 제목/설명 + 바로가기 어포던스(카드별 tint로 구분) */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px' }}>
+                <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
+                  <span style={{ ...TYPE.btn, color: TG.INK }}>{l.title}</span>
+                  <span style={{ ...TYPE.sub, color: TG.SUB, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{l.desc}</span>
+                </div>
+                <span aria-hidden="true" style={{ width: 34, height: 34, borderRadius: 17, flexShrink: 0, background: `${l.tint}14`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <CaretRightIcon size={17} weight="bold" color={l.tint} />
+                </span>
               </div>
             </button>
           ))}

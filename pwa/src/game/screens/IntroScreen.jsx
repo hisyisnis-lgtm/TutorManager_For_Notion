@@ -1,6 +1,6 @@
 // 소개 화면 (3페이지 캐러셀, Figma 좌표 절대배치) — 게임 기원 스토리.
 import { LightningIcon, TrophyIcon } from '@phosphor-icons/react';
-import { TG, FONT_TITLE, FONT_BODY, FONT_HANZI, TOUCH_OPT } from '../tgTokens.js';
+import { TG, TYPE, FONT_HANZI, TOUCH_OPT } from '../tgTokens.js';
 import { ToneMark } from '../tgWidgets.jsx';
 import { TONES } from '../../constants/toneGameWords.js';
 import { play as playSfx } from '../tgSfx.js';
@@ -46,7 +46,7 @@ function IntroPanel({ p }) {
               ))}
             </div>
             <div style={{ background: '#fff6e8', padding: '7px 14px', borderRadius: 14 }}>
-              <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 12.5, color: '#b07d12', whiteSpace: 'nowrap' }}>병음 없이 · 성조만 직접 표기</span>
+              <span style={{ ...TYPE.labelSm, color: '#b07d12', whiteSpace: 'nowrap' }}>병음 없이 · 성조만 직접 표기</span>
             </div>
           </div>
         </div>
@@ -58,15 +58,15 @@ function IntroPanel({ p }) {
             <p.Icon size={52} weight="fill" color={p.iconColor} />
           </div>
           <div style={{ background: p.tagBg, padding: '7px 14px', borderRadius: 14 }}>
-            <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 12.5, color: p.tagColor, whiteSpace: 'nowrap' }}>{p.tag}</span>
+            <span style={{ ...TYPE.labelSm, color: p.tagColor, whiteSpace: 'nowrap' }}>{p.tag}</span>
           </div>
         </div>
         </Reveal>
       )}
       <Reveal i={1} style={{ position: 'absolute', left: 24, right: 24, top: p.tcolTop }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center', textAlign: 'center' }}>
-        <span style={{ fontFamily: FONT_TITLE, fontSize: 28, color: '#2b2730', letterSpacing: -0.3, width: '100%' }}>{p.title}</span>
-        <div style={{ width: '100%', fontFamily: FONT_BODY, fontWeight: 500, fontSize: 15, color: '#9a93a0', lineHeight: 1.65 }}>
+        <span style={{ ...TYPE.titleLg, fontSize: 28, color: '#2b2730', letterSpacing: -0.3, width: '100%' }}>{p.title}</span>
+        <div style={{ width: '100%', ...TYPE.body, color: '#9a93a0', lineHeight: 1.65 }}>
           {p.body.map((line, i) => <div key={i}>{line}</div>)}
         </div>
       </div>
@@ -81,7 +81,7 @@ export function IntroScreen({ page, onNext, onSkip }) {
     <>
       {/* 건너뛰기 (고정) — 히트영역 ≥44px(패딩 확장, top/right 보정으로 텍스트 시각 위치는 기존과 동일) */}
       <button onClick={() => { playSfx('button'); onSkip(); }} className="tg-press" style={{ position: 'absolute', right: 22, top: 11, zIndex: 3, padding: '13px 12px', background: 'none', border: 'none', cursor: 'pointer', ...TOUCH_OPT }}>
-        <span style={{ fontFamily: FONT_BODY, fontWeight: 500, fontSize: 13, color: '#9a93a0' }}>건너뛰기</span>
+        <span style={{ ...TYPE.sub, color: '#9a93a0' }}>건너뛰기</span>
       </button>
 
       {/* 슬라이딩 트랙 — 일러스트+제목+본문이 좌우로 슬라이드 */}
@@ -104,7 +104,7 @@ export function IntroScreen({ page, onNext, onSkip }) {
 
       {/* CTA (고정) — 하단 여백 30px 상당(=89.35%) */}
       <button onClick={() => { playSfx('button'); onNext(); }} className="tg-press" style={{ position: 'absolute', left: 24, right: 24, top: '89.35%', zIndex: 3, height: 60, borderRadius: 20, border: 'none', cursor: 'pointer', background: TG.CORAL_GRAD, boxShadow: '0px 10px 20px rgba(242,72,76,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', ...TOUCH_OPT }}>
-        <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 18, color: '#fff' }}>{cur.cta}</span>
+        <span style={{ ...TYPE.cta, color: '#fff' }}>{cur.cta}</span>
       </button>
     </>
   );

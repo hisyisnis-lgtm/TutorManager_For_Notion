@@ -3,11 +3,11 @@
 // 잠긴 테마는 흔들림+토스트(ShakeButton/onLocked), 패널에 해제조건+진행 게이지 표기.
 // 참조 메모리: tone_game_redesign.md (테마 모드)
 import { useState, useEffect, useRef, useLayoutEffect } from 'react';
-import { CaretLeftIcon, CaretRightIcon, LockSimpleIcon, PlayIcon, StarIcon } from '@phosphor-icons/react';
-import { TG, FONT_TITLE, FONT_BODY, TOUCH_OPT, DUR } from '../tgTokens.js';
+import { CaretLeftIcon, CaretRightIcon, LockSimpleIcon, PlayIcon } from '@phosphor-icons/react';
+import { TG, TYPE, TOUCH_OPT, DUR } from '../tgTokens.js';
 import { isThemeUnlocked, themeBestScore, themeUnlockReqText, themeUnlockToastText, themeStars } from '../gameLogic.js';
 import { play as playSfx } from '../tgSfx.js';
-import { Reveal, CoachBubble, ShakeButton, prefersReducedMotion } from './shared.jsx';
+import { Reveal, GameHeader, StarRow, CoachBubble, ShakeButton, prefersReducedMotion } from './shared.jsx';
 
 const GAP = 16;
 // 스크롤 컨테이너 세로 패딩 — overflowY:hidden(가로 스크롤 강제)이 카드 그림자를 자르지 않게 여유 확보.
@@ -118,7 +118,7 @@ function AmbientParticlesInner({ themeId }) {
 
 const metaChip = (bg, color, bold) => ({
   display: 'inline-flex', alignItems: 'center', padding: '5px 10px', borderRadius: 13,
-  background: bg, fontFamily: FONT_BODY, fontWeight: bold ? 700 : 500, fontSize: 12, color,
+  background: bg, ...(bold ? TYPE.labelSm : TYPE.meta), color,
 });
 
 // 포스터형 테마 카드 — 상단 이미지 + 하단 화이트 패널(제목·태그라인 / 잠금은 해제조건·진행 게이지)
@@ -134,7 +134,7 @@ function ThemeCard({ theme, unlocked, best, count, cardH, imgH, unlockCur, focus
         {theme.image
           ? <img src={theme.image} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 30%' }} />
           : (
-            <span style={{ position: 'absolute', left: 0, right: 0, top: '42%', textAlign: 'center', fontFamily: FONT_BODY, fontWeight: 700, fontSize: 14, lineHeight: 1.5, color: 'rgba(43,39,48,0.3)' }}>
+            <span style={{ position: 'absolute', left: 0, right: 0, top: '42%', textAlign: 'center', ...TYPE.label, lineHeight: 1.5, color: 'rgba(43,39,48,0.3)' }}>
               {theme.placeholder || '이미지'}<br />(준비 중)
             </span>
           )}
@@ -149,15 +149,8 @@ function ThemeCard({ theme, unlocked, best, count, cardH, imgH, unlockCur, focus
         {/* 성취 별 배지 — 우상단(유일한 배지). 한 판 최고점 500/1000/1800 구간별 0~3개(점수 오름차순=항상 연속 채움).
             점수 숫자는 카드에서 제거(중복·정보과다, 2026-07-16 사용자 결정: 최고점은 결과화면에서 확인). 채운 별은 시차 반짝임 */}
         {unlocked && (
-          <div style={{ position: 'absolute', right: 12, top: 12, display: 'flex', gap: 4, alignItems: 'center', padding: '6px 10px', borderRadius: 15, background: 'rgba(0,0,0,0.48)' }}>
-            {[0, 1, 2].map((i) => {
-              const filled = i < stars;
-              return (
-                <span key={i} style={{ display: 'flex', animation: (filled && !prefersReducedMotion()) ? `tg-star-shine 2.8s ease-in-out ${i * 0.3}s infinite` : 'none' }}>
-                  <StarIcon size={17} weight="fill" color={filled ? TG.SUN : 'rgba(255,255,255,0.5)'} />
-                </span>
-              );
-            })}
+          <div style={{ position: 'absolute', right: 12, top: 12, display: 'flex', alignItems: 'center', padding: '6px 10px', borderRadius: 15, background: 'rgba(0,0,0,0.48)' }}>
+            <StarRow filled={stars} size={17} gap={4} off="rgba(255,255,255,0.5)" shine />
           </div>
         )}
       </div>
@@ -167,8 +160,8 @@ function ThemeCard({ theme, unlocked, best, count, cardH, imgH, unlockCur, focus
         <div style={unlocked
           ? { position: 'absolute', left: 18, top: '50%', transform: 'translateY(-50%)', right: 74 }
           : { position: 'absolute', left: 18, top: panelH >= 130 ? 15 : 11, right: 18 }}>
-          <div style={{ fontFamily: FONT_TITLE, fontSize: 22, color: TG.INK, lineHeight: 1.15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{theme.label}</div>
-          <div style={{ marginTop: 5, fontFamily: FONT_BODY, fontWeight: 500, fontSize: 13, color: PANEL_SUB, lineHeight: 1.4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          <div style={{ ...TYPE.title, color: TG.INK, lineHeight: 1.15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{theme.label}</div>
+          <div style={{ marginTop: 5, ...TYPE.sub, color: PANEL_SUB, lineHeight: 1.4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {unlocked ? (theme.desc || `${count}단어`) : themeUnlockReqText(theme)}
           </div>
         </div>
@@ -176,7 +169,7 @@ function ThemeCard({ theme, unlocked, best, count, cardH, imgH, unlockCur, focus
           /* 진행 게이지 — 해제 조건 대비 현재 최고점(잠금이 벽이 아니라 목표로 읽히게) */
           <div style={{ position: 'absolute', left: 18, right: 18, bottom: panelH >= 130 ? 17 : 13 }}>
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 6 }}>
-              <span style={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 11, color: GOLD_TX }}>
+              <span style={{ ...TYPE.labelSm, color: GOLD_TX }}>
                 {unlockCur.toLocaleString()} / {theme.unlock.score.toLocaleString()}
               </span>
             </div>
@@ -273,15 +266,8 @@ export function ThemeScreen({ themes, studentToken, counts = {}, onStart, onBack
     <>
       {/* 배경 앰비언트 파티클 — 포커스 테마 연동(첫 자식 = 모든 콘텐츠 뒤) */}
       <AmbientParticles themeId={themes[active]?.id} />
-      {/* 헤더 */}
-      <Reveal i={0} style={{ position: 'absolute', left: 24, top: 20, right: 24 }}>
-        <div style={{ height: 40, display: 'flex', gap: 12, alignItems: 'center' }}>
-          <button onClick={onBack} aria-label="뒤로" className="tg-press" style={{ width: 40, height: 40, borderRadius: 20, background: '#fff', boxShadow: '0px 3px 5px rgba(43,39,48,0.08)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, ...TOUCH_OPT }}>
-            <CaretLeftIcon size={20} weight="bold" color={TG.INK} />
-          </button>
-          <span style={{ fontFamily: FONT_TITLE, fontSize: 22, color: '#2b2730' }}>테마 선택</span>
-        </div>
-      </Reveal>
+      {/* 헤더 — 공용 GameHeader */}
+      <GameHeader title="테마 선택" onBack={onBack} />
       {/* 코치+카드+닷/힌트 = 헤더 바로 아래 상단정렬(모드/난이도 화면과 동일 리듬 — 큰 카드가 아래로 쏠리지 않게). */}
       <div style={{ position: 'absolute', left: 0, right: 0, top: 80, display: 'flex', flexDirection: 'column', gap: 18 }}>
         {/* 코치 말풍선 */}
@@ -336,7 +322,7 @@ export function ThemeScreen({ themes, studentToken, counts = {}, onStart, onBack
               <div key={t.id} style={{ width: i === active ? 20 : 6, height: 6, borderRadius: 3, background: i === active ? TG.CORAL_DK : '#d8d2ca', transition: `all ${DUR.state} ease` }} />
             ))}
           </div>
-          <span style={{ fontFamily: FONT_BODY, fontWeight: 500, fontSize: 12.5, color: TG.SUB }}>
+          <span style={{ ...TYPE.meta, color: TG.SUB }}>
             {FINE_POINTER ? '화살표 버튼이나 휠로 테마를 넘겨보세요' : '옆으로 넘겨 테마를 골라보세요'}
           </span>
         </div>
