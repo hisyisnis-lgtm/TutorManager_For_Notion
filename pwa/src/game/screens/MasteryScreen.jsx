@@ -1,5 +1,5 @@
 // 단어 숙련도 화면 (Figma "15. 단어 숙련도") — 성조 레이더 + 복습필요 리스트 + 마스터 수 + 복습 CTA.
-import { SpeakerHighIcon, PlayIcon, MedalIcon } from '@phosphor-icons/react';
+import { SpeakerHighIcon, PlayIcon, MedalIcon, CheckCircleIcon } from '@phosphor-icons/react';
 import { TG, FONT_HANZI, FONT_BODY, FONT_PINYIN, TOUCH_OPT, TYPE, RADIUS, SPACE } from '../tgTokens.js';
 import { ROUND_LENGTH } from '../../constants/toneGameWords.js';
 import { TONE_NUMS, toneAccuracy, toneAttempts } from '../toneStats.js';
@@ -28,8 +28,8 @@ function ToneRadar({ toneStats }) {
   const grid = (s) => TONE_NUMS.map((_, i) => vtx(i, s).map((n) => n.toFixed(1)).join(',')).join(' ');
   const dataPts = accs.map((a, i) => vtx(i, hasData ? Math.max(0.06, a.acc) : 0).map((n) => n.toFixed(1)).join(',')).join(' ');
   return (
-    <div style={{ background: '#fff', border: '1.5px solid #efeae4', borderRadius: RADIUS.btn, padding: '16px 18px 10px' }}>
-      <span style={{ ...TYPE.labelSm, color: TG.INK }}>내 귀 지도 · 성조별 정답률</span>
+    <div style={{ background: '#fff', borderRadius: RADIUS.lg, padding: '16px 18px 10px', boxShadow: '0 5px 14px rgba(43,39,48,0.06)' }}>
+      <span style={{ ...TYPE.labelSm, color: TG.INK }}>내 귀 지도</span>
       <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', marginTop: SPACE.xxs }}>
         <svg width={200} height={150} viewBox="0 0 200 150" style={{ display: 'block', overflow: 'visible' }} aria-hidden="true">
           {/* 그리드(외곽+50%) */}
@@ -53,14 +53,15 @@ function ToneRadar({ toneStats }) {
   );
 }
 
-function WordStatRow({ word, acc }) {
+// 복습 단어 한 줄 — 카드 chrome 없이 얇은 구분선 리스트(업적 화면과 통일). 한자·뜻·병음 + 정답률(%+바) + 발음듣기.
+function WordStatRow({ word, acc, last }) {
   const pct = Math.round(acc * 100);
   const c = masteryColor(acc);
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.xl, padding: '14px 16px', borderRadius: RADIUS.btn, background: '#fff', border: '1.5px solid #efeae4', flexShrink: 0 }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.xl, padding: '12px 2px', borderBottom: last ? 'none' : `1px solid ${TG.LINE}`, flexShrink: 0 }}>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: SPACE.md }}>
-          <span style={{ fontFamily: FONT_HANZI, fontWeight: 700, fontSize: 24, color: TG.INK }}>{word.hanzi}</span>
+          <span style={{ fontFamily: FONT_HANZI, fontWeight: 700, fontSize: 22, color: TG.INK }}>{word.hanzi}</span>
           <span style={{ ...TYPE.sub, color: TG.SUB, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{word.meaning}</span>
         </div>
         <div style={{ fontFamily: FONT_PINYIN, fontWeight: 500, fontSize: 12, color: TG.SUB, marginTop: SPACE.xs, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{(word.pinyin || []).join(' ')}</div>
@@ -77,7 +78,7 @@ function WordStatRow({ word, acc }) {
       </div>
       {/* 발음 듣기(TTS) */}
       <button onClick={() => speakWord(word)} aria-label="발음 듣기" className="tg-press" style={{ width: 34, height: 34, borderRadius: RADIUS.md, background: TG.SURFACE, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, ...TOUCH_OPT }}>
-        <SpeakerHighIcon size={18} weight="fill" color="#767676" />
+        <SpeakerHighIcon size={18} weight="fill" color={TG.ICON} />
       </button>
     </div>
   );
@@ -93,7 +94,7 @@ export function MasteryScreen({ rows, masteredN, xp = 0, rank = 0, onExam, toneS
       {/* 스크롤 영역 — 코치 + 레이더 + 소제목 + 리스트를 함께 스크롤(모바일서 리스트가 좁은 고정영역에 갇히지 않게) */}
       <div style={{
         position: 'absolute', left: 0, right: 0, top: 52, bottom: need > 0 ? 'calc(102px + env(safe-area-inset-bottom))' : 'calc(24px + env(safe-area-inset-bottom))',
-        overflowY: 'auto', WebkitOverflowScrolling: 'touch', padding: '14px 24px 10px', zIndex: 2,
+        overflowY: 'auto', WebkitOverflowScrolling: 'touch', padding: '14px 24px 48px', zIndex: 2,
         // 헤더 바(52px) 바닥에 딱 붙는 위·아래 가장자리 페이드(난이도 선택 화면과 동일 방식). 위는 엠블럼 안 흐리게 얕게, 아래는 리스트가 부드럽게 사라지게
         maskImage: 'linear-gradient(to bottom, transparent 0, #000 20px, #000 calc(100% - 48px), transparent 100%)',
         WebkitMaskImage: 'linear-gradient(to bottom, transparent 0, #000 20px, #000 calc(100% - 48px), transparent 100%)',
@@ -102,7 +103,7 @@ export function MasteryScreen({ rows, masteredN, xp = 0, rank = 0, onExam, toneS
         <Reveal i={1}>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: SPACE.md, padding: '6px 0 2px' }}>
             {/* 엠블럼 + 글로우 + 반짝임 파티클 */}
-            <div style={{ position: 'relative', width: '100%', height: 150, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ position: 'relative', width: '100%', height: 140, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <div aria-hidden="true" style={{ position: 'absolute', width: 196, height: 196, borderRadius: '50%', pointerEvents: 'none', background: `radial-gradient(closest-side, ${tier.glow}66, ${tier.glow}1a 55%, ${tier.glow}00 72%)` }} />
               {PARTICLE_POS.slice(0, tier.particles).map(([dx, dy, sz], i) => (
                 <div key={i} aria-hidden="true" style={{ position: 'absolute', left: '50%', top: '50%', transform: `translate(${dx}px, ${dy}px)`, pointerEvents: 'none' }}>
@@ -117,7 +118,7 @@ export function MasteryScreen({ rows, masteredN, xp = 0, rank = 0, onExam, toneS
             <span style={{ ...TYPE.title, color: TG.INK }}>{tier.name}</span>
             {/* 진행 — 누적 XP 게이지 */}
             {tier.isMax ? (
-              <span style={{ ...TYPE.labelSm, color: '#E0A21A' }}>최고 등급 달성! 🎉 · 누적 {xp.toLocaleString()} XP</span>
+              <span style={{ ...TYPE.labelSm, color: '#E0A21A' }}>최고 등급 달성 · 누적 {xp.toLocaleString()} XP</span>
             ) : (
               <>
                 <div style={{ width: 220, height: 8, borderRadius: RADIUS.xs, background: TG.TRACK, overflow: 'hidden' }}>
@@ -138,21 +139,22 @@ export function MasteryScreen({ rows, masteredN, xp = 0, rank = 0, onExam, toneS
             )}
           </div>
         </Reveal>
-        <Reveal i={2} style={{ display: 'block', marginTop: 30 }}><CoachBubble text={need ? '약한 단어부터 복습해 볼까요?' : '잘하고 있어요! 계속 도전해요'} /></Reveal>
+        <Reveal i={2} style={{ display: 'block', marginTop: SPACE.x4 }}><CoachBubble text={need ? '약한 단어부터 복습해 볼까요?' : '잘하고 있어요! 계속 도전해요'} /></Reveal>
         {/* 내 귀 지도(성조 레이더, P2) */}
-        <Reveal i={3} style={{ display: 'block', marginTop: SPACE.x2 }}><ToneRadar toneStats={toneStats} /></Reveal>
+        <Reveal i={3} style={{ display: 'block', marginTop: SPACE.x4 }}><ToneRadar toneStats={toneStats} /></Reveal>
         {need > 0 ? (
           <>
             {/* 소제목 */}
-            <div style={{ marginTop: SPACE.x3, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ marginTop: SPACE.x4, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span style={{ ...TYPE.labelSm, color: TG.INK }}>복습 필요 {need}개</span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.xs, background: 'rgba(54,201,141,0.14)', padding: '5px 11px', borderRadius: RADIUS.md }}>
-                <span style={{ ...TYPE.labelSm, color: TG.SUCCESS }}>✓ 마스터 {masteredN}개</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.xs, background: 'rgba(54,201,141,0.14)', padding: '5px 10px 5px 8px', borderRadius: RADIUS.md }}>
+                <CheckCircleIcon size={14} weight="fill" color={TG.SUCCESS} />
+                <span style={{ ...TYPE.labelSm, color: TG.SUCCESS }}>마스터 {masteredN}</span>
               </div>
             </div>
-            {/* 리스트 */}
-            <div style={{ marginTop: SPACE.xl, display: 'flex', flexDirection: 'column', gap: SPACE.lg }}>
-              {rows.map((r) => <WordStatRow key={r.word.hanzi} word={r.word} acc={r.acc} />)}
+            {/* 리스트 — 얇은 구분선(카드 chrome 없음) */}
+            <div style={{ marginTop: SPACE.sm, display: 'flex', flexDirection: 'column' }}>
+              {rows.map((r, i) => <WordStatRow key={r.word.hanzi} word={r.word} acc={r.acc} last={i === rows.length - 1} />)}
             </div>
           </>
         ) : (

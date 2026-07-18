@@ -107,8 +107,8 @@ export function AchievementsScreen({ earned, snapshot, onBack, onToast }) {
       } />
       {/* 하나의 리스트 — 섹션 없이 흐르고, 카테고리 구분은 링/아이콘 색으로만 */}
       <Reveal i={1} style={{
-        position: 'absolute', left: 24, right: 24, top: 52, bottom: 'calc(20px + env(safe-area-inset-bottom))', overflowY: 'auto', zIndex: 2, paddingTop: SPACE.sm,
-        // 헤더 바(52px) 바닥에 딱 붙는 위·아래 가장자리 페이드(난이도 선택 화면과 동일 방식)
+        position: 'absolute', left: 24, right: 24, top: 52, bottom: 'calc(20px + env(safe-area-inset-bottom))', overflowY: 'auto', zIndex: 2, paddingTop: SPACE.sm, paddingBottom: 52,
+        // 헤더 바(52px) 바닥에 딱 붙는 위·아래 가장자리 페이드(난이도 선택 화면과 동일 방식). 하단 패딩=마지막 항목이 페이드 위로 올라오게(가림 방지)
         maskImage: 'linear-gradient(to bottom, transparent 0, #000 20px, #000 calc(100% - 48px), transparent 100%)',
         WebkitMaskImage: 'linear-gradient(to bottom, transparent 0, #000 20px, #000 calc(100% - 48px), transparent 100%)',
       }}>
