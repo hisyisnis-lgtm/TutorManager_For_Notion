@@ -2,7 +2,7 @@
 // 카드는 카카오톡 링크 공유 미리보기 스타일(상단 썸네일 + 제목/설명/도메인)의 세로 리스트.
 // 항목은 전부 데이터(HUB_LINKS) — 특강·교재·단어장 등 새 링크는 배열에 추가만 하면 됨.
 // image: 썸네일 경로(권장 2:1 가로형). 없으면 tint+라벨 — 파일 없는 경로 금지(깨진 아이콘 뜸). SNS는 놀러가기 모달 전담.
-import { CaretLeftIcon, CaretRightIcon } from '@phosphor-icons/react';
+import { CaretLeftIcon, CaretRightIcon, SparkleIcon } from '@phosphor-icons/react';
 import { TG, TYPE, TOUCH_OPT, RADIUS, SPACE } from '../tgTokens.js';
 import { track } from '../gameAnalytics.js';
 
@@ -11,7 +11,6 @@ const SITE = 'https://tiantian-chinese.pages.dev';
 // image = 각 링크의 카톡 미리보기(OG) 이미지 그대로 (public/img, 1200×630. intro.html·group-class.html og:image와 동일)
 const HUB_LINKS = [
   { id: 'consult', title: '무료상담', desc: '고민만 들고 오세요, 부담 없이', href: `${SITE}/#/intro`, image: '/img/카카오톡링크미리보기이미지_소개및무료상담신청.png', tint: '#7f0005' },
-  { id: 'group', title: '그룹 수업', desc: '함께 배우는 라이브 클래스', href: `${SITE}/#/group-class`, image: '/img/og-group-class.png', tint: '#C9723F' },
 ];
 
 // 측정: 게임→서비스 전환 클릭(유입 깔때기의 출구) — 기존 cta_play_link 이벤트에 m: consult/group 추가
@@ -23,7 +22,7 @@ function openLink(href, channel) {
 export function LinkHubScreen({ onClose }) {
   return (
     <div className="tg-enter" style={{ position: 'fixed', inset: 0, zIndex: 60, background: TG.BG, overflowY: 'auto', ...TOUCH_OPT }}>
-      <div style={{ position: 'relative', minHeight: '100%', paddingBottom: 'calc(40px + env(safe-area-inset-bottom))' }}>
+      <div style={{ position: 'relative', minHeight: '100%', display: 'flex', flexDirection: 'column', paddingBottom: 'calc(40px + env(safe-area-inset-bottom))' }}>
         {/* 뒤로 */}
         <button aria-label="뒤로" className="tg-press" onClick={onClose} style={{
           position: 'absolute', left: 24, top: 'calc(20px + env(safe-area-inset-top))', width: 40, height: 40, borderRadius: RADIUS.xl,
@@ -64,6 +63,14 @@ export function LinkHubScreen({ onClose }) {
               </div>
             </button>
           ))}
+        </div>
+
+        {/* 새 콘텐츠 준비 안내 — marginTop:auto로 카드가 몇 개든 항상 최하단에 고정 */}
+        <div style={{ marginTop: 'auto', paddingTop: SPACE.x4, display: 'flex', justifyContent: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, padding: '10px 16px', borderRadius: RADIUS.pill, background: TG.SURFACE }}>
+            <SparkleIcon size={17} weight="fill" color={TG.MUTED} />
+            <span style={{ ...TYPE.sub, color: TG.SUB }}>새로운 콘텐츠를 준비하고 있어요</span>
+          </div>
         </div>
       </div>
     </div>

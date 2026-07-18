@@ -489,13 +489,15 @@ export function GameScreen({ word, entered, currentSyl, completed, timedOut, wor
         <div aria-hidden="true" style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 3,
           boxShadow: 'inset 0 0 72px 26px rgba(242,72,76,0.42)', animation: 'tg-vignette .85s ease-in-out infinite' }} />
       )}
-      {/* 점수 (상단 중앙) */}
+      {/* 점수 (상단 중앙) — 트레이닝은 기록·점수 개념이 없어 숨김 */}
+      {!practice && (
       <Reveal i={0} play={playReveal} style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', top: 20 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, background: '#fff', padding: '9px 14px', borderRadius: RADIUS.lg, boxShadow: '0px 3px 8px rgba(43,39,48,0.06)' }}>
         <StarIcon size={13} weight="fill" color={TG.SUN} />
         <span style={{ ...TYPE.numMd, fontSize: 17, color: TG.INK }}>{score}</span>
       </div>
       </Reveal>
+      )}
       {/* 일시정지 (우상단) — 계속/다시하기/그만두기 메뉴 포함 */}
       <Reveal i={0} play={playReveal} style={{ position: 'absolute', right: 20, top: 23 }}>
       <button onClick={onPause} aria-label="일시정지" className="tg-press" style={{ width: 40, height: 40, border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', ...TOUCH_OPT }}>
@@ -538,7 +540,7 @@ export function GameScreen({ word, entered, currentSyl, completed, timedOut, wor
         <div style={{ position: 'relative' }}>
           <div key={`card-${runId}-${wordIndex}`} style={{ animation: 'tg-card-in .38s cubic-bezier(.22,1,.36,1) both' }}>
             <div style={{ position: 'relative', transform: freeze ? 'scale(1.035)' : 'none', animation: punch ? 'tg-punch .35s ease-out' : 'none', '--tg-punch-s': (1.05 + heat * 0.05).toFixed(3) }}>
-              <WordCard word={word} entered={entered} currentSyl={currentSyl} completed={completed} timedOut={timedOut} progressText={endless ? `${wordIndex + 1}` : `${wordIndex + 1}/${wordsLen}`} hideProgress={practice} combo={combo} comboFlash={comboFlash} floatScore={floatScore} listen={listen} audioOff={audioOff} onReplay={onReplay} onCantHear={onCantHear} onHint={onHint} hintUsed={hintUsed} draw={draw} lianyinAt={lianyinAt} />
+              <WordCard word={word} entered={entered} currentSyl={currentSyl} completed={completed} timedOut={timedOut} progressText={endless ? `${wordIndex + 1}` : `${wordIndex + 1}/${wordsLen}`} hideProgress={practice} combo={combo} comboFlash={comboFlash} floatScore={practice ? null : floatScore} listen={listen} audioOff={audioOff} onReplay={onReplay} onCantHear={onCantHear} onHint={onHint} hintUsed={hintUsed} draw={draw} lianyinAt={lianyinAt} />
             </div>
           </div>
           {/* 정답 완성 연출 — 크리스프 플래시(번쩍) + 색색 색종이 + 흰/골드 글리터. ★단어 키 래퍼 '밖'에 둠: 안에 두면 새 단어 등장 때마다 리마운트되어 오발. flashKey 증가(정답 완성) 시에만 발동 */}
