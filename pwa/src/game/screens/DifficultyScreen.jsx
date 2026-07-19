@@ -15,6 +15,8 @@ import { useTabTip } from '../../hooks/useTabTip.js';
 // 스테이지 난이도 아이콘 — 밴드(1~5)마다 강도가 세짐(새싹→잎→불꽃→번개→왕관). 급은 색(DIFF_COLORS)으로 구분.
 const STAGE_ICONS = [PlantIcon, LeafIcon, FlameIcon, LightningIcon, CrownIcon];
 const SLOT_H = 92; // 슬롯 높이(균일)
+const ROW_W = 240; // 비선택 컴팩트 카드 공용 폭(잠금·해제·승급시험 통일 — 들쭉날쭉 방지)
+const ROW_H = 52;  // 비선택 컴팩트 카드 공용 높이(모바일 요소 스케일 한 단계 up)
 // 사다리 = 각 급 [5스테이지 + 보스]. 세로 배치용 reverse(위=고수 보스, 아래=입문1). 위로 오를수록 어려워짐.
 const LADDER = BOSSES.flatMap((boss) => [...STAGES.filter((s) => s.tier === boss.tier), boss]);
 const V_LADDER = [...LADDER].reverse();
@@ -230,9 +232,9 @@ export function DifficultyScreen({ studentToken, rank = 0, onSelect, onStart, on
                   </div>
                 ) : boss && beaten ? (
                   /* 보스 통과 — 골드 ✓ */
-                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: SPACE.lg, padding: '0 15px', height: 46, borderRadius: RADIUS.xxl, background: '#fff', boxShadow: '0 3px 9px rgba(43,79,120,0.1)' }}>
-                    <div style={{ position: 'relative', width: 26, height: 26, borderRadius: RADIUS.md, flexShrink: 0, background: c.tint, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <MedalIcon size={15} weight="fill" color={c.accent} />
+                  <div style={{ display: 'flex', width: ROW_W, alignItems: 'center', gap: SPACE.lg, padding: '0 15px', height: ROW_H, borderRadius: RADIUS.xxl, background: '#fff', boxShadow: '0 3px 9px rgba(43,79,120,0.1)' }}>
+                    <div style={{ position: 'relative', width: 32, height: 32, borderRadius: RADIUS.md, flexShrink: 0, background: c.tint, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <MedalIcon size={18} weight="fill" color={c.accent} />
                       <span style={{ position: 'absolute', right: -3, bottom: -3, width: 14, height: 14, borderRadius: RADIUS.pill, background: c.accent, border: '2px solid #fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <CheckIcon size={8} weight="bold" color="#fff" />
                       </span>
@@ -241,34 +243,34 @@ export function DifficultyScreen({ studentToken, rank = 0, onSelect, onStart, on
                   </div>
                 ) : boss && selectable ? (
                   /* 보스 도전 가능(ready) — 골드 크라운 + 승급시험 */
-                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: SPACE.lg, padding: '0 15px', height: 46, borderRadius: RADIUS.xxl, background: '#fff', boxShadow: `0 4px 12px ${c.glow}` }}>
-                    <div style={{ width: 26, height: 26, borderRadius: RADIUS.md, flexShrink: 0, background: c.tint, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <MedalIcon size={15} weight="fill" color={c.accent} />
+                  <div style={{ display: 'flex', width: ROW_W, alignItems: 'center', gap: SPACE.lg, padding: '0 15px', height: ROW_H, borderRadius: RADIUS.xxl, background: '#fff', boxShadow: `0 4px 12px ${c.glow}` }}>
+                    <div style={{ width: 32, height: 32, borderRadius: RADIUS.md, flexShrink: 0, background: c.tint, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <MedalIcon size={18} weight="fill" color={c.accent} />
                     </div>
                     <span style={{ ...TYPE.label, color: c.accent, whiteSpace: 'nowrap' }}>{s.tierLabel} 승급시험</span>
                   </div>
                 ) : boss ? (
                   /* 보스 잠금 — 골드 lock */
-                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: SPACE.lg, padding: '0 15px', height: 46, borderRadius: RADIUS.xxl, background: '#fff', boxShadow: '0 3px 9px rgba(43,79,120,0.1)' }}>
-                    <div style={{ width: 26, height: 26, borderRadius: RADIUS.md, flexShrink: 0, background: c.tint, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <LockSimpleIcon size={15} weight="fill" color={c.accent} />
+                  <div style={{ display: 'flex', width: ROW_W, alignItems: 'center', gap: SPACE.lg, padding: '0 15px', height: ROW_H, borderRadius: RADIUS.xxl, background: '#fff', boxShadow: '0 3px 9px rgba(43,79,120,0.1)' }}>
+                    <div style={{ width: 32, height: 32, borderRadius: RADIUS.md, flexShrink: 0, background: c.tint, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <LockSimpleIcon size={18} weight="fill" color={c.accent} />
                     </div>
                     <span style={{ ...TYPE.label, color: c.accent, whiteSpace: 'nowrap' }}>{s.tierLabel} 승급시험</span>
                   </div>
                 ) : selectable ? (
                   /* 스테이지 간략(해제) — 아이콘 + 라벨 + 미니 별 */
-                  <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.lg, padding: '0 15px', height: 46, borderRadius: RADIUS.xxl, background: '#fff', boxShadow: '0 3px 9px rgba(43,79,120,0.1)', width: 220 }}>
-                    <div style={{ width: 26, height: 26, borderRadius: RADIUS.md, flexShrink: 0, background: c.tint, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Icon size={15} weight="fill" color={c.accent} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.lg, padding: '0 15px', height: ROW_H, borderRadius: RADIUS.xxl, background: '#fff', boxShadow: '0 3px 9px rgba(43,79,120,0.1)', width: ROW_W }}>
+                    <div style={{ width: 32, height: 32, borderRadius: RADIUS.md, flexShrink: 0, background: c.tint, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Icon size={18} weight="fill" color={c.accent} />
                     </div>
                     <span style={{ flex: 1, ...TYPE.label, color: TG.INK_SOFT, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.label}</span>
-                    <StarRow filled={stars.filter(Boolean).length} size={12} gap={2} off="#d8d2c8" shine style={{ flexShrink: 0 }} />
+                    <StarRow filled={stars.filter(Boolean).length} size={14} gap={3} off="#d8d2c8" shine style={{ flexShrink: 0 }} />
                   </div>
                 ) : (
                   /* 스테이지 간략(잠금) — 자물쇠 + 라벨 */
-                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: SPACE.lg, padding: '0 15px', height: 46, borderRadius: RADIUS.xxl, background: '#fff', boxShadow: '0 3px 9px rgba(43,79,120,0.1)' }}>
-                    <div style={{ width: 26, height: 26, borderRadius: RADIUS.md, flexShrink: 0, background: c.tint, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <LockSimpleIcon size={15} weight="fill" color={c.accent} />
+                  <div style={{ display: 'flex', width: ROW_W, alignItems: 'center', gap: SPACE.lg, padding: '0 15px', height: ROW_H, borderRadius: RADIUS.xxl, background: '#fff', boxShadow: '0 3px 9px rgba(43,79,120,0.1)' }}>
+                    <div style={{ width: 32, height: 32, borderRadius: RADIUS.md, flexShrink: 0, background: c.tint, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <LockSimpleIcon size={18} weight="fill" color={c.accent} />
                     </div>
                     <span style={{ ...TYPE.label, color: c.accent, whiteSpace: 'nowrap' }}>{s.label}</span>
                   </div>
