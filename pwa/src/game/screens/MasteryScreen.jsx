@@ -1,10 +1,10 @@
 // 단어 숙련도 화면 (Figma "15. 단어 숙련도") — 성조 레이더 + 복습필요 리스트 + 마스터 수 + 복습 CTA.
-import { SpeakerHighIcon, PlayIcon, MedalIcon, CheckCircleIcon } from '@phosphor-icons/react';
+import { SpeakerHighIcon, PlayIcon, CheckCircleIcon } from '@phosphor-icons/react';
 import { TG, FONT_HANZI, FONT_BODY, FONT_PINYIN, TOUCH_OPT, TYPE, RADIUS, SPACE } from '../tgTokens.js';
 import { ROUND_LENGTH } from '../../constants/toneGameWords.js';
 import { TONE_NUMS, toneAccuracy, toneAttempts } from '../toneStats.js';
 import { TIER_SPARK_POS as PARTICLE_POS } from '../earProfile.js';
-import { displayTier } from '../gameXp.js';
+import { rankInfo, levelInfo } from '../gameXp.js';
 import { speakWord } from '../tgTts.js';
 import { play as playSfx } from '../tgSfx.js';
 import { Reveal, GameHeader, CoachBubble } from './shared.jsx';
@@ -87,7 +87,8 @@ function WordStatRow({ word, acc, last }) {
 export function MasteryScreen({ rows, masteredN, xp = 0, rank = 0, onExam, toneStats, onBack, onReview }) {
   const need = rows.length;
   const reviewN = Math.min(ROUND_LENGTH, need);
-  const tier = displayTier(rank, xp); // 등급 = 저장 rank(승급 시험 게이트). 게이지는 XP 진행. 마스터 수는 복습 학습 통계로 별도 표시.
+  const grade = rankInfo(rank); // 등급 = 보스 클리어로만 오름(rankInfo 엠블럼)
+  const lv = levelInfo(xp);     // 레벨 = 누적 XP 성장(Lv.N, 등급과 별개 축)
   return (
     <>
       <GameHeader title="내 등급" onBack={onBack} />
@@ -102,41 +103,31 @@ export function MasteryScreen({ rows, masteredN, xp = 0, rank = 0, onExam, toneS
         {/* 성장 엠블럼 히어로 — 중앙 대형 엠블럼 + 단계별 글로우/파티클 + 단계명 + 진행 */}
         <Reveal i={1}>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: SPACE.md, padding: '6px 0 2px' }}>
-            {/* 엠블럼 + 글로우 + 반짝임 파티클 */}
+            {/* 등급 엠블럼 + 글로우 + 반짝임 파티클 (등급 = 보스 클리어로만 오름) */}
             <div style={{ position: 'relative', width: '100%', height: 140, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <div aria-hidden="true" style={{ position: 'absolute', width: 196, height: 196, borderRadius: '50%', pointerEvents: 'none', background: `radial-gradient(closest-side, ${tier.glow}66, ${tier.glow}1a 55%, ${tier.glow}00 72%)` }} />
-              {PARTICLE_POS.slice(0, tier.particles).map(([dx, dy, sz], i) => (
+              <div aria-hidden="true" style={{ position: 'absolute', width: 196, height: 196, borderRadius: '50%', pointerEvents: 'none', background: `radial-gradient(closest-side, ${grade.glow}66, ${grade.glow}1a 55%, ${grade.glow}00 72%)` }} />
+              {PARTICLE_POS.slice(0, grade.particles).map(([dx, dy, sz], i) => (
                 <div key={i} aria-hidden="true" style={{ position: 'absolute', left: '50%', top: '50%', transform: `translate(${dx}px, ${dy}px)`, pointerEvents: 'none' }}>
                   <div style={{ animation: `tg-sparkle ${2.4 + i * 0.35}s ease-in-out ${i * 0.45}s infinite` }}>
-                    <svg viewBox="0 0 24 24" width={sz} height={sz} aria-hidden="true"><path d="M12 0 L14 10 L24 12 L14 14 L12 24 L10 14 L0 12 L10 10 Z" fill={tier.spark} /></svg>
+                    <svg viewBox="0 0 24 24" width={sz} height={sz} aria-hidden="true"><path d="M12 0 L14 10 L24 12 L14 14 L12 24 L10 14 L0 12 L10 10 Z" fill={grade.spark} /></svg>
                   </div>
                 </div>
               ))}
-              <img src={tier.emblem} alt="" width={132} height={132} style={{ position: 'relative', filter: `drop-shadow(0 8px 18px ${tier.glow}55)` }} />
+              <img src={grade.emblem} alt="" width={132} height={132} style={{ position: 'relative', filter: `drop-shadow(0 8px 18px ${grade.glow}55)` }} />
             </div>
-            {/* 단계명 */}
-            <span style={{ ...TYPE.title, color: TG.INK }}>{tier.name}</span>
-            {/* 진행 — 누적 XP 게이지 */}
-            {tier.isMax ? (
-              <span style={{ ...TYPE.labelSm, color: '#E0A21A' }}>최고 등급 달성 · 누적 {xp.toLocaleString()} XP</span>
-            ) : (
-              <>
-                <div style={{ width: 220, height: 8, borderRadius: RADIUS.xs, background: TG.TRACK, overflow: 'hidden' }}>
-                  <div style={{ width: `${Math.round(tier.progress * 100)}%`, height: '100%', borderRadius: RADIUS.xs, background: TG.CORAL_GRAD, transition: 'width .4s ease' }} />
-                </div>
-                <span style={{ ...TYPE.meta, color: TG.SUB }}>{tier.examReady ? '승급 시험 준비 완료!' : `다음 등급까지 ${tier.toNext.toLocaleString()} XP`} · 누적 {xp.toLocaleString()} XP</span>
-              </>
-            )}
-            {/* 승급 시험 CTA — 게이지 만땅(examReady)일 때만. 합격하면 등급 상승. */}
-            {tier.examReady && onExam && (
-              <button onClick={() => { playSfx('button'); onExam(); }} className="tg-press" style={{
-                marginTop: SPACE.xl, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: SPACE.md, padding: '12px 22px', borderRadius: RADIUS.lg,
-                border: 'none', cursor: 'pointer', background: TG.CORAL_GRAD, boxShadow: '0 8px 18px rgba(242,72,76,0.3)', ...TOUCH_OPT,
-              }}>
-                <MedalIcon size={19} weight="fill" color="#fff" />
-                <span style={{ ...TYPE.btn, color: '#fff' }}>승급 시험 보기</span>
-              </button>
-            )}
+            {/* 등급명 (+ 최고 등급) — 승급은 사다리의 '보스(승급시험)'로만 */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
+              <span style={{ ...TYPE.title, color: TG.INK }}>{grade.name}</span>
+              {grade.isMax && <span style={{ ...TYPE.labelSm, color: '#E0A21A' }}>· 최고 등급</span>}
+            </div>
+            {/* 레벨(Lv.N) — 누적 XP 성장. 등급과 별개로 계속 오름. */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.md, marginTop: SPACE.xxs }}>
+              <span style={{ ...TYPE.h2, color: TG.CORAL_DK, whiteSpace: 'nowrap' }}>Lv.{lv.level}</span>
+              <div style={{ width: 176, height: 8, borderRadius: RADIUS.xs, background: TG.TRACK, overflow: 'hidden' }}>
+                <div style={{ width: `${Math.round(lv.progress * 100)}%`, height: '100%', borderRadius: RADIUS.xs, background: TG.CORAL_GRAD, transition: 'width .4s ease' }} />
+              </div>
+            </div>
+            <span style={{ ...TYPE.meta, color: TG.SUB }}>다음 레벨까지 {lv.toNext.toLocaleString()} XP · 누적 {xp.toLocaleString()} XP</span>
           </div>
         </Reveal>
         <Reveal i={2} style={{ display: 'block', marginTop: SPACE.x4 }}><CoachBubble text={need ? '약한 단어부터 복습해 볼까요?' : '잘하고 있어요! 계속 도전해요'} /></Reveal>

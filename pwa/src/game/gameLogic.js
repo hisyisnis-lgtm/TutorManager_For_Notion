@@ -125,6 +125,27 @@ export function bossState(token, tierIdx, rank = 0) {
   return isTierCleared(token, DIFFICULTIES[tierIdx].id) ? 'ready' : 'locked';
 }
 export function isBossUnlocked(token, tierIdx, rank = 0) { return bossState(token, tierIdx, rank) === 'ready'; }
+
+// ── 보스 사다리 마이그레이션(2026-07-19) ──
+// 기존 유저가 구 스테이지 시스템에서 (isTierCleared로) 이미 연 급을 보스 rank로 1회 승계 — 개편 전 진행 손실 방지.
+// 아래(입문)부터 연속으로 5스테이지 클리어된 급 수 = 승계 rank.
+export function earnedRankFromTiers(token) {
+  let r = 0;
+  for (let i = 0; i < DIFFICULTIES.length; i += 1) {
+    if (isTierCleared(token, DIFFICULTIES[i].id)) r = i + 1; else break;
+  }
+  return r;
+}
+// 1회 마이그레이션 — 플래그 없으면 rank를 max(현재, 급클리어 승계)로 올리고 플래그 세팅. 이후엔 보스로만 오름(신규 진행 자동승급 방지).
+export function migrateRankForBoss(token, currentRank = 0) {
+  const KEY = `game_boss_migrated_${token}`;
+  try {
+    if (localStorage.getItem(KEY)) return currentRank;
+    const earned = earnedRankFromTiers(token);
+    localStorage.setItem(KEY, '1');
+    return Math.max(currentRank, earned);
+  } catch { return currentRank; }
+}
 // 단어 난이도 추정 — 음절 수 지배 + 성조 난이도(3성>경성>2성>1·4성). 강사님 단어가 들어와도 자동 정렬됨.
 export function wordDifficulty(w) {
   const tones = (w && w.tones) || [];

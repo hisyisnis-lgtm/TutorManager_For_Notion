@@ -10,7 +10,7 @@ import {
 import { TG, TYPE, TOUCH_OPT, haptic, isHapticMuted, setHapticMuted, RADIUS, SPACE } from '../tgTokens.js';
 import { TONES } from '../../constants/toneGameWords.js';
 import { ToneMark, useCountUp } from '../tgWidgets.jsx';
-import { displayTier } from '../gameXp.js';
+import { displayTier, levelInfo } from '../gameXp.js';
 import { play as playSfx, isSfxMuted, setSfxMuted } from '../tgSfx.js';
 import { isBgmMuted, setBgmMuted, startBgm } from '../tgBgm.js';
 import { FigmaScreen, EmberRise } from './shared.jsx';
@@ -518,7 +518,8 @@ function HomeMenu({ onClose, onHelp, onLogin, isMemberUser, memberName, onEditNi
 // 탭 → 게스트·회원 공통으로 프로필 모달(로그인 상태·닉네임·수정·등급·SNS로그인)을 먼저 띄운다.
 function MyInfo({ tier, nickname, onClick }) {
   const displayName = nickname || '게스트'; // 게스트(로그인 안 함) 폴백
-  const pct = tier.isMax ? 100 : Math.round(tier.progress * 100);
+  const lv = levelInfo(tier.xp || 0);       // 게이지 = 레벨(Lv.N) 진행. 엠블럼 = 등급(보스 클리어).
+  const pct = Math.round(lv.progress * 100);
   return (
     <button onClick={onClick} className="tg-press" data-coach="tg-myinfo"
       aria-label="내 프로필 열기" style={{
@@ -526,11 +527,7 @@ function MyInfo({ tier, nickname, onClick }) {
       padding: '0 14px 0 9px', borderRadius: RADIUS.btn, background: '#fff', border: 'none', cursor: 'pointer',
       boxShadow: '0 5px 14px rgba(43,39,48,0.07)', zIndex: 5, ...TOUCH_OPT,
     }}>
-      {/* 승급 시험 준비 완료 — 게이지 만땅 시 배지로 알림(탭하면 프로필 모달에서 응시) */}
-      {tier.examReady && (
-        <span aria-hidden="true" style={{ position: 'absolute', top: -7, right: -7, padding: '3px 9px', borderRadius: RADIUS.md, background: TG.CORAL_GRAD, boxShadow: '0 3px 8px rgba(242,72,76,0.35)', ...TYPE.micro, fontWeight: 800, fontSize: 10.5, color: '#fff', whiteSpace: 'nowrap', animation: 'tg-cta-pulse 2s ease-in-out infinite' }}>승급 시험</span>
-      )}
-      {/* 앰블럼 — 자체 완결 배지라 소켓(색 사각) 제거로 정리. 등급명은 앰블럼이 대표(카드엔 텍스트 생략). */}
+      {/* 앰블럼 — 자체 완결 배지라 소켓(색 사각) 제거로 정리. 등급명은 앰블럼이 대표(카드엔 텍스트 생략). 승급은 사다리 보스로 이관 → 여기 시험 배지 없음. */}
       <img src={tier.emblem} alt="" width={48} height={48} style={{ display: 'block', flexShrink: 0 }} />
       {/* 닉네임(전체 폭 한 줄, 길면 말줄임) + 등급 게이지. */}
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: SPACE.md }}>
@@ -684,25 +681,6 @@ function ToneCard({ tone, status, level, onClose }) {
   );
 }
 
-// 승급 시험 권유 모달 — 자격이 새로 생겨 홈에 돌아왔을 때 1회. '지금 응시' 또는 '나중에'.
-function ExamPromptModal({ tier, onExam, onClose }) {
-  return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 62, background: 'rgba(26,16,20,0.55)', backdropFilter: 'blur(2px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: SPACE.x4, ...TOUCH_OPT }}>
-      <div className="tg-enter" onClick={(e) => e.stopPropagation()} style={{
-        width: '100%', maxWidth: 320, background: TG.CARD, borderRadius: RADIUS.xxl, padding: '24px 22px 20px',
-        boxShadow: '0 20px 50px rgba(26,16,20,0.3)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: SPACE.sm,
-      }}>
-        <img src={tier.emblem} alt="" width={64} height={64} style={{ display: 'block', filter: `drop-shadow(0 4px 10px ${tier.glow}66)` }} />
-        <span style={{ ...TYPE.head, color: TG.INK, marginTop: SPACE.xs }}>승급 시험 준비 완료!</span>
-        <p style={{ margin: '2px 0 14px', textAlign: 'center', ...TYPE.sub, lineHeight: 1.5, color: TG.SUB }}>경험치가 가득 찼어요. 승급 시험에 도전해 등급을 올려볼까요?</p>
-        <div style={{ display: 'flex', gap: SPACE.lg, width: '100%' }}>
-          <button onClick={onClose} className="tg-press" style={{ flex: 1, height: 50, borderRadius: RADIUS.lg, border: '1.5px solid #ebe5de', background: '#fff', cursor: 'pointer', ...TYPE.btnSm, color: TG.SUB, ...TOUCH_OPT }}>나중에</button>
-          <button onClick={() => { onClose(); onExam && onExam(); }} className="tg-press" style={{ flex: 1.4, height: 50, borderRadius: RADIUS.lg, border: 'none', background: TG.CORAL_GRAD, boxShadow: '0 8px 18px rgba(242,72,76,0.3)', cursor: 'pointer', ...TYPE.btnSm, color: '#fff', ...TOUCH_OPT }}>지금 응시</button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export function HomeScreen({
   streak = 0, streakLongest = 0, freezes = 0, xp = 0, rank = 0, onExam, examPrompt = false, onExamPromptClose, toneLevels = {}, toneStatus = {}, coachTone = null, celebrateTone = null,
@@ -779,7 +757,7 @@ export function HomeScreen({
   }, [introActive, coachTone]);
   const aux = [
     { key: 'play', Icon: HandWavingIcon, label: '놀러가기', color: TG.CORAL_DK, tint: 'rgba(242,72,76,0.12)', onClick: openPlay, dot: playDot },
-    { key: 'rank', Icon: MedalIcon, label: '등급', color: '#F0A91E', tint: 'rgba(240,169,30,0.14)', onClick: onMastery, dot: tier.examReady }, // 승급 시험 가능
+    { key: 'rank', Icon: MedalIcon, label: '등급', color: '#F0A91E', tint: 'rgba(240,169,30,0.14)', onClick: onMastery, dot: false }, // 승급은 사다리 보스에서(등급 화면은 정보 표시)
     { key: 'ach', Icon: TrophyIcon, label: '업적', color: '#8B5CF6', tint: 'rgba(139,92,246,0.13)', onClick: () => onAchievements && onAchievements(), dot: achDot }, // 미확인 획득
   ];
   return (
@@ -920,13 +898,9 @@ export function HomeScreen({
 
       {cardTone != null && <ToneCard tone={TONES.find((t) => t.num === cardTone)} status={toneStatus[cardTone]} level={Math.min(5, (toneLevels[cardTone] || {}).lv || 1)} onClose={() => setCardTone(null)} />}
       {streakOpen && <StreakSheet streak={streak} longest={streakLongest} freezes={freezes} onClose={() => setStreakOpen(false)} />}
-      {/* 승급 시험 권유 — 자격이 새로 생겨 홈에 돌아왔을 때. 전환 완료 + 레벨 스포트라이트·코치와 안 겹치게. */}
-      {examPrompt && homeReady && revealIdx < 0 && !coach.visible && (
-        <ExamPromptModal tier={tier} onExam={onExam} onClose={() => onExamPromptClose && onExamPromptClose()} />
-      )}
       {profileOpen && <ProfileModal tier={tier} nickname={nickname} isGuest={isGuest} isMemberUser={isMemberUser} userId={studentToken}
         onEditNickname={onEditNickname ? () => { setProfileOpen(false); setNickEditOpen(true); } : null}
-        onExam={onExam && tier.examReady ? () => { setProfileOpen(false); onExam(); } : null}
+        onExam={null}
         onLogout={onLogout} onMastery={() => { setProfileOpen(false); onMastery && onMastery(); }}
         onClose={() => setProfileOpen(false)} />}
       {menuOpen && <HomeMenu onClose={() => setMenuOpen(false)} onHelp={onHelp} onLogin={onLogin} isMemberUser={isMemberUser} memberName={memberName} onEditNickname={onEditNickname ? () => setNickEditOpen(true) : null} onLogout={onLogout} onExit={onExit} onDebugIntro={onDebugIntro} onDebugScore={() => setDebugScoreOpen(true)} />}

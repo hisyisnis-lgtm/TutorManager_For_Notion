@@ -6,6 +6,7 @@ import {
   overallBestFromLocal, overallBestFromServer,
   loadEndlessBest, saveEndlessBest, headlineBest, resolveEndOutcome,
   themeStars, STAGES, saveStageScore, isStageUnlocked, bossState,
+  earnedRankFromTiers, migrateRankForBoss,
 } from './gameLogic.js';
 import { saveBest } from './tgTokens.js';
 
@@ -114,6 +115,26 @@ describe('보스 사다리 — 스테이지 해제(rank 게이트) / bossState',
     expect(bossState(TOKEN, 0, 0)).toBe('ready');
     expect(bossState(TOKEN, 0, 1)).toBe('beaten'); // 이미 통과
     expect(bossState(TOKEN, 1, 0)).toBe('prev');   // 실전 보스는 입문 보스부터
+  });
+});
+
+describe('보스 마이그레이션 — 기존 유저 급클리어 → rank 승계(1회)', () => {
+  const S = (tier, b) => STAGES.find((s) => s.tier === tier && s.bandIndex === b);
+  const clearTier = (tier) => { for (let b = 0; b < 5; b++) saveStageScore(TOKEN, S(tier, b).id, 99999); };
+  it('earnedRankFromTiers = 아래(입문)부터 연속 클리어된 급 수', () => {
+    expect(earnedRankFromTiers(TOKEN)).toBe(0);
+    clearTier('easy'); expect(earnedRankFromTiers(TOKEN)).toBe(1);
+    clearTier('normal'); expect(earnedRankFromTiers(TOKEN)).toBe(2);
+  });
+  it('migrateRankForBoss는 1회만 승계 — 이후 신규 클리어엔 미적용(보스로만)', () => {
+    clearTier('easy');
+    expect(migrateRankForBoss(TOKEN, 0)).toBe(1); // 입문 클리어 → rank1 승계 + 플래그
+    clearTier('normal');                          // 이후 실전 클리어해도
+    expect(migrateRankForBoss(TOKEN, 1)).toBe(1); // 플래그 있어 자동승급 없음
+  });
+  it('기존 rank가 승계값보다 높으면 유지(하락 없음)', () => {
+    clearTier('easy'); // earned=1
+    expect(migrateRankForBoss(TOKEN, 3)).toBe(3); // max(3,1)
   });
 });
 

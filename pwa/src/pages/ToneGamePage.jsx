@@ -33,7 +33,7 @@ import {
   getEndlessTimeLimit, computeScore, resolveEndOutcome,
   loadEndlessBest, saveEndlessBest, headlineBest, isEndlessUnlocked,
   ENDLESS_UNLOCK_REVEAL, STAGES, stageRoundPool, saveStageScore, unlockedTrainingPool, isStageUnlocked,
-  stageScoreOf, stageOutcome,
+  stageScoreOf, stageOutcome, migrateRankForBoss,
 } from '../game/gameLogic.js';
 import { FigmaScreen, CountdownVisual, CdWaveEdge, GameToast, SettingsModal } from '../game/screens/shared.jsx';
 import { SplashScreen } from '../game/screens/SplashScreen.jsx';
@@ -271,9 +271,14 @@ export default function ToneGamePage() {
     ? Number(qs('xp') || 0)
     : seedXpIfMissing(studentToken, Math.max(earTier(loadMasteredSync(studentToken)).idx, loadTierPeak(studentToken)))));
   // 등급(rank) — XP와 분리(승급 시험 합격으로만 오름). 최초엔 현재 XP 도달 등급으로 시딩(Phase1 자동승급 승계).
-  const [rank, setRank] = useState(() => (isPreview
-    ? (qs('rank') != null ? Number(qs('rank')) : xpTier(Number(qs('xp') || 0)).idx)
-    : seedRankIfMissing(studentToken, loadXp(studentToken) ?? 0)));
+  const [rank, setRank] = useState(() => {
+    if (isPreview) return (qs('rank') != null ? Number(qs('rank')) : xpTier(Number(qs('xp') || 0)).idx);
+    // 보스 사다리: 기존 rank(구 XP시험 승계)에 급클리어 승계를 1회 반영(개편 전 연 급 유지). 이후엔 보스로만 오름.
+    const seeded = seedRankIfMissing(studentToken, loadXp(studentToken) ?? 0);
+    const migrated = migrateRankForBoss(studentToken, seeded);
+    if (migrated !== seeded) saveRank(studentToken, migrated);
+    return migrated;
+  });
   const [examResult, setExamResult] = useState(null); // 승급 시험 결과 {correct,total,passed}
   const [examPromptPending, setExamPromptPending] = useState(() => isPreview && qs('examprompt') === '1'); // 자격 새로 생김 → 홈 복귀 시 응시 권유 모달
   const [xpGain, setXpGain] = useState(null); // 이번 판 XP 획득 연출용 {gained, prevXp, newXp} (결과화면)

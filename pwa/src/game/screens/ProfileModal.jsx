@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { PencilSimpleIcon, XIcon, CaretRightIcon, MedalIcon, CopyIcon, CheckIcon } from '@phosphor-icons/react';
 import { TG, TYPE, TOUCH_OPT, RADIUS, SPACE } from '../tgTokens.js';
 import { startSocialLogin, KakaoLogo, GoogleLogo } from './LoginScreen.jsx';
+import { levelInfo } from '../gameXp.js';
 import { ModalCard } from './shared.jsx';
 
 export function ProfileModal({
@@ -13,7 +14,8 @@ export function ProfileModal({
   onEditNickname, onExam, onLogout, onMastery, onClose,
 }) {
   const displayName = nickname || '게스트';
-  const pct = tier.isMax ? 100 : Math.round(tier.progress * 100);
+  const lv = levelInfo(tier.xp || 0);           // 레벨 = 누적 XP 성장(Lv.N). 등급(tier.emblem/name)은 보스 클리어.
+  const pct = Math.round(lv.progress * 100);
   const [copied, setCopied] = useState(false);
   const copyId = async () => {
     if (!userId) return;
@@ -64,21 +66,13 @@ export function ProfileModal({
                 </button>
               )}
             </div>
-            <span style={{ ...TYPE.labelSm, color: TG.SUB }}>{tier.name}</span>
+            <span style={{ ...TYPE.labelSm, color: TG.SUB }}>{tier.name}{tier.isMax ? ' · 최고 등급' : ''} · Lv.{lv.level}</span>
             <div style={{ marginTop: SPACE.md, width: '100%', height: 6, borderRadius: RADIUS.xs, background: TG.BORDER, overflow: 'hidden' }}>
               <div style={{ width: `${pct}%`, height: '100%', borderRadius: RADIUS.xs, background: TG.CORAL_GRAD, transition: 'width .5s ease' }} />
             </div>
-            <span style={{ display: 'block', marginTop: SPACE.sm, ...TYPE.meta, color: TG.SUB }}>{tier.isMax ? '최고 등급이에요 🎉' : (tier.examReady ? '승급 시험을 볼 수 있어요!' : `다음 등급까지 ${tier.toNext.toLocaleString()} XP`)}</span>
+            <span style={{ display: 'block', marginTop: SPACE.sm, ...TYPE.meta, color: TG.SUB }}>다음 레벨까지 {lv.toNext.toLocaleString()} XP</span>
           </div>
         </div>
-
-        {/* 승급 시험 CTA — 게이지 만땅(examReady)일 때만. 합격하면 등급 상승. */}
-        {onExam && (
-          <button onClick={onExam} className="tg-press" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: SPACE.md, width: '100%', height: 52, borderRadius: RADIUS.lg, border: 'none', cursor: 'pointer', background: TG.CORAL_GRAD, boxShadow: '0 8px 18px rgba(242,72,76,0.3)', ...TOUCH_OPT }}>
-            <MedalIcon size={19} weight="fill" color="#fff" />
-            <span style={{ ...TYPE.btnSm, color: '#fff' }}>승급 시험 보기</span>
-          </button>
-        )}
 
         {/* 등급 자세히 — 기존 카드 탭(→ 등급 화면) 동선 보존 */}
         {onMastery && (

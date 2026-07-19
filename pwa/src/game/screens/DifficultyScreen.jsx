@@ -15,8 +15,6 @@ import { useTabTip } from '../../hooks/useTabTip.js';
 // 스테이지 난이도 아이콘 — 밴드(1~5)마다 강도가 세짐(새싹→잎→불꽃→번개→왕관). 급은 색(DIFF_COLORS)으로 구분.
 const STAGE_ICONS = [PlantIcon, LeafIcon, FlameIcon, LightningIcon, CrownIcon];
 const SLOT_H = 92; // 슬롯 높이(균일)
-// 보스(승급시험) 공통 골드 톤 — 급 색과 별개로 '관문'임을 강조.
-const BOSS_C = { accent: '#E0951A', tint: 'rgba(240,169,30,0.16)', glow: 'rgba(240,169,30,0.34)' };
 // 사다리 = 각 급 [5스테이지 + 보스]. 세로 배치용 reverse(위=고수 보스, 아래=입문1). 위로 오를수록 어려워짐.
 const LADDER = BOSSES.flatMap((boss) => [...STAGES.filter((s) => s.tier === boss.tier), boss]);
 const V_LADDER = [...LADDER].reverse();
@@ -161,7 +159,7 @@ export function DifficultyScreen({ studentToken, rank = 0, onSelect, onStart, on
           const bs = boss ? bsOf(s) : null;
           const beaten = bs === 'beaten';
           const selectable = boss ? bs === 'ready' : isStageUnlocked(studentToken, s, rank);
-          const c = boss ? BOSS_C : DIFF_COLORS[s.tier];
+          const c = DIFF_COLORS[s.tier]; // 보스도 급 색(입문=초록 등). 보스 구분은 메달 아이콘·'보스' 라벨로.
           const Icon = boss ? MedalIcon : (STAGE_ICONS[s.bandIndex] || LeafIcon);
           const stars = (!boss && selectable) ? stageStarFlags(studentToken, s) : null;
           const best = (!boss && selectable) ? stageScoreOf(studentToken, s.id) : 0;
@@ -296,7 +294,7 @@ export function DifficultyScreen({ studentToken, rank = 0, onSelect, onStart, on
           }}
           className="tg-press" style={{
             width: '100%', height: 62, borderRadius: RADIUS.xl, border: 'none', cursor: 'pointer',
-            background: focusedSelectable ? TG.CORAL_GRAD : (focusedBs === 'beaten' ? BOSS_C.accent : TG.MUTED),
+            background: focusedSelectable ? TG.CORAL_GRAD : (focusedBs === 'beaten' ? ((DIFF_COLORS[focused.tier] || {}).accent || TG.SUN) : TG.MUTED),
             boxShadow: focusedSelectable ? '0px 10px 22px rgba(242,72,76,0.34)' : 'none',
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: SPACE.md, ...TOUCH_OPT,
           }}>
