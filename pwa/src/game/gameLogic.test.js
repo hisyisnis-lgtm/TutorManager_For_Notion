@@ -5,7 +5,7 @@ import {
   unlockReqText, unlockToastText, bestLabelForKey,
   overallBestFromLocal, overallBestFromServer,
   loadEndlessBest, saveEndlessBest, headlineBest, resolveEndOutcome,
-  themeStars, STAGES, saveStageScore,
+  themeStars, STAGES, saveStageScore, isStageUnlocked, bossState,
 } from './gameLogic.js';
 import { saveBest } from './tgTokens.js';
 
@@ -78,20 +78,42 @@ describe('잠금 사다리 — diffBestScore / isDifficultyUnlocked / isEndlessU
     expect(isDifficultyUnlocked(TOKEN, 'hard')).toBe(true);
   });
 
-  it('무한은 마지막 스테이지(고수5)가 열려야 열림 — 직전 스테이지 별 1개↑', () => {
-    expect(isEndlessUnlocked(TOKEN)).toBe(false);
-    saveBest(TOKEN, GAMEKEY.hard, { bestScore: UNLOCK_THRESHOLD }); // 티어 best만으론 이제 안 열림
-    expect(isEndlessUnlocked(TOKEN)).toBe(false);
-    const prevStage = STAGES[STAGES.length - 2]; // 고수4
-    saveStageScore(TOKEN, prevStage.id, 99999);  // 고수4 별 획득 → 고수5(=무한) 해제
-    expect(isEndlessUnlocked(TOKEN)).toBe(true);
+  it('무한은 고수 보스까지 통과(rank=보스수 3)해야 열림', () => {
+    expect(isEndlessUnlocked(TOKEN, 0)).toBe(false);
+    expect(isEndlessUnlocked(TOKEN, 2)).toBe(false); // 실전 보스까지만
+    expect(isEndlessUnlocked(TOKEN, 3)).toBe(true);  // 고수 보스 통과
   });
 
   it('사다리는 한 칸씩만 — 초급만 깨도 고급/무한은 잠김', () => {
     saveBest(TOKEN, GAMEKEY.easy, { bestScore: 5000 });
     expect(isDifficultyUnlocked(TOKEN, 'normal')).toBe(true);
     expect(isDifficultyUnlocked(TOKEN, 'hard')).toBe(false);
-    expect(isEndlessUnlocked(TOKEN)).toBe(false);
+    expect(isEndlessUnlocked(TOKEN, 0)).toBe(false);
+  });
+});
+
+describe('보스 사다리 — 스테이지 해제(rank 게이트) / bossState', () => {
+  const S = (tier, b) => STAGES.find((s) => s.tier === tier && s.bandIndex === b);
+  it('입문(첫 급) 스테이지는 rank 무관하게 항상 열림', () => {
+    expect(isStageUnlocked(TOKEN, S('easy', 0), 0)).toBe(true);
+  });
+  it('급 내 스테이지는 직전 스테이지 별1↑로 열림(rank 무관)', () => {
+    expect(isStageUnlocked(TOKEN, S('easy', 1), 0)).toBe(false);
+    saveStageScore(TOKEN, S('easy', 0).id, 99999); // 입문1 별
+    expect(isStageUnlocked(TOKEN, S('easy', 1), 0)).toBe(true);
+  });
+  it('다음 급 첫 스테이지는 이전 급 보스 통과(rank)로만 열림', () => {
+    expect(isStageUnlocked(TOKEN, S('normal', 0), 0)).toBe(false); // 입문 보스 전
+    expect(isStageUnlocked(TOKEN, S('normal', 0), 1)).toBe(true);  // 입문 보스 통과(rank1)
+    expect(isStageUnlocked(TOKEN, S('hard', 0), 1)).toBe(false);   // 실전 보스 전
+    expect(isStageUnlocked(TOKEN, S('hard', 0), 2)).toBe(true);    // 실전 보스 통과(rank2)
+  });
+  it('bossState: 급 미클리어=locked, 5스테이지 클리어=ready, rank 넘으면 beaten, 앞 급=prev', () => {
+    expect(bossState(TOKEN, 0, 0)).toBe('locked'); // 입문 급 미클리어
+    for (let b = 0; b < 5; b++) saveStageScore(TOKEN, S('easy', b).id, 99999); // 입문 5스테이지 별
+    expect(bossState(TOKEN, 0, 0)).toBe('ready');
+    expect(bossState(TOKEN, 0, 1)).toBe('beaten'); // 이미 통과
+    expect(bossState(TOKEN, 1, 0)).toBe('prev');   // 실전 보스는 입문 보스부터
   });
 });
 

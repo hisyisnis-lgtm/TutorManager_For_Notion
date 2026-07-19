@@ -127,3 +127,31 @@ export function examFailXp(rank, totalXp) {
   const penalty = Math.round(Math.max(0, nextMin - curMin) * EXAM_FAIL_PENALTY);
   return Math.max(curMin, Math.floor(totalXp || 0) - penalty);
 }
+
+// ── 레벨(Lv.N) — 누적 XP 기반 연속 성장(2026-07-19 보스 사다리 개편). 등급(rank)과 별개 축. ──
+//  등급 = 보스(승급시험) 클리어로만 오르는 실력 관문(EAR_TIERS 4단계). 레벨 = 플레이할수록 계속 오르는 성장 숫자(상한 없음).
+export const LVL_BASE = 500;    // Lv1→Lv2 필요 XP
+export const LVL_GROWTH = 150;  // 레벨마다 필요 XP 증가폭(점증) — 튜닝값
+// Lv.L 도달 누적 XP(L≥1, Lv1=0). 증분 increment(k)=BASE+(k-1)*GROWTH의 누적.
+export function xpForLevel(L) {
+  const n = Math.max(1, Math.floor(L || 1)) - 1;
+  return n * LVL_BASE + (LVL_GROWTH * (n * (n - 1))) / 2;
+}
+// 누적 XP → 레벨(≥1) + 게이지 정보(현재 Lv → 다음 Lv까지).
+export function levelInfo(totalXp = 0) {
+  const xp = Math.max(0, Math.floor(totalXp || 0));
+  let L = 1;
+  while (L < 999 && xpForLevel(L + 1) <= xp) L += 1; // 상한 가드
+  const curMin = xpForLevel(L);
+  const nextMin = xpForLevel(L + 1);
+  const span = Math.max(1, nextMin - curMin);
+  return { level: L, curMin, nextMin, toNext: Math.max(0, nextMin - xp), progress: Math.min(1, Math.max(0, (xp - curMin) / span)), xp };
+}
+
+// ── 등급(rank) 표시 — rank(=깬 보스 수)로 EAR_TIERS 엠블럼 결정. XP 게이지·examReady 없음(시험은 보스가 게이트). ──
+export function rankInfo(rank = 0) {
+  const idx = clampRank(rank);
+  const cur = EAR_TIERS[idx];
+  const next = EAR_TIERS[idx + 1] || null;
+  return { idx, name: cur.name, emblem: cur.emblem, glow: cur.glow, spark: cur.spark, particles: cur.particles, next, isMax: !next };
+}

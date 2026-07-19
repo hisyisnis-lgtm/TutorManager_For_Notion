@@ -4,6 +4,7 @@ import {
   gameXpGain, xpTier, XP_TIER_MIN, loadXp, saveXp, addXp, mergeXp, seedXpIfMissing,
   loadRank, saveRank, mergeRank, seedRankIfMissing, displayTier,
   examPassed, examFailXp, EXAM_QUESTIONS, EXAM_PASS_RATIO,
+  levelInfo, rankInfo, xpForLevel,
 } from './gameXp.js';
 
 beforeEach(() => { localStorage.clear(); });
@@ -151,5 +152,35 @@ describe('승급 시험 판정', () => {
     expect(examFailXp(1, XP_TIER_MIN[2])).toBe(XP_TIER_MIN[2] - penalty);
     // 차감이 base 아래로 가면 base로 바닥
     expect(examFailXp(1, XP_TIER_MIN[1] + 10)).toBe(XP_TIER_MIN[1]);
+  });
+});
+
+describe('레벨(Lv.N) — 누적 XP 연속 성장', () => {
+  it('Lv1=0에서 시작, 점증 커브로 레벨업', () => {
+    expect(levelInfo(0).level).toBe(1);
+    expect(xpForLevel(1)).toBe(0);
+    expect(levelInfo(xpForLevel(2)).level).toBe(2);
+    expect(levelInfo(xpForLevel(2) - 1).level).toBe(1); // 임계 직전
+    expect(levelInfo(xpForLevel(5)).level).toBe(5);
+    expect(xpForLevel(3)).toBeGreaterThan(xpForLevel(2)); // 점증
+    expect(xpForLevel(4) - xpForLevel(3)).toBeGreaterThan(xpForLevel(3) - xpForLevel(2)); // 증가폭 커짐
+  });
+  it('게이지 progress는 0~1, toNext는 다음 레벨까지', () => {
+    const mid = Math.floor((xpForLevel(3) + xpForLevel(4)) / 2);
+    const li = levelInfo(mid);
+    expect(li.level).toBe(3);
+    expect(li.progress).toBeGreaterThan(0);
+    expect(li.progress).toBeLessThan(1);
+    expect(li.toNext).toBe(xpForLevel(4) - mid);
+  });
+});
+
+describe('rankInfo — 등급(보스 기반)', () => {
+  it('rank로 EAR_TIERS 엠블럼 결정, 범위 clamp', () => {
+    expect(rankInfo(0).idx).toBe(0);
+    expect(rankInfo(0).isMax).toBe(false);
+    expect(rankInfo(3).isMax).toBe(true);
+    expect(rankInfo(99).idx).toBe(3); // 상한 clamp
+    expect(rankInfo(-5).idx).toBe(0); // 하한 clamp
   });
 });

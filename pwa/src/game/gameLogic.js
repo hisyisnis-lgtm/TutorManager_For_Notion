@@ -39,8 +39,9 @@ export function isDifficultyUnlocked(token, diffId) {
   if (idx === 0) return true;
   return diffBestScore(token, DIFFICULTIES[idx - 1].id) >= UNLOCK_THRESHOLD;
 }
-// 무한 모드 해제 = 마지막 스테이지(고수5)가 열림 = 사다리 전체 통과(2026-07-18 사용자 결정, 구 '고수 티어 1000점' 폐기).
-export function isEndlessUnlocked(token) { return isStageUnlocked(token, STAGES[STAGES.length - 1]); }
+// 무한 모드 해제 = 마지막 급(고수) '보스'까지 통과 = rank가 보스 수(DIFFICULTIES.length=3)에 도달(2026-07-19 보스 사다리 개편, 구 '고수5 스테이지 해제' 폐기).
+//  token은 호출부 시그니처 호환용(현재 미사용) — 해제는 순수 rank 함수.
+export function isEndlessUnlocked(token, rank = 0) { return rank >= DIFFICULTIES.length; } // eslint-disable-line no-unused-vars
 function prevDiffLabel(diffId) {
   const idx = DIFFICULTIES.findIndex((d) => d.id === diffId);
   return idx > 0 ? DIFFICULTIES[idx - 1].label : null;
@@ -106,6 +107,24 @@ export function tierClearedCount(token, tierId) {
 export function isTierCleared(token, tierId) {
   return tierClearedCount(token, tierId) >= STAGES_PER_TIER;
 }
+
+// ── 보스(급 관문 = 승급시험, 2026-07-19 보스 사다리) ─────
+// 각 급 끝의 보스 = 승급시험. 급 5스테이지를 다 깨면(isTierCleared) 응시 가능, 합격하면 rank+1 → 다음 급 해제 + 등급↑.
+// rank(=깬 보스 수, gameXp에 저장)로 진행 인코딩: 급 idx i 보스 통과 ⟺ rank > i. 보스 3개로 등급(rank) 0→3 구동.
+export const BOSSES = DIFFICULTIES.map((d, i) => ({
+  tier: d.id, tierLabel: d.label, tierIdx: i, kind: 'boss',
+  id: `${d.id}-boss`, label: `${d.label} 보스`,
+  gameKey: d.gameKey, timeMultiplier: d.timeMultiplier,
+}));
+export function bossOfTier(tierId) { return BOSSES.find((b) => b.tier === tierId) || null; }
+export function bossTierIdx(tierId) { return DIFFICULTIES.findIndex((d) => d.id === tierId); }
+// 보스 상태: 'beaten'(이미 통과) | 'ready'(급 클리어·응시 가능) | 'locked'(급 미클리어) | 'prev'(앞 급 보스부터)
+export function bossState(token, tierIdx, rank = 0) {
+  if (rank > tierIdx) return 'beaten';
+  if (rank < tierIdx) return 'prev';
+  return isTierCleared(token, DIFFICULTIES[tierIdx].id) ? 'ready' : 'locked';
+}
+export function isBossUnlocked(token, tierIdx, rank = 0) { return bossState(token, tierIdx, rank) === 'ready'; }
 // 단어 난이도 추정 — 음절 수 지배 + 성조 난이도(3성>경성>2성>1·4성). 강사님 단어가 들어와도 자동 정렬됨.
 export function wordDifficulty(w) {
   const tones = (w && w.tones) || [];
@@ -133,11 +152,12 @@ export function stageRoundPool(pool, bandIndex, minCount = 10) {
 }
 function prevStageOf(stage) { return stage.bandIndex > 0 ? STAGES.find((s) => s.tier === stage.tier && s.bandIndex === stage.bandIndex - 1) : null; }
 // 해제 규칙: 급 첫 스테이지=이전 급 별 총합 ≥ TIER_ADVANCE_STARS(초급1은 항상). 그 외=직전 스테이지 별 ≥ 1.
-export function isStageUnlocked(token, stage) {
+export function isStageUnlocked(token, stage, rank = 0) {
   if (stage.bandIndex === 0) {
     const tierIdx = DIFFICULTIES.findIndex((d) => d.id === stage.tier);
     if (tierIdx <= 0) return true;
-    return isTierCleared(token, DIFFICULTIES[tierIdx - 1].id); // 이전 급 전부 클리어
+    // 급 첫 스테이지 = 이전 급 '보스(승급시험)' 통과로 열림. rank=깬 보스 수 → rank>=tierIdx면 이전 급 보스 통과.
+    return rank >= tierIdx;
   }
   const prev = prevStageOf(stage);
   return prev ? stageStars(token, prev) >= 1 : true; // 급 내: 직전 스테이지 별 1개↑
@@ -145,10 +165,10 @@ export function isStageUnlocked(token, stage) {
 // 트레이닝 풀 = 현재 '열린' 스테이지들의 밴드 단어 합집합(hanzi 중복 제거). 진도 따라 자동 확장 —
 //   입문1만 열렸으면 입문1 단어만, 스테이지가 열릴수록 범위가 넓어진다. 잠긴 스테이지 단어는 안 섞임.
 //   wordPoolByDiff: { [tier]: word[] }. 밴드는 티어별 1회만 계산(sort 반복 방지). 선정 가중은 호출부 buildRoundWords가 담당.
-export function unlockedTrainingPool(token, wordPoolByDiff) {
+export function unlockedTrainingPool(token, wordPoolByDiff, rank = 0) {
   const seen = new Set(); const out = []; const bandsByTier = {};
   for (const stage of STAGES) {
-    if (!isStageUnlocked(token, stage)) continue;
+    if (!isStageUnlocked(token, stage, rank)) continue;
     const pool = (wordPoolByDiff && wordPoolByDiff[stage.tier]) || [];
     if (pool.length === 0) continue;
     const bands = bandsByTier[stage.tier] || (bandsByTier[stage.tier] = stageBands(pool));
@@ -159,22 +179,23 @@ export function unlockedTrainingPool(token, wordPoolByDiff) {
   return out;
 }
 // 해제 진행(게이지·문구용) — 급경계=이전 급 클리어 수({kind:'cleared',cur,need:5}), 급내=직전 스테이지 별1 점수({kind:'score',cur,need}). 열려있으면 null.
-export function stageUnlockProgress(token, stage) {
-  if (isStageUnlocked(token, stage)) return null;
+export function stageUnlockProgress(token, stage, rank = 0) {
+  if (isStageUnlocked(token, stage, rank)) return null;
   if (stage.bandIndex === 0) {
+    // 급 첫 스테이지는 이전 급 '보스(승급시험)' 통과로 열림.
     const tierIdx = DIFFICULTIES.findIndex((d) => d.id === stage.tier);
     const prevTier = tierIdx > 0 ? DIFFICULTIES[tierIdx - 1] : null;
-    return { kind: 'cleared', cur: prevTier ? tierClearedCount(token, prevTier.id) : 0, need: STAGES_PER_TIER, prevLabel: prevTier ? prevTier.label : '' };
+    return { kind: 'boss', prevLabel: prevTier ? prevTier.label : '' };
   }
   const prev = prevStageOf(stage);
   const firstStar = stageStarScores(prev.timeMultiplier)[0];
   return { kind: 'score', cur: stageScoreOf(token, prev.id), need: firstStar, prevLabel: prev.label };
 }
-export function stageUnlockToastText(token, stage) {
-  const p = stageUnlockProgress(token, stage);
+export function stageUnlockToastText(token, stage, rank = 0) {
+  const p = stageUnlockProgress(token, stage, rank);
   if (!p) return '';
-  return p.kind === 'cleared'
-    ? `${p.prevLabel} 모두 깨면 열려요`
+  return p.kind === 'boss'
+    ? `${p.prevLabel} 보스를 이기면 열려요`
     : `${p.prevLabel} 별 하나면 열려요`;
 }
 
