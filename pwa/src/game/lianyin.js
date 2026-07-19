@@ -12,3 +12,15 @@ export function findLianyin(tones) {
   }
   return -1;
 }
+
+// 3성 변조 감지 — 인접한 3성+3성의 '첫 3성' 위치를 찾는다.
+// 규범: 3성이 연속되면 앞 3성은 발음상 2성으로 실현(你好 nǐhǎo→ní hǎo). 표기·정답 키는 3성 원형 유지(§2) —
+// 이건 소리만 바뀌므로 '가르치는 연출'용 표시(각인)이지 채점에는 관여하지 않는다.
+// 반환: 첫 3성의 인덱스 i (i가 발음상 2성으로 바뀌는 글자). 없으면 -1.
+export function findToneSandhi(tones) {
+  if (!Array.isArray(tones)) return -1;
+  for (let i = 0; i < tones.length - 1; i++) {
+    if (tones[i] === 3 && tones[i + 1] === 3) return i;
+  }
+  return -1;
+}

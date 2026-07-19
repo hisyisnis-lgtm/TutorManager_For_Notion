@@ -22,7 +22,7 @@ import {
   buildReviewList, masteredCount, buildRoundWords,
 } from '../game/tgWordStats.js';
 import { recordTone, loadToneStats, saveToneStats, weakestTone, toneAccuracy } from '../game/toneStats.js';
-import { findLianyin } from '../game/lianyin.js';
+import { findLianyin, findToneSandhi } from '../game/lianyin.js';
 import { recordPlay, loadStreak, effectiveCurrent, dateKeyKST, loadFreezes } from '../game/streak.js';
 import { syncAchievements, loadAchievements, achievementById, loadReviewMastered, addReviewMastered, markAchievementsSeen, hasUnseenAchievements } from '../game/achievements.js';
 import { loadGuestNickname } from '../game/nickname.js';
@@ -114,6 +114,13 @@ const PREVIEW_LIANYIN = [
   { hanzi: '可能', pinyin: ['kě', 'néng'], tones: [3, 2], meaning: '아마도' },
 ];
 
+// 미리보기(?screen=game&sandhi=1)용 — 3성 변조(3+3 → 앞 3성이 발음상 2성) 모프 연출 검수 전용
+const PREVIEW_SANDHI = [
+  { hanzi: '你好', pinyin: ['nǐ', 'hǎo'], tones: [3, 3], meaning: '안녕' },
+  { hanzi: '老虎', pinyin: ['lǎo', 'hǔ'], tones: [3, 3], meaning: '호랑이' },
+  { hanzi: '水果', pinyin: ['shuǐ', 'guǒ'], tones: [3, 3], meaning: '과일' },
+];
+
 // 미리보기(?screen=mastery)용 샘플 — 복습필요 3 + 마스터 12 (DEV 검수 전용)
 const PREVIEW_MASTERY = (() => {
   const review = [
@@ -161,7 +168,8 @@ export default function ToneGamePage() {
   const [screen, setScreen] = useState(initialScreen); // start | difficulty | game | end | intro | tutorial
   const [paused, setPaused] = useState(false);
   const [words, setWords] = useState(() => (
-    isPreview && qs('lianyin') === '1' ? PREVIEW_LIANYIN
+    isPreview && qs('sandhi') === '1' ? PREVIEW_SANDHI
+      : isPreview && qs('lianyin') === '1' ? PREVIEW_LIANYIN
       : isPreview && (previewScreen === 'game' || previewScreen === 'gameover') ? PREVIEW_WORDS : []));
   const [cdPhase, setCdPhase] = useState(cdPreview ? 'run' : null); // 카운트다운 오버레이 단계: null|'in'|'run'|'out'
   const [cdNum, setCdNum] = useState(3);
@@ -914,10 +922,12 @@ export default function ToneGamePage() {
         // 단어 숙련도 기록(무실수 클리어 여부 + 소요시간)
         if (!isPreview) { recordWordResult(wordStatsRef.current, word.hanzi, { perfect: !hasMistake, timedOut: false, ms: answerTime }); saveWordStats(studentToken, wordStatsRef.current); }
         addTimer(setTimeout(() => setFloatScore(null), 1300));
+        // 교육 단어(3성 변조·연음)는 마크·모프 연출을 충분히 볼 수 있게 완성 후 더 오래 머문 뒤 넘김.
+        const teachDwell = (word && (findToneSandhi(word.tones) >= 0 || findLianyin(word.tones) >= 0)) ? 2400 : 1500;
         addPausable(() => {
           if (!practiceMode && wordIndex + 1 >= words.length) setShowGameOverBeat(true); // 트레이닝(무한)은 스트림 끝에서 순환 → 종료화면 없음
           else { enteredRef.current = []; completedRef.current = false; hintUsedRef.current = false; setWordIndex((i) => practiceMode ? (i + 1) % words.length : i + 1); setCurrentSyl(0); setEntered([]); setCompleted(false); setHasMistake(false); setGaugeOffsetMs(0); }
-        }, 1500);
+        }, teachDwell);
       } else { haptic(8); playSfx('tap'); setCurrentSyl(ne.length); }
     } else {
       setHasMistake(true); setCombo(0); setWrongBtn(toneNum); setShowWrong(true); setWrongShakeKey((k) => k + 1); haptic([40, 30, 40]); playSfx('wrong');
@@ -1047,6 +1057,7 @@ export default function ToneGamePage() {
   const avgMsForResult = answeredCount > 0 ? totalAnswerTime / answeredCount : 0;
   // 연음(반3성) 각인 — 3성+2성 단어면 완성 순간 두 글자 위에 마크 표시. 일반·테마·복습만(연습·무한 제외).
   const wordLianyin = (word && !practiceMode && !endlessMode) ? findLianyin(word.tones) : -1;
+  const wordSandhi = (word && !practiceMode && !endlessMode) ? findToneSandhi(word.tones) : -1;
 
   if (error) return <div style={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: TG.DANGER, fontSize: 14, background: TG.BG }}>정보를 불러오지 못했어요</div>;
   // 소셜 로그인 직후 닉네임 설정 게이트 — 스플래시·홈보다 우선(로그인하면 항상 이 화면부터).
@@ -1229,7 +1240,7 @@ export default function ToneGamePage() {
             combo={combo} comboFlash={comboFlash} floatScore={floatScore} score={score} coachText={coach.text}
             onTone={handleTone} wrongBtn={wrongBtn} wrongShakeKey={wrongShakeKey} onPause={() => setPaused(true)} onEndTraining={endTraining} playReveal={!cdPhase}
             practice={practiceMode} endKind={endKind} listen={wordIsListen} audioOff={audioOff}
-            draw={wordIsDraw} drawExpectedTone={word ? word.tones[currentSyl] : undefined} onDraw={handleTone} drawResetKey={`${runId}-${wordIndex}-${currentSyl}`} lianyinAt={wordLianyin}
+            draw={wordIsDraw} drawExpectedTone={word ? word.tones[currentSyl] : undefined} onDraw={handleTone} drawResetKey={`${runId}-${wordIndex}-${currentSyl}`} lianyinAt={wordLianyin} sandhiAt={wordSandhi}
             onReplay={() => word && speakWord(word)} onCantHear={() => { audioOffRef.current = true; setAudioOff(true); }}
             onHint={(practiceMode || examMode) ? undefined : () => { if (!word) return; hintUsedRef.current = true; speakWord(word); if (!hasMistake) { setHasMistake(true); setCombo(0); } }} hintUsed={hasMistake}
             onSkip={practiceMode ? undefined : skipWord}

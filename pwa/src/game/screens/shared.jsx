@@ -233,6 +233,9 @@ const TONE_GAME_CSS = `
       .tg-lianyin-stroke{ stroke-dasharray:100; stroke-dashoffset:100; animation: tg-lianyin-draw .5s ease-out .12s forwards }
       .tg-lianyin-barb{ opacity:0; animation: tg-lianyin-in .16s ease-out .58s forwards }
       @media (prefers-reduced-motion: reduce){ .tg-lianyin-stroke{ stroke-dashoffset:0; animation:none !important } .tg-lianyin-barb{ opacity:1; animation:none !important } }
+      /* 3성 변조 — 칩이 뒤집히듯 2성으로 팝(변화를 확실히 '느끼게') + 위로 뜨는 '→ 2성' 큐 */
+      @keyframes tg-sandhi-pop { 0%{transform:rotateX(82deg) scale(.82)} 55%{transform:rotateX(0) scale(1.22)} 78%{transform:scale(.96)} 100%{transform:scale(1)} }
+      @keyframes tg-sandhi-cue { 0%{opacity:0;transform:translate(-50%,6px) scale(.85)} 22%{opacity:1;transform:translate(-50%,-7px) scale(1.05)} 70%{opacity:1;transform:translate(-50%,-12px)} 100%{opacity:0;transform:translate(-50%,-26px)} }
       .tg-reveal{ animation: tg-rise .4s cubic-bezier(.22,1,.36,1) both }
       .tg-toast{ animation: tg-toast 1.7s ease both }
       @media (prefers-reduced-motion: reduce){ .tg-reveal{ animation: none !important } }
@@ -423,7 +426,37 @@ export function LianyinMark({ width = 108, color = LIANYIN_COLOR, stroke = 7, an
   );
 }
 
-export function WordCard({ word, entered, currentSyl, completed, timedOut, progressText, combo, comboFlash, floatScore, hideProgress, listen = false, audioOff = false, onReplay, onCantHear, onHint, hintUsed = false, draw = false, lianyinAt = -1, practice = false, onSpeak, onReveal }) {
+// 3성 변조 칩 — 3성+3성에서 앞 3성이 발음상 2성으로 바뀜(你好 nǐ→ní hǎo). 완성 후 3성 칩을 잠깐 보여준 뒤
+// 마크(ˇ→／)·칩 색·라벨을 2성으로 모프해 규칙을 가르친다. 표기·정답 키는 3성 원형 유지(연출 전용, 채점 무관).
+function SandhiToneChip({ big = false }) {
+  const [to2, setTo2] = useState(false);
+  useEffect(() => {
+    if (prefersReducedMotion()) { setTo2(true); return undefined; }
+    const t = setTimeout(() => setTo2(true), 1000); // 정답 연출(3성)이 먼저 인식된 뒤 → 별도 비트로 2성 변조(교육 단어 dwell 2.4s가 이걸 수용)
+    return () => clearTimeout(t);
+  }, []);
+  const ms = big ? 16 : 13;
+  const reduce = prefersReducedMotion();
+  const c3 = TONES.find((t) => t.num === 3)?.color ?? TG.INK;
+  const c2 = TONES.find((t) => t.num === 2)?.color ?? TG.INK;
+  return (
+    <span style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', overflow: 'visible' }}>
+      {/* 변조 순간 위로 뜨는 큐 — 변화를 놓치지 않게 */}
+      {to2 && !reduce && (
+        <span aria-hidden="true" style={{ position: 'absolute', bottom: '108%', left: '50%', whiteSpace: 'nowrap',
+          ...TYPE.labelSm, fontSize: big ? 12 : 11, fontWeight: 800, color: c2, animation: 'tg-sandhi-cue 1.1s ease-out forwards', pointerEvents: 'none' }}>→ 2성</span>
+      )}
+      <span key={to2 ? '2' : '3'} style={{ display: 'inline-flex', alignItems: 'center', gap: SPACE.xs, padding: '3px 8px', borderRadius: RADIUS.pill,
+        background: to2 ? c2 : c3, color: '#fff', transition: 'background .35s ease', transformStyle: 'preserve-3d',
+        animation: reduce ? 'none' : (to2 ? 'tg-sandhi-pop .52s cubic-bezier(.34,1.7,.5,1) both' : 'tg-pop .3s cubic-bezier(.34,1.56,.64,1) both') }}>
+        <ToneMark tone={to2 ? 2 : 3} size={ms} />
+        <span style={{ ...TYPE.labelSm, fontSize: big ? 12 : 10 }}>{to2 ? '2성' : '3성'}</span>
+      </span>
+    </span>
+  );
+}
+
+export function WordCard({ word, entered, currentSyl, completed, timedOut, progressText, combo, comboFlash, floatScore, hideProgress, listen = false, audioOff = false, onReplay, onCantHear, onHint, hintUsed = false, draw = false, lianyinAt = -1, practice = false, onSpeak, onReveal, sandhiAt = -1 }) {
   const listening = listen && !audioOff && !completed && !timedOut; // 듣기 모드: 답하기 전엔 한자 가리고 소리 패널
   // 한자 모드 발음 힌트 — 답하기 전에만, 음소거 아닐 때만. 소리=정답이라 처음 쓰면 콤보가 끊긴다(hintUsed=이미 끊긴 상태면 무료).
   const canHint = onHint && !listening && !completed && !timedOut && !audioOff;
@@ -448,10 +481,14 @@ export function WordCard({ word, entered, currentSyl, completed, timedOut, progr
     const isCurrent = i === currentSyl && !completed;
     // 연음 쌍(3성·2성)은 완성 시 성조칩을 숨기고 그 자리에 연음 마크를 얹는다(칩과 겹침 방지).
     const inLianyin = completed && lianyinAt >= 0 && (i === lianyinAt || i === lianyinAt + 1);
+    // 3성 변조 글자(3+3의 앞 3성) — 완성 시 성조칩이 3성→2성으로 모프.
+    const isSandhi = completed && sandhiAt >= 0 && i === sandhiAt && !inLianyin;
     return (
       <div key={i} style={{ width: colW, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: SPACE.xs }}>
         <div style={{ height: hz > 50 ? 34 : 26, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          {inLianyin ? null : revealed ? (
+          {inLianyin ? null : isSandhi ? (
+            <SandhiToneChip big={hz > 50} />
+          ) : revealed ? (
             <span style={{
               display: 'inline-flex', alignItems: 'center', gap: SPACE.xs, padding: '3px 8px', borderRadius: RADIUS.pill,
               background: toneColor, color: '#fff', animation: `tg-pop .3s cubic-bezier(.34,1.56,.64,1) ${popDelay} both`,
@@ -503,6 +540,7 @@ export function WordCard({ word, entered, currentSyl, completed, timedOut, progr
   const step = colW + gap;
   const totalW = n * colW + (n - 1) * gap;
   const showLianyin = completed && !timedOut && lianyinAt >= 0 && lianyinAt + 1 < n && !twoRow;
+  const showSandhi = completed && !timedOut && sandhiAt >= 0;
   const lyOffset = showLianyin ? (lianyinAt * step + colW / 2 + step / 2 - totalW / 2) : 0;
   const lyW = colW + Math.round(gap) + 22;
 
@@ -562,6 +600,9 @@ export function WordCard({ word, entered, currentSyl, completed, timedOut, progr
           <span key={guide.text} style={{ ...TYPE.label, color: guide.color, transition: `color ${DUR.state} ease`,
             // '정답'은 착탄 순간 등장(발사체 동기) — 진행 안내·시간초과는 즉시
             animation: (completed && !timedOut) ? `tg-pop .25s cubic-bezier(.34,1.56,.64,1) ${popDelay} both` : 'none' }}>{guide.text}</span>
+          {showSandhi && (
+            <span style={{ ...TYPE.labelSm, color: TONES.find((t) => t.num === 2)?.color ?? TG.SUB }}>3성+3성 → 앞은 2성으로 발음</span>
+          )}
           {showLianyin && (
             <span style={{ ...TYPE.labelSm, color: LIANYIN_COLOR }}>연음 · 3성+2성은 반3성으로 이어서</span>
           )}
