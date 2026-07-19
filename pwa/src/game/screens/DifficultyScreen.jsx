@@ -216,7 +216,7 @@ export function DifficultyScreen({ studentToken, rank = 0, onSelect, onStart, on
                     <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: SPACE.md }}>
                       <span style={{ ...TYPE.h1, lineHeight: 1, color: TG.INK }}>{s.label}</span>
                       <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.lg }}>
-                        <StarRow filled={stars.filter(Boolean).length} size={17} gap={5} off="#e4dece" />
+                        <StarRow filled={stars.filter(Boolean).length} size={17} gap={5} off="#e4dece" shine />
                         <span style={{ ...TYPE.num, color: best > 0 ? TG.SUB : TG.MUTED, whiteSpace: 'nowrap' }}>
                           {best > 0 ? `최고 ${best.toLocaleString()}` : '기록 없음'}
                         </span>
@@ -262,7 +262,7 @@ export function DifficultyScreen({ studentToken, rank = 0, onSelect, onStart, on
                       <Icon size={15} weight="fill" color={c.accent} />
                     </div>
                     <span style={{ flex: 1, ...TYPE.label, color: TG.INK_SOFT, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.label}</span>
-                    <StarRow filled={stars.filter(Boolean).length} size={12} gap={2} off="#d8d2c8" style={{ flexShrink: 0 }} />
+                    <StarRow filled={stars.filter(Boolean).length} size={12} gap={2} off="#d8d2c8" shine style={{ flexShrink: 0 }} />
                   </div>
                 ) : (
                   /* 스테이지 간략(잠금) — 자물쇠 + 라벨 */
