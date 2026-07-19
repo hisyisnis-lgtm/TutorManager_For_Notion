@@ -1,9 +1,9 @@
 // 게임 종료 경험치 획득 연출 — 게임오버 비트 다음, 결과화면 전(등급업 연출과 같은 자리·풀스크린 오버레이).
-//  환산 요소(점수·정답·신기록)가 하나씩 '쾅' 팝인하며 총 XP가 오르고 등급 게이지가 차오른다.
-//  게이지가 가득 차는 순간(examReady) '승급 시험 가능' 정보 노출. XP 적립 판(일반·무한·테마)만.
+//  환산 요소(점수·정답·신기록)가 하나씩 '쾅' 팝인하며 총 XP가 오르고 '레벨(Lv.N)' 게이지가 차오른다.
+//  XP는 레벨을 채운다(등급은 사다리 보스로만) — 게이지가 다음 레벨을 넘기면 '레벨 업!'. XP 적립 판(일반·무한·테마)만.
 import { useEffect, useState, useRef, useLayoutEffect } from 'react';
 import { TG, TYPE, haptic, RADIUS, SPACE } from '../tgTokens.js';
-import { displayTier, XP_PER_CORRECT, XP_NEWBEST_BONUS } from '../gameXp.js';
+import { rankInfo, levelInfo, XP_PER_CORRECT, XP_NEWBEST_BONUS } from '../gameXp.js';
 import { play as playSfx } from '../tgSfx.js';
 import { useCountUp } from '../tgWidgets.jsx';
 
@@ -96,13 +96,14 @@ export function XpGainReveal({ gained, prevXp = 0, newXp = 0, score = 0, correct
   const [step, setStep] = useState(0); // 지금까지 '쾅' 공개된 항목 수
   const addedSoFar = sources.slice(0, step).reduce((a, s) => a + s.val, 0);
   const animTotal = useCountUp(addedSoFar, 420); // 각 쾅마다 총 XP가 그 값까지 오름(숫자는 쾅과 함께)
-  const prevT = displayTier(rank, prevXp);
-  const finalT = displayTier(rank, newXp);
+  const grade = rankInfo(rank);            // 등급 — XP 무관(보스로만). 엠블럼 정체성 표시용.
+  const prevLv = levelInfo(prevXp);
+  const finalLv = levelInfo(newXp);
   const done = step >= sources.length;
   // ★게이지·캡션은 쾅쾅쾅이 '다 끝난 뒤'에 채운다 — done 후 짧은 텀을 두고 gaugeFilled.
   const [gaugeFilled, setGaugeFilled] = useState(false);
-  const showT = gaugeFilled ? finalT : prevT;                 // 채우기 전엔 이전 값 유지 → 다 찍힌 뒤 최종값으로
-  const justReady = gaugeFilled && !prevT.examReady && finalT.examReady; // 게이지가 찬 순간 '승급 가능'
+  const showLv = gaugeFilled ? finalLv : prevLv;              // 채우기 전엔 이전 레벨 유지 → 다 찍힌 뒤 최종
+  const leveledUp = gaugeFilled && finalLv.level > prevLv.level; // 이번 XP로 레벨 업
 
   // 순차 공개 — 첫 항목 320ms, 이후 200ms(겹침). 각 항목마다 '쾅'(햅틱+올라가는 피치).
   useEffect(() => {
@@ -122,13 +123,14 @@ export function XpGainReveal({ gained, prevXp = 0, newXp = 0, score = 0, correct
     const t = setTimeout(() => setGaugeFilled(true), 240);
     return () => clearTimeout(t);
   }, [done]);
-  // 게이지가 만땅으로 찬 순간 '승급 가능' 팡파레.
+  // 레벨 업 순간 팡파레.
   useEffect(() => {
-    if (justReady) { haptic([40, 60, 40]); playSfx('unlock'); }
+    if (leveledUp) { haptic([40, 60, 40]); playSfx('unlock'); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gaugeFilled]);
 
-  const pct = Math.round(showT.progress * 100);
+  // 레벨 업이면 게이지를 가득(100%) 채워 '올라감' 느낌 — 아니면 최종 레벨 진행도.
+  const pct = leveledUp ? 100 : Math.round(showLv.progress * 100);
   return (
     <div onClick={() => { if (!hold && done) onDone && onDone(); }}
       style={{ position: 'fixed', inset: 0, zIndex: 130, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(28,24,32,0.88)', padding: SPACE.x4, cursor: done && !hold ? 'pointer' : 'default' }}>
@@ -156,19 +158,19 @@ export function XpGainReveal({ gained, prevXp = 0, newXp = 0, score = 0, correct
           </div>
         ))}
       </div>
-      {/* 등급 게이지 — 위: 엠블럼 + 등급명 … 다음까지 N XP / 아래: 게이지 풀폭(항목 공개마다 차오름) */}
+      {/* 레벨(Lv.N) 게이지 — 좌: 등급 엠블럼(정체성) + Lv.N … 다음 레벨까지 N XP / 아래: 게이지(항목 공개마다 차오름) */}
       <div style={{ width: '100%', maxWidth: 280, display: 'flex', flexDirection: 'column', gap: SPACE.lg }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.lg }}>
-          <img src={showT.emblem} alt="" width={38} height={38} style={{ display: 'block', flexShrink: 0, filter: `drop-shadow(0 3px 8px ${showT.glow}55)` }} />
-          <span style={{ ...TYPE.labelSm, color: 'rgba(255,255,255,0.82)' }}>{showT.name}</span>
-          <span style={{ marginLeft: 'auto', ...TYPE.labelSm, color: showT.examReady ? '#FFC94D' : 'rgba(255,255,255,0.55)' }}>{showT.isMax ? '최고 등급' : showT.examReady ? '가득 참!' : `다음까지 ${showT.toNext.toLocaleString()} XP`}</span>
+          <img src={grade.emblem} alt="" width={38} height={38} style={{ display: 'block', flexShrink: 0, filter: `drop-shadow(0 3px 8px ${grade.glow}55)` }} />
+          <span style={{ ...TYPE.h2, color: '#fff' }}>Lv.{showLv.level}</span>
+          <span style={{ marginLeft: 'auto', ...TYPE.labelSm, color: leveledUp ? '#FFC94D' : 'rgba(255,255,255,0.55)' }}>{leveledUp ? '레벨 업!' : `다음 레벨까지 ${showLv.toNext.toLocaleString()} XP`}</span>
         </div>
         <SparkGauge pct={pct} />
       </div>
-      {/* 승급 가능 배너 — 게이지 만땅 순간 */}
-      {justReady && (
+      {/* 레벨 업 배너 — 이번 XP로 레벨이 오른 순간 */}
+      {leveledUp && (
         <div style={{ marginTop: SPACE.x3, display: 'flex', alignItems: 'center', gap: SPACE.md, padding: '9px 18px', borderRadius: RADIUS.lg, background: TG.CORAL_GRAD, boxShadow: '0 8px 20px rgba(242,72,76,0.4)', animation: 'xg-pop .5s cubic-bezier(.34,1.56,.64,1) both' }}>
-          <span style={{ ...TYPE.h2, color: '#fff' }}>🎖 승급 시험 가능!</span>
+          <span style={{ ...TYPE.h2, color: '#fff' }}>✨ 레벨 업! Lv.{finalLv.level}</span>
         </div>
       )}
       {/* 탭하여 계속 — 게이지까지 다 찬 뒤 텍스트 안내(화면 아무 곳이나 탭하면 결과로) */}
