@@ -56,6 +56,7 @@ import { CelebrationOverlay } from '../game/screens/CelebrationOverlay.jsx';
 import { GameOverBeat } from '../game/screens/GameOverBeat.jsx';
 import { NewRecordBeat } from '../game/screens/NewRecordBeat.jsx';
 import { RankUpReveal } from '../game/screens/RankUpReveal.jsx';
+import { ExamIntroReveal } from '../game/screens/ExamIntroReveal.jsx';
 import { XpGainReveal } from '../game/screens/XpGainReveal.jsx';
 import { ModeUnlockReveal } from '../game/screens/ModeUnlockReveal.jsx';
 
@@ -227,6 +228,12 @@ export default function ToneGamePage() {
   // 모드 잠금해제 연출 {icon,label,desc,accent} — 결과 위 오버레이. 미리보기 ?screen=modeunlock
   const [modeUnlock, setModeUnlock] = useState(() => (isPreview && previewScreen === 'modeunlock'
     ? { icon: 'Infinity', label: '무한 모드', desc: '끝없이 이어지는 무한 모드가 열렸어요', accent: '#8B5CF6' } : null));
+  // 승급시험 진입 연출 {tier,tierLabel} — 시험 런이 라이브(카운트다운 후)가 되면 인게임 오버레이로 노출, 탭/자동으로 첫 문제 시작. 미리보기 ?screen=examintro&tier=easy|normal|hard
+  const [examIntro, setExamIntro] = useState(() => {
+    if (!(isPreview && previewScreen === 'examintro')) return null;
+    const d = DIFFICULTIES.find((x) => x.id === (qs('tier') || 'easy')) || DIFFICULTIES[0];
+    return { tier: d.id, tierLabel: d.label };
+  });
   const endHandledRef = useRef(false); // 결과화면 1회 처리 가드(다시하기로 score 리셋 시 재실행·중복 사운드 방지)
   const beatSfxRef = useRef(false);   // 신기록 비트가 축하 효과음을 이미 울렸는지 — end-effect의 중복 재생 방지(런마다 resetRunState서 리셋)
   const [suggestPractice, setSuggestPractice] = useState(false); // 초급 2연속 저조 → 모드선택서 연습 카드 코치마크 유도
@@ -659,7 +666,7 @@ export default function ToneGamePage() {
   }, [wordIndex, screen, selectedDifficulty, cdPhase, runId]);
 
   useEffect(() => {
-    if (screen !== 'game' || completed || paused || cdPhase || suddenIntro || practiceMode) return undefined; // 연습=시간 무제한(타임아웃 없음) · 서든데스 연출 중 정지
+    if (screen !== 'game' || completed || paused || cdPhase || suddenIntro || examIntro || practiceMode) return undefined; // 연습=시간 무제한(타임아웃 없음) · 서든데스/승급시험 연출 중 정지
     // 남은 시간만큼만 카운트(일시정지 후 계속하기 시 처음부터 다시 세지 않음)
     segStartRef.current = Date.now();
     const remaining = Math.max(0, wordTimeLimitRef.current - wordElapsedRef.current);
@@ -689,7 +696,7 @@ export default function ToneGamePage() {
       if (lowTimer) clearTimeout(lowTimer);
       wordElapsedRef.current += Date.now() - segStartRef.current; // 이번 진행 구간을 누적
     };
-  }, [screen, completed, paused, cdPhase, wordTimeLimit, gaugeOffsetMs, wordIndex, words, endlessMode, suddenIntro, practiceMode, isPreview, studentToken]);
+  }, [screen, completed, paused, cdPhase, wordTimeLimit, gaugeOffsetMs, wordIndex, words, endlessMode, suddenIntro, examIntro, practiceMode, isPreview, studentToken]);
 
   // 무한 서든데스 킥오프 연출 — 런이 라이브(카운트다운 종료)가 되는 순간 ≈2.2초 노출. 이 동안 위 타임아웃 effect가 suddenIntro로 정지 → 타이머 안 흐름.
   useEffect(() => {
@@ -698,6 +705,16 @@ export default function ToneGamePage() {
     const t = setTimeout(() => setSuddenIntro(false), 2350);
     return () => clearTimeout(t);
   }, [runId, screen, endlessMode, cdPhase]);
+
+  // 승급시험 킥오프 연출 — 시험 런이 라이브(카운트다운 종료)가 되는 순간 인게임 노출. 이 동안 위 타임아웃 effect가 examIntro로 정지 → 타이머 안 흐름. 해제는 오버레이 onDone(탭/자동)이 담당. (미리보기는 seed 유지)
+  useEffect(() => {
+    if (isPreview) return undefined;
+    if (screen !== 'game' || !examMode || cdPhase) { setExamIntro(null); return undefined; }
+    const d = DIFFICULTIES[Math.min(rank, DIFFICULTIES.length - 1)];
+    setExamIntro({ tier: d.id, tierLabel: d.label });
+    return undefined;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [runId, screen, examMode, cdPhase]);
 
   // 현재 마스터한 단어 수(전 난이도 풀 기준) — 등급 진행 연출의 시작/종료 스냅샷용
   const currentMastered = () => {
@@ -858,7 +875,7 @@ export default function ToneGamePage() {
   };
 
   const handleTone = useCallback((toneNum) => {
-    if (completedRef.current || paused || cdPhase || suddenIntro) return; // 완성/전환 중(동기 가드) — 같은 tick 더블탭·멀티터치 재진입 차단
+    if (completedRef.current || paused || cdPhase || suddenIntro || examIntro) return; // 완성/전환 중(동기 가드) — 같은 tick 더블탭·멀티터치 재진입 차단
     const word = words[wordIndex];
     if (!word) return;
     const cur = enteredRef.current;            // 동기 소스 — 이 tick에서 이미 전진했으면 다음 슬롯을 본다(stale state 미참조)
@@ -934,7 +951,7 @@ export default function ToneGamePage() {
         setGaugeOffsetMs(elapsed);
       }
     }
-  }, [completed, paused, cdPhase, suddenIntro, words, wordIndex, currentSyl, entered, hasMistake, combo, practiceMode, isPreview, studentToken, endlessMode, wrongBtn]);
+  }, [completed, paused, cdPhase, suddenIntro, examIntro, words, wordIndex, currentSyl, entered, hasMistake, combo, practiceMode, isPreview, studentToken, endlessMode, wrongBtn]);
 
   // 건너뛰기 — 못 풀겠는 단어를 하트 1개 소모하고 넘김. 정답 공개+발음(학습) · 콤보 끊김 · 0점 · 숙련도 미반영.
   // 하트는 런당 3개 예산(모든 모드 공통). 0개면 버튼 비활성 → 스킵만 불가, 게임은 계속. 연습 모드는 자체 '정답 보기'라 미제공.
@@ -1208,7 +1225,7 @@ export default function ToneGamePage() {
       <FigmaScreen>
         {word && (
           <GameScreen word={word} entered={entered} currentSyl={currentSyl} completed={completed} timedOut={timedOut}
-            wordIndex={wordIndex} wordsLen={words.length} wordTimeLimit={wordTimeLimit} gaugeOffsetMs={gaugeOffsetMs} lowTime={lowTime} paused={paused || !!cdPhase || suddenIntro} endless={endlessMode || (isPreview && qs('endless') === '1')} lives={lives} showSudden={suddenIntro} runId={runId} recordToBeat={recordToBeat}
+            wordIndex={wordIndex} wordsLen={words.length} wordTimeLimit={wordTimeLimit} gaugeOffsetMs={gaugeOffsetMs} lowTime={lowTime} paused={paused || !!cdPhase || suddenIntro || !!examIntro} endless={endlessMode || (isPreview && qs('endless') === '1')} lives={lives} showSudden={suddenIntro} runId={runId} recordToBeat={recordToBeat}
             combo={combo} comboFlash={comboFlash} floatScore={floatScore} score={score} coachText={coach.text}
             onTone={handleTone} wrongBtn={wrongBtn} wrongShakeKey={wrongShakeKey} onPause={() => setPaused(true)} onEndTraining={endTraining} playReveal={!cdPhase}
             practice={practiceMode} endKind={endKind} listen={wordIsListen} audioOff={audioOff}
@@ -1296,6 +1313,14 @@ export default function ToneGamePage() {
         }
         return <GameOverBeat endKind={endKind} hold={hold} onDone={finishBeat} />;
       })()}
+      {/* 승급시험 진입 연출 — 시험 런이 라이브가 되면(카운트다운 후) 인게임 오버레이로 노출 → onDone(탭/자동)에서 첫 문제 시작. 미리보기 ?screen=examintro&tier= */}
+      {examIntro && (
+        <ExamIntroReveal
+          tier={examIntro.tier}
+          tierLabel={examIntro.tierLabel}
+          hold={isPreview && previewScreen === 'examintro'}
+          onDone={() => setExamIntro(null)} />
+      )}
       {/* 등급 상승 연출 — 비트 다음·결과 전(누적 XP가 다음 등급 임계를 넘겼을 때). 강등 없음. 미리보기 ?screen=rankup */}
       {(rankUp || (isPreview && previewScreen === 'rankup')) && (
         <RankUpReveal

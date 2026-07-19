@@ -31,7 +31,7 @@ const skyGradient = (p) => {
 };
 
 const DIFF_COACH = [
-  { selector: '[data-coach="diff-list"]', label: '탭하면 선택돼요. 위로 오를수록 어려워지고, 급 끝엔 승급시험 보스가 있어요!' },
+  { selector: '[data-coach="diff-list"]', label: '탭하면 선택돼요. 위로 오를수록 어려워지고, 급 끝엔 승급시험이 있어요!' },
   { selector: '[data-coach="diff-start"]', label: '선택한 곳으로 시작하려면 이 버튼을 눌러요!' },
 ];
 
@@ -164,7 +164,7 @@ export function DifficultyScreen({ studentToken, rank = 0, onSelect, onStart, on
           const stars = (!boss && selectable) ? stageStarFlags(studentToken, s) : null;
           const best = (!boss && selectable) ? stageScoreOf(studentToken, s.id) : 0;
           const lockToast = boss
-            ? (bs === 'prev' ? '앞 급 보스부터 이겨야 해요' : `${s.tierLabel} 5단계를 다 깨면 도전할 수 있어요`)
+            ? (bs === 'prev' ? '앞 급 승급시험부터 통과해야 해요' : `${s.tierLabel} 5단계를 다 깨면 도전할 수 있어요`)
             : stageUnlockToastText(studentToken, s, rank);
           return (
             <div key={s.id} ref={(n) => { rowRefs.current[idx] = n; }}
@@ -195,11 +195,11 @@ export function DifficultyScreen({ studentToken, rank = 0, onSelect, onStart, on
                       <MedalIcon size={27} weight="fill" color={c.accent} />
                     </div>
                     <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 5 }}>
-                      <span style={{ ...TYPE.h1, lineHeight: 1, color: TG.INK }}>{s.tierLabel} 보스</span>
-                      <span style={{ ...TYPE.sub, color: TG.SUB, whiteSpace: 'nowrap' }}>승급시험 · 20문제 · 80% 합격</span>
+                      <span style={{ ...TYPE.h1, lineHeight: 1, color: TG.INK }}>{s.tierLabel} 승급시험</span>
+                      <span style={{ ...TYPE.sub, color: TG.SUB, whiteSpace: 'nowrap' }}>20문제 · 정답률 80% 이상</span>
                     </div>
                     <div onClick={(e) => { e.stopPropagation(); playSfx('button'); onStart(s); }}
-                      role="button" aria-label={`${s.tierLabel} 보스 도전`}
+                      role="button" aria-label={`${s.tierLabel} 승급시험 도전`}
                       style={{ width: 40, height: 40, borderRadius: RADIUS.xl, flexShrink: 0, cursor: 'pointer', background: c.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 5px 12px ${c.glow}`, '--fab-glow': c.glow, '--fab-glow-lg': c.glow, animation: reduceMotion ? 'none' : 'tg-fab-pulse 1.5s ease-in-out infinite', ...TOUCH_OPT }}>
                       <PlayIcon size={16} weight="fill" color="#fff" />
                     </div>
@@ -237,7 +237,7 @@ export function DifficultyScreen({ studentToken, rank = 0, onSelect, onStart, on
                         <CheckIcon size={8} weight="bold" color="#fff" />
                       </span>
                     </div>
-                    <span style={{ ...TYPE.label, color: c.accent, whiteSpace: 'nowrap' }}>{s.tierLabel} 보스 통과</span>
+                    <span style={{ ...TYPE.label, color: c.accent, whiteSpace: 'nowrap' }}>{s.tierLabel} 승급시험 통과</span>
                   </div>
                 ) : boss && selectable ? (
                   /* 보스 도전 가능(ready) — 골드 크라운 + 승급시험 */
@@ -245,7 +245,7 @@ export function DifficultyScreen({ studentToken, rank = 0, onSelect, onStart, on
                     <div style={{ width: 26, height: 26, borderRadius: RADIUS.md, flexShrink: 0, background: c.tint, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <MedalIcon size={15} weight="fill" color={c.accent} />
                     </div>
-                    <span style={{ ...TYPE.label, color: c.accent, whiteSpace: 'nowrap' }}>{s.tierLabel} 보스 · 승급시험</span>
+                    <span style={{ ...TYPE.label, color: c.accent, whiteSpace: 'nowrap' }}>{s.tierLabel} 승급시험</span>
                   </div>
                 ) : boss ? (
                   /* 보스 잠금 — 골드 lock */
@@ -253,7 +253,7 @@ export function DifficultyScreen({ studentToken, rank = 0, onSelect, onStart, on
                     <div style={{ width: 26, height: 26, borderRadius: RADIUS.md, flexShrink: 0, background: c.tint, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <LockSimpleIcon size={15} weight="fill" color={c.accent} />
                     </div>
-                    <span style={{ ...TYPE.label, color: c.accent, whiteSpace: 'nowrap' }}>{s.tierLabel} 보스</span>
+                    <span style={{ ...TYPE.label, color: c.accent, whiteSpace: 'nowrap' }}>{s.tierLabel} 승급시험</span>
                   </div>
                 ) : selectable ? (
                   /* 스테이지 간략(해제) — 아이콘 + 라벨 + 미니 별 */
@@ -287,7 +287,7 @@ export function DifficultyScreen({ studentToken, rank = 0, onSelect, onStart, on
             else if (focusedBs === 'beaten') { playSfx('button'); onLocked && onLocked('이미 통과한 승급시험이에요!', 'done'); }
             else {
               const t = focusedBoss
-                ? (focusedBs === 'prev' ? '앞 급 보스부터 이겨야 해요' : `${focused.tierLabel} 5단계를 다 깨면 도전할 수 있어요`)
+                ? (focusedBs === 'prev' ? '앞 급 승급시험부터 통과해야 해요' : `${focused.tierLabel} 5단계를 다 깨면 도전할 수 있어요`)
                 : stageUnlockToastText(studentToken, focused, rank);
               onLocked && onLocked(t);
             }

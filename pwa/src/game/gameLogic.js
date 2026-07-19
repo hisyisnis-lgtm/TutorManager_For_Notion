@@ -113,7 +113,7 @@ export function isTierCleared(token, tierId) {
 // rank(=깬 보스 수, gameXp에 저장)로 진행 인코딩: 급 idx i 보스 통과 ⟺ rank > i. 보스 3개로 등급(rank) 0→3 구동.
 export const BOSSES = DIFFICULTIES.map((d, i) => ({
   tier: d.id, tierLabel: d.label, tierIdx: i, kind: 'boss',
-  id: `${d.id}-boss`, label: `${d.label} 보스`,
+  id: `${d.id}-boss`, label: `${d.label} 승급시험`,
   gameKey: d.gameKey, timeMultiplier: d.timeMultiplier,
 }));
 export function bossOfTier(tierId) { return BOSSES.find((b) => b.tier === tierId) || null; }
@@ -216,7 +216,7 @@ export function stageUnlockToastText(token, stage, rank = 0) {
   const p = stageUnlockProgress(token, stage, rank);
   if (!p) return '';
   return p.kind === 'boss'
-    ? `${p.prevLabel} 보스를 이기면 열려요`
+    ? `${p.prevLabel} 승급시험을 통과하면 열려요`
     : `${p.prevLabel} 별 하나면 열려요`;
 }
 
