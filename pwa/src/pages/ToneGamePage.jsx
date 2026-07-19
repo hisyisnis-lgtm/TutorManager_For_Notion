@@ -65,8 +65,13 @@ import { ModeUnlockReveal } from '../game/screens/ModeUnlockReveal.jsx';
 const QS = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams();
 const qs = (name) => QS.get(name);
 
-// 초급 저조 판정 = 점수 500 이하(2026-07-19 사용자 결정, 구 '최고콤보 2연속' 폐기).
-const LOW_EASY_SCORE = 500; // 초급 노멀 런 점수가 이 이하면 '저조' → 트레이닝 유도(모드선택 코치마크)
+// 초급 저조 판정 = 점수 500 이하. 유도는 '2연속 저조'일 때만(한 번 낮은 건 무시) + 쿨다운(매번 안 뜨게).
+const LOW_EASY_SCORE = 500;       // 초급 노멀 런 점수가 이 이하면 '저조'
+const LOW_EASY_STREAK = 2;        // 저조가 이만큼 '연속'이면 트레이닝 유도
+// 트레이닝 유도 빈도 제한 — 한 번 유도하면 쿨다운(계속 고전해도 매번 안 뜨게). 로그인 넛지와 동일 패턴.
+const TRAIN_NUDGE_COOLDOWN = 3 * 24 * 60 * 60 * 1000; // 3일
+function trainNudgeAllowed() { try { const t = parseInt(localStorage.getItem('tg_train_nudge') || '0', 10); return !(t && Date.now() - t < TRAIN_NUDGE_COOLDOWN); } catch { return true; } }
+function markTrainNudge() { try { localStorage.setItem('tg_train_nudge', String(Date.now())); } catch { /* noop */ } }
 
 // 성조 레벨 밴드(정확도→1~5) — 스냅샷 파생(deriveToneLevels)과 홈 렌더가 공유하는 단일 규칙(중복 하드코딩 금지).
 const toneLevelBand = (acc) => (acc < 0.5 ? 1 : acc < 0.65 ? 2 : acc < 0.8 ? 3 : acc < 0.92 ? 4 : 5);
@@ -244,7 +249,8 @@ export default function ToneGamePage() {
   });
   const endHandledRef = useRef(false); // 결과화면 1회 처리 가드(다시하기로 score 리셋 시 재실행·중복 사운드 방지)
   const beatSfxRef = useRef(false);   // 신기록 비트가 축하 효과음을 이미 울렸는지 — end-effect의 중복 재생 방지(런마다 resetRunState서 리셋)
-  const [suggestPractice, setSuggestPractice] = useState(false); // 초급 2연속 저조 → 모드선택서 연습 카드 코치마크 유도
+  const [suggestPractice, setSuggestPractice] = useState(false); // 초급 2연속 저조 → 결과화면 옵션 CTA + 모드선택 트레이닝 카드 하이라이트
+  const easyLowStreakRef = useRef(0); // 초급 노멀 연속 저조 횟수(500 넘기면 리셋). 세션 한정.
   // 듣기 문제 여부 = 라운드 시작 시 단어별로 미리 결정(listenRollsRef). 렌더에서 파생 → 예전 state 방식의
   // '새 단어 렌더 후 effect가 뒤늦게 set' 프레임(듣기→일반 순간전환 flicker) 제거. [i>0 && rand<0.35]
   const listenRollsRef = useRef([]);
@@ -538,10 +544,17 @@ export default function ToneGamePage() {
         if (mu) setModeUnlock(mu);
       }
 
-      // 초급 노멀에서 점수 500 이하 → 트레이닝 유도 플래그(모드선택 코치마크). 격려 톤(강요 아님).
-      //  2026-07-19 사용자 결정: '500점 이하일 때만' 유도(구 최고콤보 2연속 폐기).
-      if (mode === 'normal' && !themeMode && (selectedDifficulty.tier || selectedDifficulty.id) === 'easy' && score <= LOW_EASY_SCORE) {
-        setSuggestPractice(true);
+      // 초급 노멀 '연속 저조'(2연속 500 이하)일 때만 트레이닝 유도 — 격려 톤·비강제·쿨다운.
+      //  한 번 낮은 건 무시(누구나 실수), 500 넘긴 판이 나오면 연속 카운터 리셋. 쿨다운으로 매번 안 뜨게.
+      if (mode === 'normal' && !themeMode && (selectedDifficulty.tier || selectedDifficulty.id) === 'easy') {
+        if (score <= LOW_EASY_SCORE) {
+          easyLowStreakRef.current += 1;
+          if (easyLowStreakRef.current >= LOW_EASY_STREAK && trainNudgeAllowed()) {
+            setSuggestPractice(true); markTrainNudge(); easyLowStreakRef.current = 0;
+          }
+        } else {
+          easyLowStreakRef.current = 0;
+        }
       }
 
       if (identity.kind === 'member') pushMemberData(identity).catch(() => {}); // 회원: 로컬 → 서버(/game/me) 통째 동기화
@@ -1212,6 +1225,7 @@ export default function ToneGamePage() {
           practice={practiceMode} endless={endlessMode} endKind={endKind}
           onRetry={practiceMode ? () => startTraining() : endlessMode ? () => startEndless() : themeMode ? () => startTheme(selectedTheme) : () => startGame(selectedDifficulty)}
           onHome={() => tipTransitionTo('home')}
+          onTraining={() => { setSuggestPractice(false); startTraining(); }}
           onLogin={identity.kind === 'guest' ? () => setScreen('login') : null}
           retryLabel={practiceMode ? '한 번 더 트레이닝' : undefined} />
       </FigmaScreen>

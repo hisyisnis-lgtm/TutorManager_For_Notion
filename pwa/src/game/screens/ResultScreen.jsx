@@ -25,13 +25,9 @@ const RESULT_COACH = [
   { selector: '[data-coach="result-stats"]', label: '최고 콤보와 평균 반응속도도 확인할 수 있어요.' },
   { selector: '[data-coach="result-actions"]', label: '다시 도전하거나, 홈으로 나갈 수 있어요.' },
 ];
-// 초급 저조 시 연습 유도 코치마크 — '홈으로 가기' 버튼 스포트라이트(조건부·결과화면 1회). 홈 허브에서 트레이닝 진입.
-const SUGGEST_COACH = [
-  { selector: '[data-coach="result-home"]', label: '천천히 익히고 싶으면 홈에서 트레이닝을 해봐요! 🐼' },
-];
 
 
-export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, onRetry, onHome, onNextLevel = null, onLogin = null, retryLabel = '다시 도전', practice = false, endKind = null, suggestPractice = false, coachReady = true }) {
+export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, onRetry, onHome, onTraining, onNextLevel = null, onLogin = null, retryLabel = '다시 도전', practice = false, endKind = null, suggestPractice = false, coachReady = true }) {
   const animScore = useCountUp(score, 1100);
   // 로그인 유도 모달(게스트가 '이전 기록'을 실제로 넘긴 순간) — 마운트 때 1회 판정(세션·쿨다운).
   //  previousBest>0: 첫 판(항상 신기록·이전0) 코치마크와 안 겹치고, 재도전+향상=투자 있는 성취에만.
@@ -52,8 +48,6 @@ export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, 
   //   결과화면 마운트 시점엔 업적 큐가 아직 비어(end-effect가 렌더 후 실행) coachReady=true → visible=true로 시작,
   //   직후 큐가 차도 useTabTip은 visible을 되돌리지 않아 축하 연출과 겹쳤음(실기기 재현).
   const tip = useTabTip('game-result', !practice);
-  // 초급 저조 연습 유도 스포트라이트 — 첫 결과 코치가 끝난 뒤(안 겹치게)·결과화면당 1회. 전역 플래그는 안 건드림(모드선택 유도도 이어져야 함).
-  const [suggestSeen, setSuggestSeen] = useState(false);
   return (
     <>
       {/* 신기록 축하 파티클 — 성취 순간만(실패/시간초과엔 미표시). 상단 판다/배지 위에서 색색 조각이 터져 낙하 */}
@@ -107,9 +101,18 @@ export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, 
         ))}
       </div>
       </Reveal>
-      {/* 코치 — 통계카드 하단과 CTA 사이 가용공간 세로중앙. */}
-      <Reveal i={4} style={{ position: 'absolute', left: 24, right: 24, top: 452, bottom: 'calc(150px + env(safe-area-inset-bottom))', display: 'flex', alignItems: 'center' }}>
+      {/* 코치 — 통계카드 하단과 CTA 사이 가용공간 세로중앙. 유도 조건이면 아래에 옵션 트레이닝 CTA(비강제, 무시 가능). */}
+      <Reveal i={4} style={{ position: 'absolute', left: 24, right: 24, top: 452, bottom: 'calc(150px + env(safe-area-inset-bottom))', display: 'flex', flexDirection: 'column', gap: SPACE.md, alignItems: 'center', justifyContent: 'center' }}>
         <CoachBubble text={onNextLevel ? '다음 스테이지에 도전할 수 있어요! 🎉' : suggestPractice ? `${DIFFICULTIES[0].label} 단계가 어렵나요? 천천히 익혀봐요` : practice ? '잘했어요! 또 해볼까요?' : endKind === 'miss' ? '아쉽게 틀렸어요! 다시 도전해볼까요?' : '다시 도전해서 신기록을 깨볼까요?'} />
+        {suggestPractice && onTraining && (
+          <button onClick={() => { playSfx('button'); onTraining(); }} className="tg-press" style={{
+            display: 'inline-flex', alignItems: 'center', gap: SPACE.sm, padding: '10px 18px', borderRadius: RADIUS.pill,
+            background: 'rgba(54,201,141,0.14)', border: 'none', cursor: 'pointer', ...TOUCH_OPT,
+          }}>
+            <span style={{ ...TYPE.btnSm, color: TG.SUCCESS }}>트레이닝으로 익히기</span>
+            <CaretRightIcon size={14} weight="bold" color={TG.SUCCESS} />
+          </button>
+        )}
       </Reveal>
       {/* 메인 CTA (하단 고정) — 다음 스테이지가 열렸으면 [다시하기 | 다음 스테이지] 반반, 아니면 '다시 도전' 풀폭 */}
       <Reveal i={5} style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(80px + env(safe-area-inset-bottom))' }}>
@@ -151,10 +154,7 @@ export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, 
         </button>
       </Reveal>
       <CoachMarkOverlay visible={tip.visible && coachReady} onDone={tip.dismiss} steps={RESULT_COACH} delay={260} showControls={false} />
-      {/* 초급 저조 유도 — '모드 선택' 버튼 스포트라이트. 업적/모드해제 연출(coachReady)과 첫 결과 코치가 끝난 뒤에만·1회.
-          ★coachReady 없으면 tip이 게이트로 묶여 있는 동안(!tip.visible) 이 오버레이가 축하 연출 위에 겹쳐 뜸.
-          forceLastStep: 주변 탭 흡수 → '모드 선택'을 실제로 눌러야만 진행(버튼 onClick=onModeSelect가 화면 전환). */}
-      <CoachMarkOverlay visible={suggestPractice && coachReady && !!onHome && !tip.visible && !suggestSeen} onDone={() => setSuggestSeen(true)} steps={SUGGEST_COACH} delay={500} showControls={false} forceLastStep />
+      {/* (구 '초급 저조 유도' 강제 코치 오버레이 폐기 — 2026-07-19. 이제 유도는 코치 말풍선 아래 비강제 옵션 CTA로.) */}
       {/* 로그인 유도 모달 — 게스트 신기록(이전기록 넘김) 축하 뒤. 다른 축하 오버레이·코치와 겹치지 않게 coachReady 게이트. */}
       {nudgeOpen && coachReady && <LoginNudgeModal onLogin={onLogin} onClose={dismissNudge} />}
     </>
