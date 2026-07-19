@@ -1,6 +1,6 @@
 // 결과 화면 — 신기록 배지·축하 판다·점수(카운트업)·통계 2카드·코치·다시도전/난이도 바꾸기.
 import { useState, useEffect } from 'react';
-import { TrophyIcon, ArrowClockwiseIcon, LightningIcon, CheckCircleIcon, XCircleIcon, CaretRightIcon } from '@phosphor-icons/react';
+import { TrophyIcon, ArrowClockwiseIcon, LightningIcon, CheckCircleIcon, XCircleIcon, CaretRightIcon, HouseIcon } from '@phosphor-icons/react';
 import { TG, TYPE, TOUCH_OPT, pickCelebratePanda, RADIUS, SPACE } from '../tgTokens.js';
 import { useCountUp, FlameIcon } from '../tgWidgets.jsx';
 import { play as playSfx } from '../tgSfx.js';
@@ -23,26 +23,15 @@ function nudgeAllowed() {
 const RESULT_COACH = [
   { selector: '[data-coach="result-score"]', label: '이번 판 점수예요. 최고 기록을 넘기면 신기록! 🏆' },
   { selector: '[data-coach="result-stats"]', label: '최고 콤보와 평균 반응속도도 확인할 수 있어요.' },
-  { selector: '[data-coach="result-actions"]', label: '다시 도전하거나, 아래에서 다른 모드를 골라요.' },
+  { selector: '[data-coach="result-actions"]', label: '다시 도전하거나, 홈으로 나갈 수 있어요.' },
 ];
-// 초급 저조 시 연습 유도 코치마크 — '모드 선택' 버튼만 스포트라이트(조건부·결과화면 1회).
+// 초급 저조 시 연습 유도 코치마크 — '홈으로 가기' 버튼 스포트라이트(조건부·결과화면 1회). 홈 허브에서 트레이닝 진입.
 const SUGGEST_COACH = [
-  { selector: '[data-coach="result-modeselect"]', label: "여기서 '트레이닝'을 골라 천천히 익혀봐요! 🐼" },
+  { selector: '[data-coach="result-home"]', label: '천천히 익히고 싶으면 홈에서 트레이닝을 해봐요! 🐼' },
 ];
 
-// 하단 보조 버튼 (흰 배경 아웃라인). flex:1로 단일=풀폭 / 2개=반반.
-function SecBtn({ label, onClick, coachId }) {
-  return (
-    <button onClick={() => { playSfx('button'); onClick(); }} className="tg-press" data-coach={coachId} style={{
-      flex: 1, minWidth: 0, height: 54, borderRadius: RADIUS.btn, background: '#fff', border: '1.5px solid #ebe5de', cursor: 'pointer',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 8px', ...TOUCH_OPT,
-    }}>
-      <span style={{ ...TYPE.btnSm, color: TG.SUB, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
-    </button>
-  );
-}
 
-export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, onRetry, onChangeDiff, onModeSelect, onNextLevel = null, onLogin = null, retryLabel = '다시 도전', changeLabel = '난이도 바꾸기', practice = false, endKind = null, suggestPractice = false, coachReady = true }) {
+export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, onRetry, onHome, onNextLevel = null, onLogin = null, retryLabel = '다시 도전', practice = false, endKind = null, suggestPractice = false, coachReady = true }) {
   const animScore = useCountUp(score, 1100);
   // 로그인 유도 모달(게스트가 '이전 기록'을 실제로 넘긴 순간) — 마운트 때 1회 판정(세션·쿨다운).
   //  previousBest>0: 첫 판(항상 신기록·이전0) 코치마크와 안 겹치고, 재도전+향상=투자 있는 성취에만.
@@ -151,18 +140,21 @@ export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, 
         </button>
       )}
       </Reveal>
-      {/* 하단 보조 — onModeSelect 있으면 [변경 | 모드 선택] 2분할, 없으면 단일(풀폭) */}
-      <Reveal i={6} style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(18px + env(safe-area-inset-bottom))' }}>
-      <div style={{ display: 'flex', gap: SPACE.lg }}>
-        <SecBtn label={changeLabel} onClick={onChangeDiff} />
-        {onModeSelect && <SecBtn label="모드 선택" onClick={onModeSelect} coachId="result-modeselect" />}
-      </div>
+      {/* 하단 — 홈으로 가기(은은한 단일 버튼). 다른 난이도·모드는 홈 허브에서 고른다. */}
+      <Reveal i={6} style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(22px + env(safe-area-inset-bottom))' }}>
+        <button data-coach="result-home" onClick={() => { playSfx('button'); onHome(); }} className="tg-press" style={{
+          width: '100%', height: 54, borderRadius: RADIUS.btn, background: '#fff', border: '1.5px solid #ebe5de', cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: SPACE.sm, ...TOUCH_OPT,
+        }}>
+          <HouseIcon size={16} weight="fill" color={TG.SUB} />
+          <span style={{ ...TYPE.btnSm, color: TG.SUB }}>홈으로 가기</span>
+        </button>
       </Reveal>
       <CoachMarkOverlay visible={tip.visible && coachReady} onDone={tip.dismiss} steps={RESULT_COACH} delay={260} showControls={false} />
       {/* 초급 저조 유도 — '모드 선택' 버튼 스포트라이트. 업적/모드해제 연출(coachReady)과 첫 결과 코치가 끝난 뒤에만·1회.
           ★coachReady 없으면 tip이 게이트로 묶여 있는 동안(!tip.visible) 이 오버레이가 축하 연출 위에 겹쳐 뜸.
           forceLastStep: 주변 탭 흡수 → '모드 선택'을 실제로 눌러야만 진행(버튼 onClick=onModeSelect가 화면 전환). */}
-      <CoachMarkOverlay visible={suggestPractice && coachReady && !!onModeSelect && !tip.visible && !suggestSeen} onDone={() => setSuggestSeen(true)} steps={SUGGEST_COACH} delay={500} showControls={false} forceLastStep />
+      <CoachMarkOverlay visible={suggestPractice && coachReady && !!onHome && !tip.visible && !suggestSeen} onDone={() => setSuggestSeen(true)} steps={SUGGEST_COACH} delay={500} showControls={false} forceLastStep />
       {/* 로그인 유도 모달 — 게스트 신기록(이전기록 넘김) 축하 뒤. 다른 축하 오버레이·코치와 겹치지 않게 coachReady 게이트. */}
       {nudgeOpen && coachReady && <LoginNudgeModal onLogin={onLogin} onClose={dismissNudge} />}
     </>

@@ -1211,11 +1211,9 @@ export default function ToneGamePage() {
           coachReady={!showGameOverBeat && !rankUp && !modeUnlock && celebrationQueue.length === 0} /* 결과 코치+트레이닝유도 둘 다 이 게이트 뒤에서만 */
           practice={practiceMode} endless={endlessMode} endKind={endKind}
           onRetry={practiceMode ? () => startTraining() : endlessMode ? () => startEndless() : themeMode ? () => startTheme(selectedTheme) : () => startGame(selectedDifficulty)}
-          onChangeDiff={endlessMode ? () => tipTransitionTo('modeselect') : practiceMode ? () => tipTransitionTo('modeselect') : themeMode ? () => tipTransitionTo('theme') : () => tipTransitionTo('difficulty')}
-          onModeSelect={!endlessMode ? () => tipTransitionTo('modeselect') : undefined}
+          onHome={() => tipTransitionTo('home')}
           onLogin={identity.kind === 'guest' ? () => setScreen('login') : null}
-          retryLabel={practiceMode ? '한 번 더 트레이닝' : undefined}
-          changeLabel={endlessMode ? '모드 선택으로' : practiceMode ? '모드 선택으로' : themeMode ? '테마 바꾸기' : '난이도 바꾸기'} />
+          retryLabel={practiceMode ? '한 번 더 트레이닝' : undefined} />
       </FigmaScreen>
     );
   } else if (screen === 'examresult') {
