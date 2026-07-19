@@ -77,10 +77,12 @@ export function tierMaxScore(mult) {
   }
   return sum;
 }
-// 스테이지 별 3개 임계 = 1판 최고점의 1/3·2/3·3/3(사용자 결정 2026-07-16)
+// 스테이지 별 임계 = 1판 최고점 기준. ★3=3/3(이론상 즉답만점)은 사람은 사실상 불가라, '무실수 완주가 닿는 선'으로 하향(2026-07-20).
+//  실수하면 computeScore가 flat 50 + 콤보 리셋이라 점수가 크게 떨어짐 → 무실수 완주(대략 88~94%)만 ★3에 닿고 실수 런은 대체로 미달.
+const STAR3_FACTOR = 0.85; // ★3 = 이론상 최고점의 85%
 export function stageStarScores(mult) {
   const m = tierMaxScore(mult);
-  return [Math.round(m / 3), Math.round((m * 2) / 3), m];
+  return [Math.round(m / 3), Math.round((m * 2) / 3), Math.round(m * STAR3_FACTOR)];
 }
 // 스테이지별 최고 점수 — 경량 별도 저장(기록 gameKey는 티어 공유라 스테이지 구분 불가 → 여기서 별 계산)
 function stageScoresKey(token) { return `game_stage_scores_${token}`; }
