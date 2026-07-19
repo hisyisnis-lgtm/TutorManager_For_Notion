@@ -27,7 +27,7 @@ const RESULT_COACH = [
 ];
 
 
-export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, onRetry, onHome, onTraining, onNextLevel = null, onLogin = null, retryLabel = '다시 도전', practice = false, endKind = null, suggestPractice = false, coachReady = true }) {
+export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, onRetry, onHome, onNextLevel = null, onLogin = null, retryLabel = '다시 도전', practice = false, endKind = null, suggestPractice = false, coachReady = true }) {
   const animScore = useCountUp(score, 1100);
   // 로그인 유도 모달(게스트가 '이전 기록'을 실제로 넘긴 순간) — 마운트 때 1회 판정(세션·쿨다운).
   //  previousBest>0: 첫 판(항상 신기록·이전0) 코치마크와 안 겹치고, 재도전+향상=투자 있는 성취에만.
@@ -101,18 +101,9 @@ export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, 
         ))}
       </div>
       </Reveal>
-      {/* 코치 — 통계카드 하단과 CTA 사이 가용공간 세로중앙. 유도 조건이면 아래에 옵션 트레이닝 CTA(비강제, 무시 가능). */}
-      <Reveal i={4} style={{ position: 'absolute', left: 24, right: 24, top: 452, bottom: 'calc(150px + env(safe-area-inset-bottom))', display: 'flex', flexDirection: 'column', gap: SPACE.md, alignItems: 'center', justifyContent: 'center' }}>
+      {/* 코치 — 통계카드 하단과 CTA 사이 가용공간 세로중앙. (트레이닝 유도는 '홈으로 가기' 후 홈 모달로 — 결과화면은 안 어수선하게) */}
+      <Reveal i={4} style={{ position: 'absolute', left: 24, right: 24, top: 452, bottom: 'calc(150px + env(safe-area-inset-bottom))', display: 'flex', alignItems: 'center' }}>
         <CoachBubble text={onNextLevel ? '다음 스테이지에 도전할 수 있어요! 🎉' : suggestPractice ? `${DIFFICULTIES[0].label} 단계가 어렵나요? 천천히 익혀봐요` : practice ? '잘했어요! 또 해볼까요?' : endKind === 'miss' ? '아쉽게 틀렸어요! 다시 도전해볼까요?' : '다시 도전해서 신기록을 깨볼까요?'} />
-        {suggestPractice && onTraining && (
-          <button onClick={() => { playSfx('button'); onTraining(); }} className="tg-press" style={{
-            display: 'inline-flex', alignItems: 'center', gap: SPACE.sm, padding: '10px 18px', borderRadius: RADIUS.pill,
-            background: 'rgba(54,201,141,0.14)', border: 'none', cursor: 'pointer', ...TOUCH_OPT,
-          }}>
-            <span style={{ ...TYPE.btnSm, color: TG.SUCCESS }}>트레이닝으로 익히기</span>
-            <CaretRightIcon size={14} weight="bold" color={TG.SUCCESS} />
-          </button>
-        )}
       </Reveal>
       {/* 메인 CTA (하단 고정) — 다음 스테이지가 열렸으면 [다시하기 | 다음 스테이지] 반반, 아니면 '다시 도전' 풀폭 */}
       <Reveal i={5} style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(80px + env(safe-area-inset-bottom))' }}>

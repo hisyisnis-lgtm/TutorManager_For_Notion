@@ -104,7 +104,7 @@ function buildAchSnapshot(token, masteredN, toneStats, streakLongest) {
 import { IntroScreen } from '../game/screens/IntroScreen.jsx';
 import { TutorialScreen } from '../game/screens/TutorialScreen.jsx';
 import { PauseModal } from '../game/screens/PauseModal.jsx';
-import { HelpStartModal } from '../game/screens/gameModals.jsx';
+import { HelpStartModal, TrainingNudgeModal } from '../game/screens/gameModals.jsx';
 
 // 미리보기 모드(?screen=game)에서 게임 화면 렌더용 샘플 단어 (DEV 검수 전용)
 const PREVIEW_WORDS = [
@@ -553,7 +553,7 @@ export default function ToneGamePage() {
             setSuggestPractice(true); markTrainNudge(); easyLowStreakRef.current = 0;
           }
         } else {
-          easyLowStreakRef.current = 0;
+          easyLowStreakRef.current = 0; setSuggestPractice(false); // 회복(>500)하면 대기 중 유도 취소
         }
       }
 
@@ -1225,7 +1225,6 @@ export default function ToneGamePage() {
           practice={practiceMode} endless={endlessMode} endKind={endKind}
           onRetry={practiceMode ? () => startTraining() : endlessMode ? () => startEndless() : themeMode ? () => startTheme(selectedTheme) : () => startGame(selectedDifficulty)}
           onHome={() => tipTransitionTo('home')}
-          onTraining={() => { setSuggestPractice(false); startTraining(); }}
           onLogin={identity.kind === 'guest' ? () => setScreen('login') : null}
           retryLabel={practiceMode ? '한 번 더 트레이닝' : undefined} />
       </FigmaScreen>
@@ -1302,6 +1301,10 @@ export default function ToneGamePage() {
       {toast && <GameToast key={toast.key} msg={toast.msg} kind={toast.kind} />}
       {/* 게임 방법 확인 팝업 — 확인 시 인게임 튜토리얼로(완료 후 홈 복귀) */}
       {helpOpen && <HelpStartModal onStart={() => { setHelpOpen(false); setTutorialFromHelp(true); setScreen('tutorial'); }} onClose={() => setHelpOpen(false)} />}
+      {/* 트레이닝 유도 — 초급 연속 저조 후 '홈으로 가기'로 나오면 홈(전환 끝난 뒤)에서 비강제 모달로 제안. 미리보기 ?screen=home&nudge=1 */}
+      {screen === 'home' && !homeTx && (suggestPractice || (isPreview && qs('nudge') === '1')) && (
+        <TrainingNudgeModal onStart={() => { setSuggestPractice(false); startTraining(); }} onClose={() => setSuggestPractice(false)} />
+      )}
       {/* 게임오버 비트 — 게임 화면 위 오버레이(결과화면 직전). ~2초 후 결과('end')로 진행.
           신기록 판이면 어두운 게임오버 대신 밝은 '신기록!' 축하 비트로 교체(정확한 인지 + 기분좋게). onDone 로직은 공통. */}
       {showGameOverBeat && !examMode && (() => {

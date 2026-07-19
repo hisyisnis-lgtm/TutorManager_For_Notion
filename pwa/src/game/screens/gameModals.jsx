@@ -89,6 +89,31 @@ export function TrainingStartModal({ onStart, onClose }) {
   );
 }
 
+// 트레이닝 유도 모달 — 초급을 연속으로 어려워한 유저가 '홈으로 가기'로 나오면 홈에서 부드럽게 제안(비강제, 나중에=닫기).
+export function TrainingNudgeModal({ onStart, onClose }) {
+  return (
+    <ModalCard onClose={onClose}>
+      <div style={{ width: 72, height: 72, borderRadius: RADIUS.xxl, background: 'linear-gradient(135deg,#4ad4a0,#2bb583)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 10px 26px rgba(43,181,131,0.4)' }}>
+        <GraduationCapIcon size={38} weight="fill" color="#fff" />
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: SPACE.md, textAlign: 'center', width: '100%' }}>
+        <span style={{ ...TYPE.titleLg, color: TG.INK }}>천천히 익혀볼까요?</span>
+        <span style={{ ...TYPE.sub, lineHeight: 1.6, color: TG.SUB }}>
+          초급이 조금 어렵게 느껴지셨나요?<br />
+          <b style={{ color: '#2bb583', fontWeight: 800 }}>트레이닝</b>은 시간 제한 없이 <b style={{ color: TG.INK, fontWeight: 700 }}>약한 단어 위주</b>로 편하게 연습할 수 있어요.
+        </span>
+      </div>
+      <PrimaryButton onClick={() => { onStart && onStart(); }} background="linear-gradient(135deg,#3ccf97,#2bb583)" shadow="0px 10px 20px rgba(43,181,131,0.32)">
+        <span style={{ ...TYPE.cta, color: '#fff' }}>트레이닝 시작</span>
+        <PlayIcon size={14} weight="fill" color="#fff" />
+      </PrimaryButton>
+      <button className="tg-press" onClick={onClose} style={{ width: '100%', padding: '4px 0', background: 'none', border: 'none', cursor: 'pointer', ...TOUCH_OPT }}>
+        <span style={{ ...TYPE.body, color: TG.SUB }}>나중에</span>
+      </button>
+    </ModalCard>
+  );
+}
+
 // 로그인 유도 모달 — 게스트가 이전 기록을 넘긴 순간(결과 화면). 기기 저장(정직) 안내 + 로그인 버튼.
 export function LoginNudgeModal({ onLogin, onClose }) {
   return (
