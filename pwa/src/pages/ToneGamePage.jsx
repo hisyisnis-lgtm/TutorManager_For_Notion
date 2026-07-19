@@ -33,7 +33,7 @@ import {
   getEndlessTimeLimit, computeScore, resolveEndOutcome,
   loadEndlessBest, saveEndlessBest, headlineBest, isEndlessUnlocked,
   ENDLESS_UNLOCK_REVEAL, STAGES, stageRoundPool, saveStageScore, unlockedTrainingPool, isStageUnlocked,
-  stageScoreOf, stageOutcome, migrateRankForBoss,
+  stageScoreOf, stageOutcome, migrateRankForBoss, bossState,
 } from '../game/gameLogic.js';
 import { FigmaScreen, CountdownVisual, CdWaveEdge, GameToast, SettingsModal } from '../game/screens/shared.jsx';
 import { SplashScreen } from '../game/screens/SplashScreen.jsx';
@@ -1215,9 +1215,13 @@ export default function ToneGamePage() {
     const ci = STAGES.findIndex((s) => s.id === selectedDifficulty.id);
     const nextStage = (!practiceMode && !endlessMode && !themeMode && selectedDifficulty.bandIndex != null && ci >= 0) ? STAGES[ci + 1] : null;
     const canNextStage = !!(nextStage && isStageUnlocked(studentToken, nextStage));
+    // 이번 판 급의 승급시험이 이제 응시 가능(급 5스테이지 다 깸)이면 결과화면에 바로 '승급시험' 버튼. bossState 'ready' = rank===tierIdx라 startExam이 이 급을 응시.
+    const tierIdx = (!practiceMode && !endlessMode && !themeMode && selectedDifficulty.tier) ? DIFFICULTIES.findIndex((d) => d.id === selectedDifficulty.tier) : -1;
+    const examReady = tierIdx >= 0 && bossState(studentToken, tierIdx, rank) === 'ready';
     content = (
       <FigmaScreen>
         <ResultScreen score={score} maxCombo={maxCombo} avgMs={avgMsForResult}
+          onExam={(examReady || (isPreview && previewScreen === 'end' && qs('exam') === '1')) ? () => startExam() : undefined}
           onNextLevel={canNextStage ? () => startGame(nextStage) : undefined}
           isNewBest={practiceMode ? false : (isNewBest || (isPreview && qs('newbest') === '1'))} previousBest={practiceMode ? 0 : (isPreview && qs('newbest') === '1' ? 800 : previousBest)}
           suggestPractice={(suggestPractice && !practiceMode && !endlessMode && !themeMode && (selectedDifficulty.tier || selectedDifficulty.id) === 'easy') || (isPreview && previewScreen === 'end' && qs('suggest') === '1')}

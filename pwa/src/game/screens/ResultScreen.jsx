@@ -1,6 +1,6 @@
 // 결과 화면 — 신기록 배지·축하 판다·점수(카운트업)·통계 2카드·코치·다시도전/난이도 바꾸기.
 import { useState, useEffect } from 'react';
-import { TrophyIcon, ArrowClockwiseIcon, LightningIcon, CheckCircleIcon, XCircleIcon, CaretRightIcon, HouseIcon } from '@phosphor-icons/react';
+import { TrophyIcon, ArrowClockwiseIcon, LightningIcon, CheckCircleIcon, XCircleIcon, CaretRightIcon, HouseIcon, MedalIcon } from '@phosphor-icons/react';
 import { TG, TYPE, TOUCH_OPT, pickCelebratePanda, RADIUS, SPACE } from '../tgTokens.js';
 import { useCountUp, FlameIcon } from '../tgWidgets.jsx';
 import { play as playSfx } from '../tgSfx.js';
@@ -27,7 +27,7 @@ const RESULT_COACH = [
 ];
 
 
-export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, onRetry, onHome, onNextLevel = null, onLogin = null, retryLabel = '다시 도전', practice = false, endKind = null, suggestPractice = false, coachReady = true }) {
+export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, onRetry, onHome, onExam = null, onNextLevel = null, onLogin = null, retryLabel = '다시 도전', practice = false, endKind = null, suggestPractice = false, coachReady = true }) {
   const animScore = useCountUp(score, 1100);
   // 로그인 유도 모달(게스트가 '이전 기록'을 실제로 넘긴 순간) — 마운트 때 1회 판정(세션·쿨다운).
   //  previousBest>0: 첫 판(항상 신기록·이전0) 코치마크와 안 겹치고, 재도전+향상=투자 있는 성취에만.
@@ -103,11 +103,11 @@ export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, 
       </Reveal>
       {/* 코치 — 통계카드 하단과 CTA 사이 가용공간 세로중앙. (트레이닝 유도는 '홈으로 가기' 후 홈 모달로 — 결과화면은 안 어수선하게) */}
       <Reveal i={4} style={{ position: 'absolute', left: 24, right: 24, top: 452, bottom: 'calc(150px + env(safe-area-inset-bottom))', display: 'flex', alignItems: 'center' }}>
-        <CoachBubble text={onNextLevel ? '다음 스테이지에 도전할 수 있어요! 🎉' : suggestPractice ? `${DIFFICULTIES[0].label} 단계가 어렵나요? 천천히 익혀봐요` : practice ? '잘했어요! 또 해볼까요?' : endKind === 'miss' ? '아쉽게 틀렸어요! 다시 도전해볼까요?' : '다시 도전해서 신기록을 깨볼까요?'} />
+        <CoachBubble text={onExam ? '급을 다 깼어요! 이제 승급시험에 도전할 수 있어요 🎖️' : onNextLevel ? '다음 스테이지에 도전할 수 있어요! 🎉' : suggestPractice ? `${DIFFICULTIES[0].label} 단계가 어렵나요? 천천히 익혀봐요` : practice ? '잘했어요! 또 해볼까요?' : endKind === 'miss' ? '아쉽게 틀렸어요! 다시 도전해볼까요?' : '다시 도전해서 신기록을 깨볼까요?'} />
       </Reveal>
       {/* 메인 CTA (하단 고정) — 다음 스테이지가 열렸으면 [다시하기 | 다음 스테이지] 반반, 아니면 '다시 도전' 풀폭 */}
       <Reveal i={5} style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(80px + env(safe-area-inset-bottom))' }}>
-      {onNextLevel ? (
+      {(onExam || onNextLevel) ? (
         <div data-coach="result-actions" style={{ display: 'flex', gap: SPACE.lg }}>
           <button onClick={() => { playSfx('button'); onRetry(); }} className="tg-press" style={{
             flex: 1, minWidth: 0, height: 62, borderRadius: RADIUS.xl, border: '1.5px solid #ebe5de', background: '#fff', cursor: 'pointer',
@@ -116,11 +116,13 @@ export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, 
             <ArrowClockwiseIcon size={18} weight="bold" color="#9a93a0" />
             <span style={{ ...TYPE.btn, color: TG.SUB, whiteSpace: 'nowrap' }}>다시하기</span>
           </button>
-          <button onClick={() => { playSfx('button'); onNextLevel(); }} className="tg-press" style={{
+          {/* 급 5스테이지를 다 깼으면 다음은 '승급시험'(우선), 아니면 '다음 스테이지' */}
+          <button onClick={() => { playSfx('button'); (onExam || onNextLevel)(); }} className="tg-press" style={{
             flex: 1, minWidth: 0, height: 62, borderRadius: RADIUS.xl, border: 'none', cursor: 'pointer',
             background: TG.CORAL_GRAD, boxShadow: '0px 10px 20px rgba(242,72,76,0.32)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: SPACE.sm, ...TOUCH_OPT,
           }}>
-            <span style={{ ...TYPE.btn, color: '#fff', whiteSpace: 'nowrap' }}>다음 스테이지</span>
+            {onExam && <MedalIcon size={16} weight="fill" color="#fff" />}
+            <span style={{ ...TYPE.btn, color: '#fff', whiteSpace: 'nowrap' }}>{onExam ? '승급시험' : '다음 스테이지'}</span>
             <CaretRightIcon size={16} weight="bold" color="#fff" />
           </button>
         </div>
