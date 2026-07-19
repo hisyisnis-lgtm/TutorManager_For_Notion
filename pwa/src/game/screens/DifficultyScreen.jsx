@@ -250,12 +250,13 @@ export function DifficultyScreen({ studentToken, rank = 0, onSelect, onStart, on
                     <span style={{ ...TYPE.label, color: c.accent, whiteSpace: 'nowrap' }}>{s.tierLabel} 승급시험</span>
                   </div>
                 ) : boss ? (
-                  /* 보스 잠금 — 골드 lock */
+                  /* 보스 잠금 — 좌 메달(원래 아이콘) + 우 자물쇠 */
                   <div style={{ display: 'flex', width: ROW_W, alignItems: 'center', gap: SPACE.lg, padding: '0 15px', height: ROW_H, borderRadius: RADIUS.xxl, background: '#fff', boxShadow: '0 3px 9px rgba(43,79,120,0.1)' }}>
                     <div style={{ width: 32, height: 32, borderRadius: RADIUS.md, flexShrink: 0, background: c.tint, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <LockSimpleIcon size={18} weight="fill" color={c.accent} />
+                      <Icon size={18} weight="fill" color={c.accent} />
                     </div>
-                    <span style={{ ...TYPE.label, color: c.accent, whiteSpace: 'nowrap' }}>{s.tierLabel} 승급시험</span>
+                    <span style={{ flex: 1, minWidth: 0, ...TYPE.label, color: c.accent, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.tierLabel} 승급시험</span>
+                    <LockSimpleIcon size={17} weight="fill" color={TG.MUTED} style={{ flexShrink: 0 }} />
                   </div>
                 ) : selectable ? (
                   /* 스테이지 간략(해제) — 아이콘 + 라벨 + 미니 별 */
@@ -267,12 +268,13 @@ export function DifficultyScreen({ studentToken, rank = 0, onSelect, onStart, on
                     <StarRow filled={stars.filter(Boolean).length} size={14} gap={3} off="#d8d2c8" shine style={{ flexShrink: 0 }} />
                   </div>
                 ) : (
-                  /* 스테이지 간략(잠금) — 자물쇠 + 라벨 */
+                  /* 스테이지 간략(잠금) — 좌 원래 아이콘 + 우 자물쇠 */
                   <div style={{ display: 'flex', width: ROW_W, alignItems: 'center', gap: SPACE.lg, padding: '0 15px', height: ROW_H, borderRadius: RADIUS.xxl, background: '#fff', boxShadow: '0 3px 9px rgba(43,79,120,0.1)' }}>
                     <div style={{ width: 32, height: 32, borderRadius: RADIUS.md, flexShrink: 0, background: c.tint, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <LockSimpleIcon size={18} weight="fill" color={c.accent} />
+                      <Icon size={18} weight="fill" color={c.accent} />
                     </div>
-                    <span style={{ ...TYPE.label, color: c.accent, whiteSpace: 'nowrap' }}>{s.label}</span>
+                    <span style={{ flex: 1, minWidth: 0, ...TYPE.label, color: TG.INK_SOFT, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.label}</span>
+                    <LockSimpleIcon size={17} weight="fill" color={TG.MUTED} style={{ flexShrink: 0 }} />
                   </div>
                 )}
               </div>
