@@ -233,13 +233,8 @@ const TONE_GAME_CSS = `
       .tg-lianyin-stroke{ stroke-dasharray:100; stroke-dashoffset:100; animation: tg-lianyin-draw .5s ease-out .12s forwards }
       .tg-lianyin-barb{ opacity:0; animation: tg-lianyin-in .16s ease-out .58s forwards }
       @media (prefers-reduced-motion: reduce){ .tg-lianyin-stroke{ stroke-dashoffset:0; animation:none !important } .tg-lianyin-barb{ opacity:1; animation:none !important } }
-      /* 3성 변조 — 칩이 잠깐 커지며 칼로 ˇ의 내려가는 왼쪽 획을 잘라냄 → 툭 떨어지고 남은 오른쪽이 2성 ／로. + '→ 2성' 큐 */
-      @keyframes tg-cut-zoom { 0%{transform:scale(1)} 18%{transform:scale(1.62)} 66%{transform:scale(1.56)} 100%{transform:scale(1)} }
-      @keyframes tg-cut-fall { 0%{opacity:1;transform:translate(0,0) rotate(0)} 100%{opacity:0;transform:translate(-2px,11px) rotate(-40deg)} }
-      @keyframes tg-knife-slash { 0%{stroke-dashoffset:26;opacity:0} 28%{opacity:1} 46%{stroke-dashoffset:0} 100%{stroke-dashoffset:-32;opacity:0} }
-      @keyframes tg-2sung-draw { from{stroke-dashoffset:20} to{stroke-dashoffset:0} }
-      .tg-knife{ stroke-dasharray:26; animation: tg-knife-slash .34s ease-out .18s both }
-      .tg-cut-2sung{ stroke-dasharray:20; stroke-dashoffset:20; animation: tg-2sung-draw .3s ease-out .42s forwards }
+      /* 3성 변조 — 칩이 뒤집히듯 2성으로 팝(변화를 확실히 '느끼게') + 위로 뜨는 '→ 2성' 큐 */
+      @keyframes tg-sandhi-pop { 0%{transform:rotateX(82deg) scale(.82)} 55%{transform:rotateX(0) scale(1.22)} 78%{transform:scale(.96)} 100%{transform:scale(1)} }
       @keyframes tg-sandhi-cue { 0%{opacity:0;transform:translate(-50%,6px) scale(.85)} 22%{opacity:1;transform:translate(-50%,-7px) scale(1.05)} 70%{opacity:1;transform:translate(-50%,-12px)} 100%{opacity:0;transform:translate(-50%,-26px)} }
       .tg-reveal{ animation: tg-rise .4s cubic-bezier(.22,1,.36,1) both }
       .tg-toast{ animation: tg-toast 1.7s ease both }
@@ -431,52 +426,31 @@ export function LianyinMark({ width = 108, color = LIANYIN_COLOR, stroke = 7, an
   );
 }
 
-// 3성 변조 칩 — 3성+3성에서 앞 3성이 발음상 2성으로(你好 nǐ→ní hǎo). 완성 후 정답(3성) 인식 뒤 별도 비트로
-// 칼이 ˇ의 '내려가는 왼쪽 획'을 잘라냄 → 툭 떨어지고 남은 '올라가는 오른쪽'이 2성 ／로 곧게 뻗는다(발음 원리 시각화).
-// 칩이 잠깐 커져 칼질이 보이게. 표기·정답 키는 3성 원형 유지(연출 전용, 채점 무관).
+// 3성 변조 칩 — 3성+3성에서 앞 3성이 발음상 2성으로 바뀜(你好 nǐ→ní hǎo). 완성 후 3성 칩을 잠깐 보여준 뒤
+// 마크(ˇ→／)·칩 색·라벨을 2성으로 모프해 규칙을 가르친다. 표기·정답 키는 3성 원형 유지(연출 전용, 채점 무관).
 function SandhiToneChip({ big = false }) {
-  const [cut, setCut] = useState(false);
+  const [to2, setTo2] = useState(false);
   useEffect(() => {
-    if (prefersReducedMotion()) { setCut(true); return undefined; }
-    const t = setTimeout(() => setCut(true), 1000); // 정답 연출(3성)이 먼저 인식된 뒤 → 칼질 비트
+    if (prefersReducedMotion()) { setTo2(true); return undefined; }
+    const t = setTimeout(() => setTo2(true), 1000); // 정답 연출(3성)이 먼저 인식된 뒤 → 별도 비트로 2성 변조(교육 단어 dwell 2.4s가 이걸 수용)
     return () => clearTimeout(t);
   }, []);
+  const ms = big ? 16 : 13;
   const reduce = prefersReducedMotion();
   const c3 = TONES.find((t) => t.num === 3)?.color ?? TG.INK;
   const c2 = TONES.find((t) => t.num === 2)?.color ?? TG.INK;
-  const w = big ? 20 : 16, h = Math.round((big ? 20 : 16) * 0.5);
-  const svg = { width: w, height: h, viewBox: '0 0 24 12', fill: 'none', stroke: 'currentColor', strokeWidth: 3, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true };
-  const layer = { position: 'absolute', inset: 0, display: 'block', overflow: 'visible' };
   return (
     <span style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', overflow: 'visible' }}>
-      {cut && !reduce && (
-        <span aria-hidden="true" style={{ position: 'absolute', bottom: '116%', left: '50%', whiteSpace: 'nowrap',
-          ...TYPE.labelSm, fontSize: big ? 12 : 11, fontWeight: 800, color: c2, animation: 'tg-sandhi-cue 1.2s ease-out .18s both', pointerEvents: 'none' }}>→ 2성</span>
+      {/* 변조 순간 위로 뜨는 큐 — 변화를 놓치지 않게 */}
+      {to2 && !reduce && (
+        <span aria-hidden="true" style={{ position: 'absolute', bottom: '108%', left: '50%', whiteSpace: 'nowrap',
+          ...TYPE.labelSm, fontSize: big ? 12 : 11, fontWeight: 800, color: c2, animation: 'tg-sandhi-cue 1.1s ease-out forwards', pointerEvents: 'none' }}>→ 2성</span>
       )}
-      <span style={{ display: 'inline-flex', alignItems: 'center', gap: SPACE.xs, padding: '3px 8px', borderRadius: RADIUS.pill,
-        background: cut ? c2 : c3, color: '#fff', transition: 'background .5s ease .2s', transformOrigin: 'center',
-        animation: reduce ? 'none' : (cut ? 'tg-cut-zoom 1.25s cubic-bezier(.3,1.2,.5,1) both' : 'tg-pop .3s cubic-bezier(.34,1.56,.64,1) both') }}>
-        <span style={{ position: 'relative', width: w, height: h, color: '#fff' }}>
-          {/* ˇ 왼쪽(내려가는 획) — 칼질 뒤 툭 떨어짐 */}
-          <svg {...svg} style={{ ...layer, animation: (cut && !reduce) ? 'tg-cut-fall .5s ease-in .28s both' : 'none', opacity: (cut && reduce) ? 0 : 1 }}>
-            <line x1="3" y1="3" x2="12.5" y2="9" />
-          </svg>
-          {/* ˇ 오른쪽(올라가는 획) — 칼질 뒤 사라지고 2성으로 대체 */}
-          <svg {...svg} style={{ ...layer, opacity: cut ? 0 : 1, transition: 'opacity .25s ease .3s' }}>
-            <line x1="11.5" y1="9" x2="21" y2="3" />
-          </svg>
-          {/* 2성 ／ — 남은 상승획이 곧게 뻗은 결과(칼질 뒤 그려짐) */}
-          <svg {...svg} style={{ ...layer, opacity: cut ? 1 : 0, transition: 'opacity .3s ease .4s' }}>
-            <line x1="4" y1="10" x2="20" y2="2" className={(cut && !reduce) ? 'tg-cut-2sung' : ''} />
-          </svg>
-          {/* 칼날 슬래시 */}
-          {cut && !reduce && (
-            <svg {...svg} style={{ ...layer }}>
-              <line x1="1" y1="13" x2="15" y2="-3" stroke="#fff" strokeWidth="2.4" className="tg-knife" />
-            </svg>
-          )}
-        </span>
-        <span style={{ ...TYPE.labelSm, fontSize: big ? 12 : 10 }}>{cut ? '2성' : '3성'}</span>
+      <span key={to2 ? '2' : '3'} style={{ display: 'inline-flex', alignItems: 'center', gap: SPACE.xs, padding: '3px 8px', borderRadius: RADIUS.pill,
+        background: to2 ? c2 : c3, color: '#fff', transition: 'background .35s ease', transformStyle: 'preserve-3d',
+        animation: reduce ? 'none' : (to2 ? 'tg-sandhi-pop .52s cubic-bezier(.34,1.7,.5,1) both' : 'tg-pop .3s cubic-bezier(.34,1.56,.64,1) both') }}>
+        <ToneMark tone={to2 ? 2 : 3} size={ms} />
+        <span style={{ ...TYPE.labelSm, fontSize: big ? 12 : 10 }}>{to2 ? '2성' : '3성'}</span>
       </span>
     </span>
   );
