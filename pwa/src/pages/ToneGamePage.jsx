@@ -14,7 +14,7 @@ import {
   getMemberSession, loadMasteredSync, storeMasteredSync,
 } from '../game/gameStore.js';
 import { earTier, loadTierPeak } from '../game/earProfile.js';
-import { gameXpGain, xpTier, loadXp, saveXp, addXp, seedXpIfMissing, loadRank, saveRank, seedRankIfMissing, displayTier, examPassed, examFailXp, EXAM_QUESTIONS } from '../game/gameXp.js';
+import { gameXpGain, xpTier, loadXp, saveXp, addXp, seedXpIfMissing, loadRank, saveRank, seedRankIfMissing, displayTier, examPassed, EXAM_QUESTIONS } from '../game/gameXp.js';
 import { ROUND_LENGTH, DIFFICULTIES, THEMES } from '../constants/toneGameWords.js';
 import { TG, ensureGameFonts, haptic, shuffle, getTimeLimitForCombo, loadBest, saveBest } from '../game/tgTokens.js';
 import {
@@ -444,7 +444,7 @@ export default function ToneGamePage() {
     setPreviousBest(eff.previousBest);
 
     if (!isPreview) {
-      const endlessWasUnlocked = isEndlessUnlocked(studentToken); // 무한 해제 연출용 — 스테이지 점수 저장 전 상태(저장 후 비교로 '이번 판에 열림' 판정)
+      const endlessWasUnlocked = isEndlessUnlocked(studentToken, rank); // 무한 해제 연출용(보스 사다리: 무한=rank>=보스수, 일반 플레이론 안 바뀜 → 아래 조건은 사실상 미발동, 무한은 보스 합격에서 열림)
       if (mode === 'endless') {
         // 무한 — 헤드라인 best. meta.eb로 로컬 영구화. 회원은 아래 pushMemberData로 서버(/game/me) 동기화.
         const updated = { ...outcome.updated, updatedAt: Date.now() };
@@ -512,7 +512,7 @@ export default function ToneGamePage() {
           const t = THEMES.find((x) => x.unlock && x.unlock.byGameKey === gameKey
             && outcome.previousBest < x.unlock.score && outcome.updated.bestScore >= x.unlock.score);
           mu = t?.unlockReveal || null;
-        } else if (selectedDifficulty.bandIndex != null && !endlessWasUnlocked && isEndlessUnlocked(studentToken)) {
+        } else if (selectedDifficulty.bandIndex != null && !endlessWasUnlocked && isEndlessUnlocked(studentToken, rank)) {
           // 무한 게이트=마지막 스테이지(고수5) 해제. 이번 판(고수4 클리어)으로 고수5가 새로 열리면 무한 모드 해제 연출.
           mu = ENDLESS_UNLOCK_REVEAL;
         }
@@ -572,8 +572,7 @@ export default function ToneGamePage() {
       setExamResult({ correct, total, passed: true });
       setRankUp({ prevIdx, nowIdx });                       // 합격 연출(RankUpReveal 재활용) → onDone에서 결과화면
     } else {
-      const newXp = examFailXp(rank, loadXp(studentToken) ?? xp); // XP 15% 차감(등급 base 아래로는 안 내려감)
-      saveXp(studentToken, newXp); setXp(newXp);
+      // 보스 사다리: 불합격 페널티 없음 — 몇 번이고 재도전(2026-07-19 사용자 결정). XP 차감 폐기.
       setExamResult({ correct, total, passed: false });
       setScreen('examresult');
     }
@@ -788,7 +787,7 @@ export default function ToneGamePage() {
   // 트레이닝 모드 — 열린 스테이지 범위에서 약점가중 추첨. 시간 무제한·기록 미반영, 단어통계만 갱신.
   //   난이도(스테이지) 선택 없음: 범위=내 진행도(입문1만 열렸으면 입문1 단어). 진도 오르면 자동 확장.
   const startTraining = () => {
-    const pool = unlockedTrainingPool(studentToken, wordPoolByDiff);
+    const pool = unlockedTrainingPool(studentToken, wordPoolByDiff, rank);
     if (!pool || pool.length === 0) {
       message.error('단어를 불러오지 못했어요. 잠시 후 다시 시도해주세요.');
       setScreen('modeselect');
@@ -1147,7 +1146,7 @@ export default function ToneGamePage() {
   } else if (screen === 'modeselect') {
     content = (
       <FigmaScreen>
-        <ModeScreen endlessUnlocked={isPreview ? qs('locked') !== '1' : isEndlessUnlocked(studentToken)} endlessBest={loadEndlessBest(studentToken)?.bestScore || 0}
+        <ModeScreen endlessUnlocked={isPreview ? qs('locked') !== '1' : isEndlessUnlocked(studentToken, rank)} endlessBest={loadEndlessBest(studentToken)?.bestScore || 0}
           onDifficulty={() => { playSfx('button'); setScreen('difficulty'); }}
           onTheme={() => { playSfx('button'); setScreen('theme'); }}
           onEndless={() => { playSfx('button'); startEndless(); }}
@@ -1159,7 +1158,7 @@ export default function ToneGamePage() {
   } else if (screen === 'difficulty') {
     content = (
       <FigmaScreen>
-        <DifficultyScreen selected={selectedDifficulty} studentToken={studentToken} onSelect={setSelectedDifficulty} onStart={startGame} onBack={() => setScreen('modeselect')} onLocked={showToast} />
+        <DifficultyScreen selected={selectedDifficulty} studentToken={studentToken} rank={rank} onSelect={setSelectedDifficulty} onStart={(item) => (item && item.kind === 'boss' ? startExam() : startGame(item))} onBack={() => setScreen('modeselect')} onLocked={showToast} />
       </FigmaScreen>
     );
   } else if (screen === 'theme') {
