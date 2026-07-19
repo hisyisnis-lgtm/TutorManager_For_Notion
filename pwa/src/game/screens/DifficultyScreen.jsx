@@ -180,7 +180,7 @@ export function DifficultyScreen({ studentToken, rank = 0, onSelect, onStart, on
                 onLocked && onLocked(lockToast);
               }}
               role="button" tabIndex={0} aria-label={`${s.label} 선택`}
-              style={{ height: SLOT_H, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+              style={{ position: 'relative', zIndex: 1, height: SLOT_H, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
               <div style={{
                 width: isSelected ? 316 : ((selectable || beaten) ? 'auto' : 'auto'), transition: 'transform .28s ease',
                 transform: isSelected ? 'scale(1)' : 'scale(0.96)',
@@ -230,7 +230,7 @@ export function DifficultyScreen({ studentToken, rank = 0, onSelect, onStart, on
                   </div>
                 ) : boss && beaten ? (
                   /* 보스 통과 — 골드 ✓ */
-                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: SPACE.lg, padding: '0 15px', height: 46, borderRadius: RADIUS.xxl, background: 'rgba(255,255,255,0.9)', boxShadow: '0 3px 9px rgba(43,79,120,0.1)' }}>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: SPACE.lg, padding: '0 15px', height: 46, borderRadius: RADIUS.xxl, background: '#fff', boxShadow: '0 3px 9px rgba(43,79,120,0.1)' }}>
                     <div style={{ position: 'relative', width: 26, height: 26, borderRadius: RADIUS.md, flexShrink: 0, background: c.tint, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <MedalIcon size={15} weight="fill" color={c.accent} />
                       <span style={{ position: 'absolute', right: -3, bottom: -3, width: 14, height: 14, borderRadius: RADIUS.pill, background: c.accent, border: '2px solid #fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -257,7 +257,7 @@ export function DifficultyScreen({ studentToken, rank = 0, onSelect, onStart, on
                   </div>
                 ) : selectable ? (
                   /* 스테이지 간략(해제) — 아이콘 + 라벨 + 미니 별 */
-                  <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.lg, padding: '0 15px', height: 46, borderRadius: RADIUS.xxl, background: 'rgba(255,255,255,0.9)', boxShadow: '0 3px 9px rgba(43,79,120,0.1)', width: 220 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.lg, padding: '0 15px', height: 46, borderRadius: RADIUS.xxl, background: '#fff', boxShadow: '0 3px 9px rgba(43,79,120,0.1)', width: 220 }}>
                     <div style={{ width: 26, height: 26, borderRadius: RADIUS.md, flexShrink: 0, background: c.tint, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <Icon size={15} weight="fill" color={c.accent} />
                     </div>
