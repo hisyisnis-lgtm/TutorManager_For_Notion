@@ -64,9 +64,8 @@ import { ModeUnlockReveal } from '../game/screens/ModeUnlockReveal.jsx';
 const QS = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams();
 const qs = (name) => QS.get(name);
 
-// 초급 저조 판정 = 최고 콤보 기준. 점수는 오답을 다시 맞혀도 클리어 50점씩 쌓여(막 누르기≈800점대) '실력' 신호가 안 됨.
-// 콤보는 '무실수 연속 정답'이라야 오르므로 막 누르기=거의 0~2. 3연속 클린도 못 하면(=maxCombo<3) 헤매는 중으로 봄.
-const LOW_EASY_MAX_COMBO = 3; // 초급 노멀 런 최고 콤보가 이 미만이면 '저조' — 2연속 시 연습 모드 유도(코치마크)
+// 초급 저조 판정 = 점수 500 이하(2026-07-19 사용자 결정, 구 '최고콤보 2연속' 폐기).
+const LOW_EASY_SCORE = 500; // 초급 노멀 런 점수가 이 이하면 '저조' → 트레이닝 유도(모드선택 코치마크)
 
 // 성조 레벨 밴드(정확도→1~5) — 스냅샷 파생(deriveToneLevels)과 홈 렌더가 공유하는 단일 규칙(중복 하드코딩 금지).
 const toneLevelBand = (acc) => (acc < 0.5 ? 1 : acc < 0.65 ? 2 : acc < 0.8 ? 3 : acc < 0.92 ? 4 : 5);
@@ -524,14 +523,10 @@ export default function ToneGamePage() {
         if (mu) setModeUnlock(mu);
       }
 
-      // 초급 노멀 저조 연속 감지 → 2연속이면 연습 모드 유도 플래그(모드선택 코치마크). 격려 톤(강요 아님).
-      // 신호=최고 콤보(막 누르기 방어 — 점수는 오답 클리어 50점 누적으로 부풀어 실력 구분 불가).
-      if (mode === 'normal' && !themeMode && (selectedDifficulty.tier || selectedDifficulty.id) === 'easy') {
-        const lowKey = `game_easy_low_${studentToken}`;
-        let lowN = 0; try { lowN = parseInt(localStorage.getItem(lowKey) || '0', 10) || 0; } catch { /* noop */ }
-        lowN = maxCombo < LOW_EASY_MAX_COMBO ? lowN + 1 : 0;
-        if (lowN >= 2) { setSuggestPractice(true); lowN = 0; } // 유도 1회 후 카운터 리셋(반복 잔소리 방지)
-        try { localStorage.setItem(lowKey, String(lowN)); } catch { /* noop */ }
+      // 초급 노멀에서 점수 500 이하 → 트레이닝 유도 플래그(모드선택 코치마크). 격려 톤(강요 아님).
+      //  2026-07-19 사용자 결정: '500점 이하일 때만' 유도(구 최고콤보 2연속 폐기).
+      if (mode === 'normal' && !themeMode && (selectedDifficulty.tier || selectedDifficulty.id) === 'easy' && score <= LOW_EASY_SCORE) {
+        setSuggestPractice(true);
       }
 
       if (identity.kind === 'member') pushMemberData(identity).catch(() => {}); // 회원: 로컬 → 서버(/game/me) 통째 동기화
