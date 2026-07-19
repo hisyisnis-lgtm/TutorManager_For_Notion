@@ -192,12 +192,12 @@ export function ExamResultScreen({ correct = 0, total = 20, passed = false, canR
           <span style={{ ...TYPE.btnSm, color: passed ? '#fff' : TG.SUB, whiteSpace: 'nowrap' }}>{passed ? '승급 시험 합격!' : '승급 시험 불합격'}</span>
         </div>
       </Reveal>
-      {/* 축하/격려 판다 */}
-      <Reveal i={1} style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', top: 64 }}>
-        <img src={pandaSrc} alt="" width={150} height={150} style={{ display: 'block', objectFit: 'contain' }} />
+      {/* 축하/격려 판다 — 배지와 점수 사이 여백 위해 살짝 작게(겹침 방지) */}
+      <Reveal i={1} style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', top: 88 }}>
+        <img src={pandaSrc} alt="" width={120} height={120} style={{ display: 'block', objectFit: 'contain' }} />
       </Reveal>
       {/* 정답률(점수 자리) */}
-      <Reveal i={2} style={{ position: 'absolute', left: 24, right: 24, top: 196 }}>
+      <Reveal i={2} style={{ position: 'absolute', left: 24, right: 24, top: 234 }}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: SPACE.xs }}>
             <span style={{ ...TYPE.numHero, color: passed ? TG.SUCCESS : TG.CORAL_DK, lineHeight: 1 }}>{animCorrect}</span>
@@ -219,11 +219,11 @@ export function ExamResultScreen({ correct = 0, total = 20, passed = false, canR
               </div>
             );
           })()}
-          <span style={{ ...TYPE.sub, color: TG.SUB, marginTop: SPACE.md }}>정답률 {pct}% · 합격 기준 80%</span>
+          <span style={{ ...TYPE.sub, color: TG.SUB, marginTop: SPACE.xl }}>정답률 {pct}% · 합격 기준 80%</span>
         </div>
       </Reveal>
       {/* 통계 2카드(맞힌/틀린 문제) — 일반 결과 화면과 동일 기하·카드 스타일(빈 화면 방지) */}
-      <Reveal i={3} style={{ position: 'absolute', left: 24, right: 24, top: 312 }}>
+      <Reveal i={3} style={{ position: 'absolute', left: 24, right: 24, top: 384 }}>
         <div style={{ height: 128, display: 'flex', gap: SPACE.xl, alignItems: 'stretch' }}>
           {[
             { icon: <CheckCircleIcon size={24} weight="fill" color="#1fa86a" />, ibg: 'rgba(54,201,141,0.16)', val: correct, label: '맞힌 문제' },
@@ -241,7 +241,7 @@ export function ExamResultScreen({ correct = 0, total = 20, passed = false, canR
         </div>
       </Reveal>
       {/* 코치 */}
-      <Reveal i={4} style={{ position: 'absolute', left: 24, right: 24, top: 452, bottom: 'calc(150px + env(safe-area-inset-bottom))', display: 'flex', alignItems: 'center' }}>
+      <Reveal i={4} style={{ position: 'absolute', left: 24, right: 24, top: 534, bottom: 'calc(150px + env(safe-area-inset-bottom))', display: 'flex', alignItems: 'center' }}>
         <CoachBubble text={passed ? '축하해요! 등급이 한 단계 올랐어요 🎉' : (canRetry ? `합격까지 ${needMore}문제! 바로 다시 도전해봐요` : '조금만 더! 경험치를 더 채우면 다시 도전할 수 있어요')} />
       </Reveal>
       {/* 불합격 + 재응시 가능 시에만 '다시 도전' */}

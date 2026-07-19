@@ -14,7 +14,7 @@ import {
   getMemberSession, loadMasteredSync, storeMasteredSync,
 } from '../game/gameStore.js';
 import { earTier, loadTierPeak } from '../game/earProfile.js';
-import { gameXpGain, xpTier, loadXp, saveXp, addXp, seedXpIfMissing, loadRank, saveRank, seedRankIfMissing, displayTier, examPassed, EXAM_QUESTIONS } from '../game/gameXp.js';
+import { gameXpGain, xpTier, loadXp, saveXp, addXp, seedXpIfMissing, loadRank, saveRank, seedRankIfMissing, examPassed, EXAM_QUESTIONS } from '../game/gameXp.js';
 import { ROUND_LENGTH, DIFFICULTIES, THEMES } from '../constants/toneGameWords.js';
 import { TG, ensureGameFonts, haptic, shuffle, getTimeLimitForCombo, loadBest, saveBest } from '../game/tgTokens.js';
 import {
@@ -1198,7 +1198,7 @@ export default function ToneGamePage() {
     content = (
       <FigmaScreen>
         <ExamResultScreen correct={er.correct} total={er.total} passed={er.passed}
-          canRetry={!er.passed && (isPreview ? qs('retry') === '1' : displayTier(rank, xp).examReady)}
+          canRetry={!er.passed && (!isPreview || qs('retry') !== '0')} /* 보스 모델: 불합격해도 언제든 재도전(XP 게이트 없음) */
           onRetry={() => startExam()}
           onHome={() => tipTransitionTo('home')} /> {/* 승급시험 결과(인게임) → 홈(아웃게임): 팁 전환 */}
       </FigmaScreen>
@@ -1274,8 +1274,7 @@ export default function ToneGamePage() {
             const prevXp = loadXp(studentToken) ?? 0;
             const newXp = addXp(studentToken, gained);
             setXp(newXp);
-            // 이번 판에 '승급 시험 자격'이 새로 생겼으면(게이지 만땅 크로싱) → 홈 복귀 시 응시 권유 모달 1회.
-            if (!displayTier(rank, prevXp).examReady && displayTier(rank, newXp).examReady) setExamPromptPending(true);
+            // (구 XP기반 '승급 시험 권유'는 폐기 — 승급은 사다리 보스로만. XP는 레벨을 채움.)
             if (gained > 0) {
               // XP 획득 연출(등급업 연출 자리) — 요소 하나씩 '쾅' + 게이지 차오름 → onDone에서 결과화면.
               setXpGain({ gained, prevXp, newXp, score, correct: answeredCount, isNewBest: beatOutcome.isNewBest });
