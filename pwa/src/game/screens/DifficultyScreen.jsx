@@ -239,7 +239,7 @@ export function DifficultyScreen({ studentToken, rank = 0, onSelect, onStart, on
                         <CheckIcon size={8} weight="bold" color="#fff" />
                       </span>
                     </div>
-                    <span style={{ ...TYPE.label, color: c.accent, whiteSpace: 'nowrap' }}>{s.tierLabel} 승급시험 통과</span>
+                    <span style={{ ...TYPE.label, color: TG.INK_SOFT, whiteSpace: 'nowrap' }}>{s.tierLabel} 승급시험 통과</span>
                   </div>
                 ) : boss && selectable ? (
                   /* 보스 도전 가능(ready) — 골드 크라운 + 승급시험 */
@@ -247,7 +247,7 @@ export function DifficultyScreen({ studentToken, rank = 0, onSelect, onStart, on
                     <div style={{ width: 32, height: 32, borderRadius: RADIUS.md, flexShrink: 0, background: c.tint, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <MedalIcon size={18} weight="fill" color={c.accent} />
                     </div>
-                    <span style={{ ...TYPE.label, color: c.accent, whiteSpace: 'nowrap' }}>{s.tierLabel} 승급시험</span>
+                    <span style={{ ...TYPE.label, color: TG.INK_SOFT, whiteSpace: 'nowrap' }}>{s.tierLabel} 승급시험</span>
                   </div>
                 ) : boss ? (
                   /* 보스 잠금 — 좌 메달(원래 아이콘) + 우 자물쇠 */
@@ -255,7 +255,7 @@ export function DifficultyScreen({ studentToken, rank = 0, onSelect, onStart, on
                     <div style={{ width: 32, height: 32, borderRadius: RADIUS.md, flexShrink: 0, background: c.tint, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <Icon size={18} weight="fill" color={c.accent} />
                     </div>
-                    <span style={{ flex: 1, minWidth: 0, ...TYPE.label, color: c.accent, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.tierLabel} 승급시험</span>
+                    <span style={{ flex: 1, minWidth: 0, ...TYPE.label, color: TG.INK_SOFT, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.tierLabel} 승급시험</span>
                     <LockSimpleIcon size={17} weight="fill" color={TG.MUTED} style={{ flexShrink: 0 }} />
                   </div>
                 ) : selectable ? (
