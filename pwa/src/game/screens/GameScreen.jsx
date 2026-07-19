@@ -1,6 +1,6 @@
 // 게임 화면 (Figma 좌표 절대배치) — 점수·일시정지·타이머·단어카드·코치·성조버튼 + 콤보/신기록 버스트 연출(P4b).
 import { useState, useEffect, useRef, useLayoutEffect } from 'react';
-import { StarIcon, PauseIcon, TimerIcon, SpeakerHighIcon, EyeIcon, TicketIcon, SkullIcon, SignOutIcon } from '@phosphor-icons/react';
+import { StarIcon, PauseIcon, TimerIcon, SpeakerHighIcon, TicketIcon, SkullIcon, SignOutIcon } from '@phosphor-icons/react';
 import { TG, TYPE, TOUCH_OPT, RADIUS, SPACE } from '../tgTokens.js';
 import { play as playSfx } from '../tgSfx.js';
 import { Reveal, WordCard, ToneButtons, DrawPad, CoachBubble, ConfettiBurst, CrispFlash, LIGHT_CONFETTI, prefersReducedMotion, TONE_SHOT_HOVER_MS, TONE_FLIGHT_MS, TONE_IMPACT_MS } from './shared.jsx';
@@ -540,7 +540,7 @@ export function GameScreen({ word, entered, currentSyl, completed, timedOut, wor
         <div style={{ position: 'relative' }}>
           <div key={`card-${runId}-${wordIndex}`} style={{ animation: 'tg-card-in .38s cubic-bezier(.22,1,.36,1) both' }}>
             <div style={{ position: 'relative', transform: freeze ? 'scale(1.035)' : 'none', animation: punch ? 'tg-punch .35s ease-out' : 'none', '--tg-punch-s': (1.05 + heat * 0.05).toFixed(3) }}>
-              <WordCard word={word} entered={entered} currentSyl={currentSyl} completed={completed} timedOut={timedOut} progressText={endless ? `${wordIndex + 1}` : `${wordIndex + 1}/${wordsLen}`} hideProgress={practice} combo={combo} comboFlash={comboFlash} floatScore={practice ? null : floatScore} listen={listen} audioOff={audioOff} onReplay={onReplay} onCantHear={onCantHear} onHint={onHint} hintUsed={hintUsed} draw={draw} lianyinAt={lianyinAt} />
+              <WordCard word={word} entered={entered} currentSyl={currentSyl} completed={completed} timedOut={timedOut} progressText={endless ? `${wordIndex + 1}` : `${wordIndex + 1}/${wordsLen}`} hideProgress={practice} combo={combo} comboFlash={comboFlash} floatScore={practice ? null : floatScore} listen={listen} audioOff={audioOff} onReplay={onReplay} onCantHear={onCantHear} onHint={onHint} hintUsed={hintUsed} draw={draw} lianyinAt={lianyinAt} practice={practice} onSpeak={onSpeak} onReveal={onReveal} />
             </div>
           </div>
           {/* 정답 완성 연출 — 크리스프 플래시(번쩍) + 색색 색종이 + 흰/골드 글리터. ★단어 키 래퍼 '밖'에 둠: 안에 두면 새 단어 등장 때마다 리마운트되어 오발. flashKey 증가(정답 완성) 시에만 발동 */}
@@ -564,28 +564,13 @@ export function GameScreen({ word, entered, currentSyl, completed, timedOut, wor
           <CoachBubble text={coachText} />
         </Reveal>
       )}
-      {/* 트레이닝 종료 — 무한이라 자발적 종료용. 발음듣기/정답보기 '위'(자주 쓰는 버튼보다 멀리)라 오터치로 안 끊김 */}
+      {/* 트레이닝 종료 — 무한이라 자발적 종료용. 발음듣기/정답보기는 카드로 이관됨 → 성조버튼과 카드 사이 밴드에 배치(오터치 방지) */}
       {practice && onEndTraining && (
-        <Reveal i={3} play={playReveal} style={{ position: 'absolute', left: 0, right: 0, bottom: 'calc(192px + env(safe-area-inset-bottom))', display: 'flex', justifyContent: 'center' }}>
+        <Reveal i={3} play={playReveal} style={{ position: 'absolute', left: 0, right: 0, bottom: 'calc(150px + env(safe-area-inset-bottom))', display: 'flex', justifyContent: 'center' }}>
           <button onClick={onEndTraining} className="tg-press" style={{ display: 'inline-flex', alignItems: 'center', gap: SPACE.sm, padding: '9px 18px', borderRadius: RADIUS.lg, background: '#fff', border: '1.5px solid #ebe5de', boxShadow: '0px 2px 6px rgba(43,39,48,0.05)', cursor: 'pointer', ...TOUCH_OPT }}>
             <SignOutIcon size={15} weight="bold" color={TG.SUB} />
             <span style={{ ...TYPE.label, color: TG.SUB }}>트레이닝 종료</span>
           </button>
-        </Reveal>
-      )}
-      {/* 연습 모드 — 발음 듣기 / 정답 보기 (성조버튼 위) */}
-      {practice && (
-        <Reveal i={4} play={playReveal} style={{ position: 'absolute', left: 20, right: 20, bottom: 'calc(130px + env(safe-area-inset-bottom))' }}>
-          <div data-coach="prac-actions" style={{ display: 'flex', gap: SPACE.lg }}>
-            <button onClick={onSpeak} className="tg-press" style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: SPACE.md, padding: '13px 0', borderRadius: RADIUS.lg, background: '#fff', border: '1.5px solid #ebe5de', cursor: 'pointer', ...TOUCH_OPT }}>
-              <SpeakerHighIcon size={20} weight="fill" color={TG.SUCCESS_GLOW} />
-              <span style={{ ...TYPE.label, color: TG.INK }}>발음 듣기</span>
-            </button>
-            <button onClick={onReveal} disabled={completed} className="tg-press" style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: SPACE.md, padding: '13px 0', borderRadius: RADIUS.lg, background: '#fff', border: '1.5px solid #ebe5de', cursor: completed ? 'default' : 'pointer', opacity: completed ? 0.5 : 1, ...TOUCH_OPT }}>
-              <EyeIcon size={20} weight="fill" color="#767676" />
-              <span style={{ ...TYPE.label, color: TG.INK }}>정답 보기</span>
-            </button>
-          </div>
         </Reveal>
       )}
       {/* 건너뛰기 — 못 풀겠는 단어를 건너뛰기 패스 1개 쓰고 넘김. 남은 티켓 3칸을 버튼 안에 함께 표시(예산 HUD 통합):

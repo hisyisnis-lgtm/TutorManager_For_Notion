@@ -3,7 +3,7 @@
 // 단어 카드/성조 버튼·카운트다운 비주얼·토스트·흔들림 버튼.
 // 참조 메모리: tone_game_redesign.md §5(단어카드)·§10-B(FigmaScreen)·§10-C(연출)
 import { useState, useEffect, useRef, useLayoutEffect } from 'react';
-import { LockSimpleIcon, CheckCircleIcon, SpeakerHighIcon, SpeakerSlashIcon, VibrateIcon, XIcon, CaretLeftIcon, StarIcon } from '@phosphor-icons/react';
+import { LockSimpleIcon, CheckCircleIcon, SpeakerHighIcon, SpeakerSlashIcon, VibrateIcon, XIcon, CaretLeftIcon, StarIcon, EyeIcon } from '@phosphor-icons/react';
 import { TG, FONT_HANZI, FONT_PINYIN, TYPE, SHADOW, DUR, TOUCH_OPT, TONE_TINTS, TONE_BORDERS, TONE_COLORS, ASSETS,
   haptic, isHapticMuted, setHapticMuted, RADIUS, SPACE } from '../tgTokens.js';
 import { ToneMark, ComboChip } from '../tgWidgets.jsx';
@@ -423,7 +423,7 @@ export function LianyinMark({ width = 108, color = LIANYIN_COLOR, stroke = 7, an
   );
 }
 
-export function WordCard({ word, entered, currentSyl, completed, timedOut, progressText, combo, comboFlash, floatScore, hideProgress, listen = false, audioOff = false, onReplay, onCantHear, onHint, hintUsed = false, draw = false, lianyinAt = -1 }) {
+export function WordCard({ word, entered, currentSyl, completed, timedOut, progressText, combo, comboFlash, floatScore, hideProgress, listen = false, audioOff = false, onReplay, onCantHear, onHint, hintUsed = false, draw = false, lianyinAt = -1, practice = false, onSpeak, onReveal }) {
   const listening = listen && !audioOff && !completed && !timedOut; // 듣기 모드: 답하기 전엔 한자 가리고 소리 패널
   // 한자 모드 발음 힌트 — 답하기 전에만, 음소거 아닐 때만. 소리=정답이라 처음 쓰면 콤보가 끊긴다(hintUsed=이미 끊긴 상태면 무료).
   const canHint = onHint && !listening && !completed && !timedOut && !audioOff;
@@ -565,7 +565,25 @@ export function WordCard({ word, entered, currentSyl, completed, timedOut, progr
           {showLianyin && (
             <span style={{ ...TYPE.labelSm, color: LIANYIN_COLOR }}>연음 · 3성+2성은 반3성으로 이어서</span>
           )}
-          {canHint && (
+          {practice ? (
+            /* 트레이닝 — 발음 듣기 / 정답 보기 (일반 모드 발음힌트와 같은 카드 하단 자리로 통일). 트레이닝은 콤보·점수 없어 무페널티 */
+            <div data-coach="prac-actions" style={{ display: 'flex', gap: SPACE.md, marginTop: SPACE.xxs }}>
+              <button onClick={onSpeak} className="tg-press" aria-label="발음 듣기" style={{
+                display: 'inline-flex', alignItems: 'center', gap: SPACE.sm, padding: '8px 14px', borderRadius: RADIUS.lg,
+                background: '#fff', border: `1.5px solid ${TG.CORAL_BG}`, cursor: 'pointer', ...TOUCH_OPT,
+              }}>
+                <SpeakerHighIcon size={16} weight="fill" color={TG.CORAL_DK} />
+                <span style={{ ...TYPE.labelSm, color: TG.INK }}>발음 듣기</span>
+              </button>
+              <button onClick={onReveal} disabled={completed} className="tg-press" aria-label="정답 보기" style={{
+                display: 'inline-flex', alignItems: 'center', gap: SPACE.sm, padding: '8px 14px', borderRadius: RADIUS.lg,
+                background: '#fff', border: '1.5px solid #ebe5de', cursor: completed ? 'default' : 'pointer', opacity: completed ? 0.5 : 1, ...TOUCH_OPT,
+              }}>
+                <EyeIcon size={16} weight="fill" color={TG.SUB} />
+                <span style={{ ...TYPE.labelSm, color: TG.INK }}>정답 보기</span>
+              </button>
+            </div>
+          ) : canHint ? (
             <button onClick={onHint} className="tg-press" aria-label={hintUsed ? '발음 다시 듣기' : '발음 힌트 듣기 (콤보가 끊겨요)'} style={{
               display: 'inline-flex', alignItems: 'center', gap: SPACE.sm, padding: '7px 13px', borderRadius: RADIUS.md,
               background: '#fff', border: `1.5px solid ${hintUsed ? TG.BORDER : TG.CORAL_BG}`, cursor: 'pointer', ...TOUCH_OPT,
@@ -575,7 +593,7 @@ export function WordCard({ word, entered, currentSyl, completed, timedOut, progr
                 {hintUsed ? '다시 듣기' : '발음 힌트'}
               </span>
             </button>
-          )}
+          ) : null}
         </div>
       )}
     </div>
