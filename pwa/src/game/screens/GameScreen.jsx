@@ -616,6 +616,22 @@ export function GameScreen({ word, entered, currentSyl, completed, timedOut, wor
       )}
       {/* 콤보 마일스톤 · 라이브 신기록 버스트(P4b) */}
       <CenterBurst data={burst} />
+      {/* 정답 판정(완벽/훌륭/좋아) + 점수 — 카드 중앙에 크게 팝(코너 플로트는 시선이 안 가서 이관). 밀레스톤 버스트 뜰 땐 양보. 연습=점수 없음. */}
+      {!practice && floatScore && !burst && (() => {
+        const J = { best: { label: '완벽!', color: '#F5A623', size: 38, glow: true }, mid: { label: '훌륭!', color: '#1fa86a', size: 32 }, base: { label: '좋아!', color: '#8a8590', size: 27 } }[floatScore.judge] || { label: '', color: TG.SUB, size: 27 };
+        return (
+          <div key={`jp-${score}`} style={{ position: 'absolute', left: 0, right: 0, top: 240, display: 'flex', justifyContent: 'center', pointerEvents: 'none', zIndex: 19 }}>
+            <style>{`@keyframes tg-judge{0%{transform:translateY(8px) scale(.5);opacity:0}20%{transform:translateY(0) scale(1.14);opacity:1}58%{transform:translateY(0) scale(1);opacity:1}100%{transform:translateY(-22px) scale(1);opacity:0}}`}</style>
+            <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, animation: 'tg-judge 1.25s ease-out forwards' }}>
+              <div aria-hidden="true" style={{ position: 'absolute', left: '50%', top: '46%', transform: 'translate(-50%,-50%)', width: 210, height: 112, background: 'radial-gradient(closest-side, rgba(255,253,248,0.92), rgba(255,253,248,0.5) 55%, rgba(255,253,248,0))' }} />
+              {floatScore.judge && (
+                <span style={{ position: 'relative', ...TYPE.titleLg, fontSize: J.size, fontWeight: 800, color: J.color, textShadow: '0 0 8px #fffdf8, 0 0 8px #fffdf8, 0px 3px 10px rgba(43,39,48,0.16)', whiteSpace: 'nowrap' }}>{J.label}{J.glow ? ' ✨' : ''}</span>
+              )}
+              <span style={{ position: 'relative', ...TYPE.numMd, fontSize: 26, fontWeight: 800, color: TG.SUCCESS, textShadow: '0 0 6px #fffdf8, 0 0 6px #fffdf8' }}>+{floatScore.n}</span>
+            </div>
+          </div>
+        );
+      })()}
       {/* 연습 첫 진입 코치마크 — 카운트다운 끝나 배지·버튼 뜬 뒤 스포트라이트(연습은 타이머 없어 딤 안전) */}
       <CoachMarkOverlay visible={practice && playReveal && pracTip.visible} onDone={pracTip.dismiss} steps={PRACTICE_COACH} delay={360} showControls={false} />
       {/* 무한 서든데스 킥오프 연출 — 런 시작 시 뒤 배경 딤+블러 위에 중앙 큰 '서든데스 / 한 번 틀리면 끝!'. 연출 중 타이머 정지(부모가 paused 처리). */}
