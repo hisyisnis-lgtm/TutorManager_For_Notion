@@ -33,7 +33,7 @@ import {
   getEndlessTimeLimit, computeScore, resolveEndOutcome,
   loadEndlessBest, saveEndlessBest, headlineBest, isEndlessUnlocked,
   ENDLESS_UNLOCK_REVEAL, STAGES, stageRoundPool, saveStageScore, unlockedTrainingPool, isStageUnlocked,
-  stageScoreOf, stageOutcome, migrateRankForBoss, bossState, JUDGE_RATIO, earnedRankFromTiers,
+  stageScoreOf, stageOutcome, migrateRankForBoss, bossState, JUDGE_RATIO, earnedRankFromTiers, clearOrphanThemeBests,
 } from '../game/gameLogic.js';
 import { FigmaScreen, CountdownVisual, CdWaveEdge, GameToast, SettingsModal } from '../game/screens/shared.jsx';
 import { SplashScreen } from '../game/screens/SplashScreen.jsx';
@@ -443,6 +443,7 @@ export default function ToneGamePage() {
         await pullMemberData(identity).catch(() => {}); // 회원: 서버(/game/me) → 로컬 머지
         if (cancelled) return;
       }
+      clearOrphanThemeBests(studentToken); // 체인상 잠긴 테마의 유령 best(옛 '전부 오픈' 시절 기록 등) 정리 — 진입마다 멱등
       wordStatsRef.current = loadWordStats(studentToken);
       toneStatsRef.current = loadToneStats(studentToken);
       setBest(headlineBest(studentToken)); // 캐시 기반 헤드라인(무한 우선)

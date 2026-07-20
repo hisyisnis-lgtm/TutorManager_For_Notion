@@ -1,7 +1,7 @@
 // 성조게임 — 잠금 사다리 / 무한모드 / 헤드라인 최고점 등 순수 로직 헬퍼.
 // React 무관. localStorage 베스트 캐시(tgTokens) 위에서 동작 → 화면 컴포넌트·상태머신이 공유.
 // 참조 메모리: tone_game_redesign.md (잠금 사다리·무한·헤드라인)
-import { loadBest, saveBest, getTimeLimitForCombo } from './tgTokens.js';
+import { loadBest, saveBest, getTimeLimitForCombo, getBestKey } from './tgTokens.js';
 import { DIFFICULTIES, THEMES, ROUND_LENGTH } from '../constants/toneGameWords.js';
 
 // 통합 최고점수 — 3난이도 기록 중 최고(+ 그 난이도 라벨). 타이틀 카드는 '내 최고 실력'을 보여줌.
@@ -236,6 +236,17 @@ export function isThemeUnlocked(token, theme) {
   const prev = THEMES.find((t) => t.gameKey === theme.unlock.byGameKey);
   const prevUnlocked = prev ? isThemeUnlocked(token, prev) : true;
   return prevUnlocked && themeBestScore(token, theme.unlock.byGameKey) >= theme.unlock.score;
+}
+// 유령 기록 정리 — 체인상 '잠긴' 테마에 남은 stale best(옛 '테마 전부 오픈' 시절 기록 등)를 지운다.
+//  진입 시 1회. 정식으로 해제(체인 충족)하면 다시 기록됨. 잠긴 것만 지우므로 정상 진행 유저는 무영향.
+export function clearOrphanThemeBests(token) {
+  let cleared = 0;
+  for (const t of THEMES) {
+    if (!isThemeUnlocked(token, t) && themeBestScore(token, t.gameKey) > 0) {
+      try { localStorage.removeItem(getBestKey(token, t.gameKey)); cleared += 1; } catch { /* noop */ }
+    }
+  }
+  return cleared;
 }
 export function themeUnlockReqText(theme) {
   if (!theme || !theme.unlock) return '';

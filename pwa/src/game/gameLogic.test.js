@@ -6,7 +6,7 @@ import {
   overallBestFromLocal, overallBestFromServer,
   loadEndlessBest, saveEndlessBest, headlineBest, resolveEndOutcome,
   themeStars, STAGES, saveStageScore, isStageUnlocked, bossState,
-  earnedRankFromTiers, migrateRankForBoss, isThemeUnlocked,
+  earnedRankFromTiers, migrateRankForBoss, isThemeUnlocked, themeBestScore, clearOrphanThemeBests,
 } from './gameLogic.js';
 import { saveBest } from './tgTokens.js';
 import { THEMES } from '../constants/toneGameWords.js';
@@ -287,5 +287,21 @@ describe('isThemeUnlocked — 체인 전체(transitive) 해제', () => {
     saveBest(TOKEN, 'tone-cooking', { bestScore: 800 });
     expect(isThemeUnlocked(TOKEN, byKey('tone-cooking'))).toBe(true);
     expect(isThemeUnlocked(TOKEN, byKey('tone-travel'))).toBe(true);
+  });
+});
+
+describe('clearOrphanThemeBests — 잠긴 테마 유령 기록 정리', () => {
+  it('체인상 잠긴 테마의 stale best 제거(열린 건 유지)', () => {
+    saveBest(TOKEN, 'tone-cooking', { bestScore: 3243 }); // 드라마 0(잠김)인데 요리 best 남음
+    saveBest(TOKEN, 'tone-travel', { bestScore: 2000 });  // 여행도 유령
+    expect(clearOrphanThemeBests(TOKEN)).toBe(2);
+    expect(themeBestScore(TOKEN, 'tone-cooking')).toBe(0);
+    expect(themeBestScore(TOKEN, 'tone-travel')).toBe(0);
+  });
+  it('정식 해제(체인 충족) 테마 best는 유지', () => {
+    saveBest(TOKEN, 'tone-drama', { bestScore: 800 });
+    saveBest(TOKEN, 'tone-cooking', { bestScore: 1200 });
+    expect(clearOrphanThemeBests(TOKEN)).toBe(0);
+    expect(themeBestScore(TOKEN, 'tone-cooking')).toBe(1200);
   });
 });
