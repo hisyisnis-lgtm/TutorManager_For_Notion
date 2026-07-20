@@ -6,9 +6,10 @@ import {
   overallBestFromLocal, overallBestFromServer,
   loadEndlessBest, saveEndlessBest, headlineBest, resolveEndOutcome,
   themeStars, STAGES, saveStageScore, isStageUnlocked, bossState,
-  earnedRankFromTiers, migrateRankForBoss,
+  earnedRankFromTiers, migrateRankForBoss, isThemeUnlocked,
 } from './gameLogic.js';
 import { saveBest } from './tgTokens.js';
+import { THEMES } from '../constants/toneGameWords.js';
 
 const TOKEN = 'test-user';
 beforeEach(() => { localStorage.clear(); });
@@ -268,5 +269,23 @@ describe('themeStars — 테마 성취 별(한 판 최고점 500/1000/1800, 콤�
     expect(themeStars(1799)).toBe(2);
     expect(themeStars(1800)).toBe(3);
     expect(themeStars(9999)).toBe(3);
+  });
+});
+
+describe('isThemeUnlocked — 체인 전체(transitive) 해제', () => {
+  const byKey = (k) => THEMES.find((t) => t.gameKey === k);
+  it('첫 테마(unlock=null)는 항상 열림', () => {
+    expect(isThemeUnlocked(TOKEN, byKey('tone-drama'))).toBe(true);
+  });
+  it('직전이 잠겼으면 중간 stale best가 있어도 뒷 테마 안 열림(건너뛰기 방지)', () => {
+    saveBest(TOKEN, 'tone-cooking', { bestScore: 1200 }); // 요리 best만 남음(드라마 0)
+    expect(isThemeUnlocked(TOKEN, byKey('tone-cooking'))).toBe(false); // 드라마 0 → 요리 잠김
+    expect(isThemeUnlocked(TOKEN, byKey('tone-travel'))).toBe(false);  // 요리 잠김 → 여행 잠김
+  });
+  it('체인이 모두 충족되면 열림', () => {
+    saveBest(TOKEN, 'tone-drama', { bestScore: 800 });
+    saveBest(TOKEN, 'tone-cooking', { bestScore: 800 });
+    expect(isThemeUnlocked(TOKEN, byKey('tone-cooking'))).toBe(true);
+    expect(isThemeUnlocked(TOKEN, byKey('tone-travel'))).toBe(true);
   });
 });

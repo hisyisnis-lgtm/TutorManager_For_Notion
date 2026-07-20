@@ -229,9 +229,13 @@ function labelForGameKey(gameKey) {
   return '';
 }
 export function themeBestScore(token, gameKey) { const b = loadBest(token, gameKey); return b ? (b.bestScore || 0) : 0; }
+// 해제는 '체인 전체'를 봐야 함 — 직전 테마가 (재귀로) 해제돼 있고 + 그 최고점이 기준 이상일 때만.
+//  직전 점수만 보면, 잠긴 중간 테마의 stale best(옛 '전부 오픈' 시절 기록 등)로 뒷 테마가 건너뛰어 열리는 버그(2026-07-20 수정).
 export function isThemeUnlocked(token, theme) {
   if (!theme || !theme.unlock) return true;
-  return themeBestScore(token, theme.unlock.byGameKey) >= theme.unlock.score;
+  const prev = THEMES.find((t) => t.gameKey === theme.unlock.byGameKey);
+  const prevUnlocked = prev ? isThemeUnlocked(token, prev) : true;
+  return prevUnlocked && themeBestScore(token, theme.unlock.byGameKey) >= theme.unlock.score;
 }
 export function themeUnlockReqText(theme) {
   if (!theme || !theme.unlock) return '';
