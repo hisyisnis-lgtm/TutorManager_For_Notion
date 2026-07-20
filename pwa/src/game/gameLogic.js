@@ -68,21 +68,19 @@ export const STAGES = DIFFICULTIES.flatMap((d) => Array.from({ length: STAGES_PE
   id: `${d.id}-${i + 1}`, label: `${d.label} ${i + 1}`,
   gameKey: d.gameKey, timeMultiplier: d.timeMultiplier, // 기록·페이스는 티어 공유
 })));
-// 1판(ROUND_LENGTH단어) 이론상 최고점 — 무실수+즉답(콤보 보너스 i*20 + 시간보너스 timeLimit/100). 별 임계 기준.
-export function tierMaxScore(mult) {
-  let sum = 0;
-  for (let i = 1; i <= ROUND_LENGTH; i += 1) {
-    const tl = Math.max(4000, getTimeLimitForCombo(i - 1, mult)); // 단어 i 타이머 = 콤보(i-1) 기준
-    sum += 100 + i * 20 + Math.floor(tl / 100);
-  }
-  return sum;
-}
-// 스테이지 별 임계 = 1판 최고점 기준. ★3=3/3(이론상 즉답만점)은 사람은 사실상 불가라, '무실수 완주가 닿는 선'으로 하향(2026-07-20).
-//  실수하면 computeScore가 flat 50 + 콤보 리셋이라 점수가 크게 떨어짐 → 무실수 완주(대략 88~94%)만 ★3에 닿고 실수 런은 대체로 미달.
-const STAR3_FACTOR = 0.85; // ★3 = 이론상 최고점의 85%
+// 정답 판정 3단계 기준 = 단어 완성 시 '남은시간 비율'(완벽 60%↑ / 훌륭 30%↑ / 좋아). 플레이 중 뜨는 판정과 스테이지 별을 같은 기준으로 부여(정합, 2026-07-20).
+export const JUDGE_RATIO = { best: 0.6, mid: 0.3 };
+// 스테이지 별 임계 = "그 판정 수준으로 한 판을 완주". base+combo(무실수 완주 기본, 급 무관) + 남은시간비율×시간보너스.
+//  ★3=전 단어 완벽런 · ★2=훌륭런 · ★1=완주(여유값). 구 '이론상 즉답만점'과 달리 실제 도달 가능 + 화면 판정과 1:1.
 export function stageStarScores(mult) {
-  const m = tierMaxScore(mult);
-  return [Math.round(m / 3), Math.round((m * 2) / 3), Math.round(m * STAR3_FACTOR)];
+  let bc = 0, tbBest = 0, tbMid = 0;
+  for (let i = 1; i <= ROUND_LENGTH; i += 1) {
+    bc += 100 + i * 20; // 무실수 완주의 base+콤보(시간 무관 — 급 공통)
+    const tl = Math.max(4000, getTimeLimitForCombo(i - 1, mult));
+    tbBest += Math.floor((tl * JUDGE_RATIO.best) / 100); // 완벽(남은 60%)
+    tbMid += Math.floor((tl * JUDGE_RATIO.mid) / 100);   // 훌륭(남은 30%)
+  }
+  return [Math.round(bc * 0.4), bc + tbMid, bc + tbBest];
 }
 // 스테이지별 최고 점수 — 경량 별도 저장(기록 gameKey는 티어 공유라 스테이지 구분 불가 → 여기서 별 계산)
 function stageScoresKey(token) { return `game_stage_scores_${token}`; }

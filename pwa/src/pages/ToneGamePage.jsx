@@ -33,7 +33,7 @@ import {
   getEndlessTimeLimit, computeScore, resolveEndOutcome,
   loadEndlessBest, saveEndlessBest, headlineBest, isEndlessUnlocked,
   ENDLESS_UNLOCK_REVEAL, STAGES, stageRoundPool, saveStageScore, unlockedTrainingPool, isStageUnlocked,
-  stageScoreOf, stageOutcome, migrateRankForBoss, bossState,
+  stageScoreOf, stageOutcome, migrateRankForBoss, bossState, JUDGE_RATIO,
 } from '../game/gameLogic.js';
 import { FigmaScreen, CountdownVisual, CdWaveEdge, GameToast, SettingsModal } from '../game/screens/shared.jsx';
 import { SplashScreen } from '../game/screens/SplashScreen.jsx';
@@ -929,7 +929,10 @@ export default function ToneGamePage() {
           playSfx(newCombo >= 2 ? 'combo' : 'correct', undefined, pitchRate);
         } else { earned = computeScore({ perfect: false, remainingMs: remaining }); setCombo(0); haptic(15); playSfx('correct', 0.4); }
         setScore((s) => s + earned);
-        setFloatScore(`+${earned}`);
+        // 정답 판정 3단계 — 남은시간 비율(=시간보너스)로 완벽!/훌륭!/좋아!. 무실수 정답만(실수 클리어는 판정 없이 점수만).
+        const tRatio = (!hasMistake && wordTimeLimitRef.current > 0) ? remaining / wordTimeLimitRef.current : -1;
+        const judge = tRatio < 0 ? null : tRatio >= JUDGE_RATIO.best ? 'best' : tRatio >= JUDGE_RATIO.mid ? 'mid' : 'base';
+        setFloatScore({ n: earned, judge });
         setTotalAnswerTime((t) => t + answerTime);
         setAnsweredCount((c) => c + 1);
         // 단어 숙련도 기록(무실수 클리어 여부 + 소요시간)

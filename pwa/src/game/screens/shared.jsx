@@ -557,12 +557,21 @@ export function WordCard({ word, entered, currentSyl, completed, timedOut, progr
         </div>
       )}
       <div style={{ position: 'absolute', right: 16, top: 14 }}><ComboChip combo={combo} flash={comboFlash} /></div>
-      {floatScore && (
-        <div style={{
-          position: 'absolute', right: 20, top: 44, zIndex: 2, ...TYPE.numMd, fontSize: 22,
-          color: TG.SUCCESS, animation: 'tg-float 1.3s ease-out forwards', pointerEvents: 'none',
-        }}>{floatScore}</div>
-      )}
+      {floatScore && (() => {
+        // 정답 판정 3단계(완벽!/훌륭!/좋아!) — 남은시간=시간보너스를 간접 표현. 최상만 금색·크게·반짝.
+        const J = { best: { label: '완벽!', color: '#F5A623', size: 21, glow: true }, mid: { label: '훌륭!', color: TG.SUCCESS, size: 16 }, base: { label: '좋아!', color: TG.SUB, size: 14 } }[floatScore.judge];
+        return (
+          <div style={{ position: 'absolute', right: 20, top: 36, zIndex: 2, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1, animation: 'tg-float 1.3s ease-out forwards', pointerEvents: 'none' }}>
+            {J && (
+              <span style={{ ...TYPE.btnSm, fontSize: J.size, fontWeight: 800, color: J.color, lineHeight: 1,
+                ...(J.glow ? { textShadow: '0 0 12px rgba(245,166,35,0.55)', animation: 'tg-pop .34s cubic-bezier(.34,1.7,.5,1) both' } : {}) }}>
+                {J.label}{J.glow ? ' ✨' : ''}
+              </span>
+            )}
+            <span style={{ ...TYPE.numMd, fontSize: 22, color: TG.SUCCESS, lineHeight: 1.1 }}>+{floatScore.n}</span>
+          </div>
+        );
+      })()}
       {/* 뜻 — 듣기 중엔 가림(완료 시 공개="아 이 말이었구나") */}
       <div style={{ height: 22, marginTop: SPACE.md, textAlign: 'center', flexShrink: 0 }}>
         {!listening && <span style={{ ...TYPE.sub, color: TG.SUB }}>{word.meaning}</span>}
