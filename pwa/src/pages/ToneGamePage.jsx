@@ -33,7 +33,7 @@ import {
   getEndlessTimeLimit, computeScore, resolveEndOutcome,
   loadEndlessBest, saveEndlessBest, headlineBest, isEndlessUnlocked,
   ENDLESS_UNLOCK_REVEAL, STAGES, stageRoundPool, saveStageScore, unlockedTrainingPool, isStageUnlocked,
-  stageScoreOf, stageOutcome, migrateRankForBoss, bossState, JUDGE_RATIO,
+  stageScoreOf, stageOutcome, migrateRankForBoss, bossState, JUDGE_RATIO, earnedRankFromTiers,
 } from '../game/gameLogic.js';
 import { FigmaScreen, CountdownVisual, CdWaveEdge, GameToast, SettingsModal } from '../game/screens/shared.jsx';
 import { SplashScreen } from '../game/screens/SplashScreen.jsx';
@@ -296,8 +296,11 @@ export default function ToneGamePage() {
     // 보스 사다리: 기존 rank(구 XP시험 승계)에 급클리어 승계를 1회 반영(개편 전 연 급 유지). 이후엔 보스로만 오름.
     const seeded = seedRankIfMissing(studentToken, loadXp(studentToken) ?? 0);
     const migrated = migrateRankForBoss(studentToken, seeded);
-    if (migrated !== seeded) saveRank(studentToken, migrated);
-    return migrated;
+    // ★rank는 실제로 클리어한 급 수(earnedRankFromTiers)를 넘을 수 없음 — 안 깬 급의 승급시험은 통과 불가.
+    //  구 seedRankIfMissing이 rank를 'XP 등급'으로 시딩해 부풀리던 버그 자가치유(입문1만 열렸는데 실전이 열리던 문제, 2026-07-20).
+    const corrected = Math.min(migrated, earnedRankFromTiers(studentToken));
+    if (corrected !== seeded) saveRank(studentToken, corrected);
+    return corrected;
   });
   const [examResult, setExamResult] = useState(null); // 승급 시험 결과 {correct,total,passed}
   const [examPromptPending, setExamPromptPending] = useState(() => isPreview && qs('examprompt') === '1'); // 자격 새로 생김 → 홈 복귀 시 응시 권유 모달
