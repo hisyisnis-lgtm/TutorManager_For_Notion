@@ -204,6 +204,7 @@ export default function ToneGamePage() {
   const [showGameOverBeat, setShowGameOverBeat] = useState(() => isPreview && previewScreen === 'gameover');
   const [rankUp, setRankUp] = useState(null); // 등급 상승 연출 {prevIdx, nowIdx} — XP 임계 넘겨 승급 시 비트 다음·결과 전
   const masteredAtStartRef = useRef(0); // 판 시작 시 마스터 단어 수 스냅샷 — 종료 시 증가분 판정
+  const pullOkRef = useRef(false);      // 회원 서버 pull 성공 여부 — pull 성공 전엔 push 보류(빈/구 로컬로 서버 덮어쓰기 방지, 2026-07-21)
 
   const wordTimeLimitRef = useRef(7000);
   const wordElapsedRef = useRef(0); // 현재 단어의 누적 '진행' 시간(일시정지·카운트다운 제외)
@@ -393,8 +394,10 @@ export default function ToneGamePage() {
         mergeGuestIntoMember(idn);                   // 게스트 로컬 → 회원 로컬 1회 병합
         // ★ 서버 기존 데이터를 로컬에 max 병합한 뒤 push해야 다른 기기 데이터를 안 덮어쓴다.
         //   (이 pull이 빠져 있어 새 기기 로그인이 서버를 그 기기의 적은 로컬로 덮어쓰던 데이터손실 버그)
-        await pullMemberData(idn).catch(() => {});   // 서버(/game/me) → 로컬(max 병합)
-        await pushMemberData(idn, user?.nickname).catch(() => {}); // 로컬(게스트∪서버) → 서버
+        //   pull 실패 시 push 보류 — 게스트/구 로컬로 서버 완본을 덮어쓰지 않게(신규 계정은 pull이 빈 데이터로 성공하므로 정상 push).
+        let pulled = false;
+        try { await pullMemberData(idn); pulled = true; pullOkRef.current = true; } catch { /* noop */ }
+        if (pulled) await pushMemberData(idn, user?.nickname).catch(() => {}); // 로컬(게스트∪서버) → 서버
         track('login_success');
       } catch { /* noop */ }
       if (done) return;
@@ -412,8 +415,10 @@ export default function ToneGamePage() {
     const sess = getMemberSession();
     loginMember(identity.token, { ...((sess && sess.user) || {}), nickname: clean }); // 세션 갱신
     setMemberNick(clean);                                                              // 홈 표시 즉시 반영
-    await pullMemberData(identity).catch(() => {});                                    // ★push 전 pull — 다른 기기 진행분을 로컬에 max 병합(전체 덮어쓰기로 인한 유실 방지)
-    await pushMemberData(identity, clean).catch(() => {});                             // 서버(game_users.nickname) 저장
+    // ★push 전 pull — 다른 기기 진행분을 로컬에 max 병합. pull 실패 시 push 보류(구 로컬로 서버 덮어쓰기 방지 — 닉네임 저장은 다음 성공 세션에 반영).
+    let pulled = false;
+    try { await pullMemberData(identity); pulled = true; pullOkRef.current = true; } catch { /* noop */ }
+    if (pulled) await pushMemberData(identity, clean).catch(() => {});                 // 서버(game_users.nickname) 저장
   };
 
   // 닉네임 확정 → 세션·서버에 저장 후 회원으로 재초기화(reload). 이후 홈에 바로 반영된다.
@@ -425,8 +430,10 @@ export default function ToneGamePage() {
       const sess = getMemberSession();
       loginMember(token, { ...((sess && sess.user) || {}), nickname: nick }); // 세션 닉네임 갱신(reload 후 표시)
       const idn = resolveIdentity(undefined);
-      await pullMemberData(idn).catch(() => {});                                // ★push 전 pull — 로그인 콜백에서 fetchGameMe 실패로 pull을 못 했어도 여기서 서버→로컬 max 병합 → 빈 로컬이 서버 진행분을 덮어쓰는 데이터손실 방지
-      await pushMemberData(idn, nick).catch(() => {});                          // 서버(GAME_USERS.nickname) 저장
+      // ★push 전 pull — 서버→로컬 max 병합. pull 실패 시 push 보류(빈 로컬이 서버 진행분을 덮어쓰는 데이터손실 방지). 신규 계정은 pull이 빈값으로 성공해 정상 저장.
+      let pulled = false;
+      try { await pullMemberData(idn); pulled = true; } catch { /* noop */ }
+      if (pulled) await pushMemberData(idn, nick).catch(() => {});             // 서버(GAME_USERS.nickname) 저장
     } catch { /* noop */ }
     window.location.reload();
   };
@@ -440,8 +447,13 @@ export default function ToneGamePage() {
       if (identity.kind === 'member') {
         // 게스트→회원 병합은 멱등(max·합집합) — 로그인 콜백에서 fetchGameMe가 실패해 병합을 못 했어도 다음 진입에서 흡수.
         mergeGuestIntoMember(identity);
-        await pullMemberData(identity).catch(() => {}); // 회원: 서버(/game/me) → 로컬 머지
+        // ★pull 성공 시에만 이후 push 허용 — pull 실패(네트워크 등) 상태로 push하면 빈/구 로컬이 서버 완본을 덮어써 유실(2026-07-21).
+        try { await pullMemberData(identity); pullOkRef.current = true; } catch { /* pull 실패 — pullOkRef=false 유지, 이번 세션 push 보류 */ }
         if (cancelled) return;
+        // pull이 서버 rank/xp/스테이지점수를 로컬에 병합했으니 React 상태도 재동기화 — 안 하면 마운트 시점(pull 전) 값에 고착돼 상위 급이 잠긴 채로 보임.
+        setXp(loadXp(studentToken) ?? 0);
+        const r = Math.min(loadRank(studentToken) ?? 0, earnedRankFromTiers(studentToken)); // 클램프 불변식 유지(스테이지 점수 복원 후 재산정)
+        saveRank(studentToken, r); setRank(r);
       }
       clearOrphanThemeBests(studentToken); // 체인상 잠긴 테마의 유령 best(옛 '전부 오픈' 시절 기록 등) 정리 — 진입마다 멱등
       wordStatsRef.current = loadWordStats(studentToken);
@@ -561,7 +573,7 @@ export default function ToneGamePage() {
         }
       }
 
-      if (identity.kind === 'member') pushMemberData(identity).catch(() => {}); // 회원: 로컬 → 서버(/game/me) 통째 동기화
+      if (identity.kind === 'member' && pullOkRef.current) pushMemberData(identity).catch(() => {}); // 회원: 로컬 → 서버(/game/me). pull 성공했을 때만(빈 로컬로 서버 덮어쓰기 방지)
       // 측정: 런 종료(모드 라벨 + 점수) — 유입 깔때기의 '플레이' 카운트.
       //  트레이닝은 내부 모드가 'practice'지만 run_start와 라벨을 맞춰 'training'으로(깔때기 시작↔종료 정합).
       track('run_end', { m: mode === 'normal' ? (themeMode ? selectedTheme.id : selectedDifficulty.id) : mode === 'practice' ? 'training' : mode, k: identity.kind, v: score });
@@ -608,7 +620,7 @@ export default function ToneGamePage() {
       setExamResult({ correct, total, passed: false });
       setScreen('examresult');
     }
-    if (!isPreview && identity.kind === 'member') pushMemberData(identity).catch(() => {}); // 회원: 등급/XP 서버 동기화
+    if (!isPreview && identity.kind === 'member' && pullOkRef.current) pushMemberData(identity).catch(() => {}); // 회원: 등급/XP 서버 동기화(pull 성공 시만)
     if (!isPreview) track('exam_end', { m: DIFFICULTIES[Math.min(rank, DIFFICULTIES.length - 1)]?.id, k: identity.kind, v: correct });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showGameOverBeat, examMode]);

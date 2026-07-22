@@ -45,7 +45,7 @@ export function NicknameScreen({ defaultName = '', onSubmit, saving = false }) {
       <Reveal i={3} style={{ position: 'absolute', left: 24, right: 24, top: 348 }}>
         <input
           value={value}
-          onChange={(e) => setValue(e.target.value.slice(0, NICKNAME_MAX))}
+          onChange={(e) => setValue(e.target.value.replace(/[\u0000-\u001f\u007f]/g, '').slice(0, NICKNAME_MAX))}
           onKeyDown={(e) => { if (e.key === 'Enter') submit(); }}
           maxLength={NICKNAME_MAX}
           placeholder="닉네임"

@@ -12,7 +12,8 @@ import { loadToneStats, saveToneStats } from './toneStats.js';
 import { loadTierPeak, bumpTierPeak } from './earProfile.js';
 import { loadXp, saveXp, mergeXp, loadRank, saveRank, mergeRank } from './gameXp.js';
 import { loadAchievements, saveAchievements, loadReviewMastered, addReviewMastered } from './achievements.js';
-import { loadStreak, saveStreak, loadFreezes, saveFreezes } from './streak.js';
+import { loadStreak, saveStreak, loadFreezes, saveFreezes, diffDays } from './streak.js';
+import { loadStageScores, saveStageScore } from './gameLogic.js';
 import { DIFFICULTIES, THEMES } from '../constants/toneGameWords.js';
 import { fetchGameMe, saveGameMe } from '../api/gameApi.js';
 
@@ -132,14 +133,20 @@ function mergeToneStats(base, incoming) {
 }
 // 스트릭 머지 — longest는 최댓값, current/lastDate는 더 최근 플레이(날짜 큰 쪽) 기준.
 // 같은 날짜(동률)면 current 큰 쪽 — 게스트로 오늘 1판 후 로그인해도 서버의 긴 스트릭이 1로 안 덮이게.
+// 연속일(diff===1)이면 이어달리기 — 예: 서버{어제,30} + 게스트{오늘,1}은 오늘 하루 이어 뛴 것이므로 31이 돼야 함(2026-07-21 수정).
 function mergeStreak(base, inc) {
   if (!inc) return base || null;
   if (!base) return inc;
   const longest = Math.max(base.longest || 0, inc.longest || 0);
   const bd = base.lastDate || '', id = inc.lastDate || '';
   if (bd === id) return { lastDate: bd, current: Math.max(base.current || 0, inc.current || 0), longest };
-  const newer = id > bd ? inc : base;
-  return { lastDate: newer.lastDate, current: newer.current || 0, longest };
+  const newer = id > bd ? inc : base, older = id > bd ? base : inc;
+  // 하루 차이면 older 스트릭에서 하루 이어달린 것으로 봄(older.current+1 vs newer 자체 current 중 큰 쪽).
+  const gap = (older.lastDate && newer.lastDate) ? diffDays(older.lastDate, newer.lastDate) : 99;
+  const current = gap === 1
+    ? Math.max(newer.current || 0, (older.current || 0) + 1)
+    : (newer.current || 0); // 이틀 이상 공백 = 끊김, 최근 기록의 current 그대로
+  return { lastDate: newer.lastDate, current, longest: Math.max(longest, current) };
 }
 
 export function collectLocalGameData(id) {
@@ -159,6 +166,7 @@ export function collectLocalGameData(id) {
     ach: loadAchievements(id),                 // 획득 업적 id
     rm: loadReviewMastered(id),                // 복습으로 마스터한 단어 수(업적)
     frz: loadFreezes(id),                      // 스트릭 보호권
+    stg: loadStageScores(id),                  // 스테이지별 최고점 — 급 내 스테이지 해제·별·earnedRankFromTiers 근거(2026-07-21 동기화 추가)
   };
   const streak = loadStreak(id);
   if (streak) rest.streak = streak;            // {lastDate,current,longest}
@@ -190,6 +198,9 @@ function applyGameDataToLocal(id, data) {
   }
   if (data.streak) saveStreak(id, mergeStreak(loadStreak(id), data.streak));       // 스트릭
   if (typeof data.frz === 'number' && data.frz > loadFreezes(id)) saveFreezes(id, data.frz); // 프리즈=큰 쪽
+  if (data.stg && typeof data.stg === 'object') {                                  // 스테이지 최고점 = id별 max 병합(saveStageScore 내장)
+    for (const [sid, sc] of Object.entries(data.stg)) { if (typeof sc === 'number') saveStageScore(id, sid, sc); }
+  }
 }
 
 // 토큰 만료(60일)·계정없음 등 인증 실패면 세션을 정리(조용한 무기한 동기화실패 방지). 그 외(네트워크 등)는 유지.

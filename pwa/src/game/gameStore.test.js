@@ -11,6 +11,7 @@ import { saveBest, loadBest } from './tgTokens.js';
 import { bumpTierPeak, loadTierPeak } from './earProfile.js';
 import { saveAchievements, loadAchievements } from './achievements.js';
 import { saveStreak, loadStreak, saveFreezes, loadFreezes } from './streak.js';
+import { saveStageScore, stageScoreOf } from './gameLogic.js';
 
 beforeEach(() => { localStorage.clear(); });
 
@@ -87,6 +88,41 @@ describe('mergeGuestIntoMember — 게스트로 쌓은 기록이 회원 로컬�
     expect(loadAchievements('m_1').sort()).toEqual(['combo-10', 'first-play']); // 업적 합집합
     expect(loadStreak('m_1')).toEqual({ lastDate: '2026-07-06', current: 6, longest: 6 });
     expect(loadFreezes('m_1')).toBe(1);
+  });
+});
+
+describe('스테이지 최고점(stg) — 급 내 스테이지 해제·별·등급 근거의 동기화(2026-07-21)', () => {
+  it('collectLocalGameData가 스테이지 점수를 stg로 담고, 게스트→회원 병합 시 id별 max로 이관', () => {
+    localStorage.setItem('tg_guest_id', 'g_stg');
+    saveStageScore('g_stg', 'easy-1', 500);
+    saveStageScore('g_stg', 'easy-2', 800);
+    const data = collectLocalGameData('g_stg');
+    expect(data.stg).toEqual({ 'easy-1': 500, 'easy-2': 800 }); // 수집 블롭에 포함
+
+    const member = { kind: 'member', id: 'm_stg' };
+    saveStageScore('m_stg', 'easy-1', 300);  // 회원엔 더 낮은 값 — max 병합 확인용
+    mergeGuestIntoMember(member);
+    expect(stageScoreOf('m_stg', 'easy-1')).toBe(500); // max(300,500)
+    expect(stageScoreOf('m_stg', 'easy-2')).toBe(800); // 신규 이관
+  });
+});
+
+describe('스트릭 병합 — 연속일 이어달리기(2026-07-21)', () => {
+  it('회원{어제,30} + 게스트{오늘,1} 병합 = {오늘,31} (하루 이어 뛴 것으로 인식)', () => {
+    localStorage.setItem('tg_guest_id', 'g_str');
+    saveStreak('g_str', { lastDate: '2026-07-21', current: 1, longest: 1 });
+    const member = { kind: 'member', id: 'm_str' };
+    saveStreak('m_str', { lastDate: '2026-07-20', current: 30, longest: 30 });
+    mergeGuestIntoMember(member);
+    expect(loadStreak('m_str')).toEqual({ lastDate: '2026-07-21', current: 31, longest: 31 });
+  });
+  it('이틀 이상 공백이면 끊김 — 최근 기록의 current 그대로(부활 아님)', () => {
+    localStorage.setItem('tg_guest_id', 'g_gap');
+    saveStreak('g_gap', { lastDate: '2026-07-21', current: 1, longest: 1 });
+    const member = { kind: 'member', id: 'm_gap' };
+    saveStreak('m_gap', { lastDate: '2026-07-18', current: 30, longest: 30 });
+    mergeGuestIntoMember(member);
+    expect(loadStreak('m_gap')).toEqual({ lastDate: '2026-07-21', current: 1, longest: 30 });
   });
 });
 

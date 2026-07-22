@@ -36,7 +36,7 @@ export function NicknameEditModal({ current = '', onSave, onClose }) {
         <div>
           <input
             value={value}
-            onChange={(e) => setValue(e.target.value.slice(0, NICKNAME_MAX))}
+            onChange={(e) => setValue(e.target.value.replace(/[\u0000-\u001f\u007f]/g, '').slice(0, NICKNAME_MAX))}
             onKeyDown={(e) => { if (e.key === 'Enter') save(); }}
             maxLength={NICKNAME_MAX}
             placeholder="닉네임"

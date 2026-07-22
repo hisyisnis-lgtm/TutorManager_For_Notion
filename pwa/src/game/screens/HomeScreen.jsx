@@ -707,11 +707,7 @@ export function HomeScreen({
   const [streakOpen, setStreakOpen] = useState(false); // 스트릭 상세 시트
   const [showIntro, setShowIntro] = useState(() => { try { return !localStorage.getItem('tg_home_intro'); } catch { return false; } });
   const coach = useTabTip('game-home', true); // 첫 방문 코치마크 가이드(1회)
-  // 캐릭터 목소리 게이트 — 오버레이가 방을 덮으면 정지("홈 방을 보고있지 않으면 안 남"). 백그라운드는 charCanSpeak가 visibilityState로 별도 처리. 언마운트(다른 화면) 시 false.
-  useEffect(() => {
-    homeRoomActive = !(menuOpen || profileOpen || nickEditOpen || playOpen || hubOpen || streakOpen || debugScoreOpen || !!cardTone || showIntro);
-    return () => { homeRoomActive = false; };
-  }, [menuOpen, profileOpen, nickEditOpen, playOpen, hubOpen, streakOpen, debugScoreOpen, cardTone, showIntro]);
+  // (홈 방 목소리 게이트 effect는 introActive 선언 뒤로 이동 — 아래 참조)
   // 성조 레벨 변화 스포트라이트 — 홈 도착 후 바뀐 성조를 하나씩(방 딤 + 캐릭터 강조·콜아웃)
   const [revealIdx, setRevealIdx] = useState(-1);
   const [revealPos, setRevealPos] = useState(null);  // 스포트라이트 구멍 중심(컨테이너 좌표, 캐릭터가 보고)
@@ -748,6 +744,13 @@ export function HomeScreen({
   const introBlockedRef = useRef(false);
   if (levelReveals.length > 0 || revealIdx >= 0) introBlockedRef.current = true;
   const introActive = showIntro && !introBlockedRef.current;
+  // 캐릭터 목소리 게이트 — 오버레이가 방을 덮으면 정지("홈 방을 보고있지 않으면 안 남"). 백그라운드는 charCanSpeak가 visibilityState로 별도 처리. 언마운트(다른 화면) 시 false.
+  // ★인트로가 '보류'된 방문(스포트라이트 겹침)에는 showIntro가 true로 남아도 화면을 안 덮으므로, raw showIntro가 아니라 introActive로 게이트해야
+  //  레벨업 스포트라이트 목소리(playSfx('tone'…))가 음소거되지 않음(2026-07-21 수정).
+  useEffect(() => {
+    homeRoomActive = !(menuOpen || profileOpen || nickEditOpen || playOpen || hubOpen || streakOpen || debugScoreOpen || !!cardTone || introActive);
+    return () => { homeRoomActive = false; };
+  }, [menuOpen, profileOpen, nickEditOpen, playOpen, hubOpen, streakOpen, debugScoreOpen, cardTone, introActive]);
   // 첫 방문 코치 1회 — 약점 성조가 정해지면 표시·플래그 저장, 잠시 후 종료. 플래그 저장은 말풍선이 실제로 뜨는 경로에서만.
   useEffect(() => {
     if (!(introActive && coachTone != null)) return undefined;

@@ -11,7 +11,7 @@ import { DIFFICULTIES } from '../../constants/toneGameWords.js';
 
 const FIRST_LABEL = DIFFICULTIES[0].label;                       // 난이도 사다리 첫 급(현재 '입문')
 const LAST_LABEL = DIFFICULTIES[DIFFICULTIES.length - 1].label;  // 마지막 급(현재 '고수')
-const ENDLESS_REQ = `${LAST_LABEL} 마지막 단계`;                 // 무한 해제 = 사다리 끝(고수5) 도달(2026-07-18 변경, 구 '1000점' 폐기)
+const ENDLESS_REQ = `${LAST_LABEL} 승급시험`;                    // 무한 해제 = 마지막 급 승급시험 통과(rank>=DIFFICULTIES.length, 2026-07-19 보스개편)
 
 // 첫 진입 코치마크 — 난이도 경로 안내. Reveal 등장(≈0.9s)이 끝난 뒤 표시(ready 게이트).
 const MODE_COACH = [
@@ -167,7 +167,7 @@ export function ModeScreen({ endlessUnlocked, endlessBest = 0, onDifficulty, onT
             <div style={{ display: 'flex', gap: SPACE.xl }}>
               <BigTile Icon={StairsIcon} grad="linear-gradient(150deg, #FF8A6B 0%, #F2484C 100%)" glow="rgba(242,72,76,0.30)" dot="#F2484C" title="난이도 모드" desc={`${FIRST_LABEL}부터 차근차근`} onClick={onDifficulty} coachId="mode-difficulty" />
               <BigTile Icon={InfinityIcon} grad="linear-gradient(150deg, #FFC85C 0%, #F0A11E 100%)" glow="rgba(240,161,30,0.32)" dot="#F0A91E" title="무한 모드" desc="서든데스" dangerDesc
-                locked={!endlessUnlocked} lockText={`${ENDLESS_REQ} 달성`} onClick={() => setEndlessOpen(true)} onLocked={() => onLocked && onLocked(`${ENDLESS_REQ}을 달성하면 열려요`)} />
+                locked={!endlessUnlocked} lockText={`${ENDLESS_REQ} 통과`} onClick={() => setEndlessOpen(true)} onLocked={() => onLocked && onLocked(`${ENDLESS_REQ}을 통과하면 열려요`)} />
             </div>
           </Reveal>
         </div>

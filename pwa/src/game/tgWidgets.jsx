@@ -1,5 +1,5 @@
 // 성조게임 공용 위젯 — ToneMark(성조 마크 SVG) · useCountUp(숫자 카운트업) · 콤보 칩 · 불꽃 아이콘
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { TG, TYPE, RADIUS, SPACE } from './tgTokens.js';
 
 // 성조 마크 SVG — 폰트별 두께 편차 제거 위해 동일 stroke-width로 직접 렌더. currentColor 상속.
@@ -28,19 +28,23 @@ export function ToneMark({ tone, size = 20 }) {
   }
 }
 
-// 숫자 count-up 애니메이션 훅 — 0→target ease-out cubic. rAF 기반.
+// 숫자 count-up 애니메이션 훅 — 직전 표시값→target ease-out cubic. rAF 기반.
+// target이 '쾅'처럼 여러 스텝으로 올라도 매번 0으로 리셋하지 않고 현재값에서 이어 올라 단조 증가(XpGainReveal 등).
 export function useCountUp(target, duration = 1200, decimals = 0, delay = 0) {
   const [current, setCurrent] = useState(0);
+  const currentRef = useRef(0);
+  currentRef.current = current;
   useEffect(() => {
     let rafId;
     let startTs = null;
+    const from = currentRef.current; // 이 애니메이션의 시작값 = 현재 화면에 보이는 값
     const tick = (now) => {
       if (startTs === null) startTs = now;
       const elapsed = now - startTs - delay;
       if (elapsed < 0) { rafId = requestAnimationFrame(tick); return; }
       const progress = Math.min(1, elapsed / duration);
       const eased = 1 - Math.pow(1 - progress, 3);
-      setCurrent(target * eased);
+      setCurrent(from + (target - from) * eased);
       if (progress < 1) rafId = requestAnimationFrame(tick);
     };
     rafId = requestAnimationFrame(tick);
