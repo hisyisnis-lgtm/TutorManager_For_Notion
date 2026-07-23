@@ -1,30 +1,1055 @@
 {
   "easy": [
     {
-      "hanzi": "漂亮",
+      "hanzi": "好",
       "pinyin": [
-        "piào",
-        "liang"
+        "hǎo"
+      ],
+      "tones": [
+        3
+      ],
+      "meaning": "좋다",
+      "audioUrl": "/game/tts/hao_3.mp3"
+    },
+    {
+      "hanzi": "再见",
+      "pinyin": [
+        "zài",
+        "jiàn"
+      ],
+      "tones": [
+        4,
+        4
+      ],
+      "meaning": "잘 가",
+      "audioUrl": "/game/tts/zaijian_44.mp3"
+    },
+    {
+      "hanzi": "谢谢",
+      "pinyin": [
+        "xiè",
+        "xie"
       ],
       "tones": [
         4,
         0
       ],
-      "meaning": "예쁘다",
-      "audioUrl": "/game/tts/piaoliang_40.mp3"
+      "meaning": "고마워요",
+      "audioUrl": "/game/tts/xiexie_40.mp3"
     },
     {
-      "hanzi": "工作",
+      "hanzi": "不客气",
+      "pinyin": [
+        "bú",
+        "kè",
+        "qi"
+      ],
+      "tones": [
+        2,
+        4,
+        0
+      ],
+      "meaning": "별말씀을요",
+      "audioUrl": "/game/tts/bukeqi_240.mp3"
+    },
+    {
+      "hanzi": "对不起",
+      "pinyin": [
+        "duì",
+        "bu",
+        "qǐ"
+      ],
+      "tones": [
+        4,
+        0,
+        3
+      ],
+      "meaning": "죄송해요",
+      "audioUrl": "/game/tts/duibuqi_403.mp3"
+    },
+    {
+      "hanzi": "没关系",
+      "pinyin": [
+        "méi",
+        "guān",
+        "xi"
+      ],
+      "tones": [
+        2,
+        1,
+        0
+      ],
+      "meaning": "괜찮다",
+      "audioUrl": "/game/tts/meiguanxi_210.mp3"
+    },
+    {
+      "hanzi": "喂",
+      "pinyin": [
+        "wéi"
+      ],
+      "tones": [
+        2
+      ],
+      "meaning": "여보세요",
+      "audioUrl": "/game/tts/wei_2.mp3"
+    },
+    {
+      "hanzi": "人",
+      "pinyin": [
+        "rén"
+      ],
+      "tones": [
+        2
+      ],
+      "meaning": "사람",
+      "audioUrl": "/game/tts/ren_2.mp3"
+    },
+    {
+      "hanzi": "爸爸",
+      "pinyin": [
+        "bà",
+        "ba"
+      ],
+      "tones": [
+        4,
+        0
+      ],
+      "meaning": "아빠",
+      "audioUrl": "/game/tts/baba_40.mp3"
+    },
+    {
+      "hanzi": "妈妈",
+      "pinyin": [
+        "mā",
+        "ma"
+      ],
+      "tones": [
+        1,
+        0
+      ],
+      "meaning": "엄마",
+      "audioUrl": "/game/tts/mama_10.mp3"
+    },
+    {
+      "hanzi": "儿子",
+      "pinyin": [
+        "ér",
+        "zi"
+      ],
+      "tones": [
+        2,
+        0
+      ],
+      "meaning": "아들",
+      "audioUrl": "/game/tts/erzi_20.mp3"
+    },
+    {
+      "hanzi": "女儿",
+      "pinyin": [
+        "nǚ",
+        "ér"
+      ],
+      "tones": [
+        3,
+        2
+      ],
+      "meaning": "딸",
+      "audioUrl": "/game/tts/nver_32.mp3"
+    },
+    {
+      "hanzi": "弟弟",
+      "pinyin": [
+        "dì",
+        "di"
+      ],
+      "tones": [
+        4,
+        0
+      ],
+      "meaning": "남동생",
+      "audioUrl": "/game/tts/didi_40.mp3"
+    },
+    {
+      "hanzi": "哥哥",
+      "pinyin": [
+        "gē",
+        "ge"
+      ],
+      "tones": [
+        1,
+        0
+      ],
+      "meaning": "형, 오빠",
+      "audioUrl": "/game/tts/gege_10.mp3"
+    },
+    {
+      "hanzi": "姐姐",
+      "pinyin": [
+        "jiě",
+        "jie"
+      ],
+      "tones": [
+        3,
+        0
+      ],
+      "meaning": "언니, 누나",
+      "audioUrl": "/game/tts/jiejie_30.mp3"
+    },
+    {
+      "hanzi": "妹妹",
+      "pinyin": [
+        "mèi",
+        "mei"
+      ],
+      "tones": [
+        4,
+        0
+      ],
+      "meaning": "여동생",
+      "audioUrl": "/game/tts/meimei_40.mp3"
+    },
+    {
+      "hanzi": "爷爷",
+      "pinyin": [
+        "yé",
+        "ye"
+      ],
+      "tones": [
+        2,
+        0
+      ],
+      "meaning": "할아버지",
+      "audioUrl": "/game/tts/yeye_20.mp3"
+    },
+    {
+      "hanzi": "奶奶",
+      "pinyin": [
+        "nǎi",
+        "nai"
+      ],
+      "tones": [
+        3,
+        0
+      ],
+      "meaning": "할머니",
+      "audioUrl": "/game/tts/nainai_30.mp3"
+    },
+    {
+      "hanzi": "睡觉",
+      "pinyin": [
+        "shuì",
+        "jiào"
+      ],
+      "tones": [
+        4,
+        4
+      ],
+      "meaning": "잠을 자다",
+      "audioUrl": "/game/tts/shuijiao_44.mp3"
+    },
+    {
+      "hanzi": "衣服",
+      "pinyin": [
+        "yī",
+        "fu"
+      ],
+      "tones": [
+        1,
+        0
+      ],
+      "meaning": "옷",
+      "audioUrl": "/game/tts/yifu_10.mp3"
+    },
+    {
+      "hanzi": "想",
+      "pinyin": [
+        "xiǎng"
+      ],
+      "tones": [
+        3
+      ],
+      "meaning": "생각하다, 그리워하다",
+      "audioUrl": "/game/tts/xiang_3.mp3"
+    },
+    {
+      "hanzi": "怎么样",
+      "pinyin": [
+        "zěn",
+        "me",
+        "yàng"
+      ],
+      "tones": [
+        3,
+        0,
+        4
+      ],
+      "meaning": "어떻다, 어떠하다",
+      "audioUrl": "/game/tts/zenmeyang_304.mp3"
+    },
+    {
+      "hanzi": "现在",
+      "pinyin": [
+        "xiàn",
+        "zài"
+      ],
+      "tones": [
+        4,
+        4
+      ],
+      "meaning": "지금",
+      "audioUrl": "/game/tts/xianzai_44.mp3"
+    },
+    {
+      "hanzi": "早上",
+      "pinyin": [
+        "zǎo",
+        "shang"
+      ],
+      "tones": [
+        3,
+        0
+      ],
+      "meaning": "아침",
+      "audioUrl": "/game/tts/zaoshang_30.mp3"
+    },
+    {
+      "hanzi": "晚上",
+      "pinyin": [
+        "wǎn",
+        "shang"
+      ],
+      "tones": [
+        3,
+        0
+      ],
+      "meaning": "저녁, 밤",
+      "audioUrl": "/game/tts/wanshang_30.mp3"
+    },
+    {
+      "hanzi": "昨天",
+      "pinyin": [
+        "zuó",
+        "tiān"
+      ],
+      "tones": [
+        2,
+        1
+      ],
+      "meaning": "어제",
+      "audioUrl": "/game/tts/zuotian_21.mp3"
+    },
+    {
+      "hanzi": "今天",
+      "pinyin": [
+        "jīn",
+        "tiān"
+      ],
+      "tones": [
+        1,
+        1
+      ],
+      "meaning": "오늘",
+      "audioUrl": "/game/tts/jintian_11.mp3"
+    },
+    {
+      "hanzi": "明天",
+      "pinyin": [
+        "míng",
+        "tiān"
+      ],
+      "tones": [
+        2,
+        1
+      ],
+      "meaning": "내일",
+      "audioUrl": "/game/tts/mingtian_21.mp3"
+    },
+    {
+      "hanzi": "时候",
+      "pinyin": [
+        "shí",
+        "hou"
+      ],
+      "tones": [
+        2,
+        0
+      ],
+      "meaning": "때, 시각",
+      "audioUrl": "/game/tts/shihou_20.mp3"
+    },
+    {
+      "hanzi": "点",
+      "pinyin": [
+        "diǎn"
+      ],
+      "tones": [
+        3
+      ],
+      "meaning": "시",
+      "audioUrl": "/game/tts/dian_3.mp3"
+    },
+    {
+      "hanzi": "星期",
+      "pinyin": [
+        "xīng",
+        "qī"
+      ],
+      "tones": [
+        1,
+        1
+      ],
+      "meaning": "요일, 주",
+      "audioUrl": "/game/tts/xingqi_11.mp3"
+    },
+    {
+      "hanzi": "月",
+      "pinyin": [
+        "yuè"
+      ],
+      "tones": [
+        4
+      ],
+      "meaning": "월, 달",
+      "audioUrl": "/game/tts/yue_4.mp3"
+    },
+    {
+      "hanzi": "年",
+      "pinyin": [
+        "nián"
+      ],
+      "tones": [
+        2
+      ],
+      "meaning": "해, 년",
+      "audioUrl": "/game/tts/nian_2.mp3"
+    },
+    {
+      "hanzi": "去年",
+      "pinyin": [
+        "qù",
+        "nián"
+      ],
+      "tones": [
+        4,
+        2
+      ],
+      "meaning": "작년",
+      "audioUrl": "/game/tts/qunian_42.mp3"
+    },
+    {
+      "hanzi": "每天",
+      "pinyin": [
+        "měi",
+        "tiān"
+      ],
+      "tones": [
+        3,
+        1
+      ],
+      "meaning": "매일",
+      "audioUrl": "/game/tts/meitian_31.mp3"
+    },
+    {
+      "hanzi": "开",
+      "pinyin": [
+        "kāi"
+      ],
+      "tones": [
+        1
+      ],
+      "meaning": "열다",
+      "audioUrl": "/game/tts/kai_1.mp3"
+    },
+    {
+      "hanzi": "坐",
+      "pinyin": [
+        "zuò"
+      ],
+      "tones": [
+        4
+      ],
+      "meaning": "(교통 수단을)타다, 앉다",
+      "audioUrl": "/game/tts/zuo_4.mp3"
+    },
+    {
+      "hanzi": "出租车",
+      "pinyin": [
+        "chū",
+        "zū",
+        "chē"
+      ],
+      "tones": [
+        1,
+        1,
+        1
+      ],
+      "meaning": "택시",
+      "audioUrl": "/game/tts/chuzuche_111.mp3"
+    },
+    {
+      "hanzi": "公交车",
       "pinyin": [
         "gōng",
-        "zuò"
+        "jiāo",
+        "chē"
+      ],
+      "tones": [
+        1,
+        1,
+        1
+      ],
+      "meaning": "버스",
+      "audioUrl": "/game/tts/gongjiaoche_111.mp3"
+    },
+    {
+      "hanzi": "公共汽车",
+      "pinyin": [
+        "gōng",
+        "gòng",
+        "qì",
+        "chē"
+      ],
+      "tones": [
+        1,
+        4,
+        4,
+        1
+      ],
+      "meaning": "버스",
+      "audioUrl": "/game/tts/gonggongqiche_1441.mp3"
+    },
+    {
+      "hanzi": "在",
+      "pinyin": [
+        "zài"
+      ],
+      "tones": [
+        4
+      ],
+      "meaning": "~에 있다",
+      "audioUrl": "/game/tts/zai_4.mp3"
+    },
+    {
+      "hanzi": "去",
+      "pinyin": [
+        "qù"
+      ],
+      "tones": [
+        4
+      ],
+      "meaning": "가다",
+      "audioUrl": "/game/tts/qu_4.mp3"
+    },
+    {
+      "hanzi": "来",
+      "pinyin": [
+        "lái"
+      ],
+      "tones": [
+        2
+      ],
+      "meaning": "오다",
+      "audioUrl": "/game/tts/lai_2.mp3"
+    },
+    {
+      "hanzi": "走",
+      "pinyin": [
+        "zǒu"
+      ],
+      "tones": [
+        3
+      ],
+      "meaning": "가다, 걷다",
+      "audioUrl": "/game/tts/zou_3.mp3"
+    },
+    {
+      "hanzi": "哪里",
+      "pinyin": [
+        "nǎ",
+        "li"
+      ],
+      "tones": [
+        3,
+        0
+      ],
+      "meaning": "어디",
+      "audioUrl": "/game/tts/nali_30.mp3"
+    },
+    {
+      "hanzi": "回",
+      "pinyin": [
+        "huí"
+      ],
+      "tones": [
+        2
+      ],
+      "meaning": "돌아가다, 돌아오다",
+      "audioUrl": "/game/tts/hui_2.mp3"
+    },
+    {
+      "hanzi": "先生",
+      "pinyin": [
+        "xiān",
+        "sheng"
+      ],
+      "tones": [
+        1,
+        0
+      ],
+      "meaning": "선생, 씨(성인 남자)",
+      "audioUrl": "/game/tts/xiansheng_10.mp3"
+    },
+    {
+      "hanzi": "菜",
+      "pinyin": [
+        "cài"
+      ],
+      "tones": [
+        4
+      ],
+      "meaning": "요리, 음식",
+      "audioUrl": "/game/tts/cai_4.mp3"
+    },
+    {
+      "hanzi": "吃",
+      "pinyin": [
+        "chī"
+      ],
+      "tones": [
+        1
+      ],
+      "meaning": "먹다",
+      "audioUrl": "/game/tts/chi_1.mp3"
+    },
+    {
+      "hanzi": "喝",
+      "pinyin": [
+        "hē"
+      ],
+      "tones": [
+        1
+      ],
+      "meaning": "마시다",
+      "audioUrl": "/game/tts/he_1.mp3"
+    },
+    {
+      "hanzi": "茶",
+      "pinyin": [
+        "chá"
+      ],
+      "tones": [
+        2
+      ],
+      "meaning": "차",
+      "audioUrl": "/game/tts/cha_2.mp3"
+    },
+    {
+      "hanzi": "米饭",
+      "pinyin": [
+        "mǐ",
+        "fàn"
+      ],
+      "tones": [
+        3,
+        4
+      ],
+      "meaning": "쌀밥",
+      "audioUrl": "/game/tts/mifan_34.mp3"
+    },
+    {
+      "hanzi": "爱",
+      "pinyin": [
+        "ài"
+      ],
+      "tones": [
+        4
+      ],
+      "meaning": "사랑하다",
+      "audioUrl": "/game/tts/ai_4.mp3"
+    },
+    {
+      "hanzi": "喜欢",
+      "pinyin": [
+        "xǐ",
+        "huan"
+      ],
+      "tones": [
+        3,
+        0
+      ],
+      "meaning": "좋아하다",
+      "audioUrl": "/game/tts/xihuan_30.mp3"
+    },
+    {
+      "hanzi": "打电话",
+      "pinyin": [
+        "dǎ",
+        "diàn",
+        "huà"
+      ],
+      "tones": [
+        3,
+        4,
+        4
+      ],
+      "meaning": "전화하다",
+      "audioUrl": "/game/tts/dadianhua_344.mp3"
+    },
+    {
+      "hanzi": "电影",
+      "pinyin": [
+        "diàn",
+        "yǐng"
+      ],
+      "tones": [
+        4,
+        3
+      ],
+      "meaning": "영화",
+      "audioUrl": "/game/tts/dianying_43.mp3"
+    },
+    {
+      "hanzi": "说",
+      "pinyin": [
+        "shuō"
+      ],
+      "tones": [
+        1
+      ],
+      "meaning": "말하다",
+      "audioUrl": "/game/tts/shuo_1.mp3"
+    },
+    {
+      "hanzi": "请",
+      "pinyin": [
+        "qǐng"
+      ],
+      "tones": [
+        3
+      ],
+      "meaning": "~하세요",
+      "audioUrl": "/game/tts/qing_3.mp3"
+    },
+    {
+      "hanzi": "商店",
+      "pinyin": [
+        "shāng",
+        "diàn"
       ],
       "tones": [
         1,
         4
       ],
-      "meaning": "일",
-      "audioUrl": "/game/tts/gongzuo_14.mp3"
+      "meaning": "상점",
+      "audioUrl": "/game/tts/shangdian_14.mp3"
+    },
+    {
+      "hanzi": "买",
+      "pinyin": [
+        "mǎi"
+      ],
+      "tones": [
+        3
+      ],
+      "meaning": "사다",
+      "audioUrl": "/game/tts/mai_3.mp3"
+    },
+    {
+      "hanzi": "卖",
+      "pinyin": [
+        "mài"
+      ],
+      "tones": [
+        4
+      ],
+      "meaning": "팔다",
+      "audioUrl": "/game/tts/mai_4.mp3"
+    },
+    {
+      "hanzi": "东西",
+      "pinyin": [
+        "dōng",
+        "xi"
+      ],
+      "tones": [
+        1,
+        0
+      ],
+      "meaning": "물건",
+      "audioUrl": "/game/tts/dongxi_10.mp3"
+    },
+    {
+      "hanzi": "水果",
+      "pinyin": [
+        "shuǐ",
+        "guǒ"
+      ],
+      "tones": [
+        3,
+        3
+      ],
+      "meaning": "과일",
+      "audioUrl": "/game/tts/shuiguo_33.mp3"
+    },
+    {
+      "hanzi": "多少",
+      "pinyin": [
+        "duō",
+        "shao"
+      ],
+      "tones": [
+        1,
+        0
+      ],
+      "meaning": "얼마, 몇",
+      "audioUrl": "/game/tts/duoshao_10.mp3"
+    },
+    {
+      "hanzi": "钱",
+      "pinyin": [
+        "qián"
+      ],
+      "tones": [
+        2
+      ],
+      "meaning": "돈",
+      "audioUrl": "/game/tts/qian_2.mp3"
+    },
+    {
+      "hanzi": "些",
+      "pinyin": [
+        "xiē"
+      ],
+      "tones": [
+        1
+      ],
+      "meaning": "몇, 조금",
+      "audioUrl": "/game/tts/xie_1.mp3"
+    },
+    {
+      "hanzi": "做",
+      "pinyin": [
+        "zuò"
+      ],
+      "tones": [
+        4
+      ],
+      "meaning": "하다",
+      "audioUrl": "/game/tts/zuo_4.mp3"
+    },
+    {
+      "hanzi": "一起",
+      "pinyin": [
+        "yì",
+        "qǐ"
+      ],
+      "tones": [
+        4,
+        3
+      ],
+      "meaning": "함께, 같이",
+      "audioUrl": "/game/tts/yiqi_43.mp3"
+    },
+    {
+      "hanzi": "听",
+      "pinyin": [
+        "tīng"
+      ],
+      "tones": [
+        1
+      ],
+      "meaning": "듣다",
+      "audioUrl": "/game/tts/ting_1.mp3"
+    },
+    {
+      "hanzi": "住",
+      "pinyin": [
+        "zhù"
+      ],
+      "tones": [
+        4
+      ],
+      "meaning": "살다",
+      "audioUrl": "/game/tts/zhu_4.mp3"
+    },
+    {
+      "hanzi": "医生",
+      "pinyin": [
+        "yī",
+        "shēng"
+      ],
+      "tones": [
+        1,
+        1
+      ],
+      "meaning": "의사",
+      "audioUrl": "/game/tts/yisheng_11.mp3"
+    },
+    {
+      "hanzi": "医院",
+      "pinyin": [
+        "yī",
+        "yuàn"
+      ],
+      "tones": [
+        1,
+        4
+      ],
+      "meaning": "병원",
+      "audioUrl": "/game/tts/yiyuan_14.mp3"
+    },
+    {
+      "hanzi": "身体",
+      "pinyin": [
+        "shēn",
+        "tǐ"
+      ],
+      "tones": [
+        1,
+        3
+      ],
+      "meaning": "신체, 몸",
+      "audioUrl": "/game/tts/shenti_13.mp3"
+    },
+    {
+      "hanzi": "起床",
+      "pinyin": [
+        "qǐ",
+        "chuáng"
+      ],
+      "tones": [
+        3,
+        2
+      ],
+      "meaning": "일어나다",
+      "audioUrl": "/game/tts/qichuang_32.mp3"
+    },
+    {
+      "hanzi": "洗",
+      "pinyin": [
+        "xǐ"
+      ],
+      "tones": [
+        3
+      ],
+      "meaning": "씻다",
+      "audioUrl": "/game/tts/xi_3.mp3"
+    },
+    {
+      "hanzi": "红",
+      "pinyin": [
+        "hóng"
+      ],
+      "tones": [
+        2
+      ],
+      "meaning": "붉다, 빨갛다",
+      "audioUrl": "/game/tts/hong_2.mp3"
+    },
+    {
+      "hanzi": "快",
+      "pinyin": [
+        "kuài"
+      ],
+      "tones": [
+        4
+      ],
+      "meaning": "빠르다",
+      "audioUrl": "/game/tts/kuai_4.mp3"
+    },
+    {
+      "hanzi": "慢",
+      "pinyin": [
+        "màn"
+      ],
+      "tones": [
+        4
+      ],
+      "meaning": "느리다",
+      "audioUrl": "/game/tts/man_4.mp3"
+    },
+    {
+      "hanzi": "好吃",
+      "pinyin": [
+        "hǎo",
+        "chī"
+      ],
+      "tones": [
+        3,
+        1
+      ],
+      "meaning": "맛있다",
+      "audioUrl": "/game/tts/haochi_31.mp3"
+    },
+    {
+      "hanzi": "生日",
+      "pinyin": [
+        "shēng",
+        "rì"
+      ],
+      "tones": [
+        1,
+        4
+      ],
+      "meaning": "생일",
+      "audioUrl": "/game/tts/shengri_14.mp3"
+    },
+    {
+      "hanzi": "贵",
+      "pinyin": [
+        "guì"
+      ],
+      "tones": [
+        4
+      ],
+      "meaning": "비싸다",
+      "audioUrl": "/game/tts/gui_4.mp3"
+    },
+    {
+      "hanzi": "便宜",
+      "pinyin": [
+        "pián",
+        "yi"
+      ],
+      "tones": [
+        2,
+        0
+      ],
+      "meaning": "싸다",
+      "audioUrl": "/game/tts/pianyi_20.mp3"
+    },
+    {
+      "hanzi": "长",
+      "pinyin": [
+        "cháng"
+      ],
+      "tones": [
+        2
+      ],
+      "meaning": "길다",
+      "audioUrl": "/game/tts/chang_2.mp3"
+    },
+    {
+      "hanzi": "书",
+      "pinyin": [
+        "shū"
+      ],
+      "tones": [
+        1
+      ],
+      "meaning": "책",
+      "audioUrl": "/game/tts/shu_1.mp3"
+    },
+    {
+      "hanzi": "读",
+      "pinyin": [
+        "dú"
+      ],
+      "tones": [
+        2
+      ],
+      "meaning": "읽다",
+      "audioUrl": "/game/tts/du_2.mp3"
     },
     {
       "hanzi": "老师",
@@ -49,216 +1074,8 @@
         2,
         2
       ],
-      "meaning": "동급생",
+      "meaning": "학교 친구",
       "audioUrl": "/game/tts/tongxue_22.mp3"
-    },
-    {
-      "hanzi": "今天",
-      "pinyin": [
-        "jīn",
-        "tiān"
-      ],
-      "tones": [
-        1,
-        1
-      ],
-      "meaning": "오늘",
-      "audioUrl": "/game/tts/jintian_11.mp3"
-    },
-    {
-      "hanzi": "水果",
-      "pinyin": [
-        "shuǐ",
-        "guǒ"
-      ],
-      "tones": [
-        3,
-        3
-      ],
-      "meaning": "과일",
-      "audioUrl": "/game/tts/shuiguo_33.mp3"
-    },
-    {
-      "hanzi": "咖啡",
-      "pinyin": [
-        "kā",
-        "fēi"
-      ],
-      "tones": [
-        1,
-        1
-      ],
-      "meaning": "커피",
-      "audioUrl": "/game/tts/kafei_11.mp3"
-    },
-    {
-      "hanzi": "时间",
-      "pinyin": [
-        "shí",
-        "jiān"
-      ],
-      "tones": [
-        2,
-        1
-      ],
-      "meaning": "시간",
-      "audioUrl": "/game/tts/shijian_21.mp3"
-    },
-    {
-      "hanzi": "米饭",
-      "pinyin": [
-        "mǐ",
-        "fàn"
-      ],
-      "tones": [
-        3,
-        4
-      ],
-      "meaning": "밥",
-      "audioUrl": "/game/tts/mifan_34.mp3"
-    },
-    {
-      "hanzi": "鸡蛋",
-      "pinyin": [
-        "jī",
-        "dàn"
-      ],
-      "tones": [
-        1,
-        4
-      ],
-      "meaning": "계란",
-      "audioUrl": "/game/tts/jidan_14.mp3"
-    },
-    {
-      "hanzi": "明天",
-      "pinyin": [
-        "míng",
-        "tiān"
-      ],
-      "tones": [
-        2,
-        1
-      ],
-      "meaning": "내일",
-      "audioUrl": "/game/tts/mingtian_21.mp3"
-    },
-    {
-      "hanzi": "北京",
-      "pinyin": [
-        "běi",
-        "jīng"
-      ],
-      "tones": [
-        3,
-        1
-      ],
-      "meaning": "베이징",
-      "audioUrl": "/game/tts/beijing_31.mp3"
-    },
-    {
-      "hanzi": "妈妈",
-      "pinyin": [
-        "mā",
-        "ma"
-      ],
-      "tones": [
-        1,
-        0
-      ],
-      "meaning": "엄마",
-      "audioUrl": "/game/tts/mama_10.mp3"
-    },
-    {
-      "hanzi": "喜欢",
-      "pinyin": [
-        "xǐ",
-        "huan"
-      ],
-      "tones": [
-        3,
-        0
-      ],
-      "meaning": "좋아하다",
-      "audioUrl": "/game/tts/xihuan_30.mp3"
-    },
-    {
-      "hanzi": "学生",
-      "pinyin": [
-        "xué",
-        "sheng"
-      ],
-      "tones": [
-        2,
-        0
-      ],
-      "meaning": "학생",
-      "audioUrl": "/game/tts/xuesheng_20.mp3"
-    },
-    {
-      "hanzi": "现在",
-      "pinyin": [
-        "xiàn",
-        "zài"
-      ],
-      "tones": [
-        4,
-        4
-      ],
-      "meaning": "지금",
-      "audioUrl": "/game/tts/xianzai_44.mp3"
-    },
-    {
-      "hanzi": "电话",
-      "pinyin": [
-        "diàn",
-        "huà"
-      ],
-      "tones": [
-        4,
-        4
-      ],
-      "meaning": "전화",
-      "audioUrl": "/game/tts/dianhua_44.mp3"
-    },
-    {
-      "hanzi": "医生",
-      "pinyin": [
-        "yī",
-        "shēng"
-      ],
-      "tones": [
-        1,
-        1
-      ],
-      "meaning": "의사",
-      "audioUrl": "/game/tts/yisheng_11.mp3"
-    },
-    {
-      "hanzi": "飞机",
-      "pinyin": [
-        "fēi",
-        "jī"
-      ],
-      "tones": [
-        1,
-        1
-      ],
-      "meaning": "비행기",
-      "audioUrl": "/game/tts/feiji_11.mp3"
-    },
-    {
-      "hanzi": "面包",
-      "pinyin": [
-        "miàn",
-        "bāo"
-      ],
-      "tones": [
-        4,
-        1
-      ],
-      "meaning": "빵",
-      "audioUrl": "/game/tts/mianbao_41.mp3"
     },
     {
       "hanzi": "朋友",
@@ -274,48 +1091,216 @@
       "audioUrl": "/game/tts/pengyou_20.mp3"
     },
     {
-      "hanzi": "你好",
+      "hanzi": "学生",
       "pinyin": [
-        "nǐ",
-        "hǎo"
+        "xué",
+        "sheng"
       ],
       "tones": [
-        3,
+        2,
+        0
+      ],
+      "meaning": "학생",
+      "audioUrl": "/game/tts/xuesheng_20.mp3"
+    },
+    {
+      "hanzi": "写",
+      "pinyin": [
+        "xiě"
+      ],
+      "tones": [
         3
       ],
-      "meaning": "안녕",
-      "audioUrl": "/game/tts/nihao_33.mp3"
+      "meaning": "쓰다",
+      "audioUrl": "/game/tts/xie_3.mp3"
     },
     {
-      "hanzi": "火车",
+      "hanzi": "学校",
       "pinyin": [
-        "huǒ",
-        "chē"
+        "xué",
+        "xiào"
       ],
       "tones": [
-        3,
-        1
+        2,
+        4
       ],
-      "meaning": "기차",
-      "audioUrl": "/game/tts/huoche_31.mp3"
+      "meaning": "학교",
+      "audioUrl": "/game/tts/xuexiao_24.mp3"
     },
     {
-      "hanzi": "电脑",
+      "hanzi": "学习",
       "pinyin": [
-        "diàn",
-        "nǎo"
+        "xué",
+        "xí"
+      ],
+      "tones": [
+        2,
+        2
+      ],
+      "meaning": "공부하다",
+      "audioUrl": "/game/tts/xuexi_22.mp3"
+    },
+    {
+      "hanzi": "叫",
+      "pinyin": [
+        "jiào"
+      ],
+      "tones": [
+        4
+      ],
+      "meaning": "~라고 부르다",
+      "audioUrl": "/game/tts/jiao_4.mp3"
+    },
+    {
+      "hanzi": "名字",
+      "pinyin": [
+        "míng",
+        "zi"
+      ],
+      "tones": [
+        2,
+        0
+      ],
+      "meaning": "이름",
+      "audioUrl": "/game/tts/mingzi_20.mp3"
+    },
+    {
+      "hanzi": "是",
+      "pinyin": [
+        "shì"
+      ],
+      "tones": [
+        4
+      ],
+      "meaning": "~이다",
+      "audioUrl": "/game/tts/shi_4.mp3"
+    },
+    {
+      "hanzi": "岁",
+      "pinyin": [
+        "suì"
+      ],
+      "tones": [
+        4
+      ],
+      "meaning": "세, 살",
+      "audioUrl": "/game/tts/sui_4.mp3"
+    },
+    {
+      "hanzi": "小",
+      "pinyin": [
+        "xiǎo"
+      ],
+      "tones": [
+        3
+      ],
+      "meaning": "작다, 어리다",
+      "audioUrl": "/game/tts/xiao_3.mp3"
+    },
+    {
+      "hanzi": "大家",
+      "pinyin": [
+        "dà",
+        "jiā"
       ],
       "tones": [
         4,
-        3
+        1
       ],
-      "meaning": "컴퓨터",
-      "audioUrl": "/game/tts/diannao_43.mp3"
+      "meaning": "여러분, 모두",
+      "audioUrl": "/game/tts/dajia_41.mp3"
+    },
+    {
+      "hanzi": "谁",
+      "pinyin": [
+        "shéi"
+      ],
+      "tones": [
+        2
+      ],
+      "meaning": "누구",
+      "audioUrl": "/game/tts/shei_2.mp3"
+    },
+    {
+      "hanzi": "高兴",
+      "pinyin": [
+        "gāo",
+        "xìng"
+      ],
+      "tones": [
+        1,
+        4
+      ],
+      "meaning": "기쁘다",
+      "audioUrl": "/game/tts/gaoxing_14.mp3"
+    },
+    {
+      "hanzi": "认识",
+      "pinyin": [
+        "rèn",
+        "shi"
+      ],
+      "tones": [
+        4,
+        0
+      ],
+      "meaning": "알다",
+      "audioUrl": "/game/tts/renshi_40.mp3"
+    },
+    {
+      "hanzi": "工作",
+      "pinyin": [
+        "gōng",
+        "zuò"
+      ],
+      "tones": [
+        1,
+        4
+      ],
+      "meaning": "일하다",
+      "audioUrl": "/game/tts/gongzuo_14.mp3"
+    },
+    {
+      "hanzi": "看",
+      "pinyin": [
+        "kàn"
+      ],
+      "tones": [
+        4
+      ],
+      "meaning": "보다",
+      "audioUrl": "/game/tts/kan_4.mp3"
+    },
+    {
+      "hanzi": "漂亮",
+      "pinyin": [
+        "piào",
+        "liang"
+      ],
+      "tones": [
+        4,
+        0
+      ],
+      "meaning": "예쁘다",
+      "audioUrl": "/game/tts/piaoliang_40.mp3"
+    },
+    {
+      "hanzi": "飞机",
+      "pinyin": [
+        "fēi",
+        "jī"
+      ],
+      "tones": [
+        1,
+        1
+      ],
+      "meaning": "비행기",
+      "audioUrl": "/game/tts/feiji_11.mp3"
     },
     {
       "hanzi": "中国",
       "pinyin": [
-        "zhōng",
+        "Zhōng",
         "guó"
       ],
       "tones": [
@@ -326,17 +1311,525 @@
       "audioUrl": "/game/tts/zhongguo_12.mp3"
     },
     {
-      "hanzi": "可乐",
+      "hanzi": "饭店",
       "pinyin": [
-        "kě",
-        "lè"
+        "fàn",
+        "diàn"
+      ],
+      "tones": [
+        4,
+        4
+      ],
+      "meaning": "호텔, 식당",
+      "audioUrl": "/game/tts/fandian_44.mp3"
+    },
+    {
+      "hanzi": "天气",
+      "pinyin": [
+        "tiān",
+        "qì"
+      ],
+      "tones": [
+        1,
+        4
+      ],
+      "meaning": "날씨",
+      "audioUrl": "/game/tts/tianqi_14.mp3"
+    },
+    {
+      "hanzi": "冷",
+      "pinyin": [
+        "lěng"
+      ],
+      "tones": [
+        3
+      ],
+      "meaning": "춥다",
+      "audioUrl": "/game/tts/leng_3.mp3"
+    },
+    {
+      "hanzi": "热",
+      "pinyin": [
+        "rè"
+      ],
+      "tones": [
+        4
+      ],
+      "meaning": "덥다",
+      "audioUrl": "/game/tts/re_4.mp3"
+    },
+    {
+      "hanzi": "下雨",
+      "pinyin": [
+        "xià",
+        "yǔ"
+      ],
+      "tones": [
+        4,
+        3
+      ],
+      "meaning": "비가 내리다",
+      "audioUrl": "/game/tts/xiayu_43.mp3"
+    },
+    {
+      "hanzi": "狗",
+      "pinyin": [
+        "gǒu"
+      ],
+      "tones": [
+        3
+      ],
+      "meaning": "개",
+      "audioUrl": "/game/tts/gou_3.mp3"
+    },
+    {
+      "hanzi": "我",
+      "pinyin": [
+        "wǒ"
+      ],
+      "tones": [
+        3
+      ],
+      "meaning": "나",
+      "audioUrl": "/game/tts/wo_3.mp3"
+    },
+    {
+      "hanzi": "我们",
+      "pinyin": [
+        "wǒ",
+        "men"
       ],
       "tones": [
         3,
+        0
+      ],
+      "meaning": "우리",
+      "audioUrl": "/game/tts/women_30.mp3"
+    },
+    {
+      "hanzi": "你",
+      "pinyin": [
+        "nǐ"
+      ],
+      "tones": [
+        3
+      ],
+      "meaning": "너",
+      "audioUrl": "/game/tts/ni_3.mp3"
+    },
+    {
+      "hanzi": "您",
+      "pinyin": [
+        "nín"
+      ],
+      "tones": [
+        2
+      ],
+      "meaning": "당신",
+      "audioUrl": "/game/tts/nin_2.mp3"
+    },
+    {
+      "hanzi": "他",
+      "pinyin": [
+        "tā"
+      ],
+      "tones": [
+        1
+      ],
+      "meaning": "그, 걔",
+      "audioUrl": "/game/tts/ta_1.mp3"
+    },
+    {
+      "hanzi": "她",
+      "pinyin": [
+        "tā"
+      ],
+      "tones": [
+        1
+      ],
+      "meaning": "그녀, 걔",
+      "audioUrl": "/game/tts/ta_1.mp3"
+    },
+    {
+      "hanzi": "它",
+      "pinyin": [
+        "tā"
+      ],
+      "tones": [
+        1
+      ],
+      "meaning": "그것",
+      "audioUrl": "/game/tts/ta_1.mp3"
+    },
+    {
+      "hanzi": "这",
+      "pinyin": [
+        "zhè"
+      ],
+      "tones": [
         4
       ],
-      "meaning": "콜라",
-      "audioUrl": "/game/tts/kele_34.mp3"
+      "meaning": "이것",
+      "audioUrl": "/game/tts/zhe_4.mp3"
+    },
+    {
+      "hanzi": "那",
+      "pinyin": [
+        "nà"
+      ],
+      "tones": [
+        4
+      ],
+      "meaning": "저것",
+      "audioUrl": "/game/tts/na_4.mp3"
+    },
+    {
+      "hanzi": "几",
+      "pinyin": [
+        "jǐ"
+      ],
+      "tones": [
+        3
+      ],
+      "meaning": "몇",
+      "audioUrl": "/game/tts/ji_3.mp3"
+    },
+    {
+      "hanzi": "什么",
+      "pinyin": [
+        "shén",
+        "me"
+      ],
+      "tones": [
+        2,
+        0
+      ],
+      "meaning": "무엇",
+      "audioUrl": "/game/tts/shenme_20.mp3"
+    },
+    {
+      "hanzi": "一",
+      "pinyin": [
+        "yī"
+      ],
+      "tones": [
+        1
+      ],
+      "meaning": "1, 하나",
+      "audioUrl": "/game/tts/yi_1.mp3"
+    },
+    {
+      "hanzi": "二",
+      "pinyin": [
+        "èr"
+      ],
+      "tones": [
+        4
+      ],
+      "meaning": "2, 둘",
+      "audioUrl": "/game/tts/er_4.mp3"
+    },
+    {
+      "hanzi": "三",
+      "pinyin": [
+        "sān"
+      ],
+      "tones": [
+        1
+      ],
+      "meaning": "3, 셋",
+      "audioUrl": "/game/tts/san_1.mp3"
+    },
+    {
+      "hanzi": "四",
+      "pinyin": [
+        "sì"
+      ],
+      "tones": [
+        4
+      ],
+      "meaning": "4, 넷",
+      "audioUrl": "/game/tts/si_4.mp3"
+    },
+    {
+      "hanzi": "五",
+      "pinyin": [
+        "wǔ"
+      ],
+      "tones": [
+        3
+      ],
+      "meaning": "5, 다섯",
+      "audioUrl": "/game/tts/wu_3.mp3"
+    },
+    {
+      "hanzi": "六",
+      "pinyin": [
+        "liù"
+      ],
+      "tones": [
+        4
+      ],
+      "meaning": "6, 여섯",
+      "audioUrl": "/game/tts/liu_4.mp3"
+    },
+    {
+      "hanzi": "七",
+      "pinyin": [
+        "qī"
+      ],
+      "tones": [
+        1
+      ],
+      "meaning": "7, 일곱",
+      "audioUrl": "/game/tts/qi_1.mp3"
+    },
+    {
+      "hanzi": "八",
+      "pinyin": [
+        "bā"
+      ],
+      "tones": [
+        1
+      ],
+      "meaning": "8, 여덟",
+      "audioUrl": "/game/tts/ba_1.mp3"
+    },
+    {
+      "hanzi": "九",
+      "pinyin": [
+        "jiǔ"
+      ],
+      "tones": [
+        3
+      ],
+      "meaning": "9, 아홉",
+      "audioUrl": "/game/tts/jiu_3.mp3"
+    },
+    {
+      "hanzi": "十",
+      "pinyin": [
+        "shí"
+      ],
+      "tones": [
+        2
+      ],
+      "meaning": "10, 열",
+      "audioUrl": "/game/tts/shi_2.mp3"
+    },
+    {
+      "hanzi": "个",
+      "pinyin": [
+        "gè"
+      ],
+      "tones": [
+        4
+      ],
+      "meaning": "개, 명",
+      "audioUrl": "/game/tts/ge_4.mp3"
+    },
+    {
+      "hanzi": "块",
+      "pinyin": [
+        "kuài"
+      ],
+      "tones": [
+        4
+      ],
+      "meaning": "콰이(돈의 단위)",
+      "audioUrl": "/game/tts/kuai_4.mp3"
+    },
+    {
+      "hanzi": "毛",
+      "pinyin": [
+        "máo"
+      ],
+      "tones": [
+        2
+      ],
+      "meaning": "마오(돈의 단위)",
+      "audioUrl": "/game/tts/mao_2.mp3"
+    },
+    {
+      "hanzi": "分",
+      "pinyin": [
+        "fēn"
+      ],
+      "tones": [
+        1
+      ],
+      "meaning": "펀(돈의 단위)",
+      "audioUrl": "/game/tts/fen_1.mp3"
+    },
+    {
+      "hanzi": "元",
+      "pinyin": [
+        "yuán"
+      ],
+      "tones": [
+        2
+      ],
+      "meaning": "위안(돈의 단위)",
+      "audioUrl": "/game/tts/yuan_2.mp3"
+    },
+    {
+      "hanzi": "角",
+      "pinyin": [
+        "jiǎo"
+      ],
+      "tones": [
+        3
+      ],
+      "meaning": "지아오(돈의 단위)",
+      "audioUrl": "/game/tts/jiao_3.mp3"
+    },
+    {
+      "hanzi": "本",
+      "pinyin": [
+        "běn"
+      ],
+      "tones": [
+        3
+      ],
+      "meaning": "권",
+      "audioUrl": "/game/tts/ben_3.mp3"
+    },
+    {
+      "hanzi": "上午",
+      "pinyin": [
+        "shàng",
+        "wǔ"
+      ],
+      "tones": [
+        4,
+        3
+      ],
+      "meaning": "오전",
+      "audioUrl": "/game/tts/shangwu_43.mp3"
+    },
+    {
+      "hanzi": "中午",
+      "pinyin": [
+        "zhōng",
+        "wǔ"
+      ],
+      "tones": [
+        1,
+        3
+      ],
+      "meaning": "정오",
+      "audioUrl": "/game/tts/zhongwu_13.mp3"
+    },
+    {
+      "hanzi": "下午",
+      "pinyin": [
+        "xià",
+        "wǔ"
+      ],
+      "tones": [
+        4,
+        3
+      ],
+      "meaning": "오후",
+      "audioUrl": "/game/tts/xiawu_43.mp3"
+    },
+    {
+      "hanzi": "分钟",
+      "pinyin": [
+        "fēn",
+        "zhōng"
+      ],
+      "tones": [
+        1,
+        1
+      ],
+      "meaning": "분",
+      "audioUrl": "/game/tts/fenzhong_11.mp3"
+    },
+    {
+      "hanzi": "号",
+      "pinyin": [
+        "hào"
+      ],
+      "tones": [
+        4
+      ],
+      "meaning": "호, 사이즈",
+      "audioUrl": "/game/tts/hao_4.mp3"
+    },
+    {
+      "hanzi": "里",
+      "pinyin": [
+        "lǐ"
+      ],
+      "tones": [
+        3
+      ],
+      "meaning": "안, 속",
+      "audioUrl": "/game/tts/li_3.mp3"
+    },
+    {
+      "hanzi": "前面",
+      "pinyin": [
+        "qián",
+        "miàn"
+      ],
+      "tones": [
+        2,
+        4
+      ],
+      "meaning": "앞쪽",
+      "audioUrl": "/game/tts/qianmian_24.mp3"
+    },
+    {
+      "hanzi": "后面",
+      "pinyin": [
+        "hòu",
+        "miàn"
+      ],
+      "tones": [
+        4,
+        4
+      ],
+      "meaning": "뒤쪽",
+      "audioUrl": "/game/tts/houmian_44.mp3"
+    },
+    {
+      "hanzi": "小姐",
+      "pinyin": [
+        "xiǎo",
+        "jiě"
+      ],
+      "tones": [
+        3,
+        3
+      ],
+      "meaning": "아가씨",
+      "audioUrl": "/game/tts/xiaojie_33.mp3"
+    },
+    {
+      "hanzi": "水",
+      "pinyin": [
+        "shuǐ"
+      ],
+      "tones": [
+        3
+      ],
+      "meaning": "물",
+      "audioUrl": "/game/tts/shui_3.mp3"
+    },
+    {
+      "hanzi": "杯子",
+      "pinyin": [
+        "bēi",
+        "zi"
+      ],
+      "tones": [
+        1,
+        0
+      ],
+      "meaning": "컵",
+      "audioUrl": "/game/tts/beizi_10.mp3"
     },
     {
       "hanzi": "苹果",
@@ -352,253 +1845,849 @@
       "audioUrl": "/game/tts/pingguo_23.mp3"
     },
     {
-      "hanzi": "爸爸",
+      "hanzi": "桌子",
       "pinyin": [
-        "bà",
-        "ba"
+        "zhuō",
+        "zi"
+      ],
+      "tones": [
+        1,
+        0
+      ],
+      "meaning": "책상",
+      "audioUrl": "/game/tts/zhuozi_10.mp3"
+    },
+    {
+      "hanzi": "家",
+      "pinyin": [
+        "jiā"
+      ],
+      "tones": [
+        1
+      ],
+      "meaning": "집",
+      "audioUrl": "/game/tts/jia_1.mp3"
+    },
+    {
+      "hanzi": "字",
+      "pinyin": [
+        "zì"
+      ],
+      "tones": [
+        4
+      ],
+      "meaning": "글자",
+      "audioUrl": "/game/tts/zi_4.mp3"
+    },
+    {
+      "hanzi": "椅子",
+      "pinyin": [
+        "yǐ",
+        "zi"
+      ],
+      "tones": [
+        3,
+        0
+      ],
+      "meaning": "의자",
+      "audioUrl": "/game/tts/yizi_30.mp3"
+    },
+    {
+      "hanzi": "猫",
+      "pinyin": [
+        "māo"
+      ],
+      "tones": [
+        1
+      ],
+      "meaning": "고양이",
+      "audioUrl": "/game/tts/mao_1.mp3"
+    },
+    {
+      "hanzi": "汉语",
+      "pinyin": [
+        "Hàn",
+        "yǔ"
       ],
       "tones": [
         4,
-        0
+        3
       ],
-      "meaning": "아빠",
-      "audioUrl": "/game/tts/baba_40.mp3"
+      "meaning": "중국어",
+      "audioUrl": "/game/tts/hanyu_43.mp3"
     },
     {
-      "hanzi": "牛奶",
+      "hanzi": "北京",
       "pinyin": [
-        "niú",
-        "nǎi"
+        "Běi",
+        "jīng"
+      ],
+      "tones": [
+        3,
+        1
+      ],
+      "meaning": "베이징",
+      "audioUrl": "/game/tts/beijing_31.mp3"
+    },
+    {
+      "hanzi": "有",
+      "pinyin": [
+        "yǒu"
+      ],
+      "tones": [
+        3
+      ],
+      "meaning": "있다",
+      "audioUrl": "/game/tts/you_3.mp3"
+    },
+    {
+      "hanzi": "没有",
+      "pinyin": [
+        "méi",
+        "yǒu"
       ],
       "tones": [
         2,
         3
       ],
-      "meaning": "우유",
-      "audioUrl": "/game/tts/niunai_23.mp3"
+      "meaning": "없다",
+      "audioUrl": "/game/tts/meiyou_23.mp3"
     },
     {
-      "hanzi": "学校",
+      "hanzi": "很",
       "pinyin": [
-        "xué",
-        "xiào"
+        "hěn"
       ],
       "tones": [
-        2,
+        3
+      ],
+      "meaning": "매우, 아주",
+      "audioUrl": "/game/tts/hen_3.mp3"
+    },
+    {
+      "hanzi": "太",
+      "pinyin": [
+        "tài"
+      ],
+      "tones": [
         4
       ],
-      "meaning": "학교",
-      "audioUrl": "/game/tts/xuexiao_24.mp3"
-    }
-  ],
-  "normal": [
+      "meaning": "너무",
+      "audioUrl": "/game/tts/tai_4.mp3"
+    },
     {
-      "hanzi": "重要",
+      "hanzi": "都",
       "pinyin": [
-        "zhòng",
-        "yào"
+        "dōu"
+      ],
+      "tones": [
+        1
+      ],
+      "meaning": "모두",
+      "audioUrl": "/game/tts/dou_1.mp3"
+    },
+    {
+      "hanzi": "的",
+      "pinyin": [
+        "de"
+      ],
+      "tones": [
+        0
+      ],
+      "meaning": "~의, ~것",
+      "audioUrl": "/game/tts/de_0.mp3"
+    },
+    {
+      "hanzi": "和",
+      "pinyin": [
+        "hé"
+      ],
+      "tones": [
+        2
+      ],
+      "meaning": "~와, ~과",
+      "audioUrl": "/game/tts/he_2.mp3"
+    },
+    {
+      "hanzi": "能",
+      "pinyin": [
+        "néng"
+      ],
+      "tones": [
+        2
+      ],
+      "meaning": "할 수 있다",
+      "audioUrl": "/game/tts/neng_2.mp3"
+    },
+    {
+      "hanzi": "会",
+      "pinyin": [
+        "huì"
+      ],
+      "tones": [
+        4
+      ],
+      "meaning": "할 줄 안다, 할 것이다",
+      "audioUrl": "/game/tts/hui_4.mp3"
+    },
+    {
+      "hanzi": "这里",
+      "pinyin": [
+        "zhè",
+        "li"
       ],
       "tones": [
         4,
-        4
+        0
       ],
-      "meaning": "중요",
-      "audioUrl": "/game/tts/zhongyao_44.mp3"
+      "meaning": "여기",
+      "audioUrl": "/game/tts/zheli_40.mp3"
     },
     {
-      "hanzi": "担心",
+      "hanzi": "那里",
       "pinyin": [
-        "dān",
+        "nà",
+        "li"
+      ],
+      "tones": [
+        4,
+        0
+      ],
+      "meaning": "저기",
+      "audioUrl": "/game/tts/nali_40.mp3"
+    },
+    {
+      "hanzi": "要",
+      "pinyin": [
+        "yào"
+      ],
+      "tones": [
+        4
+      ],
+      "meaning": "원하다, 필요하다",
+      "audioUrl": "/game/tts/yao_4.mp3"
+    },
+    {
+      "hanzi": "开心",
+      "pinyin": [
+        "kāi",
         "xīn"
       ],
       "tones": [
         1,
         1
       ],
-      "meaning": "걱정",
-      "audioUrl": "/game/tts/danxin_11.mp3"
+      "meaning": "기쁘다, 즐겁다",
+      "audioUrl": "/game/tts/kaixin_11.mp3"
     },
     {
-      "hanzi": "决定",
+      "hanzi": "电脑",
       "pinyin": [
-        "jué",
-        "dìng"
-      ],
-      "tones": [
-        2,
-        4
-      ],
-      "meaning": "결정",
-      "audioUrl": "/game/tts/jueding_24.mp3"
-    },
-    {
-      "hanzi": "简单",
-      "pinyin": [
-        "jiǎn",
-        "dān"
-      ],
-      "tones": [
-        3,
-        1
-      ],
-      "meaning": "간단",
-      "audioUrl": "/game/tts/jiandan_31.mp3"
-    },
-    {
-      "hanzi": "历史",
-      "pinyin": [
-        "lì",
-        "shǐ"
+        "diàn",
+        "nǎo"
       ],
       "tones": [
         4,
         3
       ],
-      "meaning": "역사",
-      "audioUrl": "/game/tts/lishi_43.mp3"
+      "meaning": "컴퓨터",
+      "audioUrl": "/game/tts/diannao_43.mp3"
     },
     {
-      "hanzi": "满意",
+      "hanzi": "电视",
       "pinyin": [
-        "mǎn",
-        "yì"
+        "diàn",
+        "shì"
       ],
       "tones": [
-        3,
+        4,
         4
       ],
-      "meaning": "만족",
-      "audioUrl": "/game/tts/manyi_34.mp3"
+      "meaning": "TV",
+      "audioUrl": "/game/tts/dianshi_44.mp3"
     },
     {
-      "hanzi": "关系",
+      "hanzi": "高",
       "pinyin": [
-        "guān",
-        "xi"
+        "gāo"
+      ],
+      "tones": [
+        1
+      ],
+      "meaning": "(키다)크다, 높다",
+      "audioUrl": "/game/tts/gao_1.mp3"
+    },
+    {
+      "hanzi": "下雪",
+      "pinyin": [
+        "xià",
+        "xuě"
+      ],
+      "tones": [
+        4,
+        3
+      ],
+      "meaning": "눈이 내리다",
+      "audioUrl": "/game/tts/xiaxue_43.mp3"
+    },
+    {
+      "hanzi": "百",
+      "pinyin": [
+        "bǎi"
+      ],
+      "tones": [
+        3
+      ],
+      "meaning": "100, 백",
+      "audioUrl": "/game/tts/bai_3.mp3"
+    },
+    {
+      "hanzi": "千",
+      "pinyin": [
+        "qiān"
+      ],
+      "tones": [
+        1
+      ],
+      "meaning": "1000, 천",
+      "audioUrl": "/game/tts/qian_1.mp3"
+    },
+    {
+      "hanzi": "万",
+      "pinyin": [
+        "wàn"
+      ],
+      "tones": [
+        4
+      ],
+      "meaning": "10000, 만",
+      "audioUrl": "/game/tts/wan_4.mp3"
+    },
+    {
+      "hanzi": "多",
+      "pinyin": [
+        "duō"
+      ],
+      "tones": [
+        1
+      ],
+      "meaning": "많다",
+      "audioUrl": "/game/tts/duo_1.mp3"
+    },
+    {
+      "hanzi": "少",
+      "pinyin": [
+        "shǎo"
+      ],
+      "tones": [
+        3
+      ],
+      "meaning": "적다",
+      "audioUrl": "/game/tts/shao_3.mp3"
+    },
+    {
+      "hanzi": "大",
+      "pinyin": [
+        "dà"
+      ],
+      "tones": [
+        4
+      ],
+      "meaning": "크다",
+      "audioUrl": "/game/tts/da_4.mp3"
+    },
+    {
+      "hanzi": "也",
+      "pinyin": [
+        "yě"
+      ],
+      "tones": [
+        3
+      ],
+      "meaning": "~도",
+      "audioUrl": "/game/tts/ye_3.mp3"
+    }
+  ],
+  "normal": [
+    {
+      "hanzi": "妻子",
+      "pinyin": [
+        "qī",
+        "zi"
       ],
       "tones": [
         1,
         0
       ],
-      "meaning": "관계",
-      "audioUrl": "/game/tts/guanxi_10.mp3"
+      "meaning": "아내",
+      "audioUrl": "/game/tts/qizi_10.mp3"
     },
     {
-      "hanzi": "容易",
+      "hanzi": "丈夫",
       "pinyin": [
-        "róng",
-        "yì"
+        "zhàng",
+        "fu"
       ],
       "tones": [
-        2,
-        4
+        4,
+        0
       ],
-      "meaning": "쉽다",
-      "audioUrl": "/game/tts/rongyi_24.mp3"
+      "meaning": "남편",
+      "audioUrl": "/game/tts/zhangfu_40.mp3"
     },
     {
-      "hanzi": "城市",
+      "hanzi": "叔叔",
       "pinyin": [
-        "chéng",
-        "shì"
-      ],
-      "tones": [
-        2,
-        4
-      ],
-      "meaning": "도시",
-      "audioUrl": "/game/tts/chengshi_24.mp3"
-    },
-    {
-      "hanzi": "文化",
-      "pinyin": [
-        "wén",
-        "huà"
-      ],
-      "tones": [
-        2,
-        4
-      ],
-      "meaning": "문화",
-      "audioUrl": "/game/tts/wenhua_24.mp3"
-    },
-    {
-      "hanzi": "参加",
-      "pinyin": [
-        "cān",
-        "jiā"
+        "shū",
+        "shu"
       ],
       "tones": [
         1,
+        0
+      ],
+      "meaning": "삼촌",
+      "audioUrl": "/game/tts/shushu_10.mp3"
+    },
+    {
+      "hanzi": "穿",
+      "pinyin": [
+        "chuān"
+      ],
+      "tones": [
         1
       ],
-      "meaning": "참가",
-      "audioUrl": "/game/tts/canjia_11.mp3"
+      "meaning": "입다",
+      "audioUrl": "/game/tts/chuan_1.mp3"
     },
     {
-      "hanzi": "经常",
+      "hanzi": "手机",
       "pinyin": [
-        "jīng",
-        "cháng"
+        "shǒu",
+        "jī"
       ],
       "tones": [
-        1,
-        2
+        3,
+        1
       ],
-      "meaning": "자주",
-      "audioUrl": "/game/tts/jingchang_12.mp3"
+      "meaning": "휴대폰",
+      "audioUrl": "/game/tts/shouji_31.mp3"
     },
     {
-      "hanzi": "影响",
+      "hanzi": "手表",
       "pinyin": [
-        "yǐng",
-        "xiǎng"
+        "shǒu",
+        "biǎo"
       ],
       "tones": [
         3,
         3
       ],
-      "meaning": "영향",
-      "audioUrl": "/game/tts/yingxiang_33.mp3"
+      "meaning": "손목시계",
+      "audioUrl": "/game/tts/shoubiao_33.mp3"
     },
     {
-      "hanzi": "努力",
+      "hanzi": "颜色",
       "pinyin": [
-        "nǔ",
-        "lì"
+        "yán",
+        "sè"
+      ],
+      "tones": [
+        2,
+        4
+      ],
+      "meaning": "색깔",
+      "audioUrl": "/game/tts/yanse_24.mp3"
+    },
+    {
+      "hanzi": "外公",
+      "pinyin": [
+        "wài",
+        "gōng"
+      ],
+      "tones": [
+        4,
+        1
+      ],
+      "meaning": "외할아버지",
+      "audioUrl": "/game/tts/waigong_41.mp3"
+    },
+    {
+      "hanzi": "外婆",
+      "pinyin": [
+        "wài",
+        "pó"
+      ],
+      "tones": [
+        4,
+        2
+      ],
+      "meaning": "외할머니",
+      "audioUrl": "/game/tts/waipo_42.mp3"
+    },
+    {
+      "hanzi": "姨妈",
+      "pinyin": [
+        "yí",
+        "mā"
+      ],
+      "tones": [
+        2,
+        1
+      ],
+      "meaning": "이모",
+      "audioUrl": "/game/tts/yima_21.mp3"
+    },
+    {
+      "hanzi": "舅舅",
+      "pinyin": [
+        "jiù",
+        "jiu"
+      ],
+      "tones": [
+        4,
+        0
+      ],
+      "meaning": "외삼촌",
+      "audioUrl": "/game/tts/jiujiu_40.mp3"
+    },
+    {
+      "hanzi": "姑姑",
+      "pinyin": [
+        "gū",
+        "gu"
+      ],
+      "tones": [
+        1,
+        0
+      ],
+      "meaning": "고모",
+      "audioUrl": "/game/tts/gugu_10.mp3"
+    },
+    {
+      "hanzi": "床",
+      "pinyin": [
+        "chuáng"
+      ],
+      "tones": [
+        2
+      ],
+      "meaning": "침대",
+      "audioUrl": "/game/tts/chuang_2.mp3"
+    },
+    {
+      "hanzi": "睡懒觉",
+      "pinyin": [
+        "shuì",
+        "lǎn",
+        "jiào"
+      ],
+      "tones": [
+        4,
+        3,
+        4
+      ],
+      "meaning": "늦잠을 자다",
+      "audioUrl": "/game/tts/shuilanjiao_434.mp3"
+    },
+    {
+      "hanzi": "被子",
+      "pinyin": [
+        "bèi",
+        "zi"
+      ],
+      "tones": [
+        4,
+        0
+      ],
+      "meaning": "이불",
+      "audioUrl": "/game/tts/beizi_40.mp3"
+    },
+    {
+      "hanzi": "闹钟",
+      "pinyin": [
+        "nào",
+        "zhōng"
+      ],
+      "tones": [
+        4,
+        1
+      ],
+      "meaning": "알람시계",
+      "audioUrl": "/game/tts/naozhong_41.mp3"
+    },
+    {
+      "hanzi": "大衣",
+      "pinyin": [
+        "dà",
+        "yī"
+      ],
+      "tones": [
+        4,
+        1
+      ],
+      "meaning": "코트",
+      "audioUrl": "/game/tts/dayi_41.mp3"
+    },
+    {
+      "hanzi": "手套",
+      "pinyin": [
+        "shǒu",
+        "tào"
       ],
       "tones": [
         3,
         4
       ],
-      "meaning": "노력",
-      "audioUrl": "/game/tts/nuli_34.mp3"
+      "meaning": "장갑",
+      "audioUrl": "/game/tts/shoutao_34.mp3"
     },
     {
-      "hanzi": "安静",
+      "hanzi": "钱包",
       "pinyin": [
-        "ān",
-        "jìng"
+        "qián",
+        "bāo"
+      ],
+      "tones": [
+        2,
+        1
+      ],
+      "meaning": "지갑",
+      "audioUrl": "/game/tts/qianbao_21.mp3"
+    },
+    {
+      "hanzi": "时间",
+      "pinyin": [
+        "shí",
+        "jiān"
+      ],
+      "tones": [
+        2,
+        1
+      ],
+      "meaning": "시간",
+      "audioUrl": "/game/tts/shijian_21.mp3"
+    },
+    {
+      "hanzi": "小时",
+      "pinyin": [
+        "xiǎo",
+        "shí"
+      ],
+      "tones": [
+        3,
+        2
+      ],
+      "meaning": "시간(단위)",
+      "audioUrl": "/game/tts/xiaoshi_32.mp3"
+    },
+    {
+      "hanzi": "两",
+      "pinyin": [
+        "liǎng"
+      ],
+      "tones": [
+        3
+      ],
+      "meaning": "둘",
+      "audioUrl": "/game/tts/liang_3.mp3"
+    },
+    {
+      "hanzi": "每",
+      "pinyin": [
+        "měi"
+      ],
+      "tones": [
+        3
+      ],
+      "meaning": "매, 마다",
+      "audioUrl": "/game/tts/mei_3.mp3"
+    },
+    {
+      "hanzi": "半天",
+      "pinyin": [
+        "bàn",
+        "tiān"
+      ],
+      "tones": [
+        4,
+        1
+      ],
+      "meaning": "한참, 반나절",
+      "audioUrl": "/game/tts/bantian_41.mp3"
+    },
+    {
+      "hanzi": "开始",
+      "pinyin": [
+        "kāi",
+        "shǐ"
+      ],
+      "tones": [
+        1,
+        3
+      ],
+      "meaning": "시작하다",
+      "audioUrl": "/game/tts/kaishi_13.mp3"
+    },
+    {
+      "hanzi": "比",
+      "pinyin": [
+        "bǐ"
+      ],
+      "tones": [
+        3
+      ],
+      "meaning": "~보다",
+      "audioUrl": "/game/tts/bi_3.mp3"
+    },
+    {
+      "hanzi": "别人",
+      "pinyin": [
+        "bié",
+        "ren"
+      ],
+      "tones": [
+        2,
+        0
+      ],
+      "meaning": "다른 사람",
+      "audioUrl": "/game/tts/bieren_20.mp3"
+    },
+    {
+      "hanzi": "阿姨",
+      "pinyin": [
+        "ā",
+        "yí"
+      ],
+      "tones": [
+        1,
+        2
+      ],
+      "meaning": "아주머니, 이모",
+      "audioUrl": "/game/tts/ayi_12.mp3"
+    },
+    {
+      "hanzi": "洗澡",
+      "pinyin": [
+        "xǐ",
+        "zǎo"
+      ],
+      "tones": [
+        3,
+        3
+      ],
+      "meaning": "목욕하다",
+      "audioUrl": "/game/tts/xizao_33.mp3"
+    },
+    {
+      "hanzi": "条",
+      "pinyin": [
+        "tiáo"
+      ],
+      "tones": [
+        2
+      ],
+      "meaning": "벌(하의를 세는 단위)",
+      "audioUrl": "/game/tts/tiao_2.mp3"
+    },
+    {
+      "hanzi": "裤子",
+      "pinyin": [
+        "kù",
+        "zi"
+      ],
+      "tones": [
+        4,
+        0
+      ],
+      "meaning": "바지",
+      "audioUrl": "/game/tts/kuzi_40.mp3"
+    },
+    {
+      "hanzi": "双",
+      "pinyin": [
+        "shuāng"
+      ],
+      "tones": [
+        1
+      ],
+      "meaning": "켤레, 짝, 쌍",
+      "audioUrl": "/game/tts/shuang_1.mp3"
+    },
+    {
+      "hanzi": "袜子",
+      "pinyin": [
+        "wà",
+        "zi"
+      ],
+      "tones": [
+        4,
+        0
+      ],
+      "meaning": "양말",
+      "audioUrl": "/game/tts/wazi_40.mp3"
+    },
+    {
+      "hanzi": "帽子",
+      "pinyin": [
+        "mào",
+        "zi"
+      ],
+      "tones": [
+        4,
+        0
+      ],
+      "meaning": "모자",
+      "audioUrl": "/game/tts/maozi_40.mp3"
+    },
+    {
+      "hanzi": "皮鞋",
+      "pinyin": [
+        "pí",
+        "xié"
+      ],
+      "tones": [
+        2,
+        2
+      ],
+      "meaning": "구두",
+      "audioUrl": "/game/tts/pixie_22.mp3"
+    },
+    {
+      "hanzi": "带",
+      "pinyin": [
+        "dài"
+      ],
+      "tones": [
+        4
+      ],
+      "meaning": "휴대하다, 지니다",
+      "audioUrl": "/game/tts/dai_4.mp3"
+    },
+    {
+      "hanzi": "刷牙",
+      "pinyin": [
+        "shuā",
+        "yá"
+      ],
+      "tones": [
+        1,
+        2
+      ],
+      "meaning": "양치하다",
+      "audioUrl": "/game/tts/shuaya_12.mp3"
+    },
+    {
+      "hanzi": "周末",
+      "pinyin": [
+        "zhōu",
+        "mò"
       ],
       "tones": [
         1,
         4
       ],
-      "meaning": "조용하다",
-      "audioUrl": "/game/tts/anjing_14.mp3"
-    },
-    {
-      "hanzi": "准备",
-      "pinyin": [
-        "zhǔn",
-        "bèi"
-      ],
-      "tones": [
-        3,
-        4
-      ],
-      "meaning": "준비",
-      "audioUrl": "/game/tts/zhunbei_34.mp3"
+      "meaning": "주말",
+      "audioUrl": "/game/tts/zhoumo_14.mp3"
     },
     {
       "hanzi": "最近",
@@ -614,69 +2703,1822 @@
       "audioUrl": "/game/tts/zuijin_44.mp3"
     },
     {
-      "hanzi": "公司",
+      "hanzi": "半",
       "pinyin": [
-        "gōng",
-        "sī"
+        "bàn"
+      ],
+      "tones": [
+        4
+      ],
+      "meaning": "절반",
+      "audioUrl": "/game/tts/ban_4.mp3"
+    },
+    {
+      "hanzi": "刻",
+      "pinyin": [
+        "kè"
+      ],
+      "tones": [
+        4
+      ],
+      "meaning": "15분",
+      "audioUrl": "/game/tts/ke_4.mp3"
+    },
+    {
+      "hanzi": "地铁",
+      "pinyin": [
+        "dì",
+        "tiě"
+      ],
+      "tones": [
+        4,
+        3
+      ],
+      "meaning": "지하철",
+      "audioUrl": "/game/tts/ditie_43.mp3"
+    },
+    {
+      "hanzi": "骑",
+      "pinyin": [
+        "qí"
+      ],
+      "tones": [
+        2
+      ],
+      "meaning": "(동물, 자전거 등)타다",
+      "audioUrl": "/game/tts/qi_2.mp3"
+    },
+    {
+      "hanzi": "自行车",
+      "pinyin": [
+        "zì",
+        "xíng",
+        "chē"
+      ],
+      "tones": [
+        4,
+        2,
+        1
+      ],
+      "meaning": "자전거",
+      "audioUrl": "/game/tts/zixingche_421.mp3"
+    },
+    {
+      "hanzi": "出发",
+      "pinyin": [
+        "chū",
+        "fā"
       ],
       "tones": [
         1,
         1
       ],
-      "meaning": "회사",
-      "audioUrl": "/game/tts/gongsi_11.mp3"
+      "meaning": "출발하다",
+      "audioUrl": "/game/tts/chufa_11.mp3"
     },
     {
-      "hanzi": "旅游",
+      "hanzi": "马上",
       "pinyin": [
-        "lǚ",
-        "yóu"
+        "mǎ",
+        "shàng"
       ],
       "tones": [
         3,
-        2
+        4
       ],
-      "meaning": "여행",
-      "audioUrl": "/game/tts/lvyou_32.mp3"
+      "meaning": "곧, 즉시",
+      "audioUrl": "/game/tts/mashang_34.mp3"
     },
     {
-      "hanzi": "选择",
+      "hanzi": "注意",
       "pinyin": [
-        "xuǎn",
-        "zé"
+        "zhù",
+        "yì"
       ],
       "tones": [
-        3,
-        2
+        4,
+        4
       ],
-      "meaning": "선택",
-      "audioUrl": "/game/tts/xuanze_32.mp3"
+      "meaning": "주의하다, 조심하다",
+      "audioUrl": "/game/tts/zhuyi_44.mp3"
     },
     {
-      "hanzi": "复杂",
+      "hanzi": "认为",
       "pinyin": [
-        "fù",
-        "zá"
+        "rèn",
+        "wéi"
       ],
       "tones": [
         4,
         2
       ],
-      "meaning": "복잡",
-      "audioUrl": "/game/tts/fuza_42.mp3"
+      "meaning": "여기다, 생각하다",
+      "audioUrl": "/game/tts/renwei_42.mp3"
     },
     {
-      "hanzi": "习惯",
+      "hanzi": "站",
       "pinyin": [
-        "xí",
-        "guàn"
+        "zhàn"
+      ],
+      "tones": [
+        4
+      ],
+      "meaning": "정류장; 서다",
+      "audioUrl": "/game/tts/zhan_4.mp3"
+    },
+    {
+      "hanzi": "堵车",
+      "pinyin": [
+        "dǔ",
+        "chē"
+      ],
+      "tones": [
+        3,
+        1
+      ],
+      "meaning": "차가 막히다",
+      "audioUrl": "/game/tts/duche_31.mp3"
+    },
+    {
+      "hanzi": "一定",
+      "pinyin": [
+        "yí",
+        "dìng"
       ],
       "tones": [
         2,
         4
       ],
-      "meaning": "습관",
-      "audioUrl": "/game/tts/xiguan_24.mp3"
+      "meaning": "반드시, 꼭",
+      "audioUrl": "/game/tts/yiding_24.mp3"
+    },
+    {
+      "hanzi": "几乎",
+      "pinyin": [
+        "jī",
+        "hū"
+      ],
+      "tones": [
+        1,
+        1
+      ],
+      "meaning": "거의",
+      "audioUrl": "/game/tts/jihu_11.mp3"
+    },
+    {
+      "hanzi": "司机",
+      "pinyin": [
+        "sī",
+        "jī"
+      ],
+      "tones": [
+        1,
+        1
+      ],
+      "meaning": "기사, 운전사",
+      "audioUrl": "/game/tts/siji_11.mp3"
+    },
+    {
+      "hanzi": "师傅",
+      "pinyin": [
+        "shī",
+        "fu"
+      ],
+      "tones": [
+        1,
+        0
+      ],
+      "meaning": "기사님, 선생님",
+      "audioUrl": "/game/tts/shifu_10.mp3"
+    },
+    {
+      "hanzi": "汽车",
+      "pinyin": [
+        "qì",
+        "chē"
+      ],
+      "tones": [
+        4,
+        1
+      ],
+      "meaning": "자동차",
+      "audioUrl": "/game/tts/qiche_41.mp3"
+    },
+    {
+      "hanzi": "摩托车",
+      "pinyin": [
+        "mó",
+        "tuō",
+        "chē"
+      ],
+      "tones": [
+        2,
+        1,
+        1
+      ],
+      "meaning": "오토바이",
+      "audioUrl": "/game/tts/motuoche_211.mp3"
+    },
+    {
+      "hanzi": "船",
+      "pinyin": [
+        "chuán"
+      ],
+      "tones": [
+        2
+      ],
+      "meaning": "배(교통 수단)",
+      "audioUrl": "/game/tts/chuan_2.mp3"
+    },
+    {
+      "hanzi": "车票",
+      "pinyin": [
+        "chē",
+        "piào"
+      ],
+      "tones": [
+        1,
+        4
+      ],
+      "meaning": "차표",
+      "audioUrl": "/game/tts/chepiao_14.mp3"
+    },
+    {
+      "hanzi": "车费",
+      "pinyin": [
+        "chē",
+        "fèi"
+      ],
+      "tones": [
+        1,
+        4
+      ],
+      "meaning": "차비",
+      "audioUrl": "/game/tts/chefei_14.mp3"
+    },
+    {
+      "hanzi": "从",
+      "pinyin": [
+        "cóng"
+      ],
+      "tones": [
+        2
+      ],
+      "meaning": "~부터, ~에서",
+      "audioUrl": "/game/tts/cong_2.mp3"
+    },
+    {
+      "hanzi": "离",
+      "pinyin": [
+        "lí"
+      ],
+      "tones": [
+        2
+      ],
+      "meaning": "~에서, ~로부터",
+      "audioUrl": "/game/tts/li_2.mp3"
+    },
+    {
+      "hanzi": "远",
+      "pinyin": [
+        "yuǎn"
+      ],
+      "tones": [
+        3
+      ],
+      "meaning": "멀다",
+      "audioUrl": "/game/tts/yuan_3.mp3"
+    },
+    {
+      "hanzi": "近",
+      "pinyin": [
+        "jìn"
+      ],
+      "tones": [
+        4
+      ],
+      "meaning": "가깝다",
+      "audioUrl": "/game/tts/jin_4.mp3"
+    },
+    {
+      "hanzi": "向",
+      "pinyin": [
+        "xiàng"
+      ],
+      "tones": [
+        4
+      ],
+      "meaning": "~을 향하여",
+      "audioUrl": "/game/tts/xiang_4.mp3"
+    },
+    {
+      "hanzi": "附近",
+      "pinyin": [
+        "fù",
+        "jìn"
+      ],
+      "tones": [
+        4,
+        4
+      ],
+      "meaning": "근처",
+      "audioUrl": "/game/tts/fujin_44.mp3"
+    },
+    {
+      "hanzi": "路",
+      "pinyin": [
+        "lù"
+      ],
+      "tones": [
+        4
+      ],
+      "meaning": "길",
+      "audioUrl": "/game/tts/lu_4.mp3"
+    },
+    {
+      "hanzi": "咱们",
+      "pinyin": [
+        "zán",
+        "men"
+      ],
+      "tones": [
+        2,
+        0
+      ],
+      "meaning": "우리",
+      "audioUrl": "/game/tts/zanmen_20.mp3"
+    },
+    {
+      "hanzi": "东边",
+      "pinyin": [
+        "dōng",
+        "bian"
+      ],
+      "tones": [
+        1,
+        0
+      ],
+      "meaning": "동쪽",
+      "audioUrl": "/game/tts/dongbian_10.mp3"
+    },
+    {
+      "hanzi": "西边",
+      "pinyin": [
+        "xī",
+        "bian"
+      ],
+      "tones": [
+        1,
+        0
+      ],
+      "meaning": "서쪽",
+      "audioUrl": "/game/tts/xibian_10.mp3"
+    },
+    {
+      "hanzi": "南边",
+      "pinyin": [
+        "nán",
+        "bian"
+      ],
+      "tones": [
+        2,
+        0
+      ],
+      "meaning": "남쪽",
+      "audioUrl": "/game/tts/nanbian_20.mp3"
+    },
+    {
+      "hanzi": "北边",
+      "pinyin": [
+        "běi",
+        "bian"
+      ],
+      "tones": [
+        3,
+        0
+      ],
+      "meaning": "북쪽",
+      "audioUrl": "/game/tts/beibian_30.mp3"
+    },
+    {
+      "hanzi": "后边",
+      "pinyin": [
+        "hòu",
+        "bian"
+      ],
+      "tones": [
+        4,
+        0
+      ],
+      "meaning": "뒤쪽",
+      "audioUrl": "/game/tts/houbian_40.mp3"
+    },
+    {
+      "hanzi": "前边",
+      "pinyin": [
+        "qián",
+        "bian"
+      ],
+      "tones": [
+        2,
+        0
+      ],
+      "meaning": "앞쪽",
+      "audioUrl": "/game/tts/qianbian_20.mp3"
+    },
+    {
+      "hanzi": "上边",
+      "pinyin": [
+        "shàng",
+        "bian"
+      ],
+      "tones": [
+        4,
+        0
+      ],
+      "meaning": "위쪽",
+      "audioUrl": "/game/tts/shangbian_40.mp3"
+    },
+    {
+      "hanzi": "下边",
+      "pinyin": [
+        "xià",
+        "bian"
+      ],
+      "tones": [
+        4,
+        0
+      ],
+      "meaning": "아래쪽",
+      "audioUrl": "/game/tts/xiabian_40.mp3"
+    },
+    {
+      "hanzi": "左边",
+      "pinyin": [
+        "zuǒ",
+        "bian"
+      ],
+      "tones": [
+        3,
+        0
+      ],
+      "meaning": "왼쪽",
+      "audioUrl": "/game/tts/zuobian_30.mp3"
+    },
+    {
+      "hanzi": "右边",
+      "pinyin": [
+        "yòu",
+        "bian"
+      ],
+      "tones": [
+        4,
+        0
+      ],
+      "meaning": "오른쪽",
+      "audioUrl": "/game/tts/youbian_40.mp3"
+    },
+    {
+      "hanzi": "里边",
+      "pinyin": [
+        "lǐ",
+        "bian"
+      ],
+      "tones": [
+        3,
+        0
+      ],
+      "meaning": "안쪽",
+      "audioUrl": "/game/tts/libian_30.mp3"
+    },
+    {
+      "hanzi": "外边",
+      "pinyin": [
+        "wài",
+        "bian"
+      ],
+      "tones": [
+        4,
+        0
+      ],
+      "meaning": "바깥쪽",
+      "audioUrl": "/game/tts/waibian_40.mp3"
+    },
+    {
+      "hanzi": "旁边",
+      "pinyin": [
+        "páng",
+        "biān"
+      ],
+      "tones": [
+        2,
+        1
+      ],
+      "meaning": "옆",
+      "audioUrl": "/game/tts/pangbian_21.mp3"
+    },
+    {
+      "hanzi": "对面",
+      "pinyin": [
+        "duì",
+        "miàn"
+      ],
+      "tones": [
+        4,
+        4
+      ],
+      "meaning": "맞은편",
+      "audioUrl": "/game/tts/duimian_44.mp3"
+    },
+    {
+      "hanzi": "服务员",
+      "pinyin": [
+        "fú",
+        "wù",
+        "yuán"
+      ],
+      "tones": [
+        2,
+        4,
+        2
+      ],
+      "meaning": "종업원",
+      "audioUrl": "/game/tts/fuwuyuan_242.mp3"
+    },
+    {
+      "hanzi": "饿",
+      "pinyin": [
+        "è"
+      ],
+      "tones": [
+        4
+      ],
+      "meaning": "배고프다",
+      "audioUrl": "/game/tts/e_4.mp3"
+    },
+    {
+      "hanzi": "饱",
+      "pinyin": [
+        "bǎo"
+      ],
+      "tones": [
+        3
+      ],
+      "meaning": "배부르다",
+      "audioUrl": "/game/tts/bao_3.mp3"
+    },
+    {
+      "hanzi": "餐厅",
+      "pinyin": [
+        "cān",
+        "tīng"
+      ],
+      "tones": [
+        1,
+        1
+      ],
+      "meaning": "식당",
+      "audioUrl": "/game/tts/canting_11.mp3"
+    },
+    {
+      "hanzi": "客人",
+      "pinyin": [
+        "kè",
+        "ren"
+      ],
+      "tones": [
+        4,
+        0
+      ],
+      "meaning": "손님",
+      "audioUrl": "/game/tts/keren_40.mp3"
+    },
+    {
+      "hanzi": "顾客",
+      "pinyin": [
+        "gù",
+        "kè"
+      ],
+      "tones": [
+        4,
+        4
+      ],
+      "meaning": "고객",
+      "audioUrl": "/game/tts/guke_44.mp3"
+    },
+    {
+      "hanzi": "烤鸭",
+      "pinyin": [
+        "kǎo",
+        "yā"
+      ],
+      "tones": [
+        3,
+        1
+      ],
+      "meaning": "오리구이",
+      "audioUrl": "/game/tts/kaoya_31.mp3"
+    },
+    {
+      "hanzi": "羊肉",
+      "pinyin": [
+        "yáng",
+        "ròu"
+      ],
+      "tones": [
+        2,
+        4
+      ],
+      "meaning": "양고기",
+      "audioUrl": "/game/tts/yangrou_24.mp3"
+    },
+    {
+      "hanzi": "猪肉",
+      "pinyin": [
+        "zhū",
+        "ròu"
+      ],
+      "tones": [
+        1,
+        4
+      ],
+      "meaning": "돼지고기",
+      "audioUrl": "/game/tts/zhurou_14.mp3"
+    },
+    {
+      "hanzi": "牛肉",
+      "pinyin": [
+        "niú",
+        "ròu"
+      ],
+      "tones": [
+        2,
+        4
+      ],
+      "meaning": "소고기",
+      "audioUrl": "/game/tts/niurou_24.mp3"
+    },
+    {
+      "hanzi": "鸡肉",
+      "pinyin": [
+        "jī",
+        "ròu"
+      ],
+      "tones": [
+        1,
+        4
+      ],
+      "meaning": "닭고기",
+      "audioUrl": "/game/tts/jirou_14.mp3"
+    },
+    {
+      "hanzi": "汤",
+      "pinyin": [
+        "tāng"
+      ],
+      "tones": [
+        1
+      ],
+      "meaning": "탕, 국",
+      "audioUrl": "/game/tts/tang_1.mp3"
+    },
+    {
+      "hanzi": "饺子",
+      "pinyin": [
+        "jiǎo",
+        "zi"
+      ],
+      "tones": [
+        3,
+        0
+      ],
+      "meaning": "만두",
+      "audioUrl": "/game/tts/jiaozi_30.mp3"
+    },
+    {
+      "hanzi": "用",
+      "pinyin": [
+        "yòng"
+      ],
+      "tones": [
+        4
+      ],
+      "meaning": "사용하다, 쓰다",
+      "audioUrl": "/game/tts/yong_4.mp3"
+    },
+    {
+      "hanzi": "免费",
+      "pinyin": [
+        "miǎn",
+        "fèi"
+      ],
+      "tones": [
+        3,
+        4
+      ],
+      "meaning": "무료로 하다",
+      "audioUrl": "/game/tts/mianfei_34.mp3"
+    },
+    {
+      "hanzi": "味道",
+      "pinyin": [
+        "wèi",
+        "dào"
+      ],
+      "tones": [
+        4,
+        4
+      ],
+      "meaning": "맛",
+      "audioUrl": "/game/tts/weidao_44.mp3"
+    },
+    {
+      "hanzi": "香",
+      "pinyin": [
+        "xiāng"
+      ],
+      "tones": [
+        1
+      ],
+      "meaning": "향기롭다",
+      "audioUrl": "/game/tts/xiang_1.mp3"
+    },
+    {
+      "hanzi": "苦",
+      "pinyin": [
+        "kǔ"
+      ],
+      "tones": [
+        3
+      ],
+      "meaning": "쓰다",
+      "audioUrl": "/game/tts/ku_3.mp3"
+    },
+    {
+      "hanzi": "酸",
+      "pinyin": [
+        "suān"
+      ],
+      "tones": [
+        1
+      ],
+      "meaning": "시다",
+      "audioUrl": "/game/tts/suan_1.mp3"
+    },
+    {
+      "hanzi": "甜",
+      "pinyin": [
+        "tián"
+      ],
+      "tones": [
+        2
+      ],
+      "meaning": "달다",
+      "audioUrl": "/game/tts/tian_2.mp3"
+    },
+    {
+      "hanzi": "辣",
+      "pinyin": [
+        "là"
+      ],
+      "tones": [
+        4
+      ],
+      "meaning": "맵다",
+      "audioUrl": "/game/tts/la_4.mp3"
+    },
+    {
+      "hanzi": "咸",
+      "pinyin": [
+        "xián"
+      ],
+      "tones": [
+        2
+      ],
+      "meaning": "짜다",
+      "audioUrl": "/game/tts/xian_2.mp3"
+    },
+    {
+      "hanzi": "包",
+      "pinyin": [
+        "bāo"
+      ],
+      "tones": [
+        1
+      ],
+      "meaning": "가방",
+      "audioUrl": "/game/tts/bao_1.mp3"
+    },
+    {
+      "hanzi": "位",
+      "pinyin": [
+        "wèi"
+      ],
+      "tones": [
+        4
+      ],
+      "meaning": "분(사람 단위)",
+      "audioUrl": "/game/tts/wei_4.mp3"
+    },
+    {
+      "hanzi": "菜单",
+      "pinyin": [
+        "cài",
+        "dān"
+      ],
+      "tones": [
+        4,
+        1
+      ],
+      "meaning": "메뉴판",
+      "audioUrl": "/game/tts/caidan_41.mp3"
+    },
+    {
+      "hanzi": "方便面",
+      "pinyin": [
+        "fāng",
+        "biàn",
+        "miàn"
+      ],
+      "tones": [
+        1,
+        4,
+        4
+      ],
+      "meaning": "라면",
+      "audioUrl": "/game/tts/fangbianmian_144.mp3"
+    },
+    {
+      "hanzi": "汉堡",
+      "pinyin": [
+        "hàn",
+        "bǎo"
+      ],
+      "tones": [
+        4,
+        3
+      ],
+      "meaning": "햄버거",
+      "audioUrl": "/game/tts/hanbao_43.mp3"
+    },
+    {
+      "hanzi": "羊肉串",
+      "pinyin": [
+        "yáng",
+        "ròu",
+        "chuàn"
+      ],
+      "tones": [
+        2,
+        4,
+        4
+      ],
+      "meaning": "양꼬치",
+      "audioUrl": "/game/tts/yangrouchuan_244.mp3"
+    },
+    {
+      "hanzi": "冰淇淋",
+      "pinyin": [
+        "bīng",
+        "qí",
+        "lín"
+      ],
+      "tones": [
+        1,
+        2,
+        2
+      ],
+      "meaning": "아이스크림",
+      "audioUrl": "/game/tts/bingqilin_122.mp3"
+    },
+    {
+      "hanzi": "红茶",
+      "pinyin": [
+        "hóng",
+        "chá"
+      ],
+      "tones": [
+        2,
+        2
+      ],
+      "meaning": "홍차",
+      "audioUrl": "/game/tts/hongcha_22.mp3"
+    },
+    {
+      "hanzi": "绿茶",
+      "pinyin": [
+        "lǜ",
+        "chá"
+      ],
+      "tones": [
+        4,
+        2
+      ],
+      "meaning": "녹차",
+      "audioUrl": "/game/tts/lvcha_42.mp3"
+    },
+    {
+      "hanzi": "见面",
+      "pinyin": [
+        "jiàn",
+        "miàn"
+      ],
+      "tones": [
+        4,
+        4
+      ],
+      "meaning": "만나다",
+      "audioUrl": "/game/tts/jianmian_44.mp3"
+    },
+    {
+      "hanzi": "聊天",
+      "pinyin": [
+        "liáo",
+        "tiān"
+      ],
+      "tones": [
+        2,
+        1
+      ],
+      "meaning": "수다 떨다",
+      "audioUrl": "/game/tts/liaotian_21.mp3"
+    },
+    {
+      "hanzi": "说话",
+      "pinyin": [
+        "shuō",
+        "huà"
+      ],
+      "tones": [
+        1,
+        4
+      ],
+      "meaning": "말하다",
+      "audioUrl": "/game/tts/shuohua_14.mp3"
+    },
+    {
+      "hanzi": "迟到",
+      "pinyin": [
+        "chí",
+        "dào"
+      ],
+      "tones": [
+        2,
+        4
+      ],
+      "meaning": "지각하다",
+      "audioUrl": "/game/tts/chidao_24.mp3"
+    },
+    {
+      "hanzi": "等",
+      "pinyin": [
+        "děng"
+      ],
+      "tones": [
+        3
+      ],
+      "meaning": "기다리다",
+      "audioUrl": "/game/tts/deng_3.mp3"
+    },
+    {
+      "hanzi": "礼物",
+      "pinyin": [
+        "lǐ",
+        "wù"
+      ],
+      "tones": [
+        3,
+        4
+      ],
+      "meaning": "선물",
+      "audioUrl": "/game/tts/liwu_34.mp3"
+    },
+    {
+      "hanzi": "结婚",
+      "pinyin": [
+        "jié",
+        "hūn"
+      ],
+      "tones": [
+        2,
+        1
+      ],
+      "meaning": "결혼하다",
+      "audioUrl": "/game/tts/jiehun_21.mp3"
+    },
+    {
+      "hanzi": "俩",
+      "pinyin": [
+        "liǎ"
+      ],
+      "tones": [
+        3
+      ],
+      "meaning": "두 사람",
+      "audioUrl": "/game/tts/lia_3.mp3"
+    },
+    {
+      "hanzi": "一般",
+      "pinyin": [
+        "yì",
+        "bān"
+      ],
+      "tones": [
+        4,
+        1
+      ],
+      "meaning": "보통(이다)",
+      "audioUrl": "/game/tts/yiban_41.mp3"
+    },
+    {
+      "hanzi": "婚礼",
+      "pinyin": [
+        "hūn",
+        "lǐ"
+      ],
+      "tones": [
+        1,
+        3
+      ],
+      "meaning": "결혼식",
+      "audioUrl": "/game/tts/hunli_13.mp3"
+    },
+    {
+      "hanzi": "下班",
+      "pinyin": [
+        "xià",
+        "bān"
+      ],
+      "tones": [
+        4,
+        1
+      ],
+      "meaning": "퇴근하다",
+      "audioUrl": "/game/tts/xiaban_41.mp3"
+    },
+    {
+      "hanzi": "上班",
+      "pinyin": [
+        "shàng",
+        "bān"
+      ],
+      "tones": [
+        4,
+        1
+      ],
+      "meaning": "출근하다",
+      "audioUrl": "/game/tts/shangban_41.mp3"
+    },
+    {
+      "hanzi": "上学",
+      "pinyin": [
+        "shàng",
+        "xué"
+      ],
+      "tones": [
+        4,
+        2
+      ],
+      "meaning": "등교하다",
+      "audioUrl": "/game/tts/shangxue_42.mp3"
+    },
+    {
+      "hanzi": "放学",
+      "pinyin": [
+        "fàng",
+        "xué"
+      ],
+      "tones": [
+        4,
+        2
+      ],
+      "meaning": "하교하다",
+      "audioUrl": "/game/tts/fangxue_42.mp3"
+    },
+    {
+      "hanzi": "上课",
+      "pinyin": [
+        "shàng",
+        "kè"
+      ],
+      "tones": [
+        4,
+        4
+      ],
+      "meaning": "수업하다",
+      "audioUrl": "/game/tts/shangke_44.mp3"
+    },
+    {
+      "hanzi": "下课",
+      "pinyin": [
+        "xià",
+        "kè"
+      ],
+      "tones": [
+        4,
+        4
+      ],
+      "meaning": "수업이 끝나다",
+      "audioUrl": "/game/tts/xiake_44.mp3"
+    },
+    {
+      "hanzi": "逛",
+      "pinyin": [
+        "guàng"
+      ],
+      "tones": [
+        4
+      ],
+      "meaning": "거닐다",
+      "audioUrl": "/game/tts/guang_4.mp3"
+    },
+    {
+      "hanzi": "开玩笑",
+      "pinyin": [
+        "kāi",
+        "wán",
+        "xiào"
+      ],
+      "tones": [
+        1,
+        2,
+        4
+      ],
+      "meaning": "농담하다",
+      "audioUrl": "/game/tts/kaiwanxiao_124.mp3"
+    },
+    {
+      "hanzi": "美女",
+      "pinyin": [
+        "měi",
+        "nǚ"
+      ],
+      "tones": [
+        3,
+        3
+      ],
+      "meaning": "미녀",
+      "audioUrl": "/game/tts/meinv_33.mp3"
+    },
+    {
+      "hanzi": "帅哥",
+      "pinyin": [
+        "shuài",
+        "gē"
+      ],
+      "tones": [
+        4,
+        1
+      ],
+      "meaning": "꽃미남",
+      "audioUrl": "/game/tts/shuaige_41.mp3"
+    },
+    {
+      "hanzi": "超市",
+      "pinyin": [
+        "chāo",
+        "shì"
+      ],
+      "tones": [
+        1,
+        4
+      ],
+      "meaning": "슈퍼마켓",
+      "audioUrl": "/game/tts/chaoshi_14.mp3"
+    },
+    {
+      "hanzi": "购物",
+      "pinyin": [
+        "gòu",
+        "wù"
+      ],
+      "tones": [
+        4,
+        4
+      ],
+      "meaning": "물건을 사다",
+      "audioUrl": "/game/tts/gouwu_44.mp3"
+    },
+    {
+      "hanzi": "质量",
+      "pinyin": [
+        "zhì",
+        "liàng"
+      ],
+      "tones": [
+        4,
+        4
+      ],
+      "meaning": "품질",
+      "audioUrl": "/game/tts/zhiliang_44.mp3"
+    },
+    {
+      "hanzi": "换",
+      "pinyin": [
+        "huàn"
+      ],
+      "tones": [
+        4
+      ],
+      "meaning": "바꾸다",
+      "audioUrl": "/game/tts/huan_4.mp3"
+    },
+    {
+      "hanzi": "新鲜",
+      "pinyin": [
+        "xīn",
+        "xiān"
+      ],
+      "tones": [
+        1,
+        1
+      ],
+      "meaning": "신선하다",
+      "audioUrl": "/game/tts/xinxian_11.mp3"
+    },
+    {
+      "hanzi": "西红柿",
+      "pinyin": [
+        "xī",
+        "hóng",
+        "shì"
+      ],
+      "tones": [
+        1,
+        2,
+        4
+      ],
+      "meaning": "토마토",
+      "audioUrl": "/game/tts/xihongshi_124.mp3"
+    },
+    {
+      "hanzi": "葡萄",
+      "pinyin": [
+        "pú",
+        "tao"
+      ],
+      "tones": [
+        2,
+        0
+      ],
+      "meaning": "포도",
+      "audioUrl": "/game/tts/putao_20.mp3"
+    },
+    {
+      "hanzi": "米",
+      "pinyin": [
+        "mǐ"
+      ],
+      "tones": [
+        3
+      ],
+      "meaning": "미터",
+      "audioUrl": "/game/tts/mi_3.mp3"
+    },
+    {
+      "hanzi": "面条",
+      "pinyin": [
+        "miàn",
+        "tiáo"
+      ],
+      "tones": [
+        4,
+        2
+      ],
+      "meaning": "국수",
+      "audioUrl": "/game/tts/miantiao_42.mp3"
+    },
+    {
+      "hanzi": "鸡蛋",
+      "pinyin": [
+        "jī",
+        "dàn"
+      ],
+      "tones": [
+        1,
+        4
+      ],
+      "meaning": "계란",
+      "audioUrl": "/game/tts/jidan_14.mp3"
+    },
+    {
+      "hanzi": "鱼",
+      "pinyin": [
+        "yú"
+      ],
+      "tones": [
+        2
+      ],
+      "meaning": "생선, 물고기",
+      "audioUrl": "/game/tts/yu_2.mp3"
+    },
+    {
+      "hanzi": "包子",
+      "pinyin": [
+        "bāo",
+        "zi"
+      ],
+      "tones": [
+        1,
+        0
+      ],
+      "meaning": "만두, 빠오즈",
+      "audioUrl": "/game/tts/baozi_10.mp3"
+    },
+    {
+      "hanzi": "蛋糕",
+      "pinyin": [
+        "dàn",
+        "gāo"
+      ],
+      "tones": [
+        4,
+        1
+      ],
+      "meaning": "케익",
+      "audioUrl": "/game/tts/dangao_41.mp3"
+    },
+    {
+      "hanzi": "面包",
+      "pinyin": [
+        "miàn",
+        "bāo"
+      ],
+      "tones": [
+        4,
+        1
+      ],
+      "meaning": "빵",
+      "audioUrl": "/game/tts/mianbao_41.mp3"
+    },
+    {
+      "hanzi": "饼干",
+      "pinyin": [
+        "bǐng",
+        "gān"
+      ],
+      "tones": [
+        3,
+        1
+      ],
+      "meaning": "과자",
+      "audioUrl": "/game/tts/binggan_31.mp3"
+    },
+    {
+      "hanzi": "小吃",
+      "pinyin": [
+        "xiǎo",
+        "chī"
+      ],
+      "tones": [
+        3,
+        1
+      ],
+      "meaning": "간식",
+      "audioUrl": "/game/tts/xiaochi_31.mp3"
+    },
+    {
+      "hanzi": "矿泉水",
+      "pinyin": [
+        "kuàng",
+        "quán",
+        "shuǐ"
+      ],
+      "tones": [
+        4,
+        2,
+        3
+      ],
+      "meaning": "생수",
+      "audioUrl": "/game/tts/kuangquanshui_423.mp3"
+    },
+    {
+      "hanzi": "瓶子",
+      "pinyin": [
+        "píng",
+        "zi"
+      ],
+      "tones": [
+        2,
+        0
+      ],
+      "meaning": "병",
+      "audioUrl": "/game/tts/pingzi_20.mp3"
+    },
+    {
+      "hanzi": "饮料",
+      "pinyin": [
+        "yǐn",
+        "liào"
+      ],
+      "tones": [
+        3,
+        4
+      ],
+      "meaning": "음료",
+      "audioUrl": "/game/tts/yinliao_34.mp3"
+    },
+    {
+      "hanzi": "果汁",
+      "pinyin": [
+        "guǒ",
+        "zhī"
+      ],
+      "tones": [
+        3,
+        1
+      ],
+      "meaning": "과일 주스",
+      "audioUrl": "/game/tts/guozhi_31.mp3"
+    },
+    {
+      "hanzi": "比较",
+      "pinyin": [
+        "bǐ",
+        "jiào"
+      ],
+      "tones": [
+        3,
+        4
+      ],
+      "meaning": "비교적",
+      "audioUrl": "/game/tts/bijiao_34.mp3"
+    },
+    {
+      "hanzi": "找",
+      "pinyin": [
+        "zhǎo"
+      ],
+      "tones": [
+        3
+      ],
+      "meaning": "찾다, 구하다",
+      "audioUrl": "/game/tts/zhao_3.mp3"
+    },
+    {
+      "hanzi": "只",
+      "pinyin": [
+        "zhǐ"
+      ],
+      "tones": [
+        3
+      ],
+      "meaning": "마리(동물 단위)",
+      "audioUrl": "/game/tts/zhi_3.mp3"
+    },
+    {
+      "hanzi": "花",
+      "pinyin": [
+        "huā"
+      ],
+      "tones": [
+        1
+      ],
+      "meaning": "꽃; (돈, 시간 등)쓰다",
+      "audioUrl": "/game/tts/hua_1.mp3"
+    },
+    {
+      "hanzi": "可能",
+      "pinyin": [
+        "kě",
+        "néng"
+      ],
+      "tones": [
+        3,
+        2
+      ],
+      "meaning": "아마도",
+      "audioUrl": "/game/tts/keneng_32.mp3"
+    },
+    {
+      "hanzi": "刚才",
+      "pinyin": [
+        "gāng",
+        "cái"
+      ],
+      "tones": [
+        1,
+        2
+      ],
+      "meaning": "방금, 막",
+      "audioUrl": "/game/tts/gangcai_12.mp3"
+    },
+    {
+      "hanzi": "觉得",
+      "pinyin": [
+        "jué",
+        "de"
+      ],
+      "tones": [
+        2,
+        0
+      ],
+      "meaning": "~라고 생각하다",
+      "audioUrl": "/game/tts/juede_20.mp3"
+    },
+    {
+      "hanzi": "已经",
+      "pinyin": [
+        "yǐ",
+        "jīng"
+      ],
+      "tones": [
+        3,
+        1
+      ],
+      "meaning": "이미",
+      "audioUrl": "/game/tts/yijing_31.mp3"
+    },
+    {
+      "hanzi": "价格",
+      "pinyin": [
+        "jià",
+        "gé"
+      ],
+      "tones": [
+        4,
+        2
+      ],
+      "meaning": "가격",
+      "audioUrl": "/game/tts/jiage_42.mp3"
+    },
+    {
+      "hanzi": "打折",
+      "pinyin": [
+        "dǎ",
+        "zhé"
+      ],
+      "tones": [
+        3,
+        2
+      ],
+      "meaning": "할인하다",
+      "audioUrl": "/game/tts/dazhe_32.mp3"
+    },
+    {
+      "hanzi": "经常",
+      "pinyin": [
+        "jīng",
+        "cháng"
+      ],
+      "tones": [
+        1,
+        2
+      ],
+      "meaning": "자주",
+      "audioUrl": "/game/tts/jingchang_12.mp3"
+    },
+    {
+      "hanzi": "短",
+      "pinyin": [
+        "duǎn"
+      ],
+      "tones": [
+        3
+      ],
+      "meaning": "짧다",
+      "audioUrl": "/game/tts/duan_3.mp3"
+    },
+    {
+      "hanzi": "别",
+      "pinyin": [
+        "bié"
+      ],
+      "tones": [
+        2
+      ],
+      "meaning": "다른; ~하지 마",
+      "audioUrl": "/game/tts/bie_2.mp3"
+    },
+    {
+      "hanzi": "零",
+      "pinyin": [
+        "líng"
+      ],
+      "tones": [
+        2
+      ],
+      "meaning": "0, 영",
+      "audioUrl": "/game/tts/ling_2.mp3"
+    },
+    {
+      "hanzi": "又",
+      "pinyin": [
+        "yòu"
+      ],
+      "tones": [
+        4
+      ],
+      "meaning": "또, 다시",
+      "audioUrl": "/game/tts/you_4.mp3"
+    },
+    {
+      "hanzi": "再",
+      "pinyin": [
+        "zài"
+      ],
+      "tones": [
+        4
+      ],
+      "meaning": "다시",
+      "audioUrl": "/game/tts/zai_4.mp3"
+    },
+    {
+      "hanzi": "还",
+      "pinyin": [
+        "hái"
+      ],
+      "tones": [
+        2
+      ],
+      "meaning": "또, 더; 그럭저럭",
+      "audioUrl": "/game/tts/hai_2.mp3"
+    },
+    {
+      "hanzi": "价钱",
+      "pinyin": [
+        "jià",
+        "qian"
+      ],
+      "tones": [
+        4,
+        0
+      ],
+      "meaning": "가격, 값",
+      "audioUrl": "/game/tts/jiaqian_40.mp3"
+    },
+    {
+      "hanzi": "结账",
+      "pinyin": [
+        "jié",
+        "zhàng"
+      ],
+      "tones": [
+        2,
+        4
+      ],
+      "meaning": "결제하다",
+      "audioUrl": "/game/tts/jiezhang_24.mp3"
+    },
+    {
+      "hanzi": "买单",
+      "pinyin": [
+        "mǎi",
+        "dān"
+      ],
+      "tones": [
+        3,
+        1
+      ],
+      "meaning": "결제하다",
+      "audioUrl": "/game/tts/maidan_31.mp3"
+    },
+    {
+      "hanzi": "房间",
+      "pinyin": [
+        "fáng",
+        "jiān"
+      ],
+      "tones": [
+        2,
+        1
+      ],
+      "meaning": "방",
+      "audioUrl": "/game/tts/fangjian_21.mp3"
+    },
+    {
+      "hanzi": "客厅",
+      "pinyin": [
+        "kè",
+        "tīng"
+      ],
+      "tones": [
+        4,
+        1
+      ],
+      "meaning": "거실",
+      "audioUrl": "/game/tts/keting_41.mp3"
+    },
+    {
+      "hanzi": "厨房",
+      "pinyin": [
+        "chú",
+        "fáng"
+      ],
+      "tones": [
+        2,
+        2
+      ],
+      "meaning": "주방",
+      "audioUrl": "/game/tts/chufang_22.mp3"
+    },
+    {
+      "hanzi": "洗手间",
+      "pinyin": [
+        "xǐ",
+        "shǒu",
+        "jiān"
+      ],
+      "tones": [
+        3,
+        3,
+        1
+      ],
+      "meaning": "화장실",
+      "audioUrl": "/game/tts/xishoujian_331.mp3"
+    },
+    {
+      "hanzi": "卫生间",
+      "pinyin": [
+        "wèi",
+        "shēng",
+        "jiān"
+      ],
+      "tones": [
+        4,
+        1,
+        1
+      ],
+      "meaning": "화장실",
+      "audioUrl": "/game/tts/weishengjian_411.mp3"
+    },
+    {
+      "hanzi": "厕所",
+      "pinyin": [
+        "cè",
+        "suǒ"
+      ],
+      "tones": [
+        4,
+        3
+      ],
+      "meaning": "화장실",
+      "audioUrl": "/game/tts/cesuo_43.mp3"
+    },
+    {
+      "hanzi": "关",
+      "pinyin": [
+        "guān"
+      ],
+      "tones": [
+        1
+      ],
+      "meaning": "닫다; 끄다",
+      "audioUrl": "/game/tts/guan_1.mp3"
+    },
+    {
+      "hanzi": "冰箱",
+      "pinyin": [
+        "bīng",
+        "xiāng"
+      ],
+      "tones": [
+        1,
+        1
+      ],
+      "meaning": "냉장고",
+      "audioUrl": "/game/tts/bingxiang_11.mp3"
+    },
+    {
+      "hanzi": "盘子",
+      "pinyin": [
+        "pán",
+        "zi"
+      ],
+      "tones": [
+        2,
+        0
+      ],
+      "meaning": "접시, 쟁반",
+      "audioUrl": "/game/tts/panzi_20.mp3"
+    },
+    {
+      "hanzi": "窗户",
+      "pinyin": [
+        "chuāng",
+        "hu"
+      ],
+      "tones": [
+        1,
+        0
+      ],
+      "meaning": "창문",
+      "audioUrl": "/game/tts/chuanghu_10.mp3"
+    },
+    {
+      "hanzi": "垃圾桶",
+      "pinyin": [
+        "lā",
+        "jī",
+        "tǒng"
+      ],
+      "tones": [
+        1,
+        1,
+        3
+      ],
+      "meaning": "쓰레기통",
+      "audioUrl": "/game/tts/lajitong_113.mp3"
     },
     {
       "hanzi": "干净",
@@ -692,6 +4534,67 @@
       "audioUrl": "/game/tts/ganjing_14.mp3"
     },
     {
+      "hanzi": "打扫",
+      "pinyin": [
+        "dǎ",
+        "sǎo"
+      ],
+      "tones": [
+        3,
+        3
+      ],
+      "meaning": "청소하다",
+      "audioUrl": "/game/tts/dasao_33.mp3"
+    },
+    {
+      "hanzi": "以前",
+      "pinyin": [
+        "yǐ",
+        "qián"
+      ],
+      "tones": [
+        3,
+        2
+      ],
+      "meaning": "이전, 예전",
+      "audioUrl": "/game/tts/yiqian_32.mp3"
+    },
+    {
+      "hanzi": "让",
+      "pinyin": [
+        "ràng"
+      ],
+      "tones": [
+        4
+      ],
+      "meaning": "~하게 시키다",
+      "audioUrl": "/game/tts/rang_4.mp3"
+    },
+    {
+      "hanzi": "张",
+      "pinyin": [
+        "zhāng"
+      ],
+      "tones": [
+        1
+      ],
+      "meaning": "장(종이, 책상 등 단위)",
+      "audioUrl": "/game/tts/zhang_1.mp3"
+    },
+    {
+      "hanzi": "正在",
+      "pinyin": [
+        "zhèng",
+        "zài"
+      ],
+      "tones": [
+        4,
+        4
+      ],
+      "meaning": "~하는 중이다",
+      "audioUrl": "/game/tts/zhengzai_44.mp3"
+    },
+    {
       "hanzi": "帮助",
       "pinyin": [
         "bāng",
@@ -701,8 +4604,56 @@
         1,
         4
       ],
-      "meaning": "돕다",
+      "meaning": "돕다, 도움",
       "audioUrl": "/game/tts/bangzhu_14.mp3"
+    },
+    {
+      "hanzi": "空调",
+      "pinyin": [
+        "kōng",
+        "tiáo"
+      ],
+      "tones": [
+        1,
+        2
+      ],
+      "meaning": "에어컨",
+      "audioUrl": "/game/tts/kongtiao_12.mp3"
+    },
+    {
+      "hanzi": "坏",
+      "pinyin": [
+        "huài"
+      ],
+      "tones": [
+        4
+      ],
+      "meaning": "나쁘다; 고장나다; 상하다",
+      "audioUrl": "/game/tts/huai_4.mp3"
+    },
+    {
+      "hanzi": "楼",
+      "pinyin": [
+        "lóu"
+      ],
+      "tones": [
+        2
+      ],
+      "meaning": "층; 건물",
+      "audioUrl": "/game/tts/lou_2.mp3"
+    },
+    {
+      "hanzi": "邻居",
+      "pinyin": [
+        "lín",
+        "jū"
+      ],
+      "tones": [
+        2,
+        1
+      ],
+      "meaning": "이웃",
+      "audioUrl": "/game/tts/linju_21.mp3"
     },
     {
       "hanzi": "健康",
@@ -714,8 +4665,2691 @@
         4,
         1
       ],
-      "meaning": "건강",
+      "meaning": "건강(하다)",
       "audioUrl": "/game/tts/jiankang_41.mp3"
+    },
+    {
+      "hanzi": "知道",
+      "pinyin": [
+        "zhī",
+        "dào"
+      ],
+      "tones": [
+        1,
+        4
+      ],
+      "meaning": "알다",
+      "audioUrl": "/game/tts/zhidao_14.mp3"
+    },
+    {
+      "hanzi": "告诉",
+      "pinyin": [
+        "gào",
+        "su"
+      ],
+      "tones": [
+        4,
+        0
+      ],
+      "meaning": "알려주다",
+      "audioUrl": "/game/tts/gaosu_40.mp3"
+    },
+    {
+      "hanzi": "生病",
+      "pinyin": [
+        "shēng",
+        "bìng"
+      ],
+      "tones": [
+        1,
+        4
+      ],
+      "meaning": "병이 나다",
+      "audioUrl": "/game/tts/shengbing_14.mp3"
+    },
+    {
+      "hanzi": "疼",
+      "pinyin": [
+        "téng"
+      ],
+      "tones": [
+        2
+      ],
+      "meaning": "아프다",
+      "audioUrl": "/game/tts/teng_2.mp3"
+    },
+    {
+      "hanzi": "感冒",
+      "pinyin": [
+        "gǎn",
+        "mào"
+      ],
+      "tones": [
+        3,
+        4
+      ],
+      "meaning": "감기에 걸리다",
+      "audioUrl": "/game/tts/ganmao_34.mp3"
+    },
+    {
+      "hanzi": "舒服",
+      "pinyin": [
+        "shū",
+        "fu"
+      ],
+      "tones": [
+        1,
+        0
+      ],
+      "meaning": "편안하다",
+      "audioUrl": "/game/tts/shufu_10.mp3"
+    },
+    {
+      "hanzi": "腿",
+      "pinyin": [
+        "tuǐ"
+      ],
+      "tones": [
+        3
+      ],
+      "meaning": "다리",
+      "audioUrl": "/game/tts/tui_3.mp3"
+    },
+    {
+      "hanzi": "发烧",
+      "pinyin": [
+        "fā",
+        "shāo"
+      ],
+      "tones": [
+        1,
+        1
+      ],
+      "meaning": "열이 나다",
+      "audioUrl": "/game/tts/fashao_11.mp3"
+    },
+    {
+      "hanzi": "脸",
+      "pinyin": [
+        "liǎn"
+      ],
+      "tones": [
+        3
+      ],
+      "meaning": "얼굴",
+      "audioUrl": "/game/tts/lian_3.mp3"
+    },
+    {
+      "hanzi": "药",
+      "pinyin": [
+        "yào"
+      ],
+      "tones": [
+        4
+      ],
+      "meaning": "약",
+      "audioUrl": "/game/tts/yao_4.mp3"
+    },
+    {
+      "hanzi": "肚子",
+      "pinyin": [
+        "dù",
+        "zi"
+      ],
+      "tones": [
+        4,
+        0
+      ],
+      "meaning": "(사람 또는 동물의)배",
+      "audioUrl": "/game/tts/duzi_40.mp3"
+    },
+    {
+      "hanzi": "个子",
+      "pinyin": [
+        "gè",
+        "zi"
+      ],
+      "tones": [
+        4,
+        0
+      ],
+      "meaning": "(사람의)키",
+      "audioUrl": "/game/tts/gezi_40.mp3"
+    },
+    {
+      "hanzi": "生活",
+      "pinyin": [
+        "shēng",
+        "huó"
+      ],
+      "tones": [
+        1,
+        2
+      ],
+      "meaning": "생활; 살다",
+      "audioUrl": "/game/tts/shenghuo_12.mp3"
+    },
+    {
+      "hanzi": "为什么",
+      "pinyin": [
+        "wèi",
+        "shén",
+        "me"
+      ],
+      "tones": [
+        4,
+        2,
+        0
+      ],
+      "meaning": "왜",
+      "audioUrl": "/game/tts/weishenme_420.mp3"
+    },
+    {
+      "hanzi": "考试",
+      "pinyin": [
+        "kǎo",
+        "shì"
+      ],
+      "tones": [
+        3,
+        4
+      ],
+      "meaning": "시험(을 보다)",
+      "audioUrl": "/game/tts/kaoshi_34.mp3"
+    },
+    {
+      "hanzi": "虽然",
+      "pinyin": [
+        "suī",
+        "rán"
+      ],
+      "tones": [
+        1,
+        2
+      ],
+      "meaning": "비록",
+      "audioUrl": "/game/tts/suiran_12.mp3"
+    },
+    {
+      "hanzi": "教",
+      "pinyin": [
+        "jiāo"
+      ],
+      "tones": [
+        1
+      ],
+      "meaning": "가르치다",
+      "audioUrl": "/game/tts/jiao_1.mp3"
+    },
+    {
+      "hanzi": "课",
+      "pinyin": [
+        "kè"
+      ],
+      "tones": [
+        4
+      ],
+      "meaning": "수업",
+      "audioUrl": "/game/tts/ke_4.mp3"
+    },
+    {
+      "hanzi": "教室",
+      "pinyin": [
+        "jiào",
+        "shì"
+      ],
+      "tones": [
+        4,
+        4
+      ],
+      "meaning": "교실",
+      "audioUrl": "/game/tts/jiaoshi_44.mp3"
+    },
+    {
+      "hanzi": "黑板",
+      "pinyin": [
+        "hēi",
+        "bǎn"
+      ],
+      "tones": [
+        1,
+        3
+      ],
+      "meaning": "칠판",
+      "audioUrl": "/game/tts/heiban_13.mp3"
+    },
+    {
+      "hanzi": "水平",
+      "pinyin": [
+        "shuǐ",
+        "píng"
+      ],
+      "tones": [
+        3,
+        2
+      ],
+      "meaning": "수준, 레벨",
+      "audioUrl": "/game/tts/shuiping_32.mp3"
+    },
+    {
+      "hanzi": "作业",
+      "pinyin": [
+        "zuò",
+        "yè"
+      ],
+      "tones": [
+        4,
+        4
+      ],
+      "meaning": "숙제",
+      "audioUrl": "/game/tts/zuoye_44.mp3"
+    },
+    {
+      "hanzi": "书包",
+      "pinyin": [
+        "shū",
+        "bāo"
+      ],
+      "tones": [
+        1,
+        1
+      ],
+      "meaning": "책가방",
+      "audioUrl": "/game/tts/shubao_11.mp3"
+    },
+    {
+      "hanzi": "问",
+      "pinyin": [
+        "wèn"
+      ],
+      "tones": [
+        4
+      ],
+      "meaning": "묻다",
+      "audioUrl": "/game/tts/wen_4.mp3"
+    },
+    {
+      "hanzi": "问题",
+      "pinyin": [
+        "wèn",
+        "tí"
+      ],
+      "tones": [
+        4,
+        2
+      ],
+      "meaning": "질문, 문제",
+      "audioUrl": "/game/tts/wenti_42.mp3"
+    },
+    {
+      "hanzi": "成绩",
+      "pinyin": [
+        "chéng",
+        "jì"
+      ],
+      "tones": [
+        2,
+        4
+      ],
+      "meaning": "성적",
+      "audioUrl": "/game/tts/chengji_24.mp3"
+    },
+    {
+      "hanzi": "聪明",
+      "pinyin": [
+        "cōng",
+        "ming"
+      ],
+      "tones": [
+        1,
+        0
+      ],
+      "meaning": "똑똑하다",
+      "audioUrl": "/game/tts/congming_10.mp3"
+    },
+    {
+      "hanzi": "练习",
+      "pinyin": [
+        "liàn",
+        "xí"
+      ],
+      "tones": [
+        4,
+        2
+      ],
+      "meaning": "연습하다",
+      "audioUrl": "/game/tts/lianxi_42.mp3"
+    },
+    {
+      "hanzi": "图书馆",
+      "pinyin": [
+        "tú",
+        "shū",
+        "guǎn"
+      ],
+      "tones": [
+        2,
+        1,
+        3
+      ],
+      "meaning": "도서관",
+      "audioUrl": "/game/tts/tushuguan_213.mp3"
+    },
+    {
+      "hanzi": "介绍",
+      "pinyin": [
+        "jiè",
+        "shào"
+      ],
+      "tones": [
+        4,
+        4
+      ],
+      "meaning": "소개하다",
+      "audioUrl": "/game/tts/jieshao_44.mp3"
+    },
+    {
+      "hanzi": "姓",
+      "pinyin": [
+        "xìng"
+      ],
+      "tones": [
+        4
+      ],
+      "meaning": "성씨가 ~이다",
+      "audioUrl": "/game/tts/xing_4.mp3"
+    },
+    {
+      "hanzi": "对",
+      "pinyin": [
+        "duì"
+      ],
+      "tones": [
+        4
+      ],
+      "meaning": "맞다; ~에 대하여",
+      "audioUrl": "/game/tts/dui_4.mp3"
+    },
+    {
+      "hanzi": "挺",
+      "pinyin": [
+        "tǐng"
+      ],
+      "tones": [
+        3
+      ],
+      "meaning": "꽤, 매우",
+      "audioUrl": "/game/tts/ting_3.mp3"
+    },
+    {
+      "hanzi": "孩子",
+      "pinyin": [
+        "hái",
+        "zi"
+      ],
+      "tones": [
+        2,
+        0
+      ],
+      "meaning": "아이",
+      "audioUrl": "/game/tts/haizi_20.mp3"
+    },
+    {
+      "hanzi": "年轻",
+      "pinyin": [
+        "nián",
+        "qīng"
+      ],
+      "tones": [
+        2,
+        1
+      ],
+      "meaning": "젊다",
+      "audioUrl": "/game/tts/nianqing_21.mp3"
+    },
+    {
+      "hanzi": "但是",
+      "pinyin": [
+        "dàn",
+        "shì"
+      ],
+      "tones": [
+        4,
+        4
+      ],
+      "meaning": "하지만",
+      "audioUrl": "/game/tts/danshi_44.mp3"
+    },
+    {
+      "hanzi": "可是",
+      "pinyin": [
+        "kě",
+        "shì"
+      ],
+      "tones": [
+        3,
+        4
+      ],
+      "meaning": "그러나",
+      "audioUrl": "/game/tts/keshi_34.mp3"
+    },
+    {
+      "hanzi": "不过",
+      "pinyin": [
+        "bú",
+        "guò"
+      ],
+      "tones": [
+        2,
+        4
+      ],
+      "meaning": "그런데",
+      "audioUrl": "/game/tts/buguo_24.mp3"
+    },
+    {
+      "hanzi": "担心",
+      "pinyin": [
+        "dān",
+        "xīn"
+      ],
+      "tones": [
+        1,
+        1
+      ],
+      "meaning": "걱정하다",
+      "audioUrl": "/game/tts/danxin_11.mp3"
+    },
+    {
+      "hanzi": "哭",
+      "pinyin": [
+        "kū"
+      ],
+      "tones": [
+        1
+      ],
+      "meaning": "울다",
+      "audioUrl": "/game/tts/ku_1.mp3"
+    },
+    {
+      "hanzi": "容易",
+      "pinyin": [
+        "róng",
+        "yì"
+      ],
+      "tones": [
+        2,
+        4
+      ],
+      "meaning": "쉽다",
+      "audioUrl": "/game/tts/rongyi_24.mp3"
+    },
+    {
+      "hanzi": "难",
+      "pinyin": [
+        "nán"
+      ],
+      "tones": [
+        2
+      ],
+      "meaning": "어렵다",
+      "audioUrl": "/game/tts/nan_2.mp3"
+    },
+    {
+      "hanzi": "生气",
+      "pinyin": [
+        "shēng",
+        "qì"
+      ],
+      "tones": [
+        1,
+        4
+      ],
+      "meaning": "화가 나다",
+      "audioUrl": "/game/tts/shengqi_14.mp3"
+    },
+    {
+      "hanzi": "可爱",
+      "pinyin": [
+        "kě",
+        "ài"
+      ],
+      "tones": [
+        3,
+        4
+      ],
+      "meaning": "귀엽다",
+      "audioUrl": "/game/tts/keai_34.mp3"
+    },
+    {
+      "hanzi": "安静",
+      "pinyin": [
+        "ān",
+        "jìng"
+      ],
+      "tones": [
+        1,
+        4
+      ],
+      "meaning": "조용하다",
+      "audioUrl": "/game/tts/anjing_14.mp3"
+    },
+    {
+      "hanzi": "着急",
+      "pinyin": [
+        "zháo",
+        "jí"
+      ],
+      "tones": [
+        2,
+        2
+      ],
+      "meaning": "조급해 하다",
+      "audioUrl": "/game/tts/zhaoji_22.mp3"
+    },
+    {
+      "hanzi": "小心",
+      "pinyin": [
+        "xiǎo",
+        "xīn"
+      ],
+      "tones": [
+        3,
+        1
+      ],
+      "meaning": "조심하다",
+      "audioUrl": "/game/tts/xiaoxin_31.mp3"
+    },
+    {
+      "hanzi": "关系",
+      "pinyin": [
+        "guān",
+        "xi"
+      ],
+      "tones": [
+        1,
+        0
+      ],
+      "meaning": "관계",
+      "audioUrl": "/game/tts/guanxi_10.mp3"
+    },
+    {
+      "hanzi": "关心",
+      "pinyin": [
+        "guān",
+        "xīn"
+      ],
+      "tones": [
+        1,
+        1
+      ],
+      "meaning": "관심(을 기울이다)",
+      "audioUrl": "/game/tts/guanxin_11.mp3"
+    },
+    {
+      "hanzi": "欢迎",
+      "pinyin": [
+        "huān",
+        "yíng"
+      ],
+      "tones": [
+        1,
+        2
+      ],
+      "meaning": "환영하다",
+      "audioUrl": "/game/tts/huanying_12.mp3"
+    },
+    {
+      "hanzi": "一直",
+      "pinyin": [
+        "yì",
+        "zhí"
+      ],
+      "tones": [
+        4,
+        2
+      ],
+      "meaning": "줄곧, 계속",
+      "audioUrl": "/game/tts/yizhi_42.mp3"
+    },
+    {
+      "hanzi": "准备",
+      "pinyin": [
+        "zhǔn",
+        "bèi"
+      ],
+      "tones": [
+        3,
+        4
+      ],
+      "meaning": "준비하다",
+      "audioUrl": "/game/tts/zhunbei_34.mp3"
+    },
+    {
+      "hanzi": "事情",
+      "pinyin": [
+        "shì",
+        "qing"
+      ],
+      "tones": [
+        4,
+        0
+      ],
+      "meaning": "일",
+      "audioUrl": "/game/tts/shiqing_40.mp3"
+    },
+    {
+      "hanzi": "自己",
+      "pinyin": [
+        "zì",
+        "jǐ"
+      ],
+      "tones": [
+        4,
+        3
+      ],
+      "meaning": "자기, 자신",
+      "audioUrl": "/game/tts/ziji_43.mp3"
+    },
+    {
+      "hanzi": "希望",
+      "pinyin": [
+        "xī",
+        "wàng"
+      ],
+      "tones": [
+        1,
+        4
+      ],
+      "meaning": "희망하다, 바라다",
+      "audioUrl": "/game/tts/xiwang_14.mp3"
+    },
+    {
+      "hanzi": "机会",
+      "pinyin": [
+        "jī",
+        "huì"
+      ],
+      "tones": [
+        1,
+        4
+      ],
+      "meaning": "기회",
+      "audioUrl": "/game/tts/jihui_14.mp3"
+    },
+    {
+      "hanzi": "努力",
+      "pinyin": [
+        "nǔ",
+        "lì"
+      ],
+      "tones": [
+        3,
+        4
+      ],
+      "meaning": "노력(하다)",
+      "audioUrl": "/game/tts/nuli_34.mp3"
+    },
+    {
+      "hanzi": "认真",
+      "pinyin": [
+        "rèn",
+        "zhēn"
+      ],
+      "tones": [
+        4,
+        1
+      ],
+      "meaning": "열심히 하다",
+      "audioUrl": "/game/tts/renzhen_41.mp3"
+    },
+    {
+      "hanzi": "终于",
+      "pinyin": [
+        "zhōng",
+        "yú"
+      ],
+      "tones": [
+        1,
+        2
+      ],
+      "meaning": "마침내, 드디어",
+      "audioUrl": "/game/tts/zhongyu_12.mp3"
+    },
+    {
+      "hanzi": "重要",
+      "pinyin": [
+        "zhòng",
+        "yào"
+      ],
+      "tones": [
+        4,
+        4
+      ],
+      "meaning": "중요하다",
+      "audioUrl": "/game/tts/zhongyao_44.mp3"
+    },
+    {
+      "hanzi": "完",
+      "pinyin": [
+        "wán"
+      ],
+      "tones": [
+        2
+      ],
+      "meaning": "완성하다, 마치다",
+      "audioUrl": "/game/tts/wan_2.mp3"
+    },
+    {
+      "hanzi": "忙",
+      "pinyin": [
+        "máng"
+      ],
+      "tones": [
+        2
+      ],
+      "meaning": "바쁘다",
+      "audioUrl": "/game/tts/mang_2.mp3"
+    },
+    {
+      "hanzi": "累",
+      "pinyin": [
+        "lèi"
+      ],
+      "tones": [
+        4
+      ],
+      "meaning": "피곤하다, 힘들다",
+      "audioUrl": "/game/tts/lei_4.mp3"
+    },
+    {
+      "hanzi": "公司",
+      "pinyin": [
+        "gōng",
+        "sī"
+      ],
+      "tones": [
+        1,
+        1
+      ],
+      "meaning": "회사",
+      "audioUrl": "/game/tts/gongsi_11.mp3"
+    },
+    {
+      "hanzi": "经理",
+      "pinyin": [
+        "jīng",
+        "lǐ"
+      ],
+      "tones": [
+        1,
+        3
+      ],
+      "meaning": "사장, 관리 책임자",
+      "audioUrl": "/game/tts/jingli_13.mp3"
+    },
+    {
+      "hanzi": "同事",
+      "pinyin": [
+        "tóng",
+        "shì"
+      ],
+      "tones": [
+        2,
+        4
+      ],
+      "meaning": "동료",
+      "audioUrl": "/game/tts/tongshi_24.mp3"
+    },
+    {
+      "hanzi": "参加",
+      "pinyin": [
+        "cān",
+        "jiā"
+      ],
+      "tones": [
+        1,
+        1
+      ],
+      "meaning": "참가하다, 참석하다",
+      "audioUrl": "/game/tts/canjia_11.mp3"
+    },
+    {
+      "hanzi": "会议",
+      "pinyin": [
+        "huì",
+        "yì"
+      ],
+      "tones": [
+        4,
+        4
+      ],
+      "meaning": "회의",
+      "audioUrl": "/game/tts/huiyi_44.mp3"
+    },
+    {
+      "hanzi": "休息",
+      "pinyin": [
+        "xiū",
+        "xi"
+      ],
+      "tones": [
+        1,
+        0
+      ],
+      "meaning": "쉬다",
+      "audioUrl": "/game/tts/xiuxi_10.mp3"
+    },
+    {
+      "hanzi": "请假",
+      "pinyin": [
+        "qǐng",
+        "jià"
+      ],
+      "tones": [
+        3,
+        4
+      ],
+      "meaning": "휴가를 신청하다",
+      "audioUrl": "/game/tts/qingjia_34.mp3"
+    },
+    {
+      "hanzi": "出差",
+      "pinyin": [
+        "chū",
+        "chāi"
+      ],
+      "tones": [
+        1,
+        1
+      ],
+      "meaning": "출장가다",
+      "audioUrl": "/game/tts/chuchai_11.mp3"
+    },
+    {
+      "hanzi": "加班",
+      "pinyin": [
+        "jiā",
+        "bān"
+      ],
+      "tones": [
+        1,
+        1
+      ],
+      "meaning": "초과 근무를 하다",
+      "audioUrl": "/game/tts/jiaban_11.mp3"
+    },
+    {
+      "hanzi": "抽烟",
+      "pinyin": [
+        "chōu",
+        "yān"
+      ],
+      "tones": [
+        1,
+        1
+      ],
+      "meaning": "담배를 피우다",
+      "audioUrl": "/game/tts/chouyan_11.mp3"
+    },
+    {
+      "hanzi": "办公室",
+      "pinyin": [
+        "bàn",
+        "gōng",
+        "shì"
+      ],
+      "tones": [
+        4,
+        1,
+        4
+      ],
+      "meaning": "사무실",
+      "audioUrl": "/game/tts/bangongshi_414.mp3"
+    },
+    {
+      "hanzi": "银行",
+      "pinyin": [
+        "yín",
+        "háng"
+      ],
+      "tones": [
+        2,
+        2
+      ],
+      "meaning": "은행",
+      "audioUrl": "/game/tts/yinhang_22.mp3"
+    },
+    {
+      "hanzi": "邮局",
+      "pinyin": [
+        "yóu",
+        "jú"
+      ],
+      "tones": [
+        2,
+        2
+      ],
+      "meaning": "우체국",
+      "audioUrl": "/game/tts/youju_22.mp3"
+    },
+    {
+      "hanzi": "排队",
+      "pinyin": [
+        "pái",
+        "duì"
+      ],
+      "tones": [
+        2,
+        4
+      ],
+      "meaning": "줄을 서다",
+      "audioUrl": "/game/tts/paidui_24.mp3"
+    },
+    {
+      "hanzi": "简单",
+      "pinyin": [
+        "jiǎn",
+        "dān"
+      ],
+      "tones": [
+        3,
+        1
+      ],
+      "meaning": "간단하다",
+      "audioUrl": "/game/tts/jiandan_31.mp3"
+    },
+    {
+      "hanzi": "而且",
+      "pinyin": [
+        "ér",
+        "qiě"
+      ],
+      "tones": [
+        2,
+        3
+      ],
+      "meaning": "게다가",
+      "audioUrl": "/game/tts/erqie_23.mp3"
+    },
+    {
+      "hanzi": "因为",
+      "pinyin": [
+        "yīn",
+        "wèi"
+      ],
+      "tones": [
+        1,
+        4
+      ],
+      "meaning": "~때문에",
+      "audioUrl": "/game/tts/yinwei_14.mp3"
+    },
+    {
+      "hanzi": "所以",
+      "pinyin": [
+        "suǒ",
+        "yǐ"
+      ],
+      "tones": [
+        3,
+        3
+      ],
+      "meaning": "그래서",
+      "audioUrl": "/game/tts/suoyi_33.mp3"
+    },
+    {
+      "hanzi": "老板",
+      "pinyin": [
+        "lǎo",
+        "bǎn"
+      ],
+      "tones": [
+        3,
+        3
+      ],
+      "meaning": "사장님",
+      "audioUrl": "/game/tts/laoban_33.mp3"
+    },
+    {
+      "hanzi": "玩",
+      "pinyin": [
+        "wán"
+      ],
+      "tones": [
+        2
+      ],
+      "meaning": "놀다",
+      "audioUrl": "/game/tts/wan_2.mp3"
+    },
+    {
+      "hanzi": "游戏",
+      "pinyin": [
+        "yóu",
+        "xì"
+      ],
+      "tones": [
+        2,
+        4
+      ],
+      "meaning": "게임",
+      "audioUrl": "/game/tts/youxi_24.mp3"
+    },
+    {
+      "hanzi": "唱歌",
+      "pinyin": [
+        "chàng",
+        "gē"
+      ],
+      "tones": [
+        4,
+        1
+      ],
+      "meaning": "노래를 부르다",
+      "audioUrl": "/game/tts/changge_41.mp3"
+    },
+    {
+      "hanzi": "跳舞",
+      "pinyin": [
+        "tiào",
+        "wǔ"
+      ],
+      "tones": [
+        4,
+        3
+      ],
+      "meaning": "춤을 추다",
+      "audioUrl": "/game/tts/tiaowu_43.mp3"
+    },
+    {
+      "hanzi": "画",
+      "pinyin": [
+        "huà"
+      ],
+      "tones": [
+        4
+      ],
+      "meaning": "그림(을 그리다)",
+      "audioUrl": "/game/tts/hua_4.mp3"
+    },
+    {
+      "hanzi": "照片",
+      "pinyin": [
+        "zhào",
+        "piàn"
+      ],
+      "tones": [
+        4,
+        4
+      ],
+      "meaning": "사진",
+      "audioUrl": "/game/tts/zhaopian_44.mp3"
+    },
+    {
+      "hanzi": "照相机",
+      "pinyin": [
+        "zhào",
+        "xiàng",
+        "jī"
+      ],
+      "tones": [
+        4,
+        4,
+        1
+      ],
+      "meaning": "카메라",
+      "audioUrl": "/game/tts/zhaoxiangji_441.mp3"
+    },
+    {
+      "hanzi": "应该",
+      "pinyin": [
+        "yīng",
+        "gāi"
+      ],
+      "tones": [
+        1,
+        1
+      ],
+      "meaning": "(마땅히)해야한다",
+      "audioUrl": "/game/tts/yinggai_11.mp3"
+    },
+    {
+      "hanzi": "运动",
+      "pinyin": [
+        "yùn",
+        "dòng"
+      ],
+      "tones": [
+        4,
+        4
+      ],
+      "meaning": "운동하다",
+      "audioUrl": "/game/tts/yundong_44.mp3"
+    },
+    {
+      "hanzi": "踢足球",
+      "pinyin": [
+        "tī",
+        "zú",
+        "qiú"
+      ],
+      "tones": [
+        1,
+        2,
+        2
+      ],
+      "meaning": "축구를 하다",
+      "audioUrl": "/game/tts/tizuqiu_122.mp3"
+    },
+    {
+      "hanzi": "游泳",
+      "pinyin": [
+        "yóu",
+        "yǒng"
+      ],
+      "tones": [
+        2,
+        3
+      ],
+      "meaning": "수영하다",
+      "audioUrl": "/game/tts/youyong_23.mp3"
+    },
+    {
+      "hanzi": "跑步",
+      "pinyin": [
+        "pǎo",
+        "bù"
+      ],
+      "tones": [
+        3,
+        4
+      ],
+      "meaning": "뛰다, 달리다",
+      "audioUrl": "/game/tts/paobu_34.mp3"
+    },
+    {
+      "hanzi": "比赛",
+      "pinyin": [
+        "bǐ",
+        "sài"
+      ],
+      "tones": [
+        3,
+        4
+      ],
+      "meaning": "경기, 시합",
+      "audioUrl": "/game/tts/bisai_34.mp3"
+    },
+    {
+      "hanzi": "锻炼",
+      "pinyin": [
+        "duàn",
+        "liàn"
+      ],
+      "tones": [
+        4,
+        4
+      ],
+      "meaning": "(몸을)단련하다",
+      "audioUrl": "/game/tts/duanlian_44.mp3"
+    },
+    {
+      "hanzi": "爬山",
+      "pinyin": [
+        "pá",
+        "shān"
+      ],
+      "tones": [
+        2,
+        1
+      ],
+      "meaning": "등산하다",
+      "audioUrl": "/game/tts/pashan_21.mp3"
+    },
+    {
+      "hanzi": "习惯",
+      "pinyin": [
+        "xí",
+        "guàn"
+      ],
+      "tones": [
+        2,
+        4
+      ],
+      "meaning": "습관(이 되다)",
+      "audioUrl": "/game/tts/xiguan_24.mp3"
+    },
+    {
+      "hanzi": "减肥",
+      "pinyin": [
+        "jiǎn",
+        "féi"
+      ],
+      "tones": [
+        3,
+        2
+      ],
+      "meaning": "다이어트 하다",
+      "audioUrl": "/game/tts/jianfei_32.mp3"
+    },
+    {
+      "hanzi": "散步",
+      "pinyin": [
+        "sàn",
+        "bù"
+      ],
+      "tones": [
+        4,
+        4
+      ],
+      "meaning": "산책하다",
+      "audioUrl": "/game/tts/sanbu_44.mp3"
+    },
+    {
+      "hanzi": "第一",
+      "pinyin": [
+        "dì",
+        "yī"
+      ],
+      "tones": [
+        4,
+        1
+      ],
+      "meaning": "제 1, 최초",
+      "audioUrl": "/game/tts/diyi_41.mp3"
+    },
+    {
+      "hanzi": "打篮球",
+      "pinyin": [
+        "dǎ",
+        "lán",
+        "qiú"
+      ],
+      "tones": [
+        3,
+        2,
+        2
+      ],
+      "meaning": "농구를 하다",
+      "audioUrl": "/game/tts/dalanqiu_322.mp3"
+    },
+    {
+      "hanzi": "胖",
+      "pinyin": [
+        "pàng"
+      ],
+      "tones": [
+        4
+      ],
+      "meaning": "뚱뚱하다",
+      "audioUrl": "/game/tts/pang_4.mp3"
+    },
+    {
+      "hanzi": "瘦",
+      "pinyin": [
+        "shòu"
+      ],
+      "tones": [
+        4
+      ],
+      "meaning": "마르다, 여위다",
+      "audioUrl": "/game/tts/shou_4.mp3"
+    },
+    {
+      "hanzi": "公斤",
+      "pinyin": [
+        "gōng",
+        "jīn"
+      ],
+      "tones": [
+        1,
+        1
+      ],
+      "meaning": "킬로그램",
+      "audioUrl": "/game/tts/gongjin_11.mp3"
+    },
+    {
+      "hanzi": "公园",
+      "pinyin": [
+        "gōng",
+        "yuán"
+      ],
+      "tones": [
+        1,
+        2
+      ],
+      "meaning": "공원",
+      "audioUrl": "/game/tts/gongyuan_12.mp3"
+    },
+    {
+      "hanzi": "特别",
+      "pinyin": [
+        "tè",
+        "bié"
+      ],
+      "tones": [
+        4,
+        2
+      ],
+      "meaning": "특히",
+      "audioUrl": "/game/tts/tebie_42.mp3"
+    },
+    {
+      "hanzi": "笑",
+      "pinyin": [
+        "xiào"
+      ],
+      "tones": [
+        4
+      ],
+      "meaning": "웃다",
+      "audioUrl": "/game/tts/xiao_4.mp3"
+    },
+    {
+      "hanzi": "最后",
+      "pinyin": [
+        "zuì",
+        "hòu"
+      ],
+      "tones": [
+        4,
+        4
+      ],
+      "meaning": "맨 마지막의",
+      "audioUrl": "/game/tts/zuihou_44.mp3"
+    },
+    {
+      "hanzi": "明白",
+      "pinyin": [
+        "míng",
+        "bai"
+      ],
+      "tones": [
+        2,
+        0
+      ],
+      "meaning": "이해하다, 알다",
+      "audioUrl": "/game/tts/mingbai_20.mp3"
+    },
+    {
+      "hanzi": "回答",
+      "pinyin": [
+        "huí",
+        "dá"
+      ],
+      "tones": [
+        2,
+        2
+      ],
+      "meaning": "대답하다",
+      "audioUrl": "/game/tts/huida_22.mp3"
+    },
+    {
+      "hanzi": "帅",
+      "pinyin": [
+        "shuài"
+      ],
+      "tones": [
+        4
+      ],
+      "meaning": "잘생기다, 멋지다",
+      "audioUrl": "/game/tts/shuai_4.mp3"
+    },
+    {
+      "hanzi": "新",
+      "pinyin": [
+        "xīn"
+      ],
+      "tones": [
+        1
+      ],
+      "meaning": "새롭다, 새로",
+      "audioUrl": "/game/tts/xin_1.mp3"
+    },
+    {
+      "hanzi": "眼镜",
+      "pinyin": [
+        "yǎn",
+        "jìng"
+      ],
+      "tones": [
+        3,
+        4
+      ],
+      "meaning": "안경",
+      "audioUrl": "/game/tts/yanjing_34.mp3"
+    },
+    {
+      "hanzi": "然后",
+      "pinyin": [
+        "rán",
+        "hòu"
+      ],
+      "tones": [
+        2,
+        4
+      ],
+      "meaning": "그 다음에",
+      "audioUrl": "/game/tts/ranhou_24.mp3"
+    },
+    {
+      "hanzi": "头发",
+      "pinyin": [
+        "tóu",
+        "fa"
+      ],
+      "tones": [
+        2,
+        0
+      ],
+      "meaning": "머리카락",
+      "audioUrl": "/game/tts/toufa_20.mp3"
+    },
+    {
+      "hanzi": "火车站",
+      "pinyin": [
+        "huǒ",
+        "chē",
+        "zhàn"
+      ],
+      "tones": [
+        3,
+        1,
+        4
+      ],
+      "meaning": "기차역",
+      "audioUrl": "/game/tts/huochezhan_314.mp3"
+    },
+    {
+      "hanzi": "送",
+      "pinyin": [
+        "sòng"
+      ],
+      "tones": [
+        4
+      ],
+      "meaning": "선물하다, 배웅하다",
+      "audioUrl": "/game/tts/song_4.mp3"
+    },
+    {
+      "hanzi": "票",
+      "pinyin": [
+        "piào"
+      ],
+      "tones": [
+        4
+      ],
+      "meaning": "표, 티켓",
+      "audioUrl": "/game/tts/piao_4.mp3"
+    },
+    {
+      "hanzi": "旅行",
+      "pinyin": [
+        "lǚ",
+        "xíng"
+      ],
+      "tones": [
+        3,
+        2
+      ],
+      "meaning": "여행하다",
+      "audioUrl": "/game/tts/lvxing_32.mp3"
+    },
+    {
+      "hanzi": "旅游",
+      "pinyin": [
+        "lǚ",
+        "yóu"
+      ],
+      "tones": [
+        3,
+        2
+      ],
+      "meaning": "여행하다",
+      "audioUrl": "/game/tts/lvyou_32.mp3"
+    },
+    {
+      "hanzi": "打算",
+      "pinyin": [
+        "dǎ",
+        "suàn"
+      ],
+      "tones": [
+        3,
+        4
+      ],
+      "meaning": "~할 계획이다",
+      "audioUrl": "/game/tts/dasuan_34.mp3"
+    },
+    {
+      "hanzi": "世界",
+      "pinyin": [
+        "shì",
+        "jiè"
+      ],
+      "tones": [
+        4,
+        4
+      ],
+      "meaning": "세계",
+      "audioUrl": "/game/tts/shijie_44.mp3"
+    },
+    {
+      "hanzi": "国家",
+      "pinyin": [
+        "guó",
+        "jiā"
+      ],
+      "tones": [
+        2,
+        1
+      ],
+      "meaning": "국가, 나라",
+      "audioUrl": "/game/tts/guojia_21.mp3"
+    },
+    {
+      "hanzi": "文化",
+      "pinyin": [
+        "wén",
+        "huà"
+      ],
+      "tones": [
+        2,
+        4
+      ],
+      "meaning": "문화",
+      "audioUrl": "/game/tts/wenhua_24.mp3"
+    },
+    {
+      "hanzi": "地方",
+      "pinyin": [
+        "dì",
+        "fang"
+      ],
+      "tones": [
+        4,
+        0
+      ],
+      "meaning": "장소, 곳",
+      "audioUrl": "/game/tts/difang_40.mp3"
+    },
+    {
+      "hanzi": "护照",
+      "pinyin": [
+        "hù",
+        "zhào"
+      ],
+      "tones": [
+        4,
+        4
+      ],
+      "meaning": "여권",
+      "audioUrl": "/game/tts/huzhao_44.mp3"
+    },
+    {
+      "hanzi": "地图",
+      "pinyin": [
+        "dì",
+        "tú"
+      ],
+      "tones": [
+        4,
+        2
+      ],
+      "meaning": "지도",
+      "audioUrl": "/game/tts/ditu_42.mp3"
+    },
+    {
+      "hanzi": "机场",
+      "pinyin": [
+        "jī",
+        "chǎng"
+      ],
+      "tones": [
+        1,
+        3
+      ],
+      "meaning": "공항",
+      "audioUrl": "/game/tts/jichang_13.mp3"
+    },
+    {
+      "hanzi": "长城",
+      "pinyin": [
+        "Cháng",
+        "chéng"
+      ],
+      "tones": [
+        2,
+        2
+      ],
+      "meaning": "만리장성",
+      "audioUrl": "/game/tts/changcheng_22.mp3"
+    },
+    {
+      "hanzi": "看见",
+      "pinyin": [
+        "kàn",
+        "jiàn"
+      ],
+      "tones": [
+        4,
+        4
+      ],
+      "meaning": "보다",
+      "audioUrl": "/game/tts/kanjian_44.mp3"
+    },
+    {
+      "hanzi": "有名",
+      "pinyin": [
+        "yǒu",
+        "míng"
+      ],
+      "tones": [
+        3,
+        2
+      ],
+      "meaning": "유명하다",
+      "audioUrl": "/game/tts/youming_32.mp3"
+    },
+    {
+      "hanzi": "放心",
+      "pinyin": [
+        "fàng",
+        "xīn"
+      ],
+      "tones": [
+        4,
+        1
+      ],
+      "meaning": "안심하다",
+      "audioUrl": "/game/tts/fangxin_41.mp3"
+    },
+    {
+      "hanzi": "放",
+      "pinyin": [
+        "fàng"
+      ],
+      "tones": [
+        4
+      ],
+      "meaning": "놓다",
+      "audioUrl": "/game/tts/fang_4.mp3"
+    },
+    {
+      "hanzi": "城市",
+      "pinyin": [
+        "chéng",
+        "shì"
+      ],
+      "tones": [
+        2,
+        4
+      ],
+      "meaning": "도시",
+      "audioUrl": "/game/tts/chengshi_24.mp3"
+    },
+    {
+      "hanzi": "一边",
+      "pinyin": [
+        "yì",
+        "biān"
+      ],
+      "tones": [
+        4,
+        1
+      ],
+      "meaning": "~하면서 ~하다",
+      "audioUrl": "/game/tts/yibian_41.mp3"
+    },
+    {
+      "hanzi": "动物",
+      "pinyin": [
+        "dòng",
+        "wù"
+      ],
+      "tones": [
+        4,
+        4
+      ],
+      "meaning": "동물",
+      "audioUrl": "/game/tts/dongwu_44.mp3"
+    },
+    {
+      "hanzi": "马",
+      "pinyin": [
+        "mǎ"
+      ],
+      "tones": [
+        3
+      ],
+      "meaning": "말",
+      "audioUrl": "/game/tts/ma_3.mp3"
+    },
+    {
+      "hanzi": "鸟",
+      "pinyin": [
+        "niǎo"
+      ],
+      "tones": [
+        3
+      ],
+      "meaning": "새",
+      "audioUrl": "/game/tts/niao_3.mp3"
+    },
+    {
+      "hanzi": "熊猫",
+      "pinyin": [
+        "xióng",
+        "māo"
+      ],
+      "tones": [
+        2,
+        1
+      ],
+      "meaning": "판다",
+      "audioUrl": "/game/tts/xiongmao_21.mp3"
+    },
+    {
+      "hanzi": "为了",
+      "pinyin": [
+        "wèi",
+        "le"
+      ],
+      "tones": [
+        4,
+        0
+      ],
+      "meaning": "~하기 위하여",
+      "audioUrl": "/game/tts/weile_40.mp3"
+    },
+    {
+      "hanzi": "树",
+      "pinyin": [
+        "shù"
+      ],
+      "tones": [
+        4
+      ],
+      "meaning": "나무",
+      "audioUrl": "/game/tts/shu_4.mp3"
+    },
+    {
+      "hanzi": "辆",
+      "pinyin": [
+        "liàng"
+      ],
+      "tones": [
+        4
+      ],
+      "meaning": "대(차량의 단위)",
+      "audioUrl": "/game/tts/liang_4.mp3"
+    },
+    {
+      "hanzi": "碗",
+      "pinyin": [
+        "wǎn"
+      ],
+      "tones": [
+        3
+      ],
+      "meaning": "그릇, 공기",
+      "audioUrl": "/game/tts/wan_3.mp3"
+    },
+    {
+      "hanzi": "层",
+      "pinyin": [
+        "céng"
+      ],
+      "tones": [
+        2
+      ],
+      "meaning": "층",
+      "audioUrl": "/game/tts/ceng_2.mp3"
+    },
+    {
+      "hanzi": "中间",
+      "pinyin": [
+        "zhōng",
+        "jiān"
+      ],
+      "tones": [
+        1,
+        1
+      ],
+      "meaning": "중간",
+      "audioUrl": "/game/tts/zhongjian_11.mp3"
+    },
+    {
+      "hanzi": "春天",
+      "pinyin": [
+        "chūn",
+        "tiān"
+      ],
+      "tones": [
+        1,
+        1
+      ],
+      "meaning": "봄",
+      "audioUrl": "/game/tts/chuntian_11.mp3"
+    },
+    {
+      "hanzi": "夏天",
+      "pinyin": [
+        "xià",
+        "tiān"
+      ],
+      "tones": [
+        4,
+        1
+      ],
+      "meaning": "여름",
+      "audioUrl": "/game/tts/xiatian_41.mp3"
+    },
+    {
+      "hanzi": "秋天",
+      "pinyin": [
+        "qiū",
+        "tiān"
+      ],
+      "tones": [
+        1,
+        1
+      ],
+      "meaning": "가을",
+      "audioUrl": "/game/tts/qiutian_11.mp3"
+    },
+    {
+      "hanzi": "冬天",
+      "pinyin": [
+        "dōng",
+        "tiān"
+      ],
+      "tones": [
+        1,
+        1
+      ],
+      "meaning": "겨울",
+      "audioUrl": "/game/tts/dongtian_11.mp3"
+    },
+    {
+      "hanzi": "男生",
+      "pinyin": [
+        "nán",
+        "shēng"
+      ],
+      "tones": [
+        2,
+        1
+      ],
+      "meaning": "남자",
+      "audioUrl": "/game/tts/nansheng_21.mp3"
+    },
+    {
+      "hanzi": "女生",
+      "pinyin": [
+        "nǚ",
+        "shēng"
+      ],
+      "tones": [
+        3,
+        1
+      ],
+      "meaning": "여자",
+      "audioUrl": "/game/tts/nvsheng_31.mp3"
+    },
+    {
+      "hanzi": "咖啡",
+      "pinyin": [
+        "kā",
+        "fēi"
+      ],
+      "tones": [
+        1,
+        1
+      ],
+      "meaning": "커피",
+      "audioUrl": "/game/tts/kafei_11.mp3"
+    },
+    {
+      "hanzi": "筷子",
+      "pinyin": [
+        "kuài",
+        "zi"
+      ],
+      "tones": [
+        4,
+        0
+      ],
+      "meaning": "젓가락",
+      "audioUrl": "/game/tts/kuaizi_40.mp3"
+    },
+    {
+      "hanzi": "西瓜",
+      "pinyin": [
+        "xī",
+        "guā"
+      ],
+      "tones": [
+        1,
+        1
+      ],
+      "meaning": "수박",
+      "audioUrl": "/game/tts/xigua_11.mp3"
+    },
+    {
+      "hanzi": "香蕉",
+      "pinyin": [
+        "xiāng",
+        "jiāo"
+      ],
+      "tones": [
+        1,
+        1
+      ],
+      "meaning": "바나나",
+      "audioUrl": "/game/tts/xiangjiao_11.mp3"
+    },
+    {
+      "hanzi": "巧克力",
+      "pinyin": [
+        "qiǎo",
+        "kè",
+        "lì"
+      ],
+      "tones": [
+        3,
+        4,
+        4
+      ],
+      "meaning": "초콜릿",
+      "audioUrl": "/game/tts/qiaokeli_344.mp3"
+    },
+    {
+      "hanzi": "牛奶",
+      "pinyin": [
+        "niú",
+        "nǎi"
+      ],
+      "tones": [
+        2,
+        3
+      ],
+      "meaning": "우유",
+      "audioUrl": "/game/tts/niunai_23.mp3"
+    },
+    {
+      "hanzi": "啤酒",
+      "pinyin": [
+        "pí",
+        "jiǔ"
+      ],
+      "tones": [
+        2,
+        3
+      ],
+      "meaning": "맥주",
+      "audioUrl": "/game/tts/pijiu_23.mp3"
+    },
+    {
+      "hanzi": "灯",
+      "pinyin": [
+        "dēng"
+      ],
+      "tones": [
+        1
+      ],
+      "meaning": "전등",
+      "audioUrl": "/game/tts/deng_1.mp3"
+    },
+    {
+      "hanzi": "伞",
+      "pinyin": [
+        "sǎn"
+      ],
+      "tones": [
+        3
+      ],
+      "meaning": "우산",
+      "audioUrl": "/game/tts/san_3.mp3"
+    },
+    {
+      "hanzi": "鼻子",
+      "pinyin": [
+        "bí",
+        "zi"
+      ],
+      "tones": [
+        2,
+        0
+      ],
+      "meaning": "코",
+      "audioUrl": "/game/tts/bizi_20.mp3"
+    },
+    {
+      "hanzi": "耳朵",
+      "pinyin": [
+        "ěr",
+        "duo"
+      ],
+      "tones": [
+        3,
+        0
+      ],
+      "meaning": "귀",
+      "audioUrl": "/game/tts/erduo_30.mp3"
+    },
+    {
+      "hanzi": "大夫",
+      "pinyin": [
+        "dài",
+        "fu"
+      ],
+      "tones": [
+        4,
+        0
+      ],
+      "meaning": "의사",
+      "audioUrl": "/game/tts/daifu_40.mp3"
+    },
+    {
+      "hanzi": "口",
+      "pinyin": [
+        "kǒu"
+      ],
+      "tones": [
+        3
+      ],
+      "meaning": "명(식구를 세는 단위)",
+      "audioUrl": "/game/tts/kou_3.mp3"
+    },
+    {
+      "hanzi": "脚",
+      "pinyin": [
+        "jiǎo"
+      ],
+      "tones": [
+        3
+      ],
+      "meaning": "발",
+      "audioUrl": "/game/tts/jiao_3.mp3"
+    },
+    {
+      "hanzi": "句子",
+      "pinyin": [
+        "jù",
+        "zi"
+      ],
+      "tones": [
+        4,
+        0
+      ],
+      "meaning": "문장",
+      "audioUrl": "/game/tts/juzi_40.mp3"
+    },
+    {
+      "hanzi": "年级",
+      "pinyin": [
+        "nián",
+        "jí"
+      ],
+      "tones": [
+        2,
+        2
+      ],
+      "meaning": "학년",
+      "audioUrl": "/game/tts/nianji_22.mp3"
+    },
+    {
+      "hanzi": "年纪",
+      "pinyin": [
+        "nián",
+        "jì"
+      ],
+      "tones": [
+        2,
+        4
+      ],
+      "meaning": "나이, 연세",
+      "audioUrl": "/game/tts/nianji_24.mp3"
+    },
+    {
+      "hanzi": "爱好",
+      "pinyin": [
+        "ài",
+        "hào"
+      ],
+      "tones": [
+        4,
+        4
+      ],
+      "meaning": "취미",
+      "audioUrl": "/game/tts/aihao_44.mp3"
+    },
+    {
+      "hanzi": "报纸",
+      "pinyin": [
+        "bào",
+        "zhǐ"
+      ],
+      "tones": [
+        4,
+        3
+      ],
+      "meaning": "신문",
+      "audioUrl": "/game/tts/baozhi_43.mp3"
+    },
+    {
+      "hanzi": "声音",
+      "pinyin": [
+        "shēng",
+        "yīn"
+      ],
+      "tones": [
+        1,
+        1
+      ],
+      "meaning": "소리",
+      "audioUrl": "/game/tts/shengyin_11.mp3"
+    },
+    {
+      "hanzi": "草",
+      "pinyin": [
+        "cǎo"
+      ],
+      "tones": [
+        3
+      ],
+      "meaning": "풀",
+      "audioUrl": "/game/tts/cao_3.mp3"
+    },
+    {
+      "hanzi": "月亮",
+      "pinyin": [
+        "yuè",
+        "liang"
+      ],
+      "tones": [
+        4,
+        0
+      ],
+      "meaning": "달",
+      "audioUrl": "/game/tts/yueliang_40.mp3"
+    },
+    {
+      "hanzi": "嘴",
+      "pinyin": [
+        "zuǐ"
+      ],
+      "tones": [
+        3
+      ],
+      "meaning": "입",
+      "audioUrl": "/game/tts/zui_3.mp3"
+    },
+    {
+      "hanzi": "中文",
+      "pinyin": [
+        "Zhōng",
+        "wén"
+      ],
+      "tones": [
+        1,
+        2
+      ],
+      "meaning": "중국어",
+      "audioUrl": "/game/tts/zhongwen_12.mp3"
+    },
+    {
+      "hanzi": "过",
+      "pinyin": [
+        "guò"
+      ],
+      "tones": [
+        4
+      ],
+      "meaning": "건너다, 지나다",
+      "audioUrl": "/game/tts/guo_4.mp3"
+    },
+    {
+      "hanzi": "过去",
+      "pinyin": [
+        "guò",
+        "qù"
+      ],
+      "tones": [
+        4,
+        4
+      ],
+      "meaning": "건너가다",
+      "audioUrl": "/game/tts/guoqu_44.mp3"
+    },
+    {
+      "hanzi": "过来",
+      "pinyin": [
+        "guò",
+        "lái"
+      ],
+      "tones": [
+        4,
+        2
+      ],
+      "meaning": "건너오다",
+      "audioUrl": "/game/tts/guolai_42.mp3"
+    },
+    {
+      "hanzi": "起来",
+      "pinyin": [
+        "qǐ",
+        "lái"
+      ],
+      "tones": [
+        3,
+        2
+      ],
+      "meaning": "일어나다",
+      "audioUrl": "/game/tts/qilai_32.mp3"
+    },
+    {
+      "hanzi": "上去",
+      "pinyin": [
+        "shàng",
+        "qù"
+      ],
+      "tones": [
+        4,
+        4
+      ],
+      "meaning": "올라가다",
+      "audioUrl": "/game/tts/shangqu_44.mp3"
+    },
+    {
+      "hanzi": "上来",
+      "pinyin": [
+        "shàng",
+        "lái"
+      ],
+      "tones": [
+        4,
+        2
+      ],
+      "meaning": "올라오다",
+      "audioUrl": "/game/tts/shanglai_42.mp3"
+    },
+    {
+      "hanzi": "下去",
+      "pinyin": [
+        "xià",
+        "qù"
+      ],
+      "tones": [
+        4,
+        4
+      ],
+      "meaning": "내려가다",
+      "audioUrl": "/game/tts/xiaqu_44.mp3"
+    },
+    {
+      "hanzi": "下来",
+      "pinyin": [
+        "xià",
+        "lái"
+      ],
+      "tones": [
+        4,
+        2
+      ],
+      "meaning": "내려오다",
+      "audioUrl": "/game/tts/xialai_42.mp3"
+    },
+    {
+      "hanzi": "回来",
+      "pinyin": [
+        "huí",
+        "lái"
+      ],
+      "tones": [
+        2,
+        2
+      ],
+      "meaning": "돌아오다",
+      "audioUrl": "/game/tts/huilai_22.mp3"
+    },
+    {
+      "hanzi": "回去",
+      "pinyin": [
+        "huí",
+        "qù"
+      ],
+      "tones": [
+        2,
+        4
+      ],
+      "meaning": "돌아가다",
+      "audioUrl": "/game/tts/huiqu_24.mp3"
+    },
+    {
+      "hanzi": "进来",
+      "pinyin": [
+        "jìn",
+        "lái"
+      ],
+      "tones": [
+        4,
+        2
+      ],
+      "meaning": "들어오다",
+      "audioUrl": "/game/tts/jinlai_42.mp3"
+    },
+    {
+      "hanzi": "进去",
+      "pinyin": [
+        "jìn",
+        "qù"
+      ],
+      "tones": [
+        4,
+        4
+      ],
+      "meaning": "들어가다",
+      "audioUrl": "/game/tts/jinqu_44.mp3"
+    },
+    {
+      "hanzi": "出来",
+      "pinyin": [
+        "chū",
+        "lái"
+      ],
+      "tones": [
+        1,
+        2
+      ],
+      "meaning": "나오다",
+      "audioUrl": "/game/tts/chulai_12.mp3"
+    },
+    {
+      "hanzi": "出去",
+      "pinyin": [
+        "chū",
+        "qù"
+      ],
+      "tones": [
+        1,
+        4
+      ],
+      "meaning": "나가다",
+      "audioUrl": "/game/tts/chuqu_14.mp3"
+    },
+    {
+      "hanzi": "蓝",
+      "pinyin": [
+        "lán"
+      ],
+      "tones": [
+        2
+      ],
+      "meaning": "남색의",
+      "audioUrl": "/game/tts/lan_2.mp3"
+    },
+    {
+      "hanzi": "绿",
+      "pinyin": [
+        "lǜ"
+      ],
+      "tones": [
+        4
+      ],
+      "meaning": "녹색의, 푸르다",
+      "audioUrl": "/game/tts/lv_4.mp3"
+    },
+    {
+      "hanzi": "老",
+      "pinyin": [
+        "lǎo"
+      ],
+      "tones": [
+        3
+      ],
+      "meaning": "늙다, 오래되다",
+      "audioUrl": "/game/tts/lao_3.mp3"
+    },
+    {
+      "hanzi": "错",
+      "pinyin": [
+        "cuò"
+      ],
+      "tones": [
+        4
+      ],
+      "meaning": "잘못하다, 틀리다",
+      "audioUrl": "/game/tts/cuo_4.mp3"
+    },
+    {
+      "hanzi": "懂",
+      "pinyin": [
+        "dǒng"
+      ],
+      "tones": [
+        3
+      ],
+      "meaning": "알다, 이해하다",
+      "audioUrl": "/game/tts/dong_3.mp3"
+    },
+    {
+      "hanzi": "讲",
+      "pinyin": [
+        "jiǎng"
+      ],
+      "tones": [
+        3
+      ],
+      "meaning": "말하다, 이야기하다",
+      "audioUrl": "/game/tts/jiang_3.mp3"
+    },
+    {
+      "hanzi": "矮",
+      "pinyin": [
+        "ǎi"
+      ],
+      "tones": [
+        3
+      ],
+      "meaning": "(키가)작다",
+      "audioUrl": "/game/tts/ai_3.mp3"
+    },
+    {
+      "hanzi": "阴",
+      "pinyin": [
+        "yīn"
+      ],
+      "tones": [
+        1
+      ],
+      "meaning": "흐리다",
+      "audioUrl": "/game/tts/yin_1.mp3"
+    },
+    {
+      "hanzi": "渴",
+      "pinyin": [
+        "kě"
+      ],
+      "tones": [
+        3
+      ],
+      "meaning": "목마르다",
+      "audioUrl": "/game/tts/ke_3.mp3"
+    },
+    {
+      "hanzi": "一样",
+      "pinyin": [
+        "yí",
+        "yàng"
+      ],
+      "tones": [
+        2,
+        4
+      ],
+      "meaning": "같다",
+      "audioUrl": "/game/tts/yiyang_24.mp3"
+    },
+    {
+      "hanzi": "先",
+      "pinyin": [
+        "xiān"
+      ],
+      "tones": [
+        1
+      ],
+      "meaning": "먼저",
+      "audioUrl": "/game/tts/xian_1.mp3"
+    },
+    {
+      "hanzi": "更",
+      "pinyin": [
+        "gèng"
+      ],
+      "tones": [
+        4
+      ],
+      "meaning": "더, 더욱",
+      "audioUrl": "/game/tts/geng_4.mp3"
+    },
+    {
+      "hanzi": "总是",
+      "pinyin": [
+        "zǒng",
+        "shì"
+      ],
+      "tones": [
+        3,
+        4
+      ],
+      "meaning": "항상, 늘",
+      "audioUrl": "/game/tts/zongshi_34.mp3"
+    },
+    {
+      "hanzi": "非常",
+      "pinyin": [
+        "fēi",
+        "cháng"
+      ],
+      "tones": [
+        1,
+        2
+      ],
+      "meaning": "매우, 아주",
+      "audioUrl": "/game/tts/feichang_12.mp3"
+    },
+    {
+      "hanzi": "就",
+      "pinyin": [
+        "jiù"
+      ],
+      "tones": [
+        4
+      ],
+      "meaning": "바로",
+      "audioUrl": "/game/tts/jiu_4.mp3"
+    },
+    {
+      "hanzi": "一共",
+      "pinyin": [
+        "yí",
+        "gòng"
+      ],
+      "tones": [
+        2,
+        4
+      ],
+      "meaning": "총, 합계",
+      "audioUrl": "/game/tts/yigong_24.mp3"
+    },
+    {
+      "hanzi": "其实",
+      "pinyin": [
+        "qí",
+        "shí"
+      ],
+      "tones": [
+        2,
+        2
+      ],
+      "meaning": "사실",
+      "audioUrl": "/game/tts/qishi_22.mp3"
+    },
+    {
+      "hanzi": "还是",
+      "pinyin": [
+        "hái",
+        "shi"
+      ],
+      "tones": [
+        2,
+        0
+      ],
+      "meaning": "아직; 또는; 아무래도",
+      "audioUrl": "/game/tts/haishi_20.mp3"
+    },
+    {
+      "hanzi": "当然",
+      "pinyin": [
+        "dāng",
+        "rán"
+      ],
+      "tones": [
+        1,
+        2
+      ],
+      "meaning": "당연히",
+      "audioUrl": "/game/tts/dangran_12.mp3"
+    },
+    {
+      "hanzi": "多么",
+      "pinyin": [
+        "duō",
+        "me"
+      ],
+      "tones": [
+        1,
+        0
+      ],
+      "meaning": "얼마나",
+      "audioUrl": "/game/tts/duome_10.mp3"
+    },
+    {
+      "hanzi": "跟",
+      "pinyin": [
+        "gēn"
+      ],
+      "tones": [
+        1
+      ],
+      "meaning": "~와; ~에게",
+      "audioUrl": "/game/tts/gen_1.mp3"
+    },
+    {
+      "hanzi": "可以",
+      "pinyin": [
+        "kě",
+        "yǐ"
+      ],
+      "tones": [
+        3,
+        3
+      ],
+      "meaning": "할 수 있다; 해도 된다",
+      "audioUrl": "/game/tts/keyi_33.mp3"
+    },
+    {
+      "hanzi": "或者",
+      "pinyin": [
+        "huò",
+        "zhě"
+      ],
+      "tones": [
+        4,
+        3
+      ],
+      "meaning": "아니면",
+      "audioUrl": "/game/tts/huozhe_43.mp3"
     }
   ],
   "hard": [
@@ -900,19 +7534,6 @@
       ],
       "meaning": "상세",
       "audioUrl": "/game/tts/xiangxi_24.mp3"
-    },
-    {
-      "hanzi": "开心",
-      "pinyin": [
-        "kāi",
-        "xīn"
-      ],
-      "tones": [
-        1,
-        1
-      ],
-      "meaning": "기쁘다",
-      "audioUrl": "/game/tts/kaixin_11.mp3"
     },
     {
       "hanzi": "专业",

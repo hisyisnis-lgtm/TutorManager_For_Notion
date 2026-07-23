@@ -113,8 +113,10 @@ function build() {
         return;
       }
       if (!meaning) warnings.push(`${file} ${ln}행 '${hanzi}': 의미가 비어 있음`);
-      if (dedupMap.has(hanzi)) warnings.push(`${file} ${ln}행: 중복 한자 '${hanzi}' (${dedupMap.get(hanzi)}에도 있음)`);
-      else dedupMap.set(hanzi, `${file} ${ln}행`);
+      // 중복 한자 = '1개로 인식' — CSV 행은 그대로 두되 첫 등장만 풀에 넣고 이후는 건너뜀(2026-07-23 사용자 결정).
+      //   범위는 dedupMap이 정함: 난이도 3파일은 통합(같은 단어가 여러 급이면 첫 급만), 테마는 파일별.
+      if (dedupMap.has(hanzi)) { warnings.push(`${file} ${ln}행: 중복 한자 '${hanzi}' — ${dedupMap.get(hanzi)}에 이미 있어 건너뜀(1개로 인식)`); return; }
+      dedupMap.set(hanzi, `${file} ${ln}행`);
 
       const tones = syllables.map(toneOfSyllable);
       // audioUrl = 미리 생성한 신경망 음성 경로(결정적 슬러그). 파일이 없어도 tgTts가 Web Speech로 폴백.

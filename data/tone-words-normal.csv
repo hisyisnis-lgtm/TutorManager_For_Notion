@@ -1,26 +1,415 @@
-﻿한자,병음,의미,활성
-重要,zhòng yào,중요,O
-担心,dān xīn,걱정,O
-决定,jué dìng,결정,O
-简单,jiǎn dān,간단,O
-历史,lì shǐ,역사,O
-满意,mǎn yì,만족,O
-关系,guān xi,관계,O
-容易,róng yì,쉽다,O
-城市,chéng shì,도시,O
-文化,wén huà,문화,O
-参加,cān jiā,참가,O
-经常,jīng cháng,자주,O
-影响,yǐng xiǎng,영향,O
-努力,nǔ lì,노력,O
-安静,ān jìng,조용하다,O
-准备,zhǔn bèi,준비,O
+한자,병음,의미,활성
+妻子,qī zi,아내,O
+丈夫,zhàng fu,남편,O
+叔叔,shū shu,삼촌,O
+穿,chuān,입다,O
+手机,shǒu jī,휴대폰,O
+手表,shǒu biǎo,손목시계,O
+颜色,yán sè,색깔,O
+外公,wài gōng,외할아버지,O
+外婆,wài pó,외할머니,O
+姨妈,yí mā,이모,O
+舅舅,jiù jiu,외삼촌,O
+姑姑,gū gu,고모,O
+床,chuáng,침대,O
+睡懒觉,shuì lǎn jiào,늦잠을 자다,O
+被子,bèi zi,이불,O
+闹钟,nào zhōng,알람시계,O
+大衣,dà yī,코트,O
+手套,shǒu tào,장갑,O
+钱包,qián bāo,지갑,O
+时间,shí jiān,시간,O
+小时,xiǎo shí,시간(단위),O
+两,liǎng,둘,O
+每,měi,"매, 마다",O
+半天,bàn tiān,"한참, 반나절",O
+开,kāi,운전하다,O
+在,zài,~에서; ~하고 있다,O
+开始,kāi shǐ,시작하다,O
+比,bǐ,~보다,O
+别人,bié ren,다른 사람,O
+阿姨,ā yí,"아주머니, 이모",O
+洗澡,xǐ zǎo,목욕하다,O
+条,tiáo,벌(하의를 세는 단위),O
+裤子,kù zi,바지,O
+双,shuāng,"켤레, 짝, 쌍",O
+袜子,wà zi,양말,O
+帽子,mào zi,모자,O
+皮鞋,pí xié,구두,O
+带,dài,"휴대하다, 지니다",O
+刷牙,shuā yá,양치하다,O
+周末,zhōu mò,주말,O
 最近,zuì jìn,최근,O
-公司,gōng sī,회사,O
-旅游,lǚ yóu,여행,O
-选择,xuǎn zé,선택,O
-复杂,fù zá,복잡,O
-习惯,xí guàn,습관,O
+分,fēn,분,O
+半,bàn,절반,O
+刻,kè,15분,O
+地铁,dì tiě,지하철,O
+骑,qí,"(동물, 자전거 등)타다",O
+自行车,zì xíng chē,자전거,O
+出发,chū fā,출발하다,O
+马上,mǎ shàng,"곧, 즉시",O
+注意,zhù yì,"주의하다, 조심하다",O
+认为,rèn wéi,"여기다, 생각하다",O
+站,zhàn,정류장; 서다,O
+堵车,dǔ chē,차가 막히다,O
+一定,yí dìng,"반드시, 꼭",O
+几乎,jī hū,거의,O
+司机,sī jī,"기사, 운전사",O
+师傅,shī fu,"기사님, 선생님",O
+汽车,qì chē,자동차,O
+摩托车,mó tuō chē,오토바이,O
+船,chuán,배(교통 수단),O
+车票,chē piào,차표,O
+车费,chē fèi,차비,O
+从,cóng,"~부터, ~에서",O
+离,lí,"~에서, ~로부터",O
+远,yuǎn,멀다,O
+近,jìn,가깝다,O
+向,xiàng,~을 향하여,O
+附近,fù jìn,근처,O
+路,lù,길,O
+咱们,zán men,우리,O
+东边,dōng bian,동쪽,O
+西边,xī bian,서쪽,O
+南边,nán bian,남쪽,O
+北边,běi bian,북쪽,O
+后边,hòu bian,뒤쪽,O
+前边,qián bian,앞쪽,O
+上边,shàng bian,위쪽,O
+下边,xià bian,아래쪽,O
+左边,zuǒ bian,왼쪽,O
+右边,yòu bian,오른쪽,O
+里边,lǐ bian,안쪽,O
+外边,wài bian,바깥쪽,O
+旁边,páng biān,옆,O
+对面,duì miàn,맞은편,O
+服务员,fú wù yuán,종업원,O
+饿,è,배고프다,O
+饱,bǎo,배부르다,O
+餐厅,cān tīng,식당,O
+客人,kè ren,손님,O
+顾客,gù kè,고객,O
+烤鸭,kǎo yā,오리구이,O
+羊肉,yáng ròu,양고기,O
+猪肉,zhū ròu,돼지고기,O
+牛肉,niú ròu,소고기,O
+鸡肉,jī ròu,닭고기,O
+汤,tāng,"탕, 국",O
+饺子,jiǎo zi,만두,O
+用,yòng,"사용하다, 쓰다",O
+免费,miǎn fèi,무료로 하다,O
+味道,wèi dào,맛,O
+香,xiāng,향기롭다,O
+苦,kǔ,쓰다,O
+酸,suān,시다,O
+甜,tián,달다,O
+辣,là,맵다,O
+咸,xián,짜다,O
+包,bāo,가방,O
+位,wèi,분(사람 단위),O
+菜单,cài dān,메뉴판,O
+方便面,fāng biàn miàn,라면,O
+汉堡,hàn bǎo,햄버거,O
+羊肉串,yáng ròu chuàn,양꼬치,O
+冰淇淋,bīng qí lín,아이스크림,O
+红茶,hóng chá,홍차,O
+绿茶,lǜ chá,녹차,O
+见面,jiàn miàn,만나다,O
+聊天,liáo tiān,수다 떨다,O
+说话,shuō huà,말하다,O
+迟到,chí dào,지각하다,O
+等,děng,기다리다,O
+礼物,lǐ wù,선물,O
+结婚,jié hūn,결혼하다,O
+俩,liǎ,두 사람,O
+一般,yì bān,보통(이다),O
+婚礼,hūn lǐ,결혼식,O
+下班,xià bān,퇴근하다,O
+上班,shàng bān,출근하다,O
+上学,shàng xué,등교하다,O
+放学,fàng xué,하교하다,O
+上课,shàng kè,수업하다,O
+下课,xià kè,수업이 끝나다,O
+逛,guàng,거닐다,O
+开玩笑,kāi wán xiào,농담하다,O
+美女,měi nǚ,미녀,O
+帅哥,shuài gē,꽃미남,O
+超市,chāo shì,슈퍼마켓,O
+购物,gòu wù,물건을 사다,O
+质量,zhì liàng,품질,O
+换,huàn,바꾸다,O
+新鲜,xīn xiān,신선하다,O
+西红柿,xī hóng shì,토마토,O
+葡萄,pú tao,포도,O
+米,mǐ,미터,O
+面条,miàn tiáo,국수,O
+鸡蛋,jī dàn,계란,O
+鱼,yú,"생선, 물고기",O
+包子,bāo zi,"만두, 빠오즈",O
+蛋糕,dàn gāo,케익,O
+面包,miàn bāo,빵,O
+饼干,bǐng gān,과자,O
+小吃,xiǎo chī,간식,O
+矿泉水,kuàng quán shuǐ,생수,O
+瓶子,píng zi,병,O
+饮料,yǐn liào,음료,O
+果汁,guǒ zhī,과일 주스,O
+比较,bǐ jiào,비교적,O
+找,zhǎo,"찾다, 구하다",O
+只,zhǐ,마리(동물 단위),O
+花,huā,"꽃; (돈, 시간 등)쓰다",O
+可能,kě néng,아마도,O
+刚才,gāng cái,"방금, 막",O
+觉得,jué de,~라고 생각하다,O
+已经,yǐ jīng,이미,O
+价格,jià gé,가격,O
+打折,dǎ zhé,할인하다,O
+经常,jīng cháng,자주,O
+短,duǎn,짧다,O
+别,bié,다른; ~하지 마,O
+零,líng,"0, 영",O
+又,yòu,"또, 다시",O
+再,zài,다시,O
+还,hái,"또, 더; 그럭저럭",O
+要,yào,"하려하다, 해야한다",O
+价钱,jià qian,"가격, 값",O
+结账,jié zhàng,결제하다,O
+买单,mǎi dān,결제하다,O
+房间,fáng jiān,방,O
+客厅,kè tīng,거실,O
+厨房,chú fáng,주방,O
+洗手间,xǐ shǒu jiān,화장실,O
+卫生间,wèi shēng jiān,화장실,O
+厕所,cè suǒ,화장실,O
+关,guān,닫다; 끄다,O
+冰箱,bīng xiāng,냉장고,O
+盘子,pán zi,"접시, 쟁반",O
+窗户,chuāng hu,창문,O
+垃圾桶,lā jī tǒng,쓰레기통,O
 干净,gān jìng,깨끗하다,O
-帮助,bāng zhù,돕다,O
-健康,jiàn kāng,건강,O
+打扫,dǎ sǎo,청소하다,O
+以前,yǐ qián,"이전, 예전",O
+让,ràng,~하게 시키다,O
+张,zhāng,"장(종이, 책상 등 단위)",O
+正在,zhèng zài,~하는 중이다,O
+帮助,bāng zhù,"돕다, 도움",O
+空调,kōng tiáo,에어컨,O
+坏,huài,나쁘다; 고장나다; 상하다,O
+楼,lóu,층; 건물,O
+邻居,lín jū,이웃,O
+健康,jiàn kāng,건강(하다),O
+知道,zhī dào,알다,O
+告诉,gào su,알려주다,O
+生病,shēng bìng,병이 나다,O
+疼,téng,아프다,O
+感冒,gǎn mào,감기에 걸리다,O
+舒服,shū fu,편안하다,O
+腿,tuǐ,다리,O
+发烧,fā shāo,열이 나다,O
+脸,liǎn,얼굴,O
+药,yào,약,O
+肚子,dù zi,(사람 또는 동물의)배,O
+个子,gè zi,(사람의)키,O
+生活,shēng huó,생활; 살다,O
+为什么,wèi shén me,왜,O
+考试,kǎo shì,시험(을 보다),O
+虽然,suī rán,비록,O
+教,jiāo,가르치다,O
+课,kè,수업,O
+教室,jiào shì,교실,O
+黑板,hēi bǎn,칠판,O
+水平,shuǐ píng,"수준, 레벨",O
+作业,zuò yè,숙제,O
+书包,shū bāo,책가방,O
+问,wèn,묻다,O
+问题,wèn tí,"질문, 문제",O
+成绩,chéng jì,성적,O
+聪明,cōng ming,똑똑하다,O
+练习,liàn xí,연습하다,O
+图书馆,tú shū guǎn,도서관,O
+介绍,jiè shào,소개하다,O
+姓,xìng,성씨가 ~이다,O
+对,duì,맞다; ~에 대하여,O
+挺,tǐng,"꽤, 매우",O
+最近,zuì jìn,"최근, 요즘",O
+孩子,hái zi,아이,O
+年轻,nián qīng,젊다,O
+但是,dàn shì,하지만,O
+可是,kě shì,그러나,O
+不过,bú guò,그런데,O
+担心,dān xīn,걱정하다,O
+哭,kū,울다,O
+容易,róng yì,쉽다,O
+难,nán,어렵다,O
+生气,shēng qì,화가 나다,O
+可爱,kě ài,귀엽다,O
+安静,ān jìng,조용하다,O
+着急,zháo jí,조급해 하다,O
+小心,xiǎo xīn,조심하다,O
+关系,guān xi,관계,O
+关心,guān xīn,관심(을 기울이다),O
+欢迎,huān yíng,환영하다,O
+一直,yì zhí,"줄곧, 계속",O
+准备,zhǔn bèi,준비하다,O
+事情,shì qing,일,O
+自己,zì jǐ,"자기, 자신",O
+希望,xī wàng,"희망하다, 바라다",O
+机会,jī huì,기회,O
+努力,nǔ lì,노력(하다),O
+认真,rèn zhēn,열심히 하다,O
+终于,zhōng yú,"마침내, 드디어",O
+重要,zhòng yào,중요하다,O
+完,wán,"완성하다, 마치다",O
+忙,máng,바쁘다,O
+累,lèi,"피곤하다, 힘들다",O
+公司,gōng sī,회사,O
+经理,jīng lǐ,"사장, 관리 책임자",O
+同事,tóng shì,동료,O
+参加,cān jiā,"참가하다, 참석하다",O
+会议,huì yì,회의,O
+休息,xiū xi,쉬다,O
+请假,qǐng jià,휴가를 신청하다,O
+出差,chū chāi,출장가다,O
+加班,jiā bān,초과 근무를 하다,O
+抽烟,chōu yān,담배를 피우다,O
+办公室,bàn gōng shì,사무실,O
+银行,yín háng,은행,O
+邮局,yóu jú,우체국,O
+排队,pái duì,줄을 서다,O
+简单,jiǎn dān,간단하다,O
+而且,ér qiě,게다가,O
+因为,yīn wèi,~때문에,O
+所以,suǒ yǐ,그래서,O
+老板,lǎo bǎn,사장님,O
+玩,wán,놀다,O
+游戏,yóu xì,게임,O
+唱歌,chàng gē,노래를 부르다,O
+跳舞,tiào wǔ,춤을 추다,O
+画,huà,그림(을 그리다),O
+照片,zhào piàn,사진,O
+照相机,zhào xiàng jī,카메라,O
+应该,yīng gāi,(마땅히)해야한다,O
+运动,yùn dòng,운동하다,O
+踢足球,tī zú qiú,축구를 하다,O
+游泳,yóu yǒng,수영하다,O
+跑步,pǎo bù,"뛰다, 달리다",O
+比赛,bǐ sài,"경기, 시합",O
+锻炼,duàn liàn,(몸을)단련하다,O
+爬山,pá shān,등산하다,O
+习惯,xí guàn,습관(이 되다),O
+减肥,jiǎn féi,다이어트 하다,O
+散步,sàn bù,산책하다,O
+第一,dì yī,"제 1, 최초",O
+打篮球,dǎ lán qiú,농구를 하다,O
+胖,pàng,뚱뚱하다,O
+瘦,shòu,"마르다, 여위다",O
+公斤,gōng jīn,킬로그램,O
+公园,gōng yuán,공원,O
+特别,tè bié,특히,O
+笑,xiào,웃다,O
+最后,zuì hòu,맨 마지막의,O
+明白,míng bai,"이해하다, 알다",O
+回答,huí dá,대답하다,O
+帅,shuài,"잘생기다, 멋지다",O
+新,xīn,"새롭다, 새로",O
+长,zhǎng,"생기다, 자라다",O
+眼镜,yǎn jìng,안경,O
+然后,rán hòu,그 다음에,O
+头发,tóu fa,머리카락,O
+火车站,huǒ chē zhàn,기차역,O
+送,sòng,"선물하다, 배웅하다",O
+票,piào,"표, 티켓",O
+旅行,lǚ xíng,여행하다,O
+旅游,lǚ yóu,여행하다,O
+打算,dǎ suàn,~할 계획이다,O
+世界,shì jiè,세계,O
+国家,guó jiā,"국가, 나라",O
+文化,wén huà,문화,O
+地方,dì fang,"장소, 곳",O
+护照,hù zhào,여권,O
+地图,dì tú,지도,O
+机场,jī chǎng,공항,O
+长城,Cháng chéng,만리장성,O
+看见,kàn jiàn,보다,O
+有名,yǒu míng,유명하다,O
+放心,fàng xīn,안심하다,O
+放,fàng,놓다,O
+城市,chéng shì,도시,O
+一边,yì biān,~하면서 ~하다,O
+动物,dòng wù,동물,O
+马,mǎ,말,O
+鸟,niǎo,새,O
+熊猫,xióng māo,판다,O
+为了,wèi le,~하기 위하여,O
+树,shù,나무,O
+辆,liàng,대(차량의 단위),O
+碗,wǎn,"그릇, 공기",O
+层,céng,층,O
+中间,zhōng jiān,중간,O
+春天,chūn tiān,봄,O
+夏天,xià tiān,여름,O
+秋天,qiū tiān,가을,O
+冬天,dōng tiān,겨울,O
+男生,nán shēng,남자,O
+女生,nǚ shēng,여자,O
+咖啡,kā fēi,커피,O
+筷子,kuài zi,젓가락,O
+西瓜,xī guā,수박,O
+香蕉,xiāng jiāo,바나나,O
+巧克力,qiǎo kè lì,초콜릿,O
+牛奶,niú nǎi,우유,O
+啤酒,pí jiǔ,맥주,O
+灯,dēng,전등,O
+伞,sǎn,우산,O
+鼻子,bí zi,코,O
+耳朵,ěr duo,귀,O
+大夫,dài fu,의사,O
+口,kǒu,명(식구를 세는 단위),O
+脚,jiǎo,발,O
+句子,jù zi,문장,O
+年级,nián jí,학년,O
+年纪,nián jì,"나이, 연세",O
+爱好,ài hào,취미,O
+报纸,bào zhǐ,신문,O
+声音,shēng yīn,소리,O
+草,cǎo,풀,O
+月亮,yuè liang,달,O
+嘴,zuǐ,입,O
+中文,Zhōng wén,중국어,O
+过,guò,"건너다, 지나다",O
+过去,guò qù,건너가다,O
+过来,guò lái,건너오다,O
+起来,qǐ lái,일어나다,O
+上去,shàng qù,올라가다,O
+上来,shàng lái,올라오다,O
+下去,xià qù,내려가다,O
+下来,xià lái,내려오다,O
+回来,huí lái,돌아오다,O
+回去,huí qù,돌아가다,O
+进来,jìn lái,들어오다,O
+进去,jìn qù,들어가다,O
+出来,chū lái,나오다,O
+出去,chū qù,나가다,O
+蓝,lán,남색의,O
+绿,lǜ,"녹색의, 푸르다",O
+老,lǎo,"늙다, 오래되다",O
+错,cuò,"잘못하다, 틀리다",O
+懂,dǒng,"알다, 이해하다",O
+讲,jiǎng,"말하다, 이야기하다",O
+矮,ǎi,(키가)작다,O
+阴,yīn,흐리다,O
+渴,kě,목마르다,O
+一样,yí yàng,같다,O
+先,xiān,먼저,O
+更,gèng,"더, 더욱",O
+总是,zǒng shì,"항상, 늘",O
+非常,fēi cháng,"매우, 아주",O
+就,jiù,바로,O
+一共,yí gòng,"총, 합계",O
+其实,qí shí,사실,O
+还是,hái shi,아직; 또는; 아무래도,O
+当然,dāng rán,당연히,O
+多么,duō me,얼마나,O
+跟,gēn,~와; ~에게,O
+可以,kě yǐ,할 수 있다; 해도 된다,O
+或者,huò zhě,아니면,O
