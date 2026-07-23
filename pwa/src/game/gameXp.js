@@ -8,9 +8,9 @@
 // 등급 이름·엠블럼·글로우·파티클은 earProfile.EAR_TIERS 재사용(중복 정의 금지 — 좌표/에셋은 한 곳에서).
 import { EAR_TIERS } from './earProfile.js';
 
-// 등급 진입 누적 XP 임계값(EAR_TIERS와 같은 4단계). 1판 점수가 대략 1천~수천이라(computeScore: 100+콤보×20+시간)
-// 첫 등급은 몇 판 만에, 최고 등급은 수십 판에 걸쳐 도달하도록 잡은 첫 튜닝값 — 실사용 XP 분포 보고 조정 가능.
-export const XP_TIER_MIN = [0, 5000, 25000, 100000];
+// 등급 밴드별 기준 XP(EAR_TIERS 3단계). 지금은 seedXpIfMissing(복귀 유저의 초기 XP 시드)만 사용 —
+//   등급 자체는 XP가 아니라 rank(승급시험·배치)로 오른다. 구 XP게이트 등급 모델(xpTier/displayTier)은 제거(2026-07-23).
+export const XP_TIER_MIN = [0, 5000, 25000];
 
 // 게임 1판 XP = 획득 점수 + 정답수×3 + (신기록 시 +100). 일반·무한·테마만 적립(연습·복습은 호출부에서 제외).
 export const XP_PER_CORRECT = 3;
@@ -19,21 +19,6 @@ export function gameXpGain({ score = 0, correct = 0, isNewBest = false }) {
   const s = Math.max(0, Math.round(score || 0));
   const c = Math.max(0, Math.floor(correct || 0));
   return s + c * XP_PER_CORRECT + (isNewBest ? XP_NEWBEST_BONUS : 0);
-}
-
-// 누적 XP → 등급. earTier와 같은 형태를 반환(idx·name·emblem·glow·spark·particles·next·toNext·progress·isMax)하되
-// toNext/progress는 XP 기준. 소비처(HomeScreen·ProfileModal·MasteryScreen)는 earTier와 동일하게 쓴다.
-export function xpTier(totalXp = 0) {
-  const xp = Math.max(0, Math.floor(totalXp || 0));
-  let idx = 0;
-  for (let i = 0; i < XP_TIER_MIN.length; i++) if (xp >= XP_TIER_MIN[i]) idx = i;
-  const cur = EAR_TIERS[idx];
-  const next = EAR_TIERS[idx + 1] || null;
-  const curMin = XP_TIER_MIN[idx];
-  const nextMin = idx + 1 < XP_TIER_MIN.length ? XP_TIER_MIN[idx + 1] : null;
-  const toNext = nextMin != null ? Math.max(0, nextMin - xp) : 0;
-  const progress = nextMin != null ? Math.min(1, Math.max(0, (xp - curMin) / (nextMin - curMin))) : 1;
-  return { idx, name: cur.name, emblem: cur.emblem, glow: cur.glow, spark: cur.spark, particles: cur.particles, next, toNext, progress, xp, isMax: !next };
 }
 
 // ── 로컬 저장(토큰별) ──
@@ -75,7 +60,7 @@ export function seedXpIfMissing(token, currentTierIdx = 0) {
 // ── 등급(rank) — XP와 분리 저장(Phase 2). 등급은 '승급 시험' 합격으로만 오르며, XP가 임계를 넘어도
 //   시험 전엔 승급하지 않는다. 우상향(강등 없음) → 병합·저장 모두 max. ──
 function rankKey(token) { return token ? `game_rank_${token}` : 'game_rank'; }
-const clampRank = (i) => Math.max(0, Math.min(XP_TIER_MIN.length - 1, Math.floor(i || 0)));
+const clampRank = (i) => Math.max(0, Math.min(EAR_TIERS.length - 1, Math.floor(i || 0)));
 export function loadRank(token) {
   try {
     const v = localStorage.getItem(rankKey(token));
@@ -88,48 +73,24 @@ export function saveRank(token, idx) {
   try { localStorage.setItem(rankKey(token), String(clampRank(idx))); } catch { /* noop */ }
 }
 export function mergeRank(local, incoming) { return Math.max(clampRank(local), clampRank(incoming)); } // 우상향
-// 없으면 현재 XP가 도달한 등급으로 1회 시딩(Phase 1 자동승급 상태를 승계). 이후엔 시험 합격으로만 오름.
-export function seedRankIfMissing(token, totalXp) {
+// rank는 승급시험·배치 통과로만 오른다(우상향, 강등 없음). 키 없으면 0으로 시딩 —
+//   구 'XP 도달 등급으로 자동 시딩'은 rank 부풀림 버그라 폐기(2026-07-20). 상위 급은 시험/배치로만.
+export function seedRankIfMissing(token) {
   const cur = loadRank(token);
   if (cur != null) return cur;
-  const seed = xpTier(totalXp).idx;
-  saveRank(token, seed);
-  return seed;
-}
-
-// 표시 등급 — 저장된 rank 기준(시험 게이트). 게이지는 XP 진행(현재 rank 밴드 내, 상한 100%).
-// examReady = XP가 다음 등급 임계 도달(게이지 만땅) → '승급 시험' 응시 가능.
-export function displayTier(rank, totalXp) {
-  const idx = clampRank(rank);
-  const cur = EAR_TIERS[idx];
-  const next = EAR_TIERS[idx + 1] || null;
-  const curMin = XP_TIER_MIN[idx];
-  const nextMin = idx + 1 < XP_TIER_MIN.length ? XP_TIER_MIN[idx + 1] : null;
-  const xp = Math.max(0, Math.floor(totalXp || 0));
-  const toNext = nextMin != null ? Math.max(0, nextMin - xp) : 0;
-  const progress = nextMin != null ? Math.min(1, Math.max(0, (xp - curMin) / (nextMin - curMin))) : 1;
-  const examReady = nextMin != null && xp >= nextMin;
-  return { idx, name: cur.name, emblem: cur.emblem, glow: cur.glow, spark: cur.spark, particles: cur.particles, next, toNext, progress, xp, isMax: !next, examReady };
+  saveRank(token, 0);
+  return 0;
 }
 
 // ── 승급 시험 판정 ──
 export const EXAM_QUESTIONS = 20;
 export const EXAM_PASS_RATIO = 0.8;    // 80% (16/20)
-export const EXAM_FAIL_PENALTY = 0.15; // 불합격 시 현재 등급 밴드 요구 XP의 15% 차감
 export function examPassed(correct, total = EXAM_QUESTIONS) {
   return total > 0 && (correct | 0) / total >= EXAM_PASS_RATIO;
 }
-// 불합격 XP — 현재 등급 밴드(다음까지 필요 XP)의 15% 차감. 단, 현재 등급 base 아래로는 안 내려감(등급 유지·재응시 위해 재충전 필요).
-export function examFailXp(rank, totalXp) {
-  const idx = clampRank(rank);
-  const curMin = XP_TIER_MIN[idx];
-  const nextMin = idx + 1 < XP_TIER_MIN.length ? XP_TIER_MIN[idx + 1] : curMin;
-  const penalty = Math.round(Math.max(0, nextMin - curMin) * EXAM_FAIL_PENALTY);
-  return Math.max(curMin, Math.floor(totalXp || 0) - penalty);
-}
 
 // ── 레벨(Lv.N) — 누적 XP 기반 연속 성장(2026-07-19 보스 사다리 개편). 등급(rank)과 별개 축. ──
-//  등급 = 보스(승급시험) 클리어로만 오르는 실력 관문(EAR_TIERS 4단계). 레벨 = 플레이할수록 계속 오르는 성장 숫자(상한 없음).
+//  등급 = 보스(승급시험) 클리어로만 오르는 실력 관문(EAR_TIERS 3단계=입문/실전/고수). 레벨 = 플레이할수록 계속 오르는 성장 숫자(상한 없음).
 export const LVL_BASE = 500;    // Lv1→Lv2 필요 XP
 export const LVL_GROWTH = 150;  // 레벨마다 필요 XP 증가폭(점증) — 튜닝값
 // Lv.L 도달 누적 XP(L≥1, Lv1=0). 증분 increment(k)=BASE+(k-1)*GROWTH의 누적.

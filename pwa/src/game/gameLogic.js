@@ -39,9 +39,14 @@ export function isDifficultyUnlocked(token, diffId) {
   if (idx === 0) return true;
   return diffBestScore(token, DIFFICULTIES[idx - 1].id) >= UNLOCK_THRESHOLD;
 }
-// 무한 모드 해제 = 마지막 급(고수) '보스'까지 통과 = rank가 보스 수(DIFFICULTIES.length=3)에 도달(2026-07-19 보스 사다리 개편, 구 '고수5 스테이지 해제' 폐기).
-//  token은 호출부 시그니처 호환용(현재 미사용) — 해제는 순수 rank 함수.
-export function isEndlessUnlocked(token, rank = 0) { return rank >= DIFFICULTIES.length; } // eslint-disable-line no-unused-vars
+// 무한 모드 해제 = 마지막 급(고수)의 '마지막 스테이지'를 실제로 클리어(별 1개↑) — rank/배치고사 무관(2026-07-22 사용자 결정).
+//  승급시험은 급 사이(입문→실전, 실전→고수)에만 있고, 고수 위엔 등급이 없으니 무한은 '고수를 끝까지 깬' 보상.
+//  rank 인자는 호출부 시그니처 호환용(현재 미사용).
+export function isEndlessUnlocked(token, rank = 0) { // eslint-disable-line no-unused-vars
+  const hardTierId = DIFFICULTIES[DIFFICULTIES.length - 1].id;
+  const last = STAGES.find((s) => s.tier === hardTierId && s.bandIndex === STAGES_PER_TIER - 1);
+  return !!last && stageStars(token, last) >= 1;
+}
 function prevDiffLabel(diffId) {
   const idx = DIFFICULTIES.findIndex((d) => d.id === diffId);
   return idx > 0 ? DIFFICULTIES[idx - 1].label : null;
@@ -104,38 +109,54 @@ export function tierTotalStars(token, tierId) {
 export function tierClearedCount(token, tierId) {
   return STAGES.filter((s) => s.tier === tierId).filter((s) => stageStars(token, s) >= 1).length;
 }
+// 완벽런(3별=STARS_PER_STAGE) 스테이지 수 — 승급시험 조기 유도 판정용(고득점 부분클리어, 2026-07-23).
+export function perfectStageCount(token, tierId) {
+  return STAGES.filter((s) => s.tier === tierId).filter((s) => stageStars(token, s) >= STARS_PER_STAGE).length;
+}
 export function isTierCleared(token, tierId) {
   return tierClearedCount(token, tierId) >= STAGES_PER_TIER;
 }
 
-// ── 보스(급 관문 = 승급시험, 2026-07-19 보스 사다리) ─────
-// 각 급 끝의 보스 = 승급시험. 급 5스테이지를 다 깨면(isTierCleared) 응시 가능, 합격하면 rank+1 → 다음 급 해제 + 등급↑.
-// rank(=깬 보스 수, gameXp에 저장)로 진행 인코딩: 급 idx i 보스 통과 ⟺ rank > i. 보스 3개로 등급(rank) 0→3 구동.
-export const BOSSES = DIFFICULTIES.map((d, i) => ({
+// ── 보스(급 사이 관문 = 승급시험, 2026-07-22 개편) ─────
+// 승급시험은 '급과 급 사이'에만 있다: 입문→실전, 실전→고수. 마지막 급(고수) 위엔 등급이 없으니 승급시험 없음(무한은 고수5 클리어로).
+// 급 i의 5스테이지를 다 깨면(isTierCleared) 그 급 승급시험 응시 가능, 합격하면 rank i+1 → 다음 급 해제. 보스 2개로 rank 0→2 구동.
+// (배치고사는 이 승급시험을 사다리 밖에서 바로 응시하는 경로 — 스테이지 클리어 없이 상위 급으로 테스트 아웃.)
+// label/표시 이름 = 통과 시 '승급하는 다음 급' 이름(2026-07-23 사용자: 입문 끝 시험은 '실전으로' 승급하니 "실전 승급시험").
+// tierLabel/tier/tierIdx = 시험을 보는 '출발 급'(입문·실전) — 시험 단어·페이스·rank 로직의 근거(변경 시 여기 규약 주의).
+export const BOSSES = DIFFICULTIES.slice(0, -1).map((d, i) => ({
   tier: d.id, tierLabel: d.label, tierIdx: i, kind: 'boss',
-  id: `${d.id}-boss`, label: `${d.label} 승급시험`,
+  nextLabel: DIFFICULTIES[i + 1].label,            // 통과 시 승급하는 다음 급(표시용)
+  id: `${d.id}-boss`, label: `${DIFFICULTIES[i + 1].label} 승급시험`,
   gameKey: d.gameKey, timeMultiplier: d.timeMultiplier,
 }));
 export function bossOfTier(tierId) { return BOSSES.find((b) => b.tier === tierId) || null; }
 export function bossTierIdx(tierId) { return DIFFICULTIES.findIndex((d) => d.id === tierId); }
-// 보스 상태: 'beaten'(이미 통과) | 'ready'(급 클리어·응시 가능) | 'locked'(급 미클리어) | 'prev'(앞 급 보스부터)
-export function bossState(token, tierIdx, rank = 0) {
-  if (rank > tierIdx) return 'beaten';
-  if (rank < tierIdx) return 'prev';
-  return isTierCleared(token, DIFFICULTIES[tierIdx].id) ? 'ready' : 'locked';
+// 보스 상태: 'beaten'(이미 통과) | 'ready'(응시 가능).
+// 승급시험 상시개방(2026-07-23 사용자 정의): 난이도 사다리에서 각 급 승급시험을 스테이지 클리어·순서 무관하게 언제든 응시.
+//  이미 통과한 급만 'beaten', 나머지는 항상 'ready'. (통과 시 rank=max(rank,tierIdx+1)로 그 급까지 해제 — 테스트 아웃.)
+export function bossState(token, tierIdx, rank = 0) { // eslint-disable-line no-unused-vars
+  return rank > tierIdx ? 'beaten' : 'ready';
 }
 export function isBossUnlocked(token, tierIdx, rank = 0) { return bossState(token, tierIdx, rank) === 'ready'; }
 
 // ── 보스 사다리 마이그레이션(2026-07-19) ──
 // 기존 유저가 구 스테이지 시스템에서 (isTierCleared로) 이미 연 급을 보스 rank로 1회 승계 — 개편 전 진행 손실 방지.
-// 아래(입문)부터 연속으로 5스테이지 클리어된 급 수 = 승계 rank.
+// 아래(입문)부터 연속으로 5스테이지 클리어된 급 수 = 승계 rank. 보스가 있는 급(입문·실전)까지만 — 고수는 승급시험 없음(rank 최대 2).
 export function earnedRankFromTiers(token) {
   let r = 0;
-  for (let i = 0; i < DIFFICULTIES.length; i += 1) {
+  for (let i = 0; i < BOSSES.length; i += 1) {
     if (isTierCleared(token, DIFFICULTIES[i].id)) r = i + 1; else break;
   }
   return r;
 }
+// bossPeak = 승급시험을 실제로 통과해 얻은 최고 rank(사다리 통과 + 배치고사 통과 공통).
+//  배치고사는 스테이지 클리어 없이 rank를 올리므로, earnedRankFromTiers(스테이지 기반)만으로 클램프하면 배치 rank가 깎인다.
+//  → 클램프 상한 = max(earnedRankFromTiers, bossPeak). XP 부풀림 방어는 유지하면서 정당한 시험 통과는 보존(2026-07-22).
+function bossPeakKey(token) { return `game_boss_peak_${token}`; }
+export function loadBossPeak(token) { try { const n = parseInt(localStorage.getItem(bossPeakKey(token)) || '0', 10); return Number.isFinite(n) ? Math.max(0, Math.min(BOSSES.length, n)) : 0; } catch { return 0; } }
+export function saveBossPeak(token, v) { try { const cur = loadBossPeak(token); const nv = Math.max(0, Math.min(BOSSES.length, v || 0)); if (nv > cur) localStorage.setItem(bossPeakKey(token), String(nv)); return Math.max(cur, nv); } catch { return loadBossPeak(token); } }
+// 클램프 상한 — rank가 이 값을 넘을 수 없음(안 깬 급의 승급시험은 통과 불가하되, 배치/사다리로 정당히 통과한 급은 인정).
+export function rankUpperBound(token) { return Math.max(earnedRankFromTiers(token), loadBossPeak(token)); }
 // 1회 마이그레이션 — 플래그 없으면 rank를 max(현재, 급클리어 승계)로 올리고 플래그 세팅. 이후엔 보스로만 오름(신규 진행 자동승급 방지).
 export function migrateRankForBoss(token, currentRank = 0) {
   const KEY = `game_boss_migrated_${token}`;
@@ -172,10 +193,12 @@ export function stageRoundPool(pool, bandIndex, minCount = 10) {
   return out.length ? out : (pool || []);
 }
 function prevStageOf(stage) { return stage.bandIndex > 0 ? STAGES.find((s) => s.tier === stage.tier && s.bandIndex === stage.bandIndex - 1) : null; }
-// 해제 규칙: 급 첫 스테이지=이전 급 별 총합 ≥ TIER_ADVANCE_STARS(초급1은 항상). 그 외=직전 스테이지 별 ≥ 1.
+// 해제 규칙: ①졸업급(rank>tierIdx)=전 스테이지 해제 ②급 첫 스테이지=이전 급 승급시험 통과(rank>=tierIdx) ③그 외=직전 스테이지 별 ≥ 1.
 export function isStageUnlocked(token, stage, rank = 0) {
+  const tierIdx = DIFFICULTIES.findIndex((d) => d.id === stage.tier);
+  // 이미 넘어선(졸업한) 급 = 전 스테이지 해제 — 배치고사/사다리로 상위 급에 오면 아래 급은 복습용으로 전부 열림(2026-07-22).
+  if (rank > tierIdx) return true;
   if (stage.bandIndex === 0) {
-    const tierIdx = DIFFICULTIES.findIndex((d) => d.id === stage.tier);
     if (tierIdx <= 0) return true;
     // 급 첫 스테이지 = 이전 급 '보스(승급시험)' 통과로 열림. rank=깬 보스 수 → rank>=tierIdx면 이전 급 보스 통과.
     return rank >= tierIdx;
@@ -203,10 +226,9 @@ export function unlockedTrainingPool(token, wordPoolByDiff, rank = 0) {
 export function stageUnlockProgress(token, stage, rank = 0) {
   if (isStageUnlocked(token, stage, rank)) return null;
   if (stage.bandIndex === 0) {
-    // 급 첫 스테이지는 이전 급 '보스(승급시험)' 통과로 열림.
-    const tierIdx = DIFFICULTIES.findIndex((d) => d.id === stage.tier);
-    const prevTier = tierIdx > 0 ? DIFFICULTIES[tierIdx - 1] : null;
-    return { kind: 'boss', prevLabel: prevTier ? prevTier.label : '' };
+    // 급 첫 스테이지는 '그 급 승급시험'(그 급으로 승급하는 시험 = 이름도 그 급, 이전 급 끝에 위치) 통과로 열림.
+    //  예: 고수1은 '고수 승급시험'(실전 끝) 통과로 열림 → 표시는 stage.tierLabel(=고수). (입문1은 isStageUnlocked=true라 여기 안 옴.)
+    return { kind: 'boss', bossLabel: stage.tierLabel };
   }
   const prev = prevStageOf(stage);
   const firstStar = stageStarScores(prev.timeMultiplier)[0];
@@ -216,7 +238,7 @@ export function stageUnlockToastText(token, stage, rank = 0) {
   const p = stageUnlockProgress(token, stage, rank);
   if (!p) return '';
   return p.kind === 'boss'
-    ? `${p.prevLabel} 승급시험을 통과하면 열려요`
+    ? `${p.bossLabel} 승급시험을 통과하면 열려요`
     : `${p.prevLabel} 별 하나면 열려요`;
 }
 

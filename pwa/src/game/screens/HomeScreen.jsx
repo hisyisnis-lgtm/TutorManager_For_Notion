@@ -10,7 +10,7 @@ import {
 import { TG, TYPE, TOUCH_OPT, haptic, isHapticMuted, setHapticMuted, RADIUS, SPACE } from '../tgTokens.js';
 import { TONES } from '../../constants/toneGameWords.js';
 import { ToneMark, useCountUp } from '../tgWidgets.jsx';
-import { displayTier, levelInfo } from '../gameXp.js';
+import { rankInfo, levelInfo } from '../gameXp.js';
 import { play as playSfx, isSfxMuted, setSfxMuted } from '../tgSfx.js';
 import { isBgmMuted, setBgmMuted, startBgm } from '../tgBgm.js';
 import { FigmaScreen, EmberRise } from './shared.jsx';
@@ -689,7 +689,7 @@ export function HomeScreen({
   onPlay, onMastery, onAchievements, achDot = false, onHelp,
   onLogin, isMemberUser, memberName, nickname = null, onEditNickname, onLogout, onExit, studentToken, onRefreshBest, onDebugIntro,
 }) {
-  const tier = displayTier(rank, xp);
+  const tier = { ...rankInfo(rank), xp }; // 엠블럼·이름 = 등급(rank=급). xp는 MyInfo·ProfileModal의 레벨 게이지(levelInfo)용
   const isGuest = !!onLogin; // onLogin은 게스트일 때만 내려온다(회원/학생은 null)
   const [menuOpen, setMenuOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);

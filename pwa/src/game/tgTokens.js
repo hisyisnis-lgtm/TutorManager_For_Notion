@@ -100,7 +100,7 @@ export const TYPE = {
   // 타이틀(FONT_TITLE — 단일 굵기 디스플레이체, weight 불필요)
   titleLg: { fontFamily: FONT_TITLE, fontSize: 24 },  // 모달·히어로 제목
   title:   { fontFamily: FONT_TITLE, fontSize: 22 },  // 등급명·테마명 등 히어로
-  head:    { fontFamily: FONT_TITLE, fontSize: 21 },  // 화면 헤더
+  head:    { fontFamily: FONT_BODY, fontWeight: 700, fontSize: 21 },  // 화면 헤더 — 깔끔한 고딕 볼드(2026-07-23, 구 Jua 둥근체에서 변경)
   // 디스플레이 숫자(FONT_NUM)
   numHero: { fontFamily: FONT_NUM, fontWeight: 800, fontSize: 60 }, // 결과 점수(원오프는 size 오버라이드)
   numLg:   { fontFamily: FONT_NUM, fontWeight: 800, fontSize: 26 }, // 통계 수치

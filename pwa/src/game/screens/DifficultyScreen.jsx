@@ -17,8 +17,14 @@ const STAGE_ICONS = [PlantIcon, LeafIcon, FlameIcon, LightningIcon, CrownIcon];
 const SLOT_H = 92; // 슬롯 높이(균일)
 const ROW_W = 240; // 비선택 컴팩트 카드 공용 폭(잠금·해제·승급시험 통일 — 들쭉날쭉 방지)
 const ROW_H = 52;  // 비선택 컴팩트 카드 공용 높이(모바일 요소 스케일 한 단계 up)
-// 사다리 = 각 급 [5스테이지 + 보스]. 세로 배치용 reverse(위=고수 보스, 아래=입문1). 위로 오를수록 어려워짐.
-const LADDER = BOSSES.flatMap((boss) => [...STAGES.filter((s) => s.tier === boss.tier), boss]);
+// 사다리 = 각 급 [5스테이지 (+ 그 급 승급시험이 있으면 보스)]. 승급시험은 급 사이만(입문·실전) — 마지막 급(고수)엔 없음(무한은 고수5 클리어).
+// 세로 배치용 reverse(위=고수5, 아래=입문1). 위로 오를수록 어려워짐.
+const TIERS = [...new Set(STAGES.map((s) => s.tier))]; // 급 순서 = STAGES 순서에서 파생(DIFFICULTIES 단일출처)
+const LADDER = TIERS.flatMap((tier) => {
+  const stages = STAGES.filter((s) => s.tier === tier);
+  const boss = BOSSES.find((b) => b.tier === tier);
+  return boss ? [...stages, boss] : stages;
+});
 const V_LADDER = [...LADDER].reverse();
 const BOTTOM_VIDX = V_LADDER.length - 1; // 입문1(맨 아래) = 인트로 시작 위치
 const isBoss = (it) => it.kind === 'boss';
@@ -141,10 +147,11 @@ export function DifficultyScreen({ studentToken, rank = 0, onSelect, onStart, on
         maskImage: 'linear-gradient(to bottom, transparent 0, #000 66px, #000 calc(100% - 74px), transparent 100%)',
         WebkitMaskImage: 'linear-gradient(to bottom, transparent 0, #000 66px, #000 calc(100% - 74px), transparent 100%)',
       }}>
-        {/* 칸 사이 트레일 — 위 칸을 깼으면(스테이지 별1+ / 보스 통과) 골드 실선, 아니면 옅은 점선 */}
+        {/* 칸 사이 트레일 — 세그먼트 '위 칸'(s = 시각상 위, V_LADDER는 위=인덱스0)이 열려 있으면 골드 실선, 잠겼으면 옅은 점선.
+            해제는 아래→위 단조라 위 칸이 열렸으면 이 구간은 이미 밟은 길 → 잠긴 칸으로 올라가는 선은 점선으로 끊긴다.
+            (배치테스트로 급을 열면 별이 0이라도 잠금해제된 구간은 쭉 노란선으로 이어짐 — 2026-07-23) */}
         {padY > 0 && V_LADDER.slice(0, -1).map((s, i) => {
-          const upper = V_LADDER[i + 1];
-          const climbed = isBoss(upper) ? bossState(studentToken, upper.tierIdx, rank) === 'beaten' : stageStarFlags(studentToken, upper)[0];
+          const climbed = isBoss(s) ? bossState(studentToken, s.tierIdx, rank) === 'beaten' : isStageUnlocked(studentToken, s, rank);
           return (
             <div key={`seg-${s.id}`} aria-hidden="true" style={{
               position: 'absolute', left: '50%', top: centerY(i), height: centerY(i + 1) - centerY(i),
@@ -184,11 +191,11 @@ export function DifficultyScreen({ studentToken, rank = 0, onSelect, onStart, on
               role="button" tabIndex={0} aria-label={`${s.label} 선택`}
               style={{ position: 'relative', zIndex: 1, height: SLOT_H, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
               <div style={{
-                width: isSelected ? 316 : ((selectable || beaten) ? 'auto' : 'auto'), transition: 'transform .28s ease',
+                width: isSelected ? 316 : 'auto', transition: 'transform .28s ease',
                 transform: isSelected ? 'scale(1)' : 'scale(0.96)',
               }}>
                 {isSelected && boss ? (
-                  /* 보스 선택(확대) 카드 — 골드 관문 */
+                  /* 보스 선택(확대) 카드 — 관문 */
                   <div style={{
                     display: 'flex', alignItems: 'center', gap: SPACE.xl, padding: '0 16px 0 14px', height: 78, borderRadius: RADIUS.xxl,
                     background: '#fff', border: `2.5px solid ${c.accent}`, boxShadow: `0 12px 26px ${c.glow}`,
@@ -197,11 +204,11 @@ export function DifficultyScreen({ studentToken, rank = 0, onSelect, onStart, on
                       <MedalIcon size={27} weight="fill" color={c.accent} />
                     </div>
                     <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 5 }}>
-                      <span style={{ ...TYPE.h1, lineHeight: 1, color: TG.INK }}>{s.tierLabel} 승급시험</span>
+                      <span style={{ ...TYPE.h1, lineHeight: 1, color: TG.INK }}>{s.nextLabel} 승급시험</span>
                       <span style={{ ...TYPE.sub, color: TG.SUB, whiteSpace: 'nowrap' }}>20문제 · 정답률 80% 이상</span>
                     </div>
                     <div onClick={(e) => { e.stopPropagation(); playSfx('button'); onStart(s); }}
-                      role="button" aria-label={`${s.tierLabel} 승급시험 도전`}
+                      role="button" aria-label={`${s.nextLabel} 승급시험 도전`}
                       style={{ width: 40, height: 40, borderRadius: RADIUS.xl, flexShrink: 0, cursor: 'pointer', background: c.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 5px 12px ${c.glow}`, '--fab-glow': c.glow, '--fab-glow-lg': c.glow, animation: reduceMotion ? 'none' : 'tg-fab-pulse 1.5s ease-in-out infinite', ...TOUCH_OPT }}>
                       <PlayIcon size={16} weight="fill" color="#fff" />
                     </div>
@@ -231,7 +238,7 @@ export function DifficultyScreen({ studentToken, rank = 0, onSelect, onStart, on
                     </div>
                   </div>
                 ) : boss && beaten ? (
-                  /* 보스 통과 — 골드 ✓ */
+                  /* 보스 통과 — 흰 카드 + 메달 ✓ */
                   <div style={{ display: 'flex', width: ROW_W, alignItems: 'center', gap: SPACE.lg, padding: '0 15px', height: ROW_H, borderRadius: RADIUS.xxl, background: '#fff', boxShadow: '0 3px 9px rgba(43,79,120,0.1)' }}>
                     <div style={{ position: 'relative', width: 32, height: 32, borderRadius: RADIUS.md, flexShrink: 0, background: c.tint, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <MedalIcon size={18} weight="fill" color={c.accent} />
@@ -239,23 +246,23 @@ export function DifficultyScreen({ studentToken, rank = 0, onSelect, onStart, on
                         <CheckIcon size={8} weight="bold" color="#fff" />
                       </span>
                     </div>
-                    <span style={{ ...TYPE.label, color: TG.INK_SOFT, whiteSpace: 'nowrap' }}>{s.tierLabel} 승급시험 통과</span>
+                    <span style={{ ...TYPE.label, color: TG.INK_SOFT, whiteSpace: 'nowrap' }}>{s.nextLabel} 승급시험 통과</span>
                   </div>
                 ) : boss && selectable ? (
-                  /* 보스 도전 가능(ready) — 골드 크라운 + 승급시험 */
+                  /* 보스 도전 가능(ready) — 흰 카드 + 메달 */
                   <div style={{ display: 'flex', width: ROW_W, alignItems: 'center', gap: SPACE.lg, padding: '0 15px', height: ROW_H, borderRadius: RADIUS.xxl, background: '#fff', boxShadow: `0 4px 12px ${c.glow}` }}>
                     <div style={{ width: 32, height: 32, borderRadius: RADIUS.md, flexShrink: 0, background: c.tint, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <MedalIcon size={18} weight="fill" color={c.accent} />
                     </div>
-                    <span style={{ ...TYPE.label, color: TG.INK_SOFT, whiteSpace: 'nowrap' }}>{s.tierLabel} 승급시험</span>
+                    <span style={{ ...TYPE.label, color: TG.INK_SOFT, whiteSpace: 'nowrap' }}>{s.nextLabel} 승급시험</span>
                   </div>
                 ) : boss ? (
-                  /* 보스 잠금 — 좌 메달(원래 아이콘) + 우 자물쇠 */
+                  /* 보스 잠금 — 좌 메달 + 우 자물쇠 */
                   <div style={{ display: 'flex', width: ROW_W, alignItems: 'center', gap: SPACE.lg, padding: '0 15px', height: ROW_H, borderRadius: RADIUS.xxl, background: '#fff', boxShadow: '0 3px 9px rgba(43,79,120,0.1)' }}>
                     <div style={{ width: 32, height: 32, borderRadius: RADIUS.md, flexShrink: 0, background: c.tint, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <Icon size={18} weight="fill" color={c.accent} />
                     </div>
-                    <span style={{ flex: 1, minWidth: 0, ...TYPE.label, color: TG.INK_SOFT, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.tierLabel} 승급시험</span>
+                    <span style={{ flex: 1, minWidth: 0, ...TYPE.label, color: TG.INK_SOFT, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.nextLabel} 승급시험</span>
                     <LockSimpleIcon size={17} weight="fill" color={TG.MUTED} style={{ flexShrink: 0 }} />
                   </div>
                 ) : selectable ? (
@@ -268,12 +275,12 @@ export function DifficultyScreen({ studentToken, rank = 0, onSelect, onStart, on
                     <StarRow filled={stars.filter(Boolean).length} size={14} gap={3} off="#d8d2c8" shine style={{ flexShrink: 0 }} />
                   </div>
                 ) : (
-                  /* 스테이지 간략(잠금) — 좌 원래 아이콘 + 우 자물쇠 */
-                  <div style={{ display: 'flex', width: ROW_W, alignItems: 'center', gap: SPACE.lg, padding: '0 15px', height: ROW_H, borderRadius: RADIUS.xxl, background: '#fff', boxShadow: '0 3px 9px rgba(43,79,120,0.1)' }}>
-                    <div style={{ width: 32, height: 32, borderRadius: RADIUS.md, flexShrink: 0, background: c.tint, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Icon size={18} weight="fill" color={c.accent} />
+                  /* 스테이지 간략(잠금) — 회색 표면으로 '눌린' 느낌: 해제(흰 카드·컬러 아이콘·별)와 뚜렷이 구분 */
+                  <div style={{ display: 'flex', width: ROW_W, alignItems: 'center', gap: SPACE.lg, padding: '0 15px', height: ROW_H, borderRadius: RADIUS.xxl, background: TG.SURFACE, border: `1px solid ${TG.BORDER}`, boxShadow: 'none' }}>
+                    <div style={{ width: 32, height: 32, borderRadius: RADIUS.md, flexShrink: 0, background: TG.BORDER, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Icon size={18} weight="fill" color={TG.MUTED} />
                     </div>
-                    <span style={{ flex: 1, minWidth: 0, ...TYPE.label, color: TG.INK_SOFT, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.label}</span>
+                    <span style={{ flex: 1, minWidth: 0, ...TYPE.label, color: TG.MUTED, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.label}</span>
                     <LockSimpleIcon size={17} weight="fill" color={TG.MUTED} style={{ flexShrink: 0 }} />
                   </div>
                 )}

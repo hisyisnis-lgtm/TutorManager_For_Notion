@@ -13,10 +13,10 @@ import {
   pullMemberData, pushMemberData, loginMember, mergeGuestIntoMember, logoutMember,
   getMemberSession, loadMasteredSync, storeMasteredSync,
 } from '../game/gameStore.js';
-import { earTier, loadTierPeak } from '../game/earProfile.js';
-import { gameXpGain, xpTier, loadXp, saveXp, addXp, seedXpIfMissing, loadRank, saveRank, seedRankIfMissing, examPassed, EXAM_QUESTIONS } from '../game/gameXp.js';
+import { loadTierPeak } from '../game/earProfile.js';
+import { gameXpGain, loadXp, saveXp, addXp, seedXpIfMissing, loadRank, saveRank, seedRankIfMissing, examPassed, EXAM_QUESTIONS } from '../game/gameXp.js';
 import { ROUND_LENGTH, DIFFICULTIES, THEMES } from '../constants/toneGameWords.js';
-import { TG, ensureGameFonts, haptic, shuffle, getTimeLimitForCombo, loadBest, saveBest } from '../game/tgTokens.js';
+import { TG, DIFF_COLORS, ensureGameFonts, haptic, shuffle, getTimeLimitForCombo, loadBest, saveBest } from '../game/tgTokens.js';
 import {
   loadWordStats, saveWordStats, recordWordResult,
   buildReviewList, masteredCount, buildRoundWords,
@@ -33,7 +33,7 @@ import {
   getEndlessTimeLimit, computeScore, resolveEndOutcome,
   loadEndlessBest, saveEndlessBest, headlineBest, isEndlessUnlocked,
   ENDLESS_UNLOCK_REVEAL, STAGES, stageRoundPool, saveStageScore, unlockedTrainingPool, isStageUnlocked,
-  stageScoreOf, stageOutcome, migrateRankForBoss, bossState, JUDGE_RATIO, earnedRankFromTiers, clearOrphanThemeBests,
+  stageScoreOf, stageOutcome, migrateRankForBoss, isTierCleared, perfectStageCount, JUDGE_RATIO, rankUpperBound, saveBossPeak, BOSSES, clearOrphanThemeBests,
 } from '../game/gameLogic.js';
 import { FigmaScreen, CountdownVisual, CdWaveEdge, GameToast, SettingsModal } from '../game/screens/shared.jsx';
 import { SplashScreen } from '../game/screens/SplashScreen.jsx';
@@ -59,6 +59,7 @@ import { RankUpReveal } from '../game/screens/RankUpReveal.jsx';
 import { ExamIntroReveal } from '../game/screens/ExamIntroReveal.jsx';
 import { XpGainReveal } from '../game/screens/XpGainReveal.jsx';
 import { ModeUnlockReveal } from '../game/screens/ModeUnlockReveal.jsx';
+import { PlacementScreen } from '../game/screens/PlacementScreen.jsx';
 
 // [DEV] 미리보기 쿼리 단일 창구 — ?screen=·endless=1·practice=1 등 백도어 파라미터. 렌더마다 URLSearchParams를
 // 새로 만들던 11곳을 대체(생성 반복 제거 + 백도어 파라미터 목록이 여기서 한눈에). search는 로드 시 고정(SPA).
@@ -104,7 +105,7 @@ function buildAchSnapshot(token, masteredN, toneStats, streakLongest) {
 import { IntroScreen } from '../game/screens/IntroScreen.jsx';
 import { TutorialScreen } from '../game/screens/TutorialScreen.jsx';
 import { PauseModal } from '../game/screens/PauseModal.jsx';
-import { HelpStartModal, TrainingNudgeModal } from '../game/screens/gameModals.jsx';
+import { HelpStartModal, TrainingNudgeModal, ExamPromptModal } from '../game/screens/gameModals.jsx';
 
 // 미리보기 모드(?screen=game)에서 게임 화면 렌더용 샘플 단어 (DEV 검수 전용)
 const PREVIEW_WORDS = [
@@ -218,6 +219,7 @@ export default function ToneGamePage() {
 
   const [selectedDifficulty, setSelectedDifficulty] = useState(STAGES[0]); // 스테이지 객체(티어+밴드) — 난이도처럼 gameKey·timeMultiplier 보유
   const [wordPoolByDiff, setWordPoolByDiff] = useState({});
+  const wordPoolByDiffRef = useRef({}); wordPoolByDiffRef.current = wordPoolByDiff; // 배치테스트 지연 콜백(addPausable)이 stale 클로저로 옛 풀을 읽어 엉뚱한 난이도가 나오는 것 방지 — 항상 최신 풀
   // 런 모드 단일 enum — 'normal'(난이도)|'practice'|'review'|'endless'|'theme'.
   // (기존 4-불리언 플래그가 시작/종료/그만두기마다 수동 동기화 필요 → 한 곳 빠뜨리면 기록 오염. enum 단일화로 원천 차단)
   // 미리보기(?screen=game&endless=1 / &practice=1)는 state까지 켜서 서든데스·코치마크 검수 가능(DEV 한정).
@@ -227,8 +229,10 @@ export default function ToneGamePage() {
   const endlessMode = gameMode === 'endless';   // 무한(랜덤·가속·서든데스)
   const practiceMode = gameMode === 'practice'; // 트레이닝(열린 스테이지 범위·약점가중·시간 무제한·기록 미반영)
   const themeMode = gameMode === 'theme';       // 테마(드라마·여행 등) — 종료처리는 normal과 동일(gameKey만 테마 것)
-  const examMode = gameMode === 'exam';         // 승급 시험(20문제·무실수 정답률 80% 합격·불합격 XP차감) — 기록·XP·스트릭 미반영
+  const placementMode = gameMode === 'placement'; // 듀오링고식 적응형 실력 테스트(전 급 혼합·급 자동배정) — 첫 진입
+  const examMode = gameMode === 'exam' || placementMode; // 시험류 공통 UX(재시도 없음·타이머·정답 카운트·showGameOverBeat 종료판정)
   const examModeRef = useRef(false); examModeRef.current = examMode; // handleTone 등 useCallback 클로저에서 최신 모드 참조
+  const placementModeRef = useRef(false); placementModeRef.current = placementMode;
   const [selectedTheme, setSelectedTheme] = useState(THEMES[0]);
   const [wordPoolByTheme, setWordPoolByTheme] = useState({});
   const wordStatsRef = useRef({});  // 단어별 숙련도 글로벌(localStorage 동기화)
@@ -246,7 +250,8 @@ export default function ToneGamePage() {
   const [examIntro, setExamIntro] = useState(() => {
     if (!(isPreview && previewScreen === 'examintro')) return null;
     const d = DIFFICULTIES.find((x) => x.id === (qs('tier') || 'easy')) || DIFFICULTIES[0];
-    return { tier: d.id, tierLabel: d.label };
+    const tgt = DIFFICULTIES[DIFFICULTIES.indexOf(d) + 1] || d; // 표시=다음 급 승급시험
+    return { tier: tgt.id, tierLabel: tgt.label };
   });
   const endHandledRef = useRef(false); // 결과화면 1회 처리 가드(다시하기로 score 리셋 시 재실행·중복 사운드 방지)
   const beatSfxRef = useRef(false);   // 신기록 비트가 축하 효과음을 이미 울렸는지 — end-effect의 중복 재생 방지(런마다 resetRunState서 리셋)
@@ -290,24 +295,34 @@ export default function ToneGamePage() {
   // 누적 경험치(등급 산정) — 최초 1회 마이그레이션 시딩(현재 마스터/최고 등급 보존 → 0으로 리셋 방지), 이후 저장값.
   const [xp, setXp] = useState(() => (isPreview
     ? Number(qs('xp') || 0)
-    : seedXpIfMissing(studentToken, Math.max(earTier(loadMasteredSync(studentToken)).idx, loadTierPeak(studentToken)))));
-  // 등급(rank) — XP와 분리(승급 시험 합격으로만 오름). 최초엔 현재 XP 도달 등급으로 시딩(Phase1 자동승급 승계).
+    : seedXpIfMissing(studentToken, loadTierPeak(studentToken))));
+  // 등급(rank) — XP와 분리(승급 시험·배치로만 오름). 키 없으면 0 시딩, 이후 보스/배치로만.
   const [rank, setRank] = useState(() => {
-    if (isPreview) return (qs('rank') != null ? Number(qs('rank')) : xpTier(Number(qs('xp') || 0)).idx);
-    // 보스 사다리: 기존 rank(구 XP시험 승계)에 급클리어 승계를 1회 반영(개편 전 연 급 유지). 이후엔 보스로만 오름.
-    const seeded = seedRankIfMissing(studentToken, loadXp(studentToken) ?? 0);
+    if (isPreview) return (qs('rank') != null ? Number(qs('rank')) : 0);
+    // 보스 사다리: 기존 rank에 급클리어 승계를 1회 반영(개편 전 연 급 유지). 이후엔 보스로만 오름.
+    const seeded = seedRankIfMissing(studentToken);
     const migrated = migrateRankForBoss(studentToken, seeded);
-    // ★rank는 실제로 클리어한 급 수(earnedRankFromTiers)를 넘을 수 없음 — 안 깬 급의 승급시험은 통과 불가.
-    //  구 seedRankIfMissing이 rank를 'XP 등급'으로 시딩해 부풀리던 버그 자가치유(입문1만 열렸는데 실전이 열리던 문제, 2026-07-20).
-    const corrected = Math.min(migrated, earnedRankFromTiers(studentToken));
+    // ★rank는 정당히 통과한 급 수(rankUpperBound=스테이지클리어 or 승급시험통과)를 넘을 수 없음 — 안 깬·안 통과한 급은 못 염.
+    //  구 seedRankIfMissing이 rank를 'XP 등급'으로 시딩해 부풀리던 버그 자가치유(2026-07-20). 배치고사 통과분은 bossPeak로 보존(2026-07-22).
+    const corrected = Math.min(migrated, rankUpperBound(studentToken));
     if (corrected !== seeded) saveRank(studentToken, corrected);
     return corrected;
   });
   const [examResult, setExamResult] = useState(null); // 승급 시험 결과 {correct,total,passed}
-  const [examPromptPending, setExamPromptPending] = useState(() => isPreview && qs('examprompt') === '1'); // 자격 새로 생김 → 홈 복귀 시 응시 권유 모달
+  const [placementResult, setPlacementResult] = useState(null); // 적응형 배치 결과 {score,total,gradeIdx}
+  // 승급시험 유도 모달 {tierIdx}|null — 고득점(완벽 3별 2스테이지↑) + 다음 급 미개방(rank<=tierIdx) 시 결과화면 위로. 급별 1회. 프리뷰 ?examprompt=1
+  const [examPrompt, setExamPrompt] = useState(() => (isPreview && qs('examprompt') === '1') ? { tierIdx: qs('tier') === 'normal' ? 1 : 0 } : null);
   const [xpGain, setXpGain] = useState(null); // 이번 판 XP 획득 연출용 {gained, prevXp, newXp} (결과화면)
   const examCorrectRef = useRef(0); // 시험 중 무실수 정답 수(무실수+힌트미사용 완성만)
   const examEndedRef = useRef(false); // 시험 종료 판정 1회 가드
+  const examTierRef = useRef(0);      // 이번 시험이 어느 급 승급시험인지(tierIdx) — 합격 시 rank=max(rank,tierIdx+1) 세팅용(배치고사는 현재 rank보다 높을 수 있음)
+  const placementRef = useRef(false); // 이번 시험이 배치고사(첫 진입 실력테스트)인지 — 불합격 시 홈 복귀+격려 분기
+  // 듀오링고식 적응형 배치 테스트 — 매 문제 현재 난이도 풀에서 단어를 뽑고, 정답이면 난이도↑·오답이면↓. 급별 정답 수로 최고 도달 급 배정.
+  const PLACEMENT_Q = 10;                    // 총 문제 수
+  const placeDiffRef = useRef(0);            // 현재 문제 난이도 idx(0입문/1실전/2고수)
+  const placeCorrectRef = useRef([0, 0, 0]); // 급별 정답 수 [입문,실전,고수]
+  const placeAnsweredRef = useRef(0);        // 답한 문제 수
+  const placeLastHanziRef = useRef(null);    // 직전 출제 단어(반복 회피) — stale 클로저의 words[wordIndex] 대신 사용
 
   const timersRef = useRef([]);
   const addTimer = (id) => { timersRef.current.push(id); };
@@ -452,7 +467,7 @@ export default function ToneGamePage() {
         if (cancelled) return;
         // pull이 서버 rank/xp/스테이지점수를 로컬에 병합했으니 React 상태도 재동기화 — 안 하면 마운트 시점(pull 전) 값에 고착돼 상위 급이 잠긴 채로 보임.
         setXp(loadXp(studentToken) ?? 0);
-        const r = Math.min(loadRank(studentToken) ?? 0, earnedRankFromTiers(studentToken)); // 클램프 불변식 유지(스테이지 점수 복원 후 재산정)
+        const r = Math.min(loadRank(studentToken) ?? 0, rankUpperBound(studentToken)); // 클램프 불변식 유지(스테이지 점수·bossPeak 복원 후 재산정)
         saveRank(studentToken, r); setRank(r);
       }
       clearOrphanThemeBests(studentToken); // 체인상 잠긴 테마의 유령 best(옛 '전부 오픈' 시절 기록 등) 정리 — 진입마다 멱등
@@ -485,7 +500,7 @@ export default function ToneGamePage() {
     setPreviousBest(eff.previousBest);
 
     if (!isPreview) {
-      const endlessWasUnlocked = isEndlessUnlocked(studentToken, rank); // 무한 해제 연출용(보스 사다리: 무한=rank>=보스수, 일반 플레이론 안 바뀜 → 아래 조건은 사실상 미발동, 무한은 보스 합격에서 열림)
+      const endlessWasUnlocked = isEndlessUnlocked(studentToken, rank); // 무한 해제 연출용 스냅샷(무한=고수5 클리어. 이번 판으로 고수5를 처음 깨면 아래에서 해제 연출)
       if (mode === 'endless') {
         // 무한 — 헤드라인 best. meta.eb로 로컬 영구화. 회원은 아래 pushMemberData로 서버(/game/me) 동기화.
         const updated = { ...outcome.updated, updatedAt: Date.now() };
@@ -496,7 +511,16 @@ export default function ToneGamePage() {
         const updated = { ...outcome.updated, updatedAt: Date.now() };
         saveBest(studentToken, gameKey, updated);
         // 스테이지별 최고점 별도 저장(별·순차해제용) — 테마 아니고 스테이지(bandIndex)일 때만.
-        if (!themeMode && selectedDifficulty.bandIndex != null) saveStageScore(studentToken, selectedDifficulty.id, score);
+        if (!themeMode && selectedDifficulty.bandIndex != null) {
+          saveStageScore(studentToken, selectedDifficulty.id, score);
+          // 승급시험 유도 모달 — 고득점(완벽 3별 2스테이지↑) + 다음 급 미개방(rank<=tierIdx, 승급시험 있는 급) 시 급별 1회.
+          const eti = DIFFICULTIES.findIndex((d) => d.id === selectedDifficulty.tier);
+          if (eti >= 0 && eti < BOSSES.length && rank <= eti && perfectStageCount(studentToken, selectedDifficulty.tier) >= 2) {
+            const pk = `tg_examprompt_${studentToken}_${selectedDifficulty.tier}`;
+            let shown = false; try { shown = !!localStorage.getItem(pk); } catch { /* noop */ }
+            if (!shown) { try { localStorage.setItem(pk, '1'); } catch { /* noop */ } setExamPrompt({ tierIdx: eti }); }
+          }
+        }
         setBest(headlineBest(studentToken)); // 헤드라인(무한 우선, 없으면 통합) 갱신
       }
       // 트레이닝(else)은 최고기록 미반영 — 로컬 단어통계는 플레이 중 이미 저장됨(별도 동기화 불필요).
@@ -554,7 +578,7 @@ export default function ToneGamePage() {
             && outcome.previousBest < x.unlock.score && outcome.updated.bestScore >= x.unlock.score);
           mu = t?.unlockReveal || null;
         } else if (selectedDifficulty.bandIndex != null && !endlessWasUnlocked && isEndlessUnlocked(studentToken, rank)) {
-          // 무한 게이트=마지막 스테이지(고수5) 해제. 이번 판(고수4 클리어)으로 고수5가 새로 열리면 무한 모드 해제 연출.
+          // 무한 게이트=고수 마지막 스테이지(고수5) 클리어. 이번 판으로 고수5를 처음 깨면(별1+) 무한 모드 해제 연출.
           mu = ENDLESS_UNLOCK_REVEAL;
         }
         if (mu) setModeUnlock(mu);
@@ -608,15 +632,31 @@ export default function ToneGamePage() {
     examEndedRef.current = true;
     setShowGameOverBeat(false);
     const correct = examCorrectRef.current;
+    // ── 듀오링고식 적응형 배치 종료 → 급별 정답 수로 최고 도달 급 자동 배정 ──
+    if (placementModeRef.current) {
+      const c = placeCorrectRef.current; // [입문,실전,고수]
+      const grade = c[2] >= 2 ? 2 : c[1] >= 2 ? 1 : 0; // 그 급 단어 2개↑ 정답 = 그 급 도달(위 급부터). 입문=rank0
+      if (grade > 0) { const nowIdx = Math.max(rank, grade); saveBossPeak(studentToken, nowIdx); saveRank(studentToken, nowIdx); setRank(nowIdx); }
+      setPlacementResult({ score: correct, total: placeAnsweredRef.current || PLACEMENT_Q, gradeIdx: grade });
+      setScreen('placementresult');
+      if (!isPreview && identity.kind === 'member' && pullOkRef.current) pushMemberData(identity).catch(() => {});
+      if (!isPreview) track('placement_end', { m: DIFFICULTIES[grade]?.id, k: identity.kind, v: correct });
+      return undefined;
+    }
     const total = words.length || EXAM_QUESTIONS;
     const passed = examPassed(correct, total);
     if (passed) {
-      const prevIdx = rank, nowIdx = rank + 1;
-      saveRank(studentToken, nowIdx); setRank(nowIdx);      // 등급 +1(시험 합격으로만 오름)
+      const prevIdx = rank, nowIdx = Math.max(rank, examTierRef.current + 1); // 배치고사는 현재 rank보다 높은 급을 열 수 있음
+      saveBossPeak(studentToken, nowIdx);                   // 정당히 통과한 급 기록 — 클램프가 이 rank를 안 깎게(배치고사 필수)
+      saveRank(studentToken, nowIdx); setRank(nowIdx);      // 등급 = max(현재, 통과한 급+1)
       setExamResult({ correct, total, passed: true });
       setRankUp({ prevIdx, nowIdx });                       // 합격 연출(RankUpReveal 재활용) → onDone에서 결과화면
+    } else if (placementRef.current) {
+      // 배치고사 불합격 — 압박 없이 홈 복귀 + 격려(언제든 재도전). 페널티 없음.
+      setExamResult(null); placementRef.current = false;
+      setScreen('home'); showToast('아쉬워요! 실력은 언제든 다시 테스트할 수 있어요 🙌');
     } else {
-      // 보스 사다리: 불합격 페널티 없음 — 몇 번이고 재도전(2026-07-19 사용자 결정). XP 차감 폐기.
+      // 사다리 승급시험 불합격 — 페널티 없음, 결과화면에서 재도전(2026-07-19 사용자 결정).
       setExamResult({ correct, total, passed: false });
       setScreen('examresult');
     }
@@ -724,7 +764,8 @@ export default function ToneGamePage() {
       // 단어 숙련도 기록(시간초과 = 실패). 성조별 정답률은 탭 기준(handleTone)만 — 시간초과는 탭이 없어 미기록.
       if (!isPreview) { recordWordResult(wordStatsRef.current, word.hanzi, { perfect: false, timedOut: true, ms: 0 }); saveWordStats(studentToken, wordStatsRef.current); }
       addPausable(() => {
-        if (endlessMode || wordIndex + 1 >= words.length) setShowGameOverBeat(true); // 무한: 첫 시간초과 = 종료
+        const end = placementModeRef.current ? recordPlacement(false) : (endlessMode || wordIndex + 1 >= words.length); // 적응형=시간초과도 오답(난이도↓)
+        if (end) setShowGameOverBeat(true); // 무한: 첫 시간초과 = 종료
         else { enteredRef.current = []; completedRef.current = false; hintUsedRef.current = false; setWordIndex((i) => i + 1); setCurrentSyl(0); setEntered([]); setCompleted(false); setHasMistake(false); setGaugeOffsetMs(0); }
       }, 1700);
     }, remaining);
@@ -746,9 +787,11 @@ export default function ToneGamePage() {
   // 승급시험 킥오프 연출 — 시험 런이 라이브(카운트다운 종료)가 되는 순간 인게임 노출. 이 동안 위 타임아웃 effect가 examIntro로 정지 → 타이머 안 흐름. 해제는 오버레이 onDone(탭/자동)이 담당. (미리보기는 seed 유지)
   useEffect(() => {
     if (isPreview) return undefined;
-    if (screen !== 'game' || !examMode || cdPhase) { setExamIntro(null); return undefined; }
-    const d = DIFFICULTIES[Math.min(rank, DIFFICULTIES.length - 1)];
-    setExamIntro({ tier: d.id, tierLabel: d.label });
+    if (screen !== 'game' || !examMode || placementMode || cdPhase) { setExamIntro(null); return undefined; } // 적응형 배치는 '승급시험' 인트로 없음
+    // 시험 이름/색 = 통과 시 승급하는 '다음 급'(examTierRef=출발 급 idx → +1). "실전 승급시험" 등.
+    const srcIdx = Math.min(examTierRef.current, BOSSES.length - 1);
+    const tgt = DIFFICULTIES[srcIdx + 1] || DIFFICULTIES[srcIdx];
+    setExamIntro({ tier: tgt.id, tierLabel: tgt.label });
     return undefined;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [runId, screen, examMode, cdPhase]);
@@ -893,21 +936,75 @@ export default function ToneGamePage() {
   // 승급 시험 — 게이지 만땅(examReady) 시 응시. 현재 등급 난이도 풀에서 무작위 20문제(순수 성조 식별).
   // 일반 라운드 메커니즘 재활용(타이머·하트·힌트 그대로). '정답' = 무실수+힌트미사용 완성(handleTone에서 집계).
   // 20문제 끝 → 비트 없이 판정(examEnd effect): 합격 등급+1·상승 연출 / 불합격 XP 15%차감. 기록·XP적립·스트릭 미반영.
-  const startExam = () => {
-    const rIdx = Math.min(rank, DIFFICULTIES.length - 1);
-    if (rank >= DIFFICULTIES.length) return; // 최고 등급은 시험 없음(방어)
-    const d = DIFFICULTIES[rIdx];
+  // 승급시험 시작. targetTierIdx = 어느 급의 승급시험(기본=현재 rank의 급). placement=배치고사(첫 진입 실력테스트)면 불합격 시 홈 복귀.
+  //  승급시험은 급 사이(입문·실전)에만 있으니 tierIdx는 0..BOSSES.length-1. 배치고사 "고수 도전"은 실전 승급시험(tierIdx 1)을 봄.
+  const startExam = (targetTierIdx = rank, { placement = false } = {}) => {
+    const tIdx = Math.min(Math.max(0, targetTierIdx), BOSSES.length - 1);
+    if (targetTierIdx < 0 || targetTierIdx >= BOSSES.length) return; // 보스 없는 급(고수) 방어
+    const d = DIFFICULTIES[tIdx];
     const pool = wordPoolByDiff[d.id];
     if (!pool || pool.length === 0) {
       message.error('단어를 불러오지 못했어요. 잠시 후 다시 시도해주세요.');
       fetchToneWords(d.id).then((w) => { if (Array.isArray(w) && w.length > 0) setWordPoolByDiff((prev) => ({ ...prev, [d.id]: w })); }).catch(() => {});
       return;
     }
+    examTierRef.current = tIdx; placementRef.current = placement;
     setSelectedDifficulty(d); // 시험 타이머 페이스 = 해당 등급 난이도
     setGameMode('exam');    setRecordToBeat(0);
     examCorrectRef.current = 0; examEndedRef.current = false; setExamResult(null);
     setRound(shuffle(pool).slice(0, EXAM_QUESTIONS), { listen: false }); // 시험=듣기/그리기 미출제(순수 성조 식별)
     if (!isPreview) track('run_start', { m: 'exam', k: identity.kind });
+    resetRunState();
+  };
+
+  // ── 듀오링고식 적응형 배치 테스트 ──
+  // 현재 난이도 풀에서 단어를 뽑아 출제. 정답(무실수 완성)이면 다음 문제 난이도↑, 오답(오답탭·시간초과)이면↓(입문↔실전↔고수).
+  // PLACEMENT_Q문제 후 급별 정답 수로 최고 도달 급 배정(그 급 단어 2개↑ 정답=그 급). 모든 급수 단어가 등장할 수 있음.
+  const nextPlacementWord = () => {
+    const pools = wordPoolByDiffRef.current; // 최신 풀(ref) — 지연 콜백 stale 클로저 방지
+    const target = Math.min(Math.max(0, placeDiffRef.current), DIFFICULTIES.length - 1);
+    // 목표 급이 비어 있으면 '입문'으로 뚝 떨어지지 말고 가장 가까운 급(아래→위 순)에서 채운다.
+    let pool = null;
+    for (let step = 0; step < DIFFICULTIES.length; step += 1) {
+      const lo = pools[DIFFICULTIES[target - step]?.id];
+      if (lo && lo.length) { pool = lo; break; }
+      const hi = pools[DIFFICULTIES[target + step]?.id];
+      if (hi && hi.length) { pool = hi; break; }
+    }
+    if (!pool || pool.length === 0) return null;
+    const cur = placeLastHanziRef.current;
+    let picked = pool[Math.floor(Math.random() * pool.length)];
+    for (let k = 0; k < 6 && picked && picked.hanzi === cur; k += 1) picked = pool[Math.floor(Math.random() * pool.length)]; // 직전 단어 반복 회피
+    if (picked) placeLastHanziRef.current = picked.hanzi;
+    return picked;
+  };
+  // 답 1개 반영 — 급별 정답 기록 + 난이도 조절 + (남았으면) 다음 단어 append. 반환=이번이 마지막 문제였는지(→종료).
+  const recordPlacement = (wasCorrect) => {
+    const tier = Math.min(Math.max(0, placeDiffRef.current), 2);
+    if (wasCorrect) placeCorrectRef.current[tier] += 1;
+    placeAnsweredRef.current += 1;
+    placeDiffRef.current = wasCorrect ? Math.min(2, tier + 1) : Math.max(0, tier - 1); // 맞히면 어려워지고 틀리면 쉬워짐
+    if (placeAnsweredRef.current >= PLACEMENT_Q) return true;
+    const nw = nextPlacementWord();
+    if (!nw) return true; // 풀 없음 방어 → 종료
+    setWords((prev) => [...prev, nw]);
+    return false;
+  };
+  const startPlacement = () => {
+    const pool = wordPoolByDiff[DIFFICULTIES[0].id];
+    if (!pool || pool.length === 0) {
+      message.error('단어를 불러오지 못했어요. 잠시 후 다시 시도해주세요.');
+      fetchToneWords(DIFFICULTIES[0].id).then((w) => { if (Array.isArray(w) && w.length > 0) setWordPoolByDiff((prev) => ({ ...prev, [DIFFICULTIES[0].id]: w })); }).catch(() => {});
+      return;
+    }
+    placeDiffRef.current = 0; placeCorrectRef.current = [0, 0, 0]; placeAnsweredRef.current = 0;
+    examCorrectRef.current = 0; examEndedRef.current = false; setExamResult(null);
+    setSelectedDifficulty(DIFFICULTIES[0]); // 페이스는 입문 기준 고정(단어 난이도만 적응)
+    setGameMode('placement'); setRecordToBeat(0);
+    const first = pool[Math.floor(Math.random() * pool.length)];
+    placeLastHanziRef.current = first?.hanzi || null;
+    setRound([first], { listen: false }); // 첫 문제=입문 1개, 이후 적응형 append
+    if (!isPreview) track('run_start', { m: 'placement', k: identity.kind });
     resetRunState();
   };
 
@@ -957,7 +1054,8 @@ export default function ToneGamePage() {
         // 교육 단어(3성 변조·연음)는 마크·모프 연출을 충분히 볼 수 있게 완성 후 더 오래 머문 뒤 넘김.
         const teachDwell = (word && (findToneSandhi(word.tones) >= 0 || findLianyin(word.tones) >= 0)) ? 2400 : 1500;
         addPausable(() => {
-          if (!practiceMode && wordIndex + 1 >= words.length) setShowGameOverBeat(true); // 트레이닝(무한)은 스트림 끝에서 순환 → 종료화면 없음
+          const end = placementModeRef.current ? recordPlacement(true) : (!practiceMode && wordIndex + 1 >= words.length); // 적응형=정답이면 난이도↑·다음 단어 append(끝이면 종료)
+          if (end) setShowGameOverBeat(true); // 트레이닝(무한)은 스트림 끝에서 순환 → 종료화면 없음
           else { enteredRef.current = []; completedRef.current = false; hintUsedRef.current = false; setWordIndex((i) => practiceMode ? (i + 1) % words.length : i + 1); setCurrentSyl(0); setEntered([]); setCompleted(false); setHasMistake(false); setGaugeOffsetMs(0); }
         }, teachDwell);
       } else { haptic(8); playSfx('tap'); setCurrentSyl(ne.length); }
@@ -980,7 +1078,8 @@ export default function ToneGamePage() {
         speakWord(word); // 정답 공개 → 올바른 발음 들려주기
         if (!isPreview) { recordWordResult(wordStatsRef.current, word.hanzi, { perfect: false, timedOut: false, ms: 0 }); saveWordStats(studentToken, wordStatsRef.current); }
         addPausable(() => {
-          if (wordIndex + 1 >= words.length) setShowGameOverBeat(true); // 마지막 문제 → examEnd effect가 판정
+          const end = placementModeRef.current ? recordPlacement(false) : (wordIndex + 1 >= words.length); // 적응형=오답이면 난이도↓·다음 단어 append
+          if (end) setShowGameOverBeat(true); // 마지막 문제 → examEnd effect가 판정
           else { enteredRef.current = []; completedRef.current = false; hintUsedRef.current = false; setWordIndex((i) => i + 1); setCurrentSyl(0); setEntered([]); setCompleted(false); setHasMistake(false); setGaugeOffsetMs(0); }
         }, 1500);
         return; // 다음 문제로 — 시간 패널티 불필요
@@ -1098,7 +1197,8 @@ export default function ToneGamePage() {
 
   // 온보딩 2단계 — 소개(tg_intro_seen: 스플래시 다음, 홈 앞)·튜토리얼(tg_onboarded: 홈 강제코치 다음, 게임 앞).
   const markIntroSeen = () => { try { localStorage.setItem('tg_intro_seen', '1'); } catch { /* noop */ } };
-  const finishOnboard = () => { try { localStorage.setItem('tg_onboarded', '1'); } catch { /* noop */ } if (!isPreview) track('onboarding_done', { k: identity.kind }); setScreen('modeselect'); };
+  // 온보딩(튜토리얼) 완료 → 배치고사 선택 화면(첫 진입 1회): 차근차근 vs 실력 테스트. 이미 진행이 있으면(rank>0 등) 건너뛰고 모드선택.
+  const finishOnboard = () => { try { localStorage.setItem('tg_onboarded', '1'); } catch { /* noop */ } if (!isPreview) track('onboarding_done', { k: identity.kind }); setScreen(rank > 0 ? 'modeselect' : 'placement'); };
   // 홈에서 [게임시작] — 튜토리얼 미완이면 인게임 튜토리얼부터(소개는 홈 앞에서 이미 봄), 완료면 바로 모드선택.
   const goFromStart = () => {
     let done = false;
@@ -1147,7 +1247,7 @@ export default function ToneGamePage() {
     content = <TitleScreen onStart={() => tipTransitionTo('home')} />;
   } else if (screen === 'home') {
     content = <HomeScreen streak={startStreak} streakLongest={startStreakLongest} freezes={startFreezes} xp={xp} rank={rank} onExam={() => startExam()}
-      examPrompt={examPromptPending} onExamPromptClose={() => setExamPromptPending(false)} toneLevels={toneLevels}
+      toneLevels={toneLevels}
       toneStatus={toneStatus} coachTone={coachTone} celebrateTone={celebrateTone}
       levelReveals={toneLevelChanges} onRevealsDone={() => setToneLevelChanges([])} revealHold={isPreview && previewScreen === 'tonelevel'}
       onPlay={goFromStart}
@@ -1203,6 +1303,16 @@ export default function ToneGamePage() {
   } else if (screen === 'tutorial') {
     // 온보딩 경로면 완료 시 모드선택(finishOnboard) · 메뉴 '게임 방법' 경로면 홈 복귀(플래그 미변경)
     content = <FigmaScreen><TutorialScreen onDone={tutorialFromHelp ? () => { setTutorialFromHelp(false); setScreen('home'); } : finishOnboard} /></FigmaScreen>;
+  } else if (screen === 'placement') {
+    // 첫 진입 실력 배치 — 차근차근(모드선택) vs 실력 테스트(급 선택 → 승급시험). 통과하면 그 급까지 해제.
+    content = (
+      <FigmaScreen>
+        <PlacementScreen
+          onLadder={() => { playSfx('button'); setScreen('modeselect'); }}
+          onStartTest={() => { playSfx('button'); startPlacement(); }}
+          onBack={() => setScreen('modeselect')} />
+      </FigmaScreen>
+    );
   } else if (screen === 'modeselect') {
     content = (
       <FigmaScreen>
@@ -1218,7 +1328,7 @@ export default function ToneGamePage() {
   } else if (screen === 'difficulty') {
     content = (
       <FigmaScreen>
-        <DifficultyScreen selected={selectedDifficulty} studentToken={studentToken} rank={rank} onSelect={setSelectedDifficulty} onStart={(item) => (item && item.kind === 'boss' ? startExam() : startGame(item))} onBack={() => setScreen('modeselect')} onLocked={showToast} />
+        <DifficultyScreen selected={selectedDifficulty} studentToken={studentToken} rank={rank} onSelect={setSelectedDifficulty} onStart={(item) => (item && item.kind === 'boss' ? startExam(item.tierIdx) : startGame(item))} onBack={() => setScreen('modeselect')} onLocked={showToast} />
       </FigmaScreen>
     );
   } else if (screen === 'theme') {
@@ -1234,13 +1344,14 @@ export default function ToneGamePage() {
     const ci = STAGES.findIndex((s) => s.id === selectedDifficulty.id);
     const nextStage = (!practiceMode && !endlessMode && !themeMode && selectedDifficulty.bandIndex != null && ci >= 0) ? STAGES[ci + 1] : null;
     const canNextStage = !!(nextStage && isStageUnlocked(studentToken, nextStage));
-    // 이번 판 급의 승급시험이 이제 응시 가능(급 5스테이지 다 깸)이면 결과화면에 바로 '승급시험' 버튼. bossState 'ready' = rank===tierIdx라 startExam이 이 급을 응시.
+    // 결과화면 '승급시험' 버튼 — 급 5스테이지 다 깼고(isTierCleared) 아직 그 급 승급시험 미통과(rank<=tierIdx, 승급시험 있는 급=입문·실전).
+    //  고득점 조기 유도는 여기(결과 버튼) 대신 승급시험 유도 '모달'이 담당(2026-07-23). 승급시험 자체는 사다리에서 상시 응시.
     const tierIdx = (!practiceMode && !endlessMode && !themeMode && selectedDifficulty.tier) ? DIFFICULTIES.findIndex((d) => d.id === selectedDifficulty.tier) : -1;
-    const examReady = tierIdx >= 0 && bossState(studentToken, tierIdx, rank) === 'ready';
+    const examReady = tierIdx >= 0 && tierIdx < BOSSES.length && rank <= tierIdx && isTierCleared(studentToken, selectedDifficulty.tier);
     content = (
       <FigmaScreen>
         <ResultScreen score={score} maxCombo={maxCombo} avgMs={avgMsForResult}
-          onExam={(examReady || (isPreview && previewScreen === 'end' && qs('exam') === '1')) ? () => startExam() : undefined}
+          onExam={(examReady || (isPreview && previewScreen === 'end' && qs('exam') === '1')) ? () => startExam(tierIdx >= 0 ? tierIdx : rank) : undefined}
           onNextLevel={canNextStage ? () => startGame(nextStage) : undefined}
           isNewBest={practiceMode ? false : (isNewBest || (isPreview && qs('newbest') === '1'))} previousBest={practiceMode ? 0 : (isPreview && qs('newbest') === '1' ? 800 : previousBest)}
           suggestPractice={(suggestPractice && !practiceMode && !endlessMode && !themeMode && (selectedDifficulty.tier || selectedDifficulty.id) === 'easy') || (isPreview && previewScreen === 'end' && qs('suggest') === '1')}
@@ -1261,8 +1372,22 @@ export default function ToneGamePage() {
       <FigmaScreen>
         <ExamResultScreen correct={er.correct} total={er.total} passed={er.passed}
           canRetry={!er.passed && (!isPreview || qs('retry') !== '0')} /* 보스 모델: 불합격해도 언제든 재도전(XP 게이트 없음) */
-          onRetry={() => startExam()}
+          onRetry={() => startExam(examTierRef.current)}
           onHome={() => tipTransitionTo('home')} /> {/* 승급시험 결과(인게임) → 홈(아웃게임): 팁 전환 */}
+      </FigmaScreen>
+    );
+  } else if (screen === 'placementresult') {
+    // [DEV] 미리보기 ?screen=placementresult&grade=normal&score=7
+    const pr = placementResult || (isPreview
+      ? { score: qs('score') != null ? Number(qs('score')) : 7, total: 10, gradeIdx: qs('grade') === 'hard' ? 2 : qs('grade') === 'normal' ? 1 : 0 }
+      : { score: 0, total: PLACEMENT_Q, gradeIdx: 0 });
+    const gd = DIFFICULTIES[pr.gradeIdx] || DIFFICULTIES[0];
+    content = (
+      <FigmaScreen>
+        {/* 배치테스트 결과 = 승급시험 결과화면(ExamResultScreen) 재활용 — placement 모드로 '합격선' 대신 배정된 급 표시 */}
+        <ExamResultScreen correct={pr.score} total={pr.total}
+          placement={{ gradeLabel: gd.label, gradeColor: (DIFF_COLORS[gd.id] || {}).accent || TG.SUCCESS_GLOW, gradeIdx: pr.gradeIdx }}
+          onHome={() => { setPlacementResult(null); setGameMode('normal'); tipTransitionTo('home'); }} />
       </FigmaScreen>
     );
   } else { // game
@@ -1270,7 +1395,7 @@ export default function ToneGamePage() {
       <FigmaScreen>
         {word && (
           <GameScreen word={word} entered={entered} currentSyl={currentSyl} completed={completed} timedOut={timedOut}
-            wordIndex={wordIndex} wordsLen={words.length} wordTimeLimit={wordTimeLimit} gaugeOffsetMs={gaugeOffsetMs} lowTime={lowTime} paused={paused || !!cdPhase || suddenIntro || !!examIntro} endless={endlessMode || (isPreview && qs('endless') === '1')} lives={lives} showSudden={suddenIntro} runId={runId} recordToBeat={recordToBeat}
+            wordIndex={wordIndex} wordsLen={placementMode ? PLACEMENT_Q : words.length} wordTimeLimit={wordTimeLimit} gaugeOffsetMs={gaugeOffsetMs} lowTime={lowTime} paused={paused || !!cdPhase || suddenIntro || !!examIntro} endless={endlessMode || (isPreview && qs('endless') === '1')} lives={lives} showSudden={suddenIntro} runId={runId} recordToBeat={recordToBeat}
             combo={combo} comboFlash={comboFlash} floatScore={floatScore} score={score} coachText={coach.text}
             onTone={handleTone} wrongBtn={wrongBtn} wrongShakeKey={wrongShakeKey} onPause={() => setPaused(true)} onEndTraining={endTraining} playReveal={!cdPhase}
             practice={practiceMode} endKind={endKind} listen={wordIsListen} audioOff={audioOff}
@@ -1397,6 +1522,13 @@ export default function ToneGamePage() {
       {celebrationQueue.length > 0 && !modeUnlock && (
         <CelebrationOverlay achievement={celebrationQueue[0]} remaining={celebrationQueue.length - 1}
           onNext={() => setCelebrationQueue((q) => q.slice(1))} />
+      )}
+      {/* 승급시험 유도 모달 — 고득점(완벽2)+다음급 미개방 시 결과화면 위로(다른 연출 끝난 뒤). 프리뷰 ?screen=home&examprompt=1 */}
+      {examPrompt && !rankUp && !modeUnlock && celebrationQueue.length === 0 && (screen === 'end' || isPreview) && (
+        <ExamPromptModal
+          nextLabel={DIFFICULTIES[examPrompt.tierIdx + 1]?.label || ''}
+          onStart={() => { const t = examPrompt.tierIdx; setExamPrompt(null); startExam(t); }}
+          onClose={() => setExamPrompt(null)} />
       )}
     </>
   );

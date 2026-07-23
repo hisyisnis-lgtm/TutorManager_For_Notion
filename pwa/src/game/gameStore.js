@@ -13,7 +13,7 @@ import { loadTierPeak, bumpTierPeak } from './earProfile.js';
 import { loadXp, saveXp, mergeXp, loadRank, saveRank, mergeRank } from './gameXp.js';
 import { loadAchievements, saveAchievements, loadReviewMastered, addReviewMastered } from './achievements.js';
 import { loadStreak, saveStreak, loadFreezes, saveFreezes, diffDays } from './streak.js';
-import { loadStageScores, saveStageScore } from './gameLogic.js';
+import { loadStageScores, saveStageScore, loadBossPeak, saveBossPeak } from './gameLogic.js';
 import { DIFFICULTIES, THEMES } from '../constants/toneGameWords.js';
 import { fetchGameMe, saveGameMe } from '../api/gameApi.js';
 
@@ -167,6 +167,7 @@ export function collectLocalGameData(id) {
     rm: loadReviewMastered(id),                // 복습으로 마스터한 단어 수(업적)
     frz: loadFreezes(id),                      // 스트릭 보호권
     stg: loadStageScores(id),                  // 스테이지별 최고점 — 급 내 스테이지 해제·별·earnedRankFromTiers 근거(2026-07-21 동기화 추가)
+    bp: loadBossPeak(id),                       // 승급시험으로 통과한 최고 급(배치고사 포함) — rank 클램프 상한 근거(2026-07-22)
   };
   const streak = loadStreak(id);
   if (streak) rest.streak = streak;            // {lastDate,current,longest}
@@ -201,6 +202,7 @@ function applyGameDataToLocal(id, data) {
   if (data.stg && typeof data.stg === 'object') {                                  // 스테이지 최고점 = id별 max 병합(saveStageScore 내장)
     for (const [sid, sc] of Object.entries(data.stg)) { if (typeof sc === 'number') saveStageScore(id, sid, sc); }
   }
+  if (typeof data.bp === 'number') saveBossPeak(id, data.bp);                       // 승급시험 통과 최고 급 = max 병합(saveBossPeak 내장)
 }
 
 // 토큰 만료(60일)·계정없음 등 인증 실패면 세션을 정리(조용한 무기한 동기화실패 방지). 그 외(네트워크 등)는 유지.

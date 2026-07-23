@@ -1,7 +1,7 @@
 // 게임 공용 모달 — 놀러가기(SNS)·복습 시작·게임방법·무한 안내·로그인 유도·[DEV]점수 디버그. 시작/홈 등 여러 화면에서 재사용.
 // (기존 StartScreen.jsx 내부 함수에서 추출)
 import { useState } from 'react';
-import { HandWavingIcon, InstagramLogoIcon, YoutubeLogoIcon, ArticleIcon, CaretRightIcon, PlayIcon, InfinityIcon, StarIcon, QuestionIcon, DevicesIcon, SignInIcon, GraduationCapIcon } from '@phosphor-icons/react';
+import { HandWavingIcon, InstagramLogoIcon, YoutubeLogoIcon, ArticleIcon, CaretRightIcon, PlayIcon, InfinityIcon, StarIcon, QuestionIcon, DevicesIcon, SignInIcon, GraduationCapIcon, MedalIcon } from '@phosphor-icons/react';
 import { TG, TYPE, SHADOW, TOUCH_OPT, loadBest, saveBest, RADIUS, SPACE } from '../tgTokens.js';
 import { GAMEKEY, loadEndlessBest, saveEndlessBest } from '../gameLogic.js';
 import { DIFFICULTIES } from '../../constants/toneGameWords.js';
@@ -105,6 +105,32 @@ export function TrainingNudgeModal({ onStart, onClose }) {
       </div>
       <PrimaryButton onClick={() => { onStart && onStart(); }} background="linear-gradient(135deg,#3ccf97,#2bb583)" shadow="0px 10px 20px rgba(43,181,131,0.32)">
         <span style={{ ...TYPE.cta, color: '#fff' }}>트레이닝 시작</span>
+        <PlayIcon size={14} weight="fill" color="#fff" />
+      </PrimaryButton>
+      <button className="tg-press" onClick={onClose} style={{ width: '100%', padding: '4px 0', background: 'none', border: 'none', cursor: 'pointer', ...TOUCH_OPT }}>
+        <span style={{ ...TYPE.body, color: TG.SUB }}>나중에</span>
+      </button>
+    </ModalCard>
+  );
+}
+
+// 승급시험 유도 모달 — 고득점(완벽 3별 2스테이지↑)으로 실력 증명 시, 5단계 다 안 깨도 승급시험 도전 제안(비강제, 다음 급 미개방일 때만·급별 1회).
+export function ExamPromptModal({ nextLabel = '', onStart, onClose }) {
+  return (
+    <ModalCard onClose={onClose}>
+      <div style={{ width: 72, height: 72, borderRadius: RADIUS.xxl, background: 'linear-gradient(135deg,#ffcf5b,#F0A91E)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 10px 26px rgba(240,169,30,0.4)' }}>
+        <MedalIcon size={38} weight="fill" color="#fff" />
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: SPACE.md, textAlign: 'center', width: '100%' }}>
+        <span style={{ ...TYPE.titleLg, color: TG.INK }}>실력이 좋으시네요!</span>
+        <span style={{ ...TYPE.sub, lineHeight: 1.6, color: TG.SUB }}>
+          모든 단계를 깨지 않아도<br />
+          <b style={{ color: TG.INK, fontWeight: 700 }}>{nextLabel} 승급시험</b>에 바로 도전할 수 있어요.<br />
+          통과하면 <b style={{ color: '#F0A91E', fontWeight: 800 }}>{nextLabel}</b>로 승급!
+        </span>
+      </div>
+      <PrimaryButton onClick={() => { onStart && onStart(); }} background="linear-gradient(135deg,#ffcf5b,#F0A91E)" shadow="0px 10px 20px rgba(240,169,30,0.32)">
+        <span style={{ ...TYPE.cta, color: '#fff' }}>승급시험 도전</span>
         <PlayIcon size={14} weight="fill" color="#fff" />
       </PrimaryButton>
       <button className="tg-press" onClick={onClose} style={{ width: '100%', padding: '4px 0', background: 'none', border: 'none', cursor: 'pointer', ...TOUCH_OPT }}>

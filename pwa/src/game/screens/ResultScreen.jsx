@@ -103,7 +103,7 @@ export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, 
       </Reveal>
       {/* 코치 — 통계카드 하단과 CTA 사이 가용공간 세로중앙. (트레이닝 유도는 '홈으로 가기' 후 홈 모달로 — 결과화면은 안 어수선하게) */}
       <Reveal i={4} style={{ position: 'absolute', left: 24, right: 24, top: 452, bottom: 'calc(150px + env(safe-area-inset-bottom))', display: 'flex', alignItems: 'center' }}>
-        <CoachBubble text={onExam ? '급을 다 깼어요! 이제 승급시험에 도전할 수 있어요 🎖️' : onNextLevel ? '다음 스테이지에 도전할 수 있어요! 🎉' : suggestPractice ? `${DIFFICULTIES[0].label} 단계가 어렵나요? 천천히 익혀봐요` : practice ? '잘했어요! 또 해볼까요?' : endKind === 'miss' ? '아쉽게 틀렸어요! 다시 도전해볼까요?' : '다시 도전해서 신기록을 깨볼까요?'} />
+        <CoachBubble text={onExam ? '이제 승급시험에 도전해봐요! 🎖️' : onNextLevel ? '다음 스테이지에 도전할 수 있어요! 🎉' : suggestPractice ? `${DIFFICULTIES[0].label} 단계가 어렵나요? 천천히 익혀봐요` : practice ? '잘했어요! 또 해볼까요?' : endKind === 'miss' ? '아쉽게 틀렸어요! 다시 도전해볼까요?' : '다시 도전해서 신기록을 깨볼까요?'} />
       </Reveal>
       {/* 메인 CTA (하단 고정) — 다음 스테이지가 열렸으면 [다시하기 | 다음 스테이지] 반반, 아니면 '다시 도전' 풀폭 */}
       <Reveal i={5} style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(80px + env(safe-area-inset-bottom))' }}>
@@ -156,26 +156,38 @@ export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, 
 
 // 승급 시험 결과 — 결과화면 디자인 재활용(판다·배지·통계·코치·버튼). 점수 대신 정답률(합격/불합격).
 //  합격 축하 연출은 앞선 RankUpReveal이 담당 → 여긴 담백한 요약 + 홈/재도전.
-export function ExamResultScreen({ correct = 0, total = 20, passed = false, canRetry = false, onRetry, onHome }) {
+// placement(첫 진입 실력 테스트) = 이 화면을 재활용하되 '합격/불합격·합격선 80%' 대신 '배정된 급'을 보여준다.
+//   placement = { gradeLabel, gradeColor, gradeIdx } | null. 있으면 축하 톤 + 급 배지 + 정답률(합격선 없음) + 홈으로.
+export function ExamResultScreen({ correct = 0, total = 20, passed = false, canRetry = false, onRetry, onHome, placement = null }) {
   const pct = total > 0 ? Math.round((correct / total) * 100) : 0;
   const animCorrect = useCountUp(correct, 900);
   const animPct = useCountUp(pct, 900, 1); // 게이지 전용 — 정수 카운트업은 문제 1개당 5%씩 점프해서 소수로 따로 돌림
-  const pandaSrc = pickCelebratePanda(passed, passed ? 5 : 0);
+  const celebrate = passed || !!placement; // 배치는 항상 축하 톤(급 배정 = 성취)
+  const accent = placement ? placement.gradeColor : TG.SUCCESS_GLOW; // 배치 게이지·수치 강조색 = 배정 급 색
+  const pandaSrc = pickCelebratePanda(celebrate, placement ? (placement.gradeIdx >= 2 ? 5 : placement.gradeIdx >= 1 ? 3 : 1) : (passed ? 5 : 0));
   const wrong = Math.max(0, total - correct);
   const needMore = Math.max(0, Math.ceil(total * 0.8) - correct); // 합격까지 더 맞혀야 하는 문제 수(80% 기준)
   return (
     <>
-      {passed && <CrispFlash color="rgba(255,255,255,0.6)" zIndex={7} />}
-      {passed && <ConfettiBurst count={30} power={1.3} size={10} zIndex={3} style={{ top: 150 }} />}
-      {passed && <ConfettiBurst colors={LIGHT_CONFETTI} count={15} power={1.25} size={6} zIndex={3} style={{ top: 150 }} />}
-      {/* 합격/불합격 배지 */}
+      {celebrate && <CrispFlash color="rgba(255,255,255,0.6)" zIndex={7} />}
+      {celebrate && <ConfettiBurst count={30} power={1.3} size={10} zIndex={3} style={{ top: 150 }} />}
+      {celebrate && <ConfettiBurst colors={LIGHT_CONFETTI} count={15} power={1.25} size={6} zIndex={3} style={{ top: 150 }} />}
+      {/* 배지 — 배치=배정된 급 / 시험=합격·불합격 */}
       <Reveal i={0} style={{ position: 'absolute', top: 36, left: '50%', transform: 'translateX(-50%)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, padding: '8px 16px', borderRadius: RADIUS.lg,
-          background: passed ? 'linear-gradient(90deg, #36C98D, #1fa86a)' : TG.BORDER,
-          boxShadow: passed ? '0px 6px 14px rgba(31,168,106,0.28)' : 'none' }}>
-          {passed && <TrophyIcon size={13} weight="fill" color="#fff" />}
-          <span style={{ ...TYPE.btnSm, color: passed ? '#fff' : TG.SUB, whiteSpace: 'nowrap' }}>{passed ? '승급 시험 합격!' : '승급 시험 불합격'}</span>
-        </div>
+        {placement ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, padding: '8px 18px', borderRadius: RADIUS.pill,
+            background: `${accent}17`, border: `1.5px solid ${accent}` }}>
+            <MedalIcon size={14} weight="fill" color={accent} />
+            <span style={{ ...TYPE.btnSm, color: accent, whiteSpace: 'nowrap' }}>{placement.gradeLabel}급 달성!</span>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, padding: '8px 16px', borderRadius: RADIUS.lg,
+            background: passed ? 'linear-gradient(90deg, #36C98D, #1fa86a)' : TG.BORDER,
+            boxShadow: passed ? '0px 6px 14px rgba(31,168,106,0.28)' : 'none' }}>
+            {passed && <TrophyIcon size={13} weight="fill" color="#fff" />}
+            <span style={{ ...TYPE.btnSm, color: passed ? '#fff' : TG.SUB, whiteSpace: 'nowrap' }}>{passed ? '승급 시험 합격!' : '승급 시험 불합격'}</span>
+          </div>
+        )}
       </Reveal>
       {/* 축하/격려 판다 — 배지와 점수 사이 여백 위해 살짝 작게(겹침 방지) */}
       <Reveal i={1} style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', top: 88 }}>
@@ -185,11 +197,16 @@ export function ExamResultScreen({ correct = 0, total = 20, passed = false, canR
       <Reveal i={2} style={{ position: 'absolute', left: 24, right: 24, top: 234 }}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: SPACE.xs }}>
-            <span style={{ ...TYPE.numHero, color: passed ? TG.SUCCESS : TG.CORAL_DK, lineHeight: 1 }}>{animCorrect}</span>
+            <span style={{ ...TYPE.numHero, color: placement ? accent : passed ? TG.SUCCESS : TG.CORAL_DK, lineHeight: 1 }}>{animCorrect}</span>
             <span style={{ ...TYPE.num, fontSize: 30, color: TG.SUB }}>/ {total}</span>
           </div>
-          {/* 합격선 게이지 — 채움은 카운트업과 동기. 합격 기준(80%)까지는 빨강, 넘어선 만큼만 초록(틱 없이 색 경계가 곧 합격선). */}
-          {(() => {
+          {placement ? (
+            // 배치=합격선 없음. 정답률 게이지를 배정 급 색으로 단순 채움.
+            <div style={{ position: 'relative', width: '100%', height: 12, borderRadius: RADIUS.sm, background: TG.TRACK, marginTop: SPACE.x2, overflow: 'hidden' }}>
+              <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${Math.min(100, animPct)}%`, borderRadius: RADIUS.sm, background: `linear-gradient(90deg, ${accent}, ${accent}cc)` }} />
+            </div>
+          ) : (() => {
+            // 합격선 게이지 — 채움은 카운트업과 동기. 합격 기준(80%)까지는 빨강, 넘어선 만큼만 초록(틱 없이 색 경계가 곧 합격선).
             const fillPct = Math.min(100, animPct);
             const redFrac = fillPct > 0 ? (Math.min(80, fillPct) / fillPct) * 100 : 0; // 래퍼 내 빨강 비율 — 80% 경계를 트랙 좌표에 고정
             return (
@@ -204,7 +221,7 @@ export function ExamResultScreen({ correct = 0, total = 20, passed = false, canR
               </div>
             );
           })()}
-          <span style={{ ...TYPE.sub, color: TG.SUB, marginTop: SPACE.xl }}>정답률 {pct}% · 합격 기준 80%</span>
+          <span style={{ ...TYPE.sub, color: TG.SUB, marginTop: SPACE.xl }}>{placement ? `정답률 ${pct}%` : `정답률 ${pct}% · 합격 기준 80%`}</span>
         </div>
       </Reveal>
       {/* 통계 2카드(맞힌/틀린 문제) — 일반 결과 화면과 동일 기하·카드 스타일(빈 화면 방지) */}
@@ -227,10 +244,12 @@ export function ExamResultScreen({ correct = 0, total = 20, passed = false, canR
       </Reveal>
       {/* 코치 */}
       <Reveal i={4} style={{ position: 'absolute', left: 24, right: 24, top: 534, bottom: 'calc(150px + env(safe-area-inset-bottom))', display: 'flex', alignItems: 'center' }}>
-        <CoachBubble text={passed ? '축하해요! 등급이 한 단계 올랐어요 🎉' : (canRetry ? `합격까지 ${needMore}문제! 바로 다시 도전해봐요` : '조금만 더! 경험치를 더 채우면 다시 도전할 수 있어요')} />
+        <CoachBubble text={placement
+          ? (placement.gradeIdx > 0 ? `${placement.gradeLabel}급까지 열렸어요! 🎖️` : '입문부터 차근차근 시작해요! 🌱')
+          : (passed ? '축하해요! 등급이 한 단계 올랐어요 🎉' : (canRetry ? `합격까지 ${needMore}문제! 바로 다시 도전해봐요` : '조금만 더! 경험치를 더 채우면 다시 도전할 수 있어요'))} />
       </Reveal>
-      {/* 불합격 + 재응시 가능 시에만 '다시 도전' */}
-      {!passed && canRetry && (
+      {/* 불합격 + 재응시 가능 시에만 '다시 도전'(배치는 재도전 없음) */}
+      {!placement && !passed && canRetry && (
         <Reveal i={5} style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(80px + env(safe-area-inset-bottom))' }}>
           <button onClick={() => { playSfx('button'); onRetry(); }} className="tg-press" style={{
             width: '100%', height: 62, borderRadius: RADIUS.xl, border: 'none', cursor: 'pointer',
