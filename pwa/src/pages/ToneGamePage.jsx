@@ -323,6 +323,7 @@ export default function ToneGamePage() {
   const placeCorrectRef = useRef([0, 0, 0]); // 급별 정답 수 [입문,실전,고수]
   const placeAnsweredRef = useRef(0);        // 답한 문제 수
   const placeLastHanziRef = useRef(null);    // 직전 출제 단어(반복 회피) — stale 클로저의 words[wordIndex] 대신 사용
+  const placeServedTierRef = useRef(0);      // 실제 출제된 급 idx(채점 기준) — 목표 급 풀 미로딩 시 폴백된 급으로 채점(인플레 방지)
 
   const timersRef = useRef([]);
   const addTimer = (id) => { timersRef.current.push(id); };
@@ -964,14 +965,16 @@ export default function ToneGamePage() {
     const pools = wordPoolByDiffRef.current; // 최신 풀(ref) — 지연 콜백 stale 클로저 방지
     const target = Math.min(Math.max(0, placeDiffRef.current), DIFFICULTIES.length - 1);
     // 목표 급이 비어 있으면 '입문'으로 뚝 떨어지지 말고 가장 가까운 급(아래→위 순)에서 채운다.
-    let pool = null;
+    let pool = null, servedTier = target;
     for (let step = 0; step < DIFFICULTIES.length; step += 1) {
-      const lo = pools[DIFFICULTIES[target - step]?.id];
-      if (lo && lo.length) { pool = lo; break; }
-      const hi = pools[DIFFICULTIES[target + step]?.id];
-      if (hi && hi.length) { pool = hi; break; }
+      const loIdx = target - step, hiIdx = target + step;
+      const lo = pools[DIFFICULTIES[loIdx]?.id];
+      if (lo && lo.length) { pool = lo; servedTier = loIdx; break; }
+      const hi = pools[DIFFICULTIES[hiIdx]?.id];
+      if (hi && hi.length) { pool = hi; servedTier = hiIdx; break; }
     }
     if (!pool || pool.length === 0) return null;
+    placeServedTierRef.current = servedTier; // 채점은 목표 급이 아니라 '실제 출제된 급' 기준(폴백 인플레 방지)
     const cur = placeLastHanziRef.current;
     let picked = pool[Math.floor(Math.random() * pool.length)];
     for (let k = 0; k < 6 && picked && picked.hanzi === cur; k += 1) picked = pool[Math.floor(Math.random() * pool.length)]; // 직전 단어 반복 회피
@@ -980,10 +983,12 @@ export default function ToneGamePage() {
   };
   // 답 1개 반영 — 급별 정답 기록 + 난이도 조절 + (남았으면) 다음 단어 append. 반환=이번이 마지막 문제였는지(→종료).
   const recordPlacement = (wasCorrect) => {
-    const tier = Math.min(Math.max(0, placeDiffRef.current), 2);
-    if (wasCorrect) placeCorrectRef.current[tier] += 1;
+    const MAX = DIFFICULTIES.length - 1;
+    // 채점 = 실제 출제된 급(placeServedTierRef). 난이도 조절 = 목표 급(placeDiffRef) 기준.
+    if (wasCorrect) placeCorrectRef.current[Math.min(Math.max(0, placeServedTierRef.current), MAX)] += 1;
     placeAnsweredRef.current += 1;
-    placeDiffRef.current = wasCorrect ? Math.min(2, tier + 1) : Math.max(0, tier - 1); // 맞히면 어려워지고 틀리면 쉬워짐
+    const tier = Math.min(Math.max(0, placeDiffRef.current), MAX);
+    placeDiffRef.current = wasCorrect ? Math.min(MAX, tier + 1) : Math.max(0, tier - 1); // 맞히면 어려워지고 틀리면 쉬워짐
     if (placeAnsweredRef.current >= PLACEMENT_Q) return true;
     const nw = nextPlacementWord();
     if (!nw) return true; // 풀 없음 방어 → 종료
@@ -997,7 +1002,7 @@ export default function ToneGamePage() {
       fetchToneWords(DIFFICULTIES[0].id).then((w) => { if (Array.isArray(w) && w.length > 0) setWordPoolByDiff((prev) => ({ ...prev, [DIFFICULTIES[0].id]: w })); }).catch(() => {});
       return;
     }
-    placeDiffRef.current = 0; placeCorrectRef.current = [0, 0, 0]; placeAnsweredRef.current = 0;
+    placeDiffRef.current = 0; placeCorrectRef.current = [0, 0, 0]; placeAnsweredRef.current = 0; placeServedTierRef.current = 0; // 첫 문제=입문
     examCorrectRef.current = 0; examEndedRef.current = false; setExamResult(null);
     setSelectedDifficulty(DIFFICULTIES[0]); // 페이스는 입문 기준 고정(단어 난이도만 적응)
     setGameMode('placement'); setRecordToBeat(0);
@@ -1109,7 +1114,9 @@ export default function ToneGamePage() {
     speakWord(word); // 올바른 발음 들려주기(학습 기회)
     if (!isPreview) { recordWordResult(wordStatsRef.current, word.hanzi, { perfect: false, timedOut: false, ms: 0 }); saveWordStats(studentToken, wordStatsRef.current); }
     addPausable(() => {
-      if (!endlessMode && wordIndex + 1 >= words.length) setShowGameOverBeat(true); // 무한은 스트림이 길어 계속 진행
+      // 적응형 배치에선 건너뛰기=오답(난이도↓·다음 단어 append). 없으면 words가 매판 1개씩 자라 wordIndex+1>=length가 항상 참 → 스킵 시 테스트가 즉시 끝나버림.
+      const end = placementModeRef.current ? recordPlacement(false) : (!endlessMode && wordIndex + 1 >= words.length);
+      if (end) setShowGameOverBeat(true); // 무한은 스트림이 길어 계속 진행
       else { enteredRef.current = []; completedRef.current = false; hintUsedRef.current = false; setWordIndex((i) => i + 1); setCurrentSyl(0); setEntered([]); setCompleted(false); setHasMistake(false); setGaugeOffsetMs(0); }
     }, 1200);
   }, [completed, paused, cdPhase, practiceMode, words, wordIndex, endlessMode, isPreview, studentToken]);

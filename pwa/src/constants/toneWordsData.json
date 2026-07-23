@@ -6106,6 +6106,17 @@
       "audioUrl": "/game/tts/xin_1.mp3"
     },
     {
+      "hanzi": "长",
+      "pinyin": [
+        "zhǎng"
+      ],
+      "tones": [
+        3
+      ],
+      "meaning": "생기다, 자라다",
+      "audioUrl": "/game/tts/zhang_3.mp3"
+    },
+    {
       "hanzi": "眼镜",
       "pinyin": [
         "yǎn",
