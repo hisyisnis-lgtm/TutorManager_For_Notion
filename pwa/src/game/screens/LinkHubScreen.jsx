@@ -2,7 +2,7 @@
 // 카드는 카카오톡 링크 공유 미리보기 스타일(상단 썸네일 + 제목/설명/도메인)의 세로 리스트.
 // 항목은 전부 데이터(HUB_LINKS) — 특강·교재·단어장 등 새 링크는 배열에 추가만 하면 됨.
 // image: 썸네일 경로(권장 2:1 가로형). 없으면 tint+라벨 — 파일 없는 경로 금지(깨진 아이콘 뜸). SNS는 놀러가기 모달 전담.
-import { CaretLeftIcon, CaretRightIcon, SparkleIcon } from '@phosphor-icons/react';
+import { AltArrowLeft, AltArrowRight, Stars } from '@solar-icons/react';
 import { TG, TYPE, TOUCH_OPT, RADIUS, SPACE } from '../tgTokens.js';
 import { track } from '../gameAnalytics.js';
 
@@ -29,7 +29,7 @@ export function LinkHubScreen({ onClose }) {
           background: '#fff', border: 'none', cursor: 'pointer', boxShadow: '0 3px 8px rgba(26,16,20,0.08)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', ...TOUCH_OPT,
         }}>
-          <CaretLeftIcon size={20} weight="bold" color={TG.INK} />
+          <AltArrowLeft size={20} weight="Bold" color={TG.INK} />
         </button>
 
         {/* 히어로 — 브랜드 로고 + 화면 목적(맥락) */}
@@ -57,9 +57,7 @@ export function LinkHubScreen({ onClose }) {
                   <span style={{ ...TYPE.btn, color: TG.INK }}>{l.title}</span>
                   <span style={{ ...TYPE.sub, color: TG.SUB, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{l.desc}</span>
                 </div>
-                <span aria-hidden="true" style={{ width: 34, height: 34, borderRadius: RADIUS.lg, flexShrink: 0, background: `${l.tint}14`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <CaretRightIcon size={17} weight="bold" color={l.tint} />
-                </span>
+                <AltArrowRight aria-hidden="true" size={24} weight="Bold" color={l.tint} style={{ flexShrink: 0 }} />
               </div>
             </button>
           ))}
@@ -68,7 +66,7 @@ export function LinkHubScreen({ onClose }) {
         {/* 새 콘텐츠 준비 안내 — marginTop:auto로 카드가 몇 개든 항상 최하단에 고정 */}
         <div style={{ marginTop: 'auto', paddingTop: SPACE.x4, display: 'flex', justifyContent: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, padding: '10px 16px', borderRadius: RADIUS.pill, background: TG.SURFACE }}>
-            <SparkleIcon size={17} weight="fill" color={TG.MUTED} />
+            <Stars size={17} weight="Bold" color={TG.MUTED} />
             <span style={{ ...TYPE.sub, color: TG.SUB }}>새로운 콘텐츠를 준비하고 있어요</span>
           </div>
         </div>

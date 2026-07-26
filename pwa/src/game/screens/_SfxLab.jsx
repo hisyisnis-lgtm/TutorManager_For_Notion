@@ -3,7 +3,7 @@
 // 이 랩에선 소리/음악 음소거를 자동 해제(꺼둔 상태여도 들리게). 검수 끝나면 이 파일 + ToneGamePage의 'sfxlab' 분기 삭제.
 import { useEffect } from 'react';
 import { FONT_TITLE, FONT_BODY, TG, TOUCH_OPT } from '../tgTokens.js';
-import { CaretLeftIcon, MusicNotesIcon, StopIcon } from '@phosphor-icons/react';
+import { AltArrowLeft, MusicNotes, Stop } from '@solar-icons/react';
 import { ToneGameStyles } from './shared.jsx';
 import { play as playSfx, setSfxMuted, isSfxMuted } from '../tgSfx.js';
 import { startBgm, stopBgm, setBgmMuted, isBgmMuted } from '../tgBgm.js';
@@ -77,7 +77,7 @@ export function SfxLab({ onBack }) {
       {/* 헤더 */}
       <div style={{ position: 'sticky', top: 0, zIndex: 2, background: TG.BG, padding: '18px 20px 12px', display: 'flex', alignItems: 'center', gap: 12, borderBottom: `1px solid ${TG.LINE}` }}>
         <button onClick={onBack} aria-label="뒤로" className="tg-press" style={{ width: 40, height: 40, borderRadius: 20, background: TG.CARD, border: `1.5px solid ${TG.LINE}`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, ...TOUCH_OPT }}>
-          <CaretLeftIcon size={20} weight="bold" color={TG.INK} />
+          <AltArrowLeft size={20} weight="Bold" color={TG.INK} />
         </button>
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           <span style={{ fontFamily: FONT_TITLE, fontSize: 19, color: TG.INK }}>효과음 검수 (임시)</span>
@@ -116,12 +116,12 @@ export function SfxLab({ onBack }) {
               flex: 1, padding: '14px', borderRadius: 14, cursor: 'pointer', border: `1.5px solid ${TG.LINE}`,
               background: TG.CARD, color: TG.INK, fontFamily: FONT_BODY, fontWeight: 800, fontSize: 15,
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, ...TOUCH_OPT,
-            }}><MusicNotesIcon size={18} weight="fill" color={TG.SUCCESS} />재생</button>
+            }}><MusicNotes size={18} weight="Bold" color={TG.SUCCESS} />재생</button>
             <button onClick={() => stopBgm()} className="tg-press" style={{
               flex: 1, padding: '14px', borderRadius: 14, cursor: 'pointer', border: `1.5px solid ${TG.LINE}`,
               background: TG.CARD, color: TG.INK, fontFamily: FONT_BODY, fontWeight: 800, fontSize: 15,
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, ...TOUCH_OPT,
-            }}><StopIcon size={18} weight="fill" color={TG.DANGER} />정지</button>
+            }}><Stop size={18} weight="Bold" color={TG.DANGER} />정지</button>
           </div>
         </div>
       </div>

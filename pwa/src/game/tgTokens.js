@@ -179,6 +179,14 @@ export function ensureGameFonts() {
 export function isHapticMuted() { try { return localStorage.getItem('tg_haptic_muted') === '1'; } catch { return false; } }
 export function setHapticMuted(m) { try { localStorage.setItem('tg_haptic_muted', m ? '1' : '0'); } catch { /* noop */ } }
 
+// 보조바퀴 토글 — 뜻(플레이 중 크러치)·병음(정답 공개 시)을 숨겨 '소리·성조로 체득'을 강화.
+//  ★컨텍스트별 저장(2026-07-24): 스테이지(easy-1)·보스(easy-boss)·무한(endless)·트레이닝(training)·테마(th-drama)가 각각 기억.
+//  각 시작 화면(스테이지 카드·무한 모달·테마·트레이닝)과 인게임 설정에서 '현재 컨텍스트' 값을 켜고 끔.
+export function isMeaningHidden(ctx = 'g') { try { return localStorage.getItem(`tg_hide_meaning_${ctx}`) === '1'; } catch { return false; } }
+export function setMeaningHidden(ctx, h) { try { localStorage.setItem(`tg_hide_meaning_${ctx}`, h ? '1' : '0'); } catch { /* noop */ } }
+export function isPinyinHidden(ctx = 'g') { try { return localStorage.getItem(`tg_hide_pinyin_${ctx}`) === '1'; } catch { return false; } }
+export function setPinyinHidden(ctx, h) { try { localStorage.setItem(`tg_hide_pinyin_${ctx}`, h ? '1' : '0'); } catch { /* noop */ } }
+
 export function haptic(pattern) {
   if (isHapticMuted()) return;
   try { navigator.vibrate?.(pattern); } catch { /* noop */ }

@@ -4,7 +4,7 @@
 // GameOverBeat과 동일한 "잠깐 멈춰 인지" 골격(zIndex 120·~2초 체류 후 onDone·탭 스킵)이되 무드만 축하로 교체.
 // 아이덴티티 톤: 링·글로우·블룸 없이(이 앱엔 촌스러움) 크리스프 플래시 + 색종이 물리로 임팩트. 참조: tone_game_redesign.md §파티클.
 import { useEffect, useState } from 'react';
-import { TrophyIcon } from '@phosphor-icons/react';
+import { Cup } from '@solar-icons/react';
 import { TG, TYPE, haptic, RADIUS, SPACE } from '../tgTokens.js';
 import { ConfettiBurst, CrispFlash, LIGHT_CONFETTI } from './shared.jsx';
 
@@ -44,7 +44,7 @@ export function NewRecordBeat({ score = 0, previousBest = 0, onDone, hold = fals
           background: 'linear-gradient(135deg, #ffd24d 0%, #ff9f40 100%)', boxShadow: '0 12px 26px rgba(255,159,64,0.34)',
           animation: 'nrb-badge .6s cubic-bezier(.34,1.56,.64,1) .04s both',
         }}>
-          <TrophyIcon size={44} weight="fill" color="#fff" />
+          <Cup size={44} weight="Bold" color="#fff" />
         </div>
         {/* 헤드라인 — 골드 그라디언트 '신기록!' */}
         <span style={{

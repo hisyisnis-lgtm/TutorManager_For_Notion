@@ -1,6 +1,6 @@
 // 게임 화면 (Figma 좌표 절대배치) — 점수·일시정지·타이머·단어카드·코치·성조버튼 + 콤보/신기록 버스트 연출(P4b).
 import { useState, useEffect, useRef, useLayoutEffect } from 'react';
-import { StarIcon, PauseIcon, TimerIcon, SpeakerHighIcon, TicketIcon, SkullIcon, SignOutIcon } from '@phosphor-icons/react';
+import { Star, Pause, Stopwatch, VolumeLoud, Ticket, Bones, Logout } from '@solar-icons/react';
 import { TG, TYPE, TOUCH_OPT, RADIUS, SPACE } from '../tgTokens.js';
 import { play as playSfx } from '../tgSfx.js';
 import { Reveal, WordCard, ToneButtons, DrawPad, CoachBubble, ConfettiBurst, CrispFlash, LIGHT_CONFETTI, prefersReducedMotion, TONE_SHOT_HOVER_MS, TONE_FLIGHT_MS, TONE_IMPACT_MS } from './shared.jsx';
@@ -134,7 +134,7 @@ function SkipTicketFx({ fx, onDone }) {
         borderRadius: '50%', background: '#fff', willChange: 'transform, opacity',
         boxShadow: `0 4px 12px rgba(43,39,48,0.20), 0 0 16px 3px ${TG.CORAL}55`,
       }}>
-        <TicketIcon size={26} weight="fill" color={TG.CORAL} style={{ transform: 'rotate(45deg)' }} />
+        <Ticket size={26} weight="Bold" color={TG.CORAL} style={{ transform: 'rotate(45deg)' }} />
       </span>
     </div>
   );
@@ -257,7 +257,7 @@ function CenterBurst({ data }) {
   );
 }
 
-export function GameScreen({ word, entered, currentSyl, completed, timedOut, wordIndex, wordsLen, wordTimeLimit, gaugeOffsetMs = 0, lowTime = false, paused, combo, comboFlash, floatScore, score, coachText, onTone, wrongBtn, wrongShakeKey = 0, onPause, onEndTraining, playReveal = true, endless = false, lives = 3, onSkip, showSudden = false, runId = 0, recordToBeat = 0, practice = false, endKind = 'complete', listen = false, audioOff = false, onReplay, onCantHear, onHint, hintUsed = false, onSpeak, onReveal, draw = false, drawExpectedTone, onDraw, drawResetKey = 0, lianyinAt = -1, sandhiAt = -1, demoFx = null }) {
+export function GameScreen({ word, entered, currentSyl, completed, timedOut, wordIndex, wordsLen, wordTimeLimit, gaugeOffsetMs = 0, lowTime = false, paused, combo, comboFlash, floatScore, score, coachText, onTone, wrongBtn, wrongShakeKey = 0, onPause, onEndTraining, playReveal = true, endless = false, lives = 3, onSkip, showSudden = false, runId = 0, recordToBeat = 0, practice = false, endKind = 'complete', listen = false, audioOff = false, onReplay, onCantHear, onHint, hintUsed = false, onSpeak, onReveal, draw = false, drawExpectedTone, onDraw, drawResetKey = 0, lianyinAt = -1, sandhiAt = -1, hideMeaning = false, hidePinyin = false, demoFx = null }) {
   lowTime = lowTime || demoFx === 'low'; // [DEV] 미리보기 텐션 데모(?screen=game&fx=low) — 머지 전 백도어 제거 대상
   // ── 버스트 연출(P4b): 콤보 마일스톤(5·10·15…) + 라이브 신기록. 비차단·자동 소멸 ──
   const [burst, setBurst] = useState(null);
@@ -493,7 +493,7 @@ export function GameScreen({ word, entered, currentSyl, completed, timedOut, wor
       {!practice && (
       <Reveal i={0} play={playReveal} style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', top: 20 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, background: '#fff', padding: '9px 14px', borderRadius: RADIUS.lg, boxShadow: '0px 3px 8px rgba(43,39,48,0.06)' }}>
-        <StarIcon size={13} weight="fill" color={TG.SUN} />
+        <Star size={13} weight="Bold" color={TG.SUN} />
         <span style={{ ...TYPE.numMd, fontSize: 17, color: TG.INK }}>{score}</span>
       </div>
       </Reveal>
@@ -501,7 +501,7 @@ export function GameScreen({ word, entered, currentSyl, completed, timedOut, wor
       {/* 일시정지 (우상단) — 계속/다시하기/그만두기 메뉴 포함 */}
       <Reveal i={0} play={playReveal} style={{ position: 'absolute', right: 20, top: 23 }}>
       <button onClick={onPause} aria-label="일시정지" className="tg-press" style={{ width: 40, height: 40, border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', ...TOUCH_OPT }}>
-        <PauseIcon size={20} weight="fill" color={TG.SUB} />
+        <Pause size={20} weight="Bold" color={TG.SUB} />
       </button>
       </Reveal>
       {/* 타이머 top69 — 연습 모드는 게이지 대신 '연습 모드' 배지 */}
@@ -515,7 +515,7 @@ export function GameScreen({ word, entered, currentSyl, completed, timedOut, wor
         <Reveal i={1} play={playReveal} style={{ position: 'absolute', left: 20, right: 20, top: 69 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.md }}>
           <div style={{ width: 32, height: 32, borderRadius: RADIUS.lg, background: lowTime ? TG.CORAL_DK : '#ff5e62', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: lowTime ? '0px 0px 10px rgba(242,72,76,0.7)' : '0px 3px 4.5px rgba(255,94,98,0.45)', animation: lowTime ? 'tg-heartbeat .85s ease-in-out infinite' : 'none' }}>
-            <TimerIcon size={20} weight="fill" color="#fff" />
+            <Stopwatch size={20} weight="Bold" color="#fff" />
           </div>
           <div style={{ flex: 1, height: 12, borderRadius: RADIUS.sm, background: TG.TRACK, overflow: 'hidden', boxShadow: lowTime ? '0 0 0 2px rgba(242,72,76,0.35)' : 'none', transition: 'box-shadow .2s ease' }}>
             <div key={`${runId}-${wordIndex}-${wordTimeLimit}-${gaugeOffsetMs}`} style={{ height: '100%', width: '100%', borderRadius: RADIUS.sm, background: lowTime ? 'linear-gradient(90deg,#ff5e62,#f2484c)' : 'linear-gradient(90deg,#ffc23c,#ff6b6b)', animation: `tg-timer ${wordTimeLimit}ms linear forwards`, animationDelay: `-${gaugeOffsetMs}ms`, animationPlayState: (paused || completed) ? 'paused' : 'running' }} />
@@ -529,9 +529,9 @@ export function GameScreen({ word, entered, currentSyl, completed, timedOut, wor
           ...(runTip === 'skip' ? { bottom: 'calc(184px + env(safe-area-inset-bottom))' } : { top: 103 }),
           display: 'flex', justifyContent: 'center', zIndex: 24, pointerEvents: 'none', animation: 'tg-hint 5.1s ease forwards' }} aria-hidden="true">
           <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, background: TG.INK, color: '#fff', ...TYPE.labelSm, lineHeight: 1, padding: '7px 12px', borderRadius: RADIUS.md, boxShadow: '0 4px 12px rgba(43,39,48,0.22)', whiteSpace: 'nowrap' }}>
-            {runTip === 'play' && <><TimerIcon size={13} weight="fill" color="#ff9f6b" />타이머가 끝나기 전에 성조를 골라요!</>}
-            {runTip === 'skip' && <><TicketIcon size={13} weight="fill" color={TG.CORAL} />틀려도 안 죽어요 · 어려우면 건너뛰기!</>}
-            {runTip === 'hint' && <><SpeakerHighIcon size={13} weight="fill" color="#ff9f6b" />발음 힌트를 들으면 콤보가 끊겨요!</>}
+            {runTip === 'play' && <><Stopwatch size={13} weight="Bold" color="#ff9f6b" />타이머가 끝나기 전에 성조를 골라요!</>}
+            {runTip === 'skip' && <><Ticket size={13} weight="Bold" color={TG.CORAL} />틀려도 안 죽어요 · 어려우면 건너뛰기!</>}
+            {runTip === 'hint' && <><VolumeLoud size={13} weight="Bold" color="#ff9f6b" />발음 힌트를 들으면 콤보가 끊겨요!</>}
           </div>
         </div>
       )}
@@ -540,7 +540,7 @@ export function GameScreen({ word, entered, currentSyl, completed, timedOut, wor
         <div style={{ position: 'relative' }}>
           <div key={`card-${runId}-${wordIndex}`} style={{ animation: 'tg-card-in .38s cubic-bezier(.22,1,.36,1) both' }}>
             <div style={{ position: 'relative', transform: freeze ? 'scale(1.035)' : 'none', animation: punch ? 'tg-punch .35s ease-out' : 'none', '--tg-punch-s': (1.05 + heat * 0.05).toFixed(3) }}>
-              <WordCard word={word} entered={entered} currentSyl={currentSyl} completed={completed} timedOut={timedOut} progressText={endless ? `${wordIndex + 1}` : `${wordIndex + 1}/${wordsLen}`} hideProgress={practice} combo={combo} comboFlash={comboFlash} floatScore={practice ? null : floatScore} listen={listen} audioOff={audioOff} onReplay={onReplay} onCantHear={onCantHear} onHint={onHint} hintUsed={hintUsed} draw={draw} lianyinAt={lianyinAt} sandhiAt={sandhiAt} practice={practice} onSpeak={onSpeak} onReveal={onReveal} />
+              <WordCard word={word} entered={entered} currentSyl={currentSyl} completed={completed} timedOut={timedOut} progressText={endless ? `${wordIndex + 1}` : `${wordIndex + 1}/${wordsLen}`} hideProgress={practice} combo={combo} comboFlash={comboFlash} floatScore={practice ? null : floatScore} listen={listen} audioOff={audioOff} onReplay={onReplay} onCantHear={onCantHear} onHint={onHint} hintUsed={hintUsed} draw={draw} lianyinAt={lianyinAt} sandhiAt={sandhiAt} practice={practice} onSpeak={onSpeak} onReveal={onReveal} hideMeaning={hideMeaning} hidePinyin={hidePinyin} />
             </div>
           </div>
           {/* 정답 완성 연출 — 크리스프 플래시(번쩍) + 색색 색종이 + 흰/골드 글리터. ★단어 키 래퍼 '밖'에 둠: 안에 두면 새 단어 등장 때마다 리마운트되어 오발. flashKey 증가(정답 완성) 시에만 발동 */}
@@ -568,7 +568,7 @@ export function GameScreen({ word, entered, currentSyl, completed, timedOut, wor
       {practice && onEndTraining && (
         <Reveal i={3} play={playReveal} style={{ position: 'absolute', left: 0, right: 0, bottom: 'calc(150px + env(safe-area-inset-bottom))', display: 'flex', justifyContent: 'center' }}>
           <button onClick={onEndTraining} className="tg-press" style={{ display: 'inline-flex', alignItems: 'center', gap: SPACE.sm, padding: '9px 18px', borderRadius: RADIUS.lg, background: '#fff', border: '1.5px solid #ebe5de', boxShadow: '0px 2px 6px rgba(43,39,48,0.05)', cursor: 'pointer', ...TOUCH_OPT }}>
-            <SignOutIcon size={15} weight="bold" color={TG.SUB} />
+            <Logout size={15} weight="Bold" color={TG.SUB} />
             <span style={{ ...TYPE.label, color: TG.SUB }}>트레이닝 종료</span>
           </button>
         </Reveal>
@@ -591,7 +591,7 @@ export function GameScreen({ word, entered, currentSyl, completed, timedOut, wor
                   {[0, 1, 2].map((i) => {
                     const on = i < lives;
                     return (
-                      <TicketIcon key={i} size={17} weight={on ? 'fill' : 'regular'} color={on ? TG.CORAL : TG.MUTED}
+                      <Ticket key={i} size={17} weight="Bold" color={on ? TG.CORAL : TG.MUTED}
                         style={{ transition: 'transform 200ms ease, color 200ms ease', transform: on ? 'rotate(45deg) scale(1)' : 'rotate(45deg) scale(0.82)',
                           animation: i === lostHeart ? 'tg-skiplose 520ms ease-out' : 'none' }} />
                     );
@@ -645,7 +645,7 @@ export function GameScreen({ word, entered, currentSyl, completed, timedOut, wor
           `}</style>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: SPACE.xl, animation: 'tg-sudden 2.35s ease forwards' }}>
             <div style={{ width: 88, height: 88, borderRadius: RADIUS.card, background: 'linear-gradient(135deg,#ff5e62,#b3050a)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 14px 40px rgba(179,5,10,0.55)' }}>
-              <SkullIcon size={50} weight="fill" color="#fff" />
+              <Bones size={50} weight="Bold" color="#fff" />
             </div>
             <span style={{ ...TYPE.titleLg, fontSize: 42, lineHeight: 1, color: '#fff', textShadow: '0 3px 18px rgba(0,0,0,0.45)' }}>서든데스</span>
             <span style={{ ...TYPE.btn, color: 'rgba(255,255,255,0.92)', textShadow: '0 2px 10px rgba(0,0,0,0.4)' }}>한 번 틀리면 끝!</span>

@@ -1,19 +1,20 @@
 // 게임 공용 모달 — 놀러가기(SNS)·복습 시작·게임방법·무한 안내·로그인 유도·[DEV]점수 디버그. 시작/홈 등 여러 화면에서 재사용.
 // (기존 StartScreen.jsx 내부 함수에서 추출)
 import { useState } from 'react';
-import { HandWavingIcon, InstagramLogoIcon, YoutubeLogoIcon, ArticleIcon, CaretRightIcon, PlayIcon, InfinityIcon, StarIcon, QuestionIcon, DevicesIcon, SignInIcon, GraduationCapIcon, MedalIcon } from '@phosphor-icons/react';
+import { HandStars, Notebook, AltArrowRight, Play, Infinity, Star, QuestionCircle, Devices, Login, SquareAcademicCap, MedalStar } from '@solar-icons/react';
+import { InstagramLogoIcon, YoutubeLogoIcon } from '@phosphor-icons/react';
 import { TG, TYPE, SHADOW, TOUCH_OPT, loadBest, saveBest, RADIUS, SPACE } from '../tgTokens.js';
 import { GAMEKEY, loadEndlessBest, saveEndlessBest } from '../gameLogic.js';
 import { DIFFICULTIES } from '../../constants/toneGameWords.js';
 import { track } from '../gameAnalytics.js';
-import { ModalCard, PrimaryButton } from './shared.jsx';
+import { ModalCard, PrimaryButton, CrutchRow } from './shared.jsx';
 
 // 게임 방법 확인 모달 — 메뉴 '게임 방법' 시. 튜토리얼을 다시 볼지 확인 후 [게임 방법 보기] 눌러야 진입.
 export function HelpStartModal({ onStart, onClose }) {
   return (
     <ModalCard onClose={onClose}>
       <div style={{ width: 72, height: 72, borderRadius: 36, background: 'rgba(255,107,107,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <QuestionIcon size={32} weight="fill" color={TG.CORAL_DK} />
+        <QuestionCircle size={32} weight="Bold" color={TG.CORAL_DK} />
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: SPACE.md, textAlign: 'center', width: '100%' }}>
         <span style={{ ...TYPE.titleLg, color: TG.INK }}>게임 방법</span>
@@ -23,7 +24,7 @@ export function HelpStartModal({ onStart, onClose }) {
       </div>
       <PrimaryButton onClick={() => { onStart && onStart(); }}>
         <span style={{ ...TYPE.cta, color: '#fff' }}>게임 방법 보기</span>
-        <PlayIcon size={14} weight="fill" color="#fff" />
+        <Play size={14} weight="Bold" color="#fff" />
       </PrimaryButton>
       <button className="tg-press" onClick={onClose} style={{ width: '100%', padding: '4px 0', background: 'none', border: 'none', cursor: 'pointer', ...TOUCH_OPT }}>
         <span style={{ ...TYPE.body, color: TG.SUB }}>닫기</span>
@@ -37,7 +38,7 @@ export function EndlessStartModal({ best = 0, onStart, onClose }) {
   return (
     <ModalCard onClose={onClose}>
       <div style={{ width: 72, height: 72, borderRadius: RADIUS.xxl, background: 'linear-gradient(135deg,#ffcf5b,#F0A91E)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 10px 26px rgba(240,169,30,0.4)' }}>
-        <InfinityIcon size={40} weight="bold" color="#fff" />
+        <Infinity size={40} weight="Bold" color="#fff" />
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: SPACE.md, textAlign: 'center', width: '100%' }}>
         <span style={{ ...TYPE.titleLg, color: TG.INK }}>무한 모드</span>
@@ -47,13 +48,14 @@ export function EndlessStartModal({ best = 0, onStart, onClose }) {
       </div>
       {best > 0 && (
         <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, background: 'rgba(255,176,46,0.14)', padding: '7px 14px', borderRadius: RADIUS.pill }}>
-          <StarIcon size={15} weight="fill" color={TG.SUN} />
+          <Star size={15} weight="Bold" color={TG.SUN} />
           <span style={{ ...TYPE.labelSm, color: TG.INK }}>최고 {best.toLocaleString()}점</span>
         </div>
       )}
+      <CrutchRow ctx="endless" style={{ width: '100%' }} />
       <PrimaryButton onClick={() => { onStart && onStart(); }}>
         <span style={{ ...TYPE.cta, color: '#fff' }}>게임 시작</span>
-        <PlayIcon size={14} weight="fill" color="#fff" />
+        <Play size={14} weight="Bold" color="#fff" />
       </PrimaryButton>
       <button className="tg-press" onClick={onClose} style={{ width: '100%', padding: '4px 0', background: 'none', border: 'none', cursor: 'pointer', ...TOUCH_OPT }}>
         <span style={{ ...TYPE.body, color: TG.SUB }}>닫기</span>
@@ -68,7 +70,7 @@ export function TrainingStartModal({ onStart, onClose }) {
   return (
     <ModalCard onClose={onClose}>
       <div style={{ width: 72, height: 72, borderRadius: RADIUS.xxl, background: 'linear-gradient(135deg,#4ad4a0,#2bb583)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 10px 26px rgba(43,181,131,0.4)' }}>
-        <GraduationCapIcon size={38} weight="fill" color="#fff" />
+        <SquareAcademicCap size={38} weight="Bold" color="#fff" />
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: SPACE.md, textAlign: 'center', width: '100%' }}>
         <span style={{ ...TYPE.titleLg, color: TG.INK }}>트레이닝</span>
@@ -78,9 +80,10 @@ export function TrainingStartModal({ onStart, onClose }) {
           기록에는 반영되지 않으니 부담 없이!
         </span>
       </div>
+      <CrutchRow ctx="training" style={{ width: '100%' }} />
       <PrimaryButton onClick={() => { onStart && onStart(); }} background="linear-gradient(135deg,#3ccf97,#2bb583)" shadow="0px 10px 20px rgba(43,181,131,0.32)">
         <span style={{ ...TYPE.cta, color: '#fff' }}>트레이닝 시작</span>
-        <PlayIcon size={14} weight="fill" color="#fff" />
+        <Play size={14} weight="Bold" color="#fff" />
       </PrimaryButton>
       <button className="tg-press" onClick={onClose} style={{ width: '100%', padding: '4px 0', background: 'none', border: 'none', cursor: 'pointer', ...TOUCH_OPT }}>
         <span style={{ ...TYPE.body, color: TG.SUB }}>닫기</span>
@@ -94,7 +97,7 @@ export function TrainingNudgeModal({ onStart, onClose }) {
   return (
     <ModalCard onClose={onClose}>
       <div style={{ width: 72, height: 72, borderRadius: RADIUS.xxl, background: 'linear-gradient(135deg,#4ad4a0,#2bb583)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 10px 26px rgba(43,181,131,0.4)' }}>
-        <GraduationCapIcon size={38} weight="fill" color="#fff" />
+        <SquareAcademicCap size={38} weight="Bold" color="#fff" />
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: SPACE.md, textAlign: 'center', width: '100%' }}>
         <span style={{ ...TYPE.titleLg, color: TG.INK }}>천천히 익혀볼까요?</span>
@@ -105,7 +108,7 @@ export function TrainingNudgeModal({ onStart, onClose }) {
       </div>
       <PrimaryButton onClick={() => { onStart && onStart(); }} background="linear-gradient(135deg,#3ccf97,#2bb583)" shadow="0px 10px 20px rgba(43,181,131,0.32)">
         <span style={{ ...TYPE.cta, color: '#fff' }}>트레이닝 시작</span>
-        <PlayIcon size={14} weight="fill" color="#fff" />
+        <Play size={14} weight="Bold" color="#fff" />
       </PrimaryButton>
       <button className="tg-press" onClick={onClose} style={{ width: '100%', padding: '4px 0', background: 'none', border: 'none', cursor: 'pointer', ...TOUCH_OPT }}>
         <span style={{ ...TYPE.body, color: TG.SUB }}>나중에</span>
@@ -119,7 +122,7 @@ export function ExamPromptModal({ nextLabel = '', onStart, onClose }) {
   return (
     <ModalCard onClose={onClose}>
       <div style={{ width: 72, height: 72, borderRadius: RADIUS.xxl, background: 'linear-gradient(135deg,#ffcf5b,#F0A91E)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 10px 26px rgba(240,169,30,0.4)' }}>
-        <MedalIcon size={38} weight="fill" color="#fff" />
+        <MedalStar size={38} weight="Bold" color="#fff" />
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: SPACE.md, textAlign: 'center', width: '100%' }}>
         <span style={{ ...TYPE.titleLg, color: TG.INK }}>실력이 좋으시네요!</span>
@@ -131,7 +134,7 @@ export function ExamPromptModal({ nextLabel = '', onStart, onClose }) {
       </div>
       <PrimaryButton onClick={() => { onStart && onStart(); }} background="linear-gradient(135deg,#ffcf5b,#F0A91E)" shadow="0px 10px 20px rgba(240,169,30,0.32)">
         <span style={{ ...TYPE.cta, color: '#fff' }}>승급시험 도전</span>
-        <PlayIcon size={14} weight="fill" color="#fff" />
+        <Play size={14} weight="Bold" color="#fff" />
       </PrimaryButton>
       <button className="tg-press" onClick={onClose} style={{ width: '100%', padding: '4px 0', background: 'none', border: 'none', cursor: 'pointer', ...TOUCH_OPT }}>
         <span style={{ ...TYPE.body, color: TG.SUB }}>나중에</span>
@@ -145,7 +148,7 @@ export function LoginNudgeModal({ onLogin, onClose }) {
   return (
     <ModalCard onClose={onClose} zIndex={65}>
       <div style={{ width: 72, height: 72, borderRadius: 36, background: 'rgba(255,107,107,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <DevicesIcon size={32} weight="fill" color={TG.CORAL_DK} />
+        <Devices size={32} weight="Bold" color={TG.CORAL_DK} />
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: SPACE.md, textAlign: 'center', width: '100%' }}>
         <span style={{ ...TYPE.titleLg, color: TG.INK }}>어디서든 이어가기</span>
@@ -154,7 +157,7 @@ export function LoginNudgeModal({ onLogin, onClose }) {
         </span>
       </div>
       <PrimaryButton onClick={() => { onLogin && onLogin(); }}>
-        <SignInIcon size={18} weight="bold" color="#fff" />
+        <Login size={18} weight="Bold" color="#fff" />
         <span style={{ ...TYPE.cta, color: '#fff' }}>로그인</span>
       </PrimaryButton>
       <button className="tg-press" onClick={onClose} style={{ width: '100%', padding: '4px 0', background: 'none', border: 'none', cursor: 'pointer', ...TOUCH_OPT }}>
@@ -167,8 +170,8 @@ export function LoginNudgeModal({ onLogin, onClose }) {
 // SNS 링크 (PersonalPage와 동일 URL). 인스타그램이 메인, 유튜브·블로그는 보조.
 export const PLAY_LINKS = {
   instagram: { href: 'https://www.instagram.com/tiantian_laoshi?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==', handle: '@tiantian_laoshi' },
-  youtube: { id: 'youtube', href: 'https://www.youtube.com/@tiantian_chinese', label: '유튜브', color: '#FF0000', Icon: YoutubeLogoIcon },
-  blog: { id: 'blog', href: 'https://blog.naver.com/tiantian_chinese/224100509217', label: '블로그', color: '#03C75A', Icon: ArticleIcon },
+  youtube: { id: 'youtube', href: 'https://www.youtube.com/@tiantian_chinese', label: '유튜브', color: '#FF0000', Icon: YoutubeLogoIcon, w: 'fill' }, // 브랜드로고=phosphor라 fill
+  blog: { id: 'blog', href: 'https://blog.naver.com/tiantian_chinese/224100509217', label: '블로그', color: '#03C75A', Icon: Notebook, w: 'Bold' }, // Solar
 };
 
 // '놀러가기' 모달 — 인스타그램(메인 그라데이션) + 유튜브·블로그(보조). Figma "14. 놀러가기" 기준.
@@ -178,7 +181,7 @@ export function PlayModal({ onClose }) {
   return (
     <ModalCard onClose={onClose} padding="28px 24px 24px" gap={18}>
       <div style={{ width: 72, height: 72, borderRadius: 36, background: 'rgba(255,107,107,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <HandWavingIcon size={30} weight="fill" color={TG.CORAL_DK} />
+        <HandStars size={30} weight="Bold" color={TG.CORAL_DK} />
       </div>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: SPACE.sm, textAlign: 'center', width: '100%' }}>
           <span style={{ ...TYPE.titleLg, color: TG.INK }}>놀러 오세요</span>
@@ -196,7 +199,7 @@ export function PlayModal({ onClose }) {
               <span style={{ ...TYPE.btn, color: '#fff' }}>인스타그램</span>
               <span style={{ ...TYPE.meta, color: 'rgba(255,255,255,0.85)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>{PLAY_LINKS.instagram.handle}</span>
             </div>
-            <CaretRightIcon size={20} weight="bold" color="#fff" style={{ opacity: 0.9, flexShrink: 0 }} />
+            <AltArrowRight size={20} weight="Bold" color="#fff" style={{ opacity: 0.9, flexShrink: 0 }} />
           </button>
           <div style={{ display: 'flex', gap: SPACE.lg }}>
             {[PLAY_LINKS.youtube, PLAY_LINKS.blog].map((s) => (
@@ -204,7 +207,7 @@ export function PlayModal({ onClose }) {
                 flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: SPACE.md, padding: '12px 0', borderRadius: RADIUS.lg,
                 background: '#fff', border: '1.5px solid #ebe5de', cursor: 'pointer', ...TOUCH_OPT,
               }}>
-                <s.Icon size={20} weight="fill" color={s.color} />
+                <s.Icon size={20} weight={s.w} color={s.color} />
                 <span style={{ ...TYPE.label, color: TG.INK }}>{s.label}</span>
               </button>
             ))}

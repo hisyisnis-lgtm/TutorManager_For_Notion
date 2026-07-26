@@ -6,7 +6,7 @@
 //  비트4 연음 규칙(美国): 3성+2성 답한 뒤 완성 순간 연음 마크 등장 → 하늘쌤 반3성 연음 규칙 각인.
 // 게임 레이아웃 + 딤 스포트라이트. 완료 후 onDone → 모드선택.
 import { useState, useEffect, useRef } from 'react';
-import { StarIcon, TimerIcon, CaretRightIcon } from '@phosphor-icons/react';
+import { Star, Stopwatch, AltArrowRight } from '@solar-icons/react';
 import { TG, TYPE, FONT_HANZI, TOUCH_OPT, TONE_TINTS, TONE_BORDERS, haptic, RADIUS, SPACE } from '../tgTokens.js';
 import { ToneMark } from '../tgWidgets.jsx';
 import { TONES } from '../../constants/toneGameWords.js';
@@ -85,14 +85,14 @@ export function TutorialScreen({ onDone }) {
     <>
       {/* 점수(정적) 상단 중앙 */}
       <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', top: 20, display: 'flex', alignItems: 'center', gap: SPACE.sm, background: '#fff', padding: '9px 14px', borderRadius: RADIUS.lg, boxShadow: '0px 3px 8px rgba(43,39,48,0.06)' }}>
-        <StarIcon size={13} weight="fill" color={TG.SUN} />
+        <Star size={13} weight="Bold" color={TG.SUN} />
         <span style={{ ...TYPE.numMd, fontSize: 17, color: TG.INK }}>0</span>
       </div>
       {/* 우상단은 건너뛰기 버튼이 차지(정적 일시정지 아이콘은 겹쳐서 제거) */}
       {/* 타이머(정적) top69 */}
       <div style={{ position: 'absolute', left: 20, right: 20, top: 69, display: 'flex', alignItems: 'center', gap: SPACE.md }}>
         <div style={{ width: 32, height: 32, borderRadius: RADIUS.lg, background: '#ff5e62', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0px 3px 4.5px rgba(255,94,98,0.45)' }}>
-          <TimerIcon size={20} weight="fill" color="#fff" />
+          <Stopwatch size={20} weight="Bold" color="#fff" />
         </div>
         <div style={{ flex: 1, height: 12, borderRadius: RADIUS.sm, background: TG.TRACK }} />
       </div>
@@ -147,7 +147,7 @@ export function TutorialScreen({ onDone }) {
         <Reveal i={1} style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(130px + env(safe-area-inset-bottom))', zIndex: 6 }}>
           <button onClick={() => goPhase(1)} className="tg-press" style={{ width: '100%', height: 52, borderRadius: RADIUS.lg, border: 'none', cursor: 'pointer', background: TG.CORAL_GRAD, boxShadow: '0px 8px 18px rgba(242,72,76,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: SPACE.sm, ...TOUCH_OPT }}>
             <span style={{ ...TYPE.btn, color: '#fff' }}>다음</span>
-            <CaretRightIcon size={14} weight="bold" color="#fff" />
+            <AltArrowRight size={14} weight="Bold" color="#fff" />
           </button>
         </Reveal>
       )}

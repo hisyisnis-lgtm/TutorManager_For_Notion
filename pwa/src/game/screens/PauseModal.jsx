@@ -1,10 +1,10 @@
 // 일시정지 모달 — 계속하기 / 처음부터 / 그만두기 (+ 우상단 설정).
 import { useState } from 'react';
-import { PauseIcon, PlayIcon, ArrowClockwiseIcon, SignOutIcon, GearSixIcon } from '@phosphor-icons/react';
+import { Pause, Play, Refresh, Logout, Settings } from '@solar-icons/react';
 import { TG, TYPE, RADIUS, SHADOW, TOUCH_OPT, SPACE } from '../tgTokens.js';
 import { SettingsModal } from './shared.jsx';
 
-export function PauseModal({ score, combo, onResume, onRestart, onQuit }) {
+export function PauseModal({ score, combo, crutchCtx, onResume, onRestart, onQuit }) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   return (
     <div style={{
@@ -18,10 +18,10 @@ export function PauseModal({ score, combo, onResume, onRestart, onQuit }) {
         {/* 설정 ⚙️ — 카드 우상단 */}
         <button onClick={() => setSettingsOpen(true)} aria-label="설정" className="tg-press"
           style={{ position: 'absolute', right: 16, top: 16, width: 34, height: 34, borderRadius: RADIUS.lg, border: 'none', background: TG.SURFACE, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', ...TOUCH_OPT }}>
-          <GearSixIcon size={18} weight="fill" color={TG.SUB} />
+          <Settings size={18} weight="Bold" color={TG.SUB} />
         </button>
         <div style={{ width: 56, height: 56, borderRadius: RADIUS.pill, background: TG.CORAL_BG, margin: '0 auto 14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <PauseIcon size={26} weight="fill" color={TG.CORAL_DK} />
+          <Pause size={26} weight="Bold" color={TG.CORAL_DK} />
         </div>
         <div style={{ ...TYPE.titleLg, color: TG.INK, marginBottom: SPACE.xs }}>잠깐 멈췄어요</div>
         <div style={{ ...TYPE.sub, color: TG.SUB, marginBottom: SPACE.x3 }}>이어서 도전할까요?</div>
@@ -37,18 +37,18 @@ export function PauseModal({ score, combo, onResume, onRestart, onQuit }) {
           width: '100%', height: 52, border: 'none', borderRadius: RADIUS.btn, cursor: 'pointer', background: TG.CORAL_GRAD,
           color: '#fff', ...TYPE.btn, display: 'flex', alignItems: 'center',
           justifyContent: 'center', gap: SPACE.md, boxShadow: SHADOW.btn, marginBottom: SPACE.lg, ...TOUCH_OPT,
-        }}><PlayIcon size={18} weight="fill" /> 계속하기</button>
+        }}><Play size={18} weight="Bold" /> 계속하기</button>
         <button className="tg-press" onClick={onRestart} style={{
           width: '100%', height: 50, borderRadius: RADIUS.btn, cursor: 'pointer', background: TG.CARD,
           border: '1.5px solid rgba(43,39,48,0.1)', color: TG.INK, ...TYPE.btnSm,
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: SPACE.md, marginBottom: SPACE.md, ...TOUCH_OPT,
-        }}><ArrowClockwiseIcon size={17} weight="bold" /> 처음부터</button>
+        }}><Refresh size={17} weight="Bold" /> 처음부터</button>
         <button className="tg-press" onClick={onQuit} style={{
           width: '100%', height: 40, background: 'none', border: 'none', cursor: 'pointer', color: TG.SUB,
           ...TYPE.sub, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: SPACE.sm, ...TOUCH_OPT,
-        }}><SignOutIcon size={16} weight="bold" /> 그만두기</button>
+        }}><Logout size={16} weight="Bold" /> 그만두기</button>
       </div>
-      {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
+      {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} crutchCtx={crutchCtx} />}
     </div>
   );
 }

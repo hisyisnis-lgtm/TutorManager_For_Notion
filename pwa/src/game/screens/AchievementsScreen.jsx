@@ -2,20 +2,19 @@
 // 진행 링이 진행도를 겸해 별도 바·중복 표기 제거. 획득=색 채움, 미획득=회색+색 링(진행분).
 // 톤 원칙: 미획득도 실제 아이콘을 회색으로 — '다음 목표'로 보이게(압박 아님). 참조: tone_game_redesign.md
 import {
-  CheckIcon, FootprintsIcon, TrophyIcon, FlameIcon, FireSimpleIcon, RocketIcon, CrownIcon,
-  InfinityIcon, BookmarkSimpleIcon, BooksIcon, CalendarCheckIcon, CalendarHeartIcon, CalendarDotsIcon, FireIcon, WaveformIcon,
-  ArrowsClockwiseIcon,
-} from '@phosphor-icons/react';
+  CheckCircle, Cup, Flame, Fire, Rocket, Crown, Infinity as InfinityIcon, Refresh,
+  Walking, Bookmark, Book, CalendarMark, CalendarDate, Calendar, Soundwave,
+} from '@solar-icons/react';
 import { TG, TYPE, TOUCH_OPT, RADIUS, SPACE } from '../tgTokens.js';
 import { ACHIEVEMENTS, ACH_CATEGORIES } from '../achievements.js';
 import { Reveal, GameHeader } from './shared.jsx';
 
-// 업적 icon 문자열 → Phosphor 컴포넌트 (achievements.js의 icon 필드와 일치)
+// 업적 icon 문자열 → Solar 컴포넌트 (achievements.js의 icon 필드와 일치)
 const ACH_ICONS = {
-  Footprints: FootprintsIcon, Trophy: TrophyIcon, Flame: FlameIcon, FireSimple: FireSimpleIcon,
-  Rocket: RocketIcon, Crown: CrownIcon, Infinity: InfinityIcon, BookmarkSimple: BookmarkSimpleIcon,
-  Books: BooksIcon, CalendarCheck: CalendarCheckIcon, CalendarHeart: CalendarHeartIcon,
-  CalendarDots: CalendarDotsIcon, Fire: FireIcon, Waveform: WaveformIcon, ArrowsClockwise: ArrowsClockwiseIcon,
+  Footprints: Walking, Trophy: Cup, Flame: Flame, FireSimple: Fire,
+  Rocket: Rocket, Crown: Crown, Infinity: InfinityIcon, BookmarkSimple: Bookmark,
+  Books: Book, CalendarCheck: CalendarMark, CalendarHeart: CalendarDate,
+  CalendarDots: Calendar, Fire: Fire, Waveform: Soundwave, ArrowsClockwise: Refresh,
 };
 // 카테고리 id → 색 (섹션은 없애고 색만 사용)
 const CAT_COLOR = Object.fromEntries(ACH_CATEGORIES.map((c) => [c.id, c.color]));
@@ -32,18 +31,18 @@ const tint = (hex, a = 0.14) => {
 
 // 공용 배지(원형 아이콘) — 축하 오버레이(CelebrationOverlay)에서 사용. size=원 지름. color=획득 강조색(미지정=금색).
 export function AchBadge({ ach, earned, size = 48, color }) {
-  const Icon = ACH_ICONS[ach.icon] || TrophyIcon;
+  const Icon = ACH_ICONS[ach.icon] || Cup;
   const fg = color || DEFAULT_EARNED;
   return (
     <div style={{ width: size, height: size, borderRadius: size / 2, background: earned ? tint(fg, 0.16) : LOCKED_BG, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-      <Icon size={Math.round(size * 0.46)} weight="fill" color={earned ? fg : LOCKED_FG} />
+      <Icon size={Math.round(size * 0.46)} weight="Bold" color={earned ? fg : LOCKED_FG} />
     </div>
   );
 }
 
 // 배지 둘레 진행 링 — 진행도를 아이콘에 통합(별도 바 제거). 획득=색 채움+체크, 미획득=색 링(진행분).
 function RingBadge({ ach, got, color, pct, size = 54 }) {
-  const Icon = ACH_ICONS[ach.icon] || TrophyIcon;
+  const Icon = ACH_ICONS[ach.icon] || Cup;
   const stroke = 3.5;
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
@@ -58,11 +57,11 @@ function RingBadge({ ach, got, color, pct, size = 54 }) {
         )}
       </svg>
       <div style={{ position: 'absolute', inset: stroke + 2.5, borderRadius: '50%', background: got ? tint(color, 0.18) : LOCKED_BG, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <Icon size={Math.round(size * 0.4)} weight="fill" color={got ? color : LOCKED_FG} />
+        <Icon size={Math.round(size * 0.4)} weight="Bold" color={got ? color : LOCKED_FG} />
       </div>
       {got && (
         <div style={{ position: 'absolute', right: -2, bottom: -2, width: 19, height: 19, borderRadius: RADIUS.md, background: color, border: '2.5px solid #FFFDF8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <CheckIcon size={9} weight="bold" color="#fff" />
+          <CheckCircle size={9} weight="Bold" color="#fff" />
         </div>
       )}
     </div>
