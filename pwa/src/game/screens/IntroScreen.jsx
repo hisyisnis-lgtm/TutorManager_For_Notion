@@ -1,5 +1,5 @@
 // 소개 화면 (3페이지 캐러셀, Figma 좌표 절대배치) — 게임 기원 스토리.
-import { LightningIcon, TrophyIcon } from '@phosphor-icons/react';
+import { Bolt, Cup } from '@solar-icons/react';
 import { TG, TYPE, FONT_HANZI, TOUCH_OPT, RADIUS, SPACE } from '../tgTokens.js';
 import { ToneMark } from '../tgWidgets.jsx';
 import { TONES } from '../../constants/toneGameWords.js';
@@ -14,14 +14,14 @@ const INTRO_PAGES = [
     cta: '다음', tcolTop: '41.9%',
   },
   {
-    kind: 'icon', Icon: LightningIcon, iconColor: TG.CORAL_DK, circleBg: 'rgba(255,107,107,0.14)',
+    kind: 'icon', Icon: Bolt, iconColor: TG.CORAL_DK, circleBg: 'rgba(255,107,107,0.14)',
     tag: '성조를 빠르게 캐치!', tagColor: TG.CORAL_DK, tagBg: 'rgba(255,107,107,0.16)',
     title: '눈이 아니라 반응으로',
     body: ['성조를 빠르게 알아채는 게 회화의 진짜', '실력이에요. 반복해서 찾다 보면 머리가', '아니라 입이 먼저 기억해요.'],
     cta: '다음', tcolTop: '43.1%',
   },
   {
-    kind: 'icon', Icon: TrophyIcon, iconColor: '#F0A91E', circleBg: 'rgba(255,194,60,0.16)',
+    kind: 'icon', Icon: Cup, iconColor: '#F0A91E', circleBg: 'rgba(255,194,60,0.16)',
     tag: '최고 기록에 도전!', tagColor: '#b07d12', tagBg: 'rgba(255,194,60,0.18)',
     title: '기록 깨는 재미로, 매일',
     body: ['지난 최고 기록을 넘볼 때의 짜릿함.', '어제의 나와 겨루다 보면,', '하루 1분이 어느새 습관이 돼요.'],
@@ -55,7 +55,7 @@ function IntroPanel({ p }) {
         <Reveal i={0} style={{ position: 'absolute', left: 0, right: 0, top: '19.8%' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.x2, alignItems: 'center' }}>
           <div style={{ width: 112, height: 112, borderRadius: 56, background: p.circleBg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <p.Icon size={52} weight="fill" color={p.iconColor} />
+            <p.Icon size={52} weight="Bold" color={p.iconColor} />
           </div>
           <div style={{ background: p.tagBg, padding: '7px 14px', borderRadius: RADIUS.lg }}>
             <span style={{ ...TYPE.labelSm, color: p.tagColor, whiteSpace: 'nowrap' }}>{p.tag}</span>

@@ -1,7 +1,7 @@
 // 승급시험 진입 연출 — 시험 런이 라이브(카운트다운 종료)가 되는 순간 잠깐(≈2s) "{급} 승급시험"임을 알림.
 // 톤: 게임오버·모드해제 연출과 통일한 프로스티드 딤 + 급 색 메달 팝. 탭/자동으로 넘어가 첫 문제 시작.
 import { useEffect, useState } from 'react';
-import { MedalIcon } from '@phosphor-icons/react';
+import { MedalStar } from '@solar-icons/react';
 import { TG, TYPE, haptic, RADIUS, SPACE, DIFF_COLORS } from '../tgTokens.js';
 
 export function ExamIntroReveal({ tier = 'easy', tierLabel = '입문', onDone, hold = false }) {
@@ -28,7 +28,7 @@ export function ExamIntroReveal({ tier = 'easy', tierLabel = '입문', onDone, h
       <div style={{ position: 'relative', margin: '0 0 18px', animation: 'ei-icon .6s cubic-bezier(.34,1.56,.64,1) .04s both' }}>
         <div aria-hidden="true" style={{ position: 'absolute', inset: -18, borderRadius: RADIUS.pill, background: `radial-gradient(closest-side, ${c.accent}55, ${c.accent}00 72%)` }} />
         <div style={{ position: 'relative', width: 96, height: 96, borderRadius: RADIUS.pill, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 14px 34px ${c.glow}` }}>
-          <MedalIcon size={50} weight="fill" color={c.accent} />
+          <MedalStar size={50} weight="Bold" color={c.accent} />
         </div>
       </div>
       {/* 타이틀 — {급} 승급시험 */}

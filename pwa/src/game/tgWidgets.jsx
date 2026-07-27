@@ -3,29 +3,36 @@ import { useState, useEffect, useRef } from 'react';
 import { TG, TYPE, RADIUS, SPACE } from './tgTokens.js';
 
 // 성조 마크 SVG — 폰트별 두께 편차 제거 위해 동일 stroke-width로 직접 렌더. currentColor 상속.
-export function ToneMark({ tone, size = 20 }) {
+// outline: 획 뒤에 두를 외곽선 색(옵션) — 키캡 버튼 등 마크를 배경보다 어두운 선으로 도드라지게(2패스: 굵은 외곽선→흰 획).
+export function ToneMark({ tone, size = 20, outline }) {
   const w = size;
   const h = Math.round(size * 0.5);
   const common = {
     width: w, height: h, viewBox: '0 0 24 12',
-    fill: 'none', stroke: 'currentColor', strokeWidth: 3,
+    // 외곽선 모드(키캡)에선 흰 획도 살짝 두껍게(3→4) — 사용자 "획 조금만 두껍게" (2026-07-26)
+    fill: 'none', stroke: 'currentColor', strokeWidth: outline ? 4 : 3,
     strokeLinecap: 'round', strokeLinejoin: 'round',
-    'aria-hidden': true, style: { display: 'block' },
+    // 외곽선 패스가 viewBox를 살짝 넘어도 잘리지 않게
+    'aria-hidden': true, style: { display: 'block', overflow: 'visible' },
   };
-  switch (tone) {
-    case 1: return <svg {...common}><line x1="3" y1="6" x2="21" y2="6" /></svg>;
-    case 2: return <svg {...common}><line x1="4" y1="10" x2="20" y2="2" /></svg>;
-    case 3: return <svg {...common}><polyline points="3,3 12,9 21,3" /></svg>;
-    case 4: return <svg {...common}><line x1="4" y1="2" x2="20" y2="10" /></svg>;
-    case 0:
-      return (
-        <svg width={Math.round(size * 0.42)} height={Math.round(size * 0.42)}
-             viewBox="0 0 12 12" aria-hidden="true" style={{ display: 'block' }}>
-          <circle cx="6" cy="6" r="3" fill="currentColor" />
-        </svg>
-      );
-    default: return null;
+  const back = outline ? { stroke: outline, strokeWidth: 6.8 } : null;
+  const shape = {
+    1: (p) => <line x1="3" y1="6" x2="21" y2="6" {...p} />,
+    2: (p) => <line x1="4" y1="10" x2="20" y2="2" {...p} />,
+    3: (p) => <polyline points="3,3 12,9 21,3" {...p} />,
+    4: (p) => <line x1="4" y1="2" x2="20" y2="10" {...p} />,
+  }[tone];
+  if (shape) return <svg {...common}>{back && shape(back)}{shape({})}</svg>;
+  if (tone === 0) {
+    return (
+      <svg width={Math.round(size * 0.42)} height={Math.round(size * 0.42)}
+           viewBox="0 0 12 12" aria-hidden="true" style={{ display: 'block', overflow: 'visible' }}>
+        {outline && <circle cx="6" cy="6" r="4.8" fill={outline} />}
+        <circle cx="6" cy="6" r={outline ? 3.4 : 3} fill="currentColor" />
+      </svg>
+    );
   }
+  return null;
 }
 
 // 숫자 count-up 애니메이션 훅 — 직전 표시값→target ease-out cubic. rAF 기반.
@@ -62,7 +69,7 @@ export function FlameIcon({ size = 14, color = TG.CORAL_DK }) {
   );
 }
 
-// 콤보 칩 — 소프트 코랄 틴트 + 플랫 불꽃 + 숫자 + '콤보' (메모리 §6 확정안). combo>=2일 때만 표시.
+// 콤보 칩 — 골드 소프트 틴트 + 플랫 불꽃 + 숫자 + '콤보' (분홍 CORAL_BG → GOLD_BG, 2026-07-26 색감 리프레시). combo>=2일 때만 표시.
 export function ComboChip({ combo, flash }) {
   if (combo < 2) return null;
   return (
@@ -70,7 +77,7 @@ export function ComboChip({ combo, flash }) {
       display: 'inline-flex', alignItems: 'center', gap: SPACE.xs,
       padding: '5px 11px 6px 9px',
       borderRadius: RADIUS.md,
-      background: TG.CORAL_BG,
+      background: TG.GOLD_BG,
       transform: flash ? 'scale(1.12)' : 'scale(1)',
       transition: 'transform 220ms cubic-bezier(0.34,1.56,0.64,1)',
     }}>

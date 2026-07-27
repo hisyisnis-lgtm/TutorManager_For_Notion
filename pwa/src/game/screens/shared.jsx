@@ -3,9 +3,9 @@
 // 단어 카드/성조 버튼·카운트다운 비주얼·토스트·흔들림 버튼.
 // 참조 메모리: tone_game_redesign.md §5(단어카드)·§10-B(FigmaScreen)·§10-C(연출)
 import { useState, useEffect, useRef, useLayoutEffect } from 'react';
-import { LockSimpleIcon, CheckCircleIcon, SpeakerHighIcon, SpeakerSlashIcon, VibrateIcon, XIcon, CaretLeftIcon, StarIcon, EyeIcon } from '@phosphor-icons/react';
-import { TG, FONT_HANZI, FONT_PINYIN, TYPE, SHADOW, DUR, TOUCH_OPT, TONE_TINTS, TONE_BORDERS, TONE_COLORS, ASSETS,
-  haptic, isHapticMuted, setHapticMuted, RADIUS, SPACE } from '../tgTokens.js';
+import { Lock, CheckCircle, VolumeLoud, VolumeCross, SmartphoneVibration, CloseCircle, AltArrowLeft, Star, Eye } from '@solar-icons/react';
+import { TG, FONT_HANZI, FONT_PINYIN, TYPE, SHADOW, DUR, TOUCH_OPT, TONE_COLORS, TONE_KEY_COLORS, ASSETS,
+  haptic, isHapticMuted, setHapticMuted, isMeaningHidden, setMeaningHidden, isPinyinHidden, setPinyinHidden, RADIUS, SPACE } from '../tgTokens.js';
 import { ToneMark, ComboChip } from '../tgWidgets.jsx';
 import { TONES, DIFFICULTIES } from '../../constants/toneGameWords.js';
 import { play as playSfx, isSfxMuted, setSfxMuted } from '../tgSfx.js';
@@ -303,7 +303,7 @@ export function BackButton({ onClick, style }) {
       width: 40, height: 40, marginLeft: -8, borderRadius: RADIUS.xl, background: 'none', boxShadow: 'none',
       border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, ...TOUCH_OPT, ...style,
     }}>
-      <CaretLeftIcon size={24} weight="bold" color={TG.INK} />
+      <AltArrowLeft size={24} weight="Bold" color={TG.INK} />
     </button>
   );
 }
@@ -350,7 +350,7 @@ export function StarRow({ filled = 0, total = 3, size = 16, gap = 3, on = TG.SUN
         const f = i < filled;
         return (
           <span key={i} style={{ display: 'flex', animation: (shine && f && !prefersReducedMotion()) ? `tg-star-shine 2.8s ease-in-out ${i * 0.3}s infinite` : 'none' }}>
-            <StarIcon size={size} weight="fill" color={f ? on : off} />
+            <Star size={size} weight="Bold" color={f ? on : off} />
           </span>
         );
       })}
@@ -456,8 +456,9 @@ function SandhiToneChip({ big = false }) {
   );
 }
 
-export function WordCard({ word, entered, currentSyl, completed, timedOut, progressText, combo, comboFlash, floatScore, hideProgress, listen = false, audioOff = false, onReplay, onCantHear, onHint, hintUsed = false, draw = false, lianyinAt = -1, practice = false, onSpeak, onReveal, sandhiAt = -1 }) {
+export function WordCard({ word, entered, currentSyl, completed, timedOut, progressText, combo, comboFlash, floatScore, hideProgress, listen = false, audioOff = false, onReplay, onCantHear, onHint, hintUsed = false, draw = false, lianyinAt = -1, practice = false, onSpeak, onReveal, hideMeaning = false, hidePinyin = false, sandhiAt = -1 }) {
   const listening = listen && !audioOff && !completed && !timedOut; // 듣기 모드: 답하기 전엔 한자 가리고 소리 패널
+  // hideMeaning/hidePinyin = 보조바퀴 토글(현재 컨텍스트) — 병음/뜻 숨김으로 '소리·성조 체득' 강화. ToneGamePage가 ctx별 값을 전달.
   // 한자 모드 발음 힌트 — 답하기 전에만, 음소거 아닐 때만. 소리=정답이라 처음 쓰면 콤보가 끊긴다(hintUsed=이미 끊긴 상태면 무료).
   const canHint = onHint && !listening && !completed && !timedOut && !audioOff;
   const n = word.tones.length;
@@ -510,7 +511,7 @@ export function WordCard({ word, entered, currentSyl, completed, timedOut, progr
             background: isCurrent ? '#f2ede6' : 'transparent',
             border: isCurrent ? '2px solid #e3dbce' : '2px solid transparent',
             animation: isCurrent ? 'tg-breathe 1.7s ease-in-out infinite' : 'none', transition: `all ${DUR.state} ease` }}>
-            <SpeakerHighIcon size={Math.round(hz * 0.52)} weight="fill" color={isCurrent ? TG.INK : TG.MUTED} />
+            <VolumeLoud size={Math.round(hz * 0.52)} weight="Bold" color={isCurrent ? TG.INK : TG.MUTED} />
           </div>
         ) : (
           <div data-syl={i} style={{
@@ -525,7 +526,7 @@ export function WordCard({ word, entered, currentSyl, completed, timedOut, progr
           }}>{word.hanzi[i] ?? ''}</div>
         )}
         <div style={{ height: hz > 50 ? 26 : 20, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          {completed && (
+          {completed && !hidePinyin && (
             <span style={{ fontFamily: FONT_PINYIN, fontWeight: 600, fontSize: hz > 50 ? 17 : 14, color: TG.SUB,
               animation: timedOut ? 'none' : `tg-pop .3s cubic-bezier(.34,1.56,.64,1) ${popDelay} both` }}>{word.pinyin[i] ?? ''}</span>
           )}
@@ -558,9 +559,9 @@ export function WordCard({ word, entered, currentSyl, completed, timedOut, progr
       )}
       <div style={{ position: 'absolute', right: 16, top: 14 }}><ComboChip combo={combo} flash={comboFlash} /></div>
       {/* 정답 판정(완벽/훌륭/좋아)+점수는 카드 코너가 아니라 화면 중앙 팝으로 — GameScreen JudgePop(시선 집중) */}
-      {/* 뜻 — 듣기 중엔 가림(완료 시 공개="아 이 말이었구나") */}
+      {/* 뜻 — 듣기 중엔 가림(완료 시 공개="아 이 말이었구나"). 보조바퀴 토글로 숨기면 항상 가림 */}
       <div style={{ height: 22, marginTop: SPACE.md, textAlign: 'center', flexShrink: 0 }}>
-        {!listening && <span style={{ ...TYPE.sub, color: TG.SUB }}>{word.meaning}</span>}
+        {!listening && !hideMeaning && <span style={{ ...TYPE.sub, color: TG.SUB }}>{word.meaning}</span>}
       </div>
       {/* 음절 — 듣기 중 미공개 글자는 스피커, 맞히면 한자 공개 */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: SPACE.sm }}>
@@ -581,11 +582,11 @@ export function WordCard({ word, entered, currentSyl, completed, timedOut, progr
           <span style={{ ...TYPE.labelSm, color: TG.GUIDE }}>{`${currentSyl + 1}번째 글자의 성조를 들어보세요`}</span>
           <div style={{ display: 'flex', gap: SPACE.md }}>
             <button onClick={onReplay} className="tg-press" style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, padding: '10px 16px', borderRadius: RADIUS.lg, background: '#fff', border: `1.5px solid ${TG.CORAL_BG}`, cursor: 'pointer', ...TOUCH_OPT }}>
-              <SpeakerHighIcon size={17} weight="fill" color={TG.CORAL_DK} />
+              <VolumeLoud size={17} weight="Bold" color={TG.CORAL_DK} />
               <span style={{ ...TYPE.labelSm, color: TG.INK }}>다시 듣기</span>
             </button>
             <button onClick={onCantHear} className="tg-press" style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, padding: '10px 16px', borderRadius: RADIUS.lg, background: '#fff', border: '1.5px solid #ebe5de', cursor: 'pointer', ...TOUCH_OPT }}>
-              <SpeakerSlashIcon size={17} weight="fill" color="#767676" />
+              <VolumeCross size={17} weight="Bold" color="#767676" />
               <span style={{ ...TYPE.labelSm, color: TG.INK }}>지금은 못 들어요</span>
             </button>
           </div>
@@ -608,14 +609,14 @@ export function WordCard({ word, entered, currentSyl, completed, timedOut, progr
                 display: 'inline-flex', alignItems: 'center', gap: SPACE.sm, padding: '8px 14px', borderRadius: RADIUS.lg,
                 background: '#fff', border: `1.5px solid ${TG.CORAL_BG}`, cursor: 'pointer', ...TOUCH_OPT,
               }}>
-                <SpeakerHighIcon size={16} weight="fill" color={TG.CORAL_DK} />
+                <VolumeLoud size={16} weight="Bold" color={TG.CORAL_DK} />
                 <span style={{ ...TYPE.labelSm, color: TG.INK }}>발음 듣기</span>
               </button>
               <button onClick={onReveal} disabled={completed} className="tg-press" aria-label="정답 보기" style={{
                 display: 'inline-flex', alignItems: 'center', gap: SPACE.sm, padding: '8px 14px', borderRadius: RADIUS.lg,
                 background: '#fff', border: '1.5px solid #ebe5de', cursor: completed ? 'default' : 'pointer', opacity: completed ? 0.5 : 1, ...TOUCH_OPT,
               }}>
-                <EyeIcon size={16} weight="fill" color={TG.SUB} />
+                <Eye size={16} weight="Bold" color={TG.SUB} />
                 <span style={{ ...TYPE.labelSm, color: TG.INK }}>정답 보기</span>
               </button>
             </div>
@@ -624,7 +625,7 @@ export function WordCard({ word, entered, currentSyl, completed, timedOut, progr
               display: 'inline-flex', alignItems: 'center', gap: SPACE.sm, padding: '7px 13px', borderRadius: RADIUS.md,
               background: '#fff', border: `1.5px solid ${hintUsed ? TG.BORDER : TG.CORAL_BG}`, cursor: 'pointer', ...TOUCH_OPT,
             }}>
-              <SpeakerHighIcon size={15} weight="fill" color={hintUsed ? TG.SUB : TG.CORAL_DK} />
+              <VolumeLoud size={15} weight="Bold" color={hintUsed ? TG.SUB : TG.CORAL_DK} />
               <span style={{ ...TYPE.labelSm, color: hintUsed ? TG.SUB : TG.INK }}>
                 {hintUsed ? '다시 듣기' : '발음 힌트'}
               </span>
@@ -668,21 +669,30 @@ export function ToneButtons({ onTone, wrongBtn, disabled, heat = 0 }) {
             style={{
               position: 'relative', overflow: 'hidden',
               flex: 1, minWidth: 0, height: '100%', cursor: disabled ? 'default' : 'pointer', borderRadius: RADIUS.xl,
-              background: isWrong ? '#FFD9D9' : TONE_TINTS[t.num],
-              border: `1.5px solid ${isWrong ? TG.DANGER : TONE_BORDERS[t.num]}`,
+              // ★성조색 키캡 — 세로 그라디언트(위 밝음→기본) + 아래 두께 엣지(dark 오프셋)로 입체감.
+              //   색 자체로 배경과 분리(솔리드 확정) + "단조롭다" 보완(2026-07-26). 흰 마크/라벨 = 발사체 원판 문법.
+              background: isWrong ? TG.DANGER : `linear-gradient(180deg, ${TONE_KEY_COLORS[t.num].light}, ${TONE_KEY_COLORS[t.num].base})`,
+              border: 'none',
+              boxShadow: isWrong
+                ? '0 4px 0 #C4353A, 0 6px 12px rgba(43,39,48,0.12)'
+                : `0 4px 0 ${TONE_KEY_COLORS[t.num].dark}, 0 6px 12px rgba(43,39,48,0.12)`,
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: SPACE.xs,
-              paddingTop: SPACE.x2, paddingBottom: SPACE.xl, color: t.color, ...TOUCH_OPT,
+              paddingTop: SPACE.x2, paddingBottom: SPACE.xl, color: '#fff', ...TOUCH_OPT,
             }}
           >
-            {/* 탭 순간 성조색 리플 — 타격감 + 성조-색 각인 */}
+            {/* 탭 순간 리플 — 솔리드 성조색 배경이라 흰 리플로(같은 색이면 안 보임) */}
             {ripple && ripple.num === t.num && (
               <span key={ripple.key} aria-hidden="true" style={{
                 position: 'absolute', left: '50%', top: '50%', width: 90 + heat * 50, height: 90 + heat * 50, borderRadius: '50%',
-                background: t.color, animation: 'tg-ripple .5s ease-out forwards', pointerEvents: 'none', zIndex: 0,
+                background: 'rgba(255,255,255,0.55)', animation: 'tg-ripple .5s ease-out forwards', pointerEvents: 'none', zIndex: 0,
               }} />
             )}
-            <ToneMark tone={t.num} size={34} />
-            <span style={{ position: 'relative', zIndex: 1, ...TYPE.labelSm, color: t.color }}>{t.name}</span>
+            <ToneMark tone={t.num} size={34} outline={TONE_KEY_COLORS[t.num].dark} />
+            {/* 라벨도 마크와 동일한 어두운 아웃라인 — 2겹 스택(아래=굵은 스트로크·위=흰 글자). text-stroke 단독은 글자 안쪽을 파먹음 */}
+            <span style={{ position: 'relative', zIndex: 1, display: 'inline-grid' }}>
+              <span aria-hidden="true" style={{ gridArea: '1 / 1', ...TYPE.labelSm, color: TONE_KEY_COLORS[t.num].dark, WebkitTextStroke: `4px ${TONE_KEY_COLORS[t.num].dark}` }}>{t.name}</span>
+              <span style={{ gridArea: '1 / 1', ...TYPE.labelSm, color: '#fff' }}>{t.name}</span>
+            </span>
           </button>
         );
       })}
@@ -878,13 +888,13 @@ export function ShakeButton({ shakeOnClick, onClick, className = '', style, chil
 // 중앙 토스트 — 다크 알약 + 상황별 아이콘 + 문구. tg-toast로 페이드 인·아웃.
 //  kind: 'lock'(잠금 안내·기본) | 'done'(이미 달성 등 완료) | 'info'(문구에 자체 이모지 있어 아이콘 생략)
 export function GameToast({ msg, kind = 'lock' }) {
-  const Icon = kind === 'done' ? CheckCircleIcon : kind === 'info' ? null : LockSimpleIcon;
+  const Icon = kind === 'done' ? CheckCircle : kind === 'info' ? null : Lock;
   // 광학 중앙 보정: 정중앙(50%)이면 눈에는 아래로 쏠려 보임(하단 CTA로 무게중심도 아래) → 하단 패딩을 키워 살짝 위로.
   // 애니메이션(tg-toast)이 transform:translateY를 쓰므로 토스트 박스가 아닌 바깥 컨테이너 패딩으로 올림. safe-area-top도 함께 정합.
   return (
     <div style={{ position: 'fixed', top: 'env(safe-area-inset-top)', bottom: 0, left: 0, right: 0, zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', padding: '24px 24px calc(24px + 12vh)' }}>
       <div className="tg-toast" style={{ display: 'flex', alignItems: 'center', gap: SPACE.md, background: 'rgba(43,39,48,0.94)', boxShadow: '0 8px 22px rgba(26,16,20,0.28)', borderRadius: RADIUS.lg, padding: '12px 18px 12px 16px', maxWidth: '90%' }}>
-        {Icon && <Icon size={16} weight="fill" color="#fff" style={{ flexShrink: 0 }} />}
+        {Icon && <Icon size={16} weight="Bold" color="#fff" style={{ flexShrink: 0 }} />}
         <span style={{ ...TYPE.sub, color: '#fff', whiteSpace: 'normal', lineHeight: 1.35, wordBreak: 'keep-all' }}>{msg}</span>
       </div>
     </div>
@@ -897,9 +907,7 @@ function SettingRow({ Icon, label, on, onToggle }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.xl }}>
-        <div style={{ width: 36, height: 36, borderRadius: RADIUS.md, background: on ? 'rgba(242,72,76,0.12)' : TG.TRACK, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Icon size={20} weight="fill" color={on ? TG.CORAL_DK : TG.MUTED} />
-        </div>
+        <Icon size={28} weight="Bold" color={on ? TG.CORAL_DK : TG.MUTED} />
         <span style={{ ...TYPE.btnSm, color: TG.INK }}>{label}</span>
       </div>
       <button onClick={onToggle} role="switch" aria-checked={on} aria-label={label} className="tg-press"
@@ -910,7 +918,36 @@ function SettingRow({ Icon, label, on, onToggle }) {
   );
 }
 
-export function SettingsModal({ onClose }) {
+// 보조바퀴 토글 행(공용) — '단어카드설정: 뜻/병음'. ctx별 저장(스테이지 easy-1·보스 easy-boss·무한 endless·트레이닝 training·테마 th-drama).
+//  각 시작 화면(스테이지 카드·무한 모달·테마)·인게임 설정에서 재사용. key={ctx}로 렌더하면 컨텍스트 바뀔 때 저장값으로 재초기화.
+export function CrutchRow({ ctx, style }) {
+  const [meaningOn, setMeaningOn] = useState(() => !isMeaningHidden(ctx));
+  const [pinyinOn, setPinyinOn] = useState(() => !isPinyinHidden(ctx));
+  // 클릭음은 전역 pointerdown 핸들러(.tg-press)가 재생 — 여기서 playSfx 호출하면 이중음
+  const items = [
+    { label: '뜻', on: meaningOn, t: (e) => { e.stopPropagation(); const n = !meaningOn; setMeaningOn(n); setMeaningHidden(ctx, !n); } },
+    { label: '병음', on: pinyinOn, t: (e) => { e.stopPropagation(); const n = !pinyinOn; setPinyinOn(n); setPinyinHidden(ctx, !n); } },
+  ];
+  return (
+    <div style={{ paddingTop: SPACE.md, borderTop: `1px solid ${TG.BORDER}`, display: 'flex', alignItems: 'center', ...style }}>
+      <span style={{ ...TYPE.meta, color: TG.MUTED }}>단어카드설정</span>
+      <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: SPACE.x2 }}>
+        {items.map((cc) => (
+          <div key={cc.label} style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
+            <span style={{ ...TYPE.btnSm, color: cc.on ? TG.INK : TG.MUTED }}>{cc.label}</span>
+            {/* div role=switch (button 아님) — 테마 카드가 ShakeButton(button) 안이라 버튼 중첩 금지 회피 */}
+            <div onClick={cc.t} role="switch" aria-checked={cc.on} aria-label={cc.label} tabIndex={0} className="tg-press"
+              style={{ width: 42, height: 24, borderRadius: RADIUS.lg, cursor: 'pointer', position: 'relative', flexShrink: 0, background: cc.on ? TG.CORAL_DK : TG.MUTED, transition: 'background .2s ease', ...TOUCH_OPT }}>
+              <span style={{ position: 'absolute', top: 3, left: cc.on ? 21 : 3, width: 18, height: 18, borderRadius: RADIUS.md, background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left .18s ease' }} />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export function SettingsModal({ onClose, crutchCtx }) {
   const [sfxOn, setSfxOn] = useState(() => !isSfxMuted());
   const [hapticOn, setHapticOn] = useState(() => !isHapticMuted());
   const toggleSfx = () => { const next = !sfxOn; setSfxOn(next); setSfxMuted(!next); if (next) playSfx('button'); };
@@ -926,13 +963,13 @@ export function SettingsModal({ onClose }) {
           {/* 히트영역 44×44(음수 마진으로 레이아웃 자리는 30 유지), 시각 크기는 안쪽 30×30 원 그대로 */}
           <button onClick={onClose} aria-label="닫기" className="tg-press"
             style={{ width: 44, height: 44, margin: -7, padding: 0, border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', ...TOUCH_OPT }}>
-            <span style={{ width: 30, height: 30, borderRadius: RADIUS.lg, background: TG.SURFACE, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <XIcon size={14} weight="bold" color={TG.SUB} />
-            </span>
+            <CloseCircle size={28} weight="Bold" color={TG.SUB} />
           </button>
         </div>
-        <SettingRow Icon={sfxOn ? SpeakerHighIcon : SpeakerSlashIcon} label="소리" on={sfxOn} onToggle={toggleSfx} />
-        <SettingRow Icon={VibrateIcon} label="햅틱" on={hapticOn} onToggle={toggleHaptic} />
+        <SettingRow Icon={sfxOn ? VolumeLoud : VolumeCross} label="소리" on={sfxOn} onToggle={toggleSfx} />
+        <SettingRow Icon={SmartphoneVibration} label="햅틱" on={hapticOn} onToggle={toggleHaptic} />
+        {/* 보조바퀴(현재 컨텍스트) — 끄면 소리·성조로 체득(뜻=플레이 중, 병음=정답 공개 시) */}
+        {crutchCtx && <CrutchRow ctx={crutchCtx} style={{ marginTop: SPACE.xs }} />}
       </div>
     </div>
   );

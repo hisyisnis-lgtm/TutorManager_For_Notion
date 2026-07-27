@@ -3,7 +3,7 @@
 // 게스트면 SNS 로그인 버튼을, 회원이면 로그아웃을 노출한다.
 // 시각 패턴은 NicknameEditModal·HomeMenu와 통일(다크 오버레이 + 카드). SNS 버튼/로그인 시작은 LoginScreen 공용.
 import { useState } from 'react';
-import { PencilSimpleIcon, XIcon, CaretRightIcon, MedalIcon, CopyIcon, CheckIcon } from '@phosphor-icons/react';
+import { Pen, CloseCircle, AltArrowRight, MedalStar, Copy, CheckCircle } from '@solar-icons/react';
 import { TG, TYPE, TOUCH_OPT, RADIUS, SPACE } from '../tgTokens.js';
 import { startSocialLogin, KakaoLogo, GoogleLogo } from './LoginScreen.jsx';
 import { levelInfo } from '../gameXp.js';
@@ -44,9 +44,7 @@ export function ProfileModal({
           {/* 히트영역 44×44(음수 마진으로 레이아웃 자리는 30 유지) */}
           <button onClick={onClose} aria-label="닫기" className="tg-press"
             style={{ width: 44, height: 44, margin: -7, padding: 0, border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', ...TOUCH_OPT }}>
-            <span style={{ width: 30, height: 30, borderRadius: RADIUS.lg, background: TG.SURFACE, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <XIcon size={14} weight="bold" color={TG.SUB} />
-            </span>
+            <CloseCircle size={28} weight="Bold" color={TG.SUB} />
           </button>
         </div>
 
@@ -60,9 +58,7 @@ export function ProfileModal({
               {onEditNickname && (
                 <button onClick={onEditNickname} aria-label="닉네임 수정" className="tg-press"
                   style={{ width: 30, height: 30, margin: -4, padding: 0, border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, ...TOUCH_OPT }}>
-                  <span style={{ width: 24, height: 24, borderRadius: RADIUS.sm, background: TG.CORAL_BG, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <PencilSimpleIcon size={13} weight="fill" color={TG.CORAL_DK} />
-                  </span>
+                  <Pen size={18} weight="Bold" color={TG.CORAL_DK} />
                 </button>
               )}
             </div>
@@ -77,11 +73,9 @@ export function ProfileModal({
         {/* 등급 자세히 — 기존 카드 탭(→ 등급 화면) 동선 보존 */}
         {onMastery && (
           <button onClick={onMastery} className="tg-press" style={{ display: 'flex', alignItems: 'center', gap: SPACE.lg, width: '100%', padding: '11px 12px', borderRadius: RADIUS.lg, background: TG.SURFACE, border: 'none', cursor: 'pointer', ...TOUCH_OPT }}>
-            <div style={{ width: 30, height: 30, borderRadius: RADIUS.md, background: 'rgba(240,169,30,0.14)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <MedalIcon size={17} weight="fill" color="#F0A91E" />
-            </div>
+            <MedalStar size={24} weight="Bold" color="#F0A91E" />
             <span style={{ flex: 1, textAlign: 'left', ...TYPE.label, color: TG.INK, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>등급 자세히 보기</span>
-            <CaretRightIcon size={16} weight="bold" color="#c9c2bb" />
+            <AltArrowRight size={16} weight="Bold" color="#c9c2bb" />
           </button>
         )}
 
@@ -116,7 +110,7 @@ export function ProfileModal({
             <span style={{ flex: 1, minWidth: 0, ...TYPE.num, fontSize: 12, color: TG.INK, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{userId}</span>
             <button onClick={copyId} aria-label="UID 복사" className="tg-press"
               style={{ display: 'inline-flex', alignItems: 'center', gap: SPACE.sm, height: 30, padding: '0 10px', borderRadius: RADIUS.md, border: 'none', cursor: 'pointer', flexShrink: 0, background: copied ? 'rgba(54,201,141,0.14)' : '#fff', boxShadow: copied ? 'none' : '0 1px 3px rgba(43,39,48,0.1)', ...TOUCH_OPT }}>
-              {copied ? <CheckIcon size={13} weight="bold" color="#36C98D" /> : <CopyIcon size={13} weight="fill" color={TG.SUB} />}
+              {copied ? <CheckCircle size={13} weight="Bold" color="#36C98D" /> : <Copy size={13} weight="Bold" color={TG.SUB} />}
               <span style={{ ...TYPE.labelSm, color: copied ? TG.SUCCESS_GLOW : TG.SUB }}>{copied ? '복사됨' : '복사'}</span>
             </button>
           </div>

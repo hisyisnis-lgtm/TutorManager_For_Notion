@@ -2,10 +2,10 @@
 // 기존엔 난이도·무한이 제네릭 업적 카드로만, 테마는 연출 전무(gap)였음 → 통합 전용 연출로.
 // 톤: 게임오버·레벨 연출과 통일한 프로스티드 딤 + 미니멀(오버슛·컨페티 없음), 단 잠금해제라 아이콘+글로우로 살짝 축하.
 import { useEffect, useState } from 'react';
-import { RocketIcon, CrownIcon, InfinityIcon, MapPinIcon, ForkKnifeIcon, SparkleIcon, LockKeyOpenIcon } from '@phosphor-icons/react';
+import { Rocket, Crown, Infinity, MapPoint, ChefHat, Stars, LockUnlocked } from '@solar-icons/react';
 import { TG, TYPE, haptic, SPACE } from '../tgTokens.js';
 
-const ICONS = { Rocket: RocketIcon, Crown: CrownIcon, Infinity: InfinityIcon, MapPin: MapPinIcon, ForkKnife: ForkKnifeIcon, Sparkle: SparkleIcon };
+const ICONS = { Rocket, Crown, Infinity, MapPin: MapPoint, ForkKnife: ChefHat, Sparkle: Stars };
 
 export function ModeUnlockReveal({ unlock, onDone, hold = false }) {
   const [closing, setClosing] = useState(false);
@@ -18,7 +18,7 @@ export function ModeUnlockReveal({ unlock, onDone, hold = false }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   if (!unlock) return null;
-  const Icon = ICONS[unlock.icon] || LockKeyOpenIcon;
+  const Icon = ICONS[unlock.icon] || LockUnlocked;
   const accent = unlock.accent || TG.CORAL_DK;
   return (
     <div onClick={() => !hold && onDone && onDone()} style={{
@@ -33,7 +33,7 @@ export function ModeUnlockReveal({ unlock, onDone, hold = false }) {
       <div style={{ position: 'relative', animation: 'mu-icon .55s cubic-bezier(.22,1,.36,1) .05s both' }}>
         <div aria-hidden="true" style={{ position: 'absolute', inset: -16, borderRadius: '50%', background: `radial-gradient(closest-side, ${accent}44, ${accent}00 72%)` }} />
         <div style={{ position: 'relative', width: 88, height: 88, borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 12px 32px rgba(0,0,0,0.32)' }}>
-          <Icon size={44} weight="fill" color={accent} />
+          <Icon size={44} weight="Bold" color={accent} />
         </div>
       </div>
       <span style={{ ...TYPE.labelSm, color: accent, letterSpacing: 0.5, marginTop: SPACE.x3, animation: 'tg-rise .5s cubic-bezier(.22,1,.36,1) .16s both' }}>새 모드 열림</span>

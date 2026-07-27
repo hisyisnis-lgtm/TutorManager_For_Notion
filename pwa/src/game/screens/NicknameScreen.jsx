@@ -3,7 +3,7 @@
 // 레이아웃/톤은 LoginScreen과 통일(판다 히어로·헤드라인·CTA). 입력+버튼은 화면 중앙에 모아
 // 모바일 키보드가 하단에서 올라와도 CTA를 가리지 않게 한다(하단 고정 안 함).
 import { useState } from 'react';
-import { ArrowsClockwiseIcon } from '@phosphor-icons/react';
+import { Refresh } from '@solar-icons/react';
 import { TG, TYPE, TOUCH_OPT, ASSETS, RADIUS, SPACE } from '../tgTokens.js';
 import { play as playSfx } from '../tgSfx.js';
 import { randomNickname, NICKNAME_MAX } from '../nickname.js';
@@ -63,7 +63,7 @@ export function NicknameScreen({ defaultName = '', onSubmit, saving = false }) {
             display: 'inline-flex', alignItems: 'center', gap: SPACE.sm, padding: '8px 14px', borderRadius: RADIUS.md,
             background: '#fff', border: `1.5px solid ${TG.CORAL_BG}`, cursor: 'pointer', ...TOUCH_OPT,
           }}>
-            <ArrowsClockwiseIcon size={15} weight="bold" color={TG.CORAL_DK} />
+            <Refresh size={15} weight="Bold" color={TG.CORAL_DK} />
             <span style={{ ...TYPE.labelSm, color: TG.INK }}>다시 뽑기</span>
           </button>
           <span style={{ ...TYPE.meta, color: TG.SUB, paddingRight: SPACE.xs }}>{trimmed.length}/{NICKNAME_MAX}</span>

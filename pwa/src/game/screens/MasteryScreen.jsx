@@ -1,5 +1,5 @@
 // 단어 숙련도 화면 (Figma "15. 단어 숙련도") — 성조 레이더 + 복습필요 리스트 + 마스터 수 + 복습 CTA.
-import { SpeakerHighIcon, PlayIcon, CheckCircleIcon } from '@phosphor-icons/react';
+import { VolumeLoud, Play, CheckCircle } from '@solar-icons/react';
 import { TG, FONT_HANZI, FONT_BODY, FONT_PINYIN, TOUCH_OPT, TYPE, RADIUS, SPACE } from '../tgTokens.js';
 import { ROUND_LENGTH } from '../../constants/toneGameWords.js';
 import { TONE_NUMS, toneAccuracy, toneAttempts } from '../toneStats.js';
@@ -78,7 +78,7 @@ function WordStatRow({ word, acc, last }) {
       </div>
       {/* 발음 듣기(TTS) */}
       <button onClick={() => speakWord(word)} aria-label="발음 듣기" className="tg-press" style={{ width: 34, height: 34, borderRadius: RADIUS.md, background: TG.SURFACE, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, ...TOUCH_OPT }}>
-        <SpeakerHighIcon size={18} weight="fill" color={TG.ICON} />
+        <VolumeLoud size={18} weight="Bold" color={TG.ICON} />
       </button>
     </div>
   );
@@ -139,7 +139,7 @@ export function MasteryScreen({ rows, masteredN, xp = 0, rank = 0, onExam, toneS
             <div style={{ marginTop: SPACE.x4, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span style={{ ...TYPE.labelSm, color: TG.INK }}>복습 필요 {need}개</span>
               <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.xs, background: 'rgba(54,201,141,0.14)', padding: '5px 10px 5px 8px', borderRadius: RADIUS.md }}>
-                <CheckCircleIcon size={14} weight="fill" color={TG.SUCCESS} />
+                <CheckCircle size={14} weight="Bold" color={TG.SUCCESS} />
                 <span style={{ ...TYPE.labelSm, color: TG.SUCCESS }}>마스터 {masteredN}</span>
               </div>
             </div>
@@ -163,7 +163,7 @@ export function MasteryScreen({ rows, masteredN, xp = 0, rank = 0, onExam, toneS
           boxShadow: '0px 10px 20px rgba(242,72,76,0.32)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: SPACE.md, ...TOUCH_OPT,
         }}>
           <span style={{ ...TYPE.cta, color: '#fff' }}>약한 단어 {reviewN}개 복습하기</span>
-          <PlayIcon size={14} weight="fill" color="#fff" />
+          <Play size={14} weight="Bold" color="#fff" />
         </button>
         </Reveal>
       )}

@@ -2,7 +2,7 @@
 // 입력 + '다시 뽑기'(랜덤) + 저장. 저장 시 세션·서버(game_users.nickname)에 반영(호출부에서 처리).
 // 시각 패턴은 SettingsModal과 통일(다크 오버레이 + 카드). 입력 규칙은 NicknameScreen과 동일(≤12자·비어있지 않음).
 import { useState } from 'react';
-import { ArrowsClockwiseIcon, XIcon } from '@phosphor-icons/react';
+import { Refresh, CloseCircle } from '@solar-icons/react';
 import { TG, TYPE, TOUCH_OPT, RADIUS, SPACE } from '../tgTokens.js';
 import { play as playSfx } from '../tgSfx.js';
 import { randomNickname, NICKNAME_MAX } from '../nickname.js';
@@ -28,9 +28,7 @@ export function NicknameEditModal({ current = '', onSave, onClose }) {
           <span style={{ ...TYPE.head, fontSize: 18, color: TG.INK }}>닉네임 변경</span>
           <button onClick={onClose} aria-label="닫기" className="tg-press"
             style={{ width: 44, height: 44, margin: -7, padding: 0, border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', ...TOUCH_OPT }}>
-            <span style={{ width: 30, height: 30, borderRadius: RADIUS.lg, background: TG.SURFACE, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <XIcon size={14} weight="bold" color={TG.SUB} />
-            </span>
+            <CloseCircle size={28} weight="Bold" color={TG.SUB} />
           </button>
         </div>
         <div>
@@ -53,7 +51,7 @@ export function NicknameEditModal({ current = '', onSave, onClose }) {
               display: 'inline-flex', alignItems: 'center', gap: SPACE.sm, padding: '7px 12px', borderRadius: RADIUS.md,
               background: '#fff', border: `1.5px solid ${TG.CORAL_BG}`, cursor: 'pointer', ...TOUCH_OPT,
             }}>
-              <ArrowsClockwiseIcon size={14} weight="bold" color={TG.CORAL_DK} />
+              <Refresh size={14} weight="Bold" color={TG.CORAL_DK} />
               <span style={{ ...TYPE.labelSm, color: TG.INK }}>다시 뽑기</span>
             </button>
             <span style={{ ...TYPE.meta, color: TG.SUB, paddingRight: SPACE.xs }}>{trimmed.length}/{NICKNAME_MAX}</span>

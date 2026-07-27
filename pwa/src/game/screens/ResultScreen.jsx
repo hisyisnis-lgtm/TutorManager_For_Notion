@@ -1,6 +1,6 @@
 // 결과 화면 — 신기록 배지·축하 판다·점수(카운트업)·통계 2카드·코치·다시도전/난이도 바꾸기.
 import { useState, useEffect } from 'react';
-import { TrophyIcon, ArrowClockwiseIcon, LightningIcon, CheckCircleIcon, XCircleIcon, CaretRightIcon, HouseIcon, MedalIcon } from '@phosphor-icons/react';
+import { Cup, Refresh, Bolt, CheckCircle, CloseCircle, AltArrowRight, Home, MedalStar } from '@solar-icons/react';
 import { TG, TYPE, TOUCH_OPT, pickCelebratePanda, RADIUS, SPACE } from '../tgTokens.js';
 import { useCountUp, FlameIcon } from '../tgWidgets.jsx';
 import { play as playSfx } from '../tgSfx.js';
@@ -58,7 +58,7 @@ export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, 
       {isNewBest && (
         <Reveal i={0} style={{ position: 'absolute', top: 36, left: '50%', transform: 'translateX(-50%)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, padding: '8px 16px', borderRadius: RADIUS.lg, background: 'linear-gradient(90deg, #ffd24d, #ff9f40)', boxShadow: '0px 6px 14px rgba(255,159,64,0.28)' }}>
-          <TrophyIcon size={13} weight="fill" color="#fff" />
+          <Cup size={13} weight="Bold" color="#fff" />
           <span style={{ ...TYPE.btnSm, color: '#fff', whiteSpace: 'nowrap' }}>신기록 달성!</span>
         </div>
         </Reveal>
@@ -87,11 +87,11 @@ export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, 
       <Reveal i={3} style={{ position: 'absolute', left: 24, right: 24, top: 312 }}>
       <div data-coach="result-stats" style={{ height: 128, display: 'flex', gap: SPACE.xl, alignItems: 'stretch' }}>
         {[
-          { icon: <FlameIcon size={17} color={TG.CORAL_DK} />, ibg: 'rgba(255,107,107,0.14)', val: maxCombo, unit: '콤보', label: '최고 콤보' },
-          { icon: <LightningIcon size={17} weight="fill" color="#4D8DFF" />, ibg: 'rgba(77,141,255,0.14)', val: avgSec, unit: avgSec === '-' ? '' : '초', label: '평균 반응속도' },
+          { icon: <FlameIcon size={24} color={TG.CORAL_DK} />, val: maxCombo, unit: '콤보', label: '최고 콤보' },
+          { icon: <Bolt size={24} weight="Bold" color="#4D8DFF" />, val: avgSec, unit: avgSec === '-' ? '' : '초', label: '평균 반응속도' },
         ].map((s) => (
           <div key={s.label} style={{ flex: 1, minWidth: 0, background: '#fff', borderRadius: RADIUS.xxl, boxShadow: '0px 5px 14px rgba(43,39,48,0.06)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: SPACE.xs }}>
-            <div style={{ width: 40, height: 40, borderRadius: RADIUS.xl, background: s.ibg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{s.icon}</div>
+            {s.icon}
             <div style={{ display: 'flex', alignItems: 'baseline', gap: SPACE.xxs }}>
               <span style={{ ...TYPE.numLg, color: TG.INK }}>{s.val}</span>
               {s.unit && <span style={{ ...TYPE.label, color: TG.SUB }}>{s.unit}</span>}
@@ -113,7 +113,7 @@ export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, 
             flex: 1, minWidth: 0, height: 62, borderRadius: RADIUS.xl, border: '1.5px solid #ebe5de', background: '#fff', cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: SPACE.md, ...TOUCH_OPT,
           }}>
-            <ArrowClockwiseIcon size={18} weight="bold" color="#9a93a0" />
+            <Refresh size={18} weight="Bold" color="#9a93a0" />
             <span style={{ ...TYPE.btn, color: TG.SUB, whiteSpace: 'nowrap' }}>다시하기</span>
           </button>
           {/* 급 5스테이지를 다 깼으면 다음은 '승급시험'(우선), 아니면 '다음 스테이지' */}
@@ -121,9 +121,9 @@ export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, 
             flex: 1, minWidth: 0, height: 62, borderRadius: RADIUS.xl, border: 'none', cursor: 'pointer',
             background: TG.CORAL_GRAD, boxShadow: '0px 10px 20px rgba(242,72,76,0.32)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: SPACE.sm, ...TOUCH_OPT,
           }}>
-            {onExam && <MedalIcon size={16} weight="fill" color="#fff" />}
+            {onExam && <MedalStar size={16} weight="Bold" color="#fff" />}
             <span style={{ ...TYPE.btn, color: '#fff', whiteSpace: 'nowrap' }}>{onExam ? '승급시험' : '다음 스테이지'}</span>
-            <CaretRightIcon size={16} weight="bold" color="#fff" />
+            <AltArrowRight size={16} weight="Bold" color="#fff" />
           </button>
         </div>
       ) : (
@@ -131,7 +131,7 @@ export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, 
           width: '100%', height: 62, borderRadius: RADIUS.xl, border: 'none', cursor: 'pointer',
           background: TG.CORAL_GRAD, boxShadow: '0px 10px 20px rgba(242,72,76,0.32)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: SPACE.md, ...TOUCH_OPT,
         }}>
-          <ArrowClockwiseIcon size={19} weight="bold" color="#fff" />
+          <Refresh size={19} weight="Bold" color="#fff" />
           <span style={{ ...TYPE.cta, color: '#fff' }}>{retryLabel}</span>
         </button>
       )}
@@ -142,7 +142,7 @@ export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, 
           width: '100%', height: 54, borderRadius: RADIUS.btn, background: '#fff', border: '1.5px solid #ebe5de', cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: SPACE.sm, ...TOUCH_OPT,
         }}>
-          <HouseIcon size={16} weight="fill" color={TG.SUB} />
+          <Home size={16} weight="Bold" color={TG.SUB} />
           <span style={{ ...TYPE.btnSm, color: TG.SUB }}>홈으로 가기</span>
         </button>
       </Reveal>
@@ -177,14 +177,14 @@ export function ExamResultScreen({ correct = 0, total = 20, passed = false, canR
         {placement ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, padding: '8px 18px', borderRadius: RADIUS.pill,
             background: `${accent}17`, border: `1.5px solid ${accent}` }}>
-            <MedalIcon size={14} weight="fill" color={accent} />
+            <MedalStar size={14} weight="Bold" color={accent} />
             <span style={{ ...TYPE.btnSm, color: accent, whiteSpace: 'nowrap' }}>{placement.gradeLabel}급 달성!</span>
           </div>
         ) : (
           <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, padding: '8px 16px', borderRadius: RADIUS.lg,
             background: passed ? 'linear-gradient(90deg, #36C98D, #1fa86a)' : TG.BORDER,
             boxShadow: passed ? '0px 6px 14px rgba(31,168,106,0.28)' : 'none' }}>
-            {passed && <TrophyIcon size={13} weight="fill" color="#fff" />}
+            {passed && <Cup size={13} weight="Bold" color="#fff" />}
             <span style={{ ...TYPE.btnSm, color: passed ? '#fff' : TG.SUB, whiteSpace: 'nowrap' }}>{passed ? '승급 시험 합격!' : '승급 시험 불합격'}</span>
           </div>
         )}
@@ -228,11 +228,11 @@ export function ExamResultScreen({ correct = 0, total = 20, passed = false, canR
       <Reveal i={3} style={{ position: 'absolute', left: 24, right: 24, top: 384 }}>
         <div style={{ height: 128, display: 'flex', gap: SPACE.xl, alignItems: 'stretch' }}>
           {[
-            { icon: <CheckCircleIcon size={24} weight="fill" color="#1fa86a" />, ibg: 'rgba(54,201,141,0.16)', val: correct, label: '맞힌 문제' },
-            { icon: <XCircleIcon size={24} weight="fill" color={TG.CORAL_DK} />, ibg: 'rgba(255,107,107,0.14)', val: wrong, label: '틀린 문제' },
+            { icon: <CheckCircle size={34} weight="Bold" color="#1fa86a" />, val: correct, label: '맞힌 문제' },
+            { icon: <CloseCircle size={34} weight="Bold" color={TG.CORAL_DK} />, val: wrong, label: '틀린 문제' },
           ].map((s) => (
             <div key={s.label} style={{ flex: 1, minWidth: 0, background: '#fff', borderRadius: RADIUS.xxl, boxShadow: '0px 5px 14px rgba(43,39,48,0.06)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: SPACE.xs }}>
-              <div style={{ width: 40, height: 40, borderRadius: RADIUS.xl, background: s.ibg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{s.icon}</div>
+              {s.icon}
               <div style={{ display: 'flex', alignItems: 'baseline', gap: SPACE.xxs }}>
                 <span style={{ ...TYPE.numLg, color: TG.INK }}>{s.val}</span>
                 <span style={{ ...TYPE.label, color: TG.SUB }}>개</span>
@@ -255,7 +255,7 @@ export function ExamResultScreen({ correct = 0, total = 20, passed = false, canR
             width: '100%', height: 62, borderRadius: RADIUS.xl, border: 'none', cursor: 'pointer',
             background: TG.CORAL_GRAD, boxShadow: '0px 10px 20px rgba(242,72,76,0.32)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: SPACE.md, ...TOUCH_OPT,
           }}>
-            <ArrowClockwiseIcon size={19} weight="bold" color="#fff" />
+            <Refresh size={19} weight="Bold" color="#fff" />
             <span style={{ ...TYPE.cta, color: '#fff' }}>다시 도전</span>
           </button>
         </Reveal>

@@ -16,7 +16,7 @@ import {
 import { loadTierPeak } from '../game/earProfile.js';
 import { gameXpGain, loadXp, saveXp, addXp, seedXpIfMissing, loadRank, saveRank, seedRankIfMissing, examPassed, EXAM_QUESTIONS } from '../game/gameXp.js';
 import { ROUND_LENGTH, DIFFICULTIES, THEMES } from '../constants/toneGameWords.js';
-import { TG, DIFF_COLORS, ensureGameFonts, haptic, shuffle, getTimeLimitForCombo, loadBest, saveBest } from '../game/tgTokens.js';
+import { TG, BG_MESH, DIFF_COLORS, ensureGameFonts, haptic, shuffle, getTimeLimitForCombo, loadBest, saveBest, isMeaningHidden, isPinyinHidden } from '../game/tgTokens.js';
 import {
   loadWordStats, saveWordStats, recordWordResult,
   buildReviewList, masteredCount, buildRoundWords,
@@ -44,6 +44,7 @@ import { LoginScreen } from '../game/screens/LoginScreen.jsx';
 import { NicknameScreen } from '../game/screens/NicknameScreen.jsx';
 import { NicknameEditModal } from '../game/screens/NicknameEditModal.jsx';
 import { ModeScreen } from '../game/screens/ModeScreen.jsx';
+import { initGameAds, onRoundEnd } from '../game/gameAds.js'; // 웹 전면 광고(기본 OFF·게임 전용)
 import { ParticleLab } from '../game/screens/_ParticleLab.jsx'; // [임시·DEV] 파티클 검수용 — 검수 후 삭제
 import { SfxLab } from '../game/screens/_SfxLab.jsx'; // [임시·DEV] 효과음/배경음 검수용 — 검수 후 삭제
 import { DifficultyScreen } from '../game/screens/DifficultyScreen.jsx';
@@ -235,6 +236,15 @@ export default function ToneGamePage() {
   const placementModeRef = useRef(false); placementModeRef.current = placementMode;
   const [selectedTheme, setSelectedTheme] = useState(THEMES[0]);
   const [wordPoolByTheme, setWordPoolByTheme] = useState({});
+  // 보조바퀴(뜻·병음 숨김) 컨텍스트 키 — 스테이지/보스/무한/트레이닝/테마별 저장. 단어카드·인게임 설정이 이 값을 사용.
+  const crutchCtx = gameMode === 'placement' ? 'placement'
+    : gameMode === 'exam' ? `${selectedDifficulty?.id}-boss`
+    : gameMode === 'endless' ? 'endless'
+    : gameMode === 'practice' ? 'training'
+    : gameMode === 'theme' ? `th-${selectedTheme?.id}`
+    : (selectedDifficulty?.id || STAGES[0].id); // normal = 스테이지 id(easy-1 등)
+  const hideMeaning = isMeaningHidden(crutchCtx);
+  const hidePinyin = isPinyinHidden(crutchCtx);
   const wordStatsRef = useRef({});  // 단어별 숙련도 글로벌(localStorage 동기화)
   const toneStatsRef = useRef({});  // 성조별 정답률(1·2·3·4·경성) — 성조 레이더/약점 진단(P1)
   const toneSnapRef = useRef(null); // 런 시작 시 성조별 정답수 스냅샷 → 홈 복귀 시 성장 축하 연출(D)
@@ -479,11 +489,14 @@ export default function ToneGamePage() {
     return () => { cancelled = true; };
   }, [identity, isPreview]);
 
+  useEffect(() => { initGameAds(); }, []); // 웹 전면 광고 — 켜져 있을 때만 스크립트 로드(기본 OFF)
+
   useEffect(() => {
     if (screen !== 'end') { endHandledRef.current = false; return; } // 결과화면 벗어나면 가드 해제
     if (!studentToken) return;
     if (endHandledRef.current) return; // 이미 이 결과 처리함 — 다시하기로 score=0 리셋돼도 재실행·중복 사운드 방지
     endHandledRef.current = true;
+    onRoundEnd(); // 한 판 종료 — 3판마다 전면(광고 OFF면 무동작)
     const avgMsVal = answeredCount > 0 ? totalAnswerTime / answeredCount : 0;
 
     // 모드별 종료 판정(최고기록·신기록·효과음)은 순수함수 resolveEndOutcome에 모음.
@@ -1399,7 +1412,7 @@ export default function ToneGamePage() {
     );
   } else { // game
     content = (
-      <FigmaScreen>
+      <FigmaScreen bg={BG_MESH}>
         {word && (
           <GameScreen word={word} entered={entered} currentSyl={currentSyl} completed={completed} timedOut={timedOut}
             wordIndex={wordIndex} wordsLen={placementMode ? PLACEMENT_Q : words.length} wordTimeLimit={wordTimeLimit} gaugeOffsetMs={gaugeOffsetMs} lowTime={lowTime} paused={paused || !!cdPhase || suddenIntro || !!examIntro} endless={endlessMode || (isPreview && qs('endless') === '1')} lives={lives} showSudden={suddenIntro} runId={runId} recordToBeat={recordToBeat}
@@ -1411,6 +1424,7 @@ export default function ToneGamePage() {
             onHint={(practiceMode || examMode) ? undefined : () => { if (!word) return; hintUsedRef.current = true; speakWord(word); if (!hasMistake) { setHasMistake(true); setCombo(0); } }} hintUsed={hasMistake}
             onSkip={practiceMode || examMode ? undefined : skipWord}
             onSpeak={() => { if (!word) return; hintUsedRef.current = true; speakWord(word); }} onReveal={revealAnswer}
+            hideMeaning={hideMeaning} hidePinyin={hidePinyin}
             demoFx={isPreview ? qs('fx') : null} />
         )}
       </FigmaScreen>
@@ -1449,7 +1463,7 @@ export default function ToneGamePage() {
       )}
       {paused && (
         // onQuit=인게임 이탈 → 홈: '오늘의 팁' 웨이브 전환. tipTransitionTo가 clearTimers로 보류 큐까지 비워 기록 오염(2026-07-07 버그) 방지.
-        <PauseModal score={score} combo={combo} onResume={() => setPaused(false)}
+        <PauseModal score={score} combo={combo} crutchCtx={crutchCtx} onResume={() => setPaused(false)}
           onRestart={() => { setPaused(false); if (endlessMode) startEndless(); else if (practiceMode) startTraining(); else if (themeMode) startTheme(selectedTheme); else startGame(selectedDifficulty); }}
           onQuit={() => tipTransitionTo('home')} />
       )}
@@ -1519,7 +1533,7 @@ export default function ToneGamePage() {
           rank={isPreview ? Number(qs('rank') || 0) : rank} onDone={() => { if (!isPreview) setScreen('end'); }} />;
       })()}
       {/* [DEV] 설정 모달 미리보기(?screen=settings) — 머지 전 백도어 제거 대상 */}
-      {isPreview && previewScreen === 'settings' && <SettingsModal onClose={() => {}} />}
+      {isPreview && previewScreen === 'settings' && <SettingsModal onClose={() => {}} crutchCtx="easy-1" />}
       {/* 모드 잠금해제 연출 — 결과 위, 업적보다 먼저. 미리보기 ?screen=modeunlock */}
       {modeUnlock && (
         <ModeUnlockReveal unlock={modeUnlock} hold={isPreview && previewScreen === 'modeunlock'}

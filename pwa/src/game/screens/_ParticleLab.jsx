@@ -2,7 +2,7 @@
 // 어두운 배경에서 버튼으로 반복 발사해 파티클 움직임 퀄리티를 확인한다. 검수 끝나면 이 파일 + ToneGamePage의 'fx' 분기 삭제.
 import { useState } from 'react';
 import { FONT_TITLE, FONT_BODY, TG, TOUCH_OPT } from '../tgTokens.js';
-import { CaretLeftIcon } from '@phosphor-icons/react';
+import { AltArrowLeft } from '@solar-icons/react';
 import { ConfettiBurst, CrispFlash, LIGHT_CONFETTI, ToneGameStyles } from './shared.jsx';
 
 const VARIANTS = {
@@ -22,7 +22,7 @@ export function ParticleLab({ onBack }) {
       {/* 헤더 */}
       <div style={{ position: 'absolute', top: 20, left: 24, right: 24, display: 'flex', alignItems: 'center', gap: 12 }}>
         <button onClick={onBack} aria-label="뒤로" className="tg-press" style={{ width: 40, height: 40, borderRadius: 20, background: 'rgba(255,255,255,0.1)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, ...TOUCH_OPT }}>
-          <CaretLeftIcon size={20} weight="bold" color="#fff" />
+          <AltArrowLeft size={20} weight="Bold" color="#fff" />
         </button>
         <span style={{ fontFamily: FONT_TITLE, fontSize: 20, color: '#fff' }}>파티클 검수 (임시)</span>
       </div>
