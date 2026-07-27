@@ -4,7 +4,7 @@
 // 참조 메모리: tone_game_redesign.md §5(단어카드)·§10-B(FigmaScreen)·§10-C(연출)
 import { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { Lock, CheckCircle, VolumeLoud, VolumeCross, SmartphoneVibration, CloseCircle, AltArrowLeft, Star, Eye } from '@solar-icons/react';
-import { TG, FONT_HANZI, FONT_PINYIN, TYPE, SHADOW, DUR, TOUCH_OPT, TONE_TINTS, TONE_BORDERS, TONE_COLORS, ASSETS,
+import { TG, FONT_HANZI, FONT_PINYIN, TYPE, SHADOW, DUR, TOUCH_OPT, TONE_COLORS, TONE_KEY_COLORS, ASSETS,
   haptic, isHapticMuted, setHapticMuted, isMeaningHidden, setMeaningHidden, isPinyinHidden, setPinyinHidden, RADIUS, SPACE } from '../tgTokens.js';
 import { ToneMark, ComboChip } from '../tgWidgets.jsx';
 import { TONES, DIFFICULTIES } from '../../constants/toneGameWords.js';
@@ -669,21 +669,30 @@ export function ToneButtons({ onTone, wrongBtn, disabled, heat = 0 }) {
             style={{
               position: 'relative', overflow: 'hidden',
               flex: 1, minWidth: 0, height: '100%', cursor: disabled ? 'default' : 'pointer', borderRadius: RADIUS.xl,
-              background: isWrong ? '#FFD9D9' : TONE_TINTS[t.num],
-              border: `1.5px solid ${isWrong ? TG.DANGER : TONE_BORDERS[t.num]}`,
+              // ★성조색 키캡 — 세로 그라디언트(위 밝음→기본) + 아래 두께 엣지(dark 오프셋)로 입체감.
+              //   색 자체로 배경과 분리(솔리드 확정) + "단조롭다" 보완(2026-07-26). 흰 마크/라벨 = 발사체 원판 문법.
+              background: isWrong ? TG.DANGER : `linear-gradient(180deg, ${TONE_KEY_COLORS[t.num].light}, ${TONE_KEY_COLORS[t.num].base})`,
+              border: 'none',
+              boxShadow: isWrong
+                ? '0 4px 0 #C4353A, 0 6px 12px rgba(43,39,48,0.12)'
+                : `0 4px 0 ${TONE_KEY_COLORS[t.num].dark}, 0 6px 12px rgba(43,39,48,0.12)`,
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: SPACE.xs,
-              paddingTop: SPACE.x2, paddingBottom: SPACE.xl, color: t.color, ...TOUCH_OPT,
+              paddingTop: SPACE.x2, paddingBottom: SPACE.xl, color: '#fff', ...TOUCH_OPT,
             }}
           >
-            {/* 탭 순간 성조색 리플 — 타격감 + 성조-색 각인 */}
+            {/* 탭 순간 리플 — 솔리드 성조색 배경이라 흰 리플로(같은 색이면 안 보임) */}
             {ripple && ripple.num === t.num && (
               <span key={ripple.key} aria-hidden="true" style={{
                 position: 'absolute', left: '50%', top: '50%', width: 90 + heat * 50, height: 90 + heat * 50, borderRadius: '50%',
-                background: t.color, animation: 'tg-ripple .5s ease-out forwards', pointerEvents: 'none', zIndex: 0,
+                background: 'rgba(255,255,255,0.55)', animation: 'tg-ripple .5s ease-out forwards', pointerEvents: 'none', zIndex: 0,
               }} />
             )}
-            <ToneMark tone={t.num} size={34} />
-            <span style={{ position: 'relative', zIndex: 1, ...TYPE.labelSm, color: t.color }}>{t.name}</span>
+            <ToneMark tone={t.num} size={34} outline={TONE_KEY_COLORS[t.num].dark} />
+            {/* 라벨도 마크와 동일한 어두운 아웃라인 — 2겹 스택(아래=굵은 스트로크·위=흰 글자). text-stroke 단독은 글자 안쪽을 파먹음 */}
+            <span style={{ position: 'relative', zIndex: 1, display: 'inline-grid' }}>
+              <span aria-hidden="true" style={{ gridArea: '1 / 1', ...TYPE.labelSm, color: TONE_KEY_COLORS[t.num].dark, WebkitTextStroke: `4px ${TONE_KEY_COLORS[t.num].dark}` }}>{t.name}</span>
+              <span style={{ gridArea: '1 / 1', ...TYPE.labelSm, color: '#fff' }}>{t.name}</span>
+            </span>
           </button>
         );
       })}

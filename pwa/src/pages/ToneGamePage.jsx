@@ -16,7 +16,7 @@ import {
 import { loadTierPeak } from '../game/earProfile.js';
 import { gameXpGain, loadXp, saveXp, addXp, seedXpIfMissing, loadRank, saveRank, seedRankIfMissing, examPassed, EXAM_QUESTIONS } from '../game/gameXp.js';
 import { ROUND_LENGTH, DIFFICULTIES, THEMES } from '../constants/toneGameWords.js';
-import { TG, DIFF_COLORS, ensureGameFonts, haptic, shuffle, getTimeLimitForCombo, loadBest, saveBest, isMeaningHidden, isPinyinHidden } from '../game/tgTokens.js';
+import { TG, BG_MESH, DIFF_COLORS, ensureGameFonts, haptic, shuffle, getTimeLimitForCombo, loadBest, saveBest, isMeaningHidden, isPinyinHidden } from '../game/tgTokens.js';
 import {
   loadWordStats, saveWordStats, recordWordResult,
   buildReviewList, masteredCount, buildRoundWords,
@@ -1412,7 +1412,7 @@ export default function ToneGamePage() {
     );
   } else { // game
     content = (
-      <FigmaScreen>
+      <FigmaScreen bg={BG_MESH}>
         {word && (
           <GameScreen word={word} entered={entered} currentSyl={currentSyl} completed={completed} timedOut={timedOut}
             wordIndex={wordIndex} wordsLen={placementMode ? PLACEMENT_Q : words.length} wordTimeLimit={wordTimeLimit} gaugeOffsetMs={gaugeOffsetMs} lowTime={lowTime} paused={paused || !!cdPhase || suddenIntro || !!examIntro} endless={endlessMode || (isPreview && qs('endless') === '1')} lives={lives} showSudden={suddenIntro} runId={runId} recordToBeat={recordToBeat}

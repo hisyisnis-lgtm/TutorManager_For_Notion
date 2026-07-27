@@ -28,10 +28,21 @@ export const TG = {
   // 표면 / 라인 (웜 오프화이트 계열 통합)
   SURFACE: '#F3EFE9',   // 소프트 칩 배경(#f4efe8·#f7f3ee 통합)
   BORDER: '#EBE5DE',    // 카드 보더·구분선(#efeae4·#e7e0d8·#ece5da·#e5ded5 통합)
-  TRACK: '#F0EBE4',     // 진행 게이지 트랙
+  TRACK: '#FFEDD4',     // 진행 게이지 트랙 (greige → 웜 브라이트, 2026-07-26 색감 리프레시)
+  GOLD_BG: '#FFEFC2',   // 골드 소프트 틴트(콤보 칩 등 — CORAL_BG 분홍보다 생기)
   // 라인(반투명)
   LINE: 'rgba(43,39,48,0.08)',
 };
+
+// 인게임 배경 — 컬러 블롭 메시(단색·선형 띠 대신 유기적 공기감. 2026-07-26 색감 리프레시, Figma 35번 프레임).
+// radial 5겹(하늘·피치·민트·코랄·웜크림)을 비대칭으로 흩뿌리고 베이스는 맑은 웜화이트.
+export const BG_MESH = [
+  'radial-gradient(60% 42% at 12% 5%, rgba(191,227,250,0.50), transparent 70%)',
+  'radial-gradient(55% 36% at 90% 22%, rgba(255,225,194,0.42), transparent 70%)',
+  'radial-gradient(45% 30% at 8% 55%, rgba(216,245,227,0.32), transparent 70%)',
+  'radial-gradient(40% 26% at 92% 62%, rgba(255,217,217,0.28), transparent 70%)',
+  'radial-gradient(70% 36% at 45% 98%, rgba(255,233,200,0.55), transparent 70%)',
+].join(', ') + ', #FDFEFB';
 
 // 성조 5색 — toneGameWords.js TONES.color와 동일하게 유지(단일 출처는 TONES, 여기는 참조용 상수).
 export const TONE_COLORS = {
@@ -42,14 +53,24 @@ export const TONE_COLORS = {
   0: '#AAB2BD',
 };
 
-// 성조색 소프트 틴트 배경 (Figma: 각 성조색 0.14 알파)
+// 성조색 소프트 틴트 배경 (0.14 → 0.20: 물빠짐 해소, 2026-07-26 색감 리프레시)
 export const TONE_TINTS = {
-  1: 'rgba(255,77,109,0.14)',
-  2: 'rgba(255,159,64,0.14)',
-  3: 'rgba(54,201,141,0.14)',
-  4: 'rgba(77,141,255,0.14)',
-  0: 'rgba(170,178,189,0.14)',
+  1: 'rgba(255,77,109,0.20)',
+  2: 'rgba(255,159,64,0.20)',
+  3: 'rgba(54,201,141,0.20)',
+  4: 'rgba(77,141,255,0.20)',
+  0: 'rgba(170,178,189,0.20)',
 };
+// 성조 키 3단(위 밝음→기본→아래 두께 엣지) — 인게임 성조 버튼 키캡용 (2026-07-26 색감 리프레시 4차).
+// 경성은 흰 라벨 대비 위해 기본색 자체를 반 단계 어둡게 잡음(#AAB2BD 대신 #98A2B0 계열).
+export const TONE_KEY_COLORS = {
+  1: { light: '#FF7089', base: '#FF4D6D', dark: '#D93A57' },
+  2: { light: '#FFB466', base: '#FF9F40', dark: '#DB7F1F' },
+  3: { light: '#5CD9A6', base: '#36C98D', dark: '#23A870' },
+  4: { light: '#7AA9FF', base: '#4D8DFF', dark: '#3570DB' },
+  0: { light: '#AEB8C4', base: '#98A2B0', dark: '#7E8894' },
+};
+
 // 성조버튼 테두리 (Figma: 각 성조색 0.3 알파)
 export const TONE_BORDERS = {
   1: 'rgba(255,77,109,0.3)',
@@ -125,7 +146,8 @@ export const TYPE = {
 // 스케일(4px 기반) + 의미 별칭(chip/btn/card). 근접값은 스케일로 스냅(예 14·15→lg 16, 22·23→xxl 24). pill=완전 둥근 알약.
 export const RADIUS = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24, pill: 999, chip: 12, btn: 18, card: 28 };
 export const SHADOW = {
-  card: '0 10px 28px rgba(43,39,48,0.08)',
+  // 카드 섀도 — 무채색 → 옅은 블루·코랄 틴트 2겹(공기감, 2026-07-26 색감 리프레시)
+  card: '0 10px 28px rgba(89,128,192,0.10), 0 3px 12px rgba(255,107,107,0.06)',
   btn: '0 6px 16px rgba(242,72,76,0.28)',
   // 정답 글로우 — 하드 테두리 금지, 부드러운 다층 드롭섀도(메모리 §4)
   correctGlow: '0 10px 28px rgba(43,39,48,0.07), 0 0 40px rgba(54,201,141,0.24), 0 2px 16px rgba(54,201,141,0.16)',
