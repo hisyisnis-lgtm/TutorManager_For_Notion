@@ -193,6 +193,23 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
     flex-direction: column;
   }
 
+  /* 하단 탭바 프로스티드 글래스 — blur를 ::before(비-고정 레이어)로 분리.
+     position:fixed 요소에 backdrop-filter를 직접 걸면 iOS Safari에서 스크롤 중
+     바가 화면 중간으로 떠오르는 합성 버그가 발생 → blur를 자식 레이어로 옮겨 회피.
+     시각 결과(반투명 흰 배경 + blur)는 기존과 동일. */
+  .bottom-nav-glass {
+    isolation: isolate;
+  }
+  .bottom-nav-glass::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background-color: rgba(255, 255, 255, 0.82);
+    backdrop-filter: saturate(180%) blur(20px);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+  }
+
   /* 시각적으로만 숨기기 (스크린 리더는 읽음) */
   .sr-only {
     position: absolute;

@@ -13,13 +13,17 @@ const TABS = [
 export default function BottomNav() {
   return (
     <nav
+      className="bottom-nav-glass"
       style={{
         position: 'fixed', bottom: 0, left: 0, right: 0,
-        backgroundColor: 'rgba(255,255,255,0.82)',
-        backdropFilter: 'saturate(180%) blur(20px)',
-        WebkitBackdropFilter: 'saturate(180%) blur(20px)',
+        // 프로스티드 배경·blur는 .bottom-nav-glass::before(비-고정 레이어)로 분리.
+        // iOS Safari는 position:fixed 요소에 backdrop-filter가 직접 걸리면 스크롤 중
+        // 바가 화면 중간으로 떠오르는 합성 버그가 있어, blur를 자식 레이어로 옮겨 회피한다.
         boxShadow: 'var(--shadow-nav)',
         zIndex: 50,
+        // 고정 요소를 자체 합성 레이어로 승격해 iOS 스크롤 중 위치 튐을 추가로 방지.
+        transform: 'translateZ(0)',
+        WebkitTransform: 'translateZ(0)',
         paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
       <div style={{ maxWidth: 480, margin: '0 auto', display: 'flex' }}>
