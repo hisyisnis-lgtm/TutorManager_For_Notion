@@ -4,9 +4,18 @@
 // 미리 막아 친절한 에러 메시지를 띄우고 무의미한 업로드 트래픽을 줄인다.
 // 화이트리스트가 바뀌면 worker/lib/upload.js와 함께 동기화할 것.
 
-export const MAX_FILE_BYTES = 20 * 1024 * 1024; // Notion file_uploads single_part 상한
+// Notion file_uploads single_part 모드의 상한(20 MiB). 이보다 크면 multi_part가 필요한데
+// 숙제 제출엔 오버스펙이라 단순 거부한다.
+//
+// ⚠️ 요금제 의존: 파일당 상한은 워크스페이스 플랜을 따른다 — 무료 5 MiB / 유료 5 GiB.
+// 2026-08-01 학생 3명의 제출 실패가 정확히 이 함정이었다(무료 5 MiB인데 코드는 20 MiB를 통과시켜
+// 5~20 MiB 파일이 마지막 Notion 단계에서 거부됨). 2026-08-02 플러스 전환으로 해소.
+// **무료 플랜으로 되돌아가면 5 * 1024 * 1024로 낮출 것** — worker/lib/upload.js와 함께.
+export const MAX_FILE_BYTES = 20 * 1024 * 1024;
 // 옛 이름 호환 alias (호출처에서 import 하는 곳 보호)
 export const MAX_AUDIO_BYTES = MAX_FILE_BYTES;
+// 안내 문구용 — 상한을 바꾸면 문구도 같이 따라오게 (숫자 하드코딩 금지)
+export const MAX_FILE_MB = Math.round(MAX_FILE_BYTES / 1024 / 1024);
 
 // === 카테고리별 MIME / 확장자 ===
 
@@ -130,13 +139,6 @@ export function validateFile(file, opts = {}) {
   if (!Number.isFinite(size) || size <= 0) {
     return { ok: false, error: '파일이 비어있거나 손상되었습니다.' };
   }
-  if (size > MAX_FILE_BYTES) {
-    const mb = (size / (1024 * 1024)).toFixed(1);
-    return {
-      ok: false,
-      error: `파일이 너무 커요 (${mb} MB). 20 MB 이하로 줄여서 다시 시도해주세요.`,
-    };
-  }
 
   const mime = normalizedMime(file);
   const ext = extNoDotOf(file);
@@ -152,6 +154,19 @@ export function validateFile(file, opts = {}) {
     return {
       ok: false,
       error: '지원하지 않는 파일이에요. 녹음(mp3·m4a·wav 등) 또는 이미지·PDF(png·jpg·webp·pdf 등)만 가능해요.',
+    };
+  }
+
+  // 크기 검사는 카테고리를 안 뒤에 — 녹음이면 "짧게 나눠 올리기", 그 외엔 "줄여서 올리기"로
+  // 학생이 바로 실행할 수 있는 안내를 준다. (예전엔 카테고리 무관 한 문장이라 대처법이 없었음)
+  if (size > MAX_FILE_BYTES) {
+    const mb = (size / (1024 * 1024)).toFixed(1);
+    const limit = `${MAX_FILE_MB}MB`;
+    return {
+      ok: false,
+      error: category === 'audio'
+        ? `녹음이 너무 커요 (${mb}MB). ${limit}까지만 올릴 수 있어요 — 앱에서 '바로 녹음'으로 녹음하면 훨씬 길게 담을 수 있고, 이미 있는 파일이면 나눠서 올려주세요.`
+        : `파일이 너무 커요 (${mb}MB). ${limit} 이하로 줄여서 올려주세요.`,
     };
   }
 

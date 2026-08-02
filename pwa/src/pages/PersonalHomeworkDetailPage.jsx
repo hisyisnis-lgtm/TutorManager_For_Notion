@@ -18,6 +18,8 @@ import {
   downloadHomeworkFileStudent,
   fetchHomeworkFileBlobUrlStudent,
 } from '../api/homework.js';
+import { retryTransient } from '../api/fetchTimeout.js';
+import { reportHandledError } from '../utils/errorReporter.js';
 import { formatDateTimeCompact } from '../utils/dateUtils.js';
 import { markViewed } from '../utils/homeworkViewed.js';
 import { writeCacheValue } from '../hooks/useCachedResource.js';
@@ -33,6 +35,9 @@ import {
   isImageByName,
   isPdfByName,
 } from '../utils/audioFile.js';
+
+// Notion file_upload는 생성 후 1시간 안에 첨부해야 만료되지 않는다 — 여유를 두고 50분까지만 재사용.
+const REUSE_WINDOW_MS = 50 * 60 * 1000;
 
 function genStudentName(title, index) {
   // 한자(\p{Script=Han})도 보존 — "声调练习" 같은 중국어 제목이 통째로 지워지지 않게
@@ -56,8 +61,14 @@ export default function PersonalHomeworkDetailPage() {
   const [pendingDocs, setPendingDocs] = useState([]);
 
   const [uploading, setUploading] = useState(false);
+  // 업로드 진행 표시 — { done, total }. 스피너만 돌면 학생이 "멈췄다"고 판단해 앱을 닫는다.
+  const [progress, setProgress] = useState(null);
   const [deletingFileName, setDeletingFileName] = useState(null);
   const [deleteConfirmFile, setDeleteConfirmFile] = useState(null);
+
+  // 이번 화면에서 이미 Notion에 올라간 파일 — tempId → { fileUploadId, fileName, at }.
+  // 중간에 실패해도 성공한 파일은 다시 올리지 않는다(Notion file_upload는 1시간 유효).
+  const uploadedRef = useRef(new Map());
 
   // 저장 전 이탈 차단 — pending 파일이 하나라도 있으면 dirty.
   // 강사 페이지(HomeworkDetailPage)와 동일 패턴: handleBack 가드 + popstate 가드 + ConfirmDialog.
@@ -93,6 +104,12 @@ export default function PersonalHomeworkDetailPage() {
       navigate(-1);
     }
   };
+
+  // 업로드 중 뒤로가기를 눌러 확인창이 떠 있는 동안 제출이 끝나는 경우가 있다.
+  // 그 시점엔 경고할 내용("저장하지 않은 파일이 있어요")이 더 이상 사실이 아니므로 창을 닫는다.
+  useEffect(() => {
+    if (showLeaveConfirm && !uploading && !isDirty) setShowLeaveConfirm(false);
+  }, [showLeaveConfirm, uploading, isDirty]);
 
   const handleLeaveConfirm = () => {
     setShowLeaveConfirm(false);
@@ -165,7 +182,13 @@ export default function PersonalHomeworkDetailPage() {
     const all = [...pendingAudio, ...pendingDocs];
     if (all.length === 0) return;
     const isFirstSubmit = !hw?.submitMark;
+    // 진행률은 파일 개수가 아니라 실제 전송 바이트 기준 — 큰 파일 하나를 올릴 때도 숫자가 움직인다.
+    const totalBytes = all.reduce((sum, pf) => sum + (pf.file?.size || 0), 0) || 1;
+    let bytesDone = 0;
+    // 마지막 제출 요청이 남아 있으므로 업로드만으로 100%를 보여주지 않는다.
+    const pct = (bytes) => Math.min(99, Math.round((bytes / totalBytes) * 100));
     setUploading(true);
+    setProgress({ done: 0, total: all.length, percent: 0 });
     try {
       // 동명 파일 충돌 방지 — 기존 제출본 + 이번 pending 이름을 합쳐 유일화한다.
       // (다운로드/미리보기가 파일을 이름으로 찾으므로 같은 이름이면 전부 첫 번째로만 조회됨)
@@ -177,11 +200,29 @@ export default function PersonalHomeworkDetailPage() {
       for (let i = 0; i < all.length; i += 1) {
         const pf = all[i];
         const fullName = newNames[i];
+        // 앞선 시도에서 이미 올라간 파일은 건너뛴다 — 3개 중 2개를 올리고 실패했을 때
+        // 처음부터 다시 올리느라 또 오래 기다리는 일을 막는다.
+        const done = uploadedRef.current.get(pf.tempId);
+        if (done && done.fileName === fullName && Date.now() - done.at < REUSE_WINDOW_MS) {
+          bytesDone += pf.file?.size || 0;
+          uploaded.push({ fileUploadId: done.fileUploadId, fileName: done.fileName });
+          setProgress({ done: i + 1, total: all.length, percent: pct(bytesDone) });
+          continue;
+        }
         const namedFile = new File([pf.file], fullName, { type: pf.file.type });
-        const { fileUploadId } = await uploadStudentFile(studentToken, namedFile);
+        // 업로드만 재시도한다 — 제출 PATCH는 이미 올린 file_upload를 다시 붙이는 요청이라
+        // 재시도가 오히려 중복 첨부 오류를 부를 수 있다. 실패해도 여기 캐시가 남아 재시도가 빠르다.
+        // 재시도로 같은 파일을 다시 올려도 bytesDone은 그대로라 진행률이 뒤로 가지 않는다.
+        const { fileUploadId } = await retryTransient(() => uploadStudentFile(studentToken, namedFile, {
+          onProgress: (loaded) => setProgress({ done: i, total: all.length, percent: pct(bytesDone + loaded) }),
+        }));
+        bytesDone += pf.file?.size || 0;
+        uploadedRef.current.set(pf.tempId, { fileUploadId, fileName: fullName, at: Date.now() });
         uploaded.push({ fileUploadId, fileName: fullName });
+        setProgress({ done: i + 1, total: all.length, percent: pct(bytesDone) });
       }
       await submitHomework(studentToken, hwId, uploaded);
+      uploadedRef.current.clear();
       setPendingAudio([]);
       setPendingDocs([]);
       await load();
@@ -192,8 +233,18 @@ export default function PersonalHomeworkDetailPage() {
       }
     } catch (err) {
       message.error(`제출 실패: ${err.message}`);
+      // 토스트는 화면을 나가면 사라진다 — 강사가 볼 수 있게 원인을 원격에도 남긴다.
+      // 파일 크기를 함께 보내야 "무슨 파일을 올리다 막혔는지"를 추측 없이 알 수 있다.
+      reportHandledError(`숙제 제출 실패: ${err.message}`, {
+        source: 'PersonalHomeworkDetailPage.handleSaveSubmit',
+        detail: [
+          `status=${err.status ?? '없음(네트워크·타임아웃)'}`,
+          `files=${all.map((pf) => `${pf.baseName}${pf.ext}(${((pf.file?.size ?? 0) / 1024 / 1024).toFixed(1)}MB)`).join(' / ')}`,
+        ].join('\n'),
+      });
     } finally {
       setUploading(false);
+      setProgress(null);
     }
   };
 
@@ -475,20 +526,60 @@ export default function PersonalHomeworkDetailPage() {
         </div>
       </Modal>
 
-      {/* 업로드/삭제 중 딤 오버레이 */}
+      {/* 업로드/삭제 중 딤 오버레이
+          zIndex는 antd Modal(기본 1000)보다 낮아야 한다 — 예전 9999에서는 업로드 중 뒤로가기를
+          눌렀을 때 이탈 확인창이 이 딤 뒤에 깔려 보이지도 눌리지도 않았다. 학생 눈엔 화면이
+          멈춘 것처럼 보여 앱을 강제 종료하게 만들던 경로다. (BottomNav는 50이라 여전히 위) */}
       {(uploading || deletingFileName !== null) && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
-          <Spin size="large" />
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 900, padding: '0 32px' }}>
+          {/* 문구는 어두운 패널 안에 — 반투명 딤 위에 흰 글씨만 얹으면 뒤 카드와 겹쳐 읽히지 않는다 */}
+          <div style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14,
+            background: 'rgba(0,0,0,0.78)', borderRadius: 16, padding: uploading ? '24px 28px' : 20,
+          }}>
+            {/* 스피너는 진행률이 잠시 멈춰도 "살아 있다"는 신호를 준다 — 막대와 함께 둔다 */}
+            <Spin size="large" />
+            {uploading && (
+              <>
+                <p aria-live="polite" style={{ margin: 0, color: '#fff', fontSize: 14, fontWeight: 600, textAlign: 'center', lineHeight: 1.7 }}>
+                  {/* 지금 올리는 중인 파일 번호(1-base) — 0/2로 시작하면 멈춘 것처럼 보인다 */}
+                  {progress && progress.total > 1
+                    ? `${Math.min(progress.done + 1, progress.total)}/${progress.total} 파일 올리는 중이에요`
+                    : '파일 올리는 중이에요'}
+                  <br />
+                  <span style={{ fontWeight: 400, opacity: 0.85 }}>화면을 닫지 말고 잠시만 기다려주세요</span>
+                </p>
+                {/* 실제 전송량 기준 막대 — 큰 파일 하나를 올리는 동안에도 눈에 보이게 움직인다 */}
+                <div
+                  role="progressbar"
+                  aria-valuenow={progress?.percent ?? 0}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  style={{ width: 200, height: 6, borderRadius: 999, background: 'rgba(255,255,255,0.25)', overflow: 'hidden' }}
+                >
+                  <div
+                    className="transition-[width] duration-200 ease-out"
+                    style={{ width: `${progress?.percent ?? 0}%`, height: '100%', borderRadius: 999, background: '#fff' }}
+                  />
+                </div>
+                <span style={{ color: '#fff', fontSize: 13, fontWeight: 700, fontVariantNumeric: 'tabular-nums', marginTop: -4 }}>
+                  {progress?.percent ?? 0}%
+                </span>
+              </>
+            )}
+          </div>
         </div>
       )}
 
       {/* 저장 전 이탈 확인 — pending 파일이 있는 상태에서 뒤로가기 시도 시 */}
       {showLeaveConfirm && (
         <ConfirmDialog
-          title="페이지를 나가시겠습니까?"
-          message="저장하지 않은 파일이 있어요. 지금 나가면 추가한 파일이 사라집니다."
-          confirmLabel="나가기"
-          cancelLabel="계속 작성"
+          title={uploading ? '제출 중이에요' : '페이지를 나가시겠습니까?'}
+          message={uploading
+            ? '지금 나가면 제출이 중단될 수 있어요. 잠시만 기다려주세요.'
+            : '저장하지 않은 파일이 있어요. 지금 나가면 추가한 파일이 사라집니다.'}
+          confirmLabel={uploading ? '그래도 나가기' : '나가기'}
+          cancelLabel={uploading ? '기다리기' : '계속 작성'}
           onConfirm={handleLeaveConfirm}
           onCancel={() => setShowLeaveConfirm(false)}
         />

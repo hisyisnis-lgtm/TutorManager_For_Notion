@@ -1890,6 +1890,29 @@ async function handleHomeworkRoutes(request, env, corsHeaders, url) {
     return new Response(upstream.body, { status: 200, headers });
   }
 
+  // 숙제 파일 업로드·제출 실패를 강사에게 즉시 알린다.
+  //
+  // 왜: 학생 화면엔 실패 토스트 한 줄이 전부라 화면을 나가면 아무 흔적도 남지 않았다.
+  // 2026-08-01 학생 3명이 제출에 실패했을 때 "어떤 파일을 올리다 무엇 때문에 막혔는지"를
+  // 사후에 확인할 방법이 전혀 없었다. 파일명·크기·실제 거부 사유까지 담아 추측을 없앤다.
+  async function alertHomeworkFailure({ studentPage, file, stage, reason }) {
+    const name = stripEmoji(studentPage?.properties?.['이름']?.title?.[0]?.plain_text ?? '학생');
+    const fileName = file?.name || '';
+    const size = Number(file?.size);
+    const fileDesc = fileName
+      ? `📄 ${fileName} (${size > 0 ? `${(size / 1024 / 1024).toFixed(1)}MB` : '크기 불명'}, ${file?.type || 'mime 불명'})`
+      : '';
+    await sendAlert(env, {
+      level: 'warn',
+      title: '⚠️ 숙제 제출 실패',
+      message: [`👤 ${name}`, fileDesc, `⛔ ${stage}: ${String(reason || '').slice(0, 300)}`]
+        .filter(Boolean).join('\n'),
+      tags: ['warning', 'homework'],
+      dedupKey: `hwfail:${name}:${fileName}:${stage}`,
+      ttlSeconds: 300,
+    });
+  }
+
   // POST /homework/upload — 강사용 파일 업로드 (JWT 인증)
   if (url.pathname === '/homework/upload' && request.method === 'POST') {
     const authErr = await requireJwt(request, env, corsHeaders);
@@ -2015,17 +2038,23 @@ async function handleHomeworkRoutes(request, env, corsHeaders, url) {
         status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+    let file = null;
     try {
       const formData = await request.formData();
-      const file = formData.get('file');
-      // 익명 라우트라 검증 핵심: size 상한(Notion 20 MiB) + MIME 화이트리스트.
+      file = formData.get('file');
+      // 익명 라우트라 검증 핵심: size 상한(lib/upload.js MAX_FILE_BYTES) + MIME 화이트리스트.
       const v = validateFileUpload(file);
-      if (!v.ok) return errRes(corsHeaders, v.status, v.error);
+      if (!v.ok) {
+        // 거절도 알린다 — 학생이 지금 못 올리고 있다는 사실을 강사가 알아야 안내할 수 있다.
+        await alertHomeworkFailure({ studentPage, file, stage: '사전 검증', reason: v.error });
+        return errRes(corsHeaders, v.status, v.error);
+      }
       const result = await uploadFileToNotion(file, env.NOTION_TOKEN);
       return new Response(JSON.stringify(result), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     } catch (e) {
+      await alertHomeworkFailure({ studentPage, file, stage: 'Notion 업로드', reason: e.message });
       return new Response(JSON.stringify({ error: e.message }), {
         status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -2142,6 +2171,17 @@ async function handleHomeworkRoutes(request, env, corsHeaders, url) {
       }),
     });
     const updateData = await updateRes.json();
+
+    // 파일은 올라갔는데 페이지 반영에서 실패한 경우 — 학생 눈엔 "제출 실패"로만 보이고
+    // 노션엔 흔적이 없어 가장 진단하기 어려운 구간이다. 응답 본문까지 담아 알린다.
+    if (!updateRes.ok) {
+      await alertHomeworkFailure({
+        studentPage,
+        file: null,
+        stage: 'Notion 제출 반영',
+        reason: `${updateRes.status} ${JSON.stringify(updateData).slice(0, 200)}`,
+      });
+    }
 
     // 실제 새 파일이 업로드된 제출완료 상태일 때만 강사에게 ntfy 알림
     if (updateRes.ok && newStatus === '제출완료' && newFiles.length > 0) {

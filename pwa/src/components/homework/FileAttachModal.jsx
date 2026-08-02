@@ -19,7 +19,7 @@ import { ACCEPT_AUDIO, ACCEPT_DOCUMENT } from '../../utils/audioFile.js';
 export default function FileAttachModal({ attach, titles, hints }) {
   const {
     modalKind, modalView, sessionFiles, namingFile, namingInput, setNamingInput,
-    audioInputRef, docInputRef, recorderDefaultName, handleRecorderFile,
+    audioInputRef, docInputRef, recorderDefaultName, handleRecorderFile, preparing,
     closeModal, backToList, removeSessionFile,
     tryOpenAudioPicker, tryOpenDocPicker, tryOpenRecord,
     handleAudioPickChange, handleDocPickChange,
@@ -135,13 +135,16 @@ export default function FileAttachModal({ attach, titles, hints }) {
             </div>
           ) : (
             <div style={{ marginBottom: 10 }}>
+              {/* 고른 사진을 줄이는 동안(여러 장이면 몇 초) 버튼을 잠그고 상태를 보여준다 —
+                  아무 반응이 없으면 학생이 같은 버튼을 다시 누르게 된다 */}
               <button
                 type="button"
                 onClick={tryOpenDocPicker}
+                disabled={preparing}
                 className="transition-[background-color] duration-150 ease-out"
-                style={{ width: '100%', height: 44, borderRadius: 12, background: 'white', border: `1.5px solid ${BORDER_NEUTRAL}`, color: TEXT_SECONDARY, fontSize: 14, fontWeight: 600, cursor: 'pointer', WebkitTapHighlightColor: 'transparent' }}
+                style={{ width: '100%', height: 44, borderRadius: 12, background: 'white', border: `1.5px solid ${BORDER_NEUTRAL}`, color: preparing ? TEXT_INACTIVE : TEXT_SECONDARY, fontSize: 14, fontWeight: 600, cursor: preparing ? 'progress' : 'pointer', WebkitTapHighlightColor: 'transparent' }}
               >
-                파일 추가
+                {preparing ? '사진 준비 중…' : '파일 추가'}
               </button>
             </div>
           )}
@@ -150,6 +153,7 @@ export default function FileAttachModal({ attach, titles, hints }) {
             type="primary"
             block
             onClick={handleSessionConfirm}
+            disabled={preparing}
             style={{ height: 48, borderRadius: 12, fontWeight: 700, fontSize: 15 }}
           >
             확인{sessionFiles.length > 0 ? ` (${sessionFiles.length}개 추가)` : ''}

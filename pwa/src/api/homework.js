@@ -194,7 +194,9 @@ async function studentFetch(method, path, body, studentToken) {
   if (!res.ok) {
     // 학생 세션 만료 → 세션 정리 후 리로드(인증 게이트 재진입)
     if (res.status === 401) handleStudentAuthExpiry(studentToken);
-    throw new Error(data.error || `HTTP ${res.status}`);
+    const err = new Error(data.error || `HTTP ${res.status}`);
+    err.status = res.status; // 재시도 판단용 — 4xx는 다시 보내도 같은 결과
+    throw err;
   }
   return data;
 }
@@ -210,18 +212,66 @@ export async function fetchMyHomework(studentToken) {
   return studentFetch('GET', `/homework/student/${encodeURIComponent(studentToken)}`, undefined, studentToken);
 }
 
-/** 학생용 파일 업로드 → Worker가 Notion file_upload 처리 */
-export async function uploadStudentFile(studentToken, file) {
+/**
+ * 업로드 진행률이 필요할 때 쓰는 XHR 경로.
+ *
+ * fetch에는 업로드 진행 이벤트가 없다 — 큰 녹음 하나를 올리는 동안 화면이 "몇 번째 파일"에서
+ * 멈춰 있으면 학생은 앱이 멈춘 줄 알고 나가버린다(2026-08-01 사고의 이탈 경로).
+ * XHR의 upload.onprogress로 실제 전송량을 받아 퍼센트를 보여준다.
+ *
+ * 에러 규약은 fetch 경로와 동일 — HTTP 실패는 `err.status`를 싣고,
+ * 네트워크·타임아웃은 status 없이 던져서 retryTransient가 재시도 대상으로 인식한다.
+ */
+function uploadViaXhr(url, formData, headers, { onProgress, timeoutMs }) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', url, true);
+    Object.entries(headers || {}).forEach(([k, v]) => xhr.setRequestHeader(k, v));
+    xhr.timeout = timeoutMs;
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) onProgress(e.loaded, e.total);
+    };
+    xhr.onload = () => {
+      let data = {};
+      try { data = JSON.parse(xhr.responseText || '{}'); } catch { /* 본문이 JSON이 아닐 수 있음 */ }
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve(data);
+        return;
+      }
+      const err = new Error(data.error || `파일 업로드 실패 (${xhr.status})`);
+      err.status = xhr.status;
+      reject(err);
+    };
+    xhr.onerror = () => reject(new Error('네트워크가 끊겨 업로드하지 못했어요. 연결을 확인해주세요.'));
+    xhr.ontimeout = () => reject(new Error('요청 시간이 초과됐어요. 네트워크를 확인하고 잠시 후 다시 시도해주세요.'));
+    xhr.send(formData);
+  });
+}
+
+/**
+ * 학생용 파일 업로드 → Worker가 Notion file_upload 처리
+ * @param {(loaded: number, total: number) => void} [opts.onProgress] 주면 XHR로 전송해 진행률을 보고한다.
+ */
+export async function uploadStudentFile(studentToken, file, { onProgress } = {}) {
   const form = new FormData();
   form.append('file', file);
+  const url = `${WORKER_URL}/homework/student-upload/${encodeURIComponent(studentToken)}`;
+  const headers = studentAuthHeader(studentToken);
+
+  if (typeof onProgress === 'function' && typeof XMLHttpRequest !== 'undefined') {
+    return uploadViaXhr(url, form, headers, { onProgress, timeoutMs: UPLOAD_TIMEOUT_MS });
+  }
+
   const res = await fetchWithTimeout(
-    `${WORKER_URL}/homework/student-upload/${encodeURIComponent(studentToken)}`,
-    { method: 'POST', body: form, cache: 'no-store', headers: studentAuthHeader(studentToken) },
+    url,
+    { method: 'POST', body: form, cache: 'no-store', headers },
     UPLOAD_TIMEOUT_MS
   );
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
-    throw new Error(data.error || '파일 업로드 실패');
+    const err = new Error(data.error || '파일 업로드 실패');
+    err.status = res.status;
+    throw err;
   }
   return res.json(); // { fileUploadId, fileName }
 }
