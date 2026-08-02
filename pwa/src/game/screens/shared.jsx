@@ -3,8 +3,9 @@
 // 단어 카드/성조 버튼·카운트다운 비주얼·토스트·흔들림 버튼.
 // 참조 메모리: tone_game_redesign.md §5(단어카드)·§10-B(FigmaScreen)·§10-C(연출)
 import { useState, useEffect, useRef, useLayoutEffect } from 'react';
-import { Lock, CheckCircle, VolumeLoud, VolumeCross, SmartphoneVibration, CloseCircle, AltArrowLeft, Star, Eye } from '@solar-icons/react';
-import { TG, FONT_HANZI, FONT_PINYIN, TYPE, SHADOW, DUR, TOUCH_OPT, TONE_COLORS, TONE_KEY_COLORS, ASSETS,
+import { Lock, CheckCircle, VolumeLoud, VolumeCross, SmartphoneVibration, CloseCircle, AltArrowLeft, Star, Eye,
+  HandStars, MedalStar, Home as HomeIcon, Cup, Stars } from '@solar-icons/react';
+import { TG, HOME, FONT_HANZI, FONT_PINYIN, TYPE, SHADOW, DUR, TOUCH_OPT, TONE_COLORS, TONE_KEY_COLORS, ASSETS,
   haptic, isHapticMuted, setHapticMuted, isMeaningHidden, setMeaningHidden, isPinyinHidden, setPinyinHidden, RADIUS, SPACE } from '../tgTokens.js';
 import { ToneMark, ComboChip } from '../tgWidgets.jsx';
 import { TONES, DIFFICULTIES } from '../../constants/toneGameWords.js';
@@ -170,6 +171,10 @@ function ConfettiBurstInner({ colors = CONFETTI_COLORS, count = 16, power = 1, s
 // ── keyframes / 글로벌 게임 스타일 ─────────────────────
 // FigmaScreen마다 <style>이 중복 주입돼 화면 전환 중 시트가 2벌 존재하던 것 → 모듈 로드 시 document.head에 1회만 주입.
 const TONE_GAME_CSS = `
+      /* 감탄로드 탄탄체 — 타이틀 리디자인(2026-07-28) 필·안내문용. 상업용 무료(강원특별자치도×투게더그룹), fonts-archive CDN */
+      @font-face { font-family: 'GamtanRoad Tantan'; font-weight: normal; font-display: swap;
+        src: url('https://cdn.jsdelivr.net/gh/fonts-archive/GamtanRoadTantan/GamtanRoadTantan.woff2') format('woff2'),
+             url('https://cdn.jsdelivr.net/gh/fonts-archive/GamtanRoadTantan/GamtanRoadTantan.woff') format('woff'); }
       @keyframes tg-shake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-6px)} 40%{transform:translateX(6px)} 60%{transform:translateX(-4px)} 80%{transform:translateX(4px)} }
       @keyframes tg-pulse { 0%,100%{opacity:.35} 50%{opacity:.9} }
       @keyframes tg-heartbeat { 0%,100%{transform:scale(1)} 28%{transform:scale(1.2)} 42%{transform:scale(1)} 58%{transform:scale(1.12)} 72%{transform:scale(1)} }
@@ -215,6 +220,10 @@ const TONE_GAME_CSS = `
       @keyframes tg-toast { 0%{opacity:0; transform:translateY(8px)} 12%{opacity:1; transform:translateY(0)} 86%{opacity:1; transform:translateY(0)} 100%{opacity:0; transform:translateY(-4px)} }
       /* 타이틀 로고 효과 */
       @keyframes tg-logo-pop { 0%{opacity:0; transform:scale(.7)} 60%{opacity:1; transform:scale(1.05)} 100%{opacity:1; transform:scale(1)} }
+      @keyframes tg-smoke-rise { 0%{transform:translate(-2px,-6px) scale(.18); opacity:0} 12%{opacity:.95} 100%{transform:translate(-27px,-74px) scale(1); opacity:0} }
+      @keyframes tg-smoke-sway { from{transform:translateX(-6px)} to{transform:translateX(6px)} }
+      @keyframes tg-leaf-fall { 0%{transform:translate(-40px,-6vh) rotate(0deg)} 100%{transform:translate(150px,105vh) rotate(340deg)} }
+      @keyframes tg-leaf-sway { from{transform:translateX(-18px)} to{transform:translateX(18px)} }
       /* 브랜드 스플래시 컷(제작사 오프닝) — 페이드 인 → 유지 → 페이드 아웃 */
       @keyframes tg-brandcut { 0%{opacity:0; transform:scale(.94)} 22%{opacity:1; transform:scale(1)} 78%{opacity:1; transform:scale(1)} 100%{opacity:0; transform:scale(1.02)} }
       @keyframes tg-shine { 0%{background-position:160% 0} 22%{background-position:-60% 0} 100%{background-position:-60% 0} }
@@ -268,13 +277,15 @@ export function ToneGameStyles() {
 // → 화면 폭이 넓어지면 요소가 넓어지고, 세로가 길어지면 상단·하단이 벌어지며 채워짐(잘림 없음).
 // 상단 safe-area: 컬럼을 노치 아래에서 시작(top=safe-top)시켜 상단 요소(top:20 등)가 상태바에 안 가리게.
 //   배경(bgImage)은 root(inset:0)라 노치까지 덮음. 하단은 각 CTA가 env(safe-area-inset-bottom)로 개별 처리.
+// 레터박스(마스킹 영역 밖)는 전 화면 공통 고정색(TG.BG) — 화면별 bg는 컨테이너 '안'에만 칠함(2026-07-29)
 export function FigmaScreen({ children, bg = TG.BG, bgImage }) {
   return (
-    <div className="tg-root" style={{ position: 'fixed', inset: 0, background: bg, overflow: 'hidden' }}>
+    <div className="tg-root" style={{ position: 'fixed', inset: 0, background: TG.BG, overflow: 'hidden' }}>
       <ToneGameStyles />
-      {/* 배경을 화면 전체에 깔아 여백까지 채움 */}
-      {bgImage && <img src={bgImage} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', pointerEvents: 'none' }} />}
-      <div style={{ position: 'absolute', top: 'env(safe-area-inset-top)', bottom: 0, left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: 600 }}>
+      {/* 웹(데스크톱)에선 세로 16:9(=9:16) 비율로 제한 — 폭 = min(600px, 화면높이×9/16). 모바일 세로 화면은 기존 그대로(100%).
+          overflow hidden = 9:16 영역 마스킹 — 와이드 장식(타이틀 동산·홈 배경 등)이 레터박스로 새지 않게 */}
+      <div style={{ position: 'absolute', top: 'env(safe-area-inset-top)', bottom: 0, left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: 'min(600px, 56.25vh)', overflow: 'hidden', background: bg }}>
+        {bgImage && <img src={bgImage} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', pointerEvents: 'none' }} />}
         {children}
       </div>
     </div>
@@ -971,6 +982,107 @@ export function SettingsModal({ onClose, crutchCtx }) {
         {/* 보조바퀴(현재 컨텍스트) — 끄면 소리·성조로 체득(뜻=플레이 중, 병음=정답 공개 시) */}
         {crutchCtx && <CrutchRow ctx={crutchCtx} style={{ marginTop: SPACE.xs }} />}
       </div>
+    </div>
+  );
+}
+
+// ── 공통 하단 탭바 — 홈 허브 리디자인(2026-07-27, 사용자 Figma 시안 정밀 추출값). 놀러가기·등급·홈·업적·하늘하늘 5탭.
+// 활성 탭 = 레드 키캡(110×74·r30 상단·인너 -4px 엣지), 비활성 = 듀오톤(BoldDuotone) 40px + 라벨 12.
+// 활성 아이콘도 BoldDuotone(흰색)로 글리프 동일 유지 — 홈 활성만 시안 커스텀(흰 몸체+레드 도어).
+export const TAB_BAR_H = 80; // 화면 콘텐츠 paddingBottom 계산용(+ env(safe-area-inset-bottom))
+const TG_TABS = [
+  { key: 'play', label: '놀러가기', Icon: HandStars },
+  { key: 'mastery', label: '등급', Icon: MedalStar },
+  { key: 'home', label: '홈', Icon: HomeIcon },
+  { key: 'ach', label: '업적', Icon: Cup },
+  { key: 'hub', label: '하늘하늘', Icon: Stars },
+];
+// 홈 활성 아이콘 — 시안 그대로: 몸체 흰 솔리드 + 도어바 레드(배경 컷아웃)
+function HomeActiveIcon({ size = 40 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M2 12.2039C2 9.91549 2 8.77128 2.5192 7.82274C3.0384 6.87421 3.98695 6.28551 5.88403 5.10813L7.88403 3.86687C9.88939 2.62229 10.8921 2 12 2C13.1079 2 14.1106 2.62229 16.116 3.86687L18.116 5.10812C20.0131 6.28551 20.9616 6.87421 21.4808 7.82274C22 8.77128 22 9.91549 22 12.2039V13.725C22 17.6258 22 19.5763 20.8284 20.7881C19.6569 22 17.7712 22 14 22H10C6.22876 22 4.34315 22 3.17157 20.7881C2 19.5763 2 17.6258 2 13.725V12.2039Z" fill="#FFFFFF" />
+      <path d="M9 17.25C8.58579 17.25 8.25 17.5858 8.25 18C8.25 18.4142 8.58579 18.75 9 18.75H15C15.4142 18.75 15.75 18.4142 15.75 18C15.75 17.5858 15.4142 17.25 15 17.25H9Z" fill={HOME.TAB_RED} />
+    </svg>
+  );
+}
+// 탭 전환 애니메이션 — 아이콘·라벨은 제자리, **빨간 키캡 배경만** 별도 레이어로 이전 탭 → 새 탭 슬라이드(사용자 요청).
+// 화면(탭바 인스턴스)이 통째로 바뀌므로 직전 탭은 모듈 변수로 기억(FLIP). Web Animations API라 keyframes 충돌 없음.
+let tgLastTab = null;
+export function TgTabBar({ active, onNav }) {
+  const barRef = useRef(null);
+  const pillRef = useRef(null);
+  useLayoutEffect(() => {
+    const bar = barRef.current, pill = pillRef.current;
+    if (!bar || !pill) return undefined;
+    // 슬롯 left 계산 — 활성 110 고정, 비활성은 남는 폭 4등분(flex:1과 동일)
+    const place = (animFromKey) => {
+      const W = bar.clientWidth - 12; // 좌우 패딩 6
+      const iw = (W - 110) / 4;
+      const leftOf = (activeKey, slotKey) => {
+        let x = 6;
+        for (const t of TG_TABS) {
+          const w = t.key === activeKey ? 110 : iw;
+          if (t.key === slotKey) return x;
+          x += w;
+        }
+        return 6;
+      };
+      const nx = leftOf(active, active);
+      pill.style.transform = `translateX(${nx}px)`;
+      if (animFromKey) {
+        const EASE = { duration: 280, easing: 'cubic-bezier(.22,1,.36,1)' };
+        const px = leftOf(animFromKey, animFromKey); // 이전 레이아웃에서의 옛 키캡 위치
+        if (Math.abs(px - nx) > 1) pill.animate(
+          [{ transform: `translateX(${px}px)` }, { transform: `translateX(${nx}px)` }], EASE,
+        );
+        // 버튼들도 FLIP — 간격이 벌어지고 좁혀지는 재배치가 순간이동 대신 같은 타이밍으로 흐르게(중심 기준).
+        const centerOf = (activeKey, slotKey) => leftOf(activeKey, slotKey) + (slotKey === activeKey ? 110 : iw) / 2;
+        const btns = [...bar.children].filter((el) => el.tagName === 'BUTTON');
+        btns.forEach((el, i) => {
+          const key = TG_TABS[i].key;
+          const dx = centerOf(animFromKey, key) - centerOf(active, key);
+          if (Math.abs(dx) > 1) el.animate(
+            [{ transform: `translateX(${dx}px)` }, { transform: 'translateX(0)' }], EASE,
+          );
+        });
+      }
+    };
+    const prev = tgLastTab;
+    tgLastTab = active;
+    place(prev && prev !== active ? prev : null);
+    const onResize = () => place(null);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, [active]);
+  return (
+    <div ref={barRef} style={{
+      position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 30,
+      height: `calc(${TAB_BAR_H}px + env(safe-area-inset-bottom))`,
+      background: HOME.CARD,
+      display: 'flex', alignItems: 'flex-start', padding: '6px 6px 0',
+    }}>
+      {/* 이동하는 키캡 배경 — 버튼들 아래 레이어(버튼은 position:relative로 위에) */}
+      <div ref={pillRef} aria-hidden="true" style={{ position: 'absolute', left: 0, top: 6, width: 110, height: 74, borderRadius: '30px 30px 0 0', background: HOME.TAB_RED, willChange: 'transform' }} />
+      {TG_TABS.map(({ key, label, Icon }) => {
+        const on = key === active;
+        return (
+          <button key={key} className="tg-press" onClick={() => { if (!on) onNav(key); }}
+            aria-label={label} aria-current={on ? 'page' : undefined} style={on ? {
+              position: 'relative', width: 110, flexShrink: 0, height: 74, border: 'none', cursor: 'default',
+              background: 'transparent',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 8, paddingBottom: 4, ...TOUCH_OPT,
+            } : {
+              position: 'relative', flex: 1, minWidth: 0, height: 68, border: 'none', cursor: 'pointer', background: 'transparent', borderRadius: 16,
+              padding: 0, paddingTop: 7, display: 'flex', flexDirection: 'column', alignItems: 'center', ...TOUCH_OPT,
+            }}>
+            {on && key === 'home'
+              ? <HomeActiveIcon size={40} />
+              : <Icon size={40} weight="BoldDuotone" color={on ? '#fff' : HOME.TAB_INACTIVE} />}
+            <span style={{ ...TYPE.labelSm, fontWeight: 800, color: on ? '#fff' : HOME.TAB_INACTIVE, lineHeight: '14px' }}>{label}</span>
+          </button>
+        );
+      })}
     </div>
   );
 }

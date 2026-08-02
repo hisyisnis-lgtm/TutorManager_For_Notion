@@ -5,9 +5,9 @@ import { EAR_TIERS, loadTierPeak, bumpTierPeak } from './earProfile.js';
 beforeEach(() => { localStorage.clear(); });
 
 describe('EAR_TIERS — 급과 1:1 3단계', () => {
-  it('입문/실전/고수 3단계·엠블럼 존재', () => {
+  it('성조 입문자/수련생/고수 3단계·엠블럼 존재', () => {
     expect(EAR_TIERS.length).toBe(3);
-    expect(EAR_TIERS.map((t) => t.name)).toEqual(['입문', '실전', '고수']);
+    expect(EAR_TIERS.map((t) => t.name)).toEqual(['성조 입문자', '성조 수련생', '성조 고수']);
     expect(EAR_TIERS.every((t) => typeof t.emblem === 'string')).toBe(true);
   });
 });

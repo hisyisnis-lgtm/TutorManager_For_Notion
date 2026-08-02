@@ -7,7 +7,7 @@ import {
 } from '@solar-icons/react';
 import { TG, TYPE, TOUCH_OPT, RADIUS, SPACE } from '../tgTokens.js';
 import { ACHIEVEMENTS, ACH_CATEGORIES } from '../achievements.js';
-import { Reveal, GameHeader } from './shared.jsx';
+import { Reveal, GameHeader, TgTabBar, TAB_BAR_H } from './shared.jsx';
 
 // 업적 icon 문자열 → Solar 컴포넌트 (achievements.js의 icon 필드와 일치)
 const ACH_ICONS = {
@@ -92,7 +92,7 @@ function AchRow({ ach, earned, snapshot, onToast, last }) {
   );
 }
 
-export function AchievementsScreen({ earned, snapshot, onBack, onToast }) {
+export function AchievementsScreen({ earned, snapshot, onBack, onToast, tabNav }) {
   const earnedSet = new Set(earned || []);
   const n = earnedSet.size;
   const total = ACHIEVEMENTS.length;
@@ -106,7 +106,8 @@ export function AchievementsScreen({ earned, snapshot, onBack, onToast }) {
       } />
       {/* 하나의 리스트 — 섹션 없이 흐르고, 카테고리 구분은 링/아이콘 색으로만 */}
       <Reveal i={1} style={{
-        position: 'absolute', left: 24, right: 24, top: 52, bottom: 'calc(20px + env(safe-area-inset-bottom))', overflowY: 'auto', zIndex: 2, paddingTop: SPACE.sm, paddingBottom: 52,
+        // 하단 = 탭바(TAB_BAR_H) 위로 (2026-07-27 탭바 도입)
+        position: 'absolute', left: 24, right: 24, top: 52, bottom: `calc(${TAB_BAR_H + 12}px + env(safe-area-inset-bottom))`, overflowY: 'auto', zIndex: 2, paddingTop: SPACE.sm, paddingBottom: 52,
         // 헤더 바(52px) 바닥에 딱 붙는 위·아래 가장자리 페이드(난이도 선택 화면과 동일 방식). 하단 패딩=마지막 항목이 페이드 위로 올라오게(가림 방지)
         maskImage: 'linear-gradient(to bottom, transparent 0, #000 20px, #000 calc(100% - 48px), transparent 100%)',
         WebkitMaskImage: 'linear-gradient(to bottom, transparent 0, #000 20px, #000 calc(100% - 48px), transparent 100%)',
@@ -115,6 +116,7 @@ export function AchievementsScreen({ earned, snapshot, onBack, onToast }) {
           <AchRow key={a.id} ach={a} earned={earnedSet.has(a.id)} snapshot={snapshot} onToast={onToast} last={i === ACHIEVEMENTS.length - 1} />
         ))}
       </Reveal>
+      <TgTabBar active="ach" onNav={tabNav} />
     </>
   );
 }

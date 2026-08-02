@@ -1,4 +1,4 @@
-// 성조 빨리 찾기 미니게임 — 상태머신/오케스트레이션.
+// 매일매일 성조키우기(구 성조 빨리 찾기) 미니게임 — 상태머신/오케스트레이션.
 // 학생앱 공개 라우트(`/personal/:studentToken/game/tone`) + 게스트 독립 진입(`/game/tone`)에서 진입.
 // 플로우: 스플래시 → 시작 → (소개·튜토리얼) → 모드선택 → 난이도/무한 → 카운트다운 → 게임 → 결과.
 // 화면 컴포넌트는 game/screens/* 로 분리, 순수 로직은 game/gameLogic.js, 디자인/저장은 game/* 모듈.
@@ -53,6 +53,8 @@ import { GameScreen } from '../game/screens/GameScreen.jsx';
 import { ResultScreen, ExamResultScreen } from '../game/screens/ResultScreen.jsx';
 import { MasteryScreen } from '../game/screens/MasteryScreen.jsx';
 import { AchievementsScreen } from '../game/screens/AchievementsScreen.jsx';
+import { PlayScreen } from '../game/screens/PlayScreen.jsx';
+import { LinkHubScreen } from '../game/screens/LinkHubScreen.jsx';
 import { CelebrationOverlay } from '../game/screens/CelebrationOverlay.jsx';
 import { GameOverBeat } from '../game/screens/GameOverBeat.jsx';
 import { NewRecordBeat } from '../game/screens/NewRecordBeat.jsx';
@@ -1227,6 +1229,15 @@ export default function ToneGamePage() {
   };
 
   // 성취 표시 데이터(P3) — 시작/업적 화면에서만 localStorage 조회(게임 중 불필요). 미리보기는 샘플.
+  // 공통 탭바 내비(2026-07-27 리디자인) — 탭 전환 = 화면 교체. 업적 진입 시 미확인 획득 확인 처리 유지.
+  const tabNav = (k) => {
+    playSfx('button');
+    if (k === 'home') setScreen('home');
+    else if (k === 'mastery') setScreen('mastery');
+    else if (k === 'ach') { if (!isPreview) markAchievementsSeen(studentToken, loadAchievements(studentToken)); setScreen('achievements'); }
+    else if (k === 'play') setScreen('play');
+    else if (k === 'hub') setScreen('linkhub');
+  };
   const showStartData = screen === 'home' || screen === 'achievements';
   const startFreezes = !showStartData ? 0 : isPreview ? 1 : loadFreezes(studentToken);
   const startStreak = !showStartData ? 0 : isPreview ? 5 : effectiveCurrent(loadStreak(studentToken), dateKeyKST(), startFreezes);
@@ -1266,14 +1277,13 @@ export default function ToneGamePage() {
   } else if (screen === 'title') {
     content = <TitleScreen onStart={() => tipTransitionTo('home')} />;
   } else if (screen === 'home') {
+    // 공통 탭바 내비 — 홈·등급·업적·놀러가기·하늘하늘(2026-07-27 리디자인). 아래 mastery/achievements/play/linkhub 분기와 공유.
     content = <HomeScreen streak={startStreak} streakLongest={startStreakLongest} freezes={startFreezes} xp={xp} rank={rank} onExam={() => startExam()}
       toneLevels={toneLevels}
       toneStatus={toneStatus} coachTone={coachTone} celebrateTone={celebrateTone}
       levelReveals={toneLevelChanges} onRevealsDone={() => setToneLevelChanges([])} revealHold={isPreview && previewScreen === 'tonelevel'}
       onPlay={goFromStart}
-      onMastery={() => setScreen('mastery')}
-      onAchievements={() => { if (!isPreview) markAchievementsSeen(studentToken, loadAchievements(studentToken)); setScreen('achievements'); }}
-      achDot={achDot}
+      onNavTab={tabNav}
       onHelp={() => setHelpOpen(true)}
       onLogin={identity.kind === 'guest' ? () => setScreen('login') : null}
       isMemberUser={identity.kind === 'member'} memberName={identity.kind === 'member' ? memberNick : null}
@@ -1303,15 +1313,19 @@ export default function ToneGamePage() {
   } else if (screen === 'mastery') {
     content = (
       <FigmaScreen>
-        <MasteryScreen rows={reviewRows} masteredN={masteredN} xp={xp} rank={rank} onExam={() => startExam()} toneStats={masteryTones} onBack={() => setScreen('home')} onReview={() => startTraining()} />
+        <MasteryScreen rows={reviewRows} masteredN={masteredN} xp={xp} rank={rank} onExam={() => startExam()} toneStats={masteryTones} onBack={() => setScreen('home')} onReview={() => startTraining()} tabNav={tabNav} />
       </FigmaScreen>
     );
   } else if (screen === 'achievements') {
     content = (
       <FigmaScreen>
-        <AchievementsScreen earned={startAchievements} snapshot={achSnapshot} onBack={() => setScreen('home')} onToast={showToast} />
+        <AchievementsScreen earned={startAchievements} snapshot={achSnapshot} onBack={() => setScreen('home')} onToast={showToast} tabNav={tabNav} />
       </FigmaScreen>
     );
+  } else if (screen === 'play') { // 놀러가기 탭 화면(구 PlayModal)
+    content = <FigmaScreen bg={TG.BG}><PlayScreen tabNav={tabNav} /></FigmaScreen>;
+  } else if (screen === 'linkhub') { // 하늘하늘 탭 화면(구 플로팅 허브 오버레이)
+    content = <FigmaScreen bg={TG.BG}><LinkHubScreen tabNav={tabNav} /></FigmaScreen>;
   } else if (screen === 'intro') {
     content = (
       <FigmaScreen>

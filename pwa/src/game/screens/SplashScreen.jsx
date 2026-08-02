@@ -20,7 +20,8 @@ export function SplashScreen() {
         </div>
       ) : (
         <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: SPACE.x4 }}>
-          <img src={ASSETS.startTitle} alt="성조 빨리찾기" style={{ width: 300, height: 'auto', objectFit: 'contain', animation: 'tg-enter .5s cubic-bezier(.22,1,.36,1) both' }} />
+          {/* 게임 로고 — 타이틀 리디자인의 레터링 SVG(매일매일 성조키우기)로 교체(2026-07-28) */}
+          <img src="/game/title-logo.svg" alt="매일매일 성조키우기" style={{ width: 290, height: 'auto', objectFit: 'contain', animation: 'tg-enter .5s cubic-bezier(.22,1,.36,1) both' }} />
           <div style={{ display: 'flex', gap: SPACE.md }}>
             {[0, 1, 2].map((i) => (
               <div key={i} style={{ width: 9, height: 9, borderRadius: RADIUS.pill, background: TG.CORAL, animation: `tg-dot .9s ease-in-out ${i * 0.15}s infinite` }} />

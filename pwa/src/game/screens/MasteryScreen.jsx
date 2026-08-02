@@ -7,7 +7,7 @@ import { TIER_SPARK_POS as PARTICLE_POS } from '../earProfile.js';
 import { rankInfo, levelInfo } from '../gameXp.js';
 import { speakWord } from '../tgTts.js';
 import { play as playSfx } from '../tgSfx.js';
-import { Reveal, GameHeader, CoachBubble } from './shared.jsx';
+import { Reveal, GameHeader, CoachBubble, TgTabBar, TAB_BAR_H } from './shared.jsx';
 
 function masteryColor(acc) { return acc >= 0.8 ? TG.SUCCESS_GLOW : acc >= 0.5 ? TG.SUN : TG.CORAL; }
 
@@ -84,7 +84,7 @@ function WordStatRow({ word, acc, last }) {
   );
 }
 
-export function MasteryScreen({ rows, masteredN, xp = 0, rank = 0, onExam, toneStats, onBack, onReview }) {
+export function MasteryScreen({ rows, masteredN, xp = 0, rank = 0, onExam, toneStats, onBack, onReview, tabNav }) {
   const need = rows.length;
   const reviewN = Math.min(ROUND_LENGTH, need);
   const grade = rankInfo(rank); // 등급 = 보스 클리어로만 오름(rankInfo 엠블럼)
@@ -94,7 +94,8 @@ export function MasteryScreen({ rows, masteredN, xp = 0, rank = 0, onExam, toneS
       <GameHeader title="내 등급" onBack={onBack} />
       {/* 스크롤 영역 — 코치 + 레이더 + 소제목 + 리스트를 함께 스크롤(모바일서 리스트가 좁은 고정영역에 갇히지 않게) */}
       <div style={{
-        position: 'absolute', left: 0, right: 0, top: 52, bottom: need > 0 ? 'calc(102px + env(safe-area-inset-bottom))' : 'calc(24px + env(safe-area-inset-bottom))',
+        // 하단 = 탭바(TAB_BAR_H) 위로 — 복습 CTA가 있으면 CTA 높이만큼 더 띄움 (2026-07-27 탭바 도입)
+        position: 'absolute', left: 0, right: 0, top: 52, bottom: need > 0 ? `calc(${TAB_BAR_H + 96}px + env(safe-area-inset-bottom))` : `calc(${TAB_BAR_H + 8}px + env(safe-area-inset-bottom))`,
         overflowY: 'auto', WebkitOverflowScrolling: 'touch', padding: '14px 24px 48px', zIndex: 2,
         // 헤더 바(52px) 바닥에 딱 붙는 위·아래 가장자리 페이드(난이도 선택 화면과 동일 방식). 위는 엠블럼 안 흐리게 얕게, 아래는 리스트가 부드럽게 사라지게
         maskImage: 'linear-gradient(to bottom, transparent 0, #000 20px, #000 calc(100% - 48px), transparent 100%)',
@@ -157,7 +158,7 @@ export function MasteryScreen({ rows, masteredN, xp = 0, rank = 0, onExam, toneS
       </div>
       {/* 복습 CTA */}
       {need > 0 && (
-        <Reveal i={3} style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(30px + env(safe-area-inset-bottom))' }}>
+        <Reveal i={3} style={{ position: 'absolute', left: 24, right: 24, bottom: `calc(${TAB_BAR_H + 16}px + env(safe-area-inset-bottom))` }}>
         <button onClick={() => { playSfx('button'); onReview(); }} className="tg-press" style={{
           width: '100%', height: 60, borderRadius: RADIUS.xl, border: 'none', cursor: 'pointer', background: TG.CORAL_GRAD,
           boxShadow: '0px 10px 20px rgba(242,72,76,0.32)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: SPACE.md, ...TOUCH_OPT,
@@ -167,6 +168,7 @@ export function MasteryScreen({ rows, masteredN, xp = 0, rank = 0, onExam, toneS
         </button>
         </Reveal>
       )}
+      <TgTabBar active="mastery" onNav={tabNav} />
     </>
   );
 }

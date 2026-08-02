@@ -18,7 +18,7 @@ const ORIGIN = 'https://tiantian-chinese.pages.dev';
 // 파비콘 캐시 무력화용 버전 — 배포마다 오르므로 파비콘 변경이 새로고침 없이 반영됨.
 const { version } = JSON.parse(readFileSync(path.join(ROOT, 'pwa', 'package.json'), 'utf8'));
 const OG = {
-  title: '성조 빨리찾기 — 중국어 4성 게임',
+  title: '매일매일 성조키우기 — 중국어 4성 게임',
   description: '중국어 4성을 게임으로 빠르게 익히기. 하늘하늘중국어 성조 트레이닝.',
   image: `${ORIGIN}/game-og.png`, // 썸네일 교체 시 public/game-og.png만 바꾸면 됨
   url: `${ORIGIN}/game/tone`,

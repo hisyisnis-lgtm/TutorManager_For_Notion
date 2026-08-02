@@ -2,9 +2,9 @@
 //   ★2026-07-23: 구 '마스터 단어 수 기준 4단계·강등' 모델을 보스 사다리로 대체하며 급과 통일(3단계) — earTier/min 제거.
 //   엠블럼 = 브론즈(입문)·실버(실전)·골드(고수). glow/spark = 글로우·반짝임 색, particles = 파티클 개수(단계 오를수록 화려).
 export const EAR_TIERS = [
-  { name: '입문', emblem: '/game/emblems/tier1.png', glow: '#C9A063', spark: '#DCBB7C', particles: 3 }, // 브론즈
-  { name: '실전', emblem: '/game/emblems/tier2.png', glow: '#9FB0C4', spark: '#C2CDDB', particles: 4 }, // 실버
-  { name: '고수', emblem: '/game/emblems/tier3.png', glow: '#FFB02E', spark: '#FFC94D', particles: 5 }, // 골드
+  { name: '성조 입문자', emblem: '/game/emblems/tier1.png', glow: '#C9A063', spark: '#DCBB7C', particles: 3 }, // 브론즈
+  { name: '성조 수련생', emblem: '/game/emblems/tier2.png', glow: '#9FB0C4', spark: '#C2CDDB', particles: 4 }, // 실버
+  { name: '성조 고수', emblem: '/game/emblems/tier3.png', glow: '#FFB02E', spark: '#FFC94D', particles: 5 }, // 골드
 ];
 
 // 엠블럼 주변 반짝임 위치 [중심대비 dx, dy, 크기] — 단계 particles 수만큼 앞에서부터 사용.

@@ -120,9 +120,9 @@ describe('레벨(Lv.N) — 누적 XP 연속 성장', () => {
 describe('rankInfo — 등급(보스 기반, 급과 1:1)', () => {
   it('rank로 EAR_TIERS 엠블럼 결정, 범위 clamp', () => {
     expect(rankInfo(0).idx).toBe(0);
-    expect(rankInfo(0).name).toBe('입문');
+    expect(rankInfo(0).name).toBe('성조 입문자');
     expect(rankInfo(0).isMax).toBe(false);
-    expect(rankInfo(2).name).toBe('고수');
+    expect(rankInfo(2).name).toBe('성조 고수');
     expect(rankInfo(2).isMax).toBe(true); // 고수=최고 등급
     expect(rankInfo(99).idx).toBe(2); // 상한 clamp
     expect(rankInfo(-5).idx).toBe(0); // 하한 clamp

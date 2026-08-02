@@ -2,9 +2,10 @@
 // 카드는 카카오톡 링크 공유 미리보기 스타일(상단 썸네일 + 제목/설명/도메인)의 세로 리스트.
 // 항목은 전부 데이터(HUB_LINKS) — 특강·교재·단어장 등 새 링크는 배열에 추가만 하면 됨.
 // image: 썸네일 경로(권장 2:1 가로형). 없으면 tint+라벨 — 파일 없는 경로 금지(깨진 아이콘 뜸). SNS는 놀러가기 모달 전담.
-import { AltArrowLeft, AltArrowRight, Stars } from '@solar-icons/react';
+import { AltArrowRight, Stars } from '@solar-icons/react';
 import { TG, TYPE, TOUCH_OPT, RADIUS, SPACE } from '../tgTokens.js';
 import { track } from '../gameAnalytics.js';
+import { TgTabBar, TAB_BAR_H } from './shared.jsx';
 
 const SITE = 'https://tiantian-chinese.pages.dev';
 
@@ -19,21 +20,15 @@ function openLink(href, channel) {
   try { window.open(href, '_blank', 'noopener,noreferrer'); } catch { /* noop */ }
 }
 
-export function LinkHubScreen({ onClose }) {
+// 탭바 도입(2026-07-27 홈 리디자인) — 오버레이(onClose)에서 '하늘하늘' 탭 화면으로 전환. 뒤로가기 대신 탭 전환.
+export function LinkHubScreen({ tabNav }) {
   return (
-    <div className="tg-enter" style={{ position: 'fixed', inset: 0, zIndex: 60, background: TG.BG, overflowY: 'auto', ...TOUCH_OPT }}>
-      <div style={{ position: 'relative', minHeight: '100%', display: 'flex', flexDirection: 'column', paddingBottom: 'calc(40px + env(safe-area-inset-bottom))' }}>
-        {/* 뒤로 */}
-        <button aria-label="뒤로" className="tg-press" onClick={onClose} style={{
-          position: 'absolute', left: 24, top: 'calc(20px + env(safe-area-inset-top))', width: 40, height: 40, borderRadius: RADIUS.xl,
-          background: '#fff', border: 'none', cursor: 'pointer', boxShadow: '0 3px 8px rgba(26,16,20,0.08)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', ...TOUCH_OPT,
-        }}>
-          <AltArrowLeft size={20} weight="Bold" color={TG.INK} />
-        </button>
-
+    <div style={{ position: 'absolute', inset: 0, background: TG.BG, ...TOUCH_OPT }}>
+      {/* 스크롤 레이어 — 탭바(형제)는 고정. 진입 애니(tg-enter)는 콘텐츠에만(탭바 깜빡임 방지) */}
+      <div className="tg-enter" style={{ position: 'absolute', inset: 0, overflowY: 'auto' }}>
+      <div style={{ position: 'relative', minHeight: '100%', display: 'flex', flexDirection: 'column', paddingBottom: `calc(${TAB_BAR_H + 28}px + env(safe-area-inset-bottom))` }}>
         {/* 히어로 — 브랜드 로고 + 화면 목적(맥락) */}
-        <div style={{ paddingTop: 'calc(92px + env(safe-area-inset-top))', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: SPACE.lg }}>
+        <div style={{ paddingTop: 'calc(64px + env(safe-area-inset-top))', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: SPACE.lg }}>
           <img src="/logo/logo-red.png" alt="하늘하늘중국어" style={{ width: 188, height: 'auto', objectFit: 'contain' }} />
           <span style={{ ...TYPE.sub, color: TG.SUB, letterSpacing: '-0.01em' }}>관심 있는 주제를 눌러 둘러보세요</span>
         </div>
@@ -71,6 +66,8 @@ export function LinkHubScreen({ onClose }) {
           </div>
         </div>
       </div>
+      </div>
+      <TgTabBar active="hub" onNav={tabNav} />
     </div>
   );
 }
