@@ -144,7 +144,15 @@ export default function AudioRecorder({ onFile, onCancel, defaultName = 'recordi
       const stream = streamRef.current;
       const mimeType = getSupportedMimeType();
       mimeTypeRef.current = mimeType;
-      const mr = new MediaRecorder(stream, mimeType ? { mimeType } : {});
+      // 비트레이트를 지정하지 않으면 브라우저 기본값(약 128kbps)이 붙어 5분 녹음이 5MB에 달한다.
+      // Notion 무료 워크스페이스 상한이 파일당 5MB라 그대로 두면 긴 녹음이 업로드 단계에서 거부된다.
+      // 말소리는 32kbps로 충분하고(≈ 4KB/s), 같은 5MB에 약 20분을 담을 수 있다.
+      // ⚠️ Safari가 이 옵션을 무시할 수 있으나, 녹음 직후 validateFile이 실제 크기를 검사하므로
+      //    그 경우에도 조용히 실패하지 않고 안내로 떨어진다.
+      const mr = new MediaRecorder(stream, {
+        ...(mimeType ? { mimeType } : {}),
+        audioBitsPerSecond: 32000,
+      });
       chunksRef.current = [];
       mr.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
       mr.onstop = () => {

@@ -5,6 +5,31 @@
 export const REQUEST_TIMEOUT_MS = 25000;
 export const UPLOAD_TIMEOUT_MS = 120000;
 
+/**
+ * 일시적 실패만 지수 백오프로 재시도한다.
+ *
+ * 재시도 대상: 네트워크 끊김·타임아웃(에러에 status 없음)과 서버 일시 오류(5xx).
+ * 재시도 제외: 4xx — 파일이 크거나(413) 형식이 안 맞거나(415) 권한이 없으면 다시 보내도
+ * 결과가 같다. 재시도하면 학생을 몇 배 더 기다리게 만들 뿐이다.
+ *
+ * 호출부는 실패 시 `err.status`에 HTTP 상태를 실어줘야 이 판단이 동작한다(api/homework.js 참고).
+ */
+export async function retryTransient(fn, { attempts = 3, baseDelayMs = 1000 } = {}) {
+  let lastErr;
+  for (let i = 0; i < attempts; i += 1) {
+    try {
+      return await fn();
+    } catch (e) {
+      lastErr = e;
+      const status = e?.status;
+      const retryable = status == null || status >= 500;
+      if (!retryable || i === attempts - 1) throw e;
+      await new Promise((r) => { setTimeout(r, baseDelayMs * (i + 1)); });
+    }
+  }
+  throw lastErr;
+}
+
 export async function fetchWithTimeout(url, opts = {}, timeoutMs = REQUEST_TIMEOUT_MS) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);

@@ -25,7 +25,7 @@ describe('validateAudioUpload', () => {
       expect(r.ok).toBe(true);
     });
 
-    it('Notion 단편 모드 상한 정확히 (20 MiB)', () => {
+    it('상한 경계값(정확히 MAX_AUDIO_BYTES)은 통과', () => {
       const r = validateAudioUpload(makeFile({ size: MAX_AUDIO_BYTES }));
       expect(r.ok).toBe(true);
     });
@@ -126,12 +126,19 @@ describe('validateAudioUpload', () => {
   });
 
   describe('크기 거부 케이스', () => {
-    it('20 MiB + 1바이트 → 413', () => {
+    // 상한은 요금제와 맞물린다 — 무료 워크스페이스(파일당 5 MiB)에서 20 MiB를 열어두면
+    // 5~20 MiB 파일이 이 검증을 통과한 뒤 Notion 업로드 단계에서 거부된다(2026-08-01 사고).
+    // 현재는 플러스 플랜(5 GiB)이라 single_part API 상한인 20 MiB가 실질 관문.
+    it('상한은 Notion single_part 상한 20 MiB', () => {
+      expect(MAX_AUDIO_BYTES).toBe(20 * 1024 * 1024);
+    });
+
+    it('상한 + 1바이트 → 413 + 상한이 문구에 표시', () => {
       const r = validateAudioUpload(makeFile({ size: MAX_AUDIO_BYTES + 1 }));
       expect(r.ok).toBe(false);
       if (!r.ok) {
         expect(r.status).toBe(413);
-        expect(r.error).toContain('20 MB');
+        expect(r.error).toContain(`${Math.round(MAX_AUDIO_BYTES / 1024 / 1024)} MB`);
       }
     });
 

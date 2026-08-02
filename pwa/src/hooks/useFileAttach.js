@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { validateFile, splitFileName } from '../utils/audioFile.js';
+import { compressImage } from '../utils/imageCompress.js';
 
 /** 숙제 파일 첨부 공통 상한 — 세 페이지(피드백·학생 제출·숙제 출제) 동일 */
 export const MAX_FILES = 5;
@@ -33,6 +34,8 @@ export default function useFileAttach({ genName, fixedCount, maxFiles = MAX_FILE
   const [namingInput, setNamingInput] = useState('');
   const audioInputRef = useRef(null);
   const docInputRef = useRef(null);
+  // 사진 축소 중 — 여러 장을 고르면 몇 초 걸릴 수 있어 그동안 버튼을 잠그고 상태를 보여준다.
+  const [preparing, setPreparing] = useState(false);
 
   // 외부 페이지·기존 저장본·모달 임시 목록 합산 — 상한 판정에 쓰인다.
   const totalCount = fixedCount + sessionFiles.length;
@@ -122,30 +125,42 @@ export default function useFileAttach({ genName, fixedCount, maxFiles = MAX_FILE
   };
 
   // 이미지·PDF picker — 원본 파일명 그대로 보존 (없으면 file_N 폴백).
-  const handleDocPickChange = (e) => {
-    const files = Array.from(e.target.files ?? []);
+  const handleDocPickChange = async (e) => {
+    const picked = Array.from(e.target.files ?? []);
     e.target.value = '';
-    if (files.length === 0) return;
+    if (picked.length === 0) return;
 
-    for (const f of files) {
-      const v = validateFile(f, { expectedCategory: 'document' });
-      if (!v.ok) { message.error(v.error); return; }
-    }
-    if (totalCount + files.length > maxFiles) {
+    // 개수 검사를 먼저 — 어차피 거절할 파일을 압축하느라 기다리게 하지 않는다.
+    if (totalCount + picked.length > maxFiles) {
       message.error(`파일은 최대 ${maxFiles}개까지 첨부할 수 있어요`);
       return;
     }
 
-    const newOnes = files.map((file, i) => {
-      const { base, ext } = splitFileName(file.name);
-      return {
-        tempId: Date.now() + Math.random() + i,
-        file,
-        baseName: base || `file_${totalCount + i + 1}`,
-        ext: ext || '',
-      };
-    });
-    setSessionFiles((prev) => [...prev, ...newOnes]);
+    // 사진은 업로드 전에 축소한다 — 폰 사진 3~8MB가 그대로면 5MB 상한에 걸리고,
+    // 걸리지 않더라도 모바일 회선에서 업로드가 길어져 이탈·타임아웃을 부른다.
+    // (PDF·GIF·디코드 불가 파일은 compressImage가 원본을 그대로 돌려준다)
+    setPreparing(true);
+    try {
+      const files = await Promise.all(picked.map(compressImage));
+
+      for (const f of files) {
+        const v = validateFile(f, { expectedCategory: 'document' });
+        if (!v.ok) { message.error(v.error); return; }
+      }
+
+      const newOnes = files.map((file, i) => {
+        const { base, ext } = splitFileName(file.name);
+        return {
+          tempId: Date.now() + Math.random() + i,
+          file,
+          baseName: base || `file_${totalCount + i + 1}`,
+          ext: ext || '',
+        };
+      });
+      setSessionFiles((prev) => [...prev, ...newOnes]);
+    } finally {
+      setPreparing(false);
+    }
   };
 
   const handleNamingConfirm = () => {
@@ -181,6 +196,7 @@ export default function useFileAttach({ genName, fixedCount, maxFiles = MAX_FILE
     audioInputRef,
     docInputRef,
     totalCount,
+    preparing,
     // AudioRecorder 용
     recorderDefaultName: genName(totalCount + 1),
     handleRecorderFile,

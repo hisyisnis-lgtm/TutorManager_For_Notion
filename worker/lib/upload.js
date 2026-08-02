@@ -4,8 +4,13 @@
 // 화이트리스트로 강제한다. 우회 업로드(exe/zip 등) 차단 + Notion API의
 // single_part 20 MiB 상한을 사전 차단해 모호한 502 응답을 막는 목적.
 
-// Notion file_uploads single_part 모드의 공식 상한.
+// Notion file_uploads single_part 모드의 공식 상한(20 MiB).
 // 이보다 크면 multi_part 모드가 필요한데 학생용엔 오버스펙이라 단순 거부.
+//
+// ⚠️ 요금제 의존: 파일당 상한은 워크스페이스 플랜을 따른다 — 무료 5 MiB / 유료 5 GiB.
+// 2026-08-01 학생 3명의 제출 실패가 이 함정이었다(무료 5 MiB인데 여기서 20 MiB를 통과시켜
+// 5~20 MiB 파일이 Notion 업로드 단계에서 거부됨). 2026-08-02 플러스 전환으로 해소.
+// **무료 플랜으로 되돌아가면 5 * 1024 * 1024로 낮출 것** — pwa/src/utils/audioFile.js와 함께.
 export const MAX_FILE_BYTES = 20 * 1024 * 1024;
 // 호환을 위해 옛 이름도 유지 (외부 import 가능성)
 export const MAX_AUDIO_BYTES = MAX_FILE_BYTES;
@@ -161,10 +166,11 @@ export function validateFileUpload(file) {
   }
   if (size > MAX_FILE_BYTES) {
     const mb = (size / (1024 * 1024)).toFixed(1);
+    const limit = Math.round(MAX_FILE_BYTES / 1024 / 1024);
     return {
       ok: false,
       status: 413,
-      error: `파일이 너무 큽니다 (${mb} MB). 20 MB 이하로 압축해 다시 시도해주세요.`,
+      error: `파일이 너무 큽니다 (${mb} MB). ${limit} MB 이하로 줄여서 다시 시도해주세요.`,
     };
   }
 

@@ -76,6 +76,31 @@ function buildPayload({ message, source, lineno, colno, error }) {
   };
 }
 
+/**
+ * catch로 처리한 실패를 원격에 남긴다 — window.onerror가 잡지 못하는 경로용.
+ *
+ * 숙제 제출처럼 "실패해도 토스트 한 줄이 전부"인 지점에서 호출한다. 학생이 화면을 나가면
+ * 그 토스트조차 사라져 강사도 우리도 무슨 일이 있었는지 알 수 없었다(2026-08-01 사고).
+ *
+ * @param {string} message  사람이 읽는 실패 요약 (파일명·크기 등 원인 판별에 필요한 값 포함)
+ * @param {{ source?: string, detail?: string }} [context]
+ */
+export function reportHandledError(message, context = {}) {
+  const text = String(message || '').slice(0, 400);
+  if (!text) return;
+  if (isDuplicate(`handled:${text}`)) return;
+  send({
+    message: `[처리된 실패] ${text}`,
+    source: String(context.source || ''),
+    lineno: null,
+    colno: null,
+    stack: String(context.detail || ''),
+    url: window.location.href,
+    userAgent: navigator.userAgent,
+    studentToken: getStudentTokenFromHash(),
+  });
+}
+
 export function installErrorReporter() {
   if (typeof window === 'undefined') return;
   if (window.__errorReporterInstalled) return;
