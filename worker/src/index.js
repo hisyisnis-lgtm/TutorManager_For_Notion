@@ -1,6 +1,7 @@
 // 순수 함수는 lib/로 분리되어 단위 테스트 대상.
 // 새 순수 함수 추가 시 lib/ 안에 두고 여기서 import.
 import { stripEmoji, normalizeId, normalizePhone } from '../lib/string.js';
+import { makeNotion } from '../lib/notion.js';
 import { isSafeExternalUrl, maskPhone, maskToken, sanitizePath } from '../lib/security.js';
 import { validateFileUpload, resolveFileMime, dedupeFileNames } from '../lib/upload.js';
 import {
@@ -45,23 +46,6 @@ const AE_ACCOUNT_ID = '6bb3d7a51e3f42a7ba6367187ee8be16';
 //   워커는 단어 풀을 다루지 않는다(TONE_WORDS_DB_ID·난이도 매핑·tone-words 라우트 제거).
 
 const DAY_KR = ['일', '월', '화', '수', '목', '금', '토'];
-
-/**
- * Notion API fetch 헬퍼 팩토리 — 토큰을 한 번만 바인딩
- * 반환된 함수: (method, path, body?) → Promise<JSON>
- */
-function makeNotion(notionToken) {
-  return (method, path, body) =>
-    fetch(`https://api.notion.com/v1${path}`, {
-      method,
-      headers: {
-        Authorization: `Bearer ${notionToken}`,
-        'Notion-Version': '2022-06-28',
-        'Content-Type': 'application/json',
-      },
-      body: body ? JSON.stringify(body) : undefined,
-    }).then(r => r.json());
-}
 
 /**
  * Notion DB query 페이지네이션 헬퍼 — has_more 처리하여 모든 결과 반환.
@@ -706,10 +690,10 @@ async function handleConsultRequest(request, env, corsHeaders) {
   // 중복 신청 마킹 — 차단하지 않고, 같은 전화번호로 최근 7일 내 신청 건수를 세서 강사 ntfy 알림 상단에 표시.
   // 학생은 항상 신청 성공하지만 강사는 푸시 보고 한눈에 중복 여부 판단 가능.
   // Notion 조회 실패 시 0으로 fallback (신청 흐름은 그대로 진행).
+  const n = makeNotion(env.NOTION_TOKEN);
   let recentDuplicateCount = 0;
   try {
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-    const n = makeNotion(env.NOTION_TOKEN);
     const dup = await n('POST', `/databases/${dbId}/query`, {
       filter: {
         and: [
@@ -743,14 +727,13 @@ async function handleConsultRequest(request, env, corsHeaders) {
   const fullContent = structuredParts.join('\n');
 
   // Notion 페이지 생성
-  const notionRes = await fetch(`https://api.notion.com/v1/pages`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${env.NOTION_TOKEN}`,
-      'Notion-Version': '2022-06-28',
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
+  //
+  // 저장에 실패하면 신청자를 되찾을 방법이 없다(연락처가 이 페이지에만 남는다).
+  // 그래서 실패는 조용히 넘기지 않고 신청자 정보를 담아 critical로 알린다 —
+  // 최소한 강사가 직접 연락할 수 있게.
+  let notionRes;
+  try {
+    notionRes = await n('POST', '/pages', {
       parent: { database_id: dbId },
       properties: {
         '이름': { title: [{ text: { content: name.trim() } }] },
@@ -767,11 +750,25 @@ async function handleConsultRequest(request, env, corsHeaders) {
         '상태': { select: { name: '신청됨' } },
         '신청 일시': { date: { start: new Date().toISOString() } },
       },
-    }),
-  }).then(r => r.json());
+    });
+  } catch (e) {
+    notionRes = { object: 'error', message: e.message };
+  }
 
   if (notionRes.object === 'error') {
     console.error('[consult] Notion 오류:', JSON.stringify(notionRes));
+    await sendAlert(env, {
+      level: 'critical',
+      title: '🚨 무료상담 신청 저장 실패',
+      message: [
+        `👤 ${name.trim()} / ${phoneDigits}`,
+        kakaoId?.trim() ? `💬 카톡 ${kakaoId.trim()}` : '',
+        '⛔ Notion 저장 실패 — 신청자에게 직접 연락 필요',
+        String(notionRes.message || '').slice(0, 200),
+      ].filter(Boolean).join('\n'),
+      tags: ['rotating_light', 'consult'],
+      dedupKey: `consultfail:${phoneDigits}`,
+    });
     return new Response(JSON.stringify({ error: '신청 저장 중 오류가 발생했습니다.' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -1801,22 +1798,12 @@ async function uploadFileToNotion(file, notionToken) {
   const mimeType = resolveFileMime(file);
   const arrayBuffer = await file.arrayBuffer();
 
-  // 1. Notion file_upload 세션 생성
-  const sessionRes = await fetch('https://api.notion.com/v1/file_uploads', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${notionToken}`,
-      'Notion-Version': '2022-06-28',
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ mode: 'single_part' }),
-  });
-  if (!sessionRes.ok) {
-    const err = await sessionRes.json().catch(() => ({}));
-    throw new Error(err.message || `Notion 파일 업로드 세션 생성 실패 (${sessionRes.status})`);
+  // 1. Notion file_upload 세션 생성 (일시적 실패는 재시도로 흡수)
+  const session = await makeNotion(notionToken)('POST', '/file_uploads', { mode: 'single_part' });
+  const { id: fileUploadId, upload_url } = session ?? {};
+  if (!fileUploadId || !upload_url) {
+    throw new Error(session?.message || 'Notion 파일 업로드 세션 생성 실패');
   }
-  const session = await sessionRes.json();
-  const { id: fileUploadId, upload_url } = session;
 
   // 2. 파일을 upload_url로 전송
   const uploadForm = new FormData();
@@ -2108,9 +2095,7 @@ async function handleHomeworkRoutes(request, env, corsHeaders, url) {
     const deleteFileNamesSet = new Set(Array.isArray(body.deleteFileNames) ? body.deleteFileNames : []);
 
     // 기존 제출 파일 조회 + 소유권 확인
-    const currentPage = await fetch(`https://api.notion.com/v1/pages/${homeworkId}`, {
-      headers: { Authorization: `Bearer ${env.NOTION_TOKEN}`, 'Notion-Version': '2022-06-28' },
-    }).then(r => r.json());
+    const currentPage = await n('GET', `/pages/${homeworkId}`);
     const hwStudentIds = (currentPage.properties?.['학생']?.relation ?? []).map(r => r.id);
     if (!hwStudentIds.includes(studentPage.id)) {
       return new Response(JSON.stringify({ error: '이 숙제에 접근할 권한이 없습니다.' }), {
@@ -2149,14 +2134,14 @@ async function handleHomeworkRoutes(request, env, corsHeaders, url) {
     ];
     const mergedNames = dedupeFileNames(mergedFiles.map(f => f.name));
     mergedFiles.forEach((f, i) => { f.name = mergedNames[i]; });
-    const updateRes = await fetch(`https://api.notion.com/v1/pages/${homeworkId}`, {
-      method: 'PATCH',
-      headers: {
-        Authorization: `Bearer ${env.NOTION_TOKEN}`,
-        'Notion-Version': '2022-06-28',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
+    // Notion이 흔들리면 여기서 재시도로 흡수된다. 끝내 실패해도 던지지 않고 아래
+    // alertHomeworkFailure까지 반드시 도달시킨다 — 예전엔 응답이 JSON이 아닐 때
+    // .json()이 먼저 터져서 정작 이 실패 알림이 실행되지 못했다.
+    let updateData;
+    let updateOk = true;
+    let updateStatus = 200;
+    try {
+      updateData = await n('PATCH', `/pages/${homeworkId}`, {
         properties: {
           '제출 상태': { select: { name: newStatus } },
           '학생 제출 파일': {
@@ -2168,23 +2153,30 @@ async function handleHomeworkRoutes(request, env, corsHeaders, url) {
             ? { '제출 먹이 마크': { date: { start: nowIso } } }
             : {}),
         },
-      }),
-    });
-    const updateData = await updateRes.json();
+      });
+      if (updateData?.object === 'error') {
+        updateOk = false;
+        updateStatus = updateData.status || 400;
+      }
+    } catch (e) {
+      updateOk = false;
+      updateStatus = 502;
+      updateData = { object: 'error', message: e.message };
+    }
 
     // 파일은 올라갔는데 페이지 반영에서 실패한 경우 — 학생 눈엔 "제출 실패"로만 보이고
     // 노션엔 흔적이 없어 가장 진단하기 어려운 구간이다. 응답 본문까지 담아 알린다.
-    if (!updateRes.ok) {
+    if (!updateOk) {
       await alertHomeworkFailure({
         studentPage,
         file: null,
         stage: 'Notion 제출 반영',
-        reason: `${updateRes.status} ${JSON.stringify(updateData).slice(0, 200)}`,
+        reason: `${updateStatus} ${JSON.stringify(updateData).slice(0, 200)}`,
       });
     }
 
     // 실제 새 파일이 업로드된 제출완료 상태일 때만 강사에게 ntfy 알림
-    if (updateRes.ok && newStatus === '제출완료' && newFiles.length > 0) {
+    if (updateOk && newStatus === '제출완료' && newFiles.length > 0) {
       const studentName = stripEmoji(studentPage.properties?.['이름']?.title?.[0]?.plain_text ?? '학생');
       const homeworkTitle = currentPage.properties?.['제목']?.title?.[0]?.plain_text ?? '숙제';
       const fileDesc = newFiles.length === 1 ? '파일 1개' : `파일 ${newFiles.length}개`;
@@ -2196,7 +2188,7 @@ async function handleHomeworkRoutes(request, env, corsHeaders, url) {
     }
 
     return new Response(JSON.stringify(updateData), {
-      status: updateRes.ok ? 200 : updateRes.status,
+      status: updateOk ? 200 : updateStatus,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }

@@ -10,32 +10,56 @@ import { createHmac, randomBytes } from 'crypto';
 export function createNotionClient(token) {
   // 429 (rate limit) / 5xx 응답은 지수 백오프로 자동 재시도.
   // Notion은 429에 Retry-After 헤더를 보내기도 하므로 우선 사용.
+  //
+  // 연결 자체가 끊기는 실패(ECONNRESET·ETIMEDOUT 등)도 같은 백오프로 흡수한다.
+  // 이때는 fetch가 응답 없이 곧바로 throw하기 때문에 아래 상태 코드 분기를
+  // 아예 타지 못한다 — 2026-07-29·08-06 스크립트 실패가 모두 이 경로였다.
   async function notion(method, path, body, { maxRetries = 4 } = {}) {
     let attempt = 0;
     while (true) {
-      const res = await fetch(`https://api.notion.com/v1${path}`, {
-        method,
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Notion-Version': '2022-06-28',
-          'Content-Type': 'application/json',
-        },
-        body: body ? JSON.stringify(body) : undefined,
-      });
+      const waitAndRetry = async (reason) => {
+        const backoffMs = Math.min(15000, 500 * Math.pow(2, attempt)) + Math.random() * 250;
+        console.warn(`[notion] ${reason}, ${Math.round(backoffMs)}ms 후 재시도 (${attempt + 1}/${maxRetries})`);
+        await new Promise(r => setTimeout(r, backoffMs));
+        attempt++;
+      };
+
+      let res;
+      try {
+        res = await fetch(`https://api.notion.com/v1${path}`, {
+          method,
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Notion-Version': '2022-06-28',
+            'Content-Type': 'application/json',
+          },
+          body: body ? JSON.stringify(body) : undefined,
+        });
+      } catch (e) {
+        if (attempt >= maxRetries) {
+          throw new Error(`Notion 연결 실패 (${method} ${path}, ${attempt + 1}회 시도): ${e.message}`);
+        }
+        await waitAndRetry(`연결 실패(${e.cause?.code || e.message})`);
+        continue;
+      }
+
       if (res.ok) return res.json();
 
       const isRetryable = res.status === 429 || (res.status >= 500 && res.status < 600);
       if (!isRetryable || attempt >= maxRetries) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(`${res.status}: ${JSON.stringify(data)}`);
+        // 본문이 JSON이 아닐 수 있다(Cloudflare 평문 에러 페이지 등) — 원문을 그대로 남겨
+        // 알림에 실제 원인이 드러나게 한다.
+        const text = await res.text().catch(() => '');
+        throw new Error(`Notion ${res.status} (${method} ${path}): ${text.slice(0, 300).trim()}`);
       }
       const retryAfter = parseInt(res.headers.get('Retry-After') || '0', 10);
-      const backoffMs = retryAfter > 0
-        ? retryAfter * 1000
-        : Math.min(15000, 500 * Math.pow(2, attempt)) + Math.random() * 250;
-      console.warn(`[notion] ${res.status} 응답, ${Math.round(backoffMs)}ms 후 재시도 (${attempt + 1}/${maxRetries})`);
-      await new Promise(r => setTimeout(r, backoffMs));
-      attempt++;
+      if (retryAfter > 0) {
+        console.warn(`[notion] ${res.status} 응답, ${retryAfter}s 후 재시도 (${attempt + 1}/${maxRetries})`);
+        await new Promise(r => setTimeout(r, retryAfter * 1000));
+        attempt++;
+      } else {
+        await waitAndRetry(`${res.status} 응답`);
+      }
     }
   }
 
