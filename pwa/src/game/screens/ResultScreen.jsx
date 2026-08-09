@@ -99,7 +99,7 @@ export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, 
       <GameHeader title={title ? `${title} 결과화면` : '결과화면'} glass center />
       {/* 축하 판다 150×150 (가로 중앙, 시안 y90) */}
       <Reveal i={1} style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', top: 90 }}>
-        <img src={pandaSrc} alt="" width={150} height={150} style={{ display: 'block', objectFit: 'contain' }} />
+        <img src={pandaSrc} alt="" width={150} height={150} style={{ display: 'block', objectFit: 'contain', animation: 'tg-bob 3.4s ease-in-out infinite' }} />
       </Reveal>
       {/* 점수 — 시안 y254 · 50px */}
       <Reveal i={2} style={{ position: 'absolute', left: 24, right: 24, top: 254 }}>
@@ -193,7 +193,7 @@ export function ExamResultScreen({ correct = 0, total = 20, passed = false, onRe
       <GameHeader title={title ? `${title} 결과화면` : '승급시험 결과화면'} glass center />
       {/* 판다 150×150 (시안 y90) */}
       <Reveal i={1} style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', top: 90 }}>
-        <img src={pandaSrc} alt="" width={150} height={150} style={{ display: 'block', objectFit: 'contain' }} />
+        <img src={pandaSrc} alt="" width={150} height={150} style={{ display: 'block', objectFit: 'contain', animation: 'tg-bob 3.4s ease-in-out infinite' }} />
       </Reveal>
       {/* 정답 수 / 총 문제 — 시안 y260(잉크) · 50 + 36, 베이스라인 정렬 */}
       <Reveal i={2} style={{ position: 'absolute', left: 24, right: 24, top: 254 }}>

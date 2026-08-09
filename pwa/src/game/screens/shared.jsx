@@ -216,7 +216,10 @@ const TONE_GAME_CSS = `
          ★두 애니메이션 모두 transform을 쓰므로 **목록 뒤쪽(idle)이 delay 후 앞쪽(in)을 넘겨받는** 방식으로 이어 붙인다.
            in에 both(fill)를 줘야 idle 시작 전까지 최종 scale(1)이 유지된다. */
       @keyframes tg-ring-in { 0%{opacity:0;transform:scale(.55)} 70%{opacity:1;transform:scale(1.045)} 100%{opacity:1;transform:scale(1)} }
-      @keyframes tg-ring-idle { 0%,100%{transform:scale(1)} 50%{transform:scale(1.032)} }
+      /* Idle — 안쪽부터 바깥으로 번지는 맥동. 진폭 1.032는 거의 정지처럼 보였다(2026-08-09 사용자) */
+      @keyframes tg-ring-idle { 0%,100%{transform:scale(1)} 45%{transform:scale(1.075)} }
+      /* Out — 바깥 원부터 차례로 부풀며 사라진다(퍼져 나가듯) */
+      @keyframes tg-ring-out { 0%{opacity:1;transform:scale(1)} 100%{opacity:0;transform:scale(1.5)} }
       /* 스플래시 성조 캐릭터 파도타기 — 옆으로 차례차례 넘어가는 웨이브(캐릭터마다 delay만 다르게) */
       @keyframes tg-wave { 0%,55%,100%{transform:translateY(0)} 25%{transform:translateY(-13px)} }
       /* 로딩 문구의 '...' — 점이 하나씩 켜졌다 함께 꺼지며 반복 */
@@ -430,9 +433,13 @@ export function BeatContent({ closing = false, children }) {
 //   DOM 순서는 바깥→안(큰 원이 먼저 그려져야 안쪽 원이 위에 겹친다)이라, 지연은 **지름이 작을수록 먼저**로 계산한다.
 const REVEAL_RING_D = [542, 394, 246];
 // 타이밍은 짧게 — 560/110은 과녁이 느릿하게 열려 물렁했다(2026-08-08). Idle은 배경 호흡이라 길게 유지.
-const RING_IN_MS = 380, RING_STEP_MS = 70, RING_IDLE_MS = 4200;
+const RING_IN_MS = 380, RING_STEP_MS = 70;
+// Idle — 링마다 위상을 어긋내(IDLE_STEP) 안쪽에서 바깥으로 번지는 맥동으로 보이게. 4200ms/진폭 1.032는 멈춘 듯했다.
+const RING_IDLE_MS = 2400, RING_IDLE_STEP_MS = 260;
+// Out — 바깥 원부터 순차 확대+소멸(2026-08-09 사용자 요청)
+const RING_OUT_MS = 320, RING_OUT_STEP_MS = 85;
 // tone — 'dark'(연출 5종, 어두운 딤 위 검정 20%) | 'light'(스플래시, 크림 배경 위 흰색 50%)
-export function RevealRings({ tone = 'dark' }) {
+export function RevealRings({ tone = 'dark', out = false }) {
   const still = prefersReducedMotion();
   const ringBg = tone === 'light' ? 'rgba(255,255,254,0.5)' : 'rgba(0,0,0,0.2)';
   return (
@@ -447,8 +454,11 @@ export function RevealRings({ tone = 'dark' }) {
           <span key={d} style={{
             position: 'absolute', width: d, height: d, borderRadius: '50%', background: ringBg,
             ...(still ? null : {
-              animation: `tg-ring-in ${RING_IN_MS}ms cubic-bezier(.22,1,.36,1) ${inDelay}ms both,`
-                + ` tg-ring-idle ${RING_IDLE_MS}ms ease-in-out ${inDelay + RING_IN_MS}ms infinite`,
+              // out은 **바깥(i=0)부터** — in/idle의 order(안쪽부터)와 반대 방향이라 지연 기준도 반대다
+              animation: out
+                ? `tg-ring-out ${RING_OUT_MS}ms cubic-bezier(.22,1,.36,1) ${i * RING_OUT_STEP_MS}ms forwards`
+                : `tg-ring-in ${RING_IN_MS}ms cubic-bezier(.22,1,.36,1) ${inDelay}ms both,`
+                  + ` tg-ring-idle ${RING_IDLE_MS}ms ease-in-out ${inDelay + RING_IN_MS + order * RING_IDLE_STEP_MS}ms infinite`,
               willChange: 'transform',
             }),
           }} />

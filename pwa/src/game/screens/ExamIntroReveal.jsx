@@ -25,9 +25,10 @@ export function ExamIntroReveal({ tierLabel = '입문', total = 20, onDone, hold
       <style>{`
         @keyframes ei-icon { 0%{opacity:0;transform:scale(.55) rotate(-14deg)} 62%{opacity:1;transform:scale(1.12) rotate(6deg)} 100%{transform:scale(1) rotate(0)} }
       `}</style>
+      {/* 동심원 배경 — 딤 위·콘텐츠 아래. ★BeatContent 밖에 둔다: 안에 있으면 부모 퇴장(170ms)이
+          먼저 지워버려 바깥부터 퍼지는 out 모션이 보이지 않는다(2026-08-09) */}
+      <RevealRings out={closing} />
       <BeatContent closing={closing}>
-      {/* 동심원 배경 — 연출 5종 공용(딤 위·콘텐츠 아래) */}
-      <RevealRings />
       <RevealStage>
       {/* 메달 아이콘 — 시안 757:2: 흰 원 배경 **삭제**(hidden), 골드 메달만 126×126 @y306 */}
       <div style={{ position: 'absolute', left: 0, right: 0, top: 306, display: 'flex', justifyContent: 'center' }}>

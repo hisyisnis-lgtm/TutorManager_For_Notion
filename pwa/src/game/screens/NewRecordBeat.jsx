@@ -31,9 +31,10 @@ export function NewRecordBeat({ score = 0, previousBest = 0, onDone, hold = fals
         @keyframes nrb-pop { 0%{opacity:0;transform:scale(.4)} 62%{opacity:1;transform:scale(1.12)} 100%{transform:scale(1)} }
         @keyframes nrb-badge { 0%{opacity:0;transform:scale(0) rotate(-32deg)} 66%{opacity:1;transform:scale(1.14) rotate(7deg)} 100%{transform:scale(1) rotate(0)} }
       `}</style>
+      {/* 동심원 배경 — 딤 위·콘텐츠 아래. ★BeatContent 밖에 둔다: 안에 있으면 부모 퇴장(170ms)이
+          먼저 지워버려 바깥부터 퍼지는 out 모션이 보이지 않는다(2026-08-09) */}
+      <RevealRings out={closing} />
       <BeatContent closing={closing}>
-      {/* 동심원 배경 — 연출 5종 공용(딤 위·콘텐츠 아래) */}
-      <RevealRings />
       {/* 시안 773:55(2026-08-08 간격 수정본) — 스택 전체(282 높이)가 **화면 정중앙**.
           [트로피126 + '신기록!'] 간격 0 / 묶음 간격 20 / [점수 + 이전기록] 간격 **16**(구 6). 화면 높이가 달라도 구도가 유지된다. */}
       <div style={{

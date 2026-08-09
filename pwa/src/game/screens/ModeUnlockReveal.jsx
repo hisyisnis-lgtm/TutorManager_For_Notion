@@ -65,8 +65,10 @@ export function ModeUnlockReveal({ unlock, onDone, hold = false }) {
         @keyframes mu-reveal { 0%{opacity:0;transform:scale(.6)} 60%{opacity:1;transform:scale(1.12)} 100%{transform:scale(1)} }
         @keyframes mu-flood { from{transform:scale(0)} to{transform:scale(1.7)} }
       `}</style>
+      {/* 동심원 배경 — 딤 위·콘텐츠 아래. ★BeatContent 밖에 둔다: 안에 있으면 부모 퇴장(170ms)이
+          먼저 지워버려 바깥부터 퍼지는 out 모션이 보이지 않는다(2026-08-09) */}
+      <RevealRings out={closing} />
       <BeatContent closing={closing}>
-      <RevealRings />
       <RevealStage>
       {/* 오브 — 잠김(어두운 색+자물쇠) → 모드 색이 가운데서 차오름 → 해제(모드 색+아이콘).
           ★테두리를 만드는 원은 이 div 하나뿐. 연출 레이어는 overflow로 잘려 자기 테두리가 화면에 닿지 않는다. */}
