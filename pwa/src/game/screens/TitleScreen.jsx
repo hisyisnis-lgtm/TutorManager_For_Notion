@@ -7,6 +7,7 @@ import { TG, TYPE, TOUCH_OPT, TONE_KEY_COLORS, FONT_TANTAN, RADIUS } from '../tg
 import { TONES } from '../../constants/toneGameWords.js';
 import { ToneMark } from '../tgWidgets.jsx';
 import { FigmaScreen, prefersReducedMotion } from './shared.jsx';
+import { play as playSfx } from '../tgSfx.js';
 import { Eyes, markSize } from './eyes.jsx';
 
 const S = 0.93; // 시안 실측 스케일(마크 63.1/68)
@@ -131,6 +132,10 @@ const groundAnchor = (z) => ({
 
 export function TitleScreen({ onStart }) {
   const reduced = prefersReducedMotion();
+  // 타이틀 징글 — 로고 팝(tg-logo-pop .7s)에 맞춰 한 번.
+  //  ⚠️ 첫 콜드 로드에선 아직 사용자 제스처가 없어 브라우저가 오디오를 막는다(정책상 불가피).
+  //  홈에서 되돌아오는 등 이미 오디오가 열린 상태에선 정상적으로 울린다.
+  useEffect(() => { const t = setTimeout(() => playSfx('title'), 180); return () => clearTimeout(t); }, []);
   return (
     <FigmaScreen>
       {/* 화면 전체 터치 시작 (뒤로가기 버튼 없음 — 나가기는 홈 메뉴에서) */}

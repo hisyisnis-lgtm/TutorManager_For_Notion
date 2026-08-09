@@ -11,7 +11,7 @@ const mtof = (m) => 440 * Math.pow(2, (m - 69) / 12);
 const BASE = {
   tap: 0.3, button: 0.3, count: 0.4, correct: 0.5, combo: 0.5, score: 0.4,
   go: 0.5, wrong: 0.42, timeout: 0.5, win: 0.46, gameover: 0.47, unlock: 0.46, // win·unlock·gameover=다중 마림바라 튐 → 낮춤(음량 밸런스)
-  whoosh: 0.4, locked: 0.45,
+  whoosh: 0.4, locked: 0.45, title: 0.5,
   kick: 0.4, bump: 0.26, // 공 차기(펑)·부딪힘(톡)
   shotFly: 0.2, shotHit: 0.3, shotMiss: 0.32, // 성조 발사체(슉·톡·팅) — 판정음 아래 겹치는 레이어라 낮게
 
@@ -161,6 +161,14 @@ const SYNTH = {
   unlock: (t, v) => {                                                          // 잠금해제: 5음계 상승 반짝
     [72, 76, 79, 81, 84].forEach((m, i) => mallet(mtof(m), t + i * 0.06, v * 0.9, 0.4));
     noiseSweep(t + 0.05, 0.3, v * 0.25, 6000, 12000, 'highpass');
+  },
+  // 타이틀 징글 — 로고가 튀어나오는 순간의 짧은 사인(약 0.9초). 팡파르(win)처럼 요란하지 않게,
+  //  C-E-G 상승 뒤 한 옥타브 위 C를 길게 남겨 여운만. 낮은 옥타브 C를 깔아 두께를 준다.
+  title: (t, v) => {
+    [72, 76, 79].forEach((m, i) => mallet(mtof(m), t + i * 0.085, v * 0.9, 0.45));
+    mallet(mtof(84), t + 0.255, v, 1.1);                 // 마지막 음만 길게 = 여운
+    mallet(mtof(60), t + 0.255, v * 0.35, 1.2);          // 옥타브 아래 베이스로 두께
+    noiseSweep(t + 0.2, 0.34, v * 0.18, 5000, 12000, 'highpass'); // 반짝 — 아주 옅게
   },
   whoosh: (t, v) => noiseSweep(t, 0.25, v, 600, 6000, 'bandpass'),             // 전환: 휘익
   locked: (t, v) => { blip(150, t, 0.1, v, 'square'); blip(150, t + 0.13, 0.12, v, 'square'); }, // 거절 "부-부"
