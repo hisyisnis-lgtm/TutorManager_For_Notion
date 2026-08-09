@@ -3,7 +3,7 @@
 // 게스트면 SNS 로그인 버튼을, 회원이면 로그아웃을 노출한다.
 // 시각 패턴은 NicknameEditModal·HomeMenu와 통일(다크 오버레이 + 카드). SNS 버튼/로그인 시작은 LoginScreen 공용.
 import { useState } from 'react';
-import { Pen, CloseCircle, AltArrowRight, MedalStar, Copy, CheckCircle } from '@solar-icons/react';
+import { Pen, CloseCircle, Copy, CheckCircle } from '@solar-icons/react';
 import { TG, TYPE, TOUCH_OPT, RADIUS, SPACE } from '../tgTokens.js';
 import { startSocialLogin, KakaoLogo, GoogleLogo } from './LoginScreen.jsx';
 import { levelInfo } from '../gameXp.js';
@@ -11,7 +11,7 @@ import { ModalCard } from './shared.jsx';
 
 export function ProfileModal({
   tier, nickname, isGuest, isMemberUser, userId,
-  onEditNickname, onExam, onLogout, onMastery, onClose,
+  onEditNickname, onExam, onLogout, onClose,
 }) {
   const displayName = nickname || '게스트';
   const lv = levelInfo(tier.xp || 0);           // 레벨 = 누적 XP 성장(Lv.N). 등급(tier.emblem/name)은 보스 클리어.
@@ -48,43 +48,40 @@ export function ProfileModal({
           </button>
         </div>
 
-        {/* 프로필 — 엠블럼 + 닉네임(+수정) + 등급명·게이지 */}
+        {/* 프로필 — 엠블럼 76 + 닉네임(+수정) + 등급명·레벨 게이지(시안 461:108) */}
         <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.x2 }}>
-          <img src={tier.emblem} alt="" width={64} height={64} style={{ display: 'block', flexShrink: 0 }} />
-          <div style={{ flex: 1, minWidth: 0 }}>
+          <img src={tier.emblem} alt="" width={76} height={76} style={{ display: 'block', flexShrink: 0, objectFit: 'contain' }} />
+          <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: SPACE.sm }}>
             {/* 닉네임 + 수정 */}
             <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
               <span style={{ ...TYPE.h1, color: TG.INK, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{displayName}</span>
               {onEditNickname && (
                 <button onClick={onEditNickname} aria-label="닉네임 수정" className="tg-press"
-                  style={{ width: 30, height: 30, margin: -4, padding: 0, border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, ...TOUCH_OPT }}>
+                  style={{ width: 30, height: 30, margin: -6, padding: 0, border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, ...TOUCH_OPT }}>
                   <Pen size={18} weight="Bold" color={TG.CORAL_DK} />
                 </button>
               )}
             </div>
-            <span style={{ ...TYPE.labelSm, color: TG.SUB }}>{tier.name}{tier.isMax ? ' · 최고 등급' : ''} · Lv.{lv.level}</span>
-            <div style={{ marginTop: SPACE.md, width: '100%', height: 6, borderRadius: RADIUS.xs, background: TG.BORDER, overflow: 'hidden' }}>
-              <div style={{ width: `${pct}%`, height: '100%', borderRadius: RADIUS.xs, background: TG.CORAL_GRAD, transition: 'width .5s ease' }} />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.xs }}>
+              {/* 한 줄 고정 — 최고 등급('성조 고수 · 최고 등급 · Lv.22' = 186px)이 정보 컬럼(184)을 넘겨 두 줄이 되던 것:
+                  '최고 등급'을 '최고'로 줄이고(157px) 줄바꿈 금지. 그래도 넘치면 말줄임. */}
+              <span style={{ ...TYPE.label, color: '#9A93A0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {tier.name}{tier.isMax ? ' · 최고' : ''} · Lv.{lv.level}
+              </span>
+              {/* 레벨 게이지 — 시안: 높이 10 · 트랙 #EBE5DE(r37) · 채움 #F2484C(r14) */}
+              <div style={{ width: '100%', height: 10, borderRadius: 37, background: '#EBE5DE', overflow: 'hidden' }}>
+                <div style={{ width: `${pct}%`, height: '100%', borderRadius: 14, background: '#F2484C', transition: 'width .5s ease' }} />
+              </div>
             </div>
-            <span style={{ display: 'block', marginTop: SPACE.sm, ...TYPE.meta, color: TG.SUB }}>다음 레벨까지 {lv.toNext.toLocaleString()} XP</span>
           </div>
         </div>
-
-        {/* 등급 자세히 — 기존 카드 탭(→ 등급 화면) 동선 보존 */}
-        {onMastery && (
-          <button onClick={onMastery} className="tg-press" style={{ display: 'flex', alignItems: 'center', gap: SPACE.lg, width: '100%', padding: '11px 12px', borderRadius: RADIUS.lg, background: TG.SURFACE, border: 'none', cursor: 'pointer', ...TOUCH_OPT }}>
-            <MedalStar size={24} weight="Bold" color="#F0A91E" />
-            <span style={{ flex: 1, textAlign: 'left', ...TYPE.label, color: TG.INK, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>등급 자세히 보기</span>
-            <AltArrowRight size={16} weight="Bold" color="#c9c2bb" />
-          </button>
-        )}
 
         <div style={{ height: 1, background: TG.BORDER }} />
 
         {/* 로그인 상태 */}
         {isGuest ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.lg }}>
-            <span style={{ ...TYPE.sub, color: TG.SUB, textAlign: 'center' }}>로그인하면 기기를 바꿔도 기록이 그대로예요</span>
+            <span style={{ ...TYPE.label, color: '#9A93A0', textAlign: 'center' }}>로그인하면 기기를 바꿔도 기록이 그대로예요</span>
             <button onClick={() => startSocialLogin('kakao')} className="tg-press" style={{ width: '100%', height: 52, borderRadius: RADIUS.lg, border: 'none', background: '#FEE500', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: SPACE.md, cursor: 'pointer', ...TOUCH_OPT }}>
               <KakaoLogo />
               <span style={{ ...TYPE.btnSm, color: 'rgba(0,0,0,0.85)' }}>카카오로 시작하기</span>
@@ -96,7 +93,7 @@ export function ProfileModal({
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.lg }}>
-            <span style={{ ...TYPE.sub, color: TG.SUB, textAlign: 'center' }}>로그인됨 · 기록이 안전하게 저장되고 있어요</span>
+            <span style={{ ...TYPE.label, color: '#9A93A0', textAlign: 'center' }}>로그인됨 · 기록이 안전하게 저장되고 있어요</span>
             {isMemberUser && onLogout && (
               <button onClick={onLogout} className="tg-press" style={{ width: '100%', height: 48, borderRadius: RADIUS.lg, border: '1.5px solid #ebe5de', background: '#fff', cursor: 'pointer', ...TYPE.btnSm, color: TG.SUB, ...TOUCH_OPT }}>로그아웃</button>
             )}

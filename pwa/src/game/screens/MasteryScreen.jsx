@@ -1,173 +1,116 @@
-// 단어 숙련도 화면 (Figma "15. 단어 숙련도") — 성조 레이더 + 복습필요 리스트 + 마스터 수 + 복습 CTA.
-import { VolumeLoud, Play, CheckCircle } from '@solar-icons/react';
-import { TG, FONT_HANZI, FONT_BODY, FONT_PINYIN, TOUCH_OPT, TYPE, RADIUS, SPACE } from '../tgTokens.js';
-import { ROUND_LENGTH } from '../../constants/toneGameWords.js';
-import { TONE_NUMS, toneAccuracy, toneAttempts } from '../toneStats.js';
-import { TIER_SPARK_POS as PARTICLE_POS } from '../earProfile.js';
-import { rankInfo, levelInfo } from '../gameXp.js';
+// 오답 노트 화면 (Figma "13. 오답 노트" / "13. 오답 노트_스크롤", 2026-08-05 리디자인)
+//  구 "내 등급" 대시보드(등급 엠블럼·Lv 게이지·코치·성조 레이더·마스터 배지)는 시안에서 전부 빠졌다 —
+//  등급은 프로필 모달, 레벨 게이지는 홈 HUD에 이미 있어 정보 손실 없음. 이 화면은 **틀린 단어 → 바로 복습**만 한다.
+//  내부 수치는 전부 시안 절대값(라인하이트 고정) — flex 중앙정렬에 맡기면 라인박스가 여백을 먹는다.
+import { useState } from 'react';
+import { VolumeLoud, Play } from '@solar-icons/react';
+import { TG, FONT_HANZI, FONT_PINYIN, FONT_NUM, TOUCH_OPT, TYPE, SPACE } from '../tgTokens.js';
 import { speakWord } from '../tgTts.js';
 import { play as playSfx } from '../tgSfx.js';
-import { Reveal, GameHeader, CoachBubble, TgTabBar, TAB_BAR_H } from './shared.jsx';
+import { Reveal, TgTabBar, TAB_BAR_H } from './shared.jsx';
 
-function masteryColor(acc) { return acc >= 0.8 ? TG.SUCCESS_GLOW : acc >= 0.5 ? TG.SUN : TG.CORAL; }
+// 시안 13 실측 — 토큰에 없는 원오프 색만 상수로
+const TITLE_INK = '#272622';    // 제목
+const PCT_INK = '#452C1C';      // 정답률 %
+const BAR_TRACK = '#E2D7C1';    // 정답률 트랙
+const BAR_FILL = '#F96163';     // 정답률 채움 = CTA 레드
+const CTA_EDGE = '#E64244';     // CTA 하단 인너 엣지
+const SPEAKER_EDGE = '#E6E0D6'; // 발음듣기 버튼 하단 인너 엣지
+const DIVIDER = '#E9E6DE';      // 스크롤 시 상단 고정 블록 구분선
 
-// 엠블럼 주변 반짝임 위치 = earProfile.TIER_SPARK_POS(RankUpReveal과 공용 — 좌표는 거기 한 곳에서)
-
-// ── 성조 레이더(P2) — 성조별 정답률 5각형. toneStats(1·2·3·4·경성)로 데이터 폴리곤을 그림 ──
-const RADAR = { cx: 100, cy: 80, R: 52 };
-const TONE_LABEL = { 1: '1성', 2: '2성', 3: '3성', 4: '4성', 0: '경성' };
-const TONE_COLOR = { 1: '#FF4D6D', 2: '#FF9F40', 3: TG.SUCCESS_GLOW, 4: '#4D8DFF', 0: '#AAB2BD' };
-function vtx(i, scale = 1) {
-  const ang = ((-90 + i * 72) * Math.PI) / 180; // 위(1성)에서 시계방향
-  return [RADAR.cx + RADAR.R * scale * Math.cos(ang), RADAR.cy + RADAR.R * scale * Math.sin(ang)];
-}
-function ToneRadar({ toneStats }) {
-  const accs = TONE_NUMS.map((t) => ({ tone: t, acc: toneAccuracy(toneStats?.[t]), att: toneAttempts(toneStats?.[t]) }));
-  const totalAtt = accs.reduce((s, a) => s + a.att, 0);
-  const hasData = totalAtt >= 10; // 의미 있는 형태가 나올 만큼 탭이 쌓였을 때만 데이터 폴리곤
-  const grid = (s) => TONE_NUMS.map((_, i) => vtx(i, s).map((n) => n.toFixed(1)).join(',')).join(' ');
-  const dataPts = accs.map((a, i) => vtx(i, hasData ? Math.max(0.06, a.acc) : 0).map((n) => n.toFixed(1)).join(',')).join(' ');
-  return (
-    <div style={{ background: '#fff', borderRadius: RADIUS.lg, padding: '16px 18px 10px', boxShadow: '0 5px 14px rgba(43,39,48,0.06)' }}>
-      <span style={{ ...TYPE.labelSm, color: TG.INK }}>내 귀 지도</span>
-      <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', marginTop: SPACE.xxs }}>
-        <svg width={200} height={150} viewBox="0 0 200 150" style={{ display: 'block', overflow: 'visible' }} aria-hidden="true">
-          {/* 그리드(외곽+50%) */}
-          <polygon points={grid(1)} fill="none" stroke="#E5DED5" strokeWidth={1.2} />
-          <polygon points={grid(0.5)} fill="none" stroke="#EFEAE4" strokeWidth={1} />
-          {/* 축 */}
-          {TONE_NUMS.map((t, i) => { const [x, y] = vtx(i, 1); return <line key={`ax${t}`} x1={RADAR.cx} y1={RADAR.cy} x2={x} y2={y} stroke="#EFEAE4" strokeWidth={1} />; })}
-          {/* 데이터 폴리곤 + 꼭짓점 점 */}
-          {hasData && <polygon points={dataPts} fill="rgba(255,107,107,0.18)" stroke="#FF6B6B" strokeWidth={2} strokeLinejoin="round" />}
-          {hasData && accs.map((a, i) => { const [x, y] = vtx(i, Math.max(0.06, a.acc)); return <circle key={`dot${a.tone}`} cx={x} cy={y} r={3.5} fill={TONE_COLOR[a.tone]} />; })}
-          {/* 성조 라벨(꼭짓점 바깥, 성조색) */}
-          {TONE_NUMS.map((t, i) => { const [x, y] = vtx(i, 1.22); return <text key={`lb${t}`} x={x} y={y} fontFamily={FONT_BODY} fontSize={11} fontWeight={500} fill={TONE_COLOR[t]} textAnchor="middle" dominantBaseline="middle">{TONE_LABEL[t]}</text>; })}
-        </svg>
-        {!hasData && (
-          <span style={{ position: 'absolute', top: '54%', left: 0, right: 0, transform: 'translateY(-50%)', textAlign: 'center', ...TYPE.meta, color: TG.SUB, padding: '0 28px' }}>
-            더 플레이하면 성조별 실력이 보여요
-          </span>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// 복습 단어 한 줄 — 카드 chrome 없이 얇은 구분선 리스트(업적 화면과 통일). 한자·뜻·병음 + 정답률(%+바) + 발음듣기.
-function WordStatRow({ word, acc, last }) {
+// 오답 단어 한 줄 — 시안: 342×74 · r20 · 흰 카드. 내부 = [한자행 36] gap4 [정답률행 14], padding 10/10/10/14
+function WrongWordRow({ word, acc }) {
   const pct = Math.round(acc * 100);
-  const c = masteryColor(acc);
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.xl, padding: '12px 2px', borderBottom: last ? 'none' : `1px solid ${TG.LINE}`, flexShrink: 0 }}>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: SPACE.md }}>
-          <span style={{ fontFamily: FONT_HANZI, fontWeight: 700, fontSize: 22, color: TG.INK }}>{word.hanzi}</span>
-          <span style={{ ...TYPE.sub, color: TG.SUB, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{word.meaning}</span>
+    <div style={{
+      height: 74, borderRadius: 20, background: '#fff', boxShadow: '0px 4px 9px rgba(43,39,48,0.04)',
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 10px 10px 14px', flexShrink: 0,
+    }}>
+      <div style={{ width: 223, display: 'flex', flexDirection: 'column', gap: SPACE.xs }}>
+        {/* 한자 30 + [병음 12 / 뜻 14] — 시안 gap 8, 병음·뜻 사이 3 */}
+        <div style={{ height: 36, display: 'flex', alignItems: 'center', gap: SPACE.md }}>
+          <span style={{ fontFamily: FONT_HANZI, fontWeight: 700, fontSize: 30, lineHeight: '36px', color: TG.INK }}>{word.hanzi}</span>
+          <div style={{ width: 95, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
+            <span style={{ fontFamily: FONT_PINYIN, fontWeight: 700, fontSize: 12, lineHeight: '14px', color: TG.SUB, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{(word.pinyin || []).join(' ')}</span>
+            <span style={{ ...TYPE.label, lineHeight: '17px', color: TG.SUB, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{word.meaning}</span>
+          </div>
         </div>
-        <div style={{ fontFamily: FONT_PINYIN, fontWeight: 500, fontSize: 12, color: TG.SUB, marginTop: SPACE.xs, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{(word.pinyin || []).join(' ')}</div>
+        {/* 정답률 바 193×10 + % (Roboto Medium 12) */}
+        <div style={{ height: 14, display: 'flex', alignItems: 'center', gap: 7 }}>
+          <div style={{ width: 193, height: 10, borderRadius: 19, background: BAR_TRACK, overflow: 'hidden', flexShrink: 0 }}>
+            <div style={{ width: `${pct}%`, height: '100%', background: BAR_FILL }} />
+          </div>
+          <span style={{ fontFamily: FONT_NUM, fontWeight: 500, fontSize: 12, lineHeight: '14px', color: PCT_INK }}>{pct}%</span>
+        </div>
       </div>
-      {/* 정답률만(% + 바) — 평균시간은 부차적이라 제외해 왼쪽 2행과 균형 */}
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: SPACE.sm, flexShrink: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <span style={{ ...TYPE.numMd, color: c }}>{pct}</span>
-          <span style={{ ...TYPE.numMd, fontSize: 12, color: c }}>%</span>
-        </div>
-        <div style={{ width: 64, height: 6, borderRadius: RADIUS.xs, background: TG.TRACK, overflow: 'hidden' }}>
-          <div style={{ width: `${pct}%`, height: '100%', background: c, borderRadius: RADIUS.xs }} />
-        </div>
-      </div>
-      {/* 발음 듣기(TTS) */}
-      <button onClick={() => speakWord(word)} aria-label="발음 듣기" className="tg-press" style={{ width: 34, height: 34, borderRadius: RADIUS.md, background: TG.SURFACE, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, ...TOUCH_OPT }}>
-        <VolumeLoud size={18} weight="Bold" color={TG.ICON} />
+      {/* 발음 듣기 54 r12 — 아이콘 28 정중앙(시안), 하단 인너 엣지 */}
+      <button onClick={() => speakWord(word)} aria-label={`${word.hanzi} 발음 듣기`} className="tg-press" style={{
+        width: 54, height: 54, borderRadius: 12, background: TG.SURFACE, border: 'none', cursor: 'pointer',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+        boxShadow: `inset 0 -4px 0 ${SPEAKER_EDGE}`, ...TOUCH_OPT,
+      }}>
+        <VolumeLoud size={28} weight="Bold" color={TG.ICON} />
       </button>
     </div>
   );
 }
 
-export function MasteryScreen({ rows, masteredN, xp = 0, rank = 0, onExam, toneStats, onBack, onReview, tabNav }) {
+// 주 CTA — 시안 13: 342×50 r20 레드 키캡(라벨 21 + 플레이 18). 오답이 없을 땐 같은 자리에 '문제 풀기'로 바뀐다.
+function PrimaryCta({ label, onClick }) {
+  return (
+    <button onClick={() => { playSfx('button'); onClick(); }} className="tg-press" style={{
+      width: '100%', height: 50, borderRadius: 20, border: 'none', cursor: 'pointer', background: BAR_FILL,
+      boxShadow: `0px 10px 20px rgba(242,72,76,0.1), inset 0 -4px 0 ${CTA_EDGE}`, paddingBottom: 4,
+      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: SPACE.md, ...TOUCH_OPT,
+    }}>
+      <span style={{ ...TYPE.head, color: '#fff', whiteSpace: 'nowrap' }}>{label}</span>
+      <Play size={18} weight="Bold" color="#fff" />
+    </button>
+  );
+}
+
+export function MasteryScreen({ rows, onReview, onPlay, tabNav }) {
+  // 스크롤 상태(시안 13_스크롤): 제목이 밀려 올라가고 CTA가 상단에 고정 — 흰 블록 110 + 하단 2px 구분선.
+  //  sticky top:0 + paddingTop 40 → 고정 시 CTA가 y40에 서고 블록 높이가 정확히 110(40+50+20)이 된다.
+  const [stuck, setStuck] = useState(false);
   const need = rows.length;
-  const reviewN = Math.min(ROUND_LENGTH, need);
-  const grade = rankInfo(rank); // 등급 = 보스 클리어로만 오름(rankInfo 엠블럼)
-  const lv = levelInfo(xp);     // 레벨 = 누적 XP 성장(Lv.N, 등급과 별개 축)
   return (
     <>
-      <GameHeader title="내 등급" onBack={onBack} />
-      {/* 스크롤 영역 — 코치 + 레이더 + 소제목 + 리스트를 함께 스크롤(모바일서 리스트가 좁은 고정영역에 갇히지 않게) */}
-      <div style={{
-        // 하단 = 탭바(TAB_BAR_H) 위로 — 복습 CTA가 있으면 CTA 높이만큼 더 띄움 (2026-07-27 탭바 도입)
-        position: 'absolute', left: 0, right: 0, top: 52, bottom: need > 0 ? `calc(${TAB_BAR_H + 96}px + env(safe-area-inset-bottom))` : `calc(${TAB_BAR_H + 8}px + env(safe-area-inset-bottom))`,
-        overflowY: 'auto', WebkitOverflowScrolling: 'touch', padding: '14px 24px 48px', zIndex: 2,
-        // 헤더 바(52px) 바닥에 딱 붙는 위·아래 가장자리 페이드(난이도 선택 화면과 동일 방식). 위는 엠블럼 안 흐리게 얕게, 아래는 리스트가 부드럽게 사라지게
-        maskImage: 'linear-gradient(to bottom, transparent 0, #000 20px, #000 calc(100% - 48px), transparent 100%)',
-        WebkitMaskImage: 'linear-gradient(to bottom, transparent 0, #000 20px, #000 calc(100% - 48px), transparent 100%)',
+      <div className="tg-noscroll" onScroll={(e) => { const s = e.currentTarget.scrollTop > 4; setStuck((prev) => (prev === s ? prev : s)); }} style={{
+        scrollbarWidth: 'none', // 데스크톱 스크롤바가 폭을 먹어 342 컬럼이 좁아지지 않게(모바일은 원래 없음)
+        position: 'absolute', left: 0, right: 0, top: 0, bottom: `calc(${TAB_BAR_H}px + env(safe-area-inset-bottom))`,
+        overflowY: 'auto', WebkitOverflowScrolling: 'touch', padding: '0 24px', zIndex: 2,
       }}>
-        {/* 성장 엠블럼 히어로 — 중앙 대형 엠블럼 + 단계별 글로우/파티클 + 단계명 + 진행 */}
-        <Reveal i={1}>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: SPACE.md, padding: '6px 0 2px' }}>
-            {/* 등급 엠블럼 + 글로우 + 반짝임 파티클 (등급 = 보스 클리어로만 오름) */}
-            <div style={{ position: 'relative', width: '100%', height: 140, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <div aria-hidden="true" style={{ position: 'absolute', width: 196, height: 196, borderRadius: '50%', pointerEvents: 'none', background: `radial-gradient(closest-side, ${grade.glow}66, ${grade.glow}1a 55%, ${grade.glow}00 72%)` }} />
-              {PARTICLE_POS.slice(0, grade.particles).map(([dx, dy, sz], i) => (
-                <div key={i} aria-hidden="true" style={{ position: 'absolute', left: '50%', top: '50%', transform: `translate(${dx}px, ${dy}px)`, pointerEvents: 'none' }}>
-                  <div style={{ animation: `tg-sparkle ${2.4 + i * 0.35}s ease-in-out ${i * 0.45}s infinite` }}>
-                    <svg viewBox="0 0 24 24" width={sz} height={sz} aria-hidden="true"><path d="M12 0 L14 10 L24 12 L14 14 L12 24 L10 14 L0 12 L10 10 Z" fill={grade.spark} /></svg>
-                  </div>
-                </div>
-              ))}
-              <img src={grade.emblem} alt="" width={132} height={132} style={{ position: 'relative', filter: `drop-shadow(0 8px 18px ${grade.glow}55)` }} />
-            </div>
-            {/* 등급명 (+ 최고 등급) — 승급은 사다리의 '보스(승급시험)'로만 */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
-              <span style={{ ...TYPE.title, color: TG.INK }}>{grade.name}</span>
-              {grade.isMax && <span style={{ ...TYPE.labelSm, color: '#E0A21A' }}>· 최고 등급</span>}
-            </div>
-            {/* 레벨(Lv.N) — 누적 XP 성장. 등급과 별개로 계속 오름. */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.md, marginTop: SPACE.xxs }}>
-              <span style={{ ...TYPE.h2, color: TG.CORAL_DK, whiteSpace: 'nowrap' }}>Lv.{lv.level}</span>
-              <div style={{ width: 176, height: 8, borderRadius: RADIUS.xs, background: TG.TRACK, overflow: 'hidden' }}>
-                <div style={{ width: `${Math.round(lv.progress * 100)}%`, height: '100%', borderRadius: RADIUS.xs, background: TG.CORAL_GRAD, transition: 'width .4s ease' }} />
-              </div>
-            </div>
-            <span style={{ ...TYPE.meta, color: TG.SUB }}>다음 레벨까지 {lv.toNext.toLocaleString()} XP · 누적 {xp.toLocaleString()} XP</span>
-          </div>
+        {/* 제목 — 시안 y40 · 26px 2줄(라인 31). 오답이 없으면 이 자리에 빈 상태 문구를 대신 놓는다(화면 위쪽 리듬 유지) */}
+        <Reveal i={0} style={{ display: 'block', marginTop: 40 }}>
+          <span style={{ display: 'block', ...TYPE.head, fontSize: 26, lineHeight: '31px', color: TITLE_INK }}>
+            {need > 0 ? <>틀린 문제의 성조를<br />복습해봐요!</> : <>아직 복습할<br />단어가 없어요</>}
+          </span>
+          {need === 0 && (
+            // 복습할 게 없으면 같은 자리에서 곧장 게임으로 — 빈 화면에 갇히지 않게. 위치는 '복습 하기'와 동일(y122)
+            <div style={{ marginTop: 20 }}><PrimaryCta label="문제 풀기" onClick={onPlay} /></div>
+          )}
         </Reveal>
-        <Reveal i={2} style={{ display: 'block', marginTop: SPACE.x4 }}><CoachBubble text={need ? '약한 단어부터 복습해 볼까요?' : '잘하고 있어요! 계속 도전해요'} /></Reveal>
-        {/* 내 귀 지도(성조 레이더, P2) */}
-        <Reveal i={3} style={{ display: 'block', marginTop: SPACE.x4 }}><ToneRadar toneStats={toneStats} /></Reveal>
-        {need > 0 ? (
-          <>
-            {/* 소제목 */}
-            <div style={{ marginTop: SPACE.x4, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ ...TYPE.labelSm, color: TG.INK }}>복습 필요 {need}개</span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.xs, background: 'rgba(54,201,141,0.14)', padding: '5px 10px 5px 8px', borderRadius: RADIUS.md }}>
-                <CheckCircle size={14} weight="Bold" color={TG.SUCCESS} />
-                <span style={{ ...TYPE.labelSm, color: TG.SUCCESS }}>마스터 {masteredN}</span>
-              </div>
-            </div>
-            {/* 리스트 — 얇은 구분선(카드 chrome 없음) */}
-            <div style={{ marginTop: SPACE.sm, display: 'flex', flexDirection: 'column' }}>
-              {rows.map((r, i) => <WordStatRow key={r.word.hanzi} word={r.word} acc={r.acc} last={i === rows.length - 1} />)}
-            </div>
-          </>
-        ) : (
-          <div style={{ marginTop: SPACE.x4, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: SPACE.md, textAlign: 'center' }}>
-            <span style={{ ...TYPE.head, fontSize: 18, color: TG.INK }}>아직 복습할 단어가 없어요</span>
-            <span style={{ ...TYPE.sub, color: TG.SUB }}>게임을 플레이하면 약한 단어가 모여요</span>
+        {need > 0 && (
+          // ★Reveal(transform) 안에 넣으면 sticky가 죽는다 — 고정 블록은 페이드만(tg-fade)
+          <div className="tg-fade" style={{
+            position: 'sticky', top: 0, zIndex: 3, margin: '-20px -24px 0', padding: '40px 24px 20px', animationDelay: '85ms',
+            background: stuck ? '#fff' : 'transparent', boxShadow: stuck ? `0 2px 0 ${DIVIDER}` : 'none', transition: 'background .15s ease',
+          }}>
+            <PrimaryCta label="복습 하기" onClick={onReview} />
+          </div>
+        )}
+        {need > 0 && (
+          // 리스트 — 시안 y222(고정 블록 아래 30) · 행 간격 10. 행마다 스태거(최대 5단계까지만 늘어남)
+          <div style={{ marginTop: 30, display: 'flex', flexDirection: 'column', gap: SPACE.lg, paddingBottom: 40 }}>
+            {rows.map((r, ri) => (
+              <Reveal key={r.word.hanzi} i={ri + 2}>
+                <WrongWordRow word={r.word} acc={r.acc} />
+              </Reveal>
+            ))}
           </div>
         )}
       </div>
-      {/* 복습 CTA */}
-      {need > 0 && (
-        <Reveal i={3} style={{ position: 'absolute', left: 24, right: 24, bottom: `calc(${TAB_BAR_H + 16}px + env(safe-area-inset-bottom))` }}>
-        <button onClick={() => { playSfx('button'); onReview(); }} className="tg-press" style={{
-          width: '100%', height: 60, borderRadius: RADIUS.xl, border: 'none', cursor: 'pointer', background: TG.CORAL_GRAD,
-          boxShadow: '0px 10px 20px rgba(242,72,76,0.32)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: SPACE.md, ...TOUCH_OPT,
-        }}>
-          <span style={{ ...TYPE.cta, color: '#fff' }}>약한 단어 {reviewN}개 복습하기</span>
-          <Play size={14} weight="Bold" color="#fff" />
-        </button>
-        </Reveal>
-      )}
       <TgTabBar active="mastery" onNav={tabNav} />
     </>
   );

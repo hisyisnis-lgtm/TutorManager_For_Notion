@@ -1,14 +1,14 @@
 // 결과 화면 — 신기록 배지·축하 판다·점수(카운트업)·통계 2카드·코치·다시도전/난이도 바꾸기.
 import { useState, useEffect } from 'react';
-import { Cup, Refresh, Bolt, CheckCircle, CloseCircle, AltArrowRight, Home, MedalStar } from '@solar-icons/react';
+import { Cup, Bolt, Play } from '@solar-icons/react';
 import { TG, TYPE, TOUCH_OPT, pickCelebratePanda, RADIUS, SPACE } from '../tgTokens.js';
 import { useCountUp, FlameIcon } from '../tgWidgets.jsx';
 import { play as playSfx } from '../tgSfx.js';
-import { Reveal, CoachBubble, ConfettiBurst, CrispFlash, LIGHT_CONFETTI } from './shared.jsx';
+import { EXAM_PASS_RATIO } from '../gameXp.js';
+import { Reveal, ConfettiBurst, CrispFlash, LIGHT_CONFETTI, GameHeader } from './shared.jsx';
 import { LoginNudgeModal } from './gameModals.jsx';
 import CoachMarkOverlay from '../../components/ui/CoachMarkOverlay.jsx';
 import { useTabTip } from '../../hooks/useTabTip.js';
-import { DIFFICULTIES } from '../../constants/toneGameWords.js';
 
 // 로그인 유도(게스트가 이전 기록 넘긴 순간) — game=유입 깔때기라 '성취 순간'에만 부드럽게. 세션 1회 + 닫으면 쿨다운(잔소리 방지).
 let sessionNudged = false; // 앱 세션당 1회(리로드 시 리셋)
@@ -20,14 +20,56 @@ function nudgeAllowed() {
 }
 
 // 첫 결과 화면 코치마크 — 점수·통계·다음 액션. Reveal 등장 후 표시.
-const RESULT_COACH = [
-  { selector: '[data-coach="result-score"]', label: '이번 판 점수예요. 최고 기록을 넘기면 신기록! 🏆' },
-  { selector: '[data-coach="result-stats"]', label: '최고 콤보와 평균 반응속도도 확인할 수 있어요.' },
-  { selector: '[data-coach="result-actions"]', label: '다시 도전하거나, 홈으로 나갈 수 있어요.' },
+//  마지막 문구는 화면에 실제로 있는 버튼을 따라간다(온보딩 첫 판은 '홈으로 가기' 하나뿐).
+// 마지막 문구는 화면에 실제로 있는 버튼을 따라간다. 버튼 이름을 대괄호로 인용하지 말 것 —
+//  설명서처럼 읽히고 문장이 겉돈다(2026-08-08 사용자: "어색하다"). 무엇을 하게 되는지를 말로 풀어 쓴다.
+//  카피 원칙: 기능을 나열("~을 확인할 수 있어요")하지 말고 **무엇이 보이는지·다음에 뭘 하면 되는지**를 말한다.
+//  지표 이름(최고 콤보·평균 반응속도)을 되읊는 대신 그게 무슨 뜻인지 풀어 쓴다 — 처음 보는 사람 기준.
+const resultCoach = (homeOnly, homeHint) => [
+  { selector: '[data-coach="result-score"]', label: '이번 판 점수예요. 다음엔 이 숫자를 넘어봐요! 🏆' },
+  { selector: '[data-coach="result-stats"]', label: '연달아 몇 개나 맞혔는지, 한 문제에 얼마나 걸렸는지예요.' },
+  { selector: '[data-coach="result-actions"]', label: homeOnly ? homeHint : '바로 한 판 더 해도 되고, 홈에서 쉬었다 와도 좋아요.' },
 ];
 
 
-export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, onRetry, onHome, onExam = null, onNextLevel = null, onLogin = null, retryLabel = '다시 도전', practice = false, endKind = null, suggestPractice = false, coachReady = true }) {
+// 시안 12(2026-08-05) 값 — 결과 버튼/배지 전용. 토큰에 없는 원오프 색만 상수로.
+const RES_BTN_TEXT = '#7E8A94';   // 보조 버튼 라벨(흰 버튼)
+const RES_EDGE = '#E4EDF5';       // 흰 버튼 하단 인너 엣지
+const RES_RED = '#F96163';        // 주 버튼(계속하기)
+const RES_RED_EDGE = '#E64244';   // 주 버튼 하단 인너 엣지
+const RES_BADGE = '#FDBA28';      // 신기록 배지(구 골드 그라데 → 단색)
+const RES_BTN = { height: 60, borderRadius: 20, border: 'none', cursor: 'pointer', paddingBottom: 4, boxShadow: '0px 4px 18px rgba(43,39,48,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center' };
+const RES_WHITE = { background: '#fff', boxShadow: `0px 4px 18px rgba(43,39,48,0.07), inset 0 -4px 0 ${RES_EDGE}` };
+const RES_PRIMARY = { background: RES_RED, boxShadow: `0px 4px 18px rgba(43,39,48,0.07), inset 0 -4px 0 ${RES_RED_EDGE}` };
+
+// 통계 2카드(최고 콤보·반응 속도) — 시안 12 결과 / 승급시험 결과 공통. 166×128 r20, 내부는 시안 절대좌표 그대로.
+//  아이콘 y16(30) · 라벨 y52(19) · 수치행 y81(31, 단위는 +12). flex 중앙정렬로 두면 라인박스(라벨 25.1·값 40.9)가
+//  자리를 밀어 상하 여백이 16이 아니라 8이 된다.
+function StatCards({ maxCombo, avgSec }) {
+  return (
+    <div data-coach="result-stats" style={{ height: 128, display: 'flex', gap: SPACE.lg, alignItems: 'stretch' }}>
+      {/* ★통계 아이콘엔 개별 등장 모션을 걸지 않는다 — 결과화면은 **매 판** 보는 자리라,
+          아이콘마다 성격 있는 모션이 매번 재생되면 그게 곧 촌스러움이 된다(빈도 규칙).
+          카드 자체의 Reveal만으로 충분. delight는 신기록 배지·비트처럼 드문 순간에만. */}
+      {[
+        { icon: <FlameIcon size={30} color={TG.CORAL_DK} />, val: maxCombo, unit: '콤보', label: '최고 콤보' },
+        { icon: <Bolt size={30} weight="Bold" color="#4D8DFF" />, val: avgSec, unit: avgSec === '-' ? '' : '초', label: '반응 속도' },
+      ].map((s) => (
+        <div key={s.label} style={{ position: 'relative', flex: 1, minWidth: 0, background: '#fff', borderRadius: RADIUS.xl, boxShadow: '0px 4px 18px rgba(43,39,48,0.04)' }}>
+          <div style={{ position: 'absolute', left: 0, right: 0, top: 16, display: 'flex', justifyContent: 'center' }}>{s.icon}</div>
+          <span style={{ position: 'absolute', left: 0, right: 0, top: 52, textAlign: 'center', ...TYPE.h2, lineHeight: '19px', color: TG.SUB }}>{s.label}</span>
+          {/* 값+단위는 시안대로 베이스라인 정렬(items-baseline) — marginTop으로 눈대중 맞추면 폰트마다 어긋난다 */}
+          <div style={{ position: 'absolute', left: 0, right: 0, top: 81, height: 31, display: 'flex', justifyContent: 'center', alignItems: 'baseline', gap: SPACE.xxs }}>
+            <span style={{ ...TYPE.numLg, lineHeight: '31px', color: TG.INK }}>{s.val}</span>
+            {s.unit && <span style={{ ...TYPE.label, lineHeight: '17px', color: TG.SUB }}>{s.unit}</span>}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, onRetry, onHome, onExam = null, onNextLevel = null, onLogin = null, retryLabel = '다시하기', continueLabel = '계속하기', title = '', practice = false, coachReady = true, homeOnly = false, homeLabel = '홈으로 가기', homeHint = '홈에서 이어서 해요!' }) {
   const animScore = useCountUp(score, 1100);
   // 로그인 유도 모달(게스트가 '이전 기록'을 실제로 넘긴 순간) — 마운트 때 1회 판정(세션·쿨다운).
   //  previousBest>0: 첫 판(항상 신기록·이전0) 코치마크와 안 겹치고, 재도전+향상=투자 있는 성취에만.
@@ -42,7 +84,6 @@ export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, 
   const dismissNudge = () => { setNudgeOpen(false); try { localStorage.setItem('tg_login_nudge', String(Date.now())); } catch { /* noop */ } };
   const avgSec = avgMs > 0 ? (avgMs / 1000).toFixed(1) : '-';
   const pandaSrc = pickCelebratePanda(isNewBest, maxCombo);
-  const delta = score - previousBest;
   // 첫 결과 코치마크(1회) — 연습 결과는 제외(신기록/기록 개념이 다름).
   // ★coachReady 게이트는 훅이 아니라 아래 '오버레이 렌더 조건'에 건다. 훅에 걸면 레이스로 무력화:
   //   결과화면 마운트 시점엔 업적 큐가 아직 비어(end-effect가 렌더 후 실행) coachReady=true → visible=true로 시작,
@@ -54,99 +95,81 @@ export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, 
       {isNewBest && !practice && <CrispFlash color="rgba(255,255,255,0.6)" zIndex={7} />}
       {isNewBest && !practice && <ConfettiBurst count={32} power={1.35} size={10} zIndex={3} style={{ top: 150 }} />}
       {isNewBest && !practice && <ConfettiBurst colors={LIGHT_CONFETTI} count={16} power={1.3} size={6} zIndex={3} style={{ top: 150 }} />}
-      {/* 신기록 배지 (중앙) */}
+      {/* 헤더 — 시안 12: 글래스 60 + 스테이지명 가운데(뒤로가기 없음. 이탈은 아래 '홈으로 가기'로) */}
+      <GameHeader title={title ? `${title} 결과화면` : '결과화면'} glass center />
+      {/* 축하 판다 150×150 (가로 중앙, 시안 y90) */}
+      <Reveal i={1} style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', top: 90 }}>
+        <img src={pandaSrc} alt="" width={150} height={150} style={{ display: 'block', objectFit: 'contain' }} />
+      </Reveal>
+      {/* 점수 — 시안 y254 · 50px */}
+      <Reveal i={2} style={{ position: 'absolute', left: 24, right: 24, top: 254 }}>
+      <div data-coach="result-score" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <span style={{ ...TYPE.numHero, fontSize: 50, fontWeight: 900, color: TG.CORAL_DK, lineHeight: 1, whiteSpace: 'nowrap' }}>{animScore.toLocaleString()}</span>
+      </div>
+      </Reveal>
+      {/* 신기록 배지 — 시안 y312(점수 바로 아래) */}
       {isNewBest && (
-        <Reveal i={0} style={{ position: 'absolute', top: 36, left: '50%', transform: 'translateX(-50%)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, padding: '8px 16px', borderRadius: RADIUS.lg, background: 'linear-gradient(90deg, #ffd24d, #ff9f40)', boxShadow: '0px 6px 14px rgba(255,159,64,0.28)' }}>
-          <Cup size={13} weight="Bold" color="#fff" />
-          <span style={{ ...TYPE.btnSm, color: '#fff', whiteSpace: 'nowrap' }}>신기록 달성!</span>
+        <Reveal i={2} style={{ position: 'absolute', top: 312, left: '50%', transform: 'translateX(-50%)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, padding: '8px 16px', borderRadius: RADIUS.lg, background: RES_BADGE, boxShadow: '0px 4px 18px rgba(43,39,48,0.04)' }}>
+          <Cup size={16} weight="Bold" color="#fff" style={{ animation: 'tg-ic-trophy .34s cubic-bezier(.22,1,.36,1) .06s both' }} />
+          <span style={{ ...TYPE.btnSm, lineHeight: '17px', color: '#fff', whiteSpace: 'nowrap' }}>신기록 달성!</span>
         </div>
         </Reveal>
       )}
-      {/* 축하 판다 150×150 (가로 중앙) */}
-      <Reveal i={1} style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', top: 64 }}>
-        <img src={pandaSrc} alt="" width={150} height={150} style={{ display: 'block', objectFit: 'contain' }} />
+      {/* 통계 2카드 — 시안 12: y365 · 166×128 · r20 · 간격10 */}
+      <Reveal i={3} style={{ position: 'absolute', left: 24, right: 24, top: 365 }}>
+        <StatCards maxCombo={maxCombo} avgSec={avgSec} />
       </Reveal>
-      {/* 점수 */}
-      <Reveal i={2} style={{ position: 'absolute', left: 24, right: 24, top: 196 }}>
-      <div data-coach="result-score" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-        <span style={{ ...TYPE.numHero, color: TG.CORAL_DK, lineHeight: 1, whiteSpace: 'nowrap' }}>{animScore.toLocaleString()}</span>
-        {previousBest > 0 && (
-          <div style={{ display: 'flex', gap: SPACE.sm, alignItems: 'center', marginTop: SPACE.xxs }}>
-            <span style={{ ...TYPE.sub, color: TG.SUB, whiteSpace: 'nowrap' }}>이전 최고 {previousBest.toLocaleString()}</span>
-            {isNewBest && delta > 0 && (
-              <span style={{ display: 'flex', alignItems: 'center', padding: '3px 8px', borderRadius: RADIUS.md, background: 'rgba(54,201,141,0.16)' }}>
-                <span style={{ ...TYPE.num, color: TG.SUCCESS, whiteSpace: 'nowrap' }}>▲ {delta.toLocaleString()}</span>
-              </span>
-            )}
-          </div>
-        )}
-      </div>
-      </Reveal>
-      {/* 통계 2카드 */}
-      <Reveal i={3} style={{ position: 'absolute', left: 24, right: 24, top: 312 }}>
-      <div data-coach="result-stats" style={{ height: 128, display: 'flex', gap: SPACE.xl, alignItems: 'stretch' }}>
-        {[
-          { icon: <FlameIcon size={24} color={TG.CORAL_DK} />, val: maxCombo, unit: '콤보', label: '최고 콤보' },
-          { icon: <Bolt size={24} weight="Bold" color="#4D8DFF" />, val: avgSec, unit: avgSec === '-' ? '' : '초', label: '평균 반응속도' },
-        ].map((s) => (
-          <div key={s.label} style={{ flex: 1, minWidth: 0, background: '#fff', borderRadius: RADIUS.xxl, boxShadow: '0px 5px 14px rgba(43,39,48,0.06)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: SPACE.xs }}>
-            {s.icon}
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: SPACE.xxs }}>
-              <span style={{ ...TYPE.numLg, color: TG.INK }}>{s.val}</span>
-              {s.unit && <span style={{ ...TYPE.label, color: TG.SUB }}>{s.unit}</span>}
-            </div>
-            <span style={{ ...TYPE.meta, color: TG.SUB }}>{s.label}</span>
-          </div>
-        ))}
-      </div>
-      </Reveal>
-      {/* 코치 — 통계카드 하단과 CTA 사이 가용공간 세로중앙. (트레이닝 유도는 '홈으로 가기' 후 홈 모달로 — 결과화면은 안 어수선하게) */}
-      <Reveal i={4} style={{ position: 'absolute', left: 24, right: 24, top: 452, bottom: 'calc(150px + env(safe-area-inset-bottom))', display: 'flex', alignItems: 'center' }}>
-        <CoachBubble text={onExam ? '이제 승급시험에 도전해봐요! 🎖️' : onNextLevel ? '다음 스테이지에 도전할 수 있어요! 🎉' : suggestPractice ? `${DIFFICULTIES[0].label} 단계가 어렵나요? 천천히 익혀봐요` : practice ? '잘했어요! 또 해볼까요?' : endKind === 'miss' ? '아쉽게 틀렸어요! 다시 도전해볼까요?' : '다시 도전해서 신기록을 깨볼까요?'} />
-      </Reveal>
-      {/* 메인 CTA (하단 고정) — 다음 스테이지가 열렸으면 [다시하기 | 다음 스테이지] 반반, 아니면 '다시 도전' 풀폭 */}
-      <Reveal i={5} style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(80px + env(safe-area-inset-bottom))' }}>
+      {/* 통계 카드 아래는 비워 둔다 — 별·'한 번에 맞힘 N/10'·해제 배지를 뒀다가 2026-08-07 사용자 요청으로 전부 제거.
+          다음 칸이 열렸다는 사실은 주 CTA 라벨(continueLabel = "입문 2 도전")이 전한다. */}
+      {/* (코치 말풍선은 시안 12에서 삭제됨 — 2026-08-05) */}
+      {/* 메인 CTA — 시안 12: [다시하기 | 계속하기] 166×60 @bottom96. 다음 스테이지·승급시험이 없으면 다시하기가 풀폭(주 버튼).
+          ★homeOnly(온보딩 첫 판)면 이 줄 자체를 뺀다 — 아래 '홈으로 가기' 하나만 남겨 온보딩 흐름
+            (첫 판 → 닉네임 → 홈)을 벗어나지 않게 한다(2026-08-07 사용자). */}
+      {!homeOnly && (
+      <Reveal i={5} style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(96px + env(safe-area-inset-bottom))' }}>
       {(onExam || onNextLevel) ? (
         <div data-coach="result-actions" style={{ display: 'flex', gap: SPACE.lg }}>
           <button onClick={() => { playSfx('button'); onRetry(); }} className="tg-press" style={{
-            flex: 1, minWidth: 0, height: 62, borderRadius: RADIUS.xl, border: '1.5px solid #ebe5de', background: '#fff', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: SPACE.md, ...TOUCH_OPT,
+            ...RES_BTN, flex: 1, minWidth: 0, background: '#fff', boxShadow: `0px 4px 18px rgba(43,39,48,0.07), inset 0 -4px 0 ${RES_EDGE}`, ...TOUCH_OPT,
           }}>
-            <Refresh size={18} weight="Bold" color="#9a93a0" />
-            <span style={{ ...TYPE.btn, color: TG.SUB, whiteSpace: 'nowrap' }}>다시하기</span>
+            <span style={{ ...TYPE.head, color: RES_BTN_TEXT, whiteSpace: 'nowrap' }}>다시하기</span>
           </button>
-          {/* 급 5스테이지를 다 깼으면 다음은 '승급시험'(우선), 아니면 '다음 스테이지' */}
+          {/* 다음 목적지(승급시험 또는 다음 스테이지) — 라벨은 **목적지 이름**(예: "입문 2 도전").
+              시안 라벨 '계속하기'는 어디로 가는지 안 알려줘서, 누르면 예고 없이 다음 스테이지가 시작됐다(2026-08-07 UX 검수).
+              이름이 길어 버튼을 넘치면 기본값 '계속하기'로 폴백(continueLabel을 호출부가 판단). */}
           <button onClick={() => { playSfx('button'); (onExam || onNextLevel)(); }} className="tg-press" style={{
-            flex: 1, minWidth: 0, height: 62, borderRadius: RADIUS.xl, border: 'none', cursor: 'pointer',
-            background: TG.CORAL_GRAD, boxShadow: '0px 10px 20px rgba(242,72,76,0.32)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: SPACE.sm, ...TOUCH_OPT,
+            ...RES_BTN, flex: 1, minWidth: 0, gap: SPACE.md, background: RES_RED,
+            boxShadow: `0px 4px 18px rgba(43,39,48,0.07), inset 0 -4px 0 ${RES_RED_EDGE}`, ...TOUCH_OPT,
           }}>
-            {onExam && <MedalStar size={16} weight="Bold" color="#fff" />}
-            <span style={{ ...TYPE.btn, color: '#fff', whiteSpace: 'nowrap' }}>{onExam ? '승급시험' : '다음 스테이지'}</span>
-            <AltArrowRight size={16} weight="Bold" color="#fff" />
+            <span style={{ ...TYPE.head, color: '#fff', whiteSpace: 'nowrap' }}>{continueLabel}</span>
+            <Play size={18} weight="Bold" color="#fff" />
           </button>
         </div>
       ) : (
         <button data-coach="result-actions" onClick={() => { playSfx('button'); onRetry(); }} className="tg-press" style={{
-          width: '100%', height: 62, borderRadius: RADIUS.xl, border: 'none', cursor: 'pointer',
-          background: TG.CORAL_GRAD, boxShadow: '0px 10px 20px rgba(242,72,76,0.32)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: SPACE.md, ...TOUCH_OPT,
+          ...RES_BTN, ...RES_PRIMARY, width: '100%', ...TOUCH_OPT,
         }}>
-          <Refresh size={19} weight="Bold" color="#fff" />
-          <span style={{ ...TYPE.cta, color: '#fff' }}>{retryLabel}</span>
+          <span style={{ ...TYPE.head, color: '#fff', whiteSpace: 'nowrap' }}>{retryLabel}</span>
         </button>
       )}
       </Reveal>
-      {/* 하단 — 홈으로 가기(은은한 단일 버튼). 다른 난이도·모드는 홈 허브에서 고른다. */}
-      <Reveal i={6} style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(22px + env(safe-area-inset-bottom))' }}>
-        <button data-coach="result-home" onClick={() => { playSfx('button'); onHome(); }} className="tg-press" style={{
-          width: '100%', height: 54, borderRadius: RADIUS.btn, background: '#fff', border: '1.5px solid #ebe5de', cursor: 'pointer',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: SPACE.sm, ...TOUCH_OPT,
+      )}
+      {/* 하단 — 홈으로 가기(시안 12: 342×60 @bottom26, 흰 키캡).
+          homeOnly면 화면의 유일한 행동이므로 주 버튼(코랄)으로 올리고 코치 앵커도 여기로 옮긴다. */}
+      <Reveal i={6} style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(26px + env(safe-area-inset-bottom))' }}>
+        {/* ★homeOnly면 코치마크 마지막 단계가 이 버튼만 누를 수 있게 잠근다(forceLastStep) →
+            버튼을 실제로 눌러야 진행되므로, 코치 종료도 여기서 직접 dismiss 해야 한다(홈 CTA와 같은 패턴). */}
+        <button data-coach={homeOnly ? 'result-actions' : 'result-home'}
+          onClick={() => { playSfx('button'); if (homeOnly && tip.visible) tip.dismiss(); onHome(); }} className="tg-press" style={{
+          ...RES_BTN, width: '100%',
+          ...(homeOnly ? RES_PRIMARY : { background: '#fff', boxShadow: `0px 4px 18px rgba(43,39,48,0.07), inset 0 -4px 0 ${RES_EDGE}` }), ...TOUCH_OPT,
         }}>
-          <Home size={16} weight="Bold" color={TG.SUB} />
-          <span style={{ ...TYPE.btnSm, color: TG.SUB }}>홈으로 가기</span>
+          {/* 라벨은 **실제 목적지**를 말한다 — 온보딩 첫 판 뒤엔 닉네임 화면이 뜨므로 '홈으로 가기'는 거짓말이 된다(2026-08-08 사용자) */}
+          <span style={{ ...TYPE.head, color: homeOnly ? '#fff' : RES_BTN_TEXT }}>{homeLabel}</span>
         </button>
       </Reveal>
-      <CoachMarkOverlay visible={tip.visible && coachReady} onDone={tip.dismiss} steps={RESULT_COACH} delay={260} showControls={false} />
+      <CoachMarkOverlay visible={tip.visible && coachReady} onDone={tip.dismiss} steps={resultCoach(homeOnly, homeHint)} delay={260} showControls={false} forceLastStep={homeOnly} />
       {/* (구 '초급 저조 유도' 강제 코치 오버레이 폐기 — 2026-07-19. 이제 유도는 코치 말풍선 아래 비강제 옵션 CTA로.) */}
       {/* 로그인 유도 모달 — 게스트 신기록(이전기록 넘김) 축하 뒤. 다른 축하 오버레이·코치와 겹치지 않게 coachReady 게이트. */}
       {nudgeOpen && coachReady && <LoginNudgeModal onLogin={onLogin} onClose={dismissNudge} />}
@@ -154,120 +177,69 @@ export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, 
   );
 }
 
-// 승급 시험 결과 — 결과화면 디자인 재활용(판다·배지·통계·코치·버튼). 점수 대신 정답률(합격/불합격).
-//  합격 축하 연출은 앞선 RankUpReveal이 담당 → 여긴 담백한 요약 + 홈/재도전.
-// placement(첫 진입 실력 테스트) = 이 화면을 재활용하되 '합격/불합격·합격선 80%' 대신 '배정된 급'을 보여준다.
-//   placement = { gradeLabel, gradeColor, gradeIdx } | null. 있으면 축하 톤 + 급 배지 + 정답률(합격선 없음) + 홈으로.
-export function ExamResultScreen({ correct = 0, total = 20, passed = false, canRetry = false, onRetry, onHome, placement = null }) {
-  const pct = total > 0 ? Math.round((correct / total) * 100) : 0;
+// 승급 시험 결과 — 시안(757:12)에서 일반 결과화면과 완전히 같은 레이아웃으로 통일.
+//  점수 자리에 '정답수 / 총문제'(합격=초록·불합격=코랄) + 합격/불합격 배지 + 합격 기준 캡션 + 통계 2카드 + 3버튼.
+//  합격 축하 연출은 앞선 RankUpReveal이 담당 → 여긴 담백한 요약.
+export function ExamResultScreen({ correct = 0, total = 20, passed = false, onRetry, onContinue = null, onHome, maxCombo = 0, avgMs = 0, title = '' }) {
   const animCorrect = useCountUp(correct, 900);
-  const animPct = useCountUp(pct, 900, 1); // 게이지 전용 — 정수 카운트업은 문제 1개당 5%씩 점프해서 소수로 따로 돌림
-  const celebrate = passed || !!placement; // 배치는 항상 축하 톤(급 배정 = 성취)
-  const accent = placement ? placement.gradeColor : TG.SUCCESS_GLOW; // 배치 게이지·수치 강조색 = 배정 급 색
-  const pandaSrc = pickCelebratePanda(celebrate, placement ? (placement.gradeIdx >= 2 ? 5 : placement.gradeIdx >= 1 ? 3 : 1) : (passed ? 5 : 0));
-  const wrong = Math.max(0, total - correct);
-  const needMore = Math.max(0, Math.ceil(total * 0.8) - correct); // 합격까지 더 맞혀야 하는 문제 수(80% 기준)
+  const avgSec = avgMs > 0 ? (avgMs / 1000).toFixed(1) : '-';
+  const pandaSrc = pickCelebratePanda(passed, passed ? 5 : 0);
+  const need = Math.ceil(total * EXAM_PASS_RATIO); // 합격 기준 문제 수(20문제 기준 16)
   return (
     <>
-      {celebrate && <CrispFlash color="rgba(255,255,255,0.6)" zIndex={7} />}
-      {celebrate && <ConfettiBurst count={30} power={1.3} size={10} zIndex={3} style={{ top: 150 }} />}
-      {celebrate && <ConfettiBurst colors={LIGHT_CONFETTI} count={15} power={1.25} size={6} zIndex={3} style={{ top: 150 }} />}
-      {/* 배지 — 배치=배정된 급 / 시험=합격·불합격 */}
-      <Reveal i={0} style={{ position: 'absolute', top: 36, left: '50%', transform: 'translateX(-50%)' }}>
-        {placement ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, padding: '8px 18px', borderRadius: RADIUS.pill,
-            background: `${accent}17`, border: `1.5px solid ${accent}` }}>
-            <MedalStar size={14} weight="Bold" color={accent} />
-            <span style={{ ...TYPE.btnSm, color: accent, whiteSpace: 'nowrap' }}>{placement.gradeLabel}급 달성!</span>
+      {passed && <CrispFlash color="rgba(255,255,255,0.6)" zIndex={7} />}
+      {passed && <ConfettiBurst count={30} power={1.3} size={10} zIndex={3} style={{ top: 150 }} />}
+      {passed && <ConfettiBurst colors={LIGHT_CONFETTI} count={15} power={1.25} size={6} zIndex={3} style={{ top: 150 }} />}
+      <GameHeader title={title ? `${title} 결과화면` : '승급시험 결과화면'} glass center />
+      {/* 판다 150×150 (시안 y90) */}
+      <Reveal i={1} style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', top: 90 }}>
+        <img src={pandaSrc} alt="" width={150} height={150} style={{ display: 'block', objectFit: 'contain' }} />
+      </Reveal>
+      {/* 정답 수 / 총 문제 — 시안 y260(잉크) · 50 + 36, 베이스라인 정렬 */}
+      <Reveal i={2} style={{ position: 'absolute', left: 24, right: 24, top: 254 }}>
+        <div data-coach="result-score" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 5 }}>
+          <span style={{ ...TYPE.numHero, fontSize: 50, fontWeight: 700, lineHeight: 1, color: passed ? TG.SUCCESS : TG.CORAL_DK }}>{animCorrect}</span>
+          <span style={{ ...TYPE.numHero, fontSize: 36, fontWeight: 700, lineHeight: 1, color: TG.SUB }}>/{total}</span>
+        </div>
+      </Reveal>
+      {/* 합격·불합격 배지 — 시안 y312 */}
+      <Reveal i={2} style={{ position: 'absolute', top: 312, left: '50%', transform: 'translateX(-50%)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, padding: '8px 16px', borderRadius: RADIUS.lg,
+          background: passed ? TG.SUCCESS : TG.BORDER, boxShadow: '0px 4px 18px rgba(43,39,48,0.04)' }}>
+          {passed && <Cup size={16} weight="Bold" color="#fff" />}
+          <span style={{ ...TYPE.btnSm, lineHeight: '17px', color: passed ? '#fff' : TG.SUB, whiteSpace: 'nowrap' }}>{passed ? '승급 시험 합격!' : '승급 시험 불합격'}</span>
+        </div>
+      </Reveal>
+      {/* 합격 기준 캡션 — 시안 y355(잉크) */}
+      <Reveal i={3} style={{ position: 'absolute', left: 24, right: 24, top: 348, textAlign: 'center' }}>
+        <span style={{ ...TYPE.label, fontWeight: 500, lineHeight: '25px', color: TG.SUB }}>합격 기준 - {need}문제 이상 정답</span>
+      </Reveal>
+      {/* 통계 2카드 — 시안 y385 */}
+      <Reveal i={4} style={{ position: 'absolute', left: 24, right: 24, top: 385 }}>
+        <StatCards maxCombo={maxCombo} avgSec={avgSec} />
+      </Reveal>
+      {/* [다시하기 | 계속하기] — 다음 목적지가 없으면(불합격) 다시하기가 풀폭 주 버튼 */}
+      <Reveal i={5} style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(96px + env(safe-area-inset-bottom))' }}>
+        {onContinue ? (
+          <div style={{ display: 'flex', gap: SPACE.lg }}>
+            <button onClick={() => { playSfx('button'); onRetry(); }} className="tg-press" style={{ ...RES_BTN, ...RES_WHITE, flex: 1, minWidth: 0, ...TOUCH_OPT }}>
+              <span style={{ ...TYPE.head, color: RES_BTN_TEXT, whiteSpace: 'nowrap' }}>다시하기</span>
+            </button>
+            <button onClick={() => { playSfx('button'); onContinue(); }} className="tg-press" style={{ ...RES_BTN, ...RES_PRIMARY, flex: 1, minWidth: 0, gap: SPACE.md, ...TOUCH_OPT }}>
+              <span style={{ ...TYPE.head, color: '#fff', whiteSpace: 'nowrap' }}>계속하기</span>
+              <Play size={18} weight="Bold" color="#fff" />
+            </button>
           </div>
         ) : (
-          <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, padding: '8px 16px', borderRadius: RADIUS.lg,
-            background: passed ? 'linear-gradient(90deg, #36C98D, #1fa86a)' : TG.BORDER,
-            boxShadow: passed ? '0px 6px 14px rgba(31,168,106,0.28)' : 'none' }}>
-            {passed && <Cup size={13} weight="Bold" color="#fff" />}
-            <span style={{ ...TYPE.btnSm, color: passed ? '#fff' : TG.SUB, whiteSpace: 'nowrap' }}>{passed ? '승급 시험 합격!' : '승급 시험 불합격'}</span>
-          </div>
+          <button onClick={() => { playSfx('button'); onRetry(); }} className="tg-press" style={{ ...RES_BTN, ...RES_PRIMARY, width: '100%', ...TOUCH_OPT }}>
+            <span style={{ ...TYPE.head, color: '#fff', whiteSpace: 'nowrap' }}>다시하기</span>
+          </button>
         )}
       </Reveal>
-      {/* 축하/격려 판다 — 배지와 점수 사이 여백 위해 살짝 작게(겹침 방지) */}
-      <Reveal i={1} style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', top: 88 }}>
-        <img src={pandaSrc} alt="" width={120} height={120} style={{ display: 'block', objectFit: 'contain' }} />
-      </Reveal>
-      {/* 정답률(점수 자리) */}
-      <Reveal i={2} style={{ position: 'absolute', left: 24, right: 24, top: 234 }}>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: SPACE.xs }}>
-            <span style={{ ...TYPE.numHero, color: placement ? accent : passed ? TG.SUCCESS : TG.CORAL_DK, lineHeight: 1 }}>{animCorrect}</span>
-            <span style={{ ...TYPE.num, fontSize: 30, color: TG.SUB }}>/ {total}</span>
-          </div>
-          {placement ? (
-            // 배치=합격선 없음. 정답률 게이지를 배정 급 색으로 단순 채움.
-            <div style={{ position: 'relative', width: '100%', height: 12, borderRadius: RADIUS.sm, background: TG.TRACK, marginTop: SPACE.x2, overflow: 'hidden' }}>
-              <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${Math.min(100, animPct)}%`, borderRadius: RADIUS.sm, background: `linear-gradient(90deg, ${accent}, ${accent}cc)` }} />
-            </div>
-          ) : (() => {
-            // 합격선 게이지 — 채움은 카운트업과 동기. 합격 기준(80%)까지는 빨강, 넘어선 만큼만 초록(틱 없이 색 경계가 곧 합격선).
-            const fillPct = Math.min(100, animPct);
-            const redFrac = fillPct > 0 ? (Math.min(80, fillPct) / fillPct) * 100 : 0; // 래퍼 내 빨강 비율 — 80% 경계를 트랙 좌표에 고정
-            return (
-              <div style={{ position: 'relative', width: '100%', height: 12, borderRadius: RADIUS.sm, background: TG.BORDER, marginTop: SPACE.x2, overflow: 'hidden' }}>
-                {/* 채움 래퍼가 둥근 끝을 만들고(overflow hidden), 안의 빨강/초록 렉트를 클리핑 */}
-                {fillPct > 0 && (
-                  <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${fillPct}%`, borderRadius: RADIUS.sm, overflow: 'hidden' }}>
-                    <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${redFrac}%`, background: TG.CORAL_GRAD }} />
-                    {fillPct > 80 && <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: `${100 - redFrac}%`, background: 'linear-gradient(90deg, #36C98D, #1fa86a)' }} />}
-                  </div>
-                )}
-              </div>
-            );
-          })()}
-          <span style={{ ...TYPE.sub, color: TG.SUB, marginTop: SPACE.xl }}>{placement ? `정답률 ${pct}%` : `정답률 ${pct}% · 합격 기준 80%`}</span>
-        </div>
-      </Reveal>
-      {/* 통계 2카드(맞힌/틀린 문제) — 일반 결과 화면과 동일 기하·카드 스타일(빈 화면 방지) */}
-      <Reveal i={3} style={{ position: 'absolute', left: 24, right: 24, top: 384 }}>
-        <div style={{ height: 128, display: 'flex', gap: SPACE.xl, alignItems: 'stretch' }}>
-          {[
-            { icon: <CheckCircle size={34} weight="Bold" color="#1fa86a" />, val: correct, label: '맞힌 문제' },
-            { icon: <CloseCircle size={34} weight="Bold" color={TG.CORAL_DK} />, val: wrong, label: '틀린 문제' },
-          ].map((s) => (
-            <div key={s.label} style={{ flex: 1, minWidth: 0, background: '#fff', borderRadius: RADIUS.xxl, boxShadow: '0px 5px 14px rgba(43,39,48,0.06)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: SPACE.xs }}>
-              {s.icon}
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: SPACE.xxs }}>
-                <span style={{ ...TYPE.numLg, color: TG.INK }}>{s.val}</span>
-                <span style={{ ...TYPE.label, color: TG.SUB }}>개</span>
-              </div>
-              <span style={{ ...TYPE.meta, color: TG.SUB }}>{s.label}</span>
-            </div>
-          ))}
-        </div>
-      </Reveal>
-      {/* 코치 */}
-      <Reveal i={4} style={{ position: 'absolute', left: 24, right: 24, top: 534, bottom: 'calc(150px + env(safe-area-inset-bottom))', display: 'flex', alignItems: 'center' }}>
-        <CoachBubble text={placement
-          ? (placement.gradeIdx > 0 ? `${placement.gradeLabel}급까지 열렸어요! 🎖️` : '입문부터 차근차근 시작해요! 🌱')
-          : (passed ? '축하해요! 등급이 한 단계 올랐어요 🎉' : (canRetry ? `합격까지 ${needMore}문제! 바로 다시 도전해봐요` : '조금만 더! 경험치를 더 채우면 다시 도전할 수 있어요'))} />
-      </Reveal>
-      {/* 불합격 + 재응시 가능 시에만 '다시 도전'(배치는 재도전 없음) */}
-      {!placement && !passed && canRetry && (
-        <Reveal i={5} style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(80px + env(safe-area-inset-bottom))' }}>
-          <button onClick={() => { playSfx('button'); onRetry(); }} className="tg-press" style={{
-            width: '100%', height: 62, borderRadius: RADIUS.xl, border: 'none', cursor: 'pointer',
-            background: TG.CORAL_GRAD, boxShadow: '0px 10px 20px rgba(242,72,76,0.32)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: SPACE.md, ...TOUCH_OPT,
-          }}>
-            <Refresh size={19} weight="Bold" color="#fff" />
-            <span style={{ ...TYPE.cta, color: '#fff' }}>다시 도전</span>
-          </button>
-        </Reveal>
-      )}
-      {/* 홈으로 */}
-      <Reveal i={6} style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(18px + env(safe-area-inset-bottom))' }}>
-        <button onClick={() => { playSfx('button'); onHome(); }} className="tg-press" style={{
-          width: '100%', height: 54, borderRadius: RADIUS.btn, background: (!passed && canRetry) ? '#fff' : TG.CORAL_GRAD,
-          border: (!passed && canRetry) ? '1.5px solid #ebe5de' : 'none', cursor: 'pointer',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', ...TOUCH_OPT,
-        }}>
-          <span style={{ ...TYPE.btn, color: (!passed && canRetry) ? TG.SUB : '#fff' }}>홈으로</span>
+      {/* 홈으로 가기 — 시안 342×60 @bottom26 */}
+      <Reveal i={6} style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(26px + env(safe-area-inset-bottom))' }}>
+        <button onClick={() => { playSfx('button'); onHome(); }} className="tg-press" style={{ ...RES_BTN, ...RES_WHITE, width: '100%', ...TOUCH_OPT }}>
+          <span style={{ ...TYPE.head, color: RES_BTN_TEXT }}>홈으로 가기</span>
         </button>
       </Reveal>
     </>

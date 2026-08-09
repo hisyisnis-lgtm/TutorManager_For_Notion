@@ -3,7 +3,7 @@
 import { Star, Infinity as InfinityIcon, Lock, SquareAcademicCap, Album, AltArrowRight } from '@solar-icons/react';
 import { TG, TYPE, TOUCH_OPT, RADIUS, SPACE } from '../tgTokens.js';
 import { useState, useRef, useLayoutEffect } from 'react';
-import { ShakeButton, Reveal, GameHeader, prefersReducedMotion } from './shared.jsx';
+import { ShakeButton, Reveal, GameHeader, FieldBg, prefersReducedMotion } from './shared.jsx';
 import { EndlessStartModal, TrainingStartModal } from './gameModals.jsx';
 import CoachMarkOverlay from '../../components/ui/CoachMarkOverlay.jsx';
 import { useTabTip } from '../../hooks/useTabTip.js';
@@ -82,18 +82,6 @@ function ToneBurstInner({ color, count }) {
   );
 }
 
-// 들판 배경 — Figma "04. 모드선택 — 무한모드잠김/해제"(2026-08-03) 리디자인.
-//  동산·나무·집·돌·구름이 벡터 조각 20여 개라 SVG 1장(public/game/mode-field.svg, 390×396)으로 export해 사용.
-//  하단 정렬 + 가로 cover — 화면이 넓거나 낮아도 땅이 좌우 끝까지 이어지고, 잘리는 쪽은 위쪽 빈 하늘.
-//  높이 47% = 디자인 396/844 비율(화면 높이에 비례해 지평선이 같은 위치에 온다).
-function FieldBg() {
-  return (
-    <img src="/game/mode-field.svg" alt="" aria-hidden="true" style={{
-      position: 'absolute', left: 0, right: 0, bottom: 0, width: '100%', height: '47%',
-      objectFit: 'cover', objectPosition: 'center bottom', pointerEvents: 'none', zIndex: 0,
-    }} />
-  );
-}
 
 // 주력 버튼 — 박스(카드) 없이 큰 원형 + 아래 라벨(앱 아이콘 형태). 원 뒤에서 성조 마크 파티클이 방사형으로 퍼짐.
 //  아래 사각 카드/칩과 형태가 완전히 달라 강조된다. locked면 무광 회색 원+자물쇠(파티클 없음).
@@ -161,7 +149,8 @@ export function ModeScreen({ endlessUnlocked, endlessBest = 0, onDifficulty, onT
     <>
       {/* 들판 일러스트 배경(맨 뒤) */}
       <FieldBg />
-      <GameHeader title="모드 선택" onBack={onBack} />
+      {/* 시안(643:1617): 60px · 반투명 크림+블러 · 타이틀 가운데 · 하선 없음 — 들판 배경이 헤더 아래로 비쳐 이어진다 */}
+      <GameHeader title="모드 선택" onBack={onBack} glass center />
       {/* 코치=상단 / 주력 원형 버튼=중앙 밴드 / 나머지=하단. 원형 주력이 화면 중앙을 채워 '빈 중간'이 사라진다.
           (space-between은 남는 공간을 전부 가운데로 몰아 중간이 비었음 — 주력을 중앙에 앉히는 방식으로 교체) */}
       <div style={{ position: 'absolute', left: 0, right: 0, top: 84, bottom: 'calc(26px + env(safe-area-inset-bottom))', display: 'flex', flexDirection: 'column' }}>
@@ -195,7 +184,7 @@ export function ModeScreen({ endlessUnlocked, endlessBest = 0, onDifficulty, onT
           forceLastStep: 주변 탭 흡수 → 트레이닝 칩을 실제로 눌러야만 진행(칩 onClick=onTraining이 플래그 해제+트레이닝 진입). */}
       <CoachMarkOverlay visible={highlightPractice && !tip.visible} onDone={() => onHighlightDone && onHighlightDone()} steps={PRACTICE_NUDGE} delay={200} showControls={false} forceLastStep />
       {trainingOpen && <TrainingStartModal onStart={() => { setTrainingOpen(false); onTraining && onTraining(); }} onClose={() => setTrainingOpen(false)} />}
-      {endlessOpen && <EndlessStartModal best={endlessBest} onStart={() => { setEndlessOpen(false); onEndless && onEndless(); }} onClose={() => setEndlessOpen(false)} />}
+      {endlessOpen && <EndlessStartModal onStart={() => { setEndlessOpen(false); onEndless && onEndless(); }} onClose={() => setEndlessOpen(false)} />}
     </>
   );
 }

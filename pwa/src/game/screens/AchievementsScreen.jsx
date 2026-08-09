@@ -1,28 +1,41 @@
-// 업적 전체 화면 — 하나의 리스트(섹션 없음). 업적마다 카테고리 색만 다르게(배지 둘레 진행 링에 색).
-// 진행 링이 진행도를 겸해 별도 바·중복 표기 제거. 획득=색 채움, 미획득=회색+색 링(진행분).
-// 톤 원칙: 미획득도 실제 아이콘을 회색으로 — '다음 목표'로 보이게(압박 아님). 참조: tone_game_redesign.md
+// 업적 화면 (Figma "14. 업적" / "14. 업적 — 스크롤", 2026-08-05 리디자인)
+//  구 구성(헤더바 + 진행 링 배지 + 얇은 구분선 리스트)에서 오답 노트와 같은 문법으로 통일:
+//  제목 → 업적 진행도(라벨+바) → 카드 리스트. 스크롤하면 진행도만 상단에 고정된다.
+//  내부 수치는 전부 시안 절대값(라인하이트 고정) — flex 중앙정렬에 맡기면 라인박스가 여백을 먹는다.
+import { useState } from 'react';
 import {
-  CheckCircle, Cup, Flame, Fire, Rocket, Crown, Infinity as InfinityIcon, Refresh,
-  Walking, Bookmark, Book, CalendarMark, CalendarDate, Calendar, Soundwave,
+  Cup, Flame, Fire, Rocket, Crown, Infinity as InfinityIcon, Refresh,
+  Flag, Bookmark, Book, CalendarMark, CalendarDate, Calendar, Soundwave,
+  CheckCircle, Star, Stars, CrownStar, MedalStar, Bolt,
 } from '@solar-icons/react';
-import { TG, TYPE, TOUCH_OPT, RADIUS, SPACE } from '../tgTokens.js';
+import { TG, TYPE, FONT_NUM, TOUCH_OPT, SPACE } from '../tgTokens.js';
 import { ACHIEVEMENTS, ACH_CATEGORIES } from '../achievements.js';
-import { Reveal, GameHeader, TgTabBar, TAB_BAR_H } from './shared.jsx';
+import { Reveal, TgTabBar, TAB_BAR_H } from './shared.jsx';
 
 // 업적 icon 문자열 → Solar 컴포넌트 (achievements.js의 icon 필드와 일치)
 const ACH_ICONS = {
-  Footprints: Walking, Trophy: Cup, Flame: Flame, FireSimple: Fire,
+  Flag: Flag, Trophy: Cup, Flame: Flame, FireSimple: Fire,
   Rocket: Rocket, Crown: Crown, Infinity: InfinityIcon, BookmarkSimple: Bookmark,
   Books: Book, CalendarCheck: CalendarMark, CalendarHeart: CalendarDate,
   CalendarDots: Calendar, Fire: Fire, Waveform: Soundwave, ArrowsClockwise: Refresh,
+  CheckCircle, Star, Stars, CrownStar, MedalStar, Bolt,
 };
-// 카테고리 id → 색 (섹션은 없애고 색만 사용)
+// 카테고리 색 — 축하 오버레이(AchBadge)에서만 사용. 리스트 타일은 시안대로 획득 코랄 / 미획득 블루그레이 2색.
 const CAT_COLOR = Object.fromEntries(ACH_CATEGORIES.map((c) => [c.id, c.color]));
 
 const DEFAULT_EARNED = '#FFB02E'; // 기본 획득 금색(축하 오버레이 등 색 미지정 시)
-const LOCKED_BG = '#f1ece5';      // 회색 틴트(미획득 배지 안쪽)
-const LOCKED_FG = TG.MUTED;      // 회색 아이콘
-const RING_TRACK = TG.BORDER;     // 링 트랙(빈 부분)
+const LOCKED_BG = '#f1ece5';      // 회색 틴트(축하 오버레이 배지 안쪽)
+const LOCKED_FG = TG.MUTED;       // 회색 아이콘
+
+// 시안 14 실측 — 토큰에 없는 원오프 색만 상수로
+const TITLE_INK = '#272622';      // 제목·업적명·진행 수치
+const TILE_EARNED = '#FF6B6B';    // 획득 타일
+const TILE_LOCKED = '#E4EDF5';    // 미획득 타일
+const ICON_LOCKED = '#A6B4C1';    // 미획득 아이콘
+const BAR_TRACK = '#E2D7C1';
+const BAR_FILL = '#F96163';
+const PCT_INK = '#452C1C';
+const DIVIDER = '#E9E6DE';
 
 const tint = (hex, a = 0.14) => {
   const n = parseInt(hex.slice(1), 16);
@@ -30,92 +43,112 @@ const tint = (hex, a = 0.14) => {
 };
 
 // 공용 배지(원형 아이콘) — 축하 오버레이(CelebrationOverlay)에서 사용. size=원 지름. color=획득 강조색(미지정=금색).
-export function AchBadge({ ach, earned, size = 48, color }) {
+//  bg/iconSize = 시안별 오버라이드(축하 모달 512:2 = 흰 원 92 + 업적 아이콘 50).
+export function AchBadge({ ach, earned, size = 48, color, bg, iconSize }) {
   const Icon = ACH_ICONS[ach.icon] || Cup;
   const fg = color || DEFAULT_EARNED;
   return (
-    <div style={{ width: size, height: size, borderRadius: size / 2, background: earned ? tint(fg, 0.16) : LOCKED_BG, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-      <Icon size={Math.round(size * 0.46)} weight="Bold" color={earned ? fg : LOCKED_FG} />
+    <div style={{ width: size, height: size, borderRadius: size / 2, background: bg || (earned ? tint(fg, 0.16) : LOCKED_BG), display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+      <Icon size={iconSize || Math.round(size * 0.46)} weight="Bold" color={earned ? fg : LOCKED_FG} />
     </div>
   );
 }
+// 카테고리 색은 축하 오버레이가 참조(리스트에서는 미사용)
+export function achColor(ach) { return CAT_COLOR[ach.cat] || DEFAULT_EARNED; }
 
-// 배지 둘레 진행 링 — 진행도를 아이콘에 통합(별도 바 제거). 획득=색 채움+체크, 미획득=색 링(진행분).
-function RingBadge({ ach, got, color, pct, size = 54 }) {
-  const Icon = ACH_ICONS[ach.icon] || Cup;
-  const stroke = 3.5;
-  const r = (size - stroke) / 2;
-  const c = 2 * Math.PI * r;
-  const shownPct = got ? 100 : pct;
+// 달성 체크 — 시안 chk0(40 박스에 stroke 5 라운드 체크)
+function AchCheck() {
   return (
-    <div style={{ position: 'relative', width: size, height: size, flexShrink: 0 }}>
-      <svg width={size} height={size} style={{ position: 'absolute', inset: 0, transform: 'rotate(-90deg)' }} aria-hidden="true">
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={RING_TRACK} strokeWidth={stroke} />
-        {shownPct > 0 && (
-          <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={stroke} strokeLinecap="round"
-            strokeDasharray={c} strokeDashoffset={c * (1 - shownPct / 100)} />
-        )}
-      </svg>
-      <div style={{ position: 'absolute', inset: stroke + 2.5, borderRadius: '50%', background: got ? tint(color, 0.18) : LOCKED_BG, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <Icon size={Math.round(size * 0.4)} weight="Bold" color={got ? color : LOCKED_FG} />
-      </div>
-      {got && (
-        <div style={{ position: 'absolute', right: -2, bottom: -2, width: 19, height: 19, borderRadius: RADIUS.md, background: color, border: '2.5px solid #FFFDF8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <CheckCircle size={9} weight="Bold" color="#fff" />
-        </div>
-      )}
-    </div>
+    <svg width={40} height={40} viewBox="0 0 40 40" fill="none" aria-hidden="true" style={{ display: 'block', flexShrink: 0 }}>
+      <path d="M9.16667 20.8333L16.6667 28.3333L30.8333 12.5" stroke={TG.SUB} strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   );
 }
 
-// 업적 한 줄 — 카드 chrome 없이 얇은 구분선 리스트(대시보드 카드 느낌 제거). 진행은 링이 담당.
-function AchRow({ ach, earned, snapshot, onToast, last }) {
-  const color = CAT_COLOR[ach.cat] || DEFAULT_EARNED;
+// 업적 한 줄 — 시안: 342×70 · r20 · 흰 카드 · padding 10/20/10/10.
+//  왼쪽 = 타일 40(r10) + 아이콘 32 + gap8 + [이름 16 / 설명 12], 오른쪽 = 체크 또는 진행 수치(Roboto Black 16)
+function AchRow({ ach, earned, snapshot, onToast }) {
+  const Icon = ACH_ICONS[ach.icon] || Cup;
   const p = (ach.progress && snapshot) ? ach.progress(snapshot) : { cur: earned ? 1 : 0, target: 1 };
   const got = earned || p.cur >= p.target;
-  const pct = Math.min(100, Math.round((p.cur / (p.target || 1)) * 100));
+  const showProgress = !got && p.target > 1;
   return (
     <button className="tg-press" onClick={() => onToast && onToast(got ? '이미 달성한 업적이에요!' : ach.cond, got ? 'done' : 'lock')}
-      style={{ display: 'flex', alignItems: 'center', gap: SPACE.x2, width: '100%', textAlign: 'left', padding: '13px 4px', background: 'none', border: 'none', borderBottom: last ? 'none' : '1px solid rgba(43,39,48,0.06)', cursor: 'pointer', ...TOUCH_OPT }}>
-      <RingBadge ach={ach} got={got} color={color} pct={pct} />
-      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: SPACE.xxs }}>
-        <span style={{ ...TYPE.btnSm, color: got ? TG.INK : TG.SUB }}>{ach.label}</span>
-        <span style={{ ...TYPE.meta, color: TG.SUB, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ach.desc}</span>
+      style={{
+        // ★width 100% 필수 — button은 기본이 내용 크기라, 등장 래퍼(Reveal) 안에 들어가면 행마다 폭이 들쭉날쭉해진다(2026-08-06)
+        width: '100%', height: 70, borderRadius: 20, background: '#fff', boxShadow: '0px 4px 9px rgba(43,39,48,0.04)', border: 'none', cursor: 'pointer',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 20px 10px 10px', textAlign: 'left', flexShrink: 0, ...TOUCH_OPT,
+      }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.md, minWidth: 0 }}>
+        <div style={{ width: 40, height: 40, borderRadius: 10, background: got ? TILE_EARNED : TILE_LOCKED, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <Icon size={32} weight="Bold" color={got ? '#fff' : ICON_LOCKED} />
+        </div>
+        <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
+          <span style={{ ...TYPE.h2, lineHeight: '19px', color: TITLE_INK, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ach.label}</span>
+          <span style={{ ...TYPE.meta, fontWeight: 700, lineHeight: '14px', color: TG.SUB, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ach.desc}</span>
+        </div>
       </div>
-      {/* 우측 — 획득은 링·체크가 말하므로 비움, 진행 중만 담백한 수치 */}
-      {!got && (
-        <span style={{ ...TYPE.labelSm, color, flexShrink: 0 }}>
-          {p.cur.toLocaleString()}<span style={{ color: TG.MUTED }}> / {p.target.toLocaleString()}</span>
-        </span>
-      )}
+      {got ? <AchCheck /> : showProgress ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexShrink: 0, fontFamily: FONT_NUM, fontWeight: 900, fontSize: 16, lineHeight: '19px' }}>
+          <span style={{ color: TITLE_INK }}>{p.cur.toLocaleString()}</span>
+          <span style={{ color: TG.SUB }}>/{p.target.toLocaleString()}</span>
+        </div>
+      ) : null}
     </button>
   );
 }
 
-export function AchievementsScreen({ earned, snapshot, onBack, onToast, tabNav }) {
+export function AchievementsScreen({ earned, snapshot, onToast, tabNav }) {
+  // 스크롤 상태(시안 14 — 스크롤): 제목이 밀려 올라가고 '업적 진행도'만 상단에 고정 — 흰 블록 110 + 하단 2px 구분선.
+  //  sticky top:0 + paddingTop 50 → 고정 시 라벨 y50 · 바 y78 · 블록 110(시안과 동일).
+  const [stuck, setStuck] = useState(false);
   const earnedSet = new Set(earned || []);
-  const n = earnedSet.size;
   const total = ACHIEVEMENTS.length;
+  const gotN = ACHIEVEMENTS.filter((a) => {
+    if (earnedSet.has(a.id)) return true;
+    const p = (a.progress && snapshot) ? a.progress(snapshot) : null;
+    return !!(p && p.cur >= p.target);
+  }).length;
+  const pct = Math.round((gotN / (total || 1)) * 100);
   return (
     <>
-      <GameHeader title="업적" onBack={onBack} right={
-        /* 달성 수 — 헤더 우측에 담백한 텍스트 */
-        <span style={{ marginLeft: 'auto', ...TYPE.body, color: TG.MUTED }}>
-          <b style={{ ...TYPE.head, fontWeight: 400, fontSize: 19, color: TG.INK }}>{n}</b> / {total}
-        </span>
-      } />
-      {/* 하나의 리스트 — 섹션 없이 흐르고, 카테고리 구분은 링/아이콘 색으로만 */}
-      <Reveal i={1} style={{
-        // 하단 = 탭바(TAB_BAR_H) 위로 (2026-07-27 탭바 도입)
-        position: 'absolute', left: 24, right: 24, top: 52, bottom: `calc(${TAB_BAR_H + 12}px + env(safe-area-inset-bottom))`, overflowY: 'auto', zIndex: 2, paddingTop: SPACE.sm, paddingBottom: 52,
-        // 헤더 바(52px) 바닥에 딱 붙는 위·아래 가장자리 페이드(난이도 선택 화면과 동일 방식). 하단 패딩=마지막 항목이 페이드 위로 올라오게(가림 방지)
-        maskImage: 'linear-gradient(to bottom, transparent 0, #000 20px, #000 calc(100% - 48px), transparent 100%)',
-        WebkitMaskImage: 'linear-gradient(to bottom, transparent 0, #000 20px, #000 calc(100% - 48px), transparent 100%)',
+      <div className="tg-noscroll" onScroll={(e) => { const s = e.currentTarget.scrollTop > 4; setStuck((prev) => (prev === s ? prev : s)); }} style={{
+        scrollbarWidth: 'none', // 데스크톱 스크롤바가 폭을 먹어 342 컬럼이 좁아지지 않게(모바일은 원래 없음)
+        position: 'absolute', left: 0, right: 0, top: 0, bottom: `calc(${TAB_BAR_H}px + env(safe-area-inset-bottom))`,
+        overflowY: 'auto', WebkitOverflowScrolling: 'touch', padding: '0 24px', zIndex: 2,
       }}>
-        {ACHIEVEMENTS.map((a, i) => (
-          <AchRow key={a.id} ach={a} earned={earnedSet.has(a.id)} snapshot={snapshot} onToast={onToast} last={i === ACHIEVEMENTS.length - 1} />
-        ))}
-      </Reveal>
+        {/* 제목 — 시안 y40 · 26px 2줄(라인 31) */}
+        <Reveal i={0} style={{ display: 'block', marginTop: 40 }}>
+          <span style={{ display: 'block', ...TYPE.head, fontSize: 26, lineHeight: '31px', color: TITLE_INK }}>
+            업적을 확인하고<br />달성해봐요!
+          </span>
+        </Reveal>
+        {/* 업적 진행도 — 평소 y122, 스크롤하면 상단 고정. ★sticky는 Reveal(transform) 안에서 죽는다 → 페이드만(tg-fade) */}
+        <div className="tg-fade" style={{
+          position: 'sticky', top: 0, zIndex: 3, margin: '-30px -24px 0', padding: '50px 24px 18px', animationDelay: '85ms',
+          background: stuck ? '#fff' : 'transparent', boxShadow: stuck ? `inset 0 -2px 0 ${DIVIDER}` : 'none', transition: 'background .15s ease',
+        }}>
+          {/* 시안: 평소 16 Medium → 고정되면 24 Bold(제목 역할을 물려받음). 라인박스는 18로 고정이라 바 위치·블록 높이는 그대로 */}
+          <span style={{
+            display: 'block', ...TYPE.body, fontSize: stuck ? 24 : 16, fontWeight: stuck ? 700 : 500,
+            lineHeight: '18px', color: TITLE_INK, transition: 'font-size .15s ease',
+          }}>업적 진행도</span>
+          <div style={{ marginTop: SPACE.lg, height: 14, display: 'flex', alignItems: 'center', gap: SPACE.lg }}>
+            <div style={{ flex: 1, minWidth: 0, height: 10, borderRadius: 19, background: BAR_TRACK, overflow: 'hidden' }}>
+              <div style={{ width: `${pct}%`, height: '100%', background: BAR_FILL, transition: 'width .4s ease' }} />
+            </div>
+            <span style={{ width: 30, textAlign: 'center', fontFamily: FONT_NUM, fontWeight: 900, fontSize: 12, lineHeight: '14px', color: PCT_INK, flexShrink: 0 }}>{pct}%</span>
+          </div>
+        </div>
+        {/* 리스트 — 시안 y208(고정 블록 아래 26) · 행 간격 10 */}
+        <div style={{ marginTop: 26, display: 'flex', flexDirection: 'column', gap: SPACE.lg, paddingBottom: 40 }}>
+          {ACHIEVEMENTS.map((a, ai) => (
+            <Reveal key={a.id} i={ai + 2}>
+              <AchRow ach={a} earned={earnedSet.has(a.id)} snapshot={snapshot} onToast={onToast} />
+            </Reveal>
+          ))}
+        </div>
+      </div>
       <TgTabBar active="ach" onNav={tabNav} />
     </>
   );
