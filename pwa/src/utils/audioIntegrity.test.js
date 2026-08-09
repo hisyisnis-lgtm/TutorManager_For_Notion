@@ -95,6 +95,15 @@ describe('truncatedFileMessage', () => {
     expect(msg).toContain('녹음.m4a');
     expect(msg).toContain('2.96MB');
     expect(msg).toContain('2.98MB');
-    expect(msg).toContain('복사');
+    expect(msg).toContain('다시 켠');
+    expect(msg).toContain('PC');
+  });
+
+  // 2026-08-09: "복사하거나 이름을 바꿔보라"고 안내했더니 폰이 잘못 기억한 크기대로
+  // 파일이 실제로 잘려, 그때까지 재생되던 원본이 못 쓰게 됐다. 다시 넣지 말 것.
+  it('복사·이름 변경을 권하지 않고 오히려 경고한다', () => {
+    const msg = truncatedFileMessage('녹음.m4a', 3103700, 3126011);
+    expect(msg).not.toMatch(/복사(하거나|한|해서|하신)/);
+    expect(msg).toContain('하지 마세요');
   });
 });
