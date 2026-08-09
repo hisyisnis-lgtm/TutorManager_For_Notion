@@ -44,7 +44,8 @@ export function ProfileModal({
           {/* 히트영역 44×44(음수 마진으로 레이아웃 자리는 30 유지) */}
           <button onClick={onClose} aria-label="닫기" className="tg-press"
             style={{ width: 44, height: 44, margin: -7, padding: 0, border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', ...TOUCH_OPT }}>
-            <CloseCircle size={28} weight="Bold" color={TG.SUB} />
+            {/* 시안 461:114 = #2B2730(=INK). SUB(#9A93A0)로 잘못 들어가 다른 모달의 닫기보다 흐렸다(2026-08-09) */}
+            <CloseCircle size={28} weight="Bold" color={TG.INK} />
           </button>
         </div>
 

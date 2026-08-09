@@ -20,6 +20,7 @@ import { useTabTip } from '../../hooks/useTabTip.js';
 const STAGE_ICONS = [Leaf, Flame, Fire, Bolt, CrownStar];
 // 시안 치수(390 기준): 카드 266×72(r20) · 행 피치 92 · 레일 중심 x53 · 카드 좌측 84 · 우측 여백 40
 const ROW_H = 92, CARD_H = 72, RAIL_X = 53, CARD_L = 84, CARD_R = 40, COL_W = 390;
+const PAD_TOP = 80; // 헤더(60) 아래 여유 20 — 맨 위 칸이 헤더에 붙지 않을 만큼만
 // 노드 실측(시안 absoluteRenderBounds): 원 26 · **stroke 4 INSIDE** → 시각 지름은 26 그대로, 링은 안쪽 4px.
 //  속 원 20(=26-4*2 + 링과 1px 겹침, 육안 무시). 체크 = 획 3 round, 14 프레임 중앙.
 const NODE = 26, NODE_RING = 4;
@@ -63,7 +64,7 @@ export function DifficultyScreen({ studentToken, rank = 0, onSelect, onStart, on
   const wheelAcc = useRef(0);
   const releaseT = useRef(0);
   const wheelT = useRef(0);
-  const [padY, setPadY] = useState(0); // 첫/끝 칸을 화면 중앙에 두기 위한 상하 여백
+  const [padBottom, setPadBottom] = useState(0); // 맨 아래(입문 1)를 화면 중앙에 두기 위한 하단 여백
 
   // 칸 상태 헬퍼 — 스테이지는 isStageUnlocked, 보스는 bossState(rank 게이트).
   const bsOf = (it) => bossState(studentToken, it.tierIdx, rank);
@@ -92,10 +93,11 @@ export function DifficultyScreen({ studentToken, rank = 0, onSelect, onStart, on
     return top;
   })();
 
-  // 상하 패딩 = (화면높이 - 행높이)/2 → 스크롤 끝에서 첫/끝 칸이 **화면 정중앙**에 온다
-  //  (맨 아래=입문 1 중앙, 맨 위=고수 5 중앙 — 2026-08-03 사용자 요청)
+  // 하단 패딩 = (화면높이 - 행높이)/2 → 맨 아래로 내리면 입문 1이 **화면 정중앙**에 온다(2026-08-03 요청).
+  //  ⚠️ 상단은 같은 공식을 쓰지 않는다 — 맨 위(고수 5)까지 올리면 헤더 아래로 빈 화면이 376px이나 떠서
+  //     "여백이 너무 넓다"(2026-08-09 사용자). 위는 헤더(60) 아래 숨 쉴 틈만 준다.
   useLayoutEffect(() => {
-    const measure = () => { const el = scrollerRef.current; if (el) setPadY(Math.max(0, (el.clientHeight - ROW_H) / 2)); };
+    const measure = () => { const el = scrollerRef.current; if (el) setPadBottom(Math.max(0, (el.clientHeight - ROW_H) / 2)); };
     measure();
     window.addEventListener('resize', measure);
     return () => window.removeEventListener('resize', measure);
@@ -164,7 +166,7 @@ export function DifficultyScreen({ studentToken, rank = 0, onSelect, onStart, on
   //  사다리를 아래에서부터 훑어 올라가며 '내가 여기까지 왔다'를 보여준다. 모션 민감 설정이면 연출 없이 바로 이동.
   useLayoutEffect(() => {
     const el = scrollerRef.current;
-    if (!el || !padY) return;
+    if (!el || !padBottom) return;
     el.scrollTop = el.scrollHeight;
     applyParallax();
     if (currentVIdx < 0 || currentVIdx === V_LADDER.length - 1) return undefined; // 신규(입문1) — 이미 그 자리
@@ -172,7 +174,7 @@ export function DifficultyScreen({ studentToken, rank = 0, onSelect, onStart, on
     const t = setTimeout(() => scrollToIdx(currentVIdx, 'smooth'), 520);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [padY]);
+  }, [padBottom]);
 
   const scrollToIdx = (idx, behavior = 'smooth') => {
     const el = scrollerRef.current, row = rowRefs.current[idx];
@@ -207,12 +209,12 @@ export function DifficultyScreen({ studentToken, rank = 0, onSelect, onStart, on
       }}>
         <div ref={innerRef} style={{
           position: 'relative', width: '100%', maxWidth: COL_W, margin: '0 auto',
-          paddingTop: padY, paddingBottom: padY,
+          paddingTop: PAD_TOP, paddingBottom: padBottom,
         }}>
           {/* 레일 — 전 구간 점선 위에 밟은 구간만 실선을 덧그림.
               첫/끝 노드 중심에서 끊는다 — 위아래로 삐져나오는 '꼬다리' 제거(2026-08-03 사용자 요청) */}
           <div aria-hidden="true" style={{
-            position: 'absolute', left: RAIL_LEFT, top: padY + ROW_H / 2, bottom: padY + ROW_H / 2,
+            position: 'absolute', left: RAIL_LEFT, top: PAD_TOP + ROW_H / 2, bottom: padBottom + ROW_H / 2,
             width: RAIL_W, backgroundImage: RAIL_DASH_BG, zIndex: 0,
           }} />
 

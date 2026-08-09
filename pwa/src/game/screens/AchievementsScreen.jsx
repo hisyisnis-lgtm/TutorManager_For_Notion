@@ -9,7 +9,7 @@ import {
   CheckCircle, Star, Stars, CrownStar, MedalStar, Bolt,
 } from '@solar-icons/react';
 import { TG, TYPE, FONT_NUM, TOUCH_OPT, SPACE } from '../tgTokens.js';
-import { ACHIEVEMENTS, ACH_CATEGORIES } from '../achievements.js';
+import { ACHIEVEMENTS } from '../achievements.js';
 import { Reveal, TgTabBar, TAB_BAR_H } from './shared.jsx';
 
 // 업적 icon 문자열 → Solar 컴포넌트 (achievements.js의 icon 필드와 일치)
@@ -20,8 +20,9 @@ const ACH_ICONS = {
   CalendarDots: Calendar, Fire: Fire, Waveform: Soundwave, ArrowsClockwise: Refresh,
   CheckCircle, Star, Stars, CrownStar, MedalStar, Bolt,
 };
-// 카테고리 색 — 축하 오버레이(AchBadge)에서만 사용. 리스트 타일은 시안대로 획득 코랄 / 미획득 블루그레이 2색.
-const CAT_COLOR = Object.fromEntries(ACH_CATEGORIES.map((c) => [c.id, c.color]));
+// 업적 강조색 — 리스트 타일·축하 오버레이가 **같은 색 하나**를 쓴다.
+//  예전엔 오버레이만 카테고리별 색(achColor)이라 팝업마다 아이콘 색이 달랐다(2026-08-09 사용자 지적).
+export const ACH_ACCENT = '#FF6B6B';
 
 const DEFAULT_EARNED = '#FFB02E'; // 기본 획득 금색(축하 오버레이 등 색 미지정 시)
 const LOCKED_BG = '#f1ece5';      // 회색 틴트(축하 오버레이 배지 안쪽)
@@ -29,7 +30,6 @@ const LOCKED_FG = TG.MUTED;       // 회색 아이콘
 
 // 시안 14 실측 — 토큰에 없는 원오프 색만 상수로
 const TITLE_INK = '#272622';      // 제목·업적명·진행 수치
-const TILE_EARNED = '#FF6B6B';    // 획득 타일
 const TILE_LOCKED = '#E4EDF5';    // 미획득 타일
 const ICON_LOCKED = '#A6B4C1';    // 미획득 아이콘
 const BAR_TRACK = '#E2D7C1';
@@ -53,8 +53,6 @@ export function AchBadge({ ach, earned, size = 48, color, bg, iconSize }) {
     </div>
   );
 }
-// 카테고리 색은 축하 오버레이가 참조(리스트에서는 미사용)
-export function achColor(ach) { return CAT_COLOR[ach.cat] || DEFAULT_EARNED; }
 
 // 달성 체크 — 시안 chk0(40 박스에 stroke 5 라운드 체크)
 function AchCheck() {
@@ -80,7 +78,7 @@ function AchRow({ ach, earned, snapshot, onToast }) {
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 20px 10px 10px', textAlign: 'left', flexShrink: 0, ...TOUCH_OPT,
       }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.md, minWidth: 0 }}>
-        <div style={{ width: 40, height: 40, borderRadius: 10, background: got ? TILE_EARNED : TILE_LOCKED, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+        <div style={{ width: 40, height: 40, borderRadius: 10, background: got ? ACH_ACCENT : TILE_LOCKED, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
           <Icon size={32} weight="Bold" color={got ? '#fff' : ICON_LOCKED} />
         </div>
         <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>

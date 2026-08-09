@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { TG, TYPE, TOUCH_OPT, RADIUS, SPACE } from '../tgTokens.js';
 import { play as playSfx } from '../tgSfx.js';
-import { AchBadge, achColor } from './AchievementsScreen.jsx';
+import { AchBadge, ACH_ACCENT } from './AchievementsScreen.jsx';
 import { KeycapCta } from './shared.jsx';
 
 const CONFETTI = ['#FF4D6D', '#FF9F40', TG.SUCCESS_GLOW, '#4D8DFF', TG.SUN, TG.CORAL];
@@ -41,7 +41,7 @@ export function CelebrationOverlay({ achievement, onNext }) {
         {/* 배지 — 시안 512:2: **흰 원 92 + 그 업적의 아이콘 50**(카드 위로 46 걸침). 글로우 원은 시안에 없어 제거. */}
         <div style={{ position: 'absolute', top: -46, left: '50%', transform: 'translateX(-50%)' }}>
           <div style={{ position: 'relative', animation: 'tgc-badge .6s cubic-bezier(.34,1.56,.64,1) .1s both' }}>
-            <AchBadge ach={achievement} earned size={92} bg="#fff" iconSize={50} color={achColor(achievement)} />
+            <AchBadge ach={achievement} earned size={92} bg="#fff" iconSize={50} color={ACH_ACCENT} />
           </div>
         </div>
         {/* 텍스트 — [업적 달성!(14) + 업적명(26)] 간격 6, 그 아래 설명(14) 간격 10 */}
