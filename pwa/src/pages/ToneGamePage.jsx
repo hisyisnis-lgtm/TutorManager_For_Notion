@@ -385,12 +385,15 @@ export default function ToneGamePage() {
 
   // 배경음 — 메뉴 화면에서만 재생, 실제 풀이(game) 중엔 정지. 스플래시·미리보기 제외.
   // (startBgm은 자체 음소거 상태를 존중하므로 여기선 화면 조건만 판단)
+  //  '오늘의 팁' 전환(homeTx)이 떠 있는 동안도 정지 — 화면이 덮이는 사이 BGM만 계속 흐르면 붕 뜬다.
+  //  stopBgm/startBgm이 각각 페이드아웃(450ms)·페이드인(900ms)이라, 전환에 맞춰 서서히 줄었다 돌아온다.
+  //  (일시정지라 위치는 보존 — 전환 후 곡이 처음부터 다시 시작하지 않는다. 2026-08-09 사용자 요청)
   useEffect(() => {
     if (isPreview) return undefined;
-    if (!splash && screen !== 'game') startBgm();
+    if (!splash && screen !== 'game' && !homeTx) startBgm();
     else stopBgm();
     return undefined;
-  }, [screen, splash, isPreview]);
+  }, [screen, splash, isPreview, homeTx]);
 
   // 언마운트 시 배경음 정지(페이지 이탈).
   useEffect(() => () => stopBgm(), []);
