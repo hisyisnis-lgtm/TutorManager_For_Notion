@@ -47,30 +47,30 @@ import InAppBrowserWarning from './components/ui/InAppBrowserWarning.jsx';
 import DynamicStudentManifest from './components/DynamicStudentManifest.jsx';
 import StudentAuthGate from './components/StudentAuthGate.jsx';
 
-// 앱 초기 로드 / SW 업데이트 중 스플래시 (흰 배경 + 빨간 로고)
+// 앱 초기 로드 / SW 업데이트 중 스플래시 — 시안 "로딩 — 편집본"(755:7, 2026-08-08):
+//   브랜드 레드 전면 + 흰 로고(248×36, y378) + "잠시만 기다려 주세요..." 14/20 (y431 → 간격 17).
+//   구 스피너 링은 시안에서 빠지고 **'...'이 하나씩 켜졌다 꺼지는** 문구로 대체됐다.
 function SplashScreen({ updating }) {
   return (
     <div
       style={{ background: PRIMARY }}
-      className="fixed inset-0 flex flex-col items-center justify-center gap-6"
+      className="fixed inset-0 flex flex-col items-center justify-center"
     >
       <img
         src={`${import.meta.env.BASE_URL}logo/logo-white.png`}
         alt="하늘하늘중국어"
         style={{ height: 36, width: 'auto', display: 'block', outline: 'none', border: 'none' }}
       />
-      <div style={{
-        width: 28, height: 28, borderRadius: '50%',
-        border: '2.5px solid rgba(255,255,255,0.3)',
-        borderTopColor: '#ffffff',
-        animation: 'spin 0.75s linear infinite',
-      }} />
-      {updating && (
-        <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', margin: 0, letterSpacing: '0.02em' }}>
-          최신 버전으로 업데이트 중...
-        </p>
-      )}
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <p style={{ fontSize: 14, lineHeight: '20px', color: '#ffffff', margin: '17px 0 0', whiteSpace: 'nowrap' }}>
+        {updating ? '최신 버전으로 업데이트 중' : '잠시만 기다려 주세요'}
+        {[0, 1, 2].map((i) => (
+          <span key={i} style={{ animation: `splash-ellipsis 1.4s ease-in-out ${i * 0.18}s infinite` }}>.</span>
+        ))}
+      </p>
+      <style>{`
+        @keyframes splash-ellipsis { 0%,82%,100% { opacity: 0 } 26%,72% { opacity: 1 } }
+        @media (prefers-reduced-motion: reduce) { [style*="splash-ellipsis"] { animation: none !important; opacity: 1 !important } }
+      `}</style>
     </div>
   );
 }
