@@ -354,7 +354,7 @@ export function FigmaScreen({ children, bg = TG.BG, bgImage, enter = false }) {
     </div>
   );
   return (
-    <div className="tg-root" style={{ position: 'fixed', inset: 0, background: TG.BG, overflow: 'hidden' }}>
+    <div className="tg-root" style={{ position: 'fixed', inset: 0, height: '100dvh', background: TG.BG, overflow: 'hidden' }}>
       <ToneGameStyles />
       {/* 웹(데스크톱)에선 세로 16:9(=9:16) 비율로 제한 — 폭 = min(600px, 화면높이×9/16). 모바일 세로 화면은 기존 그대로(100%).
           overflow hidden = 9:16 영역 마스킹 — 와이드 장식(타이틀 동산·홈 배경 등)이 레터박스로 새지 않게.
@@ -1223,7 +1223,10 @@ export function FieldBg({ artRef }) {
 //    transform 없이는 fixed가 뷰포트 기준이라 PC에서 창 전체로 퍼진다(2026-08-03 사용자 요청).
 export function GameStage({ children }) {
   return (
-    <div style={{ position: 'fixed', inset: 0, background: TG.BG, display: 'flex', justifyContent: 'center', overflow: 'hidden' }}>
+    // height:100dvh = '지금 실제로 보이는 높이'. iOS에서 fixed+inset:0은 툴바가 접힌 큰 뷰포트 기준으로
+    //  잡혀 하단(탭바)이 툴바 뒤로 숨고, 그걸 드러내려 페이지가 스크롤되며 화면이 통째로 밀린다.
+    //  inset:0은 dvh 미지원 브라우저용 폴백으로 남긴다(높이가 지정되면 bottom은 무시됨).
+    <div style={{ position: 'fixed', inset: 0, height: '100dvh', background: TG.BG, display: 'flex', justifyContent: 'center', overflow: 'hidden' }}>
       {/* data-tg-stage — document.body로 포탈되는 코치마크가 이 컬럼 좌표를 읽어 밖으로 안 새게 클리핑한다 */}
       <div data-tg-stage="" style={{ position: 'relative', width: '100%', maxWidth: TG_COL_MAXW, height: '100%', overflow: 'hidden', transform: 'translateZ(0)' }}>
         {children}
