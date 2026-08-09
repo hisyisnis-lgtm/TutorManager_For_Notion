@@ -5,7 +5,8 @@
 // 정적 파일은 _redirects(/* → index.html 200)보다 우선 서빙되고, 내용은 index.html 복사본이라
 // 사용자는 앱이 그대로 로드되어 BrowserRouter가 /game/tone → 성조게임으로 라우팅한다.
 //
-// 이미지 교체: public/game-og.png 파일만 바꾸면 됨(아래 URL은 그대로 유지).
+// 이미지 교체: public/ 에 **새 파일명**으로 넣고 아래 image URL을 그 이름으로 바꾼다.
+// ⚠️ 같은 파일명으로 덮어쓰면 카카오톡·SNS 스크래퍼가 예전 썸네일을 계속 보여준다(캐시가 URL 단위).
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -20,7 +21,7 @@ const { version } = JSON.parse(readFileSync(path.join(ROOT, 'pwa', 'package.json
 const OG = {
   title: '매일매일 성조키우기 — 중국어 4성 게임',
   description: '중국어 4성을 게임으로 빠르게 익히기. 하늘하늘중국어 성조 트레이닝.',
-  image: `${ORIGIN}/game-og.png`, // 썸네일 교체 시 public/game-og.png만 바꾸면 됨
+  image: `${ORIGIN}/game-og-v2.png`, // 2026-08-09 타이틀 초원 씬으로 교체(구 game-og.png = 옛 이름 "성조 빨리찾기")
   url: `${ORIGIN}/game/tone`,
 };
 
