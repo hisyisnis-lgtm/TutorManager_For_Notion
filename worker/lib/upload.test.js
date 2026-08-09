@@ -31,6 +31,46 @@ describe('validateAudioUpload', () => {
     });
   });
 
+  // 2026-08 강사 녹음 손상 사고: 안드로이드에서 파일이 재포장되며 뒤가 잘린 채 업로드됐는데
+  // 크기·MIME 검증을 모두 통과해 재생 불가 파일이 학생에게 그대로 전달됐다.
+  describe('전송 중 잘림 탐지 (declaredSize 대조)', () => {
+    it('원본 크기와 수신 크기가 같으면 통과', () => {
+      const r = validateAudioUpload(makeFile({ size: 3126011 }), 3126011);
+      expect(r.ok).toBe(true);
+    });
+
+    it('문자열로 온 크기도 같으면 통과 (FormData 값은 문자열)', () => {
+      const r = validateAudioUpload(makeFile({ size: 3126011 }), '3126011');
+      expect(r.ok).toBe(true);
+    });
+
+    it('수신 크기가 더 작으면 400으로 거부 — 실제 사고값', () => {
+      const r = validateAudioUpload(makeFile({ size: 3103700 }), '3126011');
+      expect(r.ok).toBe(false);
+      if (!r.ok) {
+        expect(r.status).toBe(400);
+        expect(r.error).toContain('잘렸');
+      }
+    });
+
+    it('용량 초과보다 잘림을 먼저 알린다 — 원인이 다른데 "용량 초과"로 오인시키면 안 됨', () => {
+      const r = validateAudioUpload(makeFile({ size: MAX_AUDIO_BYTES + 1 }), String(MAX_AUDIO_BYTES + 2));
+      expect(r.ok).toBe(false);
+      if (!r.ok) expect(r.error).toContain('잘렸');
+    });
+
+    it('declaredSize 미전달(옛 클라이언트)이면 검사를 건너뛴다', () => {
+      expect(validateAudioUpload(makeFile({ size: 1024 })).ok).toBe(true);
+      expect(validateAudioUpload(makeFile({ size: 1024 }), null).ok).toBe(true);
+      expect(validateAudioUpload(makeFile({ size: 1024 }), '').ok).toBe(true);
+    });
+
+    it('숫자가 아닌 declaredSize는 무시 — 검증 자체를 깨뜨리지 않는다', () => {
+      expect(validateAudioUpload(makeFile({ size: 1024 }), 'abc').ok).toBe(true);
+      expect(validateAudioUpload(makeFile({ size: 1024 }), '0').ok).toBe(true);
+    });
+  });
+
   describe('정상 케이스 — 이미지·PDF (document)', () => {
     it('image/png → 통과, category=document', () => {
       const r = validateAudioUpload(makeFile({ name: 'photo.png', type: 'image/png' }));

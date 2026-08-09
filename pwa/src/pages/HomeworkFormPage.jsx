@@ -91,8 +91,8 @@ export default function HomeworkFormPage() {
       const uploaded = [];
       for (const pf of all) {
         const fullName = pf.baseName + pf.ext;
-        const namedFile = new File([pf.file], fullName, { type: pf.file.type });
-        const { fileUploadId } = await uploadTeacherFile(namedFile);
+        // 원본 File 그대로 전달하고 이름만 지정 — 재포장하면 안드로이드에서 뒤가 잘린다.
+        const { fileUploadId } = await uploadTeacherFile(pf.file, fullName);
         uploaded.push({ fileUploadId, fileName: fullName });
       }
       const created = await createHomework({

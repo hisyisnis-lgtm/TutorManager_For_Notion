@@ -90,10 +90,20 @@ export async function createHomework({ studentPageId, title, content, files }) {
   return createPage(HOMEWORK_DB, properties);
 }
 
-/** 강사용 파일 업로드 (JWT) → Worker가 Notion file_upload 생성 후 업로드 */
-export async function uploadTeacherFile(file) {
+/**
+ * 강사용 파일 업로드 (JWT) → Worker가 Notion file_upload 생성 후 업로드
+ *
+ * ⚠️ 파일 이름을 바꾸려고 `new File([file], 이름)`으로 재포장하지 말 것.
+ * 안드로이드에서 파일 선택기로 고른 파일은 실제 파일이 아니라 시스템이 중계하는 스트림이라,
+ * 재포장하면 내용이 끝까지 복사되지 않고 뒤가 잘린다(2026-08 강사 녹음 파일 손상 사고 —
+ * 3,126,011B 원본이 3,103,700B로 도착, iOS·curl은 멀쩡했고 안드로이드에서만 재현).
+ * FormData.append의 세 번째 인자로 이름만 지정하면 원본을 그대로 보낼 수 있다.
+ */
+export async function uploadTeacherFile(file, fileName) {
   const form = new FormData();
-  form.append('file', file);
+  form.append('file', file, fileName || file.name);
+  // 전송 중 잘림 탐지용 — 서버가 실제 수신 크기와 대조한다(worker/lib/upload.js).
+  form.append('size', String(file.size));
   const res = await fetchWithTimeout(`${WORKER_URL}/homework/upload`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${getToken()}` },
@@ -251,10 +261,13 @@ function uploadViaXhr(url, formData, headers, { onProgress, timeoutMs }) {
 /**
  * 학생용 파일 업로드 → Worker가 Notion file_upload 처리
  * @param {(loaded: number, total: number) => void} [opts.onProgress] 주면 XHR로 전송해 진행률을 보고한다.
+ * @param {string} [opts.fileName] 저장할 이름. 재포장 대신 이 인자를 쓸 것 — 이유는 uploadTeacherFile 주석 참고.
  */
-export async function uploadStudentFile(studentToken, file, { onProgress } = {}) {
+export async function uploadStudentFile(studentToken, file, { onProgress, fileName } = {}) {
   const form = new FormData();
-  form.append('file', file);
+  form.append('file', file, fileName || file.name);
+  // 전송 중 잘림 탐지용 — 서버가 실제 수신 크기와 대조한다(worker/lib/upload.js).
+  form.append('size', String(file.size));
   const url = `${WORKER_URL}/homework/student-upload/${encodeURIComponent(studentToken)}`;
   const headers = studentAuthHeader(studentToken);
 

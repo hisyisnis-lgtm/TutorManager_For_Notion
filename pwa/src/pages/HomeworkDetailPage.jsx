@@ -169,8 +169,8 @@ export default function HomeworkDetailPage() {
         // 여러 파일은 순차 대신 동시 업로드(업로드는 토큰버킷과 무관한 별도 엔드포인트).
         uploadedFiles = await Promise.all(files.map((pf, i) => {
           const fullName = newNames[i];
-          const namedFile = new File([pf.file], fullName, { type: pf.file.type });
-          return uploadTeacherFile(namedFile).then(({ fileUploadId }) => ({ fileUploadId, fileName: fullName }));
+          // 원본 File 그대로 전달하고 이름만 지정 — 재포장하면 안드로이드에서 뒤가 잘린다.
+          return uploadTeacherFile(pf.file, fullName).then(({ fileUploadId }) => ({ fileUploadId, fileName: fullName }));
         }));
         if (hw.feedbackFiles?.length > 0) {
           const freshPage = await getPage(id);

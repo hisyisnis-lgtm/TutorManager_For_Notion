@@ -153,9 +153,14 @@ export function fileCategoryOf(file) {
  * 학생/강사 숙제 파일 업로드 검증 — 음성·이미지·PDF 모두 허용.
  *
  * @param {File|Blob & {name?: string, type?: string, size?: number}} file
+ * @param {string|number|null} [declaredSize]
+ *   클라이언트가 함께 보낸 원본 바이트 수. 실제 수신 크기와 다르면 전송 중 잘린 것으로 보고 거절한다.
+ *   2026-08: 안드로이드에서 파일이 재포장되며 뒤가 잘린 채 업로드돼도 모든 검증을 통과했고,
+ *   재생 불가 상태로 학생에게 전달되기까지 몇 주간 아무도 알아채지 못했다. 조용한 손상을 막는 장치.
+ *   (옛 클라이언트는 이 값을 안 보내므로, 없으면 검사를 건너뛴다)
  * @returns {{ ok: true, category: 'audio'|'document' } | { ok: false, status: number, error: string }}
  */
-export function validateFileUpload(file) {
+export function validateFileUpload(file, declaredSize) {
   if (!file || typeof file !== 'object') {
     return { ok: false, status: 400, error: '파일이 없습니다.' };
   }
@@ -163,6 +168,17 @@ export function validateFileUpload(file) {
   const size = Number(file.size);
   if (!Number.isFinite(size) || size <= 0) {
     return { ok: false, status: 400, error: '파일이 비어있거나 손상되었습니다.' };
+  }
+
+  // 잘림 탐지 — 크기 상한(413)보다 먼저 본다. 잘린 파일은 상한에 걸릴 일이 없고,
+  // 원인이 전혀 다르므로 "용량 초과" 문구로 오인시키면 안 된다.
+  const declared = Number(declaredSize);
+  if (declaredSize != null && declaredSize !== '' && Number.isFinite(declared) && declared > 0 && declared !== size) {
+    return {
+      ok: false,
+      status: 400,
+      error: `파일이 전송 중 잘렸습니다 (${size.toLocaleString()} / ${declared.toLocaleString()} 바이트). 다시 시도해주세요.`,
+    };
   }
   if (size > MAX_FILE_BYTES) {
     const mb = (size / (1024 * 1024)).toFixed(1);

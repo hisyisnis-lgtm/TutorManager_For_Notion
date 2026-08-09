@@ -209,11 +209,12 @@ export default function PersonalHomeworkDetailPage() {
           setProgress({ done: i + 1, total: all.length, percent: pct(bytesDone) });
           continue;
         }
-        const namedFile = new File([pf.file], fullName, { type: pf.file.type });
         // 업로드만 재시도한다 — 제출 PATCH는 이미 올린 file_upload를 다시 붙이는 요청이라
         // 재시도가 오히려 중복 첨부 오류를 부를 수 있다. 실패해도 여기 캐시가 남아 재시도가 빠르다.
         // 재시도로 같은 파일을 다시 올려도 bytesDone은 그대로라 진행률이 뒤로 가지 않는다.
-        const { fileUploadId } = await retryTransient(() => uploadStudentFile(studentToken, namedFile, {
+        // 원본 File 그대로 전달하고 이름만 지정 — 재포장하면 안드로이드에서 뒤가 잘린다.
+        const { fileUploadId } = await retryTransient(() => uploadStudentFile(studentToken, pf.file, {
+          fileName: fullName,
           onProgress: (loaded) => setProgress({ done: i, total: all.length, percent: pct(bytesDone + loaded) }),
         }));
         bytesDone += pf.file?.size || 0;

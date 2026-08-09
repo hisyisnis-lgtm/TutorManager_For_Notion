@@ -1908,7 +1908,8 @@ async function handleHomeworkRoutes(request, env, corsHeaders, url) {
       const formData = await request.formData();
       const file = formData.get('file');
       // JWT 신뢰하더라도 토큰 탈취·잘못된 클라이언트 발송 대비해 동일 검증.
-      const v = validateFileUpload(file);
+      // `size`는 클라이언트가 보낸 원본 바이트 수 — 전송 중 잘림 탐지용.
+      const v = validateFileUpload(file, formData.get('size'));
       if (!v.ok) return errRes(corsHeaders, v.status, v.error);
       const result = await uploadFileToNotion(file, env.NOTION_TOKEN);
       return new Response(JSON.stringify(result), {
@@ -2030,7 +2031,8 @@ async function handleHomeworkRoutes(request, env, corsHeaders, url) {
       const formData = await request.formData();
       file = formData.get('file');
       // 익명 라우트라 검증 핵심: size 상한(lib/upload.js MAX_FILE_BYTES) + MIME 화이트리스트.
-      const v = validateFileUpload(file);
+      // `size`는 클라이언트가 보낸 원본 바이트 수 — 전송 중 잘림 탐지용.
+      const v = validateFileUpload(file, formData.get('size'));
       if (!v.ok) {
         // 거절도 알린다 — 학생이 지금 못 올리고 있다는 사실을 강사가 알아야 안내할 수 있다.
         await alertHomeworkFailure({ studentPage, file, stage: '사전 검증', reason: v.error });
