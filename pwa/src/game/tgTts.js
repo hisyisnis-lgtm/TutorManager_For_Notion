@@ -44,9 +44,11 @@ function pickZhVoice() {
 export function initTts() {
   if (typeof window === 'undefined') return;
   // 발음 재생 엘리먼트 언락 — SFX/BGM과 같은 첫 제스처에 태운다(speechSynthesis 유무와 무관하게 필요).
+  //  once:true — 한 번 쓰고 스스로 떨어진다. 리스너가 계속 남아 매 탭마다 재실행되면
+  //  그 직후 시작되는 발음을 끊는다(2026-08-09 회귀 재발 방지).
   try {
-    window.addEventListener('pointerdown', unlockTtsOnGesture);
-    window.addEventListener('keydown', unlockTtsOnGesture);
+    window.addEventListener('pointerdown', unlockTtsOnGesture, { once: true });
+    window.addEventListener('keydown', unlockTtsOnGesture, { once: true });
   } catch { /* noop */ }
   if (!window.speechSynthesis) return;
   pickZhVoice();
@@ -107,14 +109,16 @@ function ensureEl() {
 // 첫 사용자 제스처에서 1회 — 무음을 잠깐 재생해 엘리먼트를 '허용' 상태로 만든다(SFX/BGM 언락과 같은 자리).
 function unlockTtsOnGesture() {
   if (ttsUnlocked) return;
+  ttsUnlocked = true; // ★성공·실패와 무관하게 딱 1회. 실패했다고 되돌리면 이후 모든 탭이 아래 src 교체를
+  //                     다시 실행해, 그 직후 시작되는 진짜 발음을 계속 끊는다(2026-08-09 회귀).
   const a = ensureEl();
-  if (!a) return;
-  ttsUnlocked = true; // 재시도 폭주 방지 — 실패해도 다음 실제 재생에서 어차피 폴백된다
+  if (!a || ttsElUrl) return; // 이미 발음이 물려 있으면 건드리지 않는다
   try {
     a.src = SILENCE; ttsElUrl = SILENCE;
     const p = a.play();
-    if (p && p.then) p.then(() => { try { a.pause(); } catch { /* noop */ } }).catch(() => { ttsUnlocked = false; });
-  } catch { ttsUnlocked = false; }
+    if (p && p.catch) p.catch(() => { /* 아래 pause가 부르는 AbortError — 정상 */ });
+    a.pause(); // ★반드시 **동기** pause. 프로미스로 미루면 그 사이 시작된 발음을 꺼버린다(회귀 원인).
+  } catch { /* noop */ }
 }
 
 // 다음 단어 프리로드 — 파일을 HTTP 캐시에 올려두기만 한다(재생은 위 단일 엘리먼트가 담당).
