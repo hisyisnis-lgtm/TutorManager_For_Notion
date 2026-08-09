@@ -1,72 +1,62 @@
 // 닉네임 변경 모달 — 홈 메뉴 '닉네임 변경'에서 회원이 언제든 닉네임을 바꾼다.
-// 입력 + '다시 뽑기'(랜덤) + 저장. 저장 시 세션·서버(game_users.nickname)에 반영(호출부에서 처리).
-// 시각 패턴은 SettingsModal과 통일(다크 오버레이 + 카드). 입력 규칙은 NicknameScreen과 동일(≤12자·비어있지 않음).
+// 입력 + '닉네임 뽑기'(랜덤) + 저장. 저장 시 세션·서버(game_users.nickname)에 반영(호출부에서 처리).
+// 시안(755:24): 흰 카드 320 r24·패딩 28/22/22(내용 276) — 제목 / 입력 묶음 / [취소][저장] 키캡 2버튼.
+// 입력 규칙·모양은 NicknameScreen과 완전히 공유(NicknameField).
 import { useState } from 'react';
-import { Refresh, CloseCircle } from '@solar-icons/react';
-import { TG, TYPE, TOUCH_OPT, RADIUS, SPACE } from '../tgTokens.js';
+import { TG, TYPE, TOUCH_OPT, RADIUS } from '../tgTokens.js';
 import { play as playSfx } from '../tgSfx.js';
-import { randomNickname, NICKNAME_MAX } from '../nickname.js';
+import { NICKNAME_MIN } from '../nickname.js';
+import { useKeyboardInset } from '../tgWidgets.jsx';
+import { NicknameField, cleanNickname } from './NicknameScreen.jsx';
+
+const CTA_RED = '#F96163', CTA_EDGE = '#E64244';
+const CANCEL_TEXT = '#7E8A94', CANCEL_EDGE = '#E4EDF5';
+const BTN = {
+  flex: 1, minWidth: 0, height: 60, borderRadius: RADIUS.xl, border: 'none', cursor: 'pointer', paddingBottom: 4,
+  display: 'flex', alignItems: 'center', justifyContent: 'center', ...TOUCH_OPT,
+};
 
 export function NicknameEditModal({ current = '', onSave, onClose }) {
-  const [value, setValue] = useState(() => (current || '').slice(0, NICKNAME_MAX));
+  const [value, setValue] = useState(() => cleanNickname(current || ''));
   const trimmed = value.trim();
-  const canSave = trimmed.length >= 1;
-  const reroll = () => { playSfx('button'); setValue(randomNickname()); };
+  const canSave = trimmed.length >= NICKNAME_MIN;
+  const kbInset = useKeyboardInset(); // 키보드가 뜨면 딤 영역을 그 위로 줄여 카드가 '보이는 영역' 안에서 가운데 오게
   const save = () => {
     if (!canSave) return;
     playSfx('button');
     onSave(trimmed);
     onClose();
   };
+  // 딤은 화면 전체를 덮은 채, 키보드 높이만큼 아래 패딩을 줘서 카드가 '키보드 위 영역'의 가운데로 온다.
+  //  (딤 자체를 줄이면 키보드 슬라이드 중 아래쪽이 잠깐 안 덮인다.) 남은 높이보다 카드가 크면 스크롤.
   return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(26,16,20,0.55)', backdropFilter: 'blur(2px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: SPACE.x4, ...TOUCH_OPT }}>
+    <div onClick={onClose} style={{
+      position: 'fixed', inset: 0, zIndex: 60,
+      background: 'rgba(26,16,20,0.55)', backdropFilter: 'blur(2px)', transition: 'padding-bottom .18s ease-out',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', overflowY: 'auto',
+      padding: 24, paddingBottom: kbInset + 24, ...TOUCH_OPT,
+    }}>
       <div className="tg-enter" onClick={(e) => e.stopPropagation()} style={{
-        width: '100%', maxWidth: 320, background: TG.CARD, borderRadius: RADIUS.xxl, padding: '20px 22px 22px',
-        boxShadow: '0 20px 50px rgba(26,16,20,0.3)', display: 'flex', flexDirection: 'column', gap: SPACE.x2,
+        width: '100%', maxWidth: 320, background: TG.CARD, borderRadius: RADIUS.xxl, padding: '28px 22px 22px',
+        boxShadow: '0 20px 50px rgba(26,16,20,0.3)', display: 'flex', flexDirection: 'column', gap: 30,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ ...TYPE.head, fontSize: 18, color: TG.INK }}>닉네임 변경</span>
-          <button onClick={onClose} aria-label="닫기" className="tg-press"
-            style={{ width: 44, height: 44, margin: -7, padding: 0, border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', ...TOUCH_OPT }}>
-            <CloseCircle size={28} weight="Bold" color={TG.SUB} />
-          </button>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <span style={{ ...TYPE.head, fontSize: 18, lineHeight: '28px', color: TG.INK }}>닉네임 변경</span>
+          {/* 안내문↔칩 간격은 시안대로 10(설정 화면은 20) */}
+          <NicknameField value={value} onChange={setValue} onSubmit={save} chipGap={10} />
         </div>
-        <div>
-          <input
-            value={value}
-            onChange={(e) => setValue(e.target.value.replace(/[\u0000-\u001f\u007f]/g, '').slice(0, NICKNAME_MAX))}
-            onKeyDown={(e) => { if (e.key === 'Enter') save(); }}
-            maxLength={NICKNAME_MAX}
-            placeholder="닉네임"
-            aria-label="닉네임"
-            enterKeyHint="done"
-            style={{
-              width: '100%', height: 52, borderRadius: RADIUS.lg, border: `1.5px solid ${TG.CORAL_BG}`,
-              background: '#fff', padding: '0 16px', ...TYPE.body,
-              color: TG.INK, outline: 'none', textAlign: 'center', ...TOUCH_OPT,
-            }}
-          />
-          <div style={{ marginTop: SPACE.lg, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <button onClick={reroll} className="tg-press" aria-label="닉네임 다시 뽑기" style={{
-              display: 'inline-flex', alignItems: 'center', gap: SPACE.sm, padding: '7px 12px', borderRadius: RADIUS.md,
-              background: '#fff', border: `1.5px solid ${TG.CORAL_BG}`, cursor: 'pointer', ...TOUCH_OPT,
-            }}>
-              <Refresh size={14} weight="Bold" color={TG.CORAL_DK} />
-              <span style={{ ...TYPE.labelSm, color: TG.INK }}>다시 뽑기</span>
-            </button>
-            <span style={{ ...TYPE.meta, color: TG.SUB, paddingRight: SPACE.xs }}>{trimmed.length}/{NICKNAME_MAX}</span>
-          </div>
-        </div>
-        <div style={{ display: 'flex', gap: SPACE.lg }}>
+        <div style={{ display: 'flex', gap: 10 }}>
           <button onClick={onClose} className="tg-press" style={{
-            flex: 1, height: 48, borderRadius: RADIUS.lg, border: '1.5px solid #ebe5de', background: '#fff', cursor: 'pointer',
-            ...TYPE.btnSm, color: TG.SUB, ...TOUCH_OPT,
-          }}>취소</button>
+            ...BTN, background: '#fff', boxShadow: `inset 0 -4px 0 ${CANCEL_EDGE}, 0 4px 18px rgba(43,39,48,0.07)`,
+          }}>
+            <span style={{ ...TYPE.head, color: CANCEL_TEXT }}>취소</span>
+          </button>
           <button onClick={save} disabled={!canSave} className="tg-press" style={{
-            flex: 1.4, height: 48, borderRadius: RADIUS.lg, border: 'none',
-            background: canSave ? TG.CORAL_DK : TG.BORDER, cursor: canSave ? 'pointer' : 'default',
-            ...TYPE.btnSm, color: canSave ? '#fff' : TG.MUTED, ...TOUCH_OPT,
-          }}>저장</button>
+            ...BTN, cursor: canSave ? 'pointer' : 'default', background: canSave ? CTA_RED : TG.BORDER,
+            boxShadow: canSave ? `inset 0 -4px 0 ${CTA_EDGE}, 0 4px 18px rgba(43,39,48,0.07)` : 'none',
+          }}>
+            <span style={{ ...TYPE.head, color: canSave ? '#fff' : TG.MUTED }}>저장</span>
+          </button>
         </div>
       </div>
     </div>
