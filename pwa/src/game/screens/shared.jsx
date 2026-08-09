@@ -3,12 +3,13 @@
 // 단어 카드/성조 버튼·카운트다운 비주얼·토스트·흔들림 버튼.
 // 참조 메모리: tone_game_redesign.md §5(단어카드)·§10-B(FigmaScreen)·§10-C(연출)
 import { useState, useEffect, useRef, useLayoutEffect } from 'react';
-import { Lock, CheckCircle, VolumeLoud, VolumeCross, SmartphoneVibration, CloseCircle, AltArrowLeft, Star, Eye } from '@solar-icons/react';
-import { TG, FONT_HANZI, FONT_PINYIN, TYPE, SHADOW, DUR, TOUCH_OPT, TONE_COLORS, TONE_KEY_COLORS, ASSETS,
-  haptic, isHapticMuted, setHapticMuted, isMeaningHidden, setMeaningHidden, isPinyinHidden, setPinyinHidden, RADIUS, SPACE } from '../tgTokens.js';
-import { ToneMark, ComboChip } from '../tgWidgets.jsx';
-import { TONES, DIFFICULTIES } from '../../constants/toneGameWords.js';
-import { play as playSfx, isSfxMuted, setSfxMuted } from '../tgSfx.js';
+import { DoubleAltArrowRight, Lock, CheckCircle, VolumeLoud, VolumeCross, AltArrowLeft, Star, Eye,
+  HandStars, NotebookBookmark, Home as HomeIcon, Cup, Stars } from '@solar-icons/react';
+import { TG, HOME, FONT_HANZI, FONT_PINYIN, TYPE, SHADOW, DUR, TOUCH_OPT, TONE_COLORS, TONE_KEY_COLORS, ASSETS,
+  haptic, isMeaningHidden, setMeaningHidden, isPinyinHidden, setPinyinHidden, RADIUS, SPACE } from '../tgTokens.js';
+import { ToneMark } from '../tgWidgets.jsx';
+import { TONES } from '../../constants/toneGameWords.js';
+import { play as playSfx } from '../tgSfx.js';
 import { classifyStroke } from '../toneDraw.js';
 
 // 카운트다운 슬라이드 가장자리 진폭 폭(px) — keyframes(tg-cd-out)와 CdWaveEdge가 공유.
@@ -130,13 +131,19 @@ function ConfettiBurstInner({ colors = CONFETTI_COLORS, count = 16, power = 1, s
   useLayoutEffect(() => {
     let raf, alive = true, last = performance.now();
     const GRAV = 0.19, DRAG = 0.985;
+    // ★수명은 **벽시계(ms)**, 이동 적분만 프레임 정규화 dt.
+    //   구버전은 나이도 dt(프레임)로 쌓아, 프레임률이 떨어지면 수명까지 같이 늘어나 색종이가
+    //   슬로모션으로 화면에 남았다(업적 모달이 연달아 뜨는 순간에 발사 지점 높이에 줄지어 멈춤 —
+    //   2026-08-08 사용자 지적). 이제 프레임이 아무리 튀어도 정해진 시간에 사라진다.
+    const MS_PER_FRAME = 16.667;
     const tick = (now) => {
       if (!alive) return;
-      const dt = Math.min(2.2, (now - last) / 16.667); last = now;
+      const rawMs = Math.max(0, now - last); last = now;
+      const dt = Math.min(3, rawMs / MS_PER_FRAME); // 이동은 한 프레임에 3프레임분까지만(순간이동 방지)
       let anyAlive = false;
       for (let k = 0; k < cfg.current.length; k++) {
         const el = refs.current[k]; const s = cfg.current[k]; if (!el) continue;
-        s.age += dt;
+        s.age += rawMs / MS_PER_FRAME; // 나이는 클램프 없이 실제 경과분 그대로
         if (s.age < s.life) anyAlive = true;
         const drag = Math.pow(DRAG, dt);
         s.vx *= drag; s.vy = s.vy * drag + GRAV * dt;    // 공기저항 + 중력
@@ -152,7 +159,14 @@ function ConfettiBurstInner({ colors = CONFETTI_COLORS, count = 16, power = 1, s
       if (anyAlive) raf = requestAnimationFrame(tick); // 전부 소멸하면 rAF 정지(perf)
     };
     raf = requestAnimationFrame(tick);
-    return () => { alive = false; cancelAnimationFrame(raf); };
+    // 안전장치 — rAF가 아예 멈춘 구간(탭 비활성·긴 작업)에서는 위 루프가 돌지 않아 조각이 그 자리에 얼어붙는다.
+    //  타이머는 그래도 발화하므로, 최대 수명이 지나면 무조건 지운다.
+    const maxLifeMs = cfg.current.reduce((m, s) => Math.max(m, s.life), 0) * MS_PER_FRAME + 250;
+    const kill = setTimeout(() => {
+      alive = false; cancelAnimationFrame(raf);
+      refs.current.forEach((el) => { if (el) el.style.opacity = '0'; });
+    }, maxLifeMs);
+    return () => { alive = false; cancelAnimationFrame(raf); clearTimeout(kill); };
   }, []);
   return (
     <div aria-hidden="true" style={{ position: 'absolute', left: '50%', top: '50%', width: 0, height: 0, pointerEvents: 'none', zIndex, ...style }}>
@@ -170,6 +184,10 @@ function ConfettiBurstInner({ colors = CONFETTI_COLORS, count = 16, power = 1, s
 // ── keyframes / 글로벌 게임 스타일 ─────────────────────
 // FigmaScreen마다 <style>이 중복 주입돼 화면 전환 중 시트가 2벌 존재하던 것 → 모듈 로드 시 document.head에 1회만 주입.
 const TONE_GAME_CSS = `
+      /* 감탄로드 탄탄체 — 타이틀 리디자인(2026-07-28) 필·안내문용. 상업용 무료(강원특별자치도×투게더그룹), fonts-archive CDN */
+      @font-face { font-family: 'GamtanRoad Tantan'; font-weight: normal; font-display: swap;
+        src: url('https://cdn.jsdelivr.net/gh/fonts-archive/GamtanRoadTantan/GamtanRoadTantan.woff2') format('woff2'),
+             url('https://cdn.jsdelivr.net/gh/fonts-archive/GamtanRoadTantan/GamtanRoadTantan.woff') format('woff'); }
       @keyframes tg-shake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-6px)} 40%{transform:translateX(6px)} 60%{transform:translateX(-4px)} 80%{transform:translateX(4px)} }
       @keyframes tg-pulse { 0%,100%{opacity:.35} 50%{opacity:.9} }
       @keyframes tg-heartbeat { 0%,100%{transform:scale(1)} 28%{transform:scale(1.2)} 42%{transform:scale(1)} 58%{transform:scale(1.12)} 72%{transform:scale(1)} }
@@ -186,10 +204,33 @@ const TONE_GAME_CSS = `
       /* 착탄 임팩트 팝 — 이미 보이는 글자가 사라지지 않고 그 자리에서 튀어오름(발사체 착탄용, opacity 무변) */
       @keyframes tg-pop-impact { 0%{transform:scale(1)} 55%{transform:scale(1.24)} 100%{transform:scale(1)} }
       @keyframes tg-float { 0%{transform:translateY(0) scale(.9);opacity:0} 20%{opacity:1} 100%{transform:translateY(-28px) scale(1.05);opacity:0} }
-      @keyframes tg-enter { 0%{transform:translateY(10px);opacity:0} 100%{transform:translateY(0);opacity:1} }
+      /* 단발 등장(로고·카드 등) — tg-rise와 같은 결이되 오버슛 없이. blur만으로도 스톡 페이드업 감이 빠진다 */
+      @keyframes tg-enter { 0%{transform:translateY(4px);opacity:0;filter:blur(4px)} 100%{transform:translateY(0);opacity:1;filter:blur(0)} }
       @keyframes tg-count { 0%{transform:scale(.4);opacity:0} 45%{transform:scale(1.06);opacity:1} 100%{transform:scale(1);opacity:1} }
       @keyframes tg-touch { 0%,100%{opacity:.5} 50%{opacity:1} }
       @keyframes tg-ripple { 0%{transform:translate(-50%,-50%) scale(.5);opacity:.4} 70%{opacity:.1} 100%{transform:translate(-50%,-50%) scale(2);opacity:0} }
+      /* 그리기 예시 획(튜토리얼 전용) — 성조 곡선이 스스로 그려졌다가 잠깐 머문 뒤 사라지고 반복.
+         dasharray는 어떤 성조 path보다 긴 고정값(200)이라 길이 계산 없이 '그려지는' 연출이 된다. */
+      @keyframes tg-demo-stroke { 0%{stroke-dashoffset:200;opacity:0} 8%{opacity:1} 55%{stroke-dashoffset:0;opacity:1} 82%{stroke-dashoffset:0;opacity:1} 100%{stroke-dashoffset:0;opacity:0} }
+      /* 연출 동심원(RevealRings) — In: 안쪽부터 퍼지는 충격파(살짝 오버슛) · Idle: 아주 느린 호흡.
+         ★두 애니메이션 모두 transform을 쓰므로 **목록 뒤쪽(idle)이 delay 후 앞쪽(in)을 넘겨받는** 방식으로 이어 붙인다.
+           in에 both(fill)를 줘야 idle 시작 전까지 최종 scale(1)이 유지된다. */
+      @keyframes tg-ring-in { 0%{opacity:0;transform:scale(.55)} 70%{opacity:1;transform:scale(1.045)} 100%{opacity:1;transform:scale(1)} }
+      @keyframes tg-ring-idle { 0%,100%{transform:scale(1)} 50%{transform:scale(1.032)} }
+      /* 스플래시 성조 캐릭터 파도타기 — 옆으로 차례차례 넘어가는 웨이브(캐릭터마다 delay만 다르게) */
+      @keyframes tg-wave { 0%,55%,100%{transform:translateY(0)} 25%{transform:translateY(-13px)} }
+      /* 로딩 문구의 '...' — 점이 하나씩 켜졌다 함께 꺼지며 반복 */
+      @keyframes tg-ellipsis { 0%,82%,100%{opacity:0} 26%,72%{opacity:1} }
+      /* 비트/연출 퇴장 — 딤은 루트가 페이드, 콘텐츠는 살짝 오므라들며 빠진다(등장 팝의 반대) */
+      @keyframes tg-beat-out { from{opacity:1;transform:translateY(0) scale(1);filter:blur(0)} to{opacity:0;transform:translateY(-6px) scale(.985);filter:blur(4px)} }
+      /* ── 아이콘 의미별 등장(2026-08-08) ──────────────────────────────
+         아이콘이 **그 순간의 주인공**인 자리에만 건다(연출·비트·결과 통계).
+         탭바·업적 목록처럼 상시 노출되는 곳엔 쓰지 말 것 — 아이콘마다 다른 모션이 겹치면 산만해진다.
+         ★타이밍 규칙: 300ms 안팎으로 **짧고 딱 끊기게**. 500~600ms로 늘리면 같은 동작도 물렁해 보인다. */
+      @keyframes tg-ic-flame  { 0%{opacity:0;transform:translateY(7px) scale(.86,.5)} 50%{opacity:1;transform:translateY(-2px) scale(1.02,1.12)} 100%{opacity:1;transform:translateY(0) scale(1,1)} }
+      @keyframes tg-ic-bolt   { 0%{opacity:0;transform:scale(.4) rotate(-16deg)} 26%{opacity:1;transform:scale(1.22) rotate(6deg)} 44%{transform:scale(.94) rotate(-3deg)} 100%{opacity:1;transform:scale(1) rotate(0)} }
+      @keyframes tg-ic-trophy { 0%{opacity:0;transform:translateY(-18px) scale(.9)} 52%{opacity:1;transform:translateY(3px) scale(1.04)} 76%{transform:translateY(-2px) scale(1)} 100%{opacity:1;transform:translateY(0) scale(1)} }
+      @keyframes tg-ic-medal  { 0%{opacity:0;transform:scale(.55) rotate(-14deg)} 55%{opacity:1;transform:scale(1.12) rotate(6deg)} 100%{opacity:1;transform:scale(1) rotate(0)} }
       @keyframes tg-bob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-5px)} }
       @keyframes tg-hop { 0%,100%{transform:translateY(0)} 38%{transform:translateY(-15px)} }
       @keyframes tg-blinkeye { 0%,90%,100%{transform:scaleY(1)} 95%{transform:scaleY(.1)} }
@@ -211,10 +252,24 @@ const TONE_GAME_CSS = `
       .tg-caret::after { content:'|'; margin-left:1px; opacity:.8; animation: tg-blink .8s step-end infinite }
       @keyframes tg-blink { 50%{opacity:0} }
       @keyframes tg-timer { from{width:100%} to{width:0%} }
-      @keyframes tg-rise { from{opacity:0; transform:translateY(14px)} to{opacity:1; transform:translateY(0)} }
+      /* 요소 등장 — ★**빈도로 판단한다**(emil-design-eng 애니메이션 결정 프레임워크).
+         이 모션은 홈·결과·난이도·목록 등 **하루에 수십 번** 보는 자리에 붙는다 → "제거하거나 대폭 줄여라"에 해당.
+         축하용 타이밍(460ms·오버슛·blur 6)을 매번 보는 곳에 쓴 게 무겁고 촌스럽던 원인(2026-08-08 사용자).
+         → 오버슛 제거, blur 3까지만, **170ms**. 자주 보는 모션은 '느껴지지 않는' 게 정답이다.
+         delight는 드물게 보는 자리(비트·연출·축하)에만 남긴다. */
+      @keyframes tg-rise {
+        0%   { opacity:0; transform:translateY(4px); filter:blur(3px) }
+        100% { opacity:1; transform:translateY(0); filter:blur(0) }
+      }
+      /* 탭 화면 진입 — 화면 전체가 한 덩어리로 아주 살짝 떠오르며 페이드(요소 스태거보다 먼저 깔리는 바탕 모션) */
+      @keyframes tg-screen-in { from{opacity:0; transform:translateY(8px)} to{opacity:1; transform:translateY(0)} }
       @keyframes tg-toast { 0%{opacity:0; transform:translateY(8px)} 12%{opacity:1; transform:translateY(0)} 86%{opacity:1; transform:translateY(0)} 100%{opacity:0; transform:translateY(-4px)} }
       /* 타이틀 로고 효과 */
       @keyframes tg-logo-pop { 0%{opacity:0; transform:scale(.7)} 60%{opacity:1; transform:scale(1.05)} 100%{opacity:1; transform:scale(1)} }
+      @keyframes tg-smoke-rise { 0%{transform:translate(-2px,-6px) scale(.18); opacity:0} 12%{opacity:.95} 100%{transform:translate(-27px,-74px) scale(1); opacity:0} }
+      @keyframes tg-smoke-sway { from{transform:translateX(-6px)} to{transform:translateX(6px)} }
+      @keyframes tg-leaf-fall { 0%{transform:translate(-40px,-6vh) rotate(0deg)} 100%{transform:translate(150px,105vh) rotate(340deg)} }
+      @keyframes tg-leaf-sway { from{transform:translateX(-18px)} to{transform:translateX(18px)} }
       /* 브랜드 스플래시 컷(제작사 오프닝) — 페이드 인 → 유지 → 페이드 아웃 */
       @keyframes tg-brandcut { 0%{opacity:0; transform:scale(.94)} 22%{opacity:1; transform:scale(1)} 78%{opacity:1; transform:scale(1)} 100%{opacity:0; transform:scale(1.02)} }
       @keyframes tg-shine { 0%{background-position:160% 0} 22%{background-position:-60% 0} 100%{background-position:-60% 0} }
@@ -235,15 +290,21 @@ const TONE_GAME_CSS = `
       @media (prefers-reduced-motion: reduce){ .tg-lianyin-stroke{ stroke-dashoffset:0; animation:none !important } .tg-lianyin-barb{ opacity:1; animation:none !important } }
       /* 3성 변조 — 칩이 뒤집히듯 2성으로 팝(변화를 확실히 '느끼게') + 위로 뜨는 '→ 2성' 큐 */
       @keyframes tg-sandhi-pop { 0%{transform:rotateX(82deg) scale(.82)} 55%{transform:rotateX(0) scale(1.22)} 78%{transform:scale(.96)} 100%{transform:scale(1)} }
-      @keyframes tg-sandhi-cue { 0%{opacity:0;transform:translate(-50%,6px) scale(.85)} 22%{opacity:1;transform:translate(-50%,-7px) scale(1.05)} 70%{opacity:1;transform:translate(-50%,-12px)} 100%{opacity:0;transform:translate(-50%,-26px)} }
-      .tg-reveal{ animation: tg-rise .4s cubic-bezier(.22,1,.36,1) both }
+      /* 등장 이징 — 초반에 빠르게 붙고 끝이 길게 안착(ease-out-expo 계열). 탭 화면·요소가 같은 곡선을 쓴다. */
+      /* 이징은 강한 ease-out 하나로 통일 — 내장 easing은 약해서 의도가 안 읽히고, ease-in은 시작이 느려 굼떠 보인다 */
+      .tg-reveal{ animation: tg-rise .17s cubic-bezier(.23,1,.32,1) both }
+      .tg-screen{ animation: tg-screen-in .2s cubic-bezier(.23,1,.32,1) both }
+      /* sticky 요소용 — transform을 쓰면 position:sticky가 죽으므로 '페이드만' 하는 등장 */
+      @keyframes tg-fade-in { from{opacity:0} to{opacity:1} }
+      .tg-fade{ animation: tg-fade-in .34s ease both }
       .tg-toast{ animation: tg-toast 1.7s ease both }
-      @media (prefers-reduced-motion: reduce){ .tg-reveal{ animation: none !important } }
+      @media (prefers-reduced-motion: reduce){ .tg-reveal, .tg-screen, .tg-fade{ animation: none !important } }
       .tg-shake{ animation: tg-shake .42s ease }
       .tg-enter{ animation: tg-enter .36s cubic-bezier(.22,1,.36,1) both }
       /* 누를 땐 빠르게 쏙 들어가고(.09s), 뗄 땐 살짝 튕기며 부드럽게 복귀(back-out 스프링) */
-      .tg-press{ transition: transform .28s cubic-bezier(0.34,1.56,0.64,1) }
-      .tg-press:active{ transform: scale(.95); transition: transform .09s ease-out }
+      /* 누름 피드백 — 하루에 수백 번. 복귀가 280ms면 손을 뗀 뒤에도 버튼이 늘어져 굼떠 보인다 → 140ms(권장 100~160) */
+      .tg-press{ transition: transform .14s cubic-bezier(.23,1,.32,1) }
+      .tg-press:active{ transform: scale(.96); transition: transform .09s cubic-bezier(.23,1,.32,1) }
       .tg-root, .tg-root *, .tg-root *::before, .tg-root *::after { box-sizing: border-box; }
       .tg-noscroll::-webkit-scrollbar { display: none; }
 `;
@@ -268,15 +329,122 @@ export function ToneGameStyles() {
 // → 화면 폭이 넓어지면 요소가 넓어지고, 세로가 길어지면 상단·하단이 벌어지며 채워짐(잘림 없음).
 // 상단 safe-area: 컬럼을 노치 아래에서 시작(top=safe-top)시켜 상단 요소(top:20 등)가 상태바에 안 가리게.
 //   배경(bgImage)은 root(inset:0)라 노치까지 덮음. 하단은 각 CTA가 env(safe-area-inset-bottom)로 개별 처리.
-export function FigmaScreen({ children, bg = TG.BG, bgImage }) {
-  return (
-    <div className="tg-root" style={{ position: 'fixed', inset: 0, background: bg, overflow: 'hidden' }}>
-      <ToneGameStyles />
-      {/* 배경을 화면 전체에 깔아 여백까지 채움 */}
+// 레터박스(마스킹 영역 밖)는 전 화면 공통 고정색(TG.BG) — 화면별 bg는 컨테이너 '안'에만 칠함(2026-07-29)
+// 게임 화면 컬럼 최대 폭 — 데스크톱에서 세로 9:16 유지. 화면전환(TxLayer)도 같은 값을 써야 '창 전체가 움직이는' 느낌이 안 난다.
+export const TG_COL_MAXW = 'min(600px, 56.25vh)';
+// enter — 탭 화면 진입 모션(페이드 + 8px 상승). 컬럼 div는 translateX(-50%) 정렬 transform을 쓰므로
+//   애니메이션은 **안쪽 래퍼**에 건다(keyframes가 정렬 transform을 덮어쓰는 함정 회피).
+export function FigmaScreen({ children, bg = TG.BG, bgImage, enter = false }) {
+  // 안전영역 래퍼 — 화면 콘텐츠(절대좌표)는 예전처럼 노치 **아래**에서 시작한다.
+  //  ★이 래퍼엔 transform을 절대 주지 말 것. transform이 붙으면 이게 fixed의 기준 박스가 되어
+  //   모달·시트가 노치 높이만큼 짧은 박스 안에서 가운데 정렬 → iOS에서 아래로 쏠린다(2026-08-06 사용자 지적).
+  const inner = (
+    <div style={{ position: 'absolute', top: 'env(safe-area-inset-top)', bottom: 0, left: 0, right: 0, background: bg, overflow: 'hidden' }}>
       {bgImage && <img src={bgImage} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', pointerEvents: 'none' }} />}
-      <div style={{ position: 'absolute', top: 'env(safe-area-inset-top)', bottom: 0, left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: 600 }}>
-        {children}
+      {children}
+    </div>
+  );
+  return (
+    <div className="tg-root" style={{ position: 'fixed', inset: 0, background: TG.BG, overflow: 'hidden' }}>
+      <ToneGameStyles />
+      {/* 웹(데스크톱)에선 세로 16:9(=9:16) 비율로 제한 — 폭 = min(600px, 화면높이×9/16). 모바일 세로 화면은 기존 그대로(100%).
+          overflow hidden = 9:16 영역 마스킹 — 와이드 장식(타이틀 동산·홈 배경 등)이 레터박스로 새지 않게.
+          ★컬럼(과 enter 래퍼)은 **화면 전체 높이** — 안쪽 fixed 모달이 이 박스를 기준으로 잡히므로 여기서 노치를 빼면 안 된다. */}
+      <div style={{ position: 'absolute', top: 0, bottom: 0, left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: TG_COL_MAXW, overflow: 'hidden' }}>
+        {enter ? <div className="tg-screen" style={{ position: 'absolute', inset: 0 }}>{inner}</div> : inner}
       </div>
+    </div>
+  );
+}
+
+// ── 연출 무대 ─────────────────────────────────────────
+// 연출들은 시안 390×844 프레임의 **절대 y좌표**를 그대로 쓴다(top: 327 등).
+//  화면이 844보다 짧으면(iOS 인앱 브라우저 등) 그 좌표가 전부 아래쪽으로 쏠려 보인다.
+//  → 844 높이의 무대를 화면 세로 중앙에 놓고 그 안에서 시안 좌표를 쓰면, 짧은 화면에서도 구도가 가운데 유지된다.
+export const STAGE_H = 844;
+export function RevealStage({ children, style }) {
+  return (
+    <div style={{ position: 'absolute', left: 0, right: 0, top: '50%', height: STAGE_H, transform: 'translateY(-50%)', ...style }}>
+      {children}
+    </div>
+  );
+}
+
+// ── 비트 공용 딤 ────────────────────────────────────────
+// 종료 체인(게임오버/신기록 → XP → 등급승급 → 모드해제)은 비트가 **연달아** 뜨는데, 예전엔 각 비트가
+// 자기 딤을 갖고 있어 앞 비트가 300ms 페이드아웃 → 다음 비트가 즉시/페이드인 하며 **사이가 밝아졌다 다시 어두워졌다**
+// (2026-08-08 사용자 지적 "비트가 이어지면 딤이 깜빡거리면 안 될 것 같은데").
+//   → 딤을 비트 **밖 한 겹**으로 올려, 체인이 시작될 때 한 번 켜지고 끝날 때 한 번 꺼지게 한다.
+//   체인에 속한 비트들은 배경을 투명으로 두고 콘텐츠만 그린다.
+const BEAT_DIM_OUT_MS = 300;
+export function BeatDim({ active, zIndex = 118 }) {
+  const [shown, setShown] = useState(active);
+  useEffect(() => {
+    if (active) { setShown(true); return undefined; }
+    const t = setTimeout(() => setShown(false), BEAT_DIM_OUT_MS);
+    return () => clearTimeout(t);
+  }, [active]);
+  if (!shown) return null;
+  return (
+    <div aria-hidden="true" style={{
+      position: 'fixed', inset: 0, zIndex, pointerEvents: 'none',
+      background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
+      animation: active ? 'tg-dim-in .35s ease both' : `tg-fade-out ${BEAT_DIM_OUT_MS}ms ease forwards`,
+    }} />
+  );
+}
+
+// ── 비트/연출 콘텐츠 레이어 ─────────────────────────────
+// 비트 오버레이는 닫힐 때 루트가 페이드아웃하지만 **콘텐츠는 제자리에 그대로** 있어 등장만 있고 퇴장이 없었다
+// (2026-08-08 사용자 요청). 이 레이어가 닫힘 순간 콘텐츠만 살짝 오므리며 빠지게 한다.
+//   ★자체 transform(translate 등)을 가진 콘텐츠 위에 덧씌우면 키프레임이 그걸 덮으므로, **한 겹 밖**에서 감싼다.
+//   각 비트의 closing 후 onDone까지가 ≈300ms라 그 안에 끝나는 260ms.
+export function BeatContent({ closing = false, children }) {
+  const out = closing && !prefersReducedMotion();
+  return (
+    <div data-beat-content={closing ? 'out' : 'in'} style={{
+      position: 'absolute', inset: 0, transformOrigin: '50% 50%',
+      // 퇴장도 ease-out — ease-in은 시작이 느려 '끌려 나가는' 느낌을 준다(UI 애니메이션에 ease-in 금지)
+      ...(out ? { animation: 'tg-beat-out 170ms cubic-bezier(.23,1,.32,1) forwards' } : null),
+    }}>
+      {children}
+    </div>
+  );
+}
+
+// ── 연출 동심원 배경 (2026-08-07 시안 개편) ─────────────
+// 승급시험·신기록·모드해제·등급승급 **연출 5종이 공유**하는 배경. 딤 위에 검정 20% 원 3겹을 화면 정중앙에
+// 겹쳐 안쪽으로 갈수록 어두워지는 과녁을 만든다(시안: 지름 246 / 394 / 542, 중심 = 프레임 정중앙 195,422).
+//   ★딤(오버레이 자신의 background) 바로 위·콘텐츠 아래에 오도록 **오버레이의 첫 자식**으로 둘 것.
+//   ⚠️ 글로우/그림자 없음 — 시안의 drop shadow는 전부 visible:false(꺼둔 이펙트)다. 넣지 말 것(2026-08-08).
+// 모션(2026-08-08 사용자 요청) — In: 안쪽 원부터 차례로 퍼지는 충격파. Idle: 그 뒤 아주 느린 호흡이 바깥으로 번진다.
+//   DOM 순서는 바깥→안(큰 원이 먼저 그려져야 안쪽 원이 위에 겹친다)이라, 지연은 **지름이 작을수록 먼저**로 계산한다.
+const REVEAL_RING_D = [542, 394, 246];
+// 타이밍은 짧게 — 560/110은 과녁이 느릿하게 열려 물렁했다(2026-08-08). Idle은 배경 호흡이라 길게 유지.
+const RING_IN_MS = 380, RING_STEP_MS = 70, RING_IDLE_MS = 4200;
+// tone — 'dark'(연출 5종, 어두운 딤 위 검정 20%) | 'light'(스플래시, 크림 배경 위 흰색 50%)
+export function RevealRings({ tone = 'dark' }) {
+  const still = prefersReducedMotion();
+  const ringBg = tone === 'light' ? 'rgba(255,255,254,0.5)' : 'rgba(0,0,0,0.2)';
+  return (
+    <div aria-hidden="true" style={{
+      position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+      pointerEvents: 'none', overflow: 'hidden',
+    }}>
+      {REVEAL_RING_D.map((d, i) => {
+        const order = REVEAL_RING_D.length - 1 - i; // 안쪽(246)=0 → 가장 먼저
+        const inDelay = order * RING_STEP_MS;
+        return (
+          <span key={d} style={{
+            position: 'absolute', width: d, height: d, borderRadius: '50%', background: ringBg,
+            ...(still ? null : {
+              animation: `tg-ring-in ${RING_IN_MS}ms cubic-bezier(.22,1,.36,1) ${inDelay}ms both,`
+                + ` tg-ring-idle ${RING_IDLE_MS}ms ease-in-out ${inDelay + RING_IN_MS}ms infinite`,
+              willChange: 'transform',
+            }),
+          }} />
+        );
+      })}
     </div>
   );
 }
@@ -285,11 +453,13 @@ export function FigmaScreen({ children, bg = TG.BG, bgImage }) {
 // 바깥 div = 기존 위치/정렬(absolute·translateX 등) 그대로, 안쪽 div = 아래서 페이드업(tg-rise).
 // → 정렬 transform과 등장 transform이 다른 노드라 충돌 없음. i 순서대로 시차(base+i*step ms).
 // play=false면 숨김 유지(opacity0) — 게임화면처럼 '특정 시점부터' 등장시킬 때 사용.
-export function Reveal({ i = 0, base = 80, step = 70, play = true, style, children }) {
+// ★시차는 STAGGER_CAP까지만 늘린다 — 요소가 많은 화면에서 아래쪽이 하염없이 늦게 뜨는 '늘어짐' 방지(2026-08-06).
+const STAGGER_CAP = 5;
+export function Reveal({ i = 0, base = 20, step = 35, play = true, style, children }) {
   return (
     <div style={style}>
       <div className={play ? 'tg-reveal' : undefined}
-        style={play ? { animationDelay: `${base + i * step}ms` } : { opacity: 0 }}>
+        style={play ? { animationDelay: `${base + Math.min(i, STAGGER_CAP) * step}ms` } : { opacity: 0 }}>
         {children}
       </div>
     </div>
@@ -311,18 +481,32 @@ export function BackButton({ onClick, style }) {
 // 게임 화면 공용 헤더 — 상단 고정 뒤로가기 + 타이틀 + 우측 슬롯(옵션). 모드·테마·난이도·등급·업적 등 공통.
 //   솔리드 바가 상태바(노치)까지 덮음: 바는 FigmaScreen 콘텐츠(세이프에어리어만큼 내려옴) 위로 -inset만큼 끌어올려 채운다.
 //   52px 밴드에 40px 내용 세로중앙(위아래 6). 타이틀은 넘치면 말줄임. 바(z3, DOM 먼저)>스크롤러(z2), 내용(z3, 나중)이 바 위.
-export function GameHeader({ title, onBack, right = null, bg = '#fff' }) {
+// glass — 시안 "04. 모드선택"(643:1617) 헤더: 높이 60 · 반투명 크림(#FFFDF8 50%) + 배경 블러 10 · 하선 없음.
+// center — 타이틀을 헤더 가운데 정렬(뒤로가기는 왼쪽 고정). glass와 별개로 켤 수 있다.
+// z — 튜토리얼처럼 딤(zIndex 5) 위에 헤더를 올려야 하는 화면에서 상향(기본 3).
+export function GameHeader({ title, onBack, right = null, bg = '#fff', glass = false, center = false, z = 3 }) {
+  const H = glass ? 60 : 52;
   return (
     <>
       <div aria-hidden="true" style={{
         position: 'absolute', top: 'calc(-1 * env(safe-area-inset-top))', left: 0, right: 0,
-        height: 'calc(52px + env(safe-area-inset-top))', zIndex: 3, pointerEvents: 'none',
-        background: bg, borderBottom: '1px solid rgba(43,39,48,0.06)',
+        height: `calc(${H}px + env(safe-area-inset-top))`, zIndex: z, pointerEvents: 'none',
+        background: glass ? 'rgba(255,253,248,0.5)' : bg,
+        backdropFilter: glass ? 'blur(10px)' : undefined,
+        WebkitBackdropFilter: glass ? 'blur(10px)' : undefined,
+        borderBottom: glass ? 'none' : '1px solid rgba(43,39,48,0.06)',
       }} />
-      <Reveal i={0} style={{ position: 'absolute', left: 24, top: 6, right: 24, zIndex: 3 }}>
-        <div style={{ height: 40, display: 'flex', gap: SPACE.md, alignItems: 'center' }}>
-          <BackButton onClick={onBack} />
-          <span style={{ flex: 1, minWidth: 0, ...TYPE.head, color: TG.INK, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{title}</span>
+      <Reveal i={0} style={{ position: 'absolute', left: 24, top: (H - 40) / 2, right: 24, zIndex: z }}>
+        <div style={{ position: 'relative', height: 40, display: 'flex', gap: SPACE.md, alignItems: 'center' }}>
+          {/* 뒤로가기 없는 화면(시안 12 결과 등)은 onBack을 안 넘긴다 — center 정렬은 버튼 유무와 무관 */}
+          {onBack && <BackButton onClick={onBack} />}
+          {center ? (
+            // 가운데 정렬 — 뒤로가기/우측 요소와 겹치지 않게 좌우 40px 여백 안에서 가운데(포인터 통과)
+            <span style={{ position: 'absolute', left: 40, right: 40, textAlign: 'center', pointerEvents: 'none', ...TYPE.head, color: TG.INK, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{title}</span>
+          ) : (
+            <span style={{ flex: 1, minWidth: 0, ...TYPE.head, color: TG.INK, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{title}</span>
+          )}
+          {center && <span style={{ flex: 1 }} />}
           {right}
         </div>
       </Reveal>
@@ -359,17 +543,59 @@ export function StarRow({ filled = 0, total = 3, size = 16, gap = 3, on = TG.SUN
 }
 
 // 공용 모달 셸 — 고정 딤 오버레이(백드롭 탭 닫기) + tg-enter 카드. 게임 모달들의 동일한 껍데기를 통일.
-//   기본값 = 표준 안내 모달(322·radius28·padding28/24/20·gap16·가운데정렬). 차이나는 모달은 prop으로 오버라이드.
-export function ModalCard({ onClose, zIndex = 60, maxWidth = 322, radius = 28, padding = '28px 24px 20px', gap = 16, align = 'center', children }) {
+//   기본값 = **시안 표준 안내 모달**(330 · r24 · padding 28/22/22 · gap 16 · 가운데정렬, 2026-08-06 전 모달 통일).
+export function ModalCard({ onClose, zIndex = 60, maxWidth = 330, radius = 24, padding = '28px 22px 22px', gap = 16, align = 'center', children }) {
   return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex, background: 'rgba(26,16,20,0.55)', backdropFilter: 'blur(2px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: SPACE.x4, ...TOUCH_OPT }}>
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(2px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: SPACE.x4, ...TOUCH_OPT }}>
       <div className="tg-enter" onClick={(e) => e.stopPropagation()} style={{
         width: '100%', maxWidth, background: TG.CARD, borderRadius: radius, padding,
-        boxShadow: '0 20px 50px rgba(26,16,20,0.3)', display: 'flex', flexDirection: 'column', alignItems: align, gap,
+        boxShadow: '0px 4px 18px rgba(43,39,48,0.07)', display: 'flex', flexDirection: 'column', alignItems: align, gap,
       }}>
         {children}
       </div>
     </div>
+  );
+}
+
+// ── 안내 모달 구성요소(시안 2026-08-06 통일 규격) ─────────
+// 배지 72 r24(모달별 색) + 아이콘 38 흰색 · 간격 10 · 제목 24 Bold(라인 29)
+export function ModalHead({ Icon, badgeBg, iconColor = '#fff', title }) {
+  return (
+    <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: SPACE.lg }}>
+      <div style={{ width: 72, height: 72, borderRadius: RADIUS.xxl, background: badgeBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+        <Icon size={38} weight="Bold" color={iconColor} />
+      </div>
+      <span style={{ ...TYPE.head, fontSize: 24, lineHeight: '29px', color: TG.INK, textAlign: 'center' }}>{title}</span>
+    </div>
+  );
+}
+// 본문 — 14 Regular(라인 22) 회색, 가운데. 줄바꿈은 배열로 넘긴다(시안 줄바꿈 위치 고정).
+export function ModalBody({ lines }) {
+  return (
+    <div style={{ width: '100%', ...TYPE.body, fontWeight: 400, fontSize: 14, lineHeight: '22px', color: '#7E8A94', textAlign: 'center' }}>
+      {lines.map((l, i) => <div key={i}>{l}</div>)}
+    </div>
+  );
+}
+// 키캡 CTA — 60 r20 + 하단 인너 엣지 4px(모달 공통). 아이콘은 있으면 라벨 오른쪽 8 간격.
+export function KeycapCta({ bg = '#F96163', edge = '#E64244', label, Icon, onClick }) {
+  return (
+    <button className="tg-press" onClick={onClick} style={{
+      width: '100%', height: 60, borderRadius: RADIUS.xl, border: 'none', cursor: 'pointer', paddingBottom: 4,
+      background: bg, boxShadow: `0px 4px 18px rgba(43,39,48,0.07), inset 0 -4px 0 ${edge}`,
+      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: SPACE.md, ...TOUCH_OPT,
+    }}>
+      <span style={{ ...TYPE.head, color: '#fff' }}>{label}</span>
+      {Icon && <Icon size={18} weight="Bold" color="#fff" />}
+    </button>
+  );
+}
+// 보조 텍스트 버튼 — '닫기'/'나중에' 등. 14 Bold 회색(라인 24).
+export function ModalTextButton({ label = '닫기', color = '#7E8A94', onClick }) {
+  return (
+    <button className="tg-press" onClick={onClick} style={{ width: '100%', padding: 0, background: 'none', border: 'none', cursor: 'pointer', ...TOUCH_OPT }}>
+      <span style={{ ...TYPE.label, lineHeight: '24px', color }}>{label}</span>
+    </button>
   );
 }
 
@@ -440,12 +666,9 @@ function SandhiToneChip({ big = false }) {
   const c3 = TONES.find((t) => t.num === 3)?.color ?? TG.INK;
   const c2 = TONES.find((t) => t.num === 2)?.color ?? TG.INK;
   return (
+    // ★위로 떠오르던 '→ 2성' 큐는 제거(2026-08-06 사용자 결정) — 칩 바로 위가 '뜻' 줄이라 큐가 그 줄을 지나가 겹쳤다.
+    //  변화 신호는 칩 자체(ˇ→／ 마크·색·라벨이 3성→2성으로 뒤집힘) + 카드 하단 규칙 문구가 담당한다.
     <span style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', overflow: 'visible' }}>
-      {/* 변조 순간 위로 뜨는 큐 — 변화를 놓치지 않게 */}
-      {to2 && !reduce && (
-        <span aria-hidden="true" style={{ position: 'absolute', bottom: '108%', left: '50%', whiteSpace: 'nowrap',
-          ...TYPE.labelSm, fontSize: big ? 12 : 11, fontWeight: 800, color: c2, animation: 'tg-sandhi-cue 1.1s ease-out forwards', pointerEvents: 'none' }}>→ 2성</span>
-      )}
       <span key={to2 ? '2' : '3'} style={{ display: 'inline-flex', alignItems: 'center', gap: SPACE.xs, padding: '3px 8px', borderRadius: RADIUS.pill,
         background: to2 ? c2 : c3, color: '#fff', transition: 'background .35s ease', transformStyle: 'preserve-3d',
         animation: reduce ? 'none' : (to2 ? 'tg-sandhi-pop .52s cubic-bezier(.34,1.7,.5,1) both' : 'tg-pop .3s cubic-bezier(.34,1.56,.64,1) both') }}>
@@ -456,7 +679,11 @@ function SandhiToneChip({ big = false }) {
   );
 }
 
-export function WordCard({ word, entered, currentSyl, completed, timedOut, progressText, combo, comboFlash, floatScore, hideProgress, listen = false, audioOff = false, onReplay, onCantHear, onHint, hintUsed = false, draw = false, lianyinAt = -1, practice = false, onSpeak, onReveal, hideMeaning = false, hidePinyin = false, sandhiAt = -1 }) {
+// 카드 하단 액션 버튼(발음 듣기·정답보기) — 시안 09 실측 스타일. 문구는 상태와 무관하게 고정.
+const CARD_ACT_ICON = '#637481', CARD_ACT_TEXT = '#7E8A94';
+const CARD_ACT_BTN = { height: 30, padding: '0 13px', borderRadius: 10, background: '#fff', border: '1px solid #E2E7EB', display: 'inline-flex', alignItems: 'center', gap: 6, ...TOUCH_OPT };
+
+export function WordCard({ word, entered, currentSyl, completed, timedOut, progressText, floatScore, hideProgress, listen = false, audioOff = false, onReplay, onCantHear, onHint, hintUsed = false, draw = false, lianyinAt = -1, practice = false, onSpeak, onReveal, hideMeaning = false, hidePinyin = false, sandhiAt = -1 }) {
   const listening = listen && !audioOff && !completed && !timedOut; // 듣기 모드: 답하기 전엔 한자 가리고 소리 패널
   // hideMeaning/hidePinyin = 보조바퀴 토글(현재 컨텍스트) — 병음/뜻 숨김으로 '소리·성조 체득' 강화. ToneGamePage가 ctx별 값을 전달.
   // 한자 모드 발음 힌트 — 답하기 전에만, 음소거 아닐 때만. 소리=정답이라 처음 쓰면 콤보가 끊긴다(hintUsed=이미 끊긴 상태면 무료).
@@ -470,7 +697,8 @@ export function WordCard({ word, entered, currentSyl, completed, timedOut, progr
   const glow = completed && !timedOut ? SHADOW.correctGlow : timedOut ? SHADOW.timeoutGlow : SHADOW.card;
   const guide = completed && !timedOut ? { text: '정답', color: TG.SUCCESS }
     : timedOut ? { text: '시간초과', color: TG.DANGER }
-    : { text: `${currentSyl + 1}번째 글자의 성조를 ${draw ? '그려보세요' : '누르세요'}`, color: TG.GUIDE };
+    // 진행 안내문은 제거(시안 09 — 카드엔 뜻·마크·한자만). 정답/시간초과 결과 문구만 남긴다.
+    : { text: '', color: TG.GUIDE };
 
   // 발사체 착탄 동기 — 공개 팝을 착탄 시점(생성 정지+비행)만큼 지연해 '마크가 부딪히는 순간 채워지는' 인과로 보이게.
   // 그리기 문제(발사체 없음)·모션 최소화는 즉시 공개(기존 동작).
@@ -497,21 +725,24 @@ export function WordCard({ word, entered, currentSyl, completed, timedOut, progr
               <ToneMark tone={tone} size={hz > 50 ? 16 : 13} />
               <span style={{ ...TYPE.labelSm, fontSize: hz > 50 ? 12 : 10 }}>{tone === 0 ? '경' : `${tone}성`}</span>
             </span>
-          ) : (
-            <div style={{
-              width: hz > 50 ? 28 : 22, height: 5, borderRadius: RADIUS.pill,
-              background: isCurrent ? TG.INK : TG.BORDER, // 현재 글자 표시 — 색 대신 진한 명도로(톤 색과 안 겹치게)
-              animation: isCurrent ? 'tg-pulse 1.1s ease-in-out infinite' : 'none',
-            }} />
-          )}
+          ) : isCurrent ? (
+            /* 현재 글자 포인터 — 시안 09(2026-08-04): 아래를 가리키는 라운드 삼각형(22×18, 모서리 r3, INK).
+               구 28×5 가로 막대는 '어느 글자 차례인지'가 약했음. 라운드는 stroke+linejoin round로 만든다(둥근 삼각형 path 대체). */
+            <svg width={hz > 50 ? 14 : 12} height={hz > 50 ? 12 : 10} viewBox="0 0 14 12" aria-hidden="true"
+              style={{ display: 'block', animation: 'tg-pulse 1.1s ease-in-out infinite', overflow: 'visible' }}>
+              {/* ★크기 기준은 폴리곤 박스(22×18)가 아니라 **실제 렌더 잉크 13.5×11.3** — Figma 폴리곤은 박스에 내접+라운드로 작아진다.
+                  stroke 6(=r3 라운드)이 사방 3씩 키우므로 기본 삼각형은 7.5×5.3으로 잡는다. */}
+              <polygon points="3,3 10.5,3 6.75,8.3" fill={TG.INK} stroke={TG.INK} strokeWidth="6" strokeLinejoin="round" />
+            </svg>
+          ) : null}
         </div>
         {listening && !revealed ? (
-          // 듣기 중 미공개 글자 — 스피커. 현재 글자 강조는 색 대신 명도+애니(중립 배경·진한 아이콘·breathe), 미도래는 연하게. 맞히면 아래 한자로 공개됨
+          // 듣기 중 미공개 글자 — 스피커. 맞히면 아래 한자로 공개됨.
+          // 시안 09-5: 타일 66 · r16 · **배경/테두리 없음** · 스피커 아이콘 60(타일의 0.91).
+          // 현재 글자 강조는 색(INK)과 breathe로만 — 베이지 박스는 시안에 없다.
           <div data-syl={i} style={{ width: hz, height: hz, borderRadius: RADIUS.lg, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: isCurrent ? '#f2ede6' : 'transparent',
-            border: isCurrent ? '2px solid #e3dbce' : '2px solid transparent',
             animation: isCurrent ? 'tg-breathe 1.7s ease-in-out infinite' : 'none', transition: `all ${DUR.state} ease` }}>
-            <VolumeLoud size={Math.round(hz * 0.52)} weight="Bold" color={isCurrent ? TG.INK : TG.MUTED} />
+            <VolumeLoud size={Math.round(hz * 0.91)} weight="Bold" color={isCurrent ? TG.INK : TG.MUTED} />
           </div>
         ) : (
           <div data-syl={i} style={{
@@ -544,23 +775,38 @@ export function WordCard({ word, entered, currentSyl, completed, timedOut, progr
   const showSandhi = completed && !timedOut && sandhiAt >= 0;
   const lyOffset = showLianyin ? (lianyinAt * step + colW / 2 + step / 2 - totalW / 2) : 0;
   const lyW = colW + Math.round(gap) + 22;
+  // 규칙 문구(3성 변조·연음) — '정답'과 **같은 한 줄**을 교대로 쓴다(정답 먼저 → 잠시 뒤 규칙).
+  //  ★줄을 하나 더 쌓으면 카드(272)에 19px이 모자라 한자가 밀리고 버튼이 바닥에 붙는다(2026-08-06 사용자 지적).
+  //  등장 시점은 칩 모프(SandhiToneChip 1000ms)·연음 마크 그리기(≈0.6s)와 박자를 맞춘다.
+  const note = showSandhi ? { text: '3성+3성 → 앞은 2성으로 발음', color: TONES.find((t) => t.num === 2)?.color ?? TG.SUB, delay: 1000 }
+    : showLianyin ? { text: '연음 · 3성+2성은 반3성으로 이어서', color: LIANYIN_COLOR, delay: 700 }
+    : null;
+  const [noteOn, setNoteOn] = useState(false);
+  useEffect(() => {
+    if (!note) { setNoteOn(false); return undefined; }
+    if (prefersReducedMotion()) { setNoteOn(true); return undefined; }
+    setNoteOn(false);
+    const t = setTimeout(() => setNoteOn(true), note.delay);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [note?.text, word.hanzi]);
 
   return (
     <div style={{
-      position: 'relative', background: TG.CARD, borderRadius: RADIUS.card, width: '100%', height: 292, padding: SPACE.x3, overflow: 'hidden',
+      // 시안 09 실측: 342×272 · 안쪽 y = 진행13 · 뜻31 · 포인터77.8 · 한자101.3 · 버튼218(하단여백 24)
+      position: 'relative', background: TG.CARD, borderRadius: RADIUS.card, width: '100%', height: 272, padding: '20px 20px 24px', overflow: 'hidden',
       display: 'flex', flexDirection: 'column', boxShadow: glow, transition: `box-shadow ${DUR.state} ease`,
     }}>
       {!hideProgress && (
-        <div style={{ position: 'absolute', left: 16, top: 16, ...TYPE.num, fontSize: 16, display: 'flex', gap: SPACE.xs, alignItems: 'center' }}>
+        <div style={{ position: 'absolute', left: 16, top: 13, ...TYPE.num, fontSize: 16, display: 'flex', gap: SPACE.xs, alignItems: 'center' }}>
           <span style={{ color: TG.CORAL_DK }}>{progressText.split('/')[0]}</span>
           {/* 분모(총 문제수)는 있을 때만 — 무한모드는 숫자만이라 '/ ' 안 보이게 */}
           {progressText.split('/')[1] && <span style={{ color: TG.SUB, fontSize: 14 }}>/ {progressText.split('/')[1]}</span>}
         </div>
       )}
-      <div style={{ position: 'absolute', right: 16, top: 14 }}><ComboChip combo={combo} flash={comboFlash} /></div>
       {/* 정답 판정(완벽/훌륭/좋아)+점수는 카드 코너가 아니라 화면 중앙 팝으로 — GameScreen JudgePop(시선 집중) */}
       {/* 뜻 — 듣기 중엔 가림(완료 시 공개="아 이 말이었구나"). 보조바퀴 토글로 숨기면 항상 가림 */}
-      <div style={{ height: 22, marginTop: SPACE.md, textAlign: 'center', flexShrink: 0 }}>
+      <div style={{ height: 22, marginTop: SPACE.lg, textAlign: 'center', flexShrink: 0 }}>
         {!listening && !hideMeaning && <span style={{ ...TYPE.sub, color: TG.SUB }}>{word.meaning}</span>}
       </div>
       {/* 음절 — 듣기 중 미공개 글자는 스피커, 맞히면 한자 공개 */}
@@ -579,45 +825,45 @@ export function WordCard({ word, entered, currentSyl, completed, timedOut, progr
       {/* 하단 — 듣기면 안내 + 다시듣기/못들어요, 아니면 가이드 */}
       {listening ? (
         <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: SPACE.md, paddingTop: SPACE.xxs }}>
-          <span style={{ ...TYPE.labelSm, color: TG.GUIDE }}>{`${currentSyl + 1}번째 글자의 성조를 들어보세요`}</span>
-          <div style={{ display: 'flex', gap: SPACE.md }}>
-            <button onClick={onReplay} className="tg-press" style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, padding: '10px 16px', borderRadius: RADIUS.lg, background: '#fff', border: `1.5px solid ${TG.CORAL_BG}`, cursor: 'pointer', ...TOUCH_OPT }}>
-              <VolumeLoud size={17} weight="Bold" color={TG.CORAL_DK} />
-              <span style={{ ...TYPE.labelSm, color: TG.INK }}>다시 듣기</span>
+          {/* 듣기 모드 버튼도 시안 09-5는 **일반 모드와 같은 규격** — 카드 하단 액션 버튼 스타일(CARD_ACT_*) 공용 */}
+          <div style={{ display: 'flex', gap: 16 }}>
+            <button onClick={onReplay} className="tg-press" style={{ ...CARD_ACT_BTN, cursor: 'pointer' }}>
+              <VolumeLoud size={16} weight="Bold" color={CARD_ACT_ICON} />
+              <span style={{ ...TYPE.labelSm, fontSize: 14, color: CARD_ACT_TEXT }}>발음 듣기</span>
             </button>
-            <button onClick={onCantHear} className="tg-press" style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, padding: '10px 16px', borderRadius: RADIUS.lg, background: '#fff', border: '1.5px solid #ebe5de', cursor: 'pointer', ...TOUCH_OPT }}>
-              <VolumeCross size={17} weight="Bold" color="#767676" />
-              <span style={{ ...TYPE.labelSm, color: TG.INK }}>지금은 못 들어요</span>
+            <button onClick={onCantHear} className="tg-press" style={{ ...CARD_ACT_BTN, cursor: 'pointer' }}>
+              <VolumeCross size={16} weight="Bold" color={CARD_ACT_ICON} />
+              <span style={{ ...TYPE.labelSm, fontSize: 14, color: CARD_ACT_TEXT }}>지금은 못 들어요</span>
             </button>
           </div>
         </div>
       ) : (
-        <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: SPACE.sm, minHeight: 28, justifyContent: 'center' }}>
-          <span key={guide.text} style={{ ...TYPE.label, color: guide.color, transition: `color ${DUR.state} ease`,
-            // '정답'은 착탄 순간 등장(발사체 동기) — 진행 안내·시간초과는 즉시
-            animation: (completed && !timedOut) ? `tg-pop .25s cubic-bezier(.34,1.56,.64,1) ${popDelay} both` : 'none' }}>{guide.text}</span>
-          {showSandhi && (
-            <span style={{ ...TYPE.labelSm, color: TONES.find((t) => t.num === 2)?.color ?? TG.SUB }}>3성+3성 → 앞은 2성으로 발음</span>
-          )}
-          {showLianyin && (
-            <span style={{ ...TYPE.labelSm, color: LIANYIN_COLOR }}>연음 · 3성+2성은 반3성으로 이어서</span>
-          )}
-          {practice ? (
-            /* 트레이닝 — 발음 듣기 / 정답 보기 (일반 모드 발음힌트와 같은 카드 하단 자리로 통일). 트레이닝은 콤보·점수 없어 무페널티 */
-            <div data-coach="prac-actions" style={{ display: 'flex', gap: SPACE.md, marginTop: SPACE.xxs }}>
-              <button onClick={onSpeak} className="tg-press" aria-label="발음 듣기" style={{
-                display: 'inline-flex', alignItems: 'center', gap: SPACE.sm, padding: '8px 14px', borderRadius: RADIUS.lg,
-                background: '#fff', border: `1.5px solid ${TG.CORAL_BG}`, cursor: 'pointer', ...TOUCH_OPT,
-              }}>
-                <VolumeLoud size={16} weight="Bold" color={TG.CORAL_DK} />
-                <span style={{ ...TYPE.labelSm, color: TG.INK }}>발음 듣기</span>
+        // 하단 블록 = 안내 한 줄(19) + 6 + 버튼(30) 자리를 **항상 확보**(55).
+        //  안내가 없을 때도 높이가 같아, 정답을 맞혀도 한자·병음·버튼이 1px도 안 움직인다(2026-08-06).
+        <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: SPACE.sm, minHeight: 55, justifyContent: 'flex-end' }}>
+          {/* 안내 한 줄 — 평소 '정답', 반3성·연음 단어면 그 자리를 규칙 문구가 물려받는다(줄 수·여백 불변) */}
+          {noteOn && note ? (
+            <span key="tg-note" style={{ ...TYPE.labelSm, color: note.color,
+              animation: 'tg-pop .28s cubic-bezier(.34,1.56,.64,1) both' }}>{note.text}</span>
+          ) : guide.text ? (
+            <span key={guide.text} style={{ ...TYPE.label, color: guide.color, transition: `color ${DUR.state} ease`,
+              // '정답'은 착탄 순간 등장(발사체 동기) — 진행 안내·시간초과는 즉시
+              animation: (completed && !timedOut) ? `tg-pop .25s cubic-bezier(.34,1.56,.64,1) ${popDelay} both` : 'none' }}>{guide.text}</span>
+          ) : null}
+          {/* 발음 듣기 / 정답 보기 — 시안 09부터 **일반 모드에도** 노출(구 건너뛰기 대체). 정답보기는 횟수 제한 없음 */}
+          {(onSpeak && onReveal) ? (
+            /* 트레이닝·일반 공용. 트레이닝은 콤보·점수가 없어 무페널티, 일반은 발음듣기가 콤보를 끊는 기존 규칙 유지 */
+            <div data-coach="prac-actions" style={{ display: 'flex', gap: 16 }}>
+              {/* 시안 09 실측: 버튼 h30·r10·흰색+1px #E2E7EB / 아이콘 16 #637481 / 텍스트 14 #7E8A94 / 아이콘-텍스트 6 / 버튼 간격 16 */}
+              <button onClick={onSpeak} className="tg-press" aria-label="발음 듣기"
+                style={{ ...CARD_ACT_BTN, cursor: 'pointer' }}>
+                <VolumeLoud size={16} weight="Bold" color={CARD_ACT_ICON} />
+                <span style={{ ...TYPE.labelSm, fontSize: 14, color: CARD_ACT_TEXT }}>발음 듣기</span>
               </button>
-              <button onClick={onReveal} disabled={completed} className="tg-press" aria-label="정답 보기" style={{
-                display: 'inline-flex', alignItems: 'center', gap: SPACE.sm, padding: '8px 14px', borderRadius: RADIUS.lg,
-                background: '#fff', border: '1.5px solid #ebe5de', cursor: completed ? 'default' : 'pointer', opacity: completed ? 0.5 : 1, ...TOUCH_OPT,
-              }}>
-                <Eye size={16} weight="Bold" color={TG.SUB} />
-                <span style={{ ...TYPE.labelSm, color: TG.INK }}>정답 보기</span>
+              <button onClick={onReveal} disabled={completed} className="tg-press" aria-label="정답보기"
+                style={{ ...CARD_ACT_BTN, cursor: completed ? 'default' : 'pointer', opacity: completed ? 0.5 : 1 }}>
+                <DoubleAltArrowRight size={16} weight="Bold" color={CARD_ACT_ICON} />
+                <span style={{ ...TYPE.labelSm, fontSize: 14, color: CARD_ACT_TEXT }}>정답보기</span>
               </button>
             </div>
           ) : canHint ? (
@@ -639,7 +885,8 @@ export function WordCard({ word, entered, currentSyl, completed, timedOut, progr
 
 // ── 성조 버튼 5개 (성조색 소프트 틴트 배경) ────────────
 // heat(0~1, 콤보 고조) — 리플이 콤보와 함께 커져 타격감이 자람.
-export function ToneButtons({ onTone, wrongBtn, disabled, heat = 0 }) {
+// highlight — 튜토리얼 전용: 정답 키캡을 성조색 테두리+리플로 안내(게임에선 안 씀).
+export function ToneButtons({ onTone, wrongBtn, disabled, heat = 0, highlight = null }) {
   const [ripple, setRipple] = useState(null); // { num, key } — 탭 순간 성조색 리플
   const seqRef = useRef(0);
   const downRef = useRef({ num: null, at: 0 }); // 직전 pointerdown 판정 기록 — 뒤따르는 click 중복 실행 방지
@@ -659,7 +906,7 @@ export function ToneButtons({ onTone, wrongBtn, disabled, heat = 0 }) {
     handle(num);
   };
   return (
-    <div style={{ display: 'flex', gap: SPACE.lg, height: 81, alignItems: 'stretch' }}>
+    <div style={{ display: 'flex', gap: 5.5, height: 81, alignItems: 'stretch' }}>
       {TONES.map((t) => {
         const isWrong = wrongBtn === t.num;
         return (
@@ -669,30 +916,44 @@ export function ToneButtons({ onTone, wrongBtn, disabled, heat = 0 }) {
             style={{
               position: 'relative', overflow: 'hidden',
               flex: 1, minWidth: 0, height: '100%', cursor: disabled ? 'default' : 'pointer', borderRadius: RADIUS.xl,
-              // ★성조색 키캡 — 세로 그라디언트(위 밝음→기본) + 아래 두께 엣지(dark 오프셋)로 입체감.
-              //   색 자체로 배경과 분리(솔리드 확정) + "단조롭다" 보완(2026-07-26). 흰 마크/라벨 = 발사체 원판 문법.
-              background: isWrong ? TG.DANGER : `linear-gradient(180deg, ${TONE_KEY_COLORS[t.num].light}, ${TONE_KEY_COLORS[t.num].base})`,
-              border: 'none',
+              // ★흰 키캡 — 시안 '09. 게임'(2026-08-04): 흰 카드 + 1px 연한 테두리 + 아래 4px 안쪽 엣지.
+              //   색은 성조 마크가 전담(키캡은 중립) → 배경 들판 위에서도 눌린 카드처럼 읽힌다.
+              background: isWrong ? '#FFE9EA' : '#fff',
+              border: highlight === t.num ? `2px solid ${t.color}` : '1px solid #E4EDF5',
               boxShadow: isWrong
-                ? '0 4px 0 #C4353A, 0 6px 12px rgba(43,39,48,0.12)'
-                : `0 4px 0 ${TONE_KEY_COLORS[t.num].dark}, 0 6px 12px rgba(43,39,48,0.12)`,
-              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: SPACE.xs,
-              paddingTop: SPACE.x2, paddingBottom: SPACE.xl, color: '#fff', ...TOUCH_OPT,
+                ? 'inset 0 -4px 0 #F0BCBE, 0 4px 18px rgba(43,39,48,0.04)'
+                : highlight === t.num
+                  ? `inset 0 -4px 0 #E4EDF5, 0 0 0 4px ${t.color}22`
+                  : 'inset 0 -4px 0 #E4EDF5, 0 4px 18px rgba(43,39,48,0.04)',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', gap: 9,
+              paddingTop: 20, paddingBottom: 0, color: t.color, ...TOUCH_OPT, // 마크(currentColor)=성조색
             }}
           >
+            {/* 튜토리얼 정답 안내 리플 — 어디를 눌러야 하는지 시선 유도(2연속 무한).
+                ★배경은 **탭 리플과 같은 옅은 틴트**. 구버전은 솔리드 `t.color`라 리플이 작게 시작하는 순간
+                  마크와 같은 색의 진한 원이 마크를 통째로 삼켰다(2026-08-07 사용자 지적).
+                  강조 자체는 버튼의 2px 테두리 + 4px 글로우가 이미 담당하므로 리플은 은은해도 충분하다. */}
+            {highlight === t.num && [0, 750].map((delay) => (
+              <span key={`hl${delay}`} aria-hidden="true" style={{
+                position: 'absolute', left: '50%', top: '50%', width: 46, height: 46, borderRadius: '50%',
+                background: `${TONE_KEY_COLORS[t.num].base}2E`, transform: 'translate(-50%,-50%)', pointerEvents: 'none', zIndex: 0,
+                animation: `tg-ripple 1500ms ease-out ${delay}ms infinite`,
+              }} />
+            ))}
             {/* 탭 순간 리플 — 솔리드 성조색 배경이라 흰 리플로(같은 색이면 안 보임) */}
             {ripple && ripple.num === t.num && (
               <span key={ripple.key} aria-hidden="true" style={{
                 position: 'absolute', left: '50%', top: '50%', width: 90 + heat * 50, height: 90 + heat * 50, borderRadius: '50%',
-                background: 'rgba(255,255,255,0.55)', animation: 'tg-ripple .5s ease-out forwards', pointerEvents: 'none', zIndex: 0,
+                background: `${TONE_KEY_COLORS[t.num].base}2E`, animation: 'tg-ripple .5s ease-out forwards', pointerEvents: 'none', zIndex: 0,
               }} />
             )}
-            <ToneMark tone={t.num} size={34} outline={TONE_KEY_COLORS[t.num].dark} />
-            {/* 라벨도 마크와 동일한 어두운 아웃라인 — 2겹 스택(아래=굵은 스트로크·위=흰 글자). text-stroke 단독은 글자 안쪽을 파먹음 */}
-            <span style={{ position: 'relative', zIndex: 1, display: 'inline-grid' }}>
-              <span aria-hidden="true" style={{ gridArea: '1 / 1', ...TYPE.labelSm, color: TONE_KEY_COLORS[t.num].dark, WebkitTextStroke: `4px ${TONE_KEY_COLORS[t.num].dark}` }}>{t.name}</span>
-              <span style={{ gridArea: '1 / 1', ...TYPE.labelSm, color: '#fff' }}>{t.name}</span>
+            {/* ★마크는 리플 '위'에 — 리플 span들이 position:absolute(z-index:0)라, 위치 지정이 없는 마크는
+                CSS 페인팅 순서상 그 아래로 깔린다. 관용 래퍼로 올려야 어떤 리플에도 안 가려진다. */}
+            <span style={{ position: 'relative', zIndex: 1, display: 'flex' }}>
+              <ToneMark tone={t.num} size={34} stroke={5.6} dotR={6} />
             </span>
+            {/* 라벨 — 흰 키캡이라 아웃라인 스택 불필요. 시안 색(#7E8A94) 단색 */}
+            <span style={{ position: 'relative', zIndex: 1, ...TYPE.labelSm, color: '#7E8A94' }}>{t.name}</span>
           </button>
         );
       })}
@@ -705,7 +966,17 @@ export function ToneButtons({ onTone, wrongBtn, disabled, heat = 0 }) {
 // 성조 버튼을 대체. Pointer Events라 터치·마우스 공용. 힌트 없음(빈 캔버스 + 안내 문구만).
 // expectedTone: 현재 음절의 정답 성조 — '떼는 순간' 로컬 플래시(초록/빨강) 색만 결정(그리기 전엔 안 보임 = 힌트 아님).
 // resetKey: 값이 바뀌면(음절/단어 전환) 획 초기화.
-export function DrawPad({ expectedTone, onDraw, disabled = false, resetKey = 0 }) {
+// 성조별 예시 획 path — 100×100 정사각 뷰박스 기준(y는 아래로 증가). 1성 수평 · 2성 상승 · 3성 V · 4성 하강.
+//  튜토리얼에서만 쓴다(demoTone). 인게임은 빈 캔버스 유지 = 힌트가 되면 안 되므로.
+const DEMO_STROKE = {
+  1: 'M 18 42 L 82 42',
+  2: 'M 20 70 L 80 30',
+  3: 'M 20 30 L 50 72 L 80 30',
+  4: 'M 20 30 L 80 70',
+};
+
+/* demoTone: 지정하면 '이렇게 그려요' 예시 획이 반복 재생된다(튜토리얼 전용). 사용자가 긋기 시작하면 사라짐. */
+export function DrawPad({ expectedTone, onDraw, disabled = false, resetKey = 0, demoTone = null }) {
   const boxRef = useRef(null);
   const ptsRef = useRef([]);
   const drawingRef = useRef(false);
@@ -772,12 +1043,22 @@ export function DrawPad({ expectedTone, onDraw, disabled = false, resetKey = 0 }
       className={flash && !flash.ok ? 'tg-shake' : ''}
       style={{
         position: 'relative', width: '100%', height: '100%', borderRadius: RADIUS.xxl,
-        background: bg, border: `2px ${flash ? 'solid' : 'dashed'} ${borderCol}`,
+        // 시안 09-2: 평상시 **점선**(대시 8 / 간격 6) 코랄 테두리 — CSS dashed는 리듬이 6/6쯤이라 아래 SVG로 정확히 그린다.
+        // 평상시엔 border를 빼고(box-sizing:border-box라 바깥 크기 불변) SVG가 그 2px 자리를 그린다. 판정 플래시 때만 실선 테두리.
+        background: flash ? bg : '#fff', border: flash ? `2px solid ${borderCol}` : 'none',
         boxShadow: flash && flash.ok ? SHADOW.correctGlow : SHADOW.card,
         touchAction: 'none', WebkitTapHighlightColor: 'transparent', userSelect: 'none',
         cursor: disabled ? 'default' : 'crosshair', overflow: 'hidden',
         transition: 'border-color .15s ease, background .15s ease',
       }}>
+      {/* 점선 테두리 — 사각형을 1px 안쪽에 두고 stroke 2를 걸치면 바깥 0~2px(테두리 자리)에 정확히 그려진다. 크기는 CSS calc(SVG 기하 속성)로 따라간다 */}
+      {!flash && (
+        <svg aria-hidden="true" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
+          <rect x="1" y="1" width="100%" height="100%" rx={RADIUS.xxl - 1} ry={RADIUS.xxl - 1}
+            style={{ width: 'calc(100% - 2px)', height: 'calc(100% - 2px)' }}
+            fill="none" stroke="#FF6B6B" strokeWidth="2" strokeDasharray="8 6" />
+        </svg>
+      )}
       {/* 경성 음절 — 자동 통과 안내(그리기 불가) */}
       {neutral ? (
         <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: SPACE.md, pointerEvents: 'none', padding: SPACE.md }}>
@@ -788,16 +1069,33 @@ export function DrawPad({ expectedTone, onDraw, disabled = false, resetKey = 0 }
           <span style={{ ...TYPE.meta, color: TG.SUB }}>자동으로 넘어가요</span>
         </div>
       ) : (pts.length === 0 && !flash && (
-        /* 빈 상태 안내 — 힌트 없이 '여기 그려요'만 */
-        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: SPACE.md, pointerEvents: 'none', padding: SPACE.md }}>
-          <div style={{ width: 52, height: 52, borderRadius: RADIUS.card, background: TG.CORAL_BG, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <svg width={30} height={30} viewBox="0 0 60 60" fill="none" aria-hidden="true">
-              <path d="M 14 38 C 20 22 26 22 30 30 C 34 38 40 38 46 22" stroke={TG.CORAL} strokeWidth={4} strokeLinecap="round" strokeLinejoin="round" />
+        (demoTone != null && DEMO_STROKE[demoTone]) ? (
+          /* 예시 획(튜토리얼) — 정답 성조의 곡선이 스스로 그려지며 반복. 빈 점선 패드만 보고
+             "뭘 어떻게 그으라는 거지"에서 멈추는 것을 막는다(2026-08-07 UX 검수). 모션 민감이면 정지 상태로. */
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', padding: SPACE.md }}>
+            <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet" aria-hidden="true"
+              style={{ width: '100%', flex: 1, minHeight: 0, maxHeight: 190 }}>
+              {/* 바탕 획(연하게 상시) + 그려지는 획 — 목표 모양이 늘 보이면서 방향까지 읽힌다 */}
+              <path d={DEMO_STROKE[demoTone]} fill="none" stroke={TONE_COLORS[demoTone]} strokeOpacity={0.18} strokeWidth={7} strokeLinecap="round" strokeLinejoin="round" />
+              <path d={DEMO_STROKE[demoTone]} fill="none" stroke={TONE_COLORS[demoTone]} strokeWidth={7} strokeLinecap="round" strokeLinejoin="round"
+                strokeDasharray={200}
+                style={prefersReducedMotion()
+                  ? { strokeDashoffset: 0 }
+                  : { animation: 'tg-demo-stroke 2.4s ease-in-out infinite' }} />
             </svg>
+            <span style={{ ...TYPE.btn, color: TG.INK, marginTop: SPACE.md }}>이렇게 따라 그려보세요</span>
           </div>
-          <span style={{ ...TYPE.btn, color: TG.INK }}>성조를 그려보세요</span>
-          <span style={{ ...TYPE.meta, color: TG.SUB }}>손가락으로 획을 그으면 돼요</span>
-        </div>
+        ) : (
+          /* 빈 상태 안내 — 힌트 없이 '여기 그려요'만 */
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: SPACE.lg, pointerEvents: 'none', padding: SPACE.md }}>
+            <div style={{ width: 52, height: 52, borderRadius: RADIUS.card, background: TG.CORAL_BG, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <svg width={30} height={30} viewBox="0 0 60 60" fill="none" aria-hidden="true">
+                <path d="M 14 38 C 20 22 26 22 30 30 C 34 38 40 38 46 22" stroke={TG.CORAL} strokeWidth={4} strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+            <span style={{ ...TYPE.btn, color: TG.INK }}>성조를 그려보세요</span>
+          </div>
+        )
       ))}
       {/* 그린 획 */}
       {pts.length > 1 && (
@@ -822,26 +1120,23 @@ export function DrawPad({ expectedTone, onDraw, disabled = false, resetKey = 0 }
 }
 
 // ── 카운트다운 비주얼 (난이도 핀 포함) ──────────────────
-const DIFF_HANZI = Object.fromEntries(DIFFICULTIES.map((d) => [d.id, d.hanzi])); // 라벨·한자는 DIFFICULTIES에서 파생
-export function CountdownVisual({ n, difficulty }) {
-  const pinHz = DIFF_HANZI[difficulty?.tier || difficulty?.id]; // 스테이지는 tier로 조회. 테마 등 난이도 외엔 생략
+// 시안 08(2026-08-05 수정): 숫자 + 안내문 **둘만**. 난이도 핀은 시안에서 삭제됨(어느 스테이지인지는 인게임 헤더가 알려준다).
+export function CountdownVisual({ n }) {
   return (
     <>
-      {/* 숫자 + 안내 (Figma top290.5 = 34.4%) */}
-      <div style={{ position: 'absolute', left: 0, right: 0, top: '34.4%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: SPACE.xs }}>
-        <div key={n} style={{ width: 160, height: 160, display: 'flex', alignItems: 'center', justifyContent: 'center', filter: 'drop-shadow(0px 14px 15px rgba(242,72,76,0.3))', animation: 'tg-count .85s ease forwards' }}>
+      {/* 숫자 160 박스 (시안 y300.3 = 35.6%) — 글리프 120px, 코랄 그림자.
+          ★센터링은 바깥 래퍼가 담당: tg-count 키프레임이 transform을 덮어써 translateX(-50%)가 무시된다(반복 함정) */}
+      <div style={{ position: 'absolute', left: 0, right: 0, top: '35.6%', display: 'flex', justifyContent: 'center' }}>
+        <div key={n} style={{
+          width: 160, height: 160, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          filter: 'drop-shadow(0px 14px 15px rgba(242,72,76,0.3))', animation: 'tg-count .85s ease forwards',
+        }}>
           <span style={{ ...TYPE.numHero, fontSize: 120, color: '#fff', lineHeight: 'normal' }}>{n > 0 ? n : ''}</span>
         </div>
-        <Reveal i={1} base={140}>
-          <span style={{ display: 'block', ...TYPE.body, color: '#fff', textAlign: 'center' }}>성조를 빠르게 찾아 탭하세요!</span>
-        </Reveal>
       </div>
-      {/* 난이도 핀 (Figma top575.5 = 68.2%) */}
-      <Reveal i={2} base={140} style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', top: '68.2%' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, background: '#fff3d6', padding: '10px 16px', borderRadius: RADIUS.lg }}>
-        {pinHz && <span style={{ fontFamily: FONT_HANZI, fontWeight: 700, fontSize: 15, color: '#e0a21a' }}>{pinHz}</span>}
-        <span style={{ ...TYPE.labelSm, color: '#b07d12' }}>{difficulty?.label || DIFFICULTIES[0].label}</span>
-      </div>
+      {/* 안내문 (시안 y454.3 = 53.8%) — 15px Bold */}
+      <Reveal i={1} base={140} style={{ position: 'absolute', left: 0, right: 0, top: '53.8%' }}>
+        <span style={{ display: 'block', ...TYPE.btnSm, color: '#fff', textAlign: 'center' }}>성조를 찾아 탭하세요!</span>
       </Reveal>
     </>
   );
@@ -874,6 +1169,80 @@ export function CdWaveEdge({ side, color = '#f96c6e' }) {
   );
 }
 
+// 들판 배경 — Figma "04. 모드선택 — 무한모드잠김/해제"(2026-08-03) 리디자인.
+//  동산·나무·집·돌·구름이 벡터 조각 20여 개라 SVG 1장(public/game/mode-field.svg, 390×396)으로 export해 사용.
+//  ★프레임 클리핑(마스킹) 없이 원본 전체(1287×942)를 뽑아 **원래 크기 그대로** 얹는다(2026-08-03 2차 수정).
+//   - 구: 390폭 클리핑본 + objectFit:cover → 화면이 넓으면 위가 잘려 집·나무가 반토막(사용자 지적).
+//   - 신: 스케일 0 = 세로는 절대 안 잘림. 가로는 화면보다 넓은 그림의 가운데를 보여줌(넓을수록 들판이 더 보임).
+//   - bottom:-546 = 시안에서 그림 아래가 화면 밖으로 내려가 있던 값 → 지평선이 항상 바닥에서 396px.
+const FIELD_W = 1287, FIELD_H = 942, FIELD_BOTTOM = -546;
+const CHIMNEY = { x: 592.5, y: 101 }; // 그림 좌표계의 굴뚝 입구(연기 발원점)
+// artRef — 그림 컨테이너 ref(패럴랙스용). 난이도 화면이 스크롤에 맞춰 translateY를 직접 써서 배경을 같이 움직인다.
+//   (transform은 항상 `translateX(-50%) translateY(N)` 형태로 유지할 것 — 가로 센터링이 transform에 있음)
+export function FieldBg({ artRef }) {
+  const reduced = prefersReducedMotion();
+  return (
+    <div aria-hidden="true" style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none', zIndex: 0 }}>
+      <div ref={artRef} style={{ position: 'absolute', left: '50%', bottom: FIELD_BOTTOM, width: FIELD_W, height: FIELD_H, transform: 'translateX(-50%)', willChange: 'transform' }}>
+        <img src="/game/mode-field.svg" alt="" style={{ display: 'block', width: FIELD_W, height: FIELD_H, maxWidth: 'none' }} />
+        {/* 굴뚝 연기 — 타이틀 화면과 같은 연출(피어올라 커지며 옅어짐 + 좌우 흔들림). 정적 퍼프는 SVG에서 제거했다 */}
+        <div style={{ position: 'absolute', left: CHIMNEY.x, top: CHIMNEY.y }}>
+          {reduced ? (
+            <>
+              <div style={{ position: 'absolute', left: -10.5, top: -17, width: 12, height: 11, borderRadius: 35, background: '#EEE9D3' }} />
+              <div style={{ position: 'absolute', left: -4.5, top: -52, width: 38, height: 34, borderRadius: 35, background: '#EEE9D3' }} />
+              <div style={{ position: 'absolute', left: -61.5, top: -101, width: 65, height: 58, borderRadius: 35, background: '#EEE9D3' }} />
+            </>
+          ) : (
+            [0, 1, 2].map((i) => (
+              // 상승·팽창(linear)과 좌우 흔들림(alternate)을 분리 — 한 키프레임에 합치면 방향 전환이 뚝 끊김
+              <div key={i} style={{ position: 'absolute', left: -32, top: -29, animation: `tg-smoke-rise 5s linear ${(-i * 5) / 3}s infinite` }}>
+                <div style={{ width: 65, height: 58, borderRadius: 35, background: '#EEE9D3', animation: `tg-smoke-sway ${2.3 + i * 0.4}s ease-in-out ${-i * 0.9}s infinite alternate` }} />
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── 게임 무대(스테이지) ────────────────────────────────
+// 게임 전체를 9:16 가운데 컬럼 하나로 가둔다. 바깥(레터박스)엔 아무것도 안 보인다.
+//  ★핵심: 컬럼에 transform을 걸면 CSS상 '고정 위치의 컨테이닝 블록'이 되어, 안쪽 position:fixed 요소
+//    (모달·시트·코치마크·전환·토스트)까지 전부 이 컬럼 기준으로 배치되고 overflow:hidden에 잘린다.
+//    transform 없이는 fixed가 뷰포트 기준이라 PC에서 창 전체로 퍼진다(2026-08-03 사용자 요청).
+export function GameStage({ children }) {
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: TG.BG, display: 'flex', justifyContent: 'center', overflow: 'hidden' }}>
+      {/* data-tg-stage — document.body로 포탈되는 코치마크가 이 컬럼 좌표를 읽어 밖으로 안 새게 클리핑한다 */}
+      <div data-tg-stage="" style={{ position: 'relative', width: '100%', maxWidth: TG_COL_MAXW, height: '100%', overflow: 'hidden', transform: 'translateZ(0)' }}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+// ── 화면전환 레이어 ────────────────────────────────────
+// 카운트다운·'오늘의 팁' 웨이브 전환의 공용 껍데기. 실제로 슬라이드하는 건 **게임 컬럼(9:16)** 뿐이다.
+//  구조: fixed inset0(입력 차단·레터박스 클리핑) > 가운데 컬럼(애니메이션 적용) > 배경색 + 안전영역 콘텐츠.
+//  ⚠️ 2026-08-03 수정 전에는 fixed inset0 자체가 슬라이드해서, PC 와이드에서 '창 전체가 밀리는' 느낌이었다.
+//     콘텐츠(FigmaScreen)는 9:16 컬럼인데 전환만 창 전체라 폭이 어긋난 게 원인.
+export function TxLayer({ style, bg = '#f96c6e', children }) {
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', justifyContent: 'center', overflow: 'hidden' }}>
+      <div style={{ position: 'relative', width: '100%', maxWidth: TG_COL_MAXW, height: '100%', ...style }}>
+        {/* 좌우 물결 가장자리 — 컬럼 바깥이라 정지 상태에선 안 보이고, 슬라이드 중에만 걸쳐 보인다 */}
+        <CdWaveEdge side="left" color={bg} />
+        <CdWaveEdge side="right" color={bg} />
+        <div style={{ position: 'absolute', inset: 0, background: bg, overflow: 'hidden' }}>
+          <div style={{ position: 'absolute', top: 'env(safe-area-inset-top)', bottom: 0, left: 0, right: 0 }}>{children}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // 잠긴 버튼 흔들기 — shakeOnClick일 때 클릭 시 좌우 흔들림(tg-shake) + onClick(토스트)
 export function ShakeButton({ shakeOnClick, onClick, className = '', style, children, ...rest }) {
   const [shaking, setShaking] = useState(false);
@@ -901,18 +1270,19 @@ export function GameToast({ msg, kind = 'lock' }) {
   );
 }
 
-// ── 설정 모달 ─────────────────────────────────────────
-// ⚙️ 설정 — 소리(SFX)·햅틱(진동) on/off. 시작화면·일시정지 모달에서 공용. Figma "18. 설정 모달" 기준.
-function SettingRow({ Icon, label, on, onToggle }) {
+// ── 설정 토글 행(공용) ─────────────────────────────────
+// 소리·음악·햅틱·단어 뜻·병음 한 줄. 시안 461:212(메뉴 모달)·807:724(일시정지 모달) 동일 규격:
+//  행 36 · 아이콘 27 · 라벨 16 Bold · 스위치 46×27(노브 21). 홈 메뉴와 일시정지 모달이 같은 컴포넌트를 쓴다.
+export function MenuToggle({ Icon, label, on, onToggle }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', height: 36 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.xl }}>
-        <Icon size={28} weight="Bold" color={on ? TG.CORAL_DK : TG.MUTED} />
-        <span style={{ ...TYPE.btnSm, color: TG.INK }}>{label}</span>
+        <Icon size={27} weight="Bold" color={on ? TG.CORAL_DK : TG.MUTED} />
+        <span style={{ ...TYPE.btn, color: TG.INK }}>{label}</span>
       </div>
       <button onClick={onToggle} role="switch" aria-checked={on} aria-label={label} className="tg-press"
-        style={{ width: 48, height: 28, borderRadius: RADIUS.lg, border: 'none', cursor: 'pointer', padding: 0, background: on ? TG.CORAL_DK : TG.MUTED, position: 'relative', transition: 'background .2s ease', ...TOUCH_OPT }}>
-        <span style={{ position: 'absolute', top: 3, left: on ? 23 : 3, width: 22, height: 22, borderRadius: RADIUS.md, background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left .18s ease' }} />
+        style={{ width: 46, height: 27, borderRadius: RADIUS.lg, border: 'none', cursor: 'pointer', padding: 0, background: on ? TG.CORAL_DK : TG.MUTED, position: 'relative', transition: 'background .2s ease', ...TOUCH_OPT }}>
+        <span style={{ position: 'absolute', top: 3, left: on ? 22 : 3, width: 21, height: 21, borderRadius: RADIUS.md, background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left .18s ease' }} />
       </button>
     </div>
   );
@@ -947,30 +1317,110 @@ export function CrutchRow({ ctx, style }) {
   );
 }
 
-export function SettingsModal({ onClose, crutchCtx }) {
-  const [sfxOn, setSfxOn] = useState(() => !isSfxMuted());
-  const [hapticOn, setHapticOn] = useState(() => !isHapticMuted());
-  const toggleSfx = () => { const next = !sfxOn; setSfxOn(next); setSfxMuted(!next); if (next) playSfx('button'); };
-  const toggleHaptic = () => { const next = !hapticOn; setHapticOn(next); setHapticMuted(!next); if (next) haptic(20); };
+// ── 공통 하단 탭바 — 홈 허브 리디자인(2026-07-27, 사용자 Figma 시안 정밀 추출값). 놀러가기·오답 노트·홈·업적·하늘하늘 5탭.
+// 활성 탭 = 레드 키캡(110×74·r30 상단·인너 -4px 엣지), 비활성 = 듀오톤(BoldDuotone) 40px + 라벨 12.
+// 활성 아이콘도 BoldDuotone(흰색)로 글리프 동일 유지 — 홈 활성만 시안 커스텀(흰 몸체+레드 도어).
+export const TAB_BAR_H = 90; // 화면 콘텐츠 paddingBottom 계산용(+ env(safe-area-inset-bottom))
+const TG_TABS = [
+  { key: 'play', label: '놀러가기', Icon: HandStars },
+  { key: 'mastery', label: '오답 노트', Icon: NotebookBookmark }, // 시안 개선안(442:2) — 라벨·아이콘 교체. 목적지는 아직 '내 등급'
+  { key: 'home', label: '홈', Icon: HomeIcon },
+  { key: 'ach', label: '업적', Icon: Cup },
+  { key: 'hub', label: '하늘하늘', Icon: Stars },
+];
+// 홈 활성 아이콘 — 시안 그대로: 몸체 흰 솔리드 + 도어바 레드(배경 컷아웃)
+function HomeActiveIcon({ size = 40 }) {
   return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(26,16,20,0.55)', backdropFilter: 'blur(2px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: SPACE.x4, ...TOUCH_OPT }}>
-      <div className="tg-enter" onClick={(e) => e.stopPropagation()} style={{
-        width: '100%', maxWidth: 300, background: TG.CARD, borderRadius: RADIUS.xxl, padding: '20px 22px 22px',
-        boxShadow: '0 20px 50px rgba(26,16,20,0.3)', display: 'flex', flexDirection: 'column', gap: SPACE.x2,
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ ...TYPE.cta, color: TG.INK }}>설정</span>
-          {/* 히트영역 44×44(음수 마진으로 레이아웃 자리는 30 유지), 시각 크기는 안쪽 30×30 원 그대로 */}
-          <button onClick={onClose} aria-label="닫기" className="tg-press"
-            style={{ width: 44, height: 44, margin: -7, padding: 0, border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', ...TOUCH_OPT }}>
-            <CloseCircle size={28} weight="Bold" color={TG.SUB} />
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M2 12.2039C2 9.91549 2 8.77128 2.5192 7.82274C3.0384 6.87421 3.98695 6.28551 5.88403 5.10813L7.88403 3.86687C9.88939 2.62229 10.8921 2 12 2C13.1079 2 14.1106 2.62229 16.116 3.86687L18.116 5.10812C20.0131 6.28551 20.9616 6.87421 21.4808 7.82274C22 8.77128 22 9.91549 22 12.2039V13.725C22 17.6258 22 19.5763 20.8284 20.7881C19.6569 22 17.7712 22 14 22H10C6.22876 22 4.34315 22 3.17157 20.7881C2 19.5763 2 17.6258 2 13.725V12.2039Z" fill="#FFFFFF" />
+      <path d="M9 17.25C8.58579 17.25 8.25 17.5858 8.25 18C8.25 18.4142 8.58579 18.75 9 18.75H15C15.4142 18.75 15.75 18.4142 15.75 18C15.75 17.5858 15.4142 17.25 15 17.25H9Z" fill={HOME.TAB_RED} />
+    </svg>
+  );
+}
+// 탭 전환 애니메이션 — 아이콘·라벨은 제자리, **빨간 키캡 배경만** 별도 레이어로 이전 탭 → 새 탭 슬라이드(사용자 요청).
+// 화면(탭바 인스턴스)이 통째로 바뀌므로 직전 탭은 모듈 변수로 기억(FLIP). Web Animations API라 keyframes 충돌 없음.
+let tgLastTab = null;
+export function TgTabBar({ active, onNav }) {
+  const barRef = useRef(null);
+  const pillRef = useRef(null);
+  useLayoutEffect(() => {
+    const bar = barRef.current, pill = pillRef.current;
+    if (!bar || !pill) return undefined;
+    // 슬롯 left 계산 — 활성 110 고정, 비활성은 남는 폭 4등분(flex:1과 동일)
+    const place = (animFromKey) => {
+      const W = bar.clientWidth - 12; // 좌우 패딩 6
+      const iw = (W - 109) / 4;
+      const leftOf = (activeKey, slotKey) => {
+        let x = 6;
+        for (const t of TG_TABS) {
+          const w = t.key === activeKey ? 109 : iw;
+          if (t.key === slotKey) return x;
+          x += w;
+        }
+        return 6;
+      };
+      const nx = leftOf(active, active);
+      pill.style.transform = `translateX(${nx}px)`;
+      if (animFromKey) {
+        const EASE = { duration: 280, easing: 'cubic-bezier(.22,1,.36,1)' };
+        const px = leftOf(animFromKey, animFromKey); // 이전 레이아웃에서의 옛 키캡 위치
+        if (Math.abs(px - nx) > 1) pill.animate(
+          [{ transform: `translateX(${px}px)` }, { transform: `translateX(${nx}px)` }], EASE,
+        );
+        // 버튼들도 FLIP — 간격이 벌어지고 좁혀지는 재배치가 순간이동 대신 같은 타이밍으로 흐르게(중심 기준).
+        const centerOf = (activeKey, slotKey) => leftOf(activeKey, slotKey) + (slotKey === activeKey ? 109 : iw) / 2;
+        const btns = [...bar.children].filter((el) => el.tagName === 'BUTTON');
+        btns.forEach((el, i) => {
+          const key = TG_TABS[i].key;
+          const dx = centerOf(animFromKey, key) - centerOf(active, key);
+          if (Math.abs(dx) > 1) el.animate(
+            [{ transform: `translateX(${dx}px)` }, { transform: 'translateX(0)' }], EASE,
+          );
+        });
+      }
+    };
+    const prev = tgLastTab;
+    tgLastTab = active;
+    place(prev && prev !== active ? prev : null);
+    const onResize = () => place(null);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, [active]);
+  return (
+    <div ref={barRef} style={{
+      position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 30,
+      height: `calc(${TAB_BAR_H}px + env(safe-area-inset-bottom))`,
+      background: HOME.CARD,
+      display: 'flex', alignItems: 'flex-start', padding: '8px 6px 0',
+    }}>
+      {/* 상단 구분선 2px — 시안 개선안(442:2) 추가. 흰 탭바가 밝은 바닥과 붙어 경계가 사라지는 걸 막음 */}
+      <div aria-hidden="true" style={{ position: 'absolute', left: 0, right: 0, top: 0, height: 2, background: HOME.TAB_BORDER }} />
+      {/* 이동하는 키캡 배경 — 버튼들 아래 레이어(버튼은 position:relative로 위에) */}
+      {/* 시안 개선안(442:2, 2026-08-04): 바닥에 붙은 키캡 → **전 모서리 r20으로 떠 있는 키캡** 109×74 @top8 */}
+      <div ref={pillRef} aria-hidden="true" style={{ position: 'absolute', left: 0, top: 8, width: 109, height: 74, borderRadius: 20, background: HOME.TAB_RED, willChange: 'transform' }} />
+      {TG_TABS.map(({ key, label, Icon }) => {
+        const on = key === active;
+        return (
+          <button key={key} className="tg-press" onClick={() => { if (!on) onNav(key); }}
+            aria-label={label} aria-current={on ? 'page' : undefined} style={on ? {
+              position: 'relative', width: 109, flexShrink: 0, height: 74, border: 'none', cursor: 'default',
+              background: 'transparent',
+              paddingTop: 10, paddingRight: 0, paddingBottom: 0, paddingLeft: 0,
+              display: 'flex', flexDirection: 'column', alignItems: 'center', ...TOUCH_OPT,
+            } : {
+              position: 'relative', flex: 1, minWidth: 0, height: 68, border: 'none', cursor: 'pointer', background: 'transparent', borderRadius: 16,
+              // ★shorthand(padding) 금지 — 탭바가 화면 전환에도 살아남게 되면서 같은 버튼이 활성↔비활성으로 바뀐다.
+              //  shorthand와 longhand를 섞으면 React가 "conflicting property" 경고를 낸다(2026-08-06).
+              paddingTop: 10, paddingRight: 0, paddingBottom: 0, paddingLeft: 0,
+              display: 'flex', flexDirection: 'column', alignItems: 'center', ...TOUCH_OPT,
+            }}>
+            {on && key === 'home'
+              ? <HomeActiveIcon size={40} />
+              : <Icon size={40} weight="BoldDuotone" color={on ? '#fff' : HOME.TAB_INACTIVE} />}
+            <span style={{ ...TYPE.labelSm, fontWeight: 800, color: on ? '#fff' : HOME.TAB_INACTIVE, lineHeight: '14px' }}>{label}</span>
           </button>
-        </div>
-        <SettingRow Icon={sfxOn ? VolumeLoud : VolumeCross} label="소리" on={sfxOn} onToggle={toggleSfx} />
-        <SettingRow Icon={SmartphoneVibration} label="햅틱" on={hapticOn} onToggle={toggleHaptic} />
-        {/* 보조바퀴(현재 컨텍스트) — 끄면 소리·성조로 체득(뜻=플레이 중, 병음=정답 공개 시) */}
-        {crutchCtx && <CrutchRow ctx={crutchCtx} style={{ marginTop: SPACE.xs }} />}
-      </div>
+        );
+      })}
     </div>
   );
 }

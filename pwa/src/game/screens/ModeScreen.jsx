@@ -3,7 +3,7 @@
 import { Star, Infinity as InfinityIcon, Lock, SquareAcademicCap, Album, AltArrowRight } from '@solar-icons/react';
 import { TG, TYPE, TOUCH_OPT, RADIUS, SPACE } from '../tgTokens.js';
 import { useState, useRef, useLayoutEffect } from 'react';
-import { ShakeButton, Reveal, GameHeader, prefersReducedMotion } from './shared.jsx';
+import { ShakeButton, Reveal, GameHeader, FieldBg, prefersReducedMotion } from './shared.jsx';
 import { EndlessStartModal, TrainingStartModal } from './gameModals.jsx';
 import CoachMarkOverlay from '../../components/ui/CoachMarkOverlay.jsx';
 import { useTabTip } from '../../hooks/useTabTip.js';
@@ -82,54 +82,12 @@ function ToneBurstInner({ color, count }) {
   );
 }
 
-// 하프톤 그라데이션 배경 — 도트 크기가 그라데이션을 따라 변하는 팝아트 하프톤(위=큰 도트 → 아래로 작아지며 사라짐).
-//  캔버스 1회 렌더(정적, 리사이즈 시 재그림). 코랄 톤 은은하게 — 크림 배경 위 따뜻한 텍스처(UI 방해 X).
-function HalftoneBg() {
-  const cvRef = useRef(null);
-  useLayoutEffect(() => {
-    const cv = cvRef.current, par = cv && cv.parentElement; if (!par) return undefined;
-    const ctx = cv.getContext('2d');
-    const dpr = Math.min(2, (typeof window !== 'undefined' && window.devicePixelRatio) || 1);
-    const GAP = 11, MAXR = 3.3;
-    const draw = () => {
-      const W = par.clientWidth, H = par.clientHeight; if (!W || !H) return;
-      cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
-      cv.style.width = W + 'px'; cv.style.height = H + 'px';
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      ctx.clearRect(0, 0, W, H);
-      ctx.fillStyle = 'rgba(206,166,124,0.2)'; // 배경에 묻어나는 웜 톤(은은)
-      const cx = W / 2, cy = H * 0.42, RAD = Math.hypot(W, H) * 0.38; // 원형 그라데이션 중심·반경(범위 축소)
-      // 45° 회전 격자(다이아몬드 하프톤) — P(i,j)=((i-j)k,(i+j)k), k=cos45·GAP. 이웃 간격=GAP 유지.
-      const k = 0.70710678 * GAP;
-      let iMin = Infinity, iMax = -Infinity, jMin = Infinity, jMax = -Infinity;
-      for (const [px, py] of [[0, 0], [W, 0], [0, H], [W, H]]) {
-        const i = (px + py) / (2 * k), j = (py - px) / (2 * k);
-        if (i < iMin) iMin = i; if (i > iMax) iMax = i; if (j < jMin) jMin = j; if (j > jMax) jMax = j;
-      }
-      iMin = Math.floor(iMin) - 1; iMax = Math.ceil(iMax) + 1; jMin = Math.floor(jMin) - 1; jMax = Math.ceil(jMax) + 1;
-      for (let i = iMin; i <= iMax; i += 1) {
-        for (let j = jMin; j <= jMax; j += 1) {
-          const x = (i - j) * k, y = (i + j) * k;
-          if (x < -GAP || x > W + GAP || y < -GAP || y > H + GAP) continue;
-          const d = Math.hypot(x - cx, y - cy);
-          const gv = Math.max(0, Math.min(1, 1 - d / RAD)); // 중심=큰 도트 → 원형으로 작아지며 사라짐
-          const r = MAXR * gv; if (r < 0.3) continue;
-          ctx.beginPath(); ctx.arc(x, y, r, 0, 6.2832); ctx.fill();
-        }
-      }
-    };
-    draw();
-    window.addEventListener('resize', draw);
-    return () => window.removeEventListener('resize', draw);
-  }, []);
-  return <canvas ref={cvRef} aria-hidden="true" style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0 }} />;
-}
 
 // 주력 버튼 — 박스(카드) 없이 큰 원형 + 아래 라벨(앱 아이콘 형태). 원 뒤에서 성조 마크 파티클이 방사형으로 퍼짐.
 //  아래 사각 카드/칩과 형태가 완전히 달라 강조된다. locked면 무광 회색 원+자물쇠(파티클 없음).
-// dangerDesc=서든데스 톤: 해골 + 빨간 글씨(배경 위라 색이 그대로 읽힘).
+//  fill=단색(그라데이션 아님)·edge=아래쪽 4px 안쪽 테두리 = 살짝 도톰한 입체감(피처카드와 같은 언어, Figma 리디자인).
 const ORB = 98;
-function BigTile({ Icon, grad, glow, dot, title, locked, onClick, onLocked, coachId, iconStyle }) {
+function BigTile({ Icon, fill, edge, glow, dot, title, locked, onClick, onLocked, coachId, iconStyle }) {
   return (
     <ShakeButton shakeOnClick={locked} onClick={locked ? onLocked : onClick} className={locked ? '' : 'tg-press'} data-coach={coachId} style={{
       flex: 1, minWidth: 0, background: 'none', border: 'none', cursor: 'pointer',
@@ -140,8 +98,8 @@ function BigTile({ Icon, grad, glow, dot, title, locked, onClick, onLocked, coac
         {!locked && <ToneBurst color={dot} />}
         <div style={{
           position: 'relative', zIndex: 1, width: ORB, height: ORB, borderRadius: '50%',
-          background: locked ? '#e9e3da' : grad,
-          boxShadow: locked ? 'none' : `0 14px 28px ${glow}`,
+          background: locked ? '#E9E3DA' : fill,
+          boxShadow: locked ? 'none' : `inset 0 -4px 0 ${edge}, 0 14px 28px ${glow}`,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
           <Icon size={52} weight="Bold" color={locked ? TG.MUTED : '#fff'} style={iconStyle} />
@@ -152,7 +110,8 @@ function BigTile({ Icon, grad, glow, dot, title, locked, onClick, onLocked, coac
           )}
         </div>
       </div>
-      <span style={{ ...TYPE.h1, color: locked ? TG.SUB : TG.INK }}>{title}</span>
+      {/* 라벨은 잠김이어도 INK — 잠김 표시는 무광 원+자물쇠 배지가 맡고 글자는 또렷하게(Figma 리디자인) */}
+      <span style={{ ...TYPE.h1, color: TG.INK }}>{title}</span>
     </ShakeButton>
   );
 }
@@ -163,7 +122,8 @@ function FeatureCard({ Icon, accent, title, locked, lockText, onClick, onLocked,
     <ShakeButton shakeOnClick={locked} onClick={locked ? onLocked : onClick} className={locked ? '' : 'tg-press'} data-coach={coachId} style={{
       width: '100%', height: 76, display: 'flex', alignItems: 'center', gap: SPACE.x2, textAlign: 'left', padding: '0 18px', borderRadius: RADIUS.xl, cursor: 'pointer',
       background: locked ? TG.SURFACE : '#fff', border: 'none',
-      boxShadow: locked ? 'none' : '0 6px 18px rgba(43,39,48,0.07)', ...TOUCH_OPT,
+      // 아래 4px 안쪽 테두리 = 도톰한 카드(오브와 같은 언어). 바깥은 옅은 드롭섀도.
+      boxShadow: locked ? 'none' : 'inset 0 -4px 0 #E4EDF5, 0 4px 18px rgba(43,39,48,0.07)', ...TOUCH_OPT,
     }}>
       <Icon size={35} weight="Bold" color={locked ? TG.MUTED : accent} style={{ flexShrink: 0 }} />
       <span style={{ flex: 1, minWidth: 0, ...TYPE.h2, letterSpacing: '-0.01em', color: locked ? TG.SUB : TG.INK, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{title}</span>
@@ -187,9 +147,10 @@ export function ModeScreen({ endlessUnlocked, endlessBest = 0, onDifficulty, onT
   const [trainingOpen, setTrainingOpen] = useState(false);
   return (
     <>
-      {/* 하프톤 그라데이션 배경(맨 뒤) */}
-      <HalftoneBg />
-      <GameHeader title="모드 선택" onBack={onBack} />
+      {/* 들판 일러스트 배경(맨 뒤) */}
+      <FieldBg />
+      {/* 시안(643:1617): 60px · 반투명 크림+블러 · 타이틀 가운데 · 하선 없음 — 들판 배경이 헤더 아래로 비쳐 이어진다 */}
+      <GameHeader title="모드 선택" onBack={onBack} glass center />
       {/* 코치=상단 / 주력 원형 버튼=중앙 밴드 / 나머지=하단. 원형 주력이 화면 중앙을 채워 '빈 중간'이 사라진다.
           (space-between은 남는 공간을 전부 가운데로 몰아 중간이 비었음 — 주력을 중앙에 앉히는 방식으로 교체) */}
       <div style={{ position: 'absolute', left: 0, right: 0, top: 84, bottom: 'calc(26px + env(safe-area-inset-bottom))', display: 'flex', flexDirection: 'column' }}>
@@ -197,8 +158,8 @@ export function ModeScreen({ endlessUnlocked, endlessBest = 0, onDifficulty, onT
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
           <Reveal i={2} style={{ paddingLeft: SPACE.x4, paddingRight: SPACE.x4 }}>
             <div style={{ display: 'flex', gap: SPACE.xl }}>
-              <BigTile Icon={Star} grad="linear-gradient(150deg, #FF8A6B 0%, #F2484C 100%)" glow="rgba(242,72,76,0.30)" dot="#F2484C" title="난이도 모드" onClick={onDifficulty} coachId="mode-difficulty" />
-              <BigTile Icon={InfinityIcon} grad="linear-gradient(150deg, #FFC85C 0%, #F0A11E 100%)" glow="rgba(240,161,30,0.32)" dot="#F0A91E" title="무한 모드"
+              <BigTile Icon={Star} fill="#F96163" edge="#E64244" glow="rgba(242,72,76,0.30)" dot="#F2484C" title="난이도 모드" onClick={onDifficulty} coachId="mode-difficulty" />
+              <BigTile Icon={InfinityIcon} fill="#F3A75B" edge="#E77E33" glow="rgba(231,126,56,0.30)" dot="#E77E33" title="무한 모드"
                 iconStyle={{ stroke: 'currentColor', strokeWidth: 1.4, strokeLinejoin: 'round', strokeLinecap: 'round' }}
                 locked={!endlessUnlocked} onClick={() => setEndlessOpen(true)} onLocked={() => onLocked && onLocked(`${ENDLESS_REQ}를 클리어하면 열려요`)} />
             </div>
@@ -223,7 +184,7 @@ export function ModeScreen({ endlessUnlocked, endlessBest = 0, onDifficulty, onT
           forceLastStep: 주변 탭 흡수 → 트레이닝 칩을 실제로 눌러야만 진행(칩 onClick=onTraining이 플래그 해제+트레이닝 진입). */}
       <CoachMarkOverlay visible={highlightPractice && !tip.visible} onDone={() => onHighlightDone && onHighlightDone()} steps={PRACTICE_NUDGE} delay={200} showControls={false} forceLastStep />
       {trainingOpen && <TrainingStartModal onStart={() => { setTrainingOpen(false); onTraining && onTraining(); }} onClose={() => setTrainingOpen(false)} />}
-      {endlessOpen && <EndlessStartModal best={endlessBest} onStart={() => { setEndlessOpen(false); onEndless && onEndless(); }} onClose={() => setEndlessOpen(false)} />}
+      {endlessOpen && <EndlessStartModal onStart={() => { setEndlessOpen(false); onEndless && onEndless(); }} onClose={() => setEndlessOpen(false)} />}
     </>
   );
 }

@@ -1,4 +1,4 @@
-// 성조 빨리 찾기 게임 메타데이터 + 단어 풀
+// 매일매일 성조키우기(구 성조 빨리 찾기) 게임 메타데이터 + 단어 풀
 //
 // 단어 풀의 단일 출처 = data/tone-words-*.csv (난이도·테마별 분할, 대표님이 엑셀/구글시트로 편집).
 //   빌드 시 scripts/tone-words-build.mjs 가 병음 부호에서 성조를 자동 추출·검증해
@@ -30,13 +30,13 @@ export const DIFFICULTIES = [
 // image: 포스터 경로(5:7 세로). null이면 tint+placeholder. unlockReveal: 해제 순간 연출(ToneGamePage가 unlock 메타로 자동 트리거).
 const THEME_UNLOCK_SCORE = 500; // 별 ① 임계와 정합
 export const THEMES = [
-  { id: 'drama', gameKey: 'tone-drama', label: '드라마 중국어', desc: '드라마 속 사랑·감정 표현', timeMultiplier: 2.8571, unlock: null, image: '/game/themes/drama.png', tint: '#f1d7cf', placeholder: '드라마 이미지' },
-  { id: 'cooking', gameKey: 'tone-cooking', label: '요리 중국어', desc: '음식·맛·주방 필수 단어', timeMultiplier: 2.8571, unlock: { byGameKey: 'tone-drama', score: THEME_UNLOCK_SCORE }, image: '/game/themes/cooking.jpg', tint: '#f7e3c3', placeholder: '요리 이미지', // jpg — 그림 특성상 png 1.3MB→jpg 160KB(600×800 리사이즈)
-    unlockReveal: { icon: 'ForkKnife', label: '요리 테마', desc: '요리 중국어 테마가 열렸어요', accent: '#E8912C' } },
-  { id: 'travel', gameKey: 'tone-travel', label: '여행 중국어', desc: '공항·호텔·주문 실전 단어', timeMultiplier: 2.8571, unlock: { byGameKey: 'tone-cooking', score: THEME_UNLOCK_SCORE }, image: '/game/themes/travel.png', tint: '#c9d3e4', placeholder: '여행 이미지',
-    unlockReveal: { icon: 'MapPin', label: '여행 테마', desc: '여행 중국어 테마가 열렸어요', accent: '#7C5CFF' } },
-  { id: 'slang', gameKey: 'tone-slang', label: '신조어 중국어', desc: '요즘 중국 인터넷 유행어', timeMultiplier: 2.8571, unlock: { byGameKey: 'tone-travel', score: THEME_UNLOCK_SCORE }, image: '/game/themes/slang.png', tint: '#cfe8d8', placeholder: '신조어 이미지',
-    unlockReveal: { icon: 'Sparkle', label: '신조어 테마', desc: '신조어 중국어 테마가 열렸어요', accent: '#16B364' } },
+  { id: 'drama', gameKey: 'tone-drama', label: '드라마 단어', desc: '드라마 속 사랑·감정 표현', timeMultiplier: 2.8571, unlock: null, image: '/game/themes/drama.png', tint: '#f1d7cf', placeholder: '드라마 이미지' },
+  { id: 'cooking', gameKey: 'tone-cooking', label: '요리 단어', desc: '음식·맛·주방 필수 단어', timeMultiplier: 2.8571, unlock: { byGameKey: 'tone-drama', score: THEME_UNLOCK_SCORE }, image: '/game/themes/cooking.jpg', tint: '#f7e3c3', placeholder: '요리 이미지', // jpg — 그림 특성상 png 1.3MB→jpg 160KB(600×800 리사이즈)
+    unlockReveal: { icon: 'ForkKnife', label: '요리 테마', fill: '#E8912C', edge: '#C4761F' } },
+  { id: 'travel', gameKey: 'tone-travel', label: '여행 단어', desc: '공항·호텔·주문 실전 단어', timeMultiplier: 2.8571, unlock: { byGameKey: 'tone-cooking', score: THEME_UNLOCK_SCORE }, image: '/game/themes/travel.png', tint: '#c9d3e4', placeholder: '여행 이미지',
+    unlockReveal: { icon: 'MapPin', label: '여행 테마', fill: '#7C5CFF', edge: '#5E42D6' } },
+  { id: 'slang', gameKey: 'tone-slang', label: '신조어 단어', desc: '요즘 중국 인터넷 유행어', timeMultiplier: 2.8571, unlock: { byGameKey: 'tone-travel', score: THEME_UNLOCK_SCORE }, image: '/game/themes/slang.png', tint: '#cfe8d8', placeholder: '신조어 이미지',
+    unlockReveal: { icon: 'Sparkle', label: '신조어 테마', fill: '#16B364', edge: '#0F9152' } },
 ];
 
 // 성조 정의 — 학습 도구 특성상 5색 매핑은 디자인 시스템 단일 액센트 원칙의 합리적 예외.

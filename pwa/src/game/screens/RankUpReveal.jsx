@@ -5,9 +5,9 @@
 //  ★XP 등급 전환(2026-07-11): 등급은 이제 누적 XP로 오르며 강등이 없다 → 상승 연출만 남김(하락/게이지/마스터 문구 제거).
 //    prevIdx/nowIdx = 등급 인덱스(EAR_TIERS). Phase 2(승급 시험)에서도 합격 시 이 연출을 그대로 재활용.
 import { useEffect, useRef, useState } from 'react';
-import { TG, TYPE, haptic, RADIUS, SPACE } from '../tgTokens.js';
+import { TYPE, haptic, SPACE } from '../tgTokens.js';
 import { EAR_TIERS, TIER_SPARK_POS as PARTICLE_POS } from '../earProfile.js';
-import { CrispFlash, ConfettiBurst, LIGHT_CONFETTI } from './shared.jsx';
+import { CrispFlash, ConfettiBurst, LIGHT_CONFETTI, RevealStage, RevealRings } from './shared.jsx';
 const CHARGE_MS = 1500; // 차징 지속(짠! 까지) — 기대감 형성 구간
 const clampIdx = (i) => Math.max(0, Math.min(EAR_TIERS.length - 1, i | 0));
 
@@ -47,33 +47,27 @@ export function RankUpReveal({ prevIdx = 0, nowIdx = 0, onDone, hold = false }) 
   const done = phase === 'done';
   const charging = !done;
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 130, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: charging ? 'rgba(20,16,24,0.92)' : 'rgba(28,24,32,0.85)', transition: 'background .35s ease', padding: SPACE.x4 }}>
+    <div onClick={() => { if (!hold && done) onDone && onDone(); }}
+      // 딤은 BeatDim(공용 레이어) 담당 — 체인 사이 깜빡임 방지(2026-08-08). 구 charging 0.9→0.8 농도 변화도 함께 폐기(체인 중 딤은 일정해야 함).
+      style={{ position: 'fixed', inset: 0, zIndex: 130, cursor: done && !hold ? 'pointer' : 'default' }}>
       <style>{`
         @keyframes ru-pop{0%{opacity:0;transform:scale(.5)}55%{opacity:1;transform:scale(1.12)}100%{opacity:1;transform:scale(1)}}
         @keyframes ru-tada{0%{opacity:0;transform:scale(1.3)}28%{opacity:1;transform:scale(1.18)}60%{transform:scale(.96)}100%{transform:scale(1)}}
         @keyframes ru-hintpulse{0%,100%{opacity:.45}50%{opacity:.9}}
         @keyframes ru-converge{0%{opacity:0;transform:translate(var(--fx),var(--fy)) scale(1)}22%{opacity:.95}100%{opacity:0;transform:translate(0,0) scale(.2)}}
       `}</style>
-      {/* eyebrow */}
-      <span style={{ ...TYPE.btn, marginBottom: SPACE.md,
-        color: charging ? 'rgba(255,255,255,0.66)' : '#FFC94D',
-        animation: charging ? 'ru-hintpulse 1s ease-in-out infinite' : 'ru-pop .5s cubic-bezier(.34,1.56,.64,1) both' }}>
-        {charging ? '등급이 오르고 있어요…' : '✨ 등급 상승!'}
-      </span>
-      {/* 엠블럼 영역 */}
-      <div style={{ position: 'relative', width: '100%', height: 168, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        {/* 색 글로우 헤일로 — 짠! 이후에만(차징 땐 흰 실루엣) */}
-        {done && (
-          <div aria-hidden="true" style={{ position: 'absolute', width: 220, height: 220, borderRadius: '50%', pointerEvents: 'none', background: `radial-gradient(closest-side, ${nowT.glow}66, ${nowT.glow}1a 55%, ${nowT.glow}00 72%)` }} />
-        )}
-        {/* 떠다니는 반짝임 — 짠! 이후 */}
-        {done && PARTICLE_POS.slice(0, nowT.particles).map(([dx, dy, sz], i) => (
-          <div key={i} aria-hidden="true" style={{ position: 'absolute', left: '50%', top: '50%', transform: `translate(${dx}px, ${dy}px)`, pointerEvents: 'none' }}>
-            <div style={{ animation: `tg-sparkle ${2.2 + i * 0.3}s ease-in-out ${i * 0.4}s infinite` }}>
-              <svg viewBox="0 0 24 24" width={sz} height={sz} aria-hidden="true"><path d="M12 0 L14 10 L24 12 L14 14 L12 24 L10 14 L0 12 L10 10 Z" fill={nowT.spark} /></svg>
-            </div>
-          </div>
-        ))}
+      {/* 동심원 배경 — 연출 5종 공용(딤 위·콘텐츠 아래) */}
+      <RevealRings />
+      <RevealStage>
+      {/* 차징 중 안내 — '짠!' 이후엔 엠블럼 아래 eyebrow가 대신한다(시안은 완료 상태만 정의) */}
+      {charging && (
+        <span style={{ position: 'absolute', left: 0, right: 0, top: 469.5, textAlign: 'center', ...TYPE.label, lineHeight: '25px', color: 'rgba(255,255,255,0.66)', animation: 'ru-hintpulse 1s ease-in-out infinite' }}>
+          등급이 오르고 있어요…
+        </span>
+      )}
+      {/* 엠블럼 영역 — 시안 y318(140×140). 파티클/플래시가 엠블럼 중심을 기준으로 놓이도록 같은 박스 안에 둔다 */}
+      <div style={{ position: 'absolute', left: 0, right: 0, top: 318, height: 140, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        {/* (시안 757:52 = 엠블럼만 남는 정지 상태 — 상시 글로우 헤일로·무한 반짝임은 폐기. 순간 연출인 플래시·색종이는 유지) */}
         {/* 빨려드는 에너지 입자 — 차징 단계만(중심으로 흡수) */}
         {charging && PARTICLE_POS.map(([dx, dy], i) => (
           <div key={`cv${i}`} aria-hidden="true" style={{ position: 'absolute', left: '50%', top: '50%', width: 7, height: 7, marginLeft: -3.5, marginTop: -3.5,
@@ -93,21 +87,21 @@ export function RankUpReveal({ prevIdx = 0, nowIdx = 0, onDone, hold = false }) 
         {charging ? (
           // ★key로 done img와 노드 분리 — 안 하면 React가 같은 <img> 노드를 재사용, 전환 직후 늦은 rAF 프레임이
           //   흰 필터를 재적용하고 멈춰 흰 실루엣이 고정됨(버그). 다른 key면 언마운트되어 안전.
-          <img key="em-charge" ref={shakeRef} src={nowT.emblem} alt="" width={150} height={150} style={{ position: 'relative', zIndex: 4,
+          <img key="em-charge" ref={shakeRef} src={nowT.emblem} alt="" width={140} height={140} style={{ position: 'relative', zIndex: 4,
             transform: 'scale(0.82)', filter: `brightness(0) invert(1) drop-shadow(0 0 8px ${nowT.glow}) drop-shadow(0 0 6px #fff)`, willChange: 'transform, filter' }} />
         ) : (
-          <img key="em-done" src={nowT.emblem} alt="" width={150} height={150} style={{ position: 'relative', zIndex: 4,
+          <img key="em-done" src={nowT.emblem} alt="" width={140} height={140} style={{ position: 'relative', zIndex: 4,
             animation: 'ru-tada .58s cubic-bezier(.34,1.56,.64,1) both', filter: `drop-shadow(0 8px 20px ${nowT.glow}66)` }} />
         )}
       </div>
-      {/* 단계명 — 차징 중엔 숨겨 짠! 때 등장(반전 강조) */}
+      {/* eyebrow + 등급명 — 차징 중엔 숨겨 짠! 때 등장(반전 강조). 시안 757:52 잉크 y478 · y504 */}
       {done && (
-        <span style={{ ...TYPE.title, color: '#fff', marginTop: SPACE.xs, animation: 'ru-pop .5s cubic-bezier(.34,1.56,.64,1) .12s both' }}>{nowT.name}</span>
+        <>
+          <span style={{ position: 'absolute', left: 0, right: 0, top: 478, textAlign: 'center', ...TYPE.label, lineHeight: '25px', color: '#fff', animation: 'ru-pop .5s cubic-bezier(.34,1.56,.64,1) both' }}>등급 상승!</span>
+          <span style={{ position: 'absolute', left: 0, right: 0, top: 504, textAlign: 'center', ...TYPE.head, fontSize: 30, lineHeight: '34px', color: '#fff', animation: 'ru-pop .5s cubic-bezier(.34,1.56,.64,1) .12s both' }}>{nowT.name}</span>
+        </>
       )}
-      {/* 확인 — 차징 중엔 숨김(짠! 이후 등장) */}
-      {!hold && done && (
-        <button onClick={onDone} className="tg-press" style={{ marginTop: 40, padding: '14px 44px', borderRadius: RADIUS.lg, border: 'none', cursor: 'pointer', background: TG.CORAL_GRAD, boxShadow: '0 10px 24px rgba(242,72,76,0.32)', ...TYPE.btn, color: '#fff' }}>확인</button>
-      )}
+      </RevealStage>
     </div>
   );
 }

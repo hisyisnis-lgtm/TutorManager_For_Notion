@@ -1,15 +1,73 @@
-// 닉네임 설정 — 소셜 로그인 직후 '항상' 표시. 랜덤 닉네임을 자동으로 채우고('다시 뽑기'로 재생성),
+// 닉네임 설정 — 소셜 로그인 직후 '항상' 표시. 랜덤 닉네임을 자동으로 채우고('닉네임 뽑기'로 재생성),
 // 사용자가 그대로 시작하거나 직접 고쳐 쓸 수 있다. 카카오 닉네임 동의를 안 눌러도 '게스트'로 안 남는다.
-// 레이아웃/톤은 LoginScreen과 통일(판다 히어로·헤드라인·CTA). 입력+버튼은 화면 중앙에 모아
-// 모바일 키보드가 하단에서 올라와도 CTA를 가리지 않게 한다(하단 고정 안 함).
+// 시안(755:11): 글래스 헤더 + 좌측정렬 2줄 헤드라인 + 입력(342×56)·안내문·'닉네임 뽑기' 칩 + 하단 고정 CTA.
+// 입력 묶음은 상단(y182)에 고정 — 모바일 키보드가 올라와도 가려지지 않는다.
 import { useState } from 'react';
-import { Refresh } from '@solar-icons/react';
-import { TG, TYPE, TOUCH_OPT, ASSETS, RADIUS, SPACE } from '../tgTokens.js';
+import { Refresh, CloseCircle } from '@solar-icons/react';
+import { TG, TYPE, TOUCH_OPT, FONT_BODY, RADIUS } from '../tgTokens.js';
 import { play as playSfx } from '../tgSfx.js';
-import { randomNickname, NICKNAME_MAX } from '../nickname.js';
-import { Reveal } from './shared.jsx';
+import { randomNickname, NICKNAME_MAX, NICKNAME_MIN } from '../nickname.js';
+import { useKeyboardInset } from '../tgWidgets.jsx';
+import { Reveal, GameHeader } from './shared.jsx';
 
 export { NICKNAME_MAX };
+
+// 시안 색 — 입력·칩의 쿨그레이 라인/라벨(인게임 카드 액션 버튼과 동일 계열)
+const FIELD_BORDER = '#E2E7EB', CHIP_ICON = '#637481', CHIP_TEXT = '#7E8A94';
+const CTA_RED = '#F96163', CTA_EDGE = '#E64244';
+
+// 입력 한 줄에서 제어문자만 털어내고 상한까지 자른다(설정·변경 화면 공통 규칙).
+export const cleanNickname = (raw) => raw.replace(/[\u0000-\u001f\u007f]/g, '').slice(0, NICKNAME_MAX);
+
+// 닉네임 입력 묶음(입력칸 + 안내문 + 뽑기 칩) — 설정 화면과 변경 모달이 그대로 공유한다.
+// chipGap: 안내문↔칩 간격(시안 — 설정 화면 20 · 변경 모달 10).
+export function NicknameField({ value, onChange, onSubmit, chipGap = 20 }) {
+  const reroll = () => { playSfx('button'); onChange(randomNickname()); };
+  // 한 덩어리(block)로 감싼다 — 모달처럼 flex column 안에 놓여도 부모 gap이 내부 간격(6·chipGap)에 끼어들지 않게.
+  return (
+    <div>
+      {/* 입력칸 — 시안 342×56 r12, 좌 17 / 우 10(지우기 28) */}
+      <div style={{
+        height: 56, background: '#fff', border: `1px solid ${FIELD_BORDER}`, borderRadius: RADIUS.md,
+        display: 'flex', alignItems: 'center', padding: '0 10px 0 17px',
+      }}>
+        <input
+          value={value}
+          onChange={(e) => onChange(cleanNickname(e.target.value))}
+          onKeyDown={(e) => { if (e.key === 'Enter') onSubmit && onSubmit(); }}
+          maxLength={NICKNAME_MAX}
+          placeholder="닉네임"
+          aria-label="닉네임"
+          enterKeyHint="done"
+          style={{
+            flex: 1, minWidth: 0, height: '100%', border: 'none', background: 'none', outline: 'none', padding: 0,
+            fontFamily: FONT_BODY, fontWeight: 700, fontSize: 20, color: TG.INK, ...TOUCH_OPT,
+          }}
+        />
+        {/* 지우기 — 아이콘 28은 시안 그대로, 히트영역은 44로 넓힌다(우측 여백 10 유지 위해 -8 보정) */}
+        {value.length > 0 && (
+          <button onClick={() => onChange('')} aria-label="닉네임 지우기" className="tg-press" style={{
+            width: 44, height: 44, marginRight: -8, padding: 0, border: 'none', background: 'none', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, ...TOUCH_OPT,
+          }}>
+            <CloseCircle size={28} weight="Bold" color={TG.INK} />
+          </button>
+        )}
+      </div>
+      {/* 안내문 — 길이 규칙은 상수에서 그대로 읽어 문구와 검증이 어긋나지 않게 */}
+      <span style={{ display: 'block', marginTop: 6, fontFamily: FONT_BODY, fontWeight: 500, fontSize: 14, lineHeight: '19px', color: TG.SUB }}>
+        {NICKNAME_MIN}자 이상 {NICKNAME_MAX}자 이하로 가능합니다.
+      </span>
+      <button onClick={reroll} className="tg-press" aria-label="닉네임 다시 뽑기" style={{
+        marginTop: chipGap, display: 'flex', width: 'fit-content', alignItems: 'center', gap: 6, padding: '7px 13px',
+        borderRadius: RADIUS.md, background: '#fff', border: `1px solid ${FIELD_BORDER}`, cursor: 'pointer', ...TOUCH_OPT,
+      }}>
+        <Refresh size={17} weight="Bold" color={CHIP_ICON} />
+        <span style={{ ...TYPE.label, lineHeight: '19px', color: CHIP_TEXT }}>닉네임 뽑기</span>
+      </button>
+    </div>
+  );
+}
 
 // defaultName: 제공자(카카오·구글)가 준 닉네임. 있으면 그걸 기본값으로, 없으면 랜덤 자동생성.
 export function NicknameScreen({ defaultName = '', onSubmit, saving = false }) {
@@ -18,8 +76,8 @@ export function NicknameScreen({ defaultName = '', onSubmit, saving = false }) {
     return provided ? provided.slice(0, NICKNAME_MAX) : randomNickname();
   });
   const trimmed = value.trim();
-  const canSubmit = trimmed.length >= 1 && !saving;
-  const reroll = () => { playSfx('button'); setValue(randomNickname()); };
+  const canSubmit = trimmed.length >= NICKNAME_MIN && !saving;
+  const kbInset = useKeyboardInset(); // 키보드가 뜨면 그 높이만큼 CTA를 올려 키보드 바로 위에 붙인다
   const submit = () => {
     if (!canSubmit) return;
     playSfx('button');
@@ -27,61 +85,34 @@ export function NicknameScreen({ defaultName = '', onSubmit, saving = false }) {
   };
   return (
     <>
-      {/* 판다 히어로 */}
-      <Reveal i={0} style={{ position: 'absolute', left: 0, right: 0, top: 104, display: 'flex', justifyContent: 'center' }}>
-        <img src={ASSETS.pandaCoach} alt="" width={128} style={{ height: 'auto', filter: 'drop-shadow(0px 6px 14px rgba(43,39,48,0.12))', animation: 'tg-bob 3s ease-in-out infinite' }} />
+      <GameHeader title="닉네임 설정" center glass />
+
+      {/* 헤드라인 — 시안 좌측정렬 26/36 2줄(블록 중심 y126) */}
+      <Reveal i={0} style={{ position: 'absolute', left: 24, right: 24, top: 90 }}>
+        <span style={{ display: 'block', ...TYPE.head, fontSize: 26, lineHeight: '36px', color: TG.INK }}>
+          어떻게<br />불러드릴까요?
+        </span>
       </Reveal>
 
-      {/* 헤드라인 */}
-      <Reveal i={1} style={{ position: 'absolute', left: 24, right: 24, top: 258, textAlign: 'center' }}>
-        <span style={{ ...TYPE.titleLg, color: TG.INK }}>어떻게 불러드릴까요?</span>
-      </Reveal>
-      {/* 보조문구 */}
-      <Reveal i={2} style={{ position: 'absolute', left: 24, right: 24, top: 302, textAlign: 'center' }}>
-        <span style={{ ...TYPE.sub, color: TG.SUB }}>마음에 들면 그대로, 아니면 바꿔도 돼요</span>
+      {/* 입력 묶음 — 시안 y182 */}
+      <Reveal i={1} style={{ position: 'absolute', left: 24, right: 24, top: 182 }}>
+        <NicknameField value={value} onChange={setValue} onSubmit={submit} />
       </Reveal>
 
-      {/* 닉네임 입력 + (다시 뽑기 · 글자수) 한 줄 */}
-      <Reveal i={3} style={{ position: 'absolute', left: 24, right: 24, top: 348 }}>
-        <input
-          value={value}
-          onChange={(e) => setValue(e.target.value.replace(/[\u0000-\u001f\u007f]/g, '').slice(0, NICKNAME_MAX))}
-          onKeyDown={(e) => { if (e.key === 'Enter') submit(); }}
-          maxLength={NICKNAME_MAX}
-          placeholder="닉네임"
-          aria-label="닉네임"
-          enterKeyHint="done"
-          style={{
-            width: '100%', height: 56, borderRadius: RADIUS.lg, border: `1.5px solid ${TG.CORAL_BG}`,
-            background: '#fff', padding: '0 18px', ...TYPE.body,
-            color: TG.INK, outline: 'none', textAlign: 'center', ...TOUCH_OPT,
-          }}
-        />
-        {/* 좌: 다시 뽑기 / 우: 글자수 — 정해진 높이 한 줄이라 아래 CTA와 겹치지 않음 */}
-        <div style={{ marginTop: SPACE.lg, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <button onClick={reroll} className="tg-press" aria-label="닉네임 다시 뽑기" style={{
-            display: 'inline-flex', alignItems: 'center', gap: SPACE.sm, padding: '8px 14px', borderRadius: RADIUS.md,
-            background: '#fff', border: `1.5px solid ${TG.CORAL_BG}`, cursor: 'pointer', ...TOUCH_OPT,
-          }}>
-            <Refresh size={15} weight="Bold" color={TG.CORAL_DK} />
-            <span style={{ ...TYPE.labelSm, color: TG.INK }}>다시 뽑기</span>
-          </button>
-          <span style={{ ...TYPE.meta, color: TG.SUB, paddingRight: SPACE.xs }}>{trimmed.length}/{NICKNAME_MAX}</span>
-        </div>
-      </Reveal>
-
-      {/* 시작하기 — 입력+한줄(입력56+여백10+버튼34≈100) 아래로 띄워 겹침 방지. 키보드에 안 가리게 하단 고정 안 함. */}
-      <Reveal i={4} style={{ position: 'absolute', left: 24, right: 24, top: 462 }}>
-        <button onClick={submit} disabled={!canSubmit} className="tg-press" style={{
-          width: '100%', height: 56, borderRadius: RADIUS.lg, border: 'none',
-          background: canSubmit ? TG.CORAL_DK : TG.BORDER, cursor: canSubmit ? 'pointer' : 'default',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', ...TOUCH_OPT,
-        }}>
-          <span style={{ ...TYPE.btn, color: canSubmit ? '#fff' : TG.MUTED }}>
-            {saving ? '저장 중…' : '시작하기'}
-          </span>
-        </button>
-      </Reveal>
+      {/* 시작하기 — 하단 고정 키캡 CTA(시안 342×60, 하단 26). 키보드가 뜨면 그 위(간격 12)로 따라 붙는다 */}
+      <button onClick={submit} disabled={!canSubmit} className="tg-press" style={{
+        position: 'absolute', left: 24, right: 24, zIndex: 3,
+        bottom: kbInset > 0 ? kbInset + 12 : 'calc(26px + env(safe-area-inset-bottom))',
+        transition: 'bottom .18s ease-out',
+        height: 60, borderRadius: RADIUS.xl, border: 'none', cursor: canSubmit ? 'pointer' : 'default',
+        background: canSubmit ? CTA_RED : TG.BORDER, paddingBottom: 4,
+        boxShadow: canSubmit ? `inset 0 -4px 0 ${CTA_EDGE}, 0 4px 18px rgba(43,39,48,0.07)` : 'none',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', ...TOUCH_OPT,
+      }}>
+        <span style={{ ...TYPE.head, color: canSubmit ? '#fff' : TG.MUTED }}>
+          {saving ? '저장 중…' : '시작하기'}
+        </span>
+      </button>
     </>
   );
 }

@@ -1,110 +1,75 @@
-// 소개 화면 (3페이지 캐러셀, Figma 좌표 절대배치) — 게임 기원 스토리.
-import { Bolt, Cup } from '@solar-icons/react';
-import { TG, TYPE, FONT_HANZI, TOUCH_OPT, RADIUS, SPACE } from '../tgTokens.js';
+// 소개 화면 (1페이지, Figma 좌표 절대배치) — 게임 기원 스토리.
+// 시안(756:2): 글래스 헤더('게임 소개') / 히어로 카드(24,90 342×190) / 좌측정렬 텍스트(24,300)
+//   / 하단 고정 키캡 CTA(342×60, 하단 26).
+// ※ 2·3페이지("눈이 아니라 반응으로" / "기록 깨는 재미로")는 2026-08-08 사용자 요청으로 삭제.
+//    캐러셀(슬라이딩 트랙·점 인디케이터)과 히어로 2종(PaceCard·RecordCard)도 함께 제거 — 첫 장 하나로 끝난다.
+import { TG, TYPE, FONT_HANZI, FONT_BODY, TOUCH_OPT, RADIUS, SPACE } from '../tgTokens.js';
 import { ToneMark } from '../tgWidgets.jsx';
 import { TONES } from '../../constants/toneGameWords.js';
 import { play as playSfx } from '../tgSfx.js';
-import { Reveal } from './shared.jsx';
+import { Reveal, GameHeader } from './shared.jsx';
 
-const INTRO_PAGES = [
-  {
-    kind: 'note',
-    title: '하늘쌤의 공부법에서 시작했어요',
-    body: ['유학 시절, 병음 없는 중국어에 성조를 직접', '적어가며 회화를 익혔던 하늘쌤.', '그 연습법을 그대로 게임에 담았어요.'],
-    cta: '다음', tcolTop: '41.9%',
-  },
-  {
-    kind: 'icon', Icon: Bolt, iconColor: TG.CORAL_DK, circleBg: 'rgba(255,107,107,0.14)',
-    tag: '성조를 빠르게 캐치!', tagColor: TG.CORAL_DK, tagBg: 'rgba(255,107,107,0.16)',
-    title: '눈이 아니라 반응으로',
-    body: ['성조를 빠르게 알아채는 게 회화의 진짜', '실력이에요. 반복해서 찾다 보면 머리가', '아니라 입이 먼저 기억해요.'],
-    cta: '다음', tcolTop: '43.1%',
-  },
-  {
-    kind: 'icon', Icon: Cup, iconColor: '#F0A91E', circleBg: 'rgba(255,194,60,0.16)',
-    tag: '최고 기록에 도전!', tagColor: '#b07d12', tagBg: 'rgba(255,194,60,0.18)',
-    title: '기록 깨는 재미로, 매일',
-    body: ['지난 최고 기록을 넘볼 때의 짜릿함.', '어제의 나와 겨루다 보면,', '하루 1분이 어느새 습관이 돼요.'],
-    cta: '직접 해볼까요?', tcolTop: '43.1%',
-  },
-];
+const HERO_TOP = 90, HERO_H = 190, TEXT_TOP = 300, TEXT_W = 267;
+const CTA_RED = '#F96163', CTA_EDGE = '#E64244';
 
-// 소개 한 페이지 내용(일러스트+제목+본문) — 슬라이딩 트랙의 각 패널
-function IntroPanel({ p }) {
+const INTRO = {
+  title: '하늘쌤의 공부법에서 시작했어요',
+  body: ['유학 시절, 병음 없는 중국어에 성조를 직접', '적어가며 회화를 익혔던 하늘쌤.', '그 연습법을 그대로 게임에 담았어요.'],
+  cta: '직접 해볼까요?',
+};
+
+// 히어로 카드 — 시안 342×190 흰 카드
+const HERO_CARD = {
+  width: '100%', height: HERO_H, background: '#fff', borderRadius: RADIUS.xl,
+  boxShadow: '0px 4px 9px rgba(43,39,48,0.04)',
+  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+};
+
+// 히어로 내용 — '我爱你' 위에 성조만 직접 표기한 노트(열 폭 52·열 간격 20)
+function NoteCard() {
   return (
-    <>
-      {p.kind === 'note' ? (
-        <Reveal i={0} style={{ position: 'absolute', left: 0, right: 0, top: '16.5%' }}>
-        <div style={{ display: 'flex', justifyContent: 'center' }}>
-          <div style={{ background: '#fff', borderRadius: RADIUS.card, boxShadow: '0px 10px 28px rgba(43,39,48,0.08)', padding: '26px 30px 22px', display: 'flex', flexDirection: 'column', gap: SPACE.x2, alignItems: 'center' }}>
-            <div style={{ display: 'flex', gap: SPACE.x3, alignItems: 'center' }}>
-              {[['我', 3], ['爱', 4], ['你', 3]].map(([ch, tn]) => (
-                <div key={ch} style={{ display: 'flex', flexDirection: 'column', gap: SPACE.md, alignItems: 'center', color: TONES.find((t) => t.num === tn)?.color }}>
-                  <ToneMark tone={tn} size={26} />
-                  <span style={{ fontFamily: FONT_HANZI, fontWeight: 700, fontSize: 52, color: TG.INK, lineHeight: 1 }}>{ch}</span>
-                </div>
-              ))}
-            </div>
-            <div style={{ background: '#fff6e8', padding: '7px 14px', borderRadius: RADIUS.lg }}>
-              <span style={{ ...TYPE.labelSm, color: '#b07d12', whiteSpace: 'nowrap' }}>병음 없이 · 성조만 직접 표기</span>
-            </div>
+    <div style={{ ...HERO_CARD, gap: 18 }}>
+      <div style={{ display: 'flex', gap: SPACE.x3, alignItems: 'center' }}>
+        {[['我', 3], ['爱', 4], ['你', 3]].map(([ch, tn]) => (
+          <div key={ch} style={{ width: 52, display: 'flex', flexDirection: 'column', gap: 3, alignItems: 'center', color: TONES.find((t) => t.num === tn)?.color }}>
+            <ToneMark tone={tn} size={26} />
+            <span style={{ fontFamily: FONT_HANZI, fontWeight: 700, fontSize: 52, lineHeight: '62.4px', color: TG.INK }}>{ch}</span>
           </div>
-        </div>
-        </Reveal>
-      ) : (
-        <Reveal i={0} style={{ position: 'absolute', left: 0, right: 0, top: '19.8%' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.x2, alignItems: 'center' }}>
-          <div style={{ width: 112, height: 112, borderRadius: 56, background: p.circleBg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <p.Icon size={52} weight="Bold" color={p.iconColor} />
-          </div>
-          <div style={{ background: p.tagBg, padding: '7px 14px', borderRadius: RADIUS.lg }}>
-            <span style={{ ...TYPE.labelSm, color: p.tagColor, whiteSpace: 'nowrap' }}>{p.tag}</span>
-          </div>
-        </div>
-        </Reveal>
-      )}
-      <Reveal i={1} style={{ position: 'absolute', left: 24, right: 24, top: p.tcolTop }}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.xl, alignItems: 'center', textAlign: 'center' }}>
-        <span style={{ ...TYPE.titleLg, fontSize: 28, color: TG.INK, letterSpacing: -0.3, width: '100%' }}>{p.title}</span>
-        <div style={{ width: '100%', ...TYPE.body, color: TG.SUB, lineHeight: 1.65 }}>
-          {p.body.map((line, i) => <div key={i}>{line}</div>)}
-        </div>
+        ))}
       </div>
-      </Reveal>
-    </>
+      <span style={{ ...TYPE.label, color: TG.SUB, whiteSpace: 'nowrap' }}>병음 없이 · 성조만 직접 표기</span>
+    </div>
   );
 }
 
-export function IntroScreen({ page, onNext, onSkip }) {
-  const cur = INTRO_PAGES[page];
+// onNext — 소개를 마치고 튜토리얼로. (한 장뿐이라 '건너뛰기'는 CTA와 동작이 같아져 제거됨)
+export function IntroScreen({ onNext }) {
   return (
     <>
-      {/* 건너뛰기 (고정) — 히트영역 ≥44px(패딩 확장, top/right 보정으로 텍스트 시각 위치는 기존과 동일) */}
-      <button onClick={() => { playSfx('button'); onSkip(); }} className="tg-press" style={{ position: 'absolute', right: 22, top: 11, zIndex: 3, padding: '13px 12px', background: 'none', border: 'none', cursor: 'pointer', ...TOUCH_OPT }}>
-        <span style={{ ...TYPE.sub, color: TG.SUB }}>건너뛰기</span>
-      </button>
+      <GameHeader title="게임 소개" center glass />
 
-      {/* 슬라이딩 트랙 — 일러스트+제목+본문이 좌우로 슬라이드 */}
-      <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
-        <div style={{ display: 'flex', width: '300%', height: '100%', transform: `translateX(-${page * (100 / 3)}%)`, transition: 'transform .38s cubic-bezier(.4,0,.2,1)' }}>
-          {INTRO_PAGES.map((p, idx) => (
-            <div key={idx} style={{ position: 'relative', width: `${100 / 3}%`, height: '100%', flexShrink: 0 }}>
-              <IntroPanel p={p} />
-            </div>
-          ))}
+      <Reveal i={0} style={{ position: 'absolute', left: 24, right: 24, top: HERO_TOP }}>
+        <NoteCard />
+      </Reveal>
+
+      {/* 제목 26/36 + 본문 14/25 — 시안 좌측정렬, 폭 267(줄바꿈 위치 고정) */}
+      <Reveal i={1} style={{ position: 'absolute', left: 24, top: TEXT_TOP, width: TEXT_W }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.sm }}>
+          <span style={{ ...TYPE.head, fontSize: 26, lineHeight: '36px', color: TG.INK }}>{INTRO.title}</span>
+          <div style={{ fontFamily: FONT_BODY, fontWeight: 500, fontSize: 14, lineHeight: '25px', color: TG.SUB }}>
+            {INTRO.body.map((line, i) => <div key={i}>{line}</div>)}
+          </div>
         </div>
-      </div>
+      </Reveal>
 
-      {/* 점 인디케이터 (고정) — CTA(89.35%) 위 gap 유지 */}
-      <div style={{ position: 'absolute', left: 24, right: 24, top: '84.85%', zIndex: 3, height: 28, display: 'flex', gap: SPACE.md, alignItems: 'center', justifyContent: 'center' }}>
-        {[0, 1, 2].map((i) => (
-          <div key={i} style={{ height: 8, width: i === page ? 22 : 8, borderRadius: RADIUS.xs, background: i === page ? TG.CORAL : '#e2dbd3', transition: 'width .25s ease, background .25s ease' }} />
-        ))}
-      </div>
-
-      {/* CTA (고정) — 하단 여백 30px 상당(=89.35%) */}
-      <button onClick={() => { playSfx('button'); onNext(); }} className="tg-press" style={{ position: 'absolute', left: 24, right: 24, top: '89.35%', zIndex: 3, height: 60, borderRadius: RADIUS.xl, border: 'none', cursor: 'pointer', background: TG.CORAL_GRAD, boxShadow: '0px 10px 20px rgba(242,72,76,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', ...TOUCH_OPT }}>
-        <span style={{ ...TYPE.cta, color: '#fff' }}>{cur.cta}</span>
+      {/* CTA — 하단 26의 키캡 버튼 */}
+      <button onClick={() => { playSfx('button'); onNext(); }} className="tg-press" style={{
+        position: 'absolute', left: 24, right: 24, bottom: 'calc(26px + env(safe-area-inset-bottom))', zIndex: 3,
+        height: 60, borderRadius: RADIUS.xl, border: 'none', cursor: 'pointer', background: CTA_RED, paddingBottom: 4,
+        boxShadow: `inset 0 -4px 0 ${CTA_EDGE}, 0 4px 18px rgba(43,39,48,0.07)`,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', ...TOUCH_OPT,
+      }}>
+        <span style={{ ...TYPE.head, color: '#fff' }}>{INTRO.cta}</span>
       </button>
     </>
   );

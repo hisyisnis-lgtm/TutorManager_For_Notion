@@ -6,13 +6,13 @@
 //  비트4 연음 규칙(美国): 3성+2성 답한 뒤 완성 순간 연음 마크 등장 → 하늘쌤 반3성 연음 규칙 각인.
 // 게임 레이아웃 + 딤 스포트라이트. 완료 후 onDone → 모드선택.
 import { useState, useEffect, useRef } from 'react';
-import { Star, Stopwatch, AltArrowRight } from '@solar-icons/react';
-import { TG, TYPE, FONT_HANZI, TOUCH_OPT, TONE_TINTS, TONE_BORDERS, haptic, RADIUS, SPACE } from '../tgTokens.js';
+import { Stopwatch, Play } from '@solar-icons/react';
+import { TG, TYPE, FONT_HANZI, TOUCH_OPT, haptic, RADIUS, SPACE } from '../tgTokens.js';
 import { ToneMark } from '../tgWidgets.jsx';
 import { TONES } from '../../constants/toneGameWords.js';
 import { speakWord } from '../tgTts.js';
 import { play as playSfx } from '../tgSfx.js';
-import { WordCard, CoachBubble, Reveal, DrawPad } from './shared.jsx';
+import { WordCard, CoachBubble, Reveal, DrawPad, GameHeader, ToneButtons } from './shared.jsx';
 import { P1_WORD, P2_WORD, LY_WORD, TONE_SAMPLES, SAMPLE_ORDER } from '../tutorialWords.js';
 import { findLianyin } from '../lianyin.js';
 
@@ -83,36 +83,36 @@ export function TutorialScreen({ onDone }) {
 
   return (
     <>
-      {/* 점수(정적) 상단 중앙 */}
-      <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', top: 20, display: 'flex', alignItems: 'center', gap: SPACE.sm, background: '#fff', padding: '9px 14px', borderRadius: RADIUS.lg, boxShadow: '0px 3px 8px rgba(43,39,48,0.06)' }}>
-        <Star size={13} weight="Bold" color={TG.SUN} />
-        <span style={{ ...TYPE.numMd, fontSize: 17, color: TG.INK }}>0</span>
-      </div>
-      {/* 우상단은 건너뛰기 버튼이 차지(정적 일시정지 아이콘은 겹쳐서 제거) */}
-      {/* 타이머(정적) top69 */}
-      <div style={{ position: 'absolute', left: 20, right: 20, top: 69, display: 'flex', alignItems: 'center', gap: SPACE.md }}>
+      {/* 인게임 크롬(정적) — 시안 19: 타이머 (24,72). 딤 아래라 어둡게 깔린다 — 점수 숫자는 튜토리얼에선 뺀다(2026-08-06 사용자 요청) */}
+      <div style={{ position: 'absolute', left: 24, right: 24, top: 72, display: 'flex', alignItems: 'center', gap: SPACE.md }}>
         <div style={{ width: 32, height: 32, borderRadius: RADIUS.lg, background: '#ff5e62', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0px 3px 4.5px rgba(255,94,98,0.45)' }}>
           <Stopwatch size={20} weight="Bold" color="#fff" />
         </div>
-        <div style={{ flex: 1, height: 12, borderRadius: RADIUS.sm, background: TG.TRACK }} />
+        <div style={{ flex: 1, height: 12, borderRadius: 8, background: '#EBE5D5', overflow: 'hidden' }}>
+          <div style={{ width: '83%', height: '100%', background: '#FF5E62' }} />
+        </div>
       </div>
-      {/* 진행 표시(3점) + 단계 라벨 — top70 중앙 */}
-      <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', top: 70, display: 'flex', alignItems: 'center', gap: SPACE.md, background: '#fff1f1', padding: '8px 14px', borderRadius: RADIUS.lg, zIndex: 7 }}>
-        <div style={{ display: 'flex', gap: SPACE.sm }}>
+
+      {/* 딤 오버레이 — 헤더(60) 아래만. 강조(진행필·카드·성조버튼) 외 어둡게. 마지막 정답 시 사라짐 */}
+      <div style={{ position: 'absolute', left: 0, right: 0, top: 60, bottom: 0, zIndex: 5, background: 'rgba(43,39,48,0.5)', opacity: dimOff ? 0 : 1, transition: 'opacity .35s ease', pointerEvents: 'none' }} />
+
+      {/* 헤더 — 글래스 60 + '튜토리얼' + 우측 건너뛰기. 딤(z5) 위.
+          ★뒤로가기 없음(2026-08-07 사용자) — 우측 '건너뛰기'와 동작이 같아(둘 다 skip) 나가는 문이 두 개였다. */}
+      <GameHeader title="튜토리얼" glass center z={7} right={
+        <button onClick={skip} className="tg-press" style={{ marginLeft: 'auto', padding: '12px 0 12px 12px', background: 'none', border: 'none', cursor: 'pointer', ...TOUCH_OPT }}>
+          <span style={{ ...TYPE.sub, fontWeight: 700, color: TG.INK }}>건너뛰기</span>
+        </button>
+      } />
+
+      {/* 진행 표시(5점) + 단계 라벨 — 시안 (116,73) 158×30 r16 흰색 */}
+      <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', top: 73, height: 30, display: 'flex', alignItems: 'center', gap: SPACE.md, background: '#fff', padding: '0 14px', borderRadius: RADIUS.lg, zIndex: 7 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
           {[0, 1, 2, 3, 4].map((i) => (
             <div key={i} style={{ width: i === phase ? 16 : 6, height: 6, borderRadius: RADIUS.xs, background: i === phase ? TG.CORAL_DK : '#f4c4c4', transition: 'width .25s ease' }} />
           ))}
         </div>
         <span style={{ ...TYPE.labelSm, color: TG.CORAL_DK, whiteSpace: 'nowrap' }}>{PHASE_LABEL[phase]}</span>
       </div>
-
-      {/* 딤 오버레이 — 강조(카드·코치·성조버튼) 외 어둡게. 마지막 정답 시 사라짐 */}
-      <div style={{ position: 'absolute', inset: 0, zIndex: 5, background: 'rgba(43,39,48,0.5)', opacity: dimOff ? 0 : 1, transition: 'opacity .35s ease', pointerEvents: 'none' }} />
-
-      {/* 건너뛰기 — IntroScreen 우상단과 같은 스타일(텍스트만·히트영역 ≥44px). 딤 위(zIndex 7)라 색만 밝게(대비 확보) */}
-      <button onClick={skip} className="tg-press" style={{ position: 'absolute', right: 22, top: 11, zIndex: 7, padding: '13px 12px', background: 'none', border: 'none', cursor: 'pointer', ...TOUCH_OPT }}>
-        <span style={{ ...TYPE.sub, color: 'rgba(255,255,255,0.9)' }}>건너뛰기</span>
-      </button>
 
       {/* 카드 top129 — 스포트라이트. 비트0=성조 소개, 비트1/2=단어카드 */}
       <Reveal i={0} style={{ position: 'absolute', left: 20, right: 20, top: 129, zIndex: 6 }}>
@@ -135,19 +135,25 @@ export function TutorialScreen({ onDone }) {
         )}
       </Reveal>
 
-      {/* 비트1/2/3 코치 — 스포트라이트. 비트3(그리기)은 패드 자리 확보 위해 카드 바로 아래로 */}
+      {/* 비트1/2/3 코치 — 스포트라이트. 비트3(그리기)은 패드 자리 확보 위해 카드 바로 아래로.
+          ★비트3 세로 배치 실측(390×844): 단어카드 바닥 401 → 말풍선(높이 75, 판다는 위로 5 튀어나옴) → 패드.
+            구 430은 말풍선 바닥이 505라 패드(490)를 15px 파고들어 판다와 그리기 영역이 겹쳤다(2026-08-07 사용자). */}
       {phase !== 0 && (
-        <Reveal i={1} style={{ position: 'absolute', left: 24, right: 24, top: phase === 3 ? 430 : 470, zIndex: 6 }}>
+        <Reveal i={1} style={{ position: 'absolute', left: 24, right: 24, top: phase === 3 ? 415 : 470, zIndex: 6 }}>
           <CoachBubble text={coachText} />
         </Reveal>
       )}
 
-      {/* 비트0 '다음' 버튼 — 성조버튼 위. 스포트라이트 */}
+      {/* 비트0 '다음' 버튼 — 시안 19: (24,677) 342×50 r20 단색 코랄 + 아래 인너 엣지 + 플레이 18 */}
       {phase === 0 && (
-        <Reveal i={1} style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(130px + env(safe-area-inset-bottom))', zIndex: 6 }}>
-          <button onClick={() => goPhase(1)} className="tg-press" style={{ width: '100%', height: 52, borderRadius: RADIUS.lg, border: 'none', cursor: 'pointer', background: TG.CORAL_GRAD, boxShadow: '0px 8px 18px rgba(242,72,76,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: SPACE.sm, ...TOUCH_OPT }}>
-            <span style={{ ...TYPE.btn, color: '#fff' }}>다음</span>
-            <AltArrowRight size={14} weight="Bold" color="#fff" />
+        <Reveal i={1} style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(117px + env(safe-area-inset-bottom))', zIndex: 6 }}>
+          <button onClick={() => goPhase(1)} className="tg-press" style={{
+            width: '100%', height: 50, borderRadius: 20, border: 'none', cursor: 'pointer', background: '#F96163',
+            boxShadow: '0px 10px 20px rgba(242,72,76,0.1), inset 0 -4px 0 #E64244', paddingBottom: 4,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: SPACE.md, ...TOUCH_OPT,
+          }}>
+            <span style={{ ...TYPE.head, color: '#fff' }}>다음</span>
+            <Play size={18} weight="Bold" color="#fff" />
           </button>
         </Reveal>
       )}
@@ -155,45 +161,18 @@ export function TutorialScreen({ onDone }) {
       {/* 비트3 그리기 패드 — 성조버튼 대신. 스포트라이트(딤 위 zIndex6). 그려서 성조 맞히기.
           ★Reveal(이중 div, 안쪽 height 없음)로 감싸면 height:100% 패드가 접힘 → 단일 positioned div(top/bottom로 높이 확보) */}
       {phase === 3 && (
-        <div className="tg-reveal" style={{ position: 'absolute', left: 20, right: 20, top: 490, bottom: 'calc(30px + env(safe-area-inset-bottom))', zIndex: 6, animationDelay: '220ms' }}>
-          <DrawPad expectedTone={answer} onDraw={tap} disabled={completed} resetKey={phase} />
+        <div className="tg-reveal" style={{ position: 'absolute', left: 20, right: 20, top: 502, bottom: 'calc(30px + env(safe-area-inset-bottom))', zIndex: 6, animationDelay: '220ms' }}>
+          {/* demoTone = 예시 획 재생(튜토리얼 전용). 인게임 DrawPad는 빈 캔버스 그대로 — 정답 힌트가 되면 안 되므로. */}
+          <DrawPad expectedTone={answer} demoTone={answer} onDraw={tap} disabled={completed} resetKey={phase} />
         </div>
       )}
 
-      {/* 성조버튼 하단 고정 — 비트0=탭해서 듣기(정답 강조 없음), 비트1/2=정답 강조 + 나머지 흐림. 비트3(그리기)은 미표시 */}
+      {/* 성조버튼 하단 고정 — 시안 19는 인게임과 **같은 흰 키캡**(63.6×81 r20). 정답 안내는 highlight(테두리+리플)로.
+          비트0=탭해서 듣기(정답 없음), 비트3(그리기)은 미표시 */}
       {phase !== 3 && (
-      <Reveal i={2} style={{ position: 'absolute', left: 20, right: 20, bottom: 'calc(30px + env(safe-area-inset-bottom))', zIndex: 6 }}>
-        <div style={{ height: 81, display: 'flex', gap: SPACE.lg }}>
-          {TONES.map((t) => {
-            const isAnswer = phase !== 0 && t.num === answer && !completed;
-            const isWrong = wrong === t.num;
-            return (
-              <button key={t.num} onClick={() => tap(t.num)} className={`tg-press ${isWrong ? 'tg-shake' : ''}`} data-nosfx="true" style={{
-                position: 'relative', flex: 1, minWidth: 0, height: '100%', borderRadius: RADIUS.xl, cursor: 'pointer',
-                // 딤 위 스포트라이트 — 틴트가 투명하면 딤이 비쳐 칙칙 → 페이지색 위에 합성해 불투명
-                background: `linear-gradient(${TONE_TINTS[t.num]}, ${TONE_TINTS[t.num]}), ${TG.BG}`,
-                border: isAnswer ? `3px solid ${t.color}` : `1.5px solid ${TONE_BORDERS[t.num]}`,
-                color: t.color,
-                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: SPACE.xs, paddingTop: SPACE.x2, paddingBottom: SPACE.xl,
-                boxShadow: isAnswer ? `0 0 0 4px ${t.color}22` : 'none',
-                transition: 'box-shadow .2s ease', ...TOUCH_OPT,
-              }}>
-                {/* 정답 버튼 탭 물결(리플) */}
-                {isAnswer && [0, 750].map((delay) => (
-                  <span key={delay} style={{
-                    position: 'absolute', left: '50%', top: '50%', width: 46, height: 46, borderRadius: '50%',
-                    background: t.color, transform: 'translate(-50%,-50%)', pointerEvents: 'none', zIndex: 0,
-                    animation: `tg-ripple 1500ms ease-out ${delay}ms infinite`,
-                  }} />
-                ))}
-                <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: SPACE.xs }}>
-                  <ToneMark tone={t.num} size={34} />
-                  <span style={{ ...TYPE.labelSm, color: t.color }}>{t.name}</span>
-                </div>
-              </button>
-            );
-          })}
-        </div>
+      <Reveal i={2} style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(26px + env(safe-area-inset-bottom))', zIndex: 6 }}>
+        <ToneButtons onTone={tap} wrongBtn={wrong} disabled={completed}
+          highlight={phase !== 0 && !completed ? answer : null} />
       </Reveal>
       )}
     </>

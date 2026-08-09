@@ -5,6 +5,7 @@
 // ~2초 체류 후 자동 소멸(onDone). SFX는 end-effect 담당, 여긴 햅틱만.
 import { useEffect, useState } from 'react';
 import { TYPE, haptic, SPACE } from '../tgTokens.js';
+import { RevealStage, BeatContent } from './shared.jsx';
 
 // 종료 사유별 헤드라인 + 원인 한 줄 — 압박 아닌 격려 톤이되, 왜 끝났는지 분명히.
 // complete=모든 문제 완료(정상) · timeout=시간 초과 · miss=무한 서든데스 오답 종료
@@ -28,27 +29,25 @@ export function GameOverBeat({ endKind = 'complete', onDone, hold = false }) {
   const e = END[endKind] || END.complete;
   return (
     <div style={{
-      position: 'fixed', inset: 0, zIndex: 120, display: 'flex', alignItems: 'center', justifyContent: 'center',
-      background: 'rgba(24,20,28,0.72)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
-      animation: closing ? 'tg-fade-out .3s ease forwards' : 'tg-dim-in .35s ease both', // 공용 프리미티브(shared.jsx)
+      position: 'fixed', inset: 0, zIndex: 120,
+      // 딤은 BeatDim(비트 바깥 공용 레이어)이 담당 — 체인 사이 깜빡임 방지(2026-08-08). 여긴 콘텐츠만.
     }}>
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: -8 }}>
-        {/* 헤드라인 — 클린 타이포, 부드럽게 떠오르며 페이드(오버슛 없음) */}
-        <span style={{
-          ...TYPE.titleLg, fontSize: 38, color: '#fff', letterSpacing: '-0.01em',
-          animation: 'tg-rise .55s cubic-bezier(.22,1,.36,1) .05s both',
-        }}>{e.title}</span>
-        {/* 원인 한 줄 — 왜 끝났는지 명시(인지) */}
-        <span style={{
-          ...TYPE.body, color: 'rgba(255,255,255,0.82)', marginTop: SPACE.lg,
-          animation: 'tg-rise .55s cubic-bezier(.22,1,.36,1) .16s both',
-        }}>{e.reason}</span>
-        {/* 진행 힌트 */}
-        <span style={{
-          ...TYPE.meta, color: 'rgba(255,255,255,0.45)', marginTop: SPACE.x3,
-          animation: 'tg-rise .55s cubic-bezier(.22,1,.36,1) .3s both',
-        }}>결과 보기로 이동 중…</span>
-      </div>
+      <BeatContent closing={closing}>
+      <RevealStage>
+      {/* 시안 795:597 — 헤드라인 잉크 y372 · 사유 잉크 y420 */}
+      <span style={{
+        position: 'absolute', left: 0, right: 0, top: 353.5, textAlign: 'center',
+        ...TYPE.head, fontSize: 38, lineHeight: '60px', color: '#fff', letterSpacing: '-0.01em',
+        animation: 'tg-rise .55s cubic-bezier(.22,1,.36,1) .05s both',
+      }}>{e.title}</span>
+      {/* 원인 한 줄 — 왜 끝났는지 명시(인지) */}
+      <span style={{
+        position: 'absolute', left: 0, right: 0, top: 413, textAlign: 'center',
+        ...TYPE.body, fontSize: 16, lineHeight: '24px', color: 'rgba(255,255,255,0.82)',
+        animation: 'tg-rise .55s cubic-bezier(.22,1,.36,1) .16s both',
+      }}>{e.reason}</span>
+      </RevealStage>
+      </BeatContent>
     </div>
   );
 }

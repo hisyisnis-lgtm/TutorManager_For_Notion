@@ -60,7 +60,10 @@ export function unlockToastText(diffId) {
   return prev ? `${prev} ${UNLOCK_THRESHOLD.toLocaleString()}점을 달성하면 열려요` : '';
 }
 // 무한 모드 해제 연출(마지막 난이도 1000점 돌파 시) — 난이도별 연출은 DIFFICULTIES[].unlockReveal(데이터)이 담당.
-export const ENDLESS_UNLOCK_REVEAL = { icon: 'Infinity', label: '무한 모드', desc: '끝없이 이어지는 무한 모드가 열렸어요', accent: '#8B5CF6' };
+// fill/edge = 모드선택 화면 오브와 같은 색(연출에서 그 오브가 열리는 것처럼 보이게). desc는 시안에서 폐기.
+// iconStroke = 덧획(Solar Infinity는 획이 얇음). SVG 뷰박스(24) 기준값 — 연출 아이콘은 53px이라
+//  모드선택 화면 값(1.4)을 그대로 쓰면 화면상 3.1px로 두꺼워진다. 시안 대조 실측으로 1.1.
+export const ENDLESS_UNLOCK_REVEAL = { icon: 'Infinity', label: '무한 모드', fill: '#F3A75B', edge: '#E77E33', iconStroke: 1.1 };
 
 // ── 스테이지(난이도 세분화, 2026-07-16) ─────────────────
 // 각 난이도(티어)를 난이도순 5밴드로 나눔. 밴드=티어 풀을 난이도순 5구간으로 나눠 플레이. 새 단어 안 만들고 정렬만.

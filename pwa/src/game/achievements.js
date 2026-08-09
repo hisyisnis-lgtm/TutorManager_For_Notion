@@ -44,19 +44,41 @@ const UNLOCK_ACHIEVEMENTS = [
 //  progress(snapshot)→{cur,target}: 업적 화면 진행도 바(획득 전 현재/목표). cur는 목표 초과 가능(바는 클램프).
 // cond = 미획득 시 안내 토스트용 '얻는 조건'(desc는 획득 후 완료형). 잠금 배지 탭 시 표시(P4 후속).
 export const ACHIEVEMENTS = [
-  { id: 'first-play', label: '첫걸음', desc: '처음으로 게임을 완주했어요', cond: '게임을 한 판 완주하면 얻어요', icon: 'Footprints', cat: 'start',
+  { id: 'first-play', label: '첫걸음', desc: '처음으로 게임을 완주했어요', cond: '게임을 한 판 완주하면 얻어요', icon: 'Flag', cat: 'start',
     check: (s) => (s.playCount || 0) >= 1, progress: (s) => ({ cur: Math.min(s.playCount || 0, 1), target: 1 }) },
+  { id: 'play-10', label: '열 판 채움', desc: '게임을 10판 했어요', cond: '게임을 10판 하면 얻어요', icon: 'CheckCircle', cat: 'start',
+    check: (s) => (s.playCount || 0) >= 10, progress: (s) => ({ cur: s.playCount || 0, target: 10 }) },
+  { id: 'play-50', label: '쉰 판의 뚝심', desc: '게임을 50판 했어요', cond: '게임을 50판 하면 얻어요', icon: 'Stars', cat: 'start',
+    check: (s) => (s.playCount || 0) >= 50, progress: (s) => ({ cur: s.playCount || 0, target: 50 }) },
   { id: 'score-1000', label: '천 점 클럽', desc: '한 게임에서 1,000점을 넘었어요', cond: '한 게임에서 1,000점을 넘으면 얻어요', icon: 'Trophy', cat: 'score',
     check: (s) => (s.bestScoreAny || 0) >= 1000, progress: (s) => ({ cur: s.bestScoreAny || 0, target: 1000 }) },
+  { id: 'score-2000', label: '이천 점 클럽', desc: '한 게임에서 2,000점을 넘었어요', cond: '한 게임에서 2,000점을 넘으면 얻어요', icon: 'CrownStar', cat: 'score',
+    check: (s) => (s.bestScoreAny || 0) >= 2000, progress: (s) => ({ cur: s.bestScoreAny || 0, target: 2000 }) },
   { id: 'combo-10', label: '콤보 마스터', desc: '콤보 10을 달성했어요', cond: '콤보 10을 달성하면 얻어요', icon: 'Flame', cat: 'score',
     check: (s) => (s.maxComboEver || 0) >= 10, progress: (s) => ({ cur: s.maxComboEver || 0, target: 10 }) },
   { id: 'combo-20', label: '불꽃 손가락', desc: '콤보 20을 달성했어요', cond: '콤보 20을 달성하면 얻어요', icon: 'FireSimple', cat: 'score',
     check: (s) => (s.maxComboEver || 0) >= 20, progress: (s) => ({ cur: s.maxComboEver || 0, target: 20 }) },
+  { id: 'combo-30', label: '손이 먼저 안다', desc: '콤보 30을 달성했어요', cond: '콤보 30을 달성하면 얻어요', icon: 'Bolt', cat: 'score',
+    check: (s) => (s.maxComboEver || 0) >= 30, progress: (s) => ({ cur: s.maxComboEver || 0, target: 30 }) },
+  // 스테이지 별 — 사다리 진행의 '완벽함'을 인정. 별 3개 = 전 단어 무실수 완주.
+  { id: 'perfect-1', label: '완벽한 한 판', desc: '별 3개로 스테이지를 깼어요', cond: '스테이지 하나를 별 3개로 깨면 얻어요', icon: 'Star', cat: 'score',
+    check: (s) => (s.perfectStages || 0) >= 1, progress: (s) => ({ cur: s.perfectStages || 0, target: 1 }) },
+  { id: 'perfect-5', label: '별 열다섯 개', desc: '별 3개 스테이지를 5개 모았어요', cond: '별 3개 스테이지를 5개 모으면 얻어요', icon: 'Stars', cat: 'score',
+    check: (s) => (s.perfectStages || 0) >= 5, progress: (s) => ({ cur: s.perfectStages || 0, target: 5 }) },
   ...UNLOCK_ACHIEVEMENTS,
+  // 승급시험 합격 — 이 게임에서 가장 큰 관문인데 배지가 없었다(2026-08-08 추가).
+  { id: 'rank-1', label: '실전 승급', desc: '실전 승급시험에 합격했어요', cond: '실전 승급시험에 합격하면 얻어요', icon: 'MedalStar', cat: 'unlock',
+    check: (s) => (s.rank || 0) >= 1, progress: (s) => ({ cur: Math.min(s.rank || 0, 1), target: 1 }) },
+  { id: 'rank-2', label: '고수 승급', desc: '고수 승급시험에 합격했어요', cond: '고수 승급시험에 합격하면 얻어요', icon: 'Crown', cat: 'unlock',
+    check: (s) => (s.rank || 0) >= 2, progress: (s) => ({ cur: Math.min(s.rank || 0, 2), target: 2 }) },
+  { id: 'endless-500', label: '무한의 맛', desc: '무한 모드에서 500점을 넘었어요', cond: '무한 모드에서 500점을 넘으면 얻어요', icon: 'Infinity', cat: 'unlock',
+    check: (s) => (s.endlessBest || 0) >= 500, progress: (s) => ({ cur: s.endlessBest || 0, target: 500 }) },
   { id: 'master-10', label: '단어 수집가', desc: '10단어를 마스터했어요', cond: '단어 10개를 마스터하면 얻어요', icon: 'BookmarkSimple', cat: 'master',
     check: (s) => (s.masteredCount || 0) >= 10, progress: (s) => ({ cur: s.masteredCount || 0, target: 10 }) },
   { id: 'master-30', label: '단어 달인', desc: '30단어를 마스터했어요', cond: '단어 30개를 마스터하면 얻어요', icon: 'Books', cat: 'master',
     check: (s) => (s.masteredCount || 0) >= 30, progress: (s) => ({ cur: s.masteredCount || 0, target: 30 }) },
+  { id: 'master-60', label: '단어 수집광', desc: '60단어를 마스터했어요', cond: '단어 60개를 마스터하면 얻어요', icon: 'Books', cat: 'master',
+    check: (s) => (s.masteredCount || 0) >= 60, progress: (s) => ({ cur: s.masteredCount || 0, target: 60 }) },
   { id: 'streak-3', label: '사흘 개근', desc: '3일 연속 플레이했어요', cond: '3일 연속 플레이하면 얻어요', icon: 'CalendarCheck', cat: 'streak',
     check: (s) => (s.streakLongest || 0) >= 3, progress: (s) => ({ cur: s.streakLongest || 0, target: 3 }) },
   { id: 'streak-7', label: '일주일 개근', desc: '7일 연속 플레이했어요', cond: '7일 연속 플레이하면 얻어요', icon: 'CalendarHeart', cat: 'streak',
@@ -65,10 +87,15 @@ export const ACHIEVEMENTS = [
     check: (s) => (s.streakLongest || 0) >= 14, progress: (s) => ({ cur: s.streakLongest || 0, target: 14 }) },
   { id: 'streak-30', label: '한 달 개근', desc: '30일 연속 플레이했어요', cond: '30일 연속 플레이하면 얻어요', icon: 'Fire', cat: 'streak',
     check: (s) => (s.streakLongest || 0) >= 30, progress: (s) => ({ cur: s.streakLongest || 0, target: 30 }) },
+  // 성조 정확도는 5개 전부(감별사)만 있으면 문턱이 높아 오래 비어 있다 → 3개 단계를 앞에 둔다.
+  { id: 'tone-3', label: '성조 셋 잡기', desc: '성조 3개를 90% 이상 맞혔어요', cond: '성조 3개의 정답률이 90%를 넘으면 얻어요', icon: 'Waveform', cat: 'skill',
+    check: (s) => countTonesAbove(s.toneStats || {}, 0.9, 5) >= 3, progress: (s) => ({ cur: countTonesAbove(s.toneStats || {}, 0.9, 5), target: 3 }) },
   { id: 'tone-master', label: '성조 감별사', desc: '모든 성조 정답률 90% 이상', cond: '모든 성조 정답률 90%를 넘으면 얻어요', icon: 'Waveform', cat: 'skill',
     check: (s) => allTonesAbove(s.toneStats || {}, 0.9, 5), progress: (s) => ({ cur: countTonesAbove(s.toneStats || {}, 0.9, 5), target: 5 }) },
   { id: 'review-master-5', label: '복습의 힘', desc: '복습으로 5단어를 마스터했어요', cond: '복습 모드에서 단어 5개를 마스터하면 얻어요', icon: 'ArrowsClockwise', cat: 'skill',
     check: (s) => (s.reviewMastered || 0) >= 5, progress: (s) => ({ cur: s.reviewMastered || 0, target: 5 }) },
+  { id: 'review-master-20', label: '복습 장인', desc: '복습으로 20단어를 마스터했어요', cond: '복습 모드에서 단어 20개를 마스터하면 얻어요', icon: 'ArrowsClockwise', cat: 'skill',
+    check: (s) => (s.reviewMastered || 0) >= 20, progress: (s) => ({ cur: s.reviewMastered || 0, target: 20 }) },
 ];
 
 const BY_ID = Object.fromEntries(ACHIEVEMENTS.map((a) => [a.id, a]));

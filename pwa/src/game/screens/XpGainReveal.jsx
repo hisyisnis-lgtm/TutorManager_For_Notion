@@ -3,11 +3,17 @@
 //  XP는 레벨을 채운다(등급은 사다리 보스로만) — 게이지가 다음 레벨을 넘기면 '레벨 업!'. XP 적립 판(일반·무한·테마)만.
 import { useEffect, useState, useRef, useLayoutEffect } from 'react';
 import { TG, TYPE, haptic, RADIUS, SPACE } from '../tgTokens.js';
+import { RevealStage } from './shared.jsx';
 import { rankInfo, levelInfo, XP_PER_CORRECT, XP_NEWBEST_BONUS } from '../gameXp.js';
 import { play as playSfx } from '../tgSfx.js';
 import { useCountUp } from '../tgWidgets.jsx';
 
-// 스파크 색 — 게이지 그라데이션(#FF7A7A→#F2484C)과 동일.
+// 시안(461:9) 값 — 이 연출 전용 원오프 색.
+const GAUGE_FILL = '#FF5E62';      // 레벨 게이지 채움(단색)
+const XP_VALUE = '#FFC94D';        // 환산 내역 수치(골드)
+const ROW_BG = 'rgba(255,255,255,0.08)';
+const SUB_WHITE = 'rgba(255,255,255,0.55)';
+// 스파크 색 — 게이지 채움과 같은 계열.
 const SPARK_COLORS = ['#FF7A7A', TG.CORAL_DK];
 const SPARK_POOL = 28; // 재사용 DOM 노드 풀
 
@@ -72,7 +78,7 @@ function SparkGauge({ pct }) {
   return (
     <div ref={barRef} style={{ position: 'relative', width: '100%', height: 9 }}>
       <div style={{ position: 'absolute', inset: 0, borderRadius: RADIUS.xs, background: 'rgba(255,255,255,0.16)', overflow: 'hidden' }}>
-        <div ref={fillRef} style={{ height: '100%', borderRadius: RADIUS.xs, background: TG.CORAL_GRAD }} />
+        <div ref={fillRef} style={{ height: '100%', borderRadius: RADIUS.xs, background: GAUGE_FILL }} />
       </div>
       {/* 스파크 레이어 — 파티클은 방출 위치(월드 좌표)를 지키고 자연 페이드. top=바 세로중앙 */}
       <div style={{ position: 'absolute', left: 0, top: 4.5, width: 0, height: 0, pointerEvents: 'none' }}>
@@ -131,52 +137,57 @@ export function XpGainReveal({ gained, prevXp = 0, newXp = 0, score = 0, correct
 
   // 레벨 업이면 게이지를 가득(100%) 채워 '올라감' 느낌 — 아니면 최종 레벨 진행도.
   const pct = leveledUp ? 100 : Math.round(showLv.progress * 100);
+  // 시안(461:9) 절대좌표 — 폭 260 중앙 컬럼. 텍스트 y는 시안 '잉크(cap) 좌표'에서 라인박스 오프셋을 뺀 값.
+  const COL = { left: 'calc(50% - 130px)', width: 260 };
   return (
     <div onClick={() => { if (!hold && done) onDone && onDone(); }}
-      style={{ position: 'fixed', inset: 0, zIndex: 130, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(28,24,32,0.88)', padding: SPACE.x4, cursor: done && !hold ? 'pointer' : 'default' }}>
+      // 딤은 BeatDim(비트 바깥 공용 레이어)이 담당 — 앞 비트가 페이드아웃하고 여기서 즉시 딤이 켜지며
+      // 그 사이가 밝아졌다 어두워지는 '깜빡임'이 있었다(2026-08-08 사용자 지적).
+      style={{ position: 'fixed', inset: 0, zIndex: 130, cursor: done && !hold ? 'pointer' : 'default' }}>
       <style>{`
         @keyframes xg-bang{0%{opacity:0;transform:scale(2.2)}36%{opacity:1;transform:scale(.8)}62%{transform:scale(1.1)}82%{transform:scale(.97)}100%{transform:scale(1)}}
         @keyframes xg-punch{0%{transform:scale(1)}20%{transform:scale(1.32)}52%{transform:scale(.95)}100%{transform:scale(1)}}
         @keyframes xg-pop{0%{opacity:0;transform:scale(.5)}60%{opacity:1;transform:scale(1.08)}100%{opacity:1;transform:scale(1)}}
         @keyframes xg-boxflash{0%{opacity:1}45%{opacity:.7}100%{opacity:0}}
       `}</style>
-      {/* eyebrow */}
-      <span style={{ ...TYPE.btnSm, color: 'rgba(255,255,255,0.6)', marginBottom: SPACE.sm, animation: 'xg-pop .4s ease both' }}>경험치 획득</span>
-      {/* 총 XP — 쾅마다 punch */}
-      <div key={step} style={{ display: 'flex', alignItems: 'baseline', gap: SPACE.sm, marginBottom: SPACE.x4, animation: step > 0 ? 'xg-punch .3s ease' : 'none' }}>
-        <span style={{ ...TYPE.numHero, fontSize: 52, color: '#fff', lineHeight: 1 }}>+{animTotal.toLocaleString()}</span>
-        <span style={{ ...TYPE.cta, color: 'rgba(255,255,255,0.6)' }}>XP</span>
+      <RevealStage>
+      {/* eyebrow — 시안 잉크 y210 */}
+      <span style={{ position: 'absolute', left: 0, right: 0, top: 203, textAlign: 'center', ...TYPE.btn, lineHeight: '24px', color: '#fff', animation: 'xg-pop .4s ease both' }}>경험치 획득</span>
+      {/* 총 XP — 쾅마다 punch. 시안 잉크 y238 · 50 Roboto Bold(‘XP’ 접미사 없음) */}
+      <div key={step} style={{ position: 'absolute', left: 0, right: 0, top: 225, textAlign: 'center', animation: step > 0 ? 'xg-punch .3s ease' : 'none' }}>
+        <span style={{ ...TYPE.numHero, fontSize: 50, fontWeight: 700, lineHeight: '62.4px', color: '#fff' }}>+{animTotal.toLocaleString()}</span>
       </div>
-      {/* 환산 내역 — 하나씩 '쾅' 등장(어떤 수치로 됐는지) */}
-      <div style={{ width: '100%', maxWidth: 280, display: 'flex', flexDirection: 'column', gap: SPACE.md, marginBottom: SPACE.x4 }}>
-        {sources.map((s, i) => (
-          <div key={s.key} style={{ position: 'relative', overflow: 'hidden', height: 40, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px', borderRadius: RADIUS.md, background: 'rgba(255,255,255,0.08)', opacity: i < step ? 1 : 0, animation: i < step ? 'xg-bang .42s cubic-bezier(.3,1.4,.5,1) both' : 'none' }}>
-            {/* 박스 번쩍 — 이 항목이 찍히는 순간 박스 전체가 하얗게 번쩍(등장 시 1회) */}
-            {i < step && <span aria-hidden="true" style={{ position: 'absolute', inset: 0, background: '#fff', opacity: 0, animation: 'xg-boxflash .4s ease-out both', pointerEvents: 'none' }} />}
-            <span style={{ position: 'relative', ...TYPE.sub, color: 'rgba(255,255,255,0.82)' }}>{s.label}</span>
-            <span style={{ position: 'relative', ...TYPE.numMd, fontSize: 16, color: '#FFC94D' }}>+{s.val.toLocaleString()}</span>
-          </div>
-        ))}
-      </div>
-      {/* 레벨(Lv.N) 게이지 — 좌: 등급 엠블럼(정체성) + Lv.N … 다음 레벨까지 N XP / 아래: 게이지(항목 공개마다 차오름) */}
-      <div style={{ width: '100%', maxWidth: 280, display: 'flex', flexDirection: 'column', gap: SPACE.lg }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.lg }}>
-          <img src={grade.emblem} alt="" width={38} height={38} style={{ display: 'block', flexShrink: 0, filter: `drop-shadow(0 3px 8px ${grade.glow}55)` }} />
-          <span style={{ ...TYPE.h2, color: '#fff' }}>Lv.{showLv.level}</span>
-          <span style={{ marginLeft: 'auto', ...TYPE.labelSm, color: leveledUp ? '#FFC94D' : 'rgba(255,255,255,0.55)' }}>{leveledUp ? '레벨 업!' : `다음 레벨까지 ${showLv.toNext.toLocaleString()} XP`}</span>
+      {/* 환산 내역 — 하나씩 '쾅' 등장. 시안 y304부터 37 높이 · 간격 8 */}
+      {sources.map((s, i) => (
+        <div key={s.key} style={{
+          position: 'absolute', ...COL, top: 304 + i * 45, height: 37, overflow: 'hidden',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px',
+          borderRadius: 10, background: ROW_BG, opacity: i < step ? 1 : 0, // 시안 r10(토큰 스케일 사이값)
+          animation: i < step ? 'xg-bang .42s cubic-bezier(.3,1.4,.5,1) both' : 'none',
+        }}>
+          {/* 박스 번쩍 — 이 항목이 찍히는 순간 박스 전체가 하얗게 번쩍(등장 시 1회) */}
+          {i < step && <span aria-hidden="true" style={{ position: 'absolute', inset: 0, background: '#fff', opacity: 0, animation: 'xg-boxflash .4s ease-out both', pointerEvents: 'none' }} />}
+          <span style={{ position: 'relative', ...TYPE.body, fontSize: 16, lineHeight: '20px', color: '#fff' }}>{s.label}</span>
+          <span style={{ position: 'relative', ...TYPE.numMd, fontWeight: 700, lineHeight: '25px', color: XP_VALUE }}>+{s.val.toLocaleString()}</span>
         </div>
+      ))}
+      {/* 레벨 행 — 시안 y461(엠블럼 38 + Lv.N) · 우측 상태 라벨 */}
+      <div style={{ position: 'absolute', ...COL, top: 461, height: 38, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
+          <img src={grade.emblem} alt="" width={38} height={38} style={{ display: 'block', flexShrink: 0, filter: `drop-shadow(0 3px 8px ${grade.glow}55)` }} />
+          <span style={{ ...TYPE.h1, fontWeight: 900, lineHeight: '25px', color: '#fff' }}>Lv.{showLv.level}</span>
+        </div>
+        <span style={{ ...TYPE.label, lineHeight: '19px', color: leveledUp ? '#fff' : SUB_WHITE }}>{leveledUp ? '레벨 업!' : `다음 레벨까지 ${showLv.toNext.toLocaleString()} XP`}</span>
+      </div>
+      {/* 레벨 게이지 — 시안 y505 (항목 공개가 끝난 뒤 차오름) */}
+      <div style={{ position: 'absolute', ...COL, top: 505 }}>
         <SparkGauge pct={pct} />
       </div>
-      {/* 레벨 업 배너 — 이번 XP로 레벨이 오른 순간 */}
-      {leveledUp && (
-        <div style={{ marginTop: SPACE.x3, display: 'flex', alignItems: 'center', gap: SPACE.md, padding: '9px 18px', borderRadius: RADIUS.lg, background: TG.CORAL_GRAD, boxShadow: '0 8px 20px rgba(242,72,76,0.4)', animation: 'xg-pop .5s cubic-bezier(.34,1.56,.64,1) both' }}>
-          <span style={{ ...TYPE.h2, color: '#fff' }}>✨ 레벨 업! Lv.{finalLv.level}</span>
-        </div>
-      )}
-      {/* 탭하여 계속 — 게이지까지 다 찬 뒤 텍스트 안내(화면 아무 곳이나 탭하면 결과로) */}
+      {/* 탭하여 계속 — 게이지까지 다 찬 뒤 텍스트 안내(화면 아무 곳이나 탭하면 결과로). 시안 y555 */}
       {!hold && gaugeFilled && (
-        <span style={{ marginTop: 34, ...TYPE.sub, color: 'rgba(255,255,255,0.5)', animation: 'xg-pop .4s ease .1s both' }}>탭하여 계속</span>
+        <span style={{ position: 'absolute', left: 0, right: 0, top: 555, textAlign: 'center', ...TYPE.body, fontSize: 14, lineHeight: '20px', color: 'rgba(255,255,255,0.5)', animation: 'xg-pop .4s ease .1s both' }}>탭하여 계속</span>
       )}
+      </RevealStage>
     </div>
   );
 }

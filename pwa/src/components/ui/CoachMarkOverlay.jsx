@@ -114,24 +114,37 @@ export default function CoachMarkOverlay({ steps, visible, onDone, delay = 350, 
   const current = steps[step];
   // 강제 마지막 단계: 스포트라이트 요소만 클릭 가능(주변은 탭 흡수). rect 확정·표시 안정(alpha=1)일 때만.
   const forcedLast = forceLastStep && step >= steps.length - 1 && !!rect && alpha === 1;
-  // 툴팁·컨트롤은 게임 컬럼(가운데 최대 600px, FigmaScreen과 정합) 안에만 — 포탈(뷰포트 전체)이라 넓은 웹서 가로로 안 늘어나게.
-  const COL_W = Math.min(vw, 600);
-  const COL_LEFT = Math.round((vw - COL_W) / 2);
+  // 툴팁·컨트롤·딤은 게임 무대(9:16 컬럼) 안에만 — 포탈이라 뷰포트 전체가 기본이라서, 실제 무대 폭을 DOM에서 읽어 맞춘다.
+  //  (구: min(vw,600) 가정 → 무대가 min(600px,56.25vh)로 더 좁은 PC에서 딤·툴팁이 레터박스로 삐져나왔음. 2026-08-03)
+  const stageEl = typeof document !== 'undefined' ? document.querySelector('[data-tg-stage]') : null;
+  const stageRect = stageEl ? stageEl.getBoundingClientRect() : null;
+  const COL_W = stageRect ? Math.round(stageRect.width) : Math.min(vw, 600);
+  const COL_LEFT = stageRect ? Math.round(stageRect.left) : Math.round((vw - COL_W) / 2);
+  // 무대 밖(레터박스)은 잘라낸다 — 스포트라이트 좌표는 뷰포트 기준 그대로 두고 표시만 제한(계산 로직 무변경)
+  const stageClip = stageRect ? { clipPath: `inset(0px ${Math.max(0, vw - (COL_LEFT + COL_W))}px 0px ${Math.max(0, COL_LEFT)}px)` } : null;
 
   // ── 툴팁 세로 위치 계산 ──────────────────────────────────
   // rect 있으면: element 상단 절반 → 아래에, 하단 절반 → 위에
   // rect 없으면: 화면 상단 35% 위치에 고정
   const hasSpotlight = !!rect;
-  const isBelow = hasSpotlight && rect.cy < vh * 0.5;
+  // 위/아래 남은 공간 — 스포트라이트가 화면을 거의 다 덮으면(리스트 전체 강조 등) 둘 다 부족해진다.
+  //  그 경우 예전엔 무조건 '위'로 붙여 툴팁이 화면 밖(y −107)으로 나가 아예 안 보였다(난이도 코치마크, 2026-08-06).
+  const TIP_MIN_SPACE = 130; // 툴팁이 들어갈 최소 세로 공간(툴팁 높이 ≈ 82~110 + 여백)
+  const spaceBelow = hasSpotlight ? vh - (rect.y + rect.h) : 0;
+  const spaceAbove = hasSpotlight ? rect.y : 0;
+  const prefersBelow = hasSpotlight && rect.cy < vh * 0.5;
+  const place = !hasSpotlight ? 'free'
+    : (prefersBelow && spaceBelow >= TIP_MIN_SPACE) ? 'below'
+    : (spaceAbove >= TIP_MIN_SPACE) ? 'above'
+    : (spaceBelow >= TIP_MIN_SPACE) ? 'below'
+    : 'free'; // 위아래 모두 공간 없음 → 스포트라이트 위에 겹쳐 띄운다(화면 밖으로 나가는 것보다 낫다)
+  const isBelow = place === 'below';
 
   let tipTop, tipBottom;
-  if (!hasSpotlight) {
-    tipTop = Math.round(vh * 0.32);
-  } else if (isBelow) {
-    tipTop = Math.round(rect.y + rect.h + TIP_GAP);
-  } else {
-    tipBottom = Math.round(vh - rect.y + TIP_GAP);
-  }
+  if (place === 'below') tipTop = Math.round(rect.y + rect.h + TIP_GAP);
+  else if (place === 'above') tipBottom = Math.round(vh - rect.y + TIP_GAP);
+  else if (hasSpotlight) tipBottom = Math.round(vh * 0.2); // 큰 스포트라이트 — 화면 아래쪽 잘 보이는 자리
+  else tipTop = Math.round(vh * 0.32);
 
   // ── 화살표 가로 위치: element 중심에 정렬, 툴팁 경계(컬럼) 내 클램프 ──
   const tipLeft = COL_LEFT + TIP_H_PAD;
@@ -147,6 +160,7 @@ export default function CoachMarkOverlay({ steps, visible, onDone, delay = 350, 
       style={{
         position: 'fixed', inset: 0, zIndex: 500,
         opacity: alpha,
+        ...stageClip,
         transition: 'opacity 0.22s ease-out',
         pointerEvents: 'none', // 루트는 통과, 상호작용 자식(advance/catcher/컨트롤)만 auto — 강제 마지막의 스포트라이트 홀 클릭스루용
       }}
@@ -203,8 +217,8 @@ export default function CoachMarkOverlay({ steps, visible, onDone, delay = 350, 
           pointerEvents: 'none',
         }}
       >
-        {/* 화살표 다이아몬드 */}
-        {hasSpotlight && (
+        {/* 화살표 다이아몬드 — 스포트라이트에 붙지 못한 'free' 배치에선 가리킬 대상이 없으므로 숨긴다 */}
+        {hasSpotlight && place !== 'free' && (
           <div style={{
             position: 'absolute',
             left: arrowLeft,
@@ -236,19 +250,24 @@ export default function CoachMarkOverlay({ steps, visible, onDone, delay = 350, 
             {current?.label}
           </p>
         </div>
+
+        {/* 진행 힌트 — ★툴팁에 붙여 둔다. 화면 하단 고정으로 두면 탭바 키캡·하단 CTA·카드 위에 겹쳐
+            그 요소의 라벨을 가렸다(2026-08-07 UX 검수). absolute라 툴팁 본문/화살표 레이아웃엔 영향 없음.
+            툴팁이 스포트라이트 '위'에 붙은 경우엔 아래가 스포트라이트라 힌트도 위로 올린다. */}
+        {!showControls && !forcedLast && (
+          <div style={{
+            position: 'absolute', left: 0, right: 0, textAlign: 'center', pointerEvents: 'none',
+            ...(place === 'above' ? { bottom: '100%', marginBottom: 10 } : { top: '100%', marginTop: 10 }),
+          }}>
+            <span style={{
+              display: 'inline-block', padding: '5px 13px', borderRadius: 999,
+              background: 'rgba(43,39,48,0.62)', color: 'rgba(255,255,255,0.92)', fontSize: 13, fontWeight: 600,
+            }}>{step >= steps.length - 1 ? '탭하여 완료' : '탭하여 계속'}</span>
+          </div>
+        )}
       </div>
 
-      {/* ── 하단 컨트롤 (건너뛰기 · 스텝 도트 · 다음/완료). showControls=false면 숨기고 탭으로만 진행 ── */}
-      {!showControls && !forcedLast && (
-        <div style={{
-          position: 'absolute',
-          bottom: 'max(22px, calc(env(safe-area-inset-bottom) + 22px))',
-          left: COL_LEFT, width: COL_W, textAlign: 'center', pointerEvents: 'none',
-          color: 'rgba(255,255,255,0.62)', fontSize: 13, fontWeight: 600,
-        }}>
-          {step >= steps.length - 1 ? '탭하여 완료' : '탭하여 계속'}
-        </div>
-      )}
+      {/* ── 하단 컨트롤 (건너뛰기 · 스텝 도트 · 다음/완료). showControls=false면 툴팁에 붙은 진행 힌트로만 진행 ── */}
       {showControls && (
       <div style={{
         position: 'absolute',

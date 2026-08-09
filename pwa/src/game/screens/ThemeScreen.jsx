@@ -1,20 +1,28 @@
-// 테마 선택 화면 — 난이도와 별개 축. 테마별 포스터 카드를 가로 스냅스크롤로 보여줌(항상 중앙 스냅, 양옆 카드 살짝 걸침).
-// Figma "23. 테마 선택" 기준(A안: 상단 이미지 + 하단 화이트 패널 분리). 중앙 카드는 크게·선명, 양옆은 축소·딤.
-// 잠긴 테마는 흔들림+토스트(ShakeButton/onLocked), 패널에 해제조건+진행 게이지 표기.
+// 테마 모드 — 난이도와 별개 축. 테마 카드를 가로 스냅스크롤로 보여줌(항상 중앙 스냅, 양옆 카드 살짝 걸침).
+// Figma "06. 테마 — 개선/잠김"(2026-08-03) 리디자인:
+//   · 제목(번호+이름)·별·최고점을 **카드 밖 화면 상단**으로 분리, 카드는 [이미지 + 캡션 밴드]만.
+//   · 시작은 **하단 고정 CTA** [◀][시작][▶] — 카드 안 FAB 제거. 카드 탭도 시작(해제 시).
+//   · 잠김 = 이미지 흑백 + 가운데 자물쇠 + 캡션에 해제조건, [시작] 비활성(#D4DEE6).
+//   · 단어카드설정(CrutchRow)은 설정 팝업으로 이관 — 카드에서 제거(2026-08-03 사용자 승인).
 // 참조 메모리: tone_game_redesign.md (테마 모드)
 import { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { AltArrowLeft, AltArrowRight, Lock, Play } from '@solar-icons/react';
 import { TG, TYPE, TOUCH_OPT, DUR, RADIUS, SPACE } from '../tgTokens.js';
 import { isThemeUnlocked, themeBestScore, themeUnlockReqText, themeUnlockToastText, themeStars } from '../gameLogic.js';
 import { play as playSfx } from '../tgSfx.js';
-import { Reveal, GameHeader, StarRow, ShakeButton, CrutchRow, prefersReducedMotion } from './shared.jsx';
+import { Reveal, GameHeader, StarRow, ShakeButton, prefersReducedMotion } from './shared.jsx';
 
-const GAP = 16;
+// 시안 치수: 카드 280×300(r20) · 캡션 밴드 54 · 카드 간격 20 · 닷 활성 20×6
+const GAP = 20;
+const CARD_W = 280, CARD_MAX_H = 300, CAP_H = 54;
+// 카드 흰 내부 획(시안 stroke #FFF 14 INSIDE) — 이미지를 사방에서 덮어 액자처럼 보이게 한다.
+const CARD_STROKE = 14;
+const SCORE_C = '#8F9CA7', DOT_ON = '#9CADBA', DOT_OFF = '#D8E3EC';
 // 스크롤 컨테이너 세로 패딩 — overflowY:hidden(가로 스크롤 강제)이 카드 그림자를 자르지 않게 여유 확보.
 const PAD_TOP = 12, PAD_BOTTOM = 22;
 // 카드 위/아래 고정 요소가 차지하는 세로 합(헤더80+코치63+간격18+스크롤패딩34+닷/힌트54=249)+여유 15.
 // 짧은 화면(640 이하)에서 카드가 이만큼 빼고 줄어들어 하단 힌트까지 안 잘림.
-const RESERVED_H = 264;
+const RESERVED_H = 400; // 헤더60 + 상단블록(제목·별·점수)116 + 닷·여백 + 하단바 96
 // 패널 텍스트 색 (화이트 패널 위)
 const PANEL_SUB = TG.SUB;
 const CHIP_BG = '#F5F1EA';
@@ -27,8 +35,8 @@ const FINE_POINTER = typeof window !== 'undefined' && !!window.matchMedia
 
 // 짧은 화면 대응 — 카드는 최대 392, 화면이 짧으면 줄어들기만(비율 5:7 고정, 커지지 않음).
 function calcCardH() {
-  if (typeof window === 'undefined') return 392;
-  return Math.max(300, Math.min(392, window.innerHeight - RESERVED_H));
+  if (typeof window === 'undefined') return CARD_MAX_H;
+  return Math.max(210, Math.min(CARD_MAX_H, window.innerHeight - RESERVED_H));
 }
 
 // ── 배경 앰비언트 파티클 — 포커스된 테마에 맞는 글리프가 은은하게 떠오름 ──
@@ -121,77 +129,53 @@ const metaChip = (bg, color, bold) => ({
   background: bg, ...(bold ? TYPE.labelSm : TYPE.meta), color,
 });
 
-// 포스터형 테마 카드 — 상단 이미지 + 하단 화이트 패널(제목·태그라인 / 잠금은 해제조건·진행 게이지)
-// imgH는 호출부가 산출(패널은 고정 높이 — 칩 제거 후 여백 밸런스, 사용자 "상단 기준으로 세로 줄여").
-// focused: 캐러셀 중앙 카드 — 플레이 FAB 맥동은 포커스 카드에서만(전 카드 맥동은 소란). 모션 최소화 시 정적.
-function ThemeCard({ theme, unlocked, best, count, cardH, imgH, unlockCur, focused = false }) {
-  const panelH = cardH - imgH;
-  const stars = themeStars(best); // 0~3, 한 판 최고점 기준(점수 오름차순이라 항상 연속 채움)
+// 테마 카드 — 시안 "06. 테마 — 개선/잠김": 흰 카드(280×300 r20) = 이미지 246 + 캡션 밴드 54.
+//  제목·별·최고점은 카드 밖(화면 상단)으로 빠졌고, 시작도 하단 고정 CTA가 맡는다.
+//  잠김 = 이미지 흑백 + 가운데 자물쇠 원 + 캡션에 해제 조건.
+function ThemeCard({ theme, unlocked, w, h, capH }) {
+  const imgH = h - capH;
   return (
-    <div style={{ position: 'absolute', inset: 0, borderRadius: RADIUS.xxl, overflow: 'hidden', background: '#fff', border: '3px solid #fff', boxSizing: 'border-box' }}>
-      {/* 이미지 영역(상단 65%) */}
-      <div style={{ position: 'absolute', left: 0, right: 0, top: 0, height: imgH, background: theme.tint || '#eee' }}>
+    <div style={{
+      position: 'absolute', inset: 0, borderRadius: RADIUS.xl, overflow: 'hidden', background: '#fff',
+      boxShadow: '0 4px 18px rgba(43,39,48,0.04)',
+    }}>
+      <div style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: capH - CARD_STROKE, background: theme.tint || '#eee' }}>
         {theme.image
-          ? <img src={theme.image} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 30%' }} />
+          ? (
+            <img src={theme.image} alt="" style={{
+              position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 30%',
+              filter: unlocked ? 'none' : 'grayscale(1)', // 잠김 = 흑백(시안)
+            }} />
+          )
           : (
             <span style={{ position: 'absolute', left: 0, right: 0, top: '42%', textAlign: 'center', ...TYPE.label, lineHeight: 1.5, color: 'rgba(43,39,48,0.3)' }}>
               {theme.placeholder || '이미지'}<br />(준비 중)
             </span>
           )}
         {!unlocked && (
-          <>
-            <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)' }} />
-            <div style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: 56, height: 56, borderRadius: RADIUS.card, background: 'rgba(0,0,0,0.42)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Lock size={26} weight="Bold" color="#fff" />
-            </div>
-          </>
-        )}
-        {/* 성취 별 배지 — 우상단(유일한 배지). 한 판 최고점 500/1000/1800 구간별 0~3개(점수 오름차순=항상 연속 채움).
-            점수 숫자는 카드에서 제거(중복·정보과다, 2026-07-16 사용자 결정: 최고점은 결과화면에서 확인). 채운 별은 시차 반짝임 */}
-        {unlocked && (
-          <div style={{ position: 'absolute', right: 12, top: 12, display: 'flex', alignItems: 'center', padding: '6px 10px', borderRadius: RADIUS.lg, background: 'rgba(0,0,0,0.48)' }}>
-            <StarRow filled={stars} size={17} gap={4} off="rgba(255,255,255,0.5)" shine />
+          <div style={{
+            position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)',
+            width: 60, height: 60, borderRadius: '50%', background: 'rgba(24,33,41,0.5)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <Lock size={24} weight="Bold" color="#fff" />
           </div>
         )}
       </div>
-
-      {/* 하단 화이트 패널 — 오픈: [제목·설명 + 시작] 상단 / [보조바퀴] 하단. 잠금: 제목·설명 + 진행 게이지 */}
-      <div style={{ position: 'absolute', left: 0, right: 0, top: imgH, bottom: 0, background: '#fff', textAlign: 'left' }}>
-        {unlocked ? (
-          // 상단: 제목·설명 + 시작 버튼(포커스만 맥동). 보조바퀴(CrutchRow)는 카드 버튼 바깥
-          // 형제 오버레이로 렌더 — .tg-press:active가 조상까지 번져 토글 눌러도 카드가 스케일되던 문제 회피.
-          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, padding: '15px 17px 0', display: 'flex', alignItems: 'center', gap: SPACE.md }}>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ ...TYPE.titleLg, color: TG.INK, lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{theme.label}</div>
-              <div style={{ marginTop: 3, ...TYPE.sub, color: PANEL_SUB, lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{theme.desc || `${count}단어`}</div>
-            </div>
-            <div style={{
-              width: 42, height: 42, borderRadius: RADIUS.xxl, flexShrink: 0, background: TG.CORAL_DK, boxShadow: '0 5px 12px rgba(242,72,76,0.42)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              animation: (focused && !prefersReducedMotion()) ? 'tg-fab-pulse 1.5s ease-in-out infinite' : 'none',
-            }}>
-              <Play size={16} weight="Bold" color="#fff" />
-            </div>
-          </div>
-        ) : (
-          <>
-            <div style={{ position: 'absolute', left: 18, top: panelH >= 130 ? 15 : 11, right: 18 }}>
-              <div style={{ ...TYPE.title, color: TG.INK, lineHeight: 1.15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{theme.label}</div>
-              <div style={{ marginTop: SPACE.sm, ...TYPE.sub, color: PANEL_SUB, lineHeight: 1.4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{themeUnlockReqText(theme)}</div>
-            </div>
-            {/* 진행 게이지 — 해제 조건 대비 현재 최고점(잠금이 벽이 아니라 목표로 읽히게) */}
-            <div style={{ position: 'absolute', left: 18, right: 18, bottom: panelH >= 130 ? 17 : 13 }}>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: SPACE.sm }}>
-                <span style={{ ...TYPE.labelSm, color: GOLD_TX }}>
-                  {unlockCur.toLocaleString()} / {theme.unlock.score.toLocaleString()}
-                </span>
-              </div>
-              <div style={{ height: 8, borderRadius: RADIUS.xs, background: GAUGE_BG, overflow: 'hidden' }}>
-                <div style={{ height: '100%', borderRadius: RADIUS.xs, background: TG.SUN, width: `${Math.min(100, (unlockCur / theme.unlock.score) * 100)}%` }} />
-              </div>
-            </div>
-          </>
-        )}
+      {/* ★흰 내부 획 14px — 시안은 카드에 `stroke #FFF 14 INSIDE`라 획이 **그림 위를 덮는다**(이미지는 카드보다 크게 깔림).
+          그래서 이미지를 카드 전체에 채우고 이 오버레이로 사방을 덮어야 시안과 같은 프레이밍이 된다. */}
+      <div aria-hidden="true" style={{
+        position: 'absolute', inset: 0, borderRadius: RADIUS.xl,
+        border: `${CARD_STROKE}px solid #fff`, boxSizing: 'border-box', pointerEvents: 'none',
+      }} />
+      {/* 캡션 밴드 — 해제: 한 줄 소개 / 잠김: 해제 조건 */}
+      <div style={{
+        position: 'absolute', left: 0, right: 0, top: imgH, height: capH, background: '#fff',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 14px',
+      }}>
+        <span style={{ ...TYPE.micro, fontSize: 13, color: SCORE_C, textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          {unlocked ? (theme.tagline || theme.desc || '') : themeUnlockReqText(theme)}
+        </span>
       </div>
     </div>
   );
@@ -199,21 +183,19 @@ function ThemeCard({ theme, unlocked, best, count, cardH, imgH, unlockCur, focus
 
 export function ThemeScreen({ themes, studentToken, counts = {}, onStart, onBack, onLocked }) {
   const [active, setActive] = useState(0);
-  const [cardH, setCardH] = useState(calcCardH); // 기준 높이(5:7 산출용) — 실제 카드는 아래 boxH
-  const cardW = Math.round((cardH * 5) / 7);
-  // 카드 실높이 = 이미지(기준의 65%, 크롭 불변) + 고정 패널 132px
-  //  패널 = [제목·설명 상단] + [보조바퀴 오버레이 하단] — 내부 여백 넉넉하게(빽빽함 해소)
-  const imgH = Math.round(cardH * 0.65);
-  const boxH = imgH + 132;
+  // 카드 = 시안 280×300(캡션 54). 짧은 화면에선 높이만 줄인다(폭은 유지 — 캐러셀 피치 안정).
+  const [cardH, setCardH] = useState(calcCardH);
+  const cardW = CARD_W;
+  const capH = CAP_H;
   useEffect(() => {
     const onResize = () => setCardH(calcCardH());
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
-  // 캐러셀 다이내믹 — 중앙에서 멀어질수록 축소(0.92)·딤(0.75). 스크롤 위치 연동, rAF로 프레임당 1회.
+  // 캐러셀 다이내믹 — 중앙에서 멀어질수록 축소·딤.
   const scrollerRef = useRef(null);
-  const fxRefs = useRef([]); // 카드 시각 래퍼(스케일은 버튼이 아닌 내부 래퍼에 — tg-press/shake transform과 충돌 방지)
+  const fxRefs = useRef([]);
   const scrollRafRef = useRef(0);
   const applyFx = () => {
     const el = scrollerRef.current;
@@ -222,13 +204,13 @@ export function ThemeScreen({ themes, studentToken, counts = {}, onStart, onBack
     const center = rect.left + rect.width / 2;
     fxRefs.current.forEach((node) => {
       if (!node) return;
-      const r = node.parentElement.getBoundingClientRect(); // 버튼(비변형) 기준
+      const r = node.parentElement.getBoundingClientRect();
       const d = Math.min(1, Math.abs(r.left + r.width / 2 - center) / (cardW + GAP));
-      node.style.transform = `scale(${1 - 0.08 * d})`;
-      node.style.opacity = String(1 - 0.25 * d);
+      node.style.transform = `scale(${1 - 0.06 * d})`;
+      node.style.opacity = String(1 - 0.2 * d);
     });
   };
-  useEffect(() => { applyFx(); }, [cardH]); // 마운트·리사이즈 직후 초기 적용
+  useEffect(() => { applyFx(); }, [cardH]);
   useEffect(() => () => cancelAnimationFrame(scrollRafRef.current), []);
   const onScroll = (e) => {
     const el = e.currentTarget;
@@ -240,14 +222,13 @@ export function ThemeScreen({ themes, studentToken, counts = {}, onStart, onBack
       setActive(Math.max(0, Math.min(themes.length - 1, i)));
     });
   };
-  // PC 웹 내비 — 화살표 버튼·마우스 휠로 한 카드씩 이동(터치 스와이프 대체).
   const scrollToIndex = (i) => {
     const el = scrollerRef.current;
     if (!el) return;
     const idx = Math.max(0, Math.min(themes.length - 1, i));
     el.scrollTo({ left: idx * (cardW + GAP), behavior: 'smooth' });
   };
-  const wheelLockRef = useRef(0); // 휠 이벤트 연사(트랙패드 관성) → 350ms당 1스텝
+  const wheelLockRef = useRef(0);
   const onWheel = (e) => {
     if (!FINE_POINTER) return;
     const d = Math.abs(e.deltaY) > Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
@@ -257,76 +238,105 @@ export function ThemeScreen({ themes, studentToken, counts = {}, onStart, onBack
     wheelLockRef.current = now;
     scrollToIndex(active + (d > 0 ? 1 : -1));
   };
-  const navBtn = (disabled) => ({
-    position: 'absolute', top: PAD_TOP + boxH / 2 - 20, width: 40, height: 40, borderRadius: RADIUS.xl,
-    background: '#fff', boxShadow: '0px 3px 5px rgba(43,39,48,0.14)', border: 'none', zIndex: 2,
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    cursor: disabled ? 'default' : 'pointer', opacity: disabled ? 0.35 : 1, ...TOUCH_OPT,
-  });
-  // 항상 중앙 스냅 — 좌우 패딩을 (컨테이너폭-카드폭)/2 로 줘서 첫·끝 카드도 가운데에 오게.
+
+  const cur = themes[active] || themes[0];
+  const curUnlocked = cur ? isThemeUnlocked(studentToken, cur) : false;
+  const curBest = cur ? themeBestScore(studentToken, cur.gameKey) : 0;
+  const curStars = themeStars(curBest);
   const sidePad = `max(24px, calc((100% - ${cardW}px) / 2))`;
+  // 좌우 이동 버튼(공용) — 시안: 60×60 흰 카드 버튼 + 아래 4px 엣지
+  const navBtn = (disabled) => ({
+    width: 60, height: 60, flexShrink: 0, borderRadius: RADIUS.xl, border: 'none', background: '#fff',
+    boxShadow: 'inset 0 -4px 0 #E4EDF5, 0 4px 18px rgba(43,39,48,0.07)',
+    display: 'flex', alignItems: 'center', justifyContent: 'center', paddingBottom: 4,
+    cursor: disabled ? 'default' : 'pointer', opacity: disabled ? 0.45 : 1, ...TOUCH_OPT,
+  });
+
   return (
     <>
-      {/* 배경 앰비언트 파티클 — 포커스 테마 연동(첫 자식 = 모든 콘텐츠 뒤) */}
-      <AmbientParticles themeId={themes[active]?.id} />
-      {/* 헤더 — 공용 GameHeader */}
-      <GameHeader title="테마 선택" onBack={onBack} />
-      {/* 카드+닷 = 헤더 아래~화면 하단 사이 세로 중앙 정렬(상단에 붙지 않게) */}
-      <div style={{ position: 'absolute', left: 0, right: 0, top: 56, bottom: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: SPACE.x3 }}>
-        {/* 카드 가로 스냅스크롤 (항상 중앙 스냅 · 양옆 peek 축소·딤) — PC는 좌우 화살표·휠로 넘김 */}
-        <div style={{ position: 'relative' }}>
+      {/* 배경 앰비언트 파티클 — 포커스 테마 연동(모든 콘텐츠 뒤) */}
+      <AmbientParticles themeId={cur?.id} />
+      {/* 헤더 — 시안: 60px 글래스 + 가운데 타이틀 */}
+      <GameHeader title="테마 모드" onBack={onBack} glass center />
+
+      {/* 상단 — 번호+제목 / 별 / 최고점 (카드 밖으로 이동, 시안 y92·135·155) */}
+      <Reveal i={1} style={{ position: 'absolute', left: 0, right: 0, top: 84, zIndex: 2 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: SPACE.md }}>
+          <span style={{ ...TYPE.head, fontSize: 26, color: TG.INK, whiteSpace: 'nowrap' }}>{`${active + 1}. ${cur?.label || ''}`}</span>
+          <StarRow filled={curStars} size={16} gap={2} off="#D8E3EC" shine />
+          <span style={{ ...TYPE.num, fontSize: 14, color: SCORE_C }}>{`최고 ${curBest.toLocaleString()}점`}</span>
+        </div>
+      </Reveal>
+
+      {/* 카드 캐러셀 + 페이지 닷 — 상단 블록과 하단바 사이 세로 중앙 */}
+      <div style={{
+        // 카드+닷 묶음을 [상단 블록 ~ 하단 CTA] 사이에서 중앙정렬하되, **아래로 74px 치우침 보정**을 준다.
+        //  · 고정 top(252)만 쓰면 세로가 짧은 화면에서 아래 공간이 줄어 카드가 처져 보이고,
+        //  · 보정 없는 정중앙이면 844에서 시안보다 33px 내려간다. 둘 다 피하는 값(실측: 844에서 카드 상단 258 = 시안과 동일).
+        position: 'absolute', left: 0, right: 0, top: 176, bottom: 'calc(112px + env(safe-area-inset-bottom))',
+        paddingTop: 8, paddingBottom: 74,
+        display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: SPACE.x3, zIndex: 2,
+      }}>
         <div ref={scrollerRef} onScroll={onScroll} onWheel={onWheel} className="tg-noscroll" style={{
           display: 'flex', gap: GAP, flexShrink: 0,
-          paddingTop: PAD_TOP, paddingBottom: PAD_BOTTOM, paddingLeft: sidePad, paddingRight: sidePad,
+          paddingLeft: sidePad, paddingRight: sidePad, paddingTop: 6, paddingBottom: 6,
           overflowX: 'auto', overflowY: 'hidden', scrollSnapType: 'x mandatory',
           WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none',
         }}>
           {themes.map((t, idx) => {
             const unlocked = isThemeUnlocked(studentToken, t);
             return (
-              // 바깥 래퍼(캐러셀 fx 대상) > [카드 버튼(.tg-press)] + [보조바퀴 오버레이].
-              // CrutchRow를 버튼 자식이 아닌 형제로 둬야 토글 눌러도 카드가 .tg-press:active로 스케일되지 않음.
-              <div key={t.id} style={{ flex: `0 0 ${cardW}px`, width: cardW, height: boxH, scrollSnapAlign: 'center', position: 'relative' }}>
+              <div key={t.id} style={{ flex: `0 0 ${cardW}px`, width: cardW, height: cardH, scrollSnapAlign: 'center', position: 'relative' }}>
                 <div ref={(n) => { fxRefs.current[idx] = n; }} style={{ position: 'absolute', inset: 0 }}>
                   <ShakeButton shakeOnClick={!unlocked}
                     onClick={() => { if (unlocked) { playSfx('button'); onStart(t); } else if (onLocked) onLocked(themeUnlockToastText(t)); }}
                     className={unlocked ? 'tg-press' : ''}
                     style={{ position: 'absolute', inset: 0, padding: 0, border: 'none', background: 'transparent', cursor: 'pointer', ...TOUCH_OPT }}>
-                    <div style={{ position: 'absolute', inset: 0, borderRadius: RADIUS.xxl, boxShadow: '0 5px 14px rgba(43,39,48,0.10)' }}>
-                      <ThemeCard theme={t} unlocked={unlocked} best={themeBestScore(studentToken, t.gameKey)}
-                        count={counts[t.id] || 0} cardH={boxH} imgH={imgH} focused={idx === active}
-                        unlockCur={t.unlock ? themeBestScore(studentToken, t.unlock.byGameKey) : 0} />
-                    </div>
+                    <ThemeCard theme={t} unlocked={unlocked} w={cardW} h={cardH} capH={capH} />
                   </ShakeButton>
-                  {unlocked && (
-                    <CrutchRow ctx={`th-${t.id}`} style={{ position: 'absolute', left: 17, right: 17, bottom: 13, paddingTop: SPACE.lg }} />
-                  )}
                 </div>
               </div>
             );
           })}
         </div>
-        {FINE_POINTER && (
-          <>
-            <button onClick={() => scrollToIndex(active - 1)} aria-label="이전 테마" disabled={active === 0}
-              style={{ ...navBtn(active === 0), left: 10 }}>
-              <AltArrowLeft size={20} weight="Bold" color={TG.INK} />
-            </button>
-            <button onClick={() => scrollToIndex(active + 1)} aria-label="다음 테마" disabled={active === themes.length - 1}
-              style={{ ...navBtn(active === themes.length - 1), right: 10 }}>
-              <AltArrowRight size={20} weight="Bold" color={TG.INK} />
-            </button>
-          </>
-        )}
-        </div>
-        {/* 페이지 닷 (힌트 문구 제거 — 사용자 요청) */}
+
+        {/* 페이지 닷 — 활성 20×6 알약, 나머지 6원 */}
         <div style={{ display: 'flex', justifyContent: 'center' }}>
           <div style={{ display: 'flex', gap: SPACE.sm, alignItems: 'center' }}>
             {themes.map((t, i) => (
-              <div key={t.id} style={{ width: i === active ? 20 : 6, height: 6, borderRadius: RADIUS.xs, background: i === active ? TG.CORAL_DK : TG.MUTED, transition: `all ${DUR.state} ease` }} />
+              <div key={t.id} style={{
+                width: i === active ? 20 : 6, height: 6, borderRadius: 3,
+                background: i === active ? DOT_ON : DOT_OFF, transition: `all ${DUR.state} ease`,
+              }} />
             ))}
           </div>
         </div>
+      </div>
+
+      {/* 하단 고정 — [◀] [시작] [▶] (시안 24/94/306, 높이 60, 하단 26) */}
+      <div style={{
+        position: 'absolute', left: 24, right: 24, bottom: 'calc(26px + env(safe-area-inset-bottom))', zIndex: 3,
+        display: 'flex', alignItems: 'center', gap: SPACE.lg,
+      }}>
+        <button type="button" className="tg-press" aria-label="이전 테마" disabled={active === 0}
+          onClick={() => { playSfx('tap', 0.2); scrollToIndex(active - 1); }} style={navBtn(active === 0)}>
+          <AltArrowLeft size={30} weight="Bold" color="#7E8A94" />
+        </button>
+        <button type="button" className={curUnlocked ? 'tg-press' : ''} aria-label={`${cur?.label || ''} 시작`}
+          onClick={() => { if (curUnlocked) { playSfx('button'); onStart(cur); } else if (onLocked) onLocked(themeUnlockToastText(cur)); }}
+          style={{
+            flex: 1, minWidth: 0, height: 60, borderRadius: RADIUS.xl, border: 'none',
+            cursor: curUnlocked ? 'pointer' : 'default', paddingBottom: 4,
+            background: curUnlocked ? '#F96163' : '#D4DEE6',
+            boxShadow: curUnlocked ? 'inset 0 -4px 0 #E64244, 0 4px 18px rgba(43,39,48,0.07)' : 'none',
+            ...TOUCH_OPT,
+          }}>
+          <span style={{ ...TYPE.head, color: curUnlocked ? '#fff' : '#7E8A94' }}>시작</span>
+        </button>
+        <button type="button" className="tg-press" aria-label="다음 테마" disabled={active === themes.length - 1}
+          onClick={() => { playSfx('tap', 0.2); scrollToIndex(active + 1); }} style={navBtn(active === themes.length - 1)}>
+          <AltArrowRight size={30} weight="Bold" color="#7E8A94" />
+        </button>
       </div>
     </>
   );

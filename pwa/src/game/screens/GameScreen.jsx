@@ -3,15 +3,20 @@ import { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { Star, Pause, Stopwatch, VolumeLoud, Ticket, Bones, Logout } from '@solar-icons/react';
 import { TG, TYPE, TOUCH_OPT, RADIUS, SPACE } from '../tgTokens.js';
 import { play as playSfx } from '../tgSfx.js';
-import { Reveal, WordCard, ToneButtons, DrawPad, CoachBubble, ConfettiBurst, CrispFlash, LIGHT_CONFETTI, prefersReducedMotion, TONE_SHOT_HOVER_MS, TONE_FLIGHT_MS, TONE_IMPACT_MS } from './shared.jsx';
+import { Reveal, WordCard, ToneButtons, DrawPad, CoachBubble, ConfettiBurst, CrispFlash, GameHeader, LIGHT_CONFETTI, prefersReducedMotion, TONE_SHOT_HOVER_MS, TONE_FLIGHT_MS, TONE_IMPACT_MS } from './shared.jsx';
 import { ComboChip, ToneMark } from '../tgWidgets.jsx';
 import { TONES } from '../../constants/toneGameWords.js';
 import { useTabTip } from '../../hooks/useTabTip.js';
 import CoachMarkOverlay from '../../components/ui/CoachMarkOverlay.jsx';
 
+// 트레이닝 페이스 게이지 — 타임아웃이 없는 모드라 '천천히 생각하는' 호흡으로 느리게 흐른다(일반 모드 기본 7초 대비 2배).
+const PRACTICE_PACE_MS = 15000;
+
 // 연습 모드 첫 진입 코치마크(1회) — 시간 제한 없음 + 발음듣기/정답보기 안내. 연습은 타이머가 없어 딤 오버레이가 안전.
-const PRACTICE_COACH = [
-  { selector: '[data-coach="prac-badge"]', label: '트레이닝 모드예요. 시간 제한이 없으니 천천히 생각해도 괜찮아요.' },
+// 모드 이름은 화면 헤더(title)에서 받아 쓴다 — 같은 엔진을 '트레이닝'과 '오답 복습'이 공유하므로
+//  문구를 고정하면 오답 복습 화면에서 "트레이닝 모드예요"라고 말하게 된다(2026-08-07).
+const practiceCoach = (label) => [
+  { selector: '[data-coach="prac-badge"]', label: `${label} 모드예요. 시간 제한이 없으니 천천히 생각해도 괜찮아요.` },
   { selector: '[data-coach="prac-actions"]', label: '발음을 듣거나 정답을 볼 수 있어요. 부담 없이 익혀봐요! 🐼' },
 ];
 
@@ -257,7 +262,7 @@ function CenterBurst({ data }) {
   );
 }
 
-export function GameScreen({ word, entered, currentSyl, completed, timedOut, wordIndex, wordsLen, wordTimeLimit, gaugeOffsetMs = 0, lowTime = false, paused, combo, comboFlash, floatScore, score, coachText, onTone, wrongBtn, wrongShakeKey = 0, onPause, onEndTraining, playReveal = true, endless = false, lives = 3, onSkip, showSudden = false, runId = 0, recordToBeat = 0, practice = false, endKind = 'complete', listen = false, audioOff = false, onReplay, onCantHear, onHint, hintUsed = false, onSpeak, onReveal, draw = false, drawExpectedTone, onDraw, drawResetKey = 0, lianyinAt = -1, sandhiAt = -1, hideMeaning = false, hidePinyin = false, demoFx = null }) {
+export function GameScreen({ title = '', word, entered, currentSyl, completed, timedOut, wordIndex, wordsLen, wordTimeLimit, gaugeOffsetMs = 0, lowTime = false, paused, combo, comboFlash, floatScore, score, coachText, onTone, wrongBtn, wrongShakeKey = 0, onPause, onEndTraining, endLabel = '트레이닝 종료', playReveal = true, endless = false, lives = 3, onSkip, showSudden = false, runId = 0, recordToBeat = 0, practice = false, endKind = 'complete', listen = false, audioOff = false, onReplay, onCantHear, onHint, hintUsed = false, onSpeak, onReveal, draw = false, drawExpectedTone, onDraw, drawResetKey = 0, lianyinAt = -1, sandhiAt = -1, hideMeaning = false, hidePinyin = false, demoFx = null }) {
   lowTime = lowTime || demoFx === 'low'; // [DEV] 미리보기 텐션 데모(?screen=game&fx=low) — 머지 전 백도어 제거 대상
   // ── 버스트 연출(P4b): 콤보 마일스톤(5·10·15…) + 라이브 신기록. 비차단·자동 소멸 ──
   const [burst, setBurst] = useState(null);
@@ -483,134 +488,101 @@ export function GameScreen({ word, entered, currentSyl, completed, timedOut, wor
       {/* 성조 발사체 — 버튼→현재 글자 비행(정답=착탄 팝 동기, 오답=튕겨 낙하). 비차단·연출 전용 */}
       {shots.map((s) => <ToneShot key={s.key} shot={s} onDone={removeShot} onMissImpact={onMissImpact} />)}
       {/* 건너뛰기 티켓 소모 — 버튼→카드 비행 후 흡수(글자 공개와 동기) */}
+      {/* 배경 — 시안 09의 들판(산맥 #F2EBDB + 동산 #DFEB8D + 그림자 타원). 원본 1287×872를 스케일 0으로 하단 정렬.
+          bottom:-588 = 시안에서 그림 아래가 화면 밖으로 내려가 있던 값 → 지평선이 항상 같은 자리 */}
+      <div aria-hidden="true" style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none', zIndex: 0 }}>
+        <img src="/game/game-field.svg" alt="" style={{ position: 'absolute', left: '50%', bottom: -588, width: 1287, height: 872, maxWidth: 'none', transform: 'translateX(-50%)', display: 'block' }} />
+      </div>
       {skipFx && <SkipTicketFx key={skipFx.key} fx={skipFx} onDone={() => setSkipFx(null)} />}
       {/* 저시간 비네트 — 막바지에 화면 가장자리 붉은 맥동(텐션 램프 보강·게이지 심박과 동기). 비차단 */}
       {lowTime && !practice && (
         <div aria-hidden="true" style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 3,
           boxShadow: 'inset 0 0 72px 26px rgba(242,72,76,0.42)', animation: 'tg-vignette .85s ease-in-out infinite' }} />
       )}
-      {/* 점수 (상단 중앙) — 트레이닝은 기록·점수 개념이 없어 숨김 */}
-      {!practice && (
-      <Reveal i={0} play={playReveal} style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', top: 20 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, background: '#fff', padding: '9px 14px', borderRadius: RADIUS.lg, boxShadow: '0px 3px 8px rgba(43,39,48,0.06)' }}>
-        <Star size={13} weight="Bold" color={TG.SUN} />
-        <span style={{ ...TYPE.numMd, fontSize: 17, color: TG.INK }}>{score}</span>
-      </div>
+      {/* 점수 (상단 중앙) — 트레이닝에서도 표시(2026-08-06 사용자 요청: 얼마나 잘하고 있는지 보이게) */}
+      {/* 시안 09: 칩·별 없이 숫자만 크게(26) — 타이머 바로 아래 중앙 */}
+      <Reveal i={0} play={playReveal} style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', top: 108 }}>
+        <span style={{ ...TYPE.numMd, fontSize: 26, lineHeight: 1, color: TG.INK }}>{score}</span>
       </Reveal>
-      )}
-      {/* 일시정지 (우상단) — 계속/다시하기/그만두기 메뉴 포함 */}
-      <Reveal i={0} play={playReveal} style={{ position: 'absolute', right: 20, top: 23 }}>
-      <button onClick={onPause} aria-label="일시정지" className="tg-press" style={{ width: 40, height: 40, border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', ...TOUCH_OPT }}>
-        <Pause size={20} weight="Bold" color={TG.SUB} />
-      </button>
-      </Reveal>
-      {/* 타이머 top69 — 연습 모드는 게이지 대신 '연습 모드' 배지 */}
+      {/* 헤더 — 시안 09: 글래스 60 + 뒤로가기 + 스테이지명(가운데).
+          뒤로가기는 곧바로 이탈이 아니라 **일시정지 모달**로 연결(계속/다시하기/그만두기) — 오조작으로 판이 날아가지 않게 */}
+      <GameHeader title={title} onBack={onPause} glass center />
+      {/* 타이머 — 일반: 코랄 카운트다운 게이지 / 트레이닝(시안 09-4): **초록 풀게이지**(시간 제한 없음 = 줄지 않는 게이지) */}
       {practice ? (
-        <Reveal i={1} play={playReveal} style={{ position: 'absolute', left: 20, right: 20, top: 69, display: 'flex', justifyContent: 'center' }}>
-          <div data-coach="prac-badge" style={{ display: 'inline-flex', alignItems: 'center', padding: '8px 14px', borderRadius: RADIUS.lg, background: 'rgba(54,201,141,0.14)' }}>
-            <span style={{ ...TYPE.labelSm, color: TG.SUCCESS }}>트레이닝 · 시간 제한 없음</span>
+        <Reveal i={1} play={playReveal} style={{ position: 'absolute', left: 24, right: 24, top: 72 }}>
+          <div data-coach="prac-badge" style={{ display: 'flex', alignItems: 'center', gap: SPACE.md }}>
+            <div style={{ width: 32, height: 32, borderRadius: RADIUS.lg, background: '#2BB583', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <Stopwatch size={20} weight="Bold" color="#fff" />
+            </div>
+            {/* 게이지는 줄어들지만 트레이닝은 타임아웃 로직이 없어(ToneGamePage: practiceMode면 타이머 미설정)
+                다 줄어도 오답·시간초과 처리가 없다. 순수 '페이스 안내'용 — 그래서 **일반 모드보다 느리게**(PRACTICE_PACE_MS) 흐른다(2026-08-07 사용자 요청). */}
+            <div style={{ flex: 1, height: 12, borderRadius: 8, background: '#EBE5D5', overflow: 'hidden' }}>
+              <div key={`ptimer-${runId}-${wordIndex}`} style={{
+                height: '100%', width: '100%', background: '#2BB583',
+                animation: `tg-timer ${wordTimeLimit || PRACTICE_PACE_MS}ms linear forwards`,
+                animationPlayState: (paused || completed) ? 'paused' : 'running',
+              }} />
+            </div>
           </div>
         </Reveal>
       ) : (
-        <Reveal i={1} play={playReveal} style={{ position: 'absolute', left: 20, right: 20, top: 69 }}>
+        <Reveal i={1} play={playReveal} style={{ position: 'absolute', left: 24, right: 24, top: 72 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.md }}>
           <div style={{ width: 32, height: 32, borderRadius: RADIUS.lg, background: lowTime ? TG.CORAL_DK : '#ff5e62', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: lowTime ? '0px 0px 10px rgba(242,72,76,0.7)' : '0px 3px 4.5px rgba(255,94,98,0.45)', animation: lowTime ? 'tg-heartbeat .85s ease-in-out infinite' : 'none' }}>
             <Stopwatch size={20} weight="Bold" color="#fff" />
           </div>
-          <div style={{ flex: 1, height: 12, borderRadius: RADIUS.sm, background: TG.TRACK, overflow: 'hidden', boxShadow: lowTime ? '0 0 0 2px rgba(242,72,76,0.35)' : 'none', transition: 'box-shadow .2s ease' }}>
-            <div key={`${runId}-${wordIndex}-${wordTimeLimit}-${gaugeOffsetMs}`} style={{ height: '100%', width: '100%', borderRadius: RADIUS.sm, background: lowTime ? 'linear-gradient(90deg,#ff5e62,#f2484c)' : 'linear-gradient(90deg,#ffc23c,#ff6b6b)', animation: `tg-timer ${wordTimeLimit}ms linear forwards`, animationDelay: `-${gaugeOffsetMs}ms`, animationPlayState: (paused || completed) ? 'paused' : 'running' }} />
+          {/* 시간부족이어도 트랙에 붉은 외곽선은 넣지 않는다(2026-08-06 사용자) — 텐션은 채움 색·시계 맥동만 */}
+          <div style={{ flex: 1, height: 12, borderRadius: 8, background: '#EBE5D5', overflow: 'hidden' }}>
+            <div key={`${runId}-${wordIndex}-${wordTimeLimit}-${gaugeOffsetMs}`} style={{ height: '100%', width: '100%', borderRadius: RADIUS.sm, background: lowTime ? 'linear-gradient(90deg,#ff5e62,#f2484c)' : '#FF5E62', animation: `tg-timer ${wordTimeLimit}ms linear forwards`, animationDelay: `-${gaugeOffsetMs}ms`, animationPlayState: (paused || completed) ? 'paused' : 'running' }} />
           </div>
         </div>
         </Reveal>
       )}
-      {/* 1판 1힌트(각 1회) — 타이머/건너뛰기/발음힌트 안내. 건너뛰기 안내만 버튼 근처(하단), 나머지는 타이머 아래. 비차단·자동 페이드 */}
-      {runTip && !practice && (
-        <div style={{ position: 'absolute', left: 20, right: 20,
-          ...(runTip === 'skip' ? { bottom: 'calc(184px + env(safe-area-inset-bottom))' } : { top: 103 }),
-          display: 'flex', justifyContent: 'center', zIndex: 24, pointerEvents: 'none', animation: 'tg-hint 5.1s ease forwards' }} aria-hidden="true">
-          <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, background: TG.INK, color: '#fff', ...TYPE.labelSm, lineHeight: 1, padding: '7px 12px', borderRadius: RADIUS.md, boxShadow: '0 4px 12px rgba(43,39,48,0.22)', whiteSpace: 'nowrap' }}>
-            {runTip === 'play' && <><Stopwatch size={13} weight="Bold" color="#ff9f6b" />타이머가 끝나기 전에 성조를 골라요!</>}
-            {runTip === 'skip' && <><Ticket size={13} weight="Bold" color={TG.CORAL} />틀려도 안 죽어요 · 어려우면 건너뛰기!</>}
-            {runTip === 'hint' && <><VolumeLoud size={13} weight="Bold" color="#ff9f6b" />발음 힌트를 들으면 콤보가 끊겨요!</>}
-          </div>
-        </div>
-      )}
       {/* 단어카드 top129 (폭 채움) — 단어 바뀔 때마다 키 변경으로 입장 모션(tg-card-in) */}
-      <Reveal i={2} play={playReveal} style={{ position: 'absolute', left: 20, right: 20, top: 129 }}>
+      <Reveal i={2} play={playReveal} style={{ position: 'absolute', left: 24, right: 24, top: 179 }}>
         <div style={{ position: 'relative' }}>
           <div key={`card-${runId}-${wordIndex}`} style={{ animation: 'tg-card-in .38s cubic-bezier(.22,1,.36,1) both' }}>
             <div style={{ position: 'relative', transform: freeze ? 'scale(1.035)' : 'none', animation: punch ? 'tg-punch .35s ease-out' : 'none', '--tg-punch-s': (1.05 + heat * 0.05).toFixed(3) }}>
-              <WordCard word={word} entered={entered} currentSyl={currentSyl} completed={completed} timedOut={timedOut} progressText={endless ? `${wordIndex + 1}` : `${wordIndex + 1}/${wordsLen}`} hideProgress={practice} combo={combo} comboFlash={comboFlash} floatScore={practice ? null : floatScore} listen={listen} audioOff={audioOff} onReplay={onReplay} onCantHear={onCantHear} onHint={onHint} hintUsed={hintUsed} draw={draw} lianyinAt={lianyinAt} sandhiAt={sandhiAt} practice={practice} onSpeak={onSpeak} onReveal={onReveal} hideMeaning={hideMeaning} hidePinyin={hidePinyin} />
+              <WordCard word={word} entered={entered} currentSyl={currentSyl} completed={completed} timedOut={timedOut} progressText={(endless || practice) ? `${wordIndex + 1}` : `${wordIndex + 1}/${wordsLen}`} floatScore={practice ? null : floatScore} listen={listen} audioOff={audioOff} onReplay={onReplay} onCantHear={onCantHear} onHint={onHint} hintUsed={hintUsed} draw={draw} lianyinAt={lianyinAt} sandhiAt={sandhiAt} practice={practice} onSpeak={onSpeak} onReveal={onReveal} hideMeaning={hideMeaning} hidePinyin={hidePinyin} />
             </div>
           </div>
           {/* 정답 완성 연출 — 크리스프 플래시(번쩍) + 색색 색종이 + 흰/골드 글리터. ★단어 키 래퍼 '밖'에 둠: 안에 두면 새 단어 등장 때마다 리마운트되어 오발. flashKey 증가(정답 완성) 시에만 발동 */}
           {flashKey > 0 && <CrispFlash key={`fl-${flashKey}`} radial borderRadius={24} color="rgba(255,255,255,0.95)" zIndex={7} />}
           {flashKey > 0 && <ConfettiBurst key={`cf-${flashKey}`} count={16 + Math.round(heat * 12)} power={0.85 + heat * 0.35} size={9} zIndex={6} />}
           {flashKey > 0 && <ConfettiBurst key={`cg-${flashKey}`} colors={LIGHT_CONFETTI} count={9 + Math.round(heat * 7)} power={0.95 + heat * 0.3} size={5} zIndex={6} />}
+          {/* 콤보 칩 — 시안 09-3: 카드 안이 아니라 **화면 y143 중앙**(카드 top179 기준 -36) */}
+          <div style={{ position: 'absolute', left: '50%', top: -36, transform: 'translateX(-50%)', zIndex: 8, pointerEvents: 'none' }}>
+            <ComboChip combo={combo} flash={comboFlash} />
+          </div>
           {/* 콤보 브레이크 — 방금 잃은 콤보 칩이 기울며 떨어져 사라짐(상실을 보여줘야 다음 판에 지키고 싶어짐). 칩 실제 위치(right16 top14)에서 낙하 */}
           {comboBreak && !prefersReducedMotion() && (
-            <div key={`cb-${comboBreak.key}`} aria-hidden="true" style={{ position: 'absolute', right: 16, top: 14, zIndex: 8, pointerEvents: 'none', animation: 'tg-combodrop .6s cubic-bezier(.5,-0.1,.85,.5) forwards' }}>
-              <ComboChip combo={comboBreak.combo} />
+            <div key={`cb-${comboBreak.key}`} aria-hidden="true" style={{ position: 'absolute', left: '50%', top: -36, transform: 'translateX(-50%)', zIndex: 8, pointerEvents: 'none' }}>
+              <div style={{ animation: 'tg-combodrop .6s cubic-bezier(.5,-0.1,.85,.5) forwards' }}>
+                <ComboChip combo={comboBreak.combo} />
+              </div>
             </div>
           )}
         </div>
       </Reveal>
-      {/* 코치 — 일반 모드만. 연습 모드는 카드 힌트 + 발음듣기/정답보기 버튼이 안내하고,
-          4겹(카드·코치·연습버튼·성조버튼)이라 짧은 화면서 겹쳐 미표시.
-          ★top 고정 금지: 단어카드 하단(129+292=421)~건너뛰기 행 위(bottom 130+버튼38+여유) 사이 밴드에 flex 세로중앙 —
-          짧은 화면(사파리 툴바 ~660-720px)서 하단 고정 건너뛰기 버튼과 겹치지 않게(시작/결과화면과 동일 원칙). */}
-      {!practice && !draw && (
-        <Reveal i={3} play={playReveal} style={{ position: 'absolute', left: 24, right: 24, top: 428, bottom: 'calc(178px + env(safe-area-inset-bottom))', display: 'flex', alignItems: 'center' }}>
-          <CoachBubble text={coachText} />
-        </Reveal>
-      )}
       {/* 트레이닝 종료 — 무한이라 자발적 종료용. 발음듣기/정답보기는 카드로 이관됨 → 성조버튼과 카드 사이 밴드에 배치(오터치 방지) */}
       {practice && onEndTraining && (
         <Reveal i={3} play={playReveal} style={{ position: 'absolute', left: 0, right: 0, bottom: 'calc(150px + env(safe-area-inset-bottom))', display: 'flex', justifyContent: 'center' }}>
           <button onClick={onEndTraining} className="tg-press" style={{ display: 'inline-flex', alignItems: 'center', gap: SPACE.sm, padding: '9px 18px', borderRadius: RADIUS.lg, background: '#fff', border: '1.5px solid #ebe5de', boxShadow: '0px 2px 6px rgba(43,39,48,0.05)', cursor: 'pointer', ...TOUCH_OPT }}>
             <Logout size={15} weight="Bold" color={TG.SUB} />
-            <span style={{ ...TYPE.label, color: TG.SUB }}>트레이닝 종료</span>
+            <span style={{ ...TYPE.label, color: TG.SUB, whiteSpace: 'nowrap' }}>{endLabel}</span>
           </button>
-        </Reveal>
-      )}
-      {/* 건너뛰기 — 못 풀겠는 단어를 건너뛰기 패스 1개 쓰고 넘김. 남은 티켓 3칸을 버튼 안에 함께 표시(예산 HUD 통합):
-          fill=남음·흐림=소진, 소모 시 방금 빈 티켓을 '팟' 튕겨(tg-skiplose) 소진을 명확히. 0이면 비활성(스킵만 불가, 게임은 계속). 연습 모드는 미노출. */}
-      {onSkip && (
-        <Reveal i={4} play={playReveal} style={{ position: 'absolute', left: 0, right: 0, bottom: draw ? 'calc(40px + env(safe-area-inset-bottom))' : 'calc(130px + env(safe-area-inset-bottom))', display: 'flex', justifyContent: 'center' }}>
-          <style>{`@keyframes tg-skiplose{0%{transform:rotate(45deg) scale(1)}28%{transform:rotate(37deg) scale(1.4)}55%{transform:rotate(51deg) scale(.7)}100%{transform:rotate(45deg) scale(.82)}}`}</style>
-          {(() => {
-            const disabled = completed || lives <= 0;
-            return (
-              <button onClick={handleSkip} disabled={disabled} className="tg-press"
-                aria-label={lives > 0 ? `건너뛰기 · 남은 ${lives}개 (1회 소모)` : '건너뛰기를 다 써서 넘길 수 없어요'}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: SPACE.md, padding: '9px 16px', borderRadius: RADIUS.lg,
-                  background: '#fff', border: '1.5px solid #ebe5de', cursor: disabled ? 'default' : 'pointer',
-                  opacity: disabled ? 0.5 : 1, boxShadow: '0px 2px 6px rgba(43,39,48,0.05)', ...TOUCH_OPT }}>
-                <span style={{ ...TYPE.labelSm, color: TG.INK }}>건너뛰기</span>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: SPACE.sm }} aria-hidden="true">
-                  {[0, 1, 2].map((i) => {
-                    const on = i < lives;
-                    return (
-                      <Ticket key={i} size={17} weight="Bold" color={on ? TG.CORAL : TG.MUTED}
-                        style={{ transition: 'transform 200ms ease, color 200ms ease', transform: on ? 'rotate(45deg) scale(1)' : 'rotate(45deg) scale(0.82)',
-                          animation: i === lostHeart ? 'tg-skiplose 520ms ease-out' : 'none' }} />
-                    );
-                  })}
-                </span>
-              </button>
-            );
-          })()}
         </Reveal>
       )}
       {/* 하단 입력 — 그리기 문제면 그리기 패드, 아니면 성조버튼.
           ★패드는 top/bottom으로 높이를 잡으므로 Reveal(이중 div, 안쪽 height 없음) 대신 단일 positioned div로 감싸 height:100%가 살게 함 */}
       {draw ? (
         <div className={playReveal ? 'tg-reveal' : undefined}
-          style={{ position: 'absolute', left: 20, right: 20, top: 436, bottom: 'calc(90px + env(safe-area-inset-bottom))', animationDelay: '430ms', ...(playReveal ? {} : { opacity: 0 }) }}>
+          style={{ position: 'absolute', left: 24, right: 24, top: 518, bottom: 'calc(26px + env(safe-area-inset-bottom))', animationDelay: '430ms', ...(playReveal ? {} : { opacity: 0 }) }}>
           <DrawPad expectedTone={drawExpectedTone} onDraw={onDraw} disabled={completed || !playReveal || paused} resetKey={drawResetKey} />
         </div>
       ) : (
-        <Reveal i={5} play={playReveal} style={{ position: 'absolute', left: 20, right: 20, bottom: 'calc(30px + env(safe-area-inset-bottom))' }}>
+        // 성조 키캡 줄 — 시안 좌우 24(폭 342 → 키 64×5 + 간격 5.5×4), 하단 26
+        <Reveal i={5} play={playReveal} style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(26px + env(safe-area-inset-bottom))' }}>
           <ToneButtons onTone={handleToneTap} wrongBtn={wrongBtn} disabled={completed} heat={heat} />
         </Reveal>
       )}
@@ -633,7 +605,7 @@ export function GameScreen({ word, entered, currentSyl, completed, timedOut, wor
         );
       })()}
       {/* 연습 첫 진입 코치마크 — 카운트다운 끝나 배지·버튼 뜬 뒤 스포트라이트(연습은 타이머 없어 딤 안전) */}
-      <CoachMarkOverlay visible={practice && playReveal && pracTip.visible} onDone={pracTip.dismiss} steps={PRACTICE_COACH} delay={360} showControls={false} />
+      <CoachMarkOverlay visible={practice && playReveal && pracTip.visible} onDone={pracTip.dismiss} steps={practiceCoach(title || '트레이닝')} delay={360} showControls={false} />
       {/* 무한 서든데스 킥오프 연출 — 런 시작 시 뒤 배경 딤+블러 위에 중앙 큰 '서든데스 / 한 번 틀리면 끝!'. 연출 중 타이머 정지(부모가 paused 처리). */}
       {showSudden && (
         <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 40,

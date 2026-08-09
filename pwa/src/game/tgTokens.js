@@ -44,6 +44,35 @@ export const BG_MESH = [
   'radial-gradient(70% 36% at 45% 98%, rgba(255,233,200,0.55), transparent 70%)',
 ].join(', ') + ', #FDFEFB';
 
+// 홈 허브 팔레트 — 플랫 카툰 룸 + 공통 탭바 (2026-07-27 사용자 Figma 시안 442:2에서 추출).
+// 시그니처: 하드(블러0) 파스텔 섀도 CARD_SHADOW · 키캡 인너엣지(TAB_RED_EDGE/CTA_EDGE) · 브라운 잉크 계열.
+export const HOME = {
+  WALL: '#D9BA84',              // 상단 벽(탄)
+  WALL_BAND: '#EFE4CF',         // 벽 하부 연크림 띠
+  MOLD_DARK: '#734728',         // 몰딩 외곽 라인·창문 스트로크
+  MOLD_LIGHT: '#C48C64',        // 몰딩 상단
+  MOLD_MID: '#A46F4A',          // 몰딩 본체·창문 프레임·창턱
+  FLOOR: '#FEF3DE',             // 바닥
+  TILE: '#FBEFD7',              // 바닥 타일(라운드 사각 반복)
+  GLASS: '#FFE79D',             // 창문 유리
+  PANEL: '#D2B17B',             // 벽 세로 패널 스트라이프 — 시안 #F7F3ED MULTIPLY×벽(#D9BA84) 평탄화 값(2026-07-28 색 수정)
+  PANEL_LINE: '#905E3D',        // 하부 웨인스코팅 패널 아웃라인 — 시안 #E0D7D1 MULTIPLY×밴드(#A46F4A) 평탄화 값
+  CARD: '#FFFFFF',              // 카드·탭바 배경(순백 — 2026-08-03 시안 개선안에서 웜 아이보리 #FFF9EE에서 변경)
+  CARD_SHADOW: '#E4EDF5',       // 하드 파스텔 섀도(블러 0 — drop 0/3 + inset 0/-2)
+  INK: '#452C1C',               // 잉크 브라운(닉네임·수치)
+  BROWN: '#634633',             // 아이콘·아바타 브라운
+  ACCENT: '#D19053',            // 등급명 골드브라운
+  TAB_INACTIVE: '#B98E7A',      // 탭 비활성(진탄 — 듀오톤 주색)
+  TAB_INACTIVE_SOFT: '#D7B59E', // 탭 비활성(연탄 — 듀오톤 보조색)
+  TAB_RED: '#F96163',           // 활성 탭·CTA 레드
+  TAB_RED_EDGE: '#C23F41',      // 활성 탭 키캡 인너 엣지
+  CTA_EDGE: '#E64244',          // CTA 키캡 인너 엣지
+  GAUGE_TRACK: '#E2D7C1',       // HUD 게이지 트랙
+  TAB_BORDER: '#E9E6DE',        // 탭바 상단 2px 구분선(시안 개선안 추가)
+  STREAK_FLAME: '#FF6C28',      // 스트릭 불꽃(기본 티어) — 시안 개선안
+  STREAK_FLAME_SOFT: '#FFBD6B', // 스트릭 불꽃 안쪽 코어·글로우
+};
+
 // 성조 5색 — toneGameWords.js TONES.color와 동일하게 유지(단일 출처는 TONES, 여기는 참조용 상수).
 export const TONE_COLORS = {
   1: '#FF4D6D',
@@ -105,8 +134,9 @@ export function pickCelebratePanda(isNewBest, maxCombo) {
 
 // ── 폰트 ───────────────────────────────────────────────
 export const FONT_TITLE = '"Jua", "Noto Sans KR", sans-serif';        // 타이틀(둥근 한글)
-export const FONT_NUM = '"Baloo 2", "Noto Sans KR", sans-serif';      // 숫자·점수
-export const FONT_BODY = '"Noto Sans KR", system-ui, sans-serif';    // 본문·버튼
+export const FONT_NUM = '"Roboto", "Noto Sans SC", sans-serif';        // 숫자·점수 — 시안과 통일(2026-08-04, 구 Baloo 2)
+export const FONT_TANTAN = '"GamtanRoad Tantan", "Jua", "Noto Sans KR", sans-serif'; // 감탄로드 탄탄체 — 타이틀 필·안내문(2026-07-28 리디자인)
+export const FONT_BODY = '"Noto Sans SC", "Noto Sans KR", system-ui, sans-serif'; // 본문·버튼 — 한글·한자 한 서체로 통일(Noto CJK는 한글 글리프 공유, 2026-08-04)
 // 병음 — 성조 마크롱(ā ē ī ō ū) 렌더 안정성 위해 Noto Sans KR 대신 OS 네이티브 라틴 폰트 스택.
 // (일부 기기에서 Noto Sans KR이 1성 마크롱 글리프를 폴백→옆으로 밀려 보이는 버그 회피. SF/Segoe UI/Roboto는 정상)
 export const FONT_PINYIN = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
@@ -170,8 +200,10 @@ export const TOUCH_OPT = {
 
 // ── 웹폰트 로더 ────────────────────────────────────────
 // 게임 진입 시 1회만 Google Fonts(Jua·Baloo 2·Noto Sans KR) 주입. 자체 완결 위해 index.html 비의존.
+// ⚠️ index.html의 <link id="tg-fonts">가 먼저 들어가 있으면 아래 주입은 건너뛴다 — 두 곳의 패밀리·굵기를 항상 같이 고칠 것.
 const FONT_HREF =
-  'https://fonts.googleapis.com/css2?family=Jua&family=Baloo+2:wght@600;700;800&family=Noto+Sans+KR:wght@400;500;700&display=swap';
+  'https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@400;500;700'
+  + '&family=Noto+Sans+SC:wght@400;500;700;900&family=Roboto:wght@500;700;900&display=swap';
 export function ensureGameFonts() {
   if (typeof document === 'undefined') return;
   // 게임 단독 앱은 @fontsource로 폰트를 번들(main.game.jsx)하므로 CDN 주입 불필요 — 오프라인 동작.
@@ -204,9 +236,20 @@ export function setHapticMuted(m) { try { localStorage.setItem('tg_haptic_muted'
 // 보조바퀴 토글 — 뜻(플레이 중 크러치)·병음(정답 공개 시)을 숨겨 '소리·성조로 체득'을 강화.
 //  ★컨텍스트별 저장(2026-07-24): 스테이지(easy-1)·보스(easy-boss)·무한(endless)·트레이닝(training)·테마(th-drama)가 각각 기억.
 //  각 시작 화면(스테이지 카드·무한 모달·테마·트레이닝)과 인게임 설정에서 '현재 컨텍스트' 값을 켜고 끔.
-export function isMeaningHidden(ctx = 'g') { try { return localStorage.getItem(`tg_hide_meaning_${ctx}`) === '1'; } catch { return false; } }
+// ctx별 저장값이 없으면 **전역 기본값('g')** 을 따른다 — 홈 메뉴의 '단어 뜻/병음' 토글이 그 기본값을 쓴다(2026-08-06 시안 461:40).
+export function isMeaningHidden(ctx = 'g') {
+  try {
+    const v = localStorage.getItem(`tg_hide_meaning_${ctx}`);
+    return (v != null ? v : localStorage.getItem('tg_hide_meaning_g')) === '1';
+  } catch { return false; }
+}
 export function setMeaningHidden(ctx, h) { try { localStorage.setItem(`tg_hide_meaning_${ctx}`, h ? '1' : '0'); } catch { /* noop */ } }
-export function isPinyinHidden(ctx = 'g') { try { return localStorage.getItem(`tg_hide_pinyin_${ctx}`) === '1'; } catch { return false; } }
+export function isPinyinHidden(ctx = 'g') {
+  try {
+    const v = localStorage.getItem(`tg_hide_pinyin_${ctx}`);
+    return (v != null ? v : localStorage.getItem('tg_hide_pinyin_g')) === '1';
+  } catch { return false; }
+}
 export function setPinyinHidden(ctx, h) { try { localStorage.setItem(`tg_hide_pinyin_${ctx}`, h ? '1' : '0'); } catch { /* noop */ } }
 
 export function haptic(pattern) {

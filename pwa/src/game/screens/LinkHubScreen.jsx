@@ -2,9 +2,10 @@
 // 카드는 카카오톡 링크 공유 미리보기 스타일(상단 썸네일 + 제목/설명/도메인)의 세로 리스트.
 // 항목은 전부 데이터(HUB_LINKS) — 특강·교재·단어장 등 새 링크는 배열에 추가만 하면 됨.
 // image: 썸네일 경로(권장 2:1 가로형). 없으면 tint+라벨 — 파일 없는 경로 금지(깨진 아이콘 뜸). SNS는 놀러가기 모달 전담.
-import { AltArrowLeft, AltArrowRight, Stars } from '@solar-icons/react';
+import { AltArrowRight, Stars } from '@solar-icons/react';
 import { TG, TYPE, TOUCH_OPT, RADIUS, SPACE } from '../tgTokens.js';
 import { track } from '../gameAnalytics.js';
+import { TgTabBar, TAB_BAR_H, Reveal } from './shared.jsx';
 
 const SITE = 'https://tiantian-chinese.pages.dev';
 
@@ -19,31 +20,27 @@ function openLink(href, channel) {
   try { window.open(href, '_blank', 'noopener,noreferrer'); } catch { /* noop */ }
 }
 
-export function LinkHubScreen({ onClose }) {
+// 탭바 도입(2026-07-27 홈 리디자인) — 오버레이(onClose)에서 '하늘하늘' 탭 화면으로 전환. 뒤로가기 대신 탭 전환.
+export function LinkHubScreen({ tabNav }) {
   return (
-    <div className="tg-enter" style={{ position: 'fixed', inset: 0, zIndex: 60, background: TG.BG, overflowY: 'auto', ...TOUCH_OPT }}>
-      <div style={{ position: 'relative', minHeight: '100%', display: 'flex', flexDirection: 'column', paddingBottom: 'calc(40px + env(safe-area-inset-bottom))' }}>
-        {/* 뒤로 */}
-        <button aria-label="뒤로" className="tg-press" onClick={onClose} style={{
-          position: 'absolute', left: 24, top: 'calc(20px + env(safe-area-inset-top))', width: 40, height: 40, borderRadius: RADIUS.xl,
-          background: '#fff', border: 'none', cursor: 'pointer', boxShadow: '0 3px 8px rgba(26,16,20,0.08)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', ...TOUCH_OPT,
-        }}>
-          <AltArrowLeft size={20} weight="Bold" color={TG.INK} />
-        </button>
+    <div style={{ position: 'absolute', inset: 0, background: TG.BG, ...TOUCH_OPT }}>
+      {/* 스크롤 레이어 — 탭바(형제)는 고정. 진입 애니(tg-enter)는 콘텐츠에만(탭바 깜빡임 방지) */}
+      <div style={{ position: 'absolute', inset: 0, overflowY: 'auto' }}>
+      <div style={{ position: 'relative', minHeight: '100%', display: 'flex', flexDirection: 'column', paddingBottom: `calc(${TAB_BAR_H + 28}px + env(safe-area-inset-bottom))` }}>
+        {/* 히어로 — 브랜드 로고만. 시안 16(2026-08-05 2차): 로고 y40(188×27.3), 부제는 숨김 처리됨 */}
+        <Reveal i={0} style={{ paddingTop: 'calc(40px + env(safe-area-inset-top))' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <img src="/logo/logo-red.png" alt="하늘하늘중국어" style={{ width: 188, height: 'auto', objectFit: 'contain' }} />
+          </div>
+        </Reveal>
 
-        {/* 히어로 — 브랜드 로고 + 화면 목적(맥락) */}
-        <div style={{ paddingTop: 'calc(92px + env(safe-area-inset-top))', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: SPACE.lg }}>
-          <img src="/logo/logo-red.png" alt="하늘하늘중국어" style={{ width: 188, height: 'auto', objectFit: 'contain' }} />
-          <span style={{ ...TYPE.sub, color: TG.SUB, letterSpacing: '-0.01em' }}>관심 있는 주제를 눌러 둘러보세요</span>
-        </div>
-
-        {/* 링크 카드 — 카톡 공유 미리보기 스타일 세로 리스트 */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.x2, padding: '34px 24px 0' }}>
-          {HUB_LINKS.map((l) => (
-            <button key={l.id} className="tg-press" onClick={() => openLink(l.href, l.id)} style={{
+        {/* 링크 카드 — 카톡 공유 미리보기 스타일 세로 리스트. 시안: 첫 카드 y140(로고 아래 72.7) */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.x2, padding: '72.7px 24px 0' }}>
+          {HUB_LINKS.map((l, li) => (
+            <Reveal key={l.id} i={li + 1}>
+            <button className="tg-press" onClick={() => openLink(l.href, l.id)} style={{
               display: 'block', width: '100%', padding: 0, borderRadius: RADIUS.xl, overflow: 'hidden',
-              background: '#fff', border: 'none', cursor: 'pointer', boxShadow: '0 5px 14px rgba(26,16,20,0.07)', textAlign: 'left', ...TOUCH_OPT,
+              background: '#fff', border: 'none', cursor: 'pointer', boxShadow: '0px 4px 18px rgba(43,39,48,0.07)', textAlign: 'left', ...TOUCH_OPT,
             }}>
               {/* 상단 썸네일 — OG 표준 비율(1200×630). 이미지 없는 항목은 tint+라벨 */}
               <div style={{ width: '100%', aspectRatio: '1200 / 630', background: l.image ? TG.SURFACE : l.tint, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -53,24 +50,28 @@ export function LinkHubScreen({ onClose }) {
               </div>
               {/* 하단 텍스트 패널 — 제목/설명 + 바로가기 어포던스(카드별 tint로 구분) */}
               <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.xl, padding: '14px 16px' }}>
+                {/* 시안 16 실측: 제목 16 Bold(라인 26) · 설명 13 Bold(라인 21) · 사이 4 */}
                 <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: SPACE.xs }}>
-                  <span style={{ ...TYPE.btn, color: TG.INK }}>{l.title}</span>
-                  <span style={{ ...TYPE.sub, color: TG.SUB, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{l.desc}</span>
+                  <span style={{ ...TYPE.btn, lineHeight: '26px', color: TG.INK }}>{l.title}</span>
+                  <span style={{ ...TYPE.sub, fontWeight: 700, lineHeight: '21px', color: TG.SUB, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{l.desc}</span>
                 </div>
                 <AltArrowRight aria-hidden="true" size={24} weight="Bold" color={l.tint} style={{ flexShrink: 0 }} />
               </div>
             </button>
+            </Reveal>
           ))}
         </div>
 
-        {/* 새 콘텐츠 준비 안내 — marginTop:auto로 카드가 몇 개든 항상 최하단에 고정 */}
-        <div style={{ marginTop: 'auto', paddingTop: SPACE.x4, display: 'flex', justifyContent: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, padding: '10px 16px', borderRadius: RADIUS.pill, background: TG.SURFACE }}>
+        {/* 새 콘텐츠 준비 안내 — 시안 16(2차): 카드 아래 30 · 232×40 · TG.SURFACE · 반짝 17 + 문구 13 Bold(gap 6, 좌우 16) */}
+        <div style={{ paddingTop: 30, display: 'flex', justifyContent: 'center' }}>
+          <div style={{ height: 40, display: 'flex', alignItems: 'center', gap: SPACE.sm, padding: '0 16px', borderRadius: RADIUS.pill, background: TG.SURFACE }}>
             <Stars size={17} weight="Bold" color={TG.MUTED} />
-            <span style={{ ...TYPE.sub, color: TG.SUB }}>새로운 콘텐츠를 준비하고 있어요</span>
+            <span style={{ ...TYPE.sub, fontWeight: 700, lineHeight: '20px', color: TG.SUB }}>새로운 콘텐츠를 준비하고 있어요</span>
           </div>
         </div>
       </div>
+      </div>
+      <TgTabBar active="hub" onNav={tabNav} />
     </div>
   );
 }

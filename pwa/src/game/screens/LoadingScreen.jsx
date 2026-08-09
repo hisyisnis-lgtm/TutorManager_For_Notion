@@ -2,7 +2,7 @@
 // 성조 캐릭터 1개(랜덤)가 팁을 건네는 톤. 팁이 특정 성조 설명이면 그 성조 캐릭터를 보여줌.
 // 배경(빨강)·웨이브 슬라이드는 감싸는 오버레이가 제공 → 캐릭터 뒤 흰 원으로 성조색 대비 확보.
 import { useState } from 'react';
-import { TG, TYPE, RADIUS, SPACE } from '../tgTokens.js';
+import { TG, TYPE, RADIUS, SPACE, TONE_KEY_COLORS } from '../tgTokens.js';
 import { TONES } from '../../constants/toneGameWords.js';
 import { ToneMark } from '../tgWidgets.jsx';
 import { Eyes, markSize } from './eyes.jsx';
@@ -30,7 +30,8 @@ export function LoadingTip() {
         <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: '#fff', boxShadow: '0 8px 20px rgba(0,0,0,0.14)' }} />
         <div style={{ position: 'relative', color: tone.color, animation: 'tg-bob 2.4s ease-in-out infinite' }}>
           <div style={{ position: 'relative', display: 'inline-block' }}>
-            <ToneMark tone={tone.num} size={markSize(tone.num)} />
+            {/* 홈·타이틀 캐릭터와 동일한 성조색 다크 아웃라인(2026-07-28 동기화) */}
+            <ToneMark tone={tone.num} size={markSize(tone.num)} outline={TONE_KEY_COLORS[tone.num].dark} />
             {/* 캐릭터 1개뿐이라 시차 불필요 — i=0(기존 딜레이 없음과 동일) */}
             <Eyes num={tone.num} i={0} />
           </div>

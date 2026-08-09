@@ -1,168 +1,111 @@
 // 게임 공용 모달 — 놀러가기(SNS)·복습 시작·게임방법·무한 안내·로그인 유도·[DEV]점수 디버그. 시작/홈 등 여러 화면에서 재사용.
 // (기존 StartScreen.jsx 내부 함수에서 추출)
 import { useState } from 'react';
-import { HandStars, Notebook, AltArrowRight, Play, Infinity, Star, QuestionCircle, Devices, Login, SquareAcademicCap, MedalStar } from '@solar-icons/react';
-import { InstagramLogoIcon, YoutubeLogoIcon } from '@phosphor-icons/react';
+import { HandStars, Notebook, AltArrowRight, Play, Infinity, Devices, SquareAcademicCap, MedalStar } from '@solar-icons/react';
+import { InstagramLogoIcon, YoutubeLogoIcon, QuestionMarkIcon } from '@phosphor-icons/react';
 import { TG, TYPE, SHADOW, TOUCH_OPT, loadBest, saveBest, RADIUS, SPACE } from '../tgTokens.js';
 import { GAMEKEY, loadEndlessBest, saveEndlessBest } from '../gameLogic.js';
 import { DIFFICULTIES } from '../../constants/toneGameWords.js';
 import { track } from '../gameAnalytics.js';
-import { ModalCard, PrimaryButton, CrutchRow } from './shared.jsx';
+import { ModalCard, PrimaryButton, ModalHead, ModalBody, KeycapCta, ModalTextButton } from './shared.jsx';
 
-// 게임 방법 확인 모달 — 메뉴 '게임 방법' 시. 튜토리얼을 다시 볼지 확인 후 [게임 방법 보기] 눌러야 진입.
+// 모달 배지·CTA 색(시안 실측)
+const CTA_RED = '#F96163';           // 기본 CTA·배지 코랄
+const ENDLESS_ORANGE = '#F3A75B';    // 무한 모드 배지
+const EXAM_GOLD = '#FFC23C';         // 승급시험 배지
+const TRAIN_GREEN = '#2BB583', TRAIN_GREEN_EDGE = '#219169'; // 트레이닝 아이덴티티(시안 461:339)
+// 물음표 기호 아이콘 — Solar엔 순수 물음표가 없어 Phosphor를 쓴다(ModalHead의 Icon 인터페이스에 맞춘 래퍼)
+const QuestionMarkBadge = ({ size, color }) => <QuestionMarkIcon size={size} weight="bold" color={color} />;
+
+// 한글 받침 유무 — 조사(으로/로) 선택용. 마지막 글자가 한글이 아니면 받침 없음으로 본다.
+function hasFinalConsonant(word = '') {
+  const ch = (word || '').trim().slice(-1);
+  const code = ch.charCodeAt(0);
+  if (!ch || code < 0xac00 || code > 0xd7a3) return false;
+  return (code - 0xac00) % 28 !== 0;
+}
+
+// ── 안내 모달 5종 — 시안(2026-08-06) 공통 규격으로 통일 ────────────────
+//  카드 330 r24 · 배지 72 r24 + 아이콘 38 · 제목 24/29 · 본문 14/22 · 키캡 CTA 60 · 텍스트 '닫기'.
+//  구 비주얼(그라데이션 배지·글로우 CTA)은 전부 폐기 — 일시정지/메뉴 모달과 같은 언어로 맞춤.
 export function HelpStartModal({ onStart, onClose }) {
+  // 시안 769:28 — 배지 코랄 + 물음표 기호(Phosphor QuestionMark). CTA엔 아이콘 없음.
   return (
     <ModalCard onClose={onClose}>
-      <div style={{ width: 72, height: 72, borderRadius: 36, background: 'rgba(255,107,107,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <QuestionCircle size={32} weight="Bold" color={TG.CORAL_DK} />
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: SPACE.md, textAlign: 'center', width: '100%' }}>
-        <span style={{ ...TYPE.titleLg, color: TG.INK }}>게임 방법</span>
-        <span style={{ ...TYPE.sub, lineHeight: 1.55, color: TG.SUB }}>
-          성조 게임 조작법을 처음부터<br />다시 볼까요?
-        </span>
-      </div>
-      <PrimaryButton onClick={() => { onStart && onStart(); }}>
-        <span style={{ ...TYPE.cta, color: '#fff' }}>게임 방법 보기</span>
-        <Play size={14} weight="Bold" color="#fff" />
-      </PrimaryButton>
-      <button className="tg-press" onClick={onClose} style={{ width: '100%', padding: '4px 0', background: 'none', border: 'none', cursor: 'pointer', ...TOUCH_OPT }}>
-        <span style={{ ...TYPE.body, color: TG.SUB }}>닫기</span>
-      </button>
+      <ModalHead Icon={QuestionMarkBadge} badgeBg={CTA_RED} title="게임 방법" />
+      <ModalBody lines={['성조 게임 조작법을 처음부터', '다시 볼까요?']} />
+      <KeycapCta label="게임 방법 보기" onClick={() => { onStart && onStart(); }} />
+      <ModalTextButton onClick={onClose} />
     </ModalCard>
   );
 }
 
-// 무한 시작 모달 — 모드선택 '무한' 카드 시. 서든데스·건너뛰기 규칙 안내 + 최고점 + [게임 시작] 눌러야 진입.
-export function EndlessStartModal({ best = 0, onStart, onClose }) {
+// 무한 시작 모달 — 모드선택 '무한' 카드 시. 서든데스·건너뛰기 규칙 안내 + [게임 시작].
+//  시안 771:2에서 최고점 칩·단어카드설정(뜻/병음) 토글은 빠졌다 — 뜻/병음은 일시정지 모달에서 조절.
+export function EndlessStartModal({ onStart, onClose }) {
   return (
     <ModalCard onClose={onClose}>
-      <div style={{ width: 72, height: 72, borderRadius: RADIUS.xxl, background: 'linear-gradient(135deg,#ffcf5b,#F0A91E)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 10px 26px rgba(240,169,30,0.4)' }}>
-        <Infinity size={40} weight="Bold" color="#fff" />
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: SPACE.md, textAlign: 'center', width: '100%' }}>
-        <span style={{ ...TYPE.titleLg, color: TG.INK }}>무한 모드</span>
-        <span style={{ ...TYPE.sub, lineHeight: 1.55, color: TG.SUB }}>
-          점점 빨라지는 문제를 계속 풀어요.<br /><b style={{ color: '#d0464a', fontWeight: 800 }}>한 번이라도 틀리면 끝!</b><br />모르는 단어는 건너뛰기 패스로 넘기세요.
-        </span>
-      </div>
-      {best > 0 && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, background: 'rgba(255,176,46,0.14)', padding: '7px 14px', borderRadius: RADIUS.pill }}>
-          <Star size={15} weight="Bold" color={TG.SUN} />
-          <span style={{ ...TYPE.labelSm, color: TG.INK }}>최고 {best.toLocaleString()}점</span>
-        </div>
-      )}
-      <CrutchRow ctx="endless" style={{ width: '100%' }} />
-      <PrimaryButton onClick={() => { onStart && onStart(); }}>
-        <span style={{ ...TYPE.cta, color: '#fff' }}>게임 시작</span>
-        <Play size={14} weight="Bold" color="#fff" />
-      </PrimaryButton>
-      <button className="tg-press" onClick={onClose} style={{ width: '100%', padding: '4px 0', background: 'none', border: 'none', cursor: 'pointer', ...TOUCH_OPT }}>
-        <span style={{ ...TYPE.body, color: TG.SUB }}>닫기</span>
-      </button>
+      <ModalHead Icon={Infinity} badgeBg={ENDLESS_ORANGE} title="무한 모드" />
+      <ModalBody lines={['점점 빨라지는 문제를 계속 풀어요.', '한 번이라도 틀리면 끝!', '모르는 단어는 건너뛰기 패스로 넘기세요.']} />
+      <KeycapCta label="게임 시작" Icon={Play} onClick={() => { onStart && onStart(); }} />
+      <ModalTextButton onClick={onClose} />
     </ModalCard>
   );
 }
 
-// 트레이닝 시작 모달 — 모드선택 '트레이닝' 카드 시. 무엇을 하는 모드인지 안내 + [트레이닝 시작] 눌러야 진입.
+// 트레이닝 시작 모달 — 모드선택 '트레이닝' 카드 시. 무엇을 하는 모드인지 안내 + [트레이닝 시작].
 //   트레이닝 = 열린 스테이지 범위의 약점가중 단어를 시간제한 없이 무한 반복(기록 미반영).
 export function TrainingStartModal({ onStart, onClose }) {
+  // 시안 461:43 — 다른 안내 모달과 같은 규격(r24 · 28/22/22)으로 통일됨(2026-08-07). 본문만 색 강조가 있어 커스텀.
   return (
     <ModalCard onClose={onClose}>
-      <div style={{ width: 72, height: 72, borderRadius: RADIUS.xxl, background: 'linear-gradient(135deg,#4ad4a0,#2bb583)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 10px 26px rgba(43,181,131,0.4)' }}>
-        <SquareAcademicCap size={38} weight="Bold" color="#fff" />
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: SPACE.md, textAlign: 'center', width: '100%' }}>
-        <span style={{ ...TYPE.titleLg, color: TG.INK }}>트레이닝</span>
-        <span style={{ ...TYPE.sub, lineHeight: 1.6, color: TG.SUB }}>
-          지금 열린 범위에서 <b style={{ color: TG.INK, fontWeight: 700 }}>약한 단어 위주</b>로 골라줘요.<br />
-          <b style={{ color: '#2bb583', fontWeight: 800 }}>시간 제한 없이</b> 계속 이어서 연습해요.<br />
-          기록에는 반영되지 않으니 부담 없이!
-        </span>
-      </div>
-      <CrutchRow ctx="training" style={{ width: '100%' }} />
-      <PrimaryButton onClick={() => { onStart && onStart(); }} background="linear-gradient(135deg,#3ccf97,#2bb583)" shadow="0px 10px 20px rgba(43,181,131,0.32)">
-        <span style={{ ...TYPE.cta, color: '#fff' }}>트레이닝 시작</span>
-        <Play size={14} weight="Bold" color="#fff" />
-      </PrimaryButton>
-      <button className="tg-press" onClick={onClose} style={{ width: '100%', padding: '4px 0', background: 'none', border: 'none', cursor: 'pointer', ...TOUCH_OPT }}>
-        <span style={{ ...TYPE.body, color: TG.SUB }}>닫기</span>
-      </button>
+      <ModalHead Icon={SquareAcademicCap} badgeBg={TRAIN_GREEN} title="트레이닝" />
+      <span style={{ width: '100%', ...TYPE.body, fontWeight: 400, fontSize: 14, lineHeight: '22px', color: '#9A93A0', textAlign: 'center' }}>
+        지금 열린 범위에서 <span style={{ color: TG.INK }}>약한 단어 위주</span>로 골라줘요.<br />
+        <span style={{ color: TRAIN_GREEN }}>시간 제한 없이</span> 계속 이어서 연습해요.<br />
+        기록에는 반영되지 않으니 부담 없이!
+      </span>
+      <KeycapCta bg={TRAIN_GREEN} edge={'#229E71'} label="시작 하기" Icon={Play} onClick={() => { onStart && onStart(); }} />
+      {/* 이 모달만 닫기 색이 #9A93A0(시안 461:43) */}
+      <ModalTextButton color="#9A93A0" onClick={onClose} />
     </ModalCard>
   );
 }
 
-// 트레이닝 유도 모달 — 입문을 연속으로 어려워한 유저가 '홈으로 가기'로 나오면 홈에서 부드럽게 제안(비강제, 나중에=닫기).
+// 트레이닝 유도 모달 — 입문을 연속으로 어려워한 유저가 '홈으로 가기'로 나오면 홈에서 부드럽게 제안(비강제).
 export function TrainingNudgeModal({ onStart, onClose }) {
   return (
     <ModalCard onClose={onClose}>
-      <div style={{ width: 72, height: 72, borderRadius: RADIUS.xxl, background: 'linear-gradient(135deg,#4ad4a0,#2bb583)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 10px 26px rgba(43,181,131,0.4)' }}>
-        <SquareAcademicCap size={38} weight="Bold" color="#fff" />
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: SPACE.md, textAlign: 'center', width: '100%' }}>
-        <span style={{ ...TYPE.titleLg, color: TG.INK }}>천천히 익혀볼까요?</span>
-        <span style={{ ...TYPE.sub, lineHeight: 1.6, color: TG.SUB }}>
-          입문이 조금 어렵게 느껴지셨나요?<br />
-          <b style={{ color: '#2bb583', fontWeight: 800 }}>트레이닝</b>은 시간 제한 없이 <b style={{ color: TG.INK, fontWeight: 700 }}>약한 단어 위주</b>로 편하게 연습할 수 있어요.
-        </span>
-      </div>
-      <PrimaryButton onClick={() => { onStart && onStart(); }} background="linear-gradient(135deg,#3ccf97,#2bb583)" shadow="0px 10px 20px rgba(43,181,131,0.32)">
-        <span style={{ ...TYPE.cta, color: '#fff' }}>트레이닝 시작</span>
-        <Play size={14} weight="Bold" color="#fff" />
-      </PrimaryButton>
-      <button className="tg-press" onClick={onClose} style={{ width: '100%', padding: '4px 0', background: 'none', border: 'none', cursor: 'pointer', ...TOUCH_OPT }}>
-        <span style={{ ...TYPE.body, color: TG.SUB }}>나중에</span>
-      </button>
+      <ModalHead Icon={SquareAcademicCap} badgeBg={TRAIN_GREEN} title="천천히 익혀볼까요?" />
+      <ModalBody lines={['입문이 조금 어렵게 느껴지셨나요?', '트레이닝은 시간 제한 없이', '약한 단어 위주로 편하게 연습할 수 있어요.']} />
+      <KeycapCta bg={TRAIN_GREEN} edge={TRAIN_GREEN_EDGE} label="트레이닝 시작" Icon={Play} onClick={() => { onStart && onStart(); }} />
+      <ModalTextButton onClick={onClose} />
     </ModalCard>
   );
 }
 
-// 승급시험 유도 모달 — 고득점(완벽 3별 2스테이지↑)으로 실력 증명 시, 5단계 다 안 깨도 승급시험 도전 제안(비강제, 다음 급 미개방일 때만·급별 1회).
+// 승급시험 유도 모달 — 고득점으로 실력 증명 시, 5단계 다 안 깨도 승급시험 도전 제안(비강제·급별 1회).
 export function ExamPromptModal({ nextLabel = '', onStart, onClose }) {
   return (
     <ModalCard onClose={onClose}>
-      <div style={{ width: 72, height: 72, borderRadius: RADIUS.xxl, background: 'linear-gradient(135deg,#ffcf5b,#F0A91E)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 10px 26px rgba(240,169,30,0.4)' }}>
-        <MedalStar size={38} weight="Bold" color="#fff" />
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: SPACE.md, textAlign: 'center', width: '100%' }}>
-        <span style={{ ...TYPE.titleLg, color: TG.INK }}>실력이 좋으시네요!</span>
-        <span style={{ ...TYPE.sub, lineHeight: 1.6, color: TG.SUB }}>
-          모든 단계를 깨지 않아도<br />
-          <b style={{ color: TG.INK, fontWeight: 700 }}>{nextLabel} 승급시험</b>에 바로 도전할 수 있어요.<br />
-          통과하면 <b style={{ color: '#F0A91E', fontWeight: 800 }}>{nextLabel}</b>로 승급!
-        </span>
-      </div>
-      <PrimaryButton onClick={() => { onStart && onStart(); }} background="linear-gradient(135deg,#ffcf5b,#F0A91E)" shadow="0px 10px 20px rgba(240,169,30,0.32)">
-        <span style={{ ...TYPE.cta, color: '#fff' }}>승급시험 도전</span>
-        <Play size={14} weight="Bold" color="#fff" />
-      </PrimaryButton>
-      <button className="tg-press" onClick={onClose} style={{ width: '100%', padding: '4px 0', background: 'none', border: 'none', cursor: 'pointer', ...TOUCH_OPT }}>
-        <span style={{ ...TYPE.body, color: TG.SUB }}>나중에</span>
-      </button>
+      <ModalHead Icon={MedalStar} badgeBg={EXAM_GOLD} title="실력이 좋으시네요!" />
+      {/* 조사 — 받침 있으면 '으로'(실전→실전으로), 없으면 '로'(고수→고수로) */}
+      <ModalBody lines={['모든 단계를 깨지 않아도', `${nextLabel} 승급시험에 바로 도전할 수 있어요.`, `통과하면 ${nextLabel}${hasFinalConsonant(nextLabel) ? '으로' : '로'} 승급!`]} />
+      <KeycapCta label="승급시험 도전" Icon={Play} onClick={() => { onStart && onStart(); }} />
+      <ModalTextButton onClick={onClose} />
     </ModalCard>
   );
 }
 
-// 로그인 유도 모달 — 게스트가 이전 기록을 넘긴 순간(결과 화면). 기기 저장(정직) 안내 + 로그인 버튼.
+// 로그인 유도 모달 — 게스트가 이전 기록을 넘긴 순간(결과 화면). 기기 저장(정직) 안내 + 로그인.
 export function LoginNudgeModal({ onLogin, onClose }) {
   return (
-    <ModalCard onClose={onClose} zIndex={65}>
-      <div style={{ width: 72, height: 72, borderRadius: 36, background: 'rgba(255,107,107,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <Devices size={32} weight="Bold" color={TG.CORAL_DK} />
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: SPACE.md, textAlign: 'center', width: '100%' }}>
-        <span style={{ ...TYPE.titleLg, color: TG.INK }}>어디서든 이어가기</span>
-        <span style={{ ...TYPE.sub, lineHeight: 1.55, color: TG.SUB }}>
-          기록은 지금 <b style={{ color: TG.INK, fontWeight: 700 }}>이 기기에 저장</b>돼 있어요.<br />로그인하면 다른 기기에서도 이어서 할 수 있어요.
-        </span>
-      </div>
-      <PrimaryButton onClick={() => { onLogin && onLogin(); }}>
-        <Login size={18} weight="Bold" color="#fff" />
-        <span style={{ ...TYPE.cta, color: '#fff' }}>로그인</span>
-      </PrimaryButton>
-      <button className="tg-press" onClick={onClose} style={{ width: '100%', padding: '4px 0', background: 'none', border: 'none', cursor: 'pointer', ...TOUCH_OPT }}>
-        <span style={{ ...TYPE.body, color: TG.SUB }}>나중에</span>
-      </button>
+    <ModalCard onClose={onClose}>
+      <ModalHead Icon={Devices} badgeBg={CTA_RED} title="어디서든 이어가기" />
+      <ModalBody lines={['기록은 지금 이 기기에 저장돼 있어요.', '로그인하면 다른 기기에서도 이어서 할 수 있어요.']} />
+      {/* 시안 771:41(2026-08-07 수정) — 라벨 '로그인', CTA 아이콘 없음 */}
+      <KeycapCta label="로그인" Icon={Play} onClick={() => { onLogin && onLogin(); }} />
+      <ModalTextButton onClick={onClose} />
     </ModalCard>
   );
 }
