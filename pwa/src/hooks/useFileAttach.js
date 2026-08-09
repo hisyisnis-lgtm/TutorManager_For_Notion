@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { validateFile, splitFileName } from '../utils/audioFile.js';
 import { compressImage } from '../utils/imageCompress.js';
+import { ensureCompleteFile, truncatedFileMessage } from '../utils/audioIntegrity.js';
 
 /** 숙제 파일 첨부 공통 상한 — 세 페이지(피드백·학생 제출·숙제 출제) 동일 */
 export const MAX_FILES = 5;
@@ -89,18 +90,39 @@ export default function useFileAttach({ genName, fixedCount, maxFiles = MAX_FILE
   };
 
   // 녹음 파일 picker — 단일은 naming, 다중은 자동 이름.
-  const handleAudioPickChange = (e) => {
-    const files = Array.from(e.target.files ?? []);
+  const handleAudioPickChange = async (e) => {
+    const picked = Array.from(e.target.files ?? []);
     e.target.value = '';
-    if (files.length === 0) return;
+    if (picked.length === 0) return;
 
-    for (const f of files) {
-      const v = validateFile(f, { expectedCategory: 'audio' });
-      if (!v.ok) { message.error(v.error); return; }
-    }
-    if (totalCount + files.length > maxFiles) {
+    if (totalCount + picked.length > maxFiles) {
       message.error(`파일은 최대 ${maxFiles}개까지 첨부할 수 있어요`);
       return;
+    }
+
+    // 잘린 채 읽히는 녹음을 여기서 걸러낸다 — 그냥 두면 재생 불가 파일이 학생에게 그대로 간다.
+    // 되살릴 수 있으면 되살리고(안드로이드가 크기만 짧게 보고한 경우), 불가능하면 대처법을 안내한다.
+    setPreparing(true);
+    let files;
+    try {
+      const checked = [];
+      for (const f of picked) {
+        const r = await ensureCompleteFile(f);
+        if (!r.ok) {
+          message.error(truncatedFileMessage(f.name, r.actual, r.expected), 8);
+          return;
+        }
+        if (r.recovered) message.success(`"${f.name}" 녹음을 온전한 상태로 복구했어요`);
+        checked.push(r.file);
+      }
+      files = checked;
+
+      for (const f of files) {
+        const v = validateFile(f, { expectedCategory: 'audio' });
+        if (!v.ok) { message.error(v.error); return; }
+      }
+    } finally {
+      setPreparing(false);
     }
 
     if (files.length === 1) {
