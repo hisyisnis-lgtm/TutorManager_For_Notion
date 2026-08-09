@@ -307,6 +307,15 @@ const TONE_GAME_CSS = `
       .tg-press:active{ transform: scale(.96); transition: transform .09s cubic-bezier(.23,1,.32,1) }
       .tg-root, .tg-root *, .tg-root *::before, .tg-root *::after { box-sizing: border-box; }
       .tg-noscroll::-webkit-scrollbar { display: none; }
+      /* ── iOS 화면 전체가 딸려 스크롤되는 것 차단(2026-08-09 실기기 제보) ──────────
+         게임은 position:fixed 한 화면이라 문서가 스크롤될 일이 없는데도, 안쪽 목록을
+         끝까지 넘기면 iOS가 **문서로 스크롤을 연쇄(scroll chaining)**시켜 화면 전체가
+         고무줄처럼 밀려 올라간다(탭바가 화면 중간에 뜨고 아래가 빈 여백).
+         ① 게임이 떠 있는 동안 문서 자체를 잠그고 ② 안쪽 스크롤러가 연쇄를 끊는다.
+         overscroll-behavior는 스크롤 컨테이너에만 작용하므로 후손 전체에 걸어도 부작용이 없다 —
+         화면마다 클래스를 달지 않아도 새로 생기는 스크롤 영역까지 자동으로 보호된다. */
+      html.tg-lock, html.tg-lock body { height: 100%; overflow: hidden; overscroll-behavior: none; }
+      .tg-root, .tg-root * { overscroll-behavior: contain; }
 `;
 let tgStylesInjected = false;
 function injectToneGameStyles() {

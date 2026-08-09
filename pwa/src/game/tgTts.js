@@ -42,7 +42,13 @@ function pickZhVoice() {
 }
 
 export function initTts() {
-  if (typeof window === 'undefined' || !window.speechSynthesis) return;
+  if (typeof window === 'undefined') return;
+  // 발음 재생 엘리먼트 언락 — SFX/BGM과 같은 첫 제스처에 태운다(speechSynthesis 유무와 무관하게 필요).
+  try {
+    window.addEventListener('pointerdown', unlockTtsOnGesture);
+    window.addEventListener('keydown', unlockTtsOnGesture);
+  } catch { /* noop */ }
+  if (!window.speechSynthesis) return;
   pickZhVoice();
   // 크롬 등은 보이스가 비동기 로드 → 준비되면 다시 선택
   try { window.speechSynthesis.onvoiceschanged = pickZhVoice; } catch { /* noop */ }
@@ -82,58 +88,69 @@ function speakViaSynth(word) {
   } catch { releaseBgmDuck(); }
 }
 
-// ── mp3 캐시(LRU) — 같은 단어 반복 재생 시 재다운로드 방지 + 다음 단어 프리로드로 첫 재생 지연 제거 ──
-const AUDIO_CACHE_MAX = 24;
-const audioCache = new Map(); // key=audioUrl, value=Audio (Map 삽입순 = LRU 순)
-function cacheGet(url) {
-  const a = audioCache.get(url);
-  if (a) { audioCache.delete(url); audioCache.set(url, a); } // 최근 사용으로 갱신
-  return a || null;
+// ── 재생 엘리먼트 1개 고정 ─────────────────────────────────────────────
+// ⚠️ iOS Safari는 **사용자 제스처 밖에서 생성된 Audio**의 play()를 거부한다.
+//  예전엔 단어마다 `new Audio(url)`를 만들어 캐시했는데, 그렇게 만든 엘리먼트는
+//  듣기 문제 진입처럼 제스처가 없는 시점에 재생을 시도하면 전부 차단됐다
+//  (그래서 '발음 듣기' 버튼 = 제스처 안 → 그때서야 소리가 났다. 2026-08-09 실기기 제보).
+//  해결: 엘리먼트는 **하나만** 두고 첫 제스처에서 한 번 언락(무음 재생) → 이후엔 src만 갈아끼운다.
+//  한 번 언락된 엘리먼트는 이후 프로그램 호출로도 재생이 허용된다.
+const SILENCE = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAAAA';
+let ttsEl = null;
+let ttsElUrl = '';   // 현재 로드된 src(엘리먼트의 .src는 절대경로로 정규화돼 비교가 안 됨)
+let ttsUnlocked = false;
+
+function ensureEl() {
+  if (!ttsEl && typeof Audio !== 'undefined') { ttsEl = new Audio(); ttsEl.preload = 'auto'; }
+  return ttsEl;
 }
-function cachePut(url, a) {
-  if (audioCache.has(url)) audioCache.delete(url);
-  audioCache.set(url, a);
-  while (audioCache.size > AUDIO_CACHE_MAX) audioCache.delete(audioCache.keys().next().value); // 가장 오래된 것부터 방출
+// 첫 사용자 제스처에서 1회 — 무음을 잠깐 재생해 엘리먼트를 '허용' 상태로 만든다(SFX/BGM 언락과 같은 자리).
+function unlockTtsOnGesture() {
+  if (ttsUnlocked) return;
+  const a = ensureEl();
+  if (!a) return;
+  ttsUnlocked = true; // 재시도 폭주 방지 — 실패해도 다음 실제 재생에서 어차피 폴백된다
+  try {
+    a.src = SILENCE; ttsElUrl = SILENCE;
+    const p = a.play();
+    if (p && p.then) p.then(() => { try { a.pause(); } catch { /* noop */ } }).catch(() => { ttsUnlocked = false; });
+  } catch { ttsUnlocked = false; }
 }
 
-// 다음 단어 프리로드 — Audio를 만들어 캐시에 넣기만 하고 재생하지 않음(호출부: 다음 단어 노출 전).
+// 다음 단어 프리로드 — 파일을 HTTP 캐시에 올려두기만 한다(재생은 위 단일 엘리먼트가 담당).
+//  Audio 엘리먼트를 미리 만들어두는 방식은 iOS에서 재생 권한이 없어 의미가 없었다.
+const prefetched = new Set();
 export function preloadTts(word) {
-  try {
-    const url = word && word.audioUrl;
-    if (!url || audioCache.has(url)) return;
-    const a = new Audio(url);
-    a.preload = 'auto';
-    cachePut(url, a);
-  } catch { /* noop — 프리로드 실패는 무해(재생 시 새로 생성) */ }
+  const url = word && word.audioUrl;
+  if (!url || prefetched.has(url)) return;
+  prefetched.add(url);
+  try { fetch(url, { cache: 'force-cache' }).catch(() => prefetched.delete(url)); } catch { prefetched.delete(url); }
 }
 
 // 단어 발음 재생. word: { hanzi, audioUrl? }
 // 미리 생성한 신경망 음성(audioUrl) 우선 — 전 기기 동일·성조 정확. 없거나 재생 실패(404 등)면 Web Speech로 폴백.
-let currentAudio = null;
+let playToken = 0; // 재생 세대 — 늦게 도착한 에러 콜백이 다음 재생을 덮지 않게
 export function speakWord(word) {
   if (!word) return;
   // 실제로 소리를 낼 수 있을 때만 더킹 — 무음인데 BGM만 2.5초 꺼지는 문제 방지.
   if (!word.audioUrl && !canSynthZh()) return;
   duckBgm(); // 발음 나오는 동안 BGM 잠깐 낮춤(또렷하게). end/에러/안전타이머로 복귀.
-  if (word.audioUrl) {
+  const a = word.audioUrl ? ensureEl() : null;
+  if (a) {
     try {
-      if (currentAudio) { try { currentAudio.pause(); } catch { /* noop */ } } // 이전 재생 중단(겹침 방지)
-      let a = cacheGet(word.audioUrl);
-      if (!a) { a = new Audio(word.audioUrl); cachePut(word.audioUrl, a); }
-      currentAudio = a;
+      const mine = ++playToken;
       let fellBack = false;
       const fallback = () => { // 폴백=synth가 자체 onend로 더킹 복귀
-        if (fellBack) return; fellBack = true;
-        if (currentAudio !== a) return; // stale — 이미 다른 재생이 진행 중이면 뒤늦은 폴백이 그 위에 겹치지 않게 무시
-        currentAudio = null;
-        audioCache.delete(word.audioUrl); // 죽은 오디오는 캐시에서 제거(다음엔 새로 시도)
+        if (fellBack || mine !== playToken) return; // stale — 이미 다음 재생이 진행 중이면 그 위에 겹치지 않게 무시
+        fellBack = true;
         speakViaSynth(word);
       };
-      // 캐시 재사용 대비 on핸들러 할당(addEventListener 누적 방지 — 재생마다 교체)
-      a.onerror = fallback; // 파일 없음/디코딩 실패
-      a.onended = () => { if (currentAudio === a) currentAudio = null; releaseBgmDuck(); }; // 발음 끝 → 더킹 복귀
-      try { a.currentTime = 0; } catch { /* noop */ } // 캐시 재사용 시 처음부터
-      a.play().catch(fallback); // 재생 거부(포맷 미지원 등) → 폴백
+      try { a.pause(); } catch { /* noop */ } // 이전 발음 중단(겹침 방지)
+      a.onerror = fallback;                    // 파일 없음/디코딩 실패
+      a.onended = releaseBgmDuck;              // 발음 끝 → 더킹 복귀
+      if (ttsElUrl !== word.audioUrl) { a.src = word.audioUrl; ttsElUrl = word.audioUrl; }
+      try { a.currentTime = 0; } catch { /* noop */ } // 같은 단어 반복 재생 시 처음부터
+      a.play().catch(fallback); // 언락 전(제스처 이전)이거나 포맷 미지원 → Web Speech로 폴백
       return;
     } catch { /* fallthrough to synth */ }
   }

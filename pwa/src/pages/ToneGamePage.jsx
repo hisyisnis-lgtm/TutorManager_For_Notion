@@ -357,6 +357,14 @@ export default function ToneGamePage() {
 
   useEffect(() => { ensureGameFonts(); initTts(); initSfx(); initBgm(); }, []);
 
+  // 게임이 떠 있는 동안 문서 스크롤 잠금 — iOS에서 안쪽 목록 끝에서 스크롤이 문서로 연쇄돼
+  //  화면 전체가 밀려 올라가던 문제(탭바가 중간에 뜨고 아래가 빈 여백). 나갈 때 원복.
+  useEffect(() => {
+    const html = document.documentElement;
+    html.classList.add('tg-lock');
+    return () => html.classList.remove('tg-lock');
+  }, []);
+
   // 게임 동안만 브라우저 크롬·페이지 바탕을 게임 배경색(크림)으로 — iOS Safari/인앱 브라우저는 theme-color로
   //  상·하단 툴바 뒤를 칠하고, 툴바가 접히는 순간 그 색이 화면 아래에 그대로 드러난다(브랜드 레드가 남아 보이던 문제, 2026-08-06).
   //  나갈 때 원래 값(#7f0005 등)으로 되돌려 앱 나머지 화면의 브랜딩은 그대로 둔다.
