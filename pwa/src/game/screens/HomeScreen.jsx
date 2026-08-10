@@ -757,9 +757,12 @@ function HomeMenu({ onClose, onHelp, onCredits, onReset, onDeleteAccount, onLogi
         <div style={{ height: 1, background: TG.BORDER }} />
         <MenuAction Icon={InfoCircle} label="자료출처" onClick={() => { onClose(); onCredits && onCredits(); }} />
         {/* 파괴적 동작 — 위험색으로 구분하고, 누르면 확인창을 한 번 더 띄운다 */}
-        <MenuAction Icon={Refresh} label="데이터 초기화" color={TG.CORAL_DK} onClick={() => { onClose(); onReset && onReset(); }} />
-        {/* 계정 삭제 — 로그인 상태에서만. 서버 기록까지 지우는 회원 탈퇴라 초기화와 분리한다. */}
-        {isMemberUser && <MenuAction Icon={TrashBinTrash} label="계정 삭제" color={TG.CORAL_DK} onClick={() => { onClose(); onDeleteAccount && onDeleteAccount(); }} />}
+        {/* 초기화 vs 계정 삭제는 **둘 중 하나만** 보인다(2026-08-10 사용자 지정).
+            게스트는 지울 서버 계정이 없으니 '데이터 초기화', 회원은 계정째 지우는 '계정 삭제'.
+            둘 다 띄우면 무엇이 어디까지 지워지는지 헷갈린다. */}
+        {!isMemberUser
+          ? <MenuAction Icon={Refresh} label="데이터 초기화" color={TG.CORAL_DK} onClick={() => { onClose(); onReset && onReset(); }} />
+          : <MenuAction Icon={TrashBinTrash} label="계정 삭제" color={TG.CORAL_DK} onClick={() => { onClose(); onDeleteAccount && onDeleteAccount(); }} />}
         {import.meta.env.DEV && onDebugIntro && (
           <>
             <div style={{ height: 1, background: TG.BORDER }} />
@@ -1172,7 +1175,6 @@ export function HomeScreen({
           lines={[
             '점수·기록·업적이 모두 지워져요.',
             '되돌릴 수 없어요.',
-            ...(isMemberUser ? [' ', '로그인도 함께 풀려요.', '계정 기록은 서버에 남아요.'] : []),
           ]}
           onCancel={() => setResetOpen(false)}
           onConfirm={() => {
@@ -1187,9 +1189,9 @@ export function HomeScreen({
           confirmLabel="계정 삭제"
           busy={delBusy}
           lines={[
-            '계정 기록이 완전히 삭제돼요.',
+            '계정이 완전히 삭제돼요.',
             '이 기기 기록도 함께 지워져요.',
-            '되돌릴 수 없어요.',
+            '다시 로그인하면 새 계정으로 시작해요.',
           ]}
           onCancel={() => setDelOpen(false)}
           onConfirm={async () => {
