@@ -235,3 +235,22 @@ export function mergeGuestIntoMember(identity) {
 
 // (학생→회원 흡수 mergeStudentIntoMember/studentBestsToGameData 제거 — 게임은 학생앱과 완전 분리,
 //  회원 인증은 소셜 로그인. 학생 예약코드 연결·전화번호 매칭 경로 폐기, 2026-07-06.)
+
+// ── 게임 데이터 초기화 ─────────────────────────────────────────────────
+// 설정(메뉴) → '데이터 초기화'. 이 게임이 쓰는 로컬 키만 지운다.
+//  ⚠️ 같은 도메인에 강사앱·학생앱이 함께 있으므로 localStorage.clear()는 절대 금지 —
+//   그러면 강사 로그인·캐시까지 날아간다(2026-08-10).
+//  ⚠️ 회원(소셜 로그인) 상태면 로그아웃까지 해야 초기화가 유지된다. 로그인이 남아 있으면
+//   다음 동기화에서 서버 기록이 그대로 내려와 "초기화가 안 된 것"처럼 보인다.
+const RESET_PREFIXES = ['game_', 'tg_'];
+export function resetGameData() {
+  try {
+    const keys = [];
+    for (let i = 0; i < localStorage.length; i += 1) {
+      const k = localStorage.key(i);
+      if (k && RESET_PREFIXES.some((p) => k.startsWith(p))) keys.push(k);
+    }
+    keys.forEach((k) => localStorage.removeItem(k));
+    return keys.length;
+  } catch { return 0; }
+}
