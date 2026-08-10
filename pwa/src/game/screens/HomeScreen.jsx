@@ -843,20 +843,22 @@ function MyInfo({ tier, nickname, onClick }) {
   return (
     <button onClick={onClick} className="tg-press" data-coach="tg-myinfo"
       aria-label="내 프로필 열기" style={{
-      position: 'absolute', left: 24, top: 20, width: 172, height: 60, display: 'flex', alignItems: 'center',
+      position: 'absolute', left: 24, top: 20, width: 192, height: 72, display: 'flex', alignItems: 'center',
       padding: 0, borderRadius: 20, background: HOME.CARD, border: 'none', cursor: 'pointer',
       boxShadow: `inset 0 -2px 0 ${HOME.CARD_SHADOW}`, zIndex: 5, ...TOUCH_OPT,
     }}>
-      {/* 내부는 시안 절대좌표 그대로 — 앰블럼(2,1,56)·등급명(61,7)·닉네임(61,23)·트랙(61,44,60×6)·%(128,41) */}
-      {/* 등급 앰블럼 — 브라운 원 자리표시 대신 실제 등급 이미지(rankInfo().emblem = /game/emblems/tierN.png) */}
-      <img src={tier.emblem} alt="" style={{ position: 'absolute', left: 2, top: 1, width: 56, height: 56, maxWidth: 'none', objectFit: 'contain', display: 'block' }} />
-      <span style={{ position: 'absolute', left: 61, top: 7, ...TYPE.micro, fontWeight: 700, fontSize: 12, lineHeight: '14px', color: HOME.ACCENT, whiteSpace: 'nowrap' }}>{tier.name}</span>
-      <span style={{ position: 'absolute', left: 61, top: 23, maxWidth: 104, ...TYPE.label, lineHeight: '17px', color: HOME.INK, textAlign: 'left', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{displayName}</span>
+      {/* 내부는 시안 절대좌표 그대로 — 시안 453:2 실측(2026-08-10 사용자 개편, 구 172×60에서 확대):
+          카드 192×72 · 앰블럼(2,1,70) · 등급명(75,8,14px) · 닉네임(75,27,16px) · 트랙(75,53,60×10) · %(139,50,14px) */}
+      {/* 등급 앰블럼 — 브라운 원 자리표시 대신 실제 등급 이미지(rankInfo().emblem = /game/emblems/tierN.png).
+          ★Figma가 내보낸 tier2 샘플이 아니라 **등급별로 바뀌는 프로젝트 에셋**을 계속 쓴다(크기만 시안에 맞춤). */}
+      <img src={tier.emblem} alt="" style={{ position: 'absolute', left: 2, top: 1, width: 70, height: 70, maxWidth: 'none', objectFit: 'contain', display: 'block' }} />
+      <span style={{ position: 'absolute', left: 75, top: 8, ...TYPE.labelSm, fontSize: 14, lineHeight: '17px', color: HOME.ACCENT, whiteSpace: 'nowrap' }}>{tier.name}</span>
+      <span style={{ position: 'absolute', left: 75, top: 27, maxWidth: 105, ...TYPE.label, fontSize: 16, lineHeight: '19px', color: HOME.INK, textAlign: 'left', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{displayName}</span>
       {/* 트랙 r19 클립 → 채움은 왼쪽만 라운드(시안 per-corner)·오른쪽 플랫 */}
-      <div style={{ position: 'absolute', left: 61, top: 44, width: 60, height: 6, borderRadius: 19, background: HOME.GAUGE_TRACK, overflow: 'hidden' }}>
+      <div style={{ position: 'absolute', left: 75, top: 53, width: 60, height: 10, borderRadius: 19, background: HOME.GAUGE_TRACK, overflow: 'hidden' }}>
         <div style={{ width: `${Math.max(13, pct)}%`, height: '100%', background: HOME.TAB_RED, transition: 'width .5s ease' }} />
       </div>
-      <span style={{ position: 'absolute', left: 128, top: 41, ...TYPE.num, fontWeight: 700, fontSize: 10, lineHeight: '12px', color: HOME.INK }}>{pct}%</span>
+      <span style={{ position: 'absolute', left: 139, top: 50, ...TYPE.num, fontWeight: 400, fontSize: 14, lineHeight: '16px', color: HOME.INK }}>{pct}%</span>
     </button>
   );
 }
