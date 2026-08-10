@@ -427,7 +427,7 @@ export function GameScreen({ title = '', word, entered, currentSyl, completed, t
       {/* 점수 (상단 중앙) — 트레이닝에서도 표시(2026-08-06 사용자 요청: 얼마나 잘하고 있는지 보이게) */}
       {/* 시안 09: 칩·별 없이 숫자만 크게(26) — 타이머 바로 아래 중앙 */}
       <Reveal i={0} play={playReveal} style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', top: 108 }}>
-        <span style={{ ...TYPE.numMd, fontSize: 26, lineHeight: 1, color: TG.INK }}>{score}</span>
+        <span data-testid="tg-score" style={{ ...TYPE.numMd, fontSize: 26, lineHeight: 1, color: TG.INK }}>{score}</span>
       </Reveal>
       {/* 헤더 — 시안 09: 글래스 60 + 뒤로가기 + 스테이지명(가운데).
           뒤로가기는 곧바로 이탈이 아니라 **일시정지 모달**로 연결(계속/다시하기/그만두기) — 오조작으로 판이 날아가지 않게 */}

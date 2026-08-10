@@ -6,7 +6,7 @@ import {
   loadEndlessBest, saveEndlessBest, headlineBest, resolveEndOutcome,
   themeStars, STAGES, saveStageScore, isStageUnlocked, bossState, stageUnlockToastText,
   earnedRankFromTiers, migrateRankForBoss, isThemeUnlocked, themeBestScore, clearOrphanThemeBests,
-  BOSSES, loadBossPeak, saveBossPeak, rankUpperBound, perfectStageCount,
+  BOSSES, loadBossPeak, saveBossPeak, rankUpperBound, perfectStageCount, restartTarget,
 } from './gameLogic.js';
 import { saveBest } from './tgTokens.js';
 import { THEMES } from '../constants/toneGameWords.js';
@@ -174,6 +174,34 @@ describe('최고점 라벨 / 통합 최고', () => {
     expect(overallBestFromLocal(TOKEN)).toBe(null);
   });
 
+});
+
+// 2026-08-10 검수 회귀 방지 — 일시정지 '다시하기'가 모드를 바꿔버리던 버그.
+describe('restartTarget — 다시하기는 하던 그 판을 다시 시작한다', () => {
+  it('★승급시험은 승급시험으로 (일반 스테이지 판으로 떨어지면 안 됨)', () => {
+    expect(restartTarget('exam')).toBe('exam');
+    expect(restartTarget('exam', 'review')).toBe('exam'); // practiceKind가 뭐든 시험이 우선
+  });
+
+  it('★오답 복습은 복습으로 (트레이닝으로 바뀌면 안 됨)', () => {
+    expect(restartTarget('practice', 'review')).toBe('review');
+  });
+
+  it('트레이닝은 트레이닝으로 — 같은 practice 엔진이지만 단어 출처가 다르다', () => {
+    expect(restartTarget('practice', 'training')).toBe('training');
+    expect(restartTarget('practice')).toBe('training'); // 기본값
+  });
+
+  it('무한·테마·일반은 각자 그대로', () => {
+    expect(restartTarget('endless')).toBe('endless');
+    expect(restartTarget('theme')).toBe('theme');
+    expect(restartTarget('normal')).toBe('stage');
+  });
+
+  it('모르는 모드는 일반 스테이지로 폴백(런이 안 끊기게)', () => {
+    expect(restartTarget(undefined)).toBe('stage');
+    expect(restartTarget('알수없음')).toBe('stage');
+  });
 });
 
 describe('headlineBest — 무한 우선', () => {

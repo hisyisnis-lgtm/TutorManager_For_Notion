@@ -26,6 +26,7 @@ import { findLianyin, findToneSandhi } from '../game/lianyin.js';
 import { recordPlay, loadStreak, effectiveCurrent, dateKeyKST, loadFreezes } from '../game/streak.js';
 import { syncAchievements, loadAchievements, achievementById, loadReviewMastered, addReviewMastered, markAchievementsSeen, hasUnseenAchievements } from '../game/achievements.js';
 import { loadGuestNickname, saveGuestNickname } from '../game/nickname.js';
+import { buildAchSnapshot } from '../game/achSnapshot.js';
 import { initTts, speakWord, preloadTts } from '../game/tgTts.js';
 import { initSfx, play as playSfx } from '../game/tgSfx.js';
 import { initBgm, startBgm, stopBgm } from '../game/tgBgm.js';
@@ -33,7 +34,7 @@ import {
   getEndlessTimeLimit, computeScore, resolveEndOutcome,
   loadEndlessBest, saveEndlessBest, isEndlessUnlocked,
   ENDLESS_UNLOCK_REVEAL, STAGES, stageRoundPool, saveStageScore, unlockedTrainingPool, isStageUnlocked,
-  stageScoreOf, stageOutcome, migrateRankForBoss, isTierCleared, perfectStageCount, JUDGE_RATIO, rankUpperBound, saveBossPeak, BOSSES, clearOrphanThemeBests,
+  stageScoreOf, stageOutcome, migrateRankForBoss, isTierCleared, perfectStageCount, JUDGE_RATIO, rankUpperBound, saveBossPeak, BOSSES, clearOrphanThemeBests, restartTarget,
 } from '../game/gameLogic.js';
 import { FigmaScreen, CountdownVisual, TxLayer, GameStage, GameToast, BeatDim } from '../game/screens/shared.jsx';
 import { SplashScreen } from '../game/screens/SplashScreen.jsx';
@@ -90,25 +91,6 @@ function deriveToneLevels(toneStats) {
   return out;
 }
 
-// 업적 화면 진행도 스냅샷 — 저장된 베스트/통계에서 집계(종료 이펙트 스냅샷과 같은 필드, 런 무관 저장값만).
-// 난이도·테마·무한 전 기록을 DIFFICULTIES/THEMES에서 파생(하드코딩 없음). 각 업적 progress(snapshot)이 이 필드를 읽음.
-function buildAchSnapshot(token, masteredN, toneStats, streakLongest) {
-  const bestByDiff = {}; let playCount = 0; let maxComboEver = 0;
-  for (const d of DIFFICULTIES) { const b = loadBest(token, d.gameKey); bestByDiff[d.id] = b?.bestScore || 0; playCount += b?.playCount || 0; maxComboEver = Math.max(maxComboEver, b?.bestMaxCombo || 0); }
-  const themeRecs = THEMES.map((t) => loadBest(token, t.gameKey));
-  for (const b of themeRecs) { playCount += b?.playCount || 0; maxComboEver = Math.max(maxComboEver, b?.bestMaxCombo || 0); }
-  const eb = loadEndlessBest(token); const endlessBest = eb?.bestScore || 0;
-  playCount += eb?.playCount || 0; maxComboEver = Math.max(maxComboEver, eb?.bestMaxCombo || 0);
-  // 승급(rank)·완벽런 스테이지 수 — 2026-08-08 신규 업적(실전/고수 승급, 완벽한 한 판)의 근거.
-  //  둘 다 이미 저장돼 있는 값이라 추적 로직 추가 없이 읽기만 한다.
-  const perfectStages = DIFFICULTIES.reduce((n, d) => n + perfectStageCount(token, d.id), 0);
-  return {
-    playCount, maxComboEver, bestByDiff, endlessBest, masteredCount: masteredN,
-    bestScoreAny: Math.max(...Object.values(bestByDiff), endlessBest, ...themeRecs.map((b) => b?.bestScore || 0)),
-    streakLongest: streakLongest || 0, toneStats: toneStats || {}, reviewMastered: loadReviewMastered(token),
-    rank: loadRank(token) || 0, perfectStages,
-  };
-}
 import { IntroScreen } from '../game/screens/IntroScreen.jsx';
 import { TutorialScreen } from '../game/screens/TutorialScreen.jsx';
 import { PauseModal } from '../game/screens/PauseModal.jsx';
@@ -1567,16 +1549,16 @@ export default function ToneGamePage() {
         // onQuit=인게임 이탈 → 홈: '오늘의 팁' 웨이브 전환. tipTransitionTo가 clearTimers로 보류 큐까지 비워 기록 오염(2026-07-07 버그) 방지.
         <PauseModal score={score} combo={combo} crutchCtx={crutchCtx} onResume={() => setPaused(false)}
           onRestart={() => {
-            // 다시하기 = **지금 하던 그 판**을 다시 — 모드가 바뀌면 안 된다.
-            //  ★승급시험: examMode를 안 보면 startGame(selectedDifficulty)로 떨어지는데, startExam이 타이머 페이스용으로
-            //    selectedDifficulty를 DIFFICULTIES 항목(bandIndex 없음)으로 덮어써 둔 상태라 '티어 전체 풀 10문제 일반 판'이 시작됐다.
-            //  ★오답 복습: practiceKind를 안 보면 트레이닝으로 바뀌어 복습하던 단어 목록이 통째로 교체됐다.
+            // 다시하기 = **지금 하던 그 판**을 다시 — 모드가 바뀌면 안 된다(분기 규칙은 gameLogic.restartTarget에 고정).
             setPaused(false);
-            if (examMode) startExam(examTierRef.current);
-            else if (endlessMode) startEndless();
-            else if (practiceMode) { if (practiceKind === 'review') startReview(reviewRows); else startTraining(); }
-            else if (themeMode) startTheme(selectedTheme);
-            else startGame(selectedDifficulty);
+            switch (restartTarget(gameMode, practiceKind)) {
+              case 'exam': startExam(examTierRef.current); break;
+              case 'endless': startEndless(); break;
+              case 'review': startReview(reviewRows); break;
+              case 'training': startTraining(); break;
+              case 'theme': startTheme(selectedTheme); break;
+              default: startGame(selectedDifficulty);
+            }
           }}
           onQuit={() => tipTransitionTo('home')} />
       )}

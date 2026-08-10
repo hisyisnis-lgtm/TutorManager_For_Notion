@@ -310,6 +310,21 @@ export function stageOutcome(token, stage, tierOutcome, score) {
   return { ...tierOutcome, isNewBest, previousBest, sfx };
 }
 
+// ── 일시정지 '다시하기' 라우팅 ─────────────────────────
+// 다시하기는 **지금 하던 그 판**을 다시 시작해야 한다. 모드가 바뀌면 안 된다.
+//  2026-08-10 검수에서 두 갈래가 빠져 있었다:
+//   ① examMode 미처리 → startGame으로 떨어졌는데, startExam이 타이머 페이스용으로 selectedDifficulty를
+//      DIFFICULTIES 항목(bandIndex 없음)으로 덮어써 둔 상태라 '티어 전체 풀 10문제 일반 판'이 시작됐다.
+//   ② practiceKind 미참조 → 오답 복습이 트레이닝으로 바뀌어 복습하던 단어 목록이 통째로 교체됐다.
+//  분기를 순수 함수로 빼서 테스트로 고정한다. gameMode enum은 ToneGamePage와 동일.
+export function restartTarget(gameMode, practiceKind = 'training') {
+  if (gameMode === 'exam') return 'exam';
+  if (gameMode === 'endless') return 'endless';
+  if (gameMode === 'practice') return practiceKind === 'review' ? 'review' : 'training';
+  if (gameMode === 'theme') return 'theme';
+  return 'stage'; // normal
+}
+
 // 무한모드 베스트 캐시(localStorage)
 export function loadEndlessBest(token) { return loadBest(token, ENDLESS_BEST_KEY); }
 export function saveEndlessBest(token, data) { saveBest(token, ENDLESS_BEST_KEY, data); }
