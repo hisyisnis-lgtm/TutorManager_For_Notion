@@ -13,7 +13,7 @@ import { ToneMark, useCountUp } from '../tgWidgets.jsx';
 import { rankInfo, levelInfo } from '../gameXp.js';
 import { play as playSfx, isSfxMuted, setSfxMuted } from '../tgSfx.js';
 import { isBgmMuted, setBgmMuted, startBgm } from '../tgBgm.js';
-import { EmberRise, MenuToggle, TgTabBar, TAB_BAR_H, TG_COL_MAXW } from './shared.jsx';
+import { EmberRise, MenuToggle, TgTabBar, TAB_BAR_H, TG_COL_MAXW, ModalCard, ModalBody, KeycapCta, ModalTextButton } from './shared.jsx';
 import { markSize, Eyes } from './eyes.jsx';
 import { DebugScoreModal } from './gameModals.jsx';
 import { resetGameData, getMemberSession } from '../gameStore.js';
@@ -813,19 +813,21 @@ function CreditsModal({ onClose }) {
 }
 
 // 파괴적 동작 확인창(공용) — 데이터 초기화 / 계정 삭제가 같은 껍데기를 쓴다.
-//  기본 버튼은 '취소', 실행 버튼만 위험색(코랄)으로 구분한다.
-function ConfirmModal({ title, body, confirmLabel, busy, onCancel, onConfirm }) {
+//  ★안내 모달 5종(gameModals.jsx)과 **같은 공용 규격**을 쓴다 — 카드 330 r24 · 제목 24/29 ·
+//   본문 14/22 · 키캡 CTA 60 · 텍스트 버튼. 예전엔 이 화면만 자체 카드에 46px 버튼 두 개를
+//   나란히 그려 결이 달랐다(2026-08-10 사용자 지적).
+//  다만 **아이콘 배지는 넣지 않는다** — 확인만 받는 창에 72px 배지까지 얹으면 과하다(같은 날 지적).
+//   그래서 ModalHead 대신 그 안의 제목 스타일만 그대로 가져다 쓴다.
+//  zIndex는 설정 메뉴(HomeMenu) 위에 떠야 해서 기본 60이 아니라 64.
+function ConfirmModal({ title, lines, confirmLabel, busy, onCancel, onConfirm }) {
   return (
-    <div onClick={busy ? undefined : onCancel} style={{ position: 'fixed', inset: 0, zIndex: 64, background: 'rgba(26,16,20,0.55)', backdropFilter: 'blur(2px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: SPACE.x4, ...TOUCH_OPT }}>
-      <div className="tg-enter" onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 320, background: TG.CARD, borderRadius: RADIUS.xxl, padding: '22px 22px 18px', boxShadow: '0 20px 50px rgba(26,16,20,0.3)', display: 'flex', flexDirection: 'column', gap: SPACE.lg }}>
-        <span style={{ ...TYPE.head, fontSize: 18, color: TG.INK }}>{title}</span>
-        <span style={{ ...TYPE.body, color: TG.SUB, lineHeight: 1.55 }}>{body}</span>
-        <div style={{ display: 'flex', gap: SPACE.md, marginTop: SPACE.sm }}>
-          <button onClick={onCancel} disabled={busy} className="tg-press" style={{ flex: 1, height: 46, borderRadius: RADIUS.lg, border: `1.5px solid ${TG.BORDER}`, background: '#fff', cursor: busy ? 'default' : 'pointer', opacity: busy ? 0.5 : 1, ...TYPE.btn, color: TG.INK, ...TOUCH_OPT }}>취소</button>
-          <button onClick={onConfirm} disabled={busy} className="tg-press" style={{ flex: 1, height: 46, borderRadius: RADIUS.lg, border: 'none', background: TG.CORAL_DK, cursor: busy ? 'default' : 'pointer', opacity: busy ? 0.6 : 1, ...TYPE.btn, color: '#fff', ...TOUCH_OPT }}>{busy ? '처리 중…' : confirmLabel}</button>
-        </div>
-      </div>
-    </div>
+    <ModalCard onClose={busy ? undefined : onCancel} zIndex={64}>
+      <span style={{ ...TYPE.head, fontSize: 24, lineHeight: '29px', color: TG.INK, textAlign: 'center' }}>{title}</span>
+      <ModalBody lines={lines} />
+      {/* 처리 중엔 onClick을 비워 이중 탭을 막는다(공용 버튼에 disabled가 없어서). */}
+      <KeycapCta label={busy ? '처리 중…' : confirmLabel} onClick={busy ? undefined : onConfirm} />
+      <ModalTextButton label="취소" onClick={busy ? undefined : onCancel} />
+    </ModalCard>
   );
 }
 
@@ -1167,8 +1169,11 @@ export function HomeScreen({
         <ConfirmModal
           title="데이터를 초기화할까요?"
           confirmLabel="초기화"
-          body={<>점수·기록·업적·연속일·닉네임이 이 기기에서 모두 지워지고 처음부터 시작해요.<br />되돌릴 수 없어요.
-            {isMemberUser && <><br /><br />로그인도 함께 풀려요. <b>계정 기록은 서버에 남아</b> 다시 로그인하면 돌아옵니다.</>}</>}
+          lines={[
+            '점수·기록·업적이 모두 지워져요.',
+            '되돌릴 수 없어요.',
+            ...(isMemberUser ? [' ', '로그인도 함께 풀려요.', '계정 기록은 서버에 남아요.'] : []),
+          ]}
           onCancel={() => setResetOpen(false)}
           onConfirm={() => {
             resetGameData();
@@ -1181,7 +1186,11 @@ export function HomeScreen({
           title="계정을 삭제할까요?"
           confirmLabel="계정 삭제"
           busy={delBusy}
-          body={<>서버에 저장된 <b>계정 기록이 완전히 삭제</b>돼요. 다시 로그인해도 돌아오지 않아요.<br /><br />이 기기의 기록도 함께 지워지고 처음부터 시작합니다.</>}
+          lines={[
+            '계정 기록이 완전히 삭제돼요.',
+            '이 기기 기록도 함께 지워져요.',
+            '되돌릴 수 없어요.',
+          ]}
           onCancel={() => setDelOpen(false)}
           onConfirm={async () => {
             setDelBusy(true);
