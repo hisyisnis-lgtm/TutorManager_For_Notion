@@ -3,8 +3,7 @@ import {
   parseGameUserRow,
   findOrCreateGameUser,
   getGameUserById,
-  updateGameData,
-} from './gameDb.js';
+  updateGameData, deleteGameUser } from './gameDb.js';
 
 // 최소 D1 mock — prepare().bind().first()/run() 체인. 호출 SQL·바인딩을 기록.
 function mockDb({ firstRow = null, runResult = { success: true, meta: { changes: 1 } } } = {}) {
@@ -95,5 +94,22 @@ describe('updateGameData', () => {
     await updateGameData(db, 'u1', {}, null);
     expect(db.calls[0].args).toContain(null);
     expect(db.calls[0].sql).toMatch(/COALESCE\(\?, nickname\)/);
+  });
+});
+
+describe('deleteGameUser', () => {
+  it('id로 행을 DELETE 한다', async () => {
+    const db = mockDb();
+    await deleteGameUser(db, 'u1');
+    const call = db.calls[0];
+    expect(call.op).toBe('run');
+    expect(call.sql).toMatch(/DELETE FROM game_users WHERE id = \?/);
+    expect(call.args).toEqual(['u1']);
+  });
+  it('다른 사용자 행을 건드리지 않도록 WHERE에 id가 반드시 있다', async () => {
+    const db = mockDb();
+    await deleteGameUser(db, 'u2');
+    expect(db.calls[0].sql).toMatch(/WHERE id = \?/);
+    expect(db.calls[0].sql).not.toMatch(/DELETE FROM game_users\s*$/);
   });
 });

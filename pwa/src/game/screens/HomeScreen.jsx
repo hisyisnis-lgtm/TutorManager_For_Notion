@@ -5,7 +5,7 @@ import { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import {
   Settings, Play, Flame, Snowflake,
   QuestionCircle, Logout, AltArrowRight, AltArrowLeft, VolumeLoud, VolumeCross, SmartphoneVibration, CloseCircle,
-  MusicNotes, MusicNote, Pen, InfoCircle, LinkCircle, Notebook, TextField, Refresh,
+  MusicNotes, MusicNote, Pen, InfoCircle, LinkCircle, Notebook, TextField, Refresh, TrashBinTrash,
 } from '@solar-icons/react';
 import { TG, HOME, TYPE, TOUCH_OPT, TONE_KEY_COLORS, haptic, isHapticMuted, setHapticMuted, isMeaningHidden, setMeaningHidden, isPinyinHidden, setPinyinHidden, RADIUS, SPACE } from '../tgTokens.js';
 import { TONES } from '../../constants/toneGameWords.js';
@@ -16,7 +16,8 @@ import { isBgmMuted, setBgmMuted, startBgm } from '../tgBgm.js';
 import { EmberRise, MenuToggle, TgTabBar, TAB_BAR_H, TG_COL_MAXW } from './shared.jsx';
 import { markSize, Eyes } from './eyes.jsx';
 import { DebugScoreModal } from './gameModals.jsx';
-import { resetGameData } from '../gameStore.js';
+import { resetGameData, getMemberSession } from '../gameStore.js';
+import { deleteGameMe } from '../../api/gameApi.js';
 import { NicknameEditModal } from './NicknameEditModal.jsx';
 import { ProfileModal } from './ProfileModal.jsx';
 import CoachMarkOverlay from '../../components/ui/CoachMarkOverlay.jsx';
@@ -715,7 +716,7 @@ function MenuAction({ Icon, label, sub, color = TG.INK, onClick }) {
   );
 }
 
-function HomeMenu({ onClose, onHelp, onCredits, onReset, onLogin, isMemberUser, memberName, onEditNickname, onLogout, onExit, onDebugIntro, onDebugScore }) {
+function HomeMenu({ onClose, onHelp, onCredits, onReset, onDeleteAccount, onLogin, isMemberUser, memberName, onEditNickname, onLogout, onExit, onDebugIntro, onDebugScore }) {
   const [sfxOn, setSfxOn] = useState(() => !isSfxMuted());
   const [bgmOn, setBgmOn] = useState(() => !isBgmMuted());
   const [hapticOn, setHapticOn] = useState(() => !isHapticMuted());
@@ -757,6 +758,8 @@ function HomeMenu({ onClose, onHelp, onCredits, onReset, onLogin, isMemberUser, 
         <MenuAction Icon={InfoCircle} label="자료출처" onClick={() => { onClose(); onCredits && onCredits(); }} />
         {/* 파괴적 동작 — 위험색으로 구분하고, 누르면 확인창을 한 번 더 띄운다 */}
         <MenuAction Icon={Refresh} label="데이터 초기화" color={TG.CORAL_DK} onClick={() => { onClose(); onReset && onReset(); }} />
+        {/* 계정 삭제 — 로그인 상태에서만. 서버 기록까지 지우는 회원 탈퇴라 초기화와 분리한다. */}
+        {isMemberUser && <MenuAction Icon={TrashBinTrash} label="계정 삭제" color={TG.CORAL_DK} onClick={() => { onClose(); onDeleteAccount && onDeleteAccount(); }} />}
         {import.meta.env.DEV && onDebugIntro && (
           <>
             <div style={{ height: 1, background: TG.BORDER }} />
@@ -809,21 +812,17 @@ function CreditsModal({ onClose }) {
   );
 }
 
-// 데이터 초기화 확인창 — 되돌릴 수 없는 동작이라 한 번 더 묻는다.
-//  파괴적 동작이므로 기본 버튼은 '취소'. 확인 버튼만 위험색(코랄)으로 구분한다.
-function ResetConfirmModal({ isMemberUser, onCancel, onConfirm }) {
+// 파괴적 동작 확인창(공용) — 데이터 초기화 / 계정 삭제가 같은 껍데기를 쓴다.
+//  기본 버튼은 '취소', 실행 버튼만 위험색(코랄)으로 구분한다.
+function ConfirmModal({ title, body, confirmLabel, busy, onCancel, onConfirm }) {
   return (
-    <div onClick={onCancel} style={{ position: 'fixed', inset: 0, zIndex: 64, background: 'rgba(26,16,20,0.55)', backdropFilter: 'blur(2px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: SPACE.x4, ...TOUCH_OPT }}>
+    <div onClick={busy ? undefined : onCancel} style={{ position: 'fixed', inset: 0, zIndex: 64, background: 'rgba(26,16,20,0.55)', backdropFilter: 'blur(2px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: SPACE.x4, ...TOUCH_OPT }}>
       <div className="tg-enter" onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 320, background: TG.CARD, borderRadius: RADIUS.xxl, padding: '22px 22px 18px', boxShadow: '0 20px 50px rgba(26,16,20,0.3)', display: 'flex', flexDirection: 'column', gap: SPACE.lg }}>
-        <span style={{ ...TYPE.head, fontSize: 18, color: TG.INK }}>데이터를 초기화할까요?</span>
-        <span style={{ ...TYPE.body, color: TG.SUB, lineHeight: 1.55 }}>
-          점수·기록·업적·연속일·닉네임이 모두 지워지고 처음부터 시작해요.
-          <br />되돌릴 수 없어요.
-          {isMemberUser && <><br /><br />로그인도 함께 풀려요. 다시 로그인하면 서버에 저장된 기록이 돌아옵니다.</>}
-        </span>
+        <span style={{ ...TYPE.head, fontSize: 18, color: TG.INK }}>{title}</span>
+        <span style={{ ...TYPE.body, color: TG.SUB, lineHeight: 1.55 }}>{body}</span>
         <div style={{ display: 'flex', gap: SPACE.md, marginTop: SPACE.sm }}>
-          <button onClick={onCancel} className="tg-press" style={{ flex: 1, height: 46, borderRadius: RADIUS.lg, border: `1.5px solid ${TG.BORDER}`, background: '#fff', cursor: 'pointer', ...TYPE.btn, color: TG.INK, ...TOUCH_OPT }}>취소</button>
-          <button onClick={onConfirm} className="tg-press" style={{ flex: 1, height: 46, borderRadius: RADIUS.lg, border: 'none', background: TG.CORAL_DK, cursor: 'pointer', ...TYPE.btn, color: '#fff', ...TOUCH_OPT }}>초기화</button>
+          <button onClick={onCancel} disabled={busy} className="tg-press" style={{ flex: 1, height: 46, borderRadius: RADIUS.lg, border: `1.5px solid ${TG.BORDER}`, background: '#fff', cursor: busy ? 'default' : 'pointer', opacity: busy ? 0.5 : 1, ...TYPE.btn, color: TG.INK, ...TOUCH_OPT }}>취소</button>
+          <button onClick={onConfirm} disabled={busy} className="tg-press" style={{ flex: 1, height: 46, borderRadius: RADIUS.lg, border: 'none', background: TG.CORAL_DK, cursor: busy ? 'default' : 'pointer', opacity: busy ? 0.6 : 1, ...TYPE.btn, color: '#fff', ...TOUCH_OPT }}>{busy ? '처리 중…' : confirmLabel}</button>
         </div>
       </div>
     </div>
@@ -1023,6 +1022,8 @@ export function HomeScreen({
   const [debugScoreOpen, setDebugScoreOpen] = useState(false);
   const [creditsOpen, setCreditsOpen] = useState(false); // 자료출처 화면(오픈소스 저작권 표기)
   const [resetOpen, setResetOpen] = useState(false);     // 데이터 초기화 확인창
+  const [delOpen, setDelOpen] = useState(false);         // 계정 삭제 확인창
+  const [delBusy, setDelBusy] = useState(false);
   const [cardTone, setCardTone] = useState(null); // 탭한 성조 미니 카드
   const [streakOpen, setStreakOpen] = useState(false); // 스트릭 상세 시트
   const [showIntro, setShowIntro] = useState(() => { try { return !localStorage.getItem('tg_home_intro'); } catch { return false; } });
@@ -1160,13 +1161,33 @@ export function HomeScreen({
         onExam={null}
         onLogout={onLogout}
         onClose={() => setProfileOpen(false)} />}
-      {menuOpen && <HomeMenu onClose={() => setMenuOpen(false)} onHelp={onHelp} onCredits={() => setCreditsOpen(true)} onReset={() => setResetOpen(true)} onLogin={onLogin} isMemberUser={isMemberUser} memberName={memberName} onEditNickname={onEditNickname ? () => setNickEditOpen(true) : null} onLogout={onLogout} onExit={onExit} onDebugIntro={onDebugIntro} onDebugScore={() => setDebugScoreOpen(true)} />}
+      {menuOpen && <HomeMenu onClose={() => setMenuOpen(false)} onHelp={onHelp} onCredits={() => setCreditsOpen(true)} onReset={() => setResetOpen(true)} onDeleteAccount={() => setDelOpen(true)} onLogin={onLogin} isMemberUser={isMemberUser} memberName={memberName} onEditNickname={onEditNickname ? () => setNickEditOpen(true) : null} onLogout={onLogout} onExit={onExit} onDebugIntro={onDebugIntro} onDebugScore={() => setDebugScoreOpen(true)} />}
       {creditsOpen && <CreditsModal onClose={() => setCreditsOpen(false)} />}
       {resetOpen && (
-        <ResetConfirmModal isMemberUser={isMemberUser} onCancel={() => setResetOpen(false)}
+        <ConfirmModal
+          title="데이터를 초기화할까요?"
+          confirmLabel="초기화"
+          body={<>점수·기록·업적·연속일·닉네임이 이 기기에서 모두 지워지고 처음부터 시작해요.<br />되돌릴 수 없어요.
+            {isMemberUser && <><br /><br />로그인도 함께 풀려요. <b>계정 기록은 서버에 남아</b> 다시 로그인하면 돌아옵니다.</>}</>}
+          onCancel={() => setResetOpen(false)}
           onConfirm={() => {
             resetGameData();
-            // 새로고침 — 메모리에 남은 상태(점수·닉네임 등)까지 확실히 털어내고 처음 화면부터 시작한다.
+            // 새로고침 — 메모리에 남은 상태까지 털어내고 처음 화면부터 시작한다.
+            try { window.location.reload(); } catch { /* noop */ }
+          }} />
+      )}
+      {delOpen && (
+        <ConfirmModal
+          title="계정을 삭제할까요?"
+          confirmLabel="계정 삭제"
+          busy={delBusy}
+          body={<>서버에 저장된 <b>계정 기록이 완전히 삭제</b>돼요. 다시 로그인해도 돌아오지 않아요.<br /><br />이 기기의 기록도 함께 지워지고 처음부터 시작합니다.</>}
+          onCancel={() => setDelOpen(false)}
+          onConfirm={async () => {
+            setDelBusy(true);
+            const sess = getMemberSession();
+            try { if (sess?.token) await deleteGameMe(sess.token); } catch { /* 서버 실패해도 아래 로컬 정리는 진행 */ }
+            resetGameData();
             try { window.location.reload(); } catch { /* noop */ }
           }} />
       )}

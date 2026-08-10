@@ -50,3 +50,9 @@ export async function updateGameData(db, id, gameDataObj, nickname) {
   ).bind(json, now, nickname || null, id).run();
   return res;
 }
+
+// 계정 삭제(회원 탈퇴) — 행 자체를 지운다. 다시 로그인하면 findOrCreateGameUser가 새 행을 만든다.
+//  ⚠️ 되돌릴 수 없다. 호출부(DELETE /game/me)에서 JWT로 본인 확인 후에만 부른다.
+export async function deleteGameUser(db, id) {
+  return db.prepare('DELETE FROM game_users WHERE id = ?').bind(id).run();
+}

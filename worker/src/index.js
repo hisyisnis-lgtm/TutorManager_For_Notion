@@ -22,7 +22,7 @@ import {
   isAllowedRedirect, redirectPrefixes, appendTokenFragment,
   signAuthState, verifyAuthState,
 } from '../lib/oauth.js';
-import { findOrCreateGameUser, getGameUserById, updateGameData } from '../lib/gameDb.js';
+import { findOrCreateGameUser, getGameUserById, updateGameData, deleteGameUser } from '../lib/gameDb.js';
 import { assembleByDay, embedMembers, renderDashboard } from '../lib/gameDashboard.js';
 
 const CLASS_DB_ID = '314838fa-f2a6-81bc-8b67-d9e1c8fb7ecb';
@@ -2418,7 +2418,7 @@ async function handleGameRoutes(request, env, corsHeaders, url) {
   }
 
   // GET/PUT /game/me — 게임유저 JWT 인증 → 게임데이터 read/write (D1 game_users)
-  if (url.pathname === '/game/me' && (request.method === 'GET' || request.method === 'PUT')) {
+  if (url.pathname === '/game/me' && (request.method === 'GET' || request.method === 'PUT' || request.method === 'DELETE')) {
     const auth = (request.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
     const claim = await verifyGameToken(auth, env.JWT_SECRET);
     if (!claim?.sub) return errRes(corsHeaders, 401, '로그인이 필요합니다.');
@@ -2426,6 +2426,11 @@ async function handleGameRoutes(request, env, corsHeaders, url) {
       const user = await getGameUserById(env.GAME_DB, claim.sub);
       if (!user) return errRes(corsHeaders, 404, '계정을 찾을 수 없습니다.'); // 옛 노션ID 토큰 등 → 재로그인 유도
       return new Response(JSON.stringify({ user }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+    if (request.method === 'DELETE') {
+      // 계정 삭제(회원 탈퇴) — 본인 JWT로만. 행이 없어도 성공 처리(멱등).
+      await deleteGameUser(env.GAME_DB, claim.sub);
+      return new Response(JSON.stringify({ ok: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
     // PUT — 게임데이터 갱신(클라이언트 병합 후 최종본 덮어쓰기)
     const body = await request.json().catch(() => null);

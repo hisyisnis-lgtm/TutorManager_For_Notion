@@ -55,6 +55,11 @@ export async function saveGameMe(token, gameData, nickname) {
   return gameFetch('PUT', '/game/me', { gameData, ...(nickname ? { nickname } : {}) }, token);
 }
 
+/** 계정 삭제(회원 탈퇴) — 서버 행을 지운다. 되돌릴 수 없다. */
+export async function deleteGameMe(token) {
+  return gameFetch('DELETE', '/game/me', undefined, token);
+}
+
 /**
  * 성조 게임 단어 풀 조회 — CSV(data/tone-words-*.csv, 난이도·테마별 분할)에서 빌드 변환된 로컬 데이터를 반환.
  * 단어는 모든 유저 동일·소량이라 클라이언트 번들에 포함 → 네트워크/워커/Notion 불필요.
