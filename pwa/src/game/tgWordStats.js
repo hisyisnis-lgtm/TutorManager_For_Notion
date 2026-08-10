@@ -124,13 +124,8 @@ export function buildRoundWords(pool, stats, n) {
   return picked;
 }
 
-// 난이도별 meta.w 동기화용: 해당 풀에 있는 단어 통계만 추림(블롭 작게).
-export function subsetForPool(stats, pool) {
-  const out = {};
-  for (const w of (pool || [])) { if (stats[w.hanzi]) out[w.hanzi] = stats[w.hanzi]; }
-  return out;
-}
-// 서버 meta.w(여러 난이도) → 글로벌 병합. 단어별 시도수(attempts) 많은 쪽을 최신으로 채택.
+// (subsetForPool 제거 — 난이도별 meta.w 동기화가 /game/me JSON 통째 동기화로 대체되며 호출부가 사라짐)
+// 서버 단어 통계 → 글로벌 병합. 단어별 시도수(attempts) 많은 쪽을 최신으로 채택.
 //  단 오답 노트 카운터만은 양쪽 중 '더 진행된 쪽'(작은 값)을 살린다 — 다른 기기에서 3번 맞혀 졸업시킨 단어가
 //  시도수만 많은 오래된 사본 때문에 노트로 되살아나지 않게.
 export function mergeStats(base, incoming) {

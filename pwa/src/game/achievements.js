@@ -106,11 +106,7 @@ export function evaluateAchievements(snapshot) {
   return ACHIEVEMENTS.filter((a) => a.check(snapshot || {})).map((a) => a.id);
 }
 
-// 이번에 새로 달성한 업적(이전엔 없었고 지금 달성). 축하 연출(P4)용.
-export function newlyUnlocked(prevIds, snapshot) {
-  const prev = new Set(prevIds || []);
-  return evaluateAchievements(snapshot).filter((id) => !prev.has(id));
-}
+// (newlyUnlocked 제거 — '새로 달성' 판정은 저장까지 함께 하는 syncAchievements가 담당한다)
 
 // ── localStorage ──────────────────────────────────────
 function achKey(token) { return token ? `game_ach_${token}` : 'game_ach'; }

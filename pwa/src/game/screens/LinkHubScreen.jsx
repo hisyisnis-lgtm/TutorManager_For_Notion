@@ -21,7 +21,7 @@ function openLink(href, channel) {
 }
 
 // 탭바 도입(2026-07-27 홈 리디자인) — 오버레이(onClose)에서 '하늘하늘' 탭 화면으로 전환. 뒤로가기 대신 탭 전환.
-export function LinkHubScreen({ tabNav }) {
+export function LinkHubScreen({ tabNav, achDot = false }) {
   return (
     <div style={{ position: 'absolute', inset: 0, background: TG.BG, ...TOUCH_OPT }}>
       {/* 스크롤 레이어 — 탭바(형제)는 고정. 진입 애니(tg-enter)는 콘텐츠에만(탭바 깜빡임 방지) */}
@@ -71,7 +71,7 @@ export function LinkHubScreen({ tabNav }) {
         </div>
       </div>
       </div>
-      <TgTabBar active="hub" onNav={tabNav} />
+      <TgTabBar active="hub" onNav={tabNav} dot={achDot ? "ach" : null} />
     </div>
   );
 }

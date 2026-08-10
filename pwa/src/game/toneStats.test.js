@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import {
-  recordTone, toneAccuracy, toneAttempts, weakestTone, allTonesAbove,
+  recordTone, toneAccuracy, weakestTone, allTonesAbove,
   loadToneStats, saveToneStats, TONE_NUMS,
 } from './toneStats.js';
 
@@ -40,7 +40,7 @@ describe('recordTone', () => {
   });
 });
 
-describe('toneAccuracy / toneAttempts', () => {
+describe('toneAccuracy', () => {
   it('레거시 항목은 누적 정답률 폴백, 시도 0이면 0', () => {
     expect(toneAccuracy([3, 4])).toBe(0.75);
     expect(toneAccuracy([0, 0])).toBe(0);
@@ -55,10 +55,6 @@ describe('toneAccuracy / toneAttempts', () => {
     const cumulative = s[1][0] / s[1][1]; // 90/105 ≈ 0.857 — 누적은 거의 안 움직임
     expect(toneAccuracy(s[1])).toBeCloseTo(0.9 * 0.9 ** 5, 10); // ema ≈ 0.531 — 크게 하락
     expect(toneAccuracy(s[1])).toBeLessThan(cumulative - 0.3);
-  });
-  it('시도수', () => {
-    expect(toneAttempts([3, 4])).toBe(4);
-    expect(toneAttempts(undefined)).toBe(0);
   });
 });
 

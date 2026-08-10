@@ -1012,11 +1012,13 @@ function ToneCard({ tone, status, level, onClose }) {
 
 
 export function HomeScreen({
-  streak = 0, streakLongest = 0, freezes = 0, xp = 0, rank = 0, onExam, examPrompt = false, onExamPromptClose, toneLevels = {}, toneStatus = {}, coachTone = null, celebrateTone = null,
+  // ※ onExam·examPrompt·onExamPromptClose 제거 — 본문에서 쓰이지 않는 죽은 배선이었다(유일한 소비처였을
+  //   ProfileModal에는 onExam={null}이 하드코딩돼 있음). 승급시험 진입은 난이도 사다리와 결과화면이 담당한다.
+  streak = 0, streakLongest = 0, freezes = 0, xp = 0, rank = 0, toneLevels = {}, toneStatus = {}, coachTone = null, celebrateTone = null,
   levelReveals = [], onRevealsDone, revealHold = false,
   homeReady = true,
   onPlay, onNavTab, onHelp,
-  onLogin, isMemberUser, memberName, nickname = null, onEditNickname, onLogout, onExit, studentToken, onRefreshBest, onDebugIntro,
+  onLogin, isMemberUser, memberName, nickname = null, onEditNickname, onLogout, onExit, studentToken, onRefreshBest, onDebugIntro, achDot = false,
 }) {
   const tier = { ...rankInfo(rank), xp }; // 엠블럼·이름 = 등급(rank=급). xp는 MyInfo·ProfileModal의 레벨 게이지(levelInfo)용
   const isGuest = !!onLogin; // onLogin은 게스트일 때만 내려온다(회원/학생은 null)
@@ -1206,7 +1208,7 @@ export function HomeScreen({
       {import.meta.env.DEV && debugScoreOpen && <DebugScoreModal studentToken={studentToken} onClose={() => setDebugScoreOpen(false)} onApplied={() => onRefreshBest && onRefreshBest()} />}
 
       {/* 공통 탭바 — 놀러가기·오답 노트·홈(활성)·업적·하늘하늘 */}
-      <TgTabBar active="home" onNav={onNavTab} />
+      <TgTabBar active="home" onNav={onNavTab} dot={achDot ? "ach" : null} />
 
       {/* 첫 방문 코치마크 가이드 — 방/등급/연속학습/플레이 순서로 안내(1회). 타이틀→홈 전환(homeTx)이 끝난 뒤에만 표시 */}
       <CoachMarkOverlay visible={homeReady && coach.visible} onDone={coach.dismiss} steps={COACH_STEPS} delay={160} showControls={false} forceLastStep />

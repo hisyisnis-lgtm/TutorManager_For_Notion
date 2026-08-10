@@ -161,7 +161,7 @@ export function TutorialScreen({ onDone }) {
       {/* 비트3 그리기 패드 — 성조버튼 대신. 스포트라이트(딤 위 zIndex6). 그려서 성조 맞히기.
           ★Reveal(이중 div, 안쪽 height 없음)로 감싸면 height:100% 패드가 접힘 → 단일 positioned div(top/bottom로 높이 확보) */}
       {phase === 3 && (
-        <div className="tg-reveal" style={{ position: 'absolute', left: 20, right: 20, top: 502, bottom: 'calc(30px + env(safe-area-inset-bottom))', zIndex: 6, animationDelay: '220ms' }}>
+        <div style={{ position: 'absolute', left: 20, right: 20, top: 502, bottom: 'calc(30px + env(safe-area-inset-bottom))', zIndex: 6 }}>
           {/* demoTone = 예시 획 재생(튜토리얼 전용). 인게임 DrawPad는 빈 캔버스 그대로 — 정답 힌트가 되면 안 되므로. */}
           <DrawPad expectedTone={answer} demoTone={answer} onDraw={tap} disabled={completed} resetKey={phase} />
         </div>

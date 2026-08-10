@@ -1,6 +1,6 @@
 // 게임 화면 (Figma 좌표 절대배치) — 점수·일시정지·타이머·단어카드·코치·성조버튼 + 콤보/신기록 버스트 연출(P4b).
 import { useState, useEffect, useRef, useLayoutEffect } from 'react';
-import { Star, Pause, Stopwatch, VolumeLoud, Ticket, Bones, Logout } from '@solar-icons/react';
+import { Stopwatch, Bones, Logout } from '@solar-icons/react';
 import { TG, TYPE, TOUCH_OPT, RADIUS, SPACE } from '../tgTokens.js';
 import { play as playSfx } from '../tgSfx.js';
 import { Reveal, WordCard, ToneButtons, DrawPad, CoachBubble, ConfettiBurst, CrispFlash, GameHeader, LIGHT_CONFETTI, prefersReducedMotion, TONE_SHOT_HOVER_MS, TONE_FLIGHT_MS, TONE_IMPACT_MS } from './shared.jsx';
@@ -113,37 +113,6 @@ function ComboSparks({ heatRef }) {
 
 // 성조 발사체 — 누른 버튼에서 현재 글자로 날아가 정답=꽂힘(WordCard 착탄 동기 팝이 임팩트), 오답=글자가 쳐내 회전하며 튕겨 떨어짐.
 // 판정·점수·타이머는 탭 순간 이미 끝난 상태(연출 전용) — 즉시 판정(pointerdown) 손맛과 공정성 유지.
-// 건너뛰기 티켓 소모 연출 — 버튼에서 티켓이 뿅 떠올라 카드로 날아가 도착 순간(TONE_IMPACT_MS ≈ 글자 공개) 흡수 페이드.
-function SkipTicketFx({ fx, onDone }) {
-  const ref = useRef(null);
-  const doneRef = useRef(onDone); doneRef.current = onDone;
-  useLayoutEffect(() => {
-    const el = ref.current; if (!el) return undefined;
-    let alive = true;
-    const dx = fx.to.x - fx.from.x, dy = fx.to.y - fx.from.y;
-    const at = (x, y, sc, rot) => `translate(-50%,-50%) translate(${x.toFixed(1)}px,${y.toFixed(1)}px) scale(${sc}) rotate(${rot}deg)`;
-    // 도착 시점 = 전체의 0.8 지점 → duration을 역산해 TONE_IMPACT_MS에 정확히 착지
-    const anim = el.animate([
-      { transform: at(0, 0, 0.4, 0), opacity: 0, easing: 'cubic-bezier(.34,1.7,.64,1)' },
-      { transform: at(0, -16, 1, -8), opacity: 1, offset: 0.2, easing: 'cubic-bezier(.5,0,.55,1)' }, // 뿅 떠오름
-      { transform: at(dx, dy, 1, 10), opacity: 1, offset: 0.8, easing: 'ease-out' },                 // 카드로 비행
-      { transform: at(dx, dy, 1.5, 10), opacity: 0 },                                                // 흡수 페이드
-    ], { duration: Math.round(TONE_IMPACT_MS / 0.8), fill: 'forwards' });
-    anim.onfinish = () => { if (alive) doneRef.current(); };
-    return () => { alive = false; anim.cancel(); };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-  return (
-    <div aria-hidden="true" data-skipfx="1" style={{ position: 'absolute', left: fx.from.x, top: fx.from.y, zIndex: 22, pointerEvents: 'none' }}>
-      <span ref={ref} style={{
-        position: 'absolute', left: 0, top: 0, display: 'flex', width: 44, height: 44, alignItems: 'center', justifyContent: 'center',
-        borderRadius: '50%', background: '#fff', willChange: 'transform, opacity',
-        boxShadow: `0 4px 12px rgba(43,39,48,0.20), 0 0 16px 3px ${TG.CORAL}55`,
-      }}>
-        <Ticket size={26} weight="Bold" color={TG.CORAL} style={{ transform: 'rotate(45deg)' }} />
-      </span>
-    </div>
-  );
-}
 
 // 잔상 고스트 — 발사 구간에서만 본체를 지연 추적(모션블러 느낌). 진짜 방향성 블러 필터는 모바일 성능 리스크라 트레일로.
 const SHOT_GHOSTS = [{ delay: 40, opacity: 0.35, blur: 1 }, { delay: 80, opacity: 0.16, blur: 2 }];
@@ -262,7 +231,7 @@ function CenterBurst({ data }) {
   );
 }
 
-export function GameScreen({ title = '', word, entered, currentSyl, completed, timedOut, wordIndex, wordsLen, wordTimeLimit, gaugeOffsetMs = 0, lowTime = false, paused, combo, comboFlash, floatScore, score, coachText, onTone, wrongBtn, wrongShakeKey = 0, onPause, onEndTraining, endLabel = '트레이닝 종료', progressText = null, playReveal = true, endless = false, lives = 3, onSkip, showSudden = false, runId = 0, recordToBeat = 0, practice = false, endKind = 'complete', listen = false, audioOff = false, onReplay, onCantHear, onHint, hintUsed = false, onSpeak, onReveal, draw = false, drawExpectedTone, onDraw, drawResetKey = 0, lianyinAt = -1, sandhiAt = -1, hideMeaning = false, hidePinyin = false, demoFx = null }) {
+export function GameScreen({ title = '', word, entered, currentSyl, completed, timedOut, wordIndex, wordsLen, wordTimeLimit, gaugeOffsetMs = 0, lowTime = false, paused, combo, comboFlash, floatScore, score, coachText, onTone, wrongBtn, wrongShakeKey = 0, onPause, onEndTraining, endLabel = '트레이닝 종료', progressText = null, playReveal = true, endless = false, showSudden = false, runId = 0, recordToBeat = 0, practice = false, endKind = 'complete', listen = false, audioOff = false, onReplay, onCantHear, onSpeak, onReveal, draw = false, drawExpectedTone, onDraw, drawResetKey = 0, lianyinAt = -1, sandhiAt = -1, hideMeaning = false, hidePinyin = false, demoFx = null }) {
   lowTime = lowTime || demoFx === 'low'; // [DEV] 미리보기 텐션 데모(?screen=game&fx=low) — 머지 전 백도어 제거 대상
   // ── 버스트 연출(P4b): 콤보 마일스톤(5·10·15…) + 라이브 신기록. 비차단·자동 소멸 ──
   const [burst, setBurst] = useState(null);
@@ -325,7 +294,7 @@ export function GameScreen({ title = '', word, entered, currentSyl, completed, t
   const shotSeqRef = useRef(0);
   const shotIdxRef = useRef(0); // 연타 대응 — entered prop 재렌더 전에 정답 탭이 겹치면 낙관적으로 다음 음절을 겨냥
   useEffect(() => { shotIdxRef.current = entered.length; }, [entered]);
-  useEffect(() => { setShots([]); setSkipFx(null); shotIdxRef.current = 0; }, [wordIndex, runId]); // 단어 전환·새 런 — 비행 중 발사체·티켓 연출 정리
+  useEffect(() => { setShots([]); shotIdxRef.current = 0; }, [wordIndex, runId]); // 단어 전환·새 런 — 비행 중 발사체·티켓 연출 정리
   const removeShot = (key) => setShots((s) => s.filter((x) => x.key !== key));
   // 발사 지오메트리 — 글자 주변 반경 80~130px 랜덤 방향(고정 위치는 단조롭다 — 사용자 피드백). 화면 밖·HUD 침범 클램프 +
   // 다른 한자와 겹치면 리샘플(최대 12회) — 옆 글자 위에 뿅 나타나면 어느 글자를 겨냥하는지 헷갈림.
@@ -364,26 +333,6 @@ export function GameScreen({ title = '', word, entered, currentSyl, completed, t
     if (ok) shotIdxRef.current = idx + 1;
     spawnShot(num, idx, ok);
   };
-  // 건너뛰기 연출 — 성조 마크가 아니라 '티켓 소모'가 보여야 맞음(사용자 지적: 성조 버튼을 안 눌렀는데 성조가 나오면 이상).
-  // 버튼에서 티켓이 뿅 떠올라 카드로 날아가 도착 순간(TONE_IMPACT_MS, 글자 공개와 동기) 흡수되며 사라짐 — 완성 히트스톱·플래시가 임팩트를 받음.
-  const [skipFx, setSkipFx] = useState(null); // { key, from, to }
-  const handleSkip = onSkip ? (e) => {
-    if (!prefersReducedMotion()) {
-      const root = shakeRef.current;
-      const br = e.currentTarget.getBoundingClientRect();
-      if (root) {
-        const rr = root.getBoundingClientRect();
-        shotSeqRef.current += 1;
-        setSkipFx({
-          key: shotSeqRef.current,
-          from: { x: br.left + br.width / 2 - rr.left, y: br.top + br.height / 2 - rr.top },
-          to: { x: rr.width / 2, y: 129 + 146 }, // 단어 카드 중앙(top129 + h292/2)
-        });
-        playSfx('shotFly');
-      }
-    }
-    onSkip();
-  } : undefined;
   const handleToneTap = (num) => { fireShot(num); onTone(num); };
   // 키보드(1~5·0)도 발사체 연출 — 판정용 전역 keydown(ToneGamePage handleTone)은 GameScreen을 우회하므로 연출만 여기서 미러.
   // 가드도 handleTone과 동일하게(일시정지·카운트다운·서든데스 인트로), 키 맵도 동일.
@@ -440,35 +389,12 @@ export function GameScreen({ title = '', word, entered, currentSyl, completed, t
   // demoFx='combo'는 [DEV] 미리보기서 화염 강제(?screen=game&fx=combo). 머지 전 백도어 제거 대상.
   const heat = demoFx === 'combo' ? 0.8 : (combo >= 2 ? Math.min((combo - 1) / 11, 1) : 0);
   const heatRef = useRef(heat); heatRef.current = heat; // rAF 불티가 매 프레임 참조(강도)
-  // 건너뛰기 패스 소모 연출 — 건너뛰기로 lives가 줄면 방금 빈 티켓(index=lives)을 '팟' 튕겨 소모를 명확히 보여줌.
-  const prevLivesRef = useRef(lives);
-  const [lostHeart, setLostHeart] = useState(-1);
-  useEffect(() => {
-    if (lives < prevLivesRef.current) { setLostHeart(lives); const t = setTimeout(() => setLostHeart(-1), 520); prevLivesRef.current = lives; return () => clearTimeout(t); }
-    prevLivesRef.current = lives; return undefined;
-  }, [lives]);
-  useEffect(() => { prevLivesRef.current = lives; setLostHeart(-1); }, [runId]); // 새 런 리셋
-  // 1판 1힌트 큐(각 1회) — 우선순위: 타이머(game-play) → 건너뛰기(game-skip-v1) → 발음 힌트(game-hint-v1).
-  // 건너뛰기 패스(옛 하트, 생명 아님)·발음 힌트는 기존 유저도 처음 만나는 기능이라 판마다 하나씩 순차 안내.
-  // 딤/블로킹 없음(타이머 안 멈춤·탭 방해 없음). 조작법은 튜토리얼이 이미 가르침.
-  const tipPlay = useTabTip('game-play', true);
-  const tipSkip = useTabTip('game-skip-v1', true);
-  const tipHint = useTabTip('game-hint-v1', true);
-  const pracTip = useTabTip('game-practice', true); // 연습 첫 진입 코치마크(1회, 딤 스포트라이트)
-  const [runTip, setRunTip] = useState(null);
-  useEffect(() => {
-    if (practice || !playReveal || draw) return undefined; // 그리기 문제는 탭 기준 팁(문구·위치)이 안 맞아 생략 — 다음 탭 문제에서 표시
-    let pick = null;
-    if (tipPlay.visible) pick = { id: 'play', dismiss: tipPlay.dismiss };
-    else if (tipSkip.visible && onSkip) pick = { id: 'skip', dismiss: tipSkip.dismiss };
-    else if (tipHint.visible && onHint && !listen) pick = { id: 'hint', dismiss: tipHint.dismiss };
-    if (!pick) return undefined;
-    const wait = showSudden ? 2600 : 300; // 서든데스 킥오프 배너(2.35s)와 겹치지 않게 배너 뒤 등장
-    const a = setTimeout(() => setRunTip(pick.id), wait);
-    const b = setTimeout(() => { setRunTip(null); pick.dismiss(); }, wait + 4800);
-    return () => { clearTimeout(a); clearTimeout(b); };
-    // showSudden도 deps에: 배너가 effect 실행 '후'에 켜지면(무한 첫 팁) 팁이 배너 아래 깔림 → 재스케줄로 배너 뒤 등장 보장
-  }, [playReveal, practice, showSudden, draw]); // eslint-disable-line react-hooks/exhaustive-deps
+  // 연습 첫 진입 코치마크(1회, 딤 스포트라이트)
+  const pracTip = useTabTip('game-practice', true);
+  // ※ 인게임 1판 1힌트 큐(game-play 타이머 · game-skip-v1 건너뛰기 · game-hint-v1 발음힌트)는 제거됨.
+  //   렌더러가 01c1810(화면 정리 커밋)에서 삭제됐는데 스케줄러만 남아, 4.8초 뒤 dismiss()만 호출하며
+  //   **아무것도 보여주지 않은 채 1회성 안내를 영구 소모**하고 있었다(tab_tips_v1에 '봤음'으로 기록).
+  //   조작법은 튜토리얼이 이미 가르치므로 배선을 걷어낸다. 되살리려면 시안 09 기준 Figma 디자인이 먼저 필요.
   return (
     <div ref={shakeRef} data-tg-shake-root="1" style={{ position: 'absolute', inset: 0 }}>
       {/* 콤보 화염 — '불붙는다'는 긍정적 모멘텀(피격 비네트 아님). 사방 외곽에서 불씨가 피어오름 + 골드 글로우 플리커. 콘텐츠 뒤(zIndex0)·비차단 */}
@@ -493,7 +419,6 @@ export function GameScreen({ title = '', word, entered, currentSyl, completed, t
       <div aria-hidden="true" style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none', zIndex: 0 }}>
         <img src="/game/game-field.svg" alt="" style={{ position: 'absolute', left: '50%', bottom: -588, width: 1287, height: 872, maxWidth: 'none', transform: 'translateX(-50%)', display: 'block' }} />
       </div>
-      {skipFx && <SkipTicketFx key={skipFx.key} fx={skipFx} onDone={() => setSkipFx(null)} />}
       {/* 저시간 비네트 — 막바지에 화면 가장자리 붉은 맥동(텐션 램프 보강·게이지 심박과 동기). 비차단 */}
       {lowTime && !practice && (
         <div aria-hidden="true" style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 3,
@@ -544,7 +469,7 @@ export function GameScreen({ title = '', word, entered, currentSyl, completed, t
           <div key={`card-${runId}-${wordIndex}`} style={{ animation: 'tg-card-in .38s cubic-bezier(.22,1,.36,1) both' }}>
             <div style={{ position: 'relative', transform: freeze ? 'scale(1.035)' : 'none', animation: punch ? 'tg-punch .35s ease-out' : 'none', '--tg-punch-s': (1.05 + heat * 0.05).toFixed(3) }}>
               <WordCard word={word} entered={entered} currentSyl={currentSyl} completed={completed} timedOut={timedOut} /* 진행 표기 — 기본은 문제 번호(무한·트레이닝은 번호만). 오답 복습은 호출부가 '졸업한 단어/전체'를 넘긴다 */
-                progressText={progressText ?? ((endless || practice) ? `${wordIndex + 1}` : `${wordIndex + 1}/${wordsLen}`)} floatScore={practice ? null : floatScore} listen={listen} audioOff={audioOff} onReplay={onReplay} onCantHear={onCantHear} onHint={onHint} hintUsed={hintUsed} draw={draw} lianyinAt={lianyinAt} sandhiAt={sandhiAt} practice={practice} onSpeak={onSpeak} onReveal={onReveal} hideMeaning={hideMeaning} hidePinyin={hidePinyin} />
+                progressText={progressText ?? ((endless || practice) ? `${wordIndex + 1}` : `${wordIndex + 1}/${wordsLen}`)} floatScore={practice ? null : floatScore} listen={listen} audioOff={audioOff} onReplay={onReplay} onCantHear={onCantHear} draw={draw} lianyinAt={lianyinAt} sandhiAt={sandhiAt} practice={practice} onSpeak={onSpeak} onReveal={onReveal} hideMeaning={hideMeaning} hidePinyin={hidePinyin} />
             </div>
           </div>
           {/* 정답 완성 연출 — 크리스프 플래시(번쩍) + 색색 색종이 + 흰/골드 글리터. ★단어 키 래퍼 '밖'에 둠: 안에 두면 새 단어 등장 때마다 리마운트되어 오발. flashKey 증가(정답 완성) 시에만 발동 */}
@@ -577,8 +502,8 @@ export function GameScreen({ title = '', word, entered, currentSyl, completed, t
       {/* 하단 입력 — 그리기 문제면 그리기 패드, 아니면 성조버튼.
           ★패드는 top/bottom으로 높이를 잡으므로 Reveal(이중 div, 안쪽 height 없음) 대신 단일 positioned div로 감싸 height:100%가 살게 함 */}
       {draw ? (
-        <div className={playReveal ? 'tg-reveal' : undefined}
-          style={{ position: 'absolute', left: 24, right: 24, top: 518, bottom: 'calc(26px + env(safe-area-inset-bottom))', animationDelay: '430ms', ...(playReveal ? {} : { opacity: 0 }) }}>
+        <div
+          style={{ position: 'absolute', left: 24, right: 24, top: 518, bottom: 'calc(26px + env(safe-area-inset-bottom))', }}>
           <DrawPad expectedTone={drawExpectedTone} onDraw={onDraw} disabled={completed || !playReveal || paused} resetKey={drawResetKey} />
         </div>
       ) : (

@@ -3,11 +3,11 @@
 //   ① 모드선택 화면과 같은 오브(100)에 검정 80% 덮개 + 자물쇠 40 → ② 덮개·자물쇠가 걷히고 모드 아이콘이 드러남.
 // 톤: 어두운 딤(rgba(0,0,0,0.8)) + 미니멀(컨페티·글로우·설명문 없음).
 import { useEffect, useState } from 'react';
-import { Rocket, Crown, Infinity, MapPoint, ChefHat, Stars, LockUnlocked, Lock } from '@solar-icons/react';
+import { Rocket, Crown, Infinity as InfinityIcon, MapPoint, ChefHat, Stars, LockUnlocked, Lock } from '@solar-icons/react';
 import { TYPE, haptic, SPACE } from '../tgTokens.js';
 import { RevealStage, RevealRings, BeatContent } from './shared.jsx';
 
-const ICONS = { Rocket, Crown, Infinity, MapPin: MapPoint, ForkKnife: ChefHat, Sparkle: Stars };
+const ICONS = { Rocket, Crown, Infinity: InfinityIcon, MapPin: MapPoint, ForkKnife: ChefHat, Sparkle: Stars };
 // 잠김 색 = 시안의 '검정 80% 덮개'를 **오브 색에 미리 합성**한 값(#F3A75B → #312112).
 //  ★원 위에 같은 크기의 반투명 원을 겹치면 두 테두리의 안티에일리어싱이 따로 계산돼 1px 주황 링이 생긴다
 //    (2026-08-06 사용자 지적 "애매하게 외곽이 보인다"). → 오브 원은 **하나만**(테두리도 하나만) 두고,
