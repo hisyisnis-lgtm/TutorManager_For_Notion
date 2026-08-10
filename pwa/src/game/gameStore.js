@@ -242,8 +242,14 @@ export function mergeGuestIntoMember(identity) {
 //   그러면 강사 로그인·캐시까지 날아간다(2026-08-10).
 //  ⚠️ 회원(소셜 로그인) 상태면 로그아웃까지 해야 초기화가 유지된다. 로그인이 남아 있으면
 //   다음 동기화에서 서버 기록이 그대로 내려와 "초기화가 안 된 것"처럼 보인다.
+//  ⚠️ 코치마크(둘러보기)는 접두사 밖에 산다 — `tab_tips_v1` **한 덩어리 JSON**에 모여 있고
+//   그 안에 학생앱 팁(공지·내 수업·보관함·홈)까지 같이 들어 있다. 통째로 지우면 학생앱 팁이
+//   다시 뜬다 → 게임 팁('game-' 로 시작하는 항목)만 골라 뺀다(2026-08-10).
 const RESET_PREFIXES = ['game_', 'tg_'];
+const TIPS_KEY = 'tab_tips_v1';
+const TIP_PREFIX = 'game-';
 export function resetGameData() {
+  let n = 0;
   try {
     const keys = [];
     for (let i = 0; i < localStorage.length; i += 1) {
@@ -251,6 +257,21 @@ export function resetGameData() {
       if (k && RESET_PREFIXES.some((p) => k.startsWith(p))) keys.push(k);
     }
     keys.forEach((k) => localStorage.removeItem(k));
-    return keys.length;
-  } catch { return 0; }
+    n = keys.length;
+  } catch { /* noop */ }
+  // 코치마크 — 게임 항목만 제거해 초기화 후 둘러보기가 처음처럼 다시 뜨게 한다.
+  try {
+    const raw = localStorage.getItem(TIPS_KEY);
+    if (raw) {
+      const seen = JSON.parse(raw);
+      let removed = 0;
+      Object.keys(seen).forEach((k) => { if (k.startsWith(TIP_PREFIX)) { delete seen[k]; removed += 1; } });
+      if (removed) {
+        if (Object.keys(seen).length) localStorage.setItem(TIPS_KEY, JSON.stringify(seen));
+        else localStorage.removeItem(TIPS_KEY);   // 게임 팁만 있었으면 키 자체를 정리
+        n += removed;
+      }
+    }
+  } catch { /* noop — 파싱 실패해도 나머지 초기화는 유효 */ }
+  return n;
 }
