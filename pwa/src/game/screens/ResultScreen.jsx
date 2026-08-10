@@ -69,7 +69,9 @@ function StatCards({ maxCombo, avgSec }) {
   );
 }
 
-export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, onRetry, onHome, onExam = null, onNextLevel = null, onLogin = null, retryLabel = '다시하기', continueLabel = '계속하기', title = '', practice = false, coachReady = true, homeOnly = false, homeLabel = '홈으로 가기', homeHint = '홈에서 이어서 해요!' }) {
+// cleared = 오답 복습에서 노트를 다 비운 판. 기록(신기록)이 없는 연습 결과화면에도 '해냈다'는 축하가 필요해
+//  신기록과 같은 자리·같은 연출(파티클+배지)을 문구만 바꿔 재사용한다(2026-08-10).
+export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, onRetry, onHome, onExam = null, onNextLevel = null, onLogin = null, retryLabel = '다시하기', continueLabel = '계속하기', title = '', practice = false, cleared = false, coachReady = true, homeOnly = false, homeLabel = '홈으로 가기', homeHint = '홈에서 이어서 해요!' }) {
   const animScore = useCountUp(score, 1100);
   // 로그인 유도 모달(게스트가 '이전 기록'을 실제로 넘긴 순간) — 마운트 때 1회 판정(세션·쿨다운).
   //  previousBest>0: 첫 판(항상 신기록·이전0) 코치마크와 안 겹치고, 재도전+향상=투자 있는 성취에만.
@@ -83,7 +85,8 @@ export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, 
   }, [nudgeEligible]);
   const dismissNudge = () => { setNudgeOpen(false); try { localStorage.setItem('tg_login_nudge', String(Date.now())); } catch { /* noop */ } };
   const avgSec = avgMs > 0 ? (avgMs / 1000).toFixed(1) : '-';
-  const pandaSrc = pickCelebratePanda(isNewBest, maxCombo);
+  const celebrate = (isNewBest && !practice) || cleared; // 축하 연출(파티클·배지)을 켤 판인가
+  const pandaSrc = pickCelebratePanda(isNewBest || cleared, maxCombo);
   // 첫 결과 코치마크(1회) — 연습 결과는 제외(신기록/기록 개념이 다름).
   // ★coachReady 게이트는 훅이 아니라 아래 '오버레이 렌더 조건'에 건다. 훅에 걸면 레이스로 무력화:
   //   결과화면 마운트 시점엔 업적 큐가 아직 비어(end-effect가 렌더 후 실행) coachReady=true → visible=true로 시작,
@@ -92,9 +95,9 @@ export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, 
   return (
     <>
       {/* 신기록 축하 파티클 — 성취 순간만(실패/시간초과엔 미표시). 상단 판다/배지 위에서 색색 조각이 터져 낙하 */}
-      {isNewBest && !practice && <CrispFlash color="rgba(255,255,255,0.6)" zIndex={7} />}
-      {isNewBest && !practice && <ConfettiBurst count={32} power={1.35} size={10} zIndex={3} style={{ top: 150 }} />}
-      {isNewBest && !practice && <ConfettiBurst colors={LIGHT_CONFETTI} count={16} power={1.3} size={6} zIndex={3} style={{ top: 150 }} />}
+      {celebrate && <CrispFlash color="rgba(255,255,255,0.6)" zIndex={7} />}
+      {celebrate && <ConfettiBurst count={32} power={1.35} size={10} zIndex={3} style={{ top: 150 }} />}
+      {celebrate && <ConfettiBurst colors={LIGHT_CONFETTI} count={16} power={1.3} size={6} zIndex={3} style={{ top: 150 }} />}
       {/* 헤더 — 시안 12: 글래스 60 + 스테이지명 가운데(뒤로가기 없음. 이탈은 아래 '홈으로 가기'로) */}
       <GameHeader title={title ? `${title} 결과화면` : '결과화면'} glass center />
       {/* 축하 판다 150×150 (가로 중앙, 시안 y90) */}
@@ -107,12 +110,12 @@ export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, 
         <span style={{ ...TYPE.numHero, fontSize: 50, fontWeight: 900, color: TG.CORAL_DK, lineHeight: 1, whiteSpace: 'nowrap' }}>{animScore.toLocaleString()}</span>
       </div>
       </Reveal>
-      {/* 신기록 배지 — 시안 y312(점수 바로 아래) */}
-      {isNewBest && (
+      {/* 신기록 배지 — 시안 y312(점수 바로 아래). 오답 복습 클리어도 같은 자리·같은 배지에 문구만 바꿔 쓴다 */}
+      {(isNewBest || cleared) && (
         <Reveal i={2} style={{ position: 'absolute', top: 312, left: '50%', transform: 'translateX(-50%)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, padding: '8px 16px', borderRadius: RADIUS.lg, background: RES_BADGE, boxShadow: '0px 4px 18px rgba(43,39,48,0.04)' }}>
           <Cup size={16} weight="Bold" color="#fff" style={{ animation: 'tg-ic-trophy .34s cubic-bezier(.22,1,.36,1) .06s both' }} />
-          <span style={{ ...TYPE.btnSm, lineHeight: '17px', color: '#fff', whiteSpace: 'nowrap' }}>신기록 달성!</span>
+          <span style={{ ...TYPE.btnSm, lineHeight: '17px', color: '#fff', whiteSpace: 'nowrap' }}>{cleared ? '오답 노트를 다 비웠어요!' : '신기록 달성!'}</span>
         </div>
         </Reveal>
       )}

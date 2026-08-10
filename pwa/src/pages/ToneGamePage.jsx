@@ -19,7 +19,7 @@ import { ROUND_LENGTH, DIFFICULTIES, THEMES } from '../constants/toneGameWords.j
 import { TG, HOME, BG_MESH, DIFF_COLORS, ensureGameFonts, haptic, shuffle, getTimeLimitForCombo, loadBest, saveBest, isMeaningHidden, isPinyinHidden } from '../game/tgTokens.js';
 import {
   loadWordStats, saveWordStats, recordWordResult,
-  buildReviewList, masteredCount, buildRoundWords,
+  buildReviewList, masteredCount, buildRoundWords, noteLeft,
 } from '../game/tgWordStats.js';
 import { recordTone, loadToneStats, saveToneStats, weakestTone, toneAccuracy } from '../game/toneStats.js';
 import { findLianyin, findToneSandhi } from '../game/lianyin.js';
@@ -136,14 +136,15 @@ const PREVIEW_SANDHI = [
 
 // 미리보기(?screen=mastery)용 샘플 — 복습필요 3 + 마스터 12 (DEV 검수 전용)
 const PREVIEW_MASTERY = (() => {
+  // n = 오답 노트 졸업까지 남은 정답 횟수 — 진행바 3단계(0/3·1/3·2/3)가 한 화면에 다 보이게 샘플을 깔아둔다
   const review = [
-    { hanzi: '复杂', pinyin: ['fù', 'zá'], tones: [4, 2], meaning: '복잡하다', a: 20, p: 9, t: 52000 },
-    { hanzi: '影响', pinyin: ['yǐng', 'xiǎng'], tones: [3, 3], meaning: '영향', a: 21, p: 13, t: 44100 },
-    { hanzi: '严格', pinyin: ['yán', 'gé'], tones: [2, 2], meaning: '엄격하다', a: 10, p: 7, t: 19000 },
+    { hanzi: '复杂', pinyin: ['fù', 'zá'], tones: [4, 2], meaning: '복잡하다', a: 20, p: 9, t: 52000, n: 3 },
+    { hanzi: '影响', pinyin: ['yǐng', 'xiǎng'], tones: [3, 3], meaning: '영향', a: 21, p: 13, t: 44100, n: 2 },
+    { hanzi: '严格', pinyin: ['yán', 'gé'], tones: [2, 2], meaning: '엄격하다', a: 10, p: 7, t: 19000, n: 1 },
   ];
   const mastered = ['妈妈', '你好', '谢谢', '老师', '朋友', '时间', '学生', '中国', '咖啡', '文化', '健康', '经济'];
   const stats = {}, map = {};
-  for (const w of review) { stats[w.hanzi] = [w.a, w.p, w.t, w.a]; map[w.hanzi] = { hanzi: w.hanzi, pinyin: w.pinyin, tones: w.tones, meaning: w.meaning }; }
+  for (const w of review) { stats[w.hanzi] = [w.a, w.p, w.t, w.a, 0, w.n]; map[w.hanzi] = { hanzi: w.hanzi, pinyin: w.pinyin, tones: w.tones, meaning: w.meaning }; }
   for (const hz of mastered) { stats[hz] = [4, 4, 4800, 4]; map[hz] = { hanzi: hz, pinyin: [], tones: [], meaning: '' }; }
   return { stats, map };
 })();
@@ -223,6 +224,8 @@ export default function ToneGamePage() {
   const [totalAnswerTime, setTotalAnswerTime] = useState(0);
   const [answeredCount, setAnsweredCount] = useState(0);
   const [practiceKind, setPracticeKind] = useState('training'); // practice 엔진의 용도: 'training'(모드선택) | 'review'(오답 노트)
+  const [reviewCleared, setReviewCleared] = useState(false);    // 이번 복습에서 오답 노트를 다 비웠는가(결과화면 축하 분기)
+  const reviewTargetsRef = useRef([]);                          // 이번 복습 세션 대상 한자(유니크) — 인게임 '졸업/전체' 진행 표기용
 
   const [selectedDifficulty, setSelectedDifficulty] = useState(STAGES[0]); // 스테이지 객체(티어+밴드) — 난이도처럼 gameKey·timeMultiplier 보유
   const [wordPoolByDiff, setWordPoolByDiff] = useState({});
@@ -969,18 +972,37 @@ export default function ToneGamePage() {
   //  (구: startTraining을 그대로 불러 열린 스테이지 전체 풀이 나왔다 → "틀린 문제를 복습해봐요!"라는
   //   화면 카피·목록과 첫 단어부터 어긋났음. 2026-08-07 UX 검수)
   //  트레이닝과 같은 practice 엔진(시간 무제한·기록 미반영·정답보기 가능), 단어 출처만 다르다.
+  //  ★클리어 조건(2026-08-10): 목록의 단어를 전부 졸업(각각 정답 3번 누적)시키면 세션이 끝난다.
+  //   틀린 단어는 남은 횟수가 한 칸 늘어(+1) 계속 출제되고, 졸업한 단어는 다음 순번에서 건너뛴다.
   const startReview = (rows) => {
     const pool = (rows || []).map((r) => r.word).filter(Boolean);
     if (pool.length === 0) { startTraining(); return; } // 복습할 게 없으면 트레이닝으로 폴백
     setGameMode('practice');    setRecordToBeat(0);
-    // 짧은 목록이라 그대로 두면 금방 끝난다 → 매 사이클 섞어 이어붙인 긴 스트림('종료' 버튼으로 끝냄).
+    // 짧은 목록이라 그대로 두면 금방 끝난다 → 매 사이클 섞어 이어붙인 긴 스트림(끝까지 가면 순환).
     let stream = [];
     while (stream.length < 60) stream = stream.concat(shuffle(pool));
     setRound(stream, { listen: false }); // 듣기문제 없음(카드의 자체 발음듣기로 충분)
-    setPracticeKind('review');
+    reviewTargetsRef.current = pool.map((w) => w.hanzi); // 이번 세션 대상(유니크) — 인게임 진행 표기 '졸업/전체'의 분모
+    setPracticeKind('review'); setReviewCleared(false);
     if (!isPreview) track('run_start', { m: 'review', k: identity.kind });
     resetRunState();
   };
+
+  // practice(트레이닝·오답 복습)의 다음 단어 인덱스.
+  //  트레이닝 = 무한 순환. 오답 복습 = 이미 졸업한(노트에서 사라진) 단어를 건너뛰고, 남은 게 없으면 -1(세션 클리어).
+  const nextPracticeIndex = useCallback((from) => {
+    const len = words.length;
+    if (len === 0) return -1;
+    if (practiceKind !== 'review') return (from + 1) % len;
+    for (let k = 1; k <= len; k++) {
+      const idx = (from + k) % len;
+      if (noteLeft(wordStatsRef.current[words[idx].hanzi]) > 0) return idx;
+    }
+    return -1; // 오답 노트를 다 비웠다
+  }, [words, practiceKind]);
+
+  // 오답 노트를 다 비움 → 축하 결과화면. 게임오버 비트는 건너뛴다(끝난 게 아니라 해낸 것).
+  const finishReview = () => { setReviewCleared(true); playSfx('win'); setScreen('end'); };
   // 인게임(문제풀이·결과화면) → 아웃게임 이탈은 '오늘의 팁' 웨이브 전환으로 목적 화면 진입. 잔존 타이머·오버레이 정리(기록 오염 방지)
   //   후 트리거. gameMode 리셋은 homeTx 'in'이 전환이 화면을 덮는 시점에 처리(뒤 화면 모드 깜빡임 방지).
   const tipTransitionTo = (target) => { clearTimers(); setShowGameOverBeat(false); setPaused(false); setTxTarget(target); setHomeTx('in'); };
@@ -1092,8 +1114,10 @@ export default function ToneGamePage() {
         const teachDwell = (word && (findToneSandhi(word.tones) >= 0 || findLianyin(word.tones) >= 0)) ? 2400 : 1500;
         addPausable(() => {
           const end = !practiceMode && wordIndex + 1 >= words.length;
-          if (end) setShowGameOverBeat(true); // 트레이닝(무한)은 스트림 끝에서 순환 → 종료화면 없음
-          else { enteredRef.current = []; completedRef.current = false; hintUsedRef.current = false; setWordIndex((i) => practiceMode ? (i + 1) % words.length : i + 1); setCurrentSyl(0); setEntered([]); setCompleted(false); setHasMistake(false); setGaugeOffsetMs(0); }
+          if (end) { setShowGameOverBeat(true); return; } // 트레이닝(무한)은 스트림 끝에서 순환 → 종료화면 없음
+          const nextIdx = practiceMode ? nextPracticeIndex(wordIndex) : wordIndex + 1;
+          if (nextIdx < 0) { finishReview(); return; }    // 오답 복습 — 마지막 단어까지 졸업시킴
+          enteredRef.current = []; completedRef.current = false; hintUsedRef.current = false; setWordIndex(nextIdx); setCurrentSyl(0); setEntered([]); setCompleted(false); setHasMistake(false); setGaugeOffsetMs(0);
         }, teachDwell);
       } else { haptic(8); playSfx('tap'); setCurrentSyl(ne.length); }
     } else {
@@ -1129,7 +1153,7 @@ export default function ToneGamePage() {
         setGaugeOffsetMs(elapsed);
       }
     }
-  }, [completed, paused, cdPhase, suddenIntro, examIntro, words, wordIndex, currentSyl, entered, hasMistake, combo, practiceMode, isPreview, studentToken, endlessMode, wrongBtn]);
+  }, [completed, paused, cdPhase, suddenIntro, examIntro, words, wordIndex, currentSyl, entered, hasMistake, combo, practiceMode, isPreview, studentToken, endlessMode, wrongBtn, nextPracticeIndex]);
 
   // 건너뛰기 — 못 풀겠는 단어를 하트 1개 소모하고 넘김. 정답 공개+발음(학습) · 콤보 끊김 · 0점 · 숙련도 미반영.
   // 하트는 런당 3개 예산(모든 모드 공통). 0개면 버튼 비활성 → 스킵만 불가, 게임은 계속. 연습 모드는 자체 '정답 보기'라 미제공.
@@ -1166,14 +1190,16 @@ export default function ToneGamePage() {
       // 트레이닝(무한 스트림)은 끝에서 순환. **일반·테마 모드는 건너뛰기를 대체한 기능이라 마지막 단어면 판이 끝나야 한다**
       //  (2026-08-04: 정답보기를 일반 모드에도 노출 → 순환하면 판이 영영 안 끝나는 버그. 건너뛰기와 동일한 종료 판정으로 통일)
       if (practiceMode) {
-        enteredRef.current = []; completedRef.current = false; hintUsedRef.current = false; setWordIndex((i) => (i + 1) % words.length); setCurrentSyl(0); setEntered([]); setCompleted(false); setHasMistake(false);
+        const nextIdx = nextPracticeIndex(wordIndex);
+        if (nextIdx < 0) { finishReview(); return; } // 오답 복습 — 남은 단어 없음(정답보기로는 졸업이 안 되니 사실상 안 오는 경로지만 안전망)
+        enteredRef.current = []; completedRef.current = false; hintUsedRef.current = false; setWordIndex(nextIdx); setCurrentSyl(0); setEntered([]); setCompleted(false); setHasMistake(false);
         return;
       }
       const end = !endlessMode && wordIndex + 1 >= words.length;
       if (end) setShowGameOverBeat(true); // 무한은 스트림이 길어 계속 진행
       else { enteredRef.current = []; completedRef.current = false; hintUsedRef.current = false; setWordIndex((i) => i + 1); setCurrentSyl(0); setEntered([]); setCompleted(false); setHasMistake(false); setGaugeOffsetMs(0); }
     }, 1500);
-  }, [completed, paused, cdPhase, practiceMode, endlessMode, words, wordIndex, isPreview, studentToken]);
+  }, [completed, paused, cdPhase, practiceMode, endlessMode, words, wordIndex, isPreview, studentToken, nextPracticeIndex]);
 
   useEffect(() => {
     if (screen !== 'game') return;
@@ -1266,6 +1292,11 @@ export default function ToneGamePage() {
   const avgMsForResult = answeredCount > 0 ? totalAnswerTime / answeredCount : 0;
   // practice 엔진의 화면 표기 — 모드선택에서 온 '트레이닝'과 오답 노트에서 온 '오답 복습'을 구분(엔진은 동일).
   const practiceLabel = practiceKind === 'review' ? '오답 복습' : '트레이닝';
+  // 오답 복습 진행 표기 — '졸업시킨 단어 / 이번 세션 대상'. 몇 번째 문제인지(무한 스트림이라 무의미)보다 끝이 보이는 지표.
+  //  wordStatsRef는 ref지만 단어가 넘어갈 때마다(wordIndex) 리렌더되므로 화면 값은 항상 최신.
+  const reviewProgressText = (practiceMode && practiceKind === 'review' && reviewTargetsRef.current.length > 0)
+    ? `${reviewTargetsRef.current.filter((hz) => noteLeft(wordStatsRef.current[hz]) === 0).length}/${reviewTargetsRef.current.length}`
+    : null;
   // 연음(반3성) 각인 — 3성+2성 단어면 완성 순간 두 글자 위에 마크 표시. 일반·테마·복습만(연습·무한 제외).
   const wordLianyin = (word && !practiceMode && !endlessMode) ? findLianyin(word.tones) : -1;
   const wordSandhi = (word && !practiceMode && !endlessMode) ? findToneSandhi(word.tones) : -1;
@@ -1482,14 +1513,16 @@ export default function ToneGamePage() {
           suggestPractice={(suggestPractice && !practiceMode && !endlessMode && !themeMode && (selectedDifficulty.tier || selectedDifficulty.id) === 'easy') || (isPreview && previewScreen === 'end' && qs('suggest') === '1')}
           coachReady={!showGameOverBeat && !rankUp && !modeUnlock && celebrationQueue.length === 0} /* 결과 코치+트레이닝유도 둘 다 이 게이트 뒤에서만 */
           practice={practiceMode} endless={endlessMode} endKind={endKind}
-          onRetry={practiceMode ? (practiceKind === 'review' ? () => startReview(reviewRows) : () => startTraining()) : endlessMode ? () => startEndless() : themeMode ? () => startTheme(selectedTheme) : () => startGame(selectedDifficulty)}
+          cleared={reviewCleared || (isPreview && previewScreen === 'end' && qs('cleared') === '1')} /* 오답 노트를 다 비운 판 — 신기록 대신 이 축하 */
+          /* 노트를 비웠으면 '한 번 더 복습'은 갈 곳이 없다(빈 목록 → 트레이닝 폴백) → 모드 선택으로 보낸다 */
+          onRetry={practiceMode ? (practiceKind === 'review' ? (reviewCleared ? () => goFromStart() : () => startReview(reviewRows)) : () => startTraining()) : endlessMode ? () => startEndless() : themeMode ? () => startTheme(selectedTheme) : () => startGame(selectedDifficulty)}
           onHome={() => tipTransitionTo('home')}
           onLogin={identity.kind === 'guest' ? () => setScreen('login') : null}
           continueLabel={continueLabel}
           homeOnly={onboardingRun || (isPreview && previewScreen === 'end' && qs('homeonly') === '1')}
           homeLabel={(nickNext || (isPreview && qs('nicknext') === '1')) ? '닉네임 설정하기' : '홈으로 가기'}
           homeHint={(nickNext || (isPreview && qs('nicknext') === '1')) ? '이제 이름만 정하면 돼요!' : '홈에서 이어서 해요!'}
-          retryLabel={practiceMode ? `한 번 더 ${practiceLabel}` : undefined} />
+          retryLabel={practiceMode ? (reviewCleared ? '문제 풀러 가기' : `한 번 더 ${practiceLabel}`) : undefined} />
       </FigmaScreen>
     );
   } else if (screen === 'examresult') {
@@ -1524,7 +1557,7 @@ export default function ToneGamePage() {
           <GameScreen title={gameTitle} word={word} entered={entered} currentSyl={currentSyl} completed={completed} timedOut={timedOut}
             wordIndex={wordIndex} wordsLen={words.length} wordTimeLimit={wordTimeLimit} gaugeOffsetMs={gaugeOffsetMs} lowTime={lowTime} paused={paused || !!cdPhase || suddenIntro || !!examIntro} endless={endlessMode || (isPreview && qs('endless') === '1')} lives={lives} showSudden={suddenIntro} runId={runId} recordToBeat={recordToBeat}
             combo={combo} comboFlash={comboFlash} floatScore={floatScore} score={score} coachText={coach.text}
-            onTone={handleTone} wrongBtn={wrongBtn} wrongShakeKey={wrongShakeKey} onPause={() => setPaused(true)} onEndTraining={endTraining} endLabel={`${practiceLabel} 종료`} playReveal={!cdPhase}
+            onTone={handleTone} wrongBtn={wrongBtn} wrongShakeKey={wrongShakeKey} onPause={() => setPaused(true)} onEndTraining={endTraining} endLabel={`${practiceLabel} 종료`} progressText={reviewProgressText} playReveal={!cdPhase}
             practice={practiceMode} endKind={endKind} listen={wordIsListen} audioOff={audioOff}
             draw={wordIsDraw} drawExpectedTone={word ? word.tones[currentSyl] : undefined} onDraw={handleTone} drawResetKey={`${runId}-${wordIndex}-${currentSyl}`} lianyinAt={wordLianyin} sandhiAt={wordSandhi}
             onReplay={() => word && speakWord(word)} onCantHear={() => { audioOffRef.current = true; setAudioOff(true); }}
