@@ -21,7 +21,7 @@ const { version } = JSON.parse(readFileSync(path.join(ROOT, 'pwa', 'package.json
 const OG = {
   title: '매일매일 성조키우기 — 중국어 4성 게임',
   description: '중국어 4성을 게임으로 빠르게 익히기. 하늘하늘중국어 성조 트레이닝.',
-  image: `${ORIGIN}/game-og-v2.png`, // 2026-08-09 타이틀 초원 씬으로 교체(구 game-og.png = 옛 이름 "성조 빨리찾기")
+  image: `${ORIGIN}/game-og-v3.png`, // 2026-08-09 새 로고(성조다락방) 타이틀 씬. 파일명을 바꿔야 스크래퍼 캐시가 갱신된다
   url: `${ORIGIN}/game/tone`,
 };
 

@@ -7,7 +7,6 @@ import { TG, TYPE, TOUCH_OPT, TONE_KEY_COLORS, FONT_TANTAN, RADIUS } from '../tg
 import { TONES } from '../../constants/toneGameWords.js';
 import { ToneMark } from '../tgWidgets.jsx';
 import { FigmaScreen, prefersReducedMotion } from './shared.jsx';
-import { play as playSfx } from '../tgSfx.js';
 import { Eyes, markSize } from './eyes.jsx';
 
 const S = 0.93; // 시안 실측 스케일(마크 63.1/68)
@@ -132,10 +131,6 @@ const groundAnchor = (z) => ({
 
 export function TitleScreen({ onStart }) {
   const reduced = prefersReducedMotion();
-  // 타이틀 징글 — 로고 팝(tg-logo-pop .7s)에 맞춰 한 번.
-  //  ⚠️ 첫 콜드 로드에선 아직 사용자 제스처가 없어 브라우저가 오디오를 막는다(정책상 불가피).
-  //  홈에서 되돌아오는 등 이미 오디오가 열린 상태에선 정상적으로 울린다.
-  useEffect(() => { const t = setTimeout(() => playSfx('title'), 180); return () => clearTimeout(t); }, []);
   return (
     <FigmaScreen>
       {/* 화면 전체 터치 시작 (뒤로가기 버튼 없음 — 나가기는 홈 메뉴에서) */}
@@ -222,10 +217,14 @@ export function TitleScreen({ onStart }) {
           ))
         )}
 
-        {/* 타이틀 — 레터링 로고 SVG + For 하늘하늘중국어 필 */}
-        <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', top: '12.6%', width: 290, display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 1000 }}>
-          <img src="/game/title-logo.svg" alt="매일매일 성조키우기" style={{ display: 'block', width: 290, height: 'auto', animation: 'tg-logo-pop .7s cubic-bezier(.34,1.56,.64,1) both' }} />
-          <div style={{ marginTop: 14, height: 22, padding: '0 12px', borderRadius: 43, background: '#2D1A0E', display: 'flex', alignItems: 'center' }}>
+        {/* 타이틀 — 시안 542:40(2026-08-09 로고 리디자인): 288×134 @y124.
+            레터링 '성조다락방'(288×59) + 부제 '매일매일 성조키우기'(244×26) + For 하늘하늘중국어 필.
+            간격은 시안대로 로고↔부제 10, 부제↔필 14(gap 10 + marginTop 4). */}
+        <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', top: '14.7%', width: 288, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, zIndex: 1000 }}>
+          <img src="/game/title-logo.svg" alt="성조다락방" style={{ display: 'block', width: 288, height: 'auto', animation: 'tg-logo-pop .7s cubic-bezier(.34,1.56,.64,1) both' }} />
+          {/* 부제는 로고보다 한 박자 늦게 — 두 장이 동시에 튀면 한 덩어리로 뭉개져 보인다 */}
+          <img src="/game/title-sub.svg" alt="매일매일 성조키우기" style={{ display: 'block', width: 244, height: 'auto', animation: 'tg-logo-pop .7s cubic-bezier(.34,1.56,.64,1) .09s both' }} />
+          <div style={{ marginTop: 4, height: 25, padding: '0 12px', borderRadius: 43, background: '#2D1A0E', display: 'flex', alignItems: 'center' }}>
             <span style={{ fontFamily: FONT_TANTAN, fontSize: 14, color: '#fff', lineHeight: 1 }}>For 하늘하늘중국어</span>
           </div>
         </div>

@@ -9,6 +9,7 @@ import { TONES } from '../../constants/toneGameWords.js';
 import { ToneMark } from '../tgWidgets.jsx';
 import { FigmaScreen, RevealRings, prefersReducedMotion } from './shared.jsx';
 import { Eyes, markSize } from './eyes.jsx';
+import { play as playSfx } from '../tgSfx.js';
 
 const BRAND_CUT_MS = 1100;
 // 캐릭터 스케일 — 시안 캐릭터 프레임 폭 30 ÷ 마크 기본 68. 경성(점)도 같은 배율로 18이 되어 시안과 맞는다.
@@ -39,6 +40,10 @@ export function SplashScreen() {
     const t = setTimeout(() => setPhase('game'), BRAND_CUT_MS);
     return () => clearTimeout(t);
   }, []);
+  // 징글 — 로고가 등장하는 게임 컷 시점에 맞춰 한 번(2026-08-09 사용자 요청, 이전엔 타이틀에서 울렸다).
+  //  ⚠️ 링크로 곧장 들어온 첫 로드에선 아직 사용자 제스처가 없어 브라우저가 막는다(정책상 불가피).
+  //   앱 안에서 이동해 들어온 경우(이미 오디오가 열림)엔 정상적으로 울린다.
+  useEffect(() => { if (phase === 'game') playSfx('title'); }, [phase]);
   return (
     <FigmaScreen>
       {phase === 'brand' ? (
@@ -55,7 +60,10 @@ export function SplashScreen() {
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
           }}>
             <ToneWave />
-            <img src="/game/title-logo.svg" alt="매일매일 성조키우기" width={290} style={{ height: 'auto', objectFit: 'contain', animation: 'tg-enter .5s cubic-bezier(.22,1,.36,1) both' }} />
+            {/* 로고 — 시안 755:2 Frame 128(2026-08-09 리디자인): 레터링 290×59 + 부제 244×26, 간격 10.
+                ※ 시안의 옛 로고(761:2 '로고-매일매일 성조키우기')는 hidden이라 쓰지 않는다. */}
+            <img src="/game/title-logo.svg" alt="성조다락방" width={290} style={{ height: 'auto', objectFit: 'contain', animation: 'tg-enter .5s cubic-bezier(.22,1,.36,1) both' }} />
+            <img src="/game/title-sub.svg" alt="매일매일 성조키우기" width={244} style={{ height: 'auto', objectFit: 'contain', animation: 'tg-enter .5s cubic-bezier(.22,1,.36,1) .09s both' }} />
           </div>
         </>
       )}
