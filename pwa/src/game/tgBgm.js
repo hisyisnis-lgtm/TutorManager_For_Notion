@@ -86,44 +86,79 @@ const BARS = [
   { gtr: [N.C3, N.E3, N.G3, N.D4], root: N.C3, fifth: N.G3, riff: [N.C4, N.G4, N.E4] },   // A'' — 해소(Cadd9: 레를 얹어 따뜻하게. 컬러 화음은 여기 한 곳만)
   { gtr: [N.A2, N.E3, N.A3, N.C4], root: N.A2, fifth: N.E3, riff: [N.C4, N.A4, N.E4] },
   { gtr: [N.F2, N.C3, N.F3, N.A3], root: N.F2, fifth: N.C3, riff: [N.C4, N.A4, N.F4] },
+  { gtr: [N.C3, N.E3, N.G3, N.C4], root: N.C3, fifth: N.G3, riff: [N.C4, N.G4, N.E4] },   // 16 C
+  // ── C 섹션(17~20): 브레이크다운 ── 드럼을 빼고 기타·베이스만. 긴 루프가 늘어지지 않으려면
+  //  '한 번 비우는' 구간이 필요하다. 상대단조(Am)에서 시작해 밝아지며 돌아온다.
+  { gtr: [N.A2, N.E3, N.A3, N.C4], root: N.A2, fifth: N.E3, riff: [N.C4, N.A4, N.E4] },   // 17 Am
+  { gtr: [N.F2, N.C3, N.F3, N.A3], root: N.F2, fifth: N.C3, riff: [N.C4, N.A4, N.F4] },   // 18 F
+  { gtr: [N.C3, N.E3, N.G3, N.C4], root: N.C3, fifth: N.G3, riff: [N.C4, N.G4, N.E4] },   // 19 C
+  { gtr: [N.G2, N.D3, N.G3, N.B3], root: N.G2, fifth: N.D3, riff: [N.D4, N.B4, N.G4] },   // 20 G  복귀 준비
+  // ── 최종 재현(21~24) ── 전부 복귀 후 종결
+  { gtr: [N.C3, N.E3, N.G3, N.D4], root: N.C3, fifth: N.G3, riff: [N.C4, N.G4, N.E4] },   // 21 Cadd9 복귀
+  { gtr: [N.A2, N.E3, N.A3, N.C4], root: N.A2, fifth: N.E3, riff: [N.C4, N.A4, N.E4] },   // 22 Am
+  { gtr: [N.F2, N.C3, N.F3, N.A3], root: N.F2, fifth: N.C3, riff: [N.C4, N.A4, N.F4] },   // 23 F
   { gtr: [N.C3, N.E3, N.G3, N.C4], root: N.C3, fifth: N.G3, riff: [N.C4, N.G4, N.E4],
     // 턴어라운드 — 뒷반절만 G7로 돌려 루프가 매번 '끝났다'로 닫히지 않고 1마디로 밀어준다.
-    //  (종지 자료: 완전종지는 최대 종결감 → 반복 루프엔 과하다. 딸림화음으로 '쉼표'를 만든다)
-    turn: { gtr: [N.G2, N.D3, N.F3, N.B3], root: N.G2, fifth: N.D3 } },
+    turn: { gtr: [N.G2, N.D3, N.F3, N.B3], root: N.G2, fifth: N.D3 } },                    // 24 C→G7
 ];
 // 리프 리듬(반박자 8스텝 기준) — **정박 2 + 오프비트 1**. 이 뼈대는 곡 내내 그대로 둔다.
 //  ⚠️ 당겨 치는 음을 여럿 두면 정신사나워진다(2026-08-09 지적). 밀어치는 자리는 딱 하나.
-// 리프 변형 — [스텝, 리프음 번호]. 같은 3음을 마디마다 **다르게 배치**한다.
-//  ⚠️ 16마디 내내 같은 자리에서 같은 모양이면 아무리 좋은 리프도 벽지가 된다(2026-08-10 지적).
-//  ★모든 배치는 짝수 스텝(=하이햇이 치는 자리)에만 둔다. 하이햇이 안 짚는 자리에 혼자 나오면
-//   앞서 지적받은 '뜬금없는 당김음'이 된다.
-const R_FULL   = [[0, 0], [4, 1], [6, 2]];            // 기본
-const R_SHORT  = [[0, 0], [4, 1]];                    // 뒤를 잘라 숨을 줌
-const R_LATE   = [[2, 0], [6, 1]];                    // 한 박 늦게 들어옴(변위)
-const R_EXT    = [[0, 0], [4, 1], [6, 2], [10, 1]];   // 뒤로 한 음 더
-const R_SPARSE = [[4, 0]];                            // 한 음만
-const R_REST   = [];                                  // 쉼 — 베이스·피아노가 자리를 지킨다
-// 16마디 배치. 긴장 구간(B)은 촘촘하게, 최대 긴장(12마디 G7)에선 **아예 쉬어** 해소를 준비한다.
-const RIFF_PLAN = [
-  R_FULL, R_REST,  R_FULL,  R_SHORT,   // A   — 2마디는 비우고 피아노가 답한다
-  R_FULL, R_REST,  R_LATE,  R_REST,    // A'  — 8마디(G7)는 기타를 빼 피아노만 남긴다
-  R_EXT,  R_FULL,  R_REST,  R_REST,    // B   — 12마디는 완전한 숨(드럼도 비는 구간)
-  R_FULL, R_REST,  R_EXT,   R_SPARSE,  // A'' — 마지막은 한 음만(턴어라운드)
+// ── 멜로디 = 4마디 **악구**(2026-08-10 재작성) ─────────────────────────
+//  ⚠️ 그 전엔 마디마다 '리프 3음'만 찍고 뒷 반절은 침묵이었다. 그래서 선율이 아니라 도장 16개였고
+//   "의미없이 끊긴다"는 지적이 나왔다. 악구 문서 진단 그대로:
+//   "멜로디가 미완성처럼 들리면 대개 악구 구조 문제" — 악구의 3요소 ①내적 응집 ②종지로 닫기
+//   ③호흡 중 **닫는 지점**이 통째로 없었다.
+//
+//  구조: 8마디 대악절 두 개. 앞악구(열고) + 뒷악구(같은 동기로 시작해 닫기 = parallel period).
+//   1~4  앞악구 — 동기 제시, 4마디 끝은 **열어둔다**(반종지)
+//   5~8  뒷악구 — 같은 시작, 8마디에서 **으뜸음으로 닫는다**
+//   9~12 B      — 대비 악구, 10마디에 정점(미5), 12마디는 숨
+//   13~16 재현  — 앞악구 회귀 + 종결
+//  ★배치는 전부 짝수 스텝(하이햇이 짚는 자리). 홀수에 홀로 두면 '뜬금없는 당김음'이 된다.
+//  ★마지막 음을 8스텝 이후에 둬서 **마디를 넘어 이어지게** 한다 — 이게 없으면 다시 도장이 된다.
+const PHRASE = [
+  // 앞악구(1~4): 열기
+  [[0, N.C4], [4, N.G4], [6, N.E4], [10, N.G4], [14, N.A4]],   // 1  C   동기 제시
+  [[0, N.C5], [4, N.A4], [8, N.E4], [12, N.C4]],                // 2  Am  정점 찍고 하강(응답)
+  [[0, N.A4], [4, N.F4], [6, N.A4], [10, N.C5], [14, N.A4]],    // 3  F   다시 상행
+  [[0, N.B4], [4, N.G4], [8, N.D4], [12, N.G4]],                // 4  G   열린 채 멈춤(반종지)
+  // 뒷악구(5~8): 같은 동기로 시작해 닫기
+  [[0, N.C4], [2, N.E4], [4, N.G4], [6, N.E4], [10, N.A4], [14, N.G4]],  // 5  C  **장식**(10번) — 지나가는 음을 끼우고 끝 두 음을 뒤집었다
+  [[0, N.B4], [4, N.A4], [8, N.E4], [12, N.G4]],                // 6  Am **순차진행**(2번) — 2마디를 한 음 아래로. 9도(시)로 열고 근음(라)에 착지
+  [[0, N.A4], [4, N.F4], [8, N.D4], [12, N.F4]],                // 7  Dm  어두워지며 하강
+  [[0, N.D4], [4, N.F4], [8, N.D4], [12, N.B4]],                // 8  G7  전부 G7 코드톤. 끝을 **이끔음(시)**로
+  //   ↑ 여기서 '도'로 닫으면 딸림7 위에 해결 안 된 4도가 남는다. 8마디는 닫는 자리가 아니라
+  //     B로 밀어주는 자리 — 열어두는 게 맞다(실제 종결은 16마디).
+  // B(9~12): 대비 악구
+  [[0, N.C5], [4, N.A4], [6, N.C5], [10, N.F4], [14, N.A4]],    // 9  F
+  [[0, N.B4], [4, N.E5], [8, N.B4], [12, N.Ab4]],               // 10 E7  정점(미5) + 긴장음(솔#)
+  [[0, N.A4], [4, N.C5], [6, N.A4], [10, N.E4], [14, N.C4]],    // 11 Am  해결하며 하강
+  [],                                                            // 12 G7  숨(드럼도 비는 구간)
+  // 재현(13~16)
+  [[0, N.C4], [4, N.G4], [12, N.E4]],                           // 13 C  **확대**(6번) — 같은 음을 절반 개수로 길게. 해소 지점이라 무겁게
+  [[0, N.E4], [4, N.C5], [8, N.A4], [12, N.E4]],                // 14 Am **반행**(3번) — 2마디의 하행을 뒤집어 위로 뻗었다 내려온다
+  [[0, N.A4], [4, N.F4], [8, N.G4], [12, N.E4]],                // 15 F
+  [[0, N.D4], [4, N.E4], [8, N.C4]],                            // 16 C   여백을 두고 C섹션으로
+  // C 섹션(17~20) — 브레이크다운. 성글게, 낮은 음역에서 조용히.
+  [[0, N.E4], [6, N.C4], [12, N.A4]],                           // 17 Am
+  [[0, N.F4], [6, N.A4], [12, N.C5]],                           // 18 F
+  [[0, N.G4], [4, N.E4], [8, N.C4], [12, N.G4]],                // 19 C
+  [[0, N.D4], [6, N.G4], [12, N.B4]],                           // 20 G  **확대**(6번) — 4마디를 성글게 뒤집어 상행. 복귀 직전의 들숨
+  // 최종 재현(21~24)
+  [[0, N.C5], [4, N.G4], [6, N.E4], [8, N.C4], [12, N.E4], [14, N.G4]],  // 21 C  **옥타브 전위 + 단편화**(7번) — 위에서 떨어져 동기 앞부분을 되풀이
+  [[0, N.E4], [4, N.A4], [8, N.C5], [12, N.A4]],                // 22 Am **반행**(3번) — 14마디의 하행을 뒤집어 상행으로
+  [[0, N.A4], [2, N.C5], [4, N.F4], [8, N.A4], [12, N.F4]],     // 23 F  **장식**(10번) — 15마디에 지나가는 음을 얹어 마지막을 조금 화려하게
+  [[0, N.D4], [4, N.E4], [8, N.C4]],                            // 24 C   으뜸음으로 닫고 여백
 ];
-// 피아노 '답' — **기타가 쉬는 마디에만** 놓는다. 둘이 겹치면 주고받기가 아니라 뭉침이다.
-//  전부 그 마디 화음의 코드톤. 뒷 반절(8·10·12)에 둬서 기타 리프와 시간대가 갈린다.
-const PIANO_ANS = {
-  1:  [[8, N.E4], [12, N.C5]],                 // Am — 상행으로 답
-  5:  [[8, N.C5], [10, N.A4], [12, N.E4]],     // Am — 하행
-  7:  [[8, N.D5], [12, N.F4]],                 // G7 — 7음(파)으로 긴장을 이어받음
-  10: [[8, N.A4], [12, N.C5]],                 // Am — 해결
-  13: [[8, N.E4], [10, N.C5], [12, N.A4]],     // Am
-  15: [[8, N.G4], [12, N.C5]],                 // C  — 종결
-};
+// 피아노 = **화음 반주**(2026-08-10 재정의).
+//  ⚠️ 원래는 기타가 쉬는 마디에서 '답'하는 역할이었는데, 멜로디를 악구로 바꾸며 기타가 전 마디를
+//   채우게 되자 같은 자리에서 부딪혔다(6마디·9군데). 주고받기가 아니라 뭉침이 된다.
+//   → 멜로디는 기타가 갖고, 피아노는 **화음을 얇게 받쳐주는 층**으로 되돌린다.
+const PIANO_STEPS = [2, 10];   // 1박a·3박a — 정박을 피해 들어가는 컴핑의 기본 자리
 const PUSH_STEP = 14;           // 묶음 끝 마디의 밀어주는 음. 킥·하이햇·베이스가 같이 친다.
 // 베이스 — 네 박 전부 정박. 바닥은 흔들지 않는다.
 const BASS_PAT = 'R ~ ~ ~  5 ~ ~ ~  R ~ ~ ~  5 ~ ~ ~'.trim().split(/\s+/);
-const FORM = BARS.length * BAR;                    // 256스텝(16마디) ≈ 37초
+const FORM = BARS.length * BAR;                    // 384스텝(24마디) ≈ 55초 (+ 앞에 인트로 2마디)
 
 // ─── 악기 샘플 ────────────────────────────────────────────────────────
 // 4반음 간격 샘플 → 가장 가까운 음을 골라 playbackRate로 시프트(최대 ±2반음).
@@ -170,7 +205,7 @@ function loadSamples(ctx) {
 }
 
 // 샘플 한 음 재생 — 가장 가까운 샘플을 골라 피치 시프트 + 볼륨/감쇠 포락선.
-function sample(ctx, dest, kind, midi, t, vol, dur) {
+function sample(ctx, dest, kind, midi, t, vol, dur, opt) {
   const bag = BUF[kind];
   const keys = Object.keys(SAMPLES[kind].notes).map(Number);
   const near = keys.reduce((a, b) => (Math.abs(b - midi) < Math.abs(a - midi) ? b : a));
@@ -183,22 +218,32 @@ function sample(ctx, dest, kind, midi, t, vol, dur) {
   let head = src;
   if (kind === 'guitar') {
     const lp = ctx.createBiquadFilter();
-    lp.type = 'lowpass'; lp.frequency.value = 2100; lp.Q.value = 0.4;
+    //  ★컷오프 4200Hz — 픽이 줄을 긁는 소리는 3~6kHz에 있다. 2100Hz로 자르면 알갱이가
+    //   통째로 사라져 뭉갠 소리가 된다. 롤에만 열어뒀더니 그 톤이 더 낫다고 해서
+    //   기타 전체 기본값으로 올렸다(2026-08-10). 따뜻함은 컷오프가 아니라 아래 260Hz 부스트가 만든다.
+    lp.type = 'lowpass'; lp.frequency.value = (opt && opt.cut) || 4200; lp.Q.value = 0.4;
     const warm = ctx.createBiquadFilter();
-    warm.type = 'peaking'; warm.frequency.value = 260; warm.Q.value = 0.8; warm.gain.value = 3.5;
+    //  컷오프를 2100→4200으로 열어 고역이 늘었으므로 중저역을 조금 더 올려 균형을 잡는다.
+    warm.type = 'peaking'; warm.frequency.value = 260; warm.Q.value = 0.8; warm.gain.value = 4.5;
     src.connect(lp).connect(warm);
     head = warm;
   }
   const a = ctx.createGain();
   const g = vol * BOOST[kind];
   // 어택 — 기타는 피크가 줄을 긁는 순간을 **뭉갠다**(30ms). 날카로움이 사라지고 부드럽게 울린다.
-  const atk = kind === 'guitar' ? 0.03 : kind === 'piano' ? 0.008 : 0.004;
+  //  ★어택 8ms — 30ms는 피크가 줄을 긁는 순간을 뭉개서 '뜯었다'가 아니라 '차올랐다'로 들린다.
+  //   롤(6ms)에서 그 알갱이가 살아난 게 더 낫다고 해서 기본값도 같은 계열로 내렸다(2026-08-10).
+  const atk = (opt && opt.atk) || (kind === 'guitar' ? 0.008 : kind === 'piano' ? 0.008 : 0.004);
   a.gain.setValueAtTime(0.0001, t);
   a.gain.exponentialRampToValueAtTime(g, t + atk);
   //  ★샘플의 자연 감쇠를 최대한 살리고 **끝에서만** 닫는다. 일찍 닫으면(0.6) 뜯은 소리가
   //   중간에 잘려 어색하다 — 실제 줄은 계속 울린다(2026-08-09).
-  a.gain.setValueAtTime(g, t + dur * 0.85);
-  a.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  //  ★릴리스 — dur는 '온전히 울리는 시간', 그 뒤 **긴 꼬리**로 잦아든다. dur에서 딱 닫으면
+  //   음이 매번 툭 끊긴다("의미없이 끊긴다", 2026-08-10). 실제 줄·건반은 스스로 잦아든다.
+  //   베이스만 꼬리를 짧게 — 길면 다음 근음과 겹쳐 저역이 탁해진다.
+  const rel = kind === 'bass' ? 0.28 : 0.95;
+  a.gain.setValueAtTime(g, t + dur);
+  a.gain.linearRampToValueAtTime(0.0001, t + dur + rel);
   head.connect(a);
   a.connect(dest);
   // 잔향 send — 기타를 넉넉히, 피아노는 살짝. 베이스는 보내지 않는다.
@@ -208,7 +253,7 @@ function sample(ctx, dest, kind, midi, t, vol, dur) {
     sg.gain.value = send;
     a.connect(sg).connect(wet);
   }
-  src.start(t); src.stop(t + dur + 0.05);
+  src.start(t); src.stop(t + dur + rel + 0.05);
   return true;
 }
 // 타악기 원샷 — 피치 시프트로 음색을 조금 바꾼다(rate>1 = 밝고 짧게).
@@ -394,7 +439,7 @@ let wantPlaying = false;
 let ducked = false;
 let duckReleaseT = null;
 let timerId = null;
-let stepIndex = 0;          // 곡 진행 위치 — 정지해도 보존해 '이어 듣기'
+let stepIndex = 0;          // 곡 진행 위치 — 0이면 인트로부터
 let nextStepTime = 0;
 let running = false;
 
@@ -443,7 +488,7 @@ function ensureCtx() {
 }
 
 // ── 연주 래퍼 — 샘플이 준비됐으면 샘플, 아니면 합성으로 폴백 ──
-const vGuitar = (ctx, d, midi, t, vol, dur) => { if (!sample(ctx, d, 'guitar', midi, t, vol, dur)) pluck(ctx, d, mtof(midi), t, vol, dur); };
+const vGuitar = (ctx, d, midi, t, vol, dur, opt) => { if (!sample(ctx, d, 'guitar', midi, t, vol, dur, opt)) pluck(ctx, d, mtof(midi), t, vol, dur); };
 const vPiano  = (ctx, d, midi, t, vol, dur) => { if (!sample(ctx, d, 'piano',  midi, t, vol, dur)) piano(ctx, d, mtof(midi), t, vol, dur); };
 const vBass   = (ctx, d, midi, t, vol, dur) => { if (!sample(ctx, d, 'bass',   midi, t, vol, dur)) bass(ctx, d, mtof(midi), t, vol, dur); };
 const vWood   = (ctx, d, t, vol) => { if (!percHit(ctx, d, 'woodblock', t, vol * 1.6)) woodblock(ctx, d, t, vol); };
@@ -457,34 +502,138 @@ function strumS(ctx, dest, notes, t, vol, dur, up = false) {
   });
 }
 
+// 롤 스트럼("다라라랑") — 줄을 **하나씩 들리게** 천천히 훑어 올린다.
+//  일반 스트럼(34ms×4줄 ≈ 100ms)은 화음처럼 뭉쳐 들린다. 롤은 간격을 벌리고 줄 수를 늘려
+//  '다-라-라-랑' 하고 굴러가는 소리를 만든다. 악구 첫머리·복귀 지점의 구두점으로만 쓴다.
+//  간격 58ms × 5칸 = 290ms = 정확히 16분음표 2칸. 앞꾸밈으로 치면 맨 윗줄이 강박에 딱 착지한다.
+const ROLL_MS = 0.058;
+//  롤 전용 음색 — 어택을 6ms로 세우고 컷오프를 4200Hz로 열어 픽 소리를 살린다.
+//  (평소 기타는 30ms/2100Hz의 따뜻한 톤 그대로 — 여기만 예외)
+const ROLL_TONE = { atk: 0.006, cut: 4200 };
+// 4줄 보이싱 위에 옥타브 위 두 줄을 얹어 기타 6줄로. 정렬해 낮은 줄→높은 줄 순서를 보장한다
+//  (E7처럼 3음이 반음 올라간 화음은 단순 append만 하면 순서가 뒤집힌다).
+const rollVoicing = (gtr) => [...gtr, gtr[1] + 12, gtr[2] + 12].sort((a, b) => a - b);
+function roll(ctx, dest, gtr, t, vol, dur) {
+  rollVoicing(gtr).forEach((m, k) => {
+    // 낮은 줄이 세고 위로 갈수록 여려진다 — 엄지로 훑어 내리는 실제 다운스트로크의 세기 분포.
+    vGuitar(ctx, dest, m, t + k * ROLL_MS, vol * (1 - k * 0.07), dur - k * ROLL_MS, ROLL_TONE);
+  });
+}
+
 // 4마디 묶음의 마지막 마디 = 필(fill).
+// ── 기타 오른손 주법(articulation) ──────────────────────────────────
+//  기타 관용어법 자료: "오른손 리듬(스트럼/피킹 패턴)이 코드 이름보다 스타일을 더 결정한다."
+//  단음 멜로디만 24마디를 끌면 단조롭다 → 마디마다 주법을 바꿔 한 사람이 연주하듯 다채롭게.
+//   MEL   단음 멜로디만
+//   ARP   멜로디 + 빈칸에 아르페지오(핑거피킹 — 엄지 저음, 손가락 윗현)
+//   STRUM 멜로디 + 다운/업 스트럼(악구 끝·전환에서)
+//   BLOCK 멜로디 + 코드를 한꺼번에(종지·강조 — 스트럼과 달리 시차 없음)
+//   ROLL  멜로디 + 6줄 롤 스트럼('다라라랑' — 악구 첫머리의 구두점)
+//  ROLL은 **직전 마디 14스텝이 비어 있는 마디**에만 둔다(앞꾸밈으로 치기 때문).
+//   9마디는 8마디의 미는 음이 이미 끌고 들어가므로 롤을 겹치지 않고 STRUM으로 둔다.
+const ART = [
+  'ROLL',  'MEL',   'ARP',   'STRUM',   //  1~4  A     — 루프 첫 마디를 롤로 크게 연다
+  'MEL',   'ARP',   'MEL',   'BLOCK',   //  5~8  A'    — 8마디 종지에 한 방
+  'STRUM', 'MEL',   'ARP',   'MEL',     //  9~12 B     — 진입은 8마디의 미는 음이 담당
+  'ROLL',  'MEL',   'ARP',   'MEL',     // 13~16 A''   — 해소를 롤로. 앞 마디가 '숨'이라 가장 잘 들린다
+  'ROLL',  'ARP',   'MEL',   'STRUM',   // 17~20 C     — 브레이크다운 진입
+  'ROLL',  'MEL',   'ARP',   'BLOCK',   // 21~24 재현  — 복귀를 롤로 알리고 코드로 닫는다
+];
+// 아르페지오가 들어갈 자리(16분 격자) — 멜로디가 없는 칸에만 놓는다.
+const ARP_STEPS = [2, 6, 10, 14];
+
+// ── 인트로(8마디) ─────────────────────────────────────────────────────
+//  루프에 곧장 떨어지지 않고 **층을 하나씩 쌓아** 문을 연다. 앞 4마디는 기타 혼자,
+//  5마디에서 베이스, 7마디에서 퍼커션이 합류한다. **킥은 인트로 내내 아낀다** —
+//  본편 1마디에서 킥이 처음 울려야 그 순간이 '시작'으로 들린다(비웠다 채우기).
+//  BGM이 끊겼다 다시 나올 때마다 여기부터 재생된다(2026-08-10 사용자 요청).
+const INTRO_BARS = 8;
+const INTRO_STEPS = INTRO_BARS * BAR;
+const INTRO = [
+  { gtr: [N.C3, N.E3, N.G3, N.C4], root: N.C3 },   // 1 C
+  { gtr: [N.A2, N.E3, N.A3, N.C4], root: N.A2 },   // 2 Am
+  { gtr: [N.F2, N.C3, N.F3, N.A3], root: N.F2 },   // 3 F
+  { gtr: [N.G2, N.D3, N.G3, N.B3], root: N.G2 },   // 4 G   — 앞 절반을 열어둔 채 끝낸다
+  { gtr: [N.C3, N.E3, N.G3, N.C4], root: N.C3 },   // 5 C   — 베이스 합류
+  { gtr: [N.A2, N.E3, N.A3, N.C4], root: N.A2 },   // 6 Am
+  { gtr: [N.F2, N.C3, N.F3, N.A3], root: N.F2 },   // 7 F   — 퍼커션 합류
+  { gtr: [N.G2, N.D3, N.F3, N.B3], root: N.G2 },   // 8 G7  — 본편 1마디(C)로 강하게 당긴다
+];
+//  5마디에서 본편 첫 마디 주제를 **미리 한 번** 들려준다 — 루프가 시작될 때 '아는 가락'이 된다.
+//  8마디는 상행(레-파-솔-시)으로 1마디 첫음(도)까지 밀어올려 도착지를 예고한다.
+const INTRO_PHRASE = [
+  [[0, N.C4], [6, N.E4], [10, N.G4]],
+  [[0, N.A4], [8, N.E4]],
+  [[0, N.C4], [4, N.A4], [10, N.F4]],
+  [[0, N.G4], [8, N.B4]],
+  [[0, N.C4], [4, N.G4], [6, N.E4], [10, N.G4], [14, N.A4]],
+  [[0, N.C5], [4, N.A4], [8, N.E4], [12, N.C4]],
+  [[0, N.A4], [4, N.F4], [8, N.C5], [12, N.A4]],
+  [[0, N.D4], [4, N.F4], [8, N.G4], [12, N.B4]],
+];
+
+function scheduleIntro(t0, idx) {
+  const ctx = actx;
+  const barIdx = Math.floor(idx / BAR);
+  const st = idx % BAR;
+  const t = (st % 2 === 1) ? t0 + STEP * SWING : t0;   // 본편과 같은 스윙
+  const bar = INTRO[barIdx];
+  const built = barIdx >= 4;                           // 뒷 4마디 = 층을 쌓는 구간
+  // 곡의 서명 제스처(다라라랑)로 문을 열고, 뒷 절반이 시작될 때 한 번 더.
+  if ((barIdx === 0 || barIdx === 4) && st === 0) roll(ctx, gain, bar.gtr, t, 0.11, BEAT * 5.0);
+  INTRO_PHRASE[barIdx].forEach(([sp, m], q) => {
+    if (sp !== st) return;
+    vGuitar(ctx, gain, m, t, (q === 0 ? 0.17 : 0.14) * (built ? 1 : 0.9), BEAT * 2.4);
+  });
+  // 아르페지오 — 기타 혼자인 앞 4마디가 허전하지 않게 빈칸을 굴린다.
+  if (ARP_STEPS.includes(st) && !INTRO_PHRASE[barIdx].some((n) => n[0] === st)) {
+    vGuitar(ctx, gain, bar.gtr[(ARP_STEPS.indexOf(st) + 1) % bar.gtr.length], t, 0.030, BEAT * 2.0);
+  }
+  // 베이스는 5마디부터 — 바닥이 늦게 들어와야 층이 쌓이는 게 들린다.
+  if (built && (st === 0 || st === 8)) vBass(ctx, gain, bar.root, t, 0.20, BEAT * 1.4);
+  // 퍼커션은 7마디부터. 킥은 넣지 않는다(본편 1마디 몫).
+  if (barIdx >= 6) {
+    if (st === 4 || st === 12) vWood(ctx, gain, t, 0.05);
+    if (st % 2 === 0 && st !== 14) hat(ctx, gain, t, (st % 4 === 0 ? 0.030 : 0.018));
+  }
+  // 인트로 끝 14스텝 = 본편 1마디로 넘기는 앞꾸밈 롤(ROLL 마디와 정확히 같은 방식).
+  if (barIdx === INTRO_BARS - 1 && st === 14) roll(ctx, gain, BARS[0].gtr, t, 0.105, BEAT * 4.4);
+}
+
 const isFill = (b) => b % 4 === 3;
 
 // 한 스텝 분량을 스케줄. t0는 '정박' 시각 — 16분 뒷자리면 스윙만큼 늦춰 연주한다.
 function scheduleStep(t0, idx) {
   const ctx = actx;
-  const i = idx % FORM;
+  if (idx < INTRO_STEPS) { scheduleIntro(t0, idx); return; }   // 앞 2마디는 인트로
+  const i = (idx - INTRO_STEPS) % FORM;
   const barIdx = Math.floor(i / BAR);
   const st = i % BAR;                                  // 0~15
   const t = (st % 2 === 1) ? t0 + STEP * SWING : t0;   // 16분 스윙
   const barDef = BARS[barIdx];
   //  turn이 있는 마디는 뒷반절(8스텝~)부터 화음이 바뀐다 — 턴어라운드용
   const bar = (barDef.turn && st >= 8) ? { ...barDef, ...barDef.turn } : barDef;
-  const sect = Math.floor(barIdx / 4);
   const fill = isFill(barIdx);
   const onBeat = st % 4 === 0;
   //  미는 자리는 A·A' 끝(4·8마디)에만. 12마디는 '숨' 구간이라 밀면 숨이 죽고,
   //  16마디는 곡을 닫는 자리라 밀면 끝맺음이 안 된다.
+  //  20마디(idx 19)에서 뺐다 — 같은 14스텝에 21마디 복귀를 알리는 앞꾸밈 롤이 들어간다.
+  //   미는 음과 롤은 둘 다 '다음 마디 예고'라 겹치면 지저분해진다.
   const push = st === PUSH_STEP && (barIdx === 3 || barIdx === 7);
   // ── 셈여림 ── B섹션(긴장 구간)은 조금 세게. 12마디(G7) 뒷반절은 드럼을 비워 숨을 만든다
   //  → 13마디에서 전부 복귀하며 해소된다. 비웠다 채우는 게 가장 확실한 긴장/해소다.
-  const dyn = sect === 2 ? 1.12 : 1;
-  const breath = barIdx === 11 && st >= 8;             // 해소 직전의 '숨'
+  //  ── B섹션 진입은 **2마디에 걸쳐 단계적으로**(전환 진단: density jump) ──
+  //   9마디=음역만 먼저 / 10마디=세기 도착(E7 정점) / 11마디=유지 / 12마디=숨
+  //  C섹션(17~20)은 브레이크다운이라 더 여리게, 21마디 복귀에서 제자리로.
+  const dyn = barIdx === 8 ? 1.04 : barIdx === 9 ? 1.12 : barIdx === 10 ? 1.10
+    : (barIdx >= 16 && barIdx <= 19) ? 0.82 : 1;
+  //  '숨' = 12마디 뒷반절(해소 직전) + **C섹션(17~20) 전체**는 드럼을 뺀 브레이크다운.
+  const breath = (barIdx === 11 && st >= 8) || (barIdx >= 16 && barIdx <= 19);
 
   // ── 바닥 ① 베이스: 네 박 정박. 곡의 중심. ──
   const bp = BASS_PAT[st];
-  if (bp !== '~') vBass(ctx, gain, bp === 'R' ? bar.root : bar.fifth, t, 0.22 * dyn, BEAT * 0.6);
-  if (push) vBass(ctx, gain, bar.root, t, 0.18, BEAT * 0.9);   // 미는 음 — 받쳐주는 층 ①
+  if (bp !== '~') vBass(ctx, gain, bp === 'R' ? bar.root : bar.fifth, t, 0.22 * dyn, BEAT * 1.1);
+  if (push) vBass(ctx, gain, bar.root, t, 0.18, BEAT * 1.2);   // 미는 음 — 받쳐주는 층 ①
   // 접근음 — 마디 끝에서 다음 마디 루트로 반음/온음 다가간다. 베이스가 정박에만 있으면
   //  바닥이 굳는다(그루브 자료: 정박 정렬 후 오프비트 움직임을 더할 것).
   //  하이햇이 쉬는 자리(14)라 베이스가 그 빈틈을 메워 이음새가 매끄러워진다.
@@ -493,7 +642,7 @@ function scheduleStep(t0, idx) {
     const nextRoot = nx.root;
     if (nextRoot !== bar.root) {
       const app = nextRoot + (nextRoot > bar.root ? -2 : 2);
-      vBass(ctx, gain, app, t, 0.12, BEAT * 0.45);
+      vBass(ctx, gain, app, t, 0.12, BEAT * 0.7);
     }
   }
 
@@ -513,32 +662,53 @@ function scheduleStep(t0, idx) {
   }
 
   // ── 포인트: 리프(기타) — 마디마다 다른 변형 ──
-  const plan = RIFF_PLAN[barIdx];
-  for (let q = 0; q < plan.length; q += 1) {
-    if (plan[q][0] !== st) continue;
-    const ri = plan[q][1];
-    // 앵커(0번 음)는 길고 세게 깔고, 도약(1)·착지(2)는 짧게 얹는다.
-    //  세 음이 같은 길이면 리듬이 밋밋해 기억에 안 남는다(music-composition 진단).
-    const anchor = ri === 0;
-    vGuitar(ctx, gain, bar.riff[ri], t, (anchor ? 0.17 : 0.145) * dyn, BEAT * (anchor ? 3.6 : 1.7));
+  const line = PHRASE[barIdx];
+  for (let q = 0; q < line.length; q += 1) {
+    if (line[q][0] !== st) continue;
+    // 마디 첫 음은 세게(악구의 시작), 마지막 음은 길게(마디를 넘어 다음으로 이어짐).
+    const head = q === 0;
+    const tail = q === line.length - 1;
+    vGuitar(ctx, gain, line[q][1], t, (head ? 0.17 : 0.14) * dyn, BEAT * (tail ? 3.2 : 2.2));
   }
   //  ⚠️ 미는 음을 0.5박짜리 토막으로 두면 마디 끝에서 '툭' 끊긴다(2026-08-10 지적).
   //   당김의 목적은 **다음 마디로 넘기는 것**이라 반드시 마디선을 넘어 울려야 한다.
-  if (push) vGuitar(ctx, gain, bar.riff[0], t, 0.15, BEAT * 2.4);
+  if (push) vGuitar(ctx, gain, bar.riff[0], t, 0.15, BEAT * 3.0);
 
-  // ── 기타 스트럼: 마디 첫박만 ──
-  // 스트럼 — 4마디 묶음의 첫 마디에만. 매 마디 치면 리프가 묻힌다.
-  //  편곡 자료: '한 파트는 리듬, 한 파트는 지속, 한 파트는 멜로디'. 지속층이 없어서
-  //  스트럼을 마디 전체로 늘려(4.6박) 잔향과 함께 배경을 채우게 한다.
-  if (st === 0 && barIdx % 4 === 0) strumS(ctx, gain, bar.gtr, t, 0.038, BEAT * 4.6);
-
-  // ── 피아노: **기타가 쉬는 마디에서만** 답한다(주고받기) ──
-  //  같은 마디에 둘 다 넣으면 주고받기가 아니라 뭉침이다.
-  const ans = PIANO_ANS[barIdx];
-  if (ans) {
-    for (let q = 0; q < ans.length; q += 1) {
-      if (ans[q][0] === st) vPiano(ctx, gain, ans[q][1], t, 0.13 * dyn, BEAT * 1.6);
+  // ── 기타 오른손 주법 — 마디마다 다르게(ART) ──
+  const art = ART[barIdx];
+  if (art === 'STRUM') {
+    // 다운(1박) + 업(3박반) — 자료: "강박은 다운, 뒷박은 업"
+    if (st === 0) strumS(ctx, gain, bar.gtr, t, 0.038 * dyn, BEAT * 4.6);
+    else if (st === 10) strumS(ctx, gain, bar.gtr, t, 0.026 * dyn, BEAT * 1.6, true);
+  } else if (art === 'ROLL') {
+    // 강박은 앞 마디에서 넘어온 롤이 이미 울리고 있다. 뒷박만 가벼운 업으로 받아 리듬 유지.
+    if (st === 10) strumS(ctx, gain, bar.gtr, t, 0.022 * dyn, BEAT * 1.4, true);
+  } else if (art === 'BLOCK') {
+    // 코드를 **한꺼번에** — 시차 0. 스트럼과 달리 '탁' 하고 한 덩어리로 들린다.
+    if (st === 0) bar.gtr.forEach((m) => vGuitar(ctx, gain, m, t, 0.036 * dyn, BEAT * 4.2));
+  } else if (art === 'ARP') {
+    // 아르페지오 — 멜로디가 비운 칸에 화음 음을 하나씩 굴린다(핑거피킹).
+    if (ARP_STEPS.includes(st) && !PHRASE[barIdx].some((n) => n[0] === st)) {
+      const v = bar.gtr[(ARP_STEPS.indexOf(st) + 1) % bar.gtr.length];
+      vGuitar(ctx, gain, v, t, 0.032 * dyn, BEAT * 2.0);
     }
+    if (st === 0) strumS(ctx, gain, bar.gtr, t, 0.022 * dyn, BEAT * 3.0);   // 밑에 얇게 한 번
+  }
+
+  // ── 앞꾸밈 롤 — 다음 마디가 ROLL이면 **이 마디 14스텝**부터 훑어 올린다 ──
+  //  강박(0스텝)에서 치면 킥·베이스·멜로디 첫음에 묻혀 롤로 안 들린다("다라라랑 느낌이 없다",
+  //  2026-08-10). 하이햇이 쉬는 14스텝은 비어 있고, 290ms 뒤 맨 윗줄이 다음 마디 강박에
+  //  정확히 착지한다 — 실제 기타리스트가 박 앞에서 훑기 시작하는 것과 같다.
+  if (st === 14) {
+    const nx = BARS[(barIdx + 1) % BARS.length];
+    if (ART[(barIdx + 1) % ART.length] === 'ROLL') roll(ctx, gain, nx.gtr, t, 0.105 * dyn, BEAT * 4.4);
+  }
+
+  // ── 피아노: 화음을 얇게 받친다. **멜로디가 있는 칸은 피한다** ──
+  //  같은 16분 자리에서 부딪히면 둘 다 흐려진다. 비는 칸에만 놓아 사이를 메운다.
+  if (PIANO_STEPS.includes(st) && !PHRASE[barIdx].some((n) => n[0] === st)) {
+    const top = bar.gtr.slice(2);                       // 화음 위 두 음(3도·옥타브 언저리)
+    vPiano(ctx, gain, top[Math.floor(idx / 8) % top.length], t, 0.05 * dyn, BEAT * 1.8);
   }
 }
 
@@ -569,6 +739,10 @@ const targetVol = () => (ducked ? MASTER * DUCK : MASTER);
 function startSeq() {
   if (running || !ensureCtx()) return;
   running = true;
+  //  ★멈췄다 다시 켤 때는 **언제나** 인트로부터(2026-08-10 사용자 요청).
+  //   여기(running 가드 안쪽)에 둬야 메뉴 화면끼리 이동할 때 startBgm이 다시 불려도
+  //   곡이 되감기지 않는다 — 실제로 정지했다 켜지는 경우에만 통과한다.
+  stepIndex = 0;
   nextStepTime = actx.currentTime + 0.05;
   tick();
 }
@@ -633,7 +807,7 @@ export function startBgm() {
 }
 
 // 배경음 정지 — 게임 진입·화면전환 등. 페이드아웃 뒤 스케줄러 정지.
-//  stepIndex는 그대로 둬서 다시 켜면 곡이 이어진다(처음부터 다시 시작하지 않음).
+//  다시 켜면 곡은 항상 인트로부터 시작한다(startSeq에서 되감음).
 export function stopBgm() {
   wantPlaying = false;
   rampTo(0, FADE_OUT);
