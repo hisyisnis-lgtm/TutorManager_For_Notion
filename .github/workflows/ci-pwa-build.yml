@@ -44,10 +44,12 @@ jobs:
         if: steps.npm-cache.outputs.cache-hit != 'true'
         run: |
           for i in 1 2 3; do
-            npm ci && break
+            npm ci && exit 0
             echo "npm ci 실패 (시도 $i/3), 10초 후 재시도..."
             sleep 10
           done
+          echo "::error::npm ci가 3회 모두 실패했습니다 (package-lock.json 동기화 확인 필요)"
+          exit 1
         working-directory: pwa
 
       - name: 아이콘 생성
