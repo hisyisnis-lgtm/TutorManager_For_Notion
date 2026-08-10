@@ -1,7 +1,7 @@
 // 게임 공용 모달 — 놀러가기(SNS)·복습 시작·게임방법·무한 안내·로그인 유도·[DEV]점수 디버그. 시작/홈 등 여러 화면에서 재사용.
 // (기존 StartScreen.jsx 내부 함수에서 추출)
 import { useState } from 'react';
-import { HandStars, Notebook, AltArrowRight, Play, Infinity, Devices, SquareAcademicCap, MedalStar } from '@solar-icons/react';
+import { HandStars, Notebook, AltArrowRight, Play, Infinity as InfinityIcon, Devices, SquareAcademicCap, MedalStar } from '@solar-icons/react';
 import { InstagramLogoIcon, YoutubeLogoIcon, QuestionMarkIcon } from '@phosphor-icons/react';
 import { TG, TYPE, SHADOW, TOUCH_OPT, loadBest, saveBest, RADIUS, SPACE } from '../tgTokens.js';
 import { GAMEKEY, loadEndlessBest, saveEndlessBest } from '../gameLogic.js';
@@ -45,7 +45,7 @@ export function HelpStartModal({ onStart, onClose }) {
 export function EndlessStartModal({ onStart, onClose }) {
   return (
     <ModalCard onClose={onClose}>
-      <ModalHead Icon={Infinity} badgeBg={ENDLESS_ORANGE} title="무한 모드" />
+      <ModalHead Icon={InfinityIcon} badgeBg={ENDLESS_ORANGE} title="무한 모드" />
       <ModalBody lines={['점점 빨라지는 문제를 계속 풀어요.', '한 번이라도 틀리면 끝!', '모르는 단어는 건너뛰기 패스로 넘기세요.']} />
       <KeycapCta label="게임 시작" Icon={Play} onClick={() => { onStart && onStart(); }} />
       <ModalTextButton onClick={onClose} />

@@ -1,9 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import {
   computeScore, getEndlessTimeLimit, UNLOCK_THRESHOLD, GAMEKEY,
-  diffBestScore, isDifficultyUnlocked, isEndlessUnlocked,
-  unlockReqText, unlockToastText, bestLabelForKey,
-  overallBestFromLocal, overallBestFromServer,
+  isEndlessUnlocked,
+  overallBestFromLocal,
   loadEndlessBest, saveEndlessBest, headlineBest, resolveEndOutcome,
   themeStars, STAGES, saveStageScore, isStageUnlocked, bossState, stageUnlockToastText,
   earnedRankFromTiers, migrateRankForBoss, isThemeUnlocked, themeBestScore, clearOrphanThemeBests,
@@ -58,29 +57,7 @@ describe('getEndlessTimeLimit — 무한모드 가속(클리어 램프 + 콤보)
   });
 });
 
-describe('잠금 사다리 — diffBestScore / isDifficultyUnlocked / isEndlessUnlocked', () => {
-  it('기록 없으면 점수 0', () => {
-    expect(diffBestScore(TOKEN, 'easy')).toBe(0);
-  });
-
-  it('초급은 항상 열려 있다', () => {
-    expect(isDifficultyUnlocked(TOKEN, 'easy')).toBe(true);
-  });
-
-  it('중급은 초급 1000점 미만이면 잠김, 이상이면 열림', () => {
-    saveBest(TOKEN, GAMEKEY.easy, { bestScore: UNLOCK_THRESHOLD - 1 });
-    expect(isDifficultyUnlocked(TOKEN, 'normal')).toBe(false);
-    saveBest(TOKEN, GAMEKEY.easy, { bestScore: UNLOCK_THRESHOLD });
-    expect(isDifficultyUnlocked(TOKEN, 'normal')).toBe(true);
-  });
-
-  it('고급은 중급 1000점 달성 시 열림 (초급과 무관)', () => {
-    saveBest(TOKEN, GAMEKEY.easy, { bestScore: 9999 });
-    expect(isDifficultyUnlocked(TOKEN, 'hard')).toBe(false); // 중급 기록 없음
-    saveBest(TOKEN, GAMEKEY.normal, { bestScore: UNLOCK_THRESHOLD });
-    expect(isDifficultyUnlocked(TOKEN, 'hard')).toBe(true);
-  });
-
+describe('무한 모드 해제 — 고수 마지막 스테이지 클리어', () => {
   it('무한은 고수 마지막 스테이지(고수5) 클리어 시 열림 — rank 무관(2026-07-22)', () => {
     expect(isEndlessUnlocked(TOKEN, 0)).toBe(false);
     expect(isEndlessUnlocked(TOKEN, 2)).toBe(false); // rank 높아도 스테이지 안 깼으면 잠김
@@ -89,10 +66,8 @@ describe('잠금 사다리 — diffBestScore / isDifficultyUnlocked / isEndlessU
     expect(isEndlessUnlocked(TOKEN, 0)).toBe(true); // rank 0이어도 고수5 깼으면 열림
   });
 
-  it('사다리는 한 칸씩만 — 초급만 깨도 고급/무한은 잠김', () => {
+  it('난이도 점수만 높아도 안 열린다 — 게이트는 스테이지 클리어다', () => {
     saveBest(TOKEN, GAMEKEY.easy, { bestScore: 5000 });
-    expect(isDifficultyUnlocked(TOKEN, 'normal')).toBe(true);
-    expect(isDifficultyUnlocked(TOKEN, 'hard')).toBe(false);
     expect(isEndlessUnlocked(TOKEN, 0)).toBe(false);
   });
 });
@@ -185,24 +160,7 @@ describe('승급시험 2개 + 배치고사(2026-07-22)', () => {
   });
 });
 
-describe('해제 안내 문구', () => {
-  it('unlockReqText / unlockToastText는 난이도별 조건을 안내', () => {
-    expect(unlockReqText('normal')).toContain('입문');
-    expect(unlockReqText('hard')).toContain('실전');
-    expect(unlockReqText('easy')).toBe('');
-    expect(unlockToastText('normal')).toContain('입문');
-    expect(unlockToastText('hard')).toContain('실전');
-  });
-});
-
 describe('최고점 라벨 / 통합 최고', () => {
-  it('bestLabelForKey는 gameKey를 난이도 라벨로', () => {
-    expect(bestLabelForKey('tone-easy')).toBe('입문');
-    expect(bestLabelForKey('tone-normal')).toBe('실전');
-    expect(bestLabelForKey('tone-hard')).toBe('고수');
-    expect(bestLabelForKey('unknown')).toBe('입문'); // 폴백
-  });
-
   it('overallBestFromLocal은 3난이도 중 최고 점수+라벨', () => {
     saveBest(TOKEN, GAMEKEY.easy, { bestScore: 800 });
     saveBest(TOKEN, GAMEKEY.normal, { bestScore: 1500 });
@@ -216,15 +174,6 @@ describe('최고점 라벨 / 통합 최고', () => {
     expect(overallBestFromLocal(TOKEN)).toBe(null);
   });
 
-  it('overallBestFromServer는 서버 배열에서 최고를 뽑고 avgSec→ms 변환', () => {
-    const top = overallBestFromServer([
-      { gameKey: 'tone-easy', bestScore: 500, bestAvgSec: 3 },
-      { gameKey: 'tone-hard', bestScore: 1800, bestMaxCombo: 7, bestAvgSec: 2 },
-    ]);
-    expect(top.bestScore).toBe(1800);
-    expect(top.label).toBe('고수');
-    expect(top.bestAvgMs).toBe(2000);
-  });
 });
 
 describe('headlineBest — 무한 우선', () => {

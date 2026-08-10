@@ -54,6 +54,17 @@ jobs:
         run: npm run generate-icons
         working-directory: pwa
 
+      # 게임 순수 로직(gameLogic·tgWordStats·streak·gameXp 등) 회귀 방어.
+      # 테스트는 예전부터 있었지만 CI가 빌드만 돌려서 한 번도 실행되지 않고 있었다(2026-08-10 검수).
+      - name: 단위 테스트
+        run: npm test
+        working-directory: pwa
+
+      # 미사용 import·죽은 분기 탐지. 경고는 통과시키고 에러(no-undef 등)만 막는다.
+      - name: 린트 (에러만)
+        run: npx eslint src/ --quiet
+        working-directory: pwa
+
       - name: 빌드 검증
         run: npm run build
         working-directory: pwa

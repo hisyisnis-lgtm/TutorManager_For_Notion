@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   recordWordResult, accuracy, avgMs, isMastered, needsReview, noteLeft,
-  buildReviewList, masteredCount, subsetForPool, mergeStats, buildRoundWords,
+  buildReviewList, masteredCount, mergeStats, buildRoundWords,
   MASTER_MIN_ATTEMPTS, MASTER_ACCURACY, MASTER_EXIT_ACCURACY, NOTE_TARGET,
 } from './tgWordStats.js';
 
@@ -238,19 +238,6 @@ describe('masteredCount', () => {
     const wordMap = { A: { hanzi: 'A' }, B: { hanzi: 'B' } };
     const stats = { A: [3, 3, 0, 0], B: [3, 1, 0, 0], Z: [9, 9, 0, 0] };
     expect(masteredCount(stats, wordMap)).toBe(1); // A만(Z는 맵에 없음)
-  });
-});
-
-describe('subsetForPool — 풀 단어 통계만 추림', () => {
-  it('풀에 있는 단어 통계만 반환', () => {
-    const stats = { 老师: [1, 1, 0, 0], 你好: [2, 2, 0, 0] };
-    const pool = [{ hanzi: '老师' }];
-    expect(subsetForPool(stats, pool)).toEqual({ 老师: [1, 1, 0, 0] });
-  });
-
-  it('빈 풀/널은 빈 객체', () => {
-    expect(subsetForPool({ a: [1, 0, 0, 0] }, [])).toEqual({});
-    expect(subsetForPool({ a: [1, 0, 0, 0] }, null)).toEqual({});
   });
 });
 

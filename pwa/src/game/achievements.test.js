@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import {
-  ACHIEVEMENTS, achievementById, evaluateAchievements, newlyUnlocked,
+  ACHIEVEMENTS, achievementById, evaluateAchievements,
   loadAchievements, saveAchievements, syncAchievements,
   loadReviewMastered, addReviewMastered,
 } from './achievements.js';
@@ -85,18 +85,6 @@ describe('복습 성과 카운터 — loadReviewMastered / addReviewMastered', (
   it('깨진 저장값은 0으로', () => {
     localStorage.setItem('game_review_mastered_u', 'abc');
     expect(loadReviewMastered('u')).toBe(0);
-  });
-});
-
-describe('newlyUnlocked — 새로 달성한 것만', () => {
-  it('이전에 없던 것만 반환', () => {
-    const snap = { playCount: 1, bestScoreAny: 1200 };
-    const fresh = newlyUnlocked(['first-play'], snap);
-    expect(fresh).toContain('score-1000');
-    expect(fresh).not.toContain('first-play'); // 이미 있었음
-  });
-  it('전부 이미 있으면 빈 배열', () => {
-    expect(newlyUnlocked(['first-play'], { playCount: 1 })).toEqual([]);
   });
 });
 

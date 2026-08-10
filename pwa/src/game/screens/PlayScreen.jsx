@@ -8,7 +8,7 @@ import { track } from '../gameAnalytics.js';
 import { PLAY_LINKS } from './gameModals.jsx';
 import { TgTabBar, TAB_BAR_H, Reveal } from './shared.jsx';
 
-export function PlayScreen({ tabNav }) {
+export function PlayScreen({ tabNav, achDot = false }) {
   const openLink = (href, channel) => { track('cta_play_link', { m: channel }); try { window.open(href, '_blank', 'noopener,noreferrer'); } catch { /* noop */ } };
   return (
     <div style={{ position: 'absolute', inset: 0, background: TG.BG, ...TOUCH_OPT }}>
@@ -50,7 +50,7 @@ export function PlayScreen({ tabNav }) {
         </Reveal>
       </div>
       </div>
-      <TgTabBar active="play" onNav={tabNav} />
+      <TgTabBar active="play" onNav={tabNav} dot={achDot ? "ach" : null} />
     </div>
   );
 }

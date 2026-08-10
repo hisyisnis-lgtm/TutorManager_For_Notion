@@ -191,6 +191,9 @@ const TONE_GAME_CSS = `
       @keyframes tg-shake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-6px)} 40%{transform:translateX(6px)} 60%{transform:translateX(-4px)} 80%{transform:translateX(4px)} }
       @keyframes tg-pulse { 0%,100%{opacity:.35} 50%{opacity:.9} }
       @keyframes tg-heartbeat { 0%,100%{transform:scale(1)} 28%{transform:scale(1.2)} 42%{transform:scale(1)} 58%{transform:scale(1.12)} 72%{transform:scale(1)} }
+      /* 탭바 레드닷 — 미확인 획득 알림. 점은 고정, 뒤에서 파문만 퍼진다(점이 튀면 탭바가 산만해진다).
+         2.2s로 느리게 반복 — 주목은 시키되 눈을 붙잡아 두지는 않는다. */
+      @keyframes tg-dot-ring { 0%,64%{transform:scale(.7);opacity:0} 74%{opacity:.55} 100%{transform:scale(2.5);opacity:0} }
       @keyframes tg-screenshake { 0%,100%{transform:translate(0,0)} 15%{transform:translate(-7px,2px)} 30%{transform:translate(6px,-2px)} 45%{transform:translate(-5px,1px)} 60%{transform:translate(4px,-1px)} 80%{transform:translate(-2px,0)} }
       @keyframes tg-punch { 0%{transform:scale(1)} 35%{transform:scale(var(--tg-punch-s,1.06))} 100%{transform:scale(1)} }
       /* 콤보 브레이크 — 콤보 칩이 기울며 떨어져 사라짐(상실 연출) + 가장자리 붉은 원샷 플래시 */
@@ -204,8 +207,12 @@ const TONE_GAME_CSS = `
       /* 착탄 임팩트 팝 — 이미 보이는 글자가 사라지지 않고 그 자리에서 튀어오름(발사체 착탄용, opacity 무변) */
       @keyframes tg-pop-impact { 0%{transform:scale(1)} 55%{transform:scale(1.24)} 100%{transform:scale(1)} }
       @keyframes tg-float { 0%{transform:translateY(0) scale(.9);opacity:0} 20%{opacity:1} 100%{transform:translateY(-28px) scale(1.05);opacity:0} }
-      /* 단발 등장(로고·카드 등) — tg-rise와 같은 결이되 오버슛 없이. blur만으로도 스톡 페이드업 감이 빠진다 */
-      @keyframes tg-enter { 0%{transform:translateY(4px);opacity:0;filter:blur(4px)} 100%{transform:translateY(0);opacity:1;filter:blur(0)} }
+      /* 모달·팝오버 등장 — blur 제거하고 스케일+페이드만 남긴 깔끔한 팝인(2026-08-10 사용자).
+         blur는 렌더 비용도 크고 글자가 한 번 뭉개졌다 잡히는 게 '느리게 뜨는' 인상을 준다. 오버슛도 없음. */
+      @keyframes tg-enter { from{opacity:0; transform:scale(.96)} to{opacity:1; transform:scale(1)} }
+      /* 모달 아이콘 IDLE — 모달이 떠 있는 동안 히어로 아이콘이 천천히 숨 쉰다(2026-08-10 사용자).
+         ★위아래 '둥둥'은 쓰지 않는다(사용자가 레드닷에서 거절한 결) — 크기 호흡만. 느리게(2.6s)·약하게(7%). */
+      @keyframes tg-idle { 0%,100%{transform:scale(1)} 50%{transform:scale(1.07)} }
       @keyframes tg-count { 0%{transform:scale(.4);opacity:0} 45%{transform:scale(1.06);opacity:1} 100%{transform:scale(1);opacity:1} }
       @keyframes tg-touch { 0%,100%{opacity:.5} 50%{opacity:1} }
       @keyframes tg-ripple { 0%{transform:translate(-50%,-50%) scale(.5);opacity:.4} 70%{opacity:.1} 100%{transform:translate(-50%,-50%) scale(2);opacity:0} }
@@ -255,17 +262,9 @@ const TONE_GAME_CSS = `
       .tg-caret::after { content:'|'; margin-left:1px; opacity:.8; animation: tg-blink .8s step-end infinite }
       @keyframes tg-blink { 50%{opacity:0} }
       @keyframes tg-timer { from{width:100%} to{width:0%} }
-      /* 요소 등장 — ★**빈도로 판단한다**(emil-design-eng 애니메이션 결정 프레임워크).
-         이 모션은 홈·결과·난이도·목록 등 **하루에 수십 번** 보는 자리에 붙는다 → "제거하거나 대폭 줄여라"에 해당.
-         축하용 타이밍(460ms·오버슛·blur 6)을 매번 보는 곳에 쓴 게 무겁고 촌스럽던 원인(2026-08-08 사용자).
-         → 오버슛 제거, blur 3까지만, **170ms**. 자주 보는 모션은 '느껴지지 않는' 게 정답이다.
-         delight는 드물게 보는 자리(비트·연출·축하)에만 남긴다. */
-      @keyframes tg-rise {
-        0%   { opacity:0; transform:translateY(4px); filter:blur(3px) }
-        100% { opacity:1; transform:translateY(0); filter:blur(0) }
-      }
-      /* 탭 화면 진입 — 화면 전체가 한 덩어리로 아주 살짝 떠오르며 페이드(요소 스태거보다 먼저 깔리는 바탕 모션) */
-      @keyframes tg-screen-in { from{opacity:0; transform:translateY(8px)} to{opacity:1; transform:translateY(0)} }
+      /* (구 tg-rise/tg-screen-in/tg-fade-in = 화면 등장 연출 — 2026-08-10 사용자 결정으로 전부 제거.
+         "순서대로 뜨니 로딩이 느린 것 같다". 포인트가 필요한 자리가 생기면 그때 개별로 되살린다.
+         모달 팝인(tg-enter)·게임 연출(비트·축하·콤보)은 성격이 다르므로 그대로 유지.) */
       @keyframes tg-toast { 0%{opacity:0; transform:translateY(8px)} 12%{opacity:1; transform:translateY(0)} 86%{opacity:1; transform:translateY(0)} 100%{opacity:0; transform:translateY(-4px)} }
       /* 타이틀 로고 효과 */
       @keyframes tg-logo-pop { 0%{opacity:0; transform:scale(.7)} 60%{opacity:1; transform:scale(1.05)} 100%{opacity:1; transform:scale(1)} }
@@ -295,15 +294,11 @@ const TONE_GAME_CSS = `
       @keyframes tg-sandhi-pop { 0%{transform:rotateX(82deg) scale(.82)} 55%{transform:rotateX(0) scale(1.22)} 78%{transform:scale(.96)} 100%{transform:scale(1)} }
       /* 등장 이징 — 초반에 빠르게 붙고 끝이 길게 안착(ease-out-expo 계열). 탭 화면·요소가 같은 곡선을 쓴다. */
       /* 이징은 강한 ease-out 하나로 통일 — 내장 easing은 약해서 의도가 안 읽히고, ease-in은 시작이 느려 굼떠 보인다 */
-      .tg-reveal{ animation: tg-rise .17s cubic-bezier(.23,1,.32,1) both }
-      .tg-screen{ animation: tg-screen-in .2s cubic-bezier(.23,1,.32,1) both }
-      /* sticky 요소용 — transform을 쓰면 position:sticky가 죽으므로 '페이드만' 하는 등장 */
-      @keyframes tg-fade-in { from{opacity:0} to{opacity:1} }
-      .tg-fade{ animation: tg-fade-in .34s ease both }
       .tg-toast{ animation: tg-toast 1.7s ease both }
-      @media (prefers-reduced-motion: reduce){ .tg-reveal, .tg-screen, .tg-fade{ animation: none !important } }
+      @media (prefers-reduced-motion: reduce){ .tg-enter, .tg-idle{ animation: none !important } }
       .tg-shake{ animation: tg-shake .42s ease }
-      .tg-enter{ animation: tg-enter .36s cubic-bezier(.22,1,.36,1) both }
+      .tg-enter{ animation: tg-enter .18s cubic-bezier(.23,1,.32,1) both }
+      .tg-idle{ display: flex; animation: tg-idle 2.6s ease-in-out infinite }
       /* 누를 땐 빠르게 쏙 들어가고(.09s), 뗄 땐 살짝 튕기며 부드럽게 복귀(back-out 스프링) */
       /* 누름 피드백 — 하루에 수백 번. 복귀가 280ms면 손을 뗀 뒤에도 버튼이 늘어져 굼떠 보인다 → 140ms(권장 100~160) */
       .tg-press{ transition: transform .14s cubic-bezier(.23,1,.32,1) }
@@ -332,6 +327,40 @@ function injectToneGameStyles() {
 injectToneGameStyles(); // import 시 1회 주입
 
 // 호환용 no-op — 기존 <ToneGameStyles /> 사용처(FigmaScreen·랩)는 그대로 두되 실제 주입은 위에서 1회만.
+// 스크롤 컨테이너 안의 `position: sticky` 블록이 **상단에 붙었는지**를 판정하는 공용 훅.
+//  업적(14)·오답 노트(13)가 같은 규칙을 쓴다 — 붙는 순간에만 배경·구분선·글자크기가 바뀐다.
+//
+//  ⚠️ 두 가지를 다 피해야 한다(둘 다 2026-08-10 사용자 지적):
+//   ① `scrollTop > 4` 같은 임의 임계 → 블록이 아직 제목 아래를 흘러가는 동안(업적 기준 약 120px)
+//      배경이 먼저 켜져 "스크롤 중에 배경이 생기는" 어색함.
+//   ② onScroll에서 좌표를 재는 방식 → 관성 스크롤에선 scroll 이벤트가 프레임마다 오지 않아
+//      배경이 한 박자 늦게 켜지고, 그 사이 행이 비쳐 **틈처럼** 보인다.
+//
+//  → 경계에 **센티넬(높이 0)** 을 두고 IntersectionObserver로 감시한다. 스크롤 이벤트 빈도와 무관하게
+//    경계를 넘는 순간 정확히 발화하므로 위 둘 다 생기지 않는다.
+//
+//  사용법 — 센티넬이 sticky 블록의 '자연 위치'에 정확히 놓이도록, 블록이 갖고 있던 음수 top 마진을
+//   센티넬로 옮긴다(레이아웃 총합은 그대로):
+//     const { scrollRef, sentinelRef, stuck } = useStickyHeader();
+//     <div ref={scrollRef}>
+//       …제목…
+//       <div ref={sentinelRef} aria-hidden style={{ height: 0, marginTop: -30 }} />
+//       <div style={{ position:'sticky', top:0, margin:'0 -24px 0' }}>…</div>
+export function useStickyHeader() {
+  const scrollRef = useRef(null);
+  const sentinelRef = useRef(null);
+  const [stuck, setStuck] = useState(false);
+  useEffect(() => {
+    const root = scrollRef.current, s = sentinelRef.current;
+    if (!root || !s || typeof IntersectionObserver === 'undefined') return undefined;
+    // 센티넬이 컨테이너 상단 밖으로 나가면 = 블록이 붙은 상태.
+    const io = new IntersectionObserver(([e]) => setStuck(!e.isIntersecting), { root, threshold: 0 });
+    io.observe(s);
+    return () => io.disconnect();
+  }, []);
+  return { scrollRef, sentinelRef, stuck };
+}
+
 export function ToneGameStyles() {
   return null;
 }
@@ -363,7 +392,7 @@ export function FigmaScreen({ children, bg = TG.BG, bgImage, enter = false }) {
           overflow hidden = 9:16 영역 마스킹 — 와이드 장식(타이틀 동산·홈 배경 등)이 레터박스로 새지 않게.
           ★컬럼(과 enter 래퍼)은 **화면 전체 높이** — 안쪽 fixed 모달이 이 박스를 기준으로 잡히므로 여기서 노치를 빼면 안 된다. */}
       <div style={{ position: 'absolute', top: 0, bottom: 0, left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: TG_COL_MAXW, overflow: 'hidden' }}>
-        {enter ? <div className="tg-screen" style={{ position: 'absolute', inset: 0 }}>{inner}</div> : inner}
+        {inner}
       </div>
     </div>
   );
@@ -469,18 +498,18 @@ export function RevealRings({ tone = 'dark', out = false }) {
 }
 
 // ── 순차 등장 래퍼 ─────────────────────────────────────
-// 바깥 div = 기존 위치/정렬(absolute·translateX 등) 그대로, 안쪽 div = 아래서 페이드업(tg-rise).
+// 바깥 div = 기존 위치/정렬(absolute·translateX 등) 그대로, 안쪽 div = 그 자리를 차지하던 블록.
 // → 정렬 transform과 등장 transform이 다른 노드라 충돌 없음. i 순서대로 시차(base+i*step ms).
 // play=false면 숨김 유지(opacity0) — 게임화면처럼 '특정 시점부터' 등장시킬 때 사용.
-// ★시차는 STAGGER_CAP까지만 늘린다 — 요소가 많은 화면에서 아래쪽이 하염없이 늦게 뜨는 '늘어짐' 방지(2026-08-06).
-const STAGGER_CAP = 5;
-export function Reveal({ i = 0, base = 20, step = 35, play = true, style, children }) {
+// 화면 등장 연출은 2026-08-10 사용자 결정으로 **전부 제거**했다(순서대로 뜨는 게 로딩 지연처럼 보임).
+//  포인트를 주고 싶은 자리가 생기면 그때 개별적으로 되살린다 — 전역 스태거로 되돌리지 말 것.
+// eslint-disable-next-line no-unused-vars -- i/base/step/play는 호출부(수십 곳) 유지를 위해 받기만 한다
+export function Reveal({ i, base, step, play, style, children }) {
+  // ★래퍼 2겹 구조는 그대로 둔다 — 바깥은 절대배치/정렬 transform, 안쪽은 그 자리를 차지하던 블록.
+  //  한 겹으로 줄이면 안쪽 높이가 부모로 전달돼 일부 화면(그리기 패드 등) 레이아웃이 바뀐다.
   return (
     <div style={style}>
-      <div className={play ? 'tg-reveal' : undefined}
-        style={play ? { animationDelay: `${base + Math.min(i, STAGGER_CAP) * step}ms` } : { opacity: 0 }}>
-        {children}
-      </div>
+      <div>{children}</div>
     </div>
   );
 }
@@ -582,7 +611,8 @@ export function ModalHead({ Icon, badgeBg, iconColor = '#fff', title }) {
   return (
     <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: SPACE.lg }}>
       <div style={{ width: 72, height: 72, borderRadius: RADIUS.xxl, background: badgeBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-        <Icon size={38} weight="Bold" color={iconColor} />
+        {/* IDLE 호흡 — 아이콘 컴포넌트가 className을 넘겨준다는 보장이 없어 span으로 감싼다 */}
+        <span className="tg-idle"><Icon size={38} weight="Bold" color={iconColor} /></span>
       </div>
       <span style={{ ...TYPE.head, fontSize: 24, lineHeight: '29px', color: TG.INK, textAlign: 'center' }}>{title}</span>
     </div>
@@ -702,11 +732,11 @@ function SandhiToneChip({ big = false }) {
 const CARD_ACT_ICON = '#637481', CARD_ACT_TEXT = '#7E8A94';
 const CARD_ACT_BTN = { height: 30, padding: '0 13px', borderRadius: 10, background: '#fff', border: '1px solid #E2E7EB', display: 'inline-flex', alignItems: 'center', gap: 6, ...TOUCH_OPT };
 
-export function WordCard({ word, entered, currentSyl, completed, timedOut, progressText, floatScore, hideProgress, listen = false, audioOff = false, onReplay, onCantHear, onHint, hintUsed = false, draw = false, lianyinAt = -1, practice = false, onSpeak, onReveal, hideMeaning = false, hidePinyin = false, sandhiAt = -1 }) {
+export function WordCard({ word, entered, currentSyl, completed, timedOut, progressText, floatScore, hideProgress, listen = false, audioOff = false, onReplay, onCantHear, draw = false, lianyinAt = -1, practice = false, onSpeak, onReveal, hideMeaning = false, hidePinyin = false, sandhiAt = -1 }) {
   const listening = listen && !audioOff && !completed && !timedOut; // 듣기 모드: 답하기 전엔 한자 가리고 소리 패널
   // hideMeaning/hidePinyin = 보조바퀴 토글(현재 컨텍스트) — 병음/뜻 숨김으로 '소리·성조 체득' 강화. ToneGamePage가 ctx별 값을 전달.
-  // 한자 모드 발음 힌트 — 답하기 전에만, 음소거 아닐 때만. 소리=정답이라 처음 쓰면 콤보가 끊긴다(hintUsed=이미 끊긴 상태면 무료).
-  const canHint = onHint && !listening && !completed && !timedOut && !audioOff;
+  // ※ 구 onHint('발음 힌트') 버튼은 제거 — 아래 액션 행이 onSpeak/onReveal을 항상 받아 이 분기가 렌더될 수 없었고,
+  //   그 바람에 '발음을 들으면 콤보가 끊긴다'는 규칙이 통째로 사라져 있었다. 페널티는 onSpeak(발음 듣기)이 물려받음.
   const n = word.tones.length;
   let hz, colW, gap, twoRow = false, perRow = n;
   if (n <= 4) { hz = 66; colW = 72; gap = 14; }
@@ -885,16 +915,6 @@ export function WordCard({ word, entered, currentSyl, completed, timedOut, progr
                 <span style={{ ...TYPE.labelSm, fontSize: 14, color: CARD_ACT_TEXT }}>정답보기</span>
               </button>
             </div>
-          ) : canHint ? (
-            <button onClick={onHint} className="tg-press" aria-label={hintUsed ? '발음 다시 듣기' : '발음 힌트 듣기 (콤보가 끊겨요)'} style={{
-              display: 'inline-flex', alignItems: 'center', gap: SPACE.sm, padding: '7px 13px', borderRadius: RADIUS.md,
-              background: '#fff', border: `1.5px solid ${hintUsed ? TG.BORDER : TG.CORAL_BG}`, cursor: 'pointer', ...TOUCH_OPT,
-            }}>
-              <VolumeLoud size={15} weight="Bold" color={hintUsed ? TG.SUB : TG.CORAL_DK} />
-              <span style={{ ...TYPE.labelSm, color: hintUsed ? TG.SUB : TG.INK }}>
-                {hintUsed ? '다시 듣기' : '발음 힌트'}
-              </span>
-            </button>
           ) : null}
         </div>
       )}
@@ -1362,7 +1382,8 @@ function HomeActiveIcon({ size = 40 }) {
 // 탭 전환 애니메이션 — 아이콘·라벨은 제자리, **빨간 키캡 배경만** 별도 레이어로 이전 탭 → 새 탭 슬라이드(사용자 요청).
 // 화면(탭바 인스턴스)이 통째로 바뀌므로 직전 탭은 모듈 변수로 기억(FLIP). Web Animations API라 keyframes 충돌 없음.
 let tgLastTab = null;
-export function TgTabBar({ active, onNav }) {
+// dot = 레드닷을 띄울 탭 key(예: 'ach') | null. 지금은 '업적'의 미확인 획득 알림 하나만 쓴다.
+export function TgTabBar({ active, onNav, dot = null }) {
   const barRef = useRef(null);
   const pillRef = useRef(null);
   useLayoutEffect(() => {
@@ -1436,9 +1457,26 @@ export function TgTabBar({ active, onNav }) {
               paddingTop: 10, paddingRight: 0, paddingBottom: 0, paddingLeft: 0,
               display: 'flex', flexDirection: 'column', alignItems: 'center', ...TOUCH_OPT,
             }}>
-            {on && key === 'home'
-              ? <HomeActiveIcon size={40} />
-              : <Icon size={40} weight="BoldDuotone" color={on ? '#fff' : HOME.TAB_INACTIVE} />}
+            {/* 아이콘 + 레드닷 — 닷은 **아이콘 우상단**에 얹는다(라벨이 아니라 아이콘 기준).
+                흰 링을 둘러 활성(빨간 키캡) 위에서도 점이 묻히지 않게 한다. */}
+            <span style={{ position: 'relative', display: 'flex' }}>
+              {on && key === 'home'
+                ? <HomeActiveIcon size={40} />
+                : <Icon size={40} weight="BoldDuotone" color={on ? '#fff' : HOME.TAB_INACTIVE} />}
+              {dot === key && (
+                <span aria-hidden="true" style={{ position: 'absolute', top: 1, right: 1, width: 10, height: 10 }}>
+                  {/* 파문 — 점 뒤에서 퍼졌다 사라짐. 모션 최소화 설정에선 생략 */}
+                  {!prefersReducedMotion() && (
+                    <span style={{
+                      position: 'absolute', inset: 0, borderRadius: '50%', background: TG.CORAL,
+                      animation: 'tg-dot-ring 2.2s ease-out infinite',
+                    }} />
+                  )}
+                  {/* 점 자체는 가만히 있는다 — 흰 테두리·튀는 모션 없이 파문만으로 주목시킨다(2026-08-10 사용자) */}
+                  <span style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: TG.CORAL }} />
+                </span>
+              )}
+            </span>
             <span style={{ ...TYPE.labelSm, fontWeight: 800, color: on ? '#fff' : HOME.TAB_INACTIVE, lineHeight: '14px' }}>{label}</span>
           </button>
         );

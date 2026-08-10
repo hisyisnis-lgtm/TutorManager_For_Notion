@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import {
-  getTimeLimitForCombo, getBestKey, loadBest, saveBest, serverToCache,
+  getTimeLimitForCombo, getBestKey, loadBest, saveBest,
   formatTime, pickCelebratePanda, shuffle, ASSETS,
 } from './tgTokens.js';
 
@@ -40,25 +40,6 @@ describe('getBestKey / loadBest / saveBest 캐시', () => {
   it('깨진 JSON은 null로 안전 처리', () => {
     localStorage.setItem(getBestKey('u', 'tone-easy'), '{not json');
     expect(loadBest('u', 'tone-easy')).toBe(null);
-  });
-});
-
-describe('serverToCache — 서버 응답 → 캐시 형태', () => {
-  it('avgSec를 ms로, 누락 필드는 0/기본값으로', () => {
-    const c = serverToCache({ bestScore: 500, bestMaxCombo: 4, bestAvgSec: 2.5, playCount: 7, lastPlayedAt: '2026-06-01T00:00:00Z' });
-    expect(c.bestScore).toBe(500);
-    expect(c.bestAvgMs).toBe(2500);
-    expect(c.playCount).toBe(7);
-  });
-
-  it('null이면 null', () => {
-    expect(serverToCache(null)).toBe(null);
-  });
-
-  it('빈 객체는 0으로 채운다', () => {
-    const c = serverToCache({});
-    expect(c.bestScore).toBe(0);
-    expect(c.bestAvgMs).toBe(0);
   });
 });
 

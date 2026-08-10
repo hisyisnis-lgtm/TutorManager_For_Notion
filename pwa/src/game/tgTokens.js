@@ -82,14 +82,6 @@ export const TONE_COLORS = {
   0: '#AAB2BD',
 };
 
-// 성조색 소프트 틴트 배경 (0.14 → 0.20: 물빠짐 해소, 2026-07-26 색감 리프레시)
-export const TONE_TINTS = {
-  1: 'rgba(255,77,109,0.20)',
-  2: 'rgba(255,159,64,0.20)',
-  3: 'rgba(54,201,141,0.20)',
-  4: 'rgba(77,141,255,0.20)',
-  0: 'rgba(170,178,189,0.20)',
-};
 // 성조 키 3단(위 밝음→기본→아래 두께 엣지) — 인게임 성조 버튼 키캡용 (2026-07-26 색감 리프레시 4차).
 // 경성은 흰 라벨 대비 위해 기본색 자체를 반 단계 어둡게 잡음(#AAB2BD 대신 #98A2B0 계열).
 export const TONE_KEY_COLORS = {
@@ -98,15 +90,6 @@ export const TONE_KEY_COLORS = {
   3: { light: '#5CD9A6', base: '#36C98D', dark: '#23A870' },
   4: { light: '#7AA9FF', base: '#4D8DFF', dark: '#3570DB' },
   0: { light: '#AEB8C4', base: '#98A2B0', dark: '#7E8894' },
-};
-
-// 성조버튼 테두리 (Figma: 각 성조색 0.3 알파)
-export const TONE_BORDERS = {
-  1: 'rgba(255,77,109,0.3)',
-  2: 'rgba(255,159,64,0.3)',
-  3: 'rgba(54,201,141,0.3)',
-  4: 'rgba(77,141,255,0.3)',
-  0: 'rgba(170,178,189,0.3)',
 };
 
 // 난이도별 강조색 (Figma get_design_context 정확값). { accent, tint(0.14), glow(0.16) }
@@ -298,14 +281,5 @@ export function loadBest(studentToken, gameKey) {
 export function saveBest(studentToken, gameKey, data) {
   try { localStorage.setItem(getBestKey(studentToken, gameKey), JSON.stringify(data)); } catch { /* noop */ }
 }
-// 서버 베스트 응답 → localStorage 캐시 형태(클라이언트) 변환 — 진입 시 로컬 복원(잠금 사다리·최고점 유지)에 사용
-export function serverToCache(serverBest) {
-  if (!serverBest) return null;
-  return {
-    bestScore: serverBest.bestScore || 0,
-    bestMaxCombo: serverBest.bestMaxCombo || 0,
-    bestAvgMs: (serverBest.bestAvgSec || 0) * 1000,
-    playCount: serverBest.playCount || 0,
-    updatedAt: serverBest.lastPlayedAt ? new Date(serverBest.lastPlayedAt).getTime() : Date.now(),
-  };
-}
+// (serverToCache 제거 — 학생 서버 베스트(GAME_BEST_DB) 복원 경로가 사라져 호출부가 없다, 2026-07-12.
+//  회원 동기화는 gameStore의 applyGameDataToLocal이 /game/me JSON을 통째로 병합한다.)

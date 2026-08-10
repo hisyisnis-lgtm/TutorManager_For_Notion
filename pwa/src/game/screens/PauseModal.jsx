@@ -34,7 +34,8 @@ export function PauseModal({ score, combo, crutchCtx, onResume, onRestart, onQui
       }}>
         {/* 아이콘 + 제목 (간격 10) */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: SPACE.lg }}>
-          <Pause size={50} weight="Bold" color={TG.CORAL_DK} />
+          {/* IDLE 호흡 — 모달이 떠 있는 동안 아이콘이 천천히 숨 쉰다(공용 .tg-idle) */}
+          <span className="tg-idle"><Pause size={50} weight="Bold" color={TG.CORAL_DK} /></span>
           {/* 라인하이트는 시안 텍스트 박스 그대로(29) — 기본 라인박스를 쓰면 카드가 8px 늘어난다 */}
           <span style={{ ...TYPE.head, fontSize: 24, lineHeight: '29px', color: TG.INK }}>잠깐 멈췄어요</span>
         </div>
@@ -61,25 +62,31 @@ export function PauseModal({ score, combo, crutchCtx, onResume, onRestart, onQui
           <MenuToggle Icon={TextField} label="병음" on={pinyinOn}
             onToggle={() => { const n = !pinyinOn; setPinyinOn(n); setPinyinHidden(crutchCtx, !n); }} />
         </div>
-        {/* 버튼 — 계속하기(주) + [홈으로 | 다시하기] */}
+        {/* 버튼 — 시안 461:46 실측: ①[다시하기 138 | gap10 | 계속하기 138] ②홈으로 286 풀폭. 행 간격 10, 높이 60.
+            ★주 액션(계속하기)이 **오른쪽** — 결과화면의 [다시하기 | 계속하기]와 같은 배치라 손이 같은 자리를 기억한다.
+             구 배치(계속하기 풀폭 위 + [홈으로|다시하기] 아래)는 시안과 순서·비중이 모두 달랐다. */}
         <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: SPACE.lg }}>
-          <button className="tg-press" onClick={onResume} style={{
-            ...KEYCAP, width: '100%', background: CTA_RED,
-            boxShadow: `0px 4px 18px rgba(43,39,48,0.07), inset 0 -4px 0 ${CTA_RED_EDGE}`,
-          }}>
-            <span style={{ ...TYPE.head, color: '#fff' }}>계속하기</span>
-            <Play size={18} weight="Bold" color="#fff" />
-          </button>
           <div style={{ display: 'flex', gap: SPACE.lg }}>
-            {[['홈으로', onQuit], ['다시하기', onRestart]].map(([label, fn]) => (
-              <button key={label} className="tg-press" onClick={fn} style={{
-                ...KEYCAP, flex: 1, minWidth: 0, background: '#fff',
-                boxShadow: `0px 4px 18px rgba(43,39,48,0.07), inset 0 -4px 0 ${SUB_BTN_EDGE}`,
-              }}>
-                <span style={{ ...TYPE.head, color: SUB_BTN_TEXT }}>{label}</span>
-              </button>
-            ))}
+            <button className="tg-press" onClick={onRestart} style={{
+              ...KEYCAP, flex: 1, minWidth: 0, background: '#fff',
+              boxShadow: `0px 4px 18px rgba(43,39,48,0.07), inset 0 -4px 0 ${SUB_BTN_EDGE}`,
+            }}>
+              <span style={{ ...TYPE.head, color: SUB_BTN_TEXT }}>다시하기</span>
+            </button>
+            <button className="tg-press" onClick={onResume} style={{
+              ...KEYCAP, flex: 1, minWidth: 0, background: CTA_RED,
+              boxShadow: `0px 4px 18px rgba(43,39,48,0.07), inset 0 -4px 0 ${CTA_RED_EDGE}`,
+            }}>
+              <span style={{ ...TYPE.head, color: '#fff' }}>계속하기</span>
+              <Play size={18} weight="Bold" color="#fff" />
+            </button>
           </div>
+          <button className="tg-press" onClick={onQuit} style={{
+            ...KEYCAP, width: '100%', background: '#fff',
+            boxShadow: `0px 4px 18px rgba(43,39,48,0.07), inset 0 -4px 0 ${SUB_BTN_EDGE}`,
+          }}>
+            <span style={{ ...TYPE.head, color: SUB_BTN_TEXT }}>홈으로</span>
+          </button>
         </div>
       </div>
     </div>

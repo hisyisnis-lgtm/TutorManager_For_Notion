@@ -62,10 +62,6 @@ export function initTts() {
   } catch { /* noop */ }
 }
 
-export function ttsAvailable() {
-  return typeof window !== 'undefined' && (!!window.speechSynthesis || typeof Audio !== 'undefined');
-}
-
 // zh 합성 가능 여부 — 중국어 보이스가 실제로 있어야 true(매번 재선택: 온라인 zh 음성이 늦게 로드되는 경우 대비).
 function canSynthZh() {
   if (typeof window === 'undefined' || !window.speechSynthesis) return false;

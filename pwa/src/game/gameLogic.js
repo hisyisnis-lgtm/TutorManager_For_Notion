@@ -5,20 +5,12 @@ import { loadBest, saveBest, getTimeLimitForCombo, getBestKey } from './tgTokens
 import { DIFFICULTIES, THEMES, ROUND_LENGTH } from '../constants/toneGameWords.js';
 
 // 통합 최고점수 — 3난이도 기록 중 최고(+ 그 난이도 라벨). 타이틀 카드는 '내 최고 실력'을 보여줌.
-export function bestLabelForKey(gameKey) { const d = DIFFICULTIES.find((x) => x.gameKey === gameKey); return d ? d.label : (DIFFICULTIES[0]?.label || ''); }
+// (overallBestFromServer·bestLabelForKey 제거 — 학생 서버 베스트(GAME_BEST_DB) 경로가 사라져 호출부가 없다, 2026-07-12)
 export function overallBestFromLocal(token) {
   let top = null;
   for (const d of DIFFICULTIES) {
     const b = loadBest(token, d.gameKey);
     if (b && (b.bestScore || 0) > 0 && (!top || b.bestScore > top.bestScore)) top = { ...b, label: d.label };
-  }
-  return top;
-}
-export function overallBestFromServer(bests) {
-  let top = null;
-  for (const b of (bests || [])) {
-    const sc = b.bestScore || 0;
-    if (sc > 0 && (!top || sc > top.bestScore)) top = { bestScore: sc, bestMaxCombo: b.bestMaxCombo || 0, bestAvgMs: (b.bestAvgSec || 0) * 1000, playCount: b.playCount || 0, label: bestLabelForKey(b.gameKey) };
   }
   return top;
 }
@@ -28,17 +20,9 @@ export function overallBestFromServer(bests) {
 // 새 난이도는 toneGameWords.js DIFFICULTIES에 항목만 추가하면 잠금·문구·업적이 자동으로 따라온다(하드코딩 금지).
 export const UNLOCK_THRESHOLD = 1000;
 export const GAMEKEY = Object.fromEntries(DIFFICULTIES.map((d) => [d.id, d.gameKey]));
-export const ENDLESS_BEST_KEY = 'tone-endless'; // localStorage 캐시 키(헤드라인 최고). 서버 동기화는 meta.eb.
-// 서버 meta 필드 규약(매직 스트링 단일화) — eb=무한 최고점(마지막 난이도 행에 얹음), w=단어 숙련도 부분집합.
-export const META_ENDLESS_BEST = 'eb';
-export const META_WORD_STATS = 'w';
-export function diffBestScore(token, diffId) { const b = loadBest(token, GAMEKEY[diffId]); return b ? (b.bestScore || 0) : 0; }
-export function isDifficultyUnlocked(token, diffId) {
-  const idx = DIFFICULTIES.findIndex((d) => d.id === diffId);
-  if (idx < 0) return false;
-  if (idx === 0) return true;
-  return diffBestScore(token, DIFFICULTIES[idx - 1].id) >= UNLOCK_THRESHOLD;
-}
+export const ENDLESS_BEST_KEY = 'tone-endless'; // localStorage 캐시 키(헤드라인 최고). 회원 동기화는 gameStore의 best 맵.
+// (META_ENDLESS_BEST·META_WORD_STATS 제거 — 난이도별 meta 동기화 경로가 /game/me JSON 통째 동기화로 대체되며 참조가 사라짐)
+// (diffBestScore·isDifficultyUnlocked 제거 — 난이도 단위 잠금은 스테이지 사다리(isStageUnlocked)로 대체됨, 2026-07-16)
 // 무한 모드 해제 = 마지막 급(고수)의 '마지막 스테이지'를 실제로 클리어(별 1개↑) — rank/배치고사 무관(2026-07-22 사용자 결정).
 //  승급시험은 급 사이(입문→실전, 실전→고수)에만 있고, 고수 위엔 등급이 없으니 무한은 '고수를 끝까지 깬' 보상.
 //  rank 인자는 호출부 시그니처 호환용(현재 미사용).
@@ -47,18 +31,7 @@ export function isEndlessUnlocked(token, rank = 0) { // eslint-disable-line no-u
   const last = STAGES.find((s) => s.tier === hardTierId && s.bandIndex === STAGES_PER_TIER - 1);
   return !!last && stageStars(token, last) >= 1;
 }
-function prevDiffLabel(diffId) {
-  const idx = DIFFICULTIES.findIndex((d) => d.id === diffId);
-  return idx > 0 ? DIFFICULTIES[idx - 1].label : null;
-}
-export function unlockReqText(diffId) {
-  const prev = prevDiffLabel(diffId);
-  return prev ? `${prev} ${UNLOCK_THRESHOLD.toLocaleString()}점 달성 시 해제` : '';
-}
-export function unlockToastText(diffId) {
-  const prev = prevDiffLabel(diffId);
-  return prev ? `${prev} ${UNLOCK_THRESHOLD.toLocaleString()}점을 달성하면 열려요` : '';
-}
+// (unlockReqText·unlockToastText 제거 — 난이도 단위 해제 문구는 스테이지용 stageUnlockToastText로 대체됨)
 // 무한 모드 해제 연출(마지막 난이도 1000점 돌파 시) — 난이도별 연출은 DIFFICULTIES[].unlockReveal(데이터)이 담당.
 // fill/edge = 모드선택 화면 오브와 같은 색(연출에서 그 오브가 열리는 것처럼 보이게). desc는 시안에서 폐기.
 // iconStroke = 덧획(Solar Infinity는 획이 얇음). SVG 뷰박스(24) 기준값 — 연출 아이콘은 53px이라
@@ -105,9 +78,6 @@ export function stageStarFlags(token, stage) {
   const best = stageScoreOf(token, stage.id);
   return stageStarScores(stage.timeMultiplier).map((s) => best >= s);
 }
-export function tierTotalStars(token, tierId) {
-  return STAGES.filter((s) => s.tier === tierId).reduce((sum, s) => sum + stageStars(token, s), 0);
-}
 // 급 클리어 진행 — 별 1개 이상인 스테이지 수 / 5
 export function tierClearedCount(token, tierId) {
   return STAGES.filter((s) => s.tier === tierId).filter((s) => stageStars(token, s) >= 1).length;
@@ -132,15 +102,13 @@ export const BOSSES = DIFFICULTIES.slice(0, -1).map((d, i) => ({
   id: `${d.id}-boss`, label: `${DIFFICULTIES[i + 1].label} 승급시험`,
   gameKey: d.gameKey, timeMultiplier: d.timeMultiplier,
 }));
-export function bossOfTier(tierId) { return BOSSES.find((b) => b.tier === tierId) || null; }
-export function bossTierIdx(tierId) { return DIFFICULTIES.findIndex((d) => d.id === tierId); }
 // 보스 상태: 'beaten'(이미 통과) | 'ready'(응시 가능).
 // 승급시험 상시개방(2026-07-23 사용자 정의): 난이도 사다리에서 각 급 승급시험을 스테이지 클리어·순서 무관하게 언제든 응시.
 //  이미 통과한 급만 'beaten', 나머지는 항상 'ready'. (통과 시 rank=max(rank,tierIdx+1)로 그 급까지 해제 — 테스트 아웃.)
 export function bossState(token, tierIdx, rank = 0) { // eslint-disable-line no-unused-vars
   return rank > tierIdx ? 'beaten' : 'ready';
 }
-export function isBossUnlocked(token, tierIdx, rank = 0) { return bossState(token, tierIdx, rank) === 'ready'; }
+// (isBossUnlocked 제거 — 호출부는 bossState를 직접 본다)
 
 // ── 보스 사다리 마이그레이션(2026-07-19) ──
 // 기존 유저가 구 스테이지 시스템에서 (isTierCleared로) 이미 연 급을 보스 rank로 1회 승계 — 개편 전 진행 손실 방지.

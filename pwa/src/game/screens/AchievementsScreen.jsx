@@ -2,7 +2,6 @@
 //  구 구성(헤더바 + 진행 링 배지 + 얇은 구분선 리스트)에서 오답 노트와 같은 문법으로 통일:
 //  제목 → 업적 진행도(라벨+바) → 카드 리스트. 스크롤하면 진행도만 상단에 고정된다.
 //  내부 수치는 전부 시안 절대값(라인하이트 고정) — flex 중앙정렬에 맡기면 라인박스가 여백을 먹는다.
-import { useState } from 'react';
 import {
   Cup, Flame, Fire, Rocket, Crown, Infinity as InfinityIcon, Refresh,
   Flag, Bookmark, Book, CalendarMark, CalendarDate, Calendar, Soundwave,
@@ -10,7 +9,7 @@ import {
 } from '@solar-icons/react';
 import { TG, TYPE, FONT_NUM, TOUCH_OPT, SPACE } from '../tgTokens.js';
 import { ACHIEVEMENTS } from '../achievements.js';
-import { Reveal, TgTabBar, TAB_BAR_H } from './shared.jsx';
+import { Reveal, TgTabBar, TAB_BAR_H, useStickyHeader } from './shared.jsx';
 
 // 업적 icon 문자열 → Solar 컴포넌트 (achievements.js의 icon 필드와 일치)
 const ACH_ICONS = {
@@ -96,10 +95,11 @@ function AchRow({ ach, earned, snapshot, onToast }) {
   );
 }
 
-export function AchievementsScreen({ earned, snapshot, onToast, tabNav }) {
+export function AchievementsScreen({ earned, snapshot, onToast, tabNav, achDot = false }) {
   // 스크롤 상태(시안 14 — 스크롤): 제목이 밀려 올라가고 '업적 진행도'만 상단에 고정 — 흰 블록 110 + 하단 2px 구분선.
   //  sticky top:0 + paddingTop 50 → 고정 시 라벨 y50 · 바 y78 · 블록 110(시안과 동일).
-  const [stuck, setStuck] = useState(false);
+  //  ★고정 전환 판정은 오답 노트와 같은 공용 훅(useStickyHeader) — 블록이 실제로 상단에 붙는 순간에만 바뀐다.
+  const { scrollRef, sentinelRef, stuck } = useStickyHeader();
   const earnedSet = new Set(earned || []);
   const total = ACHIEVEMENTS.length;
   const gotN = ACHIEVEMENTS.filter((a) => {
@@ -110,7 +110,7 @@ export function AchievementsScreen({ earned, snapshot, onToast, tabNav }) {
   const pct = Math.round((gotN / (total || 1)) * 100);
   return (
     <>
-      <div className="tg-noscroll" onScroll={(e) => { const s = e.currentTarget.scrollTop > 4; setStuck((prev) => (prev === s ? prev : s)); }} style={{
+      <div className="tg-noscroll" ref={scrollRef} style={{
         scrollbarWidth: 'none', // 데스크톱 스크롤바가 폭을 먹어 342 컬럼이 좁아지지 않게(모바일은 원래 없음)
         position: 'absolute', left: 0, right: 0, top: 0, bottom: `calc(${TAB_BAR_H}px + env(safe-area-inset-bottom))`,
         overflowY: 'auto', WebkitOverflowScrolling: 'touch', padding: '0 24px', zIndex: 2,
@@ -121,10 +121,14 @@ export function AchievementsScreen({ earned, snapshot, onToast, tabNav }) {
             업적을 확인하고<br />달성해봐요!
           </span>
         </Reveal>
+        {/* ★고정 경계 센티넬 — 블록이 갖고 있던 -30 top 마진을 여기로 옮겼다(레이아웃 총합 동일).
+            이 지점이 컨테이너 상단을 넘는 순간 = 블록이 붙는 순간. IntersectionObserver가 정확히 그때 발화한다. */}
+        <div ref={sentinelRef} aria-hidden="true" style={{ height: 0, marginTop: -30 }} />
         {/* 업적 진행도 — 평소 y122, 스크롤하면 상단 고정. ★sticky는 Reveal(transform) 안에서 죽는다 → 페이드만(tg-fade) */}
-        <div className="tg-fade" style={{
-          position: 'sticky', top: 0, zIndex: 3, margin: '-30px -24px 0', padding: '50px 24px 18px', animationDelay: '85ms',
-          background: stuck ? '#fff' : 'transparent', boxShadow: stuck ? `inset 0 -2px 0 ${DIVIDER}` : 'none', transition: 'background .15s ease',
+        <div style={{
+          position: 'sticky', top: 0, zIndex: 3, margin: '0 -24px 0', padding: '50px 24px 18px',
+          // ★배경엔 transition을 걸지 않는다 — 페이드 도중 반투명 구간에서 뒤 행이 비쳐 '틈'으로 보인다.
+          background: stuck ? '#fff' : 'transparent', boxShadow: stuck ? `inset 0 -2px 0 ${DIVIDER}` : 'none',
         }}>
           {/* 시안: 평소 16 Medium → 고정되면 24 Bold(제목 역할을 물려받음). 라인박스는 18로 고정이라 바 위치·블록 높이는 그대로 */}
           <span style={{
@@ -147,7 +151,7 @@ export function AchievementsScreen({ earned, snapshot, onToast, tabNav }) {
           ))}
         </div>
       </div>
-      <TgTabBar active="ach" onNav={tabNav} />
+      <TgTabBar active="ach" onNav={tabNav} dot={achDot ? "ach" : null} />
     </>
   );
 }

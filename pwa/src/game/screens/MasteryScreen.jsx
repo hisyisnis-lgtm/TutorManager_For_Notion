@@ -2,13 +2,12 @@
 //  구 "내 등급" 대시보드(등급 엠블럼·Lv 게이지·코치·성조 레이더·마스터 배지)는 시안에서 전부 빠졌다 —
 //  등급은 프로필 모달, 레벨 게이지는 홈 HUD에 이미 있어 정보 손실 없음. 이 화면은 **틀린 단어 → 바로 복습**만 한다.
 //  내부 수치는 전부 시안 절대값(라인하이트 고정) — flex 중앙정렬에 맡기면 라인박스가 여백을 먹는다.
-import { useState } from 'react';
 import { VolumeLoud, Play } from '@solar-icons/react';
 import { TG, FONT_HANZI, FONT_PINYIN, FONT_NUM, TOUCH_OPT, TYPE, SPACE } from '../tgTokens.js';
 import { NOTE_TARGET } from '../tgWordStats.js';
 import { speakWord } from '../tgTts.js';
 import { play as playSfx } from '../tgSfx.js';
-import { Reveal, TgTabBar, TAB_BAR_H } from './shared.jsx';
+import { Reveal, TgTabBar, TAB_BAR_H, useStickyHeader } from './shared.jsx';
 
 // 시안 13 실측 — 토큰에 없는 원오프 색만 상수로
 const TITLE_INK = '#272622';    // 제목
@@ -76,14 +75,14 @@ function PrimaryCta({ label, onClick }) {
   );
 }
 
-export function MasteryScreen({ rows, onReview, onPlay, tabNav }) {
+export function MasteryScreen({ rows, onReview, onPlay, tabNav, achDot = false }) {
   // 스크롤 상태(시안 13_스크롤): 제목이 밀려 올라가고 CTA가 상단에 고정 — 흰 블록 110 + 하단 2px 구분선.
   //  sticky top:0 + paddingTop 40 → 고정 시 CTA가 y40에 서고 블록 높이가 정확히 110(40+50+20)이 된다.
-  const [stuck, setStuck] = useState(false);
+  const { scrollRef, sentinelRef, stuck } = useStickyHeader();
   const need = rows.length;
   return (
     <>
-      <div className="tg-noscroll" onScroll={(e) => { const s = e.currentTarget.scrollTop > 4; setStuck((prev) => (prev === s ? prev : s)); }} style={{
+      <div className="tg-noscroll" ref={scrollRef} style={{
         scrollbarWidth: 'none', // 데스크톱 스크롤바가 폭을 먹어 342 컬럼이 좁아지지 않게(모바일은 원래 없음)
         position: 'absolute', left: 0, right: 0, top: 0, bottom: `calc(${TAB_BAR_H}px + env(safe-area-inset-bottom))`,
         overflowY: 'auto', WebkitOverflowScrolling: 'touch', padding: '0 24px', zIndex: 2,
@@ -100,13 +99,19 @@ export function MasteryScreen({ rows, onReview, onPlay, tabNav }) {
           )}
         </Reveal>
         {need > 0 && (
-          // ★Reveal(transform) 안에 넣으면 sticky가 죽는다 — 고정 블록은 페이드만(tg-fade)
-          <div className="tg-fade" style={{
-            position: 'sticky', top: 0, zIndex: 3, margin: '-20px -24px 0', padding: '40px 24px 20px', animationDelay: '85ms',
-            background: stuck ? '#fff' : 'transparent', boxShadow: stuck ? `0 2px 0 ${DIVIDER}` : 'none', transition: 'background .15s ease',
+          <>
+          {/* ★고정 경계 센티넬 — 블록이 갖고 있던 -20 top 마진을 여기로 옮겼다(레이아웃 총합 동일).
+              업적 화면과 같은 규칙(useStickyHeader) — 붙는 순간 IntersectionObserver가 정확히 발화한다. */}
+          <div ref={sentinelRef} aria-hidden="true" style={{ height: 0, marginTop: -20 }} />
+          {/* ★Reveal(transform) 안에 넣으면 sticky가 죽는다 — 고정 블록은 페이드만(tg-fade) */}
+          <div style={{
+            position: 'sticky', top: 0, zIndex: 3, margin: '0 -24px 0', padding: '40px 24px 20px',
+            // 배경엔 transition 금지 — 페이드 도중 반투명 구간에서 뒤 행이 비쳐 '틈'으로 보인다.
+            background: stuck ? '#fff' : 'transparent', boxShadow: stuck ? `0 2px 0 ${DIVIDER}` : 'none',
           }}>
             <PrimaryCta label="복습 하기" onClick={onReview} />
           </div>
+          </>
         )}
         {need > 0 && (
           // 리스트 — 시안 y222(고정 블록 아래 30) · 행 간격 10. 행마다 스태거(최대 5단계까지만 늘어남)
@@ -119,7 +124,7 @@ export function MasteryScreen({ rows, onReview, onPlay, tabNav }) {
           </div>
         )}
       </div>
-      <TgTabBar active="mastery" onNav={tabNav} />
+      <TgTabBar active="mastery" onNav={tabNav} dot={achDot ? "ach" : null} />
     </>
   );
 }

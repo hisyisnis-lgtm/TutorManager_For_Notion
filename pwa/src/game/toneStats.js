@@ -27,7 +27,6 @@ export function toneAccuracy(e) {
   if (!e || !(e[1] > 0)) return 0;
   return typeof e[2] === 'number' ? e[2] : e[0] / e[1];
 }
-export function toneAttempts(e) { return e ? (e[1] || 0) : 0; }
 
 // 가장 약한 성조(시도 minAttempts 이상 중 정답률 최저). 없으면 null.
 export function weakestTone(stats, minAttempts = 3) {
