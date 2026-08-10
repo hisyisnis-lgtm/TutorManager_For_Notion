@@ -66,6 +66,11 @@ export default [
   {
     // 테스트 — vitest 전역
     files: ['src/**/*.test.{js,jsx}'],
-    languageOptions: { globals: { describe: 'readonly', it: 'readonly', expect: 'readonly', beforeEach: 'readonly', afterEach: 'readonly', vi: 'readonly' } },
+    languageOptions: {
+      globals: {
+        describe: 'readonly', it: 'readonly', expect: 'readonly', beforeEach: 'readonly', afterEach: 'readonly', vi: 'readonly',
+        Element: 'readonly', // jsdom shim(Element.prototype.animate)용
+      },
+    },
   },
 ];
