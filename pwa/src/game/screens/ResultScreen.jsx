@@ -99,7 +99,8 @@ export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, 
       {celebrate && <ConfettiBurst count={32} power={1.35} size={10} zIndex={3} style={{ top: 150 }} />}
       {celebrate && <ConfettiBurst colors={LIGHT_CONFETTI} count={16} power={1.3} size={6} zIndex={3} style={{ top: 150 }} />}
       {/* 헤더 — 시안 12: 글래스 60 + 스테이지명 가운데(뒤로가기 없음. 이탈은 아래 '홈으로 가기'로) */}
-      <GameHeader title={title ? `${title} 결과화면` : '결과화면'} glass center />
+      {/* ★"결과화면"이 아니라 "결과" — '화면'은 개발자 용어다(2026-08-12). 표시되는 값·레이아웃은 시안 12 그대로. */}
+      <GameHeader title={title ? `${title} 결과` : '결과'} glass center />
       {/* 축하 판다 150×150 (가로 중앙, 시안 y90) */}
       <Reveal i={1} style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', top: 90 }}>
         <img src={pandaSrc} alt="" width={150} height={150} style={{ display: 'block', objectFit: 'contain', animation: 'tg-bob 3.4s ease-in-out infinite' }} />
@@ -193,7 +194,7 @@ export function ExamResultScreen({ correct = 0, total = 20, passed = false, onRe
       {passed && <CrispFlash color="rgba(255,255,255,0.6)" zIndex={7} />}
       {passed && <ConfettiBurst count={30} power={1.3} size={10} zIndex={3} style={{ top: 150 }} />}
       {passed && <ConfettiBurst colors={LIGHT_CONFETTI} count={15} power={1.25} size={6} zIndex={3} style={{ top: 150 }} />}
-      <GameHeader title={title ? `${title} 결과화면` : '승급시험 결과화면'} glass center />
+      <GameHeader title={title ? `${title} 결과` : '승급시험 결과'} glass center />
       {/* 판다 150×150 (시안 y90) */}
       <Reveal i={1} style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', top: 90 }}>
         <img src={pandaSrc} alt="" width={150} height={150} style={{ display: 'block', objectFit: 'contain', animation: 'tg-bob 3.4s ease-in-out infinite' }} />

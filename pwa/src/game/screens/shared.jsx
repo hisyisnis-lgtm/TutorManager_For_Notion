@@ -4,7 +4,7 @@
 // 참조 메모리: tone_game_redesign.md §5(단어카드)·§10-B(FigmaScreen)·§10-C(연출)
 import { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { DoubleAltArrowRight, Lock, CheckCircle, VolumeLoud, VolumeCross, AltArrowLeft, Star, Eye,
-  HandStars, NotebookBookmark, Home as HomeIcon, Cup, Stars } from '@solar-icons/react';
+  HandStars, NotebookBookmark, Home as HomeIcon, Cup, Stars, Pause } from '@solar-icons/react';
 import { TG, HOME, FONT_HANZI, FONT_PINYIN, TYPE, SHADOW, DUR, TOUCH_OPT, TONE_COLORS, TONE_KEY_COLORS, ASSETS,
   haptic, isMeaningHidden, setMeaningHidden, isPinyinHidden, setPinyinHidden, RADIUS, SPACE } from '../tgTokens.js';
 import { ToneMark } from '../tgWidgets.jsx';
@@ -522,6 +522,22 @@ export function BackButton({ onClick, style }) {
       border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, ...TOUCH_OPT, ...style,
     }}>
       <AltArrowLeft size={24} weight="Bold" color={TG.INK} />
+    </button>
+  );
+}
+
+// 일시정지(공용) — 뒤로가기와 같은 40×40 아이콘 버튼, 헤더 **우측** 슬롯용.
+//  ★인게임 헤더는 2026-08-12부터 좌측 뒤로가기 대신 이 버튼이다(사용자 지정).
+//   구버전은 좌측 뒤로가기(aria-label="뒤로")가 실제로는 일시정지 모달을 열어 라벨·아이콘과 동작이 어긋났고,
+//   "뒤로"라 읽히니 판을 버리는 문으로 오해되기도 했다. 이제 아이콘·라벨·동작이 전부 '일시정지'로 일치한다.
+//   (하드웨어/브라우저 뒤로가기는 그대로 일시정지 모달로 연결된다 — ToneGamePage의 back guard)
+export function PauseButton({ onClick, style }) {
+  return (
+    <button onClick={onClick} aria-label="일시정지" className="tg-press" style={{
+      width: 40, height: 40, marginRight: -8, borderRadius: RADIUS.xl, background: 'none', boxShadow: 'none',
+      border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, ...TOUCH_OPT, ...style,
+    }}>
+      <Pause size={24} weight="Bold" color={TG.INK} />
     </button>
   );
 }

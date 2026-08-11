@@ -975,6 +975,20 @@ export default function ToneGamePage() {
   // 인게임(문제풀이·결과화면) → 아웃게임 이탈은 '오늘의 팁' 웨이브 전환으로 목적 화면 진입. 잔존 타이머·오버레이 정리(기록 오염 방지)
   //   후 트리거. gameMode 리셋은 homeTx 'in'이 전환이 화면을 덮는 시점에 처리(뒤 화면 모드 깜빡임 방지).
   const tipTransitionTo = (target) => { clearTimers(); setShowGameOverBeat(false); setPaused(false); setTxTarget(target); setHomeTx('in'); };
+  // 업적 축하는 **점수를 본 뒤에** 띄운다(2026-08-12 UX 검수) — 결과화면 진입 즉시 띄우면
+  //  카운트업 중인 점수(useCountUp 1,100ms)를 모달이 그대로 덮어, 이번 판 점수를 보려면 '확인'을
+  //  업적 수만큼 눌러야 했다(3개 연속이면 3번). 종료 연출 체인이 끝난 뒤부터 2초 세고 연다.
+  //  ★2,000ms인 이유: 타이머는 체인이 끝나는 순간부터 도는데 결과화면 텍스트가 실제로 뜨는 건 그보다
+  //   ~0.5초 뒤라, 1,500ms로 두면 화면 기준 체감 간격이 ~1.0초에 그쳐 카운트업(1.1초)이 안 끝난 채 덮인다.
+  //   실측: 1,500 → 화면상 1,019ms / 2,000 → 화면상 ~1.5초(카운트업 완료 후).
+  //  ⚠️ 미리보기(?screen=celebrate)는 screen이 'home'이라 이 게이트에 걸리면 검수가 막힌다 → 즉시 통과.
+  const [celebrateReady, setCelebrateReady] = useState(false);
+  useEffect(() => {
+    if (isPreview) { setCelebrateReady(true); return undefined; }
+    if (screen !== 'end' || showGameOverBeat || xpGain || rankUp || modeUnlock) { setCelebrateReady(false); return undefined; }
+    const t = setTimeout(() => setCelebrateReady(true), 2000);
+    return () => clearTimeout(t);
+  }, [isPreview, screen, showGameOverBeat, xpGain, rankUp, modeUnlock]);
   // 트레이닝/복습 종료(무한 스트림이라 결과화면 없음) — **들어온 곳으로 돌려보낸다**.
   //  복습은 오답 노트에서 시작하고, 이번 복습의 성과(단어별 졸업 진행 0/3→1/3)가 **오답 노트에만** 표시된다.
   //  홈으로 보내면 방금 한 일의 결과를 볼 자리가 사라진다(2026-08-11 UX 검수). 트레이닝은 진입이 모드선택이지만
@@ -1679,8 +1693,8 @@ export default function ToneGamePage() {
         <ModeUnlockReveal unlock={modeUnlock} hold={isPreview && previewScreen === 'modeunlock'}
           onDone={() => setModeUnlock(null)} />
       )}
-      {/* 업적 획득 축하 오버레이(P4) — 큐 맨 앞 1장, 탭/CTA로 다음. 모드해제 연출 끝난 뒤 표시 */}
-      {celebrationQueue.length > 0 && !modeUnlock && (
+      {/* 업적 획득 축하 오버레이(P4) — 큐 맨 앞 1장, 탭/CTA로 다음. 모드해제 연출 + 점수 확인 뒤 표시 */}
+      {celebrationQueue.length > 0 && !modeUnlock && celebrateReady && (
         <CelebrationOverlay achievement={celebrationQueue[0]}
           onNext={() => setCelebrationQueue((q) => q.slice(1))} />
       )}
