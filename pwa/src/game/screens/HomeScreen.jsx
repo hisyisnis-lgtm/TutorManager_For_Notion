@@ -268,6 +268,10 @@ function ToyBall() {
     const RB = BALL.r;
     BALL.x = W * 0.5; BALL.y = H * 0.56; BALL.vx = 0; BALL.vy = 0; BALL.live = true;
     let last = performance.now(), lastBumpAt = 0; // lastBumpAt = 부딪힘음 연사 방지
+    // 지금 공에 닿아 있는 캐릭터 id — '닿기 시작한 프레임'(enter)과 '계속 닿아 있음'(stay)을 구분하려고 든다.
+    //  이게 없으면 겹친 동안 매 프레임이 새 충돌로 취급돼 밀치기·소리가 초당 수십 번 반복된다(=비벼짐).
+    let ballTouch = new Set();
+    const BUMP_MIN_SPD = 70; // 이 속도 이상으로 파고들 때만 소리·타격 이펙트(살짝 스치는 접촉은 무음)
     // 회전 상태를 verts에 누적(방향이 바뀌어도 연속). 초기 = 정이십면체 꼭짓점.
     let verts = ICOSA.map((v) => [v[0], v[1], v[2]]);
     const cx = S / 2, cy = S / 2, Rin = S / 2 - 1.2, spotR = Rin * 0.36;
@@ -317,18 +321,28 @@ function ToyBall() {
       if (BALL.y < minY) { BALL.y = minY; BALL.vy = Math.abs(BALL.vy) * 0.62; wallHit = true; }
       else if (BALL.y > maxY) { BALL.y = maxY; BALL.vy = -Math.abs(BALL.vy) * 0.62; wallHit = true; }
       // 캐릭터 몸 충돌(메인+팔로워 모두) — 겹치면 밀어내고 굴림 임펄스(자연 드리블).
-      const spd0 = Math.hypot(BALL.vx, BALL.vy); let bumped = false; // 타격 감지용(충돌 전 속도)
-      for (const o of COLL.values()) {
+      //  ★접촉 '시작'과 '유지'를 구분한다(2026-08-10 사용자: 공이 캐릭터에 비벼지고 소리가 지저분함).
+      //   구버전은 밀치기 임펄스(+46)를 겹친 **모든 프레임**에 넣었다. 캐릭터가 걸어다니며 공을 계속 따라잡으니
+      //   초당 60번 밀치는 상태가 됐고, 소리 판정까지 `nowSpd - spd0 > 45`라 그 임펄스를 자기가 충돌로 오인해
+      //   초당 열 번 넘게 울렸다. → 겹침 해소는 매 프레임, **임펄스·소리는 새 접촉일 때만**.
+      const touching = new Set();
+      let hitSpd = 0; // 이번 프레임 새 접촉 중 가장 세게 파고든 속도(소리·이펙트 세기)
+      for (const [id, o] of COLL) {
         const dx = BALL.x - o.x, dy = BALL.y - o.y, d = Math.hypot(dx, dy), minD = o.r + RB;
         if (d > 0.01 && d < minD) {
-          bumped = true;
+          touching.add(id);
           const ux = dx / d, uy = dy / d;
-          BALL.x = o.x + ux * minD; BALL.y = o.y + uy * minD;
-          const along = BALL.vx * ux + BALL.vy * uy; // 파고드는 성분 반사
-          if (along < 0) { BALL.vx -= along * ux * 1.3; BALL.vy -= along * uy * 1.3; }
-          BALL.vx += ux * 46; BALL.vy += uy * 46;
+          BALL.x = o.x + ux * minD; BALL.y = o.y + uy * minD; // 겹침 해소는 항상(파고들어 보이면 안 됨)
+          const along = BALL.vx * ux + BALL.vy * uy;          // 음수 = 파고드는 중
+          if (along < 0) { BALL.vx -= along * ux * 1.3; BALL.vy -= along * uy * 1.3; } // 파고드는 성분만 반사
+          if (!ballTouch.has(id)) {
+            // 새로 닿은 순간에만 '툭' 밀어낸다 — 드리블은 연속 밀기가 아니라 **톡톡 치는 연쇄**로 남는다.
+            BALL.vx += ux * 46; BALL.vy += uy * 46;
+            if (along < 0) hitSpd = Math.max(hitSpd, -along); // 공이 실제로 캐릭터를 향해 오던 속도만 충돌로 침
+          }
         }
       }
+      ballTouch = touching;
       // 3D 구름 — 굴림 축 = 이동 방향에 수직(화면평면 내). 매 프레임 구면 회전을 verts에 누적(dθ=거리/반지름).
       const spd = Math.hypot(BALL.vx, BALL.vy);
       if (spd > 1) {
@@ -345,10 +359,11 @@ function ToyBall() {
       el.style.zIndex = String(depthZ(dep));
       // 타격 이펙트 — 공 중심(화면좌표)에 spawn. 킥(강함)은 kickBall이 예약(BALL.fx), 부딪힘은 여기서 강도로 판정.
       const icx = sx, icy = sy + 44 - RB * ds; // 공 중심
-      const nowSpd = Math.hypot(BALL.vx, BALL.vy);
       if (BALL.fx) { spawnImpact(icx, icy, BALL.fx, 'kick'); BALL.fx = 0; }
-      else if (((bumped && (spd0 > 70 || nowSpd - spd0 > 45)) || (wallHit && wallSpd > 80)) && now - lastBumpAt > 90) {
-        lastBumpAt = now; spawnImpact(icx, icy, Math.max(spd0, nowSpd, wallSpd), 'bump'); // 캐릭터 부딪힘·벽 튕김 공용
+      // 부딪힘음 — 판정 근거는 **실제 파고든 속도**(hitSpd)다. 구버전의 `nowSpd - spd0 > 45`는 방금 우리가 준
+      //  임펄스를 재는 자기충족 조건이라 항상 참이었다. 캐릭터가 걸어와 살짝 미는 접촉은 hitSpd가 작아 무음.
+      else if (((hitSpd >= BUMP_MIN_SPD) || (wallHit && wallSpd > 80)) && now - lastBumpAt > 160) {
+        lastBumpAt = now; spawnImpact(icx, icy, Math.max(hitSpd, wallSpd), 'bump'); // 캐릭터 부딪힘·벽 튕김 공용
         if (charCanSpeak()) playSfx('bump');
       }
     };
@@ -359,7 +374,7 @@ function ToyBall() {
   }, []);
   const S = BALL.r * 2;
   return (
-    <div ref={elRef} aria-hidden="true" style={{ position: 'absolute', left: 0, top: 0, pointerEvents: 'none', willChange: 'transform' }}>
+    <div ref={elRef} data-tg-ball="1" aria-hidden="true" style={{ position: 'absolute', left: 0, top: 0, pointerEvents: 'none', willChange: 'transform' }}>
       {/* 접지 그림자 — 성조 캐릭터 그림자와 **같은 스타일**(블러 없는 단색 타원 rgba(70,62,52,0.13), 가로:세로 ≈ 46:11).
           위치는 공 바닥(접점 y=0)에 살짝 물리게 — 아래로 떨어뜨리면 공이 떠 보인다(2026-08-07 사용자 지적). */}
       <div style={{ position: 'absolute', left: '50%', top: -2, transform: 'translateX(-50%)', width: S * 1.08, height: S * 0.27, borderRadius: '50%', background: 'rgba(70,62,52,0.13)' }} />
