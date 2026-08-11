@@ -272,6 +272,17 @@ function ToyBall() {
     //  이게 없으면 겹친 동안 매 프레임이 새 충돌로 취급돼 밀치기·소리가 초당 수십 번 반복된다(=비벼짐).
     let ballTouch = new Set();
     const BUMP_MIN_SPD = 70; // 이 속도 이상으로 파고들 때만 소리·타격 이펙트(살짝 스치는 접촉은 무음)
+    // ── 갇힘 탈출 ────────────────────────────────────────
+    // 레벨이 오르면 팔로워가 캐릭터당 (레벨-1)개씩 붙어 Lv.5에선 충돌체가 25개가 된다(반경도 1.8배).
+    //  그 밀도에선 공이 사방에서 밀려 벽으로 몰리고 **영영 못 빠져나온다**(2026-08-11 사용자 지적).
+    //  접촉당 임펄스를 어떻게 튜닝해도 해결이 안 되므로, '갇힘'을 상태로 감지해 빈 쪽으로 뻥 차서 꺼낸다.
+    let stuckMs = 0, lastEscapeAt = 0;
+    const STUCK_SPD = 26;    // 이 속도 아래로 캐릭터에 닿아 있으면 '갇히는 중'
+    const STUCK_MS = 600;    // 이만큼 지속되면 탈출 킥
+    const ESCAPE_V = 300;    // 탈출 킥 속도(벽에서 확실히 떨어져 나올 만큼)
+    // 밀기 세기 — 파고든 깊이를 속도로 환산(=미는 캐릭터 속도)한 뒤 GAIN을 곱해 **캐릭터보다 조금 빠르게** 굴러나가게.
+    //  고정 임펄스와 달리 실제 파고든 만큼만 주므로 살짝 닿으면 살짝, 세게 밀면 세게 — 떨림도 끌려다님도 없다.
+    const PUSH_GAIN = 1.6, PUSH_V_MAX = 190;
     // 회전 상태를 verts에 누적(방향이 바뀌어도 연속). 초기 = 정이십면체 꼭짓점.
     let verts = ICOSA.map((v) => [v[0], v[1], v[2]]);
     const cx = S / 2, cy = S / 2, Rin = S / 2 - 1.2, spotR = Rin * 0.36;
@@ -328,21 +339,51 @@ function ToyBall() {
       const touching = new Set();
       let hitSpd = 0; // 이번 프레임 새 접촉 중 가장 세게 파고든 속도(소리·이펙트 세기)
       for (const [id, o] of COLL) {
+        // ★팔로워도 공과 부딪힌다 — 공이 작은 애들을 통과하면 그게 더 어색하다(2026-08-11 사용자).
+        //  고밀도 갇힘은 '통과'가 아니라 아래 **탈출 킥**으로 푼다.
         const dx = BALL.x - o.x, dy = BALL.y - o.y, d = Math.hypot(dx, dy), minD = o.r + RB;
         if (d > 0.01 && d < minD) {
           touching.add(id);
           const ux = dx / d, uy = dy / d;
+          const depth = minD - d;                             // 이번 프레임 파고든 깊이
           BALL.x = o.x + ux * minD; BALL.y = o.y + uy * minD; // 겹침 해소는 항상(파고들어 보이면 안 됨)
           const along = BALL.vx * ux + BALL.vy * uy;          // 음수 = 파고드는 중
           if (along < 0) { BALL.vx -= along * ux * 1.3; BALL.vy -= along * uy * 1.3; } // 파고드는 성분만 반사
-          if (!ballTouch.has(id)) {
-            // 새로 닿은 순간에만 '툭' 밀어낸다 — 드리블은 연속 밀기가 아니라 **톡톡 치는 연쇄**로 남는다.
-            BALL.vx += ux * 46; BALL.vy += uy * 46;
-            if (along < 0) hitSpd = Math.max(hitSpd, -along); // 공이 실제로 캐릭터를 향해 오던 속도만 충돌로 침
-          }
+          // 비례 밀기 — 파고든 깊이/dt = 캐릭터가 미는 속도. 거기에 GAIN을 곱해 공이 앞서 굴러가게 한다.
+          const pushV = Math.min(PUSH_V_MAX, (depth / Math.max(dt, 1 / 120)) * PUSH_GAIN);
+          if (pushV > 0) { BALL.vx += ux * pushV; BALL.vy += uy * pushV; }
+          if (!ballTouch.has(id) && along < 0) hitSpd = Math.max(hitSpd, -along); // 새 접촉의 실제 충돌 속도만 소리로
         }
       }
       ballTouch = touching;
+      // 갇힘 판정 — 캐릭터에 닿은 채 거의 안 움직이는 상태가 STUCK_MS 이상 지속되면 빈 쪽으로 차서 꺼낸다.
+      const spdNow = Math.hypot(BALL.vx, BALL.vy);
+      // [DEV] 갇힘 검수용 관찰 훅 — '정지'와 '갇힘'은 다르다(혼자 멈춘 건 정상). 접촉 수까지 봐야 구분된다.
+      //  ★프레임 단위로 **누적**한다 — 밖에서 10Hz로 샘플링하면 1~2프레임짜리 짧은 접촉을 통째로 놓친다.
+      if (import.meta.env.DEV) {
+        const b = (window.__tgBall ||= { frames: 0, contactFrames: 0, maxStuckMs: 0, escapes: 0 });
+        b.v = spdNow; b.touch = touching.size; b.stuckMs = stuckMs;
+        b.frames += 1; if (touching.size > 0) b.contactFrames += 1;
+        b.maxStuckMs = Math.max(b.maxStuckMs, stuckMs);
+      }
+      if (touching.size > 0 && spdNow < STUCK_SPD) stuckMs += dt * 1000; else stuckMs = 0;
+      if (stuckMs > STUCK_MS && now - lastEscapeAt > 1200) {
+        stuckMs = 0; lastEscapeAt = now;
+        // 방향 = 주변 캐릭터들의 반대편 + 방 중앙 쪽을 섞는다(벽에 몰린 경우 중앙 성분이 빼준다).
+        let ax = 0, ay = 0, n = 0;
+        for (const o of COLL.values()) {
+          if (Math.hypot(BALL.x - o.x, BALL.y - o.y) < o.r + RB + 70) { ax += o.x; ay += o.y; n += 1; }
+        }
+        const awx = n ? BALL.x - ax / n : 0, awy = n ? BALL.y - ay / n : 0;
+        const cwx = W / 2 - BALL.x, cwy = H / 2 - BALL.y;
+        const la = Math.hypot(awx, awy) || 1, lc = Math.hypot(cwx, cwy) || 1;
+        let ex = (awx / la) * 0.6 + (cwx / lc) * 0.9, ey = (awy / la) * 0.6 + (cwy / lc) * 0.9;
+        const le = Math.hypot(ex, ey) || 1; ex /= le; ey /= le;
+        BALL.vx = ex * ESCAPE_V; BALL.vy = ey * ESCAPE_V;
+        BALL.fx = ESCAPE_V; // 킥 이펙트 예약(아래 spawnImpact가 소비) — '캐릭터가 빼줬다'로 읽히게
+        if (charCanSpeak()) playSfx('kick');
+        if (import.meta.env.DEV) { const b = (window.__tgBall ||= {}); b.escapes = (b.escapes || 0) + 1; }
+      }
       // 3D 구름 — 굴림 축 = 이동 방향에 수직(화면평면 내). 매 프레임 구면 회전을 verts에 누적(dθ=거리/반지름).
       const spd = Math.hypot(BALL.vx, BALL.vy);
       if (spd > 1) {
