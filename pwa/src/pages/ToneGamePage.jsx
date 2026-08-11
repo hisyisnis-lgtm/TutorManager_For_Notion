@@ -34,7 +34,7 @@ import {
   getEndlessTimeLimit, computeScore, resolveEndOutcome,
   loadEndlessBest, saveEndlessBest, isEndlessUnlocked,
   ENDLESS_UNLOCK_REVEAL, STAGES, stageRoundPool, saveStageScore, unlockedTrainingPool, isStageUnlocked,
-  stageScoreOf, stageOutcome, migrateRankForBoss, isTierCleared, perfectStageCount, JUDGE_RATIO, rankUpperBound, saveBossPeak, BOSSES, clearOrphanThemeBests, restartTarget,
+  stageScoreOf, stageOutcome, migrateRankForBoss, isTierCleared, perfectStageCount, JUDGE_RATIO, rankUpperBound, saveBossPeak, BOSSES, clearOrphanThemeBests, restartTarget, isThemeUnlocked,
 } from '../game/gameLogic.js';
 import { FigmaScreen, CountdownVisual, TxLayer, GameStage, GameToast, BeatDim } from '../game/screens/shared.jsx';
 import { SplashScreen } from '../game/screens/SplashScreen.jsx';
@@ -975,7 +975,11 @@ export default function ToneGamePage() {
   // 인게임(문제풀이·결과화면) → 아웃게임 이탈은 '오늘의 팁' 웨이브 전환으로 목적 화면 진입. 잔존 타이머·오버레이 정리(기록 오염 방지)
   //   후 트리거. gameMode 리셋은 homeTx 'in'이 전환이 화면을 덮는 시점에 처리(뒤 화면 모드 깜빡임 방지).
   const tipTransitionTo = (target) => { clearTimers(); setShowGameOverBeat(false); setPaused(false); setTxTarget(target); setHomeTx('in'); };
-  const endTraining = () => tipTransitionTo('home'); // 트레이닝 종료(무한) — 결과화면 없이 홈 허브로
+  // 트레이닝/복습 종료(무한 스트림이라 결과화면 없음) — **들어온 곳으로 돌려보낸다**.
+  //  복습은 오답 노트에서 시작하고, 이번 복습의 성과(단어별 졸업 진행 0/3→1/3)가 **오답 노트에만** 표시된다.
+  //  홈으로 보내면 방금 한 일의 결과를 볼 자리가 사라진다(2026-08-11 UX 검수). 트레이닝은 진입이 모드선택이지만
+  //  '한 판 더'보다 쉬었다 가는 흐름이 자연스러워 홈 유지.
+  const endTraining = () => tipTransitionTo(practiceKind === 'review' ? 'mastery' : 'home');
 
   // 무한 모드 — 전 난이도 랜덤 스트림. 점점 가속, 첫 시간초과 종료, 헤드라인 최고점.
   const startEndless = () => {
@@ -1441,6 +1445,15 @@ export default function ToneGamePage() {
     //  고득점 조기 유도는 여기(결과 버튼) 대신 승급시험 유도 '모달'이 담당(2026-07-23). 승급시험 자체는 사다리에서 상시 응시.
     const tierIdx = (!practiceMode && !endlessMode && !themeMode && selectedDifficulty.tier) ? DIFFICULTIES.findIndex((d) => d.id === selectedDifficulty.tier) : -1;
     const examReady = tierIdx >= 0 && tierIdx < BOSSES.length && rank <= tierIdx && isTierCleared(studentToken, selectedDifficulty.tier);
+    // ── 다음 목적지(모드별) ──────────────────────────────────────
+    //  이 게임은 난이도·테마 모두 **순차 잠금**이라 "목록으로 돌아가기"는 대부분 고를 게 하나뿐이다.
+    //  그래서 목록 복귀 버튼을 두는 대신 **그 하나를 지목**한다(2026-08-11 UX 검수 결론).
+    // 사다리 끝(고수 마지막 칸)을 깬 판 — 다음 스테이지가 없다. 그 클리어가 곧 무한 모드 해제 조건이므로 무한이 다음 목적지.
+    const canEndlessNext = !practiceMode && !endlessMode && !themeMode && !nextStage && ci >= 0 && isEndlessUnlocked(studentToken);
+    // 테마 모드 — 배열상 다음 테마가 (이 판의 점수로) 해제됐으면 그리로. 해제 연출만 띄우고 갈 길이 없던 문제.
+    const ti = (themeMode && selectedTheme) ? THEMES.findIndex((t) => t.id === selectedTheme.id) : -1;
+    const nextTheme = (ti >= 0 && ti + 1 < THEMES.length) ? THEMES[ti + 1] : null;
+    const canNextTheme = !!(nextTheme && isThemeUnlocked(studentToken, nextTheme));
     // 온보딩 첫 판(튜토리얼 직후 입문 1)인가 — 이 판의 결과화면은 **'홈으로 가기' 하나만** 둔다.
     //  다시하기·다음 스테이지를 열어두면 닉네임·홈 코치마크를 건너뛴 채 계속 플레이하게 되어 온보딩이 끊긴다(2026-08-07 사용자).
     //  ref는 첫 홈 진입에서 소비되므로 이 화면이 떠 있는 동안에만 true.
@@ -1452,14 +1465,22 @@ export default function ToneGamePage() {
     })();
     // 다음 목적지 라벨 — 승급시험이 우선(examReady), 아니면 다음 스테이지 이름.
     //  ★"다음 칸이 열렸다"는 신호는 이 라벨이 전부 담당한다(별·정답수·해제 배지는 2026-08-07 사용자 요청으로 제거).
+    // ★라벨 길이 상한 — 주 버튼은 반폭(390뷰포트 163 / 360뷰포트 148)에 ▶(18)+gap까지 들어간다.
+    //  360px 기기 기준 텍스트 가용폭 ≈122px(21px Noto Sans KR bold 실측). 넘치면 nowrap이라 그대로 삐져나온다.
+    //  - 테마: '요리 단어' → 접미사 '단어'를 떼고 '요리 도전'(82) · 최장 '신조어 도전'(101)  ✅
+    //  - 무한: '무한 모드 도전'은 125로 초과 → 승급시험 라벨과 같은 **목적지 이름만**('무한 모드', ▶가 이동을 말함)
     const continueLabel = examReady ? `${BOSSES[tierIdx]?.nextLabel || ''} 승급시험`.trim()
-      : (canNextStage && nextStage) ? `${nextStage.label} 도전` : '계속하기';
+      : (canNextStage && nextStage) ? `${nextStage.label} 도전`
+      : canNextTheme ? `${nextTheme.label.replace(/\s*단어$/, '')} 도전`
+      : canEndlessNext ? '무한 모드' : '계속하기';
     content = (
       <FigmaScreen enter>
         <ResultScreen score={score} maxCombo={maxCombo} avgMs={avgMsForResult}
           title={practiceMode ? practiceLabel : endlessMode ? '무한 모드' : themeMode ? (selectedTheme?.label || '테마') : (selectedDifficulty?.label || '')} /* 시안 12: 헤더 "{스테이지} 결과화면" */
           onExam={(examReady || (isPreview && previewScreen === 'end' && qs('exam') === '1')) ? () => startExam(tierIdx >= 0 ? tierIdx : rank) : undefined}
-          onNextLevel={canNextStage ? () => startGame(nextStage) : undefined}
+          onNextLevel={canNextStage ? () => startGame(nextStage)
+            : canNextTheme ? () => startTheme(nextTheme)
+            : canEndlessNext ? () => startEndless() : undefined}
           isNewBest={practiceMode ? false : (isNewBest || (isPreview && qs('newbest') === '1'))} previousBest={practiceMode ? 0 : (isPreview && qs('newbest') === '1' ? 800 : previousBest)}
           suggestPractice={(suggestPractice && !practiceMode && !endlessMode && !themeMode && (selectedDifficulty.tier || selectedDifficulty.id) === 'easy') || (isPreview && previewScreen === 'end' && qs('suggest') === '1')}
           coachReady={!showGameOverBeat && !rankUp && !modeUnlock && celebrationQueue.length === 0} /* 결과 코치+트레이닝유도 둘 다 이 게이트 뒤에서만 */
@@ -1489,6 +1510,9 @@ export default function ToneGamePage() {
           avgMs={isPreview ? (Number(qs('avgms')) || 700) : avgMsForResult}
           onRetry={() => startExam(examTierRef.current)} /* 보스 모델: 불합격해도 언제든 재도전(XP 게이트 없음) */
           onContinue={er.passed ? () => setScreen('difficulty') : null} /* 합격 → 새로 열린 급 확인(사다리) */
+          /* 불합격 → 회복 경로. 시험은 20문제 80%가 관문이라 즉시 재응시는 대부분 또 떨어진다.
+             트레이닝이 '열린 범위에서 약한 단어를 시간 제한 없이'라 처방이 정확히 맞는데 연결이 없었다(2026-08-11 UX 검수). */
+          onPractice={er.passed ? null : () => startTraining()}
           onHome={() => tipTransitionTo('home')} /> {/* 승급시험 결과(인게임) → 홈(아웃게임): 팁 전환 */}
       </FigmaScreen>
     );

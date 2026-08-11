@@ -183,7 +183,7 @@ export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, 
 // 승급 시험 결과 — 시안(757:12)에서 일반 결과화면과 완전히 같은 레이아웃으로 통일.
 //  점수 자리에 '정답수 / 총문제'(합격=초록·불합격=코랄) + 합격/불합격 배지 + 합격 기준 캡션 + 통계 2카드 + 3버튼.
 //  합격 축하 연출은 앞선 RankUpReveal이 담당 → 여긴 담백한 요약.
-export function ExamResultScreen({ correct = 0, total = 20, passed = false, onRetry, onContinue = null, onHome, maxCombo = 0, avgMs = 0, title = '' }) {
+export function ExamResultScreen({ correct = 0, total = 20, passed = false, onRetry, onContinue = null, onPractice = null, onHome, maxCombo = 0, avgMs = 0, title = '' }) {
   const animCorrect = useCountUp(correct, 900);
   const avgSec = avgMs > 0 ? (avgMs / 1000).toFixed(1) : '-';
   const pandaSrc = pickCelebratePanda(passed, passed ? 5 : 0);
@@ -221,15 +221,19 @@ export function ExamResultScreen({ correct = 0, total = 20, passed = false, onRe
       <Reveal i={4} style={{ position: 'absolute', left: 24, right: 24, top: 385 }}>
         <StatCards maxCombo={maxCombo} avgSec={avgSec} />
       </Reveal>
-      {/* [다시하기 | 계속하기] — 다음 목적지가 없으면(불합격) 다시하기가 풀폭 주 버튼 */}
+      {/* [다시하기 | 계속하기] — 합격이면 주 버튼이 사다리로.
+          ★불합격이면 주 버튼은 '다시하기'가 아니라 **연습하고 오기**(트레이닝)다(2026-08-11 UX 검수):
+            합격선이 20문제 중 80%라 곧장 재응시하면 대개 또 떨어진다. 회복 경로를 기본값으로 두되
+            즉시 재도전은 흰 버튼으로 남긴다 — 보스 모델은 '언제든 재도전'이 원칙이라 막지 않는다.
+          둘 다 없으면 다시하기가 풀폭. */}
       <Reveal i={5} style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(96px + env(safe-area-inset-bottom))' }}>
-        {onContinue ? (
+        {(onContinue || onPractice) ? (
           <div style={{ display: 'flex', gap: SPACE.lg }}>
             <button onClick={() => { playSfx('button'); onRetry(); }} className="tg-press" style={{ ...RES_BTN, ...RES_WHITE, flex: 1, minWidth: 0, ...TOUCH_OPT }}>
               <span style={{ ...TYPE.head, color: RES_BTN_TEXT, whiteSpace: 'nowrap' }}>다시하기</span>
             </button>
-            <button onClick={() => { playSfx('button'); onContinue(); }} className="tg-press" style={{ ...RES_BTN, ...RES_PRIMARY, flex: 1, minWidth: 0, gap: SPACE.md, ...TOUCH_OPT }}>
-              <span style={{ ...TYPE.head, color: '#fff', whiteSpace: 'nowrap' }}>계속하기</span>
+            <button onClick={() => { playSfx('button'); (onContinue || onPractice)(); }} className="tg-press" style={{ ...RES_BTN, ...RES_PRIMARY, flex: 1, minWidth: 0, gap: SPACE.md, ...TOUCH_OPT }}>
+              <span style={{ ...TYPE.head, color: '#fff', whiteSpace: 'nowrap' }}>{onContinue ? '계속하기' : '연습하고 오기'}</span>
               <Play size={18} weight="Bold" color="#fff" />
             </button>
           </div>
