@@ -132,7 +132,8 @@ const metaChip = (bg, color, bold) => ({
 // 테마 카드 — 시안 "06. 테마 — 개선/잠김": 흰 카드(280×300 r20) = 이미지 246 + 캡션 밴드 54.
 //  제목·별·최고점은 카드 밖(화면 상단)으로 빠졌고, 시작도 하단 고정 CTA가 맡는다.
 //  잠김 = 이미지 흑백 + 가운데 자물쇠 원 + 캡션에 해제 조건.
-function ThemeCard({ theme, unlocked, w, h, capH }) {
+// unlockCur = 해제 조건이 되는 테마의 현재 최고점(잠김 캡션에 진행 표시). 호출부가 계산해 넘긴다.
+function ThemeCard({ theme, unlocked, w, h, capH, unlockCur = 0 }) {
   const imgH = h - capH;
   return (
     <div style={{
@@ -174,7 +175,7 @@ function ThemeCard({ theme, unlocked, w, h, capH }) {
         display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 14px',
       }}>
         <span style={{ ...TYPE.micro, fontSize: 13, color: SCORE_C, textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-          {unlocked ? (theme.tagline || theme.desc || '') : themeUnlockReqText(theme)}
+          {unlocked ? (theme.tagline || theme.desc || '') : themeUnlockReqText(theme, unlockCur)}
         </span>
       </div>
     </div>
@@ -285,14 +286,16 @@ export function ThemeScreen({ themes, studentToken, counts = {}, onStart, onBack
         }}>
           {themes.map((t, idx) => {
             const unlocked = isThemeUnlocked(studentToken, t);
+            // 잠긴 테마의 진행 = 해제 조건이 되는 테마(직전)의 현재 최고점. 열린 테마는 계산 불필요.
+            const unlockCur = (!unlocked && t.unlock) ? themeBestScore(studentToken, t.unlock.byGameKey) : 0;
             return (
               <div key={t.id} style={{ flex: `0 0 ${cardW}px`, width: cardW, height: cardH, scrollSnapAlign: 'center', position: 'relative' }}>
                 <div ref={(n) => { fxRefs.current[idx] = n; }} style={{ position: 'absolute', inset: 0 }}>
                   <ShakeButton shakeOnClick={!unlocked}
-                    onClick={() => { if (unlocked) { playSfx('button'); onStart(t); } else if (onLocked) onLocked(themeUnlockToastText(t)); }}
+                    onClick={() => { if (unlocked) { playSfx('button'); onStart(t); } else if (onLocked) onLocked(themeUnlockToastText(t, unlockCur)); }}
                     className={unlocked ? 'tg-press' : ''}
                     style={{ position: 'absolute', inset: 0, padding: 0, border: 'none', background: 'transparent', cursor: 'pointer', ...TOUCH_OPT }}>
-                    <ThemeCard theme={t} unlocked={unlocked} w={cardW} h={cardH} capH={capH} />
+                    <ThemeCard theme={t} unlocked={unlocked} w={cardW} h={cardH} capH={capH} unlockCur={unlockCur} />
                   </ShakeButton>
                 </div>
               </div>
