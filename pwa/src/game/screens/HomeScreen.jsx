@@ -914,7 +914,12 @@ function MyInfo({ tier, nickname, onClick }) {
       <div style={{ position: 'absolute', left: 75, top: 53, width: 60, height: 10, borderRadius: 19, background: HOME.GAUGE_TRACK, overflow: 'hidden' }}>
         <div style={{ width: `${Math.max(13, pct)}%`, height: '100%', background: HOME.TAB_RED, transition: 'width .5s ease' }} />
       </div>
-      <span style={{ position: 'absolute', left: 139, top: 50, ...TYPE.num, fontWeight: 400, fontSize: 14, lineHeight: '16px', color: HOME.INK }}>{pct}%</span>
+      {/* ★게이지 라벨은 `%`가 아니라 **`Lv.N`**(2026-08-12, 시안 453:2 동기화).
+          이 게이지는 레벨 진행도(levelInfo(xp).progress)인데 등급명 바로 아래에 `%`만 있어
+          '등급' 진행도로 읽혔다. 등급은 승급시험으로만 오르므로, 게이지를 100% 채워도 등급이
+          그대로여서 "채웠는데 왜 안 올라?"가 된다. 진행량은 막대가 말하고, 라벨은 **무엇이**
+          차오르는지를 말한다. (구 시안 노드명도 '정답률'이라 의미가 어긋나 있어 '레벨'로 교정) */}
+      <span style={{ position: 'absolute', left: 139, top: 50, ...TYPE.num, fontWeight: 400, fontSize: 14, lineHeight: '16px', color: HOME.INK }}>Lv.{lv.level}</span>
     </button>
   );
 }
