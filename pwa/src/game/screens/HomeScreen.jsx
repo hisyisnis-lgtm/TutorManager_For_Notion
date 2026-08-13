@@ -7,7 +7,9 @@ import {
   QuestionCircle, Logout, AltArrowRight, AltArrowLeft, VolumeLoud, VolumeCross, SmartphoneVibration, CloseCircle,
   MusicNotes, MusicNote, Pen, InfoCircle, LinkCircle, Notebook, TextField, Refresh, TrashBinTrash,
 } from '@solar-icons/react';
-import { TG, HOME, TYPE, TOUCH_OPT, TONE_KEY_COLORS, haptic, isHapticMuted, setHapticMuted, isMeaningHidden, setMeaningHidden, isPinyinHidden, setPinyinHidden, RADIUS, SPACE } from '../tgTokens.js';
+import { TG, HOME, TYPE, TOUCH_OPT, TONE_KEY_COLORS, FONT_HANZI, FONT_PINYIN, haptic, isHapticMuted, setHapticMuted, isMeaningHidden, setMeaningHidden, isPinyinHidden, setPinyinHidden, RADIUS, SPACE } from '../tgTokens.js';
+import { TONE_SAMPLES } from '../tutorialWords.js';
+import { speakWord } from '../tgTts.js';
 import { TONES } from '../../constants/toneGameWords.js';
 import { ToneMark, useCountUp } from '../tgWidgets.jsx';
 import { rankInfo, levelInfo } from '../gameXp.js';
@@ -1028,6 +1030,21 @@ function StreakSheet({ streak, longest, freezes, onClose }) {
 const STATE_LABEL = { unknown: '아직 데이터가 적어요', weak: '아직 헷갈려요', mid: '꽤 익숙해요', strong: '탄탄해요' };
 const STATE_COLOR = { unknown: TG.SUB, weak: TG.CORAL_DK, mid: '#F0A91E', strong: TG.SUCCESS_GLOW };
 const STATE_NOTE = { unknown: '게임을 더 하면 이 성조 실력이 보여요.', weak: '게임에서 이 성조가 나올 때 귀 기울여보세요.', mid: '조금만 더 하면 탄탄해져요.', strong: '이 성조는 거의 마스터했어요! 👍' };
+// 성조 '소리' 한 줄 — 표준 5도 표기법(1성 55 · 2성 35 · 3성 214 · 4성 51 / 경성은 자체 높이 없음)을 말로 푼 것.
+//  ★출처 구분(chinese_tone_rules 규약): 아래는 **전부 표준 중국어 규범**이고, 하늘쌤 고유 교수 규칙은
+//   '연음'(3성 보조설명) 하나뿐이다. 없는 규칙을 지어내거나 표준 규범을 하늘쌤 규칙이라 부르지 말 것.
+const TONE_SOUND = {
+  1: '높은 음을 평평하게 쭉 유지해요.',
+  2: '중간에서 위로 끌어올려요.',
+  3: '내렸다가 살짝 올려요.',
+  4: '높은 데서 아래로 뚝 떨어뜨려요.',
+  0: '짧고 가볍게 — 높이는 앞 성조가 정해요.',
+};
+// 보조 한 줄 — 규범상 덧붙일 게 있는 성조만. 3성의 연음이 게임의 하늘쌤 시그니처인데
+//  튜토리얼에서 2.2초 스치고 다시 볼 곳이 없었다 → 여기가 그 자리.
+const TONE_NOTE2 = {
+  3: '뒤에 다른 성조가 오면 내리기만 해요(반3성). 그중 2성이 오면 끊지 않고 이어서 — 연음.',
+};
 // 시트 통계 카드 — 시안: 라벨(14 Medium)이 위, 수치(22 Roboto Black)가 아래. children으로 수치 자리를 대체할 수 있다.
 function CardStat({ label, value, children }) {
   return (
@@ -1042,6 +1059,7 @@ function ToneCard({ tone, status, level, onClose }) {
   const close = () => { if (closing) return; setClosing(true); setTimeout(onClose, 270); }; // 슬라이드 다운 후 언마운트
   const s = status || { acc: 0, attempts: 0, state: 'unknown' };
   const accTxt = s.attempts > 0 ? `${Math.round(s.acc * 100)}%` : '—';
+  const sample = TONE_SAMPLES[tone.num]; // 妈麻马骂吗 — 성조만 다른 최소대립쌍(TTS 기생성)
   return (
     <div onClick={close} style={{ position: 'fixed', inset: 0, zIndex: 60, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', ...TOUCH_OPT }}>
       {/* Dim — 별도 레이어로 분리(카드와 형제). opacity 페이드가 카드에 안 번지게 */}
@@ -1064,6 +1082,37 @@ function ToneCard({ tone, status, level, onClose }) {
             <span style={{ ...TYPE.labelSm, lineHeight: '19px', color: STATE_COLOR[s.state] }}>{STATE_LABEL[s.state]}</span>
           </div>
         </div>
+        {/* 소리 — "이 성조가 어떤 소리인지"를 **아무 때나** 볼 수 있는 자리(2026-08-12).
+            구버전 시트는 정확도·시도 통계뿐이라 "3성이 뭐였지?"에 답하지 못했다. 성조 설명이 있는 곳은
+            튜토리얼(다시 보려면 5단계 전부 재생)과 전환 화면 랜덤 팁(7개 중 3개)뿐이라 원할 때 못 봤다.
+            ★샘플은 튜토리얼의 TONE_SAMPLES(妈麻马骂吗) 재사용 — 같은 'ma'라 **성조 차이만 남는 최소대립쌍**이고
+              TTS 음성도 이미 생성돼 있다(새 에셋 0개).
+            ※ 여기 CTA는 '들어보기'뿐 — 연습/복습 CTA는 이 시트에서 뺀 상태를 유지한다(위 주석). */}
+        {sample && (
+          <div style={{ background: SHEET_STAT_BG, borderRadius: RADIUS.lg, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: SPACE.lg }}>
+            <span style={{ ...TYPE.body, fontSize: 14, lineHeight: '21px', color: TG.INK }}>{TONE_SOUND[tone.num]}</span>
+            {TONE_NOTE2[tone.num] && (
+              <span style={{ ...TYPE.body, fontSize: 13, lineHeight: '19px', color: TG.SUB }}>{TONE_NOTE2[tone.num]}</span>
+            )}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: SPACE.lg }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: SPACE.md, minWidth: 0 }}>
+                <span style={{ fontFamily: FONT_HANZI, fontWeight: 700, fontSize: 28, lineHeight: 1, color: TG.INK }}>{sample.hanzi}</span>
+                <span style={{ fontFamily: FONT_PINYIN, fontSize: 15, color: tone.color }}>{sample.pinyin.join('')}</span>
+                <span style={{ ...TYPE.labelSm, color: TG.SUB, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{sample.meaning}</span>
+              </div>
+              <button type="button" className="tg-press" onClick={() => { playSfx('tap'); haptic(10); speakWord(sample); }}
+                aria-label={`${tone.name} 예시 ${sample.hanzi} 발음 듣기`}
+                style={{
+                  flexShrink: 0, height: 34, padding: '0 12px', borderRadius: RADIUS.lg, border: 'none', cursor: 'pointer',
+                  background: '#fff', boxShadow: 'inset 0 -2px 0 #E4EDF5, 0 2px 8px rgba(43,39,48,0.05)',
+                  display: 'flex', alignItems: 'center', gap: SPACE.sm, ...TOUCH_OPT,
+                }}>
+                <VolumeLoud size={16} weight="Bold" color={TG.INK} />
+                <span style={{ ...TYPE.labelSm, color: TG.INK, whiteSpace: 'nowrap' }}>들어보기</span>
+              </button>
+            </div>
+          </div>
+        )}
         <div style={{ display: 'flex', gap: SPACE.lg }}>
           <CardStat label="정확도" value={accTxt} />
           <CardStat label="시도" value={`${s.attempts}`} />
