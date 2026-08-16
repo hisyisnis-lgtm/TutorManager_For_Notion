@@ -28,7 +28,7 @@
     "활성 여부": {
       "type": "formula",
       "id": "rDr~",
-      "expression": "if({{notion:block_property:t%3FJE:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}}, true, if({{notion:block_property:oW%7C%5E:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}}, false, if(empty({{notion:block_property:xr%3Cj:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}}) or empty({{notion:block_property:%5CKix:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}}), false, (dateBetween(now(), {{notion:block_property:xr%3Cj:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}}, \"days\") >= 0) and (dateBetween({{notion:block_property:%5CKix:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}}, now(), \"days\") >= 0))))"
+      "expression": "if(prop(\"강제 ON\"), true, if(prop(\"강제 OFF\"), false, if(empty(prop(\"시작일\")) or empty(prop(\"종료일\")), false, (dateBetween(now(), prop(\"시작일\"), \"days\") >= 0) and (dateBetween(prop(\"종료일\"), now(), \"days\") >= 0))))"
     },
     "강제 ON": {
       "type": "checkbox",

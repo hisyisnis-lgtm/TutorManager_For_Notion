@@ -29,7 +29,7 @@
     "학생 수": {
       "type": "formula",
       "id": "M~%3DW",
-      "expression": "if({{notion:block_property:%3BMQF:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}} == \"2:1\", 2, 1)"
+      "expression": "if(prop(\"수업 유형\") == \"2:1\", 2, 1)"
     },
     "메모": {
       "type": "rich_text",
@@ -48,7 +48,7 @@
     "단가 안내": {
       "type": "formula",
       "id": "%7C%3C%40r",
-      "expression": "format({{notion:block_property:w%5EM%7B:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}}) + \"원\""
+      "expression": "format(prop(\"1인 단가\")) + \"원\""
     },
     "타이틀": {
       "type": "title",

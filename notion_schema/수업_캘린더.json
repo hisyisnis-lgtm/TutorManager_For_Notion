@@ -74,7 +74,7 @@
     "시간 회차 부족": {
       "type": "formula",
       "id": "dDt%3F",
-      "expression": "if({{notion:block_property:Q%5BJz:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}}, \"⚠ 시간 회차 부족\", \"\")"
+      "expression": "if(prop(\"회차부족_감지\"), \"⚠ 시간 회차 부족\", \"\")"
     },
     "수업 유형": {
       "type": "single_property",
@@ -91,12 +91,12 @@
     "수업 종료 시간": {
       "type": "formula",
       "id": "hx%7CI",
-      "expression": "dateAdd({{notion:block_property:KRV%7D:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}}, toNumber({{notion:block_property:t%5CHE:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}}), \"minutes\")"
+      "expression": "dateAdd(prop(\"수업 일시\"), toNumber(prop(\"수업 시간(분)\")), \"minutes\")"
     },
     "시간 회차": {
       "type": "formula",
       "id": "nKmm",
-      "expression": "if({{notion:block_property:hil%7C:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}} == 0, 0, if((!empty({{notion:block_property:KRV%7D:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}}) and ({{notion:block_property:%5ClQz:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}} != \"🟠 보강\")) and ({{notion:block_property:%5ClQz:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}} != \"🚫 취소\"), toNumber({{notion:block_property:t%5CHE:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}}) / 60, 0))"
+      "expression": "if(prop(\"무료 수업\") == 0, 0, if((!empty(prop(\"수업 일시\")) and (prop(\"특이사항\") != \"🟠 보강\")) and (prop(\"특이사항\") != \"🚫 취소\"), toNumber(prop(\"수업 시간(분)\")) / 60, 0))"
     },
     "수업 시간(분)": {
       "type": "select",
@@ -144,12 +144,12 @@
     "수업 회차": {
       "type": "formula",
       "id": "vtoV",
-      "expression": "if((!empty({{notion:block_property:KRV%7D:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}}) and ({{notion:block_property:%5ClQz:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}} != \"🟠 보강\")) and ({{notion:block_property:%5ClQz:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}} != \"🚫 취소\"), 1, 0)"
+      "expression": "if((!empty(prop(\"수업 일시\")) and (prop(\"특이사항\") != \"🟠 보강\")) and (prop(\"특이사항\") != \"🚫 취소\"), 1, 0)"
     },
     "충돌": {
       "type": "formula",
       "id": "yE%7DP",
-      "expression": "if({{notion:block_property:Jcae:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}}, \"⚠️ 충돌\", \"\")"
+      "expression": "if(prop(\"충돌_감지\"), \"⚠️ 충돌\", \"\")"
     },
     "수강생": {
       "type": "rich_text",
@@ -158,7 +158,7 @@
     "상태": {
       "type": "formula",
       "id": "ydSp",
-      "expression": "if(((empty({{notion:block_property:title:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}}) or empty(join(map({{notion:block_property:egNl:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}}, format(current)), \", \"))) or empty({{notion:block_property:KRV%7D:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}})) or empty({{notion:block_property:t%5CHE:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}}), \"🔴미입력\", if({{notion:block_property:KRV%7D:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}} > now(), \"🔵예정\", \"🟢완료\"))"
+      "expression": "if(((empty(prop(\"제목\")) or empty(join(map(prop(\"수업 유형\"), format(current)), \", \"))) or empty(prop(\"수업 일시\"))) or empty(prop(\"수업 시간(분)\")), \"🔴미입력\", if(prop(\"수업 일시\") > now(), \"🔵예정\", \"🟢완료\"))"
     },
     "전화번호": {
       "type": "rich_text",

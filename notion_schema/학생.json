@@ -67,7 +67,7 @@
     "잔여 시간 회차": {
       "type": "formula",
       "id": "%5EY%5E%3F",
-      "expression": "{{notion:block_property:O%3EEL:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}} - {{notion:block_property:u%3BJ%3C:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}}"
+      "expression": "prop(\"결제 시간 회차 합계\") - prop(\"사용 시간 회차\")"
     },
     "수업 일지": {
       "type": "dual_property",

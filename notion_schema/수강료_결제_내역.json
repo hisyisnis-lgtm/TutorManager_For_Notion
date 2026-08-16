@@ -14,7 +14,7 @@
     "미수금": {
       "type": "formula",
       "id": "%3F_Xg",
-      "expression": "round(({{notion:block_property:CmmQ:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}} * {{notion:block_property:w%40%3F%40:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}}) * (1 - ({{notion:block_property:KJvP:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}} / 100))) - {{notion:block_property:A%5C~%5D:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}}"
+      "expression": "round((prop(\"시간 회차\") * prop(\"시간당 단가\")) * (1 - (prop(\"적용 할인율(%)\") / 100))) - prop(\"실제 결제 금액\")"
     },
     "실제 결제 금액": {
       "type": "number",
@@ -72,7 +72,7 @@
     "1인 결제 금액": {
       "type": "formula",
       "id": "K%7BQp",
-      "expression": "round(({{notion:block_property:CmmQ:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}} * {{notion:block_property:w%40%3F%40:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}}) * (1 - ({{notion:block_property:KJvP:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}} / 100)))"
+      "expression": "round((prop(\"시간 회차\") * prop(\"시간당 단가\")) * (1 - (prop(\"적용 할인율(%)\") / 100)))"
     },
     "환불 사유": {
       "type": "rich_text",
@@ -81,7 +81,7 @@
     "단가 안내": {
       "type": "formula",
       "id": "R%3E%3DL",
-      "expression": "if({{notion:block_property:KJvP:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}} > 0, ((((format({{notion:block_property:w%40%3F%40:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}}) + \"원  →  \") + format(round({{notion:block_property:w%40%3F%40:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}} * (1 - ({{notion:block_property:KJvP:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}} / 100))))) + \"원  (\") + format({{notion:block_property:KJvP:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}})) + \"% 할인)\", format({{notion:block_property:w%40%3F%40:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}}) + \"원\")"
+      "expression": "if(prop(\"적용 할인율(%)\") > 0, ((((format(prop(\"시간당 단가\")) + \"원  →  \") + format(round(prop(\"시간당 단가\") * (1 - (prop(\"적용 할인율(%)\") / 100))))) + \"원  (\") + format(prop(\"적용 할인율(%)\"))) + \"% 할인)\", format(prop(\"시간당 단가\")) + \"원\")"
     },
     "결제일": {
       "type": "date",
@@ -90,7 +90,7 @@
     "시간 회차 금액": {
       "type": "formula",
       "id": "_%3DHD",
-      "expression": "round((({{notion:block_property:CmmQ:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}} * {{notion:block_property:w%40%3F%40:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}}) * (1 - ({{notion:block_property:KJvP:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}} / 100))))"
+      "expression": "round(((prop(\"시간 회차\") * prop(\"시간당 단가\")) * (1 - (prop(\"적용 할인율(%)\") / 100))))"
     },
     "미입력 항목": {
       "type": "formula",
@@ -100,7 +100,7 @@
     "1인 미수금": {
       "type": "formula",
       "id": "%60yxR",
-      "expression": "round(({{notion:block_property:CmmQ:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}} * {{notion:block_property:w%40%3F%40:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}}) * (1 - ({{notion:block_property:KJvP:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}} / 100))) - {{notion:block_property:A%5C~%5D:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}}"
+      "expression": "round((prop(\"시간 회차\") * prop(\"시간당 단가\")) * (1 - (prop(\"적용 할인율(%)\") / 100))) - prop(\"실제 결제 금액\")"
     },
     "할인 적용": {
       "type": "dual_property",
@@ -110,7 +110,7 @@
     "결제 금액": {
       "type": "formula",
       "id": "fXuU",
-      "expression": "round(({{notion:block_property:CmmQ:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}} * {{notion:block_property:w%40%3F%40:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}}) * (1 - ({{notion:block_property:KJvP:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}} / 100)))"
+      "expression": "round((prop(\"시간 회차\") * prop(\"시간당 단가\")) * (1 - (prop(\"적용 할인율(%)\") / 100)))"
     },
     "학생": {
       "type": "dual_property",
@@ -131,12 +131,12 @@
     "결제 상태": {
       "type": "formula",
       "id": "yMqM",
-      "expression": "if({{notion:block_property:A%5C~%5D:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}} > round(({{notion:block_property:CmmQ:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}} * {{notion:block_property:w%40%3F%40:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}}) * (1 - ({{notion:block_property:KJvP:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}} / 100))), (\"⚠️초과금 → \" + format({{notion:block_property:A%5C~%5D:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}} - round(({{notion:block_property:CmmQ:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}} * {{notion:block_property:w%40%3F%40:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}}) * (1 - ({{notion:block_property:KJvP:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}} / 100))))) + \"원\", if(round(({{notion:block_property:CmmQ:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}} * {{notion:block_property:w%40%3F%40:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}}) * (1 - ({{notion:block_property:KJvP:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}} / 100))) == {{notion:block_property:A%5C~%5D:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}}, \"🟢완료\", if({{notion:block_property:A%5C~%5D:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}} == 0, \"🔴미결제\", \"🔴미완료\")))"
+      "expression": "if(prop(\"실제 결제 금액\") > round((prop(\"시간 회차\") * prop(\"시간당 단가\")) * (1 - (prop(\"적용 할인율(%)\") / 100))), (\"⚠️초과금 → \" + format(prop(\"실제 결제 금액\") - round((prop(\"시간 회차\") * prop(\"시간당 단가\")) * (1 - (prop(\"적용 할인율(%)\") / 100))))) + \"원\", if(round((prop(\"시간 회차\") * prop(\"시간당 단가\")) * (1 - (prop(\"적용 할인율(%)\") / 100))) == prop(\"실제 결제 금액\"), \"🟢완료\", if(prop(\"실제 결제 금액\") == 0, \"🔴미결제\", \"🔴미완료\")))"
     },
     "유효 시간 회차": {
       "type": "formula",
       "id": "%7C~~v",
-      "expression": "if({{notion:block_property:A%5C~%5D:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}} >= round(({{notion:block_property:CmmQ:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}} * {{notion:block_property:w%40%3F%40:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}}) * (1 - ({{notion:block_property:KJvP:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}} / 100))), if(empty({{notion:block_property:BnUi:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}}) or ({{notion:block_property:w%40%3F%40:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}} == 0), {{notion:block_property:CmmQ:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}}, {{notion:block_property:CmmQ:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}} - ({{notion:block_property:BnUi:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}} / ({{notion:block_property:w%40%3F%40:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}} * (1 - ({{notion:block_property:KJvP:00000000-0000-0000-0000-000000000000:14eff8a8-21f5-4252-9b05-cf83dd5e2581}} / 100))))), 0)"
+      "expression": "if(prop(\"실제 결제 금액\") >= round((prop(\"시간 회차\") * prop(\"시간당 단가\")) * (1 - (prop(\"적용 할인율(%)\") / 100))), if(empty(prop(\"환불 금액\")) or (prop(\"시간당 단가\") == 0), prop(\"시간 회차\"), prop(\"시간 회차\") - (prop(\"환불 금액\") / (prop(\"시간당 단가\") * (1 - (prop(\"적용 할인율(%)\") / 100))))), 0)"
     },
     "타이틀": {
       "type": "title",
