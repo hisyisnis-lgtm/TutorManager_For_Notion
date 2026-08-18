@@ -48,7 +48,8 @@ const isBoss = (it) => it.kind === 'boss';
 
 const DIFF_COACH = [
   // ★현재 칸 카드를 비춘다 — 리스트 전체를 스포트라이트로 잡으면 화면 전부가 구멍이 되어 딤이 사라진다(2026-08-06 사용자 지적)
-  { selector: '[data-coach="diff-card"]', label: '위로 오를수록 어려워지고, 급 끝엔 승급시험이 있어요. 카드의 ▶︎를 누르면 바로 시작해요!' },
+  // ★"카드의 ▶︎를 누르면"이 아니라 "카드를 누르면" — 2026-08-11부터 카드 전체가 버튼이다(오른쪽 칩은 표시일 뿐).
+  { selector: '[data-coach="diff-card"]', label: '위로 오를수록 어려워지고, 급 끝엔 승급시험이 있어요. 카드를 누르면 바로 시작해요!' },
   { selector: '[data-coach="diff-current"]', label: '멀리 스크롤했으면 여기로 현재 난이도에 바로 돌아와요.' },
 ];
 
@@ -264,12 +265,22 @@ export function DifficultyScreen({ studentToken, rank = 0, onSelect, onStart, on
                   )}
                 </div>
 
-                {/* 카드 — 아이콘 칩 + 제목 + 별·점수 + 시작 버튼. 잠김도 흰 카드(버튼만 자물쇠) */}
-                <div data-coach={idx === currentVIdx ? 'diff-card' : undefined} style={{
+                {/* 카드 — 아이콘 칩 + 제목 + 별·점수 + 시작 표시. 잠김도 흰 카드(오른쪽 칩만 자물쇠).
+                    ★카드 **전체**가 버튼이다(2026-08-11 UX 검수). 구버전은 오른쪽 50×50 칩만 눌렸고,
+                      카드 본문(제목·별·점수)을 탭하면 **열린 칸은 시작도 안 되고 잠긴 칸은 안내 토스트조차 안 떴다**.
+                      흰 카드+그림자라 비활성 신호가 전혀 없고, 모드선택 오브가 '오브+라벨 전체'를 히트영역으로
+                      쓰는 것과도 어긋났다(직전 검수도 같은 자리를 눌러 '무반응'으로 오판한 전례 있음).
+                    → 오른쪽 칩은 시각 어포던스로 낮추고(aria-hidden) 클릭은 카드가 전담한다(중첩 버튼 금지).
+                    ⚠️ onClick(포인터다운 아님)이라 스크롤 제스처와 충돌하지 않는다. touchAction:manipulation은
+                       더블탭 확대만 끄고 패닝은 살려두므로 리스트 스크롤도 그대로. */}
+                <button type="button" data-coach={idx === currentVIdx ? 'diff-card' : undefined}
+                  className="tg-press" onClick={() => start(s)}
+                  aria-label={selectable ? `${title} 시작` : `${title} 잠김`}
+                  style={{
                   position: 'absolute', left: CARD_L, right: CARD_R, top: (ROW_H - CARD_H) / 2, height: CARD_H,
                   display: 'flex', alignItems: 'center', gap: SPACE.lg, padding: '0 10px 0 10px',
-                  borderRadius: RADIUS.xl, background: '#fff',
-                  boxShadow: 'inset 0 -2px 0 #E4EDF5, 0 4px 18px rgba(43,39,48,0.07)',
+                  borderRadius: RADIUS.xl, background: '#fff', border: 'none', cursor: 'pointer', textAlign: 'left',
+                  boxShadow: 'inset 0 -2px 0 #E4EDF5, 0 4px 18px rgba(43,39,48,0.07)', ...TOUCH_OPT,
                 }}>
                   <div style={{ position: 'relative', width: 50, height: 50, borderRadius: RADIUS.lg, background: ICON_BG, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     {/* 잠겨도 아이콘은 급 색 그대로(시안) — 잠김 표시는 오른쪽 자물쇠 버튼이 전담 */}
@@ -286,18 +297,18 @@ export function DifficultyScreen({ studentToken, rank = 0, onSelect, onStart, on
                       <span style={{ ...TYPE.num, fontSize: 13, color: SCORE_C, whiteSpace: 'nowrap' }}>{best.toLocaleString()}점</span>
                     </div>
                   </div>
-                  {/* 시작 — 누르면 바로 시작(선택 단계 없음). 잠김은 회색 자물쇠 + 안내 토스트 */}
-                  <button type="button" className="tg-press" onClick={() => start(s)}
-                    aria-label={selectable ? `${title} 시작` : `${title} 잠김`}
+                  {/* 시작/잠김 표시 — 클릭은 카드가 받는다(중첩 버튼 금지). 여기선 시각 어포던스만 담당.
+                      모양·색은 구 버튼 그대로 유지 — 유저 눈에는 달라진 게 없고 누를 수 있는 면적만 넓어진다. */}
+                  <div aria-hidden="true"
                     style={{
-                      width: 50, height: 50, flexShrink: 0, borderRadius: RADIUS.xl, border: 'none', cursor: 'pointer',
+                      width: 50, height: 50, flexShrink: 0, borderRadius: RADIUS.xl,
                       background: selectable ? '#F96163' : CHIP_BG,
                       boxShadow: selectable ? 'inset 0 -4px 0 #E64244, 0 4px 8px rgba(43,39,48,0.07)' : 'inset 0 -4px 0 #CFDBE6',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', paddingBottom: 4, ...TOUCH_OPT,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', paddingBottom: 4,
                     }}>
                     {selectable ? <Play size={17} weight="Bold" color="#fff" /> : <Lock size={17} weight="Bold" color={SCORE_C} />}
-                  </button>
-                </div>
+                  </div>
+                </button>
               </div>
             );
           })}

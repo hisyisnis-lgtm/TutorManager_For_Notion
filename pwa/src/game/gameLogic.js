@@ -205,11 +205,15 @@ export function stageUnlockProgress(token, stage, rank = 0) {
   const firstStar = stageStarScores(prev.timeMultiplier)[0];
   return { kind: 'score', cur: stageScoreOf(token, prev.id), need: firstStar, prevLabel: prev.label };
 }
+// ★진행 수치를 문구에 넣는다(2026-08-11 UX 검수) — 구버전은 "입문 2 별 하나면 열려요"로 조건만 말해
+//  "얼마나 더 하면 되는지"를 알 수 없었다. stageUnlockProgress가 cur/need를 이미 들고 있는데 버리고 있었다.
+//  아직 한 번도 안 깬 칸(cur=0)은 수치를 붙이면 "0/840점"이라 오히려 막막하니 조건만 말한다.
 export function stageUnlockToastText(token, stage, rank = 0) {
   const p = stageUnlockProgress(token, stage, rank);
   if (!p) return '';
-  return p.kind === 'boss'
-    ? `${p.bossLabel} 승급시험을 통과하면 열려요`
+  if (p.kind === 'boss') return `${p.bossLabel} 승급시험을 통과하면 열려요`;
+  return p.cur > 0
+    ? `${p.prevLabel} 별 하나면 열려요 (${p.cur.toLocaleString()}/${p.need.toLocaleString()}점)`
     : `${p.prevLabel} 별 하나면 열려요`;
 }
 
@@ -241,13 +245,26 @@ export function clearOrphanThemeBests(token) {
   }
   return cleared;
 }
-export function themeUnlockReqText(theme) {
+// cur = 조건이 되는 테마의 현재 최고점(호출부가 themeBestScore로 구해 넘긴다).
+//  ★진행이 있으면 "드라마 단어 412/500점"으로 **현재 위치**를 말한다(2026-08-11 UX 검수) —
+//   구버전은 "…500점 달성 시 해제"로 조건만 말해 얼마나 남았는지 알 수 없었다.
+//   진행 형태가 조건 문장보다 **짧아서** 카드 캡션(nowrap+ellipsis, 280px)에도 안전하다.
+//   아직 0점이면 수치를 붙여도 막막하기만 하니 조건 문장 그대로 둔다.
+export function themeUnlockReqText(theme, cur = 0) {
   if (!theme || !theme.unlock) return '';
-  return `${labelForGameKey(theme.unlock.byGameKey)} ${theme.unlock.score.toLocaleString()}점 달성 시 해제`;
+  const label = labelForGameKey(theme.unlock.byGameKey);
+  const need = theme.unlock.score;
+  return cur > 0
+    ? `${label} ${cur.toLocaleString()}/${need.toLocaleString()}점`
+    : `${label} ${need.toLocaleString()}점 달성 시 해제`;
 }
-export function themeUnlockToastText(theme) {
+export function themeUnlockToastText(theme, cur = 0) {
   if (!theme || !theme.unlock) return '';
-  return `${labelForGameKey(theme.unlock.byGameKey)} ${theme.unlock.score.toLocaleString()}점을 달성하면 열려요`;
+  const label = labelForGameKey(theme.unlock.byGameKey);
+  const need = theme.unlock.score;
+  return cur > 0
+    ? `${label} ${cur.toLocaleString()}/${need.toLocaleString()}점 — 조금만 더!`
+    : `${label} ${need.toLocaleString()}점을 달성하면 열려요`;
 }
 // 테마 성취 별(0~3) — 한 판 최고점 구간별 별 개수. **콤보 조건 없이 순수 점수 기준**(2026-07-16 사용자 결정).
 // 점수 임계가 오름차순이라 별은 항상 왼쪽부터 연속 채워짐(구멍 없음). ★2=1000은 잠금 해제 기준(UNLOCK_THRESHOLD)과 정합.

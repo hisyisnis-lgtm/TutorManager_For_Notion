@@ -3,7 +3,7 @@ import { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { Stopwatch, Bones, Logout } from '@solar-icons/react';
 import { TG, TYPE, TOUCH_OPT, RADIUS, SPACE } from '../tgTokens.js';
 import { play as playSfx } from '../tgSfx.js';
-import { Reveal, WordCard, ToneButtons, DrawPad, CoachBubble, ConfettiBurst, CrispFlash, GameHeader, LIGHT_CONFETTI, prefersReducedMotion, TONE_SHOT_HOVER_MS, TONE_FLIGHT_MS, TONE_IMPACT_MS } from './shared.jsx';
+import { Reveal, WordCard, ToneButtons, DrawPad, CoachBubble, ConfettiBurst, CrispFlash, GameHeader, PauseButton, LIGHT_CONFETTI, prefersReducedMotion, TONE_SHOT_HOVER_MS, TONE_FLIGHT_MS, TONE_IMPACT_MS } from './shared.jsx';
 import { ComboChip, ToneMark } from '../tgWidgets.jsx';
 import { TONES } from '../../constants/toneGameWords.js';
 import { useTabTip } from '../../hooks/useTabTip.js';
@@ -429,9 +429,10 @@ export function GameScreen({ title = '', word, entered, currentSyl, completed, t
       <Reveal i={0} play={playReveal} style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', top: 108 }}>
         <span data-testid="tg-score" style={{ ...TYPE.numMd, fontSize: 26, lineHeight: 1, color: TG.INK }}>{score}</span>
       </Reveal>
-      {/* 헤더 — 시안 09: 글래스 60 + 뒤로가기 + 스테이지명(가운데).
-          뒤로가기는 곧바로 이탈이 아니라 **일시정지 모달**로 연결(계속/다시하기/그만두기) — 오조작으로 판이 날아가지 않게 */}
-      <GameHeader title={title} onBack={onPause} glass center />
+      {/* 헤더 — 글래스 60 + 스테이지명(가운데) + **우측 일시정지**(2026-08-12 사용자 지정).
+          구 시안 09는 좌측 뒤로가기였는데, 그 버튼이 실제로 여는 건 일시정지 모달이라 라벨·아이콘과 동작이 어긋났다.
+          ⚠️ 시안(페이지 439:2 '09. 게임')과 드리프트 — Figma 동기화 필요. */}
+      <GameHeader title={title} glass center right={<PauseButton onClick={onPause} />} />
       {/* 타이머 — 일반: 코랄 카운트다운 게이지 / 트레이닝(시안 09-4): **초록 풀게이지**(시간 제한 없음 = 줄지 않는 게이지) */}
       {practice ? (
         <Reveal i={1} play={playReveal} style={{ position: 'absolute', left: 24, right: 24, top: 72 }}>
