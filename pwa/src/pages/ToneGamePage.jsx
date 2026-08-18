@@ -1196,7 +1196,12 @@ export default function ToneGamePage() {
   //  cleanup이 '숨기 직전까지'만 경과로 누적한다(그 뒤 시간은 안 먹음). iOS Safari 대비 pagehide도 함께.
   useEffect(() => {
     if (screen !== 'game' || isPreview) return undefined;
-    const pause = () => { if (!showGameOverBeat) setPaused(true); };
+    // ★종료 연출 체인 중엔 일시정지하지 않는다 — 이미 끝난 판이라 멈출 게 없다.
+    //  ⚠️ 구버전은 showGameOverBeat만 봤는데, 체인은 비트 다음으로 XP획득·등급승급·모드해제가 이어지고
+    //  그 구간엔 showGameOverBeat=false인데 screen은 아직 'game'이다. 그때 탭을 벗어나면
+    //  paused가 세워진 채 결과화면으로 넘어가 **결과 위에 일시정지 모달이 떴다**(2026-08-18 사용자 제보).
+    const chainBusy = () => showGameOverBeat || !!xpGain || !!rankUp || !!modeUnlock;
+    const pause = () => { if (!chainBusy()) setPaused(true); };
     const onVis = () => { if (document.hidden) pause(); };
     document.addEventListener('visibilitychange', onVis);
     window.addEventListener('pagehide', pause);
@@ -1204,7 +1209,11 @@ export default function ToneGamePage() {
       document.removeEventListener('visibilitychange', onVis);
       window.removeEventListener('pagehide', pause);
     };
-  }, [screen, isPreview, showGameOverBeat]);
+  }, [screen, isPreview, showGameOverBeat, xpGain, rankUp, modeUnlock]);
+
+  // 인게임을 벗어나면 일시정지 상태를 반드시 내린다 — paused는 **인게임 전용 상태**다.
+  //  남아 있으면 결과화면 위에 모달이 뜨고, addPausable 콜백도 영영 보류 큐에 쌓인다.
+  useEffect(() => { if (screen !== 'game') setPaused(false); }, [screen]);
 
   // ── 인게임 이탈 방어 ②: 브라우저/기기 뒤로가기를 일시정지로 받기 ──────────
   // 게임 내부 화면 전환은 history를 쓰지 않아, 인게임에서 뒤로가기 하면 판이 통째로 날아간 채 앱 밖으로 나갔다.
@@ -1583,7 +1592,8 @@ export default function ToneGamePage() {
           <CountdownVisual n={cdNum} />
         </TxLayer>
       )}
-      {paused && (
+      {paused && screen === 'game' && (
+        // ★screen 가드 — 일시정지는 인게임 전용 UI다(결과·홈 위에 뜨면 안 된다).
         // onQuit=인게임 이탈 → 홈: '오늘의 팁' 웨이브 전환. tipTransitionTo가 clearTimers로 보류 큐까지 비워 기록 오염(2026-07-07 버그) 방지.
         <PauseModal score={score} combo={combo} crutchCtx={crutchCtx} onResume={() => setPaused(false)}
           onRestart={() => {
