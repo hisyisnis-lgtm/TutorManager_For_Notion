@@ -33,6 +33,8 @@ import PandaTestPage from './pages/PandaTestPage.jsx';
 // 성조게임은 앱에서 가장 큰 코드 덩어리 — lazy 분리로 게임 진입 시에만 로드.
 // (게임 단독 앱 빌드(main.game.jsx)는 별도 엔트리라 여기 lazy와 무관하게 정적 import 유지)
 const ToneGamePage = lazy(() => import('./pages/ToneGamePage.jsx'));
+// 개인정보처리방침 — 거의 안 들어오는 법정 고지 페이지라 첫 로드 번들에서 뺀다(lazy).
+const PrivacyPage = lazy(() => import('./pages/PrivacyPage.jsx'));
 import BookingsManagePage from './pages/BookingsManagePage.jsx';
 import ConsultManagePage from './pages/ConsultManagePage.jsx';
 import HomeworkFormPage from './pages/HomeworkFormPage.jsx';
@@ -42,6 +44,7 @@ import HomeworkManagePage from './pages/HomeworkManagePage.jsx';
 import LandingPage from './pages/LandingPage.jsx';
 import PricingPage from './pages/PricingPage.jsx';
 import ConsentPage from './pages/ConsentPage.jsx';
+
 import GroupClassPage from './pages/GroupClassPage.jsx';
 import InAppBrowserWarning from './components/ui/InAppBrowserWarning.jsx';
 import DynamicStudentManifest from './components/DynamicStudentManifest.jsx';
@@ -94,7 +97,7 @@ function GatedStudentRoute({ children }) {
 // 현재 hash가 공개 페이지인지 확인 (로그인 불필요)
 function isPublicBookingRoute() {
   const hash = window.location.hash;
-  return hash.startsWith('#/book') || hash.startsWith('#/intro') || hash.startsWith('#/pricing') || hash.startsWith('#/consent') || hash.startsWith('#/group-class') || hash.startsWith('#/bootcamp') || hash.startsWith('#/personal') || hash.startsWith('#/panda-test');
+  return hash.startsWith('#/book') || hash.startsWith('#/intro') || hash.startsWith('#/pricing') || hash.startsWith('#/consent') || hash.startsWith('#/privacy') || hash.startsWith('#/group-class') || hash.startsWith('#/bootcamp') || hash.startsWith('#/personal') || hash.startsWith('#/panda-test');
 }
 
 // 데이터 작성 중인 폼 페이지 여부 확인
@@ -304,6 +307,8 @@ export default function App() {
             <Route path="/intro" element={<LandingPage />} />
             <Route path="/pricing" element={<PricingPage />} />
             <Route path="/consent" element={<ConsentPage />} />
+            {/* 개인정보처리방침 — 카카오·구글 OAuth 콘솔이 요구하는 공개 URL(#/privacy) */}
+            <Route path="/privacy" element={<Suspense fallback={null}><PrivacyPage /></Suspense>} />
             <Route path="/group-class" element={<GroupClassPage />} />
             {/* 옛 /bootcamp 링크 호환 — 그룹 수업 페이지로 리다이렉트 (부트캠프 명칭 폐기 2026-06-12) */}
             <Route path="/bootcamp" element={<Navigate to="/group-class" replace />} />

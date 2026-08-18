@@ -303,6 +303,14 @@ const TONE_GAME_CSS = `
       /* 누름 피드백 — 하루에 수백 번. 복귀가 280ms면 손을 뗀 뒤에도 버튼이 늘어져 굼떠 보인다 → 140ms(권장 100~160) */
       .tg-press{ transition: transform .14s cubic-bezier(.23,1,.32,1) }
       .tg-press:active{ transform: scale(.96); transition: transform .09s cubic-bezier(.23,1,.32,1) }
+      /* ── 히트영역 44px 확보 — 보이는 크기는 그대로 두고 탭 영역만 넓힌다(2026-08-18 검수) ──────
+         인게임 보조 버튼(발음 듣기·정답보기 h30)과 일시정지(40)가 44 미만이라 시간 제한 중 오조작이 났다.
+         시안 실측값(h30·카드 272)을 건드리지 않으려고 ::before 투명 레이어로만 넓힌다 →
+         레이아웃에 영향 0. width/height 100%에 min 44를 얹어 원래 크기보다 줄어들 일도 없다.
+         ⚠️ 버튼을 감싸는 컨테이너에 overflow:hidden이 있으면 잘리니, 카드 안쪽 여백이 7px 미만인 곳엔 쓰지 말 것. */
+      .tg-hit44{ position: relative }
+      .tg-hit44::before{ content:''; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+        width:100%; height:100%; min-width:44px; min-height:44px }
       .tg-root, .tg-root *, .tg-root *::before, .tg-root *::after { box-sizing: border-box; }
       .tg-noscroll::-webkit-scrollbar { display: none; }
       /* ── iOS 화면 전체가 딸려 스크롤되는 것 차단(2026-08-09 실기기 제보) ──────────
@@ -533,7 +541,7 @@ export function BackButton({ onClick, style }) {
 //   (하드웨어/브라우저 뒤로가기는 그대로 일시정지 모달로 연결된다 — ToneGamePage의 back guard)
 export function PauseButton({ onClick, style }) {
   return (
-    <button onClick={onClick} aria-label="일시정지" className="tg-press" style={{
+    <button onClick={onClick} aria-label="일시정지" className="tg-press tg-hit44" style={{
       width: 40, height: 40, marginRight: -8, borderRadius: RADIUS.xl, background: 'none', boxShadow: 'none',
       border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, ...TOUCH_OPT, ...style,
     }}>
@@ -748,7 +756,7 @@ function SandhiToneChip({ big = false }) {
 const CARD_ACT_ICON = '#637481', CARD_ACT_TEXT = '#7E8A94';
 const CARD_ACT_BTN = { height: 30, padding: '0 13px', borderRadius: 10, background: '#fff', border: '1px solid #E2E7EB', display: 'inline-flex', alignItems: 'center', gap: 6, ...TOUCH_OPT };
 
-export function WordCard({ word, entered, currentSyl, completed, timedOut, progressText, floatScore, hideProgress, listen = false, audioOff = false, onReplay, onCantHear, draw = false, lianyinAt = -1, practice = false, onSpeak, onReveal, hideMeaning = false, hidePinyin = false, sandhiAt = -1 }) {
+export function WordCard({ word, entered, currentSyl, completed, timedOut, progressText, reviewDots = null, floatScore, hideProgress, listen = false, audioOff = false, onReplay, onCantHear, draw = false, lianyinAt = -1, practice = false, onSpeak, onReveal, hideMeaning = false, hidePinyin = false, sandhiAt = -1 }) {
   const listening = listen && !audioOff && !completed && !timedOut; // 듣기 모드: 답하기 전엔 한자 가리고 소리 패널
   // hideMeaning/hidePinyin = 보조바퀴 토글(현재 컨텍스트) — 병음/뜻 숨김으로 '소리·성조 체득' 강화. ToneGamePage가 ctx별 값을 전달.
   // ※ 구 onHint('발음 힌트') 버튼은 제거 — 아래 액션 행이 onSpeak/onReveal을 항상 받아 이 분기가 렌더될 수 없었고,
@@ -862,12 +870,32 @@ export function WordCard({ word, entered, currentSyl, completed, timedOut, progr
       position: 'relative', background: TG.CARD, borderRadius: RADIUS.card, width: '100%', height: 272, padding: '20px 20px 24px', overflow: 'hidden',
       display: 'flex', flexDirection: 'column', boxShadow: glow, transition: `box-shadow ${DUR.state} ease`,
     }}>
-      {!hideProgress && (
-        <div style={{ position: 'absolute', left: 16, top: 13, ...TYPE.num, fontSize: 16, display: 'flex', gap: SPACE.xs, alignItems: 'center' }}>
-          <span style={{ color: TG.CORAL_DK }}>{progressText.split('/')[0]}</span>
-          {/* 분모(총 문제수)는 있을 때만 — 무한모드는 숫자만이라 '/ ' 안 보이게 */}
-          {progressText.split('/')[1] && <span style={{ color: TG.SUB, fontSize: 14 }}>/ {progressText.split('/')[1]}</span>}
-        </div>
+      {/* 좌상단 슬롯 — 복습이면 '이 단어의 졸업 진행'(동그라미), 그 외엔 문제 번호.
+          복습에서 숫자(졸업단어수/전체)를 쓰면 "지금 이 단어를 몇 번 더 맞혀야 하나"가 안 보인다(2026-08-18). */}
+      {!hideProgress && (reviewDots
+        ? (
+          <div
+            role="img"
+            aria-label={`졸업까지 ${reviewDots.total}번 중 ${reviewDots.done}번 완료`}
+            style={{ position: 'absolute', left: 16, top: 15, display: 'flex', gap: 5, alignItems: 'center' }}
+          >
+            {Array.from({ length: reviewDots.total }, (_, i) => (
+              <span key={i} style={{
+                width: 9, height: 9, borderRadius: '50%',
+                background: i < reviewDots.done ? TG.CORAL_DK : 'transparent',
+                border: `1.5px solid ${i < reviewDots.done ? TG.CORAL_DK : TG.TRACK}`,
+                transition: `background ${DUR.state} ease, border-color ${DUR.state} ease`,
+              }} />
+            ))}
+          </div>
+        )
+        : (
+          <div style={{ position: 'absolute', left: 16, top: 13, ...TYPE.num, fontSize: 16, display: 'flex', gap: SPACE.xs, alignItems: 'center' }}>
+            <span style={{ color: TG.CORAL_DK }}>{progressText.split('/')[0]}</span>
+            {/* 분모(총 문제수)는 있을 때만 — 무한모드는 숫자만이라 '/ ' 안 보이게 */}
+            {progressText.split('/')[1] && <span style={{ color: TG.SUB, fontSize: 14 }}>/ {progressText.split('/')[1]}</span>}
+          </div>
+        )
       )}
       {/* 정답 판정(완벽/훌륭/좋아)+점수는 카드 코너가 아니라 화면 중앙 팝으로 — GameScreen JudgePop(시선 집중) */}
       {/* 뜻 — 듣기 중엔 가림(완료 시 공개="아 이 말이었구나"). 보조바퀴 토글로 숨기면 항상 가림 */}
@@ -892,11 +920,11 @@ export function WordCard({ word, entered, currentSyl, completed, timedOut, progr
         <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: SPACE.md, paddingTop: SPACE.xxs }}>
           {/* 듣기 모드 버튼도 시안 09-5는 **일반 모드와 같은 규격** — 카드 하단 액션 버튼 스타일(CARD_ACT_*) 공용 */}
           <div style={{ display: 'flex', gap: 16 }}>
-            <button onClick={onReplay} className="tg-press" style={{ ...CARD_ACT_BTN, cursor: 'pointer' }}>
+            <button onClick={onReplay} className="tg-press tg-hit44" style={{ ...CARD_ACT_BTN, cursor: 'pointer' }}>
               <VolumeLoud size={16} weight="Bold" color={CARD_ACT_ICON} />
               <span style={{ ...TYPE.labelSm, fontSize: 14, color: CARD_ACT_TEXT }}>발음 듣기</span>
             </button>
-            <button onClick={onCantHear} className="tg-press" style={{ ...CARD_ACT_BTN, cursor: 'pointer' }}>
+            <button onClick={onCantHear} className="tg-press tg-hit44" style={{ ...CARD_ACT_BTN, cursor: 'pointer' }}>
               <VolumeCross size={16} weight="Bold" color={CARD_ACT_ICON} />
               <span style={{ ...TYPE.labelSm, fontSize: 14, color: CARD_ACT_TEXT }}>지금은 못 들어요</span>
             </button>
@@ -920,12 +948,12 @@ export function WordCard({ word, entered, currentSyl, completed, timedOut, progr
             /* 트레이닝·일반 공용. 트레이닝은 콤보·점수가 없어 무페널티, 일반은 발음듣기가 콤보를 끊는 기존 규칙 유지 */
             <div data-coach="prac-actions" style={{ display: 'flex', gap: 16 }}>
               {/* 시안 09 실측: 버튼 h30·r10·흰색+1px #E2E7EB / 아이콘 16 #637481 / 텍스트 14 #7E8A94 / 아이콘-텍스트 6 / 버튼 간격 16 */}
-              <button onClick={onSpeak} className="tg-press" aria-label="발음 듣기"
+              <button onClick={onSpeak} className="tg-press tg-hit44" aria-label="발음 듣기"
                 style={{ ...CARD_ACT_BTN, cursor: 'pointer' }}>
                 <VolumeLoud size={16} weight="Bold" color={CARD_ACT_ICON} />
                 <span style={{ ...TYPE.labelSm, fontSize: 14, color: CARD_ACT_TEXT }}>발음 듣기</span>
               </button>
-              <button onClick={onReveal} disabled={completed} className="tg-press" aria-label="정답보기"
+              <button onClick={onReveal} disabled={completed} className="tg-press tg-hit44" aria-label="정답보기"
                 style={{ ...CARD_ACT_BTN, cursor: completed ? 'default' : 'pointer', opacity: completed ? 0.5 : 1 }}>
                 <DoubleAltArrowRight size={16} weight="Bold" color={CARD_ACT_ICON} />
                 <span style={{ ...TYPE.labelSm, fontSize: 14, color: CARD_ACT_TEXT }}>정답보기</span>

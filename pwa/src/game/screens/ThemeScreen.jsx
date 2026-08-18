@@ -135,6 +135,9 @@ const metaChip = (bg, color, bold) => ({
 // unlockCur = 해제 조건이 되는 테마의 현재 최고점(잠김 캡션에 진행 표시). 호출부가 계산해 넘긴다.
 function ThemeCard({ theme, unlocked, w, h, capH, unlockCur = 0 }) {
   const imgH = h - capH;
+  // 포스터가 뜨는 순간이 '툭' 튀지 않게 짧게 페이드인 — 뒤에는 이미 theme.tint가 깔려 있어
+  // 로딩 중에도 빈칸이 아니라 그 테마의 색이 보인다. (캐시 히트면 onLoad가 즉시 떠서 사실상 무전환)
+  const [imgOn, setImgOn] = useState(false);
   return (
     <div style={{
       position: 'absolute', inset: 0, borderRadius: RADIUS.xl, overflow: 'hidden', background: '#fff',
@@ -143,10 +146,19 @@ function ThemeCard({ theme, unlocked, w, h, capH, unlockCur = 0 }) {
       <div style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: capH - CARD_STROKE, background: theme.tint || '#eee' }}>
         {theme.image
           ? (
-            <img src={theme.image} alt="" style={{
-              position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 30%',
-              filter: unlocked ? 'none' : 'grayscale(1)', // 잠김 = 흑백(시안)
-            }} />
+            <img
+              src={theme.image}
+              alt=""
+              decoding="async"
+              onLoad={() => setImgOn(true)}
+              onError={() => setImgOn(true)}
+              style={{
+                position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 30%',
+                filter: unlocked ? 'none' : 'grayscale(1)', // 잠김 = 흑백(시안)
+                opacity: imgOn ? 1 : 0,
+                transition: `opacity ${DUR.state} ease`,
+              }}
+            />
           )
           : (
             <span style={{ position: 'absolute', left: 0, right: 0, top: '42%', textAlign: 'center', ...TYPE.label, lineHeight: 1.5, color: 'rgba(43,39,48,0.3)' }}>

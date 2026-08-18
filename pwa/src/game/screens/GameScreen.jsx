@@ -231,7 +231,7 @@ function CenterBurst({ data }) {
   );
 }
 
-export function GameScreen({ title = '', word, entered, currentSyl, completed, timedOut, wordIndex, wordsLen, wordTimeLimit, gaugeOffsetMs = 0, lowTime = false, paused, combo, comboFlash, floatScore, score, coachText, onTone, wrongBtn, wrongShakeKey = 0, onPause, onEndTraining, endLabel = '트레이닝 종료', progressText = null, playReveal = true, endless = false, showSudden = false, runId = 0, recordToBeat = 0, practice = false, endKind = 'complete', listen = false, audioOff = false, onReplay, onCantHear, onSpeak, onReveal, draw = false, drawExpectedTone, onDraw, drawResetKey = 0, lianyinAt = -1, sandhiAt = -1, hideMeaning = false, hidePinyin = false, demoFx = null }) {
+export function GameScreen({ title = '', word, entered, currentSyl, completed, timedOut, wordIndex, wordsLen, wordTimeLimit, gaugeOffsetMs = 0, lowTime = false, paused, combo, comboFlash, floatScore, score, coachText, onTone, wrongBtn, wrongShakeKey = 0, onPause, onEndTraining, endLabel = '트레이닝 종료', progressText = null, reviewDots = null, playReveal = true, endless = false, showSudden = false, runId = 0, recordToBeat = 0, practice = false, endKind = 'complete', listen = false, audioOff = false, onReplay, onCantHear, onSpeak, onReveal, draw = false, drawExpectedTone, onDraw, drawResetKey = 0, lianyinAt = -1, sandhiAt = -1, hideMeaning = false, hidePinyin = false, demoFx = null }) {
   lowTime = lowTime || demoFx === 'low'; // [DEV] 미리보기 텐션 데모(?screen=game&fx=low) — 머지 전 백도어 제거 대상
   // ── 버스트 연출(P4b): 콤보 마일스톤(5·10·15…) + 라이브 신기록. 비차단·자동 소멸 ──
   const [burst, setBurst] = useState(null);
@@ -445,7 +445,12 @@ export function GameScreen({ title = '', word, entered, currentSyl, completed, t
             <div style={{ flex: 1, height: 12, borderRadius: 8, background: '#EBE5D5', overflow: 'hidden' }}>
               <div key={`ptimer-${runId}-${wordIndex}`} style={{
                 height: '100%', width: '100%', background: '#2BB583',
-                animation: `tg-timer ${wordTimeLimit || PRACTICE_PACE_MS}ms linear forwards`,
+                // ★단축(animation)과 롱핸드(animationPlayState)를 섞으면 React가 경고하고 재렌더 시 값이 어긋날 수 있다.
+                //   일시정지는 매 단어 완료마다 토글되므로 전부 롱핸드로 쓴다(2026-08-18).
+                animationName: 'tg-timer',
+                animationDuration: `${wordTimeLimit || PRACTICE_PACE_MS}ms`,
+                animationTimingFunction: 'linear',
+                animationFillMode: 'forwards',
                 animationPlayState: (paused || completed) ? 'paused' : 'running',
               }} />
             </div>
@@ -459,7 +464,7 @@ export function GameScreen({ title = '', word, entered, currentSyl, completed, t
           </div>
           {/* 시간부족이어도 트랙에 붉은 외곽선은 넣지 않는다(2026-08-06 사용자) — 텐션은 채움 색·시계 맥동만 */}
           <div style={{ flex: 1, height: 12, borderRadius: 8, background: '#EBE5D5', overflow: 'hidden' }}>
-            <div key={`${runId}-${wordIndex}-${wordTimeLimit}-${gaugeOffsetMs}`} style={{ height: '100%', width: '100%', borderRadius: RADIUS.sm, background: lowTime ? 'linear-gradient(90deg,#ff5e62,#f2484c)' : '#FF5E62', animation: `tg-timer ${wordTimeLimit}ms linear forwards`, animationDelay: `-${gaugeOffsetMs}ms`, animationPlayState: (paused || completed) ? 'paused' : 'running' }} />
+            <div key={`${runId}-${wordIndex}-${wordTimeLimit}-${gaugeOffsetMs}`} style={{ height: '100%', width: '100%', borderRadius: RADIUS.sm, background: lowTime ? 'linear-gradient(90deg,#ff5e62,#f2484c)' : '#FF5E62', animationName: 'tg-timer', animationDuration: `${wordTimeLimit}ms`, animationTimingFunction: 'linear', animationFillMode: 'forwards', animationDelay: `-${gaugeOffsetMs}ms`, animationPlayState: (paused || completed) ? 'paused' : 'running' }} />
           </div>
         </div>
         </Reveal>
@@ -470,7 +475,7 @@ export function GameScreen({ title = '', word, entered, currentSyl, completed, t
           <div key={`card-${runId}-${wordIndex}`} style={{ animation: 'tg-card-in .38s cubic-bezier(.22,1,.36,1) both' }}>
             <div style={{ position: 'relative', transform: freeze ? 'scale(1.035)' : 'none', animation: punch ? 'tg-punch .35s ease-out' : 'none', '--tg-punch-s': (1.05 + heat * 0.05).toFixed(3) }}>
               <WordCard word={word} entered={entered} currentSyl={currentSyl} completed={completed} timedOut={timedOut} /* 진행 표기 — 기본은 문제 번호(무한·트레이닝은 번호만). 오답 복습은 호출부가 '졸업한 단어/전체'를 넘긴다 */
-                progressText={progressText ?? ((endless || practice) ? `${wordIndex + 1}` : `${wordIndex + 1}/${wordsLen}`)} floatScore={practice ? null : floatScore} listen={listen} audioOff={audioOff} onReplay={onReplay} onCantHear={onCantHear} draw={draw} lianyinAt={lianyinAt} sandhiAt={sandhiAt} practice={practice} onSpeak={onSpeak} onReveal={onReveal} hideMeaning={hideMeaning} hidePinyin={hidePinyin} />
+                progressText={progressText ?? ((endless || practice) ? `${wordIndex + 1}` : `${wordIndex + 1}/${wordsLen}`)} reviewDots={reviewDots} floatScore={practice ? null : floatScore} listen={listen} audioOff={audioOff} onReplay={onReplay} onCantHear={onCantHear} draw={draw} lianyinAt={lianyinAt} sandhiAt={sandhiAt} practice={practice} onSpeak={onSpeak} onReveal={onReveal} hideMeaning={hideMeaning} hidePinyin={hidePinyin} />
             </div>
           </div>
           {/* 정답 완성 연출 — 크리스프 플래시(번쩍) + 색색 색종이 + 흰/골드 글리터. ★단어 키 래퍼 '밖'에 둠: 안에 두면 새 단어 등장 때마다 리마운트되어 오발. flashKey 증가(정답 완성) 시에만 발동 */}
