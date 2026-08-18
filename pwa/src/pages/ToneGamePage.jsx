@@ -19,7 +19,7 @@ import { ROUND_LENGTH, DIFFICULTIES, THEMES } from '../constants/toneGameWords.j
 import { TG, HOME, ensureGameFonts, haptic, shuffle, getTimeLimitForCombo, loadBest, saveBest, isMeaningHidden, isPinyinHidden } from '../game/tgTokens.js';
 import {
   loadWordStats, saveWordStats, recordWordResult,
-  buildReviewList, masteredCount, buildRoundWords, noteLeft,
+  buildReviewList, masteredCount, buildRoundWords, noteLeft, NOTE_TARGET,
 } from '../game/tgWordStats.js';
 import { recordTone, loadToneStats, saveToneStats, weakestTone, toneAccuracy } from '../game/toneStats.js';
 import { findLianyin, findToneSandhi } from '../game/lianyin.js';
@@ -1276,9 +1276,18 @@ export default function ToneGamePage() {
   const reviewProgressText = (practiceMode && practiceKind === 'review' && reviewTargetsRef.current.length > 0)
     ? `${reviewTargetsRef.current.filter((hz) => noteLeft(wordStatsRef.current[hz]) === 0).length}/${reviewTargetsRef.current.length}`
     : null;
-  // 연음(반3성) 각인 — 3성+2성 단어면 완성 순간 두 글자 위에 마크 표시. 일반·테마·복습만(연습·무한 제외).
-  const wordLianyin = (word && !practiceMode && !endlessMode) ? findLianyin(word.tones) : -1;
-  const wordSandhi = (word && !practiceMode && !endlessMode) ? findToneSandhi(word.tones) : -1;
+  // 복습 인게임 좌상단 — '몇 단어 졸업했나'(세션 진행)가 아니라 **지금 이 단어가 졸업까지 얼마나 왔나**를 보여준다.
+  //  졸업 조건이 '정답 3번 누적'(NOTE_TARGET)이라 채운 동그라미 = 3 - noteLeft. 누적값이라 지난 세션에서
+  //  쌓은 것도 그대로 이어 보인다(표시와 실제 졸업 조건이 어긋나면 안 됨, 2026-08-18 사용자 결정).
+  const reviewDots = (practiceMode && practiceKind === 'review' && word)
+    ? { done: Math.max(0, NOTE_TARGET - noteLeft(wordStatsRef.current[word.hanzi])), total: NOTE_TARGET }
+    : null;
+  // 연음(반3성)·3성 변조 각인 — 해당 단어면 완성 순간 글자 위에 마크 표시. 전 모드 공통.
+  //  ★모드로 가르지 않는다(2026-08-18): 완성 후 머무는 시간(teachDwell)은 이미 모드와 무관하게 늘어나므로,
+  //   여기서 모드를 가르면 트레이닝·무한·복습에서 '아무것도 안 보이는데 900ms 더 기다리는' 판이 된다.
+  //   각인은 채점이 아니라 가르치는 연출이라 연습에서야말로 필요하다.
+  const wordLianyin = word ? findLianyin(word.tones) : -1;
+  const wordSandhi = word ? findToneSandhi(word.tones) : -1;
 
   if (splash || !student) return <SplashScreen />; // 스플래시가 로딩 상태도 겸함
 
@@ -1555,7 +1564,7 @@ export default function ToneGamePage() {
           <GameScreen title={gameTitle} word={word} entered={entered} currentSyl={currentSyl} completed={completed} timedOut={timedOut}
             wordIndex={wordIndex} wordsLen={words.length} wordTimeLimit={wordTimeLimit} gaugeOffsetMs={gaugeOffsetMs} lowTime={lowTime} paused={paused || !!cdPhase || suddenIntro || !!examIntro} endless={endlessMode || (isPreview && qs('endless') === '1')} showSudden={suddenIntro} runId={runId} recordToBeat={recordToBeat}
             combo={combo} comboFlash={comboFlash} floatScore={floatScore} score={score} coachText={coach.text}
-            onTone={handleTone} wrongBtn={wrongBtn} wrongShakeKey={wrongShakeKey} onPause={() => setPaused(true)} onEndTraining={endTraining} endLabel={`${practiceLabel} 종료`} progressText={reviewProgressText} playReveal={!cdPhase}
+            onTone={handleTone} wrongBtn={wrongBtn} wrongShakeKey={wrongShakeKey} onPause={() => setPaused(true)} onEndTraining={endTraining} endLabel={`${practiceLabel} 종료`} progressText={reviewProgressText} reviewDots={reviewDots} playReveal={!cdPhase}
             practice={practiceMode} endKind={endKind} listen={wordIsListen} audioOff={audioOff}
             draw={wordIsDraw} drawExpectedTone={word ? word.tones[currentSyl] : undefined} onDraw={handleTone} drawResetKey={`${runId}-${wordIndex}-${currentSyl}`} lianyinAt={wordLianyin} sandhiAt={wordSandhi}
             onReplay={() => word && speakWord(word)} onCantHear={() => { audioOffRef.current = true; setAudioOff(true); }}

@@ -56,22 +56,34 @@ export function LoginScreen({ onBack }) {
       </Reveal>
 
       {/* 카카오 로그인 */}
-      <Reveal i={4} style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(122px + env(safe-area-inset-bottom))' }}>
+      <Reveal i={4} style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(146px + env(safe-area-inset-bottom))' }}>
         <button onClick={() => go('kakao')} className="tg-press" style={{ width: '100%', height: 56, borderRadius: RADIUS.lg, border: 'none', background: '#FEE500', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: SPACE.md, cursor: 'pointer', ...TOUCH_OPT }}>
           <KakaoLogo />
           <span style={{ ...TYPE.btn, color: 'rgba(0,0,0,0.85)' }}>카카오로 시작하기</span>
         </button>
       </Reveal>
       {/* 구글 로그인 */}
-      <Reveal i={5} style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(54px + env(safe-area-inset-bottom))' }}>
+      <Reveal i={5} style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(78px + env(safe-area-inset-bottom))' }}>
         <button onClick={() => go('google')} className="tg-press" style={{ width: '100%', height: 56, borderRadius: RADIUS.lg, border: '1px solid #747775', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: SPACE.lg, cursor: 'pointer', ...TOUCH_OPT }}>
           <GoogleLogo />
           <span style={{ ...TYPE.btn, color: '#1f1f1f' }}>Google로 계속하기</span>
         </button>
       </Reveal>
-      {/* 안내 */}
+      {/* 안내 — 만 14세 고지와 방침 링크는 법정 요구사항(개인정보보호법 §22-2·§30)이자
+          카카오·구글 OAuth 콘솔 심사 항목이라 지우지 말 것. 방침은 해시 라우트라 origin부터 붙인다. */}
       <Reveal i={6} style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(24px + env(safe-area-inset-bottom))', textAlign: 'center' }}>
-        <span style={{ ...TYPE.meta, color: TG.SUB }}>로그인 정보는 기록 저장·동기화에만 써요</span>
+        <span style={{ ...TYPE.meta, color: TG.SUB, display: 'block' }}>로그인 정보는 기록 저장·동기화에만 써요</span>
+        <span style={{ ...TYPE.meta, color: TG.SUB, display: 'block', marginTop: 6 }}>
+          만 14세 이상만 로그인할 수 있어요 ·{' '}
+          <a
+            href={`${window.location.origin}/#/privacy`}
+            target="_blank"
+            rel="noreferrer"
+            style={{ color: TG.SUB, textDecoration: 'underline', textUnderlineOffset: 2 }}
+          >
+            개인정보처리방침
+          </a>
+        </span>
       </Reveal>
     </>
   );

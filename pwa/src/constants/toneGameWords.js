@@ -27,15 +27,17 @@ export const DIFFICULTIES = [
 //   이후는 '직전 테마 500점(별 ①)'으로 해제 — 취향 다양성 축이라 게이트는 가볍게(난이도 사다리 1000보다 낮음).
 //   순서는 접근성(구체어→문화지식): 드라마 → 요리 → 여행 → 신조어. 새 테마는 배열 끝에 추가하고 unlock.byGameKey를 직전 테마로.
 // unlock: null=오픈. { byGameKey, score }=그 게임키 최고점 ≥ score면 해제(themeUnlockReqText·진행 게이지·해제 연출이 전부 이 메타에서 파생).
-// image: 포스터 경로(5:7 세로). null이면 tint+placeholder. unlockReveal: 해제 순간 연출(ToneGamePage가 unlock 메타로 자동 트리거).
+// image: 포스터 경로(5:7 세로). null이면 tint+placeholder.
+//   ★포스터는 반드시 **600×800 jpg(q82)**로 넣을 것 — 원본 PNG(1086×1448)는 장당 1.3~2MB라
+//   테마 화면 진입 시 이미지가 뜨는 게 눈에 보인다(2026-08-18). 4장 합계 5.1MB → 150KB. unlockReveal: 해제 순간 연출(ToneGamePage가 unlock 메타로 자동 트리거).
 const THEME_UNLOCK_SCORE = 500; // 별 ① 임계와 정합
 export const THEMES = [
-  { id: 'drama', gameKey: 'tone-drama', label: '드라마 단어', desc: '드라마 속 사랑·감정 표현', timeMultiplier: 2.8571, unlock: null, image: '/game/themes/drama.png', tint: '#f1d7cf', placeholder: '드라마 이미지' },
-  { id: 'cooking', gameKey: 'tone-cooking', label: '요리 단어', desc: '음식·맛·주방 필수 단어', timeMultiplier: 2.8571, unlock: { byGameKey: 'tone-drama', score: THEME_UNLOCK_SCORE }, image: '/game/themes/cooking.jpg', tint: '#f7e3c3', placeholder: '요리 이미지', // jpg — 그림 특성상 png 1.3MB→jpg 160KB(600×800 리사이즈)
+  { id: 'drama', gameKey: 'tone-drama', label: '드라마 단어', desc: '드라마 속 사랑·감정 표현', timeMultiplier: 2.8571, unlock: null, image: '/game/themes/drama.jpg', tint: '#f1d7cf', placeholder: '드라마 이미지' },
+  { id: 'cooking', gameKey: 'tone-cooking', label: '요리 단어', desc: '음식·맛·주방 필수 단어', timeMultiplier: 2.8571, unlock: { byGameKey: 'tone-drama', score: THEME_UNLOCK_SCORE }, image: '/game/themes/cooking.jpg', tint: '#f7e3c3', placeholder: '요리 이미지',
     unlockReveal: { icon: 'ForkKnife', label: '요리 테마', fill: '#E8912C', edge: '#C4761F' } },
-  { id: 'travel', gameKey: 'tone-travel', label: '여행 단어', desc: '공항·호텔·주문 실전 단어', timeMultiplier: 2.8571, unlock: { byGameKey: 'tone-cooking', score: THEME_UNLOCK_SCORE }, image: '/game/themes/travel.png', tint: '#c9d3e4', placeholder: '여행 이미지',
+  { id: 'travel', gameKey: 'tone-travel', label: '여행 단어', desc: '공항·호텔·주문 실전 단어', timeMultiplier: 2.8571, unlock: { byGameKey: 'tone-cooking', score: THEME_UNLOCK_SCORE }, image: '/game/themes/travel.jpg', tint: '#c9d3e4', placeholder: '여행 이미지',
     unlockReveal: { icon: 'MapPin', label: '여행 테마', fill: '#7C5CFF', edge: '#5E42D6' } },
-  { id: 'slang', gameKey: 'tone-slang', label: '신조어 단어', desc: '요즘 중국 인터넷 유행어', timeMultiplier: 2.8571, unlock: { byGameKey: 'tone-travel', score: THEME_UNLOCK_SCORE }, image: '/game/themes/slang.png', tint: '#cfe8d8', placeholder: '신조어 이미지',
+  { id: 'slang', gameKey: 'tone-slang', label: '신조어 단어', desc: '요즘 중국 인터넷 유행어', timeMultiplier: 2.8571, unlock: { byGameKey: 'tone-travel', score: THEME_UNLOCK_SCORE }, image: '/game/themes/slang.jpg', tint: '#cfe8d8', placeholder: '신조어 이미지',
     unlockReveal: { icon: 'Sparkle', label: '신조어 테마', fill: '#16B364', edge: '#0F9152' } },
 ];
 
