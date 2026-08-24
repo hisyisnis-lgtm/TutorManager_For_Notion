@@ -17,6 +17,11 @@ export default defineConfig(({ mode }) => {
     __APP_VERSION__: JSON.stringify(version),
     __GAME_APP__: JSON.stringify(isGameApp),
   },
+  // 운영 빌드에서 진단용 로그만 걷어낸다(minify 시 제거, dev 서버는 그대로 출력).
+  // ⚠️ console.error/warn은 절대 넣지 말 것 — 사용자 기기에서 난 문제를 추적할 유일한 경로다.
+  esbuild: {
+    pure: ['console.log', 'console.table', 'console.group', 'console.groupEnd', 'console.debug'],
+  },
   build: {
     sourcemap: false,
     rollupOptions: {

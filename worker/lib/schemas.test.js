@@ -10,6 +10,7 @@ import {
   GameNicknameSchema,
   StudentAuthRequestSchema,
   StudentAuthVerifySchema,
+  NoticeSchema,
 } from './schemas.js';
 
 describe('StudentTokenSchema', () => {
@@ -262,5 +263,32 @@ describe('GameNicknameSchema — 닉네임 자유입력(PUT /game/me)', () => {
   it('숫자·객체 등 문자열 아님 거부', () => {
     expect(GameNicknameSchema.safeParse(123).success).toBe(false);
     expect(GameNicknameSchema.safeParse(null).success).toBe(false);
+  });
+});
+
+describe('NoticeSchema', () => {
+  it('제목만 있어도 통과 — 나머지는 선택', () => {
+    expect(NoticeSchema.safeParse({ title: '9월 휴강 안내' }).success).toBe(true);
+  });
+  it('빈 제목·공백 제목 거부', () => {
+    expect(NoticeSchema.safeParse({ title: '' }).success).toBe(false);
+    expect(NoticeSchema.safeParse({ title: '   ' }).success).toBe(false);
+    expect(NoticeSchema.safeParse({}).success).toBe(false);
+  });
+  it('선택 필드는 null을 허용 — 클라가 빈값을 null로 보낸다(.optional()이면 깨진다)', () => {
+    const r = NoticeSchema.safeParse({ title: '공지', content: null, publishedAt: null, visible: null, important: null });
+    expect(r.success).toBe(true);
+  });
+  it('길이 상한 — 제목 120자·내용 2000자', () => {
+    expect(NoticeSchema.safeParse({ title: '가'.repeat(120) }).success).toBe(true);
+    expect(NoticeSchema.safeParse({ title: '가'.repeat(121) }).success).toBe(false);
+    expect(NoticeSchema.safeParse({ title: '공지', content: '가'.repeat(2000) }).success).toBe(true);
+    expect(NoticeSchema.safeParse({ title: '공지', content: '가'.repeat(2001) }).success).toBe(false);
+  });
+  it('모르는 필드는 조용히 버린다(strip)', () => {
+    const r = NoticeSchema.safeParse({ title: '공지', 학생: 'X', archived: true });
+    expect(r.success).toBe(true);
+    expect(r.data).not.toHaveProperty('학생');
+    expect(r.data).not.toHaveProperty('archived');
   });
 });

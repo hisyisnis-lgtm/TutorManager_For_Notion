@@ -272,9 +272,13 @@ export default function CoachMarkOverlay({ steps, visible, onDone, delay = 350, 
       <div style={{
         position: 'absolute',
         bottom: 'max(20px, calc(env(safe-area-inset-bottom) + 76px))',
-        left: COL_LEFT, width: COL_W,
+        left: COL_LEFT + 16, width: COL_W - 32,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '0 28px', boxSizing: 'border-box',
+        padding: '0 12px', boxSizing: 'border-box',
+        // 딤만으로는 뒤 카드의 밝은 글씨가 비쳐 흰 라벨과 겹쳐 읽혔다(2026-08-24 검수).
+        // 컨트롤 바 자체를 어둡게 깔아 어떤 배경 위에서도 대비를 보장한다.
+        background: 'rgba(0,0,0,0.42)',
+        borderRadius: 999,
         pointerEvents: 'auto',
       }}>
         {/* 건너뛰기 */}

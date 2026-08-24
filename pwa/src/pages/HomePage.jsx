@@ -1,14 +1,15 @@
-﻿import { useState, useEffect } from 'react';
-import { BellIcon, GearSixIcon, CalendarPlusIcon, ReceiptIcon, UsersThreeIcon, CaretRightIcon, HourglassLowIcon, ClipboardTextIcon, CalendarCheckIcon } from '@phosphor-icons/react';
+﻿import { useState, useEffect, useMemo } from 'react';
+import { BellIcon, GearSixIcon, CalendarPlusIcon, ReceiptIcon, UsersThreeIcon, CaretRightIcon, HourglassLowIcon, CalendarCheckIcon, NotebookIcon } from '@phosphor-icons/react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Card } from 'antd';
 import useEmblaCarousel from 'embla-carousel-react';
 import { useData } from '../context/DataContext.jsx';
-import { queryPage, getPage } from '../api/notionClient.js';
+import { queryPage, queryAll, getPage } from '../api/notionClient.js';
 import { CLASSES_DB, parseClass } from '../api/classes.js';
 import { HOMEWORK_DB, parseHomework } from '../api/homework.js';
 import { parseLessonLog } from '../api/lessonLogs.js';
 import { CONSULT_DB } from '../constants.js';
+import { STATUS_ACTIVE } from '../api/students.js';
 import { formatShort, formatDateTime, formatTime, KST } from '../utils/dateUtils.js';
 import { isOnlineGroupTitle, isFreeConsultTitle, isFixedPriceTitle } from '../utils/classTypeKind.js';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
@@ -24,6 +25,10 @@ import {
 import { BADGE_SMALL } from '../constants/styles.js';
 import { getInstructorName, getNtfyTopic } from './SettingsPage.jsx';
 
+// 회차 부족을 며칠 앞까지 살필지. 좁게 잡아 홈 로딩·Notion 쿼터 부담을 줄인다
+// (주 25건쯤 되는 수업 밀도에서 30일이면 queryAll 2페이지 안쪽).
+const SHORTAGE_WINDOW_DAYS = 30;
+
 function getKSTToday() {
   const now = new Date();
   const parts = new Intl.DateTimeFormat('ko-KR', {
@@ -35,8 +40,10 @@ function getKSTToday() {
 export default function HomePage() {
   const navigate = useNavigate();
   const { studentNameMap, classTypeMap, students, refresh: refreshData } = useData();
-  // 잔여 회차 ≤ 1인 학생 수 — DataContext의 students에서 직접 derive (별도 fetch 불필요)
-  const lowSessionCount = students.filter((s) => (s.remainingSessions ?? 0) <= 1).length;
+  // loadShortage가 채우는 수업 인덱스.
+  //  firstShortage: 학생별 '가장 이른 회차부족 수업' 일시 — 이미 회차를 넘긴 경우
+  //  lastClass    : 학생별 '가장 늦은 예정 수업' 일시 — 언제까지 커버되는지 알려주는 용도
+  const [classIndex, setClassIndex] = useState({ firstShortage: {}, lastClass: {} });
   const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [consultCount, setConsultCount] = useState(0);
@@ -47,6 +54,33 @@ export default function HomePage() {
   // 로더 실패 시 빈 상태("오늘 수업 없음")로 위장하지 않도록 실패 배너 표시용
   const [loadFailed, setLoadFailed] = useState(false);
   const [instructorName, setInstructorName] = useState(getInstructorName);
+  const [lowSessionOpen, setLowSessionOpen] = useState(false);
+
+  // 결제 안내가 필요한 학생 — 성격이 다른 두 신호를 합친다.
+  //  ① 초과: 이미 잡아둔 수업이 결제 회차를 넘었다 (수업 formula '시간 회차 부족')
+  //  ② 여유 없음: 잔여 0회 이하 — 수업을 더 잡으려면 결제가 필요하다
+  // ②를 빼면 "다음 수업도 안 잡힌 잔여 0회" 학생을 통째로 놓친다(2026-08-25 실측 3명).
+  const paymentDueRows = useMemo(() => {
+    const rows = [];
+    for (const s of students) {
+      if (s.status !== STATUS_ACTIVE) continue;
+      const shortageAt = classIndex.firstShortage[s.id];
+      const remaining = s.remainingSessions ?? 0;
+      if (shortageAt) {
+        rows.push({ id: s.id, name: s.name, urgent: true, reason: `${formatShort(shortageAt)} 수업부터 초과` });
+      } else if (remaining <= 0) {
+        const lastAt = classIndex.lastClass[s.id];
+        rows.push({
+          id: s.id,
+          name: s.name,
+          urgent: false,
+          reason: lastAt ? `잔여 ${remaining}회 · ${formatShort(lastAt)} 수업까지` : `잔여 ${remaining}회 · 다음 수업 없음`,
+        });
+      }
+    }
+    // 이미 넘긴 사람 먼저, 그다음 잔여가 적은 순.
+    return rows.sort((a, b) => (b.urgent === true) - (a.urgent === true));
+  }, [students, classIndex]);
 
   // 피드백 대기 숙제 가로 스크롤 (Embla 자유 스크롤 — 드래그·관성·끝 저항, 마우스+터치)
   const [hwEmblaRef] = useEmblaCarousel({ dragFree: true, containScroll: 'trimSnaps' });
@@ -89,6 +123,47 @@ export default function HomePage() {
       console.error('[홈] 수업 불러오기 오류', e); setLoadFailed(true);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // 결제 안내가 필요한 학생 찾기.
+  //
+  // ⚠️ 학생의 '잔여 시간 회차'로 판단하면 안 된다 — 강사가 앞으로의 수업을 미리 등록해두면
+  //    아직 하지도 않은 수업까지 사용 회차로 잡혀 잔여가 0이나 음수가 된다. 그래서 이 기준으로는
+  //    수강중 21명 중 13명이 "부족"으로 뜨고(2026-08-25 실측) 경고가 신호 구실을 못 했다.
+  //    수업 단위 formula '시간 회차 부족'은 그 수업 시점 기준이라 실제로 결제가 필요한 건만 잡힌다
+  //    (같은 시점 실측 1건). 수업 캘린더가 쓰는 뱃지와 같은 출처다.
+  const loadShortage = async () => {
+    try {
+      // ⚠️ '시간 회차 부족'은 서버 필터를 걸 수 없다 — Notion이
+      //    "Unable to filter based on a formula of unknown type"으로 400을 준다(2026-08-25 확인).
+      //    그래서 앞으로 SHORTAGE_WINDOW_DAYS치를 받아 클라이언트에서 거른다. 범위를 좁게 잡는 이유는
+      //    전체 미래 수업(수백 건)을 매번 끌어오면 홈 로딩과 Notion 쿼터에 부담이 되기 때문.
+      const from = new Date();
+      const to = new Date(from.getTime() + SHORTAGE_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+      const results = await queryAll(
+        CLASSES_DB,
+        {
+          and: [
+            { property: '수업 일시', date: { on_or_after: from.toISOString() } },
+            { property: '수업 일시', date: { on_or_before: to.toISOString() } },
+            { property: '특이사항', select: { does_not_equal: '🚫 취소' } },
+          ] },
+        [{ property: '수업 일시', direction: 'ascending' }]
+      );
+      // 수업 일시 오름차순이므로, 처음 만난 부족 수업이 '가장 이른' 것이고
+      // 마지막까지 덮어쓴 값이 '가장 늦은 예정 수업'이 된다.
+      const firstShortage = {};
+      const lastClass = {};
+      for (const cls of results.map(parseClass)) {
+        for (const id of cls.studentIds ?? []) {
+          if (cls.sessionShortage && !firstShortage[id]) firstShortage[id] = cls.datetime;
+          lastClass[id] = cls.datetime;
+        }
+      }
+      setClassIndex({ firstShortage, lastClass });
+    } catch (e) {
+      console.error('[홈] 회차 부족 수업 불러오기 오류', e); setLoadFailed(true);
     }
   };
 
@@ -208,6 +283,7 @@ export default function HomePage() {
     loadSubmittedHomework();
     loadTodayClasses();
     loadTomorrowPrep();
+    loadShortage();
   }, []);
 
   // 설정/알림 페이지에서 돌아올 때 이름 및 뱃지 갱신 (마운트 시 1회)
@@ -221,7 +297,6 @@ export default function HomePage() {
   }, []);
 
   const handleRefresh = async () => {
-    // refreshData()가 students를 갱신 → lowSessionCount는 derive로 자동 재계산됨
     setLoadFailed(false);
     await Promise.all([
       loadUpcoming(),
@@ -229,6 +304,7 @@ export default function HomePage() {
       loadSubmittedHomework(),
       loadTodayClasses(),
       loadTomorrowPrep(),
+      loadShortage(),
       refreshData(),
     ]);
   };
@@ -250,11 +326,13 @@ export default function HomePage() {
   // 오늘 수업 요약
   const totalMinutes = todayClasses.reduce((sum, cls) => sum + (parseInt(cls.duration) || 0), 0);
 
+  // 숙제 관리는 하단 탭으로 올라갔다. 그 자리에 수업 일지를 둔다 —
+  // 화면·데이터는 진작 있었는데 앱 어디에서도 갈 수 없는 고아 화면이었다(2026-08-24 검수).
   const QUICK_ACTIONS = [
     { label: '수업 추가', Icon: CalendarPlusIcon, path: '/classes/new' },
     { label: '결제 입력', Icon: ReceiptIcon, path: '/payments/new' },
     { label: '학생 관리', Icon: UsersThreeIcon, path: '/students' },
-    { label: '숙제 관리', Icon: ClipboardTextIcon, path: '/homework' },
+    { label: '수업 일지', Icon: NotebookIcon, path: '/logs' },
   ];
 
   return (
@@ -263,7 +341,9 @@ export default function HomePage() {
       <div className="px-4 pt-8 pb-2 flex items-start justify-between">
         <h1 className="text-2xl font-bold text-gray-900">
           안녕하세요<br />
-          <span className="text-brand-600">{instructorName}</span> 강사님
+          {instructorName
+            ? <><span className="text-brand-600">{instructorName}</span> 강사님</>
+            : <span className="text-brand-600">강사님</span>}
         </h1>
         <div className="flex items-center gap-0.5">
         {/* 알림 버튼 */}
@@ -467,32 +547,71 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* 잔여 회차 부족 학생 */}
-      {lowSessionCount > 0 && (
+      {/* 결제 안내가 필요한 학생 — 목록으로 보내지 않고 여기서 바로 누구인지·언제부터인지 펼친다.
+          (필터 없는 /students로 보내면 "몇 명"만 알고 "누구"는 끝내 알 수 없었다.) */}
+      {paymentDueRows.length > 0 && (
         <div
           className="px-4 pt-3"
           style={{ animation: 'fade-in-up 400ms cubic-bezier(0.2, 0, 0, 1) both', animationDelay: '100ms' }}
         >
-          <Link
-            to="/students"
-            className="block duration-150 ease-out"
+          <Card
+            variant="borderless"
+            style={{ borderRadius: 16, backgroundColor: STATUS_WARNING_BG, boxShadow: `0 0 0 1px ${STATUS_WARNING_BORDER} inset` }}
+            styles={{ body: { padding: '12px 16px' } }}
           >
-            <Card
-              variant="borderless"
-              style={{ borderRadius: 16, backgroundColor: STATUS_WARNING_BG, boxShadow: `0 0 0 1px ${STATUS_WARNING_BORDER} inset` }}
-              styles={{ body: { padding: '12px 16px' } }}
+            <button
+              type="button"
+              onClick={() => setLowSessionOpen((v) => !v)}
+              aria-expanded={lowSessionOpen}
+              className="w-full flex items-center justify-between"
+              style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', minHeight: 24, WebkitTapHighlightColor: 'transparent' }}
             >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <HourglassLowIcon size={18} weight="fill" color={STATUS_WARNING_TEXT} />
-                  <span className="text-sm font-semibold tabular-nums" style={{ color: STATUS_WARNING_TEXT_DARK }}>
-                    잔여 회차 부족 {lowSessionCount}명
-                  </span>
-                </div>
-                <span className="text-xs text-gray-400">확인하기 ›</span>
+              <span className="flex items-center gap-2">
+                <HourglassLowIcon size={18} weight="fill" color={STATUS_WARNING_TEXT} />
+                <span className="text-sm font-semibold tabular-nums" style={{ color: STATUS_WARNING_TEXT_DARK }}>
+                  결제 안내 필요 {paymentDueRows.length}명
+                </span>
+              </span>
+              <span className="text-xs flex items-center gap-0.5" style={{ color: STATUS_WARNING_TEXT }}>
+                {lowSessionOpen ? '접기' : '누구인지 보기'}
+                <CaretRightIcon
+                  size={12}
+                  weight="bold"
+                  style={{
+                    transform: lowSessionOpen ? 'rotate(90deg)' : 'none',
+                    transitionProperty: 'transform',
+                    transitionDuration: '0.15s',
+                    transitionTimingFunction: 'ease-out' }}
+                />
+              </span>
+            </button>
+
+            {lowSessionOpen && (
+              <div style={{ marginTop: 6 }}>
+                {paymentDueRows.map((row) => (
+                  <Link
+                    key={row.id}
+                    to={`/students/${row.id}`}
+                    className="flex items-center justify-between gap-3"
+                    style={{ padding: '10px 0', minHeight: 44, textDecoration: 'none' }}
+                  >
+                    <span
+                      className="text-sm shrink-0"
+                      style={{ color: TEXT_PRIMARY, fontWeight: row.urgent ? 600 : 400 }}
+                    >
+                      {row.name}
+                    </span>
+                    <span
+                      className="text-xs tabular-nums text-right"
+                      style={{ color: row.urgent ? STATUS_WARNING_TEXT_DARK : TEXT_TERTIARY }}
+                    >
+                      {row.reason}
+                    </span>
+                  </Link>
+                ))}
               </div>
-            </Card>
-          </Link>
+            )}
+          </Card>
         </div>
       )}
 

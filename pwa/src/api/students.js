@@ -107,6 +107,9 @@ export function parseStudent(page) {
 
 export const STATUS_OPTIONS = ['🟢 수강중', '🟡 일시중단', '⚫ 수강종료'];
 
+/** 활성 수강생 판정용 단일 출처 — 이모지까지 포함한 Notion select 원본값. */
+export const STATUS_ACTIVE = '🟢 수강중';
+
 export function statusColor(status) {
   switch (status) {
     case '🟢 수강중':

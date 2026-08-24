@@ -7,14 +7,16 @@ import {
   fetchMyClasses } from '../api/bookingApi.js';
 import { fetchMyHomework, parseHomework, homeworkStatusColor } from '../api/homework.js';
 import { clearStudentSession } from '../api/studentAuth.js';
+import { fetchStudentNotices } from '../api/notices.js';
 import { Card, Button, Spin, message } from 'antd';
-import { DAY_KR, timeToMin, formatDuration, formatYearMonth, addMonths } from '../utils/dateUtils.js';
+import { DAY_KR, timeToMin, formatDuration, formatYearMonth, addMonths, formatDateDot } from '../utils/dateUtils.js';
 import { getViewedMap, HW_VIEWED_KEY } from '../utils/homeworkViewed.js';
 import HomeworkFilterBar from '../components/homework/HomeworkFilterBar.jsx';
 import HomeworkSection from '../components/homework/HomeworkSection.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import ErrorMessage from '../components/ui/ErrorMessage.jsx';
 import EmptyState from '../components/ui/EmptyState.jsx';
+import AutoLink from '../components/ui/AutoLink.jsx';
 import { HouseIcon, BookOpenIcon, BellIcon, GearSixIcon, ClipboardTextIcon, HourglassIcon, ChatTeardropTextIcon, ArchiveIcon, SpeakerHighIcon, CalendarBlankIcon, MegaphoneIcon, CaretRightIcon, InstagramLogoIcon, YoutubeLogoIcon, ArticleIcon, MusicNotesIcon, WarningCircleIcon } from '@phosphor-icons/react';
 import { STAGES, getStageInfo, PANDA_FEED_KEY, getPandaStorageKey } from '../components/ui/PandaWidget.jsx';
 import InstallBanner from '../components/ui/InstallBanner.jsx';
@@ -244,6 +246,63 @@ function ArchiveHwCard({ hw, studentToken }) {
   );
 }
 
+
+// ===== 공지 탭 =====
+// 전체 학생 공통 게시판. 강사가 강사앱에서 올린다.
+// 알림은 붙어 있지 않다 — 학생이 앱을 열었을 때만 보이므로 급한 공지는 카톡이 담당한다.
+function NoticeTab({ studentToken }) {
+  const res = useCachedResource(`student:notices:${studentToken}`, () => fetchStudentNotices(studentToken));
+  const notices = res.data ?? [];
+
+  if (res.loading) return <LoadingSpinner />;
+  if (res.error) return <ErrorMessage message={res.error} onRetry={res.refresh} />;
+
+  if (notices.length === 0) {
+    return (
+      <EmptyState
+        icon={<MegaphoneIcon size={44} weight="thin" style={{ color: BORDER_NEUTRAL }} />}
+        title="아직 공지가 없어요"
+        description={"선생님이 공지를 올리면\n여기에 표시돼요"}
+      />
+    );
+  }
+
+  return (
+    <div style={{ padding: '16px 16px 0' }}>
+      {notices.map((n) => (
+        <div
+          key={n.id}
+          style={{
+            background: '#fff', borderRadius: 16, padding: 16, marginBottom: 12,
+            boxShadow: 'var(--shadow-border)' }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+            {n.important && (
+              <span style={{
+                ...BADGE_SMALL,
+                background: PRIMARY_BG, color: PRIMARY, flexShrink: 0 }}>
+                중요
+              </span>
+            )}
+            <p style={{ fontSize: 15, fontWeight: 700, color: TEXT_PRIMARY, margin: 0, flex: 1, minWidth: 0 }}>
+              {n.title}
+            </p>
+          </div>
+          {n.content && (
+            <p style={{ fontSize: 14, color: '#262626', lineHeight: 1.7, whiteSpace: 'pre-wrap', margin: '0 0 8px' }}>
+              <AutoLink text={n.content} />
+            </p>
+          )}
+          {n.publishedAt && (
+            <p className="tabular-nums" style={{ fontSize: 12, color: TEXT_TERTIARY, margin: 0 }}>
+              {formatDateDot(n.publishedAt)}
+            </p>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
 
 // ===== 발음 보관함 탭 =====
 function ArchiveTab({ studentToken }) {
@@ -803,6 +862,7 @@ export default function PersonalPage() {
   // 탭 레드닷
   const [archiveDot, setArchiveDot] = useState(false);
   const [classDot, setClassDot] = useState(false);
+  const [noticeDot, setNoticeDot] = useState(false);
 
   // 홈 탭 숙제 섹션 (제출 전 / 제출 완료 / 피드백 완료)
   const [hwAlerts, setHwAlerts] = useState({ pending: [], submitted: [], feedback: [] });
@@ -810,6 +870,7 @@ export default function PersonalPage() {
   const lastUpcomingIdsRef = useRef(null);
 
   const ARCHIVE_SEEN_KEY = `archive_last_seen_${studentToken}`;
+  const NOTICE_SEEN_KEY = `notice_last_seen_${studentToken}`;
   const CLASS_SEEN_KEY = `classes_seen_ids_${studentToken}`;
 
   // 옛 공통 팬더 EXP 키(`panda_fed_total`) 정리 — 학생별 키 도입 전 누적된 잔존물.
@@ -866,6 +927,15 @@ export default function PersonalPage() {
         })
       );
     } catch { /* ignore */ }
+
+    // 공지 dot: 마지막으로 공지 탭을 본 시각 이후에 게시된 공지가 있으면 점을 켠다.
+    // 실패해도 조용히 넘어간다 — 배지는 부가 정보라 홈 로딩을 막을 이유가 없다.
+    try {
+      const notices = await fetchStudentNotices(studentToken);
+      writeCacheValue(`student:notices:${studentToken}`, notices); // NoticeTab과 캐시 공유
+      const lastSeen = parseInt(localStorage.getItem(NOTICE_SEEN_KEY) || '0', 10);
+      setNoticeDot(notices.some((n) => n.publishedAt && new Date(n.publishedAt).getTime() > lastSeen));
+    } catch { /* ignore */ }
   }, [studentToken]);
 
   // 내 수업 dot: HomeTab에서 upcoming classes 로드 시 호출
@@ -897,6 +967,12 @@ export default function PersonalPage() {
       setArchiveDot(false);
     }
 
+    // 공지 탭 방문 시 dot 해제 — 기준은 '본 시각'이라 이후 올라온 공지만 다시 점을 켠다.
+    if (tab === '공지') {
+      localStorage.setItem(NOTICE_SEEN_KEY, String(Date.now()));
+      setNoticeDot(false);
+    }
+
     // 내 수업 탭 방문 시 dot 해제 + 스냅샷 갱신
     if (tab === '내 수업' && lastUpcomingIdsRef.current !== null) {
       localStorage.setItem(CLASS_SEEN_KEY, lastUpcomingIdsRef.current);
@@ -922,7 +998,13 @@ export default function PersonalPage() {
   const tipHome     = useTabTip('홈',     onboardingDone, tipResetKey);
   const tipClasses  = useTabTip('내 수업', onboardingDone, tipResetKey);
   const tipArchive  = useTabTip('보관함', onboardingDone, tipResetKey);
-  const tipNotice   = useTabTip('공지',   onboardingDone, tipResetKey);
+
+  // 코치마크 표시 여부 — 오버레이가 떠 있는 동안에는 설치 배너를 내보내지 않는다.
+  // (배너가 코치마크의 '건너뛰기/다음' 버튼과 같은 높이에 겹쳐 글자가 뭉개졌다.)
+  const coachHome    = tab === '홈'      && tipHome.visible;
+  const coachClasses = tab === '내 수업' && tipClasses.visible;
+  const coachArchive = tab === '보관함'  && tipArchive.visible;
+  const coachVisible = coachHome || coachClasses || coachArchive;
   const settingsRef = useRef(null);
 
   // 외부 클릭 or 탭 변경 시 설정 메뉴 닫기
@@ -1119,47 +1201,44 @@ export default function PersonalPage() {
           </div>
         )}
         {tab === '공지' && (
-          <EmptyState
-            icon={<MegaphoneIcon size={44} weight="thin" style={{ color: BORDER_NEUTRAL }} />}
-            title="공지사항 준비 중이에요"
-            description="선생님이 공지를 등록하면 여기에 표시돼요"
-          />
+          <div role="tabpanel" id="tab-panel-3" aria-labelledby="nav-공지">
+            <NoticeTab studentToken={studentToken} />
+          </div>
         )}
       </div>
 
       {/* 코치마크 — 탭별 최초 방문 시 1회 표시 */}
       <CoachMarkOverlay
-        visible={tab === '홈' && tipHome.visible}
+        visible={coachHome}
         onDone={tipHome.dismiss}
         steps={[
-          { selector: '[data-coach="next-class"]', label: '다음 수업 날짜와 시간이 여기에 표시돼요. 내 수업 탭에서 전체 일정을 확인할 수 있어요.' },
+          { selector: '[data-coach="next-class"]', label: '다음 수업 날짜와 시간이 여기에 표시돼요. 예약 현황 탭에서 전체 일정을 확인할 수 있어요.' },
           { selector: '[data-coach="homework-card"]', label: '숙제는 여기서 바로 확인하고 파일이나 음성으로 제출할 수 있어요' },
           { selector: '[data-coach="panda"]', label: '수업을 완료하면 팬더에게 먹이를 줄 수 있어요 🐼 탭해서 팬더를 키워보세요!' },
         ]}
       />
       <CoachMarkOverlay
-        visible={tab === '내 수업' && tipClasses.visible}
+        visible={coachClasses}
         onDone={tipClasses.dismiss}
         steps={[
           { selector: '[data-coach="month-nav"]', label: '← → 버튼으로 월을 이동하며 수업을 확인해요' },
         ]}
       />
       <CoachMarkOverlay
-        visible={tab === '보관함' && tipArchive.visible}
+        visible={coachArchive}
         onDone={tipArchive.dismiss}
         steps={[
           { selector: null, label: '확인한 피드백 숙제를 언제든 다시 들춰볼 수 있어요' },
         ]}
       />
-      <CoachMarkOverlay
-        visible={tab === '공지' && tipNotice.visible}
-        onDone={tipNotice.dismiss}
-        steps={[
-          { selector: null, label: '선생님이 공지를 등록하면 여기에 표시돼요' },
-        ]}
-      />
+      {/* 공지 탭 코치마크는 제거했다 — 빈 상태 문구를 딤 위에 그대로 반복하기만 해서
+          정보가 0이었다(2026-08-24 검수). 실기능이 생긴 지금은 더더욱 안내가 필요 없다. */}
 
-      <InstallBanner {...install} showIOSGuide={showIOSGuide} setShowIOSGuide={setShowIOSGuide} />
+      {/* 온보딩·코치마크가 떠 있는 동안에는 배너를 내보내지 않는다(겹침 방지).
+          표시 상태는 useInstallPrompt 훅에 있어 잠시 언마운트해도 "닫음"이 풀리지 않는다. */}
+      {!showOnboarding && !coachVisible && (
+        <InstallBanner {...install} showIOSGuide={showIOSGuide} setShowIOSGuide={setShowIOSGuide} />
+      )}
 
       {/* 하단 네비게이션 */}
       <div style={{
@@ -1174,7 +1253,7 @@ export default function PersonalPage() {
             { key: '홈', icon: <HouseIcon weight="fill" />, label: '홈', dot: false },
             { key: '내 수업', icon: <BookOpenIcon weight="fill" />, label: '예약 현황', dot: classDot },
             { key: '보관함', icon: <ArchiveIcon weight="fill" />, label: '보관함', dot: archiveDot },
-            { key: '공지', icon: <BellIcon weight="fill" />, label: '공지', dot: false },
+            { key: '공지', icon: <BellIcon weight="fill" />, label: '공지', dot: noticeDot },
           ].map(item => {
             const isActive = tab === item.key;
             return (

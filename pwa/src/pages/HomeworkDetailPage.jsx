@@ -7,6 +7,7 @@ import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import ErrorMessage from '../components/ui/ErrorMessage.jsx';
 import ConfirmDialog from '../components/ui/ConfirmDialog.jsx';
 import FilePreview from '../components/ui/FilePreview.jsx';
+import AutoLink from '../components/ui/AutoLink.jsx';
 import FileAttachModal from '../components/homework/FileAttachModal.jsx';
 import Badge from '../components/ui/Badge.jsx';
 import SectionHeading from '../components/ui/SectionHeading.jsx';
@@ -335,7 +336,7 @@ export default function HomeworkDetailPage() {
         {hw.content && (
           <Card variant="borderless" style={{ borderRadius: 12, boxShadow: 'var(--shadow-border)', marginBottom: 12 }} styles={{ body: { padding: 16 } }}>
             <SectionHeading style={{ marginBottom: 8 }}>숙제 내용</SectionHeading>
-            <p style={{ fontSize: 14, color: '#262626', lineHeight: 1.7, whiteSpace: 'pre-wrap', margin: 0 }}>{hw.content}</p>
+            <p style={{ fontSize: 14, color: '#262626', lineHeight: 1.7, whiteSpace: 'pre-wrap', margin: 0 }}><AutoLink text={hw.content} /></p>
           </Card>
         )}
         {hw.assignmentFiles?.length > 0 && (

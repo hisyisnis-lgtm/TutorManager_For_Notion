@@ -14,6 +14,7 @@ import {
   GameNicknameSchema,
   StudentAuthRequestSchema,
   StudentAuthVerifySchema,
+  NoticeSchema,
 } from '../lib/schemas.js';
 import { validateBody, validateParams, validatePathToken } from '../lib/validation.js';
 import {
@@ -34,6 +35,9 @@ const BLOCKED_DATES_DB_ID = '31e838fa-f2a6-81d3-b034-c47a4f0e5f3e';
 
 // ===== 무료상담 신청 DB =====
 const CONSULT_DB_ID = '324838fa-f2a6-815d-99a7-ff165e8f78aa';
+
+// ===== 공지 DB (2026-08-25) — 학생앱 공지 탭. 전체 학생 공통(학생 relation 없음) =====
+const NOTICE_DB_ID = 'f93b423b-8ab0-493b-bdf3-78fde6ec430f';
 
 // ===== 게임 계정(독립실행·소셜 로그인 회원) =====
 // 저장소는 Cloudflare D1(env.GAME_DB, 테이블 game_users)로 이전(2026-07-06). 노션 GAME_USERS 은퇴.
@@ -159,12 +163,14 @@ const CLASS_DB_RAW = CLASS_DB_ID.replace(/-/g, '');
 const HOMEWORK_DB_RAW = HOMEWORK_DB_ID.replace(/-/g, '');
 const BLOCKED_DATES_DB_RAW = BLOCKED_DATES_DB_ID.replace(/-/g, '');
 const CONSULT_DB_RAW = CONSULT_DB_ID.replace(/-/g, '');
+const NOTICE_DB_RAW = NOTICE_DB_ID.replace(/-/g, '');
 const ALLOWED_NOTION_DB_IDS = new Set([
   STUDENT_DB_RAW,
   CLASS_DB_RAW,
   HOMEWORK_DB_RAW,
   BLOCKED_DATES_DB_RAW,
   CONSULT_DB_RAW,
+  NOTICE_DB_RAW,
   // 수업 유형·할인·결제·수업일지 등 강사용 추가 DB (PWA에서 사용)
   '314838faf2a681c3b4e4da87c48f9b43', // LESSON_TYPE_DB
   '314838faf2a681d39ce4c628edab065b', // DISCOUNT_DB
@@ -909,6 +915,117 @@ async function handleStudentAuthRoutes(request, env, corsHeaders, url) {
     const code = String(100000 + (crypto.getRandomValues(new Uint32Array(1))[0] % 900000));
     await putStudentOtp(token, code, 3600); // 1시간 유효 — 강사가 학생에게 직접 전달
     return new Response(JSON.stringify({ ok: true, code }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+  }
+
+  return errRes(corsHeaders, 404, 'Not Found');
+}
+
+// ===== 공지 라우트 처리 (2026-08-25) =====
+//
+// 학생용 GET은 전체 학생 공통이라 학생별 필터가 없다. 대신 `노출` 체크박스가 켜진 것만 내보낸다.
+// 알림톡·푸시는 붙이지 않았다(사용자 결정) — 공지는 "기록으로 남는 게시판"이고 급한 통지는 카톡이다.
+async function handleNoticeRoutes(request, env, corsHeaders, url) {
+  if (!(await rateLimitCheck(`notice:${clientIp(request)}`, 60, 60))) {
+    return errRes(corsHeaders, 429, '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.');
+  }
+
+  const n = makeNotion(env.NOTION_TOKEN);
+
+  // Notion 페이지 → 앱이 쓰는 최소 형태. 학생·강사 공통.
+  const parseNotice = (page) => {
+    const p = page.properties || {};
+    return {
+      id: page.id,
+      title: (p['제목']?.title ?? []).map((t) => t.plain_text).join('') || '',
+      content: (p['내용']?.rich_text ?? []).map((t) => t.plain_text).join('') || '',
+      publishedAt: p['게시일']?.date?.start ?? null,
+      visible: !!p['노출']?.checkbox,
+      important: !!p['중요']?.checkbox,
+    };
+  };
+
+  // 앱 → Notion properties. 부분 수정(PATCH)에서도 쓰려고 들어온 필드만 담는다.
+  const toProperties = (d, { forCreate }) => {
+    const props = {};
+    if (d.title !== undefined) props['제목'] = { title: [{ text: { content: d.title } }] };
+    if (d.content !== undefined) props['내용'] = { rich_text: d.content ? [{ text: { content: d.content } }] : [] };
+    if (d.publishedAt !== undefined || forCreate) {
+      const date = d.publishedAt || new Date().toISOString();
+      props['게시일'] = { date: { start: date } };
+    }
+    if (d.visible !== undefined || forCreate) props['노출'] = { checkbox: d.visible ?? true };
+    if (d.important !== undefined || forCreate) props['중요'] = { checkbox: d.important ?? false };
+    return props;
+  };
+
+  // --- 학생용: GET /notice/student/:token ---
+  const studentMatch = url.pathname.match(/^\/notice\/student\/([^/]+)$/);
+  if (studentMatch && request.method === 'GET') {
+    const token = decodeURIComponent(studentMatch[1]);
+    const gate = await enforceStudentSession(request, env, corsHeaders, token, 'notice/student');
+    if (gate) return gate;
+
+    const results = await queryAllNotion(n, NOTICE_DB_ID, {
+      filter: { property: '노출', checkbox: { equals: true } },
+      sorts: [{ property: '게시일', direction: 'descending' }],
+    });
+    // 중요 공지를 위로. 같은 그룹 안에서는 Notion이 준 게시일 내림차순을 유지한다.
+    const list = results.map(parseNotice).sort((a, b) => (b.important === true) - (a.important === true));
+    return new Response(JSON.stringify(list), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
+  // --- 아래는 전부 강사 전용 ---
+  const authFail = await requireJwt(request, env, corsHeaders);
+  if (authFail) return authFail;
+
+  // GET /notice — 숨긴 것까지 전부(강사가 관리해야 하므로)
+  if (url.pathname === '/notice' && request.method === 'GET') {
+    const results = await queryAllNotion(n, NOTICE_DB_ID, {
+      sorts: [{ property: '게시일', direction: 'descending' }],
+    });
+    return new Response(JSON.stringify(results.map(parseNotice)), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
+  // POST /notice — 새 공지
+  if (url.pathname === '/notice' && request.method === 'POST') {
+    const body = await request.json().catch(() => null);
+    const v = validateBody(NoticeSchema, body, corsHeaders);
+    if (!v.ok) return v.response;
+    const page = await n('POST', '/pages', {
+      parent: { database_id: NOTICE_DB_ID },
+      properties: toProperties(v.data, { forCreate: true }),
+    });
+    return new Response(JSON.stringify(parseNotice(page)), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
+  const idMatch = url.pathname.match(/^\/notice\/([^/]+)$/);
+  if (idMatch) {
+    const pageId = decodeURIComponent(idMatch[1]);
+
+    // PATCH /notice/:id — 수정
+    if (request.method === 'PATCH') {
+      const body = await request.json().catch(() => null);
+      const v = validateBody(NoticeSchema, body, corsHeaders);
+      if (!v.ok) return v.response;
+      const page = await n('PATCH', `/pages/${pageId}`, { properties: toProperties(v.data, { forCreate: false }) });
+      return new Response(JSON.stringify(parseNotice(page)), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // DELETE /notice/:id — Notion 휴지통으로(복구 가능). 완전 삭제는 하지 않는다.
+    if (request.method === 'DELETE') {
+      await n('PATCH', `/pages/${pageId}`, { archived: true });
+      return new Response(JSON.stringify({ ok: true }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
   }
 
   return errRes(corsHeaders, 404, 'Not Found');
@@ -2601,6 +2718,11 @@ async function handleFetch(request, env, ctx) {
     // 학생앱 휴대폰 인증(step-up) — request-otp/verify-otp는 공개, teacher-grant는 내부에서 강사 JWT 검증
     if (url.pathname.startsWith('/personal/auth/')) {
       return handleStudentAuthRoutes(request, env, corsHeaders, url);
+    }
+
+    // 공지 (학생 GET은 세션 게이트, 나머지는 강사 JWT — 내부에서 분기)
+    if (url.pathname === '/notice' || url.pathname.startsWith('/notice/')) {
+      return handleNoticeRoutes(request, env, corsHeaders, url);
     }
 
     // 무료상담 신청 (공개, 인증 불필요)

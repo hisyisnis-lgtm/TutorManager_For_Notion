@@ -5,6 +5,7 @@ import { CaretLeftIcon, MicrophoneIcon, ImageSquareIcon, ClipboardTextIcon, Pape
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import ErrorMessage from '../components/ui/ErrorMessage.jsx';
 import FilePreview from '../components/ui/FilePreview.jsx';
+import AutoLink from '../components/ui/AutoLink.jsx';
 import FileAttachModal from '../components/homework/FileAttachModal.jsx';
 import SectionHeading from '../components/ui/SectionHeading.jsx';
 import ConfirmDialog from '../components/ui/ConfirmDialog.jsx';
@@ -369,7 +370,7 @@ export default function PersonalHomeworkDetailPage() {
         <AreaHeading icon={<ClipboardTextIcon size={18} weight="fill" />} label="부여한 숙제" first />
         {hw.content && (
           <SectionCard label="숙제 내용">
-            <p style={{ fontSize: 14, color: '#262626', lineHeight: 1.7, whiteSpace: 'pre-wrap', margin: 0 }}>{hw.content}</p>
+            <p style={{ fontSize: 14, color: '#262626', lineHeight: 1.7, whiteSpace: 'pre-wrap', margin: 0 }}><AutoLink text={hw.content} /></p>
           </SectionCard>
         )}
         {hw.assignmentFiles?.length > 0 && (
@@ -452,7 +453,7 @@ export default function PersonalHomeworkDetailPage() {
             <SectionCard label={null}>
               {hw.feedbackText && (
                 <p style={{ fontSize: 14, color: '#262626', lineHeight: 1.7, whiteSpace: 'pre-wrap', margin: (feedbackAudio.length + feedbackDocs.length) > 0 ? '0 0 12px' : 0 }}>
-                  {hw.feedbackText}
+                  <AutoLink text={hw.feedbackText} />
                 </p>
               )}
               {[...feedbackAudio, ...feedbackDocs].map((f, i) => (

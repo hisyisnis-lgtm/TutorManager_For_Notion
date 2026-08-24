@@ -24,6 +24,7 @@ import HomePage from './pages/HomePage.jsx';
 import PendingClassesPage from './pages/PendingClassesPage.jsx';
 import TomorrowPrepPage from './pages/TomorrowPrepPage.jsx';
 import SettingsPage from './pages/SettingsPage.jsx';
+import NoticesPage from './pages/NoticesPage.jsx';
 import NotificationsPage from './pages/NotificationsPage.jsx';
 import PersonalEntryPage from './pages/PersonalEntryPage.jsx';
 import PersonalPage from './pages/PersonalPage.jsx';
@@ -383,6 +384,7 @@ export default function App() {
             <Route path="/homework/:id" element={<HomeworkDetailPage />} />
 
             <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/notices" element={<NoticesPage />} />
             <Route path="/notifications" element={<NotificationsPage />} />
 
             {/* 매칭되는 라우트가 없으면 홈으로. 옛 401 핸들러가 남긴 죽은 `#/login` 등

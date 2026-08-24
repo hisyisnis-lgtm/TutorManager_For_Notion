@@ -116,3 +116,16 @@ export const GameNicknameSchema = z.string()
   .min(1, '닉네임을 입력해주세요')
   .max(12, '닉네임은 12자 이내로 입력해주세요')
   .refine((s) => !/[\u0000-\u001f\u007f]/.test(s), { message: '닉네임에 사용할 수 없는 문자가 있어요' });
+
+/**
+ * 공지 작성·수정 body (강사 전용, 전체 학생 공통 공지).
+ * 선택 필드는 `.optional()`이 아니라 `.nullish()` — PWA가 빈 값을 null로 보낸다.
+ * 본문 상한 2000자는 Notion rich_text 한 조각의 한계와 맞춘 값(그 이상은 잘려 저장된다).
+ */
+export const NoticeSchema = z.object({
+  title: z.string().trim().min(1, '제목을 입력해주세요').max(120, '제목은 120자 이내로 입력해주세요'),
+  content: z.string().max(2000, '내용은 2000자 이내로 입력해주세요').nullish(),
+  publishedAt: z.string().max(40).nullish(), // ISO 날짜 문자열. 비우면 서버가 오늘로 채운다
+  visible: z.boolean().nullish(),            // 기본 true — 체크 해제하면 학생에게 안 보인다
+  important: z.boolean().nullish(),          // 기본 false — 학생앱 목록 상단 고정
+}).strip();

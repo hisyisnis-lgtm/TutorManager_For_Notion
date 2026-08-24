@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { CaretRightIcon } from '@phosphor-icons/react';
 import { Button, Input, Typography } from 'antd';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import ConfirmDialog from '../components/ui/ConfirmDialog.jsx';
@@ -14,8 +16,10 @@ const SHARE_LINKS = [
   { key: 'consent', label: '수업 동의서', path: '/#/consent' },
 ];
 
+// 이름 미설정이면 빈 문자열 — 호출부가 "<이름> 강사님"으로 조립하므로
+// 여기서 '강사님'을 폴백으로 주면 "강사님 강사님"이 된다.
 export function getInstructorName() {
-  return localStorage.getItem(STORAGE_KEY) || '강사님';
+  return localStorage.getItem(STORAGE_KEY) || '';
 }
 
 export function getNtfyTopic() {
@@ -107,6 +111,33 @@ export default function SettingsPage() {
           <p className="text-xs text-gray-500 mt-1.5">
             ntfy.sh/<span className="font-mono">{ntfyTopic || '토픽명'}</span> 으로 알림을 받습니다.
           </p>
+        </div>
+
+        <div>
+          <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>수업 설정</Typography.Text>
+          <Link
+            to="/notices"
+            className="flex items-center gap-2 bg-white border border-gray-200 rounded-2xl px-3 py-2.5 active:bg-gray-50 transition-[background-color] duration-150 ease-out mb-2"
+            style={{ minHeight: 52, textDecoration: 'none' }}
+          >
+            <div className="flex-1 min-w-0">
+              <p className="text-sm" style={{ color: TEXT_SECONDARY, margin: 0 }}>공지</p>
+              <p className="text-xs mt-0.5" style={{ color: TEXT_TERTIARY, margin: 0 }}>학생 앱 공지 탭에 올릴 내용을 관리해요</p>
+            </div>
+            <CaretRightIcon size={16} weight="bold" style={{ color: TEXT_TERTIARY, flexShrink: 0 }} />
+          </Link>
+          {/* 하단 탭에서 '숙제'에 자리를 내주고 여기로 내려온 화면. 라우트(/bookings)는 그대로다. */}
+          <Link
+            to="/bookings"
+            className="flex items-center gap-2 bg-white border border-gray-200 rounded-2xl px-3 py-2.5 active:bg-gray-50 transition-[background-color] duration-150 ease-out"
+            style={{ minHeight: 52, textDecoration: 'none' }}
+          >
+            <div className="flex-1 min-w-0">
+              <p className="text-sm" style={{ color: TEXT_SECONDARY, margin: 0 }}>예약 불가 설정</p>
+              <p className="text-xs mt-0.5" style={{ color: TEXT_TERTIARY, margin: 0 }}>휴무일·차단 시간대를 관리해요</p>
+            </div>
+            <CaretRightIcon size={16} weight="bold" style={{ color: TEXT_TERTIARY, flexShrink: 0 }} />
+          </Link>
         </div>
 
         <div>

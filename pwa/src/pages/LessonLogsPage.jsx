@@ -70,7 +70,7 @@ export default function LessonLogsPage() {
 
   return (
     <PullToRefresh onRefresh={handleRefresh}>
-      <PageHeader title="수업 일지" />
+      <PageHeader title="수업 일지" back />
 
       {/* 학생 검색 */}
       <div className="px-4 pt-4 pb-3">

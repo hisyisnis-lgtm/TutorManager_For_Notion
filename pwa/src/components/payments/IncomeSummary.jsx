@@ -153,27 +153,16 @@ const IncomeSummary = forwardRef(function IncomeSummary(_props, ref) {
       let thisMonthTotal = 0;
       let nextMonthTotal = 0;
 
-      // 디버깅용 학생별 상세
-      const breakdown = [];
       // 모달용 학생별 상세 (이번 달/다음 달 카운트된 항목만, 예상일 asc)
       const breakdownEntries = [];
 
       for (const student of activeStudents) {
         const studentPayments = paymentsByStudent.get(student.id) ?? [];
-        if (studentPayments.length === 0) {
-          breakdown.push({ 학생: student.name, 결과: '제외(결제이력없음)' });
-          continue;
-        }
+        if (studentPayments.length === 0) continue;          // 결제 이력 없음
         const lastPayment = studentPayments[0];
         const expectedAmount = lastPayment.actualAmount || 0;
-        if (expectedAmount <= 0) {
-          breakdown.push({ 학생: student.name, 결과: '제외(마지막결제금액0)' });
-          continue;
-        }
-        if (!lastPayment.paymentDate) {
-          breakdown.push({ 학생: student.name, 결과: '제외(결제일없음)' });
-          continue;
-        }
+        if (expectedAmount <= 0) continue;                    // 마지막 결제 금액 0
+        if (!lastPayment.paymentDate) continue;               // 결제일 없음
         const lastPaymentDate = new Date(lastPayment.paymentDate);
         const lastPaymentStr = lastPaymentDate.toLocaleDateString('ko-KR', { timeZone: KST });
 
@@ -211,12 +200,7 @@ const IncomeSummary = forwardRef(function IncomeSummary(_props, ref) {
             intervalMs = estimateIntervalByAmount(expectedAmount);
             basis = `금액기반(간격부적합·${Math.round(intervalMs / DAY_MS)}일)`;
           } else {
-            breakdown.push({
-              학생: student.name,
-              마지막결제: lastPaymentStr,
-              예상금액: expectedAmount,
-              결과: '제외(간격20일이하만)' });
-            continue;
+            continue; // 간격이 20일 이하로만 관측 — 정기 결제로 보기 어려움
           }
         }
 
@@ -247,16 +231,10 @@ const IncomeSummary = forwardRef(function IncomeSummary(_props, ref) {
             const occStr = occ.toLocaleDateString('ko-KR', { timeZone: KST });
             const isThisMonth = occIdx === thisMonthIdx;
             if (isThisMonth && paidThisMonthIds.has(student.id)) {
-              // 이번 달에 이미 정기 결제함 → confirmed에 이미 포함 → forecast 이중 계산 방지
-              breakdown.push({
-                학생: student.name, 마지막결제: lastPaymentStr, 예상일: occStr,
-                예상금액: expectedAmount, 산정방식: basis, 결과: '제외(이번달이미결제)' });
+              // 이번 달에 이미 정기 결제함 → confirmed에 이미 포함 → forecast 이중 계산 방지(가산하지 않음)
             } else {
               if (isThisMonth) thisMonthTotal += expectedAmount;
               else nextMonthTotal += expectedAmount;
-              breakdown.push({
-                학생: student.name, 마지막결제: lastPaymentStr, 예상일: occStr,
-                예상금액: expectedAmount, 산정방식: basis, 결과: isThisMonth ? '이번 달' : '다음 달' });
               breakdownEntries.push({
                 studentId: student.id,
                 studentName: student.name,
@@ -273,13 +251,6 @@ const IncomeSummary = forwardRef(function IncomeSummary(_props, ref) {
       }
 
       breakdownEntries.sort((a, b) => a.expectedDateRaw.localeCompare(b.expectedDateRaw));
-
-      // 디버깅 출력
-      console.group('[결제] 예상 결제 수익 학생별 상세');
-      console.table(breakdown);
-      console.log(`이번 달 가산 예상 합계: ${thisMonthTotal.toLocaleString('ko-KR')}원`);
-      console.log(`다음 달 가산 예상 합계: ${nextMonthTotal.toLocaleString('ko-KR')}원`);
-      console.groupEnd();
 
       setForecastThisMonth(thisMonthTotal);
       setForecastNextMonth(nextMonthTotal);

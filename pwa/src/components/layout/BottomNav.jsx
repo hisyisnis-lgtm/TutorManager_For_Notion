@@ -1,12 +1,15 @@
 import { NavLink } from 'react-router-dom';
-import { HouseIcon, UsersIcon, CalendarBlankIcon, BookOpenIcon, CurrencyDollarIcon } from '@phosphor-icons/react';
+import { HouseIcon, UsersIcon, CalendarBlankIcon, ClipboardTextIcon, CurrencyDollarIcon } from '@phosphor-icons/react';
 import { PRIMARY, TEXT_INACTIVE } from '../../constants/theme.js';
 
+// 숙제는 매 수업마다 쓰는 기능이라 1급 네비에 둔다.
+// 그 자리에 있던 '예약'(= 예약 불가 설정)은 학생 자가예약 폐기 후 등록 항목이 한둘뿐이라
+// 설정 화면으로 내렸다(라우트 /bookings는 그대로 유지).
 const TABS = [
   { to: '/home',     label: '홈',   icon: <HouseIcon weight="fill" />           },
   { to: '/students', label: '학생', icon: <UsersIcon weight="fill" />           },
   { to: '/classes',  label: '수업', icon: <CalendarBlankIcon weight="fill" />   },
-  { to: '/bookings', label: '예약', icon: <BookOpenIcon weight="fill" />        },
+  { to: '/homework', label: '숙제', icon: <ClipboardTextIcon weight="fill" />   },
   { to: '/payments', label: '결제', icon: <CurrencyDollarIcon weight="fill" />  },
 ];
 
