@@ -37,6 +37,9 @@ export default [
     rules: {
       ...js.configs.recommended.rules,
       'react/jsx-uses-vars': 'error',
+      // JSX 태그 이름은 no-undef가 못 본다 — `<SectionHeading>` import 누락이 빌드까지 통과해
+      //  런타임 ReferenceError로만 드러났다(2026-08-25 PersonalPage 분할). 이 규칙이 그 사각지대를 덮는다.
+      'react/jsx-no-undef': 'error',
       'react/jsx-uses-react': 'error',
       // deps 누락은 게임에서 실제로 stale 클로저 버그를 냈던 부류 — 다만 기존 코드가 많아 warn으로 시작.
       'react-hooks/rules-of-hooks': 'error',

@@ -4,6 +4,7 @@ import ClassCard from './ClassCard.jsx';
 import LoadingSpinner from '../../components/ui/LoadingSpinner.jsx';
 import ErrorMessage from '../../components/ui/ErrorMessage.jsx';
 import EmptyState from '../../components/ui/EmptyState.jsx';
+import SectionHeading from '../../components/ui/SectionHeading.jsx';
 import { formatYearMonth, addMonths } from '../../utils/dateUtils.js';
 import { FOOTNOTE } from '../../constants/styles.js';
 import { CalendarBlankIcon } from '@phosphor-icons/react';

@@ -90,7 +90,7 @@ export default function PendingClassCard({ cls, studentName, hwDone, onHwClick, 
       data-exiting={exiting}
       style={{
         borderRadius: 16, background: '#fff', boxShadow: 'var(--shadow-border)',
-        padding: '12px 14px',
+        padding: '14px 16px',
       }}
     >
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 10 }}>

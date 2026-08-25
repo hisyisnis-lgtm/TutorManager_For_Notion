@@ -158,4 +158,15 @@ export const antdTheme = {
     colorBgContainer: '#ffffff',
     fontFamily: 'inherit',
   },
+  components: {
+    Button: {
+      // antd v6는 버튼에 `0 2px 0` 단차 그림자를 기본으로 넣는다(blur 0·spread 0).
+      // 우리 그림자 철학(§6.4 "부드럽고 3겹 투명 레이어, 아니면 없음")과 이질적이고,
+      // 특히 primary는 rgba(61,13,3,0.33)이라 헤더에서 딱딱한 턱처럼 보였다(2026-08-25 지적).
+      // 버튼의 인터랙션 신호는 press scale(§7.2-bis)이 맡으므로 그림자는 없앤다.
+      primaryShadow: 'none',
+      defaultShadow: 'none',
+      dangerShadow: 'none',
+    },
+  },
 };
