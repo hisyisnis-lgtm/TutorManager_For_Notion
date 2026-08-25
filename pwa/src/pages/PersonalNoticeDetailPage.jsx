@@ -8,7 +8,7 @@ import EmptyState from '../components/ui/EmptyState.jsx';
 import AutoLink from '../components/ui/AutoLink.jsx';
 import { formatDateDot } from '../utils/dateUtils.js';
 import { BADGE_SMALL } from '../constants/styles.js';
-import { PRIMARY, PRIMARY_BG, TEXT_PRIMARY, TEXT_TERTIARY, BORDER_NEUTRAL } from '../constants/theme.js';
+import { PRIMARY, PRIMARY_BG, TEXT_PRIMARY, TEXT_TERTIARY, BORDER_NEUTRAL, BORDER_SUBTLE } from '../constants/theme.js';
 import { MegaphoneIcon } from '@phosphor-icons/react';
 
 // 공지 상세 — 목록에서 제목만 보고 들어온 학생이 본문을 읽는 화면.
@@ -39,32 +39,36 @@ export default function PersonalNoticeDetailPage() {
     );
   }
 
+  // 화면 전체가 공지 한 건이므로 카드로 감싸지 않는다 —
+  // 목록에서 카드를 눌렀는데 안에 또 카드가 나오면 한 겹 더 들어온 것처럼 보인다.
   return (
     <>
       <PageHeader title="공지" back onBack={goList} />
-      <div style={{ padding: 16 }}>
-        <div style={{ background: '#fff', borderRadius: 16, padding: 20, boxShadow: 'var(--shadow-border)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-            {notice.important && (
-              <span style={{ ...BADGE_SMALL, background: PRIMARY_BG, color: PRIMARY, flexShrink: 0 }}>중요</span>
-            )}
-            <h1 style={{ fontSize: 17, fontWeight: 700, color: TEXT_PRIMARY, margin: 0, flex: 1, minWidth: 0 }}>
-              {notice.title}
-            </h1>
-          </div>
+      {/* 100vh는 iOS 주소창 높이가 빠지지 않아 화면보다 커진다 — dvh로 잡는다(게임에서 겪은 것과 같은 건). */}
+      <div style={{ background: '#fff', minHeight: 'calc(100dvh - 56px)', padding: '24px 20px 40px' }}>
+        {notice.important && (
+          <span style={{ ...BADGE_SMALL, background: PRIMARY_BG, color: PRIMARY, display: 'inline-block', marginBottom: 8 }}>
+            중요
+          </span>
+        )}
 
-          {notice.publishedAt && (
-            <p className="tabular-nums" style={{ fontSize: 12, color: TEXT_TERTIARY, margin: '0 0 14px' }}>
-              {formatDateDot(notice.publishedAt)}
-            </p>
-          )}
+        <h1 style={{ fontSize: 20, fontWeight: 700, color: TEXT_PRIMARY, margin: 0, lineHeight: 1.35, wordBreak: 'keep-all' }}>
+          {notice.title}
+        </h1>
 
-          {notice.content && (
-            <p style={{ fontSize: 15, color: '#262626', lineHeight: 1.75, whiteSpace: 'pre-wrap', margin: 0 }}>
-              <AutoLink text={notice.content} />
-            </p>
-          )}
-        </div>
+        {notice.publishedAt && (
+          <p className="tabular-nums" style={{ fontSize: 13, color: TEXT_TERTIARY, margin: '8px 0 0' }}>
+            {formatDateDot(notice.publishedAt)}
+          </p>
+        )}
+
+        <div style={{ height: 1, background: BORDER_SUBTLE, margin: '18px 0 20px' }} />
+
+        {notice.content && (
+          <p style={{ fontSize: 15, color: '#262626', lineHeight: 1.8, whiteSpace: 'pre-wrap', margin: 0, wordBreak: 'keep-all' }}>
+            <AutoLink text={notice.content} />
+          </p>
+        )}
       </div>
     </>
   );
