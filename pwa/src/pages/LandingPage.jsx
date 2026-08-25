@@ -129,7 +129,7 @@ function ConsultContent() {
             '나에게 맞는 학습 방향 제안',
           ].map(item => (
             <Space key={item} size={10}>
-              <CheckCircleIcon weight="fill" size={14} style={{ color: PRIMARY, flexShrink: 0 }} />
+              <CheckCircleIcon weight="fill" size={16} style={{ color: PRIMARY, flexShrink: 0 }} />
               <Text style={{ fontSize: 14 }}>{item}</Text>
             </Space>
           ))}

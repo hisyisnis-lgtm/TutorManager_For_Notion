@@ -1,5 +1,6 @@
 // 팬더 위젯 인터랙션 테스트 페이지 — /panda-test
-import { useState } from 'react';
+import {
+  useState } from 'react';
 import PandaWidget from '../components/ui/PandaWidget.jsx';
 import {
   PRIMARY,
@@ -7,7 +8,9 @@ import {
   TEXT_PRIMARY,
   TEXT_SECONDARY,
   TEXT_INACTIVE,
-} from '../constants/theme.js';
+  GRAY_100,
+  GRAY_300,
+  GRAY_200 } from '../constants/theme.js';
 
 // 테스트 전용 키 — PersonalPage의 실제 데이터와 분리
 const FEED_KEY = 'panda_test_fed_total';
@@ -32,7 +35,7 @@ export default function PandaTestPage() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f5f5f5', padding: '24px 20px', maxWidth: 420, margin: '0 auto' }}>
+    <div style={{ minHeight: '100vh', background: GRAY_100, padding: '24px 20px', maxWidth: 420, margin: '0 auto' }}>
       <div style={{ marginBottom: 20 }}>
         <h2 style={{ fontSize: 17, fontWeight: 700, color: TEXT_PRIMARY, margin: 0 }}>
           🐼 팬더 위젯 테스트
@@ -84,8 +87,8 @@ export default function PandaTestPage() {
               key={v}
               onClick={() => handleMinutesChange(v)}
               style={{
-                padding: '3px 10px', borderRadius: 8, border: '1.5px solid',
-                borderColor: completedMinutes === v ? PRIMARY : '#e5e5e5',
+                padding: '3px 10px', borderRadius: 8, border: '1px solid',
+                borderColor: completedMinutes === v ? PRIMARY : GRAY_300,
                 background: completedMinutes === v ? PRIMARY_BG : 'white',
                 color: completedMinutes === v ? PRIMARY : TEXT_SECONDARY,
                 fontSize: 12, fontWeight: 600, cursor: 'pointer',
@@ -101,7 +104,7 @@ export default function PandaTestPage() {
           onClick={resetFed}
           style={{
             marginTop: 12, width: '100%', height: 36, borderRadius: 10,
-            border: '1.5px solid #f0f0f0', background: 'white',
+            border: `1px solid ${GRAY_200}`, background: 'white',
             color: PRIMARY, fontSize: 13, fontWeight: 600, cursor: 'pointer',
           }}
         >

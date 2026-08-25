@@ -1,6 +1,14 @@
-import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { Alert, Button, Card, Input, Modal, Typography } from 'antd';
+import {
+  useState,
+  useEffect } from 'react';
+import { useParams,
+  Link } from 'react-router-dom';
+import { Alert,
+  Button,
+  Card,
+  Input,
+  Modal,
+  Typography } from 'antd';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import ErrorMessage from '../components/ui/ErrorMessage.jsx';
@@ -8,18 +16,29 @@ import Badge from '../components/ui/Badge.jsx';
 import ConfirmDialog from '../components/ui/ConfirmDialog.jsx';
 import { getPage } from '../api/notionClient.js';
 import { invalidateCache } from '../hooks/useCachedResource.js';
-import { parsePayment, paymentStatusColor, updatePayment, refundSessions, formatSessions, isWholeSession } from '../api/payments.js';
+import { parsePayment,
+  paymentStatusColor,
+  updatePayment,
+  refundSessions,
+  formatSessions,
+  isWholeSession } from '../api/payments.js';
 import { useData } from '../context/DataContext.jsx';
 import { stripEmoji } from '../utils/stringUtils.js';
-import { formatKRW, todayKST } from '../utils/dateUtils.js';
-import { PRIMARY, PRIMARY_BG, TEXT_SECONDARY, TEXT_PRIMARY, TEXT_TERTIARY } from '../constants/theme.js';
+import { formatKRW,
+  todayKST } from '../utils/dateUtils.js';
+import { PRIMARY,
+  PRIMARY_BG,
+  TEXT_SECONDARY,
+  TEXT_PRIMARY,
+  TEXT_TERTIARY,
+  GRAY_100 } from '../constants/theme.js';
 
 function Row({ label, value }) {
   if (value === null || value === undefined || value === '') return null;
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '12px 0', borderBottom: '1px solid #f5f5f5' }}>
+    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '12px 0', borderBottom: `1px solid ${GRAY_100}` }}>
       <span style={{ fontSize: 13, color: TEXT_TERTIARY, flexShrink: 0 }}>{label}</span>
-      <span style={{ fontSize: 14, color: TEXT_PRIMARY, fontWeight: 500, textAlign: 'right', wordBreak: 'break-word' }}>{value}</span>
+      <span style={{ fontSize: 14, color: TEXT_PRIMARY, fontWeight: 600, textAlign: 'right', wordBreak: 'break-word' }}>{value}</span>
     </div>
   );
 }
@@ -164,7 +183,7 @@ export default function PaymentDetailPage() {
         style={{ maxWidth: 420 }}
       >
         {refundError && (
-          <Alert type="error" message={refundError} showIcon style={{ borderRadius: 12, marginBottom: 12 }} />
+          <Alert type="error" title={refundError} showIcon style={{ borderRadius: 12, marginBottom: 12 }} />
         )}
         <p style={{ fontSize: 13, color: TEXT_TERTIARY, margin: '0 0 14px' }}>
           실제 결제 금액 <strong style={{ color: TEXT_PRIMARY }}>{formatKRW(p.actualAmount)}</strong> 중 환불할 금액을 입력하세요. (0원으로 저장하면 환불 취소)

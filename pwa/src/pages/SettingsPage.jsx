@@ -1,11 +1,17 @@
-import { useState } from 'react';
+import {
+  useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CaretRightIcon } from '@phosphor-icons/react';
-import { Button, Input, Typography } from 'antd';
+import { Button,
+  Input,
+  Typography } from 'antd';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import ConfirmDialog from '../components/ui/ConfirmDialog.jsx';
 import { clearAuth } from '../api/authUtils.js';
-import { TEXT_SECONDARY, TEXT_TERTIARY, STATUS_ERROR_BORDER } from '../constants/theme.js';
+import { TEXT_SECONDARY,
+  TEXT_TERTIARY,
+  STATUS_ERROR_BORDER,
+  STATUS_SUCCESS_DARK } from '../constants/theme.js';
 
 const STORAGE_KEY = 'instructor_name';
 const NTFY_TOPIC_KEY = 'ntfy_topic';
@@ -117,7 +123,7 @@ export default function SettingsPage() {
           <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>수업 설정</Typography.Text>
           <Link
             to="/notices"
-            className="flex items-center gap-2 bg-white border border-gray-200 rounded-2xl px-3 py-2.5 active:bg-gray-50 transition-[background-color] duration-150 ease-out mb-2"
+            className="press flex items-center gap-2 bg-white shadow-border rounded-2xl pl-3 pr-2.5 py-2.5 active:bg-gray-50 transition-[background-color] duration-150 ease-out mb-2"
             style={{ minHeight: 52, textDecoration: 'none' }}
           >
             <div className="flex-1 min-w-0">
@@ -129,7 +135,7 @@ export default function SettingsPage() {
           {/* 하단 탭에서 '숙제'에 자리를 내주고 여기로 내려온 화면. 라우트(/bookings)는 그대로다. */}
           <Link
             to="/bookings"
-            className="flex items-center gap-2 bg-white border border-gray-200 rounded-2xl px-3 py-2.5 active:bg-gray-50 transition-[background-color] duration-150 ease-out"
+            className="press flex items-center gap-2 bg-white shadow-border rounded-2xl pl-3 pr-2.5 py-2.5 active:bg-gray-50 transition-[background-color] duration-150 ease-out"
             style={{ minHeight: 52, textDecoration: 'none' }}
           >
             <div className="flex-1 min-w-0">
@@ -144,7 +150,7 @@ export default function SettingsPage() {
           <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>공유 링크</Typography.Text>
           <div className="space-y-2">
             {SHARE_LINKS.map(({ key, label, path }) => (
-              <div key={key} className="flex items-center gap-2 bg-white border border-gray-200 rounded-2xl px-3 py-2.5">
+              <div key={key} className="flex items-center gap-2 bg-white shadow-border rounded-2xl px-3 py-2.5">
                 <div className="flex-1 min-w-0">
                   <p className="text-xs text-gray-500 mb-0.5">{label}</p>
                   <p className="text-xs text-gray-600 font-mono truncate">{window.location.origin}{path}</p>
@@ -152,7 +158,7 @@ export default function SettingsPage() {
                 <button
                   type="button"
                   onClick={() => copyLink(key, path)}
-                  className="shrink-0 text-xs text-brand-600 border border-brand-100 rounded-lg px-3 min-h-[40px] flex items-center active:bg-brand-50 transition-[background-color] duration-150 ease-out"
+                  className="press shrink-0 text-xs text-brand-600 border border-brand-100 rounded-lg px-3 min-h-[40px] flex items-center active:bg-brand-50 transition-[background-color] duration-150 ease-out"
                 >
                   {copiedKey === key ? '복사됨' : '복사'}
                 </button>
@@ -169,7 +175,7 @@ export default function SettingsPage() {
             borderRadius: 12,
             height: 44,
             fontWeight: 600,
-            ...(saved ? { backgroundColor: '#16a34a', borderColor: '#16a34a' } : {}),
+            ...(saved ? { backgroundColor: STATUS_SUCCESS_DARK, borderColor: STATUS_SUCCESS_DARK } : {}),
           }}
         >
           {saved ? '저장됨' : '저장'}
@@ -179,7 +185,7 @@ export default function SettingsPage() {
           block
           onClick={handleUpdate}
           loading={updating}
-          style={{ borderRadius: 12, height: 44, fontWeight: 500 }}
+          style={{ borderRadius: 12, height: 44, fontWeight: 600 }}
         >
           업데이트 (강력 새로고침)
         </Button>
@@ -188,7 +194,7 @@ export default function SettingsPage() {
           danger
           block
           onClick={() => setConfirmLogout(true)}
-          style={{ borderRadius: 12, height: 44, fontWeight: 500, border: `1px solid ${STATUS_ERROR_BORDER}` }}
+          style={{ borderRadius: 12, height: 44, fontWeight: 600, border: `1px solid ${STATUS_ERROR_BORDER}` }}
         >
           로그아웃
         </Button>

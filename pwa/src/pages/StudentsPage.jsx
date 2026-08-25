@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button, Input } from 'antd';
-import { MagnifyingGlassIcon } from '@phosphor-icons/react';
+import { MagnifyingGlassIcon, UsersThreeIcon } from '@phosphor-icons/react';
 import Card from 'antd/es/card/Card';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import Badge from '../components/ui/Badge.jsx';
@@ -13,7 +13,7 @@ import { formatKRW } from '../utils/dateUtils.js';
 import { stripEmoji } from '../utils/stringUtils.js';
 import PullToRefresh from '../components/ui/PullToRefresh.jsx';
 import { useData } from '../context/DataContext.jsx';
-import { TEXT_TERTIARY } from '../constants/theme.js';
+import { TEXT_TERTIARY, BORDER_NEUTRAL } from '../constants/theme.js';
 
 const FILTER_TABS = [
   { value: '전체', label: '전체' },
@@ -78,7 +78,7 @@ export default function StudentsPage() {
             key={value}
             onClick={() => setFilter(value)}
             aria-pressed={filter === value}
-            className={`flex-shrink-0 px-3 py-3 rounded-full text-sm font-medium transition-[background-color,color] duration-150 ease-out ${
+            className={`flex-shrink-0 px-3 py-3 rounded-full text-sm font-semibold transition-[background-color,color] duration-150 ease-out ${
               filter === value
                 ? 'bg-brand-600 text-white'
                 : 'bg-gray-100 text-gray-600'
@@ -95,7 +95,7 @@ export default function StudentsPage() {
       {students.length > 0 && (
         <>
           {filtered.length === 0 ? (
-            <EmptyState icon="👥" title="학생이 없습니다" description="노션에서 학생을 추가하세요." />
+            <EmptyState icon={<UsersThreeIcon size={44} weight="thin" style={{ color: BORDER_NEUTRAL }} />} title="학생이 없습니다" description="노션에서 학생을 추가하세요." />
           ) : (
             <ul className="px-4 space-y-3 pb-24">
               {filtered.map((student) => (
@@ -115,14 +115,13 @@ function StudentCard({ student }) {
     <li>
       <Link
         to={`/students/${student.id}`}
-        className="block duration-150 ease-out"
+        className="block tap-wrap"
       >
         <Card
           variant="borderless"
-          style={{ borderRadius: 16, boxShadow: 'var(--shadow-border)', transition: 'box-shadow 150ms ease-out' }}
+          className="card-tap"
+          style={{ borderRadius: 16 }}
           styles={{ body: { padding: '16px' } }}
-          onMouseEnter={(e) => { e.currentTarget.style.boxShadow = 'var(--shadow-border-hover)'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'var(--shadow-border)'; }}
         >
           <div className="flex items-start justify-between mb-2">
             <span className="text-base font-bold text-gray-900">{student.name}</span>

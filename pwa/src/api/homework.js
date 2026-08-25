@@ -1,25 +1,30 @@
-import { queryPage, createPage, updatePage } from './notionClient.js';
+import {
+  queryPage,
+  createPage,
+  updatePage } from './notionClient.js';
 import {
   getTitle,
   getRichText,
   getSelect,
   getDate,
   getRelationIds,
-} from '../utils/notionProp.js';
+  } from '../utils/notionProp.js';
 
 export const HOMEWORK_DB = '5ce7d5ef-7b80-4795-843f-325f4ca868e2';
 
 import { WORKER_URL } from '../config.js';
 import { getToken } from './authUtils.js';
-import { studentBearer, handleStudentAuthExpiry } from './studentAuth.js';
-import { fetchWithTimeout, UPLOAD_TIMEOUT_MS } from './fetchTimeout.js';
+import { studentBearer,
+  handleStudentAuthExpiry } from './studentAuth.js';
+import { fetchWithTimeout,
+  UPLOAD_TIMEOUT_MS } from './fetchTimeout.js';
 import {
   STATUS_SUCCESS_BG,
   STATUS_SUCCESS_DARK,
   STATUS_INFO_DARK,
   STATUS_ERROR_BG,
   STATUS_ERROR_TEXT,
-} from '../constants/theme.js';
+  STATUS_INFO_BG } from '../constants/theme.js';
 
 // ===== 파싱 =====
 
@@ -381,6 +386,6 @@ export async function fetchHomeworkFileBlobUrlTeacher(homeworkId, fileName, kind
 
 export function homeworkStatusColor(status) {
   if (status === '피드백완료') return { bg: STATUS_SUCCESS_BG, text: STATUS_SUCCESS_DARK };
-  if (status === '제출완료') return { bg: '#e6f4ff', text: STATUS_INFO_DARK };
+  if (status === '제출완료') return { bg: STATUS_INFO_BG, text: STATUS_INFO_DARK };
   return { bg: STATUS_ERROR_BG, text: STATUS_ERROR_TEXT };
 }

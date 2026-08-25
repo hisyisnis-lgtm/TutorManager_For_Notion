@@ -1,7 +1,20 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { Button, Modal, Spin, App } from 'antd';
-import { CaretLeftIcon, MicrophoneIcon, ImageSquareIcon, ClipboardTextIcon, PaperPlaneTiltIcon, ChatTeardropTextIcon } from '@phosphor-icons/react';
+import {
+  useState,
+  useEffect,
+  useCallback,
+  useRef } from 'react';
+import { useParams,
+  useNavigate } from 'react-router-dom';
+import { Button,
+  Modal,
+  Spin,
+  App } from 'antd';
+import { CaretLeftIcon,
+  MicrophoneIcon,
+  ImageSquareIcon,
+  ClipboardTextIcon,
+  PaperPlaneTiltIcon,
+  ChatTeardropTextIcon } from '@phosphor-icons/react';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import ErrorMessage from '../components/ui/ErrorMessage.jsx';
 import FilePreview from '../components/ui/FilePreview.jsx';
@@ -18,19 +31,28 @@ import {
   markFeedbackSeen,
   downloadHomeworkFileStudent,
   fetchHomeworkFileBlobUrlStudent,
-} from '../api/homework.js';
+  } from '../api/homework.js';
 import { retryTransient } from '../api/fetchTimeout.js';
 import { reportHandledError } from '../utils/errorReporter.js';
 import { formatDateTimeCompact } from '../utils/dateUtils.js';
 import { markViewed } from '../utils/homeworkViewed.js';
 import { writeCacheValue } from '../hooks/useCachedResource.js';
-import useFileAttach, { MAX_FILES } from '../hooks/useFileAttach.js';
+import useFileAttach,
+  { MAX_FILES } from '../hooks/useFileAttach.js';
 import {
-  PRIMARY, PRIMARY_BG, PRIMARY_ALPHA_20,
-  TEXT_PRIMARY, TEXT_SECONDARY, TEXT_TERTIARY, TEXT_INACTIVE,
-  BG_APP, BORDER_NEUTRAL,
-  STATUS_ERROR, STATUS_SUCCESS_BG,
-} from '../constants/theme.js';
+  PRIMARY,
+  PRIMARY_BG,
+  PRIMARY_ALPHA_20,
+  TEXT_PRIMARY,
+  TEXT_SECONDARY,
+  TEXT_TERTIARY,
+  TEXT_INACTIVE,
+  BG_APP,
+  STATUS_ERROR,
+  STATUS_SUCCESS_BG,
+  INK_900,
+  STATUS_SUCCESS_BORDER,
+  TEXT_DISABLED } from '../constants/theme.js';
 import {
   dedupeFileNames,
   isImageByName,
@@ -367,10 +389,10 @@ export default function PersonalHomeworkDetailPage() {
         <div style={{ maxWidth: 480, margin: '0 auto', padding: '20px 16px 80px' }}>
 
         {/* ===== 1. 부여한 숙제 ===== */}
-        <AreaHeading icon={<ClipboardTextIcon size={18} weight="fill" />} label="부여한 숙제" first />
+        <AreaHeading icon={<ClipboardTextIcon size={20} weight="fill" />} label="부여한 숙제" first />
         {hw.content && (
           <SectionCard label="숙제 내용">
-            <p style={{ fontSize: 14, color: '#262626', lineHeight: 1.7, whiteSpace: 'pre-wrap', margin: 0 }}><AutoLink text={hw.content} /></p>
+            <p style={{ fontSize: 14, color: INK_900, lineHeight: 1.7, whiteSpace: 'pre-wrap', margin: 0 }}><AutoLink text={hw.content} /></p>
           </SectionCard>
         )}
         {hw.assignmentFiles?.length > 0 && (
@@ -384,7 +406,7 @@ export default function PersonalHomeworkDetailPage() {
         )}
 
         {/* ===== 2. 내 제출 ===== */}
-        <AreaHeading icon={<PaperPlaneTiltIcon size={18} weight="fill" />} label="내 제출" />
+        <AreaHeading icon={<PaperPlaneTiltIcon size={20} weight="fill" />} label="내 제출" />
         {(submitAudio.length > 0 || submitDocs.length > 0) && (
           <SectionCard label="내 제출 파일">
             {[...submitAudio, ...submitDocs].map((f, i) => (
@@ -418,7 +440,7 @@ export default function PersonalHomeworkDetailPage() {
             )}
             {fixedCount < MAX_FILES && (
               <SectionEntryButton
-                icon={<MicrophoneIcon size={18} weight="fill" />}
+                icon={<MicrophoneIcon size={20} weight="fill" />}
                 label="녹음 제출하기"
                 onClick={() => openModal('audio')}
                 disabled={uploading}
@@ -437,7 +459,7 @@ export default function PersonalHomeworkDetailPage() {
             )}
             {fixedCount < MAX_FILES && (
               <SectionEntryButton
-                icon={<ImageSquareIcon size={18} weight="fill" />}
+                icon={<ImageSquareIcon size={20} weight="fill" />}
                 label="사진·문서 제출하기"
                 onClick={() => openModal('document')}
                 disabled={uploading}
@@ -449,10 +471,10 @@ export default function PersonalHomeworkDetailPage() {
         {/* ===== 3. 선생님 피드백 ===== */}
         {(hw.feedbackText || feedbackAudio.length > 0 || feedbackDocs.length > 0) && (
           <>
-            <AreaHeading icon={<ChatTeardropTextIcon size={18} weight="fill" />} label="선생님 피드백" />
+            <AreaHeading icon={<ChatTeardropTextIcon size={20} weight="fill" />} label="선생님 피드백" />
             <SectionCard label={null}>
               {hw.feedbackText && (
-                <p style={{ fontSize: 14, color: '#262626', lineHeight: 1.7, whiteSpace: 'pre-wrap', margin: (feedbackAudio.length + feedbackDocs.length) > 0 ? '0 0 12px' : 0 }}>
+                <p style={{ fontSize: 14, color: INK_900, lineHeight: 1.7, whiteSpace: 'pre-wrap', margin: (feedbackAudio.length + feedbackDocs.length) > 0 ? '0 0 12px' : 0 }}>
                   <AutoLink text={hw.feedbackText} />
                 </p>
               )}
@@ -513,14 +535,13 @@ export default function PersonalHomeworkDetailPage() {
           <button
             type="button"
             onClick={() => setDeleteConfirmFile(null)}
-            style={{ flex: 1, height: 44, borderRadius: 12, border: `1.5px solid ${BORDER_NEUTRAL}`, background: '#fff', color: TEXT_SECONDARY, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
+            style={{ flex: 1, height: 44, borderRadius: 12, border: 'none', boxShadow: 'var(--shadow-border)', background: '#fff', color: TEXT_SECONDARY, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
           >
             취소
           </button>
           <button
             type="button"
             onClick={() => handleDeleteFile(deleteConfirmFile)}
-            className="duration-150 ease-out"
             style={{ flex: 1, height: 44, borderRadius: 12, border: 'none', background: STATUS_ERROR, color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
           >
             삭제
@@ -624,7 +645,7 @@ function PendingInline({ label, items, onRemove, disabled }) {
       {items.map((pf) => (
         <div key={pf.tempId} style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '8px 12px', background: STATUS_SUCCESS_BG, border: '1px solid #b7eb8f',
+          padding: '8px 12px', background: STATUS_SUCCESS_BG, border: '1px solid ${STATUS_SUCCESS_BORDER}',
           borderRadius: 12, marginBottom: 6,
         }}>
           <span style={{ fontSize: 13, color: TEXT_PRIMARY, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -633,7 +654,7 @@ function PendingInline({ label, items, onRemove, disabled }) {
           <button
             type="button"
             onClick={() => onRemove(pf.tempId)}
-            style={{ marginLeft: 10, background: 'none', border: 'none', cursor: 'pointer', color: '#bfbfbf', fontSize: 18, flexShrink: 0, padding: 0, lineHeight: 1 }}
+            style={{ marginLeft: 10, background: 'none', border: 'none', cursor: 'pointer', color: TEXT_DISABLED, fontSize: 18, flexShrink: 0, padding: 0, lineHeight: 1 }}
             aria-label="삭제"
             disabled={disabled}
           >×</button>
@@ -652,7 +673,7 @@ function SectionEntryButton({ icon, label, onClick, disabled }) {
       className="transition-[background-color] duration-150 ease-out"
       style={{
         width: '100%', height: 44, borderRadius: 12,
-        background: PRIMARY_BG, border: `1.5px solid ${PRIMARY_ALPHA_20}`,
+        background: PRIMARY_BG, border: `1px solid ${PRIMARY_ALPHA_20}`,
         color: PRIMARY, fontSize: 14, fontWeight: 600,
         cursor: disabled ? 'not-allowed' : 'pointer',
         WebkitTapHighlightColor: 'transparent', marginBottom: 10,

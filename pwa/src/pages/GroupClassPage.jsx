@@ -267,7 +267,7 @@ export default function GroupClassPage() {
                     border: '1px solid rgba(255,255,255,0.4)', borderRadius: 980,
                     padding: '5px 14px',
                   }}>
-                    <Text style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.92)', fontWeight: 500, lineHeight: 1 }}>{c}</Text>
+                    <Text style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.92)', fontWeight: 600, lineHeight: 1 }}>{c}</Text>
                   </div>
                 ))}
               </Flex>
@@ -312,7 +312,7 @@ export default function GroupClassPage() {
                 <Flex vertical gap={9}>
                   {RECOMMEND.map(r => (
                     <Flex key={r} gap={8} align="start">
-                      <CheckCircleIcon weight="fill" size={15} style={{ color: PRIMARY, flexShrink: 0, marginTop: 2 }} />
+                      <CheckCircleIcon weight="fill" size={16} style={{ color: PRIMARY, flexShrink: 0, marginTop: 2 }} />
                       <Text style={{ fontSize: 13.5, color: TEXT_BODY, lineHeight: 1.55 }}>{r}</Text>
                     </Flex>
                   ))}
@@ -382,7 +382,7 @@ export default function GroupClassPage() {
               <Flex vertical gap={10} style={{ marginBottom: 20 }}>
                 {BENEFIT_ALL.map(b => (
                   <Flex key={b} gap={8} align="start">
-                    <CheckCircleIcon weight="fill" size={15} style={{ color: PRIMARY, flexShrink: 0, marginTop: 2 }} />
+                    <CheckCircleIcon weight="fill" size={16} style={{ color: PRIMARY, flexShrink: 0, marginTop: 2 }} />
                     <Text style={{ fontSize: 13.5, color: TEXT_BODY, lineHeight: 1.55 }}>{b}</Text>
                   </Flex>
                 ))}
@@ -408,7 +408,7 @@ export default function GroupClassPage() {
             <FadeUp delay={140}>
               <div style={{ background: PRIMARY_BG, borderRadius: 12, padding: '16px 18px' }}>
                 <Flex align="center" gap={7} style={{ marginBottom: 10 }}>
-                  <GiftIcon weight="fill" size={17} style={{ color: PRIMARY, flexShrink: 0 }} />
+                  <GiftIcon weight="fill" size={16} style={{ color: PRIMARY, flexShrink: 0 }} />
                   <Text strong style={{ fontSize: 14, color: TEXT_BODY }}>7~8월 동시 등록 전용 혜택</Text>
                 </Flex>
                 <Flex vertical gap={8}>
@@ -441,7 +441,7 @@ export default function GroupClassPage() {
                 <Flex vertical gap={9}>
                   {APPLY_NOTE.map(n => (
                     <Flex key={n} gap={8} align="start">
-                      <InfoIcon weight="fill" size={15} style={{ color: TEXT_TERTIARY, flexShrink: 0, marginTop: 2 }} />
+                      <InfoIcon weight="fill" size={16} style={{ color: TEXT_TERTIARY, flexShrink: 0, marginTop: 2 }} />
                       <Text style={{ fontSize: 13, color: TEXT_SECONDARY, lineHeight: 1.6 }}>{n}</Text>
                     </Flex>
                   ))}
@@ -475,7 +475,7 @@ export default function GroupClassPage() {
             <FadeUp delay={60}>
               <div style={{ background: PRIMARY_BG, borderRadius: 12, padding: '12px 16px', marginBottom: 12 }}>
                 <Flex gap={8} align="center">
-                  <ShieldCheckIcon weight="fill" size={17} style={{ color: PRIMARY, flexShrink: 0 }} />
+                  <ShieldCheckIcon weight="fill" size={16} style={{ color: PRIMARY, flexShrink: 0 }} />
                   <Text strong style={{ fontSize: 13.5, color: TEXT_BODY }}>1회차 수업 시작 전이면 전액 환불돼요</Text>
                 </Flex>
               </div>
@@ -491,7 +491,7 @@ export default function GroupClassPage() {
                       {isActive ? '접기' : '열어보기'}
                     </Text>
                     <CaretDownIcon
-                      weight="bold" size={13}
+                      weight="bold" size={12}
                       style={{
                         color: TEXT_TERTIARY,
                         transition: 'transform 0.2s ease',
@@ -548,7 +548,7 @@ export default function GroupClassPage() {
             <section style={{ padding: '24px 24px 36px' }}>
               <Flex vertical gap={6} align="center" style={{ marginBottom: 14 }}>
                 <Flex gap={6} align="center">
-                  <ShieldCheckIcon weight="fill" size={14} style={{ color: PRIMARY, flexShrink: 0 }} />
+                  <ShieldCheckIcon weight="fill" size={16} style={{ color: PRIMARY, flexShrink: 0 }} />
                   <Text style={{ fontSize: 13, color: TEXT_SECONDARY }}>
                     첫 수업 전이면 <Text strong style={{ color: TEXT_BODY }}>100% 환불</Text> · 선착순 마감
                   </Text>

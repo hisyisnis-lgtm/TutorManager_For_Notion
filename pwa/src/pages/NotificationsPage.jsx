@@ -4,7 +4,9 @@ import { Button } from 'antd';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import EmptyState from '../components/ui/EmptyState.jsx';
 import { getNtfyTopic } from './SettingsPage.jsx';
-import { TEXT_TERTIARY } from '../constants/theme.js';
+import { BellIcon } from '@phosphor-icons/react';
+import { TEXT_TERTIARY,
+  TEXT_INACTIVE, BORDER_NEUTRAL } from '../constants/theme.js';
 
 const STORAGE_KEY = 'ntfy_notifications';
 const LAST_READ_KEY = 'ntfy_last_read';
@@ -147,7 +149,7 @@ export default function NotificationsPage() {
         <PageHeader title="알림" back />
         <div className="flex flex-col items-center justify-center px-8 pt-24 gap-4 text-center">
           <span className="text-5xl">🔔</span>
-          <p className="text-gray-700 font-medium">ntfy 토픽이 설정되지 않았어요</p>
+          <p className="text-gray-700 font-semibold">ntfy 토픽이 설정되지 않았어요</p>
           <p className="text-sm text-gray-500">
             설정에서 ntfy 토픽을 입력하면<br />실시간 알림을 받을 수 있습니다.
           </p>
@@ -173,7 +175,7 @@ export default function NotificationsPage() {
             <Button
               type="text"
               onClick={handleClearAll}
-              style={{ fontSize: 14, color: '#9ca3af' }}
+              style={{ fontSize: 14, color: TEXT_INACTIVE }}
             >
               모두 지우기
             </Button>
@@ -191,7 +193,7 @@ export default function NotificationsPage() {
       {/* 알림 목록 */}
       <div className="pb-24">
         {notifications.length === 0 ? (
-          <EmptyState icon="🔔" title="아직 받은 알림이 없습니다" />
+          <EmptyState icon={<BellIcon size={44} weight="thin" style={{ color: BORDER_NEUTRAL }} />} title="아직 받은 알림이 없습니다" />
         ) : (
           <ul className="divide-y divide-gray-100">
             {notifications.map((n) => {
@@ -205,7 +207,7 @@ export default function NotificationsPage() {
                     {n.title && (
                       <p className="text-sm font-semibold text-gray-800 leading-snug">{n.title}</p>
                     )}
-                    <p className={`text-sm leading-snug ${n.title ? 'text-gray-600' : 'font-medium text-gray-800'}`}>
+                    <p className={`text-sm leading-snug ${n.title ? 'text-gray-600' : 'font-semibold text-gray-800'}`}>
                       {n.message}
                     </p>
                     <div className="flex items-center gap-2 mt-1.5 flex-wrap">

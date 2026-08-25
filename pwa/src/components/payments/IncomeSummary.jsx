@@ -1,18 +1,36 @@
-import { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
-import { Card, Modal } from 'antd';
+import {
+  useState,
+  useEffect,
+  forwardRef,
+  useImperativeHandle } from 'react';
+import { Card,
+  Modal } from 'antd';
 import { useCachedResource } from '../../hooks/useCachedResource.js';
 import { CaretRightIcon } from '@phosphor-icons/react';
 import { useData } from '../../context/DataContext.jsx';
-import { queryPage, queryAll } from '../../api/notionClient.js';
-import { CLASSES_DB, parseClass } from '../../api/classes.js';
-import { PAYMENTS_DB, parsePayment } from '../../api/payments.js';
-import { formatKRW, getMonthStart, getMonthEnd, getTodayStart, KST } from '../../utils/dateUtils.js';
+import { queryPage,
+  queryAll } from '../../api/notionClient.js';
+import { CLASSES_DB,
+  parseClass } from '../../api/classes.js';
+import { PAYMENTS_DB,
+  parsePayment } from '../../api/payments.js';
+import { formatKRW,
+  getMonthStart,
+  getMonthEnd,
+  getTodayStart,
+  KST } from '../../utils/dateUtils.js';
 import { stripEmoji } from '../../utils/stringUtils.js';
 import { isFixedPriceTitle } from '../../utils/classTypeKind.js';
 import SectionHeading from '../ui/SectionHeading.jsx';
 import {
-  PRIMARY, PRIMARY_BG,
-  TEXT_PRIMARY, TEXT_TERTIARY, TEXT_DISABLED } from '../../constants/theme.js';
+  PRIMARY,
+  PRIMARY_BG,
+  TEXT_PRIMARY,
+  TEXT_TERTIARY,
+  TEXT_DISABLED,
+  GRAY_100,
+  GRAY_200,
+  BG_APP } from '../../constants/theme.js';
 
 // 순 결제액(매출) = 실제 결제 − 환불. 확정 매출 집계에만 사용.
 // ⚠️ forecast(예상 수익)의 기준액(lastPayment.actualAmount)에는 적용하지 않음 — 다음 정기결제 예측 왜곡 방지.
@@ -289,7 +307,7 @@ const IncomeSummary = forwardRef(function IncomeSummary(_props, ref) {
             type="button"
             onClick={() => { setBreakdownBucket('thisMonth'); setBreakdownModalOpen(true); }}
             disabled={monthLoading}
-            className="flex items-center justify-between w-full duration-150 ease-out"
+            className="flex items-center justify-between w-full transition-[background-color] duration-150 ease-out"
             style={{
               background: 'none', border: 'none', textAlign: 'left', padding: 0,
               cursor: monthLoading ? 'default' : 'pointer' }}
@@ -306,9 +324,9 @@ const IncomeSummary = forwardRef(function IncomeSummary(_props, ref) {
             type="button"
             onClick={() => { setBreakdownBucket('thisMonth'); setBreakdownModalOpen(true); }}
             disabled={forecastLoading}
-            className="flex items-center justify-between w-full duration-150 ease-out"
+            className="flex items-center justify-between w-full transition-[background-color] duration-150 ease-out"
             style={{
-              marginTop: 10, paddingTop: 10, borderTop: '1px solid #f5f5f5',
+              marginTop: 10, paddingTop: 10, borderTop: '1px solid ${GRAY_100}',
               background: 'none', border: 'none', textAlign: 'left', padding: '10px 0 0',
               cursor: forecastLoading ? 'default' : 'pointer' }}
           >
@@ -324,7 +342,7 @@ const IncomeSummary = forwardRef(function IncomeSummary(_props, ref) {
               const confirmed = monthPayments.reduce((s, p) => s + netPaid(p), 0);
               const totalThisMonth = confirmed + forecastThisMonth;
               return (
-                <span className="tabular-nums" style={{ fontSize: 14, fontWeight: 600, color: PRIMARY }}>
+                <span className="tabular-nums" style={{ fontSize: 14, fontWeight: 600, color: TEXT_PRIMARY }}>
                   {formatKRW(totalThisMonth) || '₩0'}
                 </span>
               );
@@ -334,7 +352,7 @@ const IncomeSummary = forwardRef(function IncomeSummary(_props, ref) {
             type="button"
             onClick={() => { setBreakdownBucket('nextMonth'); setBreakdownModalOpen(true); }}
             disabled={forecastLoading}
-            className="flex items-center justify-between w-full duration-150 ease-out"
+            className="flex items-center justify-between w-full transition-[background-color] duration-150 ease-out"
             style={{
               marginTop: 6,
               background: 'none', border: 'none', textAlign: 'left', padding: 0,
@@ -445,7 +463,7 @@ const IncomeSummary = forwardRef(function IncomeSummary(_props, ref) {
                               key={p.id}
                               style={{
                                 padding: '12px 14px', borderRadius: 12,
-                                background: '#f9fafb', border: '1px solid #f0f0f0' }}
+                                background: BG_APP, border: '1px solid ${GRAY_200}' }}
                             >
                               <div className="flex items-center justify-between">
                                 <span style={{ fontSize: 14, fontWeight: 600, color: TEXT_PRIMARY }}>
@@ -490,13 +508,13 @@ const IncomeSummary = forwardRef(function IncomeSummary(_props, ref) {
                         key={`${e.studentId}-${e.expectedDateRaw}`}
                         style={{
                           padding: '12px 14px', borderRadius: 12,
-                          background: '#f9fafb', border: '1px solid #f0f0f0' }}
+                          background: BG_APP, border: `1px solid ${GRAY_200}` }}
                       >
                         <div className="flex items-center justify-between">
                           <span style={{ fontSize: 14, fontWeight: 600, color: TEXT_PRIMARY }}>
                             {e.studentName}
                           </span>
-                          <span className="tabular-nums" style={{ fontSize: 14, fontWeight: 700, color: PRIMARY }}>
+                          <span className="tabular-nums" style={{ fontSize: 14, fontWeight: 700, color: TEXT_PRIMARY }}>
                             {formatKRW(e.expectedAmount)}
                           </span>
                         </div>

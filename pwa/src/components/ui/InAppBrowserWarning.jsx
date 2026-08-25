@@ -1,6 +1,8 @@
-import { useState } from 'react';
+import {
+  useState } from 'react';
 import { message } from 'antd';
-import { detectInAppBrowser, openInChromeAndroid } from '../../utils/inAppBrowser.js';
+import { detectInAppBrowser,
+  openInChromeAndroid } from '../../utils/inAppBrowser.js';
 import {
   PRIMARY,
   PRIMARY_BG,
@@ -8,7 +10,7 @@ import {
   TEXT_PRIMARY,
   TEXT_SECONDARY,
   TEXT_INACTIVE,
-} from '../../constants/theme.js';
+  GRAY_50 } from '../../constants/theme.js';
 
 // SNS 인앱 브라우저로 PWA에 진입한 학생에게 외부 브라우저(Chrome/Safari) 이동을 권하는 모달.
 // 모달 dismiss는 24시간 기억하므로 매번 짜증나게 뜨지는 않는다 — 새 학생이 새 디바이스로
@@ -98,7 +100,7 @@ export default function InAppBrowserWarning() {
         {info.os === 'ios' && (
           <>
             <div style={{
-              background: '#fafafa', borderRadius: 12,
+              background: GRAY_50, borderRadius: 12,
               padding: '14px 16px', marginBottom: 12,
             }}>
               <p style={{ fontSize: 12, fontWeight: 700, color: PRIMARY, margin: '0 0 8px', letterSpacing: '0.04em' }}>
@@ -131,7 +133,7 @@ export default function InAppBrowserWarning() {
                 width: '100%', height: 44, marginBottom: 8,
                 background: PRIMARY_BG, color: PRIMARY,
                 fontSize: 14, fontWeight: 700,
-                border: `1.5px solid ${PRIMARY_ALPHA_20}`, borderRadius: 12,
+                border: `1px solid ${PRIMARY_ALPHA_20}`, borderRadius: 12,
                 cursor: 'pointer', WebkitTapHighlightColor: 'transparent',
               }}
             >
@@ -162,7 +164,7 @@ export default function InAppBrowserWarning() {
           style={{
             width: '100%', height: 40,
             background: 'transparent', color: TEXT_INACTIVE,
-            fontSize: 13, fontWeight: 500,
+            fontSize: 13, fontWeight: 600,
             border: 'none', cursor: 'pointer',
             WebkitTapHighlightColor: 'transparent',
           }}

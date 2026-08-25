@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Button, Input, Card, message } from 'antd';
-import { MagnifyingGlassIcon } from '@phosphor-icons/react';
+import { MagnifyingGlassIcon, NotebookIcon } from '@phosphor-icons/react';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import ErrorMessage from '../components/ui/ErrorMessage.jsx';
@@ -10,7 +10,7 @@ import { fetchLessonLogsPage, parseLessonLog, isEmpty } from '../api/lessonLogs.
 import { useData } from '../context/DataContext.jsx';
 import { useCachedResource } from '../hooks/useCachedResource.js';
 import PullToRefresh from '../components/ui/PullToRefresh.jsx';
-import { TEXT_TERTIARY } from '../constants/theme.js';
+import { TEXT_TERTIARY, BORDER_NEUTRAL } from '../constants/theme.js';
 
 export default function LessonLogsPage() {
   const { studentNameMap } = useData();
@@ -92,7 +92,7 @@ export default function LessonLogsPage() {
         <>
           {filteredLogs.length === 0 ? (
             <EmptyState
-              icon="📝"
+              icon={<NotebookIcon size={44} weight="thin" style={{ color: BORDER_NEUTRAL }} />}
               title="수업 일지가 없습니다"
               description="수업 완료 후 자동으로 빈 일지가 생성됩니다."
             />
@@ -129,23 +129,22 @@ function LogCard({ log, studentNameMap }) {
     <li>
       <Link
         to={`/logs/${log.id}/edit`}
-        className="block duration-150 ease-out"
+        className="block tap-wrap"
       >
         <Card
           variant="borderless"
-          style={{ borderRadius: 16, boxShadow: 'var(--shadow-border)', transition: 'box-shadow 150ms ease-out' }}
+          className="card-tap"
+          style={{ borderRadius: 16 }}
           styles={{ body: { padding: 16 } }}
-          onMouseEnter={(e) => { e.currentTarget.style.boxShadow = 'var(--shadow-border-hover)'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'var(--shadow-border)'; }}
         >
           <div className="flex items-start justify-between mb-1.5">
             <span className="text-base font-bold text-gray-900">{log.title || '제목 없음'}</span>
             {empty ? (
-              <span className="text-xs bg-brand-50 text-brand-600 px-2 py-0.5 rounded-full font-medium">
+              <span className="text-xs bg-brand-50 text-brand-600 px-2 py-0.5 rounded-full font-semibold">
                 작성 필요
               </span>
             ) : (
-              <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-medium">
+              <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-semibold">
                 작성 완료
               </span>
             )}

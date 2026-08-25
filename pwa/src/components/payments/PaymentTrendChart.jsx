@@ -1,5 +1,12 @@
-import { useMemo, useState } from 'react';
-import { PRIMARY, PRIMARY_BG, TEXT_PRIMARY, TEXT_TERTIARY, TEXT_DISABLED } from '../../constants/theme.js';
+import {
+  useMemo,
+  useState } from 'react';
+import { PRIMARY,
+  PRIMARY_BG,
+  TEXT_PRIMARY,
+  TEXT_TERTIARY,
+  TEXT_DISABLED,
+  GRAY_200 } from '../../constants/theme.js';
 
 import { KST } from '../../utils/dateUtils.js';
 
@@ -118,7 +125,7 @@ export default function PaymentTrendChart({ payments, studentFilter, loading }) 
               x2={W - padX}
               y1={padTop + (innerH * i) / 4}
               y2={padTop + (innerH * i) / 4}
-              stroke="#f0f0f0"
+              stroke={GRAY_200}
               strokeWidth="1"
             />
           ))}

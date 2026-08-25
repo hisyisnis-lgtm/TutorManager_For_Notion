@@ -1,7 +1,20 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { Button, Input, Card, App, Spin } from 'antd';
-import { MicrophoneIcon, ImageSquareIcon, ClipboardTextIcon, PaperPlaneTiltIcon, ChatTeardropTextIcon } from '@phosphor-icons/react';
+import {
+  useState,
+  useEffect,
+  useRef,
+  useCallback } from 'react';
+import { useParams,
+  useNavigate } from 'react-router-dom';
+import { Button,
+  Input,
+  Card,
+  App,
+  Spin } from 'antd';
+import { MicrophoneIcon,
+  ImageSquareIcon,
+  ClipboardTextIcon,
+  PaperPlaneTiltIcon,
+  ChatTeardropTextIcon } from '@phosphor-icons/react';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import ErrorMessage from '../components/ui/ErrorMessage.jsx';
@@ -12,10 +25,16 @@ import FileAttachModal from '../components/homework/FileAttachModal.jsx';
 import Badge from '../components/ui/Badge.jsx';
 import SectionHeading from '../components/ui/SectionHeading.jsx';
 import {
-  PRIMARY, PRIMARY_BG,
-  TEXT_PRIMARY, TEXT_SECONDARY, TEXT_TERTIARY, TEXT_DISABLED,
+  PRIMARY,
+  PRIMARY_BG,
+  TEXT_PRIMARY,
+  TEXT_SECONDARY,
+  TEXT_TERTIARY,
+  TEXT_DISABLED,
   BORDER_DEFAULT,
-} from '../constants/theme.js';
+  INK_900,
+  STATUS_SUCCESS_BG,
+  STATUS_SUCCESS_BORDER } from '../constants/theme.js';
 import {
   parseHomework,
   saveFeedback,
@@ -315,7 +334,7 @@ export default function HomeworkDetailPage() {
         back
         onBack={handleBack}
         action={
-          <Button danger onClick={() => setShowDeleteConfirm(true)} style={{ borderRadius: 12, fontWeight: 500 }}>
+          <Button danger onClick={() => setShowDeleteConfirm(true)} style={{ borderRadius: 12, fontWeight: 600 }}>
             삭제
           </Button>
         }
@@ -332,11 +351,11 @@ export default function HomeworkDetailPage() {
         </div>
 
         {/* ===== 1. 부여한 숙제 ===== */}
-        <AreaHeading icon={<ClipboardTextIcon size={18} weight="fill" />} label="부여한 숙제" first />
+        <AreaHeading icon={<ClipboardTextIcon size={20} weight="fill" />} label="부여한 숙제" first />
         {hw.content && (
           <Card variant="borderless" style={{ borderRadius: 12, boxShadow: 'var(--shadow-border)', marginBottom: 12 }} styles={{ body: { padding: 16 } }}>
             <SectionHeading style={{ marginBottom: 8 }}>숙제 내용</SectionHeading>
-            <p style={{ fontSize: 14, color: '#262626', lineHeight: 1.7, whiteSpace: 'pre-wrap', margin: 0 }}><AutoLink text={hw.content} /></p>
+            <p style={{ fontSize: 14, color: INK_900, lineHeight: 1.7, whiteSpace: 'pre-wrap', margin: 0 }}><AutoLink text={hw.content} /></p>
           </Card>
         )}
         {hw.assignmentFiles?.length > 0 && (
@@ -351,7 +370,7 @@ export default function HomeworkDetailPage() {
         )}
 
         {/* ===== 2. 학생 제출 ===== */}
-        <AreaHeading icon={<PaperPlaneTiltIcon size={18} weight="fill" />} label="학생 제출" />
+        <AreaHeading icon={<PaperPlaneTiltIcon size={20} weight="fill" />} label="학생 제출" />
         {(submitAudio.length > 0 || submitDocs.length > 0) ? (
           <Card variant="borderless" style={{ borderRadius: 12, boxShadow: 'var(--shadow-border)', marginBottom: 12 }} styles={{ body: { padding: 16 } }}>
             <SectionHeading style={{ marginBottom: 12 }}>학생 제출 파일</SectionHeading>
@@ -375,7 +394,7 @@ export default function HomeworkDetailPage() {
         )}
 
         {/* ===== 3. 피드백 ===== */}
-        <AreaHeading icon={<ChatTeardropTextIcon size={18} weight="fill" />} label="피드백" />
+        <AreaHeading icon={<ChatTeardropTextIcon size={20} weight="fill" />} label="피드백" />
         <Card variant="borderless" style={{ borderRadius: 12, boxShadow: 'var(--shadow-border)' }} styles={{ body: { padding: 16 } }}>
           <div style={{ marginBottom: 12 }}>
             <Input.TextArea
@@ -415,7 +434,7 @@ export default function HomeworkDetailPage() {
           )}
           {!saving && fixedCount < MAX_FILES && (
             <SectionEntryButton
-              icon={<MicrophoneIcon size={18} weight="fill" />}
+              icon={<MicrophoneIcon size={20} weight="fill" />}
               label="녹음 파일 추가"
               onClick={() => openModal('audio')}
             />
@@ -430,7 +449,7 @@ export default function HomeworkDetailPage() {
           )}
           {!saving && fixedCount < MAX_FILES && (
             <SectionEntryButton
-              icon={<ImageSquareIcon size={18} weight="fill" />}
+              icon={<ImageSquareIcon size={20} weight="fill" />}
               label="이미지·PDF 추가"
               onClick={() => openModal('document')}
             />
@@ -533,7 +552,7 @@ function PendingCard({ label, items, onRemove }) {
       {items.map((pf) => (
         <div key={pf.tempId} style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '8px 12px', background: '#f6ffed', border: '1px solid #b7eb8f',
+          padding: '8px 12px', background: STATUS_SUCCESS_BG, border: `1px solid ${STATUS_SUCCESS_BORDER}`,
           borderRadius: 12, marginBottom: 6,
         }}>
           <span style={{ fontSize: 13, color: TEXT_PRIMARY, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -556,10 +575,10 @@ function SectionEntryButton({ icon, label, onClick }) {
     <button
       type="button"
       onClick={onClick}
-      className="duration-150 ease-out"
+      className="transition-[background-color] duration-150 ease-out"
       style={{
         width: '100%', height: 44, borderRadius: 12,
-        background: PRIMARY_BG, border: '1.5px solid rgba(127,0,5,0.2)',
+        background: PRIMARY_BG, border: 'none', boxShadow: 'var(--shadow-border-brand)',
         color: PRIMARY, fontSize: 14, fontWeight: 600, cursor: 'pointer',
         WebkitTapHighlightColor: 'transparent', marginBottom: 12,
         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,

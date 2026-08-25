@@ -244,7 +244,7 @@ export default function CoachMarkOverlay({ steps, visible, onDone, delay = 350, 
           position: 'relative', zIndex: 2,
         }}>
           <p style={{
-            fontSize: 15, fontWeight: 500,
+            fontSize: 15, fontWeight: 600,
             color: TEXT_PRIMARY, lineHeight: 1.65, margin: 0,
           }}>
             {current?.label}
@@ -286,7 +286,7 @@ export default function CoachMarkOverlay({ steps, visible, onDone, delay = 350, 
           onClick={(e) => { e.stopPropagation(); finish(); }}
           style={{
             background: 'none', border: 'none', cursor: 'pointer',
-            color: 'rgba(255,255,255,0.8)', fontSize: 14, fontWeight: 500,
+            color: 'rgba(255,255,255,0.8)', fontSize: 14, fontWeight: 600,
             padding: '10px 4px', minWidth: 60,
             WebkitTapHighlightColor: 'transparent',
           }}
@@ -300,7 +300,7 @@ export default function CoachMarkOverlay({ steps, visible, onDone, delay = 350, 
             {steps.map((_, i) => (
               <div key={i} style={{
                 width: i === step ? 20 : 6, height: 6,
-                borderRadius: 3,
+                borderRadius: 4,
                 background: i === step ? '#fff' : 'rgba(255,255,255,0.32)',
                 transition: 'width 0.24s cubic-bezier(0.16,1,0.3,1)',
               }} />

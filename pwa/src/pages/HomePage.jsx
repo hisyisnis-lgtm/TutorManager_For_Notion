@@ -1,28 +1,58 @@
-﻿import { useState, useEffect, useMemo } from 'react';
-import { BellIcon, GearSixIcon, CalendarPlusIcon, ReceiptIcon, UsersThreeIcon, CaretRightIcon, HourglassLowIcon, CalendarCheckIcon, NotebookIcon } from '@phosphor-icons/react';
-import { Link, useNavigate } from 'react-router-dom';
+﻿import {
+  useState,
+  useEffect,
+  useMemo } from 'react';
+import { BellIcon,
+  GearSixIcon,
+  CalendarPlusIcon,
+  ReceiptIcon,
+  UsersThreeIcon,
+  CaretRightIcon,
+  HourglassLowIcon,
+  CalendarCheckIcon,
+  NotebookIcon } from '@phosphor-icons/react';
+import { Link,
+  useNavigate } from 'react-router-dom';
 import { Card } from 'antd';
 import useEmblaCarousel from 'embla-carousel-react';
 import { useData } from '../context/DataContext.jsx';
-import { queryPage, queryAll, getPage } from '../api/notionClient.js';
+import { queryPage,
+  queryAll,
+  getPage } from '../api/notionClient.js';
 import { swrLoad } from '../hooks/useCachedResource.js';
-import { CLASSES_DB, parseClass } from '../api/classes.js';
-import { HOMEWORK_DB, parseHomework } from '../api/homework.js';
+import { CLASSES_DB,
+  parseClass } from '../api/classes.js';
+import { HOMEWORK_DB,
+  parseHomework } from '../api/homework.js';
 import { parseLessonLog } from '../api/lessonLogs.js';
 import { CONSULT_DB } from '../constants.js';
 import { STATUS_ACTIVE } from '../api/students.js';
-import { formatShort, formatDateTime, formatTime, KST } from '../utils/dateUtils.js';
-import { isOnlineGroupTitle, isFreeConsultTitle, isFixedPriceTitle } from '../utils/classTypeKind.js';
+import { formatShort,
+  formatDateTime,
+  formatTime,
+  KST } from '../utils/dateUtils.js';
+import { isOnlineGroupTitle,
+  isFreeConsultTitle,
+  isFixedPriceTitle } from '../utils/classTypeKind.js';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import PullToRefresh from '../components/ui/PullToRefresh.jsx';
 import SectionHeading from '../components/ui/SectionHeading.jsx';
 import PendingClassCard from '../components/home/PendingClassCard.jsx';
 import { usePendingClassState } from '../hooks/usePendingClassState.js';
 import {
-  PRIMARY, PRIMARY_BG,
-  TEXT_PRIMARY, TEXT_TERTIARY, TEXT_DISABLED,
-  STATUS_ERROR_TEXT, STATUS_ERROR_BG,
-  STATUS_WARNING_BG, STATUS_WARNING_BORDER, STATUS_WARNING_TEXT, STATUS_WARNING_TEXT_DARK } from '../constants/theme.js';
+  PRIMARY,
+  PRIMARY_BG,
+  TEXT_PRIMARY,
+  TEXT_SECONDARY,
+  TEXT_TERTIARY,
+  TEXT_DISABLED,
+  STATUS_ERROR_TEXT,
+  STATUS_ERROR_BG,
+  STATUS_WARNING_BG,
+  STATUS_WARNING_BORDER,
+  STATUS_WARNING_TEXT,
+  STATUS_WARNING_TEXT_DARK,
+  GRAY_100 } from '../constants/theme.js';
 import { BADGE_SMALL } from '../constants/styles.js';
 import { getInstructorName, getNtfyTopic } from './SettingsPage.jsx';
 
@@ -406,7 +436,7 @@ export default function HomePage() {
               display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
               padding: '10px 14px', borderRadius: 12,
               background: STATUS_ERROR_BG,
-              color: STATUS_ERROR_TEXT, fontSize: 13, fontWeight: 500,
+              color: STATUS_ERROR_TEXT, fontSize: 13, fontWeight: 600,
             }}
           >
             <span>일부 정보를 불러오지 못했어요 — 표시가 실제와 다를 수 있어요.</span>
@@ -435,11 +465,11 @@ export default function HomePage() {
             key={path}
             type="button"
             onClick={() => navigate(path)}
-            className="flex flex-col items-center gap-1.5 py-4 rounded-2xl bg-white active:bg-gray-50 transition-[background-color] duration-150 ease-out"
+            className="press flex flex-col items-center gap-1.5 py-4 rounded-2xl bg-white active:bg-gray-50 transition-[background-color] duration-150 ease-out"
             style={{ boxShadow: 'var(--shadow-border)' }}
           >
             <Icon size={24} weight="fill" color={PRIMARY} />
-            <span className="text-sm font-medium text-gray-700">{label}</span>
+            <span className="text-sm font-semibold text-gray-700">{label}</span>
           </button>
         ))}
       </div>
@@ -460,7 +490,7 @@ export default function HomePage() {
               <span className="w-1.5 h-1.5 rounded-full bg-brand-400 animate-pulse" />
             ) : todayClasses.length > 0 ? (
               <div className="flex items-center gap-1.5">
-                <span className="text-sm font-bold tabular-nums" style={{ color: PRIMARY }}>
+                <span className="text-sm font-semibold tabular-nums" style={{ color: TEXT_PRIMARY }}>
                   {todayClasses.length}개
                 </span>
                 <span className="text-gray-300">·</span>
@@ -487,12 +517,12 @@ export default function HomePage() {
                   <li key={cls.id}>
                     <Link
                       to={`/classes/${cls.id}/edit`}
-                      className="flex items-center gap-3 px-3 py-2 rounded-lg bg-gray-50 active:bg-gray-100 transition-[background-color] duration-150"
+                      className="press flex items-center gap-3 px-3 py-2 rounded-lg bg-gray-50 active:bg-gray-100 transition-[background-color] duration-150"
                     >
-                      <span className="text-xs font-semibold tabular-nums shrink-0" style={{ color: PRIMARY }}>
+                      <span className="text-xs font-semibold tabular-nums shrink-0" style={{ color: TEXT_PRIMARY }}>
                         {timeStr}{endTimeStr && `~${endTimeStr}`}
                       </span>
-                      <span className="flex-1 text-sm font-medium text-gray-800 truncate">
+                      <span className="flex-1 text-sm font-semibold text-gray-800 truncate">
                         {names || cls.title || '학생 미정'}
                       </span>
                       {cls.duration && (
@@ -527,7 +557,7 @@ export default function HomePage() {
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
-                  <CalendarCheckIcon size={22} weight="fill" color="#ffffff" />
+                  <CalendarCheckIcon size={24} weight="fill" color="#ffffff" />
                   <div>
                     <span style={{ fontSize: 15, fontWeight: 700, color: '#ffffff' }}>
                       내일 수업 준비
@@ -537,7 +567,7 @@ export default function HomePage() {
                     </span>
                   </div>
                 </div>
-                <CaretRightIcon size={18} weight="bold" color="rgba(255,255,255,0.8)" />
+                <CaretRightIcon size={20} weight="bold" color="rgba(255,255,255,0.8)" />
               </div>
             </Card>
           </button>
@@ -547,7 +577,7 @@ export default function HomePage() {
       {/* 미확인 무료상담 신청 */}
       {consultCount > 0 && (
         <div
-          className="px-4 pt-5"
+          className="px-4 pt-3"
           style={{ animation: 'fade-in-up 400ms cubic-bezier(0.2, 0, 0, 1) both', animationDelay: '80ms' }}
         >
           <Link
@@ -593,7 +623,7 @@ export default function HomePage() {
               style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', minHeight: 24, WebkitTapHighlightColor: 'transparent' }}
             >
               <span className="flex items-center gap-2">
-                <HourglassLowIcon size={18} weight="fill" color={STATUS_WARNING_TEXT} />
+                <HourglassLowIcon size={20} weight="fill" color={STATUS_WARNING_TEXT} />
                 <span className="text-sm font-semibold tabular-nums" style={{ color: STATUS_WARNING_TEXT_DARK }}>
                   결제 안내 필요 {paymentDueRows.length}명
                 </span>
@@ -648,7 +678,7 @@ export default function HomePage() {
       {/* 수업 마무리 */}
       {!todayLoading && recentlyCompleted.length > 0 && (
         <div
-          className="px-4 pt-5"
+          className="px-4 pt-6"
           style={{ animation: 'fade-in-up 400ms cubic-bezier(0.2, 0, 0, 1) both', animationDelay: '120ms' }}
         >
           <SectionHeading style={{ marginBottom: 12 }}>수업 마무리</SectionHeading>
@@ -683,7 +713,7 @@ export default function HomePage() {
                   textDecoration: 'none' }}
               >
                 더보기 <span className="tabular-nums">+{overflowCount}</span>
-                <CaretRightIcon size={14} weight="bold" />
+                <CaretRightIcon size={16} weight="bold" />
               </Link>
             )}
           </div>
@@ -693,11 +723,11 @@ export default function HomePage() {
       {/* 제출된 숙제 */}
       {submittedHomework.length > 0 && (
         <div
-          className="pt-5"
+          className="pt-6"
           style={{ animation: 'fade-in-up 400ms cubic-bezier(0.2, 0, 0, 1) both', animationDelay: '160ms' }}
         >
           <SectionHeading style={{ marginBottom: 12, paddingLeft: 16, paddingRight: 16 }}>
-            피드백 대기 숙제 <span className="tabular-nums" style={{ color: PRIMARY }}>{submittedHomework.length}</span>
+            피드백 대기 숙제 <span className="tabular-nums" style={{ color: TEXT_PRIMARY }}>{submittedHomework.length}</span>
           </SectionHeading>
           <div ref={hwEmblaRef} className="overflow-hidden pull-isolate">
             <div style={{
@@ -727,10 +757,10 @@ export default function HomePage() {
                     display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
                     boxSizing: 'border-box' }}>
                     <div>
-                      <p style={{ fontSize: 15, fontWeight: 700, color: PRIMARY, margin: '0 0 4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <p style={{ fontSize: 15, fontWeight: 700, color: TEXT_PRIMARY, margin: '0 0 4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {studentName || '—'}
                       </p>
-                      <p style={{ fontSize: 13, fontWeight: 600, color: TEXT_PRIMARY, margin: 0, lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                      <p style={{ fontSize: 13, fontWeight: 600, color: TEXT_SECONDARY, margin: 0, lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                         {hw.title}
                       </p>
                     </div>
@@ -753,7 +783,7 @@ export default function HomePage() {
 
       {/* 다가오는 수업 */}
       <div
-        className="px-4 pt-5 pb-24"
+        className="px-4 pt-6 pb-24"
         style={{ animation: 'fade-in-up 400ms cubic-bezier(0.2, 0, 0, 1) both', animationDelay: '240ms' }}
       >
         <SectionHeading style={{ marginBottom: 12 }}>다가오는 수업</SectionHeading>
@@ -795,7 +825,7 @@ export default function HomePage() {
                         <p style={{ fontSize: 15, fontWeight: 600, color: TEXT_PRIMARY, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0 }}>
                           {title}
                         </p>
-                        <span style={{ fontSize: 13, color: TEXT_PRIMARY, fontWeight: 500, flexShrink: 0 }} className="tabular-nums">
+                        <span style={{ fontSize: 13, color: TEXT_SECONDARY, fontWeight: 400, flexShrink: 0 }} className="tabular-nums">
                           {dateStr} {timeStr}{endTimeStr && `–${endTimeStr}`}
                         </span>
                       </div>
@@ -815,7 +845,7 @@ export default function HomePage() {
                               <span style={{
                                 display: 'inline-block',
                                 padding: '2px 8px', borderRadius: 6,
-                                background: '#f5f5f5',
+                                background: GRAY_100,
                                 color: TEXT_TERTIARY,
                                 fontSize: 11, fontWeight: 600 }}>
                                 {isFree ? '무료상담' : isGroup ? '그룹수업' : typeTitle.includes('체험') ? '체험수업' : '원데이클래스'}
@@ -827,7 +857,7 @@ export default function HomePage() {
                           return (
                             <div style={{
                               marginTop: 10, paddingTop: 10,
-                              borderTop: '1px solid #f5f5f5' }}>
+                              borderTop: `1px solid ${GRAY_100}` }}>
                               <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
                                 <span style={{ fontSize: 11, color: TEXT_TERTIARY, flexShrink: 0, lineHeight: 1.45, marginTop: 1 }}>
                                   준비

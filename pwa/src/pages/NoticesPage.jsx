@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Button, Input, Switch, App } from 'antd';
-import { PlusIcon, EyeSlashIcon } from '@phosphor-icons/react';
+import { PlusIcon, EyeSlashIcon, MegaphoneIcon } from '@phosphor-icons/react';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import ErrorMessage from '../components/ui/ErrorMessage.jsx';
@@ -11,9 +11,7 @@ import { fetchNotices, createNotice, updateNotice, deleteNotice } from '../api/n
 import { formatDateDot } from '../utils/dateUtils.js';
 import { BADGE_SMALL } from '../constants/styles.js';
 import {
-  PRIMARY, PRIMARY_BG,
-  TEXT_PRIMARY, TEXT_SECONDARY, TEXT_TERTIARY,
-} from '../constants/theme.js';
+  PRIMARY, PRIMARY_BG, TEXT_PRIMARY, TEXT_SECONDARY, TEXT_TERTIARY, GRAY_100, INK_900, BORDER_NEUTRAL } from '../constants/theme.js';
 
 const LABEL = { fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6, fontWeight: 600 };
 const TITLE_MAX = 120;
@@ -159,7 +157,7 @@ export default function NoticesPage() {
           <Button
             type="primary"
             onClick={() => setEditing({ ...emptyDraft })}
-            icon={<PlusIcon size={14} weight="bold" />}
+            icon={<PlusIcon size={16} weight="bold" />}
             style={{ borderRadius: 999, height: 36, fontWeight: 600, fontSize: 13 }}
           >
             공지 작성
@@ -173,7 +171,7 @@ export default function NoticesPage() {
         <LoadingSpinner />
       ) : list.length === 0 ? (
         <EmptyState
-          icon="📢"
+          icon={<MegaphoneIcon size={44} weight="thin" style={{ color: BORDER_NEUTRAL }} />}
           title="아직 올린 공지가 없어요"
           description="휴강·일정 변경처럼 모두에게 알릴 내용을 적어두면 학생 앱 공지 탭에 표시돼요."
         />
@@ -190,9 +188,9 @@ export default function NoticesPage() {
                 )}
                 {!n.visible && (
                   <span
-                    style={{ ...BADGE_SMALL, background: '#f5f5f5', color: TEXT_TERTIARY, flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 3 }}
+                    style={{ ...BADGE_SMALL, background: GRAY_100, color: TEXT_TERTIARY, flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 3 }}
                   >
-                    <EyeSlashIcon size={11} weight="fill" /> 숨김
+                    <EyeSlashIcon size={12} weight="fill" /> 숨김
                   </span>
                 )}
                 <p style={{ fontSize: 15, fontWeight: 700, color: TEXT_PRIMARY, margin: 0, flex: 1, minWidth: 0 }}>
@@ -201,7 +199,7 @@ export default function NoticesPage() {
               </div>
 
               {n.content && (
-                <p style={{ fontSize: 14, color: '#262626', lineHeight: 1.7, whiteSpace: 'pre-wrap', margin: '0 0 10px' }}>
+                <p style={{ fontSize: 14, color: INK_900, lineHeight: 1.7, whiteSpace: 'pre-wrap', margin: '0 0 10px' }}>
                   <AutoLink text={n.content} />
                 </p>
               )}

@@ -1,18 +1,36 @@
-import { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Alert, Button, Input, Select, Spin, App } from 'antd';
-import { MicrophoneIcon, ImageSquareIcon } from '@phosphor-icons/react';
+import {
+  useState,
+  useEffect } from 'react';
+import { useNavigate,
+  useSearchParams } from 'react-router-dom';
+import { Alert,
+  Button,
+  Input,
+  Select,
+  Spin,
+  App } from 'antd';
+import { MicrophoneIcon,
+  ImageSquareIcon } from '@phosphor-icons/react';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import FileAttachModal from '../components/homework/FileAttachModal.jsx';
-import { createHomework, notifyHomework, uploadTeacherFile } from '../api/homework.js';
+import { createHomework,
+  notifyHomework,
+  uploadTeacherFile } from '../api/homework.js';
 import { queryAll } from '../api/notionClient.js';
 import { invalidateCache } from '../hooks/useCachedResource.js';
-import useFileAttach, { MAX_FILES } from '../hooks/useFileAttach.js';
-import { parseStudent, STUDENTS_DB } from '../api/students.js';
+import useFileAttach,
+  { MAX_FILES } from '../hooks/useFileAttach.js';
+import { parseStudent,
+  STUDENTS_DB } from '../api/students.js';
 import {
-  PRIMARY, PRIMARY_BG,
-  TEXT_PRIMARY, TEXT_SECONDARY, TEXT_TERTIARY, TEXT_DISABLED,
-} from '../constants/theme.js';
+  PRIMARY,
+  PRIMARY_BG,
+  TEXT_PRIMARY,
+  TEXT_SECONDARY,
+  TEXT_TERTIARY,
+  TEXT_DISABLED,
+  STATUS_SUCCESS_BG,
+  STATUS_SUCCESS_BORDER } from '../constants/theme.js';
 
 const LABEL = { fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6, fontWeight: 600 };
 
@@ -131,7 +149,7 @@ export default function HomeworkFormPage() {
           {studentsLoadError && (
             <Alert
               type="error" showIcon
-              message="학생 목록을 불러오지 못했어요"
+              title="학생 목록을 불러오지 못했어요"
               description="네트워크 확인 후 페이지를 새로고침해주세요."
               style={{ borderRadius: 12, marginBottom: 8 }}
             />
@@ -141,7 +159,7 @@ export default function HomeworkFormPage() {
               <Alert
                 type="warning"
                 showIcon
-                message="숙제 관리 대상 학생이 아니에요"
+                title="숙제 관리 대상 학생이 아니에요"
                 description="숙제는 VIP(숙제 관리 대상) 학생에게만 등록할 수 있어요."
                 style={{ borderRadius: 12 }}
               />
@@ -206,7 +224,7 @@ export default function HomeworkFormPage() {
           )}
           {fixedCount < MAX_FILES && (
             <SectionEntryButton
-              icon={<MicrophoneIcon size={18} weight="fill" />}
+              icon={<MicrophoneIcon size={20} weight="fill" />}
               label="녹음 파일 추가"
               onClick={() => openModal('audio')}
             />
@@ -221,7 +239,7 @@ export default function HomeworkFormPage() {
           )}
           {fixedCount < MAX_FILES && (
             <SectionEntryButton
-              icon={<ImageSquareIcon size={18} weight="fill" />}
+              icon={<ImageSquareIcon size={20} weight="fill" />}
               label="이미지·PDF 추가"
               onClick={() => openModal('document')}
             />
@@ -229,7 +247,7 @@ export default function HomeworkFormPage() {
         </div>
 
         {error && (
-          <Alert type="error" message={error} showIcon style={{ borderRadius: 12 }} />
+          <Alert type="error" title={error} showIcon style={{ borderRadius: 12 }} />
         )}
 
         <Button
@@ -274,7 +292,7 @@ function PendingCard({ label, items, onRemove }) {
       {items.map((pf) => (
         <div key={pf.tempId} style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '8px 12px', background: '#f6ffed', border: '1px solid #b7eb8f',
+          padding: '8px 12px', background: STATUS_SUCCESS_BG, border: `1px solid ${STATUS_SUCCESS_BORDER}`,
           borderRadius: 12, marginBottom: 6,
         }}>
           <span style={{ fontSize: 13, color: TEXT_PRIMARY, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -299,7 +317,7 @@ function SectionEntryButton({ icon, label, onClick }) {
       onClick={onClick}
       style={{
         width: '100%', height: 44, borderRadius: 12,
-        background: PRIMARY_BG, border: '1.5px solid rgba(127,0,5,0.2)',
+        background: PRIMARY_BG, border: '1px solid rgba(127,0,5,0.2)',
         color: PRIMARY, fontSize: 14, fontWeight: 600, cursor: 'pointer',
         WebkitTapHighlightColor: 'transparent', marginBottom: 10,
         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,

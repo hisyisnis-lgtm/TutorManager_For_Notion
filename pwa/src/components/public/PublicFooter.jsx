@@ -1,4 +1,5 @@
 import { Flex, Typography } from 'antd';
+import { BG_DARK } from '../../constants/theme.js';
 
 const { Text } = Typography;
 
@@ -14,7 +15,7 @@ const BUSINESS_INFO = [
  */
 export default function PublicFooter() {
   return (
-    <footer style={{ backgroundColor: '#1a1a1a', padding: '32px 24px 40px' }}>
+    <footer style={{ backgroundColor: BG_DARK, padding: '32px 24px 40px' }}>
       <div style={{ maxWidth: 480, margin: '0 auto' }}>
         <Text style={{ display: 'block', color: 'rgba(255,255,255,0.9)', fontSize: 15, fontWeight: 700, marginBottom: 16 }}>
           하늘하늘중국어

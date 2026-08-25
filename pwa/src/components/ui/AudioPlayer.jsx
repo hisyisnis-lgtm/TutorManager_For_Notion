@@ -1,5 +1,11 @@
-import { useState, useRef, useEffect } from 'react';
-import { SpeakerHighIcon, PauseIcon, TrashIcon, DownloadSimpleIcon } from '@phosphor-icons/react';
+import {
+  useState,
+  useRef,
+  useEffect } from 'react';
+import { SpeakerHighIcon,
+  PauseIcon,
+  TrashIcon,
+  DownloadSimpleIcon } from '@phosphor-icons/react';
 import {
   PRIMARY,
   PRIMARY_ALPHA_35,
@@ -9,7 +15,7 @@ import {
   BORDER_NEUTRAL,
   STATUS_ERROR_TEXT,
   STATUS_ERROR,
-} from '../../constants/theme.js';
+  GRAY_200 } from '../../constants/theme.js';
 
 /**
  * AudioPlayer — Notion 파일 URL용 오디오 플레이어
@@ -185,7 +191,7 @@ export default function AudioPlayer({ url, fileName, onGetFreshUrl, onDelete, de
             filter: playing ? 'blur(0px)' : 'blur(4px)',
             transition: iconTransition,
           }}>
-            <PauseIcon size={18} weight="fill" />
+            <PauseIcon size={20} weight="fill" />
           </div>
           {/* SpeakerHighIcon — 레이아웃 정의, 정지 중 표시 */}
           <div style={{
@@ -196,7 +202,7 @@ export default function AudioPlayer({ url, fileName, onGetFreshUrl, onDelete, de
             filter: playing ? 'blur(4px)' : 'blur(0px)',
             transition: iconTransition,
           }}>
-            <SpeakerHighIcon size={18} weight="fill" />
+            <SpeakerHighIcon size={20} weight="fill" />
           </div>
         </div>
       </button>
@@ -206,7 +212,7 @@ export default function AudioPlayer({ url, fileName, onGetFreshUrl, onDelete, de
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
           {displayName && (
             <div style={{
-              fontSize: 13, color: TEXT_PRIMARY, fontWeight: 500,
+              fontSize: 13, color: TEXT_PRIMARY, fontWeight: 600,
               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
               flex: 1, minWidth: 0,
             }}>
@@ -226,8 +232,8 @@ export default function AudioPlayer({ url, fileName, onGetFreshUrl, onDelete, de
             onMouseLeave={() => setHoverBar(false)}
             style={{
               height: hoverBar ? 6 : 4,
-              background: '#f0f0f0',
-              borderRadius: 3,
+              background: GRAY_200,
+              borderRadius: 4,
               cursor: 'pointer',
               position: 'relative',
               // height만 명시
@@ -236,7 +242,7 @@ export default function AudioPlayer({ url, fileName, onGetFreshUrl, onDelete, de
           >
             <div style={{
               height: '100%', width: `${progress * 100}%`,
-              background: PRIMARY, borderRadius: 3,
+              background: PRIMARY, borderRadius: 4,
               transition: 'width 0.1s linear',
               position: 'relative',
             }}>
@@ -270,7 +276,7 @@ export default function AudioPlayer({ url, fileName, onGetFreshUrl, onDelete, de
             WebkitTapHighlightColor: 'transparent',
           }}
         >
-          <DownloadSimpleIcon size={18} weight="bold" />
+          <DownloadSimpleIcon size={20} weight="bold" />
         </button>
       )}
 

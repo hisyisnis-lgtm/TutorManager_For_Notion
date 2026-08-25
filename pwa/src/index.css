@@ -125,6 +125,17 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
     0px 0px 0px 1px #ffccc7,
     0px 2px 8px rgba(207, 19, 34, 0.06);
 
+  /* 카드 눌림(press) — lift를 빼고 링만 살짝 조여 "표면에 눌러 앉은" 상태.
+     press scale은 §7.2에서 금지라 눌림감은 그림자·배경으로만 낸다. */
+  --shadow-border-pressed:
+    0px 0px 0px 1px rgba(0, 0, 0, 0.10),
+    0px 0px 1px 0px rgba(0, 0, 0, 0.04);
+
+  /* 이동/펼침용 easing — 브라우저 기본 ease-out은 약해서 "의도한 움직임"으로 안 읽힌다.
+     fade-in-up·stagger가 이미 쓰던 커브를 토큰화한 것(단일 출처).
+     색/배경 전환은 그대로 기본 ease-out을 쓴다 — 강한 커브는 거기선 과하다. */
+  --ease-out: cubic-bezier(0.2, 0, 0, 1);
+
   /* 브랜드 톤 테두리 (강조 카드용 — PRIMARY 톤의 얇은 보더 + 부드러운 그림자) */
   --shadow-border-brand:
     0px 0px 0px 1px rgba(127, 0, 5, 0.12),
@@ -143,6 +154,13 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
     padding-bottom: env(safe-area-inset-bottom);
     /* 브라우저 기본 pull-to-refresh 비활성화 */
     overscroll-behavior-y: contain;
+    /* PageHeader가 풀블리드를 위해 width:100vw를 쓰는데, 100vw는 **세로 스크롤바 폭까지 포함**한다.
+       스크롤바가 생기는 화면(설정·학생·수업…)에선 콘텐츠 영역보다 8~15px 넓어져
+       가로 스크롤바가 생기고, 그러면 `position:fixed; bottom:0`인 BottomNav가 그 스크롤바
+       높이만큼 **밀려 올라가** 아래로 페이지 배경이 비친다 — 화면마다 탭바가 달라 보이던 원인.
+       clip은 hidden과 달리 스크롤 컨테이너를 만들지 않아 sticky/fixed가 그대로 동작한다.
+       (가로 스크롤이 필요한 칩 줄들은 각자 overflow-x:auto를 갖고 있어 영향 없음) */
+    overflow-x: clip;
   }
 
   * {
@@ -282,6 +300,113 @@ html {
   transition-property: box-shadow;
   transition-duration: 150ms;
   transition-timing-function: ease-out;
+}
+
+/* ── 리스트 카드 탭 피드백 ─────────────────────
+   전에는 각 페이지가 onMouseEnter/onMouseLeave로 hover 그림자를 직접 갈아끼웠다.
+   이 앱은 사실상 전부 터치라 hover는 평생 안 걸리고, 눌러도 아무 반응이 없었다.
+   → hover는 CSS로 옮기고(마우스 있는 기기 한정) :active 눌림 상태를 새로 준다.
+   .tap-wrap 은 카드를 감싼 Link/div 용 — 안쪽 카드까지 눌림이 전달되게. */
+.card-tap {
+  box-shadow: var(--shadow-border);
+  transition-property: box-shadow, background-color;
+  transition-duration: 150ms;
+  transition-timing-function: ease-out;
+}
+@media (hover: hover) {
+  .card-tap:hover { box-shadow: var(--shadow-border-hover); }
+}
+.card-tap:active,
+.tap-wrap:active .card-tap {
+  box-shadow: var(--shadow-border-pressed);
+  background-color: #f5f5f7; /* = BG_SECTION_ALT (theme.js) */
+  /* 카드는 면적이 커서 0.96이면 과하다 — 큰 표면은 0.98 (Emil 허용범위 0.95~0.98) */
+  scale: 0.98;
+}
+
+/* ── 목록에서 사라질 때 (exit) ─────────────────
+   exit는 enter보다 짧고 조용하게. 사용자의 시선은 이미 다음으로 옮겨가는 중이라
+   퇴장이 주목을 끌면 안 된다. 컨테이너 높이만큼이 아니라 작은 고정 translateY(-12px)로
+   "어디로 갔는지"만 알려주고 끝낸다. */
+.card-dismiss {
+  transition-property: opacity, translate, filter;
+  transition-duration: 150ms;
+  transition-timing-function: ease-in;
+}
+.card-dismiss[data-exiting='true'] {
+  opacity: 0;
+  translate: 0 -12px;
+  filter: blur(4px);
+  pointer-events: none;
+}
+
+/* ── 눌림 피드백 (press scale) ─────────────────
+   누를 때 살짝 들어가야 "인터페이스가 내 손을 들었다"는 신호가 된다.
+   2026-05-19에 전역 press scale을 걷어냈다가, 2026-08-25 "스킬 우선" 지시로 복원.
+   단 이번엔 `transform: scale()`이 아니라 **독립 `scale` 프로퍼티**를 쓴다 —
+   transform을 덮어쓰지 않으므로 이미 transform을 쓰는 요소(캐럿 회전·게임 연출)와 겹쳐도 안 깨진다.
+   (옛 구현이 문제였던 지점이 정확히 여기다.)
+   값 0.96은 두 스킬 공통 지정값. 0.95 미만은 과장돼 보인다. */
+button,
+.press {
+  transition-property: scale;
+  transition-duration: 150ms;
+  transition-timing-function: ease-out;
+}
+button:active:not(:disabled):not(.press-static),
+.press:active:not(.press-static) {
+  scale: 0.96;
+}
+/* 하단 탭바는 하루 100번 넘게 누르는 곳 — 반복 노출되는 애니메이션은 오히려 느리게 느껴진다.
+   (NavLink는 <a>라 위 button 규칙에 안 걸리지만, 실수로 걸리지 않게 명시해 둔다) */
+.bottom-nav-glass a:active { scale: 1; }
+/* 모션 감소 설정에서는 duration만 0으로 줄이면 오히려 '툭' 튀므로 아예 끈다. */
+@media (prefers-reduced-motion: reduce) {
+  button:active:not(:disabled),
+  .press:active,
+  .card-tap:active,
+  .tap-wrap:active .card-tap { scale: 1; }
+}
+
+/* ── 접기/펼치기 ───────────────────────────────
+   높이를 grid-template-rows(0fr→1fr)로 트랜지션 — 내용 높이를 미리 몰라도 되고,
+   펼치는 중에 다시 눌러도 그 자리에서 되감긴다(키프레임은 처음부터 다시 시작).
+   닫힐 때 visibility로 탭 순서에서도 빠진다. */
+.reveal {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  visibility: hidden;
+  transition-property: grid-template-rows, opacity, visibility;
+  transition-duration: 220ms;
+  transition-timing-function: var(--ease-out);
+}
+.reveal > * {
+  overflow: hidden;
+  min-height: 0;
+}
+.reveal[data-open='true'] {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  visibility: visible;
+}
+
+/* ── 최소 히트영역 40px ────────────────────────
+   보이는 크기(작은 알약 버튼)는 그대로 두고 터치 영역만 넓힌다.
+   ::after는 레이아웃에 영향이 없어 배지 크기가 안 변한다.
+   40px인 이유: 44px로 키우면 위아래 이웃 버튼과 히트영역이 겹친다. */
+.hit-40 {
+  position: relative;
+}
+.hit-40::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 100%;
+  min-width: 40px;
+  height: 40px;
 }
 
 /* ── 페이지 진입 stagger 애니메이션 ─────────── */

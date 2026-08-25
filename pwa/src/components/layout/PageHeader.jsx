@@ -11,8 +11,12 @@ export default function PageHeader({ title, back, onBack, action }) {
   return (
     <header style={{
       position: 'sticky', top: 0, zIndex: 40,
-      width: '100vw',
-      marginLeft: 'calc(50% - 50vw)',
+      // 예전엔 풀블리드를 위해 `width: 100vw; marginLeft: calc(50% - 50vw)`를 썼는데,
+      // 100vw는 세로 스크롤바 폭까지 포함해서 콘텐츠 영역보다 8~15px 넓어졌다.
+      // → 가로 스크롤바가 생기고, 그 높이만큼 `position:fixed`인 BottomNav가 밀려 올라가
+      //   화면마다 탭바 위치가 달라 보였다(2026-08-25). 부모 폭(100%)에 맞추면 그 일이 없다.
+      //   모바일에선 부모가 화면 전체라 결과가 같고, 데스크톱에선 앱 컬럼 폭에 맞춰진다.
+      width: '100%',
       backgroundColor: 'rgba(255,255,255,0.82)',
       backdropFilter: 'saturate(180%) blur(20px)',
       WebkitBackdropFilter: 'saturate(180%) blur(20px)',

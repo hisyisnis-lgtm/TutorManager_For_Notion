@@ -1,10 +1,22 @@
-import { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import {
+  useState,
+  useEffect,
+  useRef } from 'react';
+import { useParams,
+  useNavigate } from 'react-router-dom';
 import { CaretLeftIcon } from '@phosphor-icons/react';
-import PandaWidget, { PANDA_FEED_KEY, getPandaStorageKey, getStageInfo } from '../components/ui/PandaWidget.jsx';
+import PandaWidget,
+  { PANDA_FEED_KEY,
+  getPandaStorageKey,
+  getStageInfo } from '../components/ui/PandaWidget.jsx';
 import { fetchStudentByToken } from '../api/bookingApi.js';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
-import { GRADIENTS, PRIMARY, TEXT_PRIMARY, TEXT_SECONDARY, STATUS_ERROR_TEXT } from '../constants/theme.js';
+import { GRADIENTS,
+  PRIMARY,
+  TEXT_PRIMARY,
+  TEXT_SECONDARY,
+  STATUS_ERROR_TEXT,
+  BG_APP } from '../constants/theme.js';
 
 const COACH_KEY = 'panda_coach_seen';
 
@@ -47,7 +59,7 @@ export default function PandaPage() {
   ] : [];
 
   return (
-    <div style={{ position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column', background: '#f9fafb' }}>
+    <div style={{ position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column', background: BG_APP }}>
       {/* 헤더 */}
       <div style={{
         flexShrink: 0,

@@ -110,7 +110,7 @@ export default function PricingPage() {
             <FadeUp delay={80}>
               <div style={{ margin: '0 0 20px' }}>
                 <p style={{
-                  color: 'rgba(255,255,255,0.82)', fontSize: 16, fontWeight: 500,
+                  color: 'rgba(255,255,255,0.82)', fontSize: 16, fontWeight: 600,
                   margin: '0 0 6px', lineHeight: 1.4, letterSpacing: '0.01em',
                 }}>
                   아는 중국어가 아니라,
@@ -132,7 +132,7 @@ export default function PricingPage() {
                   "수업 안에서 반드시 '말하게' 만드는 구조",
                 ].map(item => (
                   <Space key={item} size={8} align="start">
-                    <CheckCircleIcon weight="fill" size={14} style={{ color: 'rgba(255,255,255,0.75)', flexShrink: 0, marginTop: 3 }} />
+                    <CheckCircleIcon weight="fill" size={16} style={{ color: 'rgba(255,255,255,0.75)', flexShrink: 0, marginTop: 3 }} />
                     <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 14, lineHeight: 1.6, textWrap: 'pretty' }}>{item}</Text>
                   </Space>
                 ))}
@@ -231,7 +231,7 @@ export default function PricingPage() {
                         </div>,
                       ];
                       if (i < arr.length - 1) {
-                        els.push(<CaretRightIcon weight="fill" key={`arr-${i}`} size={10} style={{ color: TEXT_DISABLED }} />);
+                        els.push(<CaretRightIcon weight="fill" key={`arr-${i}`} size={12} style={{ color: TEXT_DISABLED }} />);
                       }
                       return els;
                     })}
@@ -250,7 +250,7 @@ export default function PricingPage() {
               <FadeUp delay={200}>
                 <div style={{ backgroundColor: '#e8e8e8', borderRadius: 10, padding: '11px 14px' }}>
                   <Space size={8} align="start">
-                    <InfoIcon weight="fill" size={13} style={{ color: TEXT_INACTIVE, marginTop: 2, flexShrink: 0 }} />
+                    <InfoIcon weight="fill" size={12} style={{ color: TEXT_INACTIVE, marginTop: 2, flexShrink: 0 }} />
                     <Text style={{ fontSize: 13, color: TEXT_SECONDARY, lineHeight: 1.6 }}>
                       두 가지 방법 중 <Text strong style={{ color: TEXT_BODY }}>하나만 선택</Text> 가능합니다.
                     </Text>

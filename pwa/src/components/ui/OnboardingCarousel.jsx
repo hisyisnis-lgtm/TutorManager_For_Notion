@@ -1,11 +1,21 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
-import { Fragment } from 'react';
-import { CalendarBlankIcon, ClipboardTextIcon, CaretRightIcon } from '@phosphor-icons/react';
 import {
-  PRIMARY, PRIMARY_DARK,
-  TEXT_PRIMARY, TEXT_SECONDARY,
+  useState,
+  useRef,
+  useCallback,
+  useEffect } from 'react';
+import { Fragment } from 'react';
+import { CalendarBlankIcon,
+  ClipboardTextIcon,
+  CaretRightIcon } from '@phosphor-icons/react';
+import {
+  PRIMARY,
+  PRIMARY_DARK,
+  TEXT_PRIMARY,
+  TEXT_SECONDARY,
   GRADIENTS,
-} from '../../constants/theme.js';
+  GRAY_300,
+  TEXT_INACTIVE,
+  BG_WARM } from '../../constants/theme.js';
 
 export const ONBOARDING_KEY = 'onboarding_v1_done';
 
@@ -14,7 +24,7 @@ const SLIDES = [
     id: 'welcome',
     type: 'logo',
     theme: 'brand',
-    zoneBg: 'linear-gradient(160deg, #6b0004 0%, #9a0007 100%)',
+    zoneBg: GRADIENTS.onboarding,
     tag: '환영해요',
     title: '하늘하늘중국어\n학생 앱이에요',
     desc: '수업 일정, 숙제, 팬더 키우기까지\n모두 여기서 확인할 수 있어요.',
@@ -52,7 +62,7 @@ const SLIDES = [
 const ZONE_HEIGHT = 256;
 
 // 모든 light 슬라이드가 공유하는 단일 배경 — "슬라이드마다 다른 색" 패턴 제거
-const ZONE_BG = '#F7F5F3';
+const ZONE_BG = BG_WARM;
 
 export default function OnboardingCarousel({ onDone }) {
   const [current, setCurrent] = useState(0);
@@ -120,7 +130,7 @@ export default function OnboardingCarousel({ onDone }) {
             borderRadius: 4,
             background: isOnDark
               ? (i === current ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.3)')
-              : (i === current ? PRIMARY : '#e0e0e0'),
+              : (i === current ? PRIMARY : GRAY_300),
             transitionProperty: 'width, background-color',
             transitionDuration: '0.28s',
             transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)',
@@ -200,8 +210,8 @@ export default function OnboardingCarousel({ onDone }) {
                 position: 'absolute', top: 12, right: 16, zIndex: 10,
                 background: 'none', border: 'none',
                 fontSize: 14,
-                color: isOnDark ? 'rgba(255,255,255,0.6)' : '#9ca3af',
-                fontWeight: 500,
+                color: isOnDark ? 'rgba(255,255,255,0.6)' : TEXT_INACTIVE,
+                fontWeight: 600,
                 cursor: 'pointer',
                 minWidth: 44, minHeight: 44,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -387,7 +397,7 @@ export default function OnboardingCarousel({ onDone }) {
                           className="stagger-item"
                           style={{
                             color: PRIMARY,
-                            fontSize: 11, fontWeight: 500,
+                            fontSize: 11, fontWeight: 600,
                             letterSpacing: '0.14em',
                             textTransform: 'uppercase',
                             marginBottom: 12,

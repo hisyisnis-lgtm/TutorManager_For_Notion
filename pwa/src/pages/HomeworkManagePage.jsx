@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Input } from 'antd';
 import { useCachedResource } from '../hooks/useCachedResource.js';
-import { MagnifyingGlassIcon } from '@phosphor-icons/react';
+import { MagnifyingGlassIcon, UsersThreeIcon } from '@phosphor-icons/react';
 import Card from 'antd/es/card/Card';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import Badge from '../components/ui/Badge.jsx';
@@ -16,10 +16,7 @@ import { useData } from '../context/DataContext.jsx';
 import { queryPage } from '../api/notionClient.js';
 import { HOMEWORK_DB, parseHomework } from '../api/homework.js';
 import {
-  TEXT_TERTIARY,
-  STATUS_ERROR_TEXT,
-  STATUS_INFO_DARK,
-} from '../constants/theme.js';
+  TEXT_TERTIARY, STATUS_ERROR_TEXT, STATUS_INFO_DARK, BORDER_NEUTRAL } from '../constants/theme.js';
 
 const FILTER_TABS = [
   { value: '전체', label: '전체' },
@@ -115,7 +112,7 @@ export default function HomeworkManagePage() {
             key={value}
             onClick={() => setFilter(value)}
             aria-pressed={filter === value}
-            className={`flex-shrink-0 px-3 py-3 rounded-full text-sm font-medium transition-[background-color,color] duration-150 ease-out ${
+            className={`flex-shrink-0 px-3 py-3 rounded-full text-sm font-semibold transition-[background-color,color] duration-150 ease-out ${
               filter === value
                 ? 'bg-brand-600 text-white'
                 : 'bg-gray-100 text-gray-600'
@@ -132,7 +129,7 @@ export default function HomeworkManagePage() {
       {students.length > 0 && (
         <>
           {filtered.length === 0 ? (
-            <EmptyState icon="👥" title="학생이 없습니다" description="학생 관리에서 학생을 추가하세요." />
+            <EmptyState icon={<UsersThreeIcon size={44} weight="thin" style={{ color: BORDER_NEUTRAL }} />} title="학생이 없습니다" description="학생 관리에서 학생을 추가하세요." />
           ) : (
             <ul className="px-4 space-y-3 pb-24">
               {filtered.map((student) => (
@@ -156,14 +153,13 @@ function HomeworkStudentCard({ student, count }) {
     <li>
       <Link
         to={`/students/${student.id}/homework`}
-        className="block duration-150 ease-out"
+        className="block tap-wrap"
       >
         <Card
           variant="borderless"
-          style={{ borderRadius: 16, boxShadow: 'var(--shadow-border)', transition: 'box-shadow 150ms ease-out' }}
+          className="card-tap"
+          style={{ borderRadius: 16 }}
           styles={{ body: { padding: '16px' } }}
-          onMouseEnter={(e) => { e.currentTarget.style.boxShadow = 'var(--shadow-border-hover)'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'var(--shadow-border)'; }}
         >
           <div className="flex items-start justify-between mb-2">
             <span className="text-base font-bold text-gray-900">{student.name}</span>

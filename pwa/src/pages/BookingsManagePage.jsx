@@ -7,6 +7,8 @@ import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import EmptyState from '../components/ui/EmptyState.jsx';
 import ErrorMessage from '../components/ui/ErrorMessage.jsx';
 import ConfirmDialog from '../components/ui/ConfirmDialog.jsx';
+import { ProhibitIcon } from '@phosphor-icons/react';
+import { BORDER_NEUTRAL } from '../constants/theme.js';
 
 const WEEK_DAYS = ['월', '화', '수', '목', '금', '토', '일'];
 
@@ -121,7 +123,7 @@ export default function BookingsManagePage() {
         <Button
           type="link"
           onClick={() => { setShowForm(v => !v); setFormError(null); if (showForm) resetForm(); }}
-          style={{ padding: 0, fontWeight: 500 }}
+          style={{ padding: 0, fontWeight: 600 }}
         >
           {showForm ? '닫기' : '+ 추가'}
         </Button>
@@ -138,7 +140,7 @@ export default function BookingsManagePage() {
                   key={t}
                   type="button"
                   onClick={() => setForm(f => ({ ...f, type: t, days: [], start: '', end: '' }))}
-                  className={`flex-1 py-3 rounded-xl text-sm font-medium border transition-[background-color,color,border-color] duration-150 ease-out ${
+                  className={`flex-1 py-3 rounded-xl text-sm font-semibold border transition-[background-color,color,border-color] duration-150 ease-out ${
                     form.type === t ? 'bg-brand-600 text-white border-brand-600' : 'bg-white text-gray-600 border-gray-200'
                   }`}
                 >
@@ -157,7 +159,7 @@ export default function BookingsManagePage() {
                       key={day}
                       type="button"
                       onClick={() => toggleDay(day)}
-                      className={`h-11 w-11 rounded-full text-sm font-medium border transition-[background-color,color,border-color] duration-150 ease-out ${
+                      className={`h-11 w-11 rounded-full text-sm font-semibold border transition-[background-color,color,border-color] duration-150 ease-out ${
                         form.days.includes(day)
                           ? 'bg-brand-600 text-white border-brand-600'
                           : 'bg-white text-gray-600 border-gray-200'
@@ -243,7 +245,7 @@ export default function BookingsManagePage() {
                     key={t}
                     type="button"
                     onClick={() => toggleTime(t)}
-                    className={`px-2.5 py-2.5 rounded-lg text-xs font-medium tabular-nums border transition-[background-color,color,border-color] duration-150 ease-out ${
+                    className={`px-2.5 py-2.5 rounded-lg text-xs font-semibold tabular-nums border transition-[background-color,color,border-color] duration-150 ease-out ${
                       form.blockedTimes.includes(t)
                         ? 'bg-red-500 text-white border-red-500'
                         : 'bg-white text-gray-600 border-gray-200 hover:border-red-300'
@@ -268,7 +270,7 @@ export default function BookingsManagePage() {
             </div>
 
             {formError && (
-              <Alert type="error" message={formError} showIcon style={{ borderRadius: 12, marginBottom: 12 }} />
+              <Alert type="error" title={formError} showIcon style={{ borderRadius: 12, marginBottom: 12 }} />
             )}
 
             <Button
@@ -287,7 +289,7 @@ export default function BookingsManagePage() {
       {loading && <LoadingSpinner />}
       {error && <ErrorMessage message={error} onRetry={blockedRes.refresh} />}
       {!loading && !error && blocked.length === 0 && (
-        <EmptyState icon="🚫" title="등록된 예약 불가 설정이 없습니다" />
+        <EmptyState icon={<ProhibitIcon size={44} weight="thin" style={{ color: BORDER_NEUTRAL }} />} title="등록된 예약 불가 설정이 없습니다" />
       )}
 
       <div className="px-4 pb-24 space-y-2 mt-1">
@@ -296,18 +298,18 @@ export default function BookingsManagePage() {
             <div className="flex items-center gap-3">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
                     item.type === '반복' ? 'bg-brand-50 text-brand-600' : 'bg-gray-100 text-gray-600'
                   }`}>
                     {item.type}
                   </span>
                   {item.blockedTimes?.length > 0 && (
-                    <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-gray-100 text-gray-600">
+                    <span className="text-xs px-2 py-0.5 rounded-full font-semibold bg-gray-100 text-gray-600">
                       시간 차단
                     </span>
                   )}
                 </div>
-                <div className="font-medium text-gray-800 text-sm">{formatBlockedLabel(item)}</div>
+                <div className="font-semibold text-gray-800 text-sm">{formatBlockedLabel(item)}</div>
                 {item.memo && item.memo !== formatBlockedLabel(item) && (
                   <div className="text-xs text-gray-500 mt-0.5">{item.memo}</div>
                 )}

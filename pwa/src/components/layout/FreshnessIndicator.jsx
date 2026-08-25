@@ -47,7 +47,7 @@ export default function FreshnessIndicator() {
           background: 'rgba(28,28,30,0.82)',
           color: '#fff',
           fontSize: 12,
-          fontWeight: 500,
+          fontWeight: 600,
           padding: '6px 13px',
           borderRadius: 980,
           backdropFilter: 'saturate(180%) blur(12px)',
@@ -58,12 +58,12 @@ export default function FreshnessIndicator() {
       >
         {refreshing ? (
           <>
-            <ArrowsClockwiseIcon size={13} weight="bold" className="animate-spin" />
+            <ArrowsClockwiseIcon size={12} weight="bold" className="animate-spin" />
             업데이트 중…
           </>
         ) : (
           <>
-            <CheckCircleIcon size={14} weight="fill" />
+            <CheckCircleIcon size={16} weight="fill" />
             방금 업데이트됨
           </>
         )}

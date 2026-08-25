@@ -50,7 +50,7 @@ export default function Badge({ label, bg, text, style: styleProp }) {
         border: 'none',
         borderRadius: 20,
         fontSize: 12,
-        fontWeight: 500,
+        fontWeight: 600,
         margin: 0,
         padding: '1px 8px',
         ...styleProp,

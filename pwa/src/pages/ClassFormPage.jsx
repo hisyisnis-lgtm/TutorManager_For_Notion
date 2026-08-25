@@ -415,7 +415,7 @@ export default function ClassFormPage() {
 
       <form onSubmit={handleSubmit} className="px-4 pt-4 pb-8 space-y-5">
         {error && (
-          <Alert type="error" message={error} showIcon style={{ borderRadius: 12 }} />
+          <Alert type="error" title={error} showIcon style={{ borderRadius: 12 }} />
         )}
 
         {/* ① 수업 유형 — 항상 표시 */}
@@ -511,10 +511,10 @@ export default function ClassFormPage() {
                         onChange={() => toggleStudent(s.id)}
                         className="w-4 h-4 accent-brand-600"
                       />
-                      <span className="text-sm font-medium text-gray-800">{s.name}</span>
+                      <span className="text-sm font-semibold text-gray-800">{s.name}</span>
                       <span className="text-xs text-gray-500 ml-auto">{stripEmoji(s.status)}</span>
                       {recurring && isSelected && (
-                        <span className="text-xs text-brand-600 font-medium">
+                        <span className="text-xs text-brand-600 font-semibold">
                           잔여 {s.remainingSessions ?? 0}회차
                         </span>
                       )}
@@ -539,7 +539,7 @@ export default function ClassFormPage() {
               <button
                 type="button"
                 onClick={() => setRecurMode('single')}
-                className={`py-3 rounded-xl text-sm font-medium border-2 transition-[background-color,color,border-color] duration-150 ease-out ${
+                className={`py-3 rounded-xl text-sm font-semibold border-2 transition-[background-color,color,border-color] duration-150 ease-out ${
                   recurMode === 'single' ? 'border-brand-600 bg-brand-50 text-brand-700' : 'border-gray-200 bg-white text-gray-600'
                 }`}
               >
@@ -548,7 +548,7 @@ export default function ClassFormPage() {
               <button
                 type="button"
                 onClick={() => setRecurMode('recur')}
-                className={`py-3 rounded-xl text-sm font-medium border-2 transition-[background-color,color,border-color] duration-150 ease-out ${
+                className={`py-3 rounded-xl text-sm font-semibold border-2 transition-[background-color,color,border-color] duration-150 ease-out ${
                   recurMode === 'recur' ? 'border-brand-600 bg-brand-50 text-brand-700' : 'border-gray-200 bg-white text-gray-600'
                 }`}
               >
@@ -649,7 +649,7 @@ export default function ClassFormPage() {
                       key={day}
                       type="button"
                       onClick={() => toggleDay(day)}
-                      className={`py-3 rounded-xl text-sm font-medium border-2 transition-[background-color,color,border-color] duration-150 ease-out ${
+                      className={`py-3 rounded-xl text-sm font-semibold border-2 transition-[background-color,color,border-color] duration-150 ease-out ${
                         active ? 'border-brand-600 bg-brand-50 text-brand-700' : 'border-gray-200 bg-white text-gray-600'
                       }`}
                     >
@@ -739,7 +739,7 @@ export default function ClassFormPage() {
                     key={d}
                     type="button"
                     onClick={() => setForm((f) => ({ ...f, duration: d }))}
-                    className={`py-3 rounded-xl text-sm font-medium border-2 transition-[background-color,color,border-color] duration-150 ease-out ${
+                    className={`py-3 rounded-xl text-sm font-semibold border-2 transition-[background-color,color,border-color] duration-150 ease-out ${
                       form.duration === d
                         ? 'border-brand-600 bg-brand-50 text-brand-700'
                         : conflict
@@ -805,7 +805,7 @@ export default function ClassFormPage() {
                     // 카페/외부 장소가 아닌 옵션 선택 시 메모 자동 리셋
                     locationMemo: loc?.includes('카페') ? f.locationMemo : '',
                   }))}
-                  className={`py-3 rounded-xl text-sm font-medium border-2 transition-[background-color,color,border-color] duration-150 ease-out ${
+                  className={`py-3 rounded-xl text-sm font-semibold border-2 transition-[background-color,color,border-color] duration-150 ease-out ${
                     form.location === loc
                       ? 'border-brand-600 bg-brand-50 text-brand-700'
                       : 'border-gray-200 bg-white text-gray-600'
@@ -840,7 +840,7 @@ export default function ClassFormPage() {
               <button
                 type="button"
                 onClick={() => setForm((f) => ({ ...f, notes: '' }))}
-                className={`py-3 rounded-xl text-sm font-medium border-2 transition-[background-color,color,border-color] duration-150 ease-out ${
+                className={`py-3 rounded-xl text-sm font-semibold border-2 transition-[background-color,color,border-color] duration-150 ease-out ${
                   !form.notes
                     ? 'border-gray-700 bg-gray-100 text-gray-800'
                     : 'border-gray-200 bg-white text-gray-600'
@@ -853,7 +853,7 @@ export default function ClassFormPage() {
                   key={n}
                   type="button"
                   onClick={() => setForm((f) => ({ ...f, notes: n }))}
-                  className={`py-3 rounded-xl text-sm font-medium border-2 transition-[background-color,color,border-color] duration-150 ease-out ${
+                  className={`py-3 rounded-xl text-sm font-semibold border-2 transition-[background-color,color,border-color] duration-150 ease-out ${
                     form.notes === n
                       ? 'border-gray-700 bg-gray-100 text-gray-800'
                       : 'border-gray-200 bg-white text-gray-600'

@@ -180,7 +180,7 @@ export default function StudentDetailPage() {
               {student.phone && (
                 <div className="col-span-2">
                   <span className="text-gray-500 text-xs">전화번호</span>
-                  <a href={`tel:${student.phone}`} className="block text-brand-600 font-medium">
+                  <a href={`tel:${student.phone}`} className="block text-brand-600 font-semibold">
                     {student.phone}
                   </a>
                 </div>
@@ -188,7 +188,7 @@ export default function StudentDetailPage() {
               {student.email && (
                 <div className="col-span-2">
                   <span className="text-gray-500 text-xs">이메일</span>
-                  <a href={`mailto:${student.email}`} className="block text-brand-600 font-medium">
+                  <a href={`mailto:${student.email}`} className="block text-brand-600 font-semibold">
                     {student.email}
                   </a>
                 </div>
@@ -239,7 +239,7 @@ export default function StudentDetailPage() {
                   onPointerUp={e => e.currentTarget.style.transform = 'scale(1)'}
                   onPointerLeave={e => e.currentTarget.style.transform = 'scale(1)'}
                 >
-                  <LinkIcon weight="fill" size={14} />
+                  <LinkIcon weight="fill" size={16} />
                   학생 페이지 공유
                 </button>
                 {/* 숙제 관리·등록은 VIP(숙제 관리 대상) 학생만 — 일반 학생 오등록 방지 */}
@@ -249,7 +249,7 @@ export default function StudentDetailPage() {
                     onClick={() => navigate(`/students/${id}/homework`)}
                     style={{
                       width: '100%', height: 44, cursor: 'pointer', borderRadius: 12,
-                      background: PRIMARY_BG, border: `1.5px solid ${STATUS_ERROR_BORDER}`,
+                      background: PRIMARY_BG, border: `1px solid ${STATUS_ERROR_BORDER}`,
                       display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                       fontSize: 14, fontWeight: 600, color: PRIMARY,
                       WebkitTapHighlightColor: 'transparent',
@@ -259,7 +259,7 @@ export default function StudentDetailPage() {
                     onPointerUp={e => e.currentTarget.style.transform = 'scale(1)'}
                     onPointerLeave={e => e.currentTarget.style.transform = 'scale(1)'}
                   >
-                    <FileTextIcon weight="fill" size={14} />
+                    <FileTextIcon weight="fill" size={16} />
                     숙제 관리
                   </button>
                 )}
@@ -289,7 +289,7 @@ export default function StudentDetailPage() {
               return (
                 <div key={cls.id} className="flex items-center justify-between py-2.5 border-b border-gray-50 last:border-0">
                   <div>
-                    <p className="text-sm font-medium text-gray-800">
+                    <p className="text-sm font-semibold text-gray-800">
                       {cls.datetime ? formatDateTime(cls.datetime) : '일시 미정'}
                       {cls.endTime && ` ~ ${formatTime(cls.endTime)}`}
                     </p>
@@ -317,7 +317,7 @@ export default function StudentDetailPage() {
               return (
                 <div key={p.id} className="flex items-center justify-between py-2.5 border-b border-gray-50 last:border-0">
                   <div>
-                    <p className="text-sm font-medium text-gray-800">
+                    <p className="text-sm font-semibold text-gray-800">
                       {p.sessionCount}회 · {formatKRW(p.paymentAmount)}
                     </p>
                     {p.unpaid > 0 && (
@@ -342,7 +342,7 @@ export default function StudentDetailPage() {
           danger
           block
           onClick={() => setShowDeleteConfirm(true)}
-          style={{ borderRadius: 12, height: 44, fontWeight: 500 }}
+          style={{ borderRadius: 12, height: 44, fontWeight: 600 }}
         >
           학생 삭제
         </Button>
@@ -365,7 +365,7 @@ function InfoRow({ label, value }) {
   return (
     <div>
       <span className="text-gray-500 text-xs">{label}</span>
-      <p className="text-sm font-medium text-gray-800">{value}</p>
+      <p className="text-sm font-semibold text-gray-800">{value}</p>
     </div>
   );
 }

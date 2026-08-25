@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Button, Input, Card, Select, message } from 'antd';
 import { useCachedResource } from '../hooks/useCachedResource.js';
-import { MagnifyingGlassIcon } from '@phosphor-icons/react';
+import { MagnifyingGlassIcon, ReceiptIcon } from '@phosphor-icons/react';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import Badge from '../components/ui/Badge.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
@@ -16,7 +16,7 @@ import { useData } from '../context/DataContext.jsx';
 import PullToRefresh from '../components/ui/PullToRefresh.jsx';
 import PaymentTrendChart from '../components/payments/PaymentTrendChart.jsx';
 import IncomeSummary from '../components/payments/IncomeSummary.jsx';
-import { TEXT_PRIMARY, TEXT_TERTIARY, STATUS_ERROR_TEXT } from '../constants/theme.js';
+import { TEXT_PRIMARY, TEXT_TERTIARY, STATUS_ERROR_TEXT, BORDER_NEUTRAL } from '../constants/theme.js';
 
 export default function PaymentsPage() {
   const { students, classTypes, studentNameMap, classTypeMap } = useData();
@@ -158,7 +158,7 @@ export default function PaymentsPage() {
             (() => {
               const suggestions = students.filter((s) => s.name.includes(nameInput));
               return suggestions.length > 0 ? (
-                <div className="absolute top-full left-0 right-0 z-10 bg-white border border-gray-200 rounded-xl shadow-lg mt-1 overflow-hidden">
+                <div className="absolute top-full left-0 right-0 z-10 bg-white rounded-xl shadow-[var(--shadow-modal)] mt-1 overflow-hidden">
                   {suggestions.map((s) => (
                     <button
                       key={s.id}
@@ -166,13 +166,13 @@ export default function PaymentsPage() {
                       onClick={() => { setNameInput(s.name); setStudentFilter(s.id); }}
                       className="w-full flex items-center justify-between px-4 py-2.5 text-sm text-gray-800 hover:bg-brand-50 active:bg-brand-100"
                     >
-                      <span className="font-medium">{s.name}</span>
+                      <span className="font-semibold">{s.name}</span>
                       <span className="text-xs text-gray-500">{stripEmoji(s.status)}</span>
                     </button>
                   ))}
                 </div>
               ) : (
-                <div className="absolute top-full left-0 right-0 z-10 bg-white border border-gray-200 rounded-xl shadow-lg mt-1 px-4 py-3 text-sm text-gray-400 text-center">
+                <div className="absolute top-full left-0 right-0 z-10 bg-white rounded-xl shadow-[var(--shadow-modal)] mt-1 px-4 py-3 text-sm text-gray-400 text-center">
                   검색 결과 없음
                 </div>
               );
@@ -201,7 +201,7 @@ export default function PaymentsPage() {
       {!loading && !error && (
         <>
           {filtered.length === 0 ? (
-            <EmptyState icon="💰" title="결제 내역이 없습니다" />
+            <EmptyState icon={<ReceiptIcon size={44} weight="thin" style={{ color: BORDER_NEUTRAL }} />} title="결제 내역이 없습니다" />
           ) : (
             <ul className={`px-4 space-y-3 ${hasMore ? 'pb-2' : 'pb-24'}`}>
               {filtered.map((p) => (
@@ -244,14 +244,13 @@ function PaymentCard({ payment, studentNameMap, classTypeMap }) {
     <li>
       <Link
         to={`/payments/${payment.id}`}
-        className="block duration-150 ease-out"
+        className="block tap-wrap"
       >
         <Card
           variant="borderless"
-          style={{ borderRadius: 12, boxShadow: 'var(--shadow-border)', transition: 'box-shadow 150ms ease-out' }}
+          className="card-tap"
+          style={{ borderRadius: 12 }}
           styles={{ body: { padding: '14px 16px' } }}
-          onMouseEnter={(e) => { e.currentTarget.style.boxShadow = 'var(--shadow-border-hover)'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'var(--shadow-border)'; }}
         >
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 10 }}>
             <div style={{ flex: 1, minWidth: 0 }}>

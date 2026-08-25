@@ -3,8 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Button, Input, Card, DatePicker, Select, message } from 'antd';
 import { useCachedResource, invalidateCache } from '../hooks/useCachedResource.js';
 import dayjs from 'dayjs';
-import { MagnifyingGlassIcon, MapPinIcon, WarningCircleIcon, CalendarBlankIcon, InfoIcon } from '@phosphor-icons/react';
-import { PRIMARY, PRIMARY_BG, TEXT_PRIMARY, TEXT_SECONDARY, TEXT_TERTIARY, BORDER_DEFAULT, PRIMARY_ALPHA_25, STATUS_ERROR_TEXT, STATUS_ERROR_BG, STATUS_WARNING_TEXT, STATUS_WARNING_BG } from '../constants/theme.js';
+import { MagnifyingGlassIcon, MapPinIcon, WarningCircleIcon, CalendarBlankIcon, InfoIcon, CaretRightIcon } from '@phosphor-icons/react';
+import { PRIMARY, PRIMARY_BG, TEXT_PRIMARY, TEXT_SECONDARY, TEXT_TERTIARY, BORDER_DEFAULT, PRIMARY_ALPHA_25, STATUS_ERROR_TEXT, STATUS_ERROR_BG, STATUS_WARNING_TEXT, STATUS_WARNING_BG, GRAY_100, BORDER_NEUTRAL } from '../constants/theme.js';
 import { createLessonLog } from '../api/lessonLogs.js';
 import { queryAll } from '../api/notionClient.js';
 import PageHeader from '../components/layout/PageHeader.jsx';
@@ -53,7 +53,7 @@ const QUICK_RANGES = [
 // 빠른 선택 칩 스타일 — 디자인 토큰 기반
 const CHIP_BASE = {
   fontSize: 13,
-  fontWeight: 500,
+  fontWeight: 600,
   lineHeight: 1,
   height: 36,
   padding: '0 14px',
@@ -107,6 +107,9 @@ export default function ClassesPage() {
   const [calYear, setCalYear] = useState(today.year);
   const [calMonth, setCalMonth] = useState(today.month);
   const [selectedDay, setSelectedDay] = useState(null);
+  // 정밀 날짜·수업 종류는 가끔만 쓰는 필터다. 항상 펼쳐 두면 캘린더까지 합쳐 709px를 먹어
+  // 정작 수업 목록이 첫 화면 밖에서 시작한다 → 기본 접힘.
+  const [moreFilterOpen, setMoreFilterOpen] = useState(false);
 
   // ── 수업 목록: 필터 조합별로 첫 페이지를 캐시(기억+갱신) → 재방문 즉시 표시.
   //    "더 보기"로 받은 다음 페이지는 라이브로 이어붙인다(extra). 필터가 바뀌면 리셋.
@@ -284,13 +287,13 @@ export default function ClassesPage() {
                       <li key={cls.id}>
                         <Link
                           to={`/classes/${cls.id}`}
-                          className="flex items-center gap-3 px-3 py-2 rounded-xl bg-gray-50 active:bg-gray-100"
+                          className="press flex items-center gap-3 px-3 py-2 rounded-lg bg-gray-50 active:bg-gray-100 transition-[background-color] duration-150 ease-out"
                         >
-                          <span className="text-xs font-semibold text-brand-600 shrink-0">
+                          <span className="text-xs font-semibold text-gray-900 shrink-0 tabular-nums">
                             {timeStr}{endTimeStr && `~${endTimeStr}`}
                           </span>
                           <div className="flex-1 min-w-0">
-                            <span className="text-sm font-medium text-gray-800 truncate block">
+                            <span className="text-sm font-semibold text-gray-800 truncate block">
                               {names || cls.title || '학생 미정'}
                             </span>
                             {(classType || cls.location) && (
@@ -320,7 +323,7 @@ export default function ClassesPage() {
           <button
             key={key}
             onClick={() => setPeriod(key)}
-            className={`flex-1 py-3 rounded-full text-sm font-medium transition-[background-color,color] duration-150 ease-out ${
+            className={`flex-1 py-3 rounded-full text-sm font-semibold transition-[background-color,color] duration-150 ease-out ${
               period === key ? 'bg-brand-600 text-white' : 'bg-gray-100 text-gray-600'
             }`}
           >
@@ -370,34 +373,6 @@ export default function ClassesPage() {
           )}
         </div>
 
-        {/* 정밀 날짜 선택 (시작일 ~ 종료일) */}
-        <div className="flex items-center gap-2">
-          <DatePicker
-            value={dateFrom ? dayjs(dateFrom) : null}
-            onChange={(d) => setDateFrom(d ? d.format('YYYY-MM-DD') : '')}
-            disabledDate={(d) => (dateTo ? d.isAfter(dayjs(dateTo), 'day') : false)}
-            placeholder="시작일"
-            format="YYYY-MM-DD"
-            style={{ flex: 1, minWidth: 0, borderRadius: 12 }}
-            size="middle"
-            inputReadOnly
-            allowClear
-            suffixIcon={<CalendarBlankIcon size={14} weight="fill" color={TEXT_TERTIARY} />}
-          />
-          <span style={{ color: TEXT_TERTIARY, fontSize: 13, userSelect: 'none' }}>~</span>
-          <DatePicker
-            value={dateTo ? dayjs(dateTo) : null}
-            onChange={(d) => setDateTo(d ? d.format('YYYY-MM-DD') : '')}
-            disabledDate={(d) => (dateFrom ? d.isBefore(dayjs(dateFrom), 'day') : false)}
-            placeholder="종료일"
-            format="YYYY-MM-DD"
-            style={{ flex: 1, minWidth: 0, borderRadius: 12 }}
-            size="middle"
-            inputReadOnly
-            allowClear
-            suffixIcon={<CalendarBlankIcon size={14} weight="fill" color={TEXT_TERTIARY} />}
-          />
-        </div>
       </div>
 
       {/* 학생 검색 + 수업 종류 필터 */}
@@ -411,6 +386,58 @@ export default function ClassesPage() {
           size="large"
           style={{ borderRadius: 12 }}
         />
+        <button
+          type="button"
+          onClick={() => setMoreFilterOpen((v) => !v)}
+          aria-expanded={moreFilterOpen}
+          className="press"
+          style={{
+            display: 'flex', alignItems: 'center', gap: 4, minHeight: 40,
+            background: 'none', border: 'none', padding: '0 2px', cursor: 'pointer',
+            color: TEXT_SECONDARY, fontSize: 13, fontWeight: 600 }}
+        >
+          상세 필터
+          <CaretRightIcon
+            size={12}
+            weight="bold"
+            style={{
+              transform: moreFilterOpen ? 'rotate(90deg)' : 'none',
+              transitionProperty: 'transform',
+              transitionDuration: '0.2s',
+              transitionTimingFunction: 'var(--ease-out)' }}
+          />
+        </button>
+        <div className="reveal" data-open={moreFilterOpen}>
+          <div>
+            <div className="space-y-2">
+        {/* 정밀 날짜 선택 (시작일 ~ 종료일) */}
+        <div className="flex items-center gap-2">
+          <DatePicker
+            value={dateFrom ? dayjs(dateFrom) : null}
+            onChange={(d) => setDateFrom(d ? d.format('YYYY-MM-DD') : '')}
+            disabledDate={(d) => (dateTo ? d.isAfter(dayjs(dateTo), 'day') : false)}
+            placeholder="시작일"
+            format="YYYY-MM-DD"
+            style={{ flex: 1, minWidth: 0, borderRadius: 12 }}
+            size="middle"
+            inputReadOnly
+            allowClear
+            suffixIcon={<CalendarBlankIcon size={16} weight="fill" color={TEXT_TERTIARY} />}
+          />
+          <span style={{ color: TEXT_TERTIARY, fontSize: 13, userSelect: 'none' }}>~</span>
+          <DatePicker
+            value={dateTo ? dayjs(dateTo) : null}
+            onChange={(d) => setDateTo(d ? d.format('YYYY-MM-DD') : '')}
+            disabledDate={(d) => (dateFrom ? d.isBefore(dayjs(dateFrom), 'day') : false)}
+            placeholder="종료일"
+            format="YYYY-MM-DD"
+            style={{ flex: 1, minWidth: 0, borderRadius: 12 }}
+            size="middle"
+            inputReadOnly
+            allowClear
+            suffixIcon={<CalendarBlankIcon size={16} weight="fill" color={TEXT_TERTIARY} />}
+          />
+        </div>
         <Select
           value={classTypeFilter || undefined}
           onChange={(v) => setClassTypeFilter(v || '')}
@@ -423,6 +450,9 @@ export default function ClassesPage() {
             <Select.Option key={ct.id} value={ct.id}>{ct.title}</Select.Option>
           ))}
         </Select>
+            </div>
+          </div>
+        </div>
       </div>
 
       {loading && <LoadingSpinner />}
@@ -432,7 +462,7 @@ export default function ClassesPage() {
         <>
           {filteredClasses.length === 0 ? (
             <EmptyState
-              icon="📅"
+              icon={<CalendarBlankIcon size={44} weight="thin" style={{ color: BORDER_NEUTRAL }} />}
               title="수업이 없습니다"
               description={
                 search.trim()
@@ -507,16 +537,13 @@ function ClassCard({ cls, studentNameMap }) {
   };
 
   return (
-    <li
-      className="duration-150 ease-out"
-    >
+    <li>
       <Card
         variant="borderless"
-        style={{ borderRadius: 16, cursor: 'pointer', boxShadow: 'var(--shadow-border)', transition: 'box-shadow 150ms ease-out' }}
-        styles={{ body: { padding: '14px 16px' } }}
+        className="card-tap"
+        style={{ borderRadius: 16, cursor: 'pointer' }}
+        styles={{ body: { padding: 16 } }}
         onClick={() => navigate(`/classes/${cls.id}`)}
-        onMouseEnter={(e) => { e.currentTarget.style.boxShadow = 'var(--shadow-border-hover)'; }}
-        onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'var(--shadow-border)'; }}
       >
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
@@ -576,12 +603,12 @@ function ClassCard({ cls, studentNameMap }) {
               style={{
                 fontSize: 12, fontWeight: 600,
                 padding: '5px 12px', borderRadius: 8, border: 'none', cursor: 'pointer',
-                background: logId ? PRIMARY_BG : '#f5f5f5',
+                background: logId ? PRIMARY_BG : GRAY_100,
                 color: logId ? PRIMARY : TEXT_SECONDARY,
                 transition: 'background-color 150ms ease-out',
                 opacity: creatingLog ? 0.5 : 1,
               }}
-              className="transition-[background-color] duration-150 ease-out"
+              className="hit-40 transition-[background-color] duration-150 ease-out"
             >
               {creatingLog ? '생성 중...' : logId ? '일지 보기' : '일지 작성'}
             </button>

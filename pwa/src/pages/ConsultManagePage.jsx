@@ -6,11 +6,12 @@ import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import EmptyState from '../components/ui/EmptyState.jsx';
 import PullToRefresh from '../components/ui/PullToRefresh.jsx';
 import SectionHeading from '../components/ui/SectionHeading.jsx';
-import { STATUS_ERROR_TEXT, STATUS_INFO_DARK, TEXT_TERTIARY } from '../constants/theme.js';
+import { STATUS_ERROR_TEXT, STATUS_INFO_DARK, TEXT_TERTIARY, GRAY_100, STATUS_INFO_BG, STATUS_ERROR_BG, STATUS_PURPLE_BG, STATUS_PURPLE_TEXT, STATUS_GOLD_BG, STATUS_GOLD_TEXT, BORDER_NEUTRAL } from '../constants/theme.js';
 import { queryAll, updatePage } from '../api/notionClient.js';
 import { CONSULT_DB } from '../constants.js';
 
 import { KST } from '../utils/dateUtils.js';
+import { ClipboardTextIcon } from '@phosphor-icons/react';
 
 function formatKST(iso) {
   if (!iso) return '';
@@ -38,12 +39,12 @@ function parseConsult(page) {
 }
 
 const STATUS_STYLE = {
-  '신청됨': { bg: '#fff1f0', color: STATUS_ERROR_TEXT },
-  '확인됨': { bg: '#f9f0ff', color: '#531dab' },
-  '연락중': { bg: '#fffbe6', color: '#d48806' },
-  '확정':   { bg: '#e6f4ff', color: STATUS_INFO_DARK },
-  '완료':   { bg: '#f5f5f5', color: TEXT_TERTIARY },
-  '불발':   { bg: '#f5f5f5', color: TEXT_TERTIARY },
+  '신청됨': { bg: STATUS_ERROR_BG, color: STATUS_ERROR_TEXT },
+  '확인됨': { bg: STATUS_PURPLE_BG, color: STATUS_PURPLE_TEXT },
+  '연락중': { bg: STATUS_GOLD_BG, color: STATUS_GOLD_TEXT },
+  '확정':   { bg: STATUS_INFO_BG, color: STATUS_INFO_DARK },
+  '완료':   { bg: GRAY_100, color: TEXT_TERTIARY },
+  '불발':   { bg: GRAY_100, color: TEXT_TERTIARY },
 };
 
 function ConsultCard({ consult: c, onConfirm, confirming }) {
@@ -134,7 +135,7 @@ export default function ConsultManagePage() {
         {loading ? (
           <LoadingSpinner />
         ) : consults.length === 0 ? (
-          <EmptyState icon="📋" title="아직 무료상담 신청이 없습니다" />
+          <EmptyState icon={<ClipboardTextIcon size={44} weight="thin" style={{ color: BORDER_NEUTRAL }} />} title="아직 무료상담 신청이 없습니다" />
         ) : (
           <>
             {pending.length > 0 && (

@@ -1,10 +1,16 @@
-import { Button, Modal } from 'antd';
+import {
+  Button,
+  Modal } from 'antd';
 import { CaretLeftIcon } from '@phosphor-icons/react';
 import AudioRecorder from '../ui/AudioRecorder.jsx';
 import {
-  TEXT_PRIMARY, TEXT_SECONDARY, TEXT_INACTIVE, TEXT_DISABLED,
-  BORDER_NEUTRAL, STATUS_SUCCESS_BG,
-} from '../../constants/theme.js';
+  TEXT_PRIMARY,
+  TEXT_SECONDARY,
+  TEXT_INACTIVE,
+  TEXT_DISABLED,
+  BORDER_NEUTRAL,
+  STATUS_SUCCESS_BG,
+  STATUS_SUCCESS_BORDER } from '../../constants/theme.js';
 import { ACCEPT_AUDIO, ACCEPT_DOCUMENT } from '../../utils/audioFile.js';
 
 /**
@@ -52,7 +58,7 @@ export default function FileAttachModal({ attach, titles, hints }) {
               style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: TEXT_SECONDARY, padding: '0 4px 0 0', display: 'flex', alignItems: 'center' }}
               aria-label="뒤로"
             >
-              <CaretLeftIcon size={18} weight="bold" />
+              <CaretLeftIcon size={20} weight="bold" />
             </button>
           )}
           <span style={{ fontSize: 16, fontWeight: 700 }}>{modalTitle}</span>
@@ -90,7 +96,7 @@ export default function FileAttachModal({ attach, titles, hints }) {
               {sessionFiles.map((pf) => (
                 <div key={pf.tempId} style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  padding: '8px 12px', background: STATUS_SUCCESS_BG, border: '1px solid #b7eb8f',
+                  padding: '8px 12px', background: STATUS_SUCCESS_BG, border: `1px solid ${STATUS_SUCCESS_BORDER}`,
                   borderRadius: 12, marginBottom: 6,
                 }}>
                   <span style={{ fontSize: 13, color: TEXT_PRIMARY, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -120,7 +126,7 @@ export default function FileAttachModal({ attach, titles, hints }) {
                 type="button"
                 onClick={tryOpenAudioPicker}
                 className="transition-[background-color] duration-150 ease-out"
-                style={{ flex: 1, height: 44, borderRadius: 12, background: 'white', border: `1.5px solid ${BORDER_NEUTRAL}`, color: TEXT_SECONDARY, fontSize: 14, fontWeight: 600, cursor: 'pointer', WebkitTapHighlightColor: 'transparent' }}
+                style={{ flex: 1, height: 44, borderRadius: 12, background: 'white', border: `1px solid ${BORDER_NEUTRAL}`, color: TEXT_SECONDARY, fontSize: 14, fontWeight: 600, cursor: 'pointer', WebkitTapHighlightColor: 'transparent' }}
               >
                 파일 추가
               </button>
@@ -128,7 +134,7 @@ export default function FileAttachModal({ attach, titles, hints }) {
                 type="button"
                 onClick={tryOpenRecord}
                 className="transition-[background-color] duration-150 ease-out"
-                style={{ flex: 1, height: 44, borderRadius: 12, background: 'white', border: `1.5px solid ${BORDER_NEUTRAL}`, color: TEXT_SECONDARY, fontSize: 14, fontWeight: 600, cursor: 'pointer', WebkitTapHighlightColor: 'transparent' }}
+                style={{ flex: 1, height: 44, borderRadius: 12, background: 'white', border: `1px solid ${BORDER_NEUTRAL}`, color: TEXT_SECONDARY, fontSize: 14, fontWeight: 600, cursor: 'pointer', WebkitTapHighlightColor: 'transparent' }}
               >
                 바로 녹음
               </button>
@@ -142,7 +148,7 @@ export default function FileAttachModal({ attach, titles, hints }) {
                 onClick={tryOpenDocPicker}
                 disabled={preparing}
                 className="transition-[background-color] duration-150 ease-out"
-                style={{ width: '100%', height: 44, borderRadius: 12, background: 'white', border: `1.5px solid ${BORDER_NEUTRAL}`, color: preparing ? TEXT_INACTIVE : TEXT_SECONDARY, fontSize: 14, fontWeight: 600, cursor: preparing ? 'progress' : 'pointer', WebkitTapHighlightColor: 'transparent' }}
+                style={{ width: '100%', height: 44, borderRadius: 12, background: 'white', border: `1px solid ${BORDER_NEUTRAL}`, color: preparing ? TEXT_INACTIVE : TEXT_SECONDARY, fontSize: 14, fontWeight: 600, cursor: preparing ? 'progress' : 'pointer', WebkitTapHighlightColor: 'transparent' }}
               >
                 {preparing ? '사진 준비 중…' : '파일 추가'}
               </button>
@@ -183,7 +189,7 @@ export default function FileAttachModal({ attach, titles, hints }) {
               autoFocus
               style={{
                 width: '100%', height: 44, borderRadius: 12,
-                border: `1.5px solid ${BORDER_NEUTRAL}`,
+                border: `1px solid ${BORDER_NEUTRAL}`,
                 padding: namingFile.ext ? '0 56px 0 14px' : '0 14px',
                 fontSize: 15, color: TEXT_PRIMARY, boxSizing: 'border-box', outline: 'none',
               }}

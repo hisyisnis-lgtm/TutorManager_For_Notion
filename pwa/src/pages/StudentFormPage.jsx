@@ -96,7 +96,7 @@ export default function StudentFormPage() {
 
       <form onSubmit={handleSubmit} className="px-4 pt-4 pb-8 space-y-5">
         {error && (
-          <Alert type="error" message={error} showIcon style={{ borderRadius: 12 }} />
+          <Alert type="error" title={error} showIcon style={{ borderRadius: 12 }} />
         )}
 
         {/* 이름 */}
@@ -125,7 +125,7 @@ export default function StudentFormPage() {
                 key={s}
                 type="button"
                 onClick={() => setForm((f) => ({ ...f, status: s }))}
-                className={`px-3 py-3 rounded-xl text-sm font-medium border-2 transition-[background-color,border-color] duration-150 ease-out ${
+                className={`px-3 py-3 rounded-xl text-sm font-semibold border-2 transition-[background-color,border-color] duration-150 ease-out ${
                   form.status === s
                     ? 'border-brand-600 bg-brand-50 text-brand-700'
                     : 'border-gray-200 bg-white text-gray-600'
@@ -225,7 +225,7 @@ export default function StudentFormPage() {
             <Button
               type="default"
               onClick={() => setForm((f) => ({ ...f, bookingCode: generateCode() }))}
-              style={{ borderRadius: 12, height: 40, fontWeight: 500, whiteSpace: 'nowrap' }}
+              style={{ borderRadius: 12, height: 40, fontWeight: 600, whiteSpace: 'nowrap' }}
             >
               재생성
             </Button>

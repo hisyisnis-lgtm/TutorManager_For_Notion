@@ -1,5 +1,12 @@
-import { useState, useEffect, useRef } from 'react';
-import { FilePdfIcon, ImageIcon, DownloadSimpleIcon, TrashIcon, XIcon } from '@phosphor-icons/react';
+import {
+  useState,
+  useEffect,
+  useRef } from 'react';
+import { FilePdfIcon,
+  ImageIcon,
+  DownloadSimpleIcon,
+  TrashIcon,
+  XIcon } from '@phosphor-icons/react';
 import AudioPlayer from './AudioPlayer.jsx';
 import {
   PRIMARY,
@@ -8,7 +15,8 @@ import {
   TEXT_DISABLED,
   BORDER_NEUTRAL,
   STATUS_ERROR_TEXT,
-} from '../../constants/theme.js';
+  GRAY_100,
+  GRAY_50 } from '../../constants/theme.js';
 import { isImageByName, isPdfByName } from '../../utils/audioFile.js';
 
 /**
@@ -49,7 +57,8 @@ export default function FilePreview({
     return (
       <DocumentRow
         fileName={file.name}
-        icon={<FilePdfIcon size={22} weight="fill" color="#d32f2f" />}
+        // design-audit-ignore: color-literal — PDF 파일타입 식별색(Adobe 레드). 우리 팔레트가 아니다
+        icon={<FilePdfIcon size={24} weight="fill" color="#d32f2f" />}
         onDownload={onDownload}
         onDelete={onDelete}
         deleteDisabled={deleteDisabled}
@@ -132,7 +141,7 @@ function ImagePreview({ fileName, fetchInlineBlobUrl, onDownload, onDelete, dele
           disabled={!blobUrl}
           style={{
             width: 56, height: 56, borderRadius: 8,
-            background: '#f5f5f5', border: 'none',
+            background: GRAY_100, border: 'none',
             cursor: blobUrl ? 'zoom-in' : 'default',
             padding: 0, overflow: 'hidden', flexShrink: 0,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -146,7 +155,12 @@ function ImagePreview({ fileName, fetchInlineBlobUrl, onDownload, onDelete, dele
             <ImageIcon size={24} color={TEXT_DISABLED} />
           ) : (
             <img src={blobUrl} alt={fileName}
-              style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              style={{
+                width: '100%', height: '100%', objectFit: 'cover',
+                // 밝은 사진이 흰 배경에 녹아 경계가 사라지는 걸 막는 얇은 아웃라인.
+                // outline은 레이아웃에 영향이 없고 offset -1로 안쪽에 그려 크기도 안 변한다.
+                outline: '1px solid rgba(0,0,0,0.1)', outlineOffset: -1,
+              }} />
           )}
         </button>
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -218,6 +232,8 @@ function FullscreenImage({ url, fileName, onClose }) {
           maxWidth: '100%', maxHeight: '100%',
           objectFit: 'contain', borderRadius: 8,
           boxShadow: '0 4px 32px rgba(0,0,0,0.5)',
+          // 전체화면은 어두운 배경이라 흰색 아웃라인
+          outline: '1px solid rgba(255,255,255,0.1)', outlineOffset: -1,
         }}
       />
     </div>
@@ -236,7 +252,7 @@ function DocumentRow({ fileName, icon, onDownload, onDelete, deleteDisabled }) {
     }}>
       <div style={{
         width: 36, height: 36, borderRadius: 8,
-        background: '#fafafa', display: 'flex',
+        background: GRAY_50, display: 'flex',
         alignItems: 'center', justifyContent: 'center', flexShrink: 0,
       }}>
         {icon}
@@ -293,7 +309,7 @@ function ActionButtons({ onDownload, onDelete, deleteDisabled }) {
             WebkitTapHighlightColor: 'transparent',
           }}
         >
-          <DownloadSimpleIcon size={18} weight="bold" />
+          <DownloadSimpleIcon size={20} weight="bold" />
         </button>
       )}
       {onDelete && (
@@ -312,7 +328,7 @@ function ActionButtons({ onDownload, onDelete, deleteDisabled }) {
             WebkitTapHighlightColor: 'transparent',
           }}
         >
-          <TrashIcon size={18} />
+          <TrashIcon size={20} />
         </button>
       )}
     </div>

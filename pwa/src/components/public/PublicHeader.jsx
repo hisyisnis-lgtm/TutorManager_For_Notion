@@ -37,7 +37,7 @@ export default function PublicHeader({ tabs, activeTab, onTabChange, rightSlot }
               onClick={() => onTabChange(t)}
               style={{
                 minHeight: 44, marginRight: 24, paddingBottom: 10, paddingTop: 10,
-                fontSize: 14, fontWeight: 500,
+                fontSize: 14, fontWeight: 600,
                 border: 'none', background: 'none', cursor: 'pointer',
                 borderBottom: `2px solid ${activeTab === t ? PRIMARY : 'transparent'}`,
                 color: activeTab === t ? PRIMARY : TEXT_SECONDARY,

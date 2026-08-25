@@ -11,7 +11,7 @@ import HomeworkSection from '../components/homework/HomeworkSection.jsx';
 import { fetchStudentHomework, parseHomework, homeworkStatusColor } from '../api/homework.js';
 import { getPage } from '../api/notionClient.js';
 import { parseStudent } from '../api/students.js';
-import { ClipboardTextIcon, HourglassIcon, ChatTeardropTextIcon, CaretRightIcon } from '@phosphor-icons/react';
+import { ClipboardTextIcon, HourglassIcon, ChatTeardropTextIcon, CaretRightIcon, MagnifyingGlassIcon } from '@phosphor-icons/react';
 import { formatDateDot } from '../utils/dateUtils.js';
 import {
   STATUS_ERROR_TEXT,
@@ -115,16 +115,16 @@ export default function StudentHomeworkPage() {
 
         {/* 빈 상태 */}
         {homeworkList.length === 0 && (
-          <EmptyState icon="📝" title="숙제가 없어요" description="우상단 + 버튼으로 숙제를 등록해보세요" />
+          <EmptyState icon={<ClipboardTextIcon size={44} weight="thin" style={{ color: BORDER_NEUTRAL }} />} title="숙제가 없어요" description="우상단 + 버튼으로 숙제를 등록해보세요" />
         )}
 
         {/* 필터 결과 없음 */}
         {homeworkList.length > 0 && filteredList.length === 0 && (
-          <EmptyState icon="🔍" title="검색 결과가 없어요" />
+          <EmptyState icon={<MagnifyingGlassIcon size={44} weight="thin" style={{ color: BORDER_NEUTRAL }} />} title="검색 결과가 없어요" />
         )}
 
         {pending.length > 0 && (
-          <HomeworkSection icon={<ClipboardTextIcon size={18} weight="fill" />} label="미제출" count={pending.length} color={STATUS_ERROR_TEXT}>
+          <HomeworkSection icon={<ClipboardTextIcon size={20} weight="fill" />} label="미제출" count={pending.length} color={STATUS_ERROR_TEXT}>
             {pending.map((hw) => (
               <HomeworkCard key={hw.id} hw={hw} onClick={() => navigate(`/homework/${hw.id}`)} />
             ))}
@@ -132,7 +132,7 @@ export default function StudentHomeworkPage() {
         )}
 
         {submitted.length > 0 && (
-          <HomeworkSection icon={<HourglassIcon size={18} weight="fill" />} label="제출완료" count={submitted.length} color={STATUS_INFO}>
+          <HomeworkSection icon={<HourglassIcon size={20} weight="fill" />} label="제출완료" count={submitted.length} color={STATUS_INFO}>
             {submitted.map((hw) => (
               <HomeworkCard key={hw.id} hw={hw} onClick={() => navigate(`/homework/${hw.id}`)} />
             ))}
@@ -140,7 +140,7 @@ export default function StudentHomeworkPage() {
         )}
 
         {done.length > 0 && (
-          <HomeworkSection icon={<ChatTeardropTextIcon size={18} weight="fill" />} label="피드백완료" count={done.length} color={STATUS_SUCCESS_DARK}>
+          <HomeworkSection icon={<ChatTeardropTextIcon size={20} weight="fill" />} label="피드백완료" count={done.length} color={STATUS_SUCCESS_DARK}>
             {done.map((hw) => (
               <HomeworkCard key={hw.id} hw={hw} onClick={() => navigate(`/homework/${hw.id}`)} />
             ))}
@@ -164,15 +164,14 @@ function HomeworkCard({ hw, onClick }) {
 
   return (
     <div
-      className="duration-150 ease-out"
+      className="tap-wrap"
       onClick={onClick}
     >
     <Card
       variant="borderless"
-      style={{ borderRadius: 16, boxShadow: 'var(--shadow-border)', cursor: 'pointer', transition: 'box-shadow 150ms ease-out' }}
+      className="card-tap"
+      style={{ borderRadius: 16, cursor: 'pointer' }}
       styles={{ body: { padding: '12px 16px' } }}
-      onMouseEnter={(e) => { e.currentTarget.style.boxShadow = 'var(--shadow-border-hover)'; }}
-      onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'var(--shadow-border)'; }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         {/* 텍스트 영역 */}
@@ -207,7 +206,7 @@ function HomeworkCard({ hw, onClick }) {
         {/* 상태 배지 + 화살표 */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
           <Badge label={hw.status} bg={bg} text={text} />
-          <CaretRightIcon size={14} weight="bold" color={BORDER_NEUTRAL} />
+          <CaretRightIcon size={16} weight="bold" color={BORDER_NEUTRAL} />
         </div>
       </div>
     </Card>

@@ -13,7 +13,7 @@ export default function ToggleButton({ label, selected, onClick, fullWidth = fal
       className="transition-[background-color,border-color,color] duration-150 ease-out"
       style={{
         width: fullWidth ? '100%' : undefined,
-        height: 44, borderRadius: 12, fontSize: 14, fontWeight: 500,
+        height: 44, borderRadius: 12, fontSize: 14, fontWeight: 600,
         cursor: 'pointer',
         border: `1px solid ${selected ? PRIMARY : BORDER_NEUTRAL}`,
         backgroundColor: selected ? PRIMARY : '#ffffff',

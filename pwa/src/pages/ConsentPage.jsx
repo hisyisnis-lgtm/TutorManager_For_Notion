@@ -31,7 +31,7 @@ function BulletList({ items }) {
       <Flex vertical gap={12} style={{ width: '100%' }}>
         {items.map((item, i) => (
           <Space key={i} size={10} align="start">
-            <CheckCircleIcon weight="fill" size={14} style={{ color: PRIMARY, flexShrink: 0, marginTop: 2 }} />
+            <CheckCircleIcon weight="fill" size={16} style={{ color: PRIMARY, flexShrink: 0, marginTop: 2 }} />
             <Text style={{ fontSize: 14, lineHeight: 1.7 }}>{item}</Text>
           </Space>
         ))}

@@ -387,7 +387,7 @@ export default function TomorrowPrepPage() {
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}
           >
-            <CaretLeftIcon size={26} weight="bold" />
+            <CaretLeftIcon size={24} weight="bold" />
           </button>
 
           <span className="tabular-nums" style={{ fontSize: 14, fontWeight: 600, color: TEXT_SECONDARY }}>
@@ -406,7 +406,7 @@ export default function TomorrowPrepPage() {
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}
           >
-            <CaretRightIcon size={26} weight="bold" />
+            <CaretRightIcon size={24} weight="bold" />
           </button>
         </div>
       )}
@@ -418,7 +418,7 @@ export default function TomorrowPrepPage() {
 function LogCardHead({ slide }) {
   return (
     <div style={{ borderBottom: `1px solid ${BORDER_SUBTLE}`, paddingBottom: 14 }}>
-      <p style={{ fontSize: 20, fontWeight: 700, color: PRIMARY, margin: 0, lineHeight: 1.2 }}>
+      <p style={{ fontSize: 20, fontWeight: 700, color: TEXT_PRIMARY, margin: 0, lineHeight: 1.2 }}>
         {slide.studentName}
       </p>
       <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -544,7 +544,7 @@ function FillLogCard({ slide }) {
             gap: 1, paddingBottom: 6, pointerEvents: 'none',
           }}
         >
-          <span style={{ fontSize: 11, fontWeight: 500, color: TEXT_TERTIARY, lineHeight: 1 }}>더보기</span>
+          <span style={{ fontSize: 11, fontWeight: 600, color: TEXT_TERTIARY, lineHeight: 1 }}>더보기</span>
           <CaretDownIcon
             size={16} weight="bold" color={TEXT_TERTIARY}
             style={{ animation: 'tprep-scroll-hint 1.4s ease-in-out infinite' }}

@@ -1,4 +1,6 @@
-import { useParams, useNavigate } from 'react-router-dom';
+import {
+  useParams,
+  useNavigate } from 'react-router-dom';
 import { useCachedResource } from '../hooks/useCachedResource.js';
 import { fetchStudentNotices } from '../api/notices.js';
 import PageHeader from '../components/layout/PageHeader.jsx';
@@ -8,7 +10,13 @@ import EmptyState from '../components/ui/EmptyState.jsx';
 import AutoLink from '../components/ui/AutoLink.jsx';
 import { formatDateDot } from '../utils/dateUtils.js';
 import { BADGE_SMALL } from '../constants/styles.js';
-import { PRIMARY, PRIMARY_BG, TEXT_PRIMARY, TEXT_TERTIARY, BORDER_NEUTRAL, BORDER_SUBTLE } from '../constants/theme.js';
+import { PRIMARY,
+  PRIMARY_BG,
+  TEXT_PRIMARY,
+  TEXT_TERTIARY,
+  BORDER_NEUTRAL,
+  BORDER_SUBTLE,
+  INK_900 } from '../constants/theme.js';
 import { MegaphoneIcon } from '@phosphor-icons/react';
 
 // 공지 상세 — 목록에서 제목만 보고 들어온 학생이 본문을 읽는 화면.
@@ -65,7 +73,7 @@ export default function PersonalNoticeDetailPage() {
         <div style={{ height: 1, background: BORDER_SUBTLE, margin: '18px 0 20px' }} />
 
         {notice.content && (
-          <p style={{ fontSize: 15, color: '#262626', lineHeight: 1.8, whiteSpace: 'pre-wrap', margin: 0, wordBreak: 'keep-all' }}>
+          <p style={{ fontSize: 15, color: INK_900, lineHeight: 1.8, whiteSpace: 'pre-wrap', margin: 0, wordBreak: 'keep-all' }}>
             <AutoLink text={notice.content} />
           </p>
         )}

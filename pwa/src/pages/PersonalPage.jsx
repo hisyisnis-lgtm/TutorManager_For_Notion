@@ -1,37 +1,101 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { usePullToRefresh, PullIndicator } from '../hooks/usePullToRefresh.jsx';
-import { useCachedResource, peekCache, writeCacheValue, trackRevalidation } from '../hooks/useCachedResource.js';
+import {
+  useState,
+  useEffect,
+  useCallback,
+  useRef } from 'react';
+import { useNavigate,
+  useParams,
+  useLocation } from 'react-router-dom';
+import { usePullToRefresh,
+  PullIndicator } from '../hooks/usePullToRefresh.jsx';
+import { useCachedResource,
+  peekCache,
+  writeCacheValue,
+  trackRevalidation } from '../hooks/useCachedResource.js';
 import {
   fetchStudentByToken,
   fetchMyClasses } from '../api/bookingApi.js';
-import { fetchMyHomework, parseHomework, homeworkStatusColor } from '../api/homework.js';
+import { fetchMyHomework,
+  parseHomework,
+  homeworkStatusColor } from '../api/homework.js';
 import { clearStudentSession } from '../api/studentAuth.js';
 import { fetchStudentNotices } from '../api/notices.js';
-import { Card, Button, Spin, message } from 'antd';
-import { DAY_KR, timeToMin, formatDuration, formatYearMonth, addMonths, formatDateDot } from '../utils/dateUtils.js';
-import { getViewedMap, HW_VIEWED_KEY, isFeedbackArchived } from '../utils/homeworkViewed.js';
+import { Card,
+  Button,
+  Spin,
+  message } from 'antd';
+import { DAY_KR,
+  timeToMin,
+  formatDuration,
+  formatYearMonth,
+  addMonths,
+  formatDateDot } from '../utils/dateUtils.js';
+import { getViewedMap,
+  HW_VIEWED_KEY,
+  isFeedbackArchived } from '../utils/homeworkViewed.js';
 import HomeworkFilterBar from '../components/homework/HomeworkFilterBar.jsx';
 import HomeworkSection from '../components/homework/HomeworkSection.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import ErrorMessage from '../components/ui/ErrorMessage.jsx';
 import EmptyState from '../components/ui/EmptyState.jsx';
-import { HouseIcon, BookOpenIcon, BellIcon, GearSixIcon, ClipboardTextIcon, HourglassIcon, ChatTeardropTextIcon, ArchiveIcon, SpeakerHighIcon, CalendarBlankIcon, MegaphoneIcon, CaretRightIcon, InstagramLogoIcon, YoutubeLogoIcon, ArticleIcon, MusicNotesIcon, WarningCircleIcon } from '@phosphor-icons/react';
-import { STAGES, getStageInfo, PANDA_FEED_KEY, getPandaStorageKey } from '../components/ui/PandaWidget.jsx';
+import { HouseIcon,
+  BookOpenIcon,
+  BellIcon,
+  GearSixIcon,
+  ClipboardTextIcon,
+  HourglassIcon,
+  ChatTeardropTextIcon,
+  ArchiveIcon,
+  SpeakerHighIcon,
+  CalendarBlankIcon,
+  MegaphoneIcon,
+  CaretRightIcon,
+  InstagramLogoIcon,
+  YoutubeLogoIcon,
+  ArticleIcon,
+  MusicNotesIcon,
+  WarningCircleIcon } from '@phosphor-icons/react';
+import { STAGES,
+  getStageInfo,
+  PANDA_FEED_KEY,
+  getPandaStorageKey } from '../components/ui/PandaWidget.jsx';
 import InstallBanner from '../components/ui/InstallBanner.jsx';
 import { useInstallPrompt } from '../hooks/useInstallPrompt.js';
-import OnboardingCarousel, { ONBOARDING_KEY } from '../components/ui/OnboardingCarousel.jsx';
+import OnboardingCarousel,
+  { ONBOARDING_KEY } from '../components/ui/OnboardingCarousel.jsx';
 import CoachMarkOverlay from '../components/ui/CoachMarkOverlay.jsx';
 import SectionHeading from '../components/ui/SectionHeading.jsx';
-import { useTabTip, resetAllTabTips } from '../hooks/useTabTip.js';
+import { useTabTip,
+  resetAllTabTips } from '../hooks/useTabTip.js';
 import {
-  PRIMARY, PRIMARY_LIGHT, PRIMARY_BG,
-  TEXT_PRIMARY, TEXT_SECONDARY, TEXT_TERTIARY, TEXT_INACTIVE, TEXT_DISABLED,
-  BG_APP, BG_ICON_NEUTRAL, BG_SUCCESS,
-  BORDER_SUBTLE, BORDER_NEUTRAL,
-  STATUS_SUCCESS_DARK, STATUS_SUCCESS_BG,
-  STATUS_ERROR_TEXT, STATUS_ERROR_BG, STATUS_ERROR_BORDER,
-  STATUS_INFO_DARK } from '../constants/theme.js';
+  PRIMARY,
+  PRIMARY_LIGHT,
+  PRIMARY_BG,
+  TEXT_PRIMARY,
+  TEXT_SECONDARY,
+  TEXT_TERTIARY,
+  TEXT_INACTIVE,
+  TEXT_DISABLED,
+  BG_APP,
+  BG_ICON_NEUTRAL,
+  BG_SUCCESS,
+  BORDER_SUBTLE,
+  BORDER_NEUTRAL,
+  STATUS_SUCCESS_DARK,
+  STATUS_SUCCESS_BG,
+  STATUS_ERROR_TEXT,
+  STATUS_ERROR_BG,
+  STATUS_ERROR_BORDER,
+  STATUS_INFO_DARK,
+  GRAY_100,
+  GRAY_50,
+  STATUS_INFO_BG,
+  STATUS_WARNING_BG,
+  BRAND_EXTERNAL,
+  STATUS_WARNING_TEXT,
+  GRADIENTS,
+  STATUS_TEAL_BG,
+  STATUS_TEAL_TEXT } from '../constants/theme.js';
 import { BADGE_SMALL, BADGE_MEDIUM, FOOTNOTE } from '../constants/styles.js';
 
 const SAVED_TOKEN_KEY = 'personal_student_token';
@@ -79,12 +143,12 @@ function ClassCard({ cls, todayStr, nowMin }) {
         <div style={{ flex: 1, minWidth: 0 }}>
           {/* 상태 배지 행 */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 4, flexWrap: 'wrap' }}>
-            {isOngoing && <span style={{ ...BADGE_SMALL, backgroundColor: '#e6f4ff', color: STATUS_INFO_DARK }}>수업중</span>}
+            {isOngoing && <span style={{ ...BADGE_SMALL, backgroundColor: STATUS_INFO_BG, color: STATUS_INFO_DARK }}>수업중</span>}
             {isToday && !isOngoing && !cls.isCancelled && <span style={{ ...BADGE_SMALL, backgroundColor: STATUS_SUCCESS_BG, color: STATUS_SUCCESS_DARK }}>오늘</span>}
-            {isPast && !cls.isCancelled && <span style={{ ...BADGE_SMALL, backgroundColor: '#f5f5f5', color: TEXT_INACTIVE }}>완료</span>}
-            {cls.isCancelled && <span style={{ ...BADGE_SMALL, backgroundColor: '#f5f5f5', color: TEXT_INACTIVE }}>취소</span>}
-            {cls.classType === '2:1' && <span style={{ ...BADGE_SMALL, backgroundColor: '#fff7e6', color: '#d46b08' }}>2:1</span>}
-            {cls.specialNote === '🟠 보강' && <span style={{ ...BADGE_SMALL, backgroundColor: '#e6fffb', color: '#08979c' }}>보강</span>}
+            {isPast && !cls.isCancelled && <span style={{ ...BADGE_SMALL, backgroundColor: GRAY_100, color: TEXT_INACTIVE }}>완료</span>}
+            {cls.isCancelled && <span style={{ ...BADGE_SMALL, backgroundColor: GRAY_100, color: TEXT_INACTIVE }}>취소</span>}
+            {cls.classType === '2:1' && <span style={{ ...BADGE_SMALL, backgroundColor: STATUS_WARNING_BG, color: STATUS_WARNING_TEXT }}>2:1</span>}
+            {cls.specialNote === '🟠 보강' && <span style={{ ...BADGE_SMALL, backgroundColor: STATUS_TEAL_BG, color: STATUS_TEAL_TEXT }}>보강</span>}
             {cls.specialNote === '🔴 결석' && <span style={{ ...BADGE_SMALL, backgroundColor: STATUS_ERROR_BG, color: STATUS_ERROR_TEXT }}>결석</span>}
           </div>
           {/* 시간 + 장소 행 */}
@@ -102,7 +166,7 @@ function ClassCard({ cls, todayStr, nowMin }) {
 
         {/* 수업 시간 */}
         <div style={{ flexShrink: 0, textAlign: 'right' }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: isDimmed ? TEXT_DISABLED : PRIMARY }} className="tabular-nums">
+          <div style={{ fontSize: 14, fontWeight: 600, color: isDimmed ? TEXT_DISABLED : TEXT_SECONDARY }} className="tabular-nums">
             {formatDuration(cls.durationMin)}
           </div>
         </div>
@@ -184,7 +248,7 @@ function HwCard({ hw, studentToken, onMarkViewed }) {
           <span style={{ ...BADGE_SMALL, background: bg, color: text }}>
             {hw.status}
           </span>
-          <CaretRightIcon size={14} color={TEXT_DISABLED} />
+          <CaretRightIcon size={16} color={TEXT_DISABLED} />
         </div>
       </button>
     </Card>
@@ -224,7 +288,7 @@ function ArchiveHwCard({ hw, studentToken }) {
             <p style={{ fontSize: 11, color: TEXT_DISABLED, margin: 0 }}>{viewedDateStr} 확인</p>
           )}
         </div>
-        <CaretRightIcon size={14} color={TEXT_DISABLED} />
+        <CaretRightIcon size={16} color={TEXT_DISABLED} />
       </button>
     </Card>
   );
@@ -411,7 +475,7 @@ function MyClassesTab({ studentToken, month, onMonthChange }) {
           className="transition-[background-color] duration-150 ease-out"
           style={{
             width: 44, height: 44, borderRadius: 12,
-            border: `1px solid ${BORDER_SUBTLE}`, background: '#fafafa', cursor: 'pointer',
+            border: `1px solid ${BORDER_SUBTLE}`, background: GRAY_50, cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: 18, color: TEXT_SECONDARY }}
         >‹</button>
@@ -429,7 +493,7 @@ function MyClassesTab({ studentToken, month, onMonthChange }) {
           className="transition-[background-color] duration-150 ease-out"
           style={{
             width: 44, height: 44, borderRadius: 12,
-            border: `1px solid ${BORDER_SUBTLE}`, background: '#fafafa', cursor: 'pointer',
+            border: `1px solid ${BORDER_SUBTLE}`, background: GRAY_50, cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: 18, color: TEXT_SECONDARY }}
         >›</button>
@@ -489,10 +553,10 @@ function NextClassHeroCard({ cls, todayStr, nowMin }) {
   const d = new Date(cls.date + 'T00:00:00+09:00');
 
   let badge = null;
-  if (isOngoing)        badge = { label: '수업 중', bg: '#e6f4ff', color: STATUS_INFO_DARK };
+  if (isOngoing)        badge = { label: '수업 중', bg: STATUS_INFO_BG, color: STATUS_INFO_DARK };
   else if (isToday)     badge = { label: '오늘',   bg: STATUS_SUCCESS_BG, color: STATUS_SUCCESS_DARK };
-  else if (daysUntil === 1) badge = { label: '내일', bg: '#fff7e6', color: '#d46b08' };
-  else if (daysUntil <= 7)  badge = { label: `D-${daysUntil}`, bg: '#f5f5f5', color: TEXT_SECONDARY };
+  else if (daysUntil === 1) badge = { label: '내일', bg: STATUS_WARNING_BG, color: STATUS_WARNING_TEXT };
+  else if (daysUntil <= 7)  badge = { label: `D-${daysUntil}`, bg: GRAY_100, color: TEXT_SECONDARY };
 
   const timeColor = isOngoing ? STATUS_INFO_DARK : PRIMARY;
 
@@ -530,13 +594,13 @@ function NextClassHeroCard({ cls, todayStr, nowMin }) {
 
       {/* 부가 정보 */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-        <span style={{ fontSize: 13, fontWeight: 500, color: TEXT_INACTIVE }}>
+        <span style={{ fontSize: 13, fontWeight: 600, color: TEXT_INACTIVE }}>
           {formatDuration(cls.durationMin)}
         </span>
         {cls.location && (
           <>
             <span style={{ color: BORDER_NEUTRAL, fontSize: 13 }}>·</span>
-            <span style={{ fontSize: 13, fontWeight: 500, color: TEXT_INACTIVE }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: TEXT_INACTIVE }}>
               {cls.location}
             </span>
           </>
@@ -557,7 +621,7 @@ function MetricRow({ remainingHours, upcomingCount }) {
         <div key={label} style={{
           flex: 1, background: '#fff', borderRadius: 12, padding: '12px 14px',
           boxShadow: 'var(--shadow-border)' }}>
-          <p style={{ fontSize: 11, fontWeight: 500, color: TEXT_TERTIARY, margin: '0 0 4px' }}>{label}</p>
+          <p style={{ fontSize: 11, fontWeight: 600, color: TEXT_TERTIARY, margin: '0 0 4px' }}>{label}</p>
           <p style={{ fontSize: 20, fontWeight: 700, color: TEXT_PRIMARY, margin: 0, lineHeight: 1.15 }} className="tabular-nums">
             {value}
             {unit && <span style={{ fontSize: 13, fontWeight: 400, color: TEXT_TERTIARY, marginLeft: 3 }}>{unit}</span>}
@@ -657,7 +721,7 @@ function HomeTab({ studentToken, foodSources, studentLoaded, remainingHours, rem
           <SectionHeading>숙제</SectionHeading>
 
           {hwAlerts.feedback.length > 0 && (
-            <HomeworkSection icon={<ChatTeardropTextIcon size={18} weight="fill" />} label="피드백 완료" count={hwAlerts.feedback.length} color={STATUS_SUCCESS_DARK}>
+            <HomeworkSection icon={<ChatTeardropTextIcon size={20} weight="fill" />} label="피드백 완료" count={hwAlerts.feedback.length} color={STATUS_SUCCESS_DARK}>
               {hwAlerts.feedback.map((hw, i) => (
                 <div key={hw.id} {...(i === 0 ? { 'data-coach': 'homework-card' } : {})}>
                   <HwCard
@@ -674,7 +738,7 @@ function HomeTab({ studentToken, foodSources, studentLoaded, remainingHours, rem
           )}
 
           {hwAlerts.pending.length > 0 && (
-            <HomeworkSection icon={<ClipboardTextIcon size={18} weight="fill" />} label="제출 전" count={hwAlerts.pending.length} color={STATUS_ERROR_TEXT}>
+            <HomeworkSection icon={<ClipboardTextIcon size={20} weight="fill" />} label="제출 전" count={hwAlerts.pending.length} color={STATUS_ERROR_TEXT}>
               {hwAlerts.pending.map((hw, i) => (
                 <div key={hw.id} {...(i === 0 && hwAlerts.feedback.length === 0 ? { 'data-coach': 'homework-card' } : {})}>
                   <HwCard hw={hw} studentToken={studentToken} />
@@ -684,7 +748,7 @@ function HomeTab({ studentToken, foodSources, studentLoaded, remainingHours, rem
           )}
 
           {hwAlerts.submitted.length > 0 && (
-            <HomeworkSection icon={<HourglassIcon size={18} weight="fill" />} label="제출 완료" count={hwAlerts.submitted.length} color={STATUS_INFO_DARK}>
+            <HomeworkSection icon={<HourglassIcon size={20} weight="fill" />} label="제출 완료" count={hwAlerts.submitted.length} color={STATUS_INFO_DARK}>
               {hwAlerts.submitted.map((hw) => (
                 <HwCard key={hw.id} hw={hw} studentToken={studentToken} />
               ))}
@@ -732,7 +796,7 @@ function HomeTab({ studentToken, foodSources, studentLoaded, remainingHours, rem
                   position: 'relative', zIndex: 1,
                   width: '100%', height: 80,
                   display: 'flex', alignItems: 'center',
-                  background: 'linear-gradient(135deg, #7f0005 0%, #a80006 100%)',
+                  background: GRADIENTS.studentHero,
                   border: 'none', cursor: 'pointer',
                   borderRadius: 16, boxShadow: '0 4px 20px rgba(127,0,5,0.28)',
                   padding: '0 16px 0 20px', textAlign: 'left',
@@ -767,16 +831,16 @@ function HomeTab({ studentToken, foodSources, studentLoaded, remainingHours, rem
             {/* 블로그·인스타·유튜브 링크 카드 */}
             <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
               {[
-                { label: '블로그', icon: <ArticleIcon size={22} weight="fill" color="#03C75A" />, href: 'https://blog.naver.com/tiantian_chinese/224100509217' },
-                { label: '인스타그램', icon: <InstagramLogoIcon size={22} weight="fill" color="#E1306C" />, href: 'https://www.instagram.com/tiantian_laoshi?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==' },
-                { label: '유튜브', icon: <YoutubeLogoIcon size={22} weight="fill" color="#FF0000" />, href: 'https://www.youtube.com/@tiantian_chinese' },
+                { label: '블로그', icon: <ArticleIcon size={24} weight="fill" color={BRAND_EXTERNAL.naver} />, href: 'https://blog.naver.com/tiantian_chinese/224100509217' },
+                { label: '인스타그램', icon: <InstagramLogoIcon size={24} weight="fill" color={BRAND_EXTERNAL.instagram} />, href: 'https://www.instagram.com/tiantian_laoshi?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==' },
+                { label: '유튜브', icon: <YoutubeLogoIcon size={24} weight="fill" color={BRAND_EXTERNAL.youtube} />, href: 'https://www.youtube.com/@tiantian_chinese' },
               ].map(({ label, icon, href }) => (
                 <a
                   key={label}
                   href={href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="duration-150 ease-out"
+                  className="press"
                   style={{
                     flex: 1, display: 'flex', flexDirection: 'column',
                     alignItems: 'center', justifyContent: 'center', gap: 6,
@@ -1053,7 +1117,7 @@ export default function PersonalPage() {
       <div className="min-h-dvh bg-gray-50 flex flex-col items-center justify-center px-4">
         <Card variant="borderless" style={{ borderRadius: 12, maxWidth: 360, width: '100%', textAlign: 'center', boxShadow: 'var(--shadow-card)' }}>
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
-            <WarningCircleIcon size={36} weight="fill" color={STATUS_ERROR_TEXT} />
+            <WarningCircleIcon size={44} weight="fill" color={STATUS_ERROR_TEXT} />
           </div>
           <p style={{ fontSize: 14, color: STATUS_ERROR_TEXT, margin: 0 }}>{studentError}</p>
           <Button
@@ -1141,7 +1205,7 @@ export default function PersonalPage() {
                   width: '100%', display: 'flex', alignItems: 'center',
                   padding: '10px 12px', borderRadius: 8,
                   border: 'none', background: 'none', cursor: 'pointer',
-                  fontSize: 14, fontWeight: 500,
+                  fontSize: 14, fontWeight: 600,
                   color: item.label === '로그아웃' ? STATUS_ERROR_TEXT : TEXT_PRIMARY,
                   borderTop: i > 0 ? `1px solid ${BORDER_SUBTLE}` : 'none' }}
               >
@@ -1266,7 +1330,7 @@ export default function PersonalPage() {
                   transitionTimingFunction: 'ease-out',
                   WebkitTapHighlightColor: 'transparent',
                   outline: 'none' }}
-                className=""
+                className="press-static"
               >
                 <div style={{ position: 'relative', display: 'inline-flex' }}>
                   {item.icon}
@@ -1275,7 +1339,7 @@ export default function PersonalPage() {
                       position: 'absolute', top: -1, right: -3,
                       width: 7, height: 7, borderRadius: '50%',
                       background: STATUS_ERROR_TEXT,
-                      border: '1.5px solid rgba(255,255,255,0.82)' }} />
+                      border: '1px solid rgba(255,255,255,0.82)' }} />
                   )}
                 </div>
                 <span style={{ fontSize: 11, fontWeight: isActive ? 600 : 500 }}>{item.label}</span>

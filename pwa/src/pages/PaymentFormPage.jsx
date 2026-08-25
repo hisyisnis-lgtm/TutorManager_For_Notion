@@ -223,10 +223,10 @@ export default function PaymentFormPage() {
 
       <form onSubmit={handleSubmit} className="px-4 pt-4 pb-8 space-y-5">
         {error && (
-          <Alert type="error" message={error} showIcon style={{ borderRadius: 12 }} />
+          <Alert type="error" title={error} showIcon style={{ borderRadius: 12 }} />
         )}
         {notice && (
-          <Alert type="success" message={notice} showIcon closable onClose={() => setNotice(null)} style={{ borderRadius: 12 }} />
+          <Alert type="success" title={notice} showIcon closable onClose={() => setNotice(null)} style={{ borderRadius: 12 }} />
         )}
 
         {/* ① 수업 종류 선택 */}
@@ -330,7 +330,7 @@ export default function PaymentFormPage() {
                       onChange={() => setForm((f) => ({ ...f, studentId: s.id }))}
                       className="w-4 h-4 accent-brand-600"
                     />
-                    <span className="text-sm font-medium text-gray-800">{s.name}</span>
+                    <span className="text-sm font-semibold text-gray-800">{s.name}</span>
                     <span className="text-xs text-gray-500 ml-auto">{stripEmoji(s.status)}</span>
                   </label>
                   );

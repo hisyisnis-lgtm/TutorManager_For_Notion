@@ -1,8 +1,14 @@
-import { useState, useEffect, useCallback } from 'react';
+import {
+  useState,
+  useEffect,
+  useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchStudentByToken } from '../api/bookingApi.js';
-import { usePullToRefresh, PullIndicator } from '../hooks/usePullToRefresh.jsx';
-import { Card, Input, Button } from 'antd';
+import { usePullToRefresh,
+  PullIndicator } from '../hooks/usePullToRefresh.jsx';
+import { Card,
+  Input,
+  Button } from 'antd';
 import PublicHeader from '../components/public/PublicHeader.jsx';
 import PublicFooter from '../components/public/PublicFooter.jsx';
 import {
@@ -12,7 +18,7 @@ import {
   STATUS_ERROR_BG,
   STATUS_ERROR_BORDER,
   STATUS_ERROR_TEXT,
-} from '../constants/theme.js';
+  GRAY_100 } from '../constants/theme.js';
 
 const SAVED_TOKEN_KEY = 'personal_student_token';
 
@@ -50,7 +56,7 @@ export default function PersonalEntryPage() {
   const errorId = 'personal-entry-error';
 
   return (
-    <div style={{ minHeight: '100dvh', backgroundColor: '#f5f5f5', fontFamily: 'inherit', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ minHeight: '100dvh', backgroundColor: GRAY_100, fontFamily: 'inherit', display: 'flex', flexDirection: 'column' }}>
       <PublicHeader tabs={[]} activeTab="" onTabChange={() => {}} />
       <PullIndicator pullY={pullY} refreshing={refreshing} />
 
@@ -62,7 +68,7 @@ export default function PersonalEntryPage() {
         <div style={{ maxWidth: 480, margin: '0 auto' }}>
           <p style={{
             color: 'rgba(255,255,255,0.55)', fontSize: 11,
-            margin: '0 0 12px', fontWeight: 500,
+            margin: '0 0 12px', fontWeight: 600,
             letterSpacing: '0.08em', textTransform: 'uppercase',
           }}>
             하늘하늘 중국어

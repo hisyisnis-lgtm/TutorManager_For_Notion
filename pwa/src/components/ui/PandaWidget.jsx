@@ -1,11 +1,25 @@
 // 수업 횟수에 따라 팬더가 성장하는 인터랙티브 위젯
-import { useState, useRef, useCallback } from 'react';
-import { LeafIcon, HandHeartIcon } from '@phosphor-icons/react';
 import {
-  PRIMARY, PRIMARY_LIGHT, PRIMARY_BG, PRIMARY_ALPHA_20,
-  TEXT_PRIMARY, TEXT_SECONDARY, TEXT_TERTIARY, TEXT_INACTIVE, TEXT_DISABLED,
+  useState,
+  useRef,
+  useCallback } from 'react';
+import { LeafIcon,
+  HandHeartIcon } from '@phosphor-icons/react';
+import {
+  PRIMARY,
+  PRIMARY_LIGHT,
+  PRIMARY_BG,
+  PRIMARY_ALPHA_20,
+  TEXT_PRIMARY,
+  TEXT_SECONDARY,
+  TEXT_TERTIARY,
+  TEXT_INACTIVE,
+  TEXT_DISABLED,
   BORDER_DEFAULT,
-  GRADIENTS } from '../../constants/theme.js';
+  GRADIENTS,
+  GRAY_100,
+  STATUS_SUCCESS_DARK,
+  GRAY_300 } from '../../constants/theme.js';
 
 export const STAGES = [
   { min: 0,   max: 2,         label: '알에서 깨어나는 중', message: '첫 수업이 기다려져요! 🥚', img: '/panda/Cha_Panda_Step_00.svg', nextAt: 3 },
@@ -247,7 +261,7 @@ export default function PandaWidget({ foodSources = [], storageKey = DEFAULT_FEE
           <div key={p.id} style={{ position: 'fixed', zIndex: 9999, pointerEvents: 'none', left: p.x, top: p.y, width: 18, height: 18, borderRadius: '50%', background: 'radial-gradient(circle at 35% 35%, #dcfce7, #22c55e)', boxShadow: '0 0 14px rgba(34,197,94,0.9)', animationName: p.kfName, animationDuration: '0.8s', animationTimingFunction: 'linear', animationFillMode: 'both', animationDelay: `${p.delay || 0}ms` }} />
         );
         if (p.type === 'burst') return (
-          <div key={p.id} style={{ position: 'fixed', zIndex: 9999, pointerEvents: 'none', left: p.x, top: p.y, width: 14, height: 14, borderRadius: '50%', background: 'radial-gradient(circle at 35% 35%, #bbf7d0, #16a34a)', boxShadow: '0 0 12px rgba(34,197,94,0.95)', animationName: 'panda-burst', animationDuration: '0.5s', animationTimingFunction: 'ease-out', animationFillMode: 'forwards', animationDelay: `${p.delay}ms`, '--tx': `${p.tx}px`, '--ty': `${p.ty}px` }} />
+          <div key={p.id} style={{ position: 'fixed', zIndex: 9999, pointerEvents: 'none', left: p.x, top: p.y, width: 14, height: 14, borderRadius: '50%', background: 'radial-gradient(circle at 35% 35%, #bbf7d0, ${STATUS_SUCCESS_DARK})', boxShadow: '0 0 12px rgba(34,197,94,0.95)', animationName: 'panda-burst', animationDuration: '0.5s', animationTimingFunction: 'ease-out', animationFillMode: 'forwards', animationDelay: `${p.delay}ms`, '--tx': `${p.tx}px`, '--ty': `${p.ty}px` }} />
         );
         if (p.type === 'heart') return (
           <div key={p.id} style={{ position: 'fixed', zIndex: 9999, pointerEvents: 'none', left: p.x, top: p.y, fontSize: p.size, userSelect: 'none', lineHeight: 1, animationName: p.kfName, animationDuration: '1.05s', animationTimingFunction: 'linear', animationFillMode: 'both', animationDelay: `${p.delay}ms` }}>❤️</div>
@@ -286,13 +300,13 @@ export default function PandaWidget({ foodSources = [], storageKey = DEFAULT_FEE
           {/* 오른쪽: 먹이 카운터 (게임 재화 스타일) */}
           <div style={{
             display: 'flex', alignItems: 'center', gap: 5,
-            background: available > 0 ? PRIMARY_BG : '#f5f5f5',
+            background: available > 0 ? PRIMARY_BG : GRAY_100,
             border: `1px solid ${available > 0 ? 'rgba(127,0,5,0.12)' : 'rgba(0,0,0,0.05)'}`,
             borderRadius: 8, padding: '4px 10px',
             transitionProperty: 'background-color, border-color',
             transitionDuration: '0.3s',
             transitionTimingFunction: 'ease' }}>
-            <LeafIcon size={14} weight="fill" color={available > 0 ? PRIMARY : TEXT_DISABLED} />
+            <LeafIcon size={16} weight="fill" color={available > 0 ? PRIMARY : TEXT_DISABLED} />
             <span style={{
               fontSize: 14, fontWeight: 700,
               color: available > 0 ? PRIMARY : TEXT_DISABLED,
@@ -382,14 +396,14 @@ export default function PandaWidget({ foodSources = [], storageKey = DEFAULT_FEE
           {/* 두꺼운 게임형 바 — inset shadow로 홈파인 느낌 */}
           <div style={{
             width: '100%', height: 12,
-            background: '#e8e8e8',
+            background: GRAY_300,
             borderRadius: 4,
             overflow: 'hidden',
             boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.12)' }}>
             <div style={{
               width: `${progress}%`, height: '100%',
               background: stage.nextAt == null
-                ? 'linear-gradient(90deg, #fbbf24 0%, #f59e0b 100%)'
+                ? GRADIENTS.xp
                 : GRADIENTS.panda,
               borderRadius: 4,
               boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.28)',
@@ -434,7 +448,7 @@ export default function PandaWidget({ foodSources = [], storageKey = DEFAULT_FEE
               transitionDuration: '0.15s',
               transitionTimingFunction: 'ease-out' }}
           >
-            <LeafIcon size={17} weight="fill" />
+            <LeafIcon size={16} weight="fill" />
             먹이주기
           </button>
 
@@ -444,7 +458,7 @@ export default function PandaWidget({ foodSources = [], storageKey = DEFAULT_FEE
             className=""
             style={{
               flex: 1, height: 52, borderRadius: 12,
-              border: '1.5px solid rgba(0,0,0,0.1)',
+              border: '1px solid rgba(0,0,0,0.1)',
               cursor: 'pointer',
               background: '#ffffff',
               color: TEXT_SECONDARY,
@@ -456,7 +470,7 @@ export default function PandaWidget({ foodSources = [], storageKey = DEFAULT_FEE
               transitionDuration: '0.15s',
               transitionTimingFunction: 'ease-out' }}
           >
-            <HandHeartIcon size={17} weight="fill" />
+            <HandHeartIcon size={16} weight="fill" />
             쓰다듬기
           </button>
         </div>
@@ -470,7 +484,7 @@ export default function PandaWidget({ foodSources = [], storageKey = DEFAULT_FEE
             className=""
             style={{
               width: '100%', height: 42, borderRadius: 12, marginTop: 8,
-              border: `1.5px solid ${PRIMARY_ALPHA_20}`,
+              border: `1px solid ${PRIMARY_ALPHA_20}`,
               cursor: canFeed ? 'pointer' : 'not-allowed',
               background: PRIMARY_BG,
               color: canFeed ? PRIMARY : TEXT_DISABLED,
@@ -481,7 +495,7 @@ export default function PandaWidget({ foodSources = [], storageKey = DEFAULT_FEE
               transitionDuration: '0.15s',
               transitionTimingFunction: 'ease-out' }}
           >
-            <LeafIcon size={14} weight="fill" />
+            <LeafIcon size={16} weight="fill" />
             먹이 {available}개 전부 주기
           </button>
         )}
@@ -497,11 +511,11 @@ export default function PandaWidget({ foodSources = [], storageKey = DEFAULT_FEE
           transitionTimingFunction: 'ease' }}>
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
-            background: '#f5f5f5',
+            background: GRAY_100,
             borderRadius: 10,
             padding: '10px 14px',
-            fontSize: 14, color: TEXT_TERTIARY, fontWeight: 500 }}>
-            <LeafIcon size={13} weight="fill" color={TEXT_DISABLED} />
+            fontSize: 14, color: TEXT_TERTIARY, fontWeight: 600 }}>
+            <LeafIcon size={12} weight="fill" color={TEXT_DISABLED} />
             수업 30분마다 먹이가 생겨요
           </div>
         </div>

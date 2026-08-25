@@ -1,6 +1,11 @@
-import { Input, Select } from 'antd';
+import {
+  Input,
+  Select } from 'antd';
 import { MagnifyingGlassIcon } from '@phosphor-icons/react';
-import { PRIMARY, TEXT_SECONDARY, TEXT_TERTIARY } from '../../constants/theme.js';
+import { PRIMARY,
+  TEXT_SECONDARY,
+  TEXT_TERTIARY,
+  GRAY_300 } from '../../constants/theme.js';
 
 /**
  * HomeworkFilterBar — 숙제 검색 + 월별/상태별 필터
@@ -62,7 +67,7 @@ export default function HomeworkFilterBar({
           style={{ borderRadius: 12, height: 40, flex: 1 }}
         />
         {showSearchType && onSearchTypeChange && (
-          <div style={{ display: 'flex', border: '1.5px solid #e0e0e0', borderRadius: 10, overflow: 'hidden', flexShrink: 0 }}>
+          <div style={{ display: 'flex', boxShadow: 'var(--shadow-border)', borderRadius: 10, overflow: 'hidden', flexShrink: 0 }}>
             {[{ value: 'title', label: '제목' }, { value: 'content', label: '내용' }].map(({ value, label }) => (
               <button
                 key={value}
@@ -103,8 +108,8 @@ export default function HomeworkFilterBar({
                 className=""
                 style={{
                   flexShrink: 0,
-                  height: 32, padding: '0 14px', borderRadius: 100,
-                  border: isActive ? 'none' : '1.5px solid #e0e0e0',
+                  height: 32, padding: '0 14px', borderRadius: 980,
+                  border: isActive ? 'none' : `1px solid ${GRAY_300}`,
                   background: isActive ? PRIMARY : '#fff',
                   color: isActive ? '#fff' : TEXT_SECONDARY,
                   fontSize: 13, fontWeight: isActive ? 600 : 400,

@@ -84,14 +84,14 @@ export default function StudentAuthGate({ token, disabled = false, children }) {
           <div
             className="sa-gate-icon"
             style={{
-              width: 60, height: 60, borderRadius: 18, background: PRIMARY_BG,
+              width: 60, height: 60, borderRadius: 20, background: PRIMARY_BG,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               boxShadow: `0 0 0 6px ${PRIMARY_BG}66`,
             }}
           >
             {phase === 'no_phone'
-              ? <DeviceMobileIcon size={32} weight="fill" color={PRIMARY} />
-              : <ShieldCheckIcon size={32} weight="fill" color={PRIMARY} />}
+              ? <DeviceMobileIcon size={24} weight="fill" color={PRIMARY} />
+              : <ShieldCheckIcon size={24} weight="fill" color={PRIMARY} />}
           </div>
           <Typography.Title level={4} style={{ margin: 0, color: TEXT_PRIMARY, textAlign: 'center', letterSpacing: '-0.01em' }}>
             {phase === 'no_phone' ? '인증을 받을 수 없어요' : '본인 확인'}
@@ -122,7 +122,7 @@ export default function StudentAuthGate({ token, disabled = false, children }) {
               padding: '5px 12px', borderRadius: 999, background: PRIMARY_BG,
               color: PRIMARY, fontWeight: 700, fontSize: 13,
             }}>
-              <DeviceMobileIcon size={15} weight="fill" />
+              <DeviceMobileIcon size={16} weight="fill" />
               {phoneTail ? `010 ···· ${phoneTail}` : '등록된 번호'}
             </span>
             <Typography.Text style={{ color: TEXT_TERTIARY, fontSize: 12, textAlign: 'center' }}>
@@ -147,7 +147,7 @@ export default function StudentAuthGate({ token, disabled = false, children }) {
             )}
 
             {notice && !error && (
-              <Typography.Text style={{ color: STATUS_SUCCESS_DARK, fontSize: 13, textAlign: 'center', fontWeight: 500 }}>
+              <Typography.Text style={{ color: STATUS_SUCCESS_DARK, fontSize: 13, textAlign: 'center', fontWeight: 600 }}>
                 ✓ {notice}
               </Typography.Text>
             )}
@@ -156,7 +156,7 @@ export default function StudentAuthGate({ token, disabled = false, children }) {
               <Typography.Text
                 key={errNonce}
                 className="sa-gate-shake"
-                style={{ color: STATUS_ERROR_TEXT, fontSize: 13, textAlign: 'center', fontWeight: 500 }}
+                style={{ color: STATUS_ERROR_TEXT, fontSize: 13, textAlign: 'center', fontWeight: 600 }}
               >
                 {error}
               </Typography.Text>
@@ -185,7 +185,7 @@ export default function StudentAuthGate({ token, disabled = false, children }) {
                     type="text" size="small"
                     onClick={() => { setPhase('idle'); setCode(''); setError(''); }}
                     style={{ color: TEXT_TERTIARY, padding: '0 8px' }}
-                    icon={<ArrowLeftIcon size={14} />}
+                    icon={<ArrowLeftIcon size={16} />}
                   >
                     처음으로
                   </Button>

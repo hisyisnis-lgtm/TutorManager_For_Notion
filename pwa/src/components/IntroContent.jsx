@@ -3,13 +3,29 @@
  * LandingPage 와 PricingPage 에서 공통으로 사용합니다.
  * 내용을 수정할 때 이 파일만 수정하면 두 페이지에 모두 반영됩니다.
  */
-import { useState, useRef, useEffect } from 'react';
-import { Button, Card, Flex, Space, Tag, Avatar, Typography } from 'antd';
 import {
-  ClockIcon, MapPinIcon, BookBookmarkIcon, UserIcon,
-  SpeakerHighIcon, ChartLineUpIcon, LightbulbIcon, ChatCircleIcon,
-  CaretLeftIcon, CaretRightIcon,
-} from '@phosphor-icons/react';
+  useState,
+  useRef,
+  useEffect } from 'react';
+import { Button,
+  Card,
+  Flex,
+  Space,
+  Tag,
+  Avatar,
+  Typography } from 'antd';
+import {
+  ClockIcon,
+  MapPinIcon,
+  BookBookmarkIcon,
+  UserIcon,
+  SpeakerHighIcon,
+  ChartLineUpIcon,
+  LightbulbIcon,
+  ChatCircleIcon,
+  CaretLeftIcon,
+  CaretRightIcon,
+  } from '@phosphor-icons/react';
 import {
   PRIMARY,
   PRIMARY_BG,
@@ -18,7 +34,10 @@ import {
   BG_APP,
   BORDER_NEUTRAL,
   STATUS_ERROR_BORDER,
-} from '../constants/theme';
+  GRAY_200,
+  GRAY_50,
+  GRAY_300,
+  INK_900 } from '../constants/theme';
 import FadeUp from './FadeUp';
 import HeroSection from './ui/HeroSection';
 import CtaSection from './public/CtaSection';
@@ -69,11 +88,11 @@ function ReviewCard({ url }) {
   if (loading) {
     return (
       <Card variant="borderless" style={{ borderRadius: 16, overflow: 'hidden', height: CARD_HEIGHT }} styles={{ body: { padding: 0 } }}>
-        <div style={{ height: IMG_HEIGHT, backgroundColor: '#f0f0f0' }} />
+        <div style={{ height: IMG_HEIGHT, backgroundColor: GRAY_200 }} />
         <div style={{ padding: '14px 16px 16px' }}>
-          <div style={{ height: 12, width: 80, backgroundColor: '#f0f0f0', borderRadius: 6, marginBottom: 10 }} />
-          <div style={{ height: 14, backgroundColor: '#f0f0f0', borderRadius: 6, marginBottom: 6 }} />
-          <div style={{ height: 14, width: '70%', backgroundColor: '#f0f0f0', borderRadius: 6 }} />
+          <div style={{ height: 12, width: 80, backgroundColor: GRAY_200, borderRadius: 6, marginBottom: 10 }} />
+          <div style={{ height: 14, backgroundColor: GRAY_200, borderRadius: 6, marginBottom: 6 }} />
+          <div style={{ height: 14, width: '70%', backgroundColor: GRAY_200, borderRadius: 6 }} />
         </div>
       </Card>
     );
@@ -99,7 +118,7 @@ function ReviewCard({ url }) {
           </Tag>
           {og.title && (
             <Text strong style={{
-              fontSize: 14, lineHeight: 1.5, marginBottom: 6, color: '#262626', flexShrink: 0,
+              fontSize: 14, lineHeight: 1.5, marginBottom: 6, color: INK_900, flexShrink: 0,
               overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
             }}>
               {og.title}
@@ -140,10 +159,10 @@ function ReviewScrollSection() {
   const navBtnStyle = {
     position: 'absolute', top: '50%', transform: 'translateY(-50%)',
     width: 44, height: 44, borderRadius: '50%',
-    backgroundColor: 'white', border: '1px solid #e0e0e0',
+    backgroundColor: 'white', border: '1px solid ${GRAY_300}',
     boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
-    cursor: 'pointer', zIndex: 10, fontSize: 18, color: '#262626',
+    cursor: 'pointer', zIndex: 10, fontSize: 18, color: INK_900,
   };
 
   return (
@@ -299,7 +318,7 @@ export default function IntroContent({ onConsult, onFloatChange }) {
         {/* 어려운 상담 */}
         <FadeUp>
           <section style={{ padding: '24px 16px 16px' }}>
-            <Card variant="borderless" style={{ borderRadius: 12, backgroundColor: '#fafafa' }} styles={{ body: { padding: 20 } }}>
+            <Card variant="borderless" style={{ borderRadius: 12, backgroundColor: GRAY_50 }} styles={{ body: { padding: 20 } }}>
               <Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 8 }}>이런 상담은 어려워요</Text>
               <Paragraph style={{ fontSize: 14, color: TEXT_SECONDARY, marginBottom: 12, lineHeight: 1.6 }}>
                 하늘쌤은 입문~초중급 회화·발음 교정 전문입니다.<br />
@@ -335,7 +354,7 @@ export default function IntroContent({ onConsult, onFloatChange }) {
                 </Text>
                 <Space size={6} wrap style={{ justifyContent: 'center' }}>
                   {['10년 경력', '회화 전문', '발음 교정'].map(tag => (
-                    <Tag key={tag} style={{ borderRadius: 20, margin: 0, fontSize: 13, backgroundColor: 'transparent', borderColor: BORDER_NEUTRAL, color: '#262626' }}>{tag}</Tag>
+                    <Tag key={tag} style={{ borderRadius: 20, margin: 0, fontSize: 13, backgroundColor: 'transparent', borderColor: BORDER_NEUTRAL, color: INK_900 }}>{tag}</Tag>
                   ))}
                 </Space>
               </div>
