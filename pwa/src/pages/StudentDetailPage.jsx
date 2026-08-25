@@ -15,7 +15,7 @@ import { SITE_ORIGIN } from '../constants.js';
 import { PRIMARY, PRIMARY_BG, STATUS_ERROR_BORDER, TEXT_PRIMARY, TEXT_SECONDARY } from '../constants/theme.js';
 import SectionHeading from '../components/ui/SectionHeading.jsx';
 import { fetchClassesPage, parseClass, classStatusColor } from '../api/classes.js';
-import { fetchPaymentsPage, parsePayment, paymentStatusColor, refundSessions, formatSessions } from '../api/payments.js';
+import { fetchAllPayments, parsePayment, paymentStatusColor, refundSessions, formatSessions, remainingSessionsOf } from '../api/payments.js';
 import { formatDateTime, formatTime, formatKRW } from '../utils/dateUtils.js';
 import { useData } from '../context/DataContext.jsx';
 
@@ -27,6 +27,7 @@ export default function StudentDetailPage() {
   const [student, setStudent] = useState(null);
   const [classes, setClasses] = useState([]);
   const [payments, setPayments] = useState([]);
+  const [remaining, setRemaining] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [updating, setUpdating] = useState(false);
@@ -53,21 +54,27 @@ export default function StudentDetailPage() {
       try {
         // 학생 1명당 Notion 3회 왕복. 상태·VIP 토글은 아래에서 낙관적으로 반영하므로
         // 캐시로 먼저 띄워도 어긋나지 않는다. 화면에 쓰는 만큼만(각 5건) 담는다.
-        await swrLoad(`student:detail:${id}`, async () => {
-          const [page, classData, paymentData] = await Promise.all([
+        // 캐시 키에 v2 — 잔여 회차를 결제 데이터로 계산하도록 바뀌어 저장 형태가 달라졌다.
+        await swrLoad(`student:detail:v2:${id}`, async () => {
+          const [page, classData, allPayments] = await Promise.all([
             getPage(id),
             fetchClassesPage({ studentId: id, completedOnly: true }),
-            fetchPaymentsPage({ studentId: id }),
+            // 잔여 회차 합산에 쓰므로 표시용 5건이 아니라 전체를 받는다.
+            fetchAllPayments(id),
           ]);
+          const st = parseStudent(page);
+          const parsedPayments = allPayments.map(parsePayment);
           return {
-            student: parseStudent(page),
+            student: st,
             classes: classData.results.slice(0, 5).map(parseClass),
-            payments: paymentData.results.slice(0, 5).map(parsePayment),
+            payments: parsedPayments.slice(0, 5),
+            remaining: remainingSessionsOf(st, parsedPayments),
           };
-        }, ({ student: st, classes: cls, payments: pay }) => {
+        }, ({ student: st, classes: cls, payments: pay, remaining: rem }) => {
           setStudent(st);
           setClasses(cls);
           setPayments(pay);
+          setRemaining(rem);
           setLoading(false);
         });
       } catch (e) {
@@ -85,7 +92,7 @@ export default function StudentDetailPage() {
     try {
       await updateStudentStatus(id, newStatus);
       setStudent((s) => ({ ...s, status: newStatus }));
-      invalidateCache(`student:detail:${id}`); // 옛 상태가 다시 들어올 때 잠깐 보이지 않게
+      invalidateCache(`student:detail:v2:${id}`); // 옛 상태가 다시 들어올 때 잠깐 보이지 않게
       refreshAll();
     } catch (e) {
       message.error(`상태 변경 실패: ${e.message}`);
@@ -99,7 +106,7 @@ export default function StudentDetailPage() {
     try {
       await updateStudentVip(id, checked);
       setStudent((s) => ({ ...s, vip: checked }));
-      invalidateCache(`student:detail:${id}`);
+      invalidateCache(`student:detail:v2:${id}`);
     } catch (e) {
       message.error(`VIP 변경 실패: ${e.message}`);
     } finally {
@@ -273,10 +280,10 @@ export default function StudentDetailPage() {
           <p className="text-xs text-gray-500 mb-1">잔여 시간 회차</p>
           <p
             className={`text-2xl font-bold tabular-nums ${
-              student.remainingSessions <= 1 ? 'text-red-500' : 'text-gray-900'
+              remaining <= 1 ? 'text-red-500' : 'text-gray-900'
             }`}
           >
-            {student.remainingSessions}
+            {formatSessions(remaining)}
             <span className="text-sm font-normal text-gray-400 ml-1">회</span>
           </p>
         </Card>

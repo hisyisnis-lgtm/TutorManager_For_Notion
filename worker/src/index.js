@@ -28,6 +28,7 @@ import { assembleByDay, embedMembers, renderDashboard } from '../lib/gameDashboa
 
 const CLASS_DB_ID = '314838fa-f2a6-81bc-8b67-d9e1c8fb7ecb';
 const STUDENT_DB_ID = '314838fa-f2a6-8143-a6c7-e59c50f3bbdb';
+const PAYMENT_DB_ID = '314838fa-f2a6-8154-935b-edd3d2fbea83';
 const HOMEWORK_DB_ID = '5ce7d5ef-7b80-4795-843f-325f4ca868e2';
 
 // ===== 예약 시스템 DB =====
@@ -442,6 +443,29 @@ async function getStudentOtp(token) {
 }
 async function clearStudentOtp(token) {
   try { await caches.default.delete(studentOtpKey(token)); } catch { /* noop */ }
+}
+
+// 학생의 결제·잔여 시간 회차 — 학생 DB의 '잔여 시간 회차' formula를 쓰지 않고 직접 합산한다.
+// 그 formula가 의존하는 '결제 시간 회차 합계' rollup은 결제 행이 연결된 시점의 값에 고정되고
+// 이후 환불을 반영하지 않는다(2026-08-25 검증: 4회차 결제 → 2회차 환불 후에도 rollup 4).
+// 결제 행의 '유효 시간 회차'(환불 차감 포함)는 정확하므로 그것을 합산한다.
+// PWA의 payments.js remainingSessionsOf와 같은 계산 — 한쪽만 고치지 말 것.
+async function loadSessionCounts(n, studentPageId, studentProps) {
+  let paidSessions = 0;
+  let cursor;
+  do {
+    const res = await n('POST', `/databases/${PAYMENT_DB_ID}/query`, {
+      filter: { property: '학생', relation: { contains: studentPageId } },
+      page_size: 100,
+      ...(cursor ? { start_cursor: cursor } : {}),
+    });
+    for (const pay of res.results ?? []) {
+      paidSessions += pay.properties?.['유효 시간 회차']?.formula?.number ?? 0;
+    }
+    cursor = res.has_more ? res.next_cursor : undefined;
+  } while (cursor);
+  const used = studentProps?.['사용 시간 회차']?.rollup?.number ?? 0;
+  return { paidSessions, remainingSessions: paidSessions - used };
 }
 
 // 예약 코드로 학생 조회 → 인증에 필요한 최소 정보(전화번호)만. 없으면 null.
@@ -1318,7 +1342,7 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
     const rawName = sProps?.['이름']?.title?.[0]?.plain_text ?? '';
     const studentName = stripEmoji(rawName);
     const phone = sProps?.['전화번호']?.phone_number ?? '';
-    const remainingSessions = sProps?.['잔여 시간 회차']?.formula?.number ?? 0;
+    const { remainingSessions } = await loadSessionCounts(n, studentPage.id, sProps);
 
     const durationMin = timeToMin(endTime) - timeToMin(startTime);
 
@@ -1470,7 +1494,7 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
     // 분 단위로 누적해 부동소수 오차를 피한다.
     //   completedMinutesAll : 잔여 시간(remainingHours) 계산용 — 전체 기간
     //   completedMinutes    : 팬더 먹이 계산용 — 공유 시점(sharedAt) 이후만 집계
-    const paidHours = props?.['결제 시간 회차 합계']?.rollup?.number ?? 0;
+    const { paidSessions: paidHours, remainingSessions } = await loadSessionCounts(n, page.id, props);
     const sharedTs = sharedAt ? new Date(sharedAt).getTime() : null;
     let completedMinutesAll = 0;
     let completedMinutes = 0;
@@ -1510,7 +1534,7 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
       id: page.id,
       name: stripEmoji(rawName),
       phone: props?.['전화번호']?.phone_number ?? '',
-      remainingSessions: props?.['잔여 시간 회차']?.formula?.number ?? 0,
+      remainingSessions,
       totalSessions: props?.['총 수업 횟수']?.rollup?.number ?? 0,
       remainingHours,
       paidHours,
@@ -1787,7 +1811,7 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
     }
     const restoreDurationMin = Number(cProps?.['수업 시간(분)']?.select?.name) || 60;
     const requiredForRestore = restoreDurationMin / 60;
-    const currentRemaining = sPage.properties?.['잔여 시간 회차']?.formula?.number ?? 0;
+    const { remainingSessions: currentRemaining } = await loadSessionCounts(n, sPage.id, sPage.properties);
     if (currentRemaining < requiredForRestore) {
       return new Response(JSON.stringify({ error: `잔여 시간이 부족하여 복구할 수 없습니다. (잔여: ${currentRemaining}회차, 필요: ${requiredForRestore}회차)` }), {
         status: 400,

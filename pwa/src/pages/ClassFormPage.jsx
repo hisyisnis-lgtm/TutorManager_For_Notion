@@ -20,6 +20,7 @@ import { toDatetimeLocal, toNotionDate, DAY_KR, toISOLocalKST } from '../utils/d
 import { generateRecurringDates } from '../utils/recurringDates.js';
 import { isOnlineGroupTitle, isFreeConsultTitle, isFixedPriceTitle } from '../utils/classTypeKind.js';
 import { useData } from '../context/DataContext.jsx';
+import { formatSessions } from '../api/payments.js';
 import { fetchTimeSlotsForTeacher, checkConflict } from '../api/bookingApi.js';
 import { TEXT_SECONDARY, TEXT_INACTIVE } from '../constants/theme.js';
 
@@ -37,7 +38,7 @@ function formatDateLabel(date) {
 export default function ClassFormPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { students, classTypes, refresh: refreshAll } = useData();
+  const { students, classTypes, remainingByStudent, refresh: refreshAll } = useData();
   const isEdit = Boolean(id);
 
   const [studentSearch, setStudentSearch] = useState('');
@@ -199,7 +200,7 @@ export default function ClassFormPage() {
   const selectedStudents = students.filter((s) => form.studentIds.includes(s.id));
   const minRemaining =
     selectedStudents.length > 0
-      ? Math.min(...selectedStudents.map((s) => s.remainingSessions ?? 0))
+      ? Math.min(...selectedStudents.map((s) => remainingByStudent[s.id] ?? 0))
       : 0;
 
   // 수업 유형별 분기
@@ -515,7 +516,7 @@ export default function ClassFormPage() {
                       <span className="text-xs text-gray-500 ml-auto">{stripEmoji(s.status)}</span>
                       {recurring && isSelected && (
                         <span className="text-xs text-brand-600 font-semibold">
-                          잔여 {s.remainingSessions ?? 0}회차
+                          잔여 {formatSessions(remainingByStudent[s.id] ?? 0)}회차
                         </span>
                       )}
                     </label>

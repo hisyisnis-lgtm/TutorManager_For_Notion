@@ -1,7 +1,7 @@
 // 돈 계산 순수 함수 테스트 — 결제 예정액·부분환불 환산·표시 포맷.
 // 매출 숫자라 틀리면 손해가 커서 경계값 위주로 고정한다.
 import { describe, it, expect } from 'vitest';
-import { calcPaymentAmount, refundSessions, formatSessions, isWholeSession, validatePaymentForm } from './payments.js';
+import { calcPaymentAmount, refundSessions, formatSessions, isWholeSession, validatePaymentForm, remainingSessionsOf } from './payments.js';
 
 describe('validatePaymentForm — 온라인그룹수업 결제 편집 (버그 수정 검증)', () => {
   const groupForm = { classTypeId: 'ct-group', sessionCount: '0', actualAmount: '140000', studentId: '' };
@@ -85,5 +85,33 @@ describe('formatSessions / isWholeSession — 회차 표시', () => {
     expect(isWholeSession(2)).toBe(true);
     expect(isWholeSession(2 + 1e-12)).toBe(true);
     expect(isWholeSession(1.5)).toBe(false);
+  });
+});
+
+describe('remainingSessionsOf — 잔여 회차 자체 계산 (Notion 롤업이 환불 미반영이라 앱이 계산)', () => {
+  it('결제별 유효 회차를 합산하고 사용 회차를 뺀다', () => {
+    const student = { usedSessions: 3 };
+    const payments = [{ effectiveSessions: 6 }, { effectiveSessions: 4 }];
+    expect(remainingSessionsOf(student, payments)).toBe(7);
+  });
+
+  it('전액 환불 건은 유효 회차 0이라 잔여도 0 (노지원 사례)', () => {
+    // 6회차 30만원 결제 → 30만원 전액 환불 → 유효 시간 회차 0, 수업 이력 없음
+    expect(remainingSessionsOf({ usedSessions: 0 }, [{ effectiveSessions: 0 }])).toBe(0);
+  });
+
+  it('부분 환불은 소수 회차도 그대로 반영', () => {
+    // 4회차 결제 중 2회차 환불 → 유효 2
+    expect(remainingSessionsOf({ usedSessions: 0 }, [{ effectiveSessions: 2 }])).toBe(2);
+    expect(remainingSessionsOf({ usedSessions: 0.5 }, [{ effectiveSessions: 1.5 }])).toBe(1);
+  });
+
+  it('결제가 없으면 사용분만큼 음수 — 초과 수업을 숨기지 않는다', () => {
+    expect(remainingSessionsOf({ usedSessions: 2 }, [])).toBe(-2);
+  });
+
+  it('값이 비어 있어도 NaN을 내지 않는다', () => {
+    expect(remainingSessionsOf({}, [{}, { effectiveSessions: 3 }])).toBe(3);
+    expect(remainingSessionsOf(null, [])).toBe(0);
   });
 });

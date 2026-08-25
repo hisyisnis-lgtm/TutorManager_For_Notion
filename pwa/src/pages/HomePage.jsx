@@ -70,7 +70,7 @@ function getKSTToday() {
 
 export default function HomePage() {
   const navigate = useNavigate();
-  const { studentNameMap, classTypeMap, students, refresh: refreshData } = useData();
+  const { studentNameMap, classTypeMap, students, remainingByStudent, refresh: refreshData } = useData();
   // loadShortage가 채우는 수업 인덱스.
   //  firstShortage: 학생별 '가장 이른 회차부족 수업' 일시 — 이미 회차를 넘긴 경우
   //  lastClass    : 학생별 '가장 늦은 예정 수업' 일시 — 언제까지 커버되는지 알려주는 용도
@@ -96,7 +96,7 @@ export default function HomePage() {
     for (const s of students) {
       if (s.status !== STATUS_ACTIVE) continue;
       const shortageAt = classIndex.firstShortage[s.id];
-      const remaining = s.remainingSessions ?? 0;
+      const remaining = remainingByStudent[s.id] ?? 0;
       if (shortageAt) {
         rows.push({ id: s.id, name: s.name, urgent: true, reason: `${formatShort(shortageAt)} 수업부터 초과` });
       } else if (remaining <= 0) {
@@ -481,7 +481,7 @@ export default function HomePage() {
       >
         <Card
           variant="borderless"
-          style={{ borderRadius: 12, boxShadow: 'var(--shadow-border)' }}
+          style={{ borderRadius: 16, boxShadow: 'var(--shadow-border)' }}
           styles={{ body: { padding: '14px 16px' } }}
         >
           <div className="flex items-center justify-between">
@@ -587,7 +587,7 @@ export default function HomePage() {
             <Card
               variant="borderless"
               style={{ borderRadius: 16, backgroundColor: STATUS_ERROR_BG, boxShadow: 'var(--shadow-danger-border)' }}
-              styles={{ body: { padding: '12px 16px' } }}
+              styles={{ body: { padding: '14px 16px' } }}
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -613,7 +613,7 @@ export default function HomePage() {
           <Card
             variant="borderless"
             style={{ borderRadius: 16, backgroundColor: STATUS_WARNING_BG, boxShadow: `0 0 0 1px ${STATUS_WARNING_BORDER} inset` }}
-            styles={{ body: { padding: '12px 16px' } }}
+            styles={{ body: { padding: '14px 16px' } }}
           >
             <button
               type="button"
@@ -818,7 +818,7 @@ export default function HomePage() {
                     <Card
                       variant="borderless"
                       className="card-tap"
-                      style={{ borderRadius: 12 }}
+                      style={{ borderRadius: 16 }}
                       styles={{ body: { padding: '14px 16px' } }}
                     >
                       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12 }}>

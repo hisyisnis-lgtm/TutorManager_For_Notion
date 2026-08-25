@@ -1,4 +1,4 @@
-import { queryPage, createPage, updatePage } from './notionClient.js';
+import { queryPage, queryAll, createPage, updatePage } from './notionClient.js';
 import {
   getTitle,
   getRichText,
@@ -133,10 +133,38 @@ export function parsePayment(page) {
     paymentDate: getDate(p['결제일']),
     memo: getRichText(p['메모']),
     phone: p['전화번호']?.phone_number ?? '',
+    // 환불분이 차감된 회차. 학생 DB의 '결제 시간 회차 합계' 롤업은 이 값을 합산하도록
+    // 돼 있지만 환불 후에도 갱신되지 않아(아래 remainingSessionsOf 주석 참고) 앱이 직접 합산한다.
+    effectiveSessions: getFormulaNumber(p['유효 시간 회차']),
     refundAmount: getNumber(p['환불 금액']),
     refundDate: getDate(p['환불일']),
     refundReason: getRichText(p['환불 사유']),
   };
+}
+
+/** 학생의 결제 전체 조회 — 잔여 회차 계산용이라 100건 초과에도 누락되면 안 되므로 queryAll. */
+export async function fetchAllPayments(studentId) {
+  return queryAll(
+    PAYMENTS_DB,
+    studentId ? { property: '학생', relation: { contains: studentId } } : undefined,
+    [{ property: '결제일', direction: 'descending' }]
+  );
+}
+
+/**
+ * 학생의 잔여 시간 회차 — Notion '잔여 시간 회차' formula를 쓰지 않고 앱에서 계산한다.
+ *
+ * Notion 학생 DB의 '결제 시간 회차 합계'는 결제.'유효 시간 회차'(환불 차감 포함)를 sum하는
+ * rollup인데, **결제 행이 연결된 시점의 값에 고정되고 이후 환불을 반영하지 않는다**.
+ * 2026-08-25 검증: 새 학생·새 결제(4회차)를 만들면 롤업 4 → 10만원(2회차) 환불 후에도 롤업 4.
+ * 결제 페이지의 '유효 시간 회차'는 2로 정확히 계산되므로, 그 값을 직접 합산한다.
+ * (Notion UI는 실시간 계산이라 0을 보여주지만 공개 API는 굳은 값을 반환 — 앱은 API를 쓴다.)
+ * 롤업 재정의·수식 재저장·관계 재연결 모두 효과 없었고, formula에서 다른 formula를 참조할 수
+ * 없어 Notion 안에서는 우회로가 없다.
+ */
+export function remainingSessionsOf(student, payments) {
+  const paid = payments.reduce((sum, p) => sum + (p.effectiveSessions ?? 0), 0);
+  return paid - (student?.usedSessions ?? 0);
 }
 
 export function paymentStatusColor(status) {

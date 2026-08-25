@@ -7,6 +7,7 @@ const TOKEN = process.env.NOTION_TOKEN;
 const NTFY_TOPIC = process.env.NTFY_TOPIC;
 const NTFY_TOKEN = process.env.NTFY_TOKEN;
 const STUDENT_DB_ID = '314838fa-f2a6-8143-a6c7-e59c50f3bbdb';
+const PAYMENTS_DB = '314838fa-f2a6-8154-935b-edd3d2fbea83';
 
 // 잔여 시간 회차가 이 값 이하인 학생에게 알림 (1 = 1시간 분량)
 const THRESHOLD = 1;
@@ -18,6 +19,21 @@ if (!TOKEN) {
 
 const { queryAll } = createNotionClient(TOKEN);
 const sendNtfy = createNtfyClient(NTFY_TOPIC, NTFY_TOKEN);
+
+
+// 학생별 결제 시간 회차 합계 — 학생 DB의 '결제 시간 회차 합계' rollup은 결제 행이 연결된
+// 시점 값에 고정돼 이후 환불을 반영하지 않는다(2026-08-25 검증). 결제 행의 '유효 시간 회차'는
+// 정확하므로 결제 DB를 직접 훑어 합산한다. PWA payments.js remainingSessionsOf와 같은 계산.
+async function loadPaidSessions(queryAll) {
+  const paidByStudent = new Map();
+  for (const pay of await queryAll(PAYMENTS_DB)) {
+    const sessions = pay.properties['유효 시간 회차']?.formula?.number ?? 0;
+    for (const rel of pay.properties['학생']?.relation ?? []) {
+      paidByStudent.set(rel.id, (paidByStudent.get(rel.id) ?? 0) + sessions);
+    }
+  }
+  return paidByStudent;
+}
 
 async function main() {
   console.log(`[${new Date().toISOString()}] 잔여 회차 부족 학생 조회 시작`);
@@ -31,12 +47,14 @@ async function main() {
   console.log(`수강중 학생 ${students.length}명 조회 완료`);
 
   // 잔여 시간 회차 ≤ THRESHOLD 인 학생 필터링
+  const paidByStudent = await loadPaidSessions(queryAll);
   const lowStudents = students
     .map(p => {
       const props = p.properties;
       const rawName = props['이름']?.title?.[0]?.plain_text ?? '?';
       const name = stripEmoji(rawName);
-      const remaining = props['잔여 시간 회차']?.formula?.number ?? Infinity;
+      const used = props['사용 시간 회차']?.rollup?.number ?? 0;
+      const remaining = (paidByStudent.get(p.id) ?? 0) - used;
       return { name, remaining };
     })
     .filter(s => s.remaining <= THRESHOLD)

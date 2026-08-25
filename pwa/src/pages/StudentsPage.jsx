@@ -10,6 +10,7 @@ import ErrorMessage from '../components/ui/ErrorMessage.jsx';
 import EmptyState from '../components/ui/EmptyState.jsx';
 import { statusColor } from '../api/students.js';
 import { formatKRW } from '../utils/dateUtils.js';
+import { formatSessions } from '../api/payments.js';
 import { stripEmoji } from '../utils/stringUtils.js';
 import PullToRefresh from '../components/ui/PullToRefresh.jsx';
 import { useData } from '../context/DataContext.jsx';
@@ -26,7 +27,7 @@ export default function StudentsPage() {
   const navigate = useNavigate();
   // DataContext의 학생 데이터를 그대로 사용 → 다른 페이지가 학생 추가/수정해도 자동 반영
   // stale 캐시가 있으면 즉시 표시하고 백그라운드에서 새로고침되는 패턴
-  const { students, loading, error, refresh } = useData();
+  const { students, remainingByStudent, loading, error, refresh } = useData();
   const [filter, setFilter] = useState('전체');
   const [search, setSearch] = useState('');
 
@@ -41,7 +42,7 @@ export default function StudentsPage() {
       const activeA = a.status === '🟢 수강중' ? 0 : 1;
       const activeB = b.status === '🟢 수강중' ? 0 : 1;
       if (activeA !== activeB) return activeA - activeB;
-      return b.remainingSessions - a.remainingSessions;
+      return (remainingByStudent[b.id] ?? 0) - (remainingByStudent[a.id] ?? 0);
     });
 
   return (
@@ -99,7 +100,7 @@ export default function StudentsPage() {
           ) : (
             <ul className="px-4 space-y-3 pb-24">
               {filtered.map((student) => (
-                <StudentCard key={student.id} student={student} />
+                <StudentCard key={student.id} student={student} remaining={remainingByStudent[student.id] ?? 0} />
               ))}
             </ul>
           )}
@@ -109,7 +110,7 @@ export default function StudentsPage() {
   );
 }
 
-function StudentCard({ student }) {
+function StudentCard({ student, remaining }) {
   const { bg, text } = statusColor(student.status);
   return (
     <li>
@@ -132,10 +133,10 @@ function StudentCard({ student }) {
               <span className="text-gray-500 text-xs">잔여 회차 </span>
               <span
                 className={`font-semibold tabular-nums ${
-                  student.remainingSessions <= 1 ? 'text-red-500' : 'text-gray-800'
+                  remaining <= 1 ? 'text-red-500' : 'text-gray-800'
                 }`}
               >
-                {student.remainingSessions}회
+                {formatSessions(remaining)}회
               </span>
             </div>
             {student.unpaidAmount > 0 && (

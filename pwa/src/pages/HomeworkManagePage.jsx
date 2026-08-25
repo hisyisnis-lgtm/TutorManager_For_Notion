@@ -26,7 +26,7 @@ const FILTER_TABS = [
 ];
 
 export default function HomeworkManagePage() {
-  const { students, loading: studentsLoading, error: studentsError, refresh: refreshStudents } = useData();
+  const { students, remainingByStudent, loading: studentsLoading, error: studentsError, refresh: refreshStudents } = useData();
   const [filter, setFilter] = useState('전체');
   const [search, setSearch] = useState('');
 
@@ -84,7 +84,7 @@ export default function HomeworkManagePage() {
       const cb = counts[b.id] || { pending: 0, submitted: 0 };
       if (cb.submitted !== ca.submitted) return cb.submitted - ca.submitted;
       if (cb.pending !== ca.pending) return cb.pending - ca.pending;
-      return b.remainingSessions - a.remainingSessions;
+      return (remainingByStudent[b.id] ?? 0) - (remainingByStudent[a.id] ?? 0);
     });
 
   const loading = studentsLoading || countsLoading;
