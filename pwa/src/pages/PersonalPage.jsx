@@ -16,7 +16,6 @@ import HomeworkSection from '../components/homework/HomeworkSection.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import ErrorMessage from '../components/ui/ErrorMessage.jsx';
 import EmptyState from '../components/ui/EmptyState.jsx';
-import AutoLink from '../components/ui/AutoLink.jsx';
 import { HouseIcon, BookOpenIcon, BellIcon, GearSixIcon, ClipboardTextIcon, HourglassIcon, ChatTeardropTextIcon, ArchiveIcon, SpeakerHighIcon, CalendarBlankIcon, MegaphoneIcon, CaretRightIcon, InstagramLogoIcon, YoutubeLogoIcon, ArticleIcon, MusicNotesIcon, WarningCircleIcon } from '@phosphor-icons/react';
 import { STAGES, getStageInfo, PANDA_FEED_KEY, getPandaStorageKey } from '../components/ui/PandaWidget.jsx';
 import InstallBanner from '../components/ui/InstallBanner.jsx';
@@ -236,6 +235,7 @@ function ArchiveHwCard({ hw, studentToken }) {
 // 전체 학생 공통 게시판. 강사가 강사앱에서 올린다.
 // 알림은 붙어 있지 않다 — 학생이 앱을 열었을 때만 보이므로 급한 공지는 카톡이 담당한다.
 function NoticeTab({ studentToken }) {
+  const navigate = useNavigate();
   const res = useCachedResource(`student:notices:${studentToken}`, () => fetchStudentNotices(studentToken));
   const notices = res.data ?? [];
 
@@ -252,38 +252,41 @@ function NoticeTab({ studentToken }) {
     );
   }
 
+  // 제목만 보이는 목록 — 본문은 눌러서 상세로.
+  // 공지는 배포할 때마다 한 건씩 쌓이므로, 본문을 다 펼쳐두면 금세 스크롤 벽이 된다.
   return (
     <div style={{ padding: '16px 16px 0' }}>
       {notices.map((n) => (
-        <div
+        <button
           key={n.id}
+          type="button"
+          onClick={() => navigate(`/personal/${studentToken}/notice/${n.id}`, { state: { tab: '공지' } })}
           style={{
-            background: '#fff', borderRadius: 16, padding: 16, marginBottom: 12,
-            boxShadow: 'var(--shadow-border)' }}
+            width: '100%', textAlign: 'left', cursor: 'pointer', border: 'none',
+            background: '#fff', borderRadius: 16, padding: '14px 16px', marginBottom: 10,
+            boxShadow: 'var(--shadow-border)', minHeight: 64,
+            display: 'flex', alignItems: 'center', gap: 10,
+            WebkitTapHighlightColor: 'transparent' }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-            {n.important && (
+          <span style={{ flex: 1, minWidth: 0 }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              {n.important && (
+                <span style={{ ...BADGE_SMALL, background: PRIMARY_BG, color: PRIMARY, flexShrink: 0 }}>중요</span>
+              )}
               <span style={{
-                ...BADGE_SMALL,
-                background: PRIMARY_BG, color: PRIMARY, flexShrink: 0 }}>
-                중요
+                fontSize: 15, fontWeight: 600, color: TEXT_PRIMARY,
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {n.title}
+              </span>
+            </span>
+            {n.publishedAt && (
+              <span className="tabular-nums" style={{ display: 'block', fontSize: 12, color: TEXT_TERTIARY, marginTop: 4 }}>
+                {formatDateDot(n.publishedAt)}
               </span>
             )}
-            <p style={{ fontSize: 15, fontWeight: 700, color: TEXT_PRIMARY, margin: 0, flex: 1, minWidth: 0 }}>
-              {n.title}
-            </p>
-          </div>
-          {n.content && (
-            <p style={{ fontSize: 14, color: '#262626', lineHeight: 1.7, whiteSpace: 'pre-wrap', margin: '0 0 8px' }}>
-              <AutoLink text={n.content} />
-            </p>
-          )}
-          {n.publishedAt && (
-            <p className="tabular-nums" style={{ fontSize: 12, color: TEXT_TERTIARY, margin: 0 }}>
-              {formatDateDot(n.publishedAt)}
-            </p>
-          )}
-        </div>
+          </span>
+          <CaretRightIcon size={16} weight="bold" style={{ color: TEXT_INACTIVE, flexShrink: 0 }} />
+        </button>
       ))}
     </div>
   );

@@ -29,6 +29,7 @@ import NotificationsPage from './pages/NotificationsPage.jsx';
 import PersonalEntryPage from './pages/PersonalEntryPage.jsx';
 import PersonalPage from './pages/PersonalPage.jsx';
 import PersonalHomeworkDetailPage from './pages/PersonalHomeworkDetailPage.jsx';
+import PersonalNoticeDetailPage from './pages/PersonalNoticeDetailPage.jsx';
 import PandaPage from './pages/PandaPage.jsx';
 import PandaTestPage from './pages/PandaTestPage.jsx';
 // 성조게임은 앱에서 가장 큰 코드 덩어리 — lazy 분리로 게임 진입 시에만 로드.
@@ -278,6 +279,7 @@ export default function App() {
           <Routes>
             <Route path="/personal/:studentToken" element={<PersonalPage />} />
             <Route path="/personal/:studentToken/homework/:hwId" element={<PersonalHomeworkDetailPage />} />
+            <Route path="/personal/:studentToken/notice/:noticeId" element={<PersonalNoticeDetailPage />} />
             <Route path="/personal/:studentToken/panda" element={<PandaPage />} />
             <Route path="/personal/:studentToken/game/tone" element={<Suspense fallback={<SplashScreen />}><ToneGamePage /></Suspense>} />
             {/* 게스트 독립 진입 (학생 토큰 없음) — 채널 유입 깔때기. ToneGamePage가 토큰 부재를 게스트로 처리 */}
@@ -318,6 +320,7 @@ export default function App() {
             <Route path="/personal" element={<PersonalEntryPage />} />
             <Route path="/personal/:studentToken" element={<GatedStudentRoute><PersonalPage /></GatedStudentRoute>} />
             <Route path="/personal/:studentToken/homework/:hwId" element={<GatedStudentRoute><PersonalHomeworkDetailPage /></GatedStudentRoute>} />
+            <Route path="/personal/:studentToken/notice/:noticeId" element={<GatedStudentRoute><PersonalNoticeDetailPage /></GatedStudentRoute>} />
             <Route path="/personal/:studentToken/panda" element={<GatedStudentRoute><PandaPage /></GatedStudentRoute>} />
             <Route path="/personal/:studentToken/game/tone" element={<GatedStudentRoute><Suspense fallback={<SplashScreen />}><ToneGamePage /></Suspense></GatedStudentRoute>} />
             <Route path="/panda-test" element={<PandaTestPage />} />
