@@ -32,7 +32,6 @@ function formatHours(h) {
   return `${mins}분`;
 }
 
-const LOCATION_LABEL = { '강남사무실': '강남', '온라인 (Zoom/화상)': 'Zoom' };
 
 
 function forceArchive(token, hwId) {
