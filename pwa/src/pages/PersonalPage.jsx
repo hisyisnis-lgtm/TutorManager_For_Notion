@@ -10,7 +10,7 @@ import { clearStudentSession } from '../api/studentAuth.js';
 import { fetchStudentNotices } from '../api/notices.js';
 import { Card, Button, Spin, message } from 'antd';
 import { DAY_KR, timeToMin, formatDuration, formatYearMonth, addMonths, formatDateDot } from '../utils/dateUtils.js';
-import { getViewedMap, HW_VIEWED_KEY } from '../utils/homeworkViewed.js';
+import { getViewedMap, HW_VIEWED_KEY, isFeedbackArchived } from '../utils/homeworkViewed.js';
 import HomeworkFilterBar from '../components/homework/HomeworkFilterBar.jsx';
 import HomeworkSection from '../components/homework/HomeworkSection.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
@@ -112,25 +112,10 @@ function ClassCard({ cls, todayStr, nowMin }) {
   );
 }
 
-// ===== 발음 보관함 — 확인 기록은 utils/homeworkViewed.js 단일 출처 =====
-
-// 보관함 판정: 학생이 본 적이 있고(viewedAt 존재) AND 강사의 마지막 피드백일이 viewedAt 이전.
-// - viewedAt 없음 → 본 적 없음 → 홈/피드백 섹션에 노출
-// - feedbackDate > viewedAt → 강사가 본 후 새 피드백을 줌 → 홈에 다시 노출
-// - 그 외 → 보관함
-//
-// 옛 동작은 "viewedAt 으로부터 24h 경과 후 보관함" 이었으나, 2026-05-21 부터 학생이 보면 즉시
-// 보관함으로 이동하는 흐름이 표준이 되어 24h 유예 조건은 제거됨. (forceArchive 가 viewedAt 을
-// 가짜로 24h 전 시점에 기록하던 hack 도 함께 제거 — 그 hack 이 feedbackDate 비교를 오작동시켰음)
-function isArchived(token, hwId, feedbackDate) {
-  const viewedAt = getViewedMap(token)[hwId];
-  if (!viewedAt) return false;
-  if (feedbackDate) {
-    const fbTime = new Date(feedbackDate).getTime();
-    if (Number.isFinite(fbTime) && fbTime > viewedAt) return false;
-  }
-  return true;
-}
+// ===== 발음 보관함 =====
+// 보관함 판정(isFeedbackArchived)과 확인 기록은 utils/homeworkViewed.js 단일 출처.
+// 옛 동작은 "확인 후 24h 경과해야 보관함"이었으나 2026-05-21에 즉시 이동으로 바뀌었고,
+// viewedAt을 가짜 과거 시점에 쓰던 hack도 함께 제거됐다(그 hack이 feedbackDate 비교를 망가뜨렸음).
 
 function forceArchive(token, hwId) {
   const map = getViewedMap(token);
@@ -318,7 +303,7 @@ function ArchiveTab({ studentToken }) {
   const error = hwRes.error;
 
   const archivedList = homeworkList.filter(
-    (h) => h.status === '피드백완료' && isArchived(studentToken, h.id, h.feedbackDate)
+    (h) => h.status === '피드백완료' && isFeedbackArchived(studentToken, h.id, h.feedbackDate, h.feedbackSeenDate)
   );
 
   const availableMonths = [...new Set(
@@ -904,7 +889,7 @@ export default function PersonalPage() {
         pending: list.filter(h => h.status === '미제출'),
         submitted: list.filter(h => h.status === '제출완료'),
         // 피드백 완료 — 아직 확인 안 함 + 강사가 viewedAt 이후 새 피드백 준 항목.
-        feedback: list.filter(h => h.status === '피드백완료' && !isArchived(studentToken, h.id, h.feedbackDate)),
+        feedback: list.filter(h => h.status === '피드백완료' && !isFeedbackArchived(studentToken, h.id, h.feedbackDate, h.feedbackSeenDate)),
       });
     };
     // 캐시 있으면 즉시 표시(홈 빠르게). '새 피드백' 여부는 아래 fresh로 ~1초 뒤 갱신.
@@ -923,7 +908,7 @@ export default function PersonalPage() {
         list.some(h => {
           if (h.status !== '피드백완료') return false;
           const viewedAt = viewedMap[h.id];
-          return viewedAt && isArchived(studentToken, h.id, h.feedbackDate) && viewedAt > lastSeenTime;
+          return viewedAt && isFeedbackArchived(studentToken, h.id, h.feedbackDate, h.feedbackSeenDate) && viewedAt > lastSeenTime;
         })
       );
     } catch { /* ignore */ }
