@@ -5,6 +5,7 @@ import useEmblaCarousel from 'embla-carousel-react';
 import { domToPng } from 'modern-screenshot';
 import { useData } from '../context/DataContext.jsx';
 import { queryPage, getPage } from '../api/notionClient.js';
+import { swrLoad } from '../hooks/useCachedResource.js';
 import { CLASSES_DB, parseClass } from '../api/classes.js';
 import { parseLessonLog } from '../api/lessonLogs.js';
 import PageHeader from '../components/layout/PageHeader.jsx';
@@ -99,6 +100,10 @@ export default function TomorrowPrepPage() {
   const load = async () => {
     setLoading(true);
     try {
+      // 학생마다 '직전 수업 + 그 일지'를 따로 부르는 N+1 구조라(학생 5명이면 최대 10회 왕복)
+      // 이 화면은 열 때마다 눈에 띄게 느렸다. 완성된 슬라이드를 통째로 캐시해
+      // 재방문 시 즉시 띄우고 뒤에서 갱신한다. 키에 내일 날짜가 들어가 날이 바뀌면 자동 무효.
+      await swrLoad(`tomorrowPrep:${tomorrowStr}`, async () => {
       // 1. 내일 수업 조회 (취소 제외, 시간순)
       const data = await queryPage(
         CLASSES_DB,
@@ -169,8 +174,12 @@ export default function TomorrowPrepPage() {
         })
       );
 
-      setSlides(built);
-      setLoadError(false);
+      return built;
+      }, (built) => {
+        setSlides(built);
+        setLoadError(false);
+        setLoading(false); // 캐시가 있으면 여기서 이미 화면이 찬다
+      });
     } catch (e) {
       console.error('[내일 수업 준비] 불러오기 오류', e);
       setLoadError(true); // 오류를 "수업 없음"으로 위장하지 않기

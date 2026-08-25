@@ -5,6 +5,7 @@ import { Card } from 'antd';
 import useEmblaCarousel from 'embla-carousel-react';
 import { useData } from '../context/DataContext.jsx';
 import { queryPage, queryAll, getPage } from '../api/notionClient.js';
+import { swrLoad } from '../hooks/useCachedResource.js';
 import { CLASSES_DB, parseClass } from '../api/classes.js';
 import { HOMEWORK_DB, parseHomework } from '../api/homework.js';
 import { parseLessonLog } from '../api/lessonLogs.js';
@@ -105,20 +106,26 @@ export default function HomePage() {
   const loadUpcoming = async () => {
     setLoading(true);
     try {
-      const data = await queryPage(
-        CLASSES_DB,
-        {
-          and: [
-            { property: '수업 일시', date: { on_or_after: new Date().toISOString() } },
-            { property: '특이사항', select: { does_not_equal: '🚫 취소' } },
-          ] },
-        [{ property: '수업 일시', direction: 'ascending' }],
-        undefined,
-        5
-      );
-      const list = (data?.results ?? []).map(parseClass);
-      setClasses(list);
-      loadUpcomingPrep(list[0]);
+      // 날짜 키를 붙여 자정을 넘기면 지난 수업이 남지 않게 한다.
+      await swrLoad(`home:upcoming:${todayStr}`, async () => {
+        const data = await queryPage(
+          CLASSES_DB,
+          {
+            and: [
+              { property: '수업 일시', date: { on_or_after: new Date().toISOString() } },
+              { property: '특이사항', select: { does_not_equal: '🚫 취소' } },
+            ] },
+          [{ property: '수업 일시', direction: 'ascending' }],
+          undefined,
+          5
+        );
+        return (data?.results ?? []).map(parseClass);
+      }, (list, { fromCache }) => {
+        setClasses(list);
+        setLoading(false);
+        // 준비 메모는 새로 받은 목록으로만 조회한다 — 캐시로 두 번 부르지 않게.
+        if (!fromCache) loadUpcomingPrep(list[0]);
+      });
     } catch (e) {
       console.error('[홈] 수업 불러오기 오류', e); setLoadFailed(true);
     } finally {
@@ -139,29 +146,33 @@ export default function HomePage() {
       //    "Unable to filter based on a formula of unknown type"으로 400을 준다(2026-08-25 확인).
       //    그래서 앞으로 SHORTAGE_WINDOW_DAYS치를 받아 클라이언트에서 거른다. 범위를 좁게 잡는 이유는
       //    전체 미래 수업(수백 건)을 매번 끌어오면 홈 로딩과 Notion 쿼터에 부담이 되기 때문.
-      const from = new Date();
-      const to = new Date(from.getTime() + SHORTAGE_WINDOW_DAYS * 24 * 60 * 60 * 1000);
-      const results = await queryAll(
-        CLASSES_DB,
-        {
-          and: [
-            { property: '수업 일시', date: { on_or_after: from.toISOString() } },
-            { property: '수업 일시', date: { on_or_before: to.toISOString() } },
-            { property: '특이사항', select: { does_not_equal: '🚫 취소' } },
-          ] },
-        [{ property: '수업 일시', direction: 'ascending' }]
-      );
-      // 수업 일시 오름차순이므로, 처음 만난 부족 수업이 '가장 이른' 것이고
-      // 마지막까지 덮어쓴 값이 '가장 늦은 예정 수업'이 된다.
-      const firstShortage = {};
-      const lastClass = {};
-      for (const cls of results.map(parseClass)) {
-        for (const id of cls.studentIds ?? []) {
-          if (cls.sessionShortage && !firstShortage[id]) firstShortage[id] = cls.datetime;
-          lastClass[id] = cls.datetime;
+      // 홈 로더 중 유일하게 queryAll(여러 페이지)이라 가장 무겁다 → 캐시 효과도 제일 크다.
+      await swrLoad(`home:shortage:${todayStr}`, async () => {
+        const from = new Date();
+        const to = new Date(from.getTime() + SHORTAGE_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+        const results = await queryAll(
+          CLASSES_DB,
+          {
+            and: [
+              { property: '수업 일시', date: { on_or_after: from.toISOString() } },
+              { property: '수업 일시', date: { on_or_before: to.toISOString() } },
+              { property: '특이사항', select: { does_not_equal: '🚫 취소' } },
+            ] },
+          [{ property: '수업 일시', direction: 'ascending' }]
+        );
+        // 수업 일시 오름차순이므로, 처음 만난 부족 수업이 '가장 이른' 것이고
+        // 마지막까지 덮어쓴 값이 '가장 늦은 예정 수업'이 된다.
+        // 캐시에는 이 인덱스만 담는다(수업 수백 건 원본은 localStorage에 들어가지 않는다).
+        const firstShortage = {};
+        const lastClass = {};
+        for (const cls of results.map(parseClass)) {
+          for (const id of cls.studentIds ?? []) {
+            if (cls.sessionShortage && !firstShortage[id]) firstShortage[id] = cls.datetime;
+            lastClass[id] = cls.datetime;
+          }
         }
-      }
-      setClassIndex({ firstShortage, lastClass });
+        return { firstShortage, lastClass };
+      }, setClassIndex);
     } catch (e) {
       console.error('[홈] 회차 부족 수업 불러오기 오류', e); setLoadFailed(true);
     }
@@ -202,14 +213,16 @@ export default function HomePage() {
 
   const loadSubmittedHomework = async () => {
     try {
-      const data = await queryPage(
-        HOMEWORK_DB,
-        { property: '제출 상태', select: { equals: '제출완료' } },
-        [{ property: '제출일', direction: 'descending' }],
-        undefined,
-        20
-      );
-      setSubmittedHomework((data?.results ?? []).map(parseHomework));
+      await swrLoad('home:submittedHw', async () => {
+        const data = await queryPage(
+          HOMEWORK_DB,
+          { property: '제출 상태', select: { equals: '제출완료' } },
+          [{ property: '제출일', direction: 'descending' }],
+          undefined,
+          20
+        );
+        return (data?.results ?? []).map(parseHomework);
+      }, setSubmittedHomework);
     } catch (e) {
       console.error('[홈] 제출된 숙제 불러오기 오류', e); setLoadFailed(true);
     }
@@ -217,14 +230,16 @@ export default function HomePage() {
 
   const loadConsultCount = async () => {
     try {
-      const data = await queryPage(
-        CONSULT_DB,
-        { property: '상태', select: { equals: '신청됨' } },
-        undefined,
-        undefined,
-        100
-      );
-      setConsultCount(data?.results?.length ?? 0);
+      await swrLoad('home:consultCount', async () => {
+        const data = await queryPage(
+          CONSULT_DB,
+          { property: '상태', select: { equals: '신청됨' } },
+          undefined,
+          undefined,
+          100
+        );
+        return data?.results?.length ?? 0;
+      }, setConsultCount);
     } catch (e) {
       console.error('[홈] 상담 수 불러오기 오류', e); setLoadFailed(true);
     }
@@ -233,19 +248,25 @@ export default function HomePage() {
   const loadTodayClasses = async () => {
     setTodayLoading(true);
     try {
-      const data = await queryPage(
-        CLASSES_DB,
-        {
-          and: [
-            { property: '수업 일시', date: { on_or_after: `${todayStr}T00:00:00+09:00` } },
-            { property: '수업 일시', date: { on_or_before: `${todayStr}T23:59:59+09:00` } },
-            { property: '특이사항', select: { does_not_equal: '🚫 취소' } },
-          ] },
-        [{ property: '수업 일시', direction: 'ascending' }],
-        undefined,
-        20
-      );
-      setTodayClasses((data?.results ?? []).map(parseClass));
+      // 키에 날짜를 넣어 날이 바뀌면 어제 캐시를 쓰지 않게 한다.
+      await swrLoad(`home:today:${todayStr}`, async () => {
+        const data = await queryPage(
+          CLASSES_DB,
+          {
+            and: [
+              { property: '수업 일시', date: { on_or_after: `${todayStr}T00:00:00+09:00` } },
+              { property: '수업 일시', date: { on_or_before: `${todayStr}T23:59:59+09:00` } },
+              { property: '특이사항', select: { does_not_equal: '🚫 취소' } },
+            ] },
+          [{ property: '수업 일시', direction: 'ascending' }],
+          undefined,
+          20
+        );
+        return (data?.results ?? []).map(parseClass);
+      }, (list) => {
+        setTodayClasses(list);
+        setTodayLoading(false); // 캐시가 있으면 여기서 이미 화면이 찬다
+      });
     } catch (e) {
       console.error('[홈] 오늘 수업 불러오기 오류', e); setLoadFailed(true);
     } finally {
@@ -257,21 +278,24 @@ export default function HomePage() {
     try {
       const tmr = new Date(today.year, today.month, today.day + 1);
       const tomorrowStr = `${tmr.getFullYear()}-${pad(tmr.getMonth() + 1)}-${pad(tmr.getDate())}`;
-      const data = await queryPage(
-        CLASSES_DB,
-        {
-          and: [
-            { property: '수업 일시', date: { on_or_after: `${tomorrowStr}T00:00:00+09:00` } },
-            { property: '수업 일시', date: { on_or_before: `${tomorrowStr}T23:59:59+09:00` } },
-            { property: '특이사항', select: { does_not_equal: '🚫 취소' } },
-          ] },
-        undefined,
-        undefined,
-        50
-      );
-      const ids = new Set();
-      (data?.results ?? []).map(parseClass).forEach((c) => c.studentIds.forEach((id) => ids.add(id)));
-      setTomorrowPrepCount(ids.size);
+      await swrLoad(`home:tomorrowPrep:${tomorrowStr}`, async () => {
+        const data = await queryPage(
+          CLASSES_DB,
+          {
+            and: [
+              { property: '수업 일시', date: { on_or_after: `${tomorrowStr}T00:00:00+09:00` } },
+              { property: '수업 일시', date: { on_or_before: `${tomorrowStr}T23:59:59+09:00` } },
+              { property: '특이사항', select: { does_not_equal: '🚫 취소' } },
+            ] },
+          undefined,
+          undefined,
+          50
+        );
+        // 캐시에는 학생 수만 담는다 — 수업 원본을 통째로 넣을 이유가 없다.
+        const ids = new Set();
+        (data?.results ?? []).map(parseClass).forEach((c) => c.studentIds.forEach((id) => ids.add(id)));
+        return ids.size;
+      }, setTomorrowPrepCount);
     } catch (e) {
       console.error('[홈] 내일 수업 수 불러오기 오류', e); setLoadFailed(true);
     }
@@ -389,6 +413,7 @@ export default function HomePage() {
             <button
               type="button"
               onClick={handleRefresh}
+              className="hit-40"
               style={{
                 flexShrink: 0, border: 'none', background: 'transparent', cursor: 'pointer',
                 color: STATUS_ERROR_TEXT, fontWeight: 700, fontSize: 13, padding: '6px 4px', minHeight: 32,
@@ -462,7 +487,7 @@ export default function HomePage() {
                   <li key={cls.id}>
                     <Link
                       to={`/classes/${cls.id}/edit`}
-                      className="flex items-center gap-3 px-3 py-2 rounded-xl bg-gray-50 active:bg-gray-100 transition-[background-color] duration-150"
+                      className="flex items-center gap-3 px-3 py-2 rounded-lg bg-gray-50 active:bg-gray-100 transition-[background-color] duration-150"
                     >
                       <span className="text-xs font-semibold tabular-nums shrink-0" style={{ color: PRIMARY }}>
                         {timeStr}{endTimeStr && `~${endTimeStr}`}
@@ -497,7 +522,8 @@ export default function HomePage() {
             <Card
               variant="borderless"
               style={{ borderRadius: 16, backgroundColor: PRIMARY, boxShadow: 'var(--shadow-brand-card)' }}
-              styles={{ body: { padding: '14px 16px' } }}
+              /* 오른쪽 캐럿은 시각 무게가 가벼워 좌우 패딩이 같으면 더 떠 보인다 → 아이콘 쪽만 2px 덜 */
+              styles={{ body: { padding: '14px 14px 14px 16px' } }}
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
@@ -526,7 +552,7 @@ export default function HomePage() {
         >
           <Link
             to="/consult"
-            className="block duration-150 ease-out"
+            className="block"
           >
             <Card
               variant="borderless"
@@ -580,14 +606,17 @@ export default function HomePage() {
                   style={{
                     transform: lowSessionOpen ? 'rotate(90deg)' : 'none',
                     transitionProperty: 'transform',
-                    transitionDuration: '0.15s',
-                    transitionTimingFunction: 'ease-out' }}
+                    transitionDuration: '0.2s',
+                    transitionTimingFunction: 'var(--ease-out)' }}
                 />
               </span>
             </button>
 
-            {lowSessionOpen && (
-              <div style={{ marginTop: 6 }}>
+            {/* 펼침은 grid-template-rows 트랜지션 — 내용 높이를 몰라도 되고,
+                펼치는 중에 다시 눌러도 그 자리에서 되감긴다(키프레임은 처음부터 다시 시작). */}
+            <div className="reveal" data-open={lowSessionOpen}>
+              <div>
+                <div style={{ marginTop: 6 }}>
                 {paymentDueRows.map((row) => (
                   <Link
                     key={row.id}
@@ -609,8 +638,9 @@ export default function HomePage() {
                     </span>
                   </Link>
                 ))}
+                </div>
               </div>
-            )}
+            </div>
           </Card>
         </div>
       )}
@@ -753,14 +783,13 @@ export default function HomePage() {
                 <li key={cls.id}>
                   <Link
                     to={`/classes/${cls.id}/edit`}
-                    className="block duration-150 ease-out"
+                    className="block tap-wrap"
                   >
                     <Card
                       variant="borderless"
-                      style={{ borderRadius: 12, boxShadow: 'var(--shadow-border)', transition: 'box-shadow 150ms ease-out' }}
+                      className="card-tap"
+                      style={{ borderRadius: 12 }}
                       styles={{ body: { padding: '14px 16px' } }}
-                      onMouseEnter={(e) => { e.currentTarget.style.boxShadow = 'var(--shadow-border-hover)'; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'var(--shadow-border)'; }}
                     >
                       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12 }}>
                         <p style={{ fontSize: 15, fontWeight: 600, color: TEXT_PRIMARY, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0 }}>

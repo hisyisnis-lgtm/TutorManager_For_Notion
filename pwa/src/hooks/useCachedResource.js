@@ -201,3 +201,25 @@ export function useCachedResource(key, fetcher) {
 
   return { data, loading, refreshing, error, refresh: revalidate };
 }
+
+/**
+ * 명령형 로더용 stale-while-revalidate.
+ *
+ * 훅을 쓸 수 없는 화면(로더가 여러 개고 서로 얽힌 강사 홈 등)에서 쓴다.
+ * 캐시가 있으면 즉시 apply해 화면을 먼저 채우고, 그다음 새로 받아 다시 apply한다.
+ *
+ * ⚠️ fetcher는 **가공을 마친 최소 데이터**를 반환할 것. Notion 원본을 그대로 담으면
+ * localStorage 용량을 넘겨 writeCache가 조용히 실패하고, 캐시가 영영 안 먹는다(2026-07 실제 사례).
+ * ⚠️ 날짜에 의존하는 데이터는 키에 날짜를 넣을 것(`home:today:2026-08-25`). 그래야 날이 바뀌면
+ * 옛 캐시를 자동으로 안 쓰게 된다.
+ *
+ * @returns {Promise<any>} 새로 받은 값. 실패하면 throw하므로 호출부에서 잡는다.
+ */
+export async function swrLoad(key, fetcher, apply) {
+  const cached = peekCache(key);
+  if (cached !== undefined && cached !== null) apply(cached, { fromCache: true });
+  const fresh = await trackRevalidation(fetcher());
+  writeCacheValue(key, fresh);
+  apply(fresh, { fromCache: false });
+  return fresh;
+}

@@ -8,6 +8,7 @@ import Badge from '../components/ui/Badge.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import ErrorMessage from '../components/ui/ErrorMessage.jsx';
 import { getPage, deletePage } from '../api/notionClient.js';
+import { swrLoad, invalidateCache } from '../hooks/useCachedResource.js';
 import ConfirmDialog from '../components/ui/ConfirmDialog.jsx';
 import { parseStudent, statusColor, STATUS_OPTIONS, updateStudentStatus, updateStudentVip, markStudentSharedIfEmpty } from '../api/students.js';
 import { SITE_ORIGIN } from '../constants.js';
@@ -50,14 +51,25 @@ export default function StudentDetailPage() {
     const load = async () => {
       setLoading(true);
       try {
-        const [page, classData, paymentData] = await Promise.all([
-          getPage(id),
-          fetchClassesPage({ studentId: id, completedOnly: true }),
-          fetchPaymentsPage({ studentId: id }),
-        ]);
-        setStudent(parseStudent(page));
-        setClasses(classData.results.slice(0, 5).map(parseClass));
-        setPayments(paymentData.results.slice(0, 5).map(parsePayment));
+        // 학생 1명당 Notion 3회 왕복. 상태·VIP 토글은 아래에서 낙관적으로 반영하므로
+        // 캐시로 먼저 띄워도 어긋나지 않는다. 화면에 쓰는 만큼만(각 5건) 담는다.
+        await swrLoad(`student:detail:${id}`, async () => {
+          const [page, classData, paymentData] = await Promise.all([
+            getPage(id),
+            fetchClassesPage({ studentId: id, completedOnly: true }),
+            fetchPaymentsPage({ studentId: id }),
+          ]);
+          return {
+            student: parseStudent(page),
+            classes: classData.results.slice(0, 5).map(parseClass),
+            payments: paymentData.results.slice(0, 5).map(parsePayment),
+          };
+        }, ({ student: st, classes: cls, payments: pay }) => {
+          setStudent(st);
+          setClasses(cls);
+          setPayments(pay);
+          setLoading(false);
+        });
       } catch (e) {
         setError(e.message);
       } finally {
@@ -73,6 +85,7 @@ export default function StudentDetailPage() {
     try {
       await updateStudentStatus(id, newStatus);
       setStudent((s) => ({ ...s, status: newStatus }));
+      invalidateCache(`student:detail:${id}`); // 옛 상태가 다시 들어올 때 잠깐 보이지 않게
       refreshAll();
     } catch (e) {
       message.error(`상태 변경 실패: ${e.message}`);
@@ -86,6 +99,7 @@ export default function StudentDetailPage() {
     try {
       await updateStudentVip(id, checked);
       setStudent((s) => ({ ...s, vip: checked }));
+      invalidateCache(`student:detail:${id}`);
     } catch (e) {
       message.error(`VIP 변경 실패: ${e.message}`);
     } finally {
@@ -135,7 +149,7 @@ export default function StudentDetailPage() {
                 상태 변경
               </Button>
               {showStatusMenu && (
-                <div className="absolute right-0 top-9 bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden z-50 min-w-32">
+                <div className="absolute right-0 top-9 bg-white rounded-xl shadow-[var(--shadow-modal)] overflow-hidden z-50 min-w-32">
                   {STATUS_OPTIONS.map((s) => (
                     <button
                       key={s}

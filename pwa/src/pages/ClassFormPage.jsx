@@ -17,6 +17,7 @@ import {
   LOCATION_OPTIONS,
 } from '../api/classes.js';
 import { toDatetimeLocal, toNotionDate, DAY_KR, toISOLocalKST } from '../utils/dateUtils.js';
+import { generateRecurringDates } from '../utils/recurringDates.js';
 import { isOnlineGroupTitle, isFreeConsultTitle, isFixedPriceTitle } from '../utils/classTypeKind.js';
 import { useData } from '../context/DataContext.jsx';
 import { fetchTimeSlotsForTeacher, checkConflict } from '../api/bookingApi.js';
@@ -27,24 +28,6 @@ const DAY_JS = [0, 1, 2, 3, 4, 5, 6];
 
 // 수업 시작 시각 분(分) 옵션 — 5분 단위
 const MINUTE_OPTIONS = ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'];
-
-/** 반복 수업 날짜 목록 생성 (시작일~종료일 범위) */
-function generateRecurringDates(startDate, endDate, selectedDays, time) {
-  if (!selectedDays.length || !startDate || !endDate) return [];
-  const [h, m] = time.split(':').map(Number);
-  const dates = [];
-  const cur = new Date(startDate + 'T00:00:00+09:00');
-  const end = new Date(endDate + 'T23:59:59+09:00');
-  while (cur <= end) {
-    if (selectedDays.includes(cur.getDay())) {
-      const d = new Date(cur);
-      d.setHours(h, m, 0, 0);
-      dates.push(d);
-    }
-    cur.setDate(cur.getDate() + 1);
-  }
-  return dates;
-}
 
 /** 날짜를 "M/D(요일)" 형태로 표시 */
 function formatDateLabel(date) {
