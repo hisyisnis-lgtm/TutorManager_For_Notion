@@ -87,8 +87,14 @@ antd ^6.3.3 기준 — deprecated API 절대 사용 금지:
 |---|---|
 | `<Card bordered={false}>` | `<Card variant="borderless">` |
 | `<Space direction="vertical" size={N}>` | `<Flex vertical gap={N}>` |
+| `<Alert message={x}>` | `<Alert title={x}>` (v6에서 개명) |
+| `<Modal destroyOnClose>` | `<Modal destroyOnHidden>` |
 
 색상 기준: Primary `#7f0005` / 보조텍스트 `#595959` / 아이콘 `#767676`
+색·크기·여백 값은 **하드코딩 금지** — `constants/theme.js` · `constants/styles.js`에서 import.
+
+> 전체 규칙은 `design_system.md` **§0(문서 지도)** 부터. 규범/판단/참고 세 층으로 나뉘어 있다.
+> 여기 표는 "항상 눈에 보여야 하는 것"만 추린 것이고, 단일 출처는 design_system.md다.
 
 ---
 
@@ -120,6 +126,13 @@ PWA 페이지를 **새로 만들거나 수정한 뒤**, 작업 완료를 보고�
 
 ### 1. 빌드 통과
 `cd pwa && npm run build` 에러 없이 통과.
+
+### 1-bis. 디자인 규칙 검사 (자동)
+```bash
+node scripts/design-audit.mjs
+```
+색 리터럴·weight 500·`transition: all`·antd deprecated·radius/아이콘 스케일 이탈·굵은 컬러 보더 등을 소스에서 잡는다. **ERROR는 0이어야 한다**(종료코드 1). `warn`은 그 파일을 건드릴 때 같이 정리하고, `review`는 사람이 판단하는 항목이라 0을 목표로 하지 않는다.
+예외가 필요하면 스크립트의 `ALLOW`에 **이유와 함께** 추가하거나 `// design-audit-ignore: <rule> — 이유` 마커를 쓴다.
 
 ### 2. 디자인 가이드 자가 대조 (`design_system.md` 기준)
 - `#7f0005`(PRIMARY)는 **인터랙티브 요소·아이콘·배지 배경에만**. **본문 텍스트 강조에 빨강 사용 금지** — 강조는 `PRIMARY_BG` 박스 또는 `fontWeight 600`.
