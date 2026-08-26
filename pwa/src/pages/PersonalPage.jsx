@@ -22,7 +22,7 @@ import ArchiveTab from './personal/ArchiveTab.jsx';
 import NoticeTab from './personal/NoticeTab.jsx';
 import {
   PRIMARY,
-  TEXT_PRIMARY, TEXT_SECONDARY, TEXT_INACTIVE,
+  TEXT_PRIMARY, TEXT_SECONDARY, TEXT_INACTIVE, TEXT_TERTIARY,
   BG_APP, BORDER_SUBTLE,
   STATUS_ERROR_TEXT,
 } from '../constants/theme.js';
@@ -356,6 +356,15 @@ export default function PersonalPage() {
                 {item.label}
               </button>
             ))}
+            {/* 버전 — 공지 제목이 "2.41.0 버전 업데이트 소식" 형식이라 학생이 자기 앱 버전과
+                대조할 수 있어야 한다. 누를 것이 없으므로 버튼이 아닌 정적 표기로 둔다
+                (업데이트는 SW가 자동 적용하므로 "업데이트 확인" 버튼은 할 일이 없다). */}
+            <p style={{
+              margin: 0, padding: '10px 12px',
+              borderTop: `1px solid ${BORDER_SUBTLE}`,
+              fontSize: 12, color: TEXT_TERTIARY, textAlign: 'center' }}>
+              버전 v{__APP_VERSION__}
+            </p>
           </div>
         </div>
         </div>
