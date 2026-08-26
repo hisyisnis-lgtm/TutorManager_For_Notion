@@ -1,4 +1,4 @@
-// 튜토리얼 단어 데이터 — TutorialScreen(화면)과 scripts/tone-tts-build.mjs(음성 생성) 공용 단일 출처.
+// 튜토리얼 단어 데이터 — TutorialScreen(화면)과 02_devtools/tone-tts-build.mjs(음성 생성) 공용 단일 출처.
 // audioUrl(미리 생성한 신경망 음성)은 ttsAudioUrl로 자동 주입 → tgTts가 우선 재생, 없으면 Web Speech 폴백.
 import { ttsAudioUrl } from './ttsSlug.js';
 

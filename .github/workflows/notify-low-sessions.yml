@@ -29,4 +29,4 @@ jobs:
           KAKAO_PFID: ${{ secrets.KAKAO_PFID }}
           MY_PHONE: ${{ secrets.MY_PHONE }}
           KAKAO_TPL_LOW_SESSIONS: ${{ secrets.KAKAO_TPL_LOW_SESSIONS }}
-        run: node notify_low_sessions.mjs
+        run: node 01_automation/notify_low_sessions.mjs

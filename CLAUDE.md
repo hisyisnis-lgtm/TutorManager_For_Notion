@@ -5,6 +5,25 @@
 
 ---
 
+## 프로젝트 폴더 구조 (2026-08-26 재편)
+
+최상위는 **대분류 넘버링**으로 고정. 새 파일은 루트에 두지 말고 해당 번호 폴더에 넣는다.
+
+| 폴더 | 내용 | 주의 |
+|---|---|---|
+| `01_automation/` | GitHub Actions가 돌리는 운영 스크립트 20개 | 워크플로가 `node 01_automation/xxx.mjs`로 호출 — 파일명·위치를 바꾸면 `.github/workflows/`도 같이 수정 |
+| `02_devtools/` | 로컬 개발도구 (design-audit · tone-words-build · tone-tts-build 등) | `pwa/package.json`이 `../02_devtools/`로 참조. 스크립트들이 `__dirname/..` = 레포 루트로 가정하므로 **폴더 깊이를 바꾸지 말 것** |
+| `03_data/` | `tone-words/` 단어 CSV · `notion_schema/` 자동 스냅샷 JSON | CSV는 대표님이 직접 편집하는 단어 풀 단일 출처 |
+| `04_docs/` | 기획서·제안서·스펙 (md · pdf · html) | |
+| `05_assets/` | `Font/` `IMG/` `Logo/` 원본 에셋 | 앱 번들과 무관한 원본 보관용 |
+| `99_external/` | 외부 스킬·템플릿 (각각 별도 git 저장소) | gitignore 대상 — 본 repo가 추적하지 않음 |
+| `pwa/` `worker/` | 배포 루트 — **번호 폴더로 옮기지 말 것** | 옮기면 `deploy-pwa.yml`·wrangler 배포 경로가 전부 깨진다 |
+
+루트에 남는 것은 `CLAUDE.md` `README.md` `package.json` `.gitignore` 등 설정 파일뿐이다.
+개발 중 스크린샷을 루트에 쌓지 말 것 — `.gitignore`의 `/*.png` `/*.jpeg`가 커밋은 막지만 파일 자체는 계속 쌓인다.
+
+---
+
 ## 메모리 파일 참조 규칙
 
 주제별 요청 시 해당 메모리 파일을 반드시 먼저 참고할 것.
@@ -115,8 +134,9 @@ antd ^6.3.3 기준 — deprecated API 절대 사용 금지:
 로컬에서 `.mjs` 스크립트 실행 시 Node.js PATH 설정 필요:
 ```bash
 export PATH="/c/Program Files/nodejs:$PATH"
-NOTION_TOKEN=ntn_... node script.mjs
+NOTION_TOKEN=ntn_... node 01_automation/script.mjs
 ```
+※ cwd는 항상 **레포 루트**. 스크립트들이 `process.cwd()`·`__dirname/..`를 루트로 가정한다.
 
 ---
 
@@ -129,7 +149,7 @@ PWA 페이지를 **새로 만들거나 수정한 뒤**, 작업 완료를 보고�
 
 ### 1-bis. 디자인 규칙 검사 (자동)
 ```bash
-node scripts/design-audit.mjs
+node 02_devtools/design-audit.mjs
 ```
 색 리터럴·weight 500·`transition: all`·antd deprecated·radius/아이콘 스케일 이탈·굵은 컬러 보더 등을 소스에서 잡는다. **ERROR는 0이어야 한다**(종료코드 1). `warn`은 그 파일을 건드릴 때 같이 정리하고, `review`는 사람이 판단하는 항목이라 0을 목표로 하지 않는다.
 예외가 필요하면 스크립트의 `ALLOW`에 **이유와 함께** 추가하거나 `// design-audit-ignore: <rule> — 이유` 마커를 쓴다.

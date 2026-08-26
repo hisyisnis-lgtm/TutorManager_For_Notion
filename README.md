@@ -126,7 +126,7 @@ if(prop("무료 수업") == 0, 0, if(not empty(prop("수업 일시")) and prop("
 ```
 if(prop("회차부족_감지"), "⚠ 시간 회차 부족", "")
 ```
-> `회차부족_감지` 체크박스는 `check_session_shortage.mjs` (GitHub Actions)이 자동 관리 — 직접 수정 금지
+> `회차부족_감지` 체크박스는 `01_automation/check_session_shortage.mjs` (GitHub Actions)이 자동 관리 — 직접 수정 금지
 
 **수업 종료 시간 formula:**
 ```
@@ -342,29 +342,29 @@ round(prop("시간 회차") * prop("시간당 단가") * (1 - prop("적용 할�
 
 | 파일 | 역할 | 실행 방식 |
 |---|---|---|
-| `check_conflicts.mjs` | 수업 시간 겹침 감지 → 충돌 체크박스 자동 업데이트 | GitHub Actions (10분마다) |
-| `check_session_shortage.mjs` | 학생별 잔여 회차 계산 → 초과 예정 수업에 회차부족_감지 체크박스 설정 | GitHub Actions (10분마다) |
-| `sync_monthly_summary.mjs` | 결제 내역 월별 집계 → 수납 현황 페이지 자동 갱신 | GitHub Actions (매일 00:00 KST) |
-| `sync_class_titles.mjs` | 수업 캘린더 빈 제목 → "이름 M/D HH:MM" 자동 기입 | GitHub Actions (30분마다) |
-| `notify_upcoming_classes.mjs` | 내일 수업 일정 ntfy 알림 | GitHub Actions (매일 14:00 KST) |
-| `notify_low_sessions.mjs` | 잔여 회차 ≤ 1인 학생 결제 독려 ntfy 알림 | GitHub Actions (매일 10:00 KST) |
-| `notify_unpaid.mjs` | 미수금 학생 ntfy 알림 | GitHub Actions (매월 25, 27, 29일) |
-| `create_lesson_logs.mjs` | 완료 수업에 빈 수업 일지 자동 생성 | GitHub Actions (매시간) |
-| `sync_student_emoji.mjs` | 학생 상태별 이름 이모지 자동 동기화 | GitHub Actions (매시간) |
+| `01_automation/check_conflicts.mjs` | 수업 시간 겹침 감지 → 충돌 체크박스 자동 업데이트 | GitHub Actions (10분마다) |
+| `01_automation/check_session_shortage.mjs` | 학생별 잔여 회차 계산 → 초과 예정 수업에 회차부족_감지 체크박스 설정 | GitHub Actions (10분마다) |
+| `01_automation/sync_monthly_summary.mjs` | 결제 내역 월별 집계 → 수납 현황 페이지 자동 갱신 | GitHub Actions (매일 00:00 KST) |
+| `01_automation/sync_class_titles.mjs` | 수업 캘린더 빈 제목 → "이름 M/D HH:MM" 자동 기입 | GitHub Actions (30분마다) |
+| `01_automation/notify_upcoming_classes.mjs` | 내일 수업 일정 ntfy 알림 | GitHub Actions (매일 14:00 KST) |
+| `01_automation/notify_low_sessions.mjs` | 잔여 회차 ≤ 1인 학생 결제 독려 ntfy 알림 | GitHub Actions (매일 10:00 KST) |
+| `01_automation/notify_unpaid.mjs` | 미수금 학생 ntfy 알림 | GitHub Actions (매월 25, 27, 29일) |
+| `01_automation/create_lesson_logs.mjs` | 완료 수업에 빈 수업 일지 자동 생성 | GitHub Actions (매시간) |
+| `01_automation/sync_student_emoji.mjs` | 학생 상태별 이름 이모지 자동 동기화 | GitHub Actions (매시간) |
 
 ### GitHub Actions 워크플로우
 
 | 파일 | 트리거 | 실행 스크립트 |
 |---|---|---|
-| `.github/workflows/check-conflicts.yml` | 10분마다 + 수동 | `check_conflicts.mjs` |
-| `.github/workflows/check-session-shortage.yml` | 10분마다 + 수동 | `check_session_shortage.mjs` |
-| `.github/workflows/sync-monthly-summary.yml` | 매일 자정 KST + 수동 | `sync_monthly_summary.mjs` |
-| `.github/workflows/sync-class-titles.yml` | 30분마다 + 수동 | `sync_class_titles.mjs` |
-| `.github/workflows/notify-upcoming-classes.yml` | 매일 14:00 KST + 수동 | `notify_upcoming_classes.mjs` |
-| `.github/workflows/notify-low-sessions.yml` | 매일 10:00 KST + 수동 | `notify_low_sessions.mjs` |
-| `.github/workflows/notify-unpaid.yml` | 매월 25, 27, 29일 + 수동 | `notify_unpaid.mjs` |
-| `.github/workflows/create-lesson-logs.yml` | 매시간 + 수동 | `create_lesson_logs.mjs` |
-| `.github/workflows/sync-student-emoji.yml` | 매시간 + 수동 | `sync_student_emoji.mjs` |
+| `.github/workflows/check-conflicts.yml` | 10분마다 + 수동 | `01_automation/check_conflicts.mjs` |
+| `.github/workflows/check-session-shortage.yml` | 10분마다 + 수동 | `01_automation/check_session_shortage.mjs` |
+| `.github/workflows/sync-monthly-summary.yml` | 매일 자정 KST + 수동 | `01_automation/sync_monthly_summary.mjs` |
+| `.github/workflows/sync-class-titles.yml` | 30분마다 + 수동 | `01_automation/sync_class_titles.mjs` |
+| `.github/workflows/notify-upcoming-classes.yml` | 매일 14:00 KST + 수동 | `01_automation/notify_upcoming_classes.mjs` |
+| `.github/workflows/notify-low-sessions.yml` | 매일 10:00 KST + 수동 | `01_automation/notify_low_sessions.mjs` |
+| `.github/workflows/notify-unpaid.yml` | 매월 25, 27, 29일 + 수동 | `01_automation/notify_unpaid.mjs` |
+| `.github/workflows/create-lesson-logs.yml` | 매시간 + 수동 | `01_automation/create_lesson_logs.mjs` |
+| `.github/workflows/sync-student-emoji.yml` | 매시간 + 수동 | `01_automation/sync_student_emoji.mjs` |
 
 > **NOTION_TOKEN** → GitHub repo Settings > Secrets > Actions에 저장 (코드에 하드코딩 금지)
 > 수동 실행: GitHub repo → Actions 탭 → 해당 워크플로우 → Run workflow
@@ -401,8 +401,8 @@ round(prop("시간 회차") * prop("시간당 단가") * (1 - prop("적용 할�
 export PATH="/c/Program Files/nodejs:$PATH"
 
 # 환경변수 설정 후 실행
-NOTION_TOKEN=ntn_... node check_conflicts.mjs
-NOTION_TOKEN=ntn_... node sync_monthly_summary.mjs
+NOTION_TOKEN=ntn_... node 01_automation/check_conflicts.mjs
+NOTION_TOKEN=ntn_... node 01_automation/sync_monthly_summary.mjs
 ```
 
 ### API 호출 패턴

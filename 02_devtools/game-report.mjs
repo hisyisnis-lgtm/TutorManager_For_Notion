@@ -3,7 +3,7 @@
 //
 // 실행:
 //   export PATH="/c/Program Files/nodejs:$PATH"
-//   CF_ACCOUNT_ID=xxxx CF_API_TOKEN=yyyy node scripts/game-report.mjs [일수=7] [--html]
+//   CF_ACCOUNT_ID=xxxx CF_API_TOKEN=yyyy node 02_devtools/game-report.mjs [일수=7] [--html]
 //   · 기본  → 콘솔 요약   · --html → game-report.html (일자별 기간 필터 대시보드)
 // 참고: 라이브 대시보드는 워커 GET /game/dashboard?key=… (노션 링크). 이 스크립트는 로컬 확인·백업용.
 //
@@ -73,7 +73,7 @@ function printConsole(funnel, members) {
   if (!members) console.log('  ⚠️ 조회 불가 (CF_API_TOKEN / D1: Read)');
   else if (!members.total) console.log('  아직 가입한 회원이 없어요.');
   else { console.log(`  총 회원 ${num(members.total)} · 활성 ${num(members.active)} · 신규 ${num(members.recent)} (최근 ${DAYS}일)`); for (const m of members.modes) console.log(`  ${m.label.padEnd(10)}최고 ${num(m.max).padStart(9)}  플레이 ${num(m.plays).padStart(5)}`); }
-  console.log(`\n(라이브 대시보드: 워커 /game/dashboard?key=… · 로컬: node scripts/game-report.mjs ${DAYS} --html)\n`);
+  console.log(`\n(라이브 대시보드: 워커 /game/dashboard?key=… · 로컬: node 02_devtools/game-report.mjs ${DAYS} --html)\n`);
 }
 
 // ── HTML 경로(일별 원본 → 공유 조립기) ──

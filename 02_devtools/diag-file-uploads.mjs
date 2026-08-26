@@ -7,8 +7,8 @@
 //
 // 실행:
 //   export PATH="/c/Program Files/nodejs:$PATH"
-//   NOTION_TOKEN=ntn_... node scripts/diag-file-uploads.mjs
-//   NOTION_TOKEN=ntn_... node scripts/diag-file-uploads.mjs --days 7
+//   NOTION_TOKEN=ntn_... node 02_devtools/diag-file-uploads.mjs
+//   NOTION_TOKEN=ntn_... node 02_devtools/diag-file-uploads.mjs --days 7
 
 const TOKEN = process.env.NOTION_TOKEN;
 if (!TOKEN) {

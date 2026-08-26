@@ -4,18 +4,18 @@
   "version": "2.40.2",
   "type": "module",
   "scripts": {
-    "predev": "node ../scripts/tone-words-build.mjs && node ../scripts/tone-tts-build.mjs",
+    "predev": "node ../02_devtools/tone-words-build.mjs && node ../02_devtools/tone-tts-build.mjs",
     "dev": "vite",
     "dev:game": "vite --mode game",
-    "prebuild": "node ../scripts/tone-words-build.mjs && node ../scripts/tone-tts-build.mjs",
+    "prebuild": "node ../02_devtools/tone-words-build.mjs && node ../02_devtools/tone-tts-build.mjs",
     "build": "vite build",
     "test": "vitest run",
     "lint": "eslint src/",
-    "postbuild": "node ../scripts/gen-game-og-route.mjs",
-    "prebuild:game": "node ../scripts/tone-words-build.mjs && node ../scripts/tone-tts-build.mjs",
+    "postbuild": "node ../02_devtools/gen-game-og-route.mjs",
+    "prebuild:game": "node ../02_devtools/tone-words-build.mjs && node ../02_devtools/tone-tts-build.mjs",
     "build:game": "vite build --mode game",
     "preview": "vite preview",
-    "tts": "node ../scripts/tone-tts-build.mjs",
+    "tts": "node ../02_devtools/tone-tts-build.mjs",
     "generate-icons": "pwa-assets-generator --preset minimal-2023 public/symbol-red.png"
   },
   "dependencies": {

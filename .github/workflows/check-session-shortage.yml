@@ -18,7 +18,7 @@ jobs:
         with:
           node-version: '24'
       - name: Check session shortage
-        run: node check_session_shortage.mjs
+        run: node 01_automation/check_session_shortage.mjs
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}

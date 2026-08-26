@@ -9,10 +9,10 @@
  * 매번 사람이 눈으로 찾는 대신 명령어 한 줄로 잡는다.
  *
  * 사용:
- *   node scripts/design-audit.mjs              # 강사·학생앱 (게임 제외)
- *   node scripts/design-audit.mjs --all        # 게임 포함
- *   node scripts/design-audit.mjs --rule=weight-500
- *   node scripts/design-audit.mjs --quiet      # 요약만
+ *   node 02_devtools/design-audit.mjs              # 강사·학생앱 (게임 제외)
+ *   node 02_devtools/design-audit.mjs --all        # 게임 포함
+ *   node 02_devtools/design-audit.mjs --rule=weight-500
+ *   node 02_devtools/design-audit.mjs --quiet      # 요약만
  *
  * 종료코드: ERROR가 하나라도 있으면 1 (CI에 걸 수 있음)
  *

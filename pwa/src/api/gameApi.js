@@ -61,7 +61,7 @@ export async function deleteGameMe(token) {
 }
 
 /**
- * 성조 게임 단어 풀 조회 — CSV(data/tone-words-*.csv, 난이도·테마별 분할)에서 빌드 변환된 로컬 데이터를 반환.
+ * 성조 게임 단어 풀 조회 — CSV(03_data/tone-words/tone-words-*.csv, 난이도·테마별 분할)에서 빌드 변환된 로컬 데이터를 반환.
  * 단어는 모든 유저 동일·소량이라 클라이언트 번들에 포함 → 네트워크/워커/Notion 불필요.
  * async 시그니처는 호출부(await fetchToneWords) 호환을 위해 유지.
  * @param {string} difficulty 난이도('easy'|'normal'|'hard') 또는 테마 id('drama'|'travel'…)

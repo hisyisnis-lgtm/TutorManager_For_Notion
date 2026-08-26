@@ -1,11 +1,11 @@
 // 매일매일 성조키우기(구 성조 빨리 찾기) 게임 메타데이터 + 단어 풀
 //
-// 단어 풀의 단일 출처 = data/tone-words-*.csv (난이도·테마별 분할, 대표님이 엑셀/구글시트로 편집).
-//   빌드 시 scripts/tone-words-build.mjs 가 병음 부호에서 성조를 자동 추출·검증해
+// 단어 풀의 단일 출처 = 03_data/tone-words/tone-words-*.csv (난이도·테마별 분할, 대표님이 엑셀/구글시트로 편집).
+//   빌드 시 02_devtools/tone-words-build.mjs 가 병음 부호에서 성조를 자동 추출·검증해
 //   toneWordsData.json 으로 변환(pwa predev/prebuild 가 실행). 이 파일은 게임 동작 상수 + 그 데이터를 export.
 //
 // 단어 추가/수정: 해당 CSV 만 편집 → 빌드(predev가 JSON+TTS mp3 자동 생성) → 산출물 커밋 → 배포. (Notion·워커 불필요)
-// 새 난이도 추가 시: ① CSV 파일 추가 ② scripts/tone-words-build.mjs 의 FILES 매핑 ③ 아래 DIFFICULTIES 항목 추가.
+// 새 난이도 추가 시: ① CSV 파일 추가 ② 02_devtools/tone-words-build.mjs 의 FILES 매핑 ③ 아래 DIFFICULTIES 항목 추가.
 //   잠금 사다리·해제 문구·업적·집계는 전부 이 배열 순서에서 자동 파생(gameLogic·achievements·ToneGamePage) — 별도 코드 수정 불필요.
 import toneWordsData from './toneWordsData.json';
 

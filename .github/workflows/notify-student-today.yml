@@ -28,4 +28,4 @@ jobs:
           SOLAPI_API_SECRET: ${{ secrets.SOLAPI_API_SECRET }}
           KAKAO_PFID: ${{ secrets.KAKAO_PFID }}
           KAKAO_TPL_STU_TODAY: ${{ secrets.KAKAO_TPL_STU_TODAY }}
-        run: node notify_student_today.mjs
+        run: node 01_automation/notify_student_today.mjs

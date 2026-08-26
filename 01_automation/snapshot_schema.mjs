@@ -1,5 +1,5 @@
 // 노션 DB 스키마 스냅샷 스크립트
-// GitHub Actions에서 주 1회 실행 → notion_schema/ 에 JSON 저장 → git 변경 감지
+// GitHub Actions에서 주 1회 실행 → 03_data/notion_schema/ 에 JSON 저장 → git 변경 감지
 
 import { writeFileSync, mkdirSync } from 'fs';
 import { join, dirname } from 'path';
@@ -21,7 +21,7 @@ const DBS = {
 };
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const OUTPUT_DIR = join(__dirname, 'notion_schema');
+const OUTPUT_DIR = join(__dirname, '..', '03_data', 'notion_schema');
 
 async function fetchDB(dbId) {
   const res = await fetch(`https://api.notion.com/v1/databases/${dbId}`, {
@@ -82,7 +82,7 @@ for (const [name, id] of Object.entries(DBS)) {
     const schema = extractSchema(db);
     const filePath = join(OUTPUT_DIR, `${name}.json`);
     writeFileSync(filePath, JSON.stringify(schema, null, 2) + '\n', 'utf8');
-    console.log(` ✅ 저장 완료 → notion_schema/${name}.json`);
+    console.log(` ✅ 저장 완료 → 03_data/notion_schema/${name}.json`);
   } catch (err) {
     console.error(` ❌ ${err.message}`);
     hasError = true;

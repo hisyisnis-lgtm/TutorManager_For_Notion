@@ -29,4 +29,4 @@ jobs:
           KAKAO_PFID: ${{ secrets.KAKAO_PFID }}
           MY_PHONE: ${{ secrets.MY_PHONE }}
           KAKAO_TPL_UPCOMING: ${{ secrets.KAKAO_TPL_UPCOMING }}
-        run: node notify_upcoming_classes.mjs
+        run: node 01_automation/notify_upcoming_classes.mjs

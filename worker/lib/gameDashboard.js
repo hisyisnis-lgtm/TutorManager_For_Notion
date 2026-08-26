@@ -1,5 +1,5 @@
 // 성조게임 지표 대시보드 — 순수 렌더/조립 모듈 (Node 스크립트 + Cloudflare Worker 공용).
-// 데이터 fetch는 각 호출자(scripts/game-report.mjs = 토큰, worker = 토큰+D1바인딩)가 하고,
+// 데이터 fetch는 각 호출자(02_devtools/game-report.mjs = 토큰, worker = 토큰+D1바인딩)가 하고,
 // 여기(assembleByDay/embedMembers/renderDashboard)는 순수 함수라 서버·워커 어디서든 동일 출력.
 // 브라우저에서 실행되는 clientMain은 .toString()으로 직렬화해 <script>로 주입(여기선 실행 안 됨).
 
@@ -406,7 +406,7 @@ export const DASH_CSS = `
 `;
 
 // 데이터 → 대시보드 body HTML(문자열). 순수 함수.
-export function renderDashboard({ byDay, days, members, maxDays, generatedAt, source = 'node scripts/game-report.mjs --html' }) {
+export function renderDashboard({ byDay, days, members, maxDays, generatedAt, source = 'node 02_devtools/game-report.mjs --html' }) {
   const payload = { maxDays, generatedAt, days, byDay, members, labels: { key: KEY_LABEL, mode: MODE_LABEL, ident: IDENT_LABEL, ch: CH_LABEL, src: SRC_LABEL } };
   const json = JSON.stringify(payload).replace(/</g, '\\u003c');
   return `<style>${DASH_CSS}</style>

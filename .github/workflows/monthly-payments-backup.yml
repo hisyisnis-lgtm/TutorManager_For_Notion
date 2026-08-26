@@ -54,7 +54,7 @@ jobs:
           NTFY_TOPIC_CRITICAL: ${{ secrets.NTFY_TOPIC_CRITICAL }}
           NTFY_TOKEN: ${{ secrets.NTFY_TOKEN }}
           BACKUP_OUTPUT_PATH: /tmp/notion-payments.json.gz
-        run: node backup_payments_to_r2.mjs
+        run: node 01_automation/backup_payments_to_r2.mjs
 
       - name: R2 시크릿 등록 여부 확인
         if: steps.date_check.outputs.is_last_day == 'true'

@@ -29,4 +29,4 @@ jobs:
           KAKAO_PFID: ${{ secrets.KAKAO_PFID }}
           KAKAO_TPL_CONSULT_TOMORROW: ${{ secrets.KAKAO_TPL_CONSULT_TOMORROW }}
           KAKAO_TPL_ONEDAY_TOMORROW: ${{ secrets.KAKAO_TPL_ONEDAY_TOMORROW }}
-        run: node notify_consult_tomorrow.mjs
+        run: node 01_automation/notify_consult_tomorrow.mjs

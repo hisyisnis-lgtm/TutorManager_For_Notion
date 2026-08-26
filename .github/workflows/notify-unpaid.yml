@@ -29,4 +29,4 @@ jobs:
           KAKAO_PFID: ${{ secrets.KAKAO_PFID }}
           MY_PHONE: ${{ secrets.MY_PHONE }}
           KAKAO_TPL_UNPAID: ${{ secrets.KAKAO_TPL_UNPAID }}
-        run: node notify_unpaid.mjs
+        run: node 01_automation/notify_unpaid.mjs
