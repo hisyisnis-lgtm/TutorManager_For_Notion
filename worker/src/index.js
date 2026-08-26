@@ -47,7 +47,7 @@ const NOTICE_DB_ID = 'f93b423b-8ab0-493b-bdf3-78fde6ec430f';
 // 게임 지표 대시보드(라이브) — AE SQL API 조회용 계정 ID(비밀 아님). AE 토큰은 시크릿 CF_ANALYTICS_TOKEN.
 const AE_ACCOUNT_ID = '6bb3d7a51e3f42a7ba6367187ee8be16';
 
-// ※ 성조 게임 단어는 더 이상 Notion DB가 아니라 data/tone-words.csv → PWA 번들로 관리(2026-06-10).
+// ※ 성조 게임 단어는 더 이상 Notion DB가 아니라 03_data/tone-words/tone-words.csv → PWA 번들로 관리(2026-06-10).
 //   워커는 단어 풀을 다루지 않는다(TONE_WORDS_DB_ID·난이도 매핑·tone-words 라우트 제거).
 
 const DAY_KR = ['일', '월', '화', '수', '목', '금', '토'];
@@ -1362,7 +1362,7 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
     // 잔여 시간 회차 체크 (60분=1회차, 90분=1.5회차 등)
     const requiredSessions = durationMin / 60;
     if (remainingSessions < requiredSessions) {
-      return new Response(JSON.stringify({ error: `잔여 시간이 부족합니다. (잔여: ${remainingSessions}회차, 필요: ${requiredSessions}회차)` }), {
+      return new Response(JSON.stringify({ error: `잔여 시간이 부족합니다. (잔여: ${remainingSessions}시간, 필요: ${requiredSessions}시간)` }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -1813,7 +1813,7 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
     const requiredForRestore = restoreDurationMin / 60;
     const { remainingSessions: currentRemaining } = await loadSessionCounts(n, sPage.id, sPage.properties);
     if (currentRemaining < requiredForRestore) {
-      return new Response(JSON.stringify({ error: `잔여 시간이 부족하여 복구할 수 없습니다. (잔여: ${currentRemaining}회차, 필요: ${requiredForRestore}회차)` }), {
+      return new Response(JSON.stringify({ error: `잔여 시간이 부족하여 복구할 수 없습니다. (잔여: ${currentRemaining}시간, 필요: ${requiredForRestore}시간)` }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -2481,7 +2481,7 @@ async function handleGameRoutes(request, env, corsHeaders, url) {
   }
 
   // ※ GET /game/tone-words/:difficulty 라우트는 제거됨 (2026-06-10).
-  //   단어 풀의 단일 출처가 data/tone-words.csv → 빌드 시 PWA 번들에 포함되도록 전환.
+  //   단어 풀의 단일 출처가 03_data/tone-words/tone-words.csv → 빌드 시 PWA 번들에 포함되도록 전환.
   //   더 이상 워커가 Notion 단어 DB를 조회하지 않는다. (PWA는 fetchToneWords 로컬 반환)
 
   // POST /game/event — 게임 이벤트 카운터(유입 깔때기 측정) → Workers Analytics Engine(GAME_AE).

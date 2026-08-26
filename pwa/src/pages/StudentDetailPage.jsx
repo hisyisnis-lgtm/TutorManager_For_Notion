@@ -54,12 +54,12 @@ export default function StudentDetailPage() {
       try {
         // 학생 1명당 Notion 3회 왕복. 상태·VIP 토글은 아래에서 낙관적으로 반영하므로
         // 캐시로 먼저 띄워도 어긋나지 않는다. 화면에 쓰는 만큼만(각 5건) 담는다.
-        // 캐시 키에 v2 — 잔여 회차를 결제 데이터로 계산하도록 바뀌어 저장 형태가 달라졌다.
+        // 캐시 키에 v2 — 잔여 시간을 결제 데이터로 계산하도록 바뀌어 저장 형태가 달라졌다.
         await swrLoad(`student:detail:v2:${id}`, async () => {
           const [page, classData, allPayments] = await Promise.all([
             getPage(id),
             fetchClassesPage({ studentId: id, completedOnly: true }),
-            // 잔여 회차 합산에 쓰므로 표시용 5건이 아니라 전체를 받는다.
+            // 잔여 시간 합산에 쓰므로 표시용 5건이 아니라 전체를 받는다.
             fetchAllPayments(id),
           ]);
           const st = parseStudent(page);
@@ -275,16 +275,16 @@ export default function StudentDetailPage() {
           </div>
         </Card>
 
-        {/* 잔여 회차 */}
+        {/* 잔여 시간 */}
         <Card variant="borderless" style={{ borderRadius: 12, boxShadow: 'var(--shadow-border)' }} styles={{ body: { padding: '16px', textAlign: 'center' } }}>
-          <p className="text-xs text-gray-500 mb-1">잔여 시간 회차</p>
+          <p className="text-xs text-gray-500 mb-1">잔여 시간</p>
           <p
             className={`text-2xl font-bold tabular-nums ${
               remaining <= 1 ? 'text-red-500' : 'text-gray-900'
             }`}
           >
             {formatSessions(remaining)}
-            <span className="text-sm font-normal text-gray-400 ml-1">회</span>
+            <span className="text-sm font-normal text-gray-400 ml-1">시간</span>
           </p>
         </Card>
 
@@ -325,7 +325,7 @@ export default function StudentDetailPage() {
                 <div key={p.id} className="flex items-center justify-between py-2.5 border-b border-gray-50 last:border-0">
                   <div>
                     <p className="text-sm font-semibold text-gray-800">
-                      {p.sessionCount}회 · {formatKRW(p.paymentAmount)}
+                      {formatSessions(p.sessionCount)}시간 · {formatKRW(p.paymentAmount)}
                     </p>
                     {p.unpaid > 0 && (
                       <p className="text-xs text-red-500 mt-0.5">미수금 {formatKRW(p.unpaid)}</p>
@@ -333,7 +333,7 @@ export default function StudentDetailPage() {
                     {p.refundAmount > 0 && (
                       <p className="text-xs text-amber-700 mt-0.5">
                         환불 −{formatKRW(p.refundAmount)}
-                        {refundSessions(p) > 0 && ` · ${formatSessions(refundSessions(p))}회`}
+                        {refundSessions(p) > 0 && ` · ${formatSessions(refundSessions(p))}시간`}
                       </p>
                     )}
                   </div>

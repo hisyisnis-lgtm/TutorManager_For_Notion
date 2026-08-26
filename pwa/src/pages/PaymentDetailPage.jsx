@@ -76,7 +76,7 @@ export default function PaymentDetailPage() {
   const netAmount = (p.actualAmount || 0) - (p.refundAmount || 0);
   const fullyRefunded = refunded && netAmount <= 0;
 
-  // 환불 모달 실시간 환산 회차 미리보기 (학생 결제만 — 단가 0이면 0)
+  // 환불 모달 실시간 환산 시간 미리보기 (학생 결제만 — 단가 0이면 0)
   const refundAmtInput = parseFloat(refundForm.amount) || 0;
   const previewSessions = refundSessions({ refundAmount: refundAmtInput, unitPrice: p.unitPrice, discountRate: p.discountRate });
 
@@ -146,13 +146,13 @@ export default function PaymentDetailPage() {
           {hasStudent && <Row label="상태" value={p.paymentStatus ? <Badge label={stripEmoji(p.paymentStatus)} bg={psc.bg} text={psc.text} /> : null} />}
           {hasStudent && <Row label="학생" value={studentNames} />}
           <Row label="수업 종류" value={ct?.title} />
-          {hasStudent && <Row label="시간 회차" value={`${p.sessionCount}회`} />}
+          {hasStudent && <Row label="결제 시간" value={`${formatSessions(p.sessionCount)}시간`} />}
           {hasStudent && <Row label="결제 예정 금액" value={formatKRW(p.paymentAmount)} />}
           <Row label="실제 결제 금액" value={formatKRW(p.actualAmount)} />
           {hasStudent && p.unpaid > 0 && <Row label="미수금" value={formatKRW(p.unpaid)} />}
           {refunded && <Row label="환불 금액" value={`− ${formatKRW(p.refundAmount)}`} />}
           {refunded && hasStudent && refundSessions(p) > 0 && (
-            <Row label="환불 회차" value={`− ${formatSessions(refundSessions(p))}회`} />
+            <Row label="환불 시간" value={`− ${formatSessions(refundSessions(p))}시간`} />
           )}
           {refunded && <Row label="환불일" value={p.refundDate} />}
           {refunded && <Row label="환불 사유" value={p.refundReason} />}
@@ -206,12 +206,12 @@ export default function PaymentDetailPage() {
         {previewSessions > 0 && (
           <div style={{ background: PRIMARY_BG, borderRadius: 12, padding: '10px 12px', marginBottom: 12 }}>
             <p style={{ fontSize: 13, color: TEXT_SECONDARY, margin: 0 }}>
-              이 금액은 <strong style={{ color: TEXT_PRIMARY }}>{formatSessions(previewSessions)}회차</strong>에 해당해요.
-              <span style={{ color: TEXT_TERTIARY }}> 학생 잔여 회차에서 차감됩니다.</span>
+              이 금액은 <strong style={{ color: TEXT_PRIMARY }}>{formatSessions(previewSessions)}시간</strong>에 해당해요.
+              <span style={{ color: TEXT_TERTIARY }}> 학생 잔여 시간에서 차감됩니다.</span>
             </p>
             {!isWholeSession(previewSessions) && (
               <p style={{ fontSize: 12, color: TEXT_PRIMARY, margin: '4px 0 0', fontWeight: 600 }}>
-                ⚠ 회차가 딱 떨어지지 않아요. 금액을 회차 단위로 맞춰보세요.
+                ⚠ 시간이 딱 떨어지지 않아요. 금액을 1시간 단위로 맞춰보세요.
               </p>
             )}
           </div>
@@ -234,7 +234,7 @@ export default function PaymentDetailPage() {
         <Input
           value={refundForm.reason}
           onChange={(e) => setRefundForm((f) => ({ ...f, reason: e.target.value }))}
-          placeholder="예: 2회차 후 중도 환불"
+          placeholder="예: 2회 수업 후 중도 환불"
           size="large"
           style={{ borderRadius: 12, marginBottom: 16 }}
         />

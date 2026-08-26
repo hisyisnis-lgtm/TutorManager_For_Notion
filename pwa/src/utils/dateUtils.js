@@ -50,10 +50,11 @@ export function timeToMin(t) {
 
 /** 분 → "X시간" 또는 "X시간 Y분" */
 export function formatDuration(min) {
-  const h = Math.floor(min / 60);
-  const m = min % 60;
-  if (m === 0) return `${h}시간`;
-  return `${h}시간 ${m}분`;
+  // 잔여·결제가 모두 시간 단위(60분=1)라 소요시간도 같은 단위로 읽혀야 한다.
+  // "1시간 30분"처럼 시·분으로 쪼개면 잔여 "1.5시간"과 머릿속에서 바로 이어지지 않는다.
+  // (시각 범위 19:00~20:30 같은 표기는 이 함수 대상이 아니며 시:분 그대로 둔다)
+  const h = Math.round((min / 60) * 100) / 100;
+  return `${Number.isInteger(h) ? h : parseFloat(h.toFixed(2))}시간`;
 }
 
 /** Date 객체 → "YYYY-MM-DDTHH:MM:00+09:00" (Notion KST 저장용) */

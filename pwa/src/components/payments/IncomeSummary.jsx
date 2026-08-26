@@ -85,9 +85,9 @@ const IncomeSummary = forwardRef(function IncomeSummary(_props, ref) {
    * - 학생별 마지막 결제 금액을 다음 결제 금액으로 가정
    * - 반복 결제 간격(intervalMs) 추정:
    *   1) 결제 2건+ → 과거 결제 간격 중 20일 초과만 평균 (미리 몰아서 결제한 짧은 간격 제외)
-   *      └ 20일 초과 간격이 하나도 없으면(항상 미리 몰아서 결제) 예상에서 제외 (회차부족 뱃지 있으면 예외)
+   *      └ 20일 초과 간격이 하나도 없으면(항상 미리 몰아서 결제) 예상에서 제외 (시간부족 뱃지 있으면 예외)
    *   2) 결제 1건 → 금액 기반 간격 (주당 75,000원 기준, 결제액만큼 수업기간이 늘어난다는 가정)
-   * - 첫 예상일: 회차부족(sessionShortage) 뱃지가 있으면 그 수업일, 없으면 마지막 결제일 + 간격
+   * - 첫 예상일: 시간부족(sessionShortage) 뱃지가 있으면 그 수업일, 없으면 마지막 결제일 + 간격
    * - 첫 예상일부터 intervalMs씩 반복(occurrence) 투영 → 이번 달·다음 달 구간에 떨어지는 결제를 모두 가산
    *   (월납 학생이 이번 달·다음 달 양쪽에 반영됨 — 학생당 한 주기만 보던 한계 해소)
    * - 이번 달에 이미 정기 결제한 학생은 이번 달 occurrence 제외 (confirmed와 이중 계산 방지)
@@ -214,7 +214,7 @@ const IncomeSummary = forwardRef(function IncomeSummary(_props, ref) {
         // 추정 간격을 못 구함 (결제 2건+인데 20일 초과 간격이 하나도 없음 = 항상 미리 몰아서 결제)
         if (intervalMs == null) {
           if (firstShortage) {
-            // 회차부족 날짜는 있으니 반복용 간격만 금액 기반으로 폴백
+            // 시간부족 날짜는 있으니 반복용 간격만 금액 기반으로 폴백
             intervalMs = estimateIntervalByAmount(expectedAmount);
             basis = `금액기반(간격부적합·${Math.round(intervalMs / DAY_MS)}일)`;
           } else {
@@ -225,11 +225,11 @@ const IncomeSummary = forwardRef(function IncomeSummary(_props, ref) {
         // 안전장치: 간격 하한 7일 (러너웨이 루프 방지)
         if (intervalMs < 7 * DAY_MS) intervalMs = 7 * DAY_MS;
 
-        // 첫 예상일: 회차부족 뱃지가 있으면 그 수업일, 없으면 마지막결제 + 간격
+        // 첫 예상일: 시간부족 뱃지가 있으면 그 수업일, 없으면 마지막결제 + 간격
         let firstDate;
         if (firstShortage) {
           firstDate = new Date(firstShortage.datetime);
-          basis = `회차부족(${firstShortage.datetime.slice(0, 10)})`;
+          basis = `시간부족(${firstShortage.datetime.slice(0, 10)})`;
         } else {
           firstDate = new Date(lastPaymentDate.getTime() + intervalMs);
         }

@@ -22,6 +22,7 @@ import { queryPage,
 import { swrLoad } from '../hooks/useCachedResource.js';
 import { CLASSES_DB,
   parseClass } from '../api/classes.js';
+import { formatSessions } from '../api/payments.js';
 import { HOMEWORK_DB,
   parseHomework } from '../api/homework.js';
 import { parseLessonLog } from '../api/lessonLogs.js';
@@ -30,6 +31,7 @@ import { STATUS_ACTIVE } from '../api/students.js';
 import { formatShort,
   formatDateTime,
   formatTime,
+  formatDuration,
   KST } from '../utils/dateUtils.js';
 import { isOnlineGroupTitle,
   isFreeConsultTitle,
@@ -56,7 +58,7 @@ import {
 import { BADGE_SMALL } from '../constants/styles.js';
 import { getInstructorName, getNtfyTopic } from './SettingsPage.jsx';
 
-// 회차 부족을 며칠 앞까지 살필지. 좁게 잡아 홈 로딩·Notion 쿼터 부담을 줄인다
+// 잔여 시간 부족을 며칠 앞까지 살필지. 좁게 잡아 홈 로딩·Notion 쿼터 부담을 줄인다
 // (주 25건쯤 되는 수업 밀도에서 30일이면 queryAll 2페이지 안쪽).
 const SHORTAGE_WINDOW_DAYS = 30;
 
@@ -72,7 +74,7 @@ export default function HomePage() {
   const navigate = useNavigate();
   const { studentNameMap, classTypeMap, students, remainingByStudent, refresh: refreshData } = useData();
   // loadShortage가 채우는 수업 인덱스.
-  //  firstShortage: 학생별 '가장 이른 회차부족 수업' 일시 — 이미 회차를 넘긴 경우
+  //  firstShortage: 학생별 '가장 이른 시간부족 수업' 일시 — 이미 결제한 시간을 넘긴 경우
   //  lastClass    : 학생별 '가장 늦은 예정 수업' 일시 — 언제까지 커버되는지 알려주는 용도
   const [classIndex, setClassIndex] = useState({ firstShortage: {}, lastClass: {} });
   const [classes, setClasses] = useState([]);
@@ -88,9 +90,9 @@ export default function HomePage() {
   const [lowSessionOpen, setLowSessionOpen] = useState(false);
 
   // 결제 안내가 필요한 학생 — 성격이 다른 두 신호를 합친다.
-  //  ① 초과: 이미 잡아둔 수업이 결제 회차를 넘었다 (수업 formula '시간 회차 부족')
-  //  ② 여유 없음: 잔여 0회 이하 — 수업을 더 잡으려면 결제가 필요하다
-  // ②를 빼면 "다음 수업도 안 잡힌 잔여 0회" 학생을 통째로 놓친다(2026-08-25 실측 3명).
+  //  ① 초과: 이미 잡아둔 수업이 결제한 시간을 넘었다 (수업 formula '시간 회차 부족')
+  //  ② 여유 없음: 잔여 0시간 이하 — 수업을 더 잡으려면 결제가 필요하다
+  // ②를 빼면 "다음 수업도 안 잡힌 잔여 0시간" 학생을 통째로 놓친다(2026-08-25 실측 3명).
   const paymentDueRows = useMemo(() => {
     const rows = [];
     for (const s of students) {
@@ -105,7 +107,7 @@ export default function HomePage() {
           id: s.id,
           name: s.name,
           urgent: false,
-          reason: lastAt ? `잔여 ${remaining}회 · ${formatShort(lastAt)} 수업까지` : `잔여 ${remaining}회 · 다음 수업 없음`,
+          reason: lastAt ? `잔여 ${formatSessions(remaining)}시간 · ${formatShort(lastAt)} 수업까지` : `잔여 ${formatSessions(remaining)}시간 · 다음 수업 없음`,
         });
       }
     }
@@ -166,7 +168,7 @@ export default function HomePage() {
   // 결제 안내가 필요한 학생 찾기.
   //
   // ⚠️ 학생의 '잔여 시간 회차'로 판단하면 안 된다 — 강사가 앞으로의 수업을 미리 등록해두면
-  //    아직 하지도 않은 수업까지 사용 회차로 잡혀 잔여가 0이나 음수가 된다. 그래서 이 기준으로는
+  //    아직 하지도 않은 수업까지 사용 시간으로 잡혀 잔여가 0이나 음수가 된다. 그래서 이 기준으로는
   //    수강중 21명 중 13명이 "부족"으로 뜨고(2026-08-25 실측) 경고가 신호 구실을 못 했다.
   //    수업 단위 formula '시간 회차 부족'은 그 수업 시점 기준이라 실제로 결제가 필요한 건만 잡힌다
   //    (같은 시점 실측 1건). 수업 캘린더가 쓰는 뱃지와 같은 출처다.
@@ -204,7 +206,7 @@ export default function HomePage() {
         return { firstShortage, lastClass };
       }, setClassIndex);
     } catch (e) {
-      console.error('[홈] 회차 부족 수업 불러오기 오류', e); setLoadFailed(true);
+      console.error('[홈] 잔여 시간 부족 수업 불러오기 오류', e); setLoadFailed(true);
     }
   };
 
@@ -494,7 +496,7 @@ export default function HomePage() {
                   {todayClasses.length}개
                 </span>
                 <span className="text-gray-300">·</span>
-                <span className="text-xs tabular-nums text-gray-400">총 {totalMinutes}분</span>
+                <span className="text-xs tabular-nums text-gray-400">총 {formatDuration(totalMinutes)}</span>
               </div>
             ) : (
               <span className="text-xs text-gray-400">없음</span>
@@ -526,7 +528,7 @@ export default function HomePage() {
                         {names || cls.title || '학생 미정'}
                       </span>
                       {cls.duration && (
-                        <span className="text-xs tabular-nums text-gray-400 shrink-0">{cls.duration}분</span>
+                        <span className="text-xs tabular-nums text-gray-400 shrink-0">{formatDuration(parseInt(cls.duration))}</span>
                       )}
                     </Link>
                   </li>

@@ -23,14 +23,6 @@ import {
   GRADIENTS, BRAND_EXTERNAL,
 } from '../../constants/theme.js';
 
-function formatHours(h) {
-  const totalMin = Math.round(h * 60);
-  const hours = Math.floor(totalMin / 60);
-  const mins = totalMin % 60;
-  if (hours > 0 && mins > 0) return `${hours}시간 ${mins}분`;
-  if (hours > 0) return `${hours}시간`;
-  return `${mins}분`;
-}
 
 
 
@@ -186,8 +178,8 @@ function MetricRow({ remainingHours, upcomingCount }) {
   return (
     <div style={{ display: 'flex', gap: 8 }}>
       {[
-        { label: '남은 수업 시간', value: formatHours(remainingHours), unit: null },
-        { label: '다가오는 수업', value: upcomingCount, unit: '개' },
+        { label: '남은 수업 시간', value: formatDuration(remainingHours * 60), unit: null },
+        { label: '예약된 수업', value: upcomingCount, unit: '개' },
       ].map(({ label, value, unit }) => (
         <div key={label} style={{
           flex: 1, background: '#fff', borderRadius: 12, padding: '12px 14px',
@@ -204,7 +196,7 @@ function MetricRow({ remainingHours, upcomingCount }) {
 }
 
 // ===== 홈 탭 =====
-export default function HomeTab({ studentToken, foodSources, studentLoaded, remainingHours, remainingSessions, onUpcomingLoaded, hwAlerts, onOpenPanda, onSwitchToClasses }) {
+export default function HomeTab({ studentToken, foodSources, studentLoaded, remainingHours, onUpcomingLoaded, hwAlerts, onOpenPanda, onSwitchToClasses }) {
   // 정적 message는 테마 컨텍스트를 못 받아 콘솔 경고 + 스타일 불일치 — App.useApp() 사용
   const { message } = App.useApp();
   const nowKST = new Date(Date.now() + 9 * 60 * 60 * 1000);
@@ -235,14 +227,19 @@ export default function HomeTab({ studentToken, foodSources, studentLoaded, rema
         fetchMyClasses(studentToken, thisMonth),
         fetchMyClasses(studentToken, addMonths(thisMonth, 1)),
       ]));
+      // 잘라내지 않고 전부 담는다 — '예약된 수업' 개수가 실제 예약 건수여야 하기 때문.
+      // (이전 slice(0,5) 때문에 10건 잡혀 있어도 5개로 보였다. 2026-08-26 실측: 활성 학생
+      //  대부분이 8~11건이라 사실상 전원이 이 상한에 걸려 있었다.)
+      // 화면에 카드로 펼치는 건 아래 렌더에서 따로 제한한다(다음 수업 1건 + 목록 3건).
+      // 조회창은 이번 달+다음 달이라 그 너머 예약은 집계에서 빠진다 — 지금 운영 패턴(1~2개월치
+      //  선등록)에선 충분하고, 더 넓히면 홈 로딩마다 월별 요청이 그만큼 늘어난다.
       const all = [...curr, ...next]
         .filter(c => !c.isCancelled && c.date >= todayStr)
         .sort((a, b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime));
-      const upcomingSlice = all.slice(0, 5);
-      setUpcoming(upcomingSlice);
+      setUpcoming(all);
       setUpcomingError(false);
-      writeCacheValue(CK, upcomingSlice);
-      onUpcomingLoaded?.(upcomingSlice);
+      writeCacheValue(CK, all);
+      onUpcomingLoaded?.(all);
     } catch {
       if (!cached) { setUpcoming([]); setUpcomingError(true); }
     } finally {
@@ -252,9 +249,16 @@ export default function HomeTab({ studentToken, foodSources, studentLoaded, rema
 
   useEffect(() => { loadInitialData(); }, [loadInitialData]);
 
-  const visibleUpcoming = (remainingSessions !== null && remainingSessions >= 0)
-    ? upcoming.slice(0, remainingSessions)
-    : upcoming;
+  // 잡혀 있는 수업은 결제 잔여와 무관하게 전부 보여준다.
+  //
+  // 이전에는 학생 '잔여 시간 회차'로 목록을 잘라냈지만 두 겹으로 틀렸다.
+  // ① 단위 혼동: 그 값의 단위는 개수가 아니라 시간이라 개수로 slice하면 90분 수업 학생은
+  //    3시간 남았을 때 3개가 보였고, 딱 맞게 결제한 학생(0시간)은 목록이 통째로 비었다.
+  // ② 기준 자체가 부적합: 그 값은 완료분뿐 아니라 '예정' 수업까지 이미 차감한 뒤의 잔액이다.
+  //    월별 결제(수강권 없음)라 강사가 몇 달치를 미리 잡아두면 음수가 되는 게 정상이고
+  //    (2026-08-26 실측: 강세희 −9시간, 예약 5건), 이걸 초과로 보고 감추면 학생 화면에서
+  //    실제로 잡혀 있는 수업이 사라진다. 결제 안내는 강사앱 '결제 안내 필요'가 맡는다.
+  const visibleUpcoming = upcoming;
 
   return (
     <div style={{ paddingTop: 20, paddingBottom: 24 }}>
@@ -432,11 +436,11 @@ export default function HomeTab({ studentToken, foodSources, studentLoaded, rema
         );
       })()}
 
-      {/* 다가오는 수업 목록 (2번째~) */}
+      {/* 예약된 수업 목록 (2번째~) */}
       {!upcomingLoading && visibleUpcoming.length > 1 && (
         <div style={{ padding: '0 20px', marginBottom: 24, animation: 'fade-in-up 400ms cubic-bezier(0.2,0,0,1) both', animationDelay: '160ms' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-            <SectionHeading style={{ marginBottom: 0 }}>다가오는 수업</SectionHeading>
+            <SectionHeading style={{ marginBottom: 0 }}>예약된 수업</SectionHeading>
             <button
               type="button"
               onClick={onSwitchToClasses}

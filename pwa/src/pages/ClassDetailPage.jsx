@@ -9,6 +9,7 @@ import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import ErrorMessage from '../components/ui/ErrorMessage.jsx';
 import Badge from '../components/ui/Badge.jsx';
 import { getPage } from '../api/notionClient.js';
+import { formatDuration } from '../utils/dateUtils.js';
 import { parseClass,
   classStatusColor,
   notesColor } from '../api/classes.js';
@@ -70,7 +71,7 @@ export default function ClassDetailPage() {
           {isGroup && cls.roster && <Row label="수강생" value={cls.roster} />}
           <Row label="수업 유형" value={ct?.title} />
           <Row label="일시" value={dt} />
-          <Row label="수업 시간" value={cls.duration ? `${cls.duration}분` : null} />
+          <Row label="수업 시간" value={cls.duration ? formatDuration(parseInt(cls.duration)) : null} />
           <Row label="장소" value={locationText} />
           <Row label="특이사항" value={cls.notes ? <Badge label={stripEmoji(cls.notes)} bg={nc?.bg || 'bg-gray-100'} text={nc?.text || 'text-gray-500'} /> : null} />
           <Row label="메모" value={cls.noteMemo} />

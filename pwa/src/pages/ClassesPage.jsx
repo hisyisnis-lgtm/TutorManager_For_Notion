@@ -14,7 +14,7 @@ import ErrorMessage from '../components/ui/ErrorMessage.jsx';
 import EmptyState from '../components/ui/EmptyState.jsx';
 import MonthCalendar from '../components/ui/MonthCalendar.jsx';
 import { fetchClassesPage, parseClass, classStatusColor, notesColor, CLASSES_DB } from '../api/classes.js';
-import { formatDateTime, formatTime, KST } from '../utils/dateUtils.js';
+import { formatDateTime, formatTime, formatDuration, KST } from '../utils/dateUtils.js';
 import { stripEmoji } from '../utils/stringUtils.js';
 import { useData } from '../context/DataContext.jsx';
 import PullToRefresh from '../components/ui/PullToRefresh.jsx';
@@ -298,7 +298,7 @@ export default function ClassesPage() {
                             </span>
                             {(classType || cls.location) && (
                               <span className="text-xs text-gray-500">
-                                {classType && `${classType} · `}{cls.duration}분
+                                {classType && `${classType} · `}{formatDuration(parseInt(cls.duration))}
                                 {cls.location && ` · ${cls.location}${cls.locationMemo ? ` — ${cls.locationMemo}` : ''}`}
                               </span>
                             )}
@@ -553,7 +553,7 @@ function ClassCard({ cls, studentNameMap }) {
             <p style={{ fontSize: 13, color: TEXT_SECONDARY, margin: '0 0 2px' }} className="tabular-nums">
               {cls.datetime ? formatDateTime(cls.datetime) : '일시 미정'}
               {cls.endTime && ` ~ ${formatTime(cls.endTime)}`}
-              {cls.duration && ` · ${cls.duration}분`}
+              {cls.duration && ` · ${formatDuration(parseInt(cls.duration))}`}
             </p>
             {cls.location && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>

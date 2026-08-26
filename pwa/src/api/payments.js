@@ -133,7 +133,7 @@ export function parsePayment(page) {
     paymentDate: getDate(p['결제일']),
     memo: getRichText(p['메모']),
     phone: p['전화번호']?.phone_number ?? '',
-    // 환불분이 차감된 회차. 학생 DB의 '결제 시간 회차 합계' 롤업은 이 값을 합산하도록
+    // 환불분이 차감된 시간. 학생 DB의 '결제 시간 회차 합계' 롤업은 이 값을 합산하도록
     // 돼 있지만 환불 후에도 갱신되지 않아(아래 remainingSessionsOf 주석 참고) 앱이 직접 합산한다.
     effectiveSessions: getFormulaNumber(p['유효 시간 회차']),
     refundAmount: getNumber(p['환불 금액']),
@@ -142,7 +142,7 @@ export function parsePayment(page) {
   };
 }
 
-/** 학생의 결제 전체 조회 — 잔여 회차 계산용이라 100건 초과에도 누락되면 안 되므로 queryAll. */
+/** 학생의 결제 전체 조회 — 잔여 시간 계산용이라 100건 초과에도 누락되면 안 되므로 queryAll. */
 export async function fetchAllPayments(studentId) {
   return queryAll(
     PAYMENTS_DB,
@@ -183,16 +183,16 @@ export function calcPaymentAmount(sessionCount, unitPrice, discountRate) {
 
 /**
  * 결제 폼 제출 검증 — 통과 시 null, 실패 시 에러 문구 반환.
- * 온라인그룹수업은 시간 회차 개념이 없어(0으로 저장) 회차 검증을 건너뛴다.
- * (이전 버그: 그룹수업 편집 시 회차 검증에 걸려 저장 자체가 불가능했음)
+ * 온라인그룹수업은 결제 시간 개념이 없어(0으로 저장) 시간 검증을 건너뛴다.
+ * (이전 버그: 그룹수업 편집 시 시간 검증에 걸려 저장 자체가 불가능했음)
  * @param {{ classTypeId, sessionCount, actualAmount, studentId }} form
  * @param {{ isOnlineGroup:boolean, isEdit:boolean }} ctx
  */
 export function validatePaymentForm(form, { isOnlineGroup, isEdit }) {
   if (!form.classTypeId) return '수업 종류를 선택하세요.';
   if (!isOnlineGroup) {
-    if (!form.sessionCount || isNaN(parseFloat(form.sessionCount))) return '시간 회차를 입력하세요.';
-    if (parseFloat(form.sessionCount) <= 0) return '시간 회차는 0보다 커야 합니다.';
+    if (!form.sessionCount || isNaN(parseFloat(form.sessionCount))) return '결제 시간을 입력하세요.';
+    if (parseFloat(form.sessionCount) <= 0) return '결제 시간은 0보다 커야 합니다.';
   }
   if (form.actualAmount === '' || isNaN(parseFloat(form.actualAmount))) return '실제 결제 금액을 입력하세요.';
   if (parseFloat(form.actualAmount) < 0) return '결제 금액은 0 이상이어야 합니다.';
@@ -201,9 +201,9 @@ export function validatePaymentForm(form, { isOnlineGroup, isEdit }) {
 }
 
 /**
- * 환불 금액 → 환산 시간 회차 (할인 적용 단가 기준, 반올림 없이 소수 그대로).
+ * 환불 금액 → 환산 시간 (할인 적용 단가 기준, 반올림 없이 소수 그대로).
  * Notion '유효 시간 회차' formula의 차감식과 동일하게 단가 0이면 0 반환(div-by-zero 가드).
- * 학생 없는 결제(단가 0)는 0이라 회차 개념 미적용.
+ * 학생 없는 결제(단가 0)는 0이라 시간 개념 미적용.
  */
 export function refundSessions({ refundAmount, unitPrice, discountRate } = {}) {
   const perSession = (unitPrice || 0) * (1 - (discountRate || 0) / 100);
@@ -211,13 +211,13 @@ export function refundSessions({ refundAmount, unitPrice, discountRate } = {}) {
   return refundAmount / perSession;
 }
 
-/** 시간 회차 표시용 포맷 — 정수면 정수, 소수면 소수점 2자리까지(불필요한 0 제거) */
+/** 시간 표시용 숫자 포맷 — 정수면 정수, 소수면 소수점 2자리까지(불필요한 0 제거). 단위(시간)는 호출부가 붙인다 */
 export function formatSessions(n) {
   const r = Math.round((n || 0) * 100) / 100;
   return Number.isInteger(r) ? String(r) : String(parseFloat(r.toFixed(2)));
 }
 
-/** 환산 회차가 정수로 딱 떨어지는지 (소수면 false → 경고 표시용) */
+/** 환산 시간이 정수로 딱 떨어지는지 (소수면 false → 경고 표시용) */
 export function isWholeSession(n) {
   return Math.abs((n || 0) - Math.round(n || 0)) < 1e-9;
 }

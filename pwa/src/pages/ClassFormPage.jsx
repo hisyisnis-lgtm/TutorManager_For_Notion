@@ -196,7 +196,7 @@ export default function ClassFormPage() {
     }));
   };
 
-  // 선택 학생의 잔여 회차 최솟값
+  // 선택 학생의 잔여 시간 최솟값
   const selectedStudents = students.filter((s) => form.studentIds.includes(s.id));
   const minRemaining =
     selectedStudents.length > 0
@@ -280,7 +280,7 @@ export default function ClassFormPage() {
           setSaving(false);
           return;
         }
-        // 강사용 폼: 잔여 회차 초과해도 등록 가능 (경고는 UI에서 표시)
+        // 강사용 폼: 잔여 시간 초과해도 등록 가능 (경고는 UI에서 표시)
         const items = recurDates.map((date) => ({
           studentIds: form.studentIds,
           classTypeId: form.classTypeId,
@@ -516,7 +516,7 @@ export default function ClassFormPage() {
                       <span className="text-xs text-gray-500 ml-auto">{stripEmoji(s.status)}</span>
                       {recurring && isSelected && (
                         <span className="text-xs text-brand-600 font-semibold">
-                          잔여 {formatSessions(remainingByStudent[s.id] ?? 0)}회차
+                          잔여 {formatSessions(remainingByStudent[s.id] ?? 0)}시간
                         </span>
                       )}
                     </label>
@@ -761,7 +761,7 @@ export default function ClassFormPage() {
           <div style={{ animation: 'fadeSlideUp 0.35s ease both' }}>
                 {/* 등록 예정 수업 수 안내 */}
                 {(() => {
-                  // 온라인그룹수업은 학생(잔여 회차) 개념이 없어 회차 초과 판정에서 제외
+                  // 온라인그룹수업은 학생(잔여 시간) 개념이 없어 시간 초과 판정에서 제외
                   const overLimit = !isOnlineGroup && recurCount > 0 && recurCount * sessionsPerLesson > minRemaining;
                   const boxColor = !form.recurEndDate || recurCount === 0 ? 'bg-gray-50 text-gray-500' : overLimit ? 'bg-yellow-50 text-yellow-700' : 'bg-brand-50 text-brand-600';
                   const datePreview = recurDates.length > 0 && (
@@ -780,8 +780,8 @@ export default function ClassFormPage() {
                         : selectedStudents.length === 0 ? '학생을 선택하면 등록 가능한 수업 수가 표시됩니다.'
                         : !form.recurEndDate ? '종료일을 선택하면 등록 예정 수업 수가 표시됩니다.'
                         : recurCount === 0 ? '선택한 날짜 범위에 해당 요일 수업이 없습니다.'
-                        : overLimit ? (<>범위 내 수업 <span className="font-semibold">{recurCount}개</span>{' '}({recurCount * sessionsPerLesson}회차) — 잔여 {minRemaining}회차 초과 (등록은 가능)</>)
-                        : (<>잔여 {minRemaining}회차 충분 →{' '}<span className="font-semibold">수업 {recurCount}개</span> 등록 예정{datePreview}</>)
+                        : overLimit ? (<>범위 내 수업 <span className="font-semibold">{recurCount}개</span>{' '}({formatSessions(recurCount * sessionsPerLesson)}시간) — 잔여 {formatSessions(minRemaining)}시간 초과 (등록은 가능)</>)
+                        : (<>잔여 {formatSessions(minRemaining)}시간 충분 →{' '}<span className="font-semibold">수업 {recurCount}개</span> 등록 예정{datePreview}</>)
                       }
                     </div>
                   );

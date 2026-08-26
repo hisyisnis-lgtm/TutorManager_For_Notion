@@ -75,7 +75,7 @@ export function DataProvider({ children }) {
   const classTypeMap = Object.fromEntries(classTypes.map((ct) => [ct.id, ct]));
   const activeStudents = students.filter((s) => s.status === '🟢 수강중');
 
-  // 학생별 잔여 시간 회차 — Notion 롤업이 환불을 반영하지 않아 결제 데이터로 직접 계산한다.
+  // 학생별 잔여 시간(60분=1) — Notion 롤업이 환불을 반영하지 않아 결제 데이터로 직접 계산한다.
   // (근거는 payments.js remainingSessionsOf 주석)
   const paymentsByStudent = {};
   for (const p of payments) {

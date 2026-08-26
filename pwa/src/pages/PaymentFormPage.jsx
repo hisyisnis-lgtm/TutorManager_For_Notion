@@ -85,7 +85,7 @@ export default function PaymentFormPage() {
   const selectedClassType = classTypes.find((ct) => ct.id === form.classTypeId);
   const unitPrice = selectedClassType?.unitPrice ?? 0;
 
-  // 온라인그룹수업: 학생앱 미등록자. 학생 없이 수강생 이름·금액만 기록(시간회차·할인·고정가격 미사용).
+  // 온라인그룹수업: 학생앱 미등록자. 학생 없이 수강생 이름·금액만 기록(결제 시간·할인·고정가격 미사용).
   const isOnlineGroup = isOnlineGroupTitle(selectedClassType?.title);
   // 신규 등록 + 온라인그룹수업일 때만 "수강생 이름 + 저장하고 계속" 단건 반복 UI
   const isGroupCreate = isOnlineGroup && !isEdit;
@@ -114,7 +114,7 @@ export default function PaymentFormPage() {
   };
   const status = paymentStatus();
 
-  // 수업 종류 선택 → 원데이클래스(고정가격)만 시간회차·금액 자동 채움
+  // 수업 종류 선택 → 원데이클래스(고정가격)만 결제 시간·금액 자동 채움
   const onSelectClassType = (value) => {
     const ct = classTypes.find((c) => c.id === value);
     const isFixed = isFixedPriceTitle(ct?.title);
@@ -141,7 +141,7 @@ export default function PaymentFormPage() {
       await createPayment({
         guestName: name,
         classTypeId: form.classTypeId,
-        sessionCount: 0, // 그룹은 시간회차 개념 없음 (매출은 실제 결제 금액으로 집계)
+        sessionCount: 0, // 그룹은 결제 시간 개념 없음 (매출은 실제 결제 금액으로 집계)
         actualAmount: parseFloat(form.actualAmount),
         paymentMethod: form.paymentMethod || null,
         paymentDate: form.paymentDate || null,
@@ -268,7 +268,7 @@ export default function PaymentFormPage() {
                   {selectedClassType.duration}분 고정 가격: {formatKRW(fixedTotalPrice)}
                 </strong>
                 <span className="text-gray-400 ml-1">
-                  (시간 회차 {fixedSessionCount} 자동 입력)
+                  (결제 시간 {fixedSessionCount}시간 자동 입력)
                 </span>
               </p>
             ) : (
@@ -364,17 +364,17 @@ export default function PaymentFormPage() {
             </Select>
             {discountRate > 0 && (
               <p className="text-xs text-green-600 mt-1.5">
-                {discountRate}% 할인 적용 → {formatKRW(Math.round(unitPrice * (1 - discountRate / 100)))}원/회
+                {discountRate}% 할인 적용 → {formatKRW(Math.round(unitPrice * (1 - discountRate / 100)))}원/시간
               </p>
             )}
           </div>
         )}
 
-        {/* ④ 시간 회차 — 일반 결제만 */}
+        {/* ④ 결제 시간 — 일반 결제만 */}
         {!isOnlineGroup && (
           <div>
             <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
-              ④ 시간 회차
+              ④ 결제 시간
             </Typography.Text>
             <Input
               type="number"
@@ -382,10 +382,11 @@ export default function PaymentFormPage() {
               onChange={set('sessionCount')}
               step="0.5"
               min="0"
-              placeholder="예: 8 (8회 60분 수업)"
+              placeholder="예: 8 (60분 수업 8회분)"
               size="large"
               style={{ borderRadius: 12 }}
             />
+            <p className="text-xs text-gray-400 mt-1.5">60분 수업 1회 = 1시간, 90분 = 1.5시간</p>
             {sessionCount > 0 && unitPrice > 0 && (
               <p className="text-sm font-semibold text-brand-700 mt-2 p-3 bg-brand-50 rounded-xl">
                 결제 예정 금액: {formatKRW(expectedAmount)}

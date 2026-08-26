@@ -19,7 +19,7 @@ import {
 } from '../constants/theme.js';
 import { BADGE_SMALL } from '../constants/styles.js';
 
-import { KST } from '../utils/dateUtils.js';
+import { KST, formatDuration } from '../utils/dateUtils.js';
 const pad = (n) => String(n).padStart(2, '0');
 
 /** KST 기준 내일 "YYYY-MM-DD" */
@@ -423,7 +423,7 @@ function LogCardHead({ slide }) {
       </p>
       <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
         {slide.classes.map((c) => (
-          // 시간과 장소는 무조건 한 줄 (nowrap). 시간·회차·핀은 고정, 장소명만 필요 시 말줄임.
+          // 시간과 장소는 무조건 한 줄 (nowrap). 시각·소요시간·핀은 고정, 장소명만 필요 시 말줄임.
           <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'nowrap', minWidth: 0 }}>
             <ClockIcon size={16} weight="fill" color={PRIMARY} style={{ flexShrink: 0 }} />
             <span className="tabular-nums" style={{ fontSize: 15, fontWeight: 700, color: TEXT_PRIMARY, flexShrink: 0, whiteSpace: 'nowrap' }}>
@@ -431,7 +431,7 @@ function LogCardHead({ slide }) {
             </span>
             {c.duration && (
               <span className="tabular-nums" style={{ fontSize: 12, color: TEXT_TERTIARY, flexShrink: 0, whiteSpace: 'nowrap' }}>
-                ({c.duration}분)
+                ({formatDuration(parseInt(c.duration))})
               </span>
             )}
             {c.location && (

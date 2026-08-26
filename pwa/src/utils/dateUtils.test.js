@@ -63,9 +63,12 @@ describe('시간 변환 유틸', () => {
     expect(timeToMin('09:30')).toBe(570);
     expect(timeToMin('00:00')).toBe(0);
   });
-  it('formatDuration', () => {
+  it('formatDuration — 시·분으로 쪼개지 않고 잔여 시간과 같은 십진 시간으로', () => {
     expect(formatDuration(60)).toBe('1시간');
-    expect(formatDuration(90)).toBe('1시간 30분');
+    expect(formatDuration(90)).toBe('1.5시간');
+    expect(formatDuration(30)).toBe('0.5시간');   // 이전엔 "0시간 30분"으로 나왔다
+    expect(formatDuration(120)).toBe('2시간');
+    expect(formatDuration(150)).toBe('2.5시간');
   });
   it('toNotionDate — datetime-local → KST 명시 ISO', () => {
     expect(toNotionDate('2026-07-12T14:30')).toBe('2026-07-12T14:30:00+09:00');

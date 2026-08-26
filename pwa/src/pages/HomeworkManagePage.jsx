@@ -76,7 +76,7 @@ export default function HomeworkManagePage() {
       return matchFilter && matchSearch;
     })
     .sort((a, b) => {
-      // 수강중 학생 우선 → 피드백 대기 많은 순 → 미제출 많은 순 → 잔여 회차 많은 순
+      // 수강중 학생 우선 → 피드백 대기 많은 순 → 미제출 많은 순 → 잔여 시간 많은 순
       const activeA = a.status === '🟢 수강중' ? 0 : 1;
       const activeB = b.status === '🟢 수강중' ? 0 : 1;
       if (activeA !== activeB) return activeA - activeB;

@@ -15,7 +15,7 @@ import {
 const LOCATION_LABEL = { '강남사무실': '강남', '온라인 (Zoom/화상)': 'Zoom' };
 
 /**
- * 수업 한 건 카드 — 학생앱 홈(다가오는 수업)과 예약 현황 탭이 함께 쓴다.
+ * 수업 한 건 카드 — 학생앱 홈(예약된 수업)과 예약 현황 탭이 함께 쓴다.
  * 지난 수업·취소 수업은 흐리게(isDimmed), 진행 중이면 '수업중' 배지.
  */
 export default function ClassCard({ cls, todayStr, nowMin }) {

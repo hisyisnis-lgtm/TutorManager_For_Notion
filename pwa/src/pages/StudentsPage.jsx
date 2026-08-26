@@ -38,7 +38,7 @@ export default function StudentsPage() {
       return matchStatus && matchSearch;
     })
     .sort((a, b) => {
-      // 수강중 학생 우선 → 잔여 회차 많은 순
+      // 수강중 학생 우선 → 잔여 시간 많은 순
       const activeA = a.status === '🟢 수강중' ? 0 : 1;
       const activeB = b.status === '🟢 수강중' ? 0 : 1;
       if (activeA !== activeB) return activeA - activeB;
@@ -130,13 +130,13 @@ function StudentCard({ student, remaining }) {
           </div>
           <div className="flex gap-4 text-sm">
             <div>
-              <span className="text-gray-500 text-xs">잔여 회차 </span>
+              <span className="text-gray-500 text-xs">잔여 시간 </span>
               <span
                 className={`font-semibold tabular-nums ${
                   remaining <= 1 ? 'text-red-500' : 'text-gray-800'
                 }`}
               >
-                {formatSessions(remaining)}회
+                {formatSessions(remaining)}시간
               </span>
             </div>
             {student.unpaidAmount > 0 && (

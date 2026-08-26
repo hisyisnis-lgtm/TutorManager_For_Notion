@@ -264,11 +264,11 @@ function PaymentCard({ payment, studentNameMap, classTypeMap }) {
             {payment.studentIds.length > 0 && <Badge label={stripEmoji(payment.paymentStatus)} bg={bg} text={text} />}
           </div>
           <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-            {/* 학생 없는 결제(온라인그룹수업)는 시간회차·미수금 개념이 없어 실제 결제 금액만 표시 */}
+            {/* 학생 없는 결제(온라인그룹수업)는 결제 시간·미수금 개념이 없어 실제 결제 금액만 표시 */}
             {payment.studentIds.length > 0 && (
               <div>
-                <span style={{ fontSize: 12, color: TEXT_TERTIARY }}>시간 회차 </span>
-                <span style={{ fontSize: 13, fontWeight: 600, color: TEXT_PRIMARY }} className="tabular-nums">{payment.sessionCount}회</span>
+                <span style={{ fontSize: 12, color: TEXT_TERTIARY }}>결제 시간 </span>
+                <span style={{ fontSize: 13, fontWeight: 600, color: TEXT_PRIMARY }} className="tabular-nums">{formatSessions(payment.sessionCount)}시간</span>
               </div>
             )}
             <div>
@@ -286,7 +286,7 @@ function PaymentCard({ payment, studentNameMap, classTypeMap }) {
                 <span style={{ fontSize: 12, color: TEXT_TERTIARY }}>환불 </span>
                 <span style={{ fontSize: 13, fontWeight: 600, color: TEXT_PRIMARY }} className="tabular-nums">
                   −{formatKRW(payment.refundAmount)}
-                  {payment.studentIds.length > 0 && refundSessions(payment) > 0 && ` · ${formatSessions(refundSessions(payment))}회`}
+                  {payment.studentIds.length > 0 && refundSessions(payment) > 0 && ` · ${formatSessions(refundSessions(payment))}시간`}
                 </span>
               </div>
             )}

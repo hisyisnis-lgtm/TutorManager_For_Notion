@@ -1,4 +1,4 @@
-// 잔여 회차 부족 학생 결제 독려 알림 스크립트
+// 잔여 시간 부족 학생 결제 독려 알림 스크립트
 // GitHub Actions에서 매일 10:00 KST (01:00 UTC)에 자동 실행됨
 
 import { createNotionClient, createNtfyClient, runWithAlert, stripEmoji } from './notion_utils.mjs';
@@ -36,7 +36,7 @@ async function loadPaidSessions(queryAll) {
 }
 
 async function main() {
-  console.log(`[${new Date().toISOString()}] 잔여 회차 부족 학생 조회 시작`);
+  console.log(`[${new Date().toISOString()}] 잔여 시간 부족 학생 조회 시작`);
 
   // 수강중 학생 전체 조회
   const students = await queryAll(STUDENT_DB_ID, {
@@ -60,7 +60,7 @@ async function main() {
     .filter(s => s.remaining <= THRESHOLD)
     .sort((a, b) => a.remaining - b.remaining);
 
-  console.log(`잔여 회차 부족 학생 ${lowStudents.length}명`);
+  console.log(`잔여 시간 부족 학생 ${lowStudents.length}명`);
 
   if (lowStudents.length === 0) {
     console.log('해당 학생 없음 - 알림 생략');
@@ -70,14 +70,14 @@ async function main() {
   const lines = lowStudents.map(s => {
     const r = s.remaining;
     const label =
-      r <= 0 ? `${r}회차 (초과)` :
-      r === 0.5 ? '0.5회차 남음' :
-      `${r}회차 남음`;
+      r <= 0 ? `${r}시간 (초과)` :
+      r === 0.5 ? '0.5시간 남음' :
+      `${r}시간 남음`;
     return `• ${s.name}: ${label}`;
   });
 
   const message = `결제 요청이 필요한 학생 ${lowStudents.length}명\n\n${lines.join('\n')}`;
-  await sendNtfy('💳 잔여 회차 부족 알림', message, 4);
+  await sendNtfy('💳 잔여 시간 부족 알림', message, 4);
 }
 
 runWithAlert('notify_low_sessions.mjs', main);

@@ -96,7 +96,7 @@ export function parseStudent(page) {
     goal: getRichText(p['목표']),
     status: getSelect(p['상태'], ''),
     // Notion '잔여 시간 회차'는 환불이 반영되지 않는 롤업에 의존한다(payments.js remainingSessionsOf 주석).
-    // 표시용 잔여 회차는 결제 데이터로 다시 계산하므로, 이 값은 참고용으로만 남긴다.
+    // 표시용 잔여 시간은 결제 데이터로 다시 계산하므로, 이 값은 참고용으로만 남긴다.
     remainingSessions: getFormulaNumber(p['잔여 시간 회차']),
     usedSessions: getRollupNumber(p['사용 시간 회차']),
     unpaidAmount: getRollupNumber(p['미수금 합계']),

@@ -18,9 +18,9 @@ describe('validatePaymentForm — 온라인그룹수업 결제 편집 (버그 �
   });
   it('일반 결제는 여전히 회차 검증 유지', () => {
     expect(validatePaymentForm({ classTypeId: 'ct1', sessionCount: '0', actualAmount: '100000', studentId: 's1' }, { isOnlineGroup: false, isEdit: true }))
-      .toBe('시간 회차는 0보다 커야 합니다.');
+      .toBe('결제 시간은 0보다 커야 합니다.');
     expect(validatePaymentForm({ classTypeId: 'ct1', sessionCount: '', actualAmount: '100000', studentId: 's1' }, { isOnlineGroup: false, isEdit: true }))
-      .toBe('시간 회차를 입력하세요.');
+      .toBe('결제 시간을 입력하세요.');
   });
   it('일반 결제 신규는 학생 필수, 편집은 학생 없어도 됨', () => {
     const f = { classTypeId: 'ct1', sessionCount: '4', actualAmount: '200000', studentId: '' };
@@ -88,7 +88,7 @@ describe('formatSessions / isWholeSession — 회차 표시', () => {
   });
 });
 
-describe('remainingSessionsOf — 잔여 회차 자체 계산 (Notion 롤업이 환불 미반영이라 앱이 계산)', () => {
+describe('remainingSessionsOf — 잔여 시간 자체 계산 (Notion 롤업이 환불 미반영이라 앱이 계산)', () => {
   it('결제별 유효 회차를 합산하고 사용 회차를 뺀다', () => {
     const student = { usedSessions: 3 };
     const payments = [{ effectiveSessions: 6 }, { effectiveSessions: 4 }];

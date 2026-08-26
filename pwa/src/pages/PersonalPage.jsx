@@ -374,7 +374,6 @@ export default function PersonalPage() {
             ]}
             studentLoaded={student !== null}
             remainingHours={student?.remainingHours ?? 0}
-            remainingSessions={student?.remainingSessions ?? null}
             onUpcomingLoaded={handleUpcomingLoaded}
             hwAlerts={hwAlerts}
             onOpenPanda={() => navigate(`/personal/${studentToken}/panda`)}
