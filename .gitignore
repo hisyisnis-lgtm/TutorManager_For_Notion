@@ -25,6 +25,8 @@ secrets.json
 
 # 외부 프로젝트/스킬 (별도 관리, 본 repo 추적 대상 아님)
 99_external/
+# .agents 안의 동명 스킬 — 이전 taste-skill/ 패턴이 경로 무관 매칭으로 함께 무시하던 것
+.agents/skills/taste-skill/
 
 # Worker 빌드 산출물 검증용
 worker/dist-check/
