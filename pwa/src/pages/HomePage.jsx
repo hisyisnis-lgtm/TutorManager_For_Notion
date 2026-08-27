@@ -62,6 +62,11 @@ import { getInstructorName, getNtfyTopic } from './SettingsPage.jsx';
 // (주 25건쯤 되는 수업 밀도에서 30일이면 queryAll 2페이지 안쪽).
 const SHORTAGE_WINDOW_DAYS = 30;
 
+// 결제 안내를 '결제가 필요해지는 날'로부터 며칠 전에 띄울지.
+// 30일 창을 그대로 쓰면 9월 말 수업까지 미리 잡아둔 학생이 8월에 벌써 경고로 뜬다
+// (2026-08-27 실측: 초과 9명 중 8명이 D-11 이상 남은 상태였다). 임박한 것만 남긴다.
+const PAYMENT_DUE_LEAD_DAYS = 10;
+
 function getKSTToday() {
   const now = new Date();
   const parts = new Intl.DateTimeFormat('ko-KR', {
@@ -94,26 +99,36 @@ export default function HomePage() {
   //  ② 여유 없음: 잔여 0시간 이하 — 수업을 더 잡으려면 결제가 필요하다
   // ②를 빼면 "다음 수업도 안 잡힌 잔여 0시간" 학생을 통째로 놓친다(2026-08-25 실측 3명).
   const paymentDueRows = useMemo(() => {
+    // '결제가 필요해지는 날' 기준 D-PAYMENT_DUE_LEAD_DAYS 안에 든 학생만 띄운다.
+    //  ① 초과: 그 날 = 첫 '시간 회차 부족' 수업일
+    //  ② 여유 없음: 그 날 = 마지막 예정 수업일 (그 뒤로는 수업을 못 잡으니 그때까지는 결제 필요)
+    //     예정 수업이 아예 없으면 이미 끊긴 상태라 날짜를 오늘로 본다 = 항상 표시.
+    const cutoff = Date.now() + PAYMENT_DUE_LEAD_DAYS * 24 * 60 * 60 * 1000;
+    const withinLead = (iso) => !iso || new Date(iso).getTime() <= cutoff;
+
     const rows = [];
     for (const s of students) {
       if (s.status !== STATUS_ACTIVE) continue;
       const shortageAt = classIndex.firstShortage[s.id];
       const remaining = remainingByStudent[s.id] ?? 0;
       if (shortageAt) {
-        rows.push({ id: s.id, name: s.name, urgent: true, reason: `${formatShort(shortageAt)} 수업부터 초과` });
+        if (!withinLead(shortageAt)) continue;
+        rows.push({ id: s.id, name: s.name, urgent: true, dueAt: shortageAt, reason: `${formatShort(shortageAt)} 수업부터 초과` });
       } else if (remaining <= 0) {
         const lastAt = classIndex.lastClass[s.id];
+        if (!withinLead(lastAt)) continue;
         rows.push({
           id: s.id,
           name: s.name,
           urgent: false,
+          dueAt: lastAt,
           reason: lastAt ? `잔여 ${formatSessions(remaining)}시간 · ${formatShort(lastAt)} 수업까지` : `잔여 ${formatSessions(remaining)}시간 · 다음 수업 없음`,
         });
       }
     }
-    // 이미 넘긴 사람 먼저, 그다음 잔여가 적은 순.
-    return rows.sort((a, b) => (b.urgent === true) - (a.urgent === true));
-  }, [students, classIndex]);
+    // 이미 넘긴 사람 먼저, 그다음 결제가 필요해지는 날이 이른 순.
+    return rows.sort((a, b) => (b.urgent === true) - (a.urgent === true) || String(a.dueAt ?? '').localeCompare(String(b.dueAt ?? '')));
+  }, [students, classIndex, remainingByStudent]);
 
   // 피드백 대기 숙제 가로 스크롤 (Embla 자유 스크롤 — 드래그·관성·끝 저항, 마우스+터치)
   const [hwEmblaRef] = useEmblaCarousel({ dragFree: true, containScroll: 'trimSnaps' });
