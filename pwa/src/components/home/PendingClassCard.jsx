@@ -9,6 +9,7 @@ import { formatTime,
   KST } from '../../utils/dateUtils.js';
 import { PRIMARY,
   TEXT_PRIMARY,
+  TEXT_SECONDARY,
   TEXT_TERTIARY,
   GRAY_100,
   TEXT_INACTIVE } from '../../constants/theme.js';
@@ -59,15 +60,15 @@ export default function PendingClassCard({ cls, studentName, hwDone, onHwClick }
     }
   };
 
-  // 아직 안 한 일(숙제 부여·일지 작성). 면은 **중립**으로 두고 강조는 글자색으로만 준다 —
-  // ⛔ 연한 브랜드 면(PRIMARY_BG)으로 채우지 말 것(design_system §18-1).
-  // 카드에 채운 버튼이 둘씩 나란히 서면 목록 전체에서 이 카드만 붕 뜬다.
+  // 아직 안 한 일(숙제 부여·일지 작성) — **흰 면 + 테두리**로 카드 위에 얹힌 버튼처럼 세운다.
+  // 회색 면은 카드 배경에 가라앉아 '이미 끝난 것'으로 읽힌다(2026-08-27 지적).
+  // ⛔ 연한 브랜드 면(PRIMARY_BG)으로 채우지 말 것(design_system §18-1) — 강조는 글자색으로.
   const activeBtn = {
     flex: 1, height: 40, borderRadius: 10,
-    background: GRAY_100, color: PRIMARY,
+    background: '#fff', color: PRIMARY,
     fontSize: 13, fontWeight: 600,
     display: 'flex', alignItems: 'center', justifyContent: 'center',
-    border: 'none', cursor: 'pointer',
+    border: 'none', boxShadow: 'var(--shadow-border)', cursor: 'pointer',
     transition: 'background-color 150ms ease-out',
   };
   const doneBtn = {
@@ -77,12 +78,14 @@ export default function PendingClassCard({ cls, studentName, hwDone, onHwClick }
     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
     border: 'none', cursor: 'default',
   };
+  // 이미 일지가 있어 '고치러 가는' 버튼 — 할 일이 아니라 회색 면에 가라앉힌다.
+  // 위 doneBtn('숙제 부여 완료')과 같은 층이다.
   const editBtn = {
     flex: 1, height: 40, borderRadius: 10,
-    background: '#fff', color: TEXT_PRIMARY,
+    background: GRAY_100, color: TEXT_SECONDARY,
     fontSize: 13, fontWeight: 600,
     display: 'flex', alignItems: 'center', justifyContent: 'center',
-    border: 'none', boxShadow: 'var(--shadow-border)', cursor: 'pointer',
+    border: 'none', cursor: 'pointer',
   };
 
   return (

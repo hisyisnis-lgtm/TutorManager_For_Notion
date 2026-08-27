@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, forwardRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { CaretLeftIcon, CaretRightIcon, CaretDownIcon, DownloadSimpleIcon, ImageIcon, StackIcon, ClockIcon, MapPinIcon } from '@phosphor-icons/react';
 import { App as AntApp, Button, Dropdown } from 'antd';
 import useEmblaCarousel from 'embla-carousel-react';
@@ -7,7 +8,7 @@ import { useData } from '../context/DataContext.jsx';
 import { queryPage, getPage } from '../api/notionClient.js';
 import { swrLoad } from '../hooks/useCachedResource.js';
 import { CLASSES_DB, parseClass } from '../api/classes.js';
-import { parseLessonLog } from '../api/lessonLogs.js';
+import { parseLessonLog, isEmpty } from '../api/lessonLogs.js';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import LessonLogBody from '../components/lessonLogs/LessonLogBody.jsx';
@@ -22,11 +23,11 @@ import {
 import { KST, formatDuration } from '../utils/dateUtils.js';
 const pad = (n) => String(n).padStart(2, '0');
 
-/** KST 기준 내일 "YYYY-MM-DD" */
-function getKSTTomorrowStr() {
+/** KST 기준 오늘로부터 offset일 뒤 "YYYY-MM-DD" (0=오늘, 1=내일) */
+function getKSTDateStr(offset) {
   const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: KST });
   const [y, m, d] = todayStr.split('-').map(Number);
-  const t = new Date(y, m - 1, d + 1);
+  const t = new Date(y, m - 1, d + offset);
   return `${t.getFullYear()}-${pad(t.getMonth() + 1)}-${pad(t.getDate())}`;
 }
 
@@ -46,7 +47,15 @@ function fmtTimeOnly(iso) {
   });
 }
 
-export default function TomorrowPrepPage() {
+/**
+ * 수업 준비 카드 — 하루치 수업을 학생별 카드로 넘겨 보는 화면.
+ * `dayOffset`으로 오늘(0)·내일(1)을 같은 화면이 처리한다. 화면 두 벌을 두지 않으려는 것.
+ * `?student=<id>`가 붙어 오면 그 학생 카드에서 시작한다(홈의 오늘 수업 줄에서 넘어올 때).
+ */
+export default function TomorrowPrepPage({ dayOffset = 1 }) {
+  const dayLabel = dayOffset === 0 ? '오늘' : '내일';
+  const [searchParams] = useSearchParams();
+  const focusStudentId = searchParams.get('student');
   const { message } = AntApp.useApp();
   const { studentNameMap } = useData();
   const [slides, setSlides] = useState([]);
@@ -58,6 +67,7 @@ export default function TomorrowPrepPage() {
   // 굳던 문제 — 맵이 늦게 도착해도 슬라이드 이름을 재해석해 갱신한다.
   useEffect(() => {
     setSlides((prev) => prev.map((s) => {
+      if (!s.studentId) return s;   // 학생없는 수업 — 이름은 수업명 그대로 둔다
       const name = stripEmoji(studentNameMap[s.studentId] || '') || s.studentName;
       return name === s.studentName ? s : { ...s, studentName: name };
     }));
@@ -72,7 +82,7 @@ export default function TomorrowPrepPage() {
   const cardRefs = useRef([]);    // off-screen 각 카드 (단일 저장 캡처 대상)
   const batchRef = useRef(null);  // off-screen 합본 (일괄 저장)
 
-  const tomorrowStr = getKSTTomorrowStr();
+  const tomorrowStr = getKSTDateStr(dayOffset);
 
   const onSelect = useCallback(() => {
     if (!emblaApi) return;
@@ -97,13 +107,23 @@ export default function TomorrowPrepPage() {
     if (emblaApi) emblaApi.reInit();
   }, [emblaApi, slides.length]);
 
+  // 홈의 '오늘 수업' 줄에서 넘어오면 그 학생 카드부터 보여준다 —
+  // 특정 수업을 눌렀는데 남의 카드가 먼저 뜨면 누른 것과 본 것이 어긋난다.
+  const focusedRef = useRef(false);
+  useEffect(() => {
+    if (!emblaApi || !focusStudentId || focusedRef.current || !slides.length) return;
+    const i = slides.findIndex((s) => s.studentId === focusStudentId);
+    if (i > 0) emblaApi.scrollTo(i, true);   // true = 애니메이션 없이 즉시
+    focusedRef.current = true;
+  }, [emblaApi, focusStudentId, slides]);
+
   const load = async () => {
     setLoading(true);
     try {
       // 학생마다 '직전 수업 + 그 일지'를 따로 부르는 N+1 구조라(학생 5명이면 최대 10회 왕복)
       // 이 화면은 열 때마다 눈에 띄게 느렸다. 완성된 슬라이드를 통째로 캐시해
       // 재방문 시 즉시 띄우고 뒤에서 갱신한다. 키에 내일 날짜가 들어가 날이 바뀌면 자동 무효.
-      await swrLoad(`tomorrowPrep:${tomorrowStr}`, async () => {
+      await swrLoad(`prep:${tomorrowStr}`, async () => {
       // 1. 내일 수업 조회 (취소 제외, 시간순)
       const data = await queryPage(
         CLASSES_DB,
@@ -122,7 +142,11 @@ export default function TomorrowPrepPage() {
 
       // 2. 학생별로 내일 수업 묶기 (2:1이면 학생마다, 중복 학생은 1슬라이드)
       const byStudent = new Map(); // studentId -> classes[]
+      // 학생이 연결되지 않은 수업(온라인그룹수업·게스트 상담)은 **수업 자체를 한 묶음**으로 잡는다.
+      // 예전엔 통째로 빠져서 그날 수업이 있는데도 카드가 안 나왔다(2026-08-27).
+      const noStudent = [];
       for (const cls of tomorrowClasses) {
+        if (!cls.studentIds?.length) { noStudent.push(cls); continue; }
         for (const sid of cls.studentIds) {
           if (!byStudent.has(sid)) byStudent.set(sid, []);
           byStudent.get(sid).push(cls);
@@ -148,8 +172,14 @@ export default function TomorrowPrepPage() {
               {
                 and: [
                   { property: '학생', relation: { contains: sid } },
-                  { property: '수업 일시', date: { before: new Date().toISOString() } },
-                  { property: '수업 일지', relation: { is_not_empty: true } },
+                  // 기준은 '지금'이 아니라 **그 학생의 그날 첫 수업 직전**이다.
+                  // 오늘치로 볼 때 '지금 이전'을 쓰면 오늘 이미 끝난 수업이 직전으로 잡혀
+                  // "직전 수업: 오늘"이 나온다(2026-08-27). 내일치에서도 결과는 같다.
+                  { property: '수업 일시', date: { before: classes[0]?.datetime ?? new Date().toISOString() } },
+                  // ⛔ '수업 일지 relation이 있는 수업'으로 좁히지 말 것 —
+                  //    수업이 끝나면 **빈 일지가 자동 생성**되므로 이 조건은 내용 유무를 못 가린다.
+                  //    게다가 진짜 직전 수업을 건너뛰고 옛 수업 날짜를 보여주게 된다(2026-08-27).
+                  //    직전 수업은 있는 그대로 찾고, 일지가 없거나 비었으면 카드가 그렇게 말한다.
                   { property: '특이사항', select: { does_not_equal: '🚫 취소' } },
                 ],
               },
@@ -160,6 +190,7 @@ export default function TomorrowPrepPage() {
             const prevPage = (prevData?.results ?? [])[0];
             if (prevPage) {
               const prevClass = parseClass(prevPage);
+              // 일지가 없어도 '직전 수업이 언제였는지'는 알려준다 — 날짜가 맞아야 카드를 믿는다.
               prevClassDate = prevClass.datetime;
               const logId = prevClass.lessonLogIds?.[0];
               if (logId) {
@@ -170,11 +201,26 @@ export default function TomorrowPrepPage() {
           } catch (e) {
             console.error('[내일 수업 준비] 직전 일지 로드 오류', name, e);
           }
-          return { studentId: sid, studentName: name, classes, prevLog, prevClassDate };
+          return { key: sid, studentId: sid, studentName: name, classes, prevLog, prevClassDate };
         })
       );
 
-      return built;
+      // 학생없는 수업 슬라이드 — 직전 일지를 찾을 상대가 없으니 수업 정보만 담는다.
+      const guestSlides = noStudent.map((cls) => ({
+        key: `cls:${cls.id}`,
+        studentId: null,
+        studentName: stripEmoji(cls.title || '') || '학생 미정',
+        classes: [cls],
+        prevLog: null,
+        prevClassDate: null,
+      }));
+
+      // 시작 시간 순으로 합친다 — 하루를 시간 흐름대로 넘겨 보게.
+      const merged = [...built, ...guestSlides].sort((a, b) =>
+        String(a.classes[0]?.datetime ?? '').localeCompare(String(b.classes[0]?.datetime ?? ''))
+      );
+
+      return merged;
       }, (built) => {
         setSlides(built);
         setLoadError(false);
@@ -188,7 +234,16 @@ export default function TomorrowPrepPage() {
     }
   };
 
-  useEffect(() => { load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // 날짜가 바뀌면 다시 부른다. 오늘/내일 두 라우트가 **같은 컴포넌트**라 라우터가
+  // 인스턴스를 재사용한다 — 마운트 1회([])로 두면 오늘 화면에 내일 데이터가 그대로 남는다
+  // (2026-08-27 실측). 자정을 넘겨 날짜가 바뀌는 경우도 이 의존성이 받아 준다.
+  useEffect(() => { load(); }, [tomorrowStr]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 화면이 바뀌면 첫 카드부터. 남은 슬라이드 위치가 다른 날짜에 그대로 이어지면 어긋난다.
+  useEffect(() => {
+    focusedRef.current = false;
+    if (emblaApi) emblaApi.scrollTo(0, true);
+  }, [emblaApi, tomorrowStr]);
 
   // 이 페이지가 마운트된 동안 페이지 세로 스크롤을 완전히 제거.
   // ① page-container를 실제 화면 높이(dvh)에 고정 (모바일 100vh > 보이는 높이 + pb-24 넘침 방지)
@@ -257,7 +312,7 @@ export default function TomorrowPrepPage() {
     setDownloading(true);
     try {
       const dataUrl = await domToPng(batchRef.current, { scale: 2, backgroundColor: BG_CARD });
-      triggerDownload(dataUrl, `내일수업준비_${tomorrowStr.slice(5)}.png`);
+      triggerDownload(dataUrl, `${dayLabel}수업준비_${tomorrowStr.slice(5)}.png`);
       message.success(`전체 ${slides.length}명 일지를 저장했어요`);
     } catch (e) {
       console.error('[내일 수업 준비] 일괄 캡처 오류', e);
@@ -274,20 +329,20 @@ export default function TomorrowPrepPage() {
 
   return (
     <PullToRefresh onRefresh={load}>
-      <PageHeader title="내일 수업 준비" back />
+      <PageHeader title={`${dayLabel} 수업 준비`} back />
 
       {loading ? (
         <div className="px-4 pt-8"><LoadingSpinner /></div>
       ) : loadError ? (
         <div className="text-center" style={{ padding: '64px 0' }}>
           <p style={{ fontSize: 14, color: TEXT_TERTIARY, marginBottom: 12 }}>
-            내일 수업 정보를 불러오지 못했어요.
+            {dayLabel} 수업 정보를 불러오지 못했어요.
           </p>
           <Button onClick={load}>다시 시도</Button>
         </div>
       ) : slides.length === 0 ? (
         <p className="text-center" style={{ fontSize: 14, color: TEXT_TERTIARY, padding: '64px 0' }}>
-          내일 예정된 수업이 없습니다.
+          {dayLabel} 예정된 수업이 없습니다.
         </p>
       ) : (
         <>
@@ -308,7 +363,7 @@ export default function TomorrowPrepPage() {
             <div style={{ display: 'flex', height: '100%' }}>
               {slides.map((s) => (
                 <div
-                  key={s.studentId}
+                  key={s.key ?? s.studentId}
                   // 상하 여백(12px): 카드 그림자가 캐러셀 overflow-hidden에 잘리지 않도록 공간 확보.
                   style={{ flex: '0 0 100%', minWidth: 0, boxSizing: 'border-box', padding: '12px 16px', height: '100%' }}
                 >
@@ -358,7 +413,7 @@ export default function TomorrowPrepPage() {
           }}
         >
           {slides.map((s, i) => (
-            <LogCard key={s.studentId} ref={(el) => { cardRefs.current[i] = el; }} slide={s} />
+            <LogCard key={s.key ?? s.studentId} ref={(el) => { cardRefs.current[i] = el; }} slide={s} />
           ))}
         </div>
       )}
@@ -450,14 +505,31 @@ function LogCardHead({ slide }) {
   );
 }
 
-/** 카드 본문 — 직전 수업 일지. 화면/캡처 공용. */
+/**
+ * 카드 본문 — 직전 수업 일지. 화면/캡처 공용.
+ * 일지가 없거나 **비어 있어도 직전 수업 날짜는 그대로 보여준다** — 날짜가 맞아야 카드를 믿는다.
+ * 수업 완료 시 빈 일지가 자동 생성되므로 "일지가 있다 = 내용이 있다"가 아니다(2026-08-27).
+ */
 function LogCardBody({ slide }) {
   const log = slide.prevLog;
-  if (!log) {
+  const blank = !log || isEmpty(log);
+  if (blank) {
     return (
-      <p style={{ fontSize: 14, color: TEXT_TERTIARY, textAlign: 'center', padding: '24px 0' }}>
-        직전 수업 일지가 없습니다.
-      </p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        {slide.prevClassDate && (
+          <p className="tabular-nums" style={{ fontSize: 12, color: TEXT_TERTIARY, margin: 0 }}>
+            직전 수업: {fmtDateOnly(slide.prevClassDate)}
+          </p>
+        )}
+        <p style={{ fontSize: 14, color: TEXT_TERTIARY, textAlign: 'center', padding: '24px 0', margin: 0 }}>
+          {slide.prevClassDate
+            ? '직전 수업 일지가 아직 작성되지 않았어요.'
+            : slide.studentId
+            ? '직전 수업이 없습니다.'
+            /* 그룹수업·게스트 상담 — 학생이 연결돼 있지 않아 직전 일지를 찾을 상대가 없다 */
+            : '학생이 연결되지 않아 직전 일지를 찾을 수 없어요.'}
+        </p>
+      </div>
     );
   }
   return (

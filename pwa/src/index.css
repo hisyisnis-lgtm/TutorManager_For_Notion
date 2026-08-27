@@ -138,6 +138,11 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
     0px 0px 0px 1px #ffccc7,
     0px 2px 8px rgba(207, 19, 34, 0.06);
 
+  /* 주의 테두리 — danger의 주황 짝. 상담=위험(빨강) / 결제 안내=주의(주황)로 층이 갈린다. */
+  --shadow-warning-border:
+    0px 0px 0px 1px #ffd591,
+    0px 2px 8px rgba(212, 107, 8, 0.06);
+
   /* 카드 눌림(press) — lift를 빼고 링만 살짝 조여 "표면에 눌러 앉은" 상태.
      press scale은 §7.2에서 금지라 눌림감은 그림자·배경으로만 낸다. */
   --shadow-border-pressed:

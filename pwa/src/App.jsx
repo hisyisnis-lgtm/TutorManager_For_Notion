@@ -361,7 +361,9 @@ export default function App() {
             <Route path="/" element={<Navigate to="/home" replace />} />
             <Route path="/home" element={<HomePage />} />
             <Route path="/home/pending" element={<PendingClassesPage />} />
-            <Route path="/home/tomorrow-prep" element={<TomorrowPrepPage />} />
+            <Route path="/home/tomorrow-prep" element={<TomorrowPrepPage dayOffset={1} />} />
+            {/* 같은 화면을 오늘치로 — 홈의 '오늘 수업' 줄에서 들어온다 */}
+            <Route path="/home/today-prep" element={<TomorrowPrepPage dayOffset={0} />} />
 
             <Route path="/students" element={<StudentsPage />} />
             <Route path="/students/new" element={<StudentFormPage />} />

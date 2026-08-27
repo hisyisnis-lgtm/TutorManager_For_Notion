@@ -43,7 +43,12 @@ export default function PaymentCard({ payment, studentNameMap, classTypeMap, hid
                 <p style={{ fontSize: 12, color: TEXT_TERTIARY, margin: '2px 0 0' }}>{classTypeName}</p>
               )}
             </div>
-            {payment.studentIds.length > 0 && <Badge label={stripEmoji(payment.paymentStatus)} bg={bg} text={text} />}
+            {/* '완료'는 안 그린다 — 결제 98건 중 84건(86%)이 완료라 정보량이 0이다(2026-08-27).
+                완료가 아닌 것은 **학생 연결 여부와 무관하게 전부** 띄운다(2026-08-27 사용자 지시).
+                노션 formula 네 가지 중 완료를 뺀 나머지: ⚠️초과금 → N원 · 🔴미결제 · 🔴미완료. */}
+            {payment.paymentStatus && !payment.paymentStatus.includes('🟢') && (
+              <Badge label={stripEmoji(payment.paymentStatus)} bg={bg} text={text} />
+            )}
           </div>
           <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
             {/* 학생 없는 결제(온라인그룹수업)는 결제 시간·미수금 개념이 없어 실제 결제 금액만 표시 */}

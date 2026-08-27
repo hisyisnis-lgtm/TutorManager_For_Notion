@@ -8,7 +8,7 @@ import { BellIcon,
   CreditCardIcon,
   NotePencilIcon,
   CaretRightIcon,
-  HourglassLowIcon,
+  CaretDownIcon,
   CalendarCheckIcon,
   NotebookIcon } from '@phosphor-icons/react';
 import { Link,
@@ -17,15 +17,13 @@ import { Card } from 'antd';
 import useEmblaCarousel from 'embla-carousel-react';
 import { useData } from '../context/DataContext.jsx';
 import { queryPage,
-  queryAll,
-  getPage } from '../api/notionClient.js';
+  queryAll } from '../api/notionClient.js';
 import { swrLoad } from '../hooks/useCachedResource.js';
 import { CLASSES_DB,
   parseClass } from '../api/classes.js';
 import { formatSessions } from '../api/payments.js';
 import { HOMEWORK_DB,
   parseHomework } from '../api/homework.js';
-import { parseLessonLog } from '../api/lessonLogs.js';
 import { CONSULT_DB } from '../constants.js';
 import { STATUS_ACTIVE } from '../api/students.js';
 import { formatShort,
@@ -33,10 +31,6 @@ import { formatShort,
   formatTime,
   formatDuration,
   KST } from '../utils/dateUtils.js';
-import { isOnlineGroupTitle,
-  isFreeConsultTitle,
-  isFixedPriceTitle } from '../utils/classTypeKind.js';
-import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import PullToRefresh from '../components/ui/PullToRefresh.jsx';
 import SectionHeading from '../components/ui/SectionHeading.jsx';
 import PendingClassCard from '../components/home/PendingClassCard.jsx';
@@ -53,8 +47,7 @@ import {
   STATUS_WARNING_BG,
   STATUS_WARNING_BORDER,
   STATUS_WARNING_TEXT,
-  STATUS_WARNING_TEXT_DARK,
-  GRAY_100 } from '../constants/theme.js';
+  STATUS_WARNING_TEXT_DARK } from '../constants/theme.js';
 import { BADGE_SMALL } from '../constants/styles.js';
 import { getInstructorName, getNtfyTopic } from './SettingsPage.jsx';
 
@@ -77,13 +70,11 @@ function getKSTToday() {
 
 export default function HomePage() {
   const navigate = useNavigate();
-  const { studentNameMap, classTypeMap, students, remainingByStudent, refresh: refreshData } = useData();
+  const { studentNameMap, students, remainingByStudent, refresh: refreshData } = useData();
   // loadShortage가 채우는 수업 인덱스.
   //  firstShortage: 학생별 '가장 이른 시간부족 수업' 일시 — 이미 결제한 시간을 넘긴 경우
   //  lastClass    : 학생별 '가장 늦은 예정 수업' 일시 — 언제까지 커버되는지 알려주는 용도
   const [classIndex, setClassIndex] = useState({ firstShortage: {}, lastClass: {} });
-  const [classes, setClasses] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [consultCount, setConsultCount] = useState(0);
   const [submittedHomework, setSubmittedHomework] = useState([]);
   const [todayClasses, setTodayClasses] = useState([]);
@@ -148,38 +139,6 @@ export default function HomePage() {
 
   const { state: pendingState, setHwDone } = usePendingClassState();
 
-  const [upcomingPrep, setUpcomingPrep] = useState(null);
-
-  const loadUpcoming = async () => {
-    setLoading(true);
-    try {
-      // 날짜 키를 붙여 자정을 넘기면 지난 수업이 남지 않게 한다.
-      await swrLoad(`home:upcoming:${todayStr}`, async () => {
-        const data = await queryPage(
-          CLASSES_DB,
-          {
-            and: [
-              { property: '수업 일시', date: { on_or_after: new Date().toISOString() } },
-              { property: '특이사항', select: { does_not_equal: '🚫 취소' } },
-            ] },
-          [{ property: '수업 일시', direction: 'ascending' }],
-          undefined,
-          5
-        );
-        return (data?.results ?? []).map(parseClass);
-      }, (list, { fromCache }) => {
-        setClasses(list);
-        setLoading(false);
-        // 준비 메모는 새로 받은 목록으로만 조회한다 — 캐시로 두 번 부르지 않게.
-        if (!fromCache) loadUpcomingPrep(list[0]);
-      });
-    } catch (e) {
-      console.error('[홈] 수업 불러오기 오류', e); setLoadFailed(true);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   // 결제 안내가 필요한 학생 찾기.
   //
   // ⚠️ 학생의 '잔여 시간 회차'로 판단하면 안 된다 — 강사가 앞으로의 수업을 미리 등록해두면
@@ -222,39 +181,6 @@ export default function HomePage() {
       }, setClassIndex);
     } catch (e) {
       console.error('[홈] 잔여 시간 부족 수업 불러오기 오류', e); setLoadFailed(true);
-    }
-  };
-
-  const loadUpcomingPrep = async (nextClass) => {
-    if (!nextClass || !nextClass.studentIds?.length) { setUpcomingPrep(null); return; }
-    try {
-      const firstStudentId = nextClass.studentIds[0];
-      const prevData = await queryPage(
-        CLASSES_DB,
-        {
-          and: [
-            { property: '학생', relation: { contains: firstStudentId } },
-            { property: '수업 일시', date: { before: new Date().toISOString() } },
-            { property: '수업 일지', relation: { is_not_empty: true } },
-            { property: '특이사항', select: { does_not_equal: '🚫 취소' } },
-          ] },
-        [{ property: '수업 일시', direction: 'descending' }],
-        undefined,
-        1
-      );
-      const prevPage = (prevData?.results ?? [])[0];
-      if (!prevPage) { setUpcomingPrep(null); return; }
-      const prevClass = parseClass(prevPage);
-      const logId = prevClass.lessonLogIds?.[0];
-      if (!logId) { setUpcomingPrep(null); return; }
-      const logPage = await getPage(logId);
-      const log = parseLessonLog(logPage);
-      const text = log.nextPrepare?.trim();
-      if (!text) { setUpcomingPrep(null); return; }
-      setUpcomingPrep({ classId: nextClass.id, logId, text });
-    } catch (e) {
-      console.error('[홈] 준비사항 로드 오류', e);
-      setUpcomingPrep(null);
     }
   };
 
@@ -349,7 +275,6 @@ export default function HomePage() {
   };
 
   useEffect(() => {
-    loadUpcoming();
     loadConsultCount();
     loadSubmittedHomework();
     loadTodayClasses();
@@ -370,7 +295,6 @@ export default function HomePage() {
   const handleRefresh = async () => {
     setLoadFailed(false);
     await Promise.all([
-      loadUpcoming(),
       loadConsultCount(),
       loadSubmittedHomework(),
       loadTodayClasses(),
@@ -532,8 +456,10 @@ export default function HomePage() {
                 const endTimeStr = cls.endTime ? formatTime(cls.endTime) : '';
                 return (
                   <li key={cls.id}>
+                    {/* 내일 수업 준비와 같은 카드 화면을 오늘치로 연다. 누른 수업의 학생 카드부터
+                        시작하도록 ?student= 를 붙인다(2026-08-27). */}
                     <Link
-                      to={`/classes/${cls.id}/edit`}
+                      to={`/home/today-prep${cls.studentIds?.[0] ? `?student=${cls.studentIds[0]}` : ''}`}
                       className="press flex items-center gap-3 px-3 py-2 rounded-lg bg-gray-50 active:bg-gray-100 transition-[background-color] duration-150"
                     >
                       <span className="text-xs font-semibold tabular-nums shrink-0" style={{ color: TEXT_PRIMARY }}>
@@ -629,41 +555,49 @@ export default function HomePage() {
         >
           <Card
             variant="borderless"
-            style={{ borderRadius: 16, backgroundColor: STATUS_WARNING_BG, boxShadow: `0 0 0 1px ${STATUS_WARNING_BORDER} inset` }}
-            styles={{ body: { padding: '14px 16px' } }}
+            style={{ borderRadius: 16, backgroundColor: STATUS_WARNING_BG, boxShadow: 'var(--shadow-warning-border)' }}
+            /* 바로 위 '내일 수업 준비'와 같은 뼈대 — 캐럿 쪽만 2px 덜 준다 */
+            styles={{ body: { padding: '14px 14px 14px 16px' } }}
           >
             <button
               type="button"
               onClick={() => setLowSessionOpen((v) => !v)}
               aria-expanded={lowSessionOpen}
+              aria-label={`결제 안내 필요 ${paymentDueRows.length}명 ${lowSessionOpen ? '접기' : '펼치기'}`}
               className="w-full flex items-center justify-between"
               style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', minHeight: 24, WebkitTapHighlightColor: 'transparent' }}
             >
-              <span className="flex items-center gap-2">
-                <HourglassLowIcon size={20} weight="fill" color={STATUS_WARNING_TEXT} />
-                <span className="text-sm font-semibold tabular-nums" style={{ color: STATUS_WARNING_TEXT_DARK }}>
-                  결제 안내 필요 {paymentDueRows.length}명
-                </span>
-              </span>
-              <span className="text-xs flex items-center gap-0.5" style={{ color: STATUS_WARNING_TEXT }}>
-                {lowSessionOpen ? '접기' : '누구인지 보기'}
-                <CaretRightIcon
-                  size={12}
-                  weight="bold"
-                  style={{
-                    transform: lowSessionOpen ? 'rotate(90deg)' : 'none',
-                    transitionProperty: 'transform',
-                    transitionDuration: '0.2s',
-                    transitionTimingFunction: 'var(--ease-out)' }}
-                />
-              </span>
+              <div className="flex items-center gap-2.5">
+                {/* 색이 '주의'를 말하니 아이콘은 '무엇에 대한'을 맡는다 — 결제는 앱 전체가 카드 아이콘 */}
+                <CreditCardIcon size={24} weight="fill" color={STATUS_WARNING_TEXT} />
+                <div>
+                  <span style={{ fontSize: 15, fontWeight: 700, color: STATUS_WARNING_TEXT_DARK }}>
+                    결제 안내 필요
+                  </span>
+                  <span className="tabular-nums" style={{ fontSize: 13, color: STATUS_WARNING_TEXT, marginLeft: 8 }}>
+                    {paymentDueRows.length}명
+                  </span>
+                </div>
+              </div>
+              {/* 캐럿만 둔다 — 위 카드가 캐럿 하나인데 여기만 '누구인지 보기 ›'면 둘이 다른 물건으로 보인다.
+                  방향은 ⌄ — 이건 이동이 아니라 펼침이다(오른쪽 화살표는 "페이지가 바뀌나?"로 읽힌다). */}
+              <CaretDownIcon
+                size={20}
+                weight="bold"
+                color={STATUS_WARNING_TEXT}
+                style={{
+                  transform: lowSessionOpen ? 'rotate(180deg)' : 'none',
+                  transitionProperty: 'transform',
+                  transitionDuration: '0.2s',
+                  transitionTimingFunction: 'var(--ease-out)' }}
+              />
             </button>
 
             {/* 펼침은 grid-template-rows 트랜지션 — 내용 높이를 몰라도 되고,
                 펼치는 중에 다시 눌러도 그 자리에서 되감긴다(키프레임은 처음부터 다시 시작). */}
             <div className="reveal" data-open={lowSessionOpen}>
               <div>
-                <div style={{ marginTop: 6 }}>
+                <div style={{ marginTop: 10, paddingTop: 4, borderTop: `1px solid ${STATUS_WARNING_BORDER}` }}>
                 {paymentDueRows.map((row) => (
                   <Link
                     key={row.id}
@@ -797,104 +731,9 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* 다가오는 수업 */}
-      <div
-        className="px-4 pt-6 pb-24"
-        style={{ animation: 'fade-in-up 400ms cubic-bezier(0.2, 0, 0, 1) both', animationDelay: '240ms' }}
-      >
-        <SectionHeading style={{ marginBottom: 12 }}>다가오는 수업</SectionHeading>
-
-        {loading ? (
-          <LoadingSpinner />
-        ) : classes.length === 0 ? (
-          <p className="text-sm text-gray-400 py-4 text-center">예정된 수업이 없습니다.</p>
-        ) : (
-          <ul className="space-y-2">
-            {classes.map((cls) => {
-              const names = cls.studentIds
-                .map((id) => studentNameMap[id])
-                .filter(Boolean)
-                .map((n) => n.replace(/^[\p{Emoji_Presentation}\p{Extended_Pictographic}]\s*/gu, '').trim())
-                .join(', ');
-              const title = cls.title || names || '수업';
-              const classType = classTypeMap[cls.classTypeId]?.classType ?? '';
-              const timeStr = cls.datetime
-                ? new Date(cls.datetime).toLocaleTimeString('ko-KR', { timeZone: KST, hour: '2-digit', minute: '2-digit', hour12: false })
-                : '';
-              const endTimeStr = cls.endTime ? formatTime(cls.endTime) : '';
-              const dateStr = cls.datetime
-                ? new Date(cls.datetime).toLocaleDateString('ko-KR', { timeZone: KST, month: 'numeric', day: 'numeric', weekday: 'short' })
-                : '';
-              return (
-                <li key={cls.id}>
-                  <Link
-                    to={`/classes/${cls.id}/edit`}
-                    className="block tap-wrap"
-                  >
-                    <Card
-                      variant="borderless"
-                      className="card-tap"
-                      style={{ borderRadius: 16 }}
-                      styles={{ body: { padding: '14px 16px' } }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12 }}>
-                        <p style={{ fontSize: 15, fontWeight: 600, color: TEXT_PRIMARY, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0 }}>
-                          {title}
-                        </p>
-                        <span style={{ fontSize: 13, color: TEXT_SECONDARY, fontWeight: 400, flexShrink: 0 }} className="tabular-nums">
-                          {dateStr} {timeStr}{endTimeStr && `–${endTimeStr}`}
-                        </span>
-                      </div>
-                      {(classType || cls.location) && (
-                        <p style={{ fontSize: 12, color: TEXT_TERTIARY, margin: '4px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {[classType, cls.location].filter(Boolean).join(' · ')}
-                        </p>
-                      )}
-                      {(() => {
-                        const typeTitle = classTypeMap[cls.classTypeId]?.title ?? '';
-                        const isFree = isFreeConsultTitle(typeTitle);
-                        const isOneDay = isFixedPriceTitle(typeTitle);
-                        const isGroup = isOnlineGroupTitle(typeTitle);
-                        if (isFree || isOneDay || isGroup) {
-                          return (
-                            <div style={{ marginTop: 8 }}>
-                              <span style={{
-                                display: 'inline-block',
-                                padding: '2px 8px', borderRadius: 6,
-                                background: GRAY_100,
-                                color: TEXT_TERTIARY,
-                                fontSize: 11, fontWeight: 600 }}>
-                                {isFree ? '무료상담' : isGroup ? '그룹수업' : typeTitle.includes('체험') ? '체험수업' : '원데이클래스'}
-                              </span>
-                            </div>
-                          );
-                        }
-                        if (classes[0]?.id === cls.id && upcomingPrep && cls.id === upcomingPrep.classId) {
-                          return (
-                            <div style={{
-                              marginTop: 10, paddingTop: 10,
-                              borderTop: `1px solid ${GRAY_100}` }}>
-                              <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-                                <span style={{ fontSize: 11, color: TEXT_TERTIARY, flexShrink: 0, lineHeight: 1.45, marginTop: 1 }}>
-                                  준비
-                                </span>
-                                <span style={{ fontSize: 13, color: TEXT_PRIMARY, lineHeight: 1.45, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                                  {upcomingPrep.text}
-                                </span>
-                              </div>
-                            </div>
-                          );
-                        }
-                        return null;
-                      })()}
-                    </Card>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </div>
+      {/* '다가오는 수업' 섹션은 제거됐다(2026-08-27 사용자 지시) — 수업 캘린더 탭과 중복.
+          하단 여백은 이 섹션이 들고 있던 pb-24를 대신한다. */}
+      <div className="pb-24" />
     </PullToRefresh>
   );
 }
