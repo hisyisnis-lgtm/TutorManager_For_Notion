@@ -5,8 +5,8 @@
 import { BellIcon,
   GearSixIcon,
   CalendarPlusIcon,
-  ReceiptIcon,
-  UsersThreeIcon,
+  CreditCardIcon,
+  NotePencilIcon,
   CaretRightIcon,
   HourglassLowIcon,
   CalendarCheckIcon,
@@ -131,7 +131,7 @@ export default function HomePage() {
     }
   });
 
-  const { state: pendingState, setHwDone, setDismissed } = usePendingClassState();
+  const { state: pendingState, setHwDone } = usePendingClassState();
 
   const [upcomingPrep, setUpcomingPrep] = useState(null);
 
@@ -386,8 +386,8 @@ export default function HomePage() {
   // 화면·데이터는 진작 있었는데 앱 어디에서도 갈 수 없는 고아 화면이었다(2026-08-24 검수).
   const QUICK_ACTIONS = [
     { label: '수업 추가', Icon: CalendarPlusIcon, path: '/classes/new' },
-    { label: '결제 입력', Icon: ReceiptIcon, path: '/payments/new' },
-    { label: '학생 관리', Icon: UsersThreeIcon, path: '/students' },
+    { label: '결제 추가', Icon: CreditCardIcon, path: '/payments/new' },
+    { label: '숙제 추가', Icon: NotePencilIcon, path: '/homework/new' },
     { label: '수업 일지', Icon: NotebookIcon, path: '/logs' },
   ];
 
@@ -699,7 +699,6 @@ export default function HomePage() {
                   studentName={names}
                   hwDone={!!s.hwDone}
                   onHwClick={setHwDone}
-                  onDismiss={setDismissed}
                 />
               );
             })}

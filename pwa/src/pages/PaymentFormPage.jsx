@@ -3,6 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { stripEmoji } from '../utils/stringUtils.js';
 import { Alert, Button, Input, Select, Typography } from 'antd';
 import PageHeader from '../components/layout/PageHeader.jsx';
+import SubmitButton from '../components/ui/SubmitButton.jsx';
+import SelectCheck from '../components/ui/SelectCheck.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import { getPage, deletePage } from '../api/notionClient.js';
 import { invalidateCache } from '../hooks/useCachedResource.js';
@@ -164,6 +166,15 @@ export default function PaymentFormPage() {
     }
   };
 
+  // 비활성 사유 — handleSubmit·saveGroup의 검사 순서를 그대로 따라간다.
+  const groupAmountInvalid =
+    form.actualAmount === '' || isNaN(parseFloat(form.actualAmount)) || parseFloat(form.actualAmount) < 0;
+  const blockedReason =
+    !form.classTypeId ? '수업 종류를 선택하세요.'
+    : isGroupCreate
+      ? (!form.guestName.trim() ? '수강생 이름을 입력하세요.' : groupAmountInvalid ? '결제 금액을 입력하세요.' : null)
+      : validatePaymentForm(form, { isOnlineGroup, isEdit });
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.classTypeId) { setError('수업 종류를 선택하세요.'); return; }
@@ -215,11 +226,11 @@ export default function PaymentFormPage() {
     }
   };
 
-  if (loading) return <><PageHeader title="결제 입력" back /><LoadingSpinner /></>;
+  if (loading) return <><PageHeader title="결제 추가" back /><LoadingSpinner /></>;
 
   return (
     <>
-      <PageHeader title={isEdit ? '결제 편집' : '결제 입력'} back />
+      <PageHeader title={isEdit ? '결제 편집' : '결제 추가'} back />
 
       <form onSubmit={handleSubmit} className="px-4 pt-4 pb-8 space-y-5">
         {error && (
@@ -307,7 +318,7 @@ export default function PaymentFormPage() {
               size="large"
               style={{ borderRadius: 12, marginBottom: 8 }}
             />
-            <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+            <div className="space-y-2 max-h-60 overflow-y-auto px-2 py-2 -mx-2">
               {students
                 .filter((s) => s.name.includes(studentSearch))
                 .map((s) => {
@@ -316,11 +327,13 @@ export default function PaymentFormPage() {
                   <label
                     key={s.id}
                     ref={isSelected ? selectedStudentRef : null}
-                    className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-[background-color,border-color] duration-150 ease-out ${
-                      isSelected
-                        ? 'border-brand-500 bg-brand-50'
-                        : 'border-gray-200 bg-white'
-                    }`}
+                    className="flex items-center gap-3 p-3 rounded-xl cursor-pointer bg-white"
+                    style={{
+                      boxShadow: isSelected ? 'var(--shadow-border-selected)' : 'var(--shadow-border)',
+                      transitionProperty: 'box-shadow',
+                      transitionDuration: '150ms',
+                      transitionTimingFunction: 'var(--ease-out)',
+                    }}
                   >
                     <input
                       type="radio"
@@ -328,8 +341,9 @@ export default function PaymentFormPage() {
                       value={s.id}
                       checked={isSelected}
                       onChange={() => setForm((f) => ({ ...f, studentId: s.id }))}
-                      className="w-4 h-4 accent-brand-600"
+                      className="sr-only select-check-input"
                     />
+                    <SelectCheck selected={isSelected} />
                     <span className="text-sm font-semibold text-gray-800">{s.name}</span>
                     <span className="text-xs text-gray-500 ml-auto">{stripEmoji(s.status)}</span>
                   </label>
@@ -497,15 +511,14 @@ export default function PaymentFormPage() {
             </p>
           </div>
         ) : (
-          <Button
-            type="primary"
-            block
+          <SubmitButton
             htmlType="submit"
-            disabled={saving}
-            style={{ borderRadius: 12, height: 44, fontWeight: 600, marginTop: 8 }}
+            loading={saving}
+            blockedReason={blockedReason}
+            style={{ marginTop: 8 }}
           >
-            {saving ? '저장 중...' : isEdit ? '수정하기' : '결제 저장'}
-          </Button>
+            {isEdit ? '수정하기' : '결제 저장'}
+          </SubmitButton>
         )}
         </>)}
 

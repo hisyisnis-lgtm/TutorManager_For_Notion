@@ -120,6 +120,19 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
   /* 모달 / Drawer */
   --shadow-modal: 0 8px 40px rgba(0, 0, 0, 0.18);
 
+  /* 다중선택 — 선택된 카드. 파스텔 면(§18-1 "AI 느낌")이 아니라 링 + 리프트로 상태를 낸다.
+     Better #3(보더 대신 그림자): 투명 레이어 3겹이라 어떤 배경 위에서도 자연스럽다. */
+  --shadow-border-selected:
+    0px 0px 0px 1.5px rgba(127, 0, 5, 0.45),
+    0px 2px 6px -2px rgba(127, 0, 5, 0.20),
+    0px 6px 16px -6px rgba(127, 0, 5, 0.14);
+
+
+  /* 하단 액션 바 — 콘텐츠 위에 뜬 레이어. borderTop 대신 위로 퍼지는 그림자(Better #3) */
+  --shadow-action-bar:
+    0px -1px 0px 0px rgba(0, 0, 0, 0.06),
+    0px -6px 16px -6px rgba(0, 0, 0, 0.10);
+
   /* 경고 테두리 (danger 카드 테두리 대용) */
   --shadow-danger-border:
     0px 0px 0px 1px #ffccc7,
@@ -307,6 +320,35 @@ html {
    이 앱은 사실상 전부 터치라 hover는 평생 안 걸리고, 눌러도 아무 반응이 없었다.
    → hover는 CSS로 옮기고(마우스 있는 기기 한정) :active 눌림 상태를 새로 준다.
    .tap-wrap 은 카드를 감싼 Link/div 용 — 안쪽 카드까지 눌림이 전달되게. */
+/* ── 세그먼트 선택 버튼 ─────────────────────────────────────
+   수업 등록·수업 일지 폼의 옵션 격자(단일/반복 · 요일 · 시간 · 특이사항 · 참여도) 공용.
+   ⛔ 선택 상태를 연한 브랜드 면(bg-brand-50)으로 칠하지 않는다(design_system §18-1).
+   면은 흰색으로 두고, 선택은 **브랜드 링**(--shadow-border-selected)과 글자색으로만 말한다.
+   2px 컬러 보더(border-2 border-brand-600)도 같이 뺐다 — 굵은 컬러 보더 금지. */
+.seg-option {
+  background: #ffffff; /* = BG_CARD (theme.js) */
+  border: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition-property: box-shadow, color, background-color;
+  transition-duration: 150ms;
+  transition-timing-function: var(--ease-out);
+}
+.seg-off {
+  box-shadow: var(--shadow-border);
+  color: #595959; /* = TEXT_SECONDARY */
+}
+.seg-on {
+  box-shadow: var(--shadow-border-selected);
+  color: #7f0005; /* = PRIMARY */
+}
+/* '없음'·'미선택'처럼 **값이 비었음을 고른** 상태 — 선택은 됐지만 강조할 일은 아니다. */
+.seg-on-neutral {
+  background: #f5f5f5; /* = GRAY_100 */
+  box-shadow: var(--shadow-border);
+  color: #1d1d1f; /* = TEXT_PRIMARY */
+}
+
 .card-tap {
   box-shadow: var(--shadow-border);
   transition-property: box-shadow, background-color;
@@ -322,6 +364,60 @@ html {
   background-color: #f5f5f7; /* = BG_SECTION_ALT (theme.js) */
   /* 카드는 면적이 커서 0.96이면 과하다 — 큰 표면은 0.98 (Emil 허용범위 0.95~0.98) */
   scale: 0.98;
+}
+
+/* ── antd Select: 열려 있는 동안 값이 흐려지는 것 ────────────
+   v6 Select은 열리면 내부 검색 input으로 전환하면서 고른 값을 플레이스홀더 톤(회색)으로
+   흐린다. showSearch={false}로도 남아서, 값이 계속 또렷하게 보이도록 되돌린다.
+   (값이 있을 때만 — 플레이스홀더는 원래대로 흐려야 한다) */
+.ant-select.ant-select-open .ant-select-content-has-value {
+  /* antd가 런타임에 주입하는 스타일이라 같은 특이도로는 밀린다 — 여기서만 !important. */
+  color: #1d1d1f !important; /* = TEXT_PRIMARY (theme.js) */
+}
+
+/* ── 다중선택 체크 컨트롤 ─────────────────────────
+   네이티브 <input type="checkbox">는 OS 크롬이라 앱 톤과 겉돈다(각진 사각·시스템 파랑 계열).
+   24px 원 + phosphor CheckIcon(bold 16). 링은 보더가 아니라 inset box-shadow(Better #3)라
+   레이아웃을 1px도 밀지 않는다. 카드 전체가 토글이라 이 요소는 표시 전용. */
+.select-check {
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: transparent;
+  box-shadow: inset 0 0 0 1.5px #d9d9d9; /* = BORDER_NEUTRAL (theme.js) */
+  transition-property: background-color, box-shadow;
+  transition-duration: 150ms;
+  transition-timing-function: var(--ease-out);
+}
+.select-check[data-selected='true'] {
+  background-color: #7f0005; /* = PRIMARY (theme.js) */
+  box-shadow: inset 0 0 0 1.5px #7f0005; /* = PRIMARY (theme.js) */
+}
+/* Better #7 — 아이콘은 표시/숨김 토글이 아니라 scale·opacity·blur로 들어온다.
+   모션 라이브러리가 없어 CSS 트랜지션으로 같은 값(0.25→1 / 0→1 / 4px→0)을 낸다. */
+.select-check > svg {
+  color: #fff;
+  scale: 0.25;
+  opacity: 0;
+  filter: blur(4px);
+  transition-property: scale, opacity, filter;
+  transition-duration: 200ms;
+  transition-timing-function: var(--ease-out);
+}
+.select-check[data-selected='true'] > svg {
+  scale: 1;
+  opacity: 1;
+  filter: blur(0px);
+}
+/* 실제 입력은 sr-only로 감춘 <input>이 맡는다 — 키보드 포커스는 눈에 보여야 하므로
+   바로 뒤 컨트롤에 포커스 링을 옮겨 그린다. */
+.select-check-input:focus-visible + .select-check {
+  outline: 2px solid #7f0005; /* = PRIMARY (theme.js) */
+  outline-offset: 2px;
 }
 
 /* ── 목록에서 사라질 때 (exit) ─────────────────

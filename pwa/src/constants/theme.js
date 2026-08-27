@@ -155,10 +155,30 @@ export const antdTheme = {
   token: {
     colorPrimary: PRIMARY,
     borderRadius: 12,
+    // 포커스 halo를 아예 없앤다. antd 기본값은 colorPrimary 파생 rgba(61,13,3,0.33)이라
+    // 빨간 보더 **바깥에 또 하나의 링**이 생겨 "선이 두 겹"으로 보였다(2026-08-26 지적).
+    // 브랜드 알파로 바꿔봐도 링이 하나 더 있는 사실은 그대로여서, 아래 Button.primaryShadow와
+    // 같은 결론으로 간다 — 없앤다. 포커스 표시는 보더가 브랜드색으로 바뀌는 것으로 충분하다.
+    controlOutlineWidth: 0,
+    // 드롭다운에서 '선택된 항목' 배경. 파생 기본값이 rgb(191,175,172)(탁한 회갈색)이라
+    // 같은 이유로 교체 — 이 용도의 연한 브랜드 면은 팔레트에 PRIMARY_BG로 이미 있다.
+    controlItemBgActive: PRIMARY_BG,
+    // antd danger 기본색은 #ff4d4f(형광 빨강)인데, 앱이 실제로 쓰는 에러색은
+    // STATUS_ERROR_TEXT(#cf1322)다(44곳). antd만 다른 빨강을 쓰면 삭제 버튼·확인창이
+    // 우리 화면에서 겉돈다(2026-08-26 지적) → 팔레트에 맞춘다.
+    colorError: STATUS_ERROR_TEXT,
     colorBgContainer: '#ffffff',
     fontFamily: 'inherit',
   },
   components: {
+    Select: {
+      // 선택된 항목을 면(배경색)으로 칠하지 않는다 — 상태는 체크 아이콘과 글자색으로 낸다.
+      // (드롭다운 안 파스텔 면이 무겁게 읽힌다는 사용자 판단, 2026-08-26.
+      //  체크 아이콘은 menuItemSelectedIcon prop으로 각 Select에서 넣는다.)
+      optionSelectedBg: 'transparent',
+      optionSelectedColor: PRIMARY,
+      optionSelectedFontWeight: 600,
+    },
     Button: {
       // antd v6는 버튼에 `0 2px 0` 단차 그림자를 기본으로 넣는다(blur 0·spread 0).
       // 우리 그림자 철학(§6.4 "부드럽고 3겹 투명 레이어, 아니면 없음")과 이질적이고,

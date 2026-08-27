@@ -25,8 +25,7 @@ import FileAttachModal from '../components/homework/FileAttachModal.jsx';
 import Badge from '../components/ui/Badge.jsx';
 import SectionHeading from '../components/ui/SectionHeading.jsx';
 import {
-  PRIMARY,
-  PRIMARY_BG,
+  GRAY_100,
   TEXT_PRIMARY,
   TEXT_SECONDARY,
   TEXT_TERTIARY,
@@ -570,6 +569,11 @@ function PendingCard({ label, items, onRemove }) {
   );
 }
 
+/**
+ * 파일·녹음 추가 진입 버튼. **중립 면(GRAY_100)** 을 쓴다 —
+ * ⛔ 연한 브랜드 면(PRIMARY_BG)으로 채우지 말 것(design_system §18-1).
+ * 이건 저장도 제출도 아닌 보조 액션이라, 화면에서 가장 눈에 띌 이유가 없다.
+ */
 function SectionEntryButton({ icon, label, onClick }) {
   return (
     <button
@@ -578,8 +582,8 @@ function SectionEntryButton({ icon, label, onClick }) {
       className="transition-[background-color] duration-150 ease-out"
       style={{
         width: '100%', height: 44, borderRadius: 12,
-        background: PRIMARY_BG, border: 'none', boxShadow: 'var(--shadow-border-brand)',
-        color: PRIMARY, fontSize: 14, fontWeight: 600, cursor: 'pointer',
+        background: GRAY_100, border: 'none',
+        color: TEXT_SECONDARY, fontSize: 14, fontWeight: 600, cursor: 'pointer',
         WebkitTapHighlightColor: 'transparent', marginBottom: 12,
         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
       }}

@@ -296,7 +296,8 @@ const IncomeSummary = forwardRef(function IncomeSummary(_props, ref) {
 
   return (
     <>
-      <div className="px-4 pt-3">
+      {/* 차트와 붙지 않게 20 — 이 페이지는 영역 사이 20 / 도구끼리 8이 규칙이다(2026-08-27) */}
+      <div className="px-4 pt-5">
         <SectionHeading style={{ marginBottom: 12 }}>수입 현황</SectionHeading>
         <Card
           variant="borderless"

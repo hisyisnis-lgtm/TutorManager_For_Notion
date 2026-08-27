@@ -1,13 +1,15 @@
-import { TEXT_SECONDARY, TEXT_INACTIVE } from '../../constants/theme.js';
+import { TEXT_SECONDARY } from '../../constants/theme.js';
 import { SECTION_HEADING } from '../../constants/styles.js';
 
 /**
- * HomeworkSection — 섹션 헤더(icon + label + count) + 카드 목록 래퍼
+ * HomeworkSection — 섹션 헤더(icon + label) + 카드 목록 래퍼
+ * ⛔ 헤더 오른쪽 총합 숫자는 넣지 않는다(2026-08-27 사용자 지시) — 카드가 바로 아래 보이는데
+ *    개수를 또 적을 이유가 없었다.
  * 강사용 StudentHomeworkPage, 학생용 PersonalPage 공용
  * design_system.md §3.4 섹션 헤딩 규칙: 17px / 600 / TEXT_PRIMARY (SECTION_HEADING 상수)
  * flex 컨텍스트라 display·marginBottom은 override.
  */
-export default function HomeworkSection({ icon, label, count, color = TEXT_SECONDARY, children }) {
+export default function HomeworkSection({ icon, label, color = TEXT_SECONDARY, children }) {
   return (
     <div style={{ marginBottom: 24 }}>
       <div style={{
@@ -20,9 +22,6 @@ export default function HomeworkSection({ icon, label, count, color = TEXT_SECON
         <span style={{ ...SECTION_HEADING, display: 'inline', marginBottom: 0 }}>
           {label}
         </span>
-        {count != null && (
-          <span style={{ ...SECTION_HEADING, display: 'inline', marginBottom: 0, color: TEXT_INACTIVE, marginLeft: 'auto' }} className="tabular-nums">{count}</span>
-        )}
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {children}

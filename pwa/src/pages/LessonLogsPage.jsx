@@ -1,68 +1,45 @@
 import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Button, Input, Card, message } from 'antd';
+import { Input, Card } from 'antd';
 import { MagnifyingGlassIcon, NotebookIcon } from '@phosphor-icons/react';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import ErrorMessage from '../components/ui/ErrorMessage.jsx';
 import EmptyState from '../components/ui/EmptyState.jsx';
-import { fetchLessonLogsPage, parseLessonLog, isEmpty } from '../api/lessonLogs.js';
+import { fetchAllLessonLogs, parseLessonLog, isEmpty } from '../api/lessonLogs.js';
+import MonthRangeFilter, { yearsOf, filterByMonthRange } from '../components/ui/MonthRangeFilter.jsx';
 import { useData } from '../context/DataContext.jsx';
 import { useCachedResource } from '../hooks/useCachedResource.js';
 import PullToRefresh from '../components/ui/PullToRefresh.jsx';
-import { TEXT_TERTIARY, BORDER_NEUTRAL } from '../constants/theme.js';
+import { TEXT_SECONDARY, TEXT_TERTIARY, BORDER_NEUTRAL, GRAY_100 } from '../constants/theme.js';
+
+/** 한 번에 그릴 일지 수. '더 보기'를 누를 때마다 이만큼씩 늘린다 */
+const PAGE = 20;
 
 export default function LessonLogsPage() {
   const { studentNameMap } = useData();
   const [search, setSearch] = useState('');
 
-  // 첫 페이지는 캐시(기억+갱신) → 재방문 시 즉시 표시. "더 보기"로 받은 다음
-  // 페이지들은 라이브로 이어붙인다(extra). 새로고침/갱신 시 extra는 리셋.
-  // 저장은 Notion 원본이 아니라 가공한 최소 데이터만 → localStorage 용량 부담 최소화.
-  const firstPage = useCachedResource('lessonLogs:first', async () => {
-    const data = await fetchLessonLogsPage({ cursor: null });
-    return {
-      logs: data.results.map(parseLessonLog),
-      hasMore: data.has_more,
-      nextCursor: data.next_cursor,
-    };
-  });
-  const [extra, setExtra] = useState([]);
-  const [pageCursor, setPageCursor] = useState(undefined); // undefined = 아직 '더 보기' 안 함
-  const [pageHasMore, setPageHasMore] = useState(undefined);
-  const [loadingMore, setLoadingMore] = useState(false);
+  // 날짜 범위 필터가 "불러온 것만" 거르면 거짓말이 되므로 전량을 받는다.
+  // 대신 화면에는 PAGE개씩만 그린다(469건을 한 번에 그리면 느리다).
+  const res = useCachedResource('lessonLogs:all', async () => ({
+    logs: (await fetchAllLessonLogs()).map(parseLessonLog),
+  }));
+  const logs = useMemo(() => res.data?.logs ?? [], [res.data]);
+  const [range, setRange] = useState({ sy: '', sm: '', ey: '', em: '' });
+  const [limit, setLimit] = useState(PAGE);
 
-  const firstLogs = firstPage.data?.logs ?? [];
-  const logs = useMemo(() => [...firstLogs, ...extra], [firstLogs, extra]);
-  const hasMore = pageHasMore ?? firstPage.data?.hasMore ?? false;
-  const nextCursor = pageCursor ?? firstPage.data?.nextCursor ?? null;
-
-  const loading = firstPage.loading;
-  const error = firstPage.error;
-
-  const loadMore = async () => {
-    if (!nextCursor) return;
-    setLoadingMore(true);
-    try {
-      const data = await fetchLessonLogsPage({ cursor: nextCursor });
-      setExtra((prev) => [...prev, ...data.results.map(parseLessonLog)]);
-      setPageHasMore(data.has_more);
-      setPageCursor(data.next_cursor);
-    } catch (e) {
-      message.error(e.message);
-    } finally {
-      setLoadingMore(false);
-    }
-  };
+  const loading = res.loading;
+  const error = res.error;
 
   const handleRefresh = async () => {
-    setExtra([]);
-    setPageCursor(undefined);
-    setPageHasMore(undefined);
-    await firstPage.refresh();
+    setLimit(PAGE);
+    await res.refresh();
   };
 
-  const filteredLogs = logs.filter((log) => {
+  const years = yearsOf(logs.map((l) => l.createdTime));
+  const inRange = filterByMonthRange(logs, (l) => l.createdTime, range, years);
+  const filteredLogs = inRange.filter((log) => {
     if (!search.trim()) return true;
     const names = log.studentIds.map((sid) => studentNameMap[sid] || '').join(' ');
     return names.toLowerCase().includes(search.trim().toLowerCase());
@@ -73,7 +50,7 @@ export default function LessonLogsPage() {
       <PageHeader title="수업 일지" back />
 
       {/* 학생 검색 */}
-      <div className="px-4 pt-4 pb-3">
+      <div className="px-4 pt-4">
         <Input
           prefix={<MagnifyingGlassIcon weight="fill" style={{ color: TEXT_TERTIARY }} />}
           placeholder="학생 이름으로 검색"
@@ -85,8 +62,15 @@ export default function LessonLogsPage() {
         />
       </div>
 
+      {/* 날짜 범위 필터 — 일지 DB엔 날짜 속성이 없어 **생성 시각** 기준이다(목록 정렬과 같은 기준) */}
+      {years.length > 0 && (
+        <div className="px-4 pt-3">
+          <MonthRangeFilter years={years} value={range} onChange={setRange} />
+        </div>
+      )}
+
       {loading && <LoadingSpinner />}
-      {error && <ErrorMessage message={error} onRetry={firstPage.refresh} />}
+      {error && <ErrorMessage message={error} onRetry={res.refresh} />}
 
       {!loading && !error && (
         <>
@@ -97,22 +81,27 @@ export default function LessonLogsPage() {
               description="수업 완료 후 자동으로 빈 일지가 생성됩니다."
             />
           ) : (
-            <ul className={`px-4 space-y-3 ${hasMore ? 'pb-2' : 'pb-24'}`}>
-              {filteredLogs.map((log) => (
+            <ul className={`px-4 pt-5 space-y-3 ${filteredLogs.length > limit ? 'pb-3' : 'pb-24'}`}>
+              {filteredLogs.slice(0, limit).map((log) => (
                 <LogCard key={log.id} log={log} studentNameMap={studentNameMap} />
               ))}
             </ul>
           )}
-          {hasMore && (
+          {filteredLogs.length > limit && (
             <div className="px-4 pb-24">
-              <Button
-                block
-                loading={loadingMore}
-                onClick={loadMore}
-                style={{ borderRadius: 12, height: 44 }}
+              {/* 숙제 페이지와 같은 회색 면 버튼 — 목록을 늘리는 보조 동작이라 테두리 버튼처럼 튀지 않는다 */}
+              <button
+                type="button"
+                onClick={() => setLimit((n) => n + PAGE)}
+                className="w-full"
+                style={{
+                  height: 40, borderRadius: 12, background: GRAY_100, border: 'none',
+                  cursor: 'pointer', fontSize: 13, fontWeight: 600, color: TEXT_SECONDARY,
+                  WebkitTapHighlightColor: 'transparent',
+                }}
               >
                 더 보기
-              </Button>
+              </button>
             </div>
           )}
         </>
@@ -128,7 +117,7 @@ function LogCard({ log, studentNameMap }) {
   return (
     <li>
       <Link
-        to={`/logs/${log.id}/edit`}
+        to={`/logs/${log.id}`}
         className="block tap-wrap"
       >
         <Card
@@ -137,7 +126,7 @@ function LogCard({ log, studentNameMap }) {
           style={{ borderRadius: 16 }}
           styles={{ body: { padding: 16 } }}
         >
-          <div className="flex items-start justify-between mb-1.5">
+          <div className="flex items-start justify-between mb-1">
             <span className="text-base font-bold text-gray-900">{log.title || '제목 없음'}</span>
             {empty ? (
               <span className="text-xs bg-brand-50 text-brand-600 px-2 py-0.5 rounded-full font-semibold">

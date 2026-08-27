@@ -1,23 +1,23 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Button, Input, Card, DatePicker, Select, message } from 'antd';
-import { useCachedResource, invalidateCache } from '../hooks/useCachedResource.js';
+import { Link } from 'react-router-dom';
+import { Button, Input, Select, message } from 'antd';
+import { useCachedResource } from '../hooks/useCachedResource.js';
 import dayjs from 'dayjs';
-import { MagnifyingGlassIcon, MapPinIcon, WarningCircleIcon, CalendarBlankIcon, InfoIcon, CaretRightIcon } from '@phosphor-icons/react';
-import { PRIMARY, PRIMARY_BG, TEXT_PRIMARY, TEXT_SECONDARY, TEXT_TERTIARY, BORDER_DEFAULT, PRIMARY_ALPHA_25, STATUS_ERROR_TEXT, STATUS_ERROR_BG, STATUS_WARNING_TEXT, STATUS_WARNING_BG, GRAY_100, BORDER_NEUTRAL } from '../constants/theme.js';
-import { createLessonLog } from '../api/lessonLogs.js';
+import { MagnifyingGlassIcon, CalendarBlankIcon, CalendarPlusIcon } from '@phosphor-icons/react';
+import { TEXT_SECONDARY, TEXT_TERTIARY, BORDER_NEUTRAL, GRAY_100 } from '../constants/theme.js';
 import { queryAll } from '../api/notionClient.js';
 import PageHeader from '../components/layout/PageHeader.jsx';
-import Badge from '../components/ui/Badge.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import ErrorMessage from '../components/ui/ErrorMessage.jsx';
 import EmptyState from '../components/ui/EmptyState.jsx';
 import MonthCalendar from '../components/ui/MonthCalendar.jsx';
-import { fetchClassesPage, parseClass, classStatusColor, notesColor, CLASSES_DB } from '../api/classes.js';
-import { formatDateTime, formatTime, formatDuration, KST } from '../utils/dateUtils.js';
-import { stripEmoji } from '../utils/stringUtils.js';
+import { fetchClassesPage, parseClass, CLASSES_DB } from '../api/classes.js';
+import { formatTime, formatDuration, KST } from '../utils/dateUtils.js';
 import { useData } from '../context/DataContext.jsx';
 import PullToRefresh from '../components/ui/PullToRefresh.jsx';
+import ClassCard from '../components/classes/ClassCard.jsx';
+import MonthRangeFilter, { resolveMonthRange } from '../components/ui/MonthRangeFilter.jsx';
+import { ABOVE_BOTTOM_NAV } from '../constants/styles.js';
 
 function getKSTToday() {
   const now = new Date();
@@ -40,51 +40,6 @@ const PERIOD_TABS = [
   { key: 'completed', label: '완료' },
 ];
 
-// 날짜 필터 빠른 선택 — getValue()로 매 렌더 시 dayjs() 호출 (오늘 기준 갱신)
-const QUICK_RANGES = [
-  { label: '오늘', getValue: () => [dayjs(), dayjs()] },
-  { label: '내일', getValue: () => [dayjs().add(1, 'day'), dayjs().add(1, 'day')] },
-  { label: '다음 7일', getValue: () => [dayjs(), dayjs().add(7, 'day')] },
-  { label: '다음 30일', getValue: () => [dayjs(), dayjs().add(30, 'day')] },
-  { label: '지난 7일', getValue: () => [dayjs().subtract(7, 'day'), dayjs()] },
-  { label: '지난 30일', getValue: () => [dayjs().subtract(30, 'day'), dayjs()] },
-];
-
-// 빠른 선택 칩 스타일 — 디자인 토큰 기반
-const CHIP_BASE = {
-  fontSize: 13,
-  fontWeight: 600,
-  lineHeight: 1,
-  height: 36,
-  padding: '0 14px',
-  borderRadius: 980,
-  display: 'inline-flex',
-  alignItems: 'center',
-  whiteSpace: 'nowrap',
-  cursor: 'pointer',
-  transition: 'background-color 150ms ease-out, color 150ms ease-out, border-color 150ms ease-out, box-shadow 150ms ease-out',
-};
-const CHIP_ACTIVE = {
-  ...CHIP_BASE,
-  backgroundColor: PRIMARY,
-  color: '#ffffff',
-  border: '1px solid transparent',
-  boxShadow: `0 2px 8px ${PRIMARY_ALPHA_25}`,
-};
-const CHIP_INACTIVE = {
-  ...CHIP_BASE,
-  backgroundColor: '#ffffff',
-  color: TEXT_SECONDARY,
-  border: `1px solid ${BORDER_DEFAULT}`,
-};
-const CHIP_RESET = {
-  ...CHIP_BASE,
-  backgroundColor: 'transparent',
-  color: TEXT_TERTIARY,
-  border: `1px dashed ${BORDER_DEFAULT}`,
-  fontSize: 12,
-};
-
 function getDateRange(period) {
   if (period === 'completed') return { dateFrom: null, dateTo: null };
   // '예정' 탭: 현재 시각 이후 시작하는 수업만 (CLASS_DB 상태 formula의 "🔵예정" 정의와 동일).
@@ -104,12 +59,36 @@ export default function ClassesPage() {
   const today = getKSTToday();
   const pad = (n) => String(n).padStart(2, '0');
   const todayStr = `${today.year}-${pad(today.month + 1)}-${pad(today.day)}`;
+  // 다른 목록(학생별 수업·결제·수업 일지)과 같은 날짜 범위 필터를 쓴다.
+  // 다만 여기 필터는 **서버 쿼리 조건**이라(dateFrom/dateTo → Notion filter) 로드된 데이터에서
+  // 연도를 뽑을 수 없다 — 완료 탭 첫 페이지엔 최근 것만 있어 작년이 선택지에서 빠져 버린다.
+  // 그래서 연도는 데이터가 아니라 **올해 기준 -2 ~ +1**로 만든다(서비스 시작 2025년 포함).
+  const years = useMemo(
+    () => Array.from({ length: 4 }, (_, i) => String(today.year - 2 + i)),
+    [today.year]
+  );
+  // dateFrom/dateTo가 단일 출처 — 필터 UI는 그 값을 월 단위로 비춰 보여줄 뿐이다.
+  // 안 건드린 기본 표시는 **올해 1~12월**. 전 구간(2024~2027)을 기본으로 두면 년 상자가 둘 다 떠서
+  // 375px에서 글자가 잘린다. 다른 해는 시작 년을 바꾸는 순간 종료 년 상자가 따라 나온다.
+  const curYear = String(today.year);
+  const monthRange = dateFrom || dateTo
+    ? { sy: dateFrom.slice(0, 4), sm: dateFrom.slice(5, 7), ey: dateTo.slice(0, 4), em: dateTo.slice(5, 7) }
+    : { sy: curYear, sm: '01', ey: curYear, em: '12' };
+  const setMonthRange = (r) => {
+    const { sy, sm, ey, em } = resolveMonthRange(r, years);
+    // 올해 전체를 고른 건 "필터 없음"이다 → 비워서 탭 기본값(예정=지금 이후)으로 되돌린다.
+    // 여기서 안 비우면 12월에 잡은 내년 1월 수업이 예정 탭에서 사라진다.
+    if (sy === curYear && sm === '01' && ey === curYear && em === '12') {
+      setDateFrom(''); setDateTo('');
+      return;
+    }
+    setDateFrom(`${sy}-${sm}-01`);
+    setDateTo(dayjs(`${ey}-${em}-01`).endOf('month').format('YYYY-MM-DD'));
+  };
+
   const [calYear, setCalYear] = useState(today.year);
   const [calMonth, setCalMonth] = useState(today.month);
   const [selectedDay, setSelectedDay] = useState(null);
-  // 정밀 날짜·수업 종류는 가끔만 쓰는 필터다. 항상 펼쳐 두면 캘린더까지 합쳐 709px를 먹어
-  // 정작 수업 목록이 첫 화면 밖에서 시작한다 → 기본 접힘.
-  const [moreFilterOpen, setMoreFilterOpen] = useState(false);
 
   // ── 수업 목록: 필터 조합별로 첫 페이지를 캐시(기억+갱신) → 재방문 즉시 표시.
   //    "더 보기"로 받은 다음 페이지는 라이브로 이어붙인다(extra). 필터가 바뀌면 리셋.
@@ -235,19 +214,7 @@ export default function ClassesPage() {
 
   return (
     <PullToRefresh onRefresh={handleRefresh}>
-      <PageHeader
-        title="수업 캘린더"
-        action={
-          <Link to="/classes/new">
-            <Button
-              type="primary"
-              style={{ borderRadius: 12, fontWeight: 600 }}
-            >
-              + 수업 추가
-            </Button>
-          </Link>
-        }
-      />
+      <PageHeader title="수업 캘린더" />
 
       {/* 월별 캘린더 */}
       <div className="px-4 pt-4">
@@ -332,50 +299,7 @@ export default function ClassesPage() {
         ))}
       </div>
 
-      {/* 날짜 범위 필터 — 페이지 배경에 직접 배치 (필터는 content가 아니라 control) */}
-      <div className="px-4 pb-3">
-        {/* 빠른 선택 칩 (가로 스크롤, 페이지 좌우 패딩 흡수) */}
-        <div
-          className="flex gap-2 overflow-x-auto [&::-webkit-scrollbar]:hidden"
-          style={{ marginLeft: -16, marginRight: -16, paddingLeft: 16, paddingRight: 16, paddingBottom: 10 }}
-        >
-          {QUICK_RANGES.map(({ label, getValue }) => {
-            const [from, to] = getValue();
-            const fromStr = from.format('YYYY-MM-DD');
-            const toStr = to.format('YYYY-MM-DD');
-            const isActive = dateFrom === fromStr && dateTo === toStr;
-            return (
-              <button
-                key={label}
-                type="button"
-                onClick={() => {
-                  // 활성 상태에서 다시 누르면 필터 해제 (토글)
-                  if (isActive) { setDateFrom(''); setDateTo(''); }
-                  else { setDateFrom(fromStr); setDateTo(toStr); }
-                }}
-                style={{ ...(isActive ? CHIP_ACTIVE : CHIP_INACTIVE), flexShrink: 0 }}
-                className="tabular-nums"
-                aria-pressed={isActive}
-              >
-                {label}
-              </button>
-            );
-          })}
-          {(dateFrom || dateTo) && (
-            <button
-              type="button"
-              onClick={() => { setDateFrom(''); setDateTo(''); }}
-              style={{ ...CHIP_RESET, flexShrink: 0 }}
-              aria-label="날짜 필터 초기화"
-            >
-              × 초기화
-            </button>
-          )}
-        </div>
-
-      </div>
-
-      {/* 학생 검색 + 수업 종류 필터 */}
+      {/* 학생 검색 + 수업 종류 */}
       <div className="px-4 pb-3 space-y-2">
         <Input
           prefix={<MagnifyingGlassIcon weight="fill" style={{ color: TEXT_TERTIARY }} />}
@@ -386,58 +310,8 @@ export default function ClassesPage() {
           size="large"
           style={{ borderRadius: 12 }}
         />
-        <button
-          type="button"
-          onClick={() => setMoreFilterOpen((v) => !v)}
-          aria-expanded={moreFilterOpen}
-          className="press"
-          style={{
-            display: 'flex', alignItems: 'center', gap: 4, minHeight: 40,
-            background: 'none', border: 'none', padding: '0 2px', cursor: 'pointer',
-            color: TEXT_SECONDARY, fontSize: 13, fontWeight: 600 }}
-        >
-          상세 필터
-          <CaretRightIcon
-            size={12}
-            weight="bold"
-            style={{
-              transform: moreFilterOpen ? 'rotate(90deg)' : 'none',
-              transitionProperty: 'transform',
-              transitionDuration: '0.2s',
-              transitionTimingFunction: 'var(--ease-out)' }}
-          />
-        </button>
-        <div className="reveal" data-open={moreFilterOpen}>
-          <div>
-            <div className="space-y-2">
-        {/* 정밀 날짜 선택 (시작일 ~ 종료일) */}
-        <div className="flex items-center gap-2">
-          <DatePicker
-            value={dateFrom ? dayjs(dateFrom) : null}
-            onChange={(d) => setDateFrom(d ? d.format('YYYY-MM-DD') : '')}
-            disabledDate={(d) => (dateTo ? d.isAfter(dayjs(dateTo), 'day') : false)}
-            placeholder="시작일"
-            format="YYYY-MM-DD"
-            style={{ flex: 1, minWidth: 0, borderRadius: 12 }}
-            size="middle"
-            inputReadOnly
-            allowClear
-            suffixIcon={<CalendarBlankIcon size={16} weight="fill" color={TEXT_TERTIARY} />}
-          />
-          <span style={{ color: TEXT_TERTIARY, fontSize: 13, userSelect: 'none' }}>~</span>
-          <DatePicker
-            value={dateTo ? dayjs(dateTo) : null}
-            onChange={(d) => setDateTo(d ? d.format('YYYY-MM-DD') : '')}
-            disabledDate={(d) => (dateFrom ? d.isBefore(dayjs(dateFrom), 'day') : false)}
-            placeholder="종료일"
-            format="YYYY-MM-DD"
-            style={{ flex: 1, minWidth: 0, borderRadius: 12 }}
-            size="middle"
-            inputReadOnly
-            allowClear
-            suffixIcon={<CalendarBlankIcon size={16} weight="fill" color={TEXT_TERTIARY} />}
-          />
-        </div>
+        {/* '상세 필터' 접이식은 없앴다(2026-08-27) — 안에 든 게 수업 종류 하나뿐이라
+            한 번 더 누르게 할 이유가 없었다. 정밀 날짜(DatePicker 2개)는 월 범위 필터로 대체. */}
         <Select
           value={classTypeFilter || undefined}
           onChange={(v) => setClassTypeFilter(v || '')}
@@ -445,14 +319,13 @@ export default function ClassesPage() {
           allowClear
           size="large"
           style={{ width: '100%' }}
-        >
-          {classTypes.map((ct) => (
-            <Select.Option key={ct.id} value={ct.id}>{ct.title}</Select.Option>
-          ))}
-        </Select>
-            </div>
-          </div>
-        </div>
+          options={classTypes.map((ct) => ({ value: ct.id, label: ct.title }))}
+        />
+      </div>
+
+      {/* 날짜 범위 — 다른 목록과 같은 공용 필터. 여기서 고른 값은 그대로 Notion 쿼리 조건이 된다 */}
+      <div className="px-4 pb-3">
+        <MonthRangeFilter years={years} value={monthRange} onChange={setMonthRange} />
       </div>
 
       {loading && <LoadingSpinner />}
@@ -473,148 +346,57 @@ export default function ClassesPage() {
               }
             />
           ) : (
-            <ul className={`px-4 space-y-3 ${hasMore ? 'pb-2' : 'pb-24'}`}>
+            <ul className="px-4 pt-5 space-y-3" style={{ paddingBottom: hasMore ? 12 : 152 }}>
               {filteredClasses.map((cls) => (
                 <ClassCard key={cls.id} cls={cls} studentNameMap={studentNameMap} />
               ))}
             </ul>
           )}
           {hasMore && (
-            <div className="px-4 pb-24">
-              <Button
-                block
-                loading={loadingMore}
+            <div className="px-4" style={{ paddingBottom: 152 }}>
+              {/* 숙제·수업 일지와 같은 회색 면 버튼 — 목록을 늘리는 보조 동작이라 튀지 않는다 */}
+              <button
+                type="button"
                 onClick={loadMore}
-                style={{ borderRadius: 12 }}
+                disabled={loadingMore}
+                className="w-full"
+                style={{
+                  height: 40, borderRadius: 12, background: GRAY_100, border: 'none',
+                  cursor: loadingMore ? 'default' : 'pointer', fontSize: 13, fontWeight: 600,
+                  color: TEXT_SECONDARY, WebkitTapHighlightColor: 'transparent',
+                }}
               >
                 {loadingMore ? '불러오는 중…' : '더 보기'}
-              </Button>
+              </button>
             </div>
           )}
         </>
       )}
-    </PullToRefresh>
-  );
-}
 
-function ClassCard({ cls, studentNameMap }) {
-  const navigate = useNavigate();
-  const now = new Date();
-  const isOngoing = !cls.notes?.includes('취소')
-    && cls.datetime && cls.endTime
-    && now >= new Date(cls.datetime)
-    && now < new Date(cls.endTime);
-  const { bg, text } = isOngoing ? { bg: 'bg-brand-50', text: 'text-brand-700' } : classStatusColor(cls.status);
-  const statusLabel = isOngoing ? '수업중' : stripEmoji(cls.status);
-  const studentNames = cls.studentIds.map((id) => studentNameMap[id] || '(알 수 없음)').join(', ');
-  const isCompleted = cls.datetime && new Date(cls.datetime) <= new Date();
-  const logId = cls.lessonLogIds?.[0];
-  const [creatingLog, setCreatingLog] = useState(false);
-
-  const handleLogClick = async (e) => {
-    e.stopPropagation();
-    if (logId) {
-      navigate(`/logs/${logId}/edit`);
-      return;
-    }
-    setCreatingLog(true);
-    try {
-      const names = cls.studentIds.map((id) => studentNameMap[id]).filter(Boolean).join(', ');
-      const dateStr = cls.datetime
-        ? new Date(cls.datetime).toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul', month: 'numeric', day: 'numeric' })
-        : '';
-      const created = await createLessonLog({
-        title: `${names} ${dateStr}`.trim(),
-        classId: cls.id,
-        studentIds: cls.studentIds,
-      });
-      invalidateCache('lessonLogs');
-      navigate(`/logs/${created.id}/edit`);
-    } catch (e) {
-      message.error(`일지 생성 실패: ${e.message}`);
-      setCreatingLog(false);
-    }
-  };
-
-  return (
-    <li>
-      <Card
-        variant="borderless"
-        className="card-tap"
-        style={{ borderRadius: 16, cursor: 'pointer' }}
-        styles={{ body: { padding: 16 } }}
-        onClick={() => navigate(`/classes/${cls.id}`)}
+      {/* 수업 추가 — 학생별 수업 관리·숙제 관리와 같은 원형 FAB(브랜드 채움).
+          ⛔ 헤더 '+ 수업 추가' 채움 버튼으로 되돌리지 말 것(2026-08-27 사용자 지시) */}
+      <div
+        style={{
+          position: 'fixed', right: 16,
+          bottom: `calc(${ABOVE_BOTTOM_NAV} + 16px)`,
+          zIndex: 40,
+        }}
       >
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex-1 min-w-0">
-            <p style={{ fontSize: 15, fontWeight: 700, color: TEXT_PRIMARY, margin: '0 0 3px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {studentNames || cls.title || '학생 미정'}
-            </p>
-            <p style={{ fontSize: 13, color: TEXT_SECONDARY, margin: '0 0 2px' }} className="tabular-nums">
-              {cls.datetime ? formatDateTime(cls.datetime) : '일시 미정'}
-              {cls.endTime && ` ~ ${formatTime(cls.endTime)}`}
-              {cls.duration && ` · ${formatDuration(parseInt(cls.duration))}`}
-            </p>
-            {cls.location && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
-                <MapPinIcon size={12} weight="fill" color={TEXT_TERTIARY} style={{ flexShrink: 0 }} />
-                <span style={{ fontSize: 12, color: TEXT_TERTIARY }}>
-                  {cls.location}{cls.locationMemo && ` — ${cls.locationMemo}`}
-                </span>
-              </div>
-            )}
-            {cls.noteMemo && (
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 4, marginTop: 2 }}>
-                <InfoIcon size={12} weight="fill" color={TEXT_TERTIARY} style={{ flexShrink: 0, marginTop: 3 }} />
-                <span style={{ fontSize: 12, color: TEXT_TERTIARY, whiteSpace: 'pre-wrap', wordBreak: 'keep-all', lineHeight: 1.5 }}>
-                  {cls.noteMemo}
-                </span>
-              </div>
-            )}
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end', flexShrink: 0 }}>
-            <Badge label={statusLabel} bg={bg} text={text} />
-            {cls.notes && (() => {
-              const nc = notesColor(cls.notes);
-              return nc ? <Badge label={stripEmoji(cls.notes)} bg={nc.bg} text={nc.text} /> : null;
-            })()}
-          </div>
-        </div>
-        {(cls.sessionShortage || cls.conflictDetected) && (
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
-            {cls.sessionShortage && (
-              <span style={{ fontSize: 12, color: STATUS_WARNING_TEXT, background: STATUS_WARNING_BG, padding: '2px 8px', borderRadius: 20 }}>
-                {cls.sessionShortage}
-              </span>
-            )}
-            {cls.conflictDetected && (
-              <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: STATUS_ERROR_TEXT, background: STATUS_ERROR_BG, padding: '2px 8px', borderRadius: 20 }}>
-                <WarningCircleIcon size={12} weight="fill" />
-                시간 충돌
-              </span>
-            )}
-          </div>
-        )}
-        {isCompleted && (
-          <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid rgba(0,0,0,0.06)', display: 'flex', justifyContent: 'flex-end' }}>
-            <button
-              onClick={handleLogClick}
-              disabled={creatingLog}
-              style={{
-                fontSize: 12, fontWeight: 600,
-                padding: '5px 12px', borderRadius: 8, border: 'none', cursor: 'pointer',
-                background: logId ? PRIMARY_BG : GRAY_100,
-                color: logId ? PRIMARY : TEXT_SECONDARY,
-                transition: 'background-color 150ms ease-out',
-                opacity: creatingLog ? 0.5 : 1,
-              }}
-              className="hit-40 transition-[background-color] duration-150 ease-out"
-            >
-              {creatingLog ? '생성 중...' : logId ? '일지 보기' : '일지 작성'}
-            </button>
-          </div>
-        )}
-      </Card>
-    </li>
+        <Link to="/classes/new">
+          <Button
+            type="primary"
+            shape="circle"
+            aria-label="수업 추가"
+            style={{
+              width: 56, height: 56,
+              boxShadow: 'var(--shadow-brand-button)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}
+          >
+            <CalendarPlusIcon weight="fill" size={24} />
+          </Button>
+        </Link>
+      </div>
+    </PullToRefresh>
   );
 }

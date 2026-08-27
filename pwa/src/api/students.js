@@ -56,7 +56,7 @@ export async function markStudentSharedIfEmpty(pageId) {
 }
 
 /** 학생 정보 수정 */
-export async function updateStudent(pageId, { name, phone, email, level, goal, status, memo, bookingCode }) {
+export async function updateStudent(pageId, { name, phone, email, level, goal, status, memo, bookingCode, vip }) {
   const properties = {};
   if (name) properties['이름'] = { title: [{ text: { content: name } }] };
   if (status) properties['상태'] = { select: { name: status } };
@@ -66,6 +66,9 @@ export async function updateStudent(pageId, { name, phone, email, level, goal, s
   properties['목표'] = { rich_text: goal ? [{ text: { content: goal } }] : [] };
   properties['메모'] = { rich_text: memo ? [{ text: { content: memo } }] : [] };
   properties['예약 코드'] = { rich_text: bookingCode ? [{ text: { content: bookingCode } }] : [] };
+  // VIP(숙제 관리 대상)는 수정 폼에서 함께 저장한다. undefined면 건드리지 않는다
+  // (학생 상세의 토글은 여전히 updateStudentVip으로 단독 갱신할 수 있다).
+  if (vip !== undefined) properties['VIP'] = { checkbox: !!vip };
   return updatePage(pageId, properties);
 }
 

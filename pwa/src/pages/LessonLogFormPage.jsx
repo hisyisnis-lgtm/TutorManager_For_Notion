@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Alert, Button, Input, Typography } from 'antd';
 import PageHeader from '../components/layout/PageHeader.jsx';
+import SubmitButton from '../components/ui/SubmitButton.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import { getPage, deletePage } from '../api/notionClient.js';
 import { invalidateCache } from '../hooks/useCachedResource.js';
@@ -27,6 +28,8 @@ export default function LessonLogFormPage() {
     engagement: '',
     memo: '',
   });
+  // 저장 버튼 비활성 판정용 원본 스냅샷 — 바뀐 게 없으면 저장할 이유가 없다.
+  const [initial, setInitial] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -39,13 +42,15 @@ export default function LessonLogFormPage() {
         const page = await getPage(id);
         const parsed = parseLessonLog(page);
         setLog(parsed);
-        setForm({
+        const loaded = {
           content: parsed.content,
           homework: parsed.homework,
           nextPrepare: parsed.nextPrepare,
           engagement: parsed.engagement || '',
           memo: parsed.memo,
-        });
+        };
+        setForm(loaded);
+        setInitial(loaded);
       } catch (e) {
         setError(e.message);
       } finally {
@@ -56,6 +61,9 @@ export default function LessonLogFormPage() {
   }, [id]);
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
+
+  const isDirty = !initial || JSON.stringify(form) !== JSON.stringify(initial);
+  const blockedReason = !isDirty ? '변경된 내용이 없어요.' : null;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -142,8 +150,8 @@ export default function LessonLogFormPage() {
             <button
               type="button"
               onClick={() => setForm((f) => ({ ...f, engagement: '' }))}
-              className={`py-3 rounded-xl text-sm font-semibold border-2 transition-[background-color,color,border-color] duration-150 ease-out ${
-                !form.engagement ? 'bg-gray-200 text-gray-800 border-gray-300' : 'bg-white text-gray-500 border-gray-200'
+              className={`seg-option py-3 rounded-xl text-sm font-semibold ${
+                !form.engagement ? 'seg-on-neutral' : 'seg-off'
               }`}
             >
               미선택
@@ -153,10 +161,10 @@ export default function LessonLogFormPage() {
                 key={opt}
                 type="button"
                 onClick={() => setForm((f) => ({ ...f, engagement: opt }))}
-                className={`py-3 rounded-xl text-sm font-semibold border-2 transition-[background-color,color,border-color] duration-150 ease-out ${
+                className={`seg-option py-3 rounded-xl text-sm font-semibold ${
                   form.engagement === opt
-                    ? 'border-brand-600 bg-brand-50 text-brand-700'
-                    : 'border-gray-200 bg-white text-gray-600'
+                    ? 'seg-on'
+                    : 'seg-off'
                 }`}
               >
                 {opt}
@@ -176,12 +184,9 @@ export default function LessonLogFormPage() {
           />
         </div>
 
-        <Button
-          type="primary" htmlType="submit" block loading={saving}
-          style={{ borderRadius: 12, height: 44, fontWeight: 600, marginTop: 8 }}
-        >
+        <SubmitButton htmlType="submit" loading={saving} blockedReason={blockedReason} style={{ marginTop: 8 }}>
           저장하기
-        </Button>
+        </SubmitButton>
 
         <Button
           danger block

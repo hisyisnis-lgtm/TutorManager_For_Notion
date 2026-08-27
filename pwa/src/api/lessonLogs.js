@@ -1,4 +1,4 @@
-import { queryPage, createPage, updatePage } from './notionClient.js';
+import { queryPage, queryAll, createPage, updatePage } from './notionClient.js';
 import {
   getTitle,
   getRichText,
@@ -22,6 +22,20 @@ export async function fetchLessonLogsPage(opts = {}) {
     filter,
     [{ timestamp: 'created_time', direction: 'descending' }],
     cursor
+  );
+}
+
+/**
+ * 수업 일지 전체 조회 (최신순).
+ * 날짜 필터가 **로드된 것만** 거르면 안 되므로 페이지네이션이 아니라 전부 받는다
+ * (2026-08-27 기준 469건 · 5회 왕복, notionClient의 레이트 리미터가 속도를 잡는다).
+ * 화면에 한 번에 다 그리지는 않는다 — 렌더 개수는 목록 쪽에서 제한한다.
+ */
+export async function fetchAllLessonLogs(studentId) {
+  return queryAll(
+    LESSON_LOGS_DB,
+    studentId ? { property: '학생', relation: { contains: studentId } } : undefined,
+    [{ timestamp: 'created_time', direction: 'descending' }]
   );
 }
 
@@ -57,6 +71,8 @@ export function parseLessonLog(page) {
   return {
     id: page.id,
     title: getTitle(p['제목']),
+    // 일지 DB엔 날짜 속성이 없다(제목에 "이름 M/D"만 들어간다) — 정렬·필터는 생성 시각 기준.
+    createdTime: page.created_time ?? '',
     classId: getRelationId(p['수업']),
     studentIds: getRelationIds(p['학생']),
     content: getRichText(p['오늘 내용']),

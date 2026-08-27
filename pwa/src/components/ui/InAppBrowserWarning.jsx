@@ -6,7 +6,6 @@ import { detectInAppBrowser,
 import {
   PRIMARY,
   PRIMARY_BG,
-  PRIMARY_ALPHA_20,
   TEXT_PRIMARY,
   TEXT_SECONDARY,
   TEXT_INACTIVE,
@@ -131,9 +130,10 @@ export default function InAppBrowserWarning() {
               onClick={handleCopyUrl}
               style={{
                 width: '100%', height: 44, marginBottom: 8,
-                background: PRIMARY_BG, color: PRIMARY,
+                // 아래 데스크톱 분기와 같은 모양 — 같은 액션이 화면마다 다르게 생길 이유가 없다.
+                background: PRIMARY, color: '#fff',
                 fontSize: 14, fontWeight: 700,
-                border: `1px solid ${PRIMARY_ALPHA_20}`, borderRadius: 12,
+                border: 'none', borderRadius: 12,
                 cursor: 'pointer', WebkitTapHighlightColor: 'transparent',
               }}
             >

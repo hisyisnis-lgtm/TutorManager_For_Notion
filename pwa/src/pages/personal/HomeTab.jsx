@@ -298,7 +298,7 @@ export default function HomeTab({ studentToken, foodSources, studentLoaded, rema
           <SectionHeading>숙제</SectionHeading>
 
           {hwAlerts.feedback.length > 0 && (
-            <HomeworkSection icon={<ChatTeardropTextIcon size={20} weight="fill" />} label="피드백 완료" count={hwAlerts.feedback.length} color={STATUS_SUCCESS_DARK}>
+            <HomeworkSection icon={<ChatTeardropTextIcon size={20} weight="fill" />} label="피드백 완료" color={STATUS_SUCCESS_DARK}>
               {hwAlerts.feedback.map((hw, i) => (
                 <div key={hw.id} {...(i === 0 ? { 'data-coach': 'homework-card' } : {})}>
                   <HwCard
@@ -315,7 +315,7 @@ export default function HomeTab({ studentToken, foodSources, studentLoaded, rema
           )}
 
           {hwAlerts.pending.length > 0 && (
-            <HomeworkSection icon={<ClipboardTextIcon size={20} weight="fill" />} label="제출 전" count={hwAlerts.pending.length} color={STATUS_ERROR_TEXT}>
+            <HomeworkSection icon={<ClipboardTextIcon size={20} weight="fill" />} label="제출 전" color={STATUS_ERROR_TEXT}>
               {hwAlerts.pending.map((hw, i) => (
                 <div key={hw.id} {...(i === 0 && hwAlerts.feedback.length === 0 ? { 'data-coach': 'homework-card' } : {})}>
                   <HwCard hw={hw} studentToken={studentToken} />
@@ -325,7 +325,7 @@ export default function HomeTab({ studentToken, foodSources, studentLoaded, rema
           )}
 
           {hwAlerts.submitted.length > 0 && (
-            <HomeworkSection icon={<HourglassIcon size={20} weight="fill" />} label="제출 완료" count={hwAlerts.submitted.length} color={STATUS_INFO_DARK}>
+            <HomeworkSection icon={<HourglassIcon size={20} weight="fill" />} label="제출 완료" color={STATUS_INFO_DARK}>
               {hwAlerts.submitted.map((hw) => (
                 <HwCard key={hw.id} hw={hw} studentToken={studentToken} />
               ))}

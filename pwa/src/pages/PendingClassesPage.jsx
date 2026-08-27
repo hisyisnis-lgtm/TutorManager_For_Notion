@@ -26,7 +26,7 @@ function getKSTToday() {
 export default function PendingClassesPage() {
   const navigate = useNavigate();
   const { studentNameMap } = useData();
-  const { state: pendingState, setHwDone, setDismissed, dismissMany } = usePendingClassState();
+  const { state: pendingState, setHwDone, dismissMany } = usePendingClassState();
   const [showConfirm, setShowConfirm] = useState(false);
 
   const today = getKSTToday();
@@ -114,7 +114,6 @@ export default function PendingClassesPage() {
                 studentName={names}
                 hwDone={!!s.hwDone}
                 onHwClick={setHwDone}
-                onDismiss={setDismissed}
               />
             );
           })}

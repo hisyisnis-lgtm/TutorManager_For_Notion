@@ -8,18 +8,15 @@ import { invalidateCache } from '../../hooks/useCachedResource.js';
 import { formatTime,
   KST } from '../../utils/dateUtils.js';
 import { PRIMARY,
-  PRIMARY_BG,
   TEXT_PRIMARY,
   TEXT_TERTIARY,
   GRAY_100,
   TEXT_INACTIVE } from '../../constants/theme.js';
 
-export default function PendingClassCard({ cls, studentName, hwDone, onHwClick, onDismiss }) {
+export default function PendingClassCard({ cls, studentName, hwDone, onHwClick }) {
   const navigate = useNavigate();
   const { message } = App.useApp();
   const [creatingLog, setCreatingLog] = useState(false);
-  // 카드가 목록에서 빠질 때 툭 사라지지 않게 — exit를 재생하고 나서 실제로 제거한다.
-  const [exiting, setExiting] = useState(false);
 
   const logId = cls.lessonLogIds?.[0];
   const logDone = !!logId;
@@ -40,7 +37,8 @@ export default function PendingClassCard({ cls, studentName, hwDone, onHwClick, 
 
   const handleLogClick = async () => {
     if (logId) {
-      navigate(`/logs/${logId}/edit`);
+      // 이미 있는 일지는 **읽기 전용 상세**로. 편집은 거기서 '편집' 버튼으로.
+      navigate(`/logs/${logId}`);
       return;
     }
     setCreatingLog(true);
@@ -61,9 +59,12 @@ export default function PendingClassCard({ cls, studentName, hwDone, onHwClick, 
     }
   };
 
+  // 아직 안 한 일(숙제 부여·일지 작성). 면은 **중립**으로 두고 강조는 글자색으로만 준다 —
+  // ⛔ 연한 브랜드 면(PRIMARY_BG)으로 채우지 말 것(design_system §18-1).
+  // 카드에 채운 버튼이 둘씩 나란히 서면 목록 전체에서 이 카드만 붕 뜬다.
   const activeBtn = {
     flex: 1, height: 40, borderRadius: 10,
-    background: PRIMARY_BG, color: PRIMARY,
+    background: GRAY_100, color: PRIMARY,
     fontSize: 13, fontWeight: 600,
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     border: 'none', cursor: 'pointer',
@@ -86,8 +87,6 @@ export default function PendingClassCard({ cls, studentName, hwDone, onHwClick, 
 
   return (
     <div
-      className="card-dismiss"
-      data-exiting={exiting}
       style={{
         borderRadius: 16, background: '#fff', boxShadow: 'var(--shadow-border)',
         padding: '14px 16px',
@@ -102,21 +101,9 @@ export default function PendingClassCard({ cls, studentName, hwDone, onHwClick, 
             {timeStr}{endTimeStr && `–${endTimeStr}`} 수업 완료
           </p>
         </div>
-        <button
-          onClick={() => {
-            if (exiting) return;
-            setExiting(true);
-            setTimeout(() => onDismiss(cls.id), 150);
-          }}
-          className="hit-40 transition-[background-color] duration-150 ease-out"
-          style={{
-            flexShrink: 0, background: '#fff', border: 'none', boxShadow: 'var(--shadow-border)',
-            color: TEXT_TERTIARY, fontSize: 12, fontWeight: 600,
-            padding: '5px 12px', borderRadius: 8, cursor: 'pointer',
-          }}
-        >
-          완료
-        </button>
+        {/* ⛔ '완료'(직접 치우기) 버튼은 없앴다(2026-08-27).
+            이 목록은 **오늘 수업만** 조회해서 자정이 지나면 저절로 사라지고,
+            숙제 부여·일지 작성이 둘 다 끝나도 즉시 사라진다. 치울 길은 전체 목록 화면의 '모두 완료'에 남아 있다. */}
       </div>
       <div style={{ display: 'flex', gap: 8 }}>
         <button

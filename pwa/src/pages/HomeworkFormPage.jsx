@@ -13,6 +13,7 @@ import { MicrophoneIcon,
   ImageSquareIcon } from '@phosphor-icons/react';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import FileAttachModal from '../components/homework/FileAttachModal.jsx';
+import SubmitButton from '../components/ui/SubmitButton.jsx';
 import { createHomework,
   notifyHomework,
   uploadTeacherFile } from '../api/homework.js';
@@ -23,8 +24,7 @@ import useFileAttach,
 import { parseStudent,
   STUDENTS_DB } from '../api/students.js';
 import {
-  PRIMARY,
-  PRIMARY_BG,
+  GRAY_100,
   TEXT_PRIMARY,
   TEXT_SECONDARY,
   TEXT_TERTIARY,
@@ -138,9 +138,16 @@ export default function HomeworkFormPage() {
   const presetOption = presetStudentId ? studentOptions.find((o) => o.value === presetStudentId) : null;
   const presetBlocked = !!presetStudentId && studentsLoaded && !studentsLoadError && !presetOption;
 
+  // 제출 버튼이 '왜 비활성인지' 말할 수 있게, handleSubmit의 검사 순서를 그대로 문구로 갖는다.
+  const blockedReason =
+    presetBlocked ? '숙제 관리 대상(VIP) 학생이 아니에요.'
+    : !studentId ? '학생을 선택해주세요.'
+    : !title.trim() ? '숙제 제목을 입력해주세요.'
+    : null;
+
   return (
     <>
-      <PageHeader title="숙제 등록" back />
+      <PageHeader title="숙제 추가" back />
 
       <div className="px-4 pt-4 pb-24 space-y-5">
         {/* 학생 선택 */}
@@ -250,17 +257,9 @@ export default function HomeworkFormPage() {
           <Alert type="error" title={error} showIcon style={{ borderRadius: 12 }} />
         )}
 
-        <Button
-          type="primary"
-          block
-          size="large"
-          onClick={handleSubmit}
-          loading={saving}
-          disabled={presetBlocked}
-          style={{ borderRadius: 12, fontWeight: 600, height: 44 }}
-        >
+        <SubmitButton onClick={handleSubmit} loading={saving} blockedReason={blockedReason}>
           등록하기{pendingTotal > 0 ? ` (${pendingTotal}개 파일)` : ''}
-        </Button>
+        </SubmitButton>
       </div>
 
       {/* ===== 파일 추가 팝업 — 공용 모달 (kind 분기) ===== */}
@@ -310,6 +309,11 @@ function PendingCard({ label, items, onRemove }) {
   );
 }
 
+/**
+ * 파일·녹음 추가 진입 버튼. **중립 면(GRAY_100)** 을 쓴다 —
+ * ⛔ 연한 브랜드 면(PRIMARY_BG)으로 채우지 말 것(design_system §18-1).
+ * 이건 저장도 제출도 아닌 보조 액션이라, 화면에서 가장 눈에 띌 이유가 없다.
+ */
 function SectionEntryButton({ icon, label, onClick }) {
   return (
     <button
@@ -317,8 +321,8 @@ function SectionEntryButton({ icon, label, onClick }) {
       onClick={onClick}
       style={{
         width: '100%', height: 44, borderRadius: 12,
-        background: PRIMARY_BG, border: '1px solid rgba(127,0,5,0.2)',
-        color: PRIMARY, fontSize: 14, fontWeight: 600, cursor: 'pointer',
+        background: GRAY_100, border: 'none',
+        color: TEXT_SECONDARY, fontSize: 14, fontWeight: 600, cursor: 'pointer',
         WebkitTapHighlightColor: 'transparent', marginBottom: 10,
         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
       }}

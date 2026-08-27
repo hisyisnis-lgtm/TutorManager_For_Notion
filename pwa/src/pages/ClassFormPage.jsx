@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { stripEmoji } from '../utils/stringUtils.js';
 import { Alert, Button, Input, Select, Typography } from 'antd';
 import PageHeader from '../components/layout/PageHeader.jsx';
+import SubmitButton from '../components/ui/SubmitButton.jsx';
+import SelectCheck from '../components/ui/SelectCheck.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import { getPage, deletePage } from '../api/notionClient.js';
 import { invalidateCache } from '../hooks/useCachedResource.js';
@@ -38,8 +40,12 @@ function formatDateLabel(date) {
 export default function ClassFormPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { students, classTypes, remainingByStudent, refresh: refreshAll } = useData();
   const isEdit = Boolean(id);
+  // 학생별 수업 관리(StudentClassesPage)의 수업 추가 버튼이 학생을 물고 온다.
+  // 편집 모드에서는 무시 — 그때 학생은 기존 수업에서 읽어온다.
+  const presetStudentId = isEdit ? null : searchParams.get('studentId');
 
   const [studentSearch, setStudentSearch] = useState('');
   const selectedStudentRef = useRef(null);
@@ -50,7 +56,7 @@ export default function ClassFormPage() {
 
   // 공통 폼
   const [form, setForm] = useState({
-    studentIds: [],
+    studentIds: presetStudentId ? [presetStudentId] : [],
     classTypeId: '',
     duration: '60',
     notes: '',
@@ -211,6 +217,16 @@ export default function ClassFormPage() {
   const isOneDayClass = isFixedPriceTitle(selectedClassType?.title);
   // 온라인그룹수업: 학생앱 미등록자 대상. 학생 선택 없이 제목(이름)만 입력해 일정 생성 (전화번호·D-1 알림 없음)
   const isOnlineGroup = isOnlineGroupTitle(selectedClassType?.title);
+
+  // 학생 고정 모드 — 학생별 수업 관리에서 `?studentId=`를 물고 들어온 경우.
+  // 이 화면은 사실상 "○○ 학생 수업 추가" 페이지이므로:
+  //   ① 학생을 붙일 수 없는 유형(무료상담·온라인그룹수업)은 아예 목록에서 뺀다
+  //   ② 학생 선택 단계를 건너뛴다 — 단 2:1은 상대 학생을 골라야 해서 남긴다
+  const studentLocked = Boolean(presetStudentId);
+  const needsSecondStudent = selectedClassType?.classType === '2:1';
+  const visibleClassTypes = studentLocked
+    ? classTypes.filter((ct) => !isOnlineGroupTitle(ct.title) && !isFreeConsultTitle(ct.title))
+    : classTypes;
   // 학생 없이 제목만으로 진행 가능한 유형 (무료상담·온라인그룹수업)
   const isGuestType = isFreeConsult || isOnlineGroup;
   // 30/60/90분 짧은 시간 옵션을 쓰는 체험성 수업
@@ -222,14 +238,19 @@ export default function ClassFormPage() {
   const canRecur = !hasShortDuration && (form.studentIds.length > 0 || isOnlineGroup) && Boolean(form.classTypeId);
 
   // 단계별 표시 조건
-  const showStudent = Boolean(form.classTypeId);
+  // 수업 유형 단계 통과 여부와 "학생 섹션을 그릴지"는 다른 문제다.
+  // (학생 고정 모드에서 섹션을 건너뛰려고 showStudent를 false로 두었더니 그 뒤 단계까지
+  //  같이 막혔던 버그 — 일시/시간 조건은 typeChosen을 본다)
+  const typeChosen = Boolean(form.classTypeId);
+  // 학생 고정 모드에서 1인 유형이면 고를 것이 없으므로 ② 학생 섹션을 통째로 건너뛴다.
+  const showStudent = typeChosen && !(studentLocked && !needsSecondStudent);
   // 무료상담·온라인그룹수업은 학생 선택 없어도 이름(제목) 입력으로 진행, 원데이클래스는 학생 선택 필수
   const studentDone = isGuestType || form.studentIds.length > 0;
   // 반복/단일 선택 섹션: 반복 가능 유형(일반 학생수업·온라인그룹수업)에서만, 선행(학생/수업종류) 완료 후. 편집·일회성 제외.
   const showRecurChoice = !isEdit && canRecur && studentDone;
   // 반복 선택이 필요없으면(일회성·편집) 바로 일시. 필요하면 단일/반복을 골라야 일시 표시.
   const recurChosen = !showRecurChoice || recurMode !== '';
-  const showDatetime = showStudent && studentDone && recurChosen;
+  const showDatetime = typeChosen && studentDone && recurChosen;
   const datetimeDone = recurring ? Boolean(form.recurTime) : Boolean(form.datetime);
   const showDuration = showDatetime && datetimeDone;
   const sessionsPerLesson = parseInt(form.duration) / 60;
@@ -238,6 +259,19 @@ export default function ClassFormPage() {
     ? generateRecurringDates(form.recurStartDate, form.recurEndDate, form.recurDays, form.recurTime)
     : [];
   const recurCount = recurDates.length;
+
+  // 비활성 사유 — handleSubmit의 검사 순서를 그대로 따라간다(반복 등록 분기 포함).
+  const blockedReason =
+    (!form.studentIds.length && !isGuestType) ? '학생을 최소 한 명 선택하세요.'
+    : (isFreeConsult && !form.studentIds.length && !form.guestName.trim()) ? '이름을 입력하거나 학생을 선택하세요.'
+    : !form.classTypeId ? '수업 유형을 선택하세요.'
+    : recurring
+      ? (!form.recurDays.length ? '요일을 최소 하나 선택하세요.'
+        : !form.recurEndDate ? '종료일을 입력하세요.'
+        : form.recurEndDate < form.recurStartDate ? '종료일은 시작일 이후여야 합니다.'
+        : recurCount <= 0 ? '선택한 날짜 범위에 해당 요일 수업이 없습니다.'
+        : null)
+      : null;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -408,11 +442,18 @@ export default function ClassFormPage() {
     }
   };
 
+  // 학생별 수업 관리에서 넘어온 경우 누구의 수업을 만드는지 헤더에서 바로 보이게 한다.
+  // (② 학생 섹션은 수업 유형 선택 후에야 펼쳐져서 그 전엔 프리셋이 안 보인다)
+  const presetStudent = presetStudentId ? students.find((s) => s.id === presetStudentId) : null;
+  const headerTitle = isEdit
+    ? '수업 편집'
+    : presetStudent ? `${presetStudent.name} 수업 추가` : '수업 추가';
+
   if (loading) return <><PageHeader title="수업 편집" back /><LoadingSpinner /></>;
 
   return (
     <>
-      <PageHeader title={isEdit ? '수업 편집' : '수업 추가'} back />
+      <PageHeader title={headerTitle} back />
 
       <form onSubmit={handleSubmit} className="px-4 pt-4 pb-8 space-y-5">
         {error && (
@@ -429,10 +470,15 @@ export default function ClassFormPage() {
             onChange={(value) => {
               const ct = classTypes.find(c => c.id === value);
               const isShortDur = isFreeConsultTitle(ct?.title) || isFixedPriceTitle(ct?.title);
+              // 온라인그룹수업은 ② 학생 선택 섹션을 통째로 건너뛴다. 그전에 고른(또는
+              // ?studentId=로 미리 채워진) 학생이 남아 있으면 화면에 안 보이는 채로 수업에
+              // 붙어버리므로 여기서 비운다.
+              const clearsStudents = isOnlineGroupTitle(ct?.title);
               setForm((f) => ({
                 ...f,
                 classTypeId: value,
                 duration: isShortDur ? '30' : (f.duration === '30' ? '60' : f.duration),
+                ...(clearsStudents ? { studentIds: [] } : null),
               }));
               setRecurMode(''); // 수업 종류 바뀌면 반복/단일 선택 초기화
             }}
@@ -440,7 +486,7 @@ export default function ClassFormPage() {
             size="large"
             placeholder="선택하세요"
           >
-            {classTypes.map((ct) => (
+            {visibleClassTypes.map((ct) => (
               <Select.Option key={ct.id} value={ct.id}>
                 {ct.title}
               </Select.Option>
@@ -480,7 +526,9 @@ export default function ClassFormPage() {
             )}
             {!isOnlineGroup && (<>
             <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
-              학생 선택 {isFreeConsult ? <span style={{ fontWeight: 400, color: TEXT_INACTIVE }}>(선택 사항)</span> : '(2:1 수업 시 두 명 선택)'}
+              {studentLocked
+                ? '함께 수업할 학생 한 명 더 선택'
+                : <>학생 선택 {isFreeConsult ? <span style={{ fontWeight: 400, color: TEXT_INACTIVE }}>(선택 사항)</span> : '(2:1 수업 시 두 명 선택)'}</>}
             </Typography.Text>
             <Input
               type="text"
@@ -490,7 +538,7 @@ export default function ClassFormPage() {
               size="large"
               style={{ borderRadius: 12, marginBottom: 8 }}
             />
-            <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+            <div className="space-y-2 max-h-60 overflow-y-auto px-2 py-2 -mx-2">
               {students
                 .filter((s) => s.name.includes(studentSearch))
                 .map((s) => {
@@ -500,23 +548,26 @@ export default function ClassFormPage() {
                     <label
                       key={s.id}
                       ref={isFirstSelected ? selectedStudentRef : null}
-                      className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-[background-color,border-color] duration-150 ease-out ${
-                        isSelected
-                          ? 'border-brand-500 bg-brand-50'
-                          : 'border-gray-200 bg-white'
-                      }`}
+                      className="flex items-center gap-3 p-3 rounded-xl cursor-pointer bg-white"
+                      style={{
+                        boxShadow: isSelected ? 'var(--shadow-border-selected)' : 'var(--shadow-border)',
+                        transitionProperty: 'box-shadow',
+                        transitionDuration: '150ms',
+                        transitionTimingFunction: 'var(--ease-out)',
+                      }}
                     >
                       <input
                         type="checkbox"
                         checked={isSelected}
                         onChange={() => toggleStudent(s.id)}
-                        className="w-4 h-4 accent-brand-600"
+                        className="sr-only select-check-input"
                       />
+                      <SelectCheck selected={isSelected} />
                       <span className="text-sm font-semibold text-gray-800">{s.name}</span>
                       <span className="text-xs text-gray-500 ml-auto">{stripEmoji(s.status)}</span>
                       {recurring && isSelected && (
                         <span className="text-xs text-brand-600 font-semibold">
-                          잔여 {formatSessions(remainingByStudent[s.id] ?? 0)}시간
+                          예약 가능 {formatSessions(remainingByStudent[s.id] ?? 0)}시간
                         </span>
                       )}
                     </label>
@@ -540,8 +591,8 @@ export default function ClassFormPage() {
               <button
                 type="button"
                 onClick={() => setRecurMode('single')}
-                className={`py-3 rounded-xl text-sm font-semibold border-2 transition-[background-color,color,border-color] duration-150 ease-out ${
-                  recurMode === 'single' ? 'border-brand-600 bg-brand-50 text-brand-700' : 'border-gray-200 bg-white text-gray-600'
+                className={`seg-option py-3 rounded-xl text-sm font-semibold ${
+                  recurMode === 'single' ? 'seg-on' : 'seg-off'
                 }`}
               >
                 단일 수업
@@ -549,8 +600,8 @@ export default function ClassFormPage() {
               <button
                 type="button"
                 onClick={() => setRecurMode('recur')}
-                className={`py-3 rounded-xl text-sm font-semibold border-2 transition-[background-color,color,border-color] duration-150 ease-out ${
-                  recurMode === 'recur' ? 'border-brand-600 bg-brand-50 text-brand-700' : 'border-gray-200 bg-white text-gray-600'
+                className={`seg-option py-3 rounded-xl text-sm font-semibold ${
+                  recurMode === 'recur' ? 'seg-on' : 'seg-off'
                 }`}
               >
                 반복 수업
@@ -650,8 +701,8 @@ export default function ClassFormPage() {
                       key={day}
                       type="button"
                       onClick={() => toggleDay(day)}
-                      className={`py-3 rounded-xl text-sm font-semibold border-2 transition-[background-color,color,border-color] duration-150 ease-out ${
-                        active ? 'border-brand-600 bg-brand-50 text-brand-700' : 'border-gray-200 bg-white text-gray-600'
+                      className={`seg-option py-3 rounded-xl text-sm font-semibold ${
+                        active ? 'seg-on' : 'seg-off'
                       }`}
                     >
                       {label}
@@ -740,12 +791,12 @@ export default function ClassFormPage() {
                     key={d}
                     type="button"
                     onClick={() => setForm((f) => ({ ...f, duration: d }))}
-                    className={`py-3 rounded-xl text-sm font-semibold border-2 transition-[background-color,color,border-color] duration-150 ease-out ${
+                    className={`seg-option py-3 rounded-xl text-sm font-semibold ${
                       form.duration === d
-                        ? 'border-brand-600 bg-brand-50 text-brand-700'
+                        ? 'seg-on'
                         : conflict
                         ? 'border-yellow-300 bg-yellow-50 text-yellow-700'
-                        : 'border-gray-200 bg-white text-gray-600'
+                        : 'seg-off'
                     }`}
                   >
                     {d}분
@@ -806,10 +857,10 @@ export default function ClassFormPage() {
                     // 카페/외부 장소가 아닌 옵션 선택 시 메모 자동 리셋
                     locationMemo: loc?.includes('카페') ? f.locationMemo : '',
                   }))}
-                  className={`py-3 rounded-xl text-sm font-semibold border-2 transition-[background-color,color,border-color] duration-150 ease-out ${
+                  className={`seg-option py-3 rounded-xl text-sm font-semibold ${
                     form.location === loc
-                      ? 'border-brand-600 bg-brand-50 text-brand-700'
-                      : 'border-gray-200 bg-white text-gray-600'
+                      ? 'seg-on'
+                      : 'seg-off'
                   }`}
                 >
                   {loc}
@@ -841,10 +892,10 @@ export default function ClassFormPage() {
               <button
                 type="button"
                 onClick={() => setForm((f) => ({ ...f, notes: '' }))}
-                className={`py-3 rounded-xl text-sm font-semibold border-2 transition-[background-color,color,border-color] duration-150 ease-out ${
+                className={`seg-option py-3 rounded-xl text-sm font-semibold ${
                   !form.notes
-                    ? 'border-gray-700 bg-gray-100 text-gray-800'
-                    : 'border-gray-200 bg-white text-gray-600'
+                    ? 'seg-on-neutral'
+                    : 'seg-off'
                 }`}
               >
                 없음
@@ -854,10 +905,10 @@ export default function ClassFormPage() {
                   key={n}
                   type="button"
                   onClick={() => setForm((f) => ({ ...f, notes: n }))}
-                  className={`py-3 rounded-xl text-sm font-semibold border-2 transition-[background-color,color,border-color] duration-150 ease-out ${
+                  className={`seg-option py-3 rounded-xl text-sm font-semibold ${
                     form.notes === n
-                      ? 'border-gray-700 bg-gray-100 text-gray-800'
-                      : 'border-gray-200 bg-white text-gray-600'
+                      ? 'seg-on-neutral'
+                      : 'seg-off'
                   }`}
                 >
                   {n}
@@ -884,12 +935,11 @@ export default function ClassFormPage() {
         )}
 
         {showDuration && (
-          <Button
-            type="primary"
-            block
+          <SubmitButton
             htmlType="submit"
-            disabled={saving}
-            style={{ borderRadius: 12, height: 44, fontWeight: 600, marginTop: 8, animation: 'fadeSlideUp 0.35s ease both' }}
+            loading={saving}
+            blockedReason={blockedReason}
+            style={{ marginTop: 8, animation: 'fadeSlideUp 0.35s ease both' }}
           >
             {saving
               ? '저장 중...'
@@ -898,7 +948,7 @@ export default function ClassFormPage() {
               : isEdit
               ? '수정하기'
               : '수업 추가'}
-          </Button>
+          </SubmitButton>
         )}
 
         {isEdit && (

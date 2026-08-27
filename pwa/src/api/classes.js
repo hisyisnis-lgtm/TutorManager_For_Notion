@@ -1,4 +1,4 @@
-import { queryPage, createPage, updatePage } from './notionClient.js';
+import { queryPage, queryAll, createPage, updatePage } from './notionClient.js';
 import {
   getTitle,
   getRichText,
@@ -9,6 +9,7 @@ import {
   getRelationIds,
   getFormulaString,
   getFormulaDate,
+  getFormulaNumber,
 } from '../utils/notionProp.js';
 
 export const CLASSES_DB = '314838fa-f2a6-81bc-8b67-d9e1c8fb7ecb';
@@ -48,6 +49,51 @@ export async function fetchClassesPage(opts = {}) {
     : [{ property: '수업 일시', direction: 'ascending' }];
 
   return queryPage(CLASSES_DB, filter, sorts, cursor, 100);
+}
+
+/**
+ * 특정 학생의 예정 수업 전체 조회 (지금 이후, 오름차순).
+ * 예약된 시간 합계에 쓰므로 100건 초과에도 누락되면 안 되어 queryAll.
+ */
+export async function fetchUpcomingClasses(studentId) {
+  return queryAll(
+    CLASSES_DB,
+    {
+      and: [
+        { property: '학생', relation: { contains: studentId } },
+        { property: '수업 일시', date: { on_or_after: new Date().toISOString() } },
+      ],
+    },
+    [{ property: '수업 일시', direction: 'ascending' }]
+  );
+}
+
+/**
+ * 예정 수업의 시간 합계 = 예약된 시간.
+ * 노션 시간 회차 formula를 그대로 더하므로 무료 수업·보강·취소는 자동으로 0.
+ * 학생 DB의 사용 시간 회차 롤업이 예정 수업까지 포함해 차감하기 때문에,
+ * 이 값은 이미 예약 가능 시간에서 빠져 있는 몫이다(StudentDetailPage 주석 참고).
+ */
+export function bookedHoursOf(classes) {
+  return classes.reduce((sum, c) => sum + (c.sessionHours ?? 0), 0);
+}
+
+/**
+ * 특정 학생의 완료 수업 전체 조회 (지금 이전, 내림차순).
+ * 월별 필터가 **로드된 것만** 걸러선 안 되므로 페이지네이션이 아니라 전부 받는다.
+ * (학생 1명 범위라 건수가 제한적이고, notionClient의 레이트 리미터가 호출 속도를 잡아준다.)
+ */
+export async function fetchCompletedClasses(studentId) {
+  return queryAll(
+    CLASSES_DB,
+    {
+      and: [
+        { property: '학생', relation: { contains: studentId } },
+        { property: '수업 일시', date: { on_or_before: new Date().toISOString() } },
+      ],
+    },
+    [{ property: '수업 일시', direction: 'descending' }]
+  );
 }
 
 /** 수업 생성 */
@@ -155,6 +201,9 @@ export function parseClass(page) {
     sessionShortage: getFormulaString(p['시간 회차 부족']),
     conflictDetected: getCheckbox(p['충돌_감지']),
     endTime: getFormulaDate(p['수업 종료 시간']),
+    // 학생 DB '사용 시간 회차' 롤업이 합산하는 값과 같은 formula.
+    // 무료 수업·🟠보강·🚫취소는 0 — 시간 집계는 반드시 이 값으로 해야 노션과 어긋나지 않는다.
+    sessionHours: getFormulaNumber(p['시간 회차']),
     lessonLogIds: getRelationIds(p['수업 일지']),
     location: getSelect(p['수업 장소']),
     locationMemo: getRichText(p['수업 장소 메모']),

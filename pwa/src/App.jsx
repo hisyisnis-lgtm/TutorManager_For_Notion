@@ -20,6 +20,7 @@ import PaymentFormPage from './pages/PaymentFormPage.jsx';
 import PaymentDetailPage from './pages/PaymentDetailPage.jsx';
 import LessonLogsPage from './pages/LessonLogsPage.jsx';
 import LessonLogFormPage from './pages/LessonLogFormPage.jsx';
+import LessonLogDetailPage from './pages/LessonLogDetailPage.jsx';
 import HomePage from './pages/HomePage.jsx';
 import PendingClassesPage from './pages/PendingClassesPage.jsx';
 import TomorrowPrepPage from './pages/TomorrowPrepPage.jsx';
@@ -42,6 +43,8 @@ import ConsultManagePage from './pages/ConsultManagePage.jsx';
 import HomeworkFormPage from './pages/HomeworkFormPage.jsx';
 import HomeworkDetailPage from './pages/HomeworkDetailPage.jsx';
 import StudentHomeworkPage from './pages/StudentHomeworkPage.jsx';
+import StudentClassesPage from './pages/StudentClassesPage.jsx';
+import StudentPaymentsPage from './pages/StudentPaymentsPage.jsx';
 import HomeworkManagePage from './pages/HomeworkManagePage.jsx';
 import LandingPage from './pages/LandingPage.jsx';
 import PricingPage from './pages/PricingPage.jsx';
@@ -377,12 +380,15 @@ export default function App() {
 
             <Route path="/logs" element={<LessonLogsPage />} />
             <Route path="/logs/:id/edit" element={<LessonLogFormPage />} />
+            <Route path="/logs/:id" element={<LessonLogDetailPage />} />
 
             <Route path="/bookings" element={<BookingsManagePage />} />
             <Route path="/consult" element={<ConsultManagePage />} />
 
             <Route path="/homework" element={<HomeworkManagePage />} />
             <Route path="/students/:id/homework" element={<StudentHomeworkPage />} />
+            <Route path="/students/:id/classes" element={<StudentClassesPage />} />
+            <Route path="/students/:id/payments" element={<StudentPaymentsPage />} />
             <Route path="/homework/new" element={<HomeworkFormPage />} />
             <Route path="/homework/:id" element={<HomeworkDetailPage />} />
 

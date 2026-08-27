@@ -9,7 +9,6 @@ import {
   PRIMARY,
   PRIMARY_LIGHT,
   PRIMARY_BG,
-  PRIMARY_ALPHA_20,
   TEXT_PRIMARY,
   TEXT_SECONDARY,
   TEXT_TERTIARY,
@@ -484,10 +483,12 @@ export default function PandaWidget({ foodSources = [], storageKey = DEFAULT_FEE
             className=""
             style={{
               width: '100%', height: 42, borderRadius: 12, marginTop: 8,
-              border: `1px solid ${PRIMARY_ALPHA_20}`,
               cursor: canFeed ? 'pointer' : 'not-allowed',
-              background: PRIMARY_BG,
-              color: canFeed ? PRIMARY : TEXT_DISABLED,
+              // 위젯의 주 액션이라 **브랜드 채움**. 연한 브랜드 면은 주 액션도 보조도 아닌
+              // 어중간한 자리에 있어 어느 쪽으로도 안 읽힌다(design_system §18-1).
+              border: canFeed ? 'none' : `1px solid ${GRAY_300}`,
+              background: canFeed ? PRIMARY : GRAY_100,
+              color: canFeed ? '#fff' : TEXT_DISABLED,
               fontSize: 14, fontWeight: 700,
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
               WebkitTapHighlightColor: 'transparent',

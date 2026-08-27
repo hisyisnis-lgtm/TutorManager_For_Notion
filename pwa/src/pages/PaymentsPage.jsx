@@ -2,13 +2,14 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Button, Input, Card, Select, message } from 'antd';
 import { useCachedResource } from '../hooks/useCachedResource.js';
-import { MagnifyingGlassIcon, ReceiptIcon } from '@phosphor-icons/react';
+import { MagnifyingGlassIcon, ReceiptIcon, CreditCardIcon } from '@phosphor-icons/react';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import Badge from '../components/ui/Badge.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import ErrorMessage from '../components/ui/ErrorMessage.jsx';
 import EmptyState from '../components/ui/EmptyState.jsx';
-import { fetchPaymentsPage, parsePayment, paymentStatusColor, refundSessions, formatSessions, PAYMENTS_DB } from '../api/payments.js';
+import { fetchPaymentsPage, parsePayment, PAYMENTS_DB } from '../api/payments.js';
+import PaymentCard from '../components/payments/PaymentCard.jsx';
 import { queryAll } from '../api/notionClient.js';
 import { formatKRW, KST } from '../utils/dateUtils.js';
 import { stripEmoji } from '../utils/stringUtils.js';
@@ -16,7 +17,8 @@ import { useData } from '../context/DataContext.jsx';
 import PullToRefresh from '../components/ui/PullToRefresh.jsx';
 import PaymentTrendChart from '../components/payments/PaymentTrendChart.jsx';
 import IncomeSummary from '../components/payments/IncomeSummary.jsx';
-import { TEXT_PRIMARY, TEXT_TERTIARY, STATUS_ERROR_TEXT, BORDER_NEUTRAL } from '../constants/theme.js';
+import { TEXT_SECONDARY, TEXT_TERTIARY, BORDER_NEUTRAL, GRAY_100 } from '../constants/theme.js';
+import { ABOVE_BOTTOM_NAV } from '../constants/styles.js';
 
 export default function PaymentsPage() {
   const { students, classTypes, studentNameMap, classTypeMap } = useData();
@@ -113,19 +115,7 @@ export default function PaymentsPage() {
 
   return (
     <PullToRefresh onRefresh={handleRefresh}>
-      <PageHeader
-        title="결제 내역"
-        action={
-          <Link to="/payments/new">
-            <Button
-              type="primary"
-              style={{ borderRadius: 12, fontWeight: 600 }}
-            >
-              + 결제 입력
-            </Button>
-          </Link>
-        }
-      />
+      <PageHeader title="결제 내역" />
 
       {/* 최근 6개월 결제 추이 */}
       <div className="px-4 pt-4">
@@ -139,7 +129,7 @@ export default function PaymentsPage() {
       {/* 수입 현황 (이번 달 결제 수입 · 예상 수익) */}
       <IncomeSummary ref={incomeRef} />
 
-      <div className="px-4 pt-3 pb-3 space-y-2">
+      <div className="px-4 pt-5 space-y-2">
         {/* 학생 검색 필터 */}
         <div className="relative">
           <Input
@@ -203,7 +193,7 @@ export default function PaymentsPage() {
           {filtered.length === 0 ? (
             <EmptyState icon={<ReceiptIcon size={44} weight="thin" style={{ color: BORDER_NEUTRAL }} />} title="결제 내역이 없습니다" />
           ) : (
-            <ul className={`px-4 space-y-3 ${hasMore ? 'pb-2' : 'pb-24'}`}>
+            <ul className="px-4 pt-5 space-y-3" style={{ paddingBottom: hasMore ? 12 : 152 }}>
               {filtered.map((p) => (
                 <PaymentCard
                   key={p.id}
@@ -215,87 +205,52 @@ export default function PaymentsPage() {
             </ul>
           )}
           {hasMore && (
-            <div className="px-4 pb-24">
-              <Button
-                block
-                loading={loadingMore}
+            <div className="px-4" style={{ paddingBottom: 152 }}>
+              {/* 숙제·수업·수업 일지와 같은 회색 면 버튼 — 목록을 늘리는 보조 동작이라 튀지 않는다 */}
+              <button
+                type="button"
                 onClick={loadMore}
-                style={{ borderRadius: 12 }}
+                disabled={loadingMore}
+                className="w-full"
+                style={{
+                  height: 40, borderRadius: 12, background: GRAY_100, border: 'none',
+                  cursor: loadingMore ? 'default' : 'pointer', fontSize: 13, fontWeight: 600,
+                  color: TEXT_SECONDARY, WebkitTapHighlightColor: 'transparent',
+                }}
               >
-                더 보기
-              </Button>
+                {loadingMore ? '불러오는 중…' : '더 보기'}
+              </button>
             </div>
           )}
         </>
       )}
-    </PullToRefresh>
-  );
-}
 
-function PaymentCard({ payment, studentNameMap, classTypeMap }) {
-  const { bg, text } = paymentStatusColor(payment.paymentStatus);
-  const studentName =
-    payment.studentIds.map((id) => studentNameMap[id] || '(알 수 없음)').join(', ');
-  // 학생 없는 결제(온라인그룹수업 등)는 타이틀(수강생 이름)을 표시
-  const displayName = studentName || payment.note || '학생 없음';
-  const classTypeName = payment.classTypeId ? classTypeMap[payment.classTypeId]?.title : null;
-
-  return (
-    <li>
-      <Link
-        to={`/payments/${payment.id}`}
-        className="block tap-wrap"
+      {/* 결제 추가 — 수업 캘린더·숙제 관리와 같은 원형 FAB(브랜드 채움).
+          ⛔ 헤더 '+ 결제 입력' 채움 버튼으로 되돌리지 말 것(2026-08-27 사용자 지시) */}
+      <div
+        style={{
+          position: 'fixed', right: 16,
+          bottom: `calc(${ABOVE_BOTTOM_NAV} + 16px)`,
+          zIndex: 40,
+        }}
       >
-        <Card
-          variant="borderless"
-          className="card-tap"
-          style={{ borderRadius: 12 }}
-          styles={{ body: { padding: '14px 16px' } }}
-        >
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 10 }}>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ fontSize: 15, fontWeight: 700, color: TEXT_PRIMARY, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {displayName}
-              </p>
-              {classTypeName && (
-                <p style={{ fontSize: 12, color: TEXT_TERTIARY, margin: '2px 0 0' }}>{classTypeName}</p>
-              )}
-            </div>
-            {payment.studentIds.length > 0 && <Badge label={stripEmoji(payment.paymentStatus)} bg={bg} text={text} />}
-          </div>
-          <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-            {/* 학생 없는 결제(온라인그룹수업)는 결제 시간·미수금 개념이 없어 실제 결제 금액만 표시 */}
-            {payment.studentIds.length > 0 && (
-              <div>
-                <span style={{ fontSize: 12, color: TEXT_TERTIARY }}>결제 시간 </span>
-                <span style={{ fontSize: 13, fontWeight: 600, color: TEXT_PRIMARY }} className="tabular-nums">{formatSessions(payment.sessionCount)}시간</span>
-              </div>
-            )}
-            <div>
-              <span style={{ fontSize: 12, color: TEXT_TERTIARY }}>결제 금액 </span>
-              <span style={{ fontSize: 13, fontWeight: 600, color: TEXT_PRIMARY }} className="tabular-nums">{formatKRW(payment.studentIds.length ? payment.paymentAmount : payment.actualAmount)}</span>
-            </div>
-            {payment.studentIds.length > 0 && payment.unpaid > 0 && (
-              <div>
-                <span style={{ fontSize: 12, color: TEXT_TERTIARY }}>미수금 </span>
-                <span style={{ fontSize: 13, fontWeight: 600, color: STATUS_ERROR_TEXT }} className="tabular-nums">{formatKRW(payment.unpaid)}</span>
-              </div>
-            )}
-            {payment.refundAmount > 0 && (
-              <div>
-                <span style={{ fontSize: 12, color: TEXT_TERTIARY }}>환불 </span>
-                <span style={{ fontSize: 13, fontWeight: 600, color: TEXT_PRIMARY }} className="tabular-nums">
-                  −{formatKRW(payment.refundAmount)}
-                  {payment.studentIds.length > 0 && refundSessions(payment) > 0 && ` · ${formatSessions(refundSessions(payment))}시간`}
-                </span>
-              </div>
-            )}
-          </div>
-          {payment.paymentDate && (
-            <p style={{ fontSize: 12, color: TEXT_TERTIARY, margin: '8px 0 0' }} className="tabular-nums">결제일 {payment.paymentDate}</p>
-          )}
-        </Card>
-      </Link>
-    </li>
+        <Link to="/payments/new">
+          <Button
+            type="primary"
+            shape="circle"
+            aria-label="결제 추가"
+            style={{
+              width: 56, height: 56,
+              boxShadow: 'var(--shadow-brand-button)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}
+          >
+            {/* 2026-08-27 사용자 선택. ⛔ 영수증(그냥 '문서'로 읽힘)·₩(하단탭 결제와 겹침) 재제안 금지.
+                phosphor엔 CalendarPlus 같은 '돈+plus' 아이콘이 없어 결제 수단으로 뜻을 세운다. */}
+            <CreditCardIcon weight="fill" size={24} />
+          </Button>
+        </Link>
+      </div>
+    </PullToRefresh>
   );
 }

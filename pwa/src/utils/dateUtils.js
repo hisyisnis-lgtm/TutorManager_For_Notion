@@ -89,6 +89,20 @@ export function formatDate(iso) {
   });
 }
 
+/**
+ * ISO 문자열 → "8월 31일 (월)" — 연도 없이 날짜만.
+ * `formatDate`는 연도가 붙어 카드 제목 줄에 넣으면 폭이 모자란다(2026-08-26 실측).
+ */
+export function formatDateNoYear(iso) {
+  if (!iso) return '';
+  return new Date(iso).toLocaleDateString('ko-KR', {
+    timeZone: KST,
+    month: 'long',
+    day: 'numeric',
+    weekday: 'short',
+  });
+}
+
 /** ISO 문자열 → "HH:MM" 시간만 표시 */
 export function formatTime(iso) {
   if (!iso) return '';
@@ -170,4 +184,20 @@ export function getMonthEnd() {
 export function formatKRW(amount) {
   if (!amount && amount !== 0) return '';
   return `₩${amount.toLocaleString('ko-KR')}`;
+}
+
+/**
+ * 만원 단위 금액 — 좁은 칸(합계 3분할 등)에서 `₩3,480,0…`처럼 잘리는 걸 막는다.
+ * 100만 이상은 만 단위 정수로 끊고(3,480,000 → `348만원`), 그 아래는 소수 한 자리까지 남긴다.
+ * 만원 미만은 만으로 줄일 게 없어 원 단위 그대로.
+ * (PaymentTrendChart의 축·툴팁은 '원'까지 넣을 폭이 없어 `532만` 형태를 따로 쓴다.)
+ */
+export function formatManwon(amount) {
+  const v = Number(amount) || 0;
+  if (Math.abs(v) < 10000) return `${v.toLocaleString('ko-KR')}원`;
+  const man = v / 10000;
+  const s = Math.abs(v) >= 1000000
+    ? String(Math.round(man))
+    : man.toFixed(1).replace(/\.0$/, '');
+  return `${s}만원`;
 }

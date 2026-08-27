@@ -40,9 +40,7 @@ import { writeCacheValue } from '../hooks/useCachedResource.js';
 import useFileAttach,
   { MAX_FILES } from '../hooks/useFileAttach.js';
 import {
-  PRIMARY,
-  PRIMARY_BG,
-  PRIMARY_ALPHA_20,
+  GRAY_100,
   TEXT_PRIMARY,
   TEXT_SECONDARY,
   TEXT_TERTIARY,
@@ -673,8 +671,9 @@ function SectionEntryButton({ icon, label, onClick, disabled }) {
       className="transition-[background-color] duration-150 ease-out"
       style={{
         width: '100%', height: 44, borderRadius: 12,
-        background: PRIMARY_BG, border: `1px solid ${PRIMARY_ALPHA_20}`,
-        color: PRIMARY, fontSize: 14, fontWeight: 600,
+        // 강사앱의 같은 버튼과 함께 중립 면으로 맞췄다 — 연한 브랜드 면 금지(2026-08-27).
+        background: GRAY_100, border: 'none',
+        color: TEXT_SECONDARY, fontSize: 14, fontWeight: 600,
         cursor: disabled ? 'not-allowed' : 'pointer',
         WebkitTapHighlightColor: 'transparent', marginBottom: 10,
         opacity: disabled ? 0.6 : 1,

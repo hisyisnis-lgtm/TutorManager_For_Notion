@@ -10,14 +10,14 @@ import { CLASSES_DB, parseClass } from '../api/classes.js';
 import { parseLessonLog } from '../api/lessonLogs.js';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
+import LessonLogBody from '../components/lessonLogs/LessonLogBody.jsx';
 import PullToRefresh from '../components/ui/PullToRefresh.jsx';
 import { stripEmoji } from '../utils/stringUtils.js';
 import {
-  PRIMARY, PRIMARY_BG,
+  PRIMARY,
   TEXT_PRIMARY, TEXT_SECONDARY, TEXT_TERTIARY,
   BG_CARD, BORDER_SUBTLE, BORDER_NEUTRAL,
 } from '../constants/theme.js';
-import { BADGE_SMALL } from '../constants/styles.js';
 
 import { KST, formatDuration } from '../utils/dateUtils.js';
 const pad = (n) => String(n).padStart(2, '0');
@@ -467,23 +467,8 @@ function LogCardBody({ slide }) {
           직전 수업: {fmtDateOnly(slide.prevClassDate)}
         </p>
       )}
-      <LogSection label="오늘 내용" text={log.content} />
-      <LogSection label="숙제" text={log.homework} />
-      <LogSection label="다음 수업 준비" text={log.nextPrepare} highlight />
-      {log.engagement && (
-        <div>
-          <SectionLabel>학생 참여도</SectionLabel>
-          <span style={{ ...BADGE_SMALL, display: 'inline-block', borderRadius: 980, background: PRIMARY_BG, color: PRIMARY }}>
-            {stripEmoji(log.engagement)}
-          </span>
-        </div>
-      )}
-      <LogSection label="메모" text={log.memo} />
-      {!log.content && !log.homework && !log.nextPrepare && !log.memo && !log.engagement && (
-        <p style={{ fontSize: 14, color: TEXT_TERTIARY, textAlign: 'center', padding: '16px 0' }}>
-          작성된 일지 내용이 없습니다.
-        </p>
-      )}
+      {/* 일지 상세(LessonLogDetailPage)와 같은 본문 — 마크업을 두 벌 두지 않는다 */}
+      <LessonLogBody log={log} />
     </div>
   );
 }
@@ -574,42 +559,3 @@ const LogCard = forwardRef(function LogCard({ slide }, ref) {
   );
 });
 
-function SectionLabel({ children }) {
-  return (
-    <span style={{ display: 'block', fontSize: 12, fontWeight: 600, color: TEXT_TERTIARY, marginBottom: 4 }}>
-      {children}
-    </span>
-  );
-}
-
-function LogSection({ label, text, highlight }) {
-  if (!text?.trim()) return null;
-  // '다음 수업 준비'는 가장 중요한 항목 — 빨강 텍스트(가이드상 인터랙티브 전용) 대신
-  // 연한 브랜드 배경 박스(PRIMARY_BG)로 강조한다.
-  if (highlight) {
-    return (
-      <div style={{ background: PRIMARY_BG, borderRadius: 12, padding: '12px 14px' }}>
-        <SectionLabel>{label}</SectionLabel>
-        <p style={{
-          fontSize: 14, lineHeight: 1.65, margin: 0,
-          color: TEXT_PRIMARY, fontWeight: 600,
-          whiteSpace: 'pre-wrap', wordBreak: 'break-word',
-        }}>
-          {text}
-        </p>
-      </div>
-    );
-  }
-  return (
-    <div>
-      <SectionLabel>{label}</SectionLabel>
-      <p style={{
-        fontSize: 14, lineHeight: 1.65, margin: 0,
-        color: TEXT_PRIMARY, fontWeight: 400,
-        whiteSpace: 'pre-wrap', wordBreak: 'break-word',
-      }}>
-        {text}
-      </p>
-    </div>
-  );
-}
