@@ -11,6 +11,7 @@ import {
   getFormulaDate,
   getFormulaNumber,
 } from '../utils/notionProp.js';
+import { STATUS_ERROR_TEXT } from '../constants/theme.js';
 
 export const CLASSES_DB = '314838fa-f2a6-81bc-8b67-d9e1c8fb7ecb';
 
@@ -220,10 +221,16 @@ export function classStatusColor(status) {
   return { bg: 'bg-gray-100', text: 'text-gray-500' };
 }
 
+/**
+ * 특이사항 배지 색. **취소가 가장 강하다** — 목록을 훑을 때 "이 카드는 실제 수업이 아니다"를
+ * 즉시 알아야 하는데 회색이라 배경에 묻혔다(2026-08-28 지적).
+ * 6월 이후 423건 중 취소 45건(11%) · 보강 3 · 결석 2 — 빈도로도 취소가 압도적이다.
+ * 취소만 **채운 빨강**이라 연빨강(결석)·연주황(보강)과 헷갈리지 않는다.
+ */
 export function notesColor(notes) {
   if (!notes) return null;
+  if (notes.includes('취소')) return { bg: STATUS_ERROR_TEXT, text: '#ffffff' };
   if (notes.includes('결석')) return { bg: 'bg-red-50', text: 'text-red-600' };
   if (notes.includes('보강')) return { bg: 'bg-orange-50', text: 'text-orange-600' };
-  if (notes.includes('취소')) return { bg: 'bg-gray-100', text: 'text-gray-500' };
   return null;
 }

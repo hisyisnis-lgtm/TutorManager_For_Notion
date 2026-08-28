@@ -1,9 +1,11 @@
 import {
   useParams,
+  useNavigate,
   Link } from 'react-router-dom';
 import { useCachedResource } from '../hooks/useCachedResource.js';
 import { Button,
   Card } from 'antd';
+import { CaretRightIcon } from '@phosphor-icons/react';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import ErrorMessage from '../components/ui/ErrorMessage.jsx';
@@ -21,6 +23,7 @@ import { stripEmoji } from '../utils/stringUtils.js';
 import { isOnlineGroupTitle } from '../utils/classTypeKind.js';
 import { PRIMARY,
   TEXT_PRIMARY,
+  TEXT_SECONDARY,
   TEXT_TERTIARY,
   GRAY_100 } from '../constants/theme.js';
 import { SECTION_HEADING } from '../constants/styles.js';
@@ -82,6 +85,7 @@ async function loadPrepSlides(cls) {
 
 export default function ClassDetailPage() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { studentNameMap, classTypeMap } = useData();
   // 수업 정보 + 수업 준비를 **한 캐시에 함께** 담는다.
   //  - 따로 두면 정보가 먼저 뜨고 준비 카드만 몇 초 뒤 튀어나온다(2026-08-27 지적).
@@ -158,6 +162,29 @@ export default function ClassDetailPage() {
               <LessonLogBody log={slide.log} />
             )}
           </Card>
+        ))}
+
+        {/* 학생별 수업 관리로 — 학생 상세의 '학생 결제 페이지' 버튼과 같은 어법(중립 면).
+            2:1이면 학생마다 하나씩. 학생 없는 수업(그룹)은 갈 곳이 없어 안 그린다. */}
+        {cls.studentIds.map((sid) => (
+          <button
+            key={sid}
+            type="button"
+            onClick={() => navigate(`/students/${sid}/classes`)}
+            className="w-full flex items-center justify-center gap-1"
+            style={{
+              marginTop: 12, height: 44, borderRadius: 12,
+              background: GRAY_100, border: 'none', cursor: 'pointer',
+              fontSize: 13, fontWeight: 600, color: TEXT_SECONDARY,
+              transition: 'background-color 150ms ease-out',
+              WebkitTapHighlightColor: 'transparent',
+            }}
+          >
+            {cls.studentIds.length > 1 && studentNameMap[sid]
+              ? `${stripEmoji(studentNameMap[sid])} 수업 전체보기`
+              : '학생 수업 전체보기'}
+            <CaretRightIcon size={16} weight="bold" color={TEXT_TERTIARY} />
+          </button>
         ))}
       </div>
     </>

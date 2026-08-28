@@ -31,6 +31,7 @@ export default function ClassCard({
     && now >= new Date(cls.datetime)
     && now < new Date(cls.endTime);
   const { bg, text } = isOngoing ? { bg: 'bg-brand-50', text: 'text-brand-700' } : classStatusColor(cls.status);
+  const isCancelled = !!cls.notes?.includes('취소');
   const statusLabel = isOngoing ? '수업중' : stripEmoji(cls.status);
   const studentNames = cls.studentIds.map((id) => studentNameMap[id] || '(알 수 없음)').join(', ');
   const isCompleted = cls.datetime && new Date(cls.datetime) <= new Date();
@@ -133,7 +134,9 @@ export default function ClassCard({
             )}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end', flexShrink: 0 }}>
-            <Badge label={statusLabel} bg={bg} text={text} />
+            {/* 취소된 수업은 '취소'만 보인다 — '예정 + 취소'는 서로 모순이라 읽는 사람이 멈칫한다(2026-08-28).
+                결석·보강은 상태와 공존한다(수업은 잡혀 있었고 그 안에서 벌어진 일이라). */}
+            {!isCancelled && <Badge label={statusLabel} bg={bg} text={text} />}
             {cls.notes && (() => {
               const nc = notesColor(cls.notes);
               return nc ? <Badge label={stripEmoji(cls.notes)} bg={nc.bg} text={nc.text} /> : null;
