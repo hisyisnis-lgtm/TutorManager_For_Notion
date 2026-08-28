@@ -4,7 +4,7 @@
 // - 원데이클래스: 수업에 연결된 학생의 전화번호로 발송 (등록된 학생만 예약 가능)
 // 수업 유형에 따라 다른 템플릿 사용: 무료상담 → KAKAO_TPL_CONSULT_TOMORROW, 원데이클래스 → KAKAO_TPL_ONEDAY_TOMORROW
 
-import { createNotionClient, createSolapiClient, runWithAlert, stripEmoji, maskPhone } from './notion_utils.mjs';
+import { createNotionClient, createSolapiClient, runWithAlert, stripEmoji, maskPhone, shouldSkipBackupRun } from './notion_utils.mjs';
 
 const TOKEN = process.env.NOTION_TOKEN;
 const CLASS_DB_ID = '314838fa-f2a6-81bc-8b67-d9e1c8fb7ecb';
@@ -86,6 +86,9 @@ async function fetchStudentMap() {
 }
 
 async function main() {
+  // 워커 cron(1차)이 이미 보냈으면 백업 schedule 실행은 여기서 끝낸다
+  if (await shouldSkipBackupRun({ workflow: 'notify-consult-tomorrow.yml', latestHourKST: 21 })) return;
+
   const { tomorrowStr, dayAfterStr } = getTomorrowKST();
   console.log(`[${new Date().toISOString()}] 내일(${tomorrowStr}) D-1 알림 시작 (무료상담/원데이클래스)`);
 

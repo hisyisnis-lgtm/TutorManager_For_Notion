@@ -627,9 +627,18 @@ async function sendAlert(env, { level = 'info', title, message, tags, dedupKey, 
 // 트레이드오프: ntfy.sh 직접 호출 대비 약 5~15초 지연. 무료상담은 카톡 알림톡으로 가고
 // 이 함수를 쓰는 곳은 숙제 제출 알림 1곳뿐이라 지연 허용 가능.
 async function sendNtfy(env, message, title = 'New Consultation') {
+  await githubDispatch(env, 'ntfy-relay', { title, message, level: 'info' });
+}
+
+/**
+ * GitHub repository_dispatch — 워크플로를 이벤트로 즉시 깨운다.
+ * schedule 트리거와 달리 러너 혼잡에 밀리지 않는다.
+ * 실패를 삼키지 않고 사유를 돌려준다 (호출부가 알림으로 올릴 수 있게).
+ */
+async function githubDispatch(env, eventType, clientPayload = {}) {
   if (!env.GITHUB_PAT) {
-    console.error('[ntfy-relay] GITHUB_PAT 미설정 — 알림 발송 불가');
-    return;
+    console.error(`[dispatch:${eventType}] GITHUB_PAT 미설정 — 발송 불가`);
+    return { ok: false, reason: 'GITHUB_PAT 미설정' };
   }
   try {
     const res = await fetch(
@@ -642,20 +651,69 @@ async function sendNtfy(env, message, title = 'New Consultation') {
           'X-GitHub-Api-Version': '2022-11-28',
           'User-Agent': 'tutor-manager-proxy',
         },
-        body: JSON.stringify({
-          event_type: 'ntfy-relay',
-          client_payload: { title, message, level: 'info' },
-        }),
+        body: JSON.stringify({ event_type: eventType, client_payload: clientPayload }),
       }
     );
     if (!res.ok) {
       const text = await res.text().catch(() => '');
-      console.error(`[ntfy-relay] HTTP ${res.status}:`, text);
-    } else {
-      console.log('[ntfy-relay] dispatch 성공:', title);
+      console.error(`[dispatch:${eventType}] HTTP ${res.status}:`, text);
+      return { ok: false, reason: `HTTP ${res.status} ${text.slice(0, 200)}` };
     }
+    console.log(`[dispatch:${eventType}] 성공`);
+    return { ok: true };
   } catch (e) {
-    console.error('[ntfy-relay] 네트워크 오류:', e.message);
+    console.error(`[dispatch:${eventType}] 네트워크 오류:`, e.message);
+    return { ok: false, reason: e.message };
+  }
+}
+
+// ===== 정시 알림 스케줄러 (Cron Trigger) =====
+//
+// GitHub Actions의 schedule 트리거는 러너가 붐비면 몇 시간씩 밀린다.
+// 2026-08-27 실측: 내일 수업 알림이 예약 05:00 UTC → 실제 16:03 UTC(KST 새벽 1시)에 실행됐고,
+// 그날 예약 워크플로가 전부 8~11시간씩 밀렸다. 반면 repository_dispatch는 이벤트 트리거라
+// 즉시 실행된다(숙제 제출 알림 실측 5~15초).
+//
+// 그래서 **정확한 시계는 워커가 갖고 GitHub은 실행만 맡는다.**
+// 워커 cron은 매시 정각 하나(`0 * * * *`, wrangler.toml)만 두고, 어느 작업을 깨울지는
+// KST 시각으로 여기서 고른다 — cron 트리거 개수 제약을 피하려는 의도.
+//
+// 시각을 바꿀 때는 해당 .github/workflows/ 파일의 주석도 같이 고칠 것.
+const HOURLY_JOBS = {
+  8: ['daily-brief'],                           // 강사 아침 브리핑
+  17: ['student-tomorrow', 'consult-tomorrow'], // 학생·상담 전날 카카오 알림톡
+  21: ['upcoming-classes'],                     // 강사 내일 수업 안내
+};
+
+async function runScheduledJobs(env) {
+  const kstHour = Number(
+    new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Asia/Seoul',
+      hour: '2-digit',
+      hourCycle: 'h23',
+    }).format(new Date())
+  );
+  const jobs = HOURLY_JOBS[kstHour] ?? [];
+  if (jobs.length === 0) return;
+
+  console.log(`[cron] KST ${kstHour}시 — ${jobs.join(', ')}`);
+  const failed = [];
+  for (const job of jobs) {
+    const r = await githubDispatch(env, job, { source: 'worker-cron', kstHour });
+    if (!r.ok) failed.push(`${job}: ${r.reason}`);
+  }
+
+  // 여기서 조용히 실패하면 그날 알림이 통째로 사라지고 아무도 모른다.
+  // critical 토픽은 anonymous라 워커에서 ntfy.sh 직접 발송이 된다(GitHub이 죽어도 뚫린다).
+  if (failed.length > 0) {
+    await sendAlert(env, {
+      level: 'critical',
+      title: `🚨 알림 dispatch 실패 (KST ${kstHour}시)`,
+      message: failed.join('\n'),
+      tags: ['rotating_light', 'cron'],
+      dedupKey: `cron-dispatch:${kstHour}`,
+      ttlSeconds: 3600,
+    });
   }
 }
 
@@ -3006,6 +3064,23 @@ async function handleFetch(request, env, ctx) {
 }
 
 export default {
+  // Cron Trigger — 매시 정각. 실제 발송 대상 선택은 runScheduledJobs가 한다.
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(
+      runScheduledJobs(env).catch((err) => {
+        console.error('[cron] 실패', err?.stack || err);
+        return sendAlert(env, {
+          level: 'critical',
+          title: '🚨 Worker cron 실패',
+          message: (err?.stack || String(err)).slice(0, 800),
+          tags: ['rotating_light', 'cron'],
+          dedupKey: 'cron-handler',
+          ttlSeconds: 3600,
+        }).catch(() => {});
+      })
+    );
+  },
+
   async fetch(request, env, ctx) {
     try {
       return await handleFetch(request, env, ctx);

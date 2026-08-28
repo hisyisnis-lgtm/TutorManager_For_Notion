@@ -8,7 +8,7 @@
 // - 무료 수업(1인 단가 = 0): 항상 false
 // - 예정 수업: 날짜 순으로 누적하여 잔여 초과 시 true
 
-import { createNotionClient, runWithAlert, sleep } from './notion_utils.mjs';
+import { createNotionClient, runWithAlert, sleep, loadPaidSessions } from './notion_utils.mjs';
 
 const TOKEN = process.env.NOTION_TOKEN;
 const CLASSES_DB = '314838fa-f2a6-81bc-8b67-d9e1c8fb7ecb';
@@ -23,26 +23,12 @@ if (!TOKEN) {
 const { notion: api, queryAll } = createNotionClient(TOKEN);
 
 
-// 학생별 결제 시간 회차 합계 — 학생 DB의 '결제 시간 회차 합계' rollup은 결제 행이 연결된
-// 시점 값에 고정돼 이후 환불을 반영하지 않는다(2026-08-25 검증). 결제 행의 '유효 시간 회차'는
-// 정확하므로 결제 DB를 직접 훑어 합산한다. PWA payments.js remainingSessionsOf와 같은 계산.
-async function loadPaidSessions(queryAll) {
-  const paidByStudent = new Map();
-  for (const pay of await queryAll(PAYMENTS_DB)) {
-    const sessions = pay.properties['유효 시간 회차']?.formula?.number ?? 0;
-    for (const rel of pay.properties['학생']?.relation ?? []) {
-      paidByStudent.set(rel.id, (paidByStudent.get(rel.id) ?? 0) + sessions);
-    }
-  }
-  return paidByStudent;
-}
-
 async function main() {
   const now = new Date();
 
   // 1. 전체 학생 조회 → studentId: paid 맵
   const studentPages = await queryAll(STUDENTS_DB);
-  const paidByStudent = await loadPaidSessions(queryAll);
+  const paidByStudent = await loadPaidSessions(queryAll, PAYMENTS_DB);
   const studentPaid = new Map(); // studentId → 결제 시간 회차 합계(환불 차감 반영)
   for (const s of studentPages) {
     studentPaid.set(s.id, paidByStudent.get(s.id) ?? 0);

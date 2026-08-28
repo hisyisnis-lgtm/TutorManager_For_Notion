@@ -346,9 +346,8 @@ round(prop("시간 회차") * prop("시간당 단가") * (1 - prop("적용 할�
 | `01_automation/check_session_shortage.mjs` | 학생별 잔여 회차 계산 → 초과 예정 수업에 회차부족_감지 체크박스 설정 | GitHub Actions (10분마다) |
 | `01_automation/sync_monthly_summary.mjs` | 결제 내역 월별 집계 → 수납 현황 페이지 자동 갱신 | GitHub Actions (매일 00:00 KST) |
 | `01_automation/sync_class_titles.mjs` | 수업 캘린더 빈 제목 → "이름 M/D HH:MM" 자동 기입 | GitHub Actions (30분마다) |
-| `01_automation/notify_upcoming_classes.mjs` | 내일 수업 일정 ntfy 알림 | GitHub Actions (매일 14:00 KST) |
-| `01_automation/notify_low_sessions.mjs` | 잔여 회차 ≤ 1인 학생 결제 독려 ntfy 알림 | GitHub Actions (매일 10:00 KST) |
-| `01_automation/notify_unpaid.mjs` | 미수금 학생 ntfy 알림 | GitHub Actions (매월 25, 27, 29일) |
+| `01_automation/notify_daily_brief.mjs` | 강사 아침 브리핑 ntfy 알림 (오늘 수업·결제 안내·피드백 대기·미수금·일지 미작성·미확인 상담) | GitHub Actions (매일 08:00 KST) |
+| `01_automation/notify_upcoming_classes.mjs` | 내일 수업 일정 ntfy 알림 | GitHub Actions (매일 21:00 KST) |
 | `01_automation/create_lesson_logs.mjs` | 완료 수업에 빈 수업 일지 자동 생성 | GitHub Actions (매시간) |
 | `01_automation/sync_student_emoji.mjs` | 학생 상태별 이름 이모지 자동 동기화 | GitHub Actions (매시간) |
 
@@ -360,9 +359,8 @@ round(prop("시간 회차") * prop("시간당 단가") * (1 - prop("적용 할�
 | `.github/workflows/check-session-shortage.yml` | 10분마다 + 수동 | `01_automation/check_session_shortage.mjs` |
 | `.github/workflows/sync-monthly-summary.yml` | 매일 자정 KST + 수동 | `01_automation/sync_monthly_summary.mjs` |
 | `.github/workflows/sync-class-titles.yml` | 30분마다 + 수동 | `01_automation/sync_class_titles.mjs` |
-| `.github/workflows/notify-upcoming-classes.yml` | 매일 14:00 KST + 수동 | `01_automation/notify_upcoming_classes.mjs` |
-| `.github/workflows/notify-low-sessions.yml` | 매일 10:00 KST + 수동 | `01_automation/notify_low_sessions.mjs` |
-| `.github/workflows/notify-unpaid.yml` | 매월 25, 27, 29일 + 수동 | `01_automation/notify_unpaid.mjs` |
+| `.github/workflows/notify-daily-brief.yml` | 매일 08:00 KST + 수동 | `01_automation/notify_daily_brief.mjs` |
+| `.github/workflows/notify-upcoming-classes.yml` | 매일 21:00 KST + 수동 | `01_automation/notify_upcoming_classes.mjs` |
 | `.github/workflows/create-lesson-logs.yml` | 매시간 + 수동 | `01_automation/create_lesson_logs.mjs` |
 | `.github/workflows/sync-student-emoji.yml` | 매시간 + 수동 | `01_automation/sync_student_emoji.mjs` |
 

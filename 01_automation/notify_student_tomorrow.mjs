@@ -1,7 +1,7 @@
 // 학생 수업 전날 리마인더 알림 스크립트
 // GitHub Actions에서 매일 20:00 KST (11:00 UTC)에 자동 실행됨
 
-import { createNotionClient, createSolapiClient, runWithAlert, stripEmoji } from './notion_utils.mjs';
+import { createNotionClient, createSolapiClient, runWithAlert, stripEmoji, shouldSkipBackupRun } from './notion_utils.mjs';
 
 const TOKEN = process.env.NOTION_TOKEN;
 const CLASS_DB_ID = '314838fa-f2a6-81bc-8b67-d9e1c8fb7ecb';
@@ -73,6 +73,9 @@ async function fetchClassTypeMap() {
 }
 
 async function main() {
+  // 워커 cron(1차)이 이미 보냈으면 백업 schedule 실행은 여기서 끝낸다
+  if (await shouldSkipBackupRun({ workflow: 'notify-student-tomorrow.yml', latestHourKST: 21 })) return;
+
   const { tomorrowStr, dayAfterStr } = getTomorrowKST();
   console.log(`[${new Date().toISOString()}] 내일(${tomorrowStr}) 수업 있는 학생 알림 시작`);
 

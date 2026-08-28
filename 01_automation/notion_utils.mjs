@@ -82,6 +82,120 @@ export function createNotionClient(token) {
 }
 
 /**
+ * 백업 schedule 실행을 걸러낸다 — 알림 발송 스크립트 맨 앞에서 호출한다.
+ *
+ * 구조: 워커 cron(repository_dispatch)이 1차, GitHub schedule이 2차 백업이다.
+ * 1차가 정상이면 2차는 아무것도 하면 안 되고(중복 발송), 1차가 실패했을 때만 대신 보낸다.
+ *
+ * 두 가지를 본다:
+ *  ① 오늘(KST) 같은 워크플로가 이미 **성공**했으면 건너뛴다.
+ *     실패한 실행은 성공으로 치지 않으므로, 1차가 에러로 끝났으면 백업이 진짜로 돈다.
+ *  ② 예정 시각에서 너무 지났으면 건너뛴다. GitHub schedule 자체도 몇 시간씩 밀리는데
+ *     (2026-08-27 실측 8~11시간), 학생 카톡이 KST 새벽 3시에 나가는 건 안 보내느니만 못하다.
+ *
+ * 토큰이 없거나 조회에 실패하면 **막지 않는다** — 두 번 오는 것보다 안 오는 게 나쁘다.
+ * 단 ②(시각 가드)는 토큰과 무관하게 항상 적용된다.
+ *
+ * @param {object} o
+ * @param {string} o.workflow      - 워크플로 파일명 (예: 'notify-daily-brief.yml')
+ * @param {number} o.latestHourKST - 이 시각(KST)을 넘겼으면 발송하지 않는다
+ * @returns {Promise<boolean>} true면 발송을 건너뛴다
+ */
+export async function shouldSkipBackupRun({ workflow, latestHourKST }) {
+  // 워커가 깨운 1차 실행과 수동 실행은 검사 대상이 아니다
+  if (process.env.GITHUB_EVENT_NAME !== 'schedule') return false;
+
+  // ① 오늘 이미 성공한 실행이 있으면 조용히 종료 (정상 경로)
+  let primaryKnownOk = false;
+  const token = process.env.GITHUB_TOKEN;
+  const repo = process.env.GITHUB_REPOSITORY;
+  const todayKST = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(new Date());
+  const since = `${todayKST}T00:00:00+09:00`;
+
+  if (token && repo) {
+    const url =
+      `https://api.github.com/repos/${repo}/actions/workflows/${workflow}/runs` +
+      `?status=success&created=%3E%3D${encodeURIComponent(since)}&per_page=20`;
+    try {
+      const res = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/vnd.github+json',
+          'X-GitHub-Api-Version': '2022-11-28',
+          'User-Agent': 'tutor-manager-backup-guard',
+        },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const done = (data.workflow_runs ?? []).filter(
+          (r) => new Date(r.created_at) >= new Date(since)
+        );
+        if (done.length > 0) {
+          console.log(`[백업] 오늘 이미 성공 ${done.length}건 (${done[0].event}) — 생략`);
+          return true;
+        }
+        primaryKnownOk = true; // 조회는 됐고, 성공 이력이 없다는 뜻
+      } else {
+        console.warn(`[백업] 실행 이력 조회 실패 (${res.status})`);
+      }
+    } catch (e) {
+      console.warn('[백업] 조회 오류:', e.message);
+    }
+  } else {
+    console.warn('[백업] GITHUB_TOKEN/REPOSITORY 없음');
+  }
+
+  // ② 여기까지 왔으면 1차가 안 됐다는 뜻이다. 그런데 백업마저 너무 늦었으면 보내지 않는다
+  //    — 학생 카톡이 KST 새벽에 나가는 건 안 보내느니만 못하다(2026-08-27 실측 03:29 발송).
+  //    다만 이 경우 알림이 그날 통째로 빠지므로 **조용히 넘어가면 안 된다.**
+  const kstHour = Number(
+    new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Asia/Seoul', hour: '2-digit', hourCycle: 'h23',
+    }).format(new Date())
+  );
+  if (kstHour > latestHourKST) {
+    console.log(`[백업] KST ${kstHour}시 — 발송 한계(${latestHourKST}시) 초과, 생략`);
+    await sendAlert({
+      level: 'critical',
+      title: `🚨 알림 누락 — ${workflow}`,
+      message: [
+        `오늘 ${workflow} 알림이 발송되지 못했습니다.`,
+        `워커 cron(1차)이 실패했고, 백업 schedule도 KST ${kstHour}시에야 실행돼 한계(${latestHourKST}시)를 넘겼습니다.`,
+        primaryKnownOk ? '' : '(1차 성공 여부는 확인하지 못했습니다 — GitHub API 조회 실패)',
+        '',
+        '필요하면 GitHub Actions에서 수동 실행(workflow_dispatch)하세요.',
+      ].filter(Boolean).join('\n'),
+      tags: ['rotating_light', 'cron'],
+    });
+    return true;
+  }
+
+  console.log('[백업] 1차 성공 이력 없음 — 백업이 대신 발송한다');
+  return false;
+}
+
+/**
+ * 학생별 결제 시간 회차 합계 (환불 차감 반영) — Map<studentId, hours>
+ *
+ * 학생 DB의 '결제 시간 회차 합계' rollup은 결제 행이 연결된 시점 값에 고정돼 이후 환불을
+ * 반영하지 않는다(2026-08-25 검증). 결제 행의 '유효 시간 회차'는 정확하므로 직접 합산한다.
+ * PWA payments.js remainingSessionsOf()와 같은 계산 — **한쪽만 고치지 말 것.**
+ *
+ * @param {Function} queryAll - createNotionClient가 준 queryAll
+ * @param {string} paymentsDbId - 수강료 결제 내역 DB id
+ */
+export async function loadPaidSessions(queryAll, paymentsDbId) {
+  const paidByStudent = new Map();
+  for (const pay of await queryAll(paymentsDbId)) {
+    const sessions = pay.properties['유효 시간 회차']?.formula?.number ?? 0;
+    for (const rel of pay.properties['학생']?.relation ?? []) {
+      paidByStudent.set(rel.id, (paidByStudent.get(rel.id) ?? 0) + sessions);
+    }
+  }
+  return paidByStudent;
+}
+
+/**
  * ntfy 알림 클라이언트 생성 (기존 단일 토픽용 — 하위호환)
  * @param {string} topic - NTFY_TOPIC 환경변수 값
  * @param {string} [ntfyToken] - NTFY_TOKEN 환경변수 값 (선택)

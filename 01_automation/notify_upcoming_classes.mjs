@@ -1,7 +1,7 @@
 // 내일 수업 알림 스크립트
 // GitHub Actions에서 매일 21:00 KST (12:00 UTC)에 자동 실행됨
 
-import { createNotionClient, createNtfyClient, runWithAlert } from './notion_utils.mjs';
+import { createNotionClient, createNtfyClient, runWithAlert, shouldSkipBackupRun } from './notion_utils.mjs';
 
 const TOKEN = process.env.NOTION_TOKEN;
 const NTFY_TOPIC = process.env.NTFY_TOPIC;
@@ -49,6 +49,9 @@ async function getStudentNames(relation) {
 }
 
 async function main() {
+  // 워커 cron(1차)이 이미 보냈으면 백업 schedule 실행은 여기서 끝낸다
+  if (await shouldSkipBackupRun({ workflow: 'notify-upcoming-classes.yml', latestHourKST: 23 })) return;
+
   const { tomorrowStr, dayAfterStr } = getTomorrowKST();
   console.log(`[${new Date().toISOString()}] 내일 수업 조회: ${tomorrowStr}`);
 
