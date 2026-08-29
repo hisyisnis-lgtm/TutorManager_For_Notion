@@ -26,9 +26,4 @@ jobs:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
           NTFY_TOPIC_CRITICAL: ${{ secrets.NTFY_TOPIC_CRITICAL }}
           NTFY_TOKEN: ${{ secrets.NTFY_TOKEN }}
-          SOLAPI_API_KEY: ${{ secrets.SOLAPI_API_KEY }}
-          SOLAPI_API_SECRET: ${{ secrets.SOLAPI_API_SECRET }}
-          KAKAO_PFID: ${{ secrets.KAKAO_PFID }}
-          MY_PHONE: ${{ secrets.MY_PHONE }}
-          KAKAO_TPL_CONFLICT: ${{ secrets.KAKAO_TPL_CONFLICT }}
         run: node 01_automation/check_conflicts.mjs

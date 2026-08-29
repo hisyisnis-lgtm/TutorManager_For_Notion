@@ -1,7 +1,7 @@
 name: 강사 아침 브리핑
 
 on:
-  # 1차 — 워커 cron이 정시에 깨운다 (worker/src/index.js HOURLY_JOBS — 08:00 KST).
+  # 1차 — 워커 cron이 정시에 깨운다 (worker/src/index.js DISPATCH_JOBS — 08:00 KST, 실패 시 11시까지 매시 재시도).
   # GitHub schedule 트리거는 러너 혼잡에 몇 시간씩 밀려(2026-08-27 실측 8~11시간)
   # 정시 발송에는 쓰지 않는다.
   repository_dispatch:
@@ -9,7 +9,7 @@ on:
   # 백업 — 워커가 못 깨웠을 때만 실제로 발송한다. 1차(08:00 KST)가 성공했으면
   # 스크립트의 shouldSkipBackupRun()이 GitHub 실행 이력을 보고 즉시 종료한다.
   schedule:
-    - cron: '0 1 * * *'  # 10:00 KST
+    - cron: '30 1 * * *'  # 10:30 KST — 워커 dispatch(정각)와 겹치지 않게 :30
   workflow_dispatch:        # 수동 실행 가능
 
 permissions:

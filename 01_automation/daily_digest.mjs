@@ -45,7 +45,8 @@ async function fetchFailedWorkflows({ startIso, endIso }) {
     return { skipped: true, reason: 'GITHUB_TOKEN 또는 GITHUB_REPOSITORY 미설정' };
   }
   // 이 디지스트의 목적: 운영 자동화의 건강 상태 보고.
-  // → schedule(주기 실행) + push(main 머지 후 CI)만 카운트.
+  // → schedule(주기 실행) + push(main 머지 후 CI) + repository_dispatch(워커 cron이 깨우는
+  //   알림 워크플로 — 2026-08-29부터 알림의 1차 경로)만 카운트.
   //   pull_request/dynamic은 Dependabot/PR 검증 결과라 머지 전엔 운영 영향 0 (노이즈).
   //   main push CI 실패는 별도로 즉시 critical 알림이 가지만, 디지스트엔 종합 표시.
   // GitHub API의 created는 ISO 8601 datetime 범위 지원. KST 자정 경계를 정확히 맞추려면
@@ -68,7 +69,7 @@ async function fetchFailedWorkflows({ startIso, endIso }) {
   const endMs = new Date(endIso).getTime();
   const auto = (data.workflow_runs || []).filter(r => {
     // 운영 자동화 이벤트만 (PR/Dependabot의 dynamic 등은 제외)
-    if (r.event !== 'schedule' && r.event !== 'push') return false;
+    if (r.event !== 'schedule' && r.event !== 'push' && r.event !== 'repository_dispatch') return false;
     // KST 자정 경계 client-side 재검증 (API의 created 파라미터가 부정확해도 안전)
     const t = new Date(r.created_at).getTime();
     return t >= startMs && t < endMs;

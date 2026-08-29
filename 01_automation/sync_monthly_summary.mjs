@@ -129,7 +129,9 @@ async function clearPageBlocks() {
     const mo = m.split('-')[1];
     return `${parseInt(mo)}월 ${monthly[m].toLocaleString('ko-KR')}원`;
   }).join(' / ');
-  await sendNtfy('✅ 월별 수납 현황 갱신 완료', summary || '집계 데이터 없음', 2);
+  // 성공 알림은 보내지 않는다 — 매일 자정 강사 토픽에 오는 ✅는 행동할 게 없는 노이즈다.
+  // 실패는 아래 catch와 runWithAlert가 알린다 (침묵 실패 없음).
+  console.log(`갱신 완료: ${summary || '집계 데이터 없음'}`);
   console.log('✅ 월별 수납 현황 업데이트 완료');
 })().catch(async (e) => {
   console.error('오류:', e.message);

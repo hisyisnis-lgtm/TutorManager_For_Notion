@@ -1,9 +1,19 @@
 name: 학생 수업 당일 알림
 
+# 전날 D-1 알림 실패의 이월(carryover) 전용 — 평소에는 스크립트가 어제 D-1 성공을
+# 확인하고 즉시 종료한다. 어제 실패했을 때만 실제 발송이 일어난다.
 on:
-  # schedule:
-  #   - cron: '0 23 * * *'  # 매일 08:00 KST (= 전날 23:00 UTC)
-  workflow_dispatch:          # 수동 실행 가능
+  # 1차 — 워커 cron이 KST 8~12시에 어제 D-1 실패를 감지하면 깨운다.
+  repository_dispatch:
+    types: [student-today]
+  # 백업 — 워커 전체가 죽었을 때. 워커 dispatch(정각)와 겹치지 않게 :30에 둔다.
+  schedule:
+    - cron: '30 0 * * *'  # 09:30 KST
+  workflow_dispatch:        # 수동 실행 = 당일 리마인더 강제 발송
+
+permissions:
+  contents: read
+  actions: read         # 오늘 중복 발송 방지 + 어제 D-1 성공 여부 조회
 
 jobs:
   notify:
@@ -18,9 +28,11 @@ jobs:
         with:
           node-version: '24'
 
-      - name: 학생 당일 수업 리마인더 발송
+      - name: 당일 리마인더 이월 발송
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
           NTFY_TOPIC_CRITICAL: ${{ secrets.NTFY_TOPIC_CRITICAL }}
           NTFY_TOKEN: ${{ secrets.NTFY_TOKEN }}

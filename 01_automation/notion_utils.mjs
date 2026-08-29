@@ -82,95 +82,126 @@ export function createNotionClient(token) {
 }
 
 /**
- * 백업 schedule 실행을 걸러낸다 — 알림 발송 스크립트 맨 앞에서 호출한다.
+ * KST 기준 날짜 문자열 (YYYY-MM-DD). offsetDays로 어제(-1)·내일(+1) 계산.
+ */
+export function kstDayStr(offsetDays = 0) {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' })
+    .format(new Date(Date.now() + offsetDays * 86400000));
+}
+
+/** KST 기준 현재 시(0~23) */
+export function kstHourNow() {
+  return Number(
+    new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Seoul', hour: '2-digit', hourCycle: 'h23' })
+      .format(new Date())
+  );
+}
+
+/**
+ * 워크플로가 [sinceIso, untilIso) 구간에 성공한 실행이 있는지 GitHub API로 확인.
+ * Actions 기본 GITHUB_TOKEN + permissions.actions:read 필요.
  *
- * 구조: 워커 cron(repository_dispatch)이 1차, GitHub schedule이 2차 백업이다.
- * 1차가 정상이면 2차는 아무것도 하면 안 되고(중복 발송), 1차가 실패했을 때만 대신 보낸다.
+ * @returns {Promise<boolean|null>} true=성공 있음 / false=없음 / null=조회 불가(토큰 없음·API 실패)
+ *   호출부는 null을 "모름"으로 다뤄야 한다 — 발송 판단에선 안전한 쪽(발송)으로,
+ *   이월 판단에선 보수적인 쪽(생략)으로 기울인다.
+ */
+export async function workflowSucceededBetween(workflow, sinceIso, untilIso) {
+  const token = process.env.GITHUB_TOKEN;
+  const repo = process.env.GITHUB_REPOSITORY;
+  if (!token || !repo) {
+    console.warn(`[wf-check] GITHUB_TOKEN/REPOSITORY 없음 (${workflow})`);
+    return null;
+  }
+  const url =
+    `https://api.github.com/repos/${repo}/actions/workflows/${workflow}/runs` +
+    `?status=success&created=${encodeURIComponent(`${sinceIso}..${untilIso}`)}&per_page=20`;
+  try {
+    const res = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28',
+        'User-Agent': 'tutor-manager-wf-check',
+      },
+    });
+    if (!res.ok) {
+      console.warn(`[wf-check] ${workflow} 조회 실패 (${res.status})`);
+      return null;
+    }
+    const data = await res.json();
+    // API의 created 파라미터를 그대로 믿지 않고 client-side로 한 번 더 거른다 (KST 경계)
+    const s = new Date(sinceIso).getTime();
+    const u = new Date(untilIso).getTime();
+    const hits = (data.workflow_runs ?? []).filter((r) => {
+      const c = new Date(r.created_at).getTime();
+      return c >= s && c < u;
+    });
+    return hits.length > 0;
+  } catch (e) {
+    console.warn(`[wf-check] ${workflow} 조회 오류: ${e.message}`);
+    return null;
+  }
+}
+
+/**
+ * 알림 발송 스크립트의 실행 가드 — main() 맨 앞에서 호출한다.
  *
- * 두 가지를 본다:
- *  ① 오늘(KST) 같은 워크플로가 이미 **성공**했으면 건너뛴다.
- *     실패한 실행은 성공으로 치지 않으므로, 1차가 에러로 끝났으면 백업이 진짜로 돈다.
- *  ② 예정 시각에서 너무 지났으면 건너뛴다. GitHub schedule 자체도 몇 시간씩 밀리는데
- *     (2026-08-27 실측 8~11시간), 학생 카톡이 KST 새벽 3시에 나가는 건 안 보내느니만 못하다.
+ * 구조: 워커 cron이 발송 창 안에서 매시 정각 repository_dispatch로 깨우고(1차+재시도),
+ * GitHub schedule은 창 중간의 :30에 한 번 더 깨운다(2차, 워커 전체가 죽었을 때).
+ * 어느 경로로 깨어났든 **오늘 이미 성공한 실행이 있으면 그냥 종료**한다 — 그래서
+ * 워커가 성공 여부를 확인하지 못하고 무턱대고 재dispatch해도 중복 발송이 없다.
  *
- * 토큰이 없거나 조회에 실패하면 **막지 않는다** — 두 번 오는 것보다 안 오는 게 나쁘다.
- * 단 ②(시각 가드)는 토큰과 무관하게 항상 적용된다.
+ * 수동 실행(workflow_dispatch)·로컬 실행은 검사 없이 통과한다 (= 강제 발송).
+ *
+ * 시각 한계(latestHourKST): 이 시각을 넘긴 실행은 발송하지 않는다. 학생 카톡이
+ * 새벽에 울리는 것을 막는 마지노선이다(2026-08-27 GitHub 지연으로 03:29 발송 사고).
+ * 한계를 넘겨 발송을 포기할 때는 critical 알림을 올려 조용히 사라지지 않게 한다.
+ * (학생 대상 알림의 진짜 복구는 다음날 아침 notify_student_today 이월이 맡는다.)
  *
  * @param {object} o
  * @param {string} o.workflow      - 워크플로 파일명 (예: 'notify-daily-brief.yml')
  * @param {number} o.latestHourKST - 이 시각(KST)을 넘겼으면 발송하지 않는다
+ * @param {boolean} [o.alertOnMiss=true] - 한계 초과로 포기할 때 critical 알림을 올릴지.
+ *   이월(carryover)처럼 "보낼 게 없어서 안 보낸 날"이 대부분인 스크립트는 false로 —
+ *   지연 실행마다 오탐 알림이 뜬다.
  * @returns {Promise<boolean>} true면 발송을 건너뛴다
  */
-export async function shouldSkipBackupRun({ workflow, latestHourKST }) {
-  // 워커가 깨운 1차 실행과 수동 실행은 검사 대상이 아니다
-  if (process.env.GITHUB_EVENT_NAME !== 'schedule') return false;
+export async function shouldSkipBackupRun({ workflow, latestHourKST, alertOnMiss = true }) {
+  const event = process.env.GITHUB_EVENT_NAME ?? '';
+  if (event !== 'schedule' && event !== 'repository_dispatch') return false; // 수동·로컬 = 강제
 
-  // ① 오늘 이미 성공한 실행이 있으면 조용히 종료 (정상 경로)
-  let primaryKnownOk = false;
-  const token = process.env.GITHUB_TOKEN;
-  const repo = process.env.GITHUB_REPOSITORY;
-  const todayKST = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(new Date());
-  const since = `${todayKST}T00:00:00+09:00`;
-
-  if (token && repo) {
-    const url =
-      `https://api.github.com/repos/${repo}/actions/workflows/${workflow}/runs` +
-      `?status=success&created=%3E%3D${encodeURIComponent(since)}&per_page=20`;
-    try {
-      const res = await fetch(url, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: 'application/vnd.github+json',
-          'X-GitHub-Api-Version': '2022-11-28',
-          'User-Agent': 'tutor-manager-backup-guard',
-        },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        const done = (data.workflow_runs ?? []).filter(
-          (r) => new Date(r.created_at) >= new Date(since)
-        );
-        if (done.length > 0) {
-          console.log(`[백업] 오늘 이미 성공 ${done.length}건 (${done[0].event}) — 생략`);
-          return true;
-        }
-        primaryKnownOk = true; // 조회는 됐고, 성공 이력이 없다는 뜻
-      } else {
-        console.warn(`[백업] 실행 이력 조회 실패 (${res.status})`);
-      }
-    } catch (e) {
-      console.warn('[백업] 조회 오류:', e.message);
-    }
-  } else {
-    console.warn('[백업] GITHUB_TOKEN/REPOSITORY 없음');
-  }
-
-  // ② 여기까지 왔으면 1차가 안 됐다는 뜻이다. 그런데 백업마저 너무 늦었으면 보내지 않는다
-  //    — 학생 카톡이 KST 새벽에 나가는 건 안 보내느니만 못하다(2026-08-27 실측 03:29 발송).
-  //    다만 이 경우 알림이 그날 통째로 빠지므로 **조용히 넘어가면 안 된다.**
-  const kstHour = Number(
-    new Intl.DateTimeFormat('en-US', {
-      timeZone: 'Asia/Seoul', hour: '2-digit', hourCycle: 'h23',
-    }).format(new Date())
+  // ① 오늘 이미 성공했으면 조용히 종료 (재시도·백업의 정상 경로)
+  const succeeded = await workflowSucceededBetween(
+    workflow,
+    `${kstDayStr(0)}T00:00:00+09:00`,
+    `${kstDayStr(1)}T00:00:00+09:00`
   );
-  if (kstHour > latestHourKST) {
-    console.log(`[백업] KST ${kstHour}시 — 발송 한계(${latestHourKST}시) 초과, 생략`);
+  if (succeeded === true) {
+    console.log(`[가드] 오늘 이미 발송 완료 — 종료 (${workflow})`);
+    return true;
+  }
+  // null(조회 불가)이면 막지 않는다 — 중복 발송이 미발송보다 낫다
+
+  // ② 아직 발송 전인데 너무 늦었으면 포기 + 알림 (새벽 발송 방지)
+  const hour = kstHourNow();
+  if (hour > latestHourKST) {
+    console.log(`[가드] KST ${hour}시 — 발송 한계(${latestHourKST}시) 초과, 발송 포기`);
+    if (!alertOnMiss) return true;
     await sendAlert({
       level: 'critical',
-      title: `🚨 알림 누락 — ${workflow}`,
+      title: `🚨 알림 미발송 — ${workflow}`,
       message: [
-        `오늘 ${workflow} 알림이 발송되지 못했습니다.`,
-        `워커 cron(1차)이 실패했고, 백업 schedule도 KST ${kstHour}시에야 실행돼 한계(${latestHourKST}시)를 넘겼습니다.`,
-        primaryKnownOk ? '' : '(1차 성공 여부는 확인하지 못했습니다 — GitHub API 조회 실패)',
-        '',
-        '필요하면 GitHub Actions에서 수동 실행(workflow_dispatch)하세요.',
+        `오늘 ${workflow}이 발송 한계(KST ${latestHourKST}시)까지 성공하지 못했습니다.`,
+        succeeded === false ? '' : '(성공 여부 조회가 불가능한 상태에서의 판단입니다)',
+        '학생 대상 알림은 내일 아침 당일 리마인더로 이월됩니다.',
+        '즉시 발송이 필요하면 GitHub Actions에서 수동 실행(workflow_dispatch)하세요.',
       ].filter(Boolean).join('\n'),
       tags: ['rotating_light', 'cron'],
     });
     return true;
   }
 
-  console.log('[백업] 1차 성공 이력 없음 — 백업이 대신 발송한다');
+  console.log(`[가드] 오늘 성공 이력 없음 — 발송 진행 (${workflow}, ${event})`);
   return false;
 }
 

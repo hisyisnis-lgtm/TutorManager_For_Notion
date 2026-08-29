@@ -670,20 +670,63 @@ async function githubDispatch(env, eventType, clientPayload = {}) {
 // ===== 정시 알림 스케줄러 (Cron Trigger) =====
 //
 // GitHub Actions의 schedule 트리거는 러너가 붐비면 몇 시간씩 밀린다.
-// 2026-08-27 실측: 내일 수업 알림이 예약 05:00 UTC → 실제 16:03 UTC(KST 새벽 1시)에 실행됐고,
-// 그날 예약 워크플로가 전부 8~11시간씩 밀렸다. 반면 repository_dispatch는 이벤트 트리거라
-// 즉시 실행된다(숙제 제출 알림 실측 5~15초).
+// 2026-08-27 실측: 예약 워크플로 전부가 8~11시간 밀렸고 학생 카톡이 KST 03:29에 발송됐다.
+// repository_dispatch(이벤트 트리거)는 밀리지 않는다 — 그래서 시계는 워커가 갖는다.
 //
-// 그래서 **정확한 시계는 워커가 갖고 GitHub은 실행만 맡는다.**
-// 워커 cron은 매시 정각 하나(`0 * * * *`, wrangler.toml)만 두고, 어느 작업을 깨울지는
-// KST 시각으로 여기서 고른다 — cron 트리거 개수 제약을 피하려는 의도.
+// 발송 창(from~until) 안에서 **매시 정각마다**: 오늘 이미 성공했으면 넘어가고,
+// 아니면 다시 깨운다. 즉 1차 실패 시 1시간 뒤 자동 재시도된다.
+// 성공 여부 조회가 안 되면(PAT 권한 등) 그냥 깨운다 — 스크립트 쪽 가드
+// (notion_utils.shouldSkipBackupRun)가 "오늘 이미 성공" 실행을 걸러 중복 발송을 막는다.
 //
-// 시각을 바꿀 때는 해당 .github/workflows/ 파일의 주석도 같이 고칠 것.
-const HOURLY_JOBS = {
-  8: ['daily-brief'],                           // 강사 아침 브리핑
-  17: ['student-tomorrow', 'consult-tomorrow'], // 학생·상담 전날 카카오 알림톡
-  21: ['upcoming-classes'],                     // 강사 내일 수업 안내
+// until을 넘긴 재시도는 하지 않는다(학생 카톡 새벽 발송 금지). 그 경우의 복구는
+// 다음날 아침 student-today 이월이 맡고, 미발송 자체는 스크립트 가드가 critical로 알린다.
+//
+// 시각을 바꿀 때는 해당 워크플로의 백업 schedule(창 중간 :30)과 스크립트의
+// latestHourKST도 같이 맞출 것.
+const DISPATCH_JOBS = {
+  'daily-brief':      { workflow: 'notify-daily-brief.yml',      from: 8,  until: 11 }, // 강사 아침 브리핑
+  'student-tomorrow': { workflow: 'notify-student-tomorrow.yml', from: 17, until: 21 }, // 학생 전날 카톡
+  'consult-tomorrow': { workflow: 'notify-consult-tomorrow.yml', from: 17, until: 21 }, // 상담·원데이 전날 카톡
+  'upcoming-classes': { workflow: 'notify-upcoming-classes.yml', from: 21, until: 23 }, // 강사 내일 수업
+  // 이월 전용 — 어제 저녁 D-1이 실패했을 때만 깨어나 당일 리마인더/강사 알림으로 메꾼다.
+  'student-today':    { workflow: 'notify-student-today.yml',    from: 8,  until: 12, carryover: true },
 };
+
+const kstDayStr = (offsetDays = 0) =>
+  new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' })
+    .format(new Date(Date.now() + offsetDays * 86400000));
+
+// 워크플로가 [since, until) KST 구간에 성공한 실행이 있는지. null = 조회 불가(모름).
+async function workflowSucceededBetween(env, workflow, sinceIso, untilIso) {
+  if (!env.GITHUB_PAT) return null;
+  const url =
+    `https://api.github.com/repos/hisyisnis-lgtm/TutorManager_For_Notion/actions/workflows/${workflow}/runs` +
+    `?status=success&created=${encodeURIComponent(`${sinceIso}..${untilIso}`)}&per_page=20`;
+  try {
+    const res = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${env.GITHUB_PAT}`,
+        Accept: 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28',
+        'User-Agent': 'tutor-manager-proxy',
+      },
+    });
+    if (!res.ok) {
+      console.warn(`[wf-check] ${workflow} 조회 실패 (${res.status})`);
+      return null;
+    }
+    const data = await res.json();
+    const s = new Date(sinceIso).getTime();
+    const u = new Date(untilIso).getTime();
+    return (data.workflow_runs ?? []).some((r) => {
+      const c = new Date(r.created_at).getTime();
+      return c >= s && c < u;
+    });
+  } catch (e) {
+    console.warn(`[wf-check] ${workflow} 조회 오류: ${e.message}`);
+    return null;
+  }
+}
 
 async function runScheduledJobs(env) {
   const kstHour = Number(
@@ -693,18 +736,33 @@ async function runScheduledJobs(env) {
       hourCycle: 'h23',
     }).format(new Date())
   );
-  const jobs = HOURLY_JOBS[kstHour] ?? [];
-  if (jobs.length === 0) return;
+  const today0 = `${kstDayStr(0)}T00:00:00+09:00`;
+  const tomorrow0 = `${kstDayStr(1)}T00:00:00+09:00`;
+  const yesterday0 = `${kstDayStr(-1)}T00:00:00+09:00`;
 
-  console.log(`[cron] KST ${kstHour}시 — ${jobs.join(', ')}`);
   const failed = [];
-  for (const job of jobs) {
-    const r = await githubDispatch(env, job, { source: 'worker-cron', kstHour });
-    if (!r.ok) failed.push(`${job}: ${r.reason}`);
+  for (const [event, job] of Object.entries(DISPATCH_JOBS)) {
+    if (kstHour < job.from || kstHour > job.until) continue;
+
+    if (job.carryover) {
+      // 어제 저녁 D-1 두 개가 모두 확실히 성공했으면 이월할 게 없다.
+      // 하나라도 실패(false)거나 모름(null)이면 깨운다 — 스크립트가 GITHUB_TOKEN으로 재판정한다.
+      const stu = await workflowSucceededBetween(env, 'notify-student-tomorrow.yml', yesterday0, today0);
+      const con = await workflowSucceededBetween(env, 'notify-consult-tomorrow.yml', yesterday0, today0);
+      if (stu === true && con === true) continue;
+    }
+
+    const done = await workflowSucceededBetween(env, job.workflow, today0, tomorrow0);
+    if (done === true) continue; // 오늘 이미 성공 — 재시도 불필요
+
+    console.log(`[cron] KST ${kstHour}시 — ${event} 깨움 (오늘 성공 이력 ${done === false ? '없음' : '확인 불가'})`);
+    const r = await githubDispatch(env, event, { source: 'worker-cron', kstHour });
+    if (!r.ok) failed.push(`${event}: ${r.reason}`);
   }
 
-  // 여기서 조용히 실패하면 그날 알림이 통째로 사라지고 아무도 모른다.
+  // dispatch 실패가 조용히 사라지면 그 시간대 알림이 통째로 빠진다.
   // critical 토픽은 anonymous라 워커에서 ntfy.sh 직접 발송이 된다(GitHub이 죽어도 뚫린다).
+  // 재시도가 매시간 돌므로 dedup 1시간이면 시간당 1회로 묶인다.
   if (failed.length > 0) {
     await sendAlert(env, {
       level: 'critical',
