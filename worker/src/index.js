@@ -679,7 +679,7 @@ async function githubDispatch(env, eventType, clientPayload = {}) {
 // (notion_utils.shouldSkipBackupRun)가 "오늘 이미 성공" 실행을 걸러 중복 발송을 막는다.
 //
 // until을 넘긴 재시도는 하지 않는다(학생 카톡 새벽 발송 금지). 그 경우의 복구는
-// 다음날 아침 student-today 이월이 맡고, 미발송 자체는 스크립트 가드가 critical로 알린다.
+// 미발송은 스크립트 가드가 critical로 알리고, 다음날 아침 브리핑이 "어제 안내 미발송"으로 표시한다.
 //
 // 시각을 바꿀 때는 해당 워크플로의 백업 schedule(창 중간 :30)과 스크립트의
 // latestHourKST도 같이 맞출 것.
@@ -688,8 +688,6 @@ const DISPATCH_JOBS = {
   'student-tomorrow': { workflow: 'notify-student-tomorrow.yml', from: 17, until: 21 }, // 학생 전날 카톡
   'consult-tomorrow': { workflow: 'notify-consult-tomorrow.yml', from: 17, until: 21 }, // 상담·원데이 전날 카톡
   'upcoming-classes': { workflow: 'notify-upcoming-classes.yml', from: 21, until: 23 }, // 강사 내일 수업
-  // 이월 전용 — 어제 저녁 D-1이 실패했을 때만 깨어나 당일 리마인더/강사 알림으로 메꾼다.
-  'student-today':    { workflow: 'notify-student-today.yml',    from: 8,  until: 12, carryover: true },
 };
 
 const kstDayStr = (offsetDays = 0) =>
@@ -738,19 +736,10 @@ async function runScheduledJobs(env) {
   );
   const today0 = `${kstDayStr(0)}T00:00:00+09:00`;
   const tomorrow0 = `${kstDayStr(1)}T00:00:00+09:00`;
-  const yesterday0 = `${kstDayStr(-1)}T00:00:00+09:00`;
 
   const failed = [];
   for (const [event, job] of Object.entries(DISPATCH_JOBS)) {
     if (kstHour < job.from || kstHour > job.until) continue;
-
-    if (job.carryover) {
-      // 어제 저녁 D-1 두 개가 모두 확실히 성공했으면 이월할 게 없다.
-      // 하나라도 실패(false)거나 모름(null)이면 깨운다 — 스크립트가 GITHUB_TOKEN으로 재판정한다.
-      const stu = await workflowSucceededBetween(env, 'notify-student-tomorrow.yml', yesterday0, today0);
-      const con = await workflowSucceededBetween(env, 'notify-consult-tomorrow.yml', yesterday0, today0);
-      if (stu === true && con === true) continue;
-    }
 
     const done = await workflowSucceededBetween(env, job.workflow, today0, tomorrow0);
     if (done === true) continue; // 오늘 이미 성공 — 재시도 불필요

@@ -156,7 +156,7 @@ export async function workflowSucceededBetween(workflow, sinceIso, untilIso) {
  * 시각 한계(latestHourKST): 이 시각을 넘긴 실행은 발송하지 않는다. 학생 카톡이
  * 새벽에 울리는 것을 막는 마지노선이다(2026-08-27 GitHub 지연으로 03:29 발송 사고).
  * 한계를 넘겨 발송을 포기할 때는 critical 알림을 올려 조용히 사라지지 않게 한다.
- * (학생 대상 알림의 진짜 복구는 다음날 아침 notify_student_today 이월이 맡는다.)
+ * (그날 알림이 포기되면 다음날 아침 브리핑이 "어제 안내 미발송" 섹션으로 강사에게 알린다.)
  *
  * @param {object} o
  * @param {string} o.workflow      - 워크플로 파일명 (예: 'notify-daily-brief.yml')

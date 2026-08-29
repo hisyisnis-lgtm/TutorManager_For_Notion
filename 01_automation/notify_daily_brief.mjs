@@ -16,6 +16,9 @@ import {
   stripEmoji,
   loadPaidSessions,
   shouldSkipBackupRun,
+  workflowSucceededBetween,
+  kstDayStr,
+  maskPhone,
 } from './notion_utils.mjs';
 
 const TOKEN = process.env.NOTION_TOKEN;
@@ -28,6 +31,7 @@ const PAYMENTS_DB = '314838fa-f2a6-8154-935b-edd3d2fbea83';
 const HOMEWORK_DB = '5ce7d5ef-7b80-4795-843f-325f4ca868e2';
 const CONSULT_DB = '324838fa-f2a6-815d-99a7-ff165e8f78aa';
 const LOG_DB = '318838fa-f2a6-81f1-9b9c-fd379b1026ed';
+const LESSON_TYPE_DB = '314838fa-f2a6-81c3-b4e4-da87c48f9b43';
 
 const KST = 'Asia/Seoul';
 
@@ -209,12 +213,46 @@ async function main() {
     ],
   });
 
+  // ===== 6-bis. 어제 저녁 D-1 안내 발송 확인 =====
+  // 재시도(17~21시)까지 전부 실패한 날, 그 밤엔 아무것도 안 보내는 대신(새벽 카톡 금지)
+  // 다음날 아침 여기서 알린다. 당일 리마인더 카톡 대체 발송은 사용자 결정으로 하지 않는다
+  // (2026-08-29) — 학생에게 당일 카톡은 불필요, 강사가 알고 있으면 된다.
+  // 성공 여부 조회가 안 되면(null) 섹션을 만들지 않는다 — 오탐 경고 방지.
+  const y0 = `${kstDayStr(-1)}T00:00:00+09:00`;
+  const y1 = `${kstDayStr(0)}T00:00:00+09:00`;
+  const [stuD1Ok, conD1Ok] = await Promise.all([
+    workflowSucceededBetween('notify-student-tomorrow.yml', y0, y1),
+    workflowSucceededBetween('notify-consult-tomorrow.yml', y0, y1),
+  ]);
+
+  // 상담 D-1 실패 시 오늘 상담/원데이 일정 (직접 연락용) — 필요할 때만 수업 유형을 조회
+  let consultRows = [];
+  if (conD1Ok === false) {
+    const typeMap = new Map();
+    for (const p of await queryAll(LESSON_TYPE_DB)) {
+      const title = p.properties['타이틀']?.title?.[0]?.plain_text ?? '';
+      typeMap.set(p.id, title);
+      typeMap.set(p.id.replace(/-/g, ''), title);
+    }
+    consultRows = todayClasses.flatMap((c) => {
+      const typeId = c.properties['수업 유형']?.relation?.[0]?.id ?? '';
+      const title = typeMap.get(typeId) ?? typeMap.get(typeId.replace(/-/g, '')) ?? '';
+      const isConsult = title.includes('무료상담');
+      if (!isConsult && !title.includes('원데이클래스')) return [];
+      const dt = c.properties['수업 일시']?.date?.start;
+      const who = c.properties['제목']?.title?.[0]?.plain_text ?? '고객';
+      const phone = c.properties['전화번호']?.rich_text?.[0]?.plain_text ?? '';
+      return [`  · ${dt ? timeOf(dt) : '??:??'} [${isConsult ? '무료상담' : '원데이'}] ${who}${phone ? ` (${maskPhone(phone)})` : ''}`];
+    });
+  }
+
   // ===== 6. 미확인 무료상담 =====
   const consults = await queryAll(CONSULT_DB, { property: '상태', select: { equals: '신청됨' } });
 
   // ===== 메시지 조립 =====
   const todoCount =
-    paymentDue.length + pendingHw.length + unpaid.length + emptyLogs.length + consults.length;
+    paymentDue.length + pendingHw.length + unpaid.length + emptyLogs.length + consults.length +
+    (stuD1Ok === false ? 1 : 0) + (conD1Ok === false ? consultRows.length : 0);
   if (todayClasses.length === 0 && todoCount === 0) {
     console.log('오늘 수업도 할 일도 없음 - 발송 생략');
     return;
@@ -266,6 +304,14 @@ async function main() {
       (l) => `  · ${l.properties['제목']?.title?.[0]?.plain_text ?? '(제목 없음)'}`
     );
     sections.push([`[수업 일지 미작성 ${emptyLogs.length}건]`, ...fold(rows)].join('\n'));
+  }
+
+  if (stuD1Ok === false) {
+    sections.push('[⚠️ 어제 수업 안내 미발송] 학생 전날 리마인더가 나가지 못했습니다 — 필요 시 위 오늘 수업 학생에게 직접 안내');
+  }
+
+  if (conD1Ok === false && consultRows.length > 0) {
+    sections.push(['[⚠️ 상담 안내 미발송 — 직접 연락 필요]', ...consultRows].join('\n'));
   }
 
   if (consults.length > 0) {
