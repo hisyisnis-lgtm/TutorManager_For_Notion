@@ -5,9 +5,9 @@
 import { useState } from 'react';
 import { Pen, CloseCircle, Copy, CheckCircle } from '@solar-icons/react';
 import { TG, TYPE, TOUCH_OPT, RADIUS, SPACE } from '../tgTokens.js';
-import { startSocialLogin, KakaoLogo, GoogleLogo } from './LoginScreen.jsx';
+import { SocialLoginButton } from './LoginScreen.jsx';
 import { levelInfo } from '../gameXp.js';
-import { ModalCard } from './shared.jsx';
+import { ModalCard, Gauge } from './shared.jsx';
 
 export function ProfileModal({
   tier, nickname, isGuest, isMemberUser, userId,
@@ -66,13 +66,11 @@ export function ProfileModal({
             <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.xs }}>
               {/* 한 줄 고정 — 최고 등급('성조 고수 · 최고 등급 · Lv.22' = 186px)이 정보 컬럼(184)을 넘겨 두 줄이 되던 것:
                   '최고 등급'을 '최고'로 줄이고(157px) 줄바꿈 금지. 그래도 넘치면 말줄임. */}
-              <span style={{ ...TYPE.label, color: '#9A93A0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <span style={{ ...TYPE.label, color: TG.SUB, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {tier.name}{tier.isMax ? ' · 최고' : ''} · Lv.{lv.level}
               </span>
-              {/* 레벨 게이지 — 시안: 높이 10 · 트랙 #EBE5DE(r37) · 채움 #F2484C(r14) */}
-              <div style={{ width: '100%', height: 10, borderRadius: 37, background: '#EBE5DE', overflow: 'hidden' }}>
-                <div style={{ width: `${pct}%`, height: '100%', borderRadius: 14, background: '#F2484C', transition: 'width .5s ease' }} />
-              </div>
+              {/* 레벨 게이지 — 홈 HUD와 같은 데이터라 같은 색(공용 Gauge 표준: 채움 CTA·트랙 GAUGE_TRACK, 2026-08-31 통일) */}
+              <Gauge pct={pct} ariaLabel={`레벨 ${lv.level} 진행도`} />
             </div>
           </div>
         </div>
@@ -82,21 +80,15 @@ export function ProfileModal({
         {/* 로그인 상태 */}
         {isGuest ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.lg }}>
-            <span style={{ ...TYPE.label, color: '#9A93A0', textAlign: 'center' }}>로그인하면 기기를 바꿔도 기록이 그대로예요</span>
-            <button onClick={() => startSocialLogin('kakao')} className="tg-press" style={{ width: '100%', height: 52, borderRadius: RADIUS.lg, border: 'none', background: '#FEE500', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: SPACE.md, cursor: 'pointer', ...TOUCH_OPT }}>
-              <KakaoLogo />
-              <span style={{ ...TYPE.btnSm, color: 'rgba(0,0,0,0.85)' }}>카카오로 시작하기</span>
-            </button>
-            <button onClick={() => startSocialLogin('google')} className="tg-press" style={{ width: '100%', height: 52, borderRadius: RADIUS.lg, border: '1px solid #747775', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: SPACE.lg, cursor: 'pointer', ...TOUCH_OPT }}>
-              <GoogleLogo />
-              <span style={{ ...TYPE.btnSm, color: '#1f1f1f' }}>Google로 계속하기</span>
-            </button>
+            <span style={{ ...TYPE.label, color: TG.SUB, textAlign: 'center' }}>로그인하면 기기를 바꿔도 기록이 그대로예요</span>
+            <SocialLoginButton provider="kakao" height={52} labelType={TYPE.btnSm} />
+            <SocialLoginButton provider="google" height={52} labelType={TYPE.btnSm} />
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.lg }}>
-            <span style={{ ...TYPE.label, color: '#9A93A0', textAlign: 'center' }}>로그인됨 · 기록이 안전하게 저장되고 있어요</span>
+            <span style={{ ...TYPE.label, color: TG.SUB, textAlign: 'center' }}>로그인됨 · 기록이 안전하게 저장되고 있어요</span>
             {isMemberUser && onLogout && (
-              <button onClick={onLogout} className="tg-press" style={{ width: '100%', height: 48, borderRadius: RADIUS.lg, border: '1.5px solid #ebe5de', background: '#fff', cursor: 'pointer', ...TYPE.btnSm, color: TG.SUB, ...TOUCH_OPT }}>로그아웃</button>
+              <button onClick={onLogout} className="tg-press" style={{ width: '100%', height: 48, borderRadius: RADIUS.lg, border: `1.5px solid ${TG.BORDER}`, background: '#fff', cursor: 'pointer', ...TYPE.btnSm, color: TG.SUB, ...TOUCH_OPT }}>로그아웃</button>
             )}
           </div>
         )}
@@ -108,7 +100,7 @@ export function ProfileModal({
             <span style={{ flex: 1, minWidth: 0, ...TYPE.num, fontSize: 12, color: TG.INK, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{userId}</span>
             <button onClick={copyId} aria-label="UID 복사" className="tg-press"
               style={{ display: 'inline-flex', alignItems: 'center', gap: SPACE.sm, height: 30, padding: '0 10px', borderRadius: RADIUS.md, border: 'none', cursor: 'pointer', flexShrink: 0, background: copied ? 'rgba(54,201,141,0.14)' : '#fff', boxShadow: copied ? 'none' : '0 1px 3px rgba(43,39,48,0.1)', ...TOUCH_OPT }}>
-              {copied ? <CheckCircle size={13} weight="Bold" color="#36C98D" /> : <Copy size={13} weight="Bold" color={TG.SUB} />}
+              {copied ? <CheckCircle size={13} weight="Bold" color={TG.SUCCESS_GLOW} /> : <Copy size={13} weight="Bold" color={TG.SUB} />}
               <span style={{ ...TYPE.labelSm, color: copied ? TG.SUCCESS_GLOW : TG.SUB }}>{copied ? '복사됨' : '복사'}</span>
             </button>
           </div>

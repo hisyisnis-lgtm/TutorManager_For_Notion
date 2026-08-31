@@ -3,18 +3,12 @@
 //  ⚙ 별도 설정 모달을 없애고(시안), 소리·음악·햅틱·단어 뜻·병음을 이 모달 안에서 바로 조절한다.
 import { useState } from 'react';
 import { Pause, Play, VolumeLoud, VolumeCross, MusicNotes, MusicNote, SmartphoneVibration, Notebook, TextField } from '@solar-icons/react';
-import { TG, TYPE, RADIUS, TOUCH_OPT, SPACE, haptic, isHapticMuted, setHapticMuted, isMeaningHidden, setMeaningHidden, isPinyinHidden, setPinyinHidden } from '../tgTokens.js';
+import { TG, TYPE, RADIUS, SPACE, haptic, isHapticMuted, setHapticMuted, isMeaningHidden, setMeaningHidden, isPinyinHidden, setPinyinHidden } from '../tgTokens.js';
 import { play as playSfx, isSfxMuted, setSfxMuted } from '../tgSfx.js';
 import { isBgmMuted, setBgmMuted } from '../tgBgm.js';
-import { MenuToggle } from './shared.jsx';
+import { MenuToggle, ModalCard, KeycapCta } from './shared.jsx';
 
-const CTA_RED = '#F96163', CTA_RED_EDGE = '#E64244';
-const SUB_BTN_TEXT = '#7E8A94', SUB_BTN_EDGE = '#E4EDF5';
 const STAT_BG = '#F7F6F5';
-const KEYCAP = {
-  height: 60, borderRadius: RADIUS.xl, border: 'none', cursor: 'pointer', paddingBottom: 4,
-  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: SPACE.md, ...TOUCH_OPT,
-};
 
 export function PauseModal({ score, combo, crutchCtx, onResume, onRestart, onQuit }) {
   const [sfxOn, setSfxOn] = useState(() => !isSfxMuted());
@@ -24,14 +18,7 @@ export function PauseModal({ score, combo, crutchCtx, onResume, onRestart, onQui
   const [meaningOn, setMeaningOn] = useState(() => !isMeaningHidden(crutchCtx));
   const [pinyinOn, setPinyinOn] = useState(() => !isPinyinHidden(crutchCtx));
   return (
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(2px)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: SPACE.x4,
-    }}>
-      <div className="tg-enter" style={{
-        width: '100%', maxWidth: 330, background: TG.CARD, borderRadius: RADIUS.xxl, padding: '28px 22px 22px',
-        boxShadow: '0px 4px 18px rgba(43,39,48,0.07)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: SPACE.x2,
-      }}>
+    <ModalCard>
         {/* 아이콘 + 제목 (간격 10) */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: SPACE.lg }}>
           {/* IDLE 호흡 — 모달이 떠 있는 동안 아이콘이 천천히 숨 쉰다(공용 .tg-idle) */}
@@ -67,28 +54,11 @@ export function PauseModal({ score, combo, crutchCtx, onResume, onRestart, onQui
              구 배치(계속하기 풀폭 위 + [홈으로|다시하기] 아래)는 시안과 순서·비중이 모두 달랐다. */}
         <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: SPACE.lg }}>
           <div style={{ display: 'flex', gap: SPACE.lg }}>
-            <button className="tg-press" onClick={onRestart} style={{
-              ...KEYCAP, flex: 1, minWidth: 0, background: '#fff',
-              boxShadow: `0px 4px 18px rgba(43,39,48,0.07), inset 0 -4px 0 ${SUB_BTN_EDGE}`,
-            }}>
-              <span style={{ ...TYPE.head, color: SUB_BTN_TEXT }}>다시하기</span>
-            </button>
-            <button className="tg-press" onClick={onResume} style={{
-              ...KEYCAP, flex: 1, minWidth: 0, background: CTA_RED,
-              boxShadow: `0px 4px 18px rgba(43,39,48,0.07), inset 0 -4px 0 ${CTA_RED_EDGE}`,
-            }}>
-              <span style={{ ...TYPE.head, color: '#fff' }}>계속하기</span>
-              <Play size={18} weight="Bold" color="#fff" />
-            </button>
+            <KeycapCta bg="#fff" edge={TG.KEY_EDGE} color={TG.STEEL} label="다시하기" onClick={onRestart} style={{ flex: 1, minWidth: 0 }} />
+            <KeycapCta label="계속하기" Icon={Play} onClick={onResume} style={{ flex: 1, minWidth: 0 }} />
           </div>
-          <button className="tg-press" onClick={onQuit} style={{
-            ...KEYCAP, width: '100%', background: '#fff',
-            boxShadow: `0px 4px 18px rgba(43,39,48,0.07), inset 0 -4px 0 ${SUB_BTN_EDGE}`,
-          }}>
-            <span style={{ ...TYPE.head, color: SUB_BTN_TEXT }}>홈으로</span>
-          </button>
+          <KeycapCta bg="#fff" edge={TG.KEY_EDGE} color={TG.STEEL} label="홈으로" onClick={onQuit} />
         </div>
-      </div>
-    </div>
+    </ModalCard>
   );
 }

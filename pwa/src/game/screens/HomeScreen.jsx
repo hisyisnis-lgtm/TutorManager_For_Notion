@@ -15,7 +15,7 @@ import { ToneMark, useCountUp } from '../tgWidgets.jsx';
 import { rankInfo, levelInfo } from '../gameXp.js';
 import { play as playSfx, isSfxMuted, setSfxMuted } from '../tgSfx.js';
 import { isBgmMuted, setBgmMuted, startBgm } from '../tgBgm.js';
-import { EmberRise, MenuToggle, TgTabBar, TAB_BAR_H, TG_COL_MAXW, ModalCard, ModalBody, KeycapCta, ModalTextButton } from './shared.jsx';
+import { EmberRise, MenuToggle, TgTabBar, TAB_BAR_H, TG_COL_MAXW, ModalCard, ModalBody, KeycapCta, ModalTextButton, Gauge } from './shared.jsx';
 import { markSize, Eyes } from './eyes.jsx';
 import { DebugScoreModal } from './gameModals.jsx';
 import { resetGameData, getMemberSession } from '../gameStore.js';
@@ -298,7 +298,7 @@ function ToyBall() {
       ctx.clearRect(0, 0, S, S);
       ctx.beginPath(); ctx.arc(cx, cy, Rin, 0, 6.2832); ctx.fillStyle = '#fff'; ctx.fill(); // 외곽선 없음(사용자 요청)
       ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, Rin, 0, 6.2832); ctx.clip();
-      ctx.fillStyle = '#2b2730';
+      ctx.fillStyle = TG.INK;
       for (const v of verts) {
         const z = v[2]; // +z = 화면 앞쪽(보이는 면)
         if (z < -0.2) continue;
@@ -825,8 +825,8 @@ function HomeMenu({ onClose, onHelp, onCredits, onReset, onDeleteAccount, onLogi
           <>
             <div style={{ height: 1, background: TG.BORDER }} />
             <div style={{ display: 'flex', gap: SPACE.md }}>
-              <button onClick={() => { onClose(); onDebugIntro(); }} className="tg-press" style={{ flex: 1, height: 36, borderRadius: RADIUS.md, border: '1.5px solid #ebe5de', background: '#fff', cursor: 'pointer', ...TYPE.labelSm, color: TG.INK, ...TOUCH_OPT }}>🛠 소개부터</button>
-              <button onClick={() => { onClose(); onDebugScore(); }} className="tg-press" style={{ flex: 1, height: 36, borderRadius: RADIUS.md, border: '1.5px solid #ebe5de', background: '#fff', cursor: 'pointer', ...TYPE.labelSm, color: TG.INK, ...TOUCH_OPT }}>🛠 점수</button>
+              <button onClick={() => { onClose(); onDebugIntro(); }} className="tg-press" style={{ flex: 1, height: 36, borderRadius: RADIUS.md, border: `1.5px solid ${TG.BORDER}`, background: '#fff', cursor: 'pointer', ...TYPE.labelSm, color: TG.INK, ...TOUCH_OPT }}>🛠 소개부터</button>
+              <button onClick={() => { onClose(); onDebugScore(); }} className="tg-press" style={{ flex: 1, height: 36, borderRadius: RADIUS.md, border: `1.5px solid ${TG.BORDER}`, background: '#fff', cursor: 'pointer', ...TYPE.labelSm, color: TG.INK, ...TOUCH_OPT }}>🛠 점수</button>
             </div>
           </>
         )}
@@ -912,10 +912,8 @@ function MyInfo({ tier, nickname, onClick }) {
       <img src={tier.emblem} alt="" style={{ position: 'absolute', left: 2, top: 1, width: 70, height: 70, maxWidth: 'none', objectFit: 'contain', display: 'block' }} />
       <span style={{ position: 'absolute', left: 75, top: 8, ...TYPE.labelSm, fontSize: 14, lineHeight: '17px', color: HOME.ACCENT, whiteSpace: 'nowrap' }}>{tier.name}</span>
       <span style={{ position: 'absolute', left: 75, top: 27, maxWidth: 105, ...TYPE.label, fontSize: 16, lineHeight: '19px', color: HOME.INK, textAlign: 'left', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{displayName}</span>
-      {/* 트랙 r19 클립 → 채움은 왼쪽만 라운드(시안 per-corner)·오른쪽 플랫 */}
-      <div style={{ position: 'absolute', left: 75, top: 53, width: 60, height: 10, borderRadius: 19, background: HOME.GAUGE_TRACK, overflow: 'hidden' }}>
-        <div style={{ width: `${Math.max(13, pct)}%`, height: '100%', background: HOME.TAB_RED, transition: 'width .5s ease' }} />
-      </div>
+      {/* 트랙 클립 → 채움은 왼쪽만 라운드(시안 per-corner)·오른쪽 플랫. 공용 Gauge(채움 TG.CTA=TAB_RED 동일값) */}
+      <Gauge pct={Math.max(13, pct)} ariaLabel={`레벨 ${lv.level} 진행도`} style={{ position: 'absolute', left: 75, top: 53, width: 60 }} />
       {/* ★게이지 라벨은 `%`가 아니라 **`Lv.N`**(2026-08-12, 시안 453:2 동기화).
           이 게이지는 레벨 진행도(levelInfo(xp).progress)인데 등급명 바로 아래에 `%`만 있어
           '등급' 진행도로 읽혔다. 등급은 승급시험으로만 오르므로, 게이지를 100% 채워도 등급이
@@ -1104,7 +1102,7 @@ function ToneCard({ tone, status, level, onClose }) {
                 aria-label={`${tone.name} 예시 ${sample.hanzi} 발음 듣기`}
                 style={{
                   flexShrink: 0, height: 34, padding: '0 12px', borderRadius: RADIUS.lg, border: 'none', cursor: 'pointer',
-                  background: '#fff', boxShadow: 'inset 0 -2px 0 #E4EDF5, 0 2px 8px rgba(43,39,48,0.05)',
+                  background: '#fff', boxShadow: `inset 0 -2px 0 ${TG.KEY_EDGE}, 0 2px 8px rgba(43,39,48,0.05)`,
                   display: 'flex', alignItems: 'center', gap: SPACE.sm, ...TOUCH_OPT,
                 }}>
                 <VolumeLoud size={16} weight="Bold" color={TG.INK} />
@@ -1262,15 +1260,10 @@ export function HomeScreen({
       {/* 모드 선택 키캡 CTA(중앙 하단·은은한 펄스) — 탭 시 모드선택 화면으로 */}
       {/* 센터링은 flex로(펄스 keyframes가 transform을 덮어써 translateX 센터링 불가) */}
       <div style={{ position: 'absolute', left: 0, right: 0, bottom: `calc(${TAB_BAR_H + 17}px + env(safe-area-inset-bottom))`, zIndex: 3, display: 'flex', justifyContent: 'center', pointerEvents: 'none', animation: 'tg-cta-pulse 2.6s ease-in-out infinite' }}>
-        <button className="tg-press" data-coach="tg-play" onClick={() => { playSfx('button'); if (coach.visible) coach.dismiss(); onPlay && onPlay(); }} style={{
-          width: 160, height: 60, borderRadius: RADIUS.xl, border: 'none', cursor: 'pointer', pointerEvents: 'auto',
-          background: HOME.TAB_RED, boxShadow: `0 10px 20px rgba(242,72,76,0.10), inset 0 -4px 0 ${HOME.CTA_EDGE}`,
-          // 인너 엣지(4px)만큼 내부 요소를 올려 시각 균형(사용자 규칙: 그림자 두께 = 콘텐츠 리프트)
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: SPACE.md, paddingBottom: 8, ...TOUCH_OPT,
-        }}>
-          <span style={{ ...TYPE.cta, fontWeight: 800, fontSize: 21, color: '#fff' }}>모드 선택</span>
-          <Play size={18} weight="Bold" color="#fff" />
-        </button>
+        {/* 인너 엣지(4px)만큼 내부 요소를 올려 시각 균형(사용자 규칙: 그림자 두께 = 콘텐츠 리프트) → paddingBottom 8 */}
+        <KeycapCta data-coach="tg-play" label="모드 선택" labelStyle={{ ...TYPE.cta, fontWeight: 800, fontSize: 21 }} Icon={Play}
+          onClick={() => { playSfx('button'); if (coach.visible) coach.dismiss(); onPlay && onPlay(); }}
+          style={{ width: 160, pointerEvents: 'auto', paddingBottom: 8, boxShadow: `0 10px 20px rgba(242,72,76,0.10), inset 0 -4px 0 ${TG.CTA_EDGE}` }} />
       </div>
 
       {cardTone != null && <ToneCard tone={TONES.find((t) => t.num === cardTone)} status={toneStatus[cardTone]} level={Math.min(5, (toneLevels[cardTone] || {}).lv || 1)} onClose={() => setCardTone(null)} />}

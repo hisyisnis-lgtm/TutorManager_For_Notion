@@ -50,7 +50,7 @@ export function CelebrationOverlay({ achievement, onNext }) {
             <span style={{ ...TYPE.label, color: TG.CORAL_DK, letterSpacing: 0.5 }}>업적 달성!</span>
             <span style={{ ...TYPE.head, fontSize: 26, color: TG.INK, textAlign: 'center' }}>{achievement.label}</span>
           </div>
-          <span style={{ ...TYPE.label, color: '#9A93A0', textAlign: 'center', lineHeight: 1.4 }}>{achievement.desc}</span>
+          <span style={{ ...TYPE.label, color: TG.SUB, textAlign: 'center', lineHeight: 1.4 }}>{achievement.desc}</span>
         </div>
         {/* CTA — 키캡 60. 업적이 여러 개면 큐로 **한 장씩 순서대로** 뜬다(남은 개수는 노출하지 않음, 2026-08-07 사용자 요청) */}
         <KeycapCta label="확인" onClick={onNext} />

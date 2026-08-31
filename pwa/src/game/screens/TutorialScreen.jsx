@@ -12,7 +12,7 @@ import { ToneMark } from '../tgWidgets.jsx';
 import { TONES } from '../../constants/toneGameWords.js';
 import { speakWord } from '../tgTts.js';
 import { play as playSfx } from '../tgSfx.js';
-import { WordCard, CoachBubble, Reveal, DrawPad, GameHeader, ToneButtons } from './shared.jsx';
+import { WordCard, CoachBubble, Reveal, DrawPad, GameHeader, ToneButtons, KeycapCta } from './shared.jsx';
 import { P1_WORD, P2_WORD, LY_WORD, TONE_SAMPLES, SAMPLE_ORDER } from '../tutorialWords.js';
 import { findLianyin } from '../lianyin.js';
 
@@ -88,7 +88,7 @@ export function TutorialScreen({ onDone }) {
         <div style={{ width: 32, height: 32, borderRadius: RADIUS.lg, background: '#ff5e62', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0px 3px 4.5px rgba(255,94,98,0.45)' }}>
           <Stopwatch size={20} weight="Bold" color="#fff" />
         </div>
-        <div style={{ flex: 1, height: 12, borderRadius: 8, background: '#EBE5D5', overflow: 'hidden' }}>
+        <div style={{ flex: 1, height: 12, borderRadius: 8, background: TG.BORDER, overflow: 'hidden' }}>
           <div style={{ width: '83%', height: '100%', background: '#FF5E62' }} />
         </div>
       </div>
@@ -147,14 +147,8 @@ export function TutorialScreen({ onDone }) {
       {/* 비트0 '다음' 버튼 — 시안 19: (24,677) 342×50 r20 단색 코랄 + 아래 인너 엣지 + 플레이 18 */}
       {phase === 0 && (
         <Reveal i={1} style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(117px + env(safe-area-inset-bottom))', zIndex: 6 }}>
-          <button onClick={() => goPhase(1)} className="tg-press" style={{
-            width: '100%', height: 50, borderRadius: 20, border: 'none', cursor: 'pointer', background: '#F96163',
-            boxShadow: '0px 10px 20px rgba(242,72,76,0.1), inset 0 -4px 0 #E64244', paddingBottom: 4,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: SPACE.md, ...TOUCH_OPT,
-          }}>
-            <span style={{ ...TYPE.head, color: '#fff' }}>다음</span>
-            <Play size={18} weight="Bold" color="#fff" />
-          </button>
+          <KeycapCta height={50} label="다음" Icon={Play} onClick={() => goPhase(1)}
+            style={{ boxShadow: `0px 10px 20px rgba(242,72,76,0.1), inset 0 -4px 0 ${TG.CTA_EDGE}` }} />
         </Reveal>
       )}
 

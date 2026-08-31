@@ -5,11 +5,13 @@ on:
     branches: [main]
     paths:
       - 'pwa/**'
+      - '02_devtools/design-audit.mjs'
       - '.github/workflows/ci-pwa-build.yml'
   pull_request:
     branches: [main]
     paths:
       - 'pwa/**'
+      - '02_devtools/design-audit.mjs'
       - '.github/workflows/ci-pwa-build.yml'
   workflow_dispatch:
 
@@ -66,6 +68,11 @@ jobs:
       - name: 린트 (에러만)
         run: npx eslint src/ --quiet
         working-directory: pwa
+
+      # 디자인 규칙 정적 검사 — 색 리터럴·deprecated API·transition:all 등(게임 포함). ERROR면 실패.
+      # 로컬 검수 플로우(CLAUDE.md 1-bis)와 같은 기준을 CI에서도 강제한다(2026-08-31).
+      - name: 디자인 규칙 검사
+        run: node 02_devtools/design-audit.mjs --quiet
 
       - name: 빌드 검증
         run: npm run build

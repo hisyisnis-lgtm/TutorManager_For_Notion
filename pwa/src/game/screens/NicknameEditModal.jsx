@@ -8,13 +8,7 @@ import { play as playSfx } from '../tgSfx.js';
 import { NICKNAME_MIN } from '../nickname.js';
 import { useKeyboardInset } from '../tgWidgets.jsx';
 import { NicknameField, cleanNickname } from './NicknameScreen.jsx';
-
-const CTA_RED = '#F96163', CTA_EDGE = '#E64244';
-const CANCEL_TEXT = '#7E8A94', CANCEL_EDGE = '#E4EDF5';
-const BTN = {
-  flex: 1, minWidth: 0, height: 60, borderRadius: RADIUS.xl, border: 'none', cursor: 'pointer', paddingBottom: 4,
-  display: 'flex', alignItems: 'center', justifyContent: 'center', ...TOUCH_OPT,
-};
+import { KeycapCta } from './shared.jsx';
 
 export function NicknameEditModal({ current = '', onSave, onClose }) {
   const [value, setValue] = useState(() => cleanNickname(current || ''));
@@ -46,17 +40,9 @@ export function NicknameEditModal({ current = '', onSave, onClose }) {
           <NicknameField value={value} onChange={setValue} onSubmit={save} chipGap={10} />
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
-          <button onClick={onClose} className="tg-press" style={{
-            ...BTN, background: '#fff', boxShadow: `inset 0 -4px 0 ${CANCEL_EDGE}, 0 4px 18px rgba(43,39,48,0.07)`,
-          }}>
-            <span style={{ ...TYPE.head, color: CANCEL_TEXT }}>취소</span>
-          </button>
-          <button onClick={save} disabled={!canSave} className="tg-press" style={{
-            ...BTN, cursor: canSave ? 'pointer' : 'default', background: canSave ? CTA_RED : TG.BORDER,
-            boxShadow: canSave ? `inset 0 -4px 0 ${CTA_EDGE}, 0 4px 18px rgba(43,39,48,0.07)` : 'none',
-          }}>
-            <span style={{ ...TYPE.head, color: canSave ? '#fff' : TG.MUTED }}>저장</span>
-          </button>
+          <KeycapCta bg="#fff" edge={TG.KEY_EDGE} color={TG.STEEL} label="취소" onClick={onClose} style={{ flex: 1, minWidth: 0 }} />
+          <KeycapCta bg={canSave ? TG.CTA : TG.BORDER} color={canSave ? '#fff' : TG.MUTED} label="저장"
+            onClick={save} disabled={!canSave} style={{ flex: 1, minWidth: 0, ...(canSave ? null : { boxShadow: 'none' }) }} />
         </div>
       </div>
     </div>

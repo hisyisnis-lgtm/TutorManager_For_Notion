@@ -7,12 +7,12 @@ import { TG, TYPE, SHADOW, TOUCH_OPT, loadBest, saveBest, RADIUS, SPACE } from '
 import { GAMEKEY, loadEndlessBest, saveEndlessBest } from '../gameLogic.js';
 import { DIFFICULTIES } from '../../constants/toneGameWords.js';
 import { track } from '../gameAnalytics.js';
-import { ModalCard, PrimaryButton, ModalHead, ModalBody, KeycapCta, ModalTextButton } from './shared.jsx';
+import { ModalCard, ModalHead, ModalBody, KeycapCta, ModalTextButton } from './shared.jsx';
 
 // 모달 배지·CTA 색(시안 실측)
-const CTA_RED = '#F96163';           // 기본 CTA·배지 코랄
+const CTA_RED = TG.CTA;              // 기본 CTA·배지 코랄
 const ENDLESS_ORANGE = '#F3A75B';    // 무한 모드 배지
-const EXAM_GOLD = '#FFC23C';         // 승급시험 배지
+const EXAM_GOLD = TG.SUN;            // 승급시험 배지
 const TRAIN_GREEN = '#2BB583', TRAIN_GREEN_EDGE = '#219169'; // 트레이닝 아이덴티티(시안 461:339)
 // 물음표 기호 아이콘 — Solar엔 순수 물음표가 없어 Phosphor를 쓴다(ModalHead의 Icon 인터페이스에 맞춘 래퍼)
 const QuestionMarkBadge = ({ size, color }) => <QuestionMarkIcon size={size} weight="bold" color={color} />;
@@ -60,14 +60,14 @@ export function TrainingStartModal({ onStart, onClose }) {
   return (
     <ModalCard onClose={onClose}>
       <ModalHead Icon={SquareAcademicCap} badgeBg={TRAIN_GREEN} title="트레이닝" />
-      <span style={{ width: '100%', ...TYPE.body, fontWeight: 400, fontSize: 14, lineHeight: '22px', color: '#9A93A0', textAlign: 'center' }}>
+      <span style={{ width: '100%', ...TYPE.body, fontWeight: 400, fontSize: 14, lineHeight: '22px', color: TG.SUB, textAlign: 'center' }}>
         지금 열린 범위에서 <span style={{ color: TG.INK }}>약한 단어 위주</span>로 골라줘요.<br />
         <span style={{ color: TRAIN_GREEN }}>시간 제한 없이</span> 계속 이어서 연습해요.<br />
         기록에는 반영되지 않으니 부담 없이!
       </span>
-      <KeycapCta bg={TRAIN_GREEN} edge={'#229E71'} label="시작 하기" Icon={Play} onClick={() => { onStart && onStart(); }} />
-      {/* 이 모달만 닫기 색이 #9A93A0(시안 461:43) */}
-      <ModalTextButton color="#9A93A0" onClick={onClose} />
+      <KeycapCta bg={TRAIN_GREEN} edge={TRAIN_GREEN_EDGE} label="시작 하기" Icon={Play} onClick={() => { onStart && onStart(); }} />
+      {/* 이 모달만 닫기 색이 SUB(시안 461:43) */}
+      <ModalTextButton color={TG.SUB} onClick={onClose} />
     </ModalCard>
   );
 }
@@ -148,7 +148,7 @@ export function PlayModal({ onClose }) {
             {[PLAY_LINKS.youtube, PLAY_LINKS.blog].map((s) => (
               <button key={s.label} className="tg-press" onClick={() => openLink(s.href, s.id)} style={{
                 flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: SPACE.md, padding: '12px 0', borderRadius: RADIUS.lg,
-                background: '#fff', border: '1.5px solid #ebe5de', cursor: 'pointer', ...TOUCH_OPT,
+                background: '#fff', border: `1.5px solid ${TG.BORDER}`, cursor: 'pointer', ...TOUCH_OPT,
               }}>
                 <s.Icon size={20} weight={s.w} color={s.color} />
                 <span style={{ ...TYPE.label, color: TG.INK }}>{s.label}</span>
@@ -188,12 +188,12 @@ export function DebugScoreModal({ studentToken, onClose, onApplied }) {
           <div key={k} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: SPACE.xl }}>
             <span style={{ ...TYPE.label, color: TG.INK }}>{label}</span>
             <input type="number" value={v[k]} onChange={(e) => setV((s) => ({ ...s, [k]: e.target.value }))}
-              style={{ width: 120, height: 38, borderRadius: RADIUS.md, border: '1.5px solid #ebe5de', padding: '0 12px', textAlign: 'right', ...TYPE.num, fontSize: 15, color: TG.INK, background: '#fff' }} />
+              style={{ width: 120, height: 38, borderRadius: RADIUS.md, border: `1.5px solid ${TG.BORDER}`, padding: '0 12px', textAlign: 'right', ...TYPE.num, fontSize: 15, color: TG.INK, background: '#fff' }} />
           </div>
         ))}
         <div style={{ display: 'flex', gap: SPACE.md, marginTop: SPACE.xxs }}>
-          <button onClick={() => setV((s) => ({ ...s, easy: 1000, normal: 1000, hard: 1000 }))} className="tg-press" style={{ flex: 1, height: 40, borderRadius: RADIUS.md, border: '1.5px solid #ebe5de', background: '#fff', cursor: 'pointer', ...TYPE.labelSm, color: TG.INK, ...TOUCH_OPT }}>난이도 모두 1000</button>
-          <button onClick={() => setV({ easy: 0, normal: 0, hard: 0, endless: 0 })} className="tg-press" style={{ flex: 1, height: 40, borderRadius: RADIUS.md, border: '1.5px solid #ebe5de', background: '#fff', cursor: 'pointer', ...TYPE.labelSm, color: TG.SUB, ...TOUCH_OPT }}>초기화</button>
+          <button onClick={() => setV((s) => ({ ...s, easy: 1000, normal: 1000, hard: 1000 }))} className="tg-press" style={{ flex: 1, height: 40, borderRadius: RADIUS.md, border: `1.5px solid ${TG.BORDER}`, background: '#fff', cursor: 'pointer', ...TYPE.labelSm, color: TG.INK, ...TOUCH_OPT }}>난이도 모두 1000</button>
+          <button onClick={() => setV({ easy: 0, normal: 0, hard: 0, endless: 0 })} className="tg-press" style={{ flex: 1, height: 40, borderRadius: RADIUS.md, border: `1.5px solid ${TG.BORDER}`, background: '#fff', cursor: 'pointer', ...TYPE.labelSm, color: TG.SUB, ...TOUCH_OPT }}>초기화</button>
         </div>
         <button onClick={apply} className="tg-press" style={{ width: '100%', height: 50, borderRadius: RADIUS.lg, border: 'none', cursor: 'pointer', background: TG.CORAL_GRAD, boxShadow: SHADOW.btn, color: '#fff', ...TYPE.btn, marginTop: SPACE.xs, ...TOUCH_OPT }}>적용</button>
         <button onClick={onClose} className="tg-press" style={{ width: '100%', padding: '4px 0', background: 'none', border: 'none', cursor: 'pointer', ...TYPE.sub, color: TG.SUB, ...TOUCH_OPT }}>닫기</button>

@@ -12,7 +12,7 @@ import { Lock, Play, Leaf, Flame, Fire, Bolt, CrownStar, MedalStar, CheckCircle 
 import { TG, TYPE, TOUCH_OPT, DIFF_COLORS, RADIUS, SPACE } from '../tgTokens.js';
 import { STAGES, BOSSES, isStageUnlocked, stageUnlockToastText, stageStarFlags, stageScoreOf, bossState, isTierCleared } from '../gameLogic.js';
 import { play as playSfx } from '../tgSfx.js';
-import { GameHeader, StarRow, FieldBg, prefersReducedMotion } from './shared.jsx';
+import { GameHeader, StarRow, FieldBg, KeycapCta, prefersReducedMotion } from './shared.jsx';
 import CoachMarkOverlay from '../../components/ui/CoachMarkOverlay.jsx';
 import { useTabTip } from '../../hooks/useTabTip.js';
 
@@ -32,7 +32,7 @@ const RAIL_W = 3, RAIL_LEFT = RAIL_X - RAIL_W / 2;
 const RAIL_DASH_BG = `repeating-linear-gradient(to bottom, ${RAIL_DASH} 0 6px, transparent 6px 12px)`;
 // 배경 패럴랙스 — 맨 아래(입문1)에선 들판이 그대로, 맨 위(고수5)로 갈수록 아래로 밀려 거의 사라진다.
 const FIELD_SHIFT = 460;
-const CHIP_BG = '#E4EDF5', SCORE_C = '#8F9CA7';
+const CHIP_BG = TG.KEY_EDGE, SCORE_C = '#8F9CA7';
 const ICON_BG = '#F4F4F4'; // 난이도 아이콘 칩 배경(2026-08-06 사용자 지정) — 잠김 버튼(CHIP_BG)과는 별개
 
 // 사다리 = 각 급 [5스테이지 (+ 그 급 승급시험이 있으면 보스)]. 승급시험은 급 사이만(입문·실전) — 마지막 급(고수)엔 없음.
@@ -280,7 +280,7 @@ export function DifficultyScreen({ studentToken, rank = 0, onSelect, onStart, on
                   position: 'absolute', left: CARD_L, right: CARD_R, top: (ROW_H - CARD_H) / 2, height: CARD_H,
                   display: 'flex', alignItems: 'center', gap: SPACE.lg, padding: '0 10px 0 10px',
                   borderRadius: RADIUS.xl, background: '#fff', border: 'none', cursor: 'pointer', textAlign: 'left',
-                  boxShadow: 'inset 0 -2px 0 #E4EDF5, 0 4px 18px rgba(43,39,48,0.07)', ...TOUCH_OPT,
+                  boxShadow: `inset 0 -2px 0 ${TG.KEY_EDGE}, 0 4px 18px rgba(43,39,48,0.07)`, ...TOUCH_OPT,
                 }}>
                   <div style={{ position: 'relative', width: 50, height: 50, borderRadius: RADIUS.lg, background: ICON_BG, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     {/* 잠겨도 아이콘은 급 색 그대로(시안) — 잠김 표시는 오른쪽 자물쇠 버튼이 전담 */}
@@ -302,8 +302,8 @@ export function DifficultyScreen({ studentToken, rank = 0, onSelect, onStart, on
                   <div aria-hidden="true"
                     style={{
                       width: 50, height: 50, flexShrink: 0, borderRadius: RADIUS.xl,
-                      background: selectable ? '#F96163' : CHIP_BG,
-                      boxShadow: selectable ? 'inset 0 -4px 0 #E64244, 0 4px 8px rgba(43,39,48,0.07)' : 'inset 0 -4px 0 #CFDBE6',
+                      background: selectable ? TG.CTA : CHIP_BG,
+                      boxShadow: selectable ? `inset 0 -4px 0 ${TG.CTA_EDGE}, 0 4px 8px rgba(43,39,48,0.07)` : 'inset 0 -4px 0 #CFDBE6',
                       display: 'flex', alignItems: 'center', justifyContent: 'center', paddingBottom: 4,
                     }}>
                     {selectable ? <Play size={17} weight="Bold" color="#fff" /> : <Lock size={17} weight="Bold" color={SCORE_C} />}
@@ -323,20 +323,10 @@ export function DifficultyScreen({ studentToken, rank = 0, onSelect, onStart, on
           display: 'flex', gap: SPACE.lg, alignItems: 'flex-start',
           background: 'rgba(255,253,248,0.5)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
         }}>
-          <button type="button" className="tg-press" onClick={() => { playSfx('tap', 0.2); scrollToIdx(0); }}
-            style={{
-              flex: 1, height: 60, borderRadius: RADIUS.xl, border: 'none', cursor: 'pointer', background: '#fff',
-              boxShadow: 'inset 0 -4px 0 #E4EDF5, 0 4px 18px rgba(43,39,48,0.07)', paddingBottom: 4, ...TOUCH_OPT,
-            }}>
-            <span style={{ ...TYPE.head, color: '#7E8A94' }}>맨 위로</span>
-          </button>
-          <button type="button" data-coach="diff-current" className="tg-press" onClick={() => { playSfx('tap', 0.2); scrollToIdx(currentVIdx); }}
-            style={{
-              flex: 1, height: 60, borderRadius: RADIUS.xl, border: 'none', cursor: 'pointer', background: '#F96163',
-              boxShadow: 'inset 0 -4px 0 #E64244, 0 4px 18px rgba(43,39,48,0.07)', paddingBottom: 4, ...TOUCH_OPT,
-            }}>
-            <span style={{ ...TYPE.head, color: '#fff' }}>현재 난이도로</span>
-          </button>
+          <KeycapCta bg="#fff" edge={TG.KEY_EDGE} color={TG.STEEL} label="맨 위로"
+            onClick={() => { playSfx('tap', 0.2); scrollToIdx(0); }} style={{ flex: 1 }} type="button" />
+          <KeycapCta data-coach="diff-current" label="현재 난이도로"
+            onClick={() => { playSfx('tap', 0.2); scrollToIdx(currentVIdx); }} style={{ flex: 1 }} type="button" />
         </div>
       </div>
       <CoachMarkOverlay visible={tip.visible} onDone={tip.dismiss} steps={DIFF_COACH} delay={160} showControls={false} />

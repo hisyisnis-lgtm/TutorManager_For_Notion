@@ -32,8 +32,23 @@ export function GoogleLogo() {
   );
 }
 
+// 소셜 로그인 버튼(공용) — LoginScreen(56·btn)·ProfileModal(52·btnSm)이 공유.
+// 색은 제공자 브랜드 규격 고정(카카오 #FEE500 / 구글 흰 배경 + 보더 #747775 — Google 가이드라인 값이라 토큰화 대상 아님).
+export function SocialLoginButton({ provider, height = 56, labelType = TYPE.btn }) {
+  const kakao = provider === 'kakao';
+  return (
+    <button onClick={() => startSocialLogin(provider)} className="tg-press" style={{
+      width: '100%', height, borderRadius: RADIUS.lg, cursor: 'pointer',
+      border: kakao ? 'none' : '1px solid #747775', background: kakao ? '#FEE500' : '#fff',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: kakao ? SPACE.md : SPACE.lg, ...TOUCH_OPT,
+    }}>
+      {kakao ? <KakaoLogo /> : <GoogleLogo />}
+      <span style={{ ...labelType, color: kakao ? 'rgba(0,0,0,0.85)' : '#1f1f1f' }}>{kakao ? '카카오로 시작하기' : 'Google로 계속하기'}</span>
+    </button>
+  );
+}
+
 export function LoginScreen({ onBack }) {
-  const go = (provider) => startSocialLogin(provider);
   return (
     <>
       {/* 뒤로 — 공용 BackButton */}
@@ -57,17 +72,11 @@ export function LoginScreen({ onBack }) {
 
       {/* 카카오 로그인 */}
       <Reveal i={4} style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(146px + env(safe-area-inset-bottom))' }}>
-        <button onClick={() => go('kakao')} className="tg-press" style={{ width: '100%', height: 56, borderRadius: RADIUS.lg, border: 'none', background: '#FEE500', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: SPACE.md, cursor: 'pointer', ...TOUCH_OPT }}>
-          <KakaoLogo />
-          <span style={{ ...TYPE.btn, color: 'rgba(0,0,0,0.85)' }}>카카오로 시작하기</span>
-        </button>
+        <SocialLoginButton provider="kakao" />
       </Reveal>
       {/* 구글 로그인 */}
       <Reveal i={5} style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(78px + env(safe-area-inset-bottom))' }}>
-        <button onClick={() => go('google')} className="tg-press" style={{ width: '100%', height: 56, borderRadius: RADIUS.lg, border: '1px solid #747775', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: SPACE.lg, cursor: 'pointer', ...TOUCH_OPT }}>
-          <GoogleLogo />
-          <span style={{ ...TYPE.btn, color: '#1f1f1f' }}>Google로 계속하기</span>
-        </button>
+        <SocialLoginButton provider="google" />
       </Reveal>
       {/* 안내 — 만 14세 고지와 방침 링크는 법정 요구사항(개인정보보호법 §22-2·§30)이자
           카카오·구글 OAuth 콘솔 심사 항목이라 지우지 말 것. 방침은 해시 라우트라 origin부터 붙인다. */}

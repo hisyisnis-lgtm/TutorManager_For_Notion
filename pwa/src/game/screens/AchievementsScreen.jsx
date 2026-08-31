@@ -7,9 +7,9 @@ import {
   Flag, Bookmark, Book, CalendarMark, CalendarDate, Calendar, Soundwave,
   CheckCircle, Star, Stars, CrownStar, MedalStar, Bolt,
 } from '@solar-icons/react';
-import { TG, TYPE, FONT_NUM, TOUCH_OPT, SPACE } from '../tgTokens.js';
+import { TG, HOME, TYPE, FONT_NUM, TOUCH_OPT, SPACE } from '../tgTokens.js';
 import { ACHIEVEMENTS } from '../achievements.js';
-import { Reveal, TgTabBar, TAB_BAR_H, useStickyHeader } from './shared.jsx';
+import { Reveal, TgTabBar, TAB_BAR_H, useStickyHeader, Gauge } from './shared.jsx';
 
 // 업적 icon 문자열 → Solar 컴포넌트 (achievements.js의 icon 필드와 일치)
 const ACH_ICONS = {
@@ -27,14 +27,14 @@ const DEFAULT_EARNED = '#FFB02E'; // 기본 획득 금색(축하 오버레이 �
 const LOCKED_BG = '#f1ece5';      // 회색 틴트(축하 오버레이 배지 안쪽)
 const LOCKED_FG = TG.MUTED;       // 회색 아이콘
 
-// 시안 14 실측 — 토큰에 없는 원오프 색만 상수로
-const TITLE_INK = '#272622';      // 제목·업적명·진행 수치
-const TILE_LOCKED = '#E4EDF5';    // 미획득 타일
-const ICON_LOCKED = '#A6B4C1';    // 미획득 아이콘
-const BAR_TRACK = '#E2D7C1';
-const BAR_FILL = '#F96163';
-const PCT_INK = '#452C1C';
-const DIVIDER = '#E9E6DE';
+// 시안 14 실측 — 토큰에 있는 색은 참조, 원오프만 리터럴 (2026-08-31 토큰 통합)
+const TITLE_INK = '#272622';      // 제목·업적명·진행 수치 (원오프)
+const TILE_LOCKED = TG.KEY_EDGE;  // 미획득 타일
+const ICON_LOCKED = '#A6B4C1';    // 미획득 아이콘 (원오프)
+const BAR_TRACK = HOME.GAUGE_TRACK;
+const BAR_FILL = TG.CTA;
+const PCT_INK = HOME.INK;
+const DIVIDER = HOME.TAB_BORDER;
 
 const tint = (hex, a = 0.14) => {
   const n = parseInt(hex.slice(1), 16);
@@ -136,9 +136,8 @@ export function AchievementsScreen({ earned, snapshot, onToast, tabNav, achDot =
             lineHeight: '18px', color: TITLE_INK, transition: 'font-size .15s ease',
           }}>업적 진행도</span>
           <div style={{ marginTop: SPACE.lg, height: 14, display: 'flex', alignItems: 'center', gap: SPACE.lg }}>
-            <div style={{ flex: 1, minWidth: 0, height: 10, borderRadius: 19, background: BAR_TRACK, overflow: 'hidden' }}>
-              <div style={{ width: `${pct}%`, height: '100%', background: BAR_FILL, transition: 'width .4s ease' }} />
-            </div>
+            <Gauge pct={pct} fill={BAR_FILL} track={BAR_TRACK} transition="width .4s ease" ariaLabel="업적 진행도"
+              style={{ flex: 1, minWidth: 0, width: 'auto' }} />
             <span style={{ width: 30, textAlign: 'center', fontFamily: FONT_NUM, fontWeight: 900, fontSize: 12, lineHeight: '14px', color: PCT_INK, flexShrink: 0 }}>{pct}%</span>
           </div>
         </div>

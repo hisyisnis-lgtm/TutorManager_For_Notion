@@ -5,7 +5,7 @@ import { TG, TYPE, TOUCH_OPT, pickCelebratePanda, RADIUS, SPACE } from '../tgTok
 import { useCountUp, FlameIcon } from '../tgWidgets.jsx';
 import { play as playSfx } from '../tgSfx.js';
 import { EXAM_PASS_RATIO } from '../gameXp.js';
-import { Reveal, ConfettiBurst, CrispFlash, LIGHT_CONFETTI, GameHeader } from './shared.jsx';
+import { Reveal, ConfettiBurst, CrispFlash, LIGHT_CONFETTI, GameHeader, KeycapCta } from './shared.jsx';
 import { LoginNudgeModal } from './gameModals.jsx';
 import CoachMarkOverlay from '../../components/ui/CoachMarkOverlay.jsx';
 import { useTabTip } from '../../hooks/useTabTip.js';
@@ -32,15 +32,10 @@ const resultCoach = (homeOnly, homeHint) => [
 ];
 
 
-// 시안 12(2026-08-05) 값 — 결과 버튼/배지 전용. 토큰에 없는 원오프 색만 상수로.
-const RES_BTN_TEXT = '#7E8A94';   // 보조 버튼 라벨(흰 버튼)
-const RES_EDGE = '#E4EDF5';       // 흰 버튼 하단 인너 엣지
-const RES_RED = '#F96163';        // 주 버튼(계속하기)
-const RES_RED_EDGE = '#E64244';   // 주 버튼 하단 인너 엣지
+// 시안 12(2026-08-05) 값 — 버튼은 공용 KeycapCta로 통일(2026-08-31), 원오프 색만 상수로.
 const RES_BADGE = '#FDBA28';      // 신기록 배지(구 골드 그라데 → 단색)
-const RES_BTN = { height: 60, borderRadius: 20, border: 'none', cursor: 'pointer', paddingBottom: 4, boxShadow: '0px 4px 18px rgba(43,39,48,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center' };
-const RES_WHITE = { background: '#fff', boxShadow: `0px 4px 18px rgba(43,39,48,0.07), inset 0 -4px 0 ${RES_EDGE}` };
-const RES_PRIMARY = { background: RES_RED, boxShadow: `0px 4px 18px rgba(43,39,48,0.07), inset 0 -4px 0 ${RES_RED_EDGE}` };
+// 흰 보조 키캡 공통 prop(다시하기·홈으로) — 주 키캡은 KeycapCta 기본값(TG.CTA) 그대로.
+const WHITE_CAP = { bg: '#fff', edge: TG.KEY_EDGE, color: TG.STEEL };
 
 // 통계 2카드(최고 콤보·반응 속도) — 시안 12 결과 / 승급시험 결과 공통. 166×128 r20, 내부는 시안 절대좌표 그대로.
 //  아이콘 y16(30) · 라벨 y52(19) · 수치행 y81(31, 단위는 +12). flex 중앙정렬로 두면 라인박스(라벨 25.1·값 40.9)가
@@ -134,28 +129,17 @@ export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, 
       <Reveal i={5} style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(96px + env(safe-area-inset-bottom))' }}>
       {(onExam || onNextLevel) ? (
         <div data-coach="result-actions" style={{ display: 'flex', gap: SPACE.lg }}>
-          <button onClick={() => { playSfx('button'); onRetry(); }} className="tg-press" style={{
-            ...RES_BTN, flex: 1, minWidth: 0, background: '#fff', boxShadow: `0px 4px 18px rgba(43,39,48,0.07), inset 0 -4px 0 ${RES_EDGE}`, ...TOUCH_OPT,
-          }}>
-            <span style={{ ...TYPE.head, color: RES_BTN_TEXT, whiteSpace: 'nowrap' }}>다시하기</span>
-          </button>
+          <KeycapCta {...WHITE_CAP} label="다시하기" labelStyle={{ whiteSpace: 'nowrap' }}
+            onClick={() => { playSfx('button'); onRetry(); }} style={{ flex: 1, minWidth: 0 }} />
           {/* 다음 목적지(승급시험 또는 다음 스테이지) — 라벨은 **목적지 이름**(예: "입문 2 도전").
               시안 라벨 '계속하기'는 어디로 가는지 안 알려줘서, 누르면 예고 없이 다음 스테이지가 시작됐다(2026-08-07 UX 검수).
               이름이 길어 버튼을 넘치면 기본값 '계속하기'로 폴백(continueLabel을 호출부가 판단). */}
-          <button onClick={() => { playSfx('button'); (onExam || onNextLevel)(); }} className="tg-press" style={{
-            ...RES_BTN, flex: 1, minWidth: 0, gap: SPACE.md, background: RES_RED,
-            boxShadow: `0px 4px 18px rgba(43,39,48,0.07), inset 0 -4px 0 ${RES_RED_EDGE}`, ...TOUCH_OPT,
-          }}>
-            <span style={{ ...TYPE.head, color: '#fff', whiteSpace: 'nowrap' }}>{continueLabel}</span>
-            <Play size={18} weight="Bold" color="#fff" />
-          </button>
+          <KeycapCta label={continueLabel} labelStyle={{ whiteSpace: 'nowrap' }} Icon={Play}
+            onClick={() => { playSfx('button'); (onExam || onNextLevel)(); }} style={{ flex: 1, minWidth: 0 }} />
         </div>
       ) : (
-        <button data-coach="result-actions" onClick={() => { playSfx('button'); onRetry(); }} className="tg-press" style={{
-          ...RES_BTN, ...RES_PRIMARY, width: '100%', ...TOUCH_OPT,
-        }}>
-          <span style={{ ...TYPE.head, color: '#fff', whiteSpace: 'nowrap' }}>{retryLabel}</span>
-        </button>
+        <KeycapCta data-coach="result-actions" label={retryLabel} labelStyle={{ whiteSpace: 'nowrap' }}
+          onClick={() => { playSfx('button'); onRetry(); }} />
       )}
       </Reveal>
       )}
@@ -164,14 +148,9 @@ export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, 
       <Reveal i={6} style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(26px + env(safe-area-inset-bottom))' }}>
         {/* ★homeOnly면 코치마크 마지막 단계가 이 버튼만 누를 수 있게 잠근다(forceLastStep) →
             버튼을 실제로 눌러야 진행되므로, 코치 종료도 여기서 직접 dismiss 해야 한다(홈 CTA와 같은 패턴). */}
-        <button data-coach={homeOnly ? 'result-actions' : 'result-home'}
-          onClick={() => { playSfx('button'); if (homeOnly && tip.visible) tip.dismiss(); onHome(); }} className="tg-press" style={{
-          ...RES_BTN, width: '100%',
-          ...(homeOnly ? RES_PRIMARY : { background: '#fff', boxShadow: `0px 4px 18px rgba(43,39,48,0.07), inset 0 -4px 0 ${RES_EDGE}` }), ...TOUCH_OPT,
-        }}>
-          {/* 라벨은 **실제 목적지**를 말한다 — 온보딩 첫 판 뒤엔 닉네임 화면이 뜨므로 '홈으로 가기'는 거짓말이 된다(2026-08-08 사용자) */}
-          <span style={{ ...TYPE.head, color: homeOnly ? '#fff' : RES_BTN_TEXT }}>{homeLabel}</span>
-        </button>
+        {/* 라벨은 **실제 목적지**를 말한다 — 온보딩 첫 판 뒤엔 닉네임 화면이 뜨므로 '홈으로 가기'는 거짓말이 된다(2026-08-08 사용자) */}
+        <KeycapCta data-coach={homeOnly ? 'result-actions' : 'result-home'} {...(homeOnly ? null : WHITE_CAP)} label={homeLabel}
+          onClick={() => { playSfx('button'); if (homeOnly && tip.visible) tip.dismiss(); onHome(); }} />
       </Reveal>
       <CoachMarkOverlay visible={tip.visible && coachReady} onDone={tip.dismiss} steps={resultCoach(homeOnly, homeHint)} delay={260} showControls={false} forceLastStep={homeOnly} />
       {/* (구 '초급 저조 유도' 강제 코치 오버레이 폐기 — 2026-07-19. 이제 유도는 코치 말풍선 아래 비강제 옵션 CTA로.) */}
@@ -230,25 +209,18 @@ export function ExamResultScreen({ correct = 0, total = 20, passed = false, onRe
       <Reveal i={5} style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(96px + env(safe-area-inset-bottom))' }}>
         {(onContinue || onPractice) ? (
           <div style={{ display: 'flex', gap: SPACE.lg }}>
-            <button onClick={() => { playSfx('button'); onRetry(); }} className="tg-press" style={{ ...RES_BTN, ...RES_WHITE, flex: 1, minWidth: 0, ...TOUCH_OPT }}>
-              <span style={{ ...TYPE.head, color: RES_BTN_TEXT, whiteSpace: 'nowrap' }}>다시하기</span>
-            </button>
-            <button onClick={() => { playSfx('button'); (onContinue || onPractice)(); }} className="tg-press" style={{ ...RES_BTN, ...RES_PRIMARY, flex: 1, minWidth: 0, gap: SPACE.md, ...TOUCH_OPT }}>
-              <span style={{ ...TYPE.head, color: '#fff', whiteSpace: 'nowrap' }}>{onContinue ? '계속하기' : '연습하고 오기'}</span>
-              <Play size={18} weight="Bold" color="#fff" />
-            </button>
+            <KeycapCta {...WHITE_CAP} label="다시하기" labelStyle={{ whiteSpace: 'nowrap' }}
+              onClick={() => { playSfx('button'); onRetry(); }} style={{ flex: 1, minWidth: 0 }} />
+            <KeycapCta label={onContinue ? '계속하기' : '연습하고 오기'} labelStyle={{ whiteSpace: 'nowrap' }} Icon={Play}
+              onClick={() => { playSfx('button'); (onContinue || onPractice)(); }} style={{ flex: 1, minWidth: 0 }} />
           </div>
         ) : (
-          <button onClick={() => { playSfx('button'); onRetry(); }} className="tg-press" style={{ ...RES_BTN, ...RES_PRIMARY, width: '100%', ...TOUCH_OPT }}>
-            <span style={{ ...TYPE.head, color: '#fff', whiteSpace: 'nowrap' }}>다시하기</span>
-          </button>
+          <KeycapCta label="다시하기" labelStyle={{ whiteSpace: 'nowrap' }} onClick={() => { playSfx('button'); onRetry(); }} />
         )}
       </Reveal>
       {/* 홈으로 가기 — 시안 342×60 @bottom26 */}
       <Reveal i={6} style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(26px + env(safe-area-inset-bottom))' }}>
-        <button onClick={() => { playSfx('button'); onHome(); }} className="tg-press" style={{ ...RES_BTN, ...RES_WHITE, width: '100%', ...TOUCH_OPT }}>
-          <span style={{ ...TYPE.head, color: RES_BTN_TEXT }}>홈으로 가기</span>
-        </button>
+        <KeycapCta {...WHITE_CAP} label="홈으로 가기" onClick={() => { playSfx('button'); onHome(); }} />
       </Reveal>
     </>
   );

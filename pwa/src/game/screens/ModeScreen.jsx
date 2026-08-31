@@ -105,7 +105,7 @@ function BigTile({ Icon, fill, edge, glow, dot, title, locked, onClick, onLocked
           <Icon size={52} weight="Bold" color={locked ? TG.MUTED : '#fff'} style={iconStyle} />
           {locked && (
             <div style={{ position: 'absolute', right: 3, bottom: 3, width: 29, height: 29, borderRadius: RADIUS.lg, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 6px rgba(0,0,0,0.16)' }}>
-              <Lock size={15} weight="Bold" color="#9a93a0" />
+              <Lock size={15} weight="Bold" color={TG.SUB} />
             </div>
           )}
         </div>
@@ -123,13 +123,13 @@ function FeatureCard({ Icon, accent, title, locked, lockText, onClick, onLocked,
       width: '100%', height: 76, display: 'flex', alignItems: 'center', gap: SPACE.x2, textAlign: 'left', padding: '0 18px', borderRadius: RADIUS.xl, cursor: 'pointer',
       background: locked ? TG.SURFACE : '#fff', border: 'none',
       // 아래 4px 안쪽 테두리 = 도톰한 카드(오브와 같은 언어). 바깥은 옅은 드롭섀도.
-      boxShadow: locked ? 'none' : 'inset 0 -4px 0 #E4EDF5, 0 4px 18px rgba(43,39,48,0.07)', ...TOUCH_OPT,
+      boxShadow: locked ? 'none' : `inset 0 -4px 0 ${TG.KEY_EDGE}, 0 4px 18px rgba(43,39,48,0.07)`, ...TOUCH_OPT,
     }}>
       <Icon size={35} weight="Bold" color={locked ? TG.MUTED : accent} style={{ flexShrink: 0 }} />
       <span style={{ flex: 1, minWidth: 0, ...TYPE.h2, letterSpacing: '-0.01em', color: locked ? TG.SUB : TG.INK, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{title}</span>
       {locked ? (
         <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, flexShrink: 0 }}>
-          <Lock size={20} weight="Bold" color="#b8b0a8" />
+          <Lock size={20} weight="Bold" color={TG.MUTED} />
           <span style={{ ...TYPE.micro, color: TG.SUB, whiteSpace: 'nowrap' }}>{lockText}</span>
         </div>
       ) : (
@@ -158,7 +158,7 @@ export function ModeScreen({ endlessUnlocked, endlessBest = 0, onDifficulty, onT
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
           <Reveal i={2} style={{ paddingLeft: SPACE.x4, paddingRight: SPACE.x4 }}>
             <div style={{ display: 'flex', gap: SPACE.xl }}>
-              <BigTile Icon={Star} fill="#F96163" edge="#E64244" glow="rgba(242,72,76,0.30)" dot="#F2484C" title="난이도 모드" onClick={onDifficulty} coachId="mode-difficulty" />
+              <BigTile Icon={Star} fill={TG.CTA} edge={TG.CTA_EDGE} glow="rgba(242,72,76,0.30)" dot={TG.CORAL_DK} title="난이도 모드" onClick={onDifficulty} coachId="mode-difficulty" />
               <BigTile Icon={InfinityIcon} fill="#F3A75B" edge="#E77E33" glow="rgba(231,126,56,0.30)" dot="#E77E33" title="무한 모드"
                 iconStyle={{ stroke: 'currentColor', strokeWidth: 1.4, strokeLinejoin: 'round', strokeLinecap: 'round' }}
                 locked={!endlessUnlocked} onClick={() => setEndlessOpen(true)} onLocked={() => onLocked && onLocked(`${ENDLESS_REQ}를 클리어하면 열려요`)} />

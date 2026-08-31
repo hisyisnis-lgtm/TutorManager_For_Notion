@@ -3,14 +3,13 @@
 //   / 하단 고정 키캡 CTA(342×60, 하단 26).
 // ※ 2·3페이지("눈이 아니라 반응으로" / "기록 깨는 재미로")는 2026-08-08 사용자 요청으로 삭제.
 //    캐러셀(슬라이딩 트랙·점 인디케이터)과 히어로 2종(PaceCard·RecordCard)도 함께 제거 — 첫 장 하나로 끝난다.
-import { TG, TYPE, FONT_HANZI, FONT_BODY, TOUCH_OPT, RADIUS, SPACE } from '../tgTokens.js';
+import { TG, TYPE, FONT_HANZI, FONT_BODY, RADIUS, SPACE } from '../tgTokens.js';
 import { ToneMark } from '../tgWidgets.jsx';
 import { TONES } from '../../constants/toneGameWords.js';
 import { play as playSfx } from '../tgSfx.js';
-import { Reveal, GameHeader } from './shared.jsx';
+import { Reveal, GameHeader, KeycapCta } from './shared.jsx';
 
 const HERO_TOP = 90, HERO_H = 190, TEXT_TOP = 300, TEXT_W = 267;
-const CTA_RED = '#F96163', CTA_EDGE = '#E64244';
 
 const INTRO = {
   title: '하늘쌤의 공부법에서 시작했어요',
@@ -63,14 +62,8 @@ export function IntroScreen({ onNext }) {
       </Reveal>
 
       {/* CTA — 하단 26의 키캡 버튼 */}
-      <button onClick={() => { playSfx('button'); onNext(); }} className="tg-press" style={{
-        position: 'absolute', left: 24, right: 24, bottom: 'calc(26px + env(safe-area-inset-bottom))', zIndex: 3,
-        height: 60, borderRadius: RADIUS.xl, border: 'none', cursor: 'pointer', background: CTA_RED, paddingBottom: 4,
-        boxShadow: `inset 0 -4px 0 ${CTA_EDGE}, 0 4px 18px rgba(43,39,48,0.07)`,
-        display: 'flex', alignItems: 'center', justifyContent: 'center', ...TOUCH_OPT,
-      }}>
-        <span style={{ ...TYPE.head, color: '#fff' }}>{INTRO.cta}</span>
-      </button>
+      <KeycapCta label={INTRO.cta} onClick={() => { playSfx('button'); onNext(); }}
+        style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(26px + env(safe-area-inset-bottom))', zIndex: 3, width: 'auto' }} />
     </>
   );
 }

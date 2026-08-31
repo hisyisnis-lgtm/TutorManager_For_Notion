@@ -442,7 +442,7 @@ export function GameScreen({ title = '', word, entered, currentSyl, completed, t
             </div>
             {/* 게이지는 줄어들지만 트레이닝은 타임아웃 로직이 없어(ToneGamePage: practiceMode면 타이머 미설정)
                 다 줄어도 오답·시간초과 처리가 없다. 순수 '페이스 안내'용 — 그래서 **일반 모드보다 느리게**(PRACTICE_PACE_MS) 흐른다(2026-08-07 사용자 요청). */}
-            <div style={{ flex: 1, height: 12, borderRadius: 8, background: '#EBE5D5', overflow: 'hidden' }}>
+            <div style={{ flex: 1, height: 12, borderRadius: 8, background: TG.BORDER, overflow: 'hidden' }}>
               <div key={`ptimer-${runId}-${wordIndex}`} style={{
                 height: '100%', width: '100%', background: '#2BB583',
                 // ★단축(animation)과 롱핸드(animationPlayState)를 섞으면 React가 경고하고 재렌더 시 값이 어긋날 수 있다.
@@ -463,7 +463,7 @@ export function GameScreen({ title = '', word, entered, currentSyl, completed, t
             <Stopwatch size={20} weight="Bold" color="#fff" />
           </div>
           {/* 시간부족이어도 트랙에 붉은 외곽선은 넣지 않는다(2026-08-06 사용자) — 텐션은 채움 색·시계 맥동만 */}
-          <div style={{ flex: 1, height: 12, borderRadius: 8, background: '#EBE5D5', overflow: 'hidden' }}>
+          <div style={{ flex: 1, height: 12, borderRadius: 8, background: TG.BORDER, overflow: 'hidden' }}>
             <div key={`${runId}-${wordIndex}-${wordTimeLimit}-${gaugeOffsetMs}`} style={{ height: '100%', width: '100%', borderRadius: RADIUS.sm, background: lowTime ? 'linear-gradient(90deg,#ff5e62,#f2484c)' : '#FF5E62', animationName: 'tg-timer', animationDuration: `${wordTimeLimit}ms`, animationTimingFunction: 'linear', animationFillMode: 'forwards', animationDelay: `-${gaugeOffsetMs}ms`, animationPlayState: (paused || completed) ? 'paused' : 'running' }} />
           </div>
         </div>
@@ -499,7 +499,7 @@ export function GameScreen({ title = '', word, entered, currentSyl, completed, t
       {/* 트레이닝 종료 — 무한이라 자발적 종료용. 발음듣기/정답보기는 카드로 이관됨 → 성조버튼과 카드 사이 밴드에 배치(오터치 방지) */}
       {practice && onEndTraining && (
         <Reveal i={3} play={playReveal} style={{ position: 'absolute', left: 0, right: 0, bottom: 'calc(150px + env(safe-area-inset-bottom))', display: 'flex', justifyContent: 'center' }}>
-          <button onClick={onEndTraining} className="tg-press" style={{ display: 'inline-flex', alignItems: 'center', gap: SPACE.sm, padding: '9px 18px', borderRadius: RADIUS.lg, background: '#fff', border: '1.5px solid #ebe5de', boxShadow: '0px 2px 6px rgba(43,39,48,0.05)', cursor: 'pointer', ...TOUCH_OPT }}>
+          <button onClick={onEndTraining} className="tg-press" style={{ display: 'inline-flex', alignItems: 'center', gap: SPACE.sm, padding: '9px 18px', borderRadius: RADIUS.lg, background: '#fff', border: `1.5px solid ${TG.BORDER}`, boxShadow: '0px 2px 6px rgba(43,39,48,0.05)', cursor: 'pointer', ...TOUCH_OPT }}>
             <Logout size={15} weight="Bold" color={TG.SUB} />
             <span style={{ ...TYPE.label, color: TG.SUB, whiteSpace: 'nowrap' }}>{endLabel}</span>
           </button>

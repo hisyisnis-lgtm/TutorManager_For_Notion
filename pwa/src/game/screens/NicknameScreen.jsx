@@ -8,13 +8,12 @@ import { TG, TYPE, TOUCH_OPT, FONT_BODY, RADIUS } from '../tgTokens.js';
 import { play as playSfx } from '../tgSfx.js';
 import { randomNickname, NICKNAME_MAX, NICKNAME_MIN } from '../nickname.js';
 import { useKeyboardInset } from '../tgWidgets.jsx';
-import { Reveal, GameHeader } from './shared.jsx';
+import { Reveal, GameHeader, KeycapCta } from './shared.jsx';
 
 export { NICKNAME_MAX };
 
 // 시안 색 — 입력·칩의 쿨그레이 라인/라벨(인게임 카드 액션 버튼과 동일 계열)
-const FIELD_BORDER = '#E2E7EB', CHIP_ICON = '#637481', CHIP_TEXT = '#7E8A94';
-const CTA_RED = '#F96163', CTA_EDGE = '#E64244';
+const FIELD_BORDER = '#E2E7EB', CHIP_ICON = '#637481', CHIP_TEXT = TG.STEEL;
 
 // 입력 한 줄에서 제어문자만 털어내고 상한까지 자른다(설정·변경 화면 공통 규칙).
 export const cleanNickname = (raw) => raw.replace(/[\u0000-\u001f\u007f]/g, '').slice(0, NICKNAME_MAX);
@@ -100,19 +99,14 @@ export function NicknameScreen({ defaultName = '', onSubmit, saving = false }) {
       </Reveal>
 
       {/* 시작하기 — 하단 고정 키캡 CTA(시안 342×60, 하단 26). 키보드가 뜨면 그 위(간격 12)로 따라 붙는다 */}
-      <button onClick={submit} disabled={!canSubmit} className="tg-press" style={{
-        position: 'absolute', left: 24, right: 24, zIndex: 3,
-        bottom: kbInset > 0 ? kbInset + 12 : 'calc(26px + env(safe-area-inset-bottom))',
-        transition: 'bottom .18s ease-out',
-        height: 60, borderRadius: RADIUS.xl, border: 'none', cursor: canSubmit ? 'pointer' : 'default',
-        background: canSubmit ? CTA_RED : TG.BORDER, paddingBottom: 4,
-        boxShadow: canSubmit ? `inset 0 -4px 0 ${CTA_EDGE}, 0 4px 18px rgba(43,39,48,0.07)` : 'none',
-        display: 'flex', alignItems: 'center', justifyContent: 'center', ...TOUCH_OPT,
-      }}>
-        <span style={{ ...TYPE.head, color: canSubmit ? '#fff' : TG.MUTED }}>
-          {saving ? '저장 중…' : '시작하기'}
-        </span>
-      </button>
+      <KeycapCta bg={canSubmit ? TG.CTA : TG.BORDER} color={canSubmit ? '#fff' : TG.MUTED}
+        label={saving ? '저장 중…' : '시작하기'} onClick={submit} disabled={!canSubmit}
+        style={{
+          position: 'absolute', left: 24, right: 24, zIndex: 3, width: 'auto',
+          bottom: kbInset > 0 ? kbInset + 12 : 'calc(26px + env(safe-area-inset-bottom))',
+          transition: 'bottom .18s ease-out',
+          ...(canSubmit ? null : { boxShadow: 'none' }),
+        }} />
     </>
   );
 }

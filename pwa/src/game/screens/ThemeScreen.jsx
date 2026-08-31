@@ -260,7 +260,7 @@ export function ThemeScreen({ themes, studentToken, counts = {}, onStart, onBack
   // 좌우 이동 버튼(공용) — 시안: 60×60 흰 카드 버튼 + 아래 4px 엣지
   const navBtn = (disabled) => ({
     width: 60, height: 60, flexShrink: 0, borderRadius: RADIUS.xl, border: 'none', background: '#fff',
-    boxShadow: 'inset 0 -4px 0 #E4EDF5, 0 4px 18px rgba(43,39,48,0.07)',
+    boxShadow: `inset 0 -4px 0 ${TG.KEY_EDGE}, 0 4px 18px rgba(43,39,48,0.07)`,
     display: 'flex', alignItems: 'center', justifyContent: 'center', paddingBottom: 4,
     cursor: disabled ? 'default' : 'pointer', opacity: disabled ? 0.45 : 1, ...TOUCH_OPT,
   });
@@ -321,7 +321,8 @@ export function ThemeScreen({ themes, studentToken, counts = {}, onStart, onBack
             {themes.map((t, i) => (
               <div key={t.id} style={{
                 width: i === active ? 20 : 6, height: 6, borderRadius: 3,
-                background: i === active ? DOT_ON : DOT_OFF, transition: `all ${DUR.state} ease`,
+                background: i === active ? DOT_ON : DOT_OFF,
+                transition: `width ${DUR.state} ease, background-color ${DUR.state} ease`,
               }} />
             ))}
           </div>
@@ -335,22 +336,22 @@ export function ThemeScreen({ themes, studentToken, counts = {}, onStart, onBack
       }}>
         <button type="button" className="tg-press" aria-label="이전 테마" disabled={active === 0}
           onClick={() => { playSfx('tap', 0.2); scrollToIndex(active - 1); }} style={navBtn(active === 0)}>
-          <AltArrowLeft size={30} weight="Bold" color="#7E8A94" />
+          <AltArrowLeft size={30} weight="Bold" color={TG.STEEL} />
         </button>
         <button type="button" className={curUnlocked ? 'tg-press' : ''} aria-label={`${cur?.label || ''} 시작`}
           onClick={() => { if (curUnlocked) { playSfx('button'); onStart(cur); } else if (onLocked) onLocked(themeUnlockToastText(cur)); }}
           style={{
             flex: 1, minWidth: 0, height: 60, borderRadius: RADIUS.xl, border: 'none',
             cursor: curUnlocked ? 'pointer' : 'default', paddingBottom: 4,
-            background: curUnlocked ? '#F96163' : '#D4DEE6',
-            boxShadow: curUnlocked ? 'inset 0 -4px 0 #E64244, 0 4px 18px rgba(43,39,48,0.07)' : 'none',
+            background: curUnlocked ? TG.CTA : '#D4DEE6',
+            boxShadow: curUnlocked ? `inset 0 -4px 0 ${TG.CTA_EDGE}, 0 4px 18px rgba(43,39,48,0.07)` : 'none',
             ...TOUCH_OPT,
           }}>
-          <span style={{ ...TYPE.head, color: curUnlocked ? '#fff' : '#7E8A94' }}>시작</span>
+          <span style={{ ...TYPE.head, color: curUnlocked ? '#fff' : TG.STEEL }}>시작</span>
         </button>
         <button type="button" className="tg-press" aria-label="다음 테마" disabled={active === themes.length - 1}
           onClick={() => { playSfx('tap', 0.2); scrollToIndex(active + 1); }} style={navBtn(active === themes.length - 1)}>
-          <AltArrowRight size={30} weight="Bold" color="#7E8A94" />
+          <AltArrowRight size={30} weight="Bold" color={TG.STEEL} />
         </button>
       </div>
     </>

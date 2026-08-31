@@ -586,15 +586,17 @@ export function GameHeader({ title, onBack, right = null, bg = '#fff', glass = f
   );
 }
 
-// 풀폭 CTA 버튼(공용) — 그라디언트+가운데 콘텐츠. 색/그림자/높이/반경은 prop(기본=코랄). children=아이콘+라벨.
-export function PrimaryButton({ onClick, children, height = 56, radius = 18, background = TG.CORAL_GRAD, shadow = '0px 10px 20px rgba(242,72,76,0.32)', disabled = false, style }) {
+// (PrimaryButton 삭제 — 2026-08-31. 구 그라디언트 CTA는 호출부 0건 데드 코드였고, 게임 CTA는 KeycapCta로 통일.)
+
+// 진행 게이지(공용) — 트랙+채움+width%. 화면마다 재구현되던 게이지(홈 HUD·프로필·업적·숙련도) 통일 (2026-08-31).
+// 레벨/진행 게이지 표준색 = 채움 TG.CTA · 트랙 HOME.GAUGE_TRACK. ariaLabel을 넘기면 스크린리더에 진행률 노출.
+export function Gauge({ pct = 0, fill = TG.CTA, track = HOME.GAUGE_TRACK, height = 10, radius = RADIUS.pill, transition = 'width .5s ease', ariaLabel, style }) {
+  const p = Math.max(0, Math.min(100, pct));
   return (
-    <button className="tg-press" onClick={onClick} disabled={disabled} style={{
-      width: '100%', height, borderRadius: radius, border: 'none', cursor: disabled ? 'default' : 'pointer',
-      background, boxShadow: shadow, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: SPACE.md, ...TOUCH_OPT, ...style,
-    }}>
-      {children}
-    </button>
+    <div role="progressbar" aria-valuenow={Math.round(p)} aria-valuemin={0} aria-valuemax={100} aria-label={ariaLabel}
+      style={{ width: '100%', height, borderRadius: radius, background: track, overflow: 'hidden', ...style }}>
+      <div style={{ width: `${p}%`, height: '100%', borderRadius: radius, background: fill, transition }} />
+    </div>
   );
 }
 
@@ -645,26 +647,33 @@ export function ModalHead({ Icon, badgeBg, iconColor = '#fff', title }) {
 // 본문 — 14 Regular(라인 22) 회색, 가운데. 줄바꿈은 배열로 넘긴다(시안 줄바꿈 위치 고정).
 export function ModalBody({ lines }) {
   return (
-    <div style={{ width: '100%', ...TYPE.body, fontWeight: 400, fontSize: 14, lineHeight: '22px', color: '#7E8A94', textAlign: 'center' }}>
+    <div style={{ width: '100%', ...TYPE.body, fontWeight: 400, fontSize: 14, lineHeight: '22px', color: TG.STEEL, textAlign: 'center' }}>
       {lines.map((l, i) => <div key={i}>{l}</div>)}
     </div>
   );
 }
-// 키캡 CTA — 60 r20 + 하단 인너 엣지 4px(모달 공통). 아이콘은 있으면 라벨 오른쪽 8 간격.
-export function KeycapCta({ bg = '#F96163', edge = '#E64244', label, Icon, onClick }) {
+// 키캡 CTA(게임 표준 CTA) — 기본 60 r20 + 하단 인너 엣지 4px. 아이콘은 있으면 라벨 오른쪽 8 간격.
+// 화면들이 인라인으로 재구현하던 키캡(inset 0 -4px 0 엣지) 패턴의 단일 출처(2026-08-31 승격).
+//   children을 주면 라벨 대신 그대로 렌더(2줄 구성·커스텀 내용). labelStyle로 폰트만 덮어쓰기.
+export function KeycapCta({ bg = TG.CTA, edge = TG.CTA_EDGE, color = '#fff', label, labelStyle, Icon, iconSize = 18,
+  onClick, height = 60, radius = RADIUS.xl, disabled = false, style, children, ...rest }) {
   return (
-    <button className="tg-press" onClick={onClick} style={{
-      width: '100%', height: 60, borderRadius: RADIUS.xl, border: 'none', cursor: 'pointer', paddingBottom: 4,
+    <button className="tg-press" onClick={onClick} disabled={disabled} {...rest} style={{
+      width: '100%', height, borderRadius: radius, border: 'none', cursor: disabled ? 'default' : 'pointer', paddingBottom: 4,
       background: bg, boxShadow: `0px 4px 18px rgba(43,39,48,0.07), inset 0 -4px 0 ${edge}`,
-      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: SPACE.md, ...TOUCH_OPT,
+      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: SPACE.md, ...TOUCH_OPT, ...style,
     }}>
-      <span style={{ ...TYPE.head, color: '#fff' }}>{label}</span>
-      {Icon && <Icon size={18} weight="Bold" color="#fff" />}
+      {children ?? (
+        <>
+          <span style={{ ...TYPE.head, color, ...labelStyle }}>{label}</span>
+          {Icon && <Icon size={iconSize} weight="Bold" color={color} />}
+        </>
+      )}
     </button>
   );
 }
 // 보조 텍스트 버튼 — '닫기'/'나중에' 등. 14 Bold 회색(라인 24).
-export function ModalTextButton({ label = '닫기', color = '#7E8A94', onClick }) {
+export function ModalTextButton({ label = '닫기', color = TG.STEEL, onClick }) {
   return (
     <button className="tg-press" onClick={onClick} style={{ width: '100%', padding: 0, background: 'none', border: 'none', cursor: 'pointer', ...TOUCH_OPT }}>
       <span style={{ ...TYPE.label, lineHeight: '24px', color }}>{label}</span>
@@ -753,7 +762,7 @@ function SandhiToneChip({ big = false }) {
 }
 
 // 카드 하단 액션 버튼(발음 듣기·정답보기) — 시안 09 실측 스타일. 문구는 상태와 무관하게 고정.
-const CARD_ACT_ICON = '#637481', CARD_ACT_TEXT = '#7E8A94';
+const CARD_ACT_ICON = '#637481', CARD_ACT_TEXT = TG.STEEL;
 const CARD_ACT_BTN = { height: 30, padding: '0 13px', borderRadius: 10, background: '#fff', border: '1px solid #E2E7EB', display: 'inline-flex', alignItems: 'center', gap: 6, ...TOUCH_OPT };
 
 export function WordCard({ word, entered, currentSyl, completed, timedOut, progressText, reviewDots = null, floatScore, hideProgress, listen = false, audioOff = false, onReplay, onCantHear, draw = false, lianyinAt = -1, practice = false, onSpeak, onReveal, hideMeaning = false, hidePinyin = false, sandhiAt = -1 }) {
@@ -814,7 +823,7 @@ export function WordCard({ word, entered, currentSyl, completed, timedOut, progr
           // 시안 09-5: 타일 66 · r16 · **배경/테두리 없음** · 스피커 아이콘 60(타일의 0.91).
           // 현재 글자 강조는 색(INK)과 breathe로만 — 베이지 박스는 시안에 없다.
           <div data-syl={i} style={{ width: hz, height: hz, borderRadius: RADIUS.lg, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            animation: isCurrent ? 'tg-breathe 1.7s ease-in-out infinite' : 'none', transition: `all ${DUR.state} ease` }}>
+            animation: isCurrent ? 'tg-breathe 1.7s ease-in-out infinite' : 'none' }}>
             <VolumeLoud size={Math.round(hz * 0.91)} weight="Bold" color={isCurrent ? TG.INK : TG.MUTED} />
           </div>
         ) : (
@@ -1002,12 +1011,12 @@ export function ToneButtons({ onTone, wrongBtn, disabled, heat = 0, highlight = 
               // ★흰 키캡 — 시안 '09. 게임'(2026-08-04): 흰 카드 + 1px 연한 테두리 + 아래 4px 안쪽 엣지.
               //   색은 성조 마크가 전담(키캡은 중립) → 배경 들판 위에서도 눌린 카드처럼 읽힌다.
               background: isWrong ? '#FFE9EA' : '#fff',
-              border: highlight === t.num ? `2px solid ${t.color}` : '1px solid #E4EDF5',
+              border: highlight === t.num ? `2px solid ${t.color}` : `1px solid ${TG.KEY_EDGE}`,
               boxShadow: isWrong
                 ? 'inset 0 -4px 0 #F0BCBE, 0 4px 18px rgba(43,39,48,0.04)'
                 : highlight === t.num
-                  ? `inset 0 -4px 0 #E4EDF5, 0 0 0 4px ${t.color}22`
-                  : 'inset 0 -4px 0 #E4EDF5, 0 4px 18px rgba(43,39,48,0.04)',
+                  ? `inset 0 -4px 0 ${TG.KEY_EDGE}, 0 0 0 4px ${t.color}22`
+                  : `inset 0 -4px 0 ${TG.KEY_EDGE}, 0 4px 18px rgba(43,39,48,0.04)`,
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', gap: 9,
               paddingTop: 20, paddingBottom: 0, color: t.color, ...TOUCH_OPT, // 마크(currentColor)=성조색
             }}
@@ -1036,7 +1045,7 @@ export function ToneButtons({ onTone, wrongBtn, disabled, heat = 0, highlight = 
               <ToneMark tone={t.num} size={34} stroke={5.6} dotR={6} />
             </span>
             {/* 라벨 — 흰 키캡이라 아웃라인 스택 불필요. 시안 색(#7E8A94) 단색 */}
-            <span style={{ position: 'relative', zIndex: 1, ...TYPE.labelSm, color: '#7E8A94' }}>{t.name}</span>
+            <span style={{ position: 'relative', zIndex: 1, ...TYPE.labelSm, color: TG.STEEL }}>{t.name}</span>
           </button>
         );
       })}
@@ -1139,7 +1148,7 @@ export function DrawPad({ expectedTone, onDraw, disabled = false, resetKey = 0, 
         <svg aria-hidden="true" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
           <rect x="1" y="1" width="100%" height="100%" rx={RADIUS.xxl - 1} ry={RADIUS.xxl - 1}
             style={{ width: 'calc(100% - 2px)', height: 'calc(100% - 2px)' }}
-            fill="none" stroke="#FF6B6B" strokeWidth="2" strokeDasharray="8 6" />
+            fill="none" stroke={TG.CORAL} strokeWidth="2" strokeDasharray="8 6" />
         </svg>
       )}
       {/* 경성 음절 — 자동 통과 안내(그리기 불가) */}
@@ -1207,20 +1216,22 @@ export function DrawPad({ expectedTone, onDraw, disabled = false, resetKey = 0, 
 export function CountdownVisual({ n }) {
   return (
     <>
-      {/* 숫자 160 박스 (시안 y300.3 = 35.6%) — 글리프 120px, 코랄 그림자.
-          ★센터링은 바깥 래퍼가 담당: tg-count 키프레임이 transform을 덮어써 translateX(-50%)가 무시된다(반복 함정) */}
-      <div style={{ position: 'absolute', left: 0, right: 0, top: '35.6%', display: 'flex', justifyContent: 'center' }}>
+      {/* 숫자 160 박스 + 안내문을 **한 블록**으로 묶어 배치(시안 y300.3 = 35.6%) — 글리프 120px, 코랄 그림자.
+          ★숫자·안내문을 각각 %로 따로 앵커하면 둘 사이 간격이 화면 높이에 비례해 변한다(2026-08-31 사용자 지적)
+            → 블록만 %로 앉히고 내부 간격은 시안 고정값(안내문 top = 숫자박스 top + 154px = 박스 아래 -6px).
+          ★센터링은 래퍼 flex가 담당: tg-count 키프레임이 transform을 덮어써 translateX(-50%)가 무시된다(반복 함정) */}
+      <div style={{ position: 'absolute', left: 0, right: 0, top: '35.6%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
         <div key={n} style={{
           width: 160, height: 160, display: 'flex', alignItems: 'center', justifyContent: 'center',
           filter: 'drop-shadow(0px 14px 15px rgba(242,72,76,0.3))', animation: 'tg-count .85s ease forwards',
         }}>
           <span style={{ ...TYPE.numHero, fontSize: 120, color: '#fff', lineHeight: 'normal' }}>{n > 0 ? n : ''}</span>
         </div>
+        {/* 안내문 (시안 y454.3 − y300.3 = 154 → 박스 160 아래에서 -6px) — 15px Bold */}
+        <Reveal i={1} base={140} style={{ marginTop: -6 }}>
+          <span style={{ display: 'block', ...TYPE.btnSm, color: '#fff', textAlign: 'center' }}>성조를 찾아 탭하세요!</span>
+        </Reveal>
       </div>
-      {/* 안내문 (시안 y454.3 = 53.8%) — 15px Bold */}
-      <Reveal i={1} base={140} style={{ position: 'absolute', left: 0, right: 0, top: '53.8%' }}>
-        <span style={{ display: 'block', ...TYPE.btnSm, color: '#fff', textAlign: 'center' }}>성조를 찾아 탭하세요!</span>
-      </Reveal>
     </>
   );
 }

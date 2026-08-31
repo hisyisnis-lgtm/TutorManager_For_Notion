@@ -9,8 +9,8 @@
  * 매번 사람이 눈으로 찾는 대신 명령어 한 줄로 잡는다.
  *
  * 사용:
- *   node 02_devtools/design-audit.mjs              # 강사·학생앱 (게임 제외)
- *   node 02_devtools/design-audit.mjs --all        # 게임 포함
+ *   node 02_devtools/design-audit.mjs              # 전체 (게임 포함 — 2026-08-31부터 기본)
+ *   node 02_devtools/design-audit.mjs --no-game    # 게임 제외
  *   node 02_devtools/design-audit.mjs --rule=weight-500
  *   node 02_devtools/design-audit.mjs --quiet      # 요약만
  *
@@ -24,7 +24,10 @@ import path from 'node:path';
 
 const SRC = path.resolve(process.cwd(), 'pwa/src');
 const args = process.argv.slice(2);
-const INCLUDE_GAME = args.includes('--all');
+// 게임은 기본 포함(2026-08-31 — 그전엔 통째로 검사 밖이라 위반 전량이 게임에 쌓였다). --all은 구 호환 no-op.
+const INCLUDE_GAME = !args.includes('--no-game');
+// 게임 파일 판별 — 게임은 자체 토큰(tgTokens.js)·자체 스케일이라 본체 전용 규칙 일부를 다르게 적용한다.
+const isGameFile = (f) => /[\\/]game[\\/]/.test(f) || /ToneGamePage\.jsx$/.test(f);
 const QUIET = args.includes('--quiet');
 const ONLY = (args.find((a) => a.startsWith('--rule=')) || '').split('=')[1];
 
@@ -50,6 +53,16 @@ function suppressedInline(lines, idx, ruleId) {
 
 // ── 규칙 정의 ───────────────────────────────────────────────────────────────
 // severity: error = 고쳐야 함 / warn = 드리프트 / review = 사람이 판단
+// 색 리터럴 판별 — 본체(color-literal, error)와 게임(color-literal-game, warn)이 공유
+function testColorLiteral(line) {
+  if (/^\s*(\/\/|\*|\/\*)/.test(line)) return false;      // 주석
+  if (/rgba?\(/.test(line) && !/#[0-9a-fA-F]{3,8}\b/.test(line)) return false;
+  const m = line.match(/#[0-9a-fA-F]{6}\b|#[0-9a-fA-F]{3}\b/g);
+  if (!m) return false;
+  // 흑백·투명은 유틸 목적으로 허용 (그림자·오버레이 등)
+  const allowed = new Set(['#fff', '#ffffff', '#000', '#000000']);
+  return m.some((h) => !allowed.has(h.toLowerCase()));
+}
 const RULES = [
   {
     id: 'antd-deprecated',
@@ -103,25 +116,26 @@ const RULES = [
     severity: 'error',
     doc: '§13',
     why: '색은 constants/theme.js가 단일 출처. 리터럴은 토큰 변경 시 누락된다.',
-    // 토큰 정의 파일과 CSS는 리터럴이 있어야 정상
-    skipFile: (f) => /constants[\\/](theme|styles)\.js$/.test(f) || /\.css$/.test(f),
-    test: (line) => {
-      if (/^\s*(\/\/|\*|\/\*)/.test(line)) return false;      // 주석
-      if (/rgba?\(/.test(line) && !/#[0-9a-fA-F]{3,8}\b/.test(line)) return false;
-      const m = line.match(/#[0-9a-fA-F]{6}\b|#[0-9a-fA-F]{3}\b/g);
-      if (!m) return false;
-      // 흑백·투명은 유틸 목적으로 허용 (그림자·오버레이 등)
-      const allowed = new Set(['#fff', '#ffffff', '#000', '#000000']);
-      return m.some((h) => !allowed.has(h.toLowerCase()));
-    },
+    // 토큰 정의 파일과 CSS는 리터럴이 있어야 정상. 게임은 아래 color-literal-game(warn)이 담당.
+    skipFile: (f) => /constants[\\/](theme|styles)\.js$/.test(f) || /\.css$/.test(f) || isGameFile(f),
+    test: testColorLiteral,
+  },
+  {
+    id: 'color-literal-game',
+    severity: 'warn',
+    doc: 'game_design_tokens.md',
+    why: '게임 색 단일 출처는 tgTokens.js. 그라디언트 스톱·장식 틴트·데이터 정의는 규약상 리터럴 허용이라 warn — 토큰에 이미 있는 색의 재등장만 정리 대상(파일 건드릴 때 같이).',
+    // tgTokens.js가 게임의 토큰 정의 파일. _SfxLab/_ParticleLab은 DEV 전용 랩(프로덕션 미노출).
+    skipFile: (f) => !isGameFile(f) || /tgTokens\.js$/.test(f) || /_(SfxLab|ParticleLab)\.jsx$/.test(f),
+    test: testColorLiteral,
   },
   {
     id: 'weight-500',
     severity: 'warn',
     doc: '§3.3',
     why: 'KimjungchulGothic은 300/400/700만 있어 500은 시스템 폰트로 폴백 → 같은 줄에 서체가 갈린다. 400 또는 600으로.',
-    // 스케일이 인정한 예외
-    skipFile: (f) => /BottomNav\.jsx$/.test(f) || /MonthCalendar\.jsx$/.test(f),
+    // 스케일이 인정한 예외. 게임 폰트(Noto·Jua·Roboto)는 500이 있어 이 규칙 비적용.
+    skipFile: (f) => /BottomNav\.jsx$/.test(f) || /MonthCalendar\.jsx$/.test(f) || isGameFile(f),
     test: (line) => /\bfont-medium\b/.test(line) || /fontWeight:\s*500\b/.test(line),
   },
   {
@@ -141,6 +155,7 @@ const RULES = [
     severity: 'warn',
     doc: '§4',
     why: 'radius 스케일 밖 값. 4/6/8/10/12/16/20/980 중에서 고를 것.',
+    skipFile: isGameFile, // 게임은 자체 RADIUS 스케일(tgTokens: 4/8/12/16/20/24/28/999)
     test: (line) => {
       const m = [...line.matchAll(/borderRadius:\s*(\d+)/g)];
       if (!m.length) return false;
@@ -153,6 +168,7 @@ const RULES = [
     severity: 'warn',
     doc: '§12 · Better #3',
     why: '굵은 컬러 보더는 "AI티"로 명시 거절된 패턴. 깊이는 그림자로.',
+    skipFile: isGameFile, // 게임의 1.5px 라이트 보더(TG.BORDER)·2px 성조색 하이라이트는 시안 승인 패턴
     test: (line) => /border(Left|Right|Top|Bottom)?:\s*[`'"]\s*(1\.5|2|3)px solid/.test(line),
   },
   {
@@ -190,6 +206,7 @@ const RULES = [
     why: '아이콘 크기 토큰은 12/16/20/24/44.',
     // ⚠️ `size` prop은 antd에도 있다 — <Space size={8}>은 간격, <Avatar size={120}>은 지름.
     //    Phosphor 아이콘 컴포넌트(<XxxIcon>)에 붙은 size만 본다. 안 그러면 오탐이 쏟아진다.
+    skipFile: isGameFile, // 게임 아이콘(Solar)은 시안 실측 크기 사용 — 본체 스케일 비적용
     test: (line) => {
       const m = [...line.matchAll(/<[A-Z]\w*Icon\b[^>]*?\bsize=\{(\d+)\}/g)];
       if (!m.length) return false;

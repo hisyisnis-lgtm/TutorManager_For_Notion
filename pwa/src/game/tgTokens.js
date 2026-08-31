@@ -18,6 +18,11 @@ export const TG = {
   SUCCESS: '#1FA86A',     // 성공 텍스트
   SUCCESS_GLOW: '#36C98D',
   DANGER: '#F2484C',      // 시간초과·오답
+  // 주 CTA 키캡(2026-08-31 승격 — 파일마다 CTA_RED/RES_RED/BAR_FILL 등으로 재선언되던 값을 단일 출처로)
+  CTA: '#F96163',         // 주 CTA·활성 탭·게이지 채움 레드 (= HOME.TAB_RED)
+  CTA_EDGE: '#E64244',    // CTA 키캡 인너 엣지 (= HOME.CTA_EDGE)
+  KEY_EDGE: '#E4EDF5',    // 흰 키캡 버튼 인너 엣지·하드 파스텔 섀도 (= HOME.CARD_SHADOW)
+  STEEL: '#7E8A94',       // 쿨 그레이 — 보조 버튼 텍스트·취소 라벨(#8F9CA7·#637481 근접 통합)
   // 텍스트 (의미별 계층 — 비슷한 회색은 여기로 통합, 2026-07-18)
   INK: '#2B2730',       // 본문·제목
   INK_SOFT: '#4A4550',  // 살짝 옅은 본문
@@ -58,15 +63,15 @@ export const HOME = {
   PANEL: '#D2B17B',             // 벽 세로 패널 스트라이프 — 시안 #F7F3ED MULTIPLY×벽(#D9BA84) 평탄화 값(2026-07-28 색 수정)
   PANEL_LINE: '#905E3D',        // 하부 웨인스코팅 패널 아웃라인 — 시안 #E0D7D1 MULTIPLY×밴드(#A46F4A) 평탄화 값
   CARD: '#FFFFFF',              // 카드·탭바 배경(순백 — 2026-08-03 시안 개선안에서 웜 아이보리 #FFF9EE에서 변경)
-  CARD_SHADOW: '#E4EDF5',       // 하드 파스텔 섀도(블러 0 — drop 0/3 + inset 0/-2)
+  CARD_SHADOW: TG.KEY_EDGE,     // 하드 파스텔 섀도(블러 0 — drop 0/3 + inset 0/-2)
   INK: '#452C1C',               // 잉크 브라운(닉네임·수치)
   BROWN: '#634633',             // 아이콘·아바타 브라운
   ACCENT: '#D19053',            // 등급명 골드브라운
   TAB_INACTIVE: '#B98E7A',      // 탭 비활성(진탄 — 듀오톤 주색)
   TAB_INACTIVE_SOFT: '#D7B59E', // 탭 비활성(연탄 — 듀오톤 보조색)
-  TAB_RED: '#F96163',           // 활성 탭·CTA 레드
+  TAB_RED: TG.CTA,              // 활성 탭·CTA 레드
   TAB_RED_EDGE: '#C23F41',      // 활성 탭 키캡 인너 엣지
-  CTA_EDGE: '#E64244',          // CTA 키캡 인너 엣지
+  CTA_EDGE: TG.CTA_EDGE,        // CTA 키캡 인너 엣지
   GAUGE_TRACK: '#E2D7C1',       // HUD 게이지 트랙
   TAB_BORDER: '#E9E6DE',        // 탭바 상단 2px 구분선(시안 개선안 추가)
   STREAK_FLAME: '#FF6C28',      // 스트릭 불꽃(기본 티어) — 시안 개선안

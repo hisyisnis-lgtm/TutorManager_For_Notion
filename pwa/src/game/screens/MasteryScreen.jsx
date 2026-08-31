@@ -3,20 +3,19 @@
 //  등급은 프로필 모달, 레벨 게이지는 홈 HUD에 이미 있어 정보 손실 없음. 이 화면은 **틀린 단어 → 바로 복습**만 한다.
 //  내부 수치는 전부 시안 절대값(라인하이트 고정) — flex 중앙정렬에 맡기면 라인박스가 여백을 먹는다.
 import { VolumeLoud, Play } from '@solar-icons/react';
-import { TG, FONT_HANZI, FONT_PINYIN, FONT_NUM, TOUCH_OPT, TYPE, SPACE } from '../tgTokens.js';
+import { TG, HOME, FONT_HANZI, FONT_PINYIN, FONT_NUM, TOUCH_OPT, TYPE, SPACE } from '../tgTokens.js';
 import { NOTE_TARGET } from '../tgWordStats.js';
 import { speakWord } from '../tgTts.js';
 import { play as playSfx } from '../tgSfx.js';
-import { Reveal, TgTabBar, TAB_BAR_H, useStickyHeader } from './shared.jsx';
+import { Reveal, TgTabBar, TAB_BAR_H, useStickyHeader, KeycapCta } from './shared.jsx';
 
-// 시안 13 실측 — 토큰에 없는 원오프 색만 상수로
-const TITLE_INK = '#272622';    // 제목
-const PCT_INK = '#452C1C';      // 정답률 %
-const BAR_TRACK = '#E2D7C1';    // 정답률 트랙
-const BAR_FILL = '#F96163';     // 정답률 채움 = CTA 레드
-const CTA_EDGE = '#E64244';     // CTA 하단 인너 엣지
-const SPEAKER_EDGE = '#E6E0D6'; // 발음듣기 버튼 하단 인너 엣지
-const DIVIDER = '#E9E6DE';      // 스크롤 시 상단 고정 블록 구분선
+// 시안 13 실측 — 토큰에 있는 색은 참조, 원오프만 리터럴 (2026-08-31 토큰 통합)
+const TITLE_INK = '#272622';    // 제목 (원오프)
+const PCT_INK = HOME.INK;       // 정답률 %
+const BAR_TRACK = HOME.GAUGE_TRACK; // 정답률 트랙
+const BAR_FILL = TG.CTA;        // 정답률 채움 = CTA 레드
+const SPEAKER_EDGE = '#E6E0D6'; // 발음듣기 버튼 하단 인너 엣지 (원오프)
+const DIVIDER = HOME.TAB_BORDER; // 스크롤 시 상단 고정 블록 구분선
 
 // 오답 단어 한 줄 — 시안 13 실측(2026-08-10 갱신): 342×77 · r20 · 흰 카드 · shadow 0/4 b18 4%.
 //  내부 = [한자행 37] gap4 [진행행 16], padding 10/10/10/14, 컬럼 223 + 발음듣기 54.
@@ -64,14 +63,9 @@ function WrongWordRow({ word, left }) {
 // 주 CTA — 시안 13: 342×50 r20 레드 키캡(라벨 21 + 플레이 18). 오답이 없을 땐 같은 자리에 '문제 풀기'로 바뀐다.
 function PrimaryCta({ label, onClick }) {
   return (
-    <button onClick={() => { playSfx('button'); onClick(); }} className="tg-press" style={{
-      width: '100%', height: 50, borderRadius: 20, border: 'none', cursor: 'pointer', background: BAR_FILL,
-      boxShadow: `0px 10px 20px rgba(242,72,76,0.1), inset 0 -4px 0 ${CTA_EDGE}`, paddingBottom: 4,
-      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: SPACE.md, ...TOUCH_OPT,
-    }}>
-      <span style={{ ...TYPE.head, color: '#fff', whiteSpace: 'nowrap' }}>{label}</span>
-      <Play size={18} weight="Bold" color="#fff" />
-    </button>
+    <KeycapCta height={50} label={label} labelStyle={{ whiteSpace: 'nowrap' }} Icon={Play}
+      onClick={() => { playSfx('button'); onClick(); }}
+      style={{ boxShadow: `0px 10px 20px rgba(242,72,76,0.1), inset 0 -4px 0 ${TG.CTA_EDGE}` }} />
   );
 }
 
