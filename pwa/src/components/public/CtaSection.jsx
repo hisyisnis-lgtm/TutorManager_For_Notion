@@ -1,8 +1,10 @@
-import { Button, Typography } from 'antd';
+import {
+  Button } from '../shadcn/button';
 import FadeUp from '../FadeUp';
-import { TEXT_BODY, TEXT_SECONDARY } from '../../constants/theme.js';
+import { TEXT_BODY,
+  TEXT_SECONDARY,
+  TEXT_TERTIARY } from '../../constants/theme';
 
-const { Text } = Typography;
 
 /**
  * CtaSection — "무료 상담 신청하기" 하단 CTA 섹션
@@ -16,17 +18,17 @@ export default function CtaSection({ onCtaClick, className, sectionRef }) {
   return (
     <FadeUp>
       <section ref={sectionRef} style={{ padding: '36px 24px 32px' }}>
-        <Text strong style={{ fontSize: 16, color: TEXT_BODY, lineHeight: 1.65, display: 'block', marginBottom: 6, textAlign: 'center' }}>
+        <span style={{ fontWeight: 600, fontSize: 16, color: TEXT_BODY, lineHeight: 1.65, display: 'block', marginBottom: 6, textAlign: 'center' }}>
           현재 레벨과 목표에 따라<br />가장 적합한 방향을 함께 안내드립니다.
-        </Text>
-        <Text type="secondary" style={{ fontSize: 13, display: 'block', marginBottom: 24, textAlign: 'center' }}>
+        </span>
+        <span style={{ color: TEXT_TERTIARY, fontSize: 13, display: 'block', marginBottom: 24, textAlign: 'center' }}>
           편하게 상담 신청해 주세요 :)
-        </Text>
+        </span>
         <Button
-          type="primary" size="large" block
+          size="lg" block
           className={className}
           onClick={onCtaClick}
-          style={{ height: 48, borderRadius: 12, fontWeight: 700, fontSize: 15, marginBottom: 14 }}
+          style={{ marginBottom: 14 }}
         >
           무료 상담 신청하기
         </Button>

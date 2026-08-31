@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { Button, Input, Typography, Flex } from 'antd';
+import { Button } from './shadcn/button';
+import { Input } from './shadcn/input';
+import OtpInput from './ui/OtpInput.jsx';
 import { ShieldCheckIcon, ArrowLeftIcon, DeviceMobileIcon } from '@phosphor-icons/react';
 import {
   PRIMARY, PRIMARY_BG, TEXT_PRIMARY, TEXT_SECONDARY, TEXT_TERTIARY,
@@ -68,9 +70,8 @@ export default function StudentAuthGate({ token, disabled = false, children }) {
   }
 
   return (
-    <Flex
-      align="center" justify="center"
-      style={{ minHeight: '100dvh', background: BG_APP, padding: 'max(20px, env(safe-area-inset-top)) 20px max(20px, env(safe-area-inset-bottom))' }}
+    <div
+      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100dvh', background: BG_APP, padding: 'max(20px, env(safe-area-inset-top)) 20px max(20px, env(safe-area-inset-bottom))' }}
     >
       <div
         className="sa-gate-card"
@@ -80,7 +81,7 @@ export default function StudentAuthGate({ token, disabled = false, children }) {
           boxShadow: '0 12px 40px rgba(0,0,0,0.08)',
         }}
       >
-        <Flex vertical align="center" gap={14}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
           <div
             className="sa-gate-icon"
             style={{
@@ -93,17 +94,17 @@ export default function StudentAuthGate({ token, disabled = false, children }) {
               ? <DeviceMobileIcon size={24} weight="fill" color={PRIMARY} />
               : <ShieldCheckIcon size={24} weight="fill" color={PRIMARY} />}
           </div>
-          <Typography.Title level={4} style={{ margin: 0, color: TEXT_PRIMARY, textAlign: 'center', letterSpacing: '-0.01em' }}>
+          <h4 style={{ margin: 0, fontSize: 20, fontWeight: 600, lineHeight: 1.4, color: TEXT_PRIMARY, textAlign: 'center', letterSpacing: '-0.01em' }}>
             {phase === 'no_phone' ? '인증을 받을 수 없어요' : '본인 확인'}
-          </Typography.Title>
-          <Typography.Text style={{ color: TEXT_SECONDARY, textAlign: 'center', fontSize: 14, lineHeight: 1.65 }}>
+          </h4>
+          <span style={{ color: TEXT_SECONDARY, textAlign: 'center', fontSize: 14, lineHeight: 1.65 }}>
             {phase === 'sent'
               ? <>휴대폰으로 보낸 인증번호 6자리를<br />입력해 주세요.</>
               : phase === 'no_phone'
                 ? <>등록된 휴대폰 번호가 없어요.</>
                 : <>소중한 정보를 지키기 위해<br />새 기기에서는 한 번만 확인할게요.</>}
-          </Typography.Text>
-        </Flex>
+          </span>
+        </div>
 
         {/* 전화 미등록 — 막다른 길 방지 */}
         {phase === 'no_phone' && (
@@ -116,7 +117,7 @@ export default function StudentAuthGate({ token, disabled = false, children }) {
         )}
 
         {phase === 'sent' && (
-          <Flex vertical align="center" gap={6} style={{ marginTop: 22, marginBottom: 4 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, marginTop: 22, marginBottom: 4 }}>
             <span style={{
               display: 'inline-flex', alignItems: 'center', gap: 6,
               padding: '5px 12px', borderRadius: 999, background: PRIMARY_BG,
@@ -125,47 +126,44 @@ export default function StudentAuthGate({ token, disabled = false, children }) {
               <DeviceMobileIcon size={16} weight="fill" />
               {phoneTail ? `010 ···· ${phoneTail}` : '등록된 번호'}
             </span>
-            <Typography.Text style={{ color: TEXT_TERTIARY, fontSize: 12, textAlign: 'center' }}>
+            <span style={{ color: TEXT_TERTIARY, fontSize: 12, textAlign: 'center' }}>
               문자가 도착하기까지 1~2분 걸릴 수 있어요.
-            </Typography.Text>
-          </Flex>
+            </span>
+          </div>
         )}
 
         {/* 액션 영역 */}
         {phase !== 'no_phone' && (
-          <Flex vertical gap={14} style={{ marginTop: phase === 'sent' ? 14 : 24 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginTop: phase === 'sent' ? 14 : 24 }}>
             {phase === 'sent' && (
-              <Input.OTP
-                className="sa-otp"
+              <OtpInput
                 length={6}
-                size="large"
                 value={code}
-                formatter={(s) => s.replace(/\D/g, '')}
                 onChange={(val) => { setError(''); setCode(val); if (val.length === 6) submitCode(val); }}
                 autoFocus
               />
             )}
 
             {notice && !error && (
-              <Typography.Text style={{ color: STATUS_SUCCESS_DARK, fontSize: 13, textAlign: 'center', fontWeight: 600 }}>
+              <span style={{ color: STATUS_SUCCESS_DARK, fontSize: 13, textAlign: 'center', fontWeight: 600 }}>
                 ✓ {notice}
-              </Typography.Text>
+              </span>
             )}
 
             {error && (
-              <Typography.Text
+              <span
                 key={errNonce}
                 className="sa-gate-shake"
                 style={{ color: STATUS_ERROR_TEXT, fontSize: 13, textAlign: 'center', fontWeight: 600 }}
               >
                 {error}
-              </Typography.Text>
+              </span>
             )}
 
             {phase === 'idle' && (
               <Button
-                type="primary" size="large" block loading={busy} onClick={() => sendOtp(false)}
-                style={{ borderRadius: 14, height: 50, fontWeight: 600, fontSize: 16 }}
+                size="lg" block loading={busy} onClick={() => sendOtp(false)}
+                className="rounded-[14px] text-base"
               >
                 인증번호 받기
               </Button>
@@ -174,43 +172,45 @@ export default function StudentAuthGate({ token, disabled = false, children }) {
             {phase === 'sent' && (
               <>
                 <Button
-                  type="primary" size="large" block loading={busy}
+                  size="lg" block loading={busy}
                   disabled={code.length !== 6} onClick={() => submitCode()}
-                  style={{ borderRadius: 14, height: 50, fontWeight: 600, fontSize: 16 }}
+                  className="rounded-[14px] text-base"
                 >
                   확인
                 </Button>
-                <Flex align="center" justify="center" gap={4} style={{ marginTop: 2 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, marginTop: 2 }}>
                   <Button
-                    type="text" size="small"
+                    variant="ghost" size="sm"
                     onClick={() => { setPhase('idle'); setCode(''); setError(''); }}
-                    style={{ color: TEXT_TERTIARY, padding: '0 8px' }}
-                    icon={<ArrowLeftIcon size={16} />}
+                    style={{ color: TEXT_TERTIARY }}
+                    className="px-2"
                   >
+                    <ArrowLeftIcon size={16} />
                     처음으로
                   </Button>
                   <span style={{ color: BORDER_DEFAULT }}>·</span>
                   <Button
-                    type="text" size="small" disabled={resendIn > 0 || busy} onClick={() => sendOtp(true)}
-                    style={{ color: resendIn > 0 ? TEXT_TERTIARY : PRIMARY, fontWeight: 600, padding: '0 8px' }}
+                    variant="ghost" size="sm" disabled={resendIn > 0 || busy} onClick={() => sendOtp(true)}
+                    style={{ color: resendIn > 0 ? TEXT_TERTIARY : PRIMARY }}
+                    className="px-2"
                   >
                     {resendIn > 0 ? `다시 보내기 (${resendIn})` : '다시 보내기'}
                   </Button>
-                </Flex>
+                </div>
               </>
             )}
-          </Flex>
+          </div>
         )}
 
         {phase === 'no_phone' && (
           <Button
-            type="default" size="large" block onClick={() => { setPhase('idle'); setError(''); }}
-            style={{ borderRadius: 14, height: 48, fontWeight: 600, marginTop: 18 }}
+            variant="outline" size="lg" block onClick={() => { setPhase('idle'); setError(''); }}
+            className="mt-[18px] rounded-[14px]"
           >
             처음으로
           </Button>
         )}
       </div>
-    </Flex>
+    </div>
   );
 }

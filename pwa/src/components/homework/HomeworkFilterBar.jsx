@@ -1,10 +1,7 @@
-import {
-  Input,
-  Select } from 'antd';
-import { MagnifyingGlassIcon } from '@phosphor-icons/react';
+import SearchInput from '../ui/SearchInput.jsx';
+import SelectField from '../ui/SelectField.jsx';
 import { PRIMARY,
   TEXT_SECONDARY,
-  TEXT_TERTIARY,
   GRAY_300 } from '../../constants/theme.js';
 
 /**
@@ -58,13 +55,11 @@ export default function HomeworkFilterBar({
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       {/* 검색 + 검색 타입 토글 */}
       <div style={{ display: 'flex', gap: 6 }}>
-        <Input
-          prefix={<MagnifyingGlassIcon weight="fill" style={{ color: TEXT_TERTIARY }} />}
+        <SearchInput
           placeholder={searchPlaceholder}
           value={searchText}
           onChange={(e) => onSearchChange(e.target.value)}
-          allowClear
-          style={{ borderRadius: 12, height: 40, flex: 1 }}
+          className="flex-1"
         />
         {showSearchType && onSearchTypeChange && (
           <div style={{ display: 'flex', boxShadow: 'var(--shadow-border)', borderRadius: 10, overflow: 'hidden', flexShrink: 0 }}>
@@ -129,20 +124,18 @@ export default function HomeworkFilterBar({
       {/* 월 + 상태 필터 — Select 드롭다운 모드 */}
       {!pillMode && (
         <div style={{ display: 'flex', gap: 8 }}>
-          <Select
+          <SelectField
             value={filterMonth}
             onChange={onMonthChange}
             options={monthOptions}
-            style={{ flex: 1 }}
-            styles={{ popup: { root: { borderRadius: 12 } } }}
+            className="flex-1"
           />
           {!hideStatus && (
-            <Select
+            <SelectField
               value={filterStatus}
               onChange={onStatusChange}
               options={statusOptions}
-              style={{ flex: 1 }}
-              styles={{ popup: { root: { borderRadius: 12 } } }}
+              className="flex-1"
             />
           )}
         </div>

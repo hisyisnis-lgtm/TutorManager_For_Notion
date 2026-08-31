@@ -1,10 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Card, Button, Input } from 'antd';
+import { Button } from '../components/shadcn/button';
+import { Card, CardContent } from '../components/shadcn/card';
+import SearchInput from '../components/ui/SearchInput.jsx';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import ErrorMessage from '../components/ui/ErrorMessage.jsx';
 import EmptyState from '../components/ui/EmptyState.jsx';
+import LoadMoreButton from '../components/ui/LoadMoreButton.jsx';
 import MonthRangeFilter, { yearsOf, filterByMonthRange } from '../components/ui/MonthRangeFilter.jsx';
 import HomeworkSection from '../components/homework/HomeworkSection.jsx';
 import { fetchStudentHomework, parseHomework } from '../api/homework.js';
@@ -12,7 +15,7 @@ import { getPage } from '../api/notionClient.js';
 import { parseStudent } from '../api/students.js';
 import { ClipboardTextIcon, HourglassIcon, ChatTeardropTextIcon, CaretRightIcon, MagnifyingGlassIcon, NotePencilIcon, PaperclipIcon } from '@phosphor-icons/react';
 import { formatDateDot } from '../utils/dateUtils.js';
-import { ABOVE_BOTTOM_NAV } from '../constants/styles.js';
+import { ABOVE_BOTTOM_NAV, FAB_EXTRA_PB } from '../constants/styles.js';
 import {
   STATUS_ERROR_TEXT,
   STATUS_INFO,
@@ -22,11 +25,11 @@ import {
   TEXT_TERTIARY,
   TEXT_DISABLED,
   BORDER_NEUTRAL,
-  GRAY_100,
 } from '../constants/theme.js';
 
 /** 플로팅 '숙제 추가' 버튼(원형 56px) + 여백까지 비워둘 스크롤 하단 여백 */
-const FAB_CLEARANCE = 152;
+// 전역 .page-container pb-24(96px)에 **더해지는** FAB 몫 — 통째 152를 넣으면 이중 패딩(2026-08-31)
+const FAB_CLEARANCE = FAB_EXTRA_PB;
 /** 섹션당 처음 보여줄 개수 */
 const INITIAL = 3;
 /** '더 보기' 한 번에 늘어나는 개수 */
@@ -107,13 +110,10 @@ export default function StudentHomeworkPage() {
             나뉘어 있어 중복이었다(2026-08-26). */}
         {homeworkList.length > 0 && (
           <div style={{ marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <Input
-              prefix={<MagnifyingGlassIcon weight="fill" style={{ color: TEXT_TERTIARY }} />}
+            <SearchInput
               placeholder="숙제 이름 검색"
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
-              allowClear
-              style={{ borderRadius: 12, height: 40 }}
             />
             {years.length > 0 && (
               <MonthRangeFilter years={years} value={range} onChange={setRange} />
@@ -142,18 +142,7 @@ export default function StudentHomeworkPage() {
                 <HomeworkCard key={hw.id} hw={hw} onClick={() => navigate(`/homework/${hw.id}`)} />
               ))}
               {rest > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setLimits((l) => ({ ...l, [key]: l[key] + STEP }))}
-                  className="w-full"
-                  style={{
-                    height: 40, borderRadius: 12, background: GRAY_100, border: 'none',
-                    cursor: 'pointer', fontSize: 13, fontWeight: 600, color: TEXT_SECONDARY,
-                    WebkitTapHighlightColor: 'transparent',
-                  }}
-                >
-                  더 보기
-                </button>
+                <LoadMoreButton onClick={() => setLimits((l) => ({ ...l, [key]: l[key] + STEP }))} />
               )}
             </HomeworkSection>
           );
@@ -169,15 +158,10 @@ export default function StudentHomeworkPage() {
         }}
       >
         <Button
-          type="primary"
-          shape="circle"
+          size="icon"
           aria-label="숙제 추가"
           onClick={() => navigate(`/homework/new?studentId=${id}`)}
-          style={{
-            width: 56, height: 56,
-            boxShadow: 'var(--shadow-brand-button)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}
+          className="h-14 w-14 rounded-full shadow-[shadow:var(--shadow-brand-button)]"
         >
           <NotePencilIcon weight="fill" size={24} />
         </Button>
@@ -200,12 +184,8 @@ function HomeworkCard({ hw, onClick }) {
       className="tap-wrap"
       onClick={onClick}
     >
-    <Card
-      variant="borderless"
-      className="card-tap"
-      style={{ borderRadius: 16, cursor: 'pointer' }}
-      styles={{ body: { padding: '12px 16px' } }}
-    >
+    <Card className="card-tap rounded-2xl cursor-pointer">
+      <CardContent className="px-4 py-3">
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         {/* 텍스트 영역 */}
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -240,6 +220,7 @@ function HomeworkCard({ hw, onClick }) {
             초록 '피드백완료' 배지가 목록 전체에서 가장 강조돼 보이던 게 문제였다. */}
         <CaretRightIcon size={16} weight="bold" color={BORDER_NEUTRAL} style={{ flexShrink: 0 }} />
       </div>
+      </CardContent>
     </Card>
     </div>
   );

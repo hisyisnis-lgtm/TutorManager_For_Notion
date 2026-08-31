@@ -98,16 +98,37 @@
 
 ---
 
-## PWA 코드 규칙 (antd v6)
+## PWA 코드 규칙 (shadcn)
 
-antd ^6.3.3 기준 — deprecated API 절대 사용 금지:
+> **antd는 2026-08-29에 완전히 제거됐다**(브랜치 `feature/shadcn-migration`). 이 앱의 UI는 shadcn이 단일 출처다.
+> 배경·이식 함정 29건·자동 변환기 주의사항은 `shadcn_migration.md`.
 
-| ❌ 금지 | ✅ 올바른 사용 |
+**새 UI를 만들 때 처음부터 디자인하지 말 것.** `src/components/shadcn/`의 기존 컴포넌트를 먼저 조합하고,
+없는 요소만 이 프로젝트의 색·여백·variant 규칙에 맞춰 확장한다.
+
+| 항목 | 값 |
 |---|---|
-| `<Card bordered={false}>` | `<Card variant="borderless">` |
-| `<Space direction="vertical" size={N}>` | `<Flex vertical gap={N}>` |
-| `<Alert message={x}>` | `<Alert title={x}>` (v6에서 개명) |
-| `<Modal destroyOnClose>` | `<Modal destroyOnHidden>` |
+| 프리미티브 | `src/components/shadcn/` (소문자 파일명, 공식 소스 기반) |
+| 앱 컴포넌트 | `src/components/ui/` (기존 유지 — 내부만 shadcn으로 교체) |
+| 경로 alias | `@/` → `src/` (vite.config.js + jsconfig.json) |
+| 클래스 병합 | `cn()` from `@/lib/utils` (clsx + tailwind-merge) |
+| 아이콘 | **Phosphor** (`XxxIcon` + weight). lucide 쓰지 말 것 — 미설치이고 §19 규범 위반 |
+| 색 토큰 | `index.css` `:root`의 HSL 변수 ← `constants/theme.js`가 단일 출처 |
+| CLI | `npx shadcn@latest add <name>` — ⚠️ `shadcn-cli`는 **가짜 패키지** |
+| Tailwind | v3 유지. `tailwind-merge`는 **v2.6.0 고정**(v3은 Tailwind v4 전용) |
+
+**공식 소스에서 의도적으로 바꾼 것 — 되돌리지 말 것:**
+
+| 상류 기본값 | 우리 값 | 이유 |
+|---|---|---|
+| 웨이트 500 유틸 | `font-semibold`(600) | KimjungchulGothic에 500이 없어 시스템 폰트로 폴백 |
+| `ring-2 ring-offset-2` | **링 없음**, 보더 색 변화로 포커스 표시 | "보더 바깥에 링이 또 생겨 선이 두 겹" |
+| `transition-colors` | 전환 목록에 **`scale` 포함** | 전역 press scale을 특이도로 덮어써 누름 피드백이 죽는다 |
+| `rounded-md` | `rounded-lg` | 기본 radius 12 |
+| 버튼 `h-10` | `h-11`(44px) | 터치 타겟 WCAG 2.1 AA |
+| 카드 `border`+`shadow-sm` | `shadow-[var(--shadow-border)]` | 3겹 투명 레이어로 경계를 낸다(§6.4) |
+
+**상류에 없어 추가한 것**: Button의 `destructiveOutline` variant · `block` variant · `loading` prop.
 
 색상 기준: Primary `#7f0005` / 보조텍스트 `#595959` / 아이콘 `#767676`
 색·크기·여백 값은 **하드코딩 금지** — `constants/theme.js` · `constants/styles.js`에서 import.
@@ -162,7 +183,7 @@ node 02_devtools/design-audit.mjs
 - 아이콘은 `@phosphor-icons/react`의 `XxxIcon` + `weight="fill"`.
 
 ### 3. 레이아웃 함정 점검 (화면 밖 넘침·가림 방지)
-- **전역 `BottomNav`는 `position: fixed; bottom: 0; zIndex: 50; 높이 ≈ 60px + safe-area`로 모든 라우트에 깔린다.** 페이지에 자체 하단 고정 요소(컨트롤 바·CTA)를 두면 BottomNav에 가려진다 → `bottom: calc(60px + env(safe-area-inset-bottom))` 이상으로 띄우고 `zIndex`는 50 미만.
+- **전역 `BottomNav`는 플로팅 캡슐(2026-08-31~)로 `position: fixed; zIndex: 50; 점유 높이 ≈ 66px + safe-area`(하단 여백 10 + 캡슐 56)로 모든 라우트에 깔린다.** 페이지에 자체 하단 고정 요소(컨트롤 바·CTA·FAB)를 두면 가려진다 → `bottom`은 **`constants/styles.js`의 `ABOVE_BOTTOM_NAV`**(= 74px + safe-area)를 쓰고 `zIndex`는 50 미만. 숫자를 하드코딩하지 말 것 — 탭바 형태가 바뀌면 상수만 갱신된다.
 - 스크롤 콘텐츠 하단에 `paddingBottom`을 충분히 줘서 BottomNav·자체 고정요소에 마지막 내용이 가리지 않게.
 - 가로 overflow·고정폭으로 인한 화면 밖 넘침 / `env(safe-area-inset-*)` 대응 확인.
 

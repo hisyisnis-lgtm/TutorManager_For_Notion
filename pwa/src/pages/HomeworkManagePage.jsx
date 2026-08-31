@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Input } from 'antd';
+import SearchInput from '../components/ui/SearchInput.jsx';
 import { useCachedResource } from '../hooks/useCachedResource.js';
-import { MagnifyingGlassIcon, UsersThreeIcon, CaretDownIcon, ChatCircleDotsIcon, WarningCircleIcon, MinusCircleIcon } from '@phosphor-icons/react';
-import Card from 'antd/es/card/Card';
+import { UsersThreeIcon, CaretDownIcon, ChatCircleDotsIcon, WarningCircleIcon, MinusCircleIcon } from '@phosphor-icons/react';
+import { Card, CardContent } from '../components/shadcn/card';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import Badge from '../components/ui/Badge.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
@@ -122,14 +122,10 @@ export default function HomeworkManagePage() {
       <PageHeader title="숙제 관리" back />
 
       <div className="px-4 pt-3 pb-2">
-        <Input
-          size="large"
+        <SearchInput
           placeholder="이름으로 검색"
-          prefix={<MagnifyingGlassIcon weight="fill" style={{ color: TEXT_TERTIARY }} />}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          style={{ borderRadius: 12 }}
-          allowClear
         />
       </div>
 
@@ -145,7 +141,8 @@ export default function HomeworkManagePage() {
               description={searching ? undefined : '학생 관리에서 학생을 추가하세요.'}
             />
           ) : (
-            <div className="px-4 pb-24" style={{ paddingTop: 20 }}>
+            // 하단 여유는 전역 .page-container pb-24가 담당
+            <div className="px-4" style={{ paddingTop: 20 }}>
               {groups.map(({ key, Icon, color, alwaysOpen, items }) => {
                 if (!items.length) return null;   // 피드백 대기 0건이면 섹션 자체를 안 그린다
                 // 검색 중에는 전부 펼친다 — 접힌 섹션에 결과가 숨으면 안 된다.
@@ -215,12 +212,8 @@ function HomeworkStudentCard({ student, count }) {
         to={`/students/${student.id}/homework`}
         className="block tap-wrap"
       >
-        <Card
-          variant="borderless"
-          className="card-tap"
-          style={{ borderRadius: 16 }}
-          styles={{ body: { padding: '16px' } }}
-        >
+        <Card className="card-tap rounded-2xl">
+          <CardContent className="p-4">
           <div className="flex items-start justify-between mb-2">
             <span className="text-base font-bold text-gray-900">{student.name}</span>
             {showStatus && <Badge label={stripEmoji(student.status)} bg={bg} text={text} />}
@@ -248,6 +241,7 @@ function HomeworkStudentCard({ student, count }) {
               </div>
             )}
           </div>
+          </CardContent>
         </Card>
       </Link>
     </li>

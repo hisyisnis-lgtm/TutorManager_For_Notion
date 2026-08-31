@@ -1,7 +1,8 @@
 import {
   useState } from 'react';
+import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
-import { App } from 'antd';
+
 import { CheckIcon } from '@phosphor-icons/react';
 import { createLessonLog } from '../../api/lessonLogs.js';
 import { invalidateCache } from '../../hooks/useCachedResource.js';
@@ -14,9 +15,8 @@ import { PRIMARY,
   GRAY_100,
   TEXT_INACTIVE } from '../../constants/theme.js';
 
-export default function PendingClassCard({ cls, studentName, hwDone, onHwClick }) {
+export default function PendingClassCard({ cls, studentName, hwDone }) {
   const navigate = useNavigate();
-  const { message } = App.useApp();
   const [creatingLog, setCreatingLog] = useState(false);
 
   const logId = cls.lessonLogIds?.[0];
@@ -29,10 +29,11 @@ export default function PendingClassCard({ cls, studentName, hwDone, onHwClick }
 
   const handleHwClick = () => {
     if (hwDone) return;
-    onHwClick(cls.id);
+    // 완료 표시는 여기서 하지 않는다 — 클릭만 하고 저장 없이 나와도 '완료'로 남던 버그(2026-08-30).
+    // fromClassId를 넘기면 HomeworkFormPage가 **저장 성공 시** markPendingHwDone으로 기록한다.
     const hwLink = cls.studentIds.length === 1
-      ? `/homework/new?studentId=${cls.studentIds[0]}`
-      : '/homework/new';
+      ? `/homework/new?studentId=${cls.studentIds[0]}&fromClassId=${cls.id}`
+      : `/homework/new?fromClassId=${cls.id}`;
     navigate(hwLink);
   };
 
@@ -55,7 +56,7 @@ export default function PendingClassCard({ cls, studentName, hwDone, onHwClick }
       invalidateCache('lessonLogs');
       navigate(`/logs/${created.id}/edit`);
     } catch (e) {
-      message.error(`일지 생성 실패: ${e.message}`);
+      toast.error(`일지 생성 실패: ${e.message}`);
       setCreatingLog(false);
     }
   };

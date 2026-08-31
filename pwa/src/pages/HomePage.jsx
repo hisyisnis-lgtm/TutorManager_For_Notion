@@ -13,7 +13,7 @@ import { BellIcon,
   NotebookIcon } from '@phosphor-icons/react';
 import { Link,
   useNavigate } from 'react-router-dom';
-import { Card } from 'antd';
+import { Card, CardContent } from '../components/shadcn/card';
 import useEmblaCarousel from 'embla-carousel-react';
 import { useData } from '../context/DataContext.jsx';
 import { queryPage,
@@ -137,7 +137,7 @@ export default function HomePage() {
     }
   });
 
-  const { state: pendingState, setHwDone } = usePendingClassState();
+  const { state: pendingState } = usePendingClassState();
 
   // 결제 안내가 필요한 학생 찾기.
   //
@@ -330,16 +330,29 @@ export default function HomePage() {
     { label: '수업 일지', Icon: NotebookIcon, path: '/logs' },
   ];
 
+  // 인사 위 오늘 날짜 한 줄 — "오늘 수업 3개"가 어느 날의 이야기인지 화면 안에서 닫히게
+  const todayLabel = new Date().toLocaleDateString('ko-KR', {
+    timeZone: KST, month: 'long', day: 'numeric', weekday: 'long',
+  });
+  // 시간대별 중국어 인사 — 브랜드(중국어)가 하루의 인사를 건넨다.
+  // 실사용 표현만 쓴다(하늘쌤 규칙): 早上好(아침)·你好(낮)·晚上好(저녁).
+  const kstHour = Number(new Date().toLocaleString('en-US', { timeZone: KST, hour: 'numeric', hour12: false }));
+  const cnGreeting = kstHour >= 5 && kstHour < 11 ? '早上好' : kstHour >= 11 && kstHour < 18 ? '你好' : '晚上好';
+  const HANZI_FONT = '"Noto Sans SC", "PingFang SC", "Microsoft YaHei", "Heiti SC", sans-serif';
+
   return (
     <PullToRefresh onRefresh={handleRefresh}>
       {/* 헤더 */}
       <div className="px-4 pt-8 pb-2 flex items-start justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">
-          안녕하세요<br />
-          {instructorName
-            ? <><span className="text-brand-600">{instructorName}</span> 강사님</>
-            : <span className="text-brand-600">강사님</span>}
-        </h1>
+        <div>
+          <p className="text-[13px] mb-1.5 tabular-nums" style={{ color: TEXT_TERTIARY }}>
+            {todayLabel}
+          </p>
+          <h1 className="text-2xl font-bold tracking-tight break-keep" style={{ color: TEXT_PRIMARY }}>
+            <span className="text-brand-600" style={{ fontFamily: HANZI_FONT }}>{cnGreeting}</span><br />
+            {instructorName ? `${instructorName} 강사님` : '강사님'}
+          </h1>
+        </div>
         <div className="flex items-center gap-0.5">
         {/* 알림 버튼 */}
         <button
@@ -396,18 +409,19 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* 빠른 실행 */}
-      <div
-        className="px-4 pt-4 pb-1 grid grid-cols-2 gap-2"
-        style={{ animation: 'fade-in-up 400ms cubic-bezier(0.2, 0, 0, 1) both', animationDelay: '0ms' }}
-      >
-        {QUICK_ACTIONS.map(({ label, Icon, path }) => (
+      {/* 빠른 실행 — 타일이 40ms 간격으로 순서대로 떠오르는 캐스케이드 진입 */}
+      <div className="px-4 pt-4 pb-1 grid grid-cols-2 gap-2">
+        {QUICK_ACTIONS.map(({ label, Icon, path }, i) => (
           <button
             key={path}
             type="button"
             onClick={() => navigate(path)}
             className="press flex flex-col items-center gap-1.5 py-4 rounded-2xl bg-white active:bg-gray-50 transition-[background-color] duration-150 ease-out"
-            style={{ boxShadow: 'var(--shadow-border)' }}
+            style={{
+              boxShadow: 'var(--shadow-border)',
+              animation: 'fade-in-up 400ms var(--ease-out) both',
+              animationDelay: `${i * 40}ms`,
+            }}
           >
             <Icon size={24} weight="fill" color={PRIMARY} />
             <span className="text-sm font-semibold text-gray-700">{label}</span>
@@ -420,11 +434,8 @@ export default function HomePage() {
         className="px-4 pt-3"
         style={{ animation: 'fade-in-up 400ms cubic-bezier(0.2, 0, 0, 1) both', animationDelay: '80ms' }}
       >
-        <Card
-          variant="borderless"
-          style={{ borderRadius: 16, boxShadow: 'var(--shadow-border)' }}
-          styles={{ body: { padding: '14px 16px' } }}
-        >
+        <Card className="rounded-2xl">
+          <CardContent>
           <div className="flex items-center justify-between">
             <span className="text-sm font-semibold text-gray-800">오늘 수업</span>
             {todayLoading ? (
@@ -477,6 +488,7 @@ export default function HomePage() {
               })}
             </ul>
           )}
+          </CardContent>
         </Card>
       </div>
 
@@ -493,11 +505,11 @@ export default function HomePage() {
             style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
           >
             <Card
-              variant="borderless"
-              style={{ borderRadius: 16, backgroundColor: PRIMARY, boxShadow: 'var(--shadow-brand-card)' }}
-              /* 오른쪽 캐럿은 시각 무게가 가벼워 좌우 패딩이 같으면 더 떠 보인다 → 아이콘 쪽만 2px 덜 */
-              styles={{ body: { padding: '14px 14px 14px 16px' } }}
+              className="rounded-2xl shadow-[shadow:var(--shadow-brand-card)]"
+              style={{ backgroundColor: PRIMARY }}
             >
+              {/* 오른쪽 캐럿은 시각 무게가 가벼워 좌우 패딩이 같으면 더 떠 보인다 → 아이콘 쪽만 2px 덜 */}
+              <CardContent className="py-3.5 pl-4 pr-3.5">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
                   <CalendarCheckIcon size={24} weight="fill" color="#ffffff" />
@@ -512,6 +524,7 @@ export default function HomePage() {
                 </div>
                 <CaretRightIcon size={20} weight="bold" color="rgba(255,255,255,0.8)" />
               </div>
+              </CardContent>
             </Card>
           </button>
         </div>
@@ -528,10 +541,10 @@ export default function HomePage() {
             className="block"
           >
             <Card
-              variant="borderless"
-              style={{ borderRadius: 16, backgroundColor: STATUS_ERROR_BG, boxShadow: 'var(--shadow-danger-border)' }}
-              styles={{ body: { padding: '14px 16px' } }}
+              className="rounded-2xl shadow-[shadow:var(--shadow-danger-border)]"
+              style={{ backgroundColor: STATUS_ERROR_BG }}
             >
+              <CardContent>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span aria-hidden="true" className="text-lg">📩</span>
@@ -541,6 +554,7 @@ export default function HomePage() {
                 </div>
                 <span className="text-xs text-gray-400">확인하기 ›</span>
               </div>
+              </CardContent>
             </Card>
           </Link>
         </div>
@@ -554,11 +568,11 @@ export default function HomePage() {
           style={{ animation: 'fade-in-up 400ms cubic-bezier(0.2, 0, 0, 1) both', animationDelay: '100ms' }}
         >
           <Card
-            variant="borderless"
-            style={{ borderRadius: 16, backgroundColor: STATUS_WARNING_BG, boxShadow: 'var(--shadow-warning-border)' }}
-            /* 바로 위 '내일 수업 준비'와 같은 뼈대 — 캐럿 쪽만 2px 덜 준다 */
-            styles={{ body: { padding: '14px 14px 14px 16px' } }}
+            className="rounded-2xl shadow-[shadow:var(--shadow-warning-border)]"
+            style={{ backgroundColor: STATUS_WARNING_BG }}
           >
+            {/* 바로 위 '내일 수업 준비'와 같은 뼈대 — 캐럿 쪽만 2px 덜 준다 */}
+            <CardContent className="py-3.5 pl-4 pr-3.5">
             <button
               type="button"
               onClick={() => setLowSessionOpen((v) => !v)}
@@ -622,6 +636,7 @@ export default function HomePage() {
                 </div>
               </div>
             </div>
+            </CardContent>
           </Card>
         </div>
       )}
@@ -647,7 +662,6 @@ export default function HomePage() {
                   cls={cls}
                   studentName={names}
                   hwDone={!!s.hwDone}
-                  onHwClick={setHwDone}
                 />
               );
             })}

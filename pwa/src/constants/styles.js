@@ -37,7 +37,17 @@ export const BADGE_MEDIUM = {
  * CLAUDE.md의 "60px"은 어림값이라 그대로 쓰면 2px 겹친다(2026-08-26 실측으로 확인).
  * 이 값을 쓰는 요소의 zIndex는 반드시 50 미만으로 둘 것.
  */
-export const ABOVE_BOTTOM_NAV = 'calc(62px + env(safe-area-inset-bottom))';
+// 2026-08-31 플로팅 캡슐 탭바로 리디자인 — 점유 높이 = 하단 여백 10 + 캡슐 56 = 66px(+safe).
+// 그 위 8px 숨쉴 틈을 더해 74. (이전 붙은 바 시절 실측값 62의 산식은 캡슐과 함께 폐기)
+export const ABOVE_BOTTOM_NAV = 'calc(74px + env(safe-area-inset-bottom))';
+
+/**
+ * FAB(원형 56px, 하단 우측 고정)가 목록 마지막 내용을 가리지 않게 하는 **페이지 추가** 하단 패딩.
+ * 하단탭 여유 96px은 전역 `.page-container`(index.css `pb-24`)가 이미 깔아준다 — 이 값을 더하면
+ * 총 ≈152px. 예전엔 페이지마다 152를 통째로 넣어 전역 96과 겹쳐 스크롤 끝에 ~250px 빈공간이
+ * 생겼다(2026-08-31 검수). FAB 없는 페이지는 아무것도 더하지 않는다(전역 96이면 충분).
+ */
+export const FAB_EXTRA_PB = 56;
 
 /**
  * 페이지 안에서 PageHeader 바로 아래에 sticky로 붙이는 요소(탭 바 등)의 top 값.

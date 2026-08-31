@@ -4,9 +4,7 @@
 // 학생 조회 코드(fetchStudentByToken)는 __GAME_APP__ 빌드플래그로 번들에서 제거된다(ToneGamePage 참고).
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { ConfigProvider, App as AntApp } from 'antd';
 import { MemoryRouter } from 'react-router-dom';
-import { antdTheme } from './constants/theme.js';
 import ToneGamePage from './pages/ToneGamePage.jsx';
 import ErrorBoundary from './components/ui/ErrorBoundary.jsx';
 import { installErrorReporter } from './utils/errorReporter.js';
@@ -25,13 +23,9 @@ installErrorReporter();
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <ErrorBoundary>
-      <ConfigProvider theme={antdTheme}>
-        <AntApp>
-          <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-            <ToneGamePage />
-          </MemoryRouter>
-        </AntApp>
-      </ConfigProvider>
+      <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <ToneGamePage />
+      </MemoryRouter>
     </ErrorBoundary>
   </React.StrictMode>
 );

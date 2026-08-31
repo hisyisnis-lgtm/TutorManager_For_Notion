@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Alert, Button, Input, Typography } from 'antd';
+import { WarningCircleIcon } from '@phosphor-icons/react';
+import { Alert, AlertDescription } from '../components/shadcn/alert';
+import { Button } from '../components/shadcn/button';
+import { Textarea } from '../components/shadcn/textarea';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import SubmitButton from '../components/ui/SubmitButton.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
@@ -9,9 +12,7 @@ import { invalidateCache } from '../hooks/useCachedResource.js';
 import ConfirmDialog from '../components/ui/ConfirmDialog.jsx';
 import { parseLessonLog, updateLessonLog, ENGAGEMENT_OPTIONS } from '../api/lessonLogs.js';
 import { useData } from '../context/DataContext.jsx';
-import { TEXT_SECONDARY } from '../constants/theme.js';
-
-const { Text } = Typography;
+import { TEXT_SECONDARY, TEXT_TERTIARY } from '../constants/theme.js';
 
 const LABEL_STYLE = { fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6, fontWeight: 600 };
 
@@ -104,48 +105,48 @@ export default function LessonLogFormPage() {
 
       <form onSubmit={handleSubmit} className="px-4 pt-4 pb-8 space-y-5">
         {studentNames && (
-          <Text type="secondary" style={{ fontSize: 14 }}>학생: {studentNames}</Text>
+          <span style={{ fontSize: 14, color: TEXT_TERTIARY }}>학생: {studentNames}</span>
         )}
 
         {error && (
-          <Alert type="error" title={error} showIcon style={{ borderRadius: 12 }} />
+          <Alert variant="destructive">
+            <WarningCircleIcon size={16} weight="fill" aria-hidden />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
         )}
 
         <div>
-          <Text strong style={LABEL_STYLE}>오늘 내용</Text>
-          <Input.TextArea
+          <span style={LABEL_STYLE}>오늘 내용</span>
+          <Textarea
             value={form.content}
             onChange={set('content')}
             rows={4}
             placeholder="이번 수업에서 다룬 내용을 입력하세요"
-            style={{ borderRadius: 12 }}
           />
         </div>
 
         <div>
-          <Text strong style={LABEL_STYLE}>숙제</Text>
-          <Input.TextArea
+          <span style={LABEL_STYLE}>숙제</span>
+          <Textarea
             value={form.homework}
             onChange={set('homework')}
             rows={3}
             placeholder="내준 숙제를 입력하세요"
-            style={{ borderRadius: 12 }}
           />
         </div>
 
         <div>
-          <Text strong style={LABEL_STYLE}>다음 수업 준비</Text>
-          <Input.TextArea
+          <span style={LABEL_STYLE}>다음 수업 준비</span>
+          <Textarea
             value={form.nextPrepare}
             onChange={set('nextPrepare')}
             rows={3}
             placeholder="다음 수업 계획을 입력하세요"
-            style={{ borderRadius: 12 }}
           />
         </div>
 
         <div>
-          <Text strong style={LABEL_STYLE}>학생 참여도</Text>
+          <span style={LABEL_STYLE}>학생 참여도</span>
           <div className="grid grid-cols-3 gap-2">
             <button
               type="button"
@@ -174,13 +175,12 @@ export default function LessonLogFormPage() {
         </div>
 
         <div>
-          <Text strong style={LABEL_STYLE}>메모 (특이사항)</Text>
-          <Input.TextArea
+          <span style={LABEL_STYLE}>메모 (특이사항)</span>
+          <Textarea
             value={form.memo}
             onChange={set('memo')}
             rows={2}
             placeholder="특이사항이 있으면 입력하세요"
-            style={{ borderRadius: 12 }}
           />
         </div>
 
@@ -189,9 +189,10 @@ export default function LessonLogFormPage() {
         </SubmitButton>
 
         <Button
-          danger block
+          variant="destructiveOutline"
+          block
           onClick={() => setShowDeleteConfirm(true)}
-          style={{ borderRadius: 12, height: 44, marginTop: 4 }}
+          className="mt-1"
         >
           수업 일지 삭제
         </Button>

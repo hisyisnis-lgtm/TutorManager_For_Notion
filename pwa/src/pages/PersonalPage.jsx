@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { toast } from 'sonner';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { App, Card, Button } from 'antd';
-import { HouseIcon, BookOpenIcon, BellIcon, GearSixIcon, ArchiveIcon, WarningCircleIcon } from '@phosphor-icons/react';
+import { Button } from '../components/shadcn/button';
+import { Card, CardContent } from '../components/shadcn/card';
+import { HouseIcon, BookOpenIcon, BellIcon, GearSixIcon, ArchiveIcon, UserIcon, WarningCircleIcon } from '@phosphor-icons/react';
 import { usePullToRefresh, PullIndicator } from '../hooks/usePullToRefresh.jsx';
 import { peekCache, writeCacheValue, trackRevalidation } from '../hooks/useCachedResource.js';
 import { fetchStudentByToken } from '../api/bookingApi.js';
@@ -13,6 +15,7 @@ import { PANDA_FEED_KEY } from '../components/ui/PandaWidget.jsx';
 import InstallBanner from '../components/ui/InstallBanner.jsx';
 import { useInstallPrompt } from '../hooks/useInstallPrompt.js';
 import OnboardingCarousel, { ONBOARDING_KEY } from '../components/ui/OnboardingCarousel.jsx';
+import PageHeader from '../components/layout/PageHeader.jsx';
 import CoachMarkOverlay from '../components/ui/CoachMarkOverlay.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import { useTabTip, resetAllTabTips } from '../hooks/useTabTip.js';
@@ -20,9 +23,11 @@ import HomeTab from './personal/HomeTab.jsx';
 import MyClassesTab from './personal/MyClassesTab.jsx';
 import ArchiveTab from './personal/ArchiveTab.jsx';
 import NoticeTab from './personal/NoticeTab.jsx';
+import HanulTab from './personal/HanulTab.jsx';
+import MyTab from './personal/MyTab.jsx';
 import {
   PRIMARY,
-  TEXT_PRIMARY, TEXT_SECONDARY, TEXT_INACTIVE, TEXT_TERTIARY,
+  TEXT_PRIMARY, TEXT_INACTIVE, TEXT_TERTIARY,
   BG_APP, BORDER_SUBTLE,
   STATUS_ERROR_TEXT,
 } from '../constants/theme.js';
@@ -32,16 +37,16 @@ const SAVED_TOKEN_KEY = 'personal_student_token';
 // ===== 메인 페이지 =====
 export default function PersonalPage() {
   const navigate = useNavigate();
-  // 정적 message는 테마 컨텍스트를 못 받아 콘솔 경고 + 스타일 불일치 — App.useApp() 사용
-  const { message } = App.useApp();
   const { studentToken } = useParams();
   const routerLocation = useLocation();
 
-  const [student, setStudent] = useState(null);
+  // 캐시 우선 — 숙제 상세 등에 갔다 돌아올 때마다(재마운트) 전체 화면 스피너가 걸리던 것
+  // (2026-08-31 지적). 수업·공지와 같은 어법: 캐시 즉시 표시 + 뒤에서 최신화.
+  const [student, setStudent] = useState(() => peekCache(`student:info:${studentToken}`) ?? null);
   const [studentError, setStudentError] = useState(null);
   const [tab, setTab] = useState(() => {
     const t = routerLocation.state?.tab;
-    return ['홈', '내 수업', '보관함', '공지'].includes(t) ? t : '홈';
+    return ['홈', '내 수업', '보관함', '공지', '하늘하늘', 'MY'].includes(t) ? t : '홈';
   });
   const [showOnboarding, setShowOnboarding] = useState(() => !localStorage.getItem(ONBOARDING_KEY));
 
@@ -219,12 +224,12 @@ export default function PersonalPage() {
 
   const handleInstallAction = async () => {
     if (install.isInstalled) {
-      message.success('이미 홈 화면에 추가되어 있어요!');
+      toast.success('이미 홈 화면에 추가되어 있어요!');
       return;
     }
     if (install.canPrompt) {
       const accepted = await install.promptInstall();
-      if (accepted) message.success('홈 화면에 추가되었어요!');
+      if (accepted) toast.success('홈 화면에 추가되었어요!');
       return;
     }
     setShowIOSGuide(true);
@@ -232,8 +237,9 @@ export default function PersonalPage() {
 
   const loadStudent = useCallback(async () => {
     try {
-      const data = await fetchStudentByToken(studentToken);
+      const data = await trackRevalidation(fetchStudentByToken(studentToken));
       localStorage.setItem(SAVED_TOKEN_KEY, studentToken);
+      writeCacheValue(`student:info:${studentToken}`, data);
       setStudent(data);
     } catch (e) {
       localStorage.removeItem(SAVED_TOKEN_KEY);
@@ -259,19 +265,20 @@ export default function PersonalPage() {
   if (studentError) {
     return (
       <div className="min-h-dvh bg-gray-50 flex flex-col items-center justify-center px-4">
-        <Card variant="borderless" style={{ borderRadius: 12, maxWidth: 360, width: '100%', textAlign: 'center', boxShadow: 'var(--shadow-card)' }}>
+        <Card className="w-full max-w-[360px] text-center shadow-[shadow:var(--shadow-card)]">
+          <CardContent className="p-6">
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
             <WarningCircleIcon size={44} weight="fill" color={STATUS_ERROR_TEXT} />
           </div>
           <p style={{ fontSize: 14, color: STATUS_ERROR_TEXT, margin: 0 }}>{studentError}</p>
           <Button
-            type="primary"
             block
             onClick={() => navigate('/personal')}
-            style={{ borderRadius: 12, height: 44, fontWeight: 600, marginTop: 16 }}
+            className="mt-4"
           >
             다시 입력
           </Button>
+          </CardContent>
         </Card>
       </div>
     );
@@ -285,107 +292,150 @@ export default function PersonalPage() {
     );
   }
 
+  // 오늘 날짜 한 줄 — 강사앱 홈 인사 섹션과 같은 어법(2026-08-31)
+  const todayLabel = new Date().toLocaleDateString('ko-KR', {
+    timeZone: 'Asia/Seoul', month: 'long', day: 'numeric', weekday: 'long',
+  });
+  // 시간대별 중국어 인사 — 강사앱 홈과 동일(사용자 지시로 두 앱 통일, 2026-08-31).
+  // 실사용 표현만: 早上好(아침)·你好(낮)·晚上好(저녁).
+  const kstHour = Number(new Date().toLocaleString('en-US', { timeZone: 'Asia/Seoul', hour: 'numeric', hour12: false }));
+  const cnGreeting = kstHour >= 5 && kstHour < 11 ? '早上好' : kstHour >= 11 && kstHour < 18 ? '你好' : '晚上好';
+  const HANZI_FONT = '"Noto Sans SC", "PingFang SC", "Microsoft YaHei", "Heiti SC", sans-serif';
+
+  // 설정 기어 + 플로팅 패널 — 홈 탭(인사 섹션 우측)과 다른 탭(고정 헤더 우측) 공용.
+  // 아이콘 색은 강사앱 홈 헤더 아이콘과 맞춘다(2026-08-31).
+  const settingsControl = (
+    <div ref={settingsRef} style={{ position: 'relative' }}>
+      {/* 강사앱 홈 헤더 아이콘 버튼과 동일 스타일(p-2·gray-400·active 진해짐, 2026-08-31) */}
+      <button
+        onClick={() => setSettingsOpen(v => !v)}
+        aria-label="설정"
+        aria-expanded={settingsOpen}
+        className="p-2 -mr-1 text-gray-400 active:text-gray-600 transition-[color] duration-150 ease-out"
+        style={{
+          border: 'none', background: 'none', display: 'flex',
+          cursor: 'pointer', WebkitTapHighlightColor: 'transparent',
+          outline: 'none' }}
+      >
+        <GearSixIcon weight="fill" size={24} />
+      </button>
+
+      {/* 플로팅 패널 */}
+      <div style={{
+        position: 'absolute', top: 44, right: 0,
+        background: '#fff', borderRadius: 12,
+        boxShadow: 'var(--shadow-card)',
+        padding: '6px',
+        minWidth: 140,
+        zIndex: 110,
+        transformOrigin: 'top right',
+        transform: settingsOpen ? 'scale(1)' : 'scale(0.85)',
+        opacity: settingsOpen ? 1 : 0,
+        pointerEvents: settingsOpen ? 'auto' : 'none',
+        transition: 'transform 0.18s cubic-bezier(0.34,1.56,0.64,1), opacity 0.15s ease' }}>
+        {[
+          ...(install.isInstalled ? [] : [{ label: '홈 화면에 추가', onClick: handleInstallAction }]),
+          { label: '가이드 보기', onClick: () => { resetAllTabTips(); setTipResetKey(k => k + 1); } },
+          // 폼이 버그 제보 → 서비스 개선의견으로 넓어져 라벨도 통일(2026-08-31, MY 탭과 같은 폼)
+          { label: '피드백 남기기', onClick: () => window.open('https://forms.gle/dCwXvZAdfG12AxoJ9', '_blank', 'noopener,noreferrer') },
+          // 공용 기기 대비 — 저장 토큰과 함께 OTP 출입 세션도 정리
+          { label: '로그아웃', onClick: () => { localStorage.removeItem(SAVED_TOKEN_KEY); clearStudentSession(studentToken); navigate('/personal'); } },
+        ].map((item, i) => (
+          <button
+            key={item.label}
+            onClick={() => { setSettingsOpen(false); item.onClick(); }}
+            className="transition-[background-color] duration-150 ease-out"
+            style={{
+              width: '100%', display: 'flex', alignItems: 'center',
+              padding: '10px 12px', borderRadius: 8,
+              border: 'none', background: 'none', cursor: 'pointer',
+              fontSize: 14, fontWeight: 600,
+              color: item.label === '로그아웃' ? STATUS_ERROR_TEXT : TEXT_PRIMARY,
+              borderTop: i > 0 ? `1px solid ${BORDER_SUBTLE}` : 'none' }}
+          >
+            {item.label}
+          </button>
+        ))}
+        {/* 버전 — 공지 제목이 "2.41.0 버전 업데이트 소식" 형식이라 학생이 자기 앱 버전과
+            대조할 수 있어야 한다. 누를 것이 없으므로 버튼이 아닌 정적 표기로 둔다
+            (업데이트는 SW가 자동 적용하므로 "업데이트 확인" 버튼은 할 일이 없다). */}
+        <p style={{
+          margin: 0, padding: '10px 12px',
+          borderTop: `1px solid ${BORDER_SUBTLE}`,
+          fontSize: 12, color: TEXT_TERTIARY, textAlign: 'center' }}>
+          버전 v{__APP_VERSION__}
+        </p>
+      </div>
+    </div>
+  );
+
   return (
     <div style={{ minHeight: '100dvh', backgroundColor: BG_APP }}>
       {showOnboarding && <OnboardingCarousel onDone={() => setShowOnboarding(false)} />}
       <PullIndicator pullY={pullY} refreshing={pullRefreshing} />
 
-      {/* 상단 헤더 */}
-      <div style={{
-        position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
-        backgroundColor: 'rgba(255,255,255,0.82)',
-        backdropFilter: 'saturate(180%) blur(20px)',
-        WebkitBackdropFilter: 'saturate(180%) blur(20px)',
-        borderBottom: `1px solid ${BORDER_SUBTLE}` }}>
-        <div style={{
-          maxWidth: 480, margin: '0 auto',
-          height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '0 16px' }}>
-        <h1 style={{ fontSize: 17, fontWeight: 700, color: TEXT_PRIMARY, margin: 0, lineHeight: 1.3 }}>
-          {tab === '홈' ? student.name : tab === '내 수업' ? '예약 현황' : tab === '보관함' ? '발음 보관함' : tab}
-        </h1>
-
-        <div ref={settingsRef} style={{ position: 'relative' }}>
-          <button
-            onClick={() => setSettingsOpen(v => !v)}
-            aria-label="설정"
-            aria-expanded={settingsOpen}
-            className="transition-[color] duration-150 ease-out"
-            style={{
-              width: 36, height: 36, padding: 0,
-              border: 'none', background: 'none',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer', color: TEXT_SECONDARY, fontSize: 24,
-              WebkitTapHighlightColor: 'transparent',
-              outline: 'none' }}
-          >
-            <GearSixIcon weight="fill" />
-          </button>
-
-          {/* 플로팅 패널 */}
-          <div style={{
-            position: 'absolute', top: 44, right: 0,
-            background: '#fff', borderRadius: 12,
-            boxShadow: 'var(--shadow-card)',
-            padding: '6px',
-            minWidth: 140,
-            transformOrigin: 'top right',
-            transform: settingsOpen ? 'scale(1)' : 'scale(0.85)',
-            opacity: settingsOpen ? 1 : 0,
-            pointerEvents: settingsOpen ? 'auto' : 'none',
-            transition: 'transform 0.18s cubic-bezier(0.34,1.56,0.64,1), opacity 0.15s ease' }}>
-            {[
-              ...(install.isInstalled ? [] : [{ label: '홈 화면에 추가', onClick: handleInstallAction }]),
-              { label: '가이드 보기', onClick: () => { resetAllTabTips(); setTipResetKey(k => k + 1); } },
-              { label: '문제 신고하기', onClick: () => window.open('https://forms.gle/dCwXvZAdfG12AxoJ9', '_blank', 'noopener,noreferrer') },
-              // 공용 기기 대비 — 저장 토큰과 함께 OTP 출입 세션도 정리
-              { label: '로그아웃', onClick: () => { localStorage.removeItem(SAVED_TOKEN_KEY); clearStudentSession(studentToken); navigate('/personal'); } },
-            ].map((item, i) => (
-              <button
-                key={item.label}
-                onClick={() => { setSettingsOpen(false); item.onClick(); }}
-                className="transition-[background-color] duration-150 ease-out"
-                style={{
-                  width: '100%', display: 'flex', alignItems: 'center',
-                  padding: '10px 12px', borderRadius: 8,
-                  border: 'none', background: 'none', cursor: 'pointer',
-                  fontSize: 14, fontWeight: 600,
-                  color: item.label === '로그아웃' ? STATUS_ERROR_TEXT : TEXT_PRIMARY,
-                  borderTop: i > 0 ? `1px solid ${BORDER_SUBTLE}` : 'none' }}
-              >
-                {item.label}
-              </button>
-            ))}
-            {/* 버전 — 공지 제목이 "2.41.0 버전 업데이트 소식" 형식이라 학생이 자기 앱 버전과
-                대조할 수 있어야 한다. 누를 것이 없으므로 버튼이 아닌 정적 표기로 둔다
-                (업데이트는 SW가 자동 적용하므로 "업데이트 확인" 버튼은 할 일이 없다). */}
-            <p style={{
-              margin: 0, padding: '10px 12px',
-              borderTop: `1px solid ${BORDER_SUBTLE}`,
-              fontSize: 12, color: TEXT_TERTIARY, textAlign: 'center' }}>
-              버전 v{__APP_VERSION__}
-            </p>
-          </div>
-        </div>
-        </div>
-      </div>
+      {/* 상단 헤더 — 홈 탭은 고정 헤더 대신 아래 인사 섹션이 대신한다(강사앱 홈과 동일 구조).
+          다른 탭은 강사앱 공용 PageHeader(스티키 글래스, 17/600)로 통일(2026-08-31).
+          설정 버튼은 홈 인사 섹션에만 — 다른 탭 헤더에는 두지 않는다(2026-08-31 지적). */}
+      {tab !== '홈' && (
+        <PageHeader
+          title={tab === '내 수업' ? '예약 현황' : tab === '보관함' ? '발음 보관함' : tab}
+          // 공지는 하단탭이 아니라 홈 상단 벨로 진입(2026-08-31) — 뒤로가기로 홈 복귀
+          back={tab === '공지'}
+          onBack={() => setTab('홈')}
+        />
+      )}
 
       {/* 콘텐츠 */}
-      <div style={{ maxWidth: 480, margin: '0 auto', paddingTop: 56, paddingBottom: 80 }}>
+      {/* 하단 96 = 캡슐 점유 66 + 숨쉴 틈 (강사앱 .page-container pb-24와 동일 기준).
+          헤더가 sticky(플로우 차지)라 상단 패딩 불필요. */}
+      <div style={{ maxWidth: 480, margin: '0 auto', paddingBottom: 96 }}>
+        {tab === '홈' && (
+          // 가장자리 여백은 강사앱 홈(px-4=16)과 동일하게 16 (2026-08-31 통일)
+          <div style={{ padding: '32px 16px 0', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
+            <div>
+              {/* 여백·타이포는 강사앱 홈 인사와 동일 클래스 — 두 앱이 픽셀 단위로 같게(2026-08-31) */}
+              <p className="text-[13px] mb-1.5 tabular-nums" style={{ color: TEXT_TERTIARY }}>
+                {todayLabel}
+              </p>
+              <h1 className="text-2xl font-bold tracking-tight break-keep" style={{ color: TEXT_PRIMARY, margin: 0 }}>
+                <span className="text-brand-600" style={{ fontFamily: HANZI_FONT }}>{cnGreeting}</span><br />
+                {student.name}님
+              </h1>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+              {/* 공지 벨 — 하단탭에서 상단(설정 옆)으로 이동(2026-08-31). 새 공지 dot 유지 */}
+              <button
+                onClick={() => setTab('공지')}
+                aria-label="공지"
+                className="p-2 text-gray-400 active:text-gray-600 transition-[color] duration-150 ease-out"
+                style={{
+                  border: 'none', background: 'none', display: 'flex',
+                  cursor: 'pointer', WebkitTapHighlightColor: 'transparent',
+                  outline: 'none' }}
+              >
+                <span style={{ position: 'relative', display: 'inline-flex' }}>
+                  <BellIcon weight="fill" size={24} />
+                  {noticeDot && (
+                    <span style={{
+                      position: 'absolute', top: -1, right: -3,
+                      width: 7, height: 7, borderRadius: '50%',
+                      background: STATUS_ERROR_TEXT,
+                      border: '1px solid rgba(255,255,255,0.82)' }} />
+                  )}
+                </span>
+              </button>
+              {settingsControl}
+            </div>
+          </div>
+        )}
         {tab === '홈' && (
           <HomeTab
             key={classRefreshKey}
             studentToken={studentToken}
-            foodSources={[
-              { key: 'sessions', label: '완료 수업', count: Math.floor((student?.completedMinutes ?? 0) / 30) },
-              { key: 'hw_submit', label: '숙제 제출', count: student?.sharedAt ? (student?.submittedHomeworkFood ?? 0) : 0 },
-              { key: 'hw_feedback', label: '피드백 확인', count: student?.sharedAt ? (student?.feedbackSeenHomeworkFood ?? 0) : 0 },
-            ]}
             studentLoaded={student !== null}
-            remainingHours={student?.remainingHours ?? 0}
             onUpcomingLoaded={handleUpcomingLoaded}
             hwAlerts={hwAlerts}
-            onOpenPanda={() => navigate(`/personal/${studentToken}/panda`)}
             onSwitchToClasses={() => setTab('내 수업')}
           />
         )}
@@ -409,6 +459,25 @@ export default function PersonalPage() {
             <NoticeTab studentToken={studentToken} />
           </div>
         )}
+        {tab === '하늘하늘' && (
+          <div role="tabpanel" id="tab-panel-4" aria-labelledby="nav-하늘하늘">
+            <HanulTab />
+          </div>
+        )}
+        {tab === 'MY' && (
+          <div role="tabpanel" id="tab-panel-5" aria-labelledby="nav-MY">
+            <MyTab
+              student={student}
+              studentToken={studentToken}
+              foodSources={[
+                { key: 'sessions', label: '완료 수업', count: Math.floor((student?.completedMinutes ?? 0) / 30) },
+                { key: 'hw_submit', label: '숙제 제출', count: student?.sharedAt ? (student?.submittedHomeworkFood ?? 0) : 0 },
+                { key: 'hw_feedback', label: '피드백 확인', count: student?.sharedAt ? (student?.feedbackSeenHomeworkFood ?? 0) : 0 },
+              ]}
+              onOpenPanda={() => navigate(`/personal/${studentToken}/panda`)}
+            />
+          </div>
+        )}
       </div>
 
       {/* 코치마크 — 탭별 최초 방문 시 1회 표시 */}
@@ -418,7 +487,7 @@ export default function PersonalPage() {
         steps={[
           { selector: '[data-coach="next-class"]', label: '다음 수업 날짜와 시간이 여기에 표시돼요. 예약 현황 탭에서 전체 일정을 확인할 수 있어요.' },
           { selector: '[data-coach="homework-card"]', label: '숙제는 여기서 바로 확인하고 파일이나 음성으로 제출할 수 있어요' },
-          { selector: '[data-coach="panda"]', label: '수업을 완료하면 팬더에게 먹이를 줄 수 있어요 🐼 탭해서 팬더를 키워보세요!' },
+          // 팬더 카드는 MY 탭으로 이사(2026-08-31) — 홈 코치마크에서 제외
         ]}
       />
       <CoachMarkOverlay
@@ -444,20 +513,41 @@ export default function PersonalPage() {
         <InstallBanner {...install} showIOSGuide={showIOSGuide} setShowIOSGuide={setShowIOSGuide} />
       )}
 
-      {/* 하단 네비게이션 */}
-      <div style={{
-        position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 200,
-        backgroundColor: 'rgba(255,255,255,0.82)',
-        backdropFilter: 'saturate(180%) blur(20px)',
-        WebkitBackdropFilter: 'saturate(180%) blur(20px)',
-        boxShadow: 'var(--shadow-nav)',
-        paddingBottom: 'env(safe-area-inset-bottom)' }}>
-        <div style={{ maxWidth: 480, margin: '0 auto', display: 'flex' }}>
+      {/* 캡슐 뒤 하단 스크림 — 강사앱 BottomNav와 같은 어법. rgba = BG_APP 토큰의 알파 변주 */}
+      <div
+        aria-hidden="true"
+        style={{
+          position: 'fixed', left: 0, right: 0, bottom: 0,
+          height: 'calc(104px + env(safe-area-inset-bottom))',
+          // 콘텐츠 위 · 플로팅 크롬(업데이트 알약·설치 배너·캡슐) 아래 — 강사앱 스크림과 동일 원칙
+          zIndex: 20, pointerEvents: 'none',
+          background: 'linear-gradient(to top, rgba(249,250,251,0.97) 0%, rgba(249,250,251,0.88) 38%, rgba(249,250,251,0.45) 68%, rgba(249,250,251,0) 100%)',
+        }}
+      />
+      {/* 하단 네비게이션 — 플로팅 캡슐 (2026-08-31, 강사앱 BottomNav와 동일 어법).
+          blur는 .bottom-nav-glass::before로 분리(iOS fixed+backdrop-filter 합성 버그 회피)
+          + overflow:hidden으로 캡슐 곡률에 맞춰 자른다. */}
+      <div className="bottom-nav-glass" style={{
+        position: 'fixed',
+        left: 0, right: 0,
+        bottom: 'calc(10px + env(safe-area-inset-bottom))',
+        marginInline: 'auto',
+        width: 'min(calc(100% - 24px), 440px)',
+        borderRadius: 999,
+        overflow: 'hidden',
+        boxShadow: 'var(--shadow-nav-float)',
+        zIndex: 200,
+        transform: 'translateZ(0)',
+        WebkitTransform: 'translateZ(0)' }}>
+        <div style={{ display: 'flex' }}>
           {[
             { key: '홈', icon: <HouseIcon weight="fill" />, label: '홈', dot: false },
             { key: '내 수업', icon: <BookOpenIcon weight="fill" />, label: '예약 현황', dot: classDot },
             { key: '보관함', icon: <ArchiveIcon weight="fill" />, label: '보관함', dot: archiveDot },
-            { key: '공지', icon: <BellIcon weight="fill" />, label: '공지', dot: noticeDot },
+            // 브랜드 링크 허브 — 아이콘은 phosphor가 아니라 브랜드 심볼 이미지(symbol 플래그로 분기)
+            { key: '하늘하늘', symbol: true, label: '하늘하늘', dot: false },
+            // 공지는 홈 상단 벨로 이동(2026-08-31) — MY(내 현황·팬더)는 관례대로 맨 오른쪽
+            { key: 'MY', icon: <UserIcon weight="fill" />, label: 'MY', dot: false },
           ].map(item => {
             const isActive = tab === item.key;
             return (
@@ -472,7 +562,7 @@ export default function PersonalPage() {
                   flex: 1,
                   display: 'flex', flexDirection: 'column',
                   alignItems: 'center', justifyContent: 'center',
-                  gap: 3, padding: '8px 0 10px',
+                  gap: 3, padding: '8px 0',
                   border: 'none', background: 'none', cursor: 'pointer',
                   minHeight: 56,
                   color: isActive ? PRIMARY : TEXT_INACTIVE,
@@ -485,7 +575,24 @@ export default function PersonalPage() {
                 className="press-static"
               >
                 <div style={{ position: 'relative', display: 'inline-flex' }}>
-                  {item.icon}
+                  {item.symbol ? (
+                    // 심볼 PNG를 CSS 마스크로 씌워 currentColor로 칠한다 — grayscale 필터 근사로는
+                    // phosphor 아이콘과 회색 톤이 미묘하게 달라 밸런스가 깨져 보였다(2026-08-31 지적).
+                    // 이러면 색·전환이 버튼의 color(활성 PRIMARY/비활성 TEXT_INACTIVE)와 완전 동일.
+                    <span
+                      aria-hidden="true"
+                      style={{
+                        // phosphor 24px 박스는 내부 여백이 있어 실그림이 ~20px — 심볼도 20px로 맞추고
+                        // 상하 2px 마진으로 24px 줄높이를 유지해 라벨 정렬이 어긋나지 않게 한다.
+                        width: 20, height: 20, margin: 2, display: 'inline-block',
+                        backgroundColor: 'currentColor',
+                        WebkitMaskImage: 'url(/logo/symbol-red.png)',
+                        maskImage: 'url(/logo/symbol-red.png)',
+                        WebkitMaskSize: 'contain', maskSize: 'contain',
+                        WebkitMaskRepeat: 'no-repeat', maskRepeat: 'no-repeat',
+                        WebkitMaskPosition: 'center', maskPosition: 'center' }}
+                    />
+                  ) : item.icon}
                   {item.dot && !isActive && (
                     <span style={{
                       position: 'absolute', top: -1, right: -3,

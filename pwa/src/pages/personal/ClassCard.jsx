@@ -1,9 +1,9 @@
-import { Card } from 'antd';
+import { Card, CardContent } from '@/components/shadcn/card';
 import { DAY_KR, timeToMin, formatDuration } from '../../utils/dateUtils.js';
 import { BADGE_SMALL } from '../../constants/styles.js';
 import {
   PRIMARY, PRIMARY_LIGHT, PRIMARY_BG,
-  TEXT_PRIMARY, TEXT_SECONDARY, TEXT_TERTIARY, TEXT_INACTIVE, TEXT_DISABLED,
+  TEXT_PRIMARY, TEXT_TERTIARY, TEXT_INACTIVE, TEXT_DISABLED,
   BG_APP, GRAY_100,
   STATUS_INFO_BG, STATUS_INFO_DARK,
   STATUS_SUCCESS_BG, STATUS_SUCCESS_DARK,
@@ -12,7 +12,7 @@ import {
   STATUS_ERROR_BG, STATUS_ERROR_TEXT,
 } from '../../constants/theme.js';
 
-const LOCATION_LABEL = { '강남사무실': '강남', '온라인 (Zoom/화상)': 'Zoom' };
+export const LOCATION_LABEL = { '강남사무실': '강남', '온라인 (Zoom/화상)': 'Zoom' };
 
 /**
  * 수업 한 건 카드 — 학생앱 홈(예약된 수업)과 예약 현황 탭이 함께 쓴다.
@@ -33,7 +33,9 @@ export default function ClassCard({ cls, todayStr, nowMin }) {
   const endTimeStr = `${endH}:${endM}`;
 
   return (
-    <Card variant="borderless" style={{ borderRadius: 12, boxShadow: 'var(--shadow-border)', opacity: isDimmed ? 0.6 : 1, transition: 'opacity 0.2s' }} styles={{ body: { padding: '14px 16px' } }}>
+    // 목록 카드 규범 = radius 16 + padding 16 (강사앱 ClassCard와 동일)
+    <Card className="rounded-2xl" style={{ opacity: isDimmed ? 0.6 : 1, transition: 'opacity 0.2s' }}>
+      <CardContent className="p-4">
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         {/* 날짜 박스 */}
         <div style={{ minWidth: 50, textAlign: 'center', backgroundColor: isDimmed ? BG_APP : PRIMARY_BG, borderRadius: 10, padding: '8px 6px', flexShrink: 0 }}>
@@ -45,10 +47,14 @@ export default function ClassCard({ cls, todayStr, nowMin }) {
           </div>
         </div>
 
-        {/* 수업 정보 */}
+        {/* 수업 정보 — 배지가 시간 **위에** 뜨고 소요시간이 오른쪽에 따로 떠서
+            가운데 블록이 래그드했다(2026-08-31 지적). 시간을 주인공으로 승격하고
+            배지는 시간 옆 인라인, 장소·소요시간은 아래 메타 한 줄로 합친다. */}
         <div style={{ flex: 1, minWidth: 0 }}>
-          {/* 상태 배지 행 */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 4, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 15, fontWeight: 700, color: isDimmed ? TEXT_INACTIVE : TEXT_PRIMARY }} className="tabular-nums">
+              {cls.startTime}–{endTimeStr}
+            </span>
             {isOngoing && <span style={{ ...BADGE_SMALL, backgroundColor: STATUS_INFO_BG, color: STATUS_INFO_DARK }}>수업중</span>}
             {isToday && !isOngoing && !cls.isCancelled && <span style={{ ...BADGE_SMALL, backgroundColor: STATUS_SUCCESS_BG, color: STATUS_SUCCESS_DARK }}>오늘</span>}
             {isPast && !cls.isCancelled && <span style={{ ...BADGE_SMALL, backgroundColor: GRAY_100, color: TEXT_INACTIVE }}>완료</span>}
@@ -57,26 +63,13 @@ export default function ClassCard({ cls, todayStr, nowMin }) {
             {cls.specialNote === '🟠 보강' && <span style={{ ...BADGE_SMALL, backgroundColor: STATUS_TEAL_BG, color: STATUS_TEAL_TEXT }}>보강</span>}
             {cls.specialNote === '🔴 결석' && <span style={{ ...BADGE_SMALL, backgroundColor: STATUS_ERROR_BG, color: STATUS_ERROR_TEXT }}>결석</span>}
           </div>
-          {/* 시간 + 장소 행 */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 14, fontWeight: 700, color: isDimmed ? TEXT_INACTIVE : TEXT_PRIMARY }} className="tabular-nums">
-              {cls.startTime}–{endTimeStr}
-            </span>
-            {cls.location && (
-              <span style={{ fontSize: 12, color: TEXT_TERTIARY }}>
-                {LOCATION_LABEL[cls.location] ?? cls.location}
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* 수업 시간 */}
-        <div style={{ flexShrink: 0, textAlign: 'right' }}>
-          <div style={{ fontSize: 14, fontWeight: 600, color: isDimmed ? TEXT_DISABLED : TEXT_SECONDARY }} className="tabular-nums">
+          <div style={{ marginTop: 3, fontSize: 13, color: isDimmed ? TEXT_DISABLED : TEXT_TERTIARY }} className="tabular-nums">
+            {cls.location && <>{LOCATION_LABEL[cls.location] ?? cls.location} · </>}
             {formatDuration(cls.durationMin)}
           </div>
         </div>
       </div>
+      </CardContent>
     </Card>
   );
 }

@@ -113,6 +113,13 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
     0px -1px 0px 0px rgba(0, 0, 0, 0.06),
     0px -2px 8px 0px rgba(0, 0, 0, 0.04);
 
+  /* 플로팅 캡슐 탭바 (2026-08-31) — 화면에 붙은 바가 아니라 떠 있는 요소라
+     위쪽 보더형(--shadow-nav) 대신 링 + 부드러운 드롭 그림자를 쓴다. */
+  --shadow-nav-float:
+    0px 0px 0px 1px rgba(0, 0, 0, 0.05),
+    0px 8px 24px -6px rgba(0, 0, 0, 0.16),
+    0px 2px 8px 0px rgba(0, 0, 0, 0.06);
+
   /* 브랜드 컬러 그림자 */
   --shadow-brand-button: 0 4px 16px rgba(127, 0, 5, 0.35);
   --shadow-brand-card: 0 4px 16px rgba(127, 0, 5, 0.25);
@@ -159,6 +166,62 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
     0px 0px 0px 1px rgba(127, 0, 5, 0.12),
     0px 1px 2px -1px rgba(0, 0, 0, 0.06),
     0px 2px 4px 0px rgba(0, 0, 0, 0.04);
+
+  /* ── shadcn 색 토큰 (HSL 채널값) ──────────────────
+     shadcn 컴포넌트는 hsl(var(--x)) 형태를 전제한다. 값은 constants/theme.js의
+     기존 토큰을 그대로 변환한 것 — 새 색을 만들지 않는다(theme.js가 단일 출처).
+     라이트 전용: 이 앱은 다크 모드를 쓰지 않으므로 .dark 블록을 두지 않는다. */
+  --background: 210 20% 98%;        /* BG_APP     #f9fafb */
+  --foreground: 240 3.3% 11.8%;     /* TEXT_PRIMARY #1d1d1f */
+
+  --card: 0 0% 100%;                /* BG_CARD    #ffffff */
+  --card-foreground: 240 3.3% 11.8%;
+
+  --popover: 0 0% 100%;
+  --popover-foreground: 240 3.3% 11.8%;
+
+  --primary: 357.6 100% 24.9%;        /* PRIMARY    #7f0005 */
+  --primary-foreground: 0 0% 100%;
+  --primary-dark: 358 100% 21%;    /* PRIMARY_DARK #6b0004 — hover/active */
+
+  --secondary: 0 0% 96%;          /* GRAY_100   #f5f5f5 */
+  --secondary-foreground: 240 3.3% 11.8%;
+
+  --muted: 0 0% 96%;              /* GRAY_100   #f5f5f5 */
+  --muted-foreground: 0 0% 35%;   /* TEXT_SECONDARY #595959 */
+
+  /* accent = 메뉴 포커스·outline/ghost 버튼 hover 면. 브랜드 분홍(PRIMARY_BG)이었으나
+     "드롭다운 안 파스텔 면이 무겁게 읽힌다"(2026-08-26 사용자 판단, antdTheme optionSelectedBg
+     transparent 결정)와 §18-1-quater 연한 브랜드 면 일소에 맞춰 중립 회색으로 (2026-08-31). */
+  --accent: 0 0% 96%;             /* GRAY_100   #f5f5f5 */
+  --accent-foreground: 240 3.3% 11.8%;
+
+  /* antd colorError와 동일하게 STATUS_ERROR_TEXT를 쓴다. antd 기본 #ff4d4f(형광 빨강)는
+     앱이 실제 쓰는 에러색과 달라 이미 한 번 교체된 값이다(theme.js 주석 참고). */
+  --destructive: 355.2 83.2% 44.3%;   /* STATUS_ERROR_TEXT #cf1322 */
+  --destructive-foreground: 0 0% 100%;
+
+  --border: 0 0% 92%;             /* BORDER_DEFAULT #ebebeb */
+  --input: 0 0% 85%;              /* BORDER_NEUTRAL #d9d9d9 */
+
+  /* 포커스 링 색. 다만 shadcn 기본의 ring-2/ring-offset은 쓰지 않는다 —
+     "빨간 보더 바깥에 링이 또 생겨 선이 두 겹"이라는 지적(2026-08-26)으로
+     antdTheme.controlOutlineWidth를 0으로 둔 결정을 그대로 이어받는다.
+     포커스 표시는 보더가 브랜드색으로 바뀌는 것으로 충분하다. */
+  --ring: 357.6 100% 24.9%;
+
+  /* 상태색(경고·성공·에러 면) — theme.js의 STATUS_* 토큰을 HSL로 옮긴 것.
+     Alert의 warning/success variant가 쓴다. 값은 왕복 검증(HSL→RGB=원본 hex)을 통과했다. */
+  --warning-bg: 40.8 100% 95.1%;        /* STATUS_WARNING_BG     #fff7e6 */
+  --warning-fg: 29.1 92.7% 43.1%;       /* STATUS_WARNING_TEXT   #d46b08 */
+  --warning-border: 37.1 100% 78.4%;    /* STATUS_WARNING_BORDER #ffd591 */
+  --success-bg: 90 100% 96.5%;          /* STATUS_SUCCESS_BG     #f6ffed */
+  --success-fg: 102.2 84.8% 33.5%;      /* STATUS_SUCCESS_DARK   #389e0d */
+  --success-border: 93.9 69.7% 74.1%;   /* STATUS_SUCCESS_BORDER #b7eb8f */
+  --destructive-bg: 8 100% 97%;         /* STATUS_ERROR_BG       #fff2f0 */
+  --destructive-border: 5 100% 89%;     /* STATUS_ERROR_BORDER   #ffccc7 */
+
+  --radius: 0.75rem;                /* 12px — antdTheme.borderRadius와 동일 */
 }
 
 @layer base {

@@ -1,9 +1,6 @@
 import { useNavigate } from 'react-router-dom';
-import { Flex, Typography } from 'antd';
 import { CaretLeftIcon } from '@phosphor-icons/react';
 import { TEXT_PRIMARY, TEXT_SECONDARY } from '../../constants/theme.js';
-
-const { Text } = Typography;
 
 export default function PageHeader({ title, back, onBack, action }) {
   const navigate = useNavigate();
@@ -23,7 +20,7 @@ export default function PageHeader({ title, back, onBack, action }) {
       borderBottom: '1px solid rgba(0,0,0,0.06)',
     }}>
       <div style={{ maxWidth: 480, margin: '0 auto' }}>
-        <Flex align="center" gap={8} style={{ height: 56, padding: '0 20px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, height: 56, padding: '0 20px' }}>
           {back && (
             <button
               onClick={() => onBack ? onBack() : navigate(-1)}
@@ -42,14 +39,13 @@ export default function PageHeader({ title, back, onBack, action }) {
               <CaretLeftIcon size={20} weight="bold" />
             </button>
           )}
-          <Text
-            strong
-            style={{ flex: 1, fontSize: 17, color: TEXT_PRIMARY, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+          <span
+            style={{ flex: 1, fontSize: 17, fontWeight: 600, color: TEXT_PRIMARY, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
           >
             {title}
-          </Text>
+          </span>
           {action && <div style={{ flexShrink: 0 }}>{action}</div>}
-        </Flex>
+        </div>
       </div>
     </header>
   );

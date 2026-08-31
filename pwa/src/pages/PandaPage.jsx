@@ -16,7 +16,7 @@ import { GRADIENTS,
   TEXT_PRIMARY,
   TEXT_SECONDARY,
   STATUS_ERROR_TEXT,
-  BG_APP } from '../constants/theme.js';
+  BG_WARM } from '../constants/theme.js';
 
 const COACH_KEY = 'panda_coach_seen';
 
@@ -59,7 +59,8 @@ export default function PandaPage() {
   ] : [];
 
   return (
-    <div style={{ position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column', background: BG_APP }}>
+    // 게임성 화면인데 순백 배경이라 심심하다는 평가(2026-08-31) — 따뜻한 중립톤 + 캐릭터 뒤 광원
+    <div style={{ position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column', background: BG_WARM }}>
       {/* 헤더 */}
       <div style={{
         flexShrink: 0,
@@ -94,7 +95,17 @@ export default function PandaPage() {
       {/* 콘텐츠 — 하단은 iOS 홈 인디케이터 회피를 위해 safe-area-inset-bottom 추가
            (PandaPage는 position:fixed inset:0이라 body의 padding-bottom이 적용 안 됨) */}
       <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-        <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', maxWidth: 480, width: '100%', margin: '0 auto', padding: '16px 20px calc(20px + env(safe-area-inset-bottom))' }}>
+        <div style={{ position: 'relative', flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', maxWidth: 480, width: '100%', margin: '0 auto', padding: '16px 20px calc(20px + env(safe-area-inset-bottom))' }}>
+          {/* 캐릭터 뒤 은은한 흰 광원 — 알/팬더가 무대 위에 앉은 느낌 */}
+          <div
+            aria-hidden="true"
+            style={{
+              position: 'absolute', left: '50%', top: '40%',
+              width: 360, height: 360, transform: 'translate(-50%, -50%)',
+              borderRadius: '50%', pointerEvents: 'none',
+              background: 'radial-gradient(circle, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 70%)',
+            }}
+          />
           {error ? (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: STATUS_ERROR_TEXT, fontSize: 14 }}>
               정보를 불러오지 못했어요

@@ -1,5 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Button, Input, Switch, App } from 'antd';
+import { toast } from 'sonner';
+import { Button } from '../components/shadcn/button';
+import { Input } from '../components/shadcn/input';
+import { Textarea } from '../components/shadcn/textarea';
+import { Switch } from '../components/shadcn/switch';
 import { PlusIcon, EyeSlashIcon, MegaphoneIcon } from '@phosphor-icons/react';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
@@ -20,7 +24,6 @@ const CONTENT_MAX = 2000;
 const emptyDraft = { title: '', content: '', visible: true, important: false };
 
 export default function NoticesPage() {
-  const { message } = App.useApp();
   const [list, setList] = useState(null);
   const [error, setError] = useState('');
   const [editing, setEditing] = useState(null); // null | { id?, title, content, visible, important }
@@ -40,7 +43,7 @@ export default function NoticesPage() {
 
   const handleSave = async () => {
     const title = editing.title.trim();
-    if (!title) { message.error('제목을 입력해주세요'); return; }
+    if (!title) { toast.error('제목을 입력해주세요'); return; }
     setSaving(true);
     try {
       const payload = {
@@ -51,11 +54,11 @@ export default function NoticesPage() {
       };
       if (editing.id) await updateNotice(editing.id, payload);
       else await createNotice(payload);
-      message.success(editing.id ? '공지를 수정했어요' : '공지를 올렸어요');
+      toast.success(editing.id ? '공지를 수정했어요' : '공지를 올렸어요');
       setEditing(null);
       await load();
     } catch (e) {
-      message.error(e.message || '저장하지 못했어요');
+      toast.error(e.message || '저장하지 못했어요');
     } finally {
       setSaving(false);
     }
@@ -65,11 +68,11 @@ export default function NoticesPage() {
     setSaving(true);
     try {
       await deleteNotice(confirmDelete.id);
-      message.success('공지를 삭제했어요');
+      toast.success('공지를 삭제했어요');
       setConfirmDelete(null);
       await load();
     } catch (e) {
-      message.error(e.message || '삭제하지 못했어요');
+      toast.error(e.message || '삭제하지 못했어요');
     } finally {
       setSaving(false);
     }
@@ -80,7 +83,7 @@ export default function NoticesPage() {
     return (
       <>
         <PageHeader title={editing.id ? '공지 수정' : '공지 작성'} back onBack={() => setEditing(null)} />
-        <div className="px-4 py-4 space-y-4 pb-24">
+        <div className="px-4 py-4 space-y-4">
           <div>
             <label style={LABEL}>제목</label>
             <Input
@@ -88,20 +91,18 @@ export default function NoticesPage() {
               onChange={(e) => setEditing({ ...editing, title: e.target.value })}
               placeholder="예) 추석 연휴 휴강 안내"
               maxLength={TITLE_MAX}
-              style={{ borderRadius: 12, height: 44 }}
             />
           </div>
 
           <div>
             <label style={LABEL}>내용</label>
-            <Input.TextArea
+            <Textarea
               value={editing.content}
               onChange={(e) => setEditing({ ...editing, content: e.target.value })}
               placeholder="학생들에게 전할 내용을 적어주세요"
               maxLength={CONTENT_MAX}
               showCount
               autoSize={{ minRows: 6, maxRows: 14 }}
-              style={{ borderRadius: 12 }}
             />
             <p className="text-xs mt-1.5" style={{ color: TEXT_TERTIARY }}>
               주소(https://…)를 적으면 학생 앱에서 눌러서 열 수 있어요.
@@ -113,7 +114,7 @@ export default function NoticesPage() {
               <p className="text-sm" style={{ color: TEXT_PRIMARY, margin: 0 }}>학생에게 보이기</p>
               <p className="text-xs mt-0.5" style={{ color: TEXT_TERTIARY, margin: 0 }}>끄면 나만 볼 수 있어요</p>
             </div>
-            <Switch checked={editing.visible} onChange={(v) => setEditing({ ...editing, visible: v })} />
+            <Switch checked={editing.visible} onCheckedChange={(v) => setEditing({ ...editing, visible: v })} />
           </div>
 
           <div className="flex items-center justify-between" style={{ minHeight: 44 }}>
@@ -121,7 +122,7 @@ export default function NoticesPage() {
               <p className="text-sm" style={{ color: TEXT_PRIMARY, margin: 0 }}>중요 공지</p>
               <p className="text-xs mt-0.5" style={{ color: TEXT_TERTIARY, margin: 0 }}>학생 앱 목록 맨 위에 고정돼요</p>
             </div>
-            <Switch checked={editing.important} onChange={(v) => setEditing({ ...editing, important: v })} />
+            <Switch checked={editing.important} onCheckedChange={(v) => setEditing({ ...editing, important: v })} />
           </div>
 
           {/* 알림을 보내지 않는다는 점을 여기서 분명히 알린다 —
@@ -134,11 +135,10 @@ export default function NoticesPage() {
           </div>
 
           <Button
-            type="primary"
             block
+            size="lg"
             loading={saving}
             onClick={handleSave}
-            style={{ borderRadius: 12, height: 48, fontWeight: 600 }}
           >
             {editing.id ? '수정 완료' : '공지 올리기'}
           </Button>
@@ -155,11 +155,10 @@ export default function NoticesPage() {
         back
         action={(
           <Button
-            type="primary"
             onClick={() => setEditing({ ...emptyDraft })}
-            icon={<PlusIcon size={16} weight="bold" />}
-            style={{ borderRadius: 999, height: 36, fontWeight: 600, fontSize: 13 }}
+            className="h-9 rounded-full px-3 text-[13px]"
           >
+            <PlusIcon size={16} weight="bold" />
             공지 작성
           </Button>
         )}
@@ -176,7 +175,8 @@ export default function NoticesPage() {
           description="휴강·일정 변경처럼 모두에게 알릴 내용을 적어두면 학생 앱 공지 탭에 표시돼요."
         />
       ) : (
-        <ul className="px-4 py-4 space-y-3 pb-24" style={{ listStyle: 'none', margin: 0 }}>
+        // 하단 여유는 전역 .page-container pb-24가 담당
+        <ul className="px-4 py-4 space-y-3" style={{ listStyle: 'none', margin: 0 }}>
           {list.map((n) => (
             <li
               key={n.id}
@@ -210,17 +210,16 @@ export default function NoticesPage() {
                 </span>
                 <div className="flex items-center gap-2">
                   <Button
-                    size="small"
+                    variant="outline"
+                    size="sm"
                     onClick={() => setEditing({ id: n.id, title: n.title, content: n.content, visible: n.visible, important: n.important })}
-                    style={{ borderRadius: 8, minHeight: 32 }}
                   >
                     수정
                   </Button>
                   <Button
-                    size="small"
-                    danger
+                    variant="destructiveOutline"
+                    size="sm"
                     onClick={() => setConfirmDelete(n)}
-                    style={{ borderRadius: 8, minHeight: 32 }}
                   >
                     삭제
                   </Button>

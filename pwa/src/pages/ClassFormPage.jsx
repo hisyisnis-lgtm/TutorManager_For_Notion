@@ -1,7 +1,12 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { stripEmoji } from '../utils/stringUtils.js';
-import { Alert, Button, Input, Select, Typography } from 'antd';
+import { WarningCircleIcon } from '@phosphor-icons/react';
+import { Alert, AlertDescription } from '../components/shadcn/alert';
+import { Button } from '../components/shadcn/button';
+import { Input } from '../components/shadcn/input';
+import { Textarea } from '../components/shadcn/textarea';
+import SelectField from '../components/ui/SelectField.jsx';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import SubmitButton from '../components/ui/SubmitButton.jsx';
 import SelectCheck from '../components/ui/SelectCheck.jsx';
@@ -273,6 +278,14 @@ export default function ClassFormPage() {
         : null)
       : null;
 
+  // 제목 기본값 = 학생 이름 (2:1이면 "이름1, 이름2" — sync_class_titles.mjs와 같은 형식).
+  // 비워두면 자동화(30분 주기)가 채울 때까지 상태 formula가 '미입력'으로 보이므로
+  // 등록 시점에 즉시 채운다. 자동화는 Notion에서 직접 만든 수업의 안전망으로 유지.
+  const autoClassTitle = () => form.studentIds
+    .map((sid) => stripEmoji(students.find((st) => st.id === sid)?.name || ''))
+    .filter(Boolean)
+    .join(', ');
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.studentIds.length && !isGuestType) {
@@ -324,7 +337,7 @@ export default function ClassFormPage() {
           location: form.location || null,
           locationMemo: form.locationMemo || '',
           noteMemo: form.noteMemo || '',
-          title: (isOnlineGroup ? '온라인그룹수업' : form.guestName.trim()) || undefined,
+          title: (isOnlineGroup ? '온라인그룹수업' : form.guestName.trim()) || autoClassTitle() || undefined,
         }));
         // 반복 수업 충돌 검사 — 충돌 있어도 확인 팝업 후 진행
         const pad = (n) => String(n).padStart(2, '0');
@@ -366,7 +379,8 @@ export default function ClassFormPage() {
           location: form.location || null,
           locationMemo: form.locationMemo || '',
           noteMemo: form.noteMemo || '',
-          title: (isOnlineGroup ? '온라인그룹수업' : form.guestName.trim()) || undefined,
+          // 자동 제목은 **생성 시에만** — 수정 때 넣으면 강사가 Notion에서 바꾼 제목을 덮어쓴다
+          title: (isOnlineGroup ? '온라인그룹수업' : form.guestName.trim()) || (isEdit ? undefined : autoClassTitle()) || undefined,
           phone: isFreeConsult ? form.guestPhone : undefined,
         };
         // 일회성 수업 충돌 검사 — 충돌 있어도 확인 팝업 후 진행
@@ -457,15 +471,18 @@ export default function ClassFormPage() {
 
       <form onSubmit={handleSubmit} className="px-4 pt-4 pb-8 space-y-5">
         {error && (
-          <Alert type="error" title={error} showIcon style={{ borderRadius: 12 }} />
+          <Alert variant="destructive">
+            <WarningCircleIcon size={16} weight="fill" aria-hidden />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
         )}
 
         {/* ① 수업 유형 — 항상 표시 */}
         <div>
-          <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
+          <span style={{ fontSize: 14, fontWeight: 600, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
             수업 유형
-          </Typography.Text>
-          <Select
+          </span>
+          <SelectField
             value={form.classTypeId || undefined}
             onChange={(value) => {
               const ct = classTypes.find(c => c.id === value);
@@ -482,16 +499,9 @@ export default function ClassFormPage() {
               }));
               setRecurMode(''); // 수업 종류 바뀌면 반복/단일 선택 초기화
             }}
-            style={{ width: '100%' }}
-            size="large"
             placeholder="선택하세요"
-          >
-            {visibleClassTypes.map((ct) => (
-              <Select.Option key={ct.id} value={ct.id}>
-                {ct.title}
-              </Select.Option>
-            ))}
-          </Select>
+            options={visibleClassTypes.map((ct) => ({ value: ct.id, label: ct.title }))}
+          />
         </div>
 
         {/* ② 학생 선택 — 수업 유형 선택 후 표시 (온라인그룹수업은 학생/이름 입력 없이 건너뜀) */}
@@ -500,43 +510,39 @@ export default function ClassFormPage() {
             {/* 무료상담: 상담자 이름 + 전화번호(D-1 알림용) */}
             {isFreeConsult && (
               <div style={{ marginBottom: 20 }}>
-                <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
+                <span style={{ fontSize: 14, fontWeight: 600, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
                   이름
-                </Typography.Text>
+                </span>
                 <Input
                   placeholder="이름을 입력하세요 (노션 수업 제목)"
                   value={form.guestName}
                   onChange={(e) => setForm((f) => ({ ...f, guestName: e.target.value }))}
-                  size="large"
-                  style={{ borderRadius: 12, marginBottom: 12 }}
+                  style={{ marginBottom: 12 }}
                 />
-                <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
-                  전화번호 <Typography.Text style={{ fontSize: 12, color: TEXT_INACTIVE, fontWeight: 400 }}>(D-1 카카오 알림톡 발송용)</Typography.Text>
-                </Typography.Text>
+                <span style={{ fontSize: 14, fontWeight: 600, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
+                  전화번호 <span style={{ fontSize: 12, color: TEXT_INACTIVE, fontWeight: 400 }}>(D-1 카카오 알림톡 발송용)</span>
+                </span>
                 <Input
                   placeholder="01012345678"
                   type="tel"
                   value={form.guestPhone}
                   onChange={(e) => setForm((f) => ({ ...f, guestPhone: e.target.value.replace(/\D/g, '') }))}
                   maxLength={11}
-                  size="large"
-                  style={{ borderRadius: 12 }}
                 />
               </div>
             )}
             {!isOnlineGroup && (<>
-            <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
+            <span style={{ fontSize: 14, fontWeight: 600, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
               {studentLocked
                 ? '함께 수업할 학생 한 명 더 선택'
                 : <>학생 선택 {isFreeConsult ? <span style={{ fontWeight: 400, color: TEXT_INACTIVE }}>(선택 사항)</span> : '(2:1 수업 시 두 명 선택)'}</>}
-            </Typography.Text>
+            </span>
             <Input
               type="text"
               placeholder="학생 이름 검색..."
               value={studentSearch}
               onChange={(e) => setStudentSearch(e.target.value)}
-              size="large"
-              style={{ borderRadius: 12, marginBottom: 8 }}
+              style={{ marginBottom: 8 }}
             />
             <div className="space-y-2 max-h-60 overflow-y-auto px-2 py-2 -mx-2">
               {students
@@ -584,9 +590,9 @@ export default function ClassFormPage() {
         {/* 반복/단일 선택 — 일시 입력 전. 학생수업: 학생 선택 후 / 온라인그룹수업: 수업 종류 후 */}
         {showRecurChoice && (
           <div style={{ animation: 'fadeSlideUp 0.35s ease both' }}>
-            <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
+            <span style={{ fontSize: 14, fontWeight: 600, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
               수업 등록 방식
-            </Typography.Text>
+            </span>
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
@@ -613,9 +619,9 @@ export default function ClassFormPage() {
         {/* ③ 일시(단일) 또는 요일·기간·시각(반복) — 등록 방식 선택 후 표시 */}
         {showDatetime && !recurring && (
           <div style={{ animation: 'fadeSlideUp 0.35s ease both' }}>
-            <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
+            <span style={{ fontSize: 14, fontWeight: 600, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
               수업 일시
-            </Typography.Text>
+            </span>
             <div className="flex gap-2">
               <Input
                 type="date"
@@ -625,62 +631,36 @@ export default function ClassFormPage() {
                   const time = form.datetime ? form.datetime.slice(11) : '08:00';
                   setForm((f) => ({ ...f, datetime: date ? `${date}T${time}` : '' }));
                 }}
-                size="large"
-                style={{ borderRadius: 12, flex: 1 }}
+                style={{ flex: 1 }}
               />
-              <Select
+              <SelectField
                 value={selectedHour || undefined}
                 onChange={(h) => {
                   const date = form.datetime ? form.datetime.slice(0, 10) : '';
                   const min = form.datetime ? form.datetime.slice(14, 16) : '00';
                   setForm((f) => ({ ...f, datetime: `${date}T${h}:${min}` }));
                 }}
-                size="large"
-                style={{ width: 80 }}
+                className="w-20"
                 placeholder="시"
-                virtual={false}
-                popupRender={(menu) => (
-                  <div ref={(el) => { if (el) el.addEventListener('touchmove', (e) => e.stopPropagation(), { passive: false }); }}>
-                    {menu}
-                  </div>
-                )}
-              >
-                {Array.from({ length: 17 }, (_, i) => i + 6).map((h) => {
+                options={Array.from({ length: 17 }, (_, i) => i + 6).map((h) => {
                   const hStr = String(h).padStart(2, '0');
-                  const conflict = !isHourAvailable(hStr);
-                  return (
-                    <Select.Option key={h} value={hStr}>
-                      {h}시{conflict ? ' ⚠' : ''}
-                    </Select.Option>
-                  );
+                  return { value: hStr, label: h + '시' + (isHourAvailable(hStr) ? '' : ' ⚠') };
                 })}
-              </Select>
-              <Select
+              />
+              <SelectField
                 value={form.datetime ? selectedMin : undefined}
                 onChange={(min) => {
                   const date = form.datetime ? form.datetime.slice(0, 10) : '';
                   const hour = form.datetime ? form.datetime.slice(11, 13) : '08';
                   setForm((f) => ({ ...f, datetime: `${date}T${hour}:${min}` }));
                 }}
-                size="large"
-                style={{ width: 92 }}
+                className="w-[92px]"
                 placeholder="분"
-                virtual={false}
-                popupRender={(menu) => (
-                  <div ref={(el) => { if (el) el.addEventListener('touchmove', (e) => e.stopPropagation(), { passive: false }); }}>
-                    {menu}
-                  </div>
-                )}
-              >
-                {MINUTE_OPTIONS.map((min) => {
-                  const conflict = !isMinAvailable(min);
-                  return (
-                    <Select.Option key={min} value={min}>
-                      {min}분{conflict ? ' ⚠' : ''}
-                    </Select.Option>
-                  );
-                })}
-              </Select>
+                options={MINUTE_OPTIONS.map((min) => ({
+                  value: min,
+                  label: min + '분' + (isMinAvailable(min) ? '' : ' ⚠'),
+                }))}
+              />
             </div>
           </div>
         )}
@@ -689,9 +669,9 @@ export default function ClassFormPage() {
         {showDatetime && recurring && (
           <div style={{ animation: 'fadeSlideUp 0.35s ease both' }} className="space-y-4">
             <div>
-              <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
+              <span style={{ fontSize: 14, fontWeight: 600, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
                 수업 요일 (복수 선택 가능)
-              </Typography.Text>
+              </span>
               <div className="grid grid-cols-7 gap-1.5">
                 {DAY_KR.map((label, i) => {
                   const day = DAY_JS[i];
@@ -714,64 +694,43 @@ export default function ClassFormPage() {
 
             <div className="grid grid-cols-2 gap-3">
               <div className="min-w-0">
-                <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>시작일</Typography.Text>
-                <Input type="date" value={form.recurStartDate} onChange={(e) => setForm((f) => ({ ...f, recurStartDate: e.target.value }))} size="large" style={{ borderRadius: 12, width: '100%' }} />
+                <span style={{ fontSize: 14, fontWeight: 600, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>시작일</span>
+                <Input type="date" value={form.recurStartDate} onChange={(e) => setForm((f) => ({ ...f, recurStartDate: e.target.value }))} style={{ width: '100%' }} />
               </div>
               <div className="min-w-0">
-                <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>종료일</Typography.Text>
-                <Input type="date" value={form.recurEndDate} min={form.recurStartDate} onChange={(e) => setForm((f) => ({ ...f, recurEndDate: e.target.value }))} size="large" style={{ borderRadius: 12, width: '100%' }} />
+                <span style={{ fontSize: 14, fontWeight: 600, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>종료일</span>
+                <Input type="date" value={form.recurEndDate} min={form.recurStartDate} onChange={(e) => setForm((f) => ({ ...f, recurEndDate: e.target.value }))} style={{ width: '100%' }} />
               </div>
             </div>
 
             <div>
-              <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
+              <span style={{ fontSize: 14, fontWeight: 600, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
                 수업 시작 시각
-              </Typography.Text>
+              </span>
               <div className="flex gap-2">
-                <Select
+                <SelectField
                   value={form.recurTime ? form.recurTime.slice(0, 2) : undefined}
                   onChange={(h) => {
                     const min = form.recurTime ? form.recurTime.slice(3, 5) : '00';
                     setForm((f) => ({ ...f, recurTime: `${h}:${min}` }));
                   }}
-                  size="large"
-                  style={{ flex: 1 }}
+                  className="flex-1"
                   placeholder="시"
-                  virtual={false}
-                  popupRender={(menu) => (
-                    <div ref={(el) => { if (el) el.addEventListener('touchmove', (e) => e.stopPropagation(), { passive: false }); }}>
-                      {menu}
-                    </div>
-                  )}
-                >
-                  {Array.from({ length: 17 }, (_, i) => i + 6).map((h) => (
-                    <Select.Option key={h} value={String(h).padStart(2, '0')}>
-                      {h}시
-                    </Select.Option>
-                  ))}
-                </Select>
-                <Select
+                  options={Array.from({ length: 17 }, (_, i) => i + 6).map((h) => ({
+                    value: String(h).padStart(2, '0'),
+                    label: h + '시',
+                  }))}
+                />
+                <SelectField
                   value={form.recurTime ? form.recurTime.slice(3, 5) : undefined}
                   onChange={(min) => {
                     const hour = form.recurTime ? form.recurTime.slice(0, 2) : '10';
                     setForm((f) => ({ ...f, recurTime: `${hour}:${min}` }));
                   }}
-                  size="large"
-                  style={{ flex: 1 }}
+                  className="flex-1"
                   placeholder="분"
-                  virtual={false}
-                  popupRender={(menu) => (
-                    <div ref={(el) => { if (el) el.addEventListener('touchmove', (e) => e.stopPropagation(), { passive: false }); }}>
-                      {menu}
-                    </div>
-                  )}
-                >
-                  {MINUTE_OPTIONS.map((min) => (
-                    <Select.Option key={min} value={min}>
-                      {min}분
-                    </Select.Option>
-                  ))}
-                </Select>
+                  options={MINUTE_OPTIONS.map((min) => ({ value: min, label: min + '분' }))}
+                />
               </div>
             </div>
           </div>
@@ -780,9 +739,9 @@ export default function ClassFormPage() {
         {/* ④ 수업 시간 — 일시 입력 후 표시 */}
         {showDuration && (
           <div style={{ animation: 'fadeSlideUp 0.35s ease both' }}>
-            <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
+            <span style={{ fontSize: 14, fontWeight: 600, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
               수업 시간
-            </Typography.Text>
+            </span>
             <div className="grid grid-cols-5 gap-2">
               {displayDurationOptions.map((d) => {
                 const conflict = !recurring && !isDurationAvailable(d);
@@ -843,9 +802,9 @@ export default function ClassFormPage() {
         {/* ⑥ 수업 장소 — 일시 입력 후 표시 */}
         {showDuration && (
           <div style={{ animation: 'fadeSlideUp 0.35s ease both' }}>
-            <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
+            <span style={{ fontSize: 14, fontWeight: 600, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
               수업 장소
-            </Typography.Text>
+            </span>
             <div className="grid grid-cols-2 gap-2">
               {LOCATION_OPTIONS.map((loc) => (
                 <button
@@ -874,8 +833,6 @@ export default function ClassFormPage() {
                   placeholder="상세 장소 (예: 스타벅스 강남역점)"
                   value={form.locationMemo}
                   onChange={(e) => setForm((f) => ({ ...f, locationMemo: e.target.value }))}
-                  size="large"
-                  style={{ borderRadius: 12 }}
                 />
               </div>
             )}
@@ -885,9 +842,9 @@ export default function ClassFormPage() {
         {/* ⑦ 특이사항 — 일시 입력 후 표시 */}
         {showDuration && (
           <div style={{ animation: 'fadeSlideUp 0.35s ease both' }}>
-            <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
+            <span style={{ fontSize: 14, fontWeight: 600, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
               특이사항 (선택)
-            </Typography.Text>
+            </span>
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
@@ -921,15 +878,14 @@ export default function ClassFormPage() {
         {/* ⑧ 메모 — 특이사항 상세 내용 (자유 텍스트) */}
         {showDuration && (
           <div style={{ animation: 'fadeSlideUp 0.35s ease both' }}>
-            <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
+            <span style={{ fontSize: 14, fontWeight: 600, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
               메모 (선택)
-            </Typography.Text>
-            <Input.TextArea
+            </span>
+            <Textarea
               placeholder="특이사항 상세 내용을 입력하세요 (예: 결석 사유, 보강 일정, 학생 요청사항 등)"
               value={form.noteMemo}
               onChange={(e) => setForm((f) => ({ ...f, noteMemo: e.target.value }))}
               autoSize={{ minRows: 2, maxRows: 6 }}
-              style={{ borderRadius: 12 }}
             />
           </div>
         )}
@@ -953,11 +909,10 @@ export default function ClassFormPage() {
 
         {isEdit && (
           <Button
-            danger
+            variant="destructiveOutline"
             block
-            type="primary"
             onClick={() => setShowDeleteConfirm(true)}
-            style={{ borderRadius: 12, height: 44, marginTop: 4 }}
+            className="mt-1"
           >
             수업 삭제
           </Button>

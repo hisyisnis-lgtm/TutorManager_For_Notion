@@ -3,13 +3,13 @@ import {
   useEffect,
   useRef,
   useCallback } from 'react';
+import { toast } from 'sonner';
 import { useParams,
   useNavigate } from 'react-router-dom';
-import { Button,
-  Input,
-  Card,
-  App,
-  Spin } from 'antd';
+import { CircleNotchIcon } from '@phosphor-icons/react';
+import { Button } from '../components/shadcn/button';
+import { Card, CardContent } from '../components/shadcn/card';
+import { Textarea } from '../components/shadcn/textarea';
 import { MicrophoneIcon,
   ImageSquareIcon,
   ClipboardTextIcon,
@@ -24,8 +24,8 @@ import AutoLink from '../components/ui/AutoLink.jsx';
 import FileAttachModal from '../components/homework/FileAttachModal.jsx';
 import Badge from '../components/ui/Badge.jsx';
 import SectionHeading from '../components/ui/SectionHeading.jsx';
+import SectionEntryButton from '../components/ui/SectionEntryButton.jsx';
 import {
-  GRAY_100,
   TEXT_PRIMARY,
   TEXT_SECONDARY,
   TEXT_TERTIARY,
@@ -63,7 +63,6 @@ function genFeedbackName(title, index) {
 export default function HomeworkDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { message } = App.useApp();
   const { studentNameMap } = useData();
 
   const [hw, setHw] = useState(null);
@@ -92,27 +91,40 @@ export default function HomeworkDetailPage() {
   const pendingNavRef = useRef(null);
 
   // 브라우저 뒤로가기 차단 (HashRouter는 useBlocker 미지원)
+  // ⚠️ 이탈 결정 후의 pop이 만드는 popstate에 또 navigate(-1)을 쏘면 pop이 초과되어
+  // 문서 전체 리로드가 걸렸다(학생 페이지와 동일 패턴·해법, 2026-08-31):
+  // pushedRef = 쌓인 더미 개수(StrictMode는 2개) · leave() 한 번으로 이탈 · leavingRef로 이탈 pop 무시.
+  const leavingRef = useRef(false);
+  const pushedRef = useRef(0);
+  const leave = useCallback(() => {
+    leavingRef.current = true;
+    navigate(-(pushedRef.current + 1));
+  }, [navigate]);
   useEffect(() => {
     window.history.pushState(null, '', window.location.href);
+    pushedRef.current += 1;
     const onPopState = () => {
+      if (leavingRef.current) return;
+      pushedRef.current -= 1; // 방금 pop으로 더미 하나 소진
       if (isDirtyRef.current) {
         window.history.pushState(null, '', window.location.href);
+        pushedRef.current += 1;
         setShowLeaveConfirm(true);
-        pendingNavRef.current = () => navigate(-2);
+        pendingNavRef.current = leave;
       } else {
-        navigate(-1);
+        leave();
       }
     };
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
-  }, [navigate]);
+  }, [navigate, leave]);
 
   const handleBack = () => {
     if (isDirtyRef.current) {
       setShowLeaveConfirm(true);
-      pendingNavRef.current = () => navigate(-1);
+      pendingNavRef.current = leave;
     } else {
-      navigate(-1);
+      leave();
     }
   };
 
@@ -158,7 +170,6 @@ export default function HomeworkDetailPage() {
   const attach = useFileAttach({
     genName: (index) => genFeedbackName(hw?.title ?? '숙제', index),
     fixedCount,
-    message,
     onConfirm: (kind, files) => {
       if (kind === 'audio') {
         setPendingFeedbackAudio((prev) => [...prev, ...files]);
@@ -226,7 +237,7 @@ export default function HomeworkDetailPage() {
       invalidateCache('homework'); // 홈 '피드백 대기'·숙제 관리 카운트 stale 방지
       closeModal();
     } catch (e) {
-      message.error(`저장 실패: ${e.message}`);
+      toast.error(`저장 실패: ${e.message}`);
     } finally {
       setSaving(false);
     }
@@ -244,7 +255,7 @@ export default function HomeworkDetailPage() {
       await saveFeedback(id, { files: [], existingFiles, filesOnly: true });
       await load();
     } catch (e) {
-      message.error(`삭제 실패: ${e.message}`);
+      toast.error(`삭제 실패: ${e.message}`);
     } finally {
       setDeletingFeedbackFileName(null);
     }
@@ -252,7 +263,7 @@ export default function HomeworkDetailPage() {
 
   const handleSaveFeedback = async () => {
     if (!feedbackText.trim() && pendingTotal === 0 && !hw?.feedbackFiles?.length) {
-      message.error('피드백 텍스트 또는 파일을 입력해주세요.');
+      toast.error('피드백 텍스트 또는 파일을 입력해주세요.');
       return;
     }
     await uploadAndSave([...pendingFeedbackAudio, ...pendingFeedbackDocs]);
@@ -265,7 +276,7 @@ export default function HomeworkDetailPage() {
       invalidateCache('homework');
       navigate(-1);
     } catch (e) {
-      message.error(`삭제 실패: ${e.message}`);
+      toast.error(`삭제 실패: ${e.message}`);
       setShowDeleteConfirm(false);
       setDeleting(false);
     }
@@ -333,7 +344,7 @@ export default function HomeworkDetailPage() {
         back
         onBack={handleBack}
         action={
-          <Button danger onClick={() => setShowDeleteConfirm(true)} style={{ borderRadius: 12, fontWeight: 600 }}>
+          <Button variant="destructiveOutline" onClick={() => setShowDeleteConfirm(true)}>
             삭제
           </Button>
         }
@@ -352,26 +363,31 @@ export default function HomeworkDetailPage() {
         {/* ===== 1. 부여한 숙제 ===== */}
         <AreaHeading icon={<ClipboardTextIcon size={20} weight="fill" />} label="부여한 숙제" first />
         {hw.content && (
-          <Card variant="borderless" style={{ borderRadius: 12, boxShadow: 'var(--shadow-border)', marginBottom: 12 }} styles={{ body: { padding: 16 } }}>
+          <Card className="mb-3">
+            <CardContent className="p-4">
             <SectionHeading style={{ marginBottom: 8 }}>숙제 내용</SectionHeading>
             <p style={{ fontSize: 14, color: INK_900, lineHeight: 1.7, whiteSpace: 'pre-wrap', margin: 0 }}><AutoLink text={hw.content} /></p>
+            </CardContent>
           </Card>
         )}
         {hw.assignmentFiles?.length > 0 && (
-          <Card variant="borderless" style={{ borderRadius: 12, boxShadow: 'var(--shadow-border)', marginBottom: 12 }} styles={{ body: { padding: 16 } }}>
+          <Card className="mb-3">
+            <CardContent className="p-4">
             <SectionHeading style={{ marginBottom: 12 }}>숙제 파일</SectionHeading>
             {hw.assignmentFiles.map((f, i) => (
               <div key={`assignment-${i}-${f.name}`} style={{ marginBottom: i < hw.assignmentFiles.length - 1 ? 8 : 0 }}>
                 {renderAssignmentFile(f, i)}
               </div>
             ))}
+            </CardContent>
           </Card>
         )}
 
         {/* ===== 2. 학생 제출 ===== */}
         <AreaHeading icon={<PaperPlaneTiltIcon size={20} weight="fill" />} label="학생 제출" />
         {(submitAudio.length > 0 || submitDocs.length > 0) ? (
-          <Card variant="borderless" style={{ borderRadius: 12, boxShadow: 'var(--shadow-border)', marginBottom: 12 }} styles={{ body: { padding: 16 } }}>
+          <Card className="mb-3">
+            <CardContent className="p-4">
             <SectionHeading style={{ marginBottom: 12 }}>학생 제출 파일</SectionHeading>
             {[...submitAudio, ...submitDocs].map((f, i, arr) => (
               <div key={`submit-${i}-${f.name}`} style={{ marginBottom: i < arr.length - 1 ? 8 : 0 }}>
@@ -383,26 +399,29 @@ export default function HomeworkDetailPage() {
                 제출일: <span className="tabular-nums">{formatDateTimeCompact(hw.submitDate)}</span>
               </p>
             )}
+            </CardContent>
           </Card>
         ) : (
-          <Card variant="borderless" style={{ borderRadius: 12, boxShadow: 'var(--shadow-border)', marginBottom: 12 }} styles={{ body: { padding: 16 } }}>
+          <Card className="mb-3">
+            <CardContent className="p-4">
             <div style={{ textAlign: 'center', padding: '20px 0', color: TEXT_DISABLED, fontSize: 13 }}>
               아직 제출하지 않았습니다
             </div>
+            </CardContent>
           </Card>
         )}
 
         {/* ===== 3. 피드백 ===== */}
         <AreaHeading icon={<ChatTeardropTextIcon size={20} weight="fill" />} label="피드백" />
-        <Card variant="borderless" style={{ borderRadius: 12, boxShadow: 'var(--shadow-border)' }} styles={{ body: { padding: 16 } }}>
+        <Card>
+          <CardContent className="p-4">
           <div style={{ marginBottom: 12 }}>
-            <Input.TextArea
+            <Textarea
               value={feedbackText}
               onChange={(e) => setFeedbackText(e.target.value)}
               placeholder="텍스트 피드백을 입력하세요"
               rows={4}
               maxLength={2000}
-              style={{ borderRadius: 12 }}
             />
             <div style={{ textAlign: 'right', fontSize: 12, color: TEXT_TERTIARY, marginTop: 4 }}>
               <span className="tabular-nums">{feedbackText.length}</span> / 2000
@@ -461,14 +480,13 @@ export default function HomeworkDetailPage() {
           )}
 
           <Button
-            type="primary"
             block
             onClick={handleSaveFeedback}
             loading={saving}
-            style={{ borderRadius: 12, height: 44, fontWeight: 600 }}
           >
             피드백 저장{pendingTotal > 0 ? ` (${pendingTotal}개 파일)` : ''}
           </Button>
+          </CardContent>
         </Card>
       </div>
 
@@ -488,7 +506,7 @@ export default function HomeworkDetailPage() {
           position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999,
         }}>
-          <Spin size="large" />
+          <CircleNotchIcon size={24} weight="bold" className="animate-spin" aria-hidden />
         </div>
       )}
 
@@ -569,27 +587,3 @@ function PendingCard({ label, items, onRemove }) {
   );
 }
 
-/**
- * 파일·녹음 추가 진입 버튼. **중립 면(GRAY_100)** 을 쓴다 —
- * ⛔ 연한 브랜드 면(PRIMARY_BG)으로 채우지 말 것(design_system §18-1).
- * 이건 저장도 제출도 아닌 보조 액션이라, 화면에서 가장 눈에 띌 이유가 없다.
- */
-function SectionEntryButton({ icon, label, onClick }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="transition-[background-color] duration-150 ease-out"
-      style={{
-        width: '100%', height: 44, borderRadius: 12,
-        background: GRAY_100, border: 'none',
-        color: TEXT_SECONDARY, fontSize: 14, fontWeight: 600, cursor: 'pointer',
-        WebkitTapHighlightColor: 'transparent', marginBottom: 12,
-        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-      }}
-    >
-      {icon}
-      {label}
-    </button>
-  );
-}

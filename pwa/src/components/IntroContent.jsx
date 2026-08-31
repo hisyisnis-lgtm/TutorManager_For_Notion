@@ -7,13 +7,9 @@ import {
   useState,
   useRef,
   useEffect } from 'react';
-import { Button,
-  Card,
-  Flex,
-  Space,
-  Tag,
-  Avatar,
-  Typography } from 'antd';
+import { Button } from './shadcn/button';
+import { Card,
+  CardContent } from './shadcn/card';
 import {
   ClockIcon,
   MapPinIcon,
@@ -50,7 +46,6 @@ const REVIEW_URLS = [
   'https://m.blog.naver.com/naningumusme/224232796614',
 ];
 
-const { Title, Text, Paragraph } = Typography;
 
 function IconBox({ icon, color = TEXT_TERTIARY, bg = BG_APP }) {
   return (
@@ -87,14 +82,16 @@ function ReviewCard({ url }) {
 
   if (loading) {
     return (
-      <Card variant="borderless" style={{ borderRadius: 16, overflow: 'hidden', height: CARD_HEIGHT }} styles={{ body: { padding: 0 } }}>
+      <Card className="rounded-2xl" style={{ overflow: 'hidden', height: CARD_HEIGHT }}>
+<CardContent style={{ padding: 0 }}>
         <div style={{ height: IMG_HEIGHT, backgroundColor: GRAY_200 }} />
         <div style={{ padding: '14px 16px 16px' }}>
           <div style={{ height: 12, width: 80, backgroundColor: GRAY_200, borderRadius: 6, marginBottom: 10 }} />
           <div style={{ height: 14, backgroundColor: GRAY_200, borderRadius: 6, marginBottom: 6 }} />
           <div style={{ height: 14, width: '70%', backgroundColor: GRAY_200, borderRadius: 6 }} />
         </div>
-      </Card>
+      </CardContent>
+</Card>
     );
   }
 
@@ -104,7 +101,8 @@ function ReviewCard({ url }) {
 
   return (
     <a href={url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none', display: 'block', height: CARD_HEIGHT }}>
-      <Card variant="borderless" hoverable style={{ borderRadius: 16, overflow: 'hidden', height: '100%' }} styles={{ body: { padding: 0, height: '100%', display: 'flex', flexDirection: 'column' } }}>
+      <Card className="rounded-2xl" style={{ overflow: 'hidden', height: '100%' }}>
+<CardContent style={{ padding: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
         {og.image && (
           <img
             src={og.image}
@@ -113,30 +111,27 @@ function ReviewCard({ url }) {
           />
         )}
         <div style={{ padding: '14px 16px 16px', display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-          <Tag style={{ borderRadius: 20, marginBottom: 8, fontSize: 12, fontWeight: 600, backgroundColor: PRIMARY_BG, borderColor: STATUS_ERROR_BORDER, color: PRIMARY, flexShrink: 0 }}>
+          <span style={{ display: 'inline-block', lineHeight: 1.6667, whiteSpace: 'nowrap', borderRadius: 20, marginBottom: 8, fontSize: 12, fontWeight: 600, backgroundColor: PRIMARY_BG, borderColor: STATUS_ERROR_BORDER, color: PRIMARY, flexShrink: 0 }}>
             {hostname}
-          </Tag>
+          </span>
           {og.title && (
-            <Text strong style={{
-              fontSize: 14, lineHeight: 1.5, marginBottom: 6, color: INK_900, flexShrink: 0,
-              overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
-            }}>
+            <span style={{ fontWeight: 600, fontSize: 14, lineHeight: 1.5, marginBottom: 6, color: INK_900, flexShrink: 0,
+              overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', }}>
               {og.title}
-            </Text>
+            </span>
           )}
           {og.description && (
-            <Text type="secondary" style={{
-              fontSize: 13, lineHeight: 1.6, flex: 1, minHeight: 0,
-              overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical',
-            }}>
+            <span style={{ color: TEXT_TERTIARY, fontSize: 13, lineHeight: 1.6, flex: 1, minHeight: 0,
+              overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', }}>
               {og.description}
-            </Text>
+            </span>
           )}
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10, flexShrink: 0 }}>
-            <Text style={{ fontSize: 12, color: PRIMARY, fontWeight: 600 }}>전체 보기 →</Text>
+            <span style={{ fontSize: 12, color: PRIMARY, fontWeight: 600 }}>전체 보기 →</span>
           </div>
         </div>
-      </Card>
+      </CardContent>
+</Card>
     </a>
   );
 }
@@ -159,7 +154,7 @@ function ReviewScrollSection() {
   const navBtnStyle = {
     position: 'absolute', top: '50%', transform: 'translateY(-50%)',
     width: 44, height: 44, borderRadius: '50%',
-    backgroundColor: 'white', border: '1px solid ${GRAY_300}',
+    backgroundColor: 'white', border: `1px solid ${GRAY_300}`,
     boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     cursor: 'pointer', zIndex: 10, fontSize: 18, color: INK_900,
@@ -168,7 +163,7 @@ function ReviewScrollSection() {
   return (
     <FadeUp>
       <section style={{ padding: '24px 0 16px', position: 'relative' }}>
-        <Title level={5} style={{ marginBottom: 16, paddingLeft: 20 }}>수강생 후기</Title>
+        <h5 style={{ fontSize: 16, fontWeight: 600, lineHeight: 1.5, marginBottom: 16, paddingLeft: 20 }}>수강생 후기</h5>
         {canLeft && (
           <div className="review-nav-btn" style={{ ...navBtnStyle, left: 4 }} onClick={() => scroll(-1)} aria-label="이전">
             <CaretLeftIcon weight="fill" />
@@ -246,13 +241,11 @@ export default function IntroContent({ onConsult, onFloatChange }) {
         <HeroSection sectionRef={heroRef} style={{ padding: '56px 24px 48px' }}>
           <div>
             <FadeUp delay={0}>
-              <Tag style={{
-                backgroundColor: 'rgba(255,255,255,0.15)', color: 'white',
+              <span style={{ display: 'inline-block', lineHeight: 1.6667, whiteSpace: 'nowrap', backgroundColor: 'rgba(255,255,255,0.15)', color: 'white',
                 border: 'none', borderRadius: 20, fontSize: 13, fontWeight: 600,
-                marginBottom: 20, letterSpacing: '0.05em',
-              }}>
+                marginBottom: 20, letterSpacing: '0.05em', }}>
                 회화 · 발음 교정 전문
-              </Tag>
+              </span>
             </FadeUp>
             <FadeUp delay={100}>
               <h1 style={{
@@ -272,8 +265,9 @@ export default function IntroContent({ onConsult, onFloatChange }) {
             </FadeUp>
             <FadeUp delay={300}>
               <Button
-                size="large" onClick={onConsult} block
-                style={{ backgroundColor: 'white', color: PRIMARY, fontWeight: 700, height: 48, borderRadius: 12, border: 'none' }}
+                size="lg" onClick={onConsult} block
+                className="font-bold"
+                style={{ backgroundColor: 'white', color: PRIMARY, border: 'none' }}
               >
                 무료 상담 신청
               </Button>
@@ -291,9 +285,9 @@ export default function IntroContent({ onConsult, onFloatChange }) {
         {/* 이런 분께 */}
         <section style={{ padding: '24px 16px 16px' }}>
           <FadeUp>
-            <Title level={5} style={{ marginBottom: 16 }}>이런 분께 맞아요</Title>
+            <h5 style={{ fontSize: 16, fontWeight: 600, lineHeight: 1.5, marginBottom: 16 }}>이런 분께 맞아요</h5>
           </FadeUp>
-          <Flex vertical gap={10} style={{ width: '100%' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%' }}>
             {[
               { icon: <LightbulbIcon weight="fill" />, title: '중국어를 처음 시작하는 분', desc: '성조부터 회화까지, 가장 빠르고 확실하게 첫 단추를 끼워드립니다.' },
               { icon: <SpeakerHighIcon weight="fill" />, title: '어색한 발음이 고민인 분', desc: '디테일한 밀착 교정으로, 원어민처럼 당당하게 말하는 자신감을 찾아드립니다.' },
@@ -301,46 +295,56 @@ export default function IntroContent({ onConsult, onFloatChange }) {
               { icon: <ChartLineUpIcon weight="fill" />, title: '초·중급인데 방향을 잘 못 잡겠는 분', desc: '예리한 진단으로 지금의 답답함을 뚫고, 한 단계 도약할 돌파구를 찾아드립니다.' },
             ].map(({ icon, title, desc }, i) => (
               <FadeUp key={title} delay={i * 80}>
-                <Card variant="borderless" style={{ borderRadius: 12 }} styles={{ body: { padding: 16 } }}>
-                  <Space size={14} align="start">
+                <Card>
+<CardContent style={{ padding: 16 }}>
+                  <span style={{ display: 'inline-flex', alignItems: 'flex-start', gap: 14 }}>
                     <IconBox icon={icon} color={PRIMARY} bg={PRIMARY_BG} />
                     <div>
-                      <Text strong style={{ fontSize: 14, display: 'block', marginBottom: 2 }}>{title}</Text>
-                      <Text type="secondary" style={{ fontSize: 13, lineHeight: 1.5 }}>{desc}</Text>
+                      <span style={{ fontWeight: 600, fontSize: 14, display: 'block', marginBottom: 2 }}>{title}</span>
+                      <span style={{ color: TEXT_TERTIARY, fontSize: 13, lineHeight: 1.5 }}>{desc}</span>
                     </div>
-                  </Space>
-                </Card>
+                  </span>
+                </CardContent>
+</Card>
               </FadeUp>
             ))}
-          </Flex>
+          </div>
         </section>
 
         {/* 어려운 상담 */}
         <FadeUp>
           <section style={{ padding: '24px 16px 16px' }}>
-            <Card variant="borderless" style={{ borderRadius: 12, backgroundColor: GRAY_50 }} styles={{ body: { padding: 20 } }}>
-              <Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 8 }}>이런 상담은 어려워요</Text>
-              <Paragraph style={{ fontSize: 14, color: TEXT_SECONDARY, marginBottom: 12, lineHeight: 1.6 }}>
+            <Card style={{ backgroundColor: GRAY_50 }}>
+<CardContent style={{ padding: 20 }}>
+              <span style={{ fontWeight: 600, fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 8 }}>이런 상담은 어려워요</span>
+              <p style={{ fontSize: 14, color: TEXT_SECONDARY, marginBottom: 12, lineHeight: 1.6 }}>
                 하늘쌤은 입문~초중급 회화·발음 교정 전문입니다.<br />
                 아래 항목은 충분히 도움드리기 어려울 수 있어요.
-              </Paragraph>
-              <Flex vertical gap={4}>
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 {['HSK 시험 준비', '작문·쓰기 집중 학습', '대학원 진학, 유학, 어학연수 준비'].map(item => (
-                  <Text key={item} type="secondary" style={{ fontSize: 14 }}>· {item}</Text>
+                  <span key={item} style={{ color: TEXT_TERTIARY, fontSize: 14 }}>· {item}</span>
                 ))}
-              </Flex>
-            </Card>
+              </div>
+            </CardContent>
+</Card>
           </section>
         </FadeUp>
 
         {/* 강사 프로필 */}
         <FadeUp>
           <section style={{ padding: '24px 16px 16px' }}>
-            <Flex vertical align="center" gap={12} style={{ textAlign: 'center', padding: '0' }}>
-              <Avatar
-                src="/img/profile.jpg" size={120}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, textAlign: 'center', padding: '0' }}>
+              <img
+                src="/img/profile.jpg"
                 alt="하늘쌤 프로필 사진"
+                width={120}
+                height={120}
                 style={{
+                  width: 120,
+                  height: 120,
+                  borderRadius: '50%',
+                  objectFit: 'cover',
                   flexShrink: 0,
                   boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
                   outline: '1px solid rgba(0,0,0,0.08)',
@@ -348,42 +352,44 @@ export default function IntroContent({ onConsult, onFloatChange }) {
                 }}
               />
               <div>
-                <Title level={4} style={{ margin: '0 0 4px' }}>하늘쌤</Title>
-                <Text style={{ fontSize: 13, fontWeight: 600, color: PRIMARY, letterSpacing: '0.05em', display: 'block', marginBottom: 12 }}>
+                <h4 style={{ fontSize: 20, fontWeight: 600, lineHeight: 1.4, margin: '0 0 4px' }}>하늘쌤</h4>
+                <span style={{ fontSize: 13, fontWeight: 600, color: PRIMARY, letterSpacing: '0.05em', display: 'block', marginBottom: 12 }}>
                   대표 강사
-                </Text>
-                <Space size={6} wrap style={{ justifyContent: 'center' }}>
+                </span>
+                <span style={{ display: 'inline-flex', gap: 6, justifyContent: 'center' }}>
                   {['10년 경력', '회화 전문', '발음 교정'].map(tag => (
-                    <Tag key={tag} style={{ borderRadius: 20, margin: 0, fontSize: 13, backgroundColor: 'transparent', borderColor: BORDER_NEUTRAL, color: INK_900 }}>{tag}</Tag>
+                    <span key={tag} style={{ display: 'inline-block', lineHeight: 1.6667, whiteSpace: 'nowrap', borderRadius: 20, margin: 0, fontSize: 13, backgroundColor: 'transparent', borderColor: BORDER_NEUTRAL, color: INK_900 }}>{tag}</span>
                   ))}
-                </Space>
+                </span>
               </div>
-            </Flex>
+            </div>
           </section>
         </FadeUp>
 
         {/* 수업 안내 */}
         <FadeUp>
           <section style={{ padding: '24px 16px 16px' }}>
-            <Title level={5} style={{ marginBottom: 16 }}>수업 안내</Title>
-            <Card variant="borderless" style={{ borderRadius: 16 }}>
-              <Flex vertical gap={16} style={{ width: '100%' }}>
+            <h5 style={{ fontSize: 16, fontWeight: 600, lineHeight: 1.5, marginBottom: 16 }}>수업 안내</h5>
+            <Card className="rounded-2xl">
+<CardContent className="p-6">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16, width: '100%' }}>
                 {[
                   { icon: <ClockIcon weight="fill" />, label: '수업 시간', value: '60분 기준 (조정 가능)' },
                   { icon: <MapPinIcon weight="fill" />, label: '수업 장소', value: '강남 사무실 · Zoom 화상' },
                   { icon: <BookBookmarkIcon weight="fill" />, label: '수업 방식', value: '회화·발음 교정, 1:1 맞춤형' },
                   { icon: <UserIcon weight="fill" />, label: '수업 형태', value: '1:1 개인 과외' },
                 ].map(({ icon, label, value }) => (
-                  <Space key={label} size={12}>
+                  <span key={label} style={{ display: 'inline-flex', gap: 12 }}>
                     <IconBox icon={icon} />
                     <div>
-                      <Text type="secondary" style={{ fontSize: 13, display: 'block' }}>{label}</Text>
-                      <Text strong style={{ fontSize: 14 }}>{value}</Text>
+                      <span style={{ color: TEXT_TERTIARY, fontSize: 13, display: 'block' }}>{label}</span>
+                      <span style={{ fontWeight: 600, fontSize: 14 }}>{value}</span>
                     </div>
-                  </Space>
+                  </span>
                 ))}
-              </Flex>
-            </Card>
+              </div>
+            </CardContent>
+</Card>
           </section>
         </FadeUp>
 

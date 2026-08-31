@@ -1,7 +1,14 @@
-import { useState, useEffect, useRef, useCallback, forwardRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef, useCallback, forwardRef } from 'react';
+import { toast } from 'sonner';
 import { useSearchParams } from 'react-router-dom';
 import { CaretLeftIcon, CaretRightIcon, CaretDownIcon, DownloadSimpleIcon, ImageIcon, StackIcon, ClockIcon, MapPinIcon } from '@phosphor-icons/react';
-import { App as AntApp, Button, Dropdown } from 'antd';
+import { Button } from '../components/shadcn/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '../components/shadcn/dropdown-menu';
 import useEmblaCarousel from 'embla-carousel-react';
 import { domToPng } from 'modern-screenshot';
 import { useData } from '../context/DataContext.jsx';
@@ -56,7 +63,6 @@ export default function TomorrowPrepPage({ dayOffset = 1 }) {
   const dayLabel = dayOffset === 0 ? '오늘' : '내일';
   const [searchParams] = useSearchParams();
   const focusStudentId = searchParams.get('student');
-  const { message } = AntApp.useApp();
   const { studentNameMap } = useData();
   const [slides, setSlides] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -73,8 +79,16 @@ export default function TomorrowPrepPage({ dayOffset = 1 }) {
     }));
   }, [studentNameMap]);
 
+  // 홈의 '오늘 수업' 줄에서 `?student=`로 넘어오면 그 학생 카드에서 **시작**한다.
+  // 이펙트에서 scrollTo로 점프하는 방식은 emblaApi 도착 타이밍에 따라 첫 카드가
+  // 먼저 그려졌다 넘어가는 깜빡임이 남았다(2026-08-31 두 차례 지적) —
+  // 초기화 옵션(startIndex)으로 주면 어떤 렌더 순서에서도 처음부터 그 위치다.
+  const focusIndex = focusStudentId && slides.length
+    ? Math.max(0, slides.findIndex((s) => s.studentId === focusStudentId))
+    : 0;
+
   // Embla 캐러셀 (드래그·스냅·끝 러버밴드·마우스+터치 모두 처리)
-  const [emblaRef, emblaApi] = useEmblaCarousel({ align: 'start', containScroll: false });
+  const [emblaRef, emblaApi] = useEmblaCarousel({ align: 'start', containScroll: false, startIndex: focusIndex });
   const [index, setIndex] = useState(0);
   const [canPrev, setCanPrev] = useState(false);
   const [canNext, setCanNext] = useState(false);
@@ -102,20 +116,14 @@ export default function TomorrowPrepPage({ dayOffset = 1 }) {
     };
   }, [emblaApi, onSelect]);
 
-  // 슬라이드 로드/변경 시 Embla 재초기화
-  useEffect(() => {
+  // 슬라이드 로드/변경 시 Embla 재초기화.
+  // ⚠️ 아래 포커스 점프와 함께 **useLayoutEffect**여야 한다 — useEffect는 페인트 뒤에 돌아서
+  // 첫 카드가 한 번 그려졌다가 목표 카드로 넘어가는 깜빡임이 보였다(2026-08-31 지적).
+  useLayoutEffect(() => {
     if (emblaApi) emblaApi.reInit();
   }, [emblaApi, slides.length]);
 
-  // 홈의 '오늘 수업' 줄에서 넘어오면 그 학생 카드부터 보여준다 —
-  // 특정 수업을 눌렀는데 남의 카드가 먼저 뜨면 누른 것과 본 것이 어긋난다.
-  const focusedRef = useRef(false);
-  useEffect(() => {
-    if (!emblaApi || !focusStudentId || focusedRef.current || !slides.length) return;
-    const i = slides.findIndex((s) => s.studentId === focusStudentId);
-    if (i > 0) emblaApi.scrollTo(i, true);   // true = 애니메이션 없이 즉시
-    focusedRef.current = true;
-  }, [emblaApi, focusStudentId, slides]);
+  // (포커스 이동은 위 startIndex가 담당한다 — scrollTo 이펙트 방식은 타이밍 경쟁으로 폐기)
 
   const load = async () => {
     setLoading(true);
@@ -239,9 +247,14 @@ export default function TomorrowPrepPage({ dayOffset = 1 }) {
   // (2026-08-27 실측). 자정을 넘겨 날짜가 바뀌는 경우도 이 의존성이 받아 준다.
   useEffect(() => { load(); }, [tomorrowStr]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // 화면이 바뀌면 첫 카드부터. 남은 슬라이드 위치가 다른 날짜에 그대로 이어지면 어긋난다.
+  // 오늘↔내일 화면이 **실제로 바뀔 때만** 첫 카드로. 남은 슬라이드 위치가 다른 날짜에 이어지면 어긋난다.
+  // ⚠️ [emblaApi, tomorrowStr]로 걸면 emblaApi가 '도착'하는 순간에도 실행돼,
+  //    ?student= 포커스로 잡아둔 위치를 0번으로 되돌렸다 — "누른 학생이 떴다가
+  //    첫 학생으로 넘어가는" 깜빡임의 진범(2026-08-31). 날짜 변화만 감지한다.
+  const prevDayRef = useRef(tomorrowStr);
   useEffect(() => {
-    focusedRef.current = false;
+    if (prevDayRef.current === tomorrowStr) return;
+    prevDayRef.current = tomorrowStr;
     if (emblaApi) emblaApi.scrollTo(0, true);
   }, [emblaApi, tomorrowStr]);
 
@@ -297,10 +310,10 @@ export default function TomorrowPrepPage({ dayOffset = 1 }) {
         ? new Date(slide.classes[0].datetime).toLocaleDateString('en-CA', { timeZone: KST }).slice(5)
         : tomorrowStr.slice(5);
       triggerDownload(dataUrl, `${slide?.studentName || '학생'}_${dateTag}.png`);
-      message.success('일지 이미지를 저장했어요');
+      toast.success('일지 이미지를 저장했어요');
     } catch (e) {
       console.error('[내일 수업 준비] 단일 캡처 오류', e);
-      message.error('이미지 저장에 실패했어요');
+      toast.error('이미지 저장에 실패했어요');
     } finally {
       setDownloading(false);
     }
@@ -313,19 +326,14 @@ export default function TomorrowPrepPage({ dayOffset = 1 }) {
     try {
       const dataUrl = await domToPng(batchRef.current, { scale: 2, backgroundColor: BG_CARD });
       triggerDownload(dataUrl, `${dayLabel}수업준비_${tomorrowStr.slice(5)}.png`);
-      message.success(`전체 ${slides.length}명 일지를 저장했어요`);
+      toast.success(`전체 ${slides.length}명 일지를 저장했어요`);
     } catch (e) {
       console.error('[내일 수업 준비] 일괄 캡처 오류', e);
-      message.error('이미지 저장에 실패했어요');
+      toast.error('이미지 저장에 실패했어요');
     } finally {
       setDownloading(false);
     }
   };
-
-  const menuItems = [
-    { key: 'one', label: '이 일지만 저장', icon: <ImageIcon size={16} /> },
-    { key: 'all', label: '일괄 저장', icon: <StackIcon size={16} /> },
-  ];
 
   return (
     <PullToRefresh onRefresh={load}>
@@ -372,26 +380,33 @@ export default function TomorrowPrepPage({ dayOffset = 1 }) {
                     <FillLogCard slide={s} />
 
                     {/* 이미지 저장 — 카드 우상단 (이 일지만 / 일괄 저장) */}
-                    <Dropdown
-                      menu={{ items: menuItems, onClick: ({ key }) => (key === 'one' ? handleDownloadOne() : handleDownloadAll()) }}
-                      trigger={['click']}
-                      placement="bottomRight"
-                      disabled={downloading}
-                    >
-                      <button
-                        type="button"
-                        aria-label="이미지 저장"
-                        style={{
-                          position: 'absolute', top: 14, right: 14, zIndex: 3,
-                          padding: 8, background: 'none', border: 'none',
-                          color: PRIMARY, cursor: 'pointer',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          opacity: downloading ? 0.5 : 1,
-                        }}
-                      >
-                        <DownloadSimpleIcon size={20} weight="bold" />
-                      </button>
-                    </Dropdown>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild disabled={downloading}>
+                        <button
+                          type="button"
+                          aria-label="이미지 저장"
+                          style={{
+                            position: 'absolute', top: 14, right: 14, zIndex: 3,
+                            padding: 8, background: 'none', border: 'none',
+                            color: PRIMARY, cursor: 'pointer',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            opacity: downloading ? 0.5 : 1,
+                          }}
+                        >
+                          <DownloadSimpleIcon size={20} weight="bold" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onSelect={handleDownloadOne}>
+                          <ImageIcon size={16} />
+                          이 일지만 저장
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onSelect={handleDownloadAll}>
+                          <StackIcon size={16} />
+                          일괄 저장
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
               ))}
@@ -478,25 +493,27 @@ function LogCardHead({ slide }) {
       </p>
       <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
         {slide.classes.map((c) => (
-          // 시간과 장소는 무조건 한 줄 (nowrap). 시각·소요시간·핀은 고정, 장소명만 필요 시 말줄임.
-          <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'nowrap', minWidth: 0 }}>
-            <ClockIcon size={16} weight="fill" color={PRIMARY} style={{ flexShrink: 0 }} />
-            <span className="tabular-nums" style={{ fontSize: 15, fontWeight: 700, color: TEXT_PRIMARY, flexShrink: 0, whiteSpace: 'nowrap' }}>
-              {fmtTimeOnly(c.datetime)}{c.endTime && `~${fmtTimeOnly(c.endTime)}`}
-            </span>
-            {c.duration && (
-              <span className="tabular-nums" style={{ fontSize: 12, color: TEXT_TERTIARY, flexShrink: 0, whiteSpace: 'nowrap' }}>
-                ({formatDuration(parseInt(c.duration))})
+          // 장소는 시간 **아랫줄** — 한 줄에 붙이면 "온라인 (Zoom/화상)"이 잘렸다(2026-08-31 지적).
+          // 아랫줄은 전폭을 쓰므로 잘릴 일이 없고, 말줄임은 극단 케이스 안전망으로만 남긴다.
+          <div key={c.id} style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'nowrap' }}>
+              <ClockIcon size={16} weight="fill" color={PRIMARY} style={{ flexShrink: 0 }} />
+              <span className="tabular-nums" style={{ fontSize: 15, fontWeight: 700, color: TEXT_PRIMARY, flexShrink: 0, whiteSpace: 'nowrap' }}>
+                {fmtTimeOnly(c.datetime)}{c.endTime && `~${fmtTimeOnly(c.endTime)}`}
               </span>
-            )}
+              {c.duration && (
+                <span className="tabular-nums" style={{ fontSize: 12, color: TEXT_TERTIARY, flexShrink: 0, whiteSpace: 'nowrap' }}>
+                  ({formatDuration(parseInt(c.duration))})
+                </span>
+              )}
+            </div>
             {c.location && (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, minWidth: 0, flexShrink: 1 }}>
-                <span style={{ color: BORDER_NEUTRAL, flexShrink: 0 }}>·</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
                 <MapPinIcon size={16} weight="fill" color={PRIMARY} style={{ flexShrink: 0 }} />
-                <span style={{ fontSize: 15, fontWeight: 600, color: TEXT_PRIMARY, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <span style={{ fontSize: 14, fontWeight: 600, color: TEXT_SECONDARY, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {stripEmoji(c.location)}
                 </span>
-              </span>
+              </div>
             )}
           </div>
         ))}

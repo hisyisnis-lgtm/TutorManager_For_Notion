@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { Button, Card, message } from 'antd';
+import { toast } from 'sonner';
+import { Button } from '../components/shadcn/button';
+import { Card, CardContent } from '../components/shadcn/card';
 import { useCachedResource } from '../hooks/useCachedResource.js';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
@@ -53,11 +55,8 @@ function ConsultCard({ consult: c, onConfirm, confirming }) {
   const faded = c.status === '완료' || c.status === '불발';
 
   return (
-    <Card
-      variant="borderless"
-      style={{ borderRadius: 16, boxShadow: 'var(--shadow-border)', opacity: faded ? 0.55 : 1 }}
-      styles={{ body: { padding: 16 } }}
-    >
+    <Card className="rounded-2xl" style={{ opacity: faded ? 0.55 : 1 }}>
+      <CardContent className="p-4">
       <div className="flex items-start justify-between gap-2 mb-2">
         <div className="min-w-0">
           <span className="text-base font-semibold text-gray-900">{c.name}</span>
@@ -84,16 +83,16 @@ function ConsultCard({ consult: c, onConfirm, confirming }) {
         <span className="text-xs text-gray-400 tabular-nums">{formatKST(c.appliedAt)}</span>
         {isPending && (
           <Button
-            type="primary"
-            size="small"
+            size="sm"
             loading={confirming}
             onClick={() => onConfirm(c.id)}
-            style={{ borderRadius: 12, fontWeight: 600, minWidth: 64 }}
+            className="min-w-16"
           >
             확인하기
           </Button>
         )}
       </div>
+      </CardContent>
     </Card>
   );
 }
@@ -118,7 +117,7 @@ export default function ConsultManagePage() {
       await updatePage(id, { '상태': { select: { name: '확인됨' } } });
       await consultsRes.refresh();
     } catch (e) {
-      message.error(`처리 실패: ${e.message}`);
+      toast.error(`처리 실패: ${e.message}`);
     } finally {
       setConfirming(null);
     }

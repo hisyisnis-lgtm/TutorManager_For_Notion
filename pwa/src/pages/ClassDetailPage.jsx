@@ -3,8 +3,8 @@ import {
   useNavigate,
   Link } from 'react-router-dom';
 import { useCachedResource } from '../hooks/useCachedResource.js';
-import { Button,
-  Card } from 'antd';
+import { Button } from '../components/shadcn/button';
+import { Card, CardContent } from '../components/shadcn/card';
 import { CaretRightIcon } from '@phosphor-icons/react';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
@@ -21,9 +21,8 @@ import { parseClass,
 import { useData } from '../context/DataContext.jsx';
 import { stripEmoji } from '../utils/stringUtils.js';
 import { isOnlineGroupTitle } from '../utils/classTypeKind.js';
-import { PRIMARY,
+import {
   TEXT_PRIMARY,
-  TEXT_SECONDARY,
   TEXT_TERTIARY,
   GRAY_100 } from '../constants/theme.js';
 import { SECTION_HEADING } from '../constants/styles.js';
@@ -117,13 +116,14 @@ export default function ClassDetailPage() {
     <>
       <PageHeader title="수업 상세" back />
       <div className="px-4 pt-4 pb-24">
-        <Card variant="borderless" style={{ borderRadius: 12, boxShadow: 'var(--shadow-border)' }} styles={{ body: { padding: '16px 18px' } }}>
+        <Card>
+          <CardContent className="py-4 px-[18px]">
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 14 }}>
             <p style={{ fontSize: 18, fontWeight: 700, color: TEXT_PRIMARY, margin: 0 }}>
               {cls.title || studentNames || '수업'}
             </p>
             <Link to={`/classes/${id}/edit`} style={{ flexShrink: 0 }}>
-              <Button type="text" size="small" style={{ color: PRIMARY, fontWeight: 600, paddingInline: 8 }}>편집</Button>
+              <Button variant="ghost" size="sm" className="px-2 text-primary hover:text-primary">편집</Button>
             </Link>
           </div>
           <Row label="상태" value={cls.status ? <Badge label={stripEmoji(cls.status)} bg={sc.bg} text={sc.text} /> : null} />
@@ -136,17 +136,14 @@ export default function ClassDetailPage() {
           <Row label="특이사항" value={cls.notes ? <Badge label={stripEmoji(cls.notes)} bg={nc?.bg || 'bg-gray-100'} text={nc?.text || 'text-gray-500'} /> : null} />
           <Row label="메모" value={cls.noteMemo} />
           <Row label="전화번호" value={cls.phone} />
+          </CardContent>
         </Card>
 
         {/* 수업 준비 — 직전 수업 일지. 위 정보와 같은 캐시라 따로 로딩 문구가 필요 없다.
             자료가 없으면 카드째 안 그린다(빈 카드 금지). */}
         {prep.map((slide) => (
-          <Card
-            key={slide.studentId}
-            variant="borderless"
-            style={{ borderRadius: 12, boxShadow: 'var(--shadow-border)', marginTop: 12 }}
-            styles={{ body: { padding: '16px 18px' } }}
-          >
+          <Card key={slide.studentId} className="mt-3">
+            <CardContent className="py-4 px-[18px]">
             <p style={{ ...SECTION_HEADING, marginBottom: 4 }}>
               수업 준비{prep.length > 1 && studentNameMap[slide.studentId] ? ` · ${stripEmoji(studentNameMap[slide.studentId])}` : ''}
             </p>
@@ -161,30 +158,27 @@ export default function ClassDetailPage() {
             ) : (
               <LessonLogBody log={slide.log} />
             )}
+            </CardContent>
           </Card>
         ))}
 
         {/* 학생별 수업 관리로 — 학생 상세의 '학생 결제 페이지' 버튼과 같은 어법(중립 면).
             2:1이면 학생마다 하나씩. 학생 없는 수업(그룹)은 갈 곳이 없어 안 그린다. */}
         {cls.studentIds.map((sid) => (
-          <button
+          <Button
             key={sid}
             type="button"
+            variant="secondary"
+            block
             onClick={() => navigate(`/students/${sid}/classes`)}
-            className="w-full flex items-center justify-center gap-1"
-            style={{
-              marginTop: 12, height: 44, borderRadius: 12,
-              background: GRAY_100, border: 'none', cursor: 'pointer',
-              fontSize: 13, fontWeight: 600, color: TEXT_SECONDARY,
-              transition: 'background-color 150ms ease-out',
-              WebkitTapHighlightColor: 'transparent',
-            }}
+            className="mt-3 gap-1 text-muted-foreground"
+            style={{ fontSize: 13 }}
           >
             {cls.studentIds.length > 1 && studentNameMap[sid]
               ? `${stripEmoji(studentNameMap[sid])} 수업 전체보기`
               : '학생 수업 전체보기'}
             <CaretRightIcon size={16} weight="bold" color={TEXT_TERTIARY} />
-          </button>
+          </Button>
         ))}
       </div>
     </>

@@ -1,7 +1,4 @@
-import { Flex, Typography } from 'antd';
-import { TEXT_SECONDARY } from '../../constants/theme.js';
-
-const { Text } = Typography;
+import { TEXT_SECONDARY, TEXT_TERTIARY } from '../../constants/theme.js';
 
 export default function EmptyState({ icon, title, description }) {
   const iconNode = typeof icon === 'string'
@@ -9,16 +6,16 @@ export default function EmptyState({ icon, title, description }) {
     : (icon ?? null);
 
   return (
-    <Flex vertical align="center" justify="center" gap={8} style={{ padding: '80px 24px', textAlign: 'center' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '80px 24px', textAlign: 'center' }}>
       {iconNode && <div style={{ marginBottom: 4 }}>{iconNode}</div>}
       {title && (
-        <Text strong style={{ fontSize: 15, color: TEXT_SECONDARY, display: 'block' }}>
+        <span style={{ fontSize: 15, fontWeight: 600, color: TEXT_SECONDARY, display: 'block' }}>
           {title}
-        </Text>
+        </span>
       )}
       {description && (
-        <Text type="secondary" style={{ fontSize: 13, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{description}</Text>
+        <span style={{ fontSize: 13, color: TEXT_TERTIARY, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{description}</span>
       )}
-    </Flex>
+    </div>
   );
 }

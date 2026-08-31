@@ -1,6 +1,12 @@
 import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Alert, Button, Input, Switch, Typography, message } from 'antd';
+import { WarningCircleIcon } from '@phosphor-icons/react';
+import { Alert, AlertDescription } from '../components/shadcn/alert';
+import { Button } from '../components/shadcn/button';
+import { Input } from '../components/shadcn/input';
+import { Textarea } from '../components/shadcn/textarea';
+import { Switch } from '../components/shadcn/switch';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import SubmitButton from '../components/ui/SubmitButton.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
@@ -118,53 +124,50 @@ export default function StudentFormPage() {
           그룹 안은 16px, 그룹 사이는 28px로 리듬을 준다. 하단은 BottomNav를 피해 96px. */}
       <form onSubmit={handleSubmit} className="px-4 pt-4 pb-24" style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
         {error && (
-          <Alert type="error" title={error} showIcon style={{ borderRadius: 12 }} />
+          <Alert variant="destructive">
+            <WarningCircleIcon size={16} weight="fill" aria-hidden />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
         )}
 
         {/* ── 누구인가 ───────────────────────── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         {/* 이름 */}
         <div>
-          <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
+          <span style={{ fontSize: 14, fontWeight: 600, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
             이름 *
-          </Typography.Text>
+          </span>
           <Input
-            size="large"
             value={form.name}
             onChange={set('name')}
             placeholder="홍길동"
-            style={{ borderRadius: 12 }}
             required
           />
         </div>
 
         {/* 전화번호 */}
         <div>
-          <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
+          <span style={{ fontSize: 14, fontWeight: 600, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
             전화번호 (선택)
-          </Typography.Text>
+          </span>
           <Input
-            size="large"
             type="tel"
             value={form.phone}
             onChange={set('phone')}
             placeholder="010-0000-0000"
-            style={{ borderRadius: 12 }}
           />
         </div>
 
         {/* 이메일 */}
         <div>
-          <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
+          <span style={{ fontSize: 14, fontWeight: 600, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
             이메일 (선택)
-          </Typography.Text>
+          </span>
           <Input
-            size="large"
             type="email"
             value={form.email}
             onChange={set('email')}
             placeholder="example@email.com"
-            style={{ borderRadius: 12 }}
           />
         </div>
 
@@ -174,43 +177,40 @@ export default function StudentFormPage() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         {/* 레벨 */}
         <div>
-          <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
+          <span style={{ fontSize: 14, fontWeight: 600, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
             레벨 (선택)
-          </Typography.Text>
-          <Input.TextArea
+          </span>
+          <Textarea
             value={form.level}
             onChange={set('level')}
             placeholder="예: 초급, 중급, 고급"
             rows={3}
-            style={{ borderRadius: 12 }}
           />
         </div>
 
         {/* 목표 */}
         <div>
-          <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
+          <span style={{ fontSize: 14, fontWeight: 600, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
             목표 (선택)
-          </Typography.Text>
-          <Input.TextArea
+          </span>
+          <Textarea
             value={form.goal}
             onChange={set('goal')}
             placeholder="예: 수능 1등급, 회화 향상"
             rows={3}
-            style={{ borderRadius: 12 }}
           />
         </div>
 
         {/* 메모 */}
         <div>
-          <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
+          <span style={{ fontSize: 14, fontWeight: 600, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
             메모 (선택)
-          </Typography.Text>
-          <Input.TextArea
+          </span>
+          <Textarea
             value={form.memo}
             onChange={set('memo')}
             placeholder="특이사항, 참고 정보 등"
             rows={3}
-            style={{ borderRadius: 12 }}
           />
         </div>
 
@@ -223,9 +223,9 @@ export default function StudentFormPage() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         {/* 상태 */}
         <div>
-          <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
+          <span style={{ fontSize: 14, fontWeight: 600, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
             상태
-          </Typography.Text>
+          </span>
           <div className="flex gap-2">
             {STATUS_OPTIONS.map((s) => (
               <button
@@ -258,7 +258,7 @@ export default function StudentFormPage() {
           <p className="text-sm font-semibold" style={{ color: TEXT_PRIMARY, margin: 0, minWidth: 0 }}>숙제 관리 대상 (VIP)</p>
           <Switch
             checked={!!form.vip}
-            onChange={(checked) => setForm((f) => ({ ...f, vip: checked }))}
+            onCheckedChange={(checked) => setForm((f) => ({ ...f, vip: checked }))}
             aria-label="숙제 관리 대상(VIP) 설정"
           />
         </div>
@@ -269,21 +269,22 @@ export default function StudentFormPage() {
         {isEdit && savedCode && (
           <Button
             block
-            /* 사슬 모양은 획으로 읽히는 구조 아이콘이라 fill이면 뭉갠다 → bold(§19.3).
-               크기도 버튼 안 아이콘 토큰인 20px로(§19.2, 16은 인라인 메타용) */
-            icon={<LinkIcon weight="bold" size={20} color={PRIMARY} />}
+            variant="outline"
             onClick={() => {
               // iOS Safari PWA가 "홈 화면에 추가" 시 hash·query를 잘라내므로 path 기반 URL로 공유.
               // App.jsx 모듈 IIFE가 `/personal/{token}` path 진입 시 hash로 변환해 라우터로 전달.
               const personalUrl = `${SITE_ORIGIN}/personal/${encodeURIComponent(savedCode)}`;
               const cleanName = form.name.replace(/[\u200B-\u200D\uFE0F\uFEFF]/g, '').replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, '').trim();
               const text = `${personalUrl}\n[${cleanName}님 학생코드 - ${savedCode}]`;
-              navigator.clipboard.writeText(text).then(() => message.success('복사되었습니다.'));
+              navigator.clipboard.writeText(text).then(() => toast.success('복사되었습니다.'));
               // 첫 공유 시점만 기록 — 판다 먹이 계산의 시작점이 됨.
               markStudentSharedIfEmpty(id).catch((e) => console.warn('공유일 기록 실패:', e?.message));
             }}
-            style={{ borderRadius: 12, height: 44, fontWeight: 600 }}
           >
+            {/* antd의 icon prop 대신 children으로 넣는다 — 우리 Button은 gap-2로 간격을 준다.
+                사슬 모양은 획으로 읽히는 구조 아이콘이라 fill이면 뭉갠다 → bold(§19.3).
+                크기는 버튼 안 아이콘 토큰 20px(§19.2, 16은 인라인 메타용). */}
+            <LinkIcon weight="bold" size={20} color={PRIMARY} />
             학생 페이지 공유
           </Button>
         )}

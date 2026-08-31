@@ -1,6 +1,7 @@
 import {
   useState } from 'react';
-import { message } from 'antd';
+import { toast } from 'sonner';
+
 import { detectInAppBrowser,
   openInChromeAndroid } from '../../utils/inAppBrowser.js';
 import {
@@ -39,9 +40,9 @@ export default function InAppBrowserWarning() {
   const handleCopyUrl = async () => {
     try {
       await navigator.clipboard.writeText(window.location.href);
-      message.success('주소를 복사했어요. Safari를 열고 주소창에 붙여넣어 주세요.');
+      toast.success('주소를 복사했어요. Safari를 열고 주소창에 붙여넣어 주세요.');
     } catch {
-      message.error('주소 복사에 실패했어요. 주소창에서 직접 복사해주세요.');
+      toast.error('주소 복사에 실패했어요. 주소창에서 직접 복사해주세요.');
     }
   };
 

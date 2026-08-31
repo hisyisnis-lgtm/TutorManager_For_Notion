@@ -1,15 +1,20 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
-import { Button, Input, Select, message } from 'antd';
+import { Button } from '../components/shadcn/button';
+import SearchInput from '../components/ui/SearchInput.jsx';
+import SelectField from '../components/ui/SelectField.jsx';
 import { useCachedResource } from '../hooks/useCachedResource.js';
 import dayjs from 'dayjs';
-import { MagnifyingGlassIcon, CalendarBlankIcon, CalendarPlusIcon } from '@phosphor-icons/react';
-import { TEXT_SECONDARY, TEXT_TERTIARY, BORDER_NEUTRAL, GRAY_100 } from '../constants/theme.js';
+import { CalendarBlankIcon, CalendarPlusIcon } from '@phosphor-icons/react';
+import { BORDER_NEUTRAL } from '../constants/theme.js';
+import { FAB_EXTRA_PB } from '../constants/styles.js';
 import { queryAll } from '../api/notionClient.js';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import ErrorMessage from '../components/ui/ErrorMessage.jsx';
 import EmptyState from '../components/ui/EmptyState.jsx';
+import LoadMoreButton from '../components/ui/LoadMoreButton.jsx';
 import MonthCalendar from '../components/ui/MonthCalendar.jsx';
 import { fetchClassesPage, parseClass, CLASSES_DB } from '../api/classes.js';
 import { formatTime, formatDuration, KST } from '../utils/dateUtils.js';
@@ -146,7 +151,7 @@ export default function ClassesPage() {
       setPageHasMore(data.has_more);
       setPageCursor(data.next_cursor);
     } catch (e) {
-      message.error(e.message);
+      toast.error(e.message);
     } finally {
       setLoadingMore(false);
     }
@@ -301,24 +306,18 @@ export default function ClassesPage() {
 
       {/* 학생 검색 + 수업 종류 */}
       <div className="px-4 pb-3 space-y-2">
-        <Input
-          prefix={<MagnifyingGlassIcon weight="fill" style={{ color: TEXT_TERTIARY }} />}
+        <SearchInput
           placeholder="학생 이름으로 검색"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          allowClear
-          size="large"
-          style={{ borderRadius: 12 }}
         />
         {/* '상세 필터' 접이식은 없앴다(2026-08-27) — 안에 든 게 수업 종류 하나뿐이라
             한 번 더 누르게 할 이유가 없었다. 정밀 날짜(DatePicker 2개)는 월 범위 필터로 대체. */}
-        <Select
+        <SelectField
           value={classTypeFilter || undefined}
           onChange={(v) => setClassTypeFilter(v || '')}
           placeholder="수업 종류 전체"
           allowClear
-          size="large"
-          style={{ width: '100%' }}
           options={classTypes.map((ct) => ({ value: ct.id, label: ct.title }))}
         />
       </div>
@@ -346,28 +345,15 @@ export default function ClassesPage() {
               }
             />
           ) : (
-            <ul className="px-4 pt-5 space-y-3" style={{ paddingBottom: hasMore ? 12 : 152 }}>
+            <ul className="px-4 pt-5 space-y-3" style={{ paddingBottom: hasMore ? 12 : FAB_EXTRA_PB }}>
               {filteredClasses.map((cls) => (
                 <ClassCard key={cls.id} cls={cls} studentNameMap={studentNameMap} />
               ))}
             </ul>
           )}
           {hasMore && (
-            <div className="px-4" style={{ paddingBottom: 152 }}>
-              {/* 숙제·수업 일지와 같은 회색 면 버튼 — 목록을 늘리는 보조 동작이라 튀지 않는다 */}
-              <button
-                type="button"
-                onClick={loadMore}
-                disabled={loadingMore}
-                className="w-full"
-                style={{
-                  height: 40, borderRadius: 12, background: GRAY_100, border: 'none',
-                  cursor: loadingMore ? 'default' : 'pointer', fontSize: 13, fontWeight: 600,
-                  color: TEXT_SECONDARY, WebkitTapHighlightColor: 'transparent',
-                }}
-              >
-                {loadingMore ? '불러오는 중…' : '더 보기'}
-              </button>
+            <div className="px-4" style={{ paddingBottom: FAB_EXTRA_PB }}>
+              <LoadMoreButton onClick={loadMore} loading={loadingMore} />
             </div>
           )}
         </>
@@ -384,14 +370,9 @@ export default function ClassesPage() {
       >
         <Link to="/classes/new">
           <Button
-            type="primary"
-            shape="circle"
+            size="icon"
             aria-label="수업 추가"
-            style={{
-              width: 56, height: 56,
-              boxShadow: 'var(--shadow-brand-button)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}
+            className="h-14 w-14 rounded-full shadow-[shadow:var(--shadow-brand-button)]"
           >
             <CalendarPlusIcon weight="fill" size={24} />
           </Button>

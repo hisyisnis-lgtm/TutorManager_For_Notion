@@ -1,5 +1,4 @@
-import { Select } from 'antd';
-import { CheckIcon } from '@phosphor-icons/react';
+import SelectField from './SelectField.jsx';
 import { TEXT_SECONDARY } from '../../constants/theme.js';
 
 const MONTHS = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'];
@@ -72,20 +71,12 @@ function YearMonth({ year, month, years, onYear, onMonth, hideYear = false, hide
   // 단위는 앞 상자에 속한 글자다. 양쪽 간격이 같으면 '년'이 어느 상자 것인지 모호해진다.
   const unit = { fontSize: 13, color: TEXT_SECONDARY, userSelect: 'none', flexShrink: 0 };
   const unitBetween = { ...unit, marginRight: 10 };
-  // showSearch를 끄는 이유: antd v6 단일 Select는 열면 검색 입력으로 바뀌어 고른 값이 흐려진다.
-  const common = {
-    showSearch: false,
-    menuItemSelectedIcon: <CheckIcon size={16} weight="bold" />,
-    styles: { popup: { root: { borderRadius: 12 } } },
-  };
-
   // display:contents — 이 래퍼를 flex 계산에서 빼야 두 월 상자 폭이 같아진다.
   return (
     <span style={{ display: 'contents' }}>
       {!hideYear && (
         <>
-          <Select
-            {...common}
+          <SelectField
             value={year}
             onChange={onYear}
             options={years.map((y) => ({ value: y, label: y }))}
@@ -94,8 +85,7 @@ function YearMonth({ year, month, years, onYear, onMonth, hideYear = false, hide
           <span style={unitBetween}>년</span>
         </>
       )}
-      <Select
-        {...common}
+      <SelectField
         value={month}
         onChange={onMonth}
         options={MONTHS.map((m) => ({ value: m, label: String(Number(m)) }))}

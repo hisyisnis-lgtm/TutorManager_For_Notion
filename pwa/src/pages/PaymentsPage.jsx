@@ -1,24 +1,27 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
-import { Button, Input, Card, Select, message } from 'antd';
+import { Button } from '../components/shadcn/button';
+import SearchInput from '../components/ui/SearchInput.jsx';
+import SelectField from '../components/ui/SelectField.jsx';
 import { useCachedResource } from '../hooks/useCachedResource.js';
-import { MagnifyingGlassIcon, ReceiptIcon, CreditCardIcon } from '@phosphor-icons/react';
+import { ReceiptIcon, CreditCardIcon } from '@phosphor-icons/react';
 import PageHeader from '../components/layout/PageHeader.jsx';
-import Badge from '../components/ui/Badge.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import ErrorMessage from '../components/ui/ErrorMessage.jsx';
 import EmptyState from '../components/ui/EmptyState.jsx';
+import LoadMoreButton from '../components/ui/LoadMoreButton.jsx';
 import { fetchPaymentsPage, parsePayment, PAYMENTS_DB } from '../api/payments.js';
 import PaymentCard from '../components/payments/PaymentCard.jsx';
 import { queryAll } from '../api/notionClient.js';
-import { formatKRW, KST } from '../utils/dateUtils.js';
+import { KST } from '../utils/dateUtils.js';
 import { stripEmoji } from '../utils/stringUtils.js';
 import { useData } from '../context/DataContext.jsx';
 import PullToRefresh from '../components/ui/PullToRefresh.jsx';
 import PaymentTrendChart from '../components/payments/PaymentTrendChart.jsx';
 import IncomeSummary from '../components/payments/IncomeSummary.jsx';
-import { TEXT_SECONDARY, TEXT_TERTIARY, BORDER_NEUTRAL, GRAY_100 } from '../constants/theme.js';
-import { ABOVE_BOTTOM_NAV } from '../constants/styles.js';
+import { BORDER_NEUTRAL } from '../constants/theme.js';
+import { ABOVE_BOTTOM_NAV, FAB_EXTRA_PB } from '../constants/styles.js';
 
 export default function PaymentsPage() {
   const { students, classTypes, studentNameMap, classTypeMap } = useData();
@@ -73,7 +76,7 @@ export default function PaymentsPage() {
       setPageHasMore(data.has_more);
       setPageCursor(data.next_cursor);
     } catch (e) {
-      message.error(e.message);
+      toast.error(e.message);
     } finally {
       setLoadingMore(false);
     }
@@ -132,23 +135,19 @@ export default function PaymentsPage() {
       <div className="px-4 pt-5 space-y-2">
         {/* 학생 검색 필터 */}
         <div className="relative">
-          <Input
-            prefix={<MagnifyingGlassIcon weight="fill" style={{ color: TEXT_TERTIARY }} />}
+          <SearchInput
             placeholder="학생 이름으로 검색"
             value={nameInput}
             onChange={(e) => {
               setNameInput(e.target.value);
               if (!e.target.value) setStudentFilter('');
             }}
-            allowClear
-            size="large"
-            style={{ borderRadius: 12 }}
           />
           {nameInput && !studentFilter && (
             (() => {
               const suggestions = students.filter((s) => s.name.includes(nameInput));
               return suggestions.length > 0 ? (
-                <div className="absolute top-full left-0 right-0 z-10 bg-white rounded-xl shadow-[var(--shadow-modal)] mt-1 overflow-hidden">
+                <div className="absolute top-full left-0 right-0 z-10 bg-white rounded-xl shadow-[shadow:var(--shadow-modal)] mt-1 overflow-hidden">
                   {suggestions.map((s) => (
                     <button
                       key={s.id}
@@ -162,7 +161,7 @@ export default function PaymentsPage() {
                   ))}
                 </div>
               ) : (
-                <div className="absolute top-full left-0 right-0 z-10 bg-white rounded-xl shadow-[var(--shadow-modal)] mt-1 px-4 py-3 text-sm text-gray-400 text-center">
+                <div className="absolute top-full left-0 right-0 z-10 bg-white rounded-xl shadow-[shadow:var(--shadow-modal)] mt-1 px-4 py-3 text-sm text-gray-400 text-center">
                   검색 결과 없음
                 </div>
               );
@@ -171,18 +170,13 @@ export default function PaymentsPage() {
         </div>
 
         {/* 수업 종류 필터 */}
-        <Select
+        <SelectField
           value={classTypeFilter || undefined}
           onChange={(v) => setClassTypeFilter(v || '')}
           placeholder="수업 종류 전체"
           allowClear
-          size="large"
-          style={{ width: '100%' }}
-        >
-          {classTypes.map((ct) => (
-            <Select.Option key={ct.id} value={ct.id}>{ct.title}</Select.Option>
-          ))}
-        </Select>
+          options={classTypes.map((ct) => ({ value: ct.id, label: ct.title }))}
+        />
       </div>
 
       {loading && <LoadingSpinner />}
@@ -193,7 +187,7 @@ export default function PaymentsPage() {
           {filtered.length === 0 ? (
             <EmptyState icon={<ReceiptIcon size={44} weight="thin" style={{ color: BORDER_NEUTRAL }} />} title="결제 내역이 없습니다" />
           ) : (
-            <ul className="px-4 pt-5 space-y-3" style={{ paddingBottom: hasMore ? 12 : 152 }}>
+            <ul className="px-4 pt-5 space-y-3" style={{ paddingBottom: hasMore ? 12 : FAB_EXTRA_PB }}>
               {filtered.map((p) => (
                 <PaymentCard
                   key={p.id}
@@ -205,21 +199,8 @@ export default function PaymentsPage() {
             </ul>
           )}
           {hasMore && (
-            <div className="px-4" style={{ paddingBottom: 152 }}>
-              {/* 숙제·수업·수업 일지와 같은 회색 면 버튼 — 목록을 늘리는 보조 동작이라 튀지 않는다 */}
-              <button
-                type="button"
-                onClick={loadMore}
-                disabled={loadingMore}
-                className="w-full"
-                style={{
-                  height: 40, borderRadius: 12, background: GRAY_100, border: 'none',
-                  cursor: loadingMore ? 'default' : 'pointer', fontSize: 13, fontWeight: 600,
-                  color: TEXT_SECONDARY, WebkitTapHighlightColor: 'transparent',
-                }}
-              >
-                {loadingMore ? '불러오는 중…' : '더 보기'}
-              </button>
+            <div className="px-4" style={{ paddingBottom: FAB_EXTRA_PB }}>
+              <LoadMoreButton onClick={loadMore} loading={loadingMore} />
             </div>
           )}
         </>
@@ -236,14 +217,9 @@ export default function PaymentsPage() {
       >
         <Link to="/payments/new">
           <Button
-            type="primary"
-            shape="circle"
+            size="icon"
             aria-label="결제 추가"
-            style={{
-              width: 56, height: 56,
-              boxShadow: 'var(--shadow-brand-button)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}
+            className="h-14 w-14 rounded-full shadow-[shadow:var(--shadow-brand-button)]"
           >
             {/* 2026-08-27 사용자 선택. ⛔ 영수증(그냥 '문서'로 읽힘)·₩(하단탭 결제와 겹침) 재제안 금지.
                 phosphor엔 CalendarPlus 같은 '돈+plus' 아이콘이 없어 결제 수단으로 뜻을 세운다. */}

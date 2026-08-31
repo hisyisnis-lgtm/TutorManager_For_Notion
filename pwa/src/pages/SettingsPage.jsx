@@ -2,9 +2,8 @@ import {
   useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CaretRightIcon } from '@phosphor-icons/react';
-import { Button,
-  Input,
-  Typography } from 'antd';
+import { Button } from '../components/shadcn/button';
+import { Input } from '../components/shadcn/input';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import ConfirmDialog from '../components/ui/ConfirmDialog.jsx';
 import { clearAuth } from '../api/authUtils.js';
@@ -86,30 +85,26 @@ export default function SettingsPage() {
   return (
     <>
       <PageHeader title="설정" back />
-      <div className="px-4 pt-6 pb-8 space-y-6">
+      <div className="px-4 pt-6 space-y-6">
         <div>
-          <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>강사 이름</Typography.Text>
+          <span style={{ fontSize: 14, fontWeight: 600, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>강사 이름</span>
           <Input
             type="text"
             value={name}
             onChange={(e) => { setName(e.target.value); setSaved(false); }}
             placeholder="강사 이름 입력"
-            style={{ borderRadius: 12 }}
-            size="large"
             maxLength={20}
           />
           <p className="text-xs text-gray-500 mt-1.5">홈 화면 인사말에 표시됩니다.</p>
         </div>
 
         <div>
-          <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>ntfy 토픽</Typography.Text>
+          <span style={{ fontSize: 14, fontWeight: 600, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>ntfy 토픽</span>
           <Input
             type="text"
             value={ntfyTopic}
             onChange={(e) => { setNtfyTopic(e.target.value); setSaved(false); }}
             placeholder="예) tutor-alerts"
-            style={{ borderRadius: 12 }}
-            size="large"
             maxLength={64}
             autoCapitalize="none"
             autoCorrect="off"
@@ -120,7 +115,7 @@ export default function SettingsPage() {
         </div>
 
         <div>
-          <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>수업 설정</Typography.Text>
+          <span style={{ fontSize: 14, fontWeight: 600, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>수업 설정</span>
           <Link
             to="/notices"
             className="press flex items-center gap-2 bg-white shadow-border rounded-2xl pl-3 pr-2.5 py-2.5 active:bg-gray-50 transition-[background-color] duration-150 ease-out mb-2"
@@ -147,7 +142,7 @@ export default function SettingsPage() {
         </div>
 
         <div>
-          <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>공유 링크</Typography.Text>
+          <span style={{ fontSize: 14, fontWeight: 600, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>공유 링크</span>
           <div className="space-y-2">
             {SHARE_LINKS.map(({ key, label, path }) => (
               <div key={key} className="flex items-center gap-2 bg-white shadow-border rounded-2xl px-3 py-2.5">
@@ -168,33 +163,28 @@ export default function SettingsPage() {
         </div>
 
         <Button
-          type="primary"
           block
           onClick={handleSave}
-          style={{
-            borderRadius: 12,
-            height: 44,
-            fontWeight: 600,
-            ...(saved ? { backgroundColor: STATUS_SUCCESS_DARK, borderColor: STATUS_SUCCESS_DARK } : {}),
-          }}
+          // 저장 완료 상태만 성공색으로 — radius/height/weight는 우리 Button 기본값이라 뺐다
+          style={saved ? { backgroundColor: STATUS_SUCCESS_DARK, borderColor: STATUS_SUCCESS_DARK } : undefined}
         >
           {saved ? '저장됨' : '저장'}
         </Button>
 
         <Button
+          variant="outline"
           block
           onClick={handleUpdate}
           loading={updating}
-          style={{ borderRadius: 12, height: 44, fontWeight: 600 }}
         >
           업데이트 (강력 새로고침)
         </Button>
 
         <Button
-          danger
+          variant="destructiveOutline"
           block
           onClick={() => setConfirmLogout(true)}
-          style={{ borderRadius: 12, height: 44, fontWeight: 600, border: `1px solid ${STATUS_ERROR_BORDER}` }}
+          style={{ borderColor: STATUS_ERROR_BORDER }}
         >
           로그아웃
         </Button>
@@ -207,6 +197,8 @@ export default function SettingsPage() {
           title="로그아웃"
           message="로그아웃하면 다시 비밀번호를 입력해야 합니다."
           confirmLabel="로그아웃"
+          // 로그아웃은 데이터가 지워지는 동작이 아니다 — 삭제급 빨강 대신 브랜드색 확인 버튼
+          danger={false}
           onConfirm={() => {
             clearAuth();
             window.location.reload();

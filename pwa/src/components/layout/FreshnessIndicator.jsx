@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ArrowsClockwiseIcon, CheckCircleIcon } from '@phosphor-icons/react';
 import { useIsRevalidating } from '../../hooks/useCachedResource.js';
+import { ABOVE_BOTTOM_NAV } from '../../constants/styles.js';
 
 // 전역 최신화 표시 — 앱에 하나만 둔다(App.jsx). 백그라운드로 캐시를 갱신하는
 // 동안 "업데이트 중", 끝나면 잠깐 "방금 업데이트됨"을 보여주고 사라진다.
@@ -32,7 +33,8 @@ export default function FreshnessIndicator() {
         position: 'fixed',
         left: 0,
         right: 0,
-        bottom: 'calc(60px + env(safe-area-inset-bottom) + 12px)',
+        // 캡슐 탭바 위 — 탭바 형태가 바뀌어도 이 상수만 따라간다
+        bottom: ABOVE_BOTTOM_NAV,
         display: 'flex',
         justifyContent: 'center',
         zIndex: 45, // BottomNav(50) 아래 — 위치상 겹치지 않지만 안전하게.

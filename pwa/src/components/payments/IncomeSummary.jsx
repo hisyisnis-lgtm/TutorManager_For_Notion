@@ -3,8 +3,8 @@ import {
   useEffect,
   forwardRef,
   useImperativeHandle } from 'react';
-import { Card,
-  Modal } from 'antd';
+import { Card, CardContent } from '../shadcn/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../shadcn/dialog';
 import { useCachedResource } from '../../hooks/useCachedResource.js';
 import { CaretRightIcon } from '@phosphor-icons/react';
 import { useData } from '../../context/DataContext.jsx';
@@ -299,11 +299,8 @@ const IncomeSummary = forwardRef(function IncomeSummary(_props, ref) {
       {/* 차트와 붙지 않게 20 — 이 페이지는 영역 사이 20 / 도구끼리 8이 규칙이다(2026-08-27) */}
       <div className="px-4 pt-5">
         <SectionHeading style={{ marginBottom: 12 }}>수입 현황</SectionHeading>
-        <Card
-          variant="borderless"
-          style={{ borderRadius: 12, boxShadow: 'var(--shadow-border)' }}
-          styles={{ body: { padding: '14px 16px' } }}
-        >
+        <Card>
+          <CardContent>
           <button
             type="button"
             onClick={() => { setBreakdownBucket('thisMonth'); setBreakdownModalOpen(true); }}
@@ -327,8 +324,10 @@ const IncomeSummary = forwardRef(function IncomeSummary(_props, ref) {
             disabled={forecastLoading}
             className="flex items-center justify-between w-full transition-[background-color] duration-150 ease-out"
             style={{
-              marginTop: 10, paddingTop: 10, borderTop: '1px solid ${GRAY_100}',
-              background: 'none', border: 'none', textAlign: 'left', padding: '10px 0 0',
+              marginTop: 10, paddingTop: 10,
+              background: 'none', textAlign: 'left', padding: '10px 0 0',
+              // border:none 을 먼저 둬야 한다 — 뒤에 오면 borderTop 을 덮어써서 구분선이 사라진다.
+              border: 'none', borderTop: `1px solid ${GRAY_100}`,
               cursor: forecastLoading ? 'default' : 'pointer' }}
           >
             <span className="text-sm flex items-center gap-1" style={{ color: TEXT_TERTIARY }}>
@@ -373,27 +372,26 @@ const IncomeSummary = forwardRef(function IncomeSummary(_props, ref) {
               </span>
             )}
           </button>
+          </CardContent>
         </Card>
       </div>
 
       {/* 예상 결제 수익 상세 모달 */}
-      <Modal
-        open={breakdownModalOpen}
-        onCancel={() => setBreakdownModalOpen(false)}
-        footer={null}
-        destroyOnHidden
-        centered
-        title={breakdownBucket === 'thisMonth' ? '예상 이번 달 상세' : '예상 다음 달 상세'}
-        width="92vw"
-        style={{ maxWidth: 480, paddingBottom: 0 }}
-        styles={{
-          body: {
-            maxHeight: 'calc(85vh - 110px)',
-            overflowY: 'auto',
-            overscrollBehavior: 'contain',
-            WebkitOverflowScrolling: 'touch',
-            paddingRight: 4 } }}
-      >
+      <Dialog open={breakdownModalOpen} onOpenChange={setBreakdownModalOpen}>
+        <DialogContent className="w-[92vw] max-w-[480px] pb-0">
+          <DialogHeader>
+            <DialogTitle>{breakdownBucket === 'thisMonth' ? '예상 이번 달 상세' : '예상 다음 달 상세'}</DialogTitle>
+            <DialogDescription className="sr-only">예상 결제 수익의 학생별 내역입니다.</DialogDescription>
+          </DialogHeader>
+          <div
+            style={{
+              maxHeight: 'calc(85vh - 110px)',
+              overflowY: 'auto',
+              overscrollBehavior: 'contain',
+              WebkitOverflowScrolling: 'touch',
+              paddingRight: 4,
+            }}
+          >
         {(() => {
           const entries = forecastBreakdown.filter((e) => e.bucket === breakdownBucket);
           const confirmedThisMonth = monthPayments.reduce((s, p) => s + netPaid(p), 0);
@@ -464,7 +462,7 @@ const IncomeSummary = forwardRef(function IncomeSummary(_props, ref) {
                               key={p.id}
                               style={{
                                 padding: '12px 14px', borderRadius: 12,
-                                background: BG_APP, border: '1px solid ${GRAY_200}' }}
+                                background: BG_APP, border: `1px solid ${GRAY_200}` }}
                             >
                               <div className="flex items-center justify-between">
                                 <span style={{ fontSize: 14, fontWeight: 600, color: TEXT_PRIMARY }}>
@@ -535,7 +533,9 @@ const IncomeSummary = forwardRef(function IncomeSummary(_props, ref) {
             </div>
           );
         })()}
-      </Modal>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 });

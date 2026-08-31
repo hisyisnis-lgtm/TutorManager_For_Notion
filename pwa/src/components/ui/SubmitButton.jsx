@@ -1,4 +1,5 @@
-import { Button, App } from 'antd';
+import { Button } from '../shadcn/button';
+import { toast } from 'sonner';
 import { GRAY_100, GRAY_300, TEXT_DISABLED } from '../../constants/theme.js';
 
 /**
@@ -11,15 +12,17 @@ import { GRAY_100, GRAY_300, TEXT_DISABLED } from '../../constants/theme.js';
  *
  * @param blockedReason 채워야 할 게 남았을 때의 안내 문구. 없으면(`null`) 정상 제출.
  */
-export default function SubmitButton({ blockedReason, loading, onClick, style, children, ...rest }) {
-  const { message } = App.useApp();
+export default function SubmitButton({ blockedReason, loading, onClick, style, children, htmlType, type, ...rest }) {
   const blocked = Boolean(blockedReason) && !loading;
+  // antd는 `htmlType`을 네이티브 `type`으로 번역해줬다. 우리 Button은 native button이라
+  // 그대로 넘기면 DOM에 알 수 없는 속성으로 새어나간다(React 경고).
+  // 호출부 4곳이 아직 htmlType을 쓰므로 여기서 받아 번역한다.
+  const nativeType = type ?? htmlType ?? 'button';
 
   return (
     <Button
-      type="primary"
       block
-      size="large"
+      type={nativeType}
       loading={loading}
       aria-disabled={blocked || undefined}
       onClick={(e) => {
@@ -27,16 +30,15 @@ export default function SubmitButton({ blockedReason, loading, onClick, style, c
           // htmlType="submit"이어도 여기서 막는다 — 폼이 그냥 넘어가지 않게.
           e.preventDefault();
           // key를 고정해 연타해도 토스트가 쌓이지 않게 한다(같은 자리에서 문구만 갱신).
-          message.warning({ content: blockedReason, key: 'submit-blocked' });
+          toast.warning(blockedReason, { id: 'submit-blocked' });
           return;
         }
         onClick?.(e);
       }}
       style={{
-        borderRadius: 12,
-        fontWeight: 600,
-        height: 44,
-        // antd의 disabled 모양을 그대로 흉내 낸다 — 사용자 눈엔 똑같이 '못 누르는 버튼'이어야 한다.
+        // radius 12·weight 600·height 44는 우리 Button 기본값이라 뺐다.
+        // blocked 모양만 남긴다 — 우리 Button의 disabled(opacity 50%)와 생김새가 달라서,
+        // "못 누르는 버튼"으로 읽히게 하려면 이 면·보더 조합이 필요하다.
         ...(blocked
           ? { background: GRAY_100, color: TEXT_DISABLED, border: `1px solid ${GRAY_300}`, boxShadow: 'none' }
           : null),

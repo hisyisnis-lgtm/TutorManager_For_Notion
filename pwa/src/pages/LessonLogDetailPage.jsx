@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Button, Card } from 'antd';
+import { Button } from '../components/shadcn/button';
+import { Card, CardContent } from '../components/shadcn/card';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import ErrorMessage from '../components/ui/ErrorMessage.jsx';
@@ -10,7 +11,7 @@ import { parseLessonLog } from '../api/lessonLogs.js';
 import { parseClass } from '../api/classes.js';
 import { formatDateTime, formatTime } from '../utils/dateUtils.js';
 import { useData } from '../context/DataContext.jsx';
-import { PRIMARY, TEXT_PRIMARY, TEXT_TERTIARY } from '../constants/theme.js';
+import { TEXT_PRIMARY, TEXT_TERTIARY } from '../constants/theme.js';
 
 /**
  * 수업 일지 상세 — **읽기 전용**. 편집은 카드 안 '편집' 버튼으로 `/logs/:id/edit`에 들어간다.
@@ -61,7 +62,8 @@ export default function LessonLogDetailPage() {
       <PageHeader title="수업 일지" back />
 
       <div className="px-4 pt-4 pb-24">
-        <Card variant="borderless" style={{ borderRadius: 12, boxShadow: 'var(--shadow-border)' }} styles={{ body: { padding: '16px 18px' } }}>
+        <Card>
+          <CardContent className="py-4 px-[18px]">
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 14 }}>
             <div style={{ minWidth: 0 }}>
               <p style={{ fontSize: 18, fontWeight: 700, color: TEXT_PRIMARY, margin: 0, wordBreak: 'keep-all' }}>
@@ -76,11 +78,12 @@ export default function LessonLogDetailPage() {
             </div>
             {/* 편집은 헤더 우상단이 아니라 카드 안 — 이 앱의 상세 화면 공통 어법 */}
             <Link to={`/logs/${id}/edit`} style={{ flexShrink: 0 }}>
-              <Button type="text" size="small" style={{ color: PRIMARY, fontWeight: 600, paddingInline: 8 }}>편집</Button>
+              <Button variant="ghost" size="sm" className="px-2 text-primary hover:text-primary">편집</Button>
             </Link>
           </div>
 
           <LessonLogBody log={log} />
+          </CardContent>
         </Card>
       </div>
     </>

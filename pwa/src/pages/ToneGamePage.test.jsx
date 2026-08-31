@@ -8,7 +8,6 @@
 import { describe, it, expect, beforeAll, beforeEach, afterEach } from 'vitest';
 import { render, within, fireEvent, cleanup } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { App } from 'antd';
 
 // ★import를 beforeAll에서 딱 한 번 — ToneGamePage는 모듈 그래프가 커서 첫 import에 수십 초가 걸린다.
 //  이걸 첫 테스트 안에서 하면 그 테스트만 import 비용을 뒤집어써, 머신이 바쁠 때 타임아웃으로 깨진다(2026-08-11 실제 발생).
@@ -22,9 +21,7 @@ beforeAll(async () => {
 function renderGame() {
   const { container } = render(
     <MemoryRouter>
-      <App>
-        <ToneGamePage />
-      </App>
+      <ToneGamePage />
     </MemoryRouter>,
   );
   const q = within(container);

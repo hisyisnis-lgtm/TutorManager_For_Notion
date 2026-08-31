@@ -29,8 +29,8 @@ export default function NoticeTab({ studentToken }) {
     );
   }
 
-  // 제목만 보이는 목록 — 본문은 눌러서 상세로.
-  // 공지는 배포할 때마다 한 건씩 쌓이므로, 본문을 다 펼쳐두면 금세 스크롤 벽이 된다.
+  // 제목 + 본문 첫 줄 미리보기 — 전문은 눌러서 상세로.
+  // 본문을 다 펼치면 스크롤 벽이 되지만, 한 줄 프리뷰는 열기 전에 내용을 가늠하게 해준다(2026-08-31 평가).
   return (
     <div style={{ padding: '16px 16px 0' }}>
       {notices.map((n) => (
@@ -56,8 +56,15 @@ export default function NoticeTab({ studentToken }) {
                 {n.title}
               </span>
             </span>
+            {n.content && (
+              <span style={{
+                display: 'block', fontSize: 13, color: TEXT_TERTIARY, marginTop: 3,
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {n.content.split('\n').find((l) => l.trim()) || ''}
+              </span>
+            )}
             {n.publishedAt && (
-              <span className="tabular-nums" style={{ display: 'block', fontSize: 12, color: TEXT_TERTIARY, marginTop: 4 }}>
+              <span className="tabular-nums" style={{ display: 'block', fontSize: 12, color: TEXT_INACTIVE, marginTop: 4 }}>
                 {formatDateDot(n.publishedAt)}
               </span>
             )}

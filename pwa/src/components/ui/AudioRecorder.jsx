@@ -2,7 +2,8 @@ import {
   useState,
   useRef,
   useEffect } from 'react';
-import { message } from 'antd';
+import { toast } from 'sonner';
+
 import {
   PRIMARY,
   TEXT_PRIMARY,
@@ -121,11 +122,11 @@ export default function AudioRecorder({ onFile, onCancel, defaultName = 'recordi
 
   async function startRecording() {
     if (!window.isSecureContext) {
-      message.error('HTTPS 환경에서만 녹음할 수 있어요.');
+      toast.error('HTTPS 환경에서만 녹음할 수 있어요.');
       return;
     }
     if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
-      message.error('이 브라우저는 녹음을 지원하지 않아요. 최신 Chrome/Safari로 다시 시도해주세요.');
+      toast.error('이 브라우저는 녹음을 지원하지 않아요. 최신 Chrome/Safari로 다시 시도해주세요.');
       return;
     }
     // A. 권한 사전 체크 — Permissions API 지원 브라우저(Chrome/Edge/Firefox 등)에서 미리 'denied' 감지
@@ -181,11 +182,11 @@ export default function AudioRecorder({ onFile, onCancel, defaultName = 'recordi
       if (name === 'NotAllowedError' || name === 'SecurityError') {
         setPhase('mic-denied');
       } else if (name === 'NotFoundError' || name === 'OverconstrainedError') {
-        message.error('사용 가능한 마이크를 찾지 못했어요.');
+        toast.error('사용 가능한 마이크를 찾지 못했어요.');
       } else if (name === 'NotReadableError') {
-        message.error('마이크가 다른 앱에서 사용 중이에요. 다른 앱을 종료한 뒤 다시 시도해주세요.');
+        toast.error('마이크가 다른 앱에서 사용 중이에요. 다른 앱을 종료한 뒤 다시 시도해주세요.');
       } else {
-        message.error('녹음을 시작하지 못했어요. 잠시 후 다시 시도해주세요.');
+        toast.error('녹음을 시작하지 못했어요. 잠시 후 다시 시도해주세요.');
       }
     }
   }
@@ -206,9 +207,9 @@ export default function AudioRecorder({ onFile, onCancel, defaultName = 'recordi
   async function copyCurrentUrl() {
     try {
       await navigator.clipboard.writeText(window.location.href);
-      message.success('주소를 복사했어요. Safari를 열고 주소창에 붙여넣어 주세요.');
+      toast.success('주소를 복사했어요. Safari를 열고 주소창에 붙여넣어 주세요.');
     } catch {
-      message.error('주소 복사에 실패했어요. 주소창에서 직접 복사해주세요.');
+      toast.error('주소 복사에 실패했어요. 주소창에서 직접 복사해주세요.');
     }
   }
 

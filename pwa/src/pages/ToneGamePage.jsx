@@ -5,7 +5,6 @@
 // 디자인 사양: 메모리 tone_game_redesign.md
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
-import { App } from 'antd';
 import { fetchToneWords, fetchGameMe, takeTokenFromHash } from '../api/gameApi.js';
 import { track } from '../game/gameAnalytics.js';
 import {
@@ -140,7 +139,6 @@ export default function ToneGamePage() {
   // 정체성 추상화: 게스트(로컬UUID·독립진입)/회원(소셜)/프리뷰를 동일 처리. 로컬 저장키=identity.id. (학생·Notion 분리, 2026-07-12)
   const identity = useMemo(() => resolveIdentity(routeToken), [routeToken]);
   const studentToken = identity.id; // 로컬 저장 키(게스트ID/회원ID/'preview'). 게임은 Notion 분리 — 서버 베스트 호출 없음.
-  const { message } = App.useApp();
   const [student, setStudent] = useState(null);
   const [error, setError] = useState(false);
 
@@ -902,7 +900,7 @@ export default function ToneGamePage() {
     const poolId = d.tier || d.id; // 스테이지는 티어 풀 참조(밴드로 슬라이스), 일반 난이도는 자기 풀
     const pool = wordPoolByDiff[poolId];
     if (!pool || pool.length === 0) {
-      message.error('단어를 불러오지 못했어요. 잠시 후 다시 시도해주세요.');
+      showToast('단어를 불러오지 못했어요. 잠시 후 다시 시도해주세요.', 'info');
       setScreen('difficulty');
       fetchToneWords(poolId).then((w) => { if (Array.isArray(w) && w.length > 0) setWordPoolByDiff((prev) => ({ ...prev, [poolId]: w })); }).catch(() => {});
       return;
@@ -920,7 +918,7 @@ export default function ToneGamePage() {
   const startTraining = () => {
     const pool = unlockedTrainingPool(studentToken, wordPoolByDiff, rank);
     if (!pool || pool.length === 0) {
-      message.error('단어를 불러오지 못했어요. 잠시 후 다시 시도해주세요.');
+      showToast('단어를 불러오지 못했어요. 잠시 후 다시 시도해주세요.', 'info');
       setScreen('modeselect');
       fetchToneWords('easy').then((w) => { if (Array.isArray(w) && w.length > 0) setWordPoolByDiff((prev) => ({ ...prev, easy: w })); }).catch(() => {});
       return;
@@ -998,7 +996,7 @@ export default function ToneGamePage() {
   // 무한 모드 — 전 난이도 랜덤 스트림. 점점 가속, 첫 시간초과 종료, 헤드라인 최고점.
   const startEndless = () => {
     const all = DIFFICULTIES.flatMap((d) => wordPoolByDiff[d.id] || []);
-    if (all.length === 0) { message.error('단어를 불러오지 못했어요. 잠시 후 다시 시도해주세요.'); return; }
+    if (all.length === 0) { showToast('단어를 불러오지 못했어요. 잠시 후 다시 시도해주세요.', 'info'); return; }
     let stream = [];
     for (let i = 0; i < 8; i++) stream = stream.concat(shuffle(all)); // 첫 초과로 끝나므로 충분히 길게
     setGameMode('endless');    setRecordToBeat(loadEndlessBest(studentToken)?.bestScore || 0); // 라이브 신기록 기준(무한 직전 최고)
@@ -1013,7 +1011,7 @@ export default function ToneGamePage() {
     if (theme && theme.id !== selectedTheme.id) setSelectedTheme(t);
     const pool = wordPoolByTheme[t.id];
     if (!pool || pool.length === 0) {
-      message.error('단어를 불러오지 못했어요. 잠시 후 다시 시도해주세요.');
+      showToast('단어를 불러오지 못했어요. 잠시 후 다시 시도해주세요.', 'info');
       setScreen('theme');
       fetchToneWords(t.id).then((w) => { if (Array.isArray(w) && w.length > 0) setWordPoolByTheme((prev) => ({ ...prev, [t.id]: w })); }).catch(() => {});
       return;
@@ -1035,7 +1033,7 @@ export default function ToneGamePage() {
     const d = DIFFICULTIES[tIdx];
     const pool = wordPoolByDiff[d.id];
     if (!pool || pool.length === 0) {
-      message.error('단어를 불러오지 못했어요. 잠시 후 다시 시도해주세요.');
+      showToast('단어를 불러오지 못했어요. 잠시 후 다시 시도해주세요.', 'info');
       fetchToneWords(d.id).then((w) => { if (Array.isArray(w) && w.length > 0) setWordPoolByDiff((prev) => ({ ...prev, [d.id]: w })); }).catch(() => {});
       return;
     }
