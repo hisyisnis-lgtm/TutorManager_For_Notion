@@ -73,7 +73,7 @@ export async function updateStudent(pageId, { name, phone, email, level, goal, s
 }
 
 /** 학생 생성 */
-export async function createStudent({ name, phone, email, level, goal, status, memo, bookingCode }) {
+export async function createStudent({ name, phone, email, level, goal, status, memo, bookingCode, vip }) {
   const properties = {
     이름: { title: [{ text: { content: name } }] },
     상태: { select: { name: status || '🟢 수강중' } },
@@ -84,6 +84,8 @@ export async function createStudent({ name, phone, email, level, goal, status, m
   if (goal) properties['목표'] = { rich_text: [{ text: { content: goal } }] };
   if (memo) properties['메모'] = { rich_text: [{ text: { content: memo } }] };
   if (bookingCode) properties['예약 코드'] = { rich_text: [{ text: { content: bookingCode } }] };
+  // 추가 폼의 VIP 토글이 저장 안 되던 버그(2026-08-30 검수) — updateStudent와 동일하게 처리
+  if (vip) properties['VIP'] = { checkbox: true };
   return createPage(STUDENTS_DB, properties);
 }
 

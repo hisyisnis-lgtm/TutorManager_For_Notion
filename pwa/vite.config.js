@@ -17,6 +17,13 @@ export default defineConfig(({ mode }) => {
     __APP_VERSION__: JSON.stringify(version),
     __GAME_APP__: JSON.stringify(isGameApp),
   },
+  // shadcn 컴포넌트가 `@/lib/utils` 형태로 서로를 참조한다(공식 규약).
+  // jsconfig.json에도 같은 매핑이 있어야 에디터 자동완성·경로 점프가 동작한다.
+  resolve: {
+    alias: {
+      '@': fileURLToPath(new URL('./src', import.meta.url)),
+    },
+  },
   // 운영 빌드에서 진단용 로그만 걷어낸다(minify 시 제거, dev 서버는 그대로 출력).
   // ⚠️ console.error/warn은 절대 넣지 말 것 — 사용자 기기에서 난 문제를 추적할 유일한 경로다.
   esbuild: {

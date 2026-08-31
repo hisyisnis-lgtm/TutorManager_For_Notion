@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { useParams, useNavigate } from 'react-router-dom';
 import { stripEmoji } from '../utils/stringUtils.js';
-import { Button, Card, message } from 'antd';
+import { Button } from '../components/shadcn/button';
+import { Card, CardContent } from '../components/shadcn/card';
 import { FileTextIcon, CalendarBlankIcon, CaretRightIcon, CaretDownIcon, PhoneIcon } from '@phosphor-icons/react';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import Badge from '../components/ui/Badge.jsx';
@@ -80,7 +82,7 @@ export default function StudentDetailPage() {
       refreshAll();
       navigate(-1);
     } catch (e) {
-      message.error(`삭제 실패: ${e.message}`);
+      toast.error(`삭제 실패: ${e.message}`);
       setShowDeleteConfirm(false);
       setDeleting(false);
     }
@@ -106,8 +108,8 @@ export default function StudentDetailPage() {
           /* 수정은 "필요할 때 찾는" 보조 액션 — 색으로 강조하지 않는다.
              (학생별 수업 관리의 '선택' 버튼과 같은 판단, 2026-08-26) */
           <Button
+            variant="outline"
             onClick={() => navigate(`/students/${id}/edit`)}
-            style={{ borderRadius: 12, fontWeight: 600 }}
           >
             수정
           </Button>
@@ -135,7 +137,8 @@ export default function StudentDetailPage() {
             "수업을 더 잡을 수 있나 / 결제 안내를 해야 하나"를 이 숫자가 결정한다.
             ⛔ 게이지·막대를 넣지 말 것 — 2026-08-26에 두 가지 방식으로 시도했다 모두 폐기했다.
                이유는 메모리 [[project_booking_patterns]] "시간 카드" 항목 참고. */}
-        <Card variant="borderless" style={{ borderRadius: 12, boxShadow: 'var(--shadow-border)' }} styles={{ body: { padding: '16px' } }}>
+        <Card>
+          <CardContent className="p-4">
           <p style={{ fontSize: 13, fontWeight: 600, color: TEXT_SECONDARY, margin: '0 0 4px' }}>예약 가능 시간</p>
           <p
             className="tabular-nums"
@@ -149,6 +152,7 @@ export default function StudentDetailPage() {
             <span style={{ color: GRAY_300 }}>·</span>
             <span className="tabular-nums">남은 수업 {formatSessions(totalHours)}시간</span>
           </div>
+          </CardContent>
         </Card>
 
         {/* ② 수업·숙제 — 학생 관리의 메인 기능이라 가로 2열 타일로 볼륨을 준다.
@@ -169,7 +173,8 @@ export default function StudentDetailPage() {
         </div>
 
         {/* ③ 학생 정보 — 이름·연락처·레벨·목표·메모. 전부 "필요할 때 찾아보는" 참고 정보라 접어 둔다 */}
-        <Card variant="borderless" style={{ borderRadius: 12, boxShadow: 'var(--shadow-border)' }} styles={{ body: { padding: '14px 16px' } }}>
+        <Card>
+          <CardContent>
           <Disclosure open={infoOpen} onToggle={() => setInfoOpen((v) => !v)} label="학생 정보" />
           <div className="reveal" data-open={infoOpen}>
             <div>
@@ -202,11 +207,13 @@ export default function StudentDetailPage() {
               </div>
             </div>
           </div>
+          </CardContent>
         </Card>
 
         {/* ④ 결제 정보 — 최근 5건. 지금 당장의 판단(수업 잡기)에는 안 쓰이는 이력이라 접어 둔다 */}
         {payments.length > 0 && (
-          <Card variant="borderless" style={{ borderRadius: 12, boxShadow: 'var(--shadow-border)' }} styles={{ body: { padding: '14px 16px' } }}>
+          <Card>
+            <CardContent>
             <Disclosure open={paymentsOpen} onToggle={() => setPaymentsOpen((v) => !v)} label="결제 정보" />
             <div className="reveal" data-open={paymentsOpen}>
               <div>
@@ -236,33 +243,29 @@ export default function StudentDetailPage() {
                   {/* 상세에는 최근 5건만 담는다 — 전체 이력·합계는 학생별 결제 페이지에서.
                       배경 있는 중립 버튼(GRAY_100)으로 둔다 — 텍스트만 있으면 결제 행들과
                       섞여 어정쩡하고, 브랜드 채움은 이 화면의 액센트 예산을 넘는다. */}
-                  <button
+                  <Button
                     type="button"
+                    variant="secondary"
+                    block
                     onClick={() => navigate(`/students/${id}/payments`)}
-                    className="w-full flex items-center justify-center gap-1"
-                    style={{
-                      marginTop: 10, height: 44, borderRadius: 12,
-                      background: GRAY_100, border: 'none', cursor: 'pointer',
-                      fontSize: 13, fontWeight: 600, color: TEXT_SECONDARY,
-                      transition: 'background-color 150ms ease-out',
-                      WebkitTapHighlightColor: 'transparent',
-                    }}
+                    className="mt-2.5 gap-1 text-muted-foreground"
+                    style={{ fontSize: 13 }}
                   >
                     학생 결제 페이지
                     <CaretRightIcon size={16} weight="bold" color={TEXT_TERTIARY} />
-                  </button>
+                  </Button>
                 </div>
               </div>
             </div>
+            </CardContent>
           </Card>
         )}
 
         {/* 학생 삭제 */}
         <Button
-          danger
+          variant="destructiveOutline"
           block
           onClick={() => setShowDeleteConfirm(true)}
-          style={{ borderRadius: 12, height: 44, fontWeight: 600 }}
         >
           학생 삭제
         </Button>

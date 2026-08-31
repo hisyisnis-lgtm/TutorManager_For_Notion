@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Card } from 'antd';
+import { Card, CardContent } from '@/components/shadcn/card';
 import Badge from '../ui/Badge.jsx';
 import { paymentStatusColor, refundSessions, formatSessions } from '../../api/payments.js';
 import { formatKRW } from '../../utils/dateUtils.js';
@@ -28,12 +28,9 @@ export default function PaymentCard({ payment, studentNameMap, classTypeMap, hid
         to={`/payments/${payment.id}`}
         className="block tap-wrap"
       >
-        <Card
-          variant="borderless"
-          className="card-tap"
-          style={{ borderRadius: 12 }}
-          styles={{ body: { padding: '14px 16px' } }}
-        >
+        {/* 목록 카드 규범 = radius 16 + padding 16 (수업 목록 ClassCard와 동일) */}
+        <Card className="card-tap rounded-2xl">
+          <CardContent className="p-4">
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 10 }}>
             <div style={{ flex: 1, minWidth: 0 }}>
               <p style={{ fontSize: 15, fontWeight: 700, color: TEXT_PRIMARY, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -81,6 +78,7 @@ export default function PaymentCard({ payment, studentNameMap, classTypeMap, hid
           {payment.paymentDate && (
             <p style={{ fontSize: 12, color: TEXT_TERTIARY, margin: '8px 0 0' }} className="tabular-nums">결제일 {payment.paymentDate}</p>
           )}
+          </CardContent>
         </Card>
       </Link>
     </li>

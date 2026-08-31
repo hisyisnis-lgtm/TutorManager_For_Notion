@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Button, Input } from 'antd';
-import { MagnifyingGlassIcon, UsersThreeIcon, CaretDownIcon, CheckCircleIcon, PauseCircleIcon, MinusCircleIcon, UserPlusIcon } from '@phosphor-icons/react';
-import Card from 'antd/es/card/Card';
+import { Button } from '../components/shadcn/button';
+import { Card, CardContent } from '../components/shadcn/card';
+import SearchInput from '../components/ui/SearchInput.jsx';
+import { UsersThreeIcon, CaretDownIcon, CheckCircleIcon, PauseCircleIcon, MinusCircleIcon, UserPlusIcon } from '@phosphor-icons/react';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import ErrorMessage from '../components/ui/ErrorMessage.jsx';
@@ -14,7 +15,7 @@ import { stripEmoji } from '../utils/stringUtils.js';
 import PullToRefresh from '../components/ui/PullToRefresh.jsx';
 import { useData } from '../context/DataContext.jsx';
 import { TEXT_PRIMARY, TEXT_INACTIVE, TEXT_TERTIARY, BORDER_NEUTRAL, STATUS_SUCCESS_DARK, STATUS_WARNING_TEXT, STATUS_ERROR_TEXT } from '../constants/theme.js';
-import { SECTION_HEADING, ABOVE_BOTTOM_NAV } from '../constants/styles.js';
+import { SECTION_HEADING, ABOVE_BOTTOM_NAV, FAB_EXTRA_PB } from '../constants/styles.js';
 
 // 섹션 헤더 아이콘 — 노션 상태값의 이모지(🟢🟡⚫) 대신 phosphor 아이콘을 쓴다(§19.1).
 // 같은 원형 계열로 묶어 "하나의 상태 스케일"로 읽히게 하고, 색은 의미색 토큰.
@@ -52,14 +53,10 @@ export default function StudentsPage() {
       <PageHeader title="학생 관리" />
 
       <div className="px-4 pt-4">
-        <Input
-          size="large"
+        <SearchInput
           placeholder="이름으로 검색"
-          prefix={<MagnifyingGlassIcon weight="fill" style={{ color: TEXT_TERTIARY }} />}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          style={{ borderRadius: 12 }}
-          allowClear
         />
       </div>
 
@@ -71,7 +68,7 @@ export default function StudentsPage() {
           {filtered.length === 0 ? (
             <EmptyState icon={<UsersThreeIcon size={44} weight="thin" style={{ color: BORDER_NEUTRAL }} />} title={searching ? '검색 결과가 없어요' : '학생이 없습니다'} description={searching ? undefined : '노션에서 학생을 추가하세요.'} />
           ) : (
-            <div className="px-4" style={{ paddingTop: 20, paddingBottom: 152 }}>
+            <div className="px-4" style={{ paddingTop: 20, paddingBottom: FAB_EXTRA_PB }}>
               {groups.map(({ status, items }) => {
                 if (!items.length) return null;
                 // 수강중은 항상, 검색 중에는 전부 펼친다 — 접힌 섹션에 결과가 숨으면 안 된다.
@@ -143,15 +140,10 @@ export default function StudentsPage() {
         }}
       >
         <Button
-          type="primary"
-          shape="circle"
+          size="icon"
           aria-label="학생 추가"
           onClick={() => navigate('/students/new')}
-          style={{
-            width: 56, height: 56,
-            boxShadow: 'var(--shadow-brand-button)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}
+          className="h-14 w-14 rounded-full shadow-[shadow:var(--shadow-brand-button)]"
         >
           <UserPlusIcon weight="fill" size={24} />
         </Button>
@@ -167,12 +159,8 @@ function StudentCard({ student, remaining }) {
         to={`/students/${student.id}`}
         className="block tap-wrap"
       >
-        <Card
-          variant="borderless"
-          className="card-tap"
-          style={{ borderRadius: 16 }}
-          styles={{ body: { padding: '16px' } }}
-        >
+        <Card className="card-tap rounded-2xl">
+          <CardContent className="p-4">
           {/* 상태 배지는 없다 — 카드가 상태별 섹션 안에 있어 헤더가 이미 말해준다(2026-08-26) */}
           <p className="text-base font-bold text-gray-900" style={{ margin: '0 0 8px' }}>{student.name}</p>
           <div className="flex gap-4 text-sm">
@@ -192,6 +180,7 @@ function StudentCard({ student, remaining }) {
               </div>
             )}
           </div>
+          </CardContent>
         </Card>
       </Link>
     </li>

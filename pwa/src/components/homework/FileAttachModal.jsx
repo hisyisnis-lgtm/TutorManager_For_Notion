@@ -1,6 +1,7 @@
-import {
-  Button,
-  Modal } from 'antd';
+import { useRef } from 'react';
+import { Button } from '../shadcn/button';
+import { Input } from '../shadcn/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../shadcn/dialog';
 import { CaretLeftIcon } from '@phosphor-icons/react';
 import AudioRecorder from '../ui/AudioRecorder.jsx';
 import {
@@ -8,7 +9,6 @@ import {
   TEXT_SECONDARY,
   TEXT_INACTIVE,
   TEXT_DISABLED,
-  BORDER_NEUTRAL,
   STATUS_SUCCESS_BG,
   STATUS_SUCCESS_BORDER } from '../../constants/theme.js';
 import { ACCEPT_AUDIO, ACCEPT_DOCUMENT } from '../../utils/audioFile.js';
@@ -32,24 +32,37 @@ export default function FileAttachModal({ attach, titles, hints }) {
     handleNamingConfirm, handleSessionConfirm,
   } = attach;
 
+  // 닫힘 애니메이션 동안 modalKind는 이미 null인데 Dialog는 화면에 남아 있어
+  // 제목·버튼이 fallback으로 번쩍 바뀌었다("파일 제출" 플래시, 2026-08-31).
+  // 렌더링용 kind는 마지막 값을 유지한다 — 로직 판정은 여전히 modalKind 기준.
+  const lastKindRef = useRef(null);
+  if (modalKind !== null) lastKindRef.current = modalKind;
+  const displayKind = modalKind ?? lastKindRef.current;
+
   const modalTitle = (() => {
     if (modalView === 'record') return '음성 녹음';
     if (modalView === 'naming') return '파일 이름 입력';
-    if (modalKind === 'audio') return titles.audio;
-    if (modalKind === 'document') return titles.document;
+    if (displayKind === 'audio') return titles.audio;
+    if (displayKind === 'document') return titles.document;
     return titles.fallback;
   })();
 
   return (
-    <Modal
-      open={modalKind !== null}
-      onCancel={closeModal}
-      footer={null}
-      closable={false}
-      mask={{ closable: false }}
-      keyboard={false}
-      title={
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+    <Dialog open={modalKind !== null} onOpenChange={(next) => { if (!next) closeModal(); }}>
+      {/* antd의 closable=false·mask.closable=false·keyboard=false를 그대로 옮긴 것:
+          업로드 중 실수로 닫혀 파일이 날아가지 않도록 **명시적 동작으로만** 닫는다. */}
+      {/* pt-4: 헤더가 컴팩트해 위만 살짝 줄임. 아래는 기본 p-6(24px) 유지 —
+          antd 시절 잔재 pb-1(4px) 때문에 확인 버튼이 모달 바닥에 붙어 보였다(2026-08-30) */}
+      <DialogContent
+        showClose={false}
+        onPointerDownOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => e.preventDefault()}
+        onInteractOutside={(e) => e.preventDefault()}
+        className="pt-4"
+      >
+      <DialogHeader>
+        <DialogTitle asChild>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           {modalView !== 'list' && (
             <button
               type="button"
@@ -62,12 +75,10 @@ export default function FileAttachModal({ attach, titles, hints }) {
             </button>
           )}
           <span style={{ fontSize: 16, fontWeight: 700 }}>{modalTitle}</span>
-        </div>
-      }
-      centered
-      destroyOnHidden
-      styles={{ body: { paddingTop: 8, paddingBottom: 4 } }}
-    >
+          </div>
+        </DialogTitle>
+        <DialogDescription className="sr-only">숙제에 첨부할 파일을 고르세요.</DialogDescription>
+      </DialogHeader>
       {/* 카테고리별 input — accept 속성으로 OS picker 단계에서 필터 */}
       <input
         ref={audioInputRef}
@@ -114,49 +125,41 @@ export default function FileAttachModal({ attach, titles, hints }) {
           ) : (
             <p style={{
               fontSize: 13, color: TEXT_INACTIVE, textAlign: 'center',
-              padding: '14px 0 16px', margin: 0, lineHeight: 1.6,
+              // DialogContent 그리드 gap(16px)이 제목과의 간격을 이미 주므로 위 패딩은 살짝만.
+              // 아래는 버튼 간격(12px 리듬)과 맞춘다 — 14/16/10으로 제각각이던 여백 통일(2026-08-30)
+              padding: '4px 0 12px', margin: 0, lineHeight: 1.6,
             }}>
-              {modalKind === 'audio' ? hints.audio : hints.document}
+              {displayKind === 'audio' ? hints.audio : hints.document}
             </p>
           )}
 
-          {modalKind === 'audio' ? (
-            <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-              <button
-                type="button"
-                onClick={tryOpenAudioPicker}
-                className="transition-[background-color] duration-150 ease-out"
-                style={{ flex: 1, height: 44, borderRadius: 12, background: 'white', border: `1px solid ${BORDER_NEUTRAL}`, color: TEXT_SECONDARY, fontSize: 14, fontWeight: 600, cursor: 'pointer', WebkitTapHighlightColor: 'transparent' }}
-              >
+          {displayKind === 'audio' ? (
+            <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+              <Button type="button" variant="outline" onClick={tryOpenAudioPicker} className="flex-1 text-muted-foreground">
                 파일 추가
-              </button>
-              <button
-                type="button"
-                onClick={tryOpenRecord}
-                className="transition-[background-color] duration-150 ease-out"
-                style={{ flex: 1, height: 44, borderRadius: 12, background: 'white', border: `1px solid ${BORDER_NEUTRAL}`, color: TEXT_SECONDARY, fontSize: 14, fontWeight: 600, cursor: 'pointer', WebkitTapHighlightColor: 'transparent' }}
-              >
+              </Button>
+              <Button type="button" variant="outline" onClick={tryOpenRecord} className="flex-1 text-muted-foreground">
                 바로 녹음
-              </button>
+              </Button>
             </div>
           ) : (
-            <div style={{ marginBottom: 10 }}>
+            <div style={{ marginBottom: 12 }}>
               {/* 고른 사진을 줄이는 동안(여러 장이면 몇 초) 버튼을 잠그고 상태를 보여준다 —
                   아무 반응이 없으면 학생이 같은 버튼을 다시 누르게 된다 */}
-              <button
+              <Button
                 type="button"
+                variant="outline"
+                block
                 onClick={tryOpenDocPicker}
                 disabled={preparing}
-                className="transition-[background-color] duration-150 ease-out"
-                style={{ width: '100%', height: 44, borderRadius: 12, background: 'white', border: `1px solid ${BORDER_NEUTRAL}`, color: preparing ? TEXT_INACTIVE : TEXT_SECONDARY, fontSize: 14, fontWeight: 600, cursor: preparing ? 'progress' : 'pointer', WebkitTapHighlightColor: 'transparent' }}
+                className="text-muted-foreground"
               >
                 {preparing ? '사진 준비 중…' : '파일 추가'}
-              </button>
+              </Button>
             </div>
           )}
 
           <Button
-            type="primary"
             block
             onClick={handleSessionConfirm}
             disabled={preparing}
@@ -167,7 +170,7 @@ export default function FileAttachModal({ attach, titles, hints }) {
         </div>
       )}
 
-      {modalView === 'record' && modalKind === 'audio' && (
+      {modalView === 'record' && displayKind === 'audio' && (
         <AudioRecorder
           defaultName={recorderDefaultName}
           onFile={handleRecorderFile}
@@ -180,19 +183,14 @@ export default function FileAttachModal({ attach, titles, hints }) {
         <div>
           <p style={{ fontSize: 13, color: TEXT_SECONDARY, margin: '0 0 8px' }}>파일 이름을 입력하세요</p>
           <div style={{ position: 'relative', marginBottom: 8 }}>
-            <input
+            <Input
               type="text"
               value={namingInput}
               onChange={(e) => setNamingInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleNamingConfirm()}
               maxLength={50}
               autoFocus
-              style={{
-                width: '100%', height: 44, borderRadius: 12,
-                border: `1px solid ${BORDER_NEUTRAL}`,
-                padding: namingFile.ext ? '0 56px 0 14px' : '0 14px',
-                fontSize: 15, color: TEXT_PRIMARY, boxSizing: 'border-box', outline: 'none',
-              }}
+              style={{ fontSize: 15, padding: namingFile.ext ? '0 56px 0 14px' : '0 14px' }}
               onFocus={(e) => e.target.select()}
             />
             {namingFile.ext && (
@@ -205,7 +203,6 @@ export default function FileAttachModal({ attach, titles, hints }) {
             )}
           </div>
           <Button
-            type="primary"
             block
             onClick={handleNamingConfirm}
             disabled={!namingInput.trim()}
@@ -215,6 +212,7 @@ export default function FileAttachModal({ attach, titles, hints }) {
           </Button>
         </div>
       )}
-    </Modal>
+      </DialogContent>
+    </Dialog>
   );
 }

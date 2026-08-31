@@ -3,12 +3,11 @@ import {
   useEffect } from 'react';
 import { useParams,
   Link } from 'react-router-dom';
-import { Alert,
-  Button,
-  Card,
-  Input,
-  Modal,
-  Typography } from 'antd';
+import { Alert, AlertDescription } from '../components/shadcn/alert';
+import { Button } from '../components/shadcn/button';
+import { Card, CardContent } from '../components/shadcn/card';
+import { Input } from '../components/shadcn/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../components/shadcn/dialog';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import ErrorMessage from '../components/ui/ErrorMessage.jsx';
@@ -26,8 +25,7 @@ import { useData } from '../context/DataContext.jsx';
 import { stripEmoji } from '../utils/stringUtils.js';
 import { formatKRW,
   todayKST } from '../utils/dateUtils.js';
-import { PRIMARY,
-  PRIMARY_BG,
+import { PRIMARY_BG,
   TEXT_SECONDARY,
   TEXT_PRIMARY,
   TEXT_TERTIARY,
@@ -127,7 +125,8 @@ export default function PaymentDetailPage() {
     <>
       <PageHeader title="결제 상세" back />
       <div className="px-4 pt-4 pb-24">
-        <Card variant="borderless" style={{ borderRadius: 12, boxShadow: 'var(--shadow-border)' }} styles={{ body: { padding: '16px 18px' } }}>
+        <Card>
+          <CardContent className="py-4 px-[18px]">
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 14 }}>
             <div style={{ minWidth: 0 }}>
               <p style={{ fontSize: 18, fontWeight: 700, color: TEXT_PRIMARY, margin: 0 }}>
@@ -140,7 +139,7 @@ export default function PaymentDetailPage() {
               )}
             </div>
             <Link to={`/payments/${id}/edit`} style={{ flexShrink: 0 }}>
-              <Button type="text" size="small" style={{ color: PRIMARY, fontWeight: 600, paddingInline: 8 }}>편집</Button>
+              <Button variant="ghost" size="sm" className="px-2 text-primary hover:text-primary">편집</Button>
             </Link>
           </div>
           {hasStudent && <Row label="상태" value={p.paymentStatus ? <Badge label={stripEmoji(p.paymentStatus)} bg={psc.bg} text={psc.text} /> : null} />}
@@ -164,34 +163,34 @@ export default function PaymentDetailPage() {
 
           <Button
             block
+            variant="outline"
             onClick={openRefund}
-            style={{ marginTop: 16, borderRadius: 12, height: 44, fontWeight: 600 }}
+            className="mt-4"
           >
             {refunded ? '환불 내역 수정' : '환불 처리'}
           </Button>
+          </CardContent>
         </Card>
       </div>
 
-      <Modal
-        open={refundOpen}
-        onCancel={() => setRefundOpen(false)}
-        title="환불 처리"
-        footer={null}
-        centered
-        destroyOnHidden
-        width="92vw"
-        style={{ maxWidth: 420 }}
-      >
+      <Dialog open={refundOpen} onOpenChange={setRefundOpen}>
+        <DialogContent className="w-[92vw] max-w-[420px]">
+          <DialogHeader>
+            <DialogTitle>환불 처리</DialogTitle>
+            <DialogDescription className="sr-only">환불 금액과 환불일을 입력하세요.</DialogDescription>
+          </DialogHeader>
         {refundError && (
-          <Alert type="error" title={refundError} showIcon style={{ borderRadius: 12, marginBottom: 12 }} />
+          <Alert variant="destructive" className="mb-3">
+            <AlertDescription>{refundError}</AlertDescription>
+          </Alert>
         )}
         <p style={{ fontSize: 13, color: TEXT_TERTIARY, margin: '0 0 14px' }}>
           실제 결제 금액 <strong style={{ color: TEXT_PRIMARY }}>{formatKRW(p.actualAmount)}</strong> 중 환불할 금액을 입력하세요. (0원으로 저장하면 환불 취소)
         </p>
 
-        <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
+        <span style={{ fontSize: 14, fontWeight: 600, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
           환불 금액
-        </Typography.Text>
+        </span>
         <Input
           type="number"
           value={refundForm.amount}
@@ -199,8 +198,7 @@ export default function PaymentDetailPage() {
           step="1000"
           min="0"
           placeholder="환불할 금액"
-          size="large"
-          style={{ borderRadius: 12, marginBottom: previewSessions > 0 ? 6 : 12 }}
+          className={previewSessions > 0 ? 'mb-1.5' : 'mb-3'}
         />
 
         {previewSessions > 0 && (
@@ -217,37 +215,31 @@ export default function PaymentDetailPage() {
           </div>
         )}
 
-        <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
+        <span style={{ fontSize: 14, fontWeight: 600, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
           환불일
-        </Typography.Text>
+        </span>
         <Input
           type="date"
           value={refundForm.date}
           onChange={(e) => setRefundForm((f) => ({ ...f, date: e.target.value }))}
-          size="large"
-          style={{ borderRadius: 12, marginBottom: 12 }}
+          className="mb-3"
         />
 
-        <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
+        <span style={{ fontSize: 14, fontWeight: 600, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
           환불 사유 <span style={{ fontWeight: 400, color: TEXT_TERTIARY }}>(선택)</span>
-        </Typography.Text>
+        </span>
         <Input
           value={refundForm.reason}
           onChange={(e) => setRefundForm((f) => ({ ...f, reason: e.target.value }))}
           placeholder="예: 2회 수업 후 중도 환불"
-          size="large"
-          style={{ borderRadius: 12, marginBottom: 16 }}
+          className="mb-4"
         />
 
-        <Button
-          type="primary"
-          block
-          onClick={requestRefund}
-          style={{ borderRadius: 12, height: 44, fontWeight: 600 }}
-        >
+        <Button block onClick={requestRefund}>
           저장
         </Button>
-      </Modal>
+        </DialogContent>
+      </Dialog>
 
       {refundConfirm && (() => {
         const amt = parseFloat(refundForm.amount) || 0;

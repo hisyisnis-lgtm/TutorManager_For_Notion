@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { toast } from 'sonner';
 import { validateFile, splitFileName } from '../utils/audioFile.js';
 import { compressImage } from '../utils/imageCompress.js';
 import { ensureCompleteFile, truncatedFileMessage } from '../utils/audioIntegrity.js';
@@ -16,12 +17,11 @@ export const MAX_FILES = 5;
  * @param {(index: number) => string} opts.genName - 자동 파일 이름 생성 (1-base index)
  * @param {number} opts.fixedCount - 기존 저장본 + 외부 pending 파일 수 (페이지마다 계산이 다름)
  * @param {number} [opts.maxFiles] - 첨부 상한 (기본 MAX_FILES)
- * @param {Object} opts.message - App.useApp() 의 message 인스턴스
  * @param {(kind: 'audio'|'document', files: Array) => void} opts.onConfirm
  *   - 모달 확인 시 sessionFiles 를 카테고리별 pending 으로 머지하는 콜백
  * @returns 훅 state·핸들러 묶음 — FileAttachModal 의 attach prop 으로 그대로 전달
  */
-export default function useFileAttach({ genName, fixedCount, maxFiles = MAX_FILES, message, onConfirm }) {
+export default function useFileAttach({ genName, fixedCount, maxFiles = MAX_FILES, onConfirm }) {
   // 모달 — kind 가 null이면 닫힘. 'audio' 또는 'document'.
   // view: 'list' | 'record' | 'naming' (document 카테고리에선 record 없음)
   const [modalKind, setModalKind] = useState(null);
@@ -70,7 +70,7 @@ export default function useFileAttach({ genName, fixedCount, maxFiles = MAX_FILE
 
   const guardLimit = () => {
     if (totalCount >= maxFiles) {
-      message.error(`파일은 최대 ${maxFiles}개까지 첨부할 수 있어요`);
+      toast.error(`파일은 최대 ${maxFiles}개까지 첨부할 수 있어요`);
       return false;
     }
     return true;
@@ -96,7 +96,7 @@ export default function useFileAttach({ genName, fixedCount, maxFiles = MAX_FILE
     if (picked.length === 0) return;
 
     if (totalCount + picked.length > maxFiles) {
-      message.error(`파일은 최대 ${maxFiles}개까지 첨부할 수 있어요`);
+      toast.error(`파일은 최대 ${maxFiles}개까지 첨부할 수 있어요`);
       return;
     }
 
@@ -109,17 +109,18 @@ export default function useFileAttach({ genName, fixedCount, maxFiles = MAX_FILE
       for (const f of picked) {
         const r = await ensureCompleteFile(f);
         if (!r.ok) {
-          message.error(truncatedFileMessage(f.name, r.actual, r.expected), 8);
+          // antd는 두 번째 인자가 초 단위 지속시간이었다 → sonner는 옵션 객체(밀리초).
+          toast.error(truncatedFileMessage(f.name, r.actual, r.expected), { duration: 8000 });
           return;
         }
-        if (r.recovered) message.success(`"${f.name}" 녹음을 온전한 상태로 복구했어요`);
+        if (r.recovered) toast.success(`"${f.name}" 녹음을 온전한 상태로 복구했어요`);
         checked.push(r.file);
       }
       files = checked;
 
       for (const f of files) {
         const v = validateFile(f, { expectedCategory: 'audio' });
-        if (!v.ok) { message.error(v.error); return; }
+        if (!v.ok) { toast.error(v.error); return; }
       }
     } finally {
       setPreparing(false);
@@ -154,7 +155,7 @@ export default function useFileAttach({ genName, fixedCount, maxFiles = MAX_FILE
 
     // 개수 검사를 먼저 — 어차피 거절할 파일을 압축하느라 기다리게 하지 않는다.
     if (totalCount + picked.length > maxFiles) {
-      message.error(`파일은 최대 ${maxFiles}개까지 첨부할 수 있어요`);
+      toast.error(`파일은 최대 ${maxFiles}개까지 첨부할 수 있어요`);
       return;
     }
 
@@ -167,7 +168,7 @@ export default function useFileAttach({ genName, fixedCount, maxFiles = MAX_FILE
 
       for (const f of files) {
         const v = validateFile(f, { expectedCategory: 'document' });
-        if (!v.ok) { message.error(v.error); return; }
+        if (!v.ok) { toast.error(v.error); return; }
       }
 
       const newOnes = files.map((file, i) => {
@@ -194,7 +195,7 @@ export default function useFileAttach({ genName, fixedCount, maxFiles = MAX_FILE
   // 제출 시점 서버 에러 대신 여기서 바로 안내
   const handleRecorderFile = (file) => {
     const check = validateFile(file);
-    if (!check.ok) { message.error(check.error); return; }
+    if (!check.ok) { toast.error(check.error); return; }
     const { base, ext } = splitFileName(file.name);
     addToSession(file, base, ext);
   };

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button } from 'antd';
+import { Button } from '../components/shadcn/button';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import EmptyState from '../components/ui/EmptyState.jsx';
 import { getNtfyTopic } from './SettingsPage.jsx';
@@ -154,9 +154,8 @@ export default function NotificationsPage() {
             설정에서 ntfy 토픽을 입력하면<br />실시간 알림을 받을 수 있습니다.
           </p>
           <Button
-            type="primary"
             onClick={() => navigate('/settings')}
-            style={{ borderRadius: 12, height: 44, fontWeight: 600, marginTop: 8 }}
+            className="mt-2"
           >
             설정으로 이동
           </Button>
@@ -173,9 +172,9 @@ export default function NotificationsPage() {
         action={
           notifications.length > 0 && (
             <Button
-              type="text"
+              variant="ghost"
               onClick={handleClearAll}
-              style={{ fontSize: 14, color: TEXT_INACTIVE }}
+              style={{ color: TEXT_INACTIVE }}
             >
               모두 지우기
             </Button>

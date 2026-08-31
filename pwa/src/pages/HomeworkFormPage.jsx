@@ -3,17 +3,18 @@ import {
   useEffect } from 'react';
 import { useNavigate,
   useSearchParams } from 'react-router-dom';
-import { Alert,
-  Button,
-  Input,
-  Select,
-  Spin,
-  App } from 'antd';
+import { CircleNotchIcon, WarningCircleIcon, WarningIcon } from '@phosphor-icons/react';
+import { Alert, AlertTitle, AlertDescription } from '../components/shadcn/alert';
+import { Input } from '../components/shadcn/input';
+import { Textarea } from '../components/shadcn/textarea';
+import SelectField from '../components/ui/SelectField.jsx';
 import { MicrophoneIcon,
   ImageSquareIcon } from '@phosphor-icons/react';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import FileAttachModal from '../components/homework/FileAttachModal.jsx';
 import SubmitButton from '../components/ui/SubmitButton.jsx';
+import SectionEntryButton from '../components/ui/SectionEntryButton.jsx';
+import { markPendingHwDone } from '../hooks/usePendingClassState.js';
 import { createHomework,
   notifyHomework,
   uploadTeacherFile } from '../api/homework.js';
@@ -24,7 +25,6 @@ import useFileAttach,
 import { parseStudent,
   STUDENTS_DB } from '../api/students.js';
 import {
-  GRAY_100,
   TEXT_PRIMARY,
   TEXT_SECONDARY,
   TEXT_TERTIARY,
@@ -44,7 +44,8 @@ export default function HomeworkFormPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const presetStudentId = searchParams.get('studentId');
-  const { message } = App.useApp();
+  // 홈 '수업 준비' 카드에서 온 경우 — 저장 성공 시에만 그 수업의 '숙제 부여 완료'를 기록한다
+  const fromClassId = searchParams.get('fromClassId');
 
   const [students, setStudents] = useState([]);
   const [studentsLoaded, setStudentsLoaded] = useState(false);
@@ -83,7 +84,6 @@ export default function HomeworkFormPage() {
   const attach = useFileAttach({
     genName: (index) => genAssignmentName(title, index),
     fixedCount,
-    message,
     onConfirm: (kind, files) => {
       if (kind === 'audio') {
         setPendingAudio((prev) => [...prev, ...files]);
@@ -120,6 +120,7 @@ export default function HomeworkFormPage() {
         files: uploaded.length > 0 ? uploaded : undefined,
       });
       if (created?.id) notifyHomework('assign', created.id);
+      if (fromClassId) markPendingHwDone(fromClassId);
       invalidateCache('homework');
       navigate(-1);
     } catch (e) {
@@ -154,37 +155,32 @@ export default function HomeworkFormPage() {
         <div>
           <label style={LABEL}>학생</label>
           {studentsLoadError && (
-            <Alert
-              type="error" showIcon
-              title="학생 목록을 불러오지 못했어요"
-              description="네트워크 확인 후 페이지를 새로고침해주세요."
-              style={{ borderRadius: 12, marginBottom: 8 }}
-            />
+            <Alert variant="destructive" className="mb-2">
+              <WarningCircleIcon size={16} weight="fill" aria-hidden />
+              <AlertTitle>학생 목록을 불러오지 못했어요</AlertTitle>
+              <AlertDescription>네트워크 확인 후 페이지를 새로고침해주세요.</AlertDescription>
+            </Alert>
           )}
           {presetStudentId ? (
             presetBlocked ? (
-              <Alert
-                type="warning"
-                showIcon
-                title="숙제 관리 대상 학생이 아니에요"
-                description="숙제는 VIP(숙제 관리 대상) 학생에게만 등록할 수 있어요."
-                style={{ borderRadius: 12 }}
-              />
+              <Alert variant="warning">
+                <WarningIcon size={16} weight="fill" aria-hidden />
+                <AlertTitle>숙제 관리 대상 학생이 아니에요</AlertTitle>
+                <AlertDescription>숙제는 VIP(숙제 관리 대상) 학생에게만 등록할 수 있어요.</AlertDescription>
+              </Alert>
             ) : (
               <div style={{ fontSize: 15, fontWeight: 600, color: TEXT_PRIMARY, padding: '8px 0' }}>
                 {presetOption?.label ?? '…'}
               </div>
             )
           ) : (
-            <Select
+            <SelectField
               value={studentId || undefined}
               onChange={setStudentId}
               placeholder="학생 선택"
-              style={{ width: '100%' }}
-              showSearch
-              filterOption={(input, option) => option.label.toLowerCase().includes(input.toLowerCase())}
+              searchable
+              searchPlaceholder="학생 이름 검색"
               options={studentOptions}
-              size="large"
             />
           )}
         </div>
@@ -197,16 +193,14 @@ export default function HomeworkFormPage() {
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="예) 1과 본문 읽기"
-            size="large"
             maxLength={100}
-            style={{ borderRadius: 12 }}
           />
         </div>
 
         {/* 숙제 내용 */}
         <div>
           <label htmlFor="hw-content" style={LABEL}>숙제 내용</label>
-          <Input.TextArea
+          <Textarea
             id="hw-content"
             value={content}
             onChange={(e) => setContent(e.target.value)}
@@ -214,7 +208,6 @@ export default function HomeworkFormPage() {
             rows={5}
             maxLength={1000}
             showCount
-            style={{ borderRadius: 12 }}
           />
         </div>
 
@@ -254,7 +247,10 @@ export default function HomeworkFormPage() {
         </div>
 
         {error && (
-          <Alert type="error" title={error} showIcon style={{ borderRadius: 12 }} />
+          <Alert variant="destructive">
+            <WarningCircleIcon size={16} weight="fill" aria-hidden />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
         )}
 
         <SubmitButton onClick={handleSubmit} loading={saving} blockedReason={blockedReason}>
@@ -275,7 +271,7 @@ export default function HomeworkFormPage() {
       {/* 업로드 중 딤 오버레이 */}
       {saving && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
-          <Spin size="large" />
+          <CircleNotchIcon size={24} weight="bold" className="animate-spin" color="#fff" aria-hidden />
         </div>
       )}
     </>
@@ -309,26 +305,3 @@ function PendingCard({ label, items, onRemove }) {
   );
 }
 
-/**
- * 파일·녹음 추가 진입 버튼. **중립 면(GRAY_100)** 을 쓴다 —
- * ⛔ 연한 브랜드 면(PRIMARY_BG)으로 채우지 말 것(design_system §18-1).
- * 이건 저장도 제출도 아닌 보조 액션이라, 화면에서 가장 눈에 띌 이유가 없다.
- */
-function SectionEntryButton({ icon, label, onClick }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      style={{
-        width: '100%', height: 44, borderRadius: 12,
-        background: GRAY_100, border: 'none',
-        color: TEXT_SECONDARY, fontSize: 14, fontWeight: 600, cursor: 'pointer',
-        WebkitTapHighlightColor: 'transparent', marginBottom: 10,
-        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-      }}
-    >
-      {icon}
-      {label}
-    </button>
-  );
-}

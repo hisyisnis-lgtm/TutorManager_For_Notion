@@ -1,17 +1,19 @@
 import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Input, Card } from 'antd';
-import { MagnifyingGlassIcon, NotebookIcon } from '@phosphor-icons/react';
+import { Card, CardContent } from '../components/shadcn/card';
+import SearchInput from '../components/ui/SearchInput.jsx';
+import { NotebookIcon } from '@phosphor-icons/react';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import ErrorMessage from '../components/ui/ErrorMessage.jsx';
 import EmptyState from '../components/ui/EmptyState.jsx';
+import LoadMoreButton from '../components/ui/LoadMoreButton.jsx';
 import { fetchAllLessonLogs, parseLessonLog, isEmpty } from '../api/lessonLogs.js';
 import MonthRangeFilter, { yearsOf, filterByMonthRange } from '../components/ui/MonthRangeFilter.jsx';
 import { useData } from '../context/DataContext.jsx';
 import { useCachedResource } from '../hooks/useCachedResource.js';
 import PullToRefresh from '../components/ui/PullToRefresh.jsx';
-import { TEXT_SECONDARY, TEXT_TERTIARY, BORDER_NEUTRAL, GRAY_100 } from '../constants/theme.js';
+import { TEXT_TERTIARY, BORDER_NEUTRAL } from '../constants/theme.js';
 
 /** 한 번에 그릴 일지 수. '더 보기'를 누를 때마다 이만큼씩 늘린다 */
 const PAGE = 20;
@@ -51,14 +53,10 @@ export default function LessonLogsPage() {
 
       {/* 학생 검색 */}
       <div className="px-4 pt-4">
-        <Input
-          prefix={<MagnifyingGlassIcon weight="fill" style={{ color: TEXT_TERTIARY }} />}
+        <SearchInput
           placeholder="학생 이름으로 검색"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          allowClear
-          size="large"
-          style={{ borderRadius: 12 }}
         />
       </div>
 
@@ -81,27 +79,16 @@ export default function LessonLogsPage() {
               description="수업 완료 후 자동으로 빈 일지가 생성됩니다."
             />
           ) : (
-            <ul className={`px-4 pt-5 space-y-3 ${filteredLogs.length > limit ? 'pb-3' : 'pb-24'}`}>
+            // 하단 여유는 전역 .page-container pb-24가 담당 — 여기서 또 주면 이중 패딩
+            <ul className={`px-4 pt-5 space-y-3 ${filteredLogs.length > limit ? 'pb-3' : ''}`}>
               {filteredLogs.slice(0, limit).map((log) => (
                 <LogCard key={log.id} log={log} studentNameMap={studentNameMap} />
               ))}
             </ul>
           )}
           {filteredLogs.length > limit && (
-            <div className="px-4 pb-24">
-              {/* 숙제 페이지와 같은 회색 면 버튼 — 목록을 늘리는 보조 동작이라 테두리 버튼처럼 튀지 않는다 */}
-              <button
-                type="button"
-                onClick={() => setLimit((n) => n + PAGE)}
-                className="w-full"
-                style={{
-                  height: 40, borderRadius: 12, background: GRAY_100, border: 'none',
-                  cursor: 'pointer', fontSize: 13, fontWeight: 600, color: TEXT_SECONDARY,
-                  WebkitTapHighlightColor: 'transparent',
-                }}
-              >
-                더 보기
-              </button>
+            <div className="px-4">
+              <LoadMoreButton onClick={() => setLimit((n) => n + PAGE)} />
             </div>
           )}
         </>
@@ -120,12 +107,8 @@ function LogCard({ log, studentNameMap }) {
         to={`/logs/${log.id}`}
         className="block tap-wrap"
       >
-        <Card
-          variant="borderless"
-          className="card-tap"
-          style={{ borderRadius: 16 }}
-          styles={{ body: { padding: 16 } }}
-        >
+        <Card className="card-tap rounded-2xl">
+          <CardContent className="p-4">
           <div className="flex items-start justify-between mb-1">
             <span className="text-base font-bold text-gray-900">{log.title || '제목 없음'}</span>
             {empty ? (
@@ -147,6 +130,7 @@ function LogCard({ log, studentNameMap }) {
           {log.engagement && (
             <p className="text-xs text-gray-500 mt-2">참여도 {log.engagement}</p>
           )}
+          </CardContent>
         </Card>
       </Link>
     </li>

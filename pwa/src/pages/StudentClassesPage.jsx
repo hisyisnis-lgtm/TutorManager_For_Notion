@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
+import { toast } from 'sonner';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Button, message } from 'antd';
+import { Button } from '../components/shadcn/button';
 import { CalendarBlankIcon, CalendarPlusIcon } from '@phosphor-icons/react';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
@@ -16,7 +17,7 @@ import { invalidateCache } from '../hooks/useCachedResource.js';
 import { useData } from '../context/DataContext.jsx';
 import { formatDateTime } from '../utils/dateUtils.js';
 import { PRIMARY, TEXT_PRIMARY, TEXT_SECONDARY, BORDER_NEUTRAL, BG_APP, BG_CARD } from '../constants/theme.js';
-import { ABOVE_BOTTOM_NAV, BELOW_PAGE_HEADER } from '../constants/styles.js';
+import { ABOVE_BOTTOM_NAV, BELOW_PAGE_HEADER, FAB_EXTRA_PB } from '../constants/styles.js';
 
 const TABS = [
   { key: 'upcoming', label: '예정' },
@@ -25,8 +26,9 @@ const TABS = [
 
 /** 자체 하단 고정 바 높이 — 목록 마지막 카드가 가리지 않게 paddingBottom에 더한다 */
 const ACTION_BAR_H = 76;
-/** 플로팅 '수업 추가' 버튼(원형 56px) + 위아래 여백까지 비워둘 스크롤 하단 여백 */
-const FAB_CLEARANCE = 152;
+/** 플로팅 '수업 추가' 버튼(원형 56px) 몫의 **추가** 하단 여백 —
+    하단탭 여유 96px은 전역 .page-container pb-24가 이미 준다(통째 152는 이중 패딩, 2026-08-31) */
+const FAB_CLEARANCE = FAB_EXTRA_PB;
 
 /**
  * 학생별 수업 관리 — 한 학생의 예약된(예정) 수업을 모아 보고 탭해서 편집한다.
@@ -103,8 +105,8 @@ export default function StudentClassesPage() {
     setShowDeleteConfirm(false);
     exitSelectMode();
 
-    if (failed) message.error(`${deleted.length}개 삭제, ${failed}개 실패했어요. 실패한 수업은 다시 시도해주세요.`);
-    else message.success(`수업 ${deleted.length}개를 삭제했어요.`);
+    if (failed) toast.error(`${deleted.length}개 삭제, ${failed}개 실패했어요. 실패한 수업은 다시 시도해주세요.`);
+    else toast.success(`수업 ${deleted.length}개를 삭제했어요.`);
   };
 
   if (loading) return <><PageHeader title="수업" back /><LoadingSpinner /></>;
@@ -137,8 +139,8 @@ export default function StudentClassesPage() {
             /* 선택·수업추가는 "필요할 때 찾는" 보조 액션 — 색으로 강조하지 않는다.
                브랜드 채움은 이 화면에서 삭제 버튼 하나만 쓴다(액센트 예산) */
             <Button
+              variant="outline"
               onClick={() => (selectMode ? exitSelectMode() : setSelectMode(true))}
-              style={{ borderRadius: 12, fontWeight: 600 }}
             >
               {selectMode ? '취소' : '선택'}
             </Button>
@@ -202,7 +204,8 @@ export default function StudentClassesPage() {
             // 고정 줄(zIndex 30·불투명)이 첫 카드의 브랜드 링·그림자를 덮어 "잘린" 것처럼 보였다.
             // 카드가 고정 줄의 페인트 영역 밖에서 시작하도록 목록 자체에 상단 여백을 준다.
             paddingTop: 8,
-            paddingBottom: showActionBar ? 96 + ACTION_BAR_H : FAB_CLEARANCE,
+            // 액션바(76px, 하단탭 위 고정)가 마지막 카드를 안 가리게 — 하단탭 몫 96은 전역이 담당
+            paddingBottom: showActionBar ? ACTION_BAR_H + 16 : FAB_CLEARANCE,
           }}
         >
           {list.map((cls) => (
@@ -229,15 +232,10 @@ export default function StudentClassesPage() {
           }}
         >
           <Button
-            type="primary"
-            shape="circle"
+            size="icon"
             aria-label="수업 추가"
             onClick={() => navigate(`/classes/new?studentId=${id}`)}
-            style={{
-              width: 56, height: 56,
-              boxShadow: 'var(--shadow-brand-button)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}
+            className="h-14 w-14 rounded-full shadow-[shadow:var(--shadow-brand-button)]"
           >
             {/* 그냥 +는 speed-dial(누르면 버튼이 펼쳐지는) 것처럼 읽힌다 — 무엇이 추가되는지
                 말해주는 아이콘으로. weight는 §19.3 기본값 fill */}
@@ -263,13 +261,10 @@ export default function StudentClassesPage() {
                 (별도 danger 빨강을 새로 들이면 브랜드 예산 초과.) 파괴적이라는 신호는
                 라벨과 확인창이 맡는다 */}
             <Button
-              type="primary"
               block
+              size="lg"
               onClick={() => setShowDeleteConfirm(true)}
-              style={{
-                borderRadius: 12, height: 48, fontWeight: 700, fontSize: 15,
-                boxShadow: 'var(--shadow-brand-button)',
-              }}
+              className="text-[15px] font-bold shadow-[shadow:var(--shadow-brand-button)]"
             >
               {selectedIds.length}개 삭제
             </Button>

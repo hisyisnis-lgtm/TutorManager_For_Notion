@@ -1,9 +1,9 @@
 import { useState, useEffect, lazy, Suspense } from 'react';
 import { HashRouter, BrowserRouter, Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom';
-import { ConfigProvider, App as AntApp } from 'antd';
+import { Toaster } from './components/shadcn/sonner';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { isAuthed } from './api/authUtils.js';
-import { PRIMARY, antdTheme } from './constants/theme.js';
+import { PRIMARY } from './constants/theme.js';
 import { DataProvider } from './context/DataContext.jsx';
 import BottomNav from './components/layout/BottomNav.jsx';
 import FreshnessIndicator from './components/layout/FreshnessIndicator.jsx';
@@ -270,8 +270,8 @@ export default function App() {
       window.history.replaceState(null, '', `/personal/${token}${window.location.search}${window.location.hash}`);
     }
     return (
-      <ConfigProvider theme={antdTheme}>
-        <AntApp>
+        <>
+        <Toaster position="top-center" />
         <InAppBrowserWarning />
         {/* iOS에서는 manifest를 DOM에서 제거해 "홈 화면에 추가" 시 현재 path를 PWA URL로 박는다. */}
         <DynamicStudentManifest />
@@ -291,16 +291,15 @@ export default function App() {
         </BrowserRouter>
         <FreshnessIndicator />
         </StudentAuthGate>
-        </AntApp>
-      </ConfigProvider>
+        </>
     );
   }
 
   // 공개 예약 페이지는 로그인 없이 접근
   if (isPublicBookingRoute()) {
     return (
-      <ConfigProvider theme={antdTheme}>
-        <AntApp>
+        <>
+        <Toaster position="top-center" />
         {/* SNS 인앱 브라우저(카카오톡·인스타·페북 등)에서 학생 라우트로 진입하면
             외부 브라우저(Android: Chrome, iOS: Safari) 사용 권장 모달 표시. */}
         <InAppBrowserWarning />
@@ -330,29 +329,27 @@ export default function App() {
           </Routes>
         </HashRouter>
         <FreshnessIndicator />
-        </AntApp>
-      </ConfigProvider>
+        </>
     );
   }
 
   if (!authed) {
     return (
-      <ConfigProvider theme={antdTheme}>
-        <AntApp>
-          <LoginPage
-            onSuccess={() => {
-              window.location.hash = '#/home';
-              setAuthed(true);
-            }}
-          />
-        </AntApp>
-      </ConfigProvider>
+      <>
+        <Toaster position="top-center" />
+        <LoginPage
+          onSuccess={() => {
+            window.location.hash = '#/home';
+            setAuthed(true);
+          }}
+        />
+      </>
     );
   }
 
   return (
-    <ConfigProvider theme={antdTheme}>
-    <AntApp>
+    <>
+    <Toaster position="top-center" />
     <DataProvider>
       <HashRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <ScrollToTop />
@@ -407,7 +404,6 @@ export default function App() {
         <BottomNav />
       </HashRouter>
     </DataProvider>
-    </AntApp>
-    </ConfigProvider>
+    </>
   );
 }

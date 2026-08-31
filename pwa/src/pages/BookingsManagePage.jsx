@@ -1,8 +1,13 @@
 import { useState } from 'react';
+import { toast } from 'sonner';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import { fetchBlockedDates, createBlockedDate, deleteBlockedDate } from '../api/bookingApi.js';
 import { useCachedResource } from '../hooks/useCachedResource.js';
-import { Alert, Card, Input, Button, message } from 'antd';
+import { WarningCircleIcon } from '@phosphor-icons/react';
+import { Alert, AlertDescription } from '../components/shadcn/alert';
+import { Button } from '../components/shadcn/button';
+import { Card, CardContent } from '../components/shadcn/card';
+import { Input } from '../components/shadcn/input';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import EmptyState from '../components/ui/EmptyState.jsx';
 import ErrorMessage from '../components/ui/ErrorMessage.jsx';
@@ -104,7 +109,7 @@ export default function BookingsManagePage() {
       await deleteBlockedDate(item.id);
       await blockedRes.refresh();
     } catch (e) {
-      message.error(`삭제 실패: ${e.message}`);
+      toast.error(`삭제 실패: ${e.message}`);
     } finally {
       setDeletingId(null);
     }
@@ -121,9 +126,9 @@ export default function BookingsManagePage() {
       <div className="flex items-center justify-between px-4 pt-4 pb-3">
         <span className="text-sm text-gray-500">{blocked.length}개 등록됨</span>
         <Button
-          type="link"
+          variant="link"
           onClick={() => { setShowForm(v => !v); setFormError(null); if (showForm) resetForm(); }}
-          style={{ padding: 0, fontWeight: 600 }}
+          className="h-auto p-0"
         >
           {showForm ? '닫기' : '+ 추가'}
         </Button>
@@ -132,7 +137,8 @@ export default function BookingsManagePage() {
       {/* 추가 폼 */}
       {showForm && (
         <form onSubmit={handleSave}>
-          <Card variant="borderless" className="mx-4 mb-3" style={{ borderRadius: 16, boxShadow: 'var(--shadow-border)' }}>
+          <Card className="mx-4 mb-3 rounded-2xl">
+            <CardContent className="p-6">
             {/* 유형 선택 */}
             <div className="flex gap-2" style={{ marginBottom: 12 }}>
               {['일회성', '반복'].map(t => (
@@ -261,8 +267,6 @@ export default function BookingsManagePage() {
             <div style={{ marginBottom: 12 }}>
               <label className="block text-xs text-gray-500 mb-1">메모 (선택)</label>
               <Input
-                size="large"
-                style={{ borderRadius: 12 }}
                 value={form.memo}
                 onChange={e => setForm(f => ({ ...f, memo: e.target.value }))}
                 placeholder="예: 추석 연휴"
@@ -270,18 +274,20 @@ export default function BookingsManagePage() {
             </div>
 
             {formError && (
-              <Alert type="error" title={formError} showIcon style={{ borderRadius: 12, marginBottom: 12 }} />
+              <Alert variant="destructive" className="mb-3">
+                <WarningCircleIcon size={16} weight="fill" aria-hidden />
+                <AlertDescription>{formError}</AlertDescription>
+              </Alert>
             )}
 
             <Button
-              type="primary"
               block
-              htmlType="submit"
+              type="submit"
               disabled={saving || !isFormValid}
-              style={{ borderRadius: 12, height: 44, fontWeight: 600 }}
             >
               {saving ? '저장 중...' : '저장'}
             </Button>
+            </CardContent>
           </Card>
         </form>
       )}
@@ -294,7 +300,8 @@ export default function BookingsManagePage() {
 
       <div className="px-4 pb-24 space-y-2 mt-1">
         {blocked.map(item => (
-          <Card key={item.id} variant="borderless" style={{ borderRadius: 16, boxShadow: 'var(--shadow-border)' }}>
+          <Card key={item.id} className="rounded-2xl">
+            <CardContent className="p-6">
             <div className="flex items-center gap-3">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
@@ -315,14 +322,15 @@ export default function BookingsManagePage() {
                 )}
               </div>
               <Button
-                danger
+                variant="destructiveOutline"
                 onClick={() => setConfirmItem(item)}
                 disabled={deletingId === item.id}
-                style={{ borderRadius: 12, flexShrink: 0 }}
+                className="shrink-0"
               >
                 {deletingId === item.id ? '삭제 중...' : '삭제'}
               </Button>
             </div>
+            </CardContent>
           </Card>
         ))}
       </div>

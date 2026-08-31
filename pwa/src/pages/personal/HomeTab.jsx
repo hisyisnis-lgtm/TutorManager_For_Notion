@@ -1,26 +1,25 @@
 import { useState, useEffect, useCallback } from 'react';
+import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
-import { Card, Button, Spin, App } from 'antd';
-import { ClipboardTextIcon, HourglassIcon, ChatTeardropTextIcon, CaretRightIcon, MusicNotesIcon, ArticleIcon, InstagramLogoIcon, YoutubeLogoIcon } from '@phosphor-icons/react';
+import { CircleNotchIcon } from '@phosphor-icons/react';
+import { Button } from '../../components/shadcn/button';
+import { Card, CardContent } from '../../components/shadcn/card';
+import { ChatTeardropTextIcon, CaretRightIcon, MusicNotesIcon } from '@phosphor-icons/react';
 import { peekCache, writeCacheValue, trackRevalidation } from '../../hooks/useCachedResource.js';
 import { fetchMyClasses } from '../../api/bookingApi.js';
 import { homeworkStatusColor } from '../../api/homework.js';
 import { getViewedMap, HW_VIEWED_KEY } from '../../utils/homeworkViewed.js';
 import { DAY_KR, timeToMin, formatDuration, addMonths } from '../../utils/dateUtils.js';
 import ClassCard from './ClassCard.jsx';
-import HomeworkSection from '../../components/homework/HomeworkSection.jsx';
 import SectionHeading from '../../components/ui/SectionHeading.jsx';
-import { getStageInfo, getPandaStorageKey } from '../../components/ui/PandaWidget.jsx';
-import { BADGE_SMALL, BADGE_MEDIUM } from '../../constants/styles.js';
+import { BADGE_SMALL } from '../../constants/styles.js';
 import {
   PRIMARY,
-  TEXT_PRIMARY, TEXT_SECONDARY, TEXT_TERTIARY, TEXT_INACTIVE, TEXT_DISABLED,
-  GRAY_100, BORDER_SUBTLE, BORDER_NEUTRAL,
-  STATUS_INFO_BG, STATUS_INFO_DARK,
-  STATUS_SUCCESS_BG, STATUS_SUCCESS_DARK,
-  STATUS_WARNING_BG, STATUS_WARNING_TEXT,
-  STATUS_ERROR_TEXT,
-  GRADIENTS, BRAND_EXTERNAL,
+  TEXT_PRIMARY, TEXT_TERTIARY, TEXT_INACTIVE, TEXT_DISABLED,
+  BORDER_SUBTLE, BORDER_NEUTRAL,
+  STATUS_INFO_DARK,
+  STATUS_SUCCESS_DARK,
+  STATUS_WARNING_TEXT,
 } from '../../constants/theme.js';
 
 
@@ -41,15 +40,14 @@ function HwCard({ hw, studentToken, onMarkViewed }) {
 
   return (
     <Card
-      variant="borderless"
-      style={{
-        borderRadius: 12,
-        boxShadow: isFeedback
-          ? '0 0 0 2px rgba(82, 196, 26, 0.35), var(--shadow-border)'
-          : 'var(--shadow-border)',
-        overflow: 'hidden' }}
-      styles={{ body: { padding: 0 } }}
+      className="overflow-hidden"
+      // 피드백 도착 카드만 초록 링을 덧댄다 — 기본 그림자는 Card가 이미 갖고 있지만
+      // 링과 함께 쓰려면 한 선언에 넣어야 해서 여기서 통째로 지정한다.
+      style={isFeedback
+        ? { boxShadow: '0 0 0 2px rgba(82, 196, 26, 0.35), var(--shadow-border)' }
+        : undefined}
     >
+      <CardContent className="p-0">
       <button
         type="button"
         onClick={() => {
@@ -97,6 +95,7 @@ function HwCard({ hw, studentToken, onMarkViewed }) {
           <CaretRightIcon size={16} color={TEXT_DISABLED} />
         </div>
       </button>
+      </CardContent>
     </Card>
   );
 }
@@ -115,48 +114,42 @@ function NextClassHeroCard({ cls, todayStr, nowMin }) {
   );
   const d = new Date(cls.date + 'T00:00:00+09:00');
 
-  let badge = null;
-  if (isOngoing)        badge = { label: '수업 중', bg: STATUS_INFO_BG, color: STATUS_INFO_DARK };
-  else if (isToday)     badge = { label: '오늘',   bg: STATUS_SUCCESS_BG, color: STATUS_SUCCESS_DARK };
-  else if (daysUntil === 1) badge = { label: '내일', bg: STATUS_WARNING_BG, color: STATUS_WARNING_TEXT };
-  else if (daysUntil <= 7)  badge = { label: `D-${daysUntil}`, bg: GRAY_100, color: TEXT_SECONDARY };
-
   const timeColor = isOngoing ? STATUS_INFO_DARK : PRIMARY;
 
+  // 상태 단어(오늘/내일/수업 중)는 배지 칩 대신 날짜 줄의 첫 단어로 —
+  // 큰 날짜 숫자·배지·카운트다운이 겹치니 "복잡하고 정리 안 된 느낌"(2026-08-31 지적).
+  // 주인공은 시간 하나, 나머지는 조용한 한 줄씩.
+  const statusWord = isOngoing
+    ? { label: '수업 중', color: STATUS_INFO_DARK }
+    : isToday
+      ? { label: '오늘', color: STATUS_SUCCESS_DARK }
+      : daysUntil === 1
+        ? { label: '내일', color: STATUS_WARNING_TEXT }
+        : null;
+
+  // 날짜/상태는 메타 줄의 첫 항목 — 별도 줄로 두면 '오늘' 한 단어가 붕 뜬다(2026-08-31).
+  // 오늘/내일/수업 중은 단어로, 그 외에는 수업 날짜로 말한다.
+  const whenLabel = statusWord
+    ? statusWord
+    : { label: `${d.getMonth() + 1}월 ${d.getDate()}일 ${DAY_KR[d.getDay()]}요일`, color: TEXT_INACTIVE };
+
   return (
-    <div style={{ position: 'relative' }}>
-      {/* 배지 — 우측 상단 */}
-      {badge && (
-        <span style={{
-          position: 'absolute', top: 0, right: 0,
-          ...BADGE_MEDIUM,
-          background: badge.bg, color: badge.color }}>
-          {badge.label}
-        </span>
-      )}
+    <div>
+      {/* 시간 — 이 블록의 유일한 주인공. 한 덩어리(단일 크기·단일 색)를 유지하되
+          투명도만으로 깊이를 준다: 시작이 앵커, 끝은 받쳐준다.
+          구분자는 앱 전체 시간 표기와 같은 물결(~) — 작은 대시는 붕 떠 보였다(2026-08-31). */}
+      <p style={{ display: 'flex', alignItems: 'baseline', gap: 6, fontSize: 34, fontWeight: 700, color: timeColor, margin: '0 0 8px', lineHeight: 1, letterSpacing: '-0.5px' }} className="tabular-nums">
+        <span>{cls.startTime}</span>
+        <span style={{ opacity: 0.35 }} aria-hidden="true">~</span>
+        <span style={{ opacity: 0.55 }}>{endTimeStr}</span>
+      </p>
 
-      {/* 날짜 + 요일 */}
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 6 }} className="tabular-nums">
-        <span style={{ fontSize: 32, fontWeight: 700, color: TEXT_PRIMARY, lineHeight: 1, letterSpacing: '-0.5px' }}>
-          {d.getMonth() + 1}.{d.getDate()}
+      {/* 부가 정보 — 언제 · 얼마나 · 어디서 */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }} className="tabular-nums">
+        <span style={{ fontSize: 13, fontWeight: 600, color: whenLabel.color }}>
+          {whenLabel.label}
         </span>
-        <span style={{ fontSize: 15, fontWeight: 600, color: TEXT_INACTIVE }}>
-          {DAY_KR[d.getDay()]}요일
-        </span>
-      </div>
-
-      {/* 시간 */}
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 14, marginBottom: 10 }} className="tabular-nums">
-        <span style={{ fontSize: 44, fontWeight: 700, color: timeColor, lineHeight: 1, letterSpacing: '-1px' }}>
-          {cls.startTime}
-        </span>
-        <span style={{ fontSize: 26, fontWeight: 600, color: timeColor, opacity: 0.45, lineHeight: 1, letterSpacing: '-0.5px' }}>
-          {endTimeStr}
-        </span>
-      </div>
-
-      {/* 부가 정보 */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <span style={{ color: BORDER_NEUTRAL, fontSize: 13 }}>·</span>
         <span style={{ fontSize: 13, fontWeight: 600, color: TEXT_INACTIVE }}>
           {formatDuration(cls.durationMin)}
         </span>
@@ -173,32 +166,17 @@ function NextClassHeroCard({ cls, todayStr, nowMin }) {
   );
 }
 
-// ===== 지표 로우 =====
-function MetricRow({ remainingHours, upcomingCount }) {
+// 숙제가 하나도 없을 때 자리 문구 — 섹션은 항상 떠 있고 비어 있음도 정보다
+function HwEmptyLine() {
   return (
-    <div style={{ display: 'flex', gap: 8 }}>
-      {[
-        { label: '남은 수업 시간', value: formatDuration(remainingHours * 60), unit: null },
-        { label: '예약된 수업', value: upcomingCount, unit: '개' },
-      ].map(({ label, value, unit }) => (
-        <div key={label} style={{
-          flex: 1, background: '#fff', borderRadius: 12, padding: '12px 14px',
-          boxShadow: 'var(--shadow-border)' }}>
-          <p style={{ fontSize: 11, fontWeight: 600, color: TEXT_TERTIARY, margin: '0 0 4px' }}>{label}</p>
-          <p style={{ fontSize: 20, fontWeight: 700, color: TEXT_PRIMARY, margin: 0, lineHeight: 1.15 }} className="tabular-nums">
-            {value}
-            {unit && <span style={{ fontSize: 13, fontWeight: 400, color: TEXT_TERTIARY, marginLeft: 3 }}>{unit}</span>}
-          </p>
-        </div>
-      ))}
-    </div>
+    <p style={{ fontSize: 13, color: TEXT_INACTIVE, margin: 0, padding: '2px 2px 0' }}>
+      아직 받은 숙제가 없어요
+    </p>
   );
 }
 
 // ===== 홈 탭 =====
-export default function HomeTab({ studentToken, foodSources, studentLoaded, remainingHours, onUpcomingLoaded, hwAlerts, onOpenPanda, onSwitchToClasses }) {
-  // 정적 message는 테마 컨텍스트를 못 받아 콘솔 경고 + 스타일 불일치 — App.useApp() 사용
-  const { message } = App.useApp();
+export default function HomeTab({ studentToken, studentLoaded, onUpcomingLoaded, hwAlerts, onSwitchToClasses }) {
   const nowKST = new Date(Date.now() + 9 * 60 * 60 * 1000);
   const pad = n => String(n).padStart(2, '0');
   const todayStr = `${nowKST.getUTCFullYear()}-${pad(nowKST.getUTCMonth() + 1)}-${pad(nowKST.getUTCDate())}`;
@@ -233,8 +211,14 @@ export default function HomeTab({ studentToken, foodSources, studentLoaded, rema
       // 화면에 카드로 펼치는 건 아래 렌더에서 따로 제한한다(다음 수업 1건 + 목록 3건).
       // 조회창은 이번 달+다음 달이라 그 너머 예약은 집계에서 빠진다 — 지금 운영 패턴(1~2개월치
       //  선등록)에선 충분하고, 더 넓히면 홈 로딩마다 월별 요청이 그만큼 늘어난다.
+      // 오늘 수업은 **끝나기 전까지만** '다음 수업'이다 — date만 비교하면 끝난 수업이
+      // 자정까지 홈에 남는다(2026-08-30 검수 지적). 진행 중(시작~종료 사이)은 계속 보여준다.
+      const nowMinFresh = kst.getUTCHours() * 60 + kst.getUTCMinutes();
       const all = [...curr, ...next]
-        .filter(c => !c.isCancelled && c.date >= todayStr)
+        .filter(c => !c.isCancelled && (
+          c.date > todayStr
+          || (c.date === todayStr && timeToMin(c.startTime) + c.durationMin > nowMinFresh)
+        ))
         .sort((a, b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime));
       setUpcoming(all);
       setUpcomingError(false);
@@ -264,21 +248,21 @@ export default function HomeTab({ studentToken, foodSources, studentLoaded, rema
     <div style={{ paddingTop: 20, paddingBottom: 24 }}>
 
       {/* 다음 수업 */}
-      <div data-coach="next-class" style={{ padding: '0 20px', marginBottom: 24, animation: 'fade-in-up 400ms cubic-bezier(0.2,0,0,1) both' }}>
+      <div data-coach="next-class" style={{ padding: '0 16px', marginBottom: 24, animation: 'fade-in-up 400ms cubic-bezier(0.2,0,0,1) both' }}>
         <SectionHeading>다음 수업</SectionHeading>
         {upcomingLoading ? (
           <div style={{
             height: 86, borderRadius: 12, background: '#fff',
             boxShadow: 'var(--shadow-card)',
             display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Spin size="small" />
+            <CircleNotchIcon size={16} weight="bold" className="animate-spin" aria-hidden />
           </div>
         ) : upcomingError ? (
           <div style={{
             borderRadius: 12, background: '#fff',
             boxShadow: 'var(--shadow-border)', padding: '20px', textAlign: 'center' }}>
             <p style={{ fontSize: 14, color: TEXT_TERTIARY, margin: '0 0 10px' }}>수업 정보를 불러오지 못했어요</p>
-            <Button size="small" onClick={loadInitialData}>다시 시도</Button>
+            <Button variant="outline" size="sm" onClick={loadInitialData}>다시 시도</Button>
           </div>
         ) : visibleUpcoming.length === 0 ? (
           <div style={{
@@ -290,155 +274,48 @@ export default function HomeTab({ studentToken, foodSources, studentLoaded, rema
           <NextClassHeroCard cls={visibleUpcoming[0]} todayStr={todayStr} nowMin={nowMin} />
         )}
       </div>
-      <div style={{ margin: '0 20px 24px', borderBottom: `1px solid ${BORDER_SUBTLE}` }} />
+      <div style={{ margin: '0 16px 24px', borderBottom: `1px solid ${BORDER_SUBTLE}` }} />
 
-      {/* 숙제 — 제출 전 / 제출 완료 / 피드백 완료 (각 섹션은 카드 있을 때만 노출) */}
-      {studentLoaded && (hwAlerts?.pending?.length > 0 || hwAlerts?.submitted?.length > 0 || hwAlerts?.feedback?.length > 0) && (
-        <div style={{ padding: '0 20px', marginBottom: 24, animation: 'fade-in-up 400ms cubic-bezier(0.2,0,0,1) both', animationDelay: '60ms' }}>
+      {/* 숙제 — 상태별 섹션 대신 부여된 숙제 카드 하나의 플랫 리스트(2026-08-31 사용자 제안).
+          상태는 카드 배지(미제출/제출완료/피드백완료)가 이미 말해주므로 섹션 헤더는 중복이었다.
+          정렬 = 지금 해야 하는 일 순: 제출 전 → 피드백 확인 → 제출 완료(대기). 피드백이
+          쌓여도 제출할 숙제가 항상 맨 위라 묻히지 않는다. 비어 있으면 문구 한 줄. */}
+      {studentLoaded && (
+        <div style={{ padding: '0 16px', marginBottom: 24, animation: 'fade-in-up 400ms cubic-bezier(0.2,0,0,1) both', animationDelay: '60ms' }}>
           <SectionHeading>숙제</SectionHeading>
-
-          {hwAlerts.feedback.length > 0 && (
-            <HomeworkSection icon={<ChatTeardropTextIcon size={20} weight="fill" />} label="피드백 완료" color={STATUS_SUCCESS_DARK}>
-              {hwAlerts.feedback.map((hw, i) => (
-                <div key={hw.id} {...(i === 0 ? { 'data-coach': 'homework-card' } : {})}>
-                  <HwCard
-                    hw={hw}
-                    studentToken={studentToken}
-                    onMarkViewed={() => {
-                      forceArchive(studentToken, hw.id);
-                      message.success('보관함으로 이동됐어요');
-                    }}
-                  />
-                </div>
-              ))}
-            </HomeworkSection>
-          )}
-
-          {hwAlerts.pending.length > 0 && (
-            <HomeworkSection icon={<ClipboardTextIcon size={20} weight="fill" />} label="제출 전" color={STATUS_ERROR_TEXT}>
-              {hwAlerts.pending.map((hw, i) => (
-                <div key={hw.id} {...(i === 0 && hwAlerts.feedback.length === 0 ? { 'data-coach': 'homework-card' } : {})}>
-                  <HwCard hw={hw} studentToken={studentToken} />
-                </div>
-              ))}
-            </HomeworkSection>
-          )}
-
-          {hwAlerts.submitted.length > 0 && (
-            <HomeworkSection icon={<HourglassIcon size={20} weight="fill" />} label="제출 완료" color={STATUS_INFO_DARK}>
-              {hwAlerts.submitted.map((hw) => (
-                <HwCard key={hw.id} hw={hw} studentToken={studentToken} />
-              ))}
-            </HomeworkSection>
-          )}
+          {(() => {
+            const all = [
+              ...(hwAlerts?.pending ?? []),
+              ...(hwAlerts?.feedback ?? []),
+              ...(hwAlerts?.submitted ?? []),
+            ];
+            if (all.length === 0) return <HwEmptyLine />;
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {all.map((hw, i) => (
+                  <div key={hw.id} {...(i === 0 ? { 'data-coach': 'homework-card' } : {})}>
+                    <HwCard
+                      hw={hw}
+                      studentToken={studentToken}
+                      // 피드백 카드만 열람 시 보관함으로 이동
+                      onMarkViewed={hw.status === '피드백완료' ? () => {
+                        forceArchive(studentToken, hw.id);
+                        toast.success('보관함으로 이동됐어요');
+                      } : undefined}
+                    />
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
         </div>
       )}
 
-      {/* 내 현황 + 팬더 키우기 */}
-      {studentLoaded && (() => {
-        const total = foodSources.reduce((s, x) => s + (x.count || 0), 0);
-        // 학생별 키 사용 → 다른 학생의 EXP가 섞여 표시되던 문제 해결
-        const fed = Math.min(parseInt(localStorage.getItem(getPandaStorageKey(studentToken)) || '0', 10), total);
-        const { stage } = getStageInfo(fed);
-        return (
-          <div style={{ padding: '0 20px', marginBottom: 24, animation: 'fade-in-up 400ms cubic-bezier(0.2,0,0,1) both', animationDelay: '120ms' }}>
-            <SectionHeading>내 현황</SectionHeading>
-            <MetricRow remainingHours={remainingHours} upcomingCount={visibleUpcoming.length} />
-            {/*
-              팬더 배너 — 두 레이어 기법
-              paddingTop=76: 카드 위로 노출되는 팬더 높이
-              카드 height=80 (fixed), 팬더 이미지 180px
-              팬더 bottom=-24 in card → 하단 24px이 overflow:hidden으로 클립됨
-              오버레이 div가 카드 위 76px 구간을 보여줌
-            */}
-            <div style={{ position: 'relative', marginTop: 8, paddingTop: 52 }}>
-              {/* 오버레이: 카드 상단 위로 삐져나온 팬더 상체만 노출 */}
-              <div style={{
-                position: 'absolute', top: 0, right: -20,
-                width: 180, height: 52,
-                overflow: 'hidden', pointerEvents: 'none', zIndex: 2 }}>
-                <img
-                  src={stage.img} alt={stage.label}
-                  style={{ position: 'absolute', right: 0, bottom: -104, width: 180, height: 180, objectFit: 'contain', animation: 'panda-rock 2s ease-in-out infinite', transformOrigin: 'bottom center' }}
-                />
-              </div>
-
-              {/* 카드: overflow:hidden이 팬더 하단을 클립 */}
-              <button
-                data-coach="panda"
-                type="button"
-                onClick={onOpenPanda}
-                className="no-press"
-                style={{
-                  position: 'relative', zIndex: 1,
-                  width: '100%', height: 80,
-                  display: 'flex', alignItems: 'center',
-                  background: GRADIENTS.studentHero,
-                  border: 'none', cursor: 'pointer',
-                  borderRadius: 16, boxShadow: '0 4px 20px rgba(127,0,5,0.28)',
-                  padding: '0 16px 0 20px', textAlign: 'left',
-                  overflow: 'hidden',
-                  WebkitTapHighlightColor: 'transparent' }}
-              >
-                {/* 팬더 이미지: 카드 내부에서 overflow:hidden으로 상·하단 클립 */}
-                <img
-                  src={stage.img} alt="" aria-hidden="true"
-                  style={{
-                    position: 'absolute', right: -20, bottom: -24,
-                    width: 180, height: 180, objectFit: 'contain',
-                    pointerEvents: 'none',
-                    animation: 'panda-rock 2s ease-in-out infinite', transformOrigin: 'bottom center' }}
-                />
-                {/* 배경 장식 원 */}
-                <div style={{ position: 'absolute', left: -12, bottom: -18, width: 72, height: 72, borderRadius: '50%', background: 'rgba(255,255,255,0.06)', pointerEvents: 'none' }} />
-                {/* 텍스트 */}
-                <div style={{ flex: 1, position: 'relative', zIndex: 1 }}>
-                  <div style={{ fontSize: 17, fontWeight: 700, color: '#fff', lineHeight: 1.3, letterSpacing: '-0.3px', textWrap: 'balance', marginBottom: 6 }}>
-                    수업할수록 팬더가 자라요
-                  </div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.8)' }}>
-                    탭해서 먹이 주기 →
-                  </div>
-                </div>
-                {/* 팬더 공간 확보용 */}
-                <div style={{ width: 148, flexShrink: 0 }} />
-              </button>
-            </div>
-
-            {/* 블로그·인스타·유튜브 링크 카드 */}
-            <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-              {[
-                { label: '블로그', icon: <ArticleIcon size={24} weight="fill" color={BRAND_EXTERNAL.naver} />, href: 'https://blog.naver.com/tiantian_chinese/224100509217' },
-                { label: '인스타그램', icon: <InstagramLogoIcon size={24} weight="fill" color={BRAND_EXTERNAL.instagram} />, href: 'https://www.instagram.com/tiantian_laoshi?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==' },
-                { label: '유튜브', icon: <YoutubeLogoIcon size={24} weight="fill" color={BRAND_EXTERNAL.youtube} />, href: 'https://www.youtube.com/@tiantian_chinese' },
-              ].map(({ label, icon, href }) => (
-                <a
-                  key={label}
-                  href={href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="press"
-                  style={{
-                    flex: 1, display: 'flex', flexDirection: 'column',
-                    alignItems: 'center', justifyContent: 'center', gap: 6,
-                    padding: '14px 8px',
-                    background: '#fff', borderRadius: 12,
-                    boxShadow: 'var(--shadow-border)',
-                    textDecoration: 'none',
-                    WebkitTapHighlightColor: 'transparent' }}
-                >
-                  {icon}
-                  <span style={{ fontSize: 11, fontWeight: 600, color: TEXT_SECONDARY }}>{label}</span>
-                </a>
-              ))}
-            </div>
-          </div>
-        );
-      })()}
+      {/* '내 현황'(지표 + 팬더)은 MY 탭으로 이사(2026-08-31) — MyTab.jsx */}
 
       {/* 예약된 수업 목록 (2번째~) */}
       {!upcomingLoading && visibleUpcoming.length > 1 && (
-        <div style={{ padding: '0 20px', marginBottom: 24, animation: 'fade-in-up 400ms cubic-bezier(0.2,0,0,1) both', animationDelay: '160ms' }}>
+        <div style={{ padding: '0 16px', marginBottom: 24, animation: 'fade-in-up 400ms cubic-bezier(0.2,0,0,1) both', animationDelay: '160ms' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
             <SectionHeading style={{ marginBottom: 0 }}>예약된 수업</SectionHeading>
             <button
@@ -460,6 +337,8 @@ export default function HomeTab({ studentToken, foodSources, studentLoaded, rema
           </div>
         </div>
       )}
+
+      {/* 블로그·인스타·유튜브 링크는 '하늘하늘' 탭으로 이동(2026-08-31) — HanulTab.jsx */}
     </div>
   );
 }

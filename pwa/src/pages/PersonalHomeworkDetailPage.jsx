@@ -3,12 +3,11 @@ import {
   useEffect,
   useCallback,
   useRef } from 'react';
+import { toast } from 'sonner';
 import { useParams,
   useNavigate } from 'react-router-dom';
-import { Button,
-  Modal,
-  Spin,
-  App } from 'antd';
+import { CircleNotchIcon } from '@phosphor-icons/react';
+import { Button } from '../components/shadcn/button';
 import { CaretLeftIcon,
   MicrophoneIcon,
   ImageSquareIcon,
@@ -22,6 +21,7 @@ import AutoLink from '../components/ui/AutoLink.jsx';
 import FileAttachModal from '../components/homework/FileAttachModal.jsx';
 import SectionHeading from '../components/ui/SectionHeading.jsx';
 import ConfirmDialog from '../components/ui/ConfirmDialog.jsx';
+import SectionEntryButton from '../components/ui/SectionEntryButton.jsx';
 import {
   fetchMyHomework,
   parseHomework,
@@ -40,13 +40,11 @@ import { writeCacheValue } from '../hooks/useCachedResource.js';
 import useFileAttach,
   { MAX_FILES } from '../hooks/useFileAttach.js';
 import {
-  GRAY_100,
   TEXT_PRIMARY,
   TEXT_SECONDARY,
   TEXT_TERTIARY,
   TEXT_INACTIVE,
   BG_APP,
-  STATUS_ERROR,
   STATUS_SUCCESS_BG,
   INK_900,
   STATUS_SUCCESS_BORDER,
@@ -69,8 +67,6 @@ function genStudentName(title, index) {
 export default function PersonalHomeworkDetailPage() {
   const { studentToken, hwId } = useParams();
   const navigate = useNavigate();
-  // 정적 message는 테마 컨텍스트를 못 받아 콘솔 경고 + 스타일 불일치 — App.useApp() 사용(강사판과 통일)
-  const { message } = App.useApp();
 
   const [hw, setHw] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -102,27 +98,43 @@ export default function PersonalHomeworkDetailPage() {
 
   // 브라우저 뒤로가기(swipe·Android back) 차단 — HashRouter 는 useBlocker 미지원이라
   // history.pushState 더미 entry + popstate 리스너로 가드.
+  // ⚠️ 떠나기로 결정한 뒤의 pop이 만드는 popstate에 리스너가 또 navigate(-1)을 쏘면
+  // pop이 초과되어 SPA 히스토리 범위를 벗어나 **문서 전체 리로드**가 걸렸다
+  // ("뒤로가기하면 로딩" 2026-08-31). 해법:
+  //  · pushedRef — 지금 위에 쌓인 더미 개수(StrictMode는 이펙트를 두 번 돌려 2개가 된다)
+  //  · leave() — 더미 + 이 페이지를 navigate 한 번으로 빠져나간다
+  //  · leavingRef — 이탈 pop이 만드는 popstate는 무시
+  const leavingRef = useRef(false);
+  const pushedRef = useRef(0);
+  const leave = useCallback(() => {
+    leavingRef.current = true;
+    navigate(-(pushedRef.current + 1));
+  }, [navigate]);
   useEffect(() => {
     window.history.pushState(null, '', window.location.href);
+    pushedRef.current += 1;
     const onPopState = () => {
+      if (leavingRef.current) return;
+      pushedRef.current -= 1; // 방금 pop으로 더미 하나 소진
       if (isDirtyRef.current) {
         window.history.pushState(null, '', window.location.href);
+        pushedRef.current += 1;
         setShowLeaveConfirm(true);
-        pendingNavRef.current = () => navigate(-2);
+        pendingNavRef.current = leave;
       } else {
-        navigate(-1);
+        leave();
       }
     };
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
-  }, [navigate]);
+  }, [navigate, leave]);
 
   const handleBack = () => {
     if (isDirtyRef.current) {
       setShowLeaveConfirm(true);
-      pendingNavRef.current = () => navigate(-1);
+      pendingNavRef.current = leave;
     } else {
-      navigate(-1);
+      leave();
     }
   };
 
@@ -165,7 +177,7 @@ export default function PersonalHomeworkDetailPage() {
       markFeedbackSeen(studentToken, hwId)
         .then(() => {
           setHw(prev => prev ? { ...prev, feedbackSeenDate: new Date().toISOString() } : prev);
-          message.success('피드백 확인 완료 · 먹이 +1');
+          toast.success('피드백 확인 완료 · 먹이 +1');
         })
         .catch(e => console.warn('피드백 확인 기록 실패:', e?.message));
     }
@@ -184,7 +196,6 @@ export default function PersonalHomeworkDetailPage() {
   const attach = useFileAttach({
     genName: (index) => genStudentName(hw?.title ?? '숙제', index),
     fixedCount,
-    message,
     onConfirm: (kind, files) => {
       if (kind === 'audio') {
         setPendingAudio((prev) => [...prev, ...files]);
@@ -249,12 +260,12 @@ export default function PersonalHomeworkDetailPage() {
       setPendingDocs([]);
       await load();
       if (isFirstSubmit) {
-        message.success('숙제 제출 완료 · 먹이 +1');
+        toast.success('숙제 제출 완료 · 먹이 +1');
       } else {
-        message.success('숙제가 제출되었어요');
+        toast.success('숙제가 제출되었어요');
       }
     } catch (err) {
-      message.error(`제출 실패: ${err.message}`);
+      toast.error(`제출 실패: ${err.message}`);
       // 토스트는 화면을 나가면 사라진다 — 강사가 볼 수 있게 원인을 원격에도 남긴다.
       // 파일 크기를 함께 보내야 "무슨 파일을 올리다 막혔는지"를 추측 없이 알 수 있다.
       reportHandledError(`숙제 제출 실패: ${err.message}`, {
@@ -277,7 +288,7 @@ export default function PersonalHomeworkDetailPage() {
       await submitHomework(studentToken, hwId, [], [fileName]);
       await load();
     } catch (err) {
-      message.error(`삭제 실패: ${err.message}`);
+      toast.error(`삭제 실패: ${err.message}`);
     } finally {
       setDeletingFileName(null);
     }
@@ -386,10 +397,12 @@ export default function PersonalHomeworkDetailPage() {
       <div style={{ background: BG_APP, minHeight: 'calc(100dvh - 56px)' }}>
         <div style={{ maxWidth: 480, margin: '0 auto', padding: '20px 16px 80px' }}>
 
-        {/* ===== 1. 부여한 숙제 ===== */}
-        <AreaHeading icon={<ClipboardTextIcon size={20} weight="fill" />} label="부여한 숙제" first />
+        {/* ===== 1. 이번 숙제 ===== */}
+        {/* "부여한 숙제"는 선생님 시점 워딩(2026-08-31 지적) — 학생 화면은 학생 시점으로 */}
+        <AreaHeading icon={<ClipboardTextIcon size={20} weight="fill" />} label="이번 숙제" first />
         {hw.content && (
-          <SectionCard label="숙제 내용">
+          // 바로 위 AreaHeading이 이미 "부여한 숙제"라고 말한다 — 카드 안 "숙제 내용" 제목은 이중 라벨(2026-08-31 평가)
+          <SectionCard label={null}>
             <p style={{ fontSize: 14, color: INK_900, lineHeight: 1.7, whiteSpace: 'pre-wrap', margin: 0 }}><AutoLink text={hw.content} /></p>
           </SectionCard>
         )}
@@ -406,7 +419,7 @@ export default function PersonalHomeworkDetailPage() {
         {/* ===== 2. 내 제출 ===== */}
         <AreaHeading icon={<PaperPlaneTiltIcon size={20} weight="fill" />} label="내 제출" />
         {(submitAudio.length > 0 || submitDocs.length > 0) && (
-          <SectionCard label="내 제출 파일">
+          <SectionCard label="제출한 파일">
             {[...submitAudio, ...submitDocs].map((f, i) => (
               <div key={`submit-${i}-${f.name}`} style={{ marginBottom: 8 }}>
                 {renderStoredFile(f, 'submit', i)}
@@ -419,9 +432,10 @@ export default function PersonalHomeworkDetailPage() {
             )}
           </SectionCard>
         )}
-        {/* "내 숙제 제출" 추가 업로드 영역 — 미제출/제출완료 시. 학생이 더 올리거나 수정할 수 있도록. */}
+        {/* 업로드 영역 — 미제출/제출완료 시. 학생이 더 올리거나 수정할 수 있도록.
+            바로 위 AreaHeading이 이미 "내 제출"이라 카드 제목은 이중 라벨 — 안내문만 남긴다(2026-08-31). */}
         {canEdit && (
-          <SectionCard label="내 숙제 제출">
+          <SectionCard label={null}>
             <p style={{ fontSize: 13, color: TEXT_INACTIVE, lineHeight: 1.6, margin: '-2px 0 14px' }}>
               {hw.status === '미제출'
                 ? '공부한 내용을 녹음·사진·PDF로 올려주세요'
@@ -439,7 +453,7 @@ export default function PersonalHomeworkDetailPage() {
             {fixedCount < MAX_FILES && (
               <SectionEntryButton
                 icon={<MicrophoneIcon size={20} weight="fill" />}
-                label="녹음 제출하기"
+                label="녹음 올리기"
                 onClick={() => openModal('audio')}
                 disabled={uploading}
               />
@@ -458,7 +472,7 @@ export default function PersonalHomeworkDetailPage() {
             {fixedCount < MAX_FILES && (
               <SectionEntryButton
                 icon={<ImageSquareIcon size={20} weight="fill" />}
-                label="사진·문서 제출하기"
+                label="사진·문서 올리기"
                 onClick={() => openModal('document')}
                 disabled={uploading}
               />
@@ -493,11 +507,11 @@ export default function PersonalHomeworkDetailPage() {
         {/* 숙제 제출 — 두 카테고리 pending 을 한 번에 업로드 (카드 외부에 둬서 액션 강조) */}
         {canEdit && pendingTotal > 0 && (
           <Button
-            type="primary"
             block
+            size="lg"
             onClick={handleSaveSubmit}
             loading={uploading}
-            style={{ height: 48, borderRadius: 12, fontWeight: 700, fontSize: 15, marginTop: 4 }}
+            className="mt-1 text-[15px] font-bold"
           >
             숙제 제출하기 ({pendingTotal}개 파일)
           </Button>
@@ -516,36 +530,19 @@ export default function PersonalHomeworkDetailPage() {
         }}
       />
 
-      {/* 파일 삭제 확인 팝업 */}
-      <Modal
-        open={deleteConfirmFile !== null}
-        onCancel={() => setDeleteConfirmFile(null)}
-        footer={null}
-        title={<span style={{ fontSize: 16, fontWeight: 700 }}>파일 삭제</span>}
-        centered
-        destroyOnHidden
-      >
-        <p style={{ fontSize: 14, color: TEXT_SECONDARY, margin: '0 0 20px', lineHeight: 1.6 }}>
-          <strong style={{ color: TEXT_PRIMARY }}>{deleteConfirmFile?.replace(/\.[^/.]+$/, '')}</strong> 파일을 삭제할까요?<br />
-          삭제 후에는 복구할 수 없어요.
-        </p>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button
-            type="button"
-            onClick={() => setDeleteConfirmFile(null)}
-            style={{ flex: 1, height: 44, borderRadius: 12, border: 'none', boxShadow: 'var(--shadow-border)', background: '#fff', color: TEXT_SECONDARY, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
-          >
-            취소
-          </button>
-          <button
-            type="button"
-            onClick={() => handleDeleteFile(deleteConfirmFile)}
-            style={{ flex: 1, height: 44, borderRadius: 12, border: 'none', background: STATUS_ERROR, color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
-          >
-            삭제
-          </button>
-        </div>
-      </Modal>
+      {/* 파일 삭제 확인 — 같은 파일 아래쪽 '이탈 확인'과 함께 공용 ConfirmDialog를 쓴다.
+          예전엔 여기만 자체 Dialog + raw button이라 삭제 버튼이 STATUS_ERROR(형광 빨강)를 써서,
+          다른 12곳의 삭제 확인(STATUS_ERROR_TEXT)과 색이 달랐다(2026-08-29 통일).
+          ⚠️ 주석에 헥사값을 적으면 design-audit color-literal 이 잡는다(§L1191). 색 이름으로 적을 것. */}
+      {deleteConfirmFile !== null && (
+        <ConfirmDialog
+          title="파일 삭제"
+          message={`${deleteConfirmFile.replace(/\.[^/.]+$/, '')} 파일을 삭제할까요?\n삭제 후에는 복구할 수 없어요.`}
+          confirmLabel="삭제"
+          onConfirm={() => handleDeleteFile(deleteConfirmFile)}
+          onCancel={() => setDeleteConfirmFile(null)}
+        />
+      )}
 
       {/* 업로드/삭제 중 딤 오버레이
           zIndex는 antd Modal(기본 1000)보다 낮아야 한다 — 예전 9999에서는 업로드 중 뒤로가기를
@@ -559,7 +556,7 @@ export default function PersonalHomeworkDetailPage() {
             background: 'rgba(0,0,0,0.78)', borderRadius: 16, padding: uploading ? '24px 28px' : 20,
           }}>
             {/* 스피너는 진행률이 잠시 멈춰도 "살아 있다"는 신호를 준다 — 막대와 함께 둔다 */}
-            <Spin size="large" />
+            <CircleNotchIcon size={24} weight="bold" className="animate-spin" color="#fff" aria-hidden />
             {uploading && (
               <>
                 <p aria-live="polite" style={{ margin: 0, color: '#fff', fontSize: 14, fontWeight: 600, textAlign: 'center', lineHeight: 1.7 }}>
@@ -620,7 +617,7 @@ function SectionCard({ label, children }) {
   );
 }
 
-// 3영역(부여한 숙제 / 내 제출 / 선생님 피드백) 시각 구분용 헤더.
+// 3영역(이번 숙제 / 내 제출 / 선생님 피드백) 시각 구분용 헤더.
 function AreaHeading({ icon, label, first }) {
   return (
     <div style={{
@@ -643,7 +640,7 @@ function PendingInline({ label, items, onRemove, disabled }) {
       {items.map((pf) => (
         <div key={pf.tempId} style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '8px 12px', background: STATUS_SUCCESS_BG, border: '1px solid ${STATUS_SUCCESS_BORDER}',
+          padding: '8px 12px', background: STATUS_SUCCESS_BG, border: `1px solid ${STATUS_SUCCESS_BORDER}`,
           borderRadius: 12, marginBottom: 6,
         }}>
           <span style={{ fontSize: 13, color: TEXT_PRIMARY, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -662,26 +659,3 @@ function PendingInline({ label, items, onRemove, disabled }) {
   );
 }
 
-function SectionEntryButton({ icon, label, onClick, disabled }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className="transition-[background-color] duration-150 ease-out"
-      style={{
-        width: '100%', height: 44, borderRadius: 12,
-        // 강사앱의 같은 버튼과 함께 중립 면으로 맞췄다 — 연한 브랜드 면 금지(2026-08-27).
-        background: GRAY_100, border: 'none',
-        color: TEXT_SECONDARY, fontSize: 14, fontWeight: 600,
-        cursor: disabled ? 'not-allowed' : 'pointer',
-        WebkitTapHighlightColor: 'transparent', marginBottom: 10,
-        opacity: disabled ? 0.6 : 1,
-        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-      }}
-    >
-      {icon}
-      {label}
-    </button>
-  );
-}

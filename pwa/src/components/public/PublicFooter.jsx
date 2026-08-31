@@ -1,7 +1,4 @@
-import { Flex, Typography } from 'antd';
 import { BG_DARK } from '../../constants/theme.js';
-
-const { Text } = Typography;
 
 const BUSINESS_INFO = [
   ['대표', '최하늘'],
@@ -17,20 +14,20 @@ export default function PublicFooter() {
   return (
     <footer style={{ backgroundColor: BG_DARK, padding: '32px 24px 40px' }}>
       <div style={{ maxWidth: 480, margin: '0 auto' }}>
-        <Text style={{ display: 'block', color: 'rgba(255,255,255,0.9)', fontSize: 15, fontWeight: 700, marginBottom: 16 }}>
+        <span style={{ display: 'block', color: 'rgba(255,255,255,0.9)', fontSize: 15, fontWeight: 700, marginBottom: 16 }}>
           하늘하늘중국어
-        </Text>
-        <Flex vertical gap={6} style={{ marginBottom: 20 }}>
+        </span>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 20 }}>
           {BUSINESS_INFO.map(([label, value]) => (
-            <Text key={label} style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>
+            <span key={label} style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>
               {label} : {value}
-            </Text>
+            </span>
           ))}
-        </Flex>
+        </div>
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 16 }}>
-          <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.8)' }}>
+          <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.8)' }}>
             Copyright © 2025 하늘하늘중국어. All rights reserved.
-          </Text>
+          </span>
         </div>
       </div>
     </footer>

@@ -6,9 +6,9 @@ import { useNavigate } from 'react-router-dom';
 import { fetchStudentByToken } from '../api/bookingApi.js';
 import { usePullToRefresh,
   PullIndicator } from '../hooks/usePullToRefresh.jsx';
-import { Card,
-  Input,
-  Button } from 'antd';
+import { Button } from '../components/shadcn/button';
+import { Card, CardContent } from '../components/shadcn/card';
+import { Input } from '../components/shadcn/input';
 import PublicHeader from '../components/public/PublicHeader.jsx';
 import PublicFooter from '../components/public/PublicFooter.jsx';
 import {
@@ -90,7 +90,8 @@ export default function PersonalEntryPage() {
       {/* 폼 */}
       <div style={{ flex: 1, maxWidth: 480, margin: '0 auto', width: '100%', padding: '24px 16px 40px' }}>
         <form onSubmit={handleSubmit} noValidate>
-          <Card variant="borderless" style={{ borderRadius: 16, boxShadow: 'var(--shadow-card)' }}>
+          <Card className="rounded-2xl shadow-[shadow:var(--shadow-card)]">
+            <CardContent className="p-6">
             <div style={{ marginBottom: 16 }}>
               <label
                 htmlFor="student-code"
@@ -100,8 +101,6 @@ export default function PersonalEntryPage() {
               </label>
               <Input
                 id="student-code"
-                size="large"
-                style={{ borderRadius: 12 }}
                 value={code}
                 onChange={e => { setCode(e.target.value); setError(null); }}
                 placeholder="예: ABCD1234EFGH"
@@ -146,15 +145,16 @@ export default function PersonalEntryPage() {
             </div>
 
             <Button
-              type="primary"
               block
-              htmlType="submit"
+              size="lg"
+              type="submit"
               loading={loading}
               disabled={loading || !code.trim()}
-              style={{ borderRadius: 12, height: 48, fontWeight: 700, fontSize: 15 }}
+              className="text-[15px] font-bold"
             >
               {loading ? '확인 중...' : '시작하기'}
             </Button>
+            </CardContent>
           </Card>
 
           <p style={{ textAlign: 'center', fontSize: 13, color: TEXT_INACTIVE, marginTop: 16 }}>

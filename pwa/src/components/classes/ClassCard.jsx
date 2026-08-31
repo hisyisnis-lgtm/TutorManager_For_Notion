@@ -1,6 +1,7 @@
 import { useState } from 'react';
+import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
-import { Card, message } from 'antd';
+import { Card, CardContent } from '../shadcn/card';
 import { MapPinIcon, WarningCircleIcon, InfoIcon } from '@phosphor-icons/react';
 import Badge from '../ui/Badge.jsx';
 import SelectCheck from '../ui/SelectCheck.jsx';
@@ -59,26 +60,22 @@ export default function ClassCard({
       invalidateCache('lessonLogs');
       navigate(`/logs/${created.id}/edit`);
     } catch (e) {
-      message.error(`일지 생성 실패: ${e.message}`);
+      toast.error(`일지 생성 실패: ${e.message}`);
       setCreatingLog(false);
     }
   };
 
   return (
     <li>
+      {/* 선택 상태는 면을 파스텔로 칠하지 않는다(§18-1 — 그 플러드가 "AI가 만든 것" 느낌의 정체).
+          대신 브랜드 링 + 살짝의 리프트로 낸다. 채워진 체크 컨트롤이 상태를 확정해준다. */}
       <Card
-        variant="borderless"
-        className="card-tap"
-        style={{
-          borderRadius: 16, cursor: 'pointer',
-          // 선택 상태는 면을 파스텔로 칠하지 않는다(§18-1 — 그 플러드가 "AI가 만든 것" 느낌의 정체).
-          // 대신 브랜드 링 + 살짝의 리프트로 낸다. 채워진 체크 컨트롤이 상태를 확정해준다.
-          ...(selected ? { boxShadow: 'var(--shadow-border-selected)' } : null),
-        }}
-        styles={{ body: { padding: 16 } }}
+        className="card-tap rounded-2xl cursor-pointer"
+        style={selected ? { boxShadow: 'var(--shadow-border-selected)' } : undefined}
         onClick={() => (selectable ? onSelect?.(cls.id) : navigate(`/classes/${cls.id}`))}
         aria-pressed={selectable ? selected : undefined}
       >
+        <CardContent className="p-4">
         <div className="flex items-start justify-between gap-3">
           {/* 카드 전체가 토글이라 체크 컨트롤은 표시 전용(포커스·중복 토글에서 제외).
               첫 줄 텍스트(15px)와 시각 중심을 맞추려 1px 내린다 — Better #2 광학 정렬 */}
@@ -182,6 +179,7 @@ export default function ClassCard({
             </button>
           </div>
         )}
+        </CardContent>
       </Card>
     </li>
   );

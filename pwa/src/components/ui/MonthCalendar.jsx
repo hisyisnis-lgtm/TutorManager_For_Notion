@@ -1,5 +1,5 @@
 import { useRef, useEffect } from 'react';
-import { Card } from 'antd';
+import { Card, CardContent } from '@/components/shadcn/card';
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 const pad = n => String(n).padStart(2, '0');
@@ -66,11 +66,10 @@ export default function MonthCalendar({
   return (
     <div ref={containerRef}>
     <Card
-      variant="borderless"
-      style={{ borderRadius: 16, boxShadow: 'var(--shadow-card)' }}
-      styles={{ body: { padding: 16 } }}
+      className="rounded-2xl shadow-[shadow:var(--shadow-card)]"
       onClick={() => onDeselect?.()}
     >
+      <CardContent className="p-4">
       {/* 월 네비게이션 */}
       <div className="flex items-center justify-between mb-3">
         <button
@@ -177,6 +176,7 @@ export default function MonthCalendar({
 
       {/* 드릴다운 슬롯 */}
       {footer}
+      </CardContent>
     </Card>
     </div>
   );

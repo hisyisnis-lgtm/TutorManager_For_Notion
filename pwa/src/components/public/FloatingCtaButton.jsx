@@ -1,4 +1,4 @@
-import { Button } from 'antd';
+import { Button } from '@/components/shadcn/button';
 import { ArrowRightIcon } from '@phosphor-icons/react';
 
 /**
@@ -20,11 +20,8 @@ export default function FloatingCtaButton({ visible, onClick, label = '무료 �
       pointerEvents: visible ? 'auto' : 'none',
     }}>
       <Button
-        type="primary" size="large" onClick={onClick}
-        style={{
-          height: 48, borderRadius: 980, fontWeight: 700, fontSize: 15,
-          paddingInline: 28, boxShadow: 'var(--shadow-brand-button)',
-        }}
+        size="lg" onClick={onClick}
+        className="rounded-full px-7 text-[15px] font-bold shadow-[shadow:var(--shadow-brand-button)]"
       >
         {label} <ArrowRightIcon weight="fill" />
       </Button>

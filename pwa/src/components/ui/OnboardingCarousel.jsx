@@ -58,6 +58,17 @@ const SLIDES = [
   },
 ];
 
+// 브랜드 슬라이드의 한자 파티클 — 로그인·공개 히어로와 같은 어법(hanziFloat 재사용).
+// 첫 화면이 "중국어 배우는 앱"이라고 말하게 한다(2026-08-31 학생앱 평가).
+const HANZI_FONT = '"Noto Sans SC", "PingFang SC", "Microsoft YaHei", "Heiti SC", sans-serif';
+const HANZI_PARTICLES = [
+  { char: '好', left: '10%', bottom: '16%', size: 22, delay: '0s',   dur: '8s'   },
+  { char: '学', left: '30%', bottom: '7%',  size: 15, delay: '2.4s', dur: '7s'   },
+  { char: '语', left: '52%', bottom: '12%', size: 18, delay: '1.1s', dur: '8.5s' },
+  { char: '中', left: '72%', bottom: '5%',  size: 21, delay: '3.2s', dur: '7.5s' },
+  { char: '文', left: '87%', bottom: '15%', size: 15, delay: '0.7s', dur: '6.5s' },
+];
+
 // light theme 슬라이드의 상단 비주얼존 고정 높이
 const ZONE_HEIGHT = 256;
 
@@ -254,6 +265,7 @@ export default function OnboardingCarousel({ onDone }) {
                      로고(white) + 흰색 텍스트로 HeroSection 분위기.
                      ════════════════════════════════════════════ */
                   <div style={{
+                    position: 'relative',
                     flex: 1,
                     background: slide.zoneBg,
                     display: 'flex',
@@ -261,6 +273,20 @@ export default function OnboardingCarousel({ onDone }) {
                     alignItems: 'flex-start',
                     padding: '80px 28px 32px',
                   }}>
+                    {/* 한자 파티클 — 하단에서 은은하게 피어오른다 */}
+                    {HANZI_PARTICLES.map(({ char, left, bottom, size, delay, dur }) => (
+                      <span
+                        key={`${char}-${left}`}
+                        aria-hidden="true"
+                        style={{
+                          position: 'absolute', left, bottom,
+                          fontSize: size, lineHeight: 1,
+                          color: 'white', fontFamily: HANZI_FONT,
+                          animation: `hanziFloat ${dur} ease-in-out ${delay} infinite both`,
+                          pointerEvents: 'none', userSelect: 'none',
+                        }}
+                      >{char}</span>
+                    ))}
                     <Fragment key={`${slide.id}-v${visitCounts.current[idx]}`}>
                       {/* 로고 심볼 (흰색) */}
                       <div

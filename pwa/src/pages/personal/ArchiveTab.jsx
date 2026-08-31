@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card } from 'antd';
+import { Card, CardContent } from '@/components/shadcn/card';
 import { CaretRightIcon, SpeakerHighIcon } from '@phosphor-icons/react';
 import { useCachedResource } from '../../hooks/useCachedResource.js';
 import { fetchMyHomework, parseHomework } from '../../api/homework.js';
@@ -27,11 +27,8 @@ function ArchiveHwCard({ hw, studentToken }) {
     : "";
 
   return (
-    <Card
-      variant="borderless"
-      style={{ borderRadius: 12, boxShadow: "var(--shadow-border)", overflow: "hidden" }}
-      styles={{ body: { padding: 0 } }}
-    >
+    <Card className="overflow-hidden">
+      <CardContent className="p-0">
       <button
         type="button"
         onClick={() => navigate(`/personal/${studentToken}/homework/${hw.id}`, { state: { tab: '보관함' } })}
@@ -51,6 +48,7 @@ function ArchiveHwCard({ hw, studentToken }) {
         </div>
         <CaretRightIcon size={16} color={TEXT_DISABLED} />
       </button>
+      </CardContent>
     </Card>
   );
 }

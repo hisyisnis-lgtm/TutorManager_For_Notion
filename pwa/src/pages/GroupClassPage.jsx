@@ -1,20 +1,43 @@
-import { useState, useEffect } from 'react';
-import { ConfigProvider, Flex, Collapse, Typography, Button } from 'antd';
 import {
-  CalendarBlankIcon, ClockIcon, VideoCameraIcon, ShieldCheckIcon,
-  CheckCircleIcon, GiftIcon, CreditCardIcon, WarningCircleIcon,
-  InfoIcon, FileLockIcon, MicrophoneStageIcon, CaretDownIcon,
-} from '@phosphor-icons/react';
+  useState,
+  useEffect } from 'react';
+import { Button } from '../components/shadcn/button';
 import {
-  PRIMARY, PRIMARY_BG, antdTheme,
-  TEXT_PRIMARY, TEXT_BODY, TEXT_SECONDARY, TEXT_TERTIARY, TEXT_INACTIVE,
-  BORDER_DEFAULT, BG_SECTION_ALT, BG_LETTER, GRADIENTS,
-} from '../constants/theme';
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+  } from '../components/shadcn/accordion';
+import {
+  CalendarBlankIcon,
+  ClockIcon,
+  VideoCameraIcon,
+  ShieldCheckIcon,
+  CheckCircleIcon,
+  GiftIcon,
+  CreditCardIcon,
+  WarningCircleIcon,
+  InfoIcon,
+  FileLockIcon,
+  MicrophoneStageIcon,
+  CaretDownIcon,
+  } from '@phosphor-icons/react';
+import {
+  PRIMARY,
+  PRIMARY_BG,
+  TEXT_PRIMARY,
+  TEXT_BODY,
+  TEXT_SECONDARY,
+  TEXT_TERTIARY,
+  TEXT_INACTIVE,
+  BORDER_DEFAULT,
+  BG_SECTION_ALT,
+  BG_LETTER,
+  GRADIENTS } from '../constants/theme';
 import FadeUp from '../components/FadeUp';
 import PublicFooter from '../components/public/PublicFooter';
 import FloatingCtaButton from '../components/public/FloatingCtaButton';
 
-const { Title, Text } = Typography;
 
 // 신청 폼 (구글폼)
 const APPLY_FORM_URL = 'https://forms.gle/1bwL7MPjhnsdF8uz9';
@@ -180,20 +203,20 @@ const POLICY = [
 // ── 공통 섹션 타이틀 ───────────────────────────────────
 function SectionTitle({ icon: Icon, children }) {
   return (
-    <Flex align="center" gap={8} style={{ marginBottom: 16 }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
       {Icon && <Icon weight="fill" size={18} style={{ color: TEXT_TERTIARY, flexShrink: 0 }} />}
-      <Title level={4} style={{ margin: 0, letterSpacing: '-0.3px', textWrap: 'balance' }}>{children}</Title>
-    </Flex>
+      <h4 style={{ fontSize: 20, fontWeight: 600, lineHeight: 1.4, margin: 0, letterSpacing: '-0.3px', textWrap: 'balance' }}>{children}</h4>
+    </div>
   );
 }
 
 // 점 불릿 한 줄
 function Bullet({ children, color = TEXT_SECONDARY }) {
   return (
-    <Flex gap={9} align="start">
+    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 9 }}>
       <span style={{ width: 4, height: 4, borderRadius: '50%', background: TEXT_INACTIVE, marginTop: 8, flexShrink: 0 }} />
-      <Text style={{ fontSize: 13, color, lineHeight: 1.6 }}>{children}</Text>
-    </Flex>
+      <span style={{ fontSize: 13, color, lineHeight: 1.6 }}>{children}</span>
+    </div>
   );
 }
 
@@ -211,7 +234,7 @@ export default function GroupClassPage() {
   }, []);
 
   return (
-    <ConfigProvider theme={antdTheme}>
+      <>
       <FloatingCtaButton visible={showFloat} onClick={openApply} label="참여 동의서 작성하기" />
       <style>{`
         .gc-header { -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
@@ -246,7 +269,7 @@ export default function GroupClassPage() {
                 backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 980,
                 padding: '5px 13px', marginBottom: 16,
               }}>
-                <Text style={{ fontSize: 12, color: 'white', fontWeight: 700, lineHeight: 1 }}>7~8월 온라인 회화 그룹 수업</Text>
+                <span style={{ fontSize: 12, color: 'white', fontWeight: 700, lineHeight: 1 }}>7~8월 온라인 회화 그룹 수업</span>
               </div>
             </FadeUp>
             <FadeUp delay={80}>
@@ -260,17 +283,17 @@ export default function GroupClassPage() {
               </p>
             </FadeUp>
             <FadeUp delay={240}>
-              <Flex gap={8} wrap="wrap">
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 {HERO_CHIPS.map(c => (
                   <div key={c} style={{
                     display: 'inline-flex', alignItems: 'center',
                     border: '1px solid rgba(255,255,255,0.4)', borderRadius: 980,
                     padding: '5px 14px',
                   }}>
-                    <Text style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.92)', fontWeight: 600, lineHeight: 1 }}>{c}</Text>
+                    <span style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.92)', fontWeight: 600, lineHeight: 1 }}>{c}</span>
                   </div>
                 ))}
-              </Flex>
+              </div>
             </FadeUp>
           </section>
 
@@ -281,95 +304,95 @@ export default function GroupClassPage() {
             {/* 수강료 + 개강/시간 스탯 */}
             <FadeUp>
               <div style={{ background: BG_SECTION_ALT, borderRadius: 16, padding: 20 }}>
-                <Text style={{ fontSize: 12, color: TEXT_TERTIARY, display: 'block', marginBottom: 4 }}>월 수강료</Text>
-                <Flex align="baseline" gap={5} style={{ marginBottom: 18 }}>
-                  <Text className="tabular-nums" style={{ fontSize: 34, fontWeight: 700, color: TEXT_BODY, lineHeight: 1.1 }}>80,000</Text>
-                  <Text style={{ fontSize: 15, color: TEXT_SECONDARY, fontWeight: 600 }}>원 / 월</Text>
-                </Flex>
+                <span style={{ fontSize: 12, color: TEXT_TERTIARY, display: 'block', marginBottom: 4 }}>월 수강료</span>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, marginBottom: 18 }}>
+                  <span className="tabular-nums" style={{ fontSize: 34, fontWeight: 700, color: TEXT_BODY, lineHeight: 1.1 }}>80,000</span>
+                  <span style={{ fontSize: 15, color: TEXT_SECONDARY, fontWeight: 600 }}>원 / 월</span>
+                </div>
                 <div style={{ height: 1, background: BORDER_DEFAULT, marginBottom: 16 }} />
-                <Flex gap={16}>
+                <div style={{ display: 'flex', gap: 16 }}>
                   {[
                     { icon: CalendarBlankIcon, label: '개강', value: '7/2 · 8/6' },
                     { icon: ClockIcon, label: '수업', value: '목 21:00' },
                   ].map(({ icon: Icon, label, value }) => (
                     <div key={label} style={{ flex: 1 }}>
-                      <Flex align="center" gap={5} style={{ marginBottom: 4 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 4 }}>
                         <Icon weight="fill" size={14} style={{ color: TEXT_TERTIARY }} />
-                        <Text style={{ fontSize: 12, color: TEXT_TERTIARY }}>{label}</Text>
-                      </Flex>
-                      <Text className="tabular-nums" style={{ fontSize: 17, fontWeight: 700, color: TEXT_BODY }}>{value}</Text>
+                        <span style={{ fontSize: 12, color: TEXT_TERTIARY }}>{label}</span>
+                      </div>
+                      <span className="tabular-nums" style={{ fontSize: 17, fontWeight: 700, color: TEXT_BODY }}>{value}</span>
                     </div>
                   ))}
-                </Flex>
-                <Text style={{ fontSize: 12.5, color: TEXT_TERTIARY, display: 'block', marginTop: 14 }}>온라인 그룹(Zoom) · 매주 목 저녁 9시 · 월 4회 · 회당 50분</Text>
+                </div>
+                <span style={{ fontSize: 12.5, color: TEXT_TERTIARY, display: 'block', marginTop: 14 }}>온라인 그룹(Zoom) · 매주 목 저녁 9시 · 월 4회 · 회당 50분</span>
               </div>
             </FadeUp>
 
             {/* 추천 대상 */}
             <FadeUp delay={80}>
               <div style={{ marginTop: 18 }}>
-                <Text strong style={{ fontSize: 14, color: TEXT_PRIMARY, display: 'block', marginBottom: 10 }}>이런 분께 추천해요</Text>
-                <Flex vertical gap={9}>
+                <span style={{ fontWeight: 600, fontSize: 14, color: TEXT_PRIMARY, display: 'block', marginBottom: 10 }}>이런 분께 추천해요</span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
                   {RECOMMEND.map(r => (
-                    <Flex key={r} gap={8} align="start">
+                    <div key={r} style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
                       <CheckCircleIcon weight="fill" size={16} style={{ color: PRIMARY, flexShrink: 0, marginTop: 2 }} />
-                      <Text style={{ fontSize: 13.5, color: TEXT_BODY, lineHeight: 1.55 }}>{r}</Text>
-                    </Flex>
+                      <span style={{ fontSize: 13.5, color: TEXT_BODY, lineHeight: 1.55 }}>{r}</span>
+                    </div>
                   ))}
-                </Flex>
+                </div>
               </div>
             </FadeUp>
 
             <FadeUp delay={140}>
-              <Text style={{ fontSize: 12.5, color: TEXT_TERTIARY, display: 'block', marginTop: 16, lineHeight: 1.6 }}>
+              <span style={{ fontSize: 12.5, color: TEXT_TERTIARY, display: 'block', marginTop: 16, lineHeight: 1.6 }}>
                 모든 회차 수업은 복습을 위한 녹화본이 일정 기간 제공됩니다. 상세 커리큘럼과 추가 혜택은 아래에서 확인해 주세요.
-              </Text>
+              </span>
             </FadeUp>
           </section>
 
           {/* ── 커리큘럼 (회색 밴드) ── */}
           <section style={{ background: BG_SECTION_ALT, padding: '32px 24px' }}>
             <FadeUp><SectionTitle>입이 트이는 8주, 이렇게 진행됩니다</SectionTitle></FadeUp>
-            <Flex vertical gap={28}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
               {CURRICULUM.map((m, i) => (
                 <FadeUp key={m.pill} delay={i * 80}>
                   <div>
-                    <Flex align="center" gap={10} style={{ marginBottom: 12 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
                       <span style={{ backgroundColor: PRIMARY, color: '#fff', fontSize: 12, fontWeight: 700, borderRadius: 980, padding: '4px 10px' }}>{m.pill}</span>
-                      <Text strong style={{ fontSize: 14, color: TEXT_PRIMARY }}>{m.summary}</Text>
-                    </Flex>
+                      <span style={{ fontWeight: 600, fontSize: 14, color: TEXT_PRIMARY }}>{m.summary}</span>
+                    </div>
                     <div style={{ height: 1, background: BORDER_DEFAULT, marginBottom: 12 }} />
-                    <Flex vertical gap={9}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
                       {m.sessions.map(([d, desc]) => (
-                        <Flex key={d} gap={11} align="start">
-                          <Text className="tabular-nums" style={{ fontSize: 12, fontWeight: 700, color: PRIMARY, width: 36, flexShrink: 0, marginTop: 1 }}>{d}</Text>
-                          <Text style={{ fontSize: 13, color: TEXT_BODY, lineHeight: 1.5 }}>{desc}</Text>
-                        </Flex>
+                        <div key={d} style={{ display: 'flex', alignItems: 'flex-start', gap: 11 }}>
+                          <span className="tabular-nums" style={{ fontSize: 12, fontWeight: 700, color: PRIMARY, width: 36, flexShrink: 0, marginTop: 1 }}>{d}</span>
+                          <span style={{ fontSize: 13, color: TEXT_BODY, lineHeight: 1.5 }}>{desc}</span>
+                        </div>
                       ))}
-                    </Flex>
+                    </div>
 
                     {/* 월말 1:1 녹음 피드백 — 회색 밴드 위 흰 카드로 강조 */}
                     <div style={{ background: '#fff', borderRadius: 12, padding: 16, marginTop: 14, boxShadow: 'var(--shadow-border)' }}>
-                      <Flex align="center" gap={7} style={{ marginBottom: 10 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 10 }}>
                         <MicrophoneStageIcon weight="fill" size={16} style={{ color: PRIMARY, flexShrink: 0 }} />
-                        <Text strong style={{ fontSize: 13.5, color: TEXT_BODY }}>1:1 녹음 피드백</Text>
-                        <Text strong className="tabular-nums" style={{ fontSize: 12, color: PRIMARY, marginLeft: 'auto', flexShrink: 0 }}>{m.feedback.period}</Text>
-                      </Flex>
-                      <Text style={{ fontSize: 12.5, color: TEXT_SECONDARY, display: 'block', lineHeight: 1.7, marginBottom: 14 }}>{m.feedback.desc}</Text>
-                      <Text strong style={{ fontSize: 11.5, color: PRIMARY, display: 'block', marginBottom: 9, letterSpacing: '-0.2px' }}>보내실 때 꼭 확인해주세요</Text>
-                      <Flex vertical gap={7}>
+                        <span style={{ fontWeight: 600, fontSize: 13.5, color: TEXT_BODY }}>1:1 녹음 피드백</span>
+                        <span className="tabular-nums" style={{ fontWeight: 600, fontSize: 12, color: PRIMARY, marginLeft: 'auto', flexShrink: 0 }}>{m.feedback.period}</span>
+                      </div>
+                      <span style={{ fontSize: 12.5, color: TEXT_SECONDARY, display: 'block', lineHeight: 1.7, marginBottom: 14 }}>{m.feedback.desc}</span>
+                      <span style={{ fontWeight: 600, fontSize: 11.5, color: PRIMARY, display: 'block', marginBottom: 9, letterSpacing: '-0.2px' }}>보내실 때 꼭 확인해주세요</span>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
                         {m.feedback.notes.map(n => (
-                          <Flex key={n} gap={8} align="start">
+                          <div key={n} style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
                             <span style={{ width: 3, height: 3, borderRadius: '50%', background: PRIMARY, marginTop: 7, flexShrink: 0 }} />
-                            <Text style={{ fontSize: 12, color: TEXT_SECONDARY, lineHeight: 1.6 }}>{n}</Text>
-                          </Flex>
+                            <span style={{ fontSize: 12, color: TEXT_SECONDARY, lineHeight: 1.6 }}>{n}</span>
+                          </div>
                         ))}
-                      </Flex>
+                      </div>
                     </div>
                   </div>
                 </FadeUp>
               ))}
-            </Flex>
+            </div>
           </section>
 
           {/* ── 혜택 ── */}
@@ -378,47 +401,47 @@ export default function GroupClassPage() {
 
             {/* 모두에게 제공 */}
             <FadeUp delay={60}>
-              <Text strong style={{ fontSize: 14, color: TEXT_PRIMARY, display: 'block', marginBottom: 10 }}>모두에게 제공돼요</Text>
-              <Flex vertical gap={10} style={{ marginBottom: 20 }}>
+              <span style={{ fontWeight: 600, fontSize: 14, color: TEXT_PRIMARY, display: 'block', marginBottom: 10 }}>모두에게 제공돼요</span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
                 {BENEFIT_ALL.map(b => (
-                  <Flex key={b} gap={8} align="start">
+                  <div key={b} style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
                     <CheckCircleIcon weight="fill" size={16} style={{ color: PRIMARY, flexShrink: 0, marginTop: 2 }} />
-                    <Text style={{ fontSize: 13.5, color: TEXT_BODY, lineHeight: 1.55 }}>{b}</Text>
-                  </Flex>
+                    <span style={{ fontSize: 13.5, color: TEXT_BODY, lineHeight: 1.55 }}>{b}</span>
+                  </div>
                 ))}
-              </Flex>
+              </div>
             </FadeUp>
 
             {/* 수강 유형별 녹화본 */}
             <FadeUp delay={100}>
-              <Text strong style={{ fontSize: 14, color: TEXT_PRIMARY, display: 'block', marginBottom: 10 }}>수강 유형별 녹화본</Text>
+              <span style={{ fontWeight: 600, fontSize: 14, color: TEXT_PRIMARY, display: 'block', marginBottom: 10 }}>수강 유형별 녹화본</span>
               <div style={{ background: BG_SECTION_ALT, borderRadius: 12, padding: '14px 16px', marginBottom: 20 }}>
-                <Flex vertical gap={10}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {RECORDING_BY_TYPE.map(([t, v]) => (
-                    <Flex key={t} justify="space-between" align="center" gap={12}>
-                      <Text strong style={{ fontSize: 13, color: TEXT_BODY, flexShrink: 0 }}>{t}</Text>
-                      <Text className="tabular-nums" style={{ fontSize: 12.5, color: TEXT_SECONDARY, textAlign: 'right' }}>{v}</Text>
-                    </Flex>
+                    <div key={t} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                      <span style={{ fontWeight: 600, fontSize: 13, color: TEXT_BODY, flexShrink: 0 }}>{t}</span>
+                      <span className="tabular-nums" style={{ fontSize: 12.5, color: TEXT_SECONDARY, textAlign: 'right' }}>{v}</span>
+                    </div>
                   ))}
-                </Flex>
+                </div>
               </div>
             </FadeUp>
 
             {/* 동시 등록 전용 혜택 */}
             <FadeUp delay={140}>
               <div style={{ background: PRIMARY_BG, borderRadius: 12, padding: '16px 18px' }}>
-                <Flex align="center" gap={7} style={{ marginBottom: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 10 }}>
                   <GiftIcon weight="fill" size={16} style={{ color: PRIMARY, flexShrink: 0 }} />
-                  <Text strong style={{ fontSize: 14, color: TEXT_BODY }}>7~8월 동시 등록 전용 혜택</Text>
-                </Flex>
-                <Flex vertical gap={8}>
+                  <span style={{ fontWeight: 600, fontSize: 14, color: TEXT_BODY }}>7~8월 동시 등록 전용 혜택</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {PACKAGE_BONUS.map(b => (
-                    <Flex key={b} gap={7} align="start">
+                    <div key={b} style={{ display: 'flex', alignItems: 'flex-start', gap: 7 }}>
                       <span style={{ width: 4, height: 4, borderRadius: '50%', background: PRIMARY, marginTop: 8, flexShrink: 0 }} />
-                      <Text style={{ fontSize: 13, color: TEXT_BODY, lineHeight: 1.6 }}>{b}</Text>
-                    </Flex>
+                      <span style={{ fontSize: 13, color: TEXT_BODY, lineHeight: 1.6 }}>{b}</span>
+                    </div>
                   ))}
-                </Flex>
+                </div>
               </div>
             </FadeUp>
           </section>
@@ -427,25 +450,25 @@ export default function GroupClassPage() {
           <section style={{ background: BG_SECTION_ALT, padding: '32px 24px' }}>
             <FadeUp><SectionTitle icon={CreditCardIcon}>수강료 · 신청 안내</SectionTitle></FadeUp>
             <FadeUp delay={60}>
-              <Flex vertical gap={9} style={{ marginBottom: 18 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 9, marginBottom: 18 }}>
                 {PAYMENT.map(p => (
-                  <Flex key={p} gap={10} align="start">
+                  <div key={p} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
                     <span style={{ width: 5, height: 5, borderRadius: '50%', background: TEXT_INACTIVE, marginTop: 7, flexShrink: 0 }} />
-                    <Text style={{ fontSize: 13.5, color: TEXT_BODY, lineHeight: 1.55 }}>{p}</Text>
-                  </Flex>
+                    <span style={{ fontSize: 13.5, color: TEXT_BODY, lineHeight: 1.55 }}>{p}</span>
+                  </div>
                 ))}
-              </Flex>
+              </div>
             </FadeUp>
             <FadeUp delay={100}>
               <div style={{ background: '#fff', borderRadius: 12, padding: '14px 16px' }}>
-                <Flex vertical gap={9}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
                   {APPLY_NOTE.map(n => (
-                    <Flex key={n} gap={8} align="start">
+                    <div key={n} style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
                       <InfoIcon weight="fill" size={16} style={{ color: TEXT_TERTIARY, flexShrink: 0, marginTop: 2 }} />
-                      <Text style={{ fontSize: 13, color: TEXT_SECONDARY, lineHeight: 1.6 }}>{n}</Text>
-                    </Flex>
+                      <span style={{ fontSize: 13, color: TEXT_SECONDARY, lineHeight: 1.6 }}>{n}</span>
+                    </div>
                   ))}
-                </Flex>
+                </div>
               </div>
             </FadeUp>
           </section>
@@ -453,20 +476,20 @@ export default function GroupClassPage() {
           {/* ── 수업 진행 방법 ── */}
           <section style={{ padding: '28px 24px 24px' }}>
             <FadeUp><SectionTitle icon={VideoCameraIcon}>수업 진행 방법</SectionTitle></FadeUp>
-            <Flex vertical gap={18}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
               {PROCEDURE.map((p, i) => (
                 <FadeUp key={p.phase} delay={i * 50}>
                   <div>
-                    <Flex align="center" gap={8} style={{ marginBottom: 8 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                       <span className="tabular-nums" style={{ fontSize: 11, fontWeight: 700, color: PRIMARY, background: PRIMARY_BG, borderRadius: 980, padding: '3px 9px' }}>{p.phase}</span>
-                    </Flex>
-                    <Flex vertical gap={7}>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
                       {p.items.map(it => <Bullet key={it}>{it}</Bullet>)}
-                    </Flex>
+                    </div>
                   </div>
                 </FadeUp>
               ))}
-            </Flex>
+            </div>
           </section>
 
           {/* ── 환불 및 기타 안내사항 (회색 밴드 + 안심 + 아코디언) ── */}
@@ -474,49 +497,36 @@ export default function GroupClassPage() {
             <FadeUp><SectionTitle icon={ShieldCheckIcon}>환불 및 기타 안내사항</SectionTitle></FadeUp>
             <FadeUp delay={60}>
               <div style={{ background: PRIMARY_BG, borderRadius: 12, padding: '12px 16px', marginBottom: 12 }}>
-                <Flex gap={8} align="center">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <ShieldCheckIcon weight="fill" size={16} style={{ color: PRIMARY, flexShrink: 0 }} />
-                  <Text strong style={{ fontSize: 13.5, color: TEXT_BODY }}>1회차 수업 시작 전이면 전액 환불돼요</Text>
-                </Flex>
+                  <span style={{ fontWeight: 600, fontSize: 13.5, color: TEXT_BODY }}>1회차 수업 시작 전이면 전액 환불돼요</span>
+                </div>
               </div>
             </FadeUp>
             <FadeUp delay={120}>
-              <Collapse
-                accordion
-                defaultActiveKey="refund"
-                expandIconPlacement="end"
-                expandIcon={({ isActive }) => (
-                  <Flex align="center" gap={4}>
-                    <Text style={{ fontSize: 12, color: TEXT_TERTIARY, lineHeight: 1, flexShrink: 0 }}>
-                      {isActive ? '접기' : '열어보기'}
-                    </Text>
-                    <CaretDownIcon
-                      weight="bold" size={12}
-                      style={{
-                        color: TEXT_TERTIARY,
-                        transition: 'transform 0.2s ease',
-                        transform: isActive ? 'rotate(180deg)' : 'rotate(0deg)',
-                      }}
-                    />
-                  </Flex>
-                )}
-                style={{ background: 'transparent', border: 'none' }}
-                items={POLICY.map(({ key, title, items }) => ({
-                  key,
-                  label: <Text strong style={{ fontSize: 14, color: TEXT_BODY }}>{title}</Text>,
-                  style: { backgroundColor: '#ffffff', borderRadius: 12, marginBottom: 10, overflow: 'hidden', boxShadow: 'var(--shadow-border)' },
-                  children: (
-                    <Flex vertical gap={10}>
-                      {items.map(([label, value], i) => (
-                        <div key={i}>
-                          {label && <Text strong style={{ fontSize: 13, color: TEXT_PRIMARY, display: 'block', marginBottom: 2 }}>{label}</Text>}
-                          <Text style={{ fontSize: 13, color: TEXT_SECONDARY, lineHeight: 1.6 }}>{value}</Text>
-                        </div>
-                      ))}
-                    </Flex>
-                  ),
-                }))}
-              />
+              <Accordion type="single" collapsible defaultValue="refund" className="w-full">
+                {POLICY.map(({ key, title, items }) => (
+                  <AccordionItem
+                    key={key}
+                    value={key}
+                    className="mb-2.5 overflow-hidden rounded-lg border-0 bg-card shadow-[shadow:var(--shadow-border)]"
+                  >
+                    <AccordionTrigger className="px-4 hover:no-underline">
+                      <span style={{ fontWeight: 600, fontSize: 14, color: TEXT_BODY }}>{title}</span>
+                    </AccordionTrigger>
+                    <AccordionContent className="px-4">
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                        {items.map(([label, value], i) => (
+                          <div key={i}>
+                            {label && <span style={{ fontWeight: 600, fontSize: 13, color: TEXT_PRIMARY, display: 'block', marginBottom: 2 }}>{label}</span>}
+                            <span style={{ fontSize: 13, color: TEXT_SECONDARY, lineHeight: 1.6 }}>{value}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                ))}
+              </Accordion>
             </FadeUp>
           </section>
 
@@ -524,20 +534,20 @@ export default function GroupClassPage() {
           <section style={{ padding: '28px 24px 24px' }}>
             <FadeUp>
               <div style={{ background: BG_LETTER, borderRadius: 16, padding: '24px 22px', boxShadow: 'var(--shadow-card)' }}>
-                <Flex align="center" gap={12} style={{ marginBottom: 18 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
                   <img src="/img/profile.jpg" alt="하늘쌤" style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover', objectPosition: 'center top', flexShrink: 0, boxShadow: '0 0 0 1px rgba(0,0,0,0.06)' }} />
-                  <Text strong style={{ fontSize: 15, color: TEXT_PRIMARY }}>하늘쌤의 편지</Text>
-                </Flex>
-                <Text style={{ fontSize: 14, color: TEXT_BODY, fontWeight: 600, display: 'block', marginBottom: 14, lineHeight: 1.6 }}>
+                  <span style={{ fontWeight: 600, fontSize: 15, color: TEXT_PRIMARY }}>하늘쌤의 편지</span>
+                </div>
+                <span style={{ fontSize: 14, color: TEXT_BODY, fontWeight: 600, display: 'block', marginBottom: 14, lineHeight: 1.6 }}>
                   끝까지 읽어주셔서 감사합니다.
-                </Text>
+                </span>
                 <p style={{ fontSize: 14, color: TEXT_BODY, lineHeight: 1.95, margin: 0, textWrap: 'pretty' }}>
                   단어는 충분히 알고 계세요. 이제 그 단어들을 입 밖으로 꺼내는 일만 남았습니다. 그 길을 함께 걸어가며, 여러분의 입이 트이는 순간을 만들어가겠습니다.
                   <br /><br />
                   8주 동안 잘 부탁드립니다!
                 </p>
                 <div style={{ textAlign: 'right', marginTop: 22 }}>
-                  <Text style={{ fontSize: 15, color: TEXT_PRIMARY, fontWeight: 700 }}>하늘쌤 드림</Text>
+                  <span style={{ fontSize: 15, color: TEXT_PRIMARY, fontWeight: 700 }}>하늘쌤 드림</span>
                 </div>
               </div>
             </FadeUp>
@@ -546,19 +556,21 @@ export default function GroupClassPage() {
           {/* ── CTA ── */}
           <FadeUp delay={60}>
             <section style={{ padding: '24px 24px 36px' }}>
-              <Flex vertical gap={6} align="center" style={{ marginBottom: 14 }}>
-                <Flex gap={6} align="center">
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, marginBottom: 14 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <ShieldCheckIcon weight="fill" size={16} style={{ color: PRIMARY, flexShrink: 0 }} />
-                  <Text style={{ fontSize: 13, color: TEXT_SECONDARY }}>
-                    첫 수업 전이면 <Text strong style={{ color: TEXT_BODY }}>100% 환불</Text> · 선착순 마감
-                  </Text>
-                </Flex>
-                <Text style={{ fontSize: 12, color: TEXT_TERTIARY }}>참여 동의서 작성 → 문자로 결제 안내를 드려요</Text>
-              </Flex>
+                  <span style={{ fontSize: 13, color: TEXT_SECONDARY }}>
+                    첫 수업 전이면 <span style={{ fontWeight: 600, color: TEXT_BODY }}>100% 환불</span> · 선착순 마감
+                  </span>
+                </div>
+                <span style={{ fontSize: 12, color: TEXT_TERTIARY }}>참여 동의서 작성 → 문자로 결제 안내를 드려요</span>
+              </div>
+              {/* antd 시절 href prop 잔재로 무동작이던 버튼(2026-08-30 검수) —
+                  플로팅 CTA와 같은 openApply 핸들러로 통일 */}
               <Button
+                block
+                onClick={openApply}
                 className="gc-cta"
-                type="primary" size="large" block
-                href={APPLY_FORM_URL} target="_blank" rel="noopener noreferrer"
                 style={{ height: 48, borderRadius: 12, fontWeight: 700, fontSize: 15, marginBottom: 8 }}
               >
                 참여 동의서 작성하기
@@ -577,6 +589,6 @@ export default function GroupClassPage() {
 
         <PublicFooter />
       </div>
-    </ConfigProvider>
+      </>
   );
 }

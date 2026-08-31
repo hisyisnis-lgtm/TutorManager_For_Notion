@@ -1,15 +1,15 @@
 import { useState } from 'react';
 
-import {
-  ConfigProvider, Button, Card, Flex, Form, Input,
-  Typography, Space, Divider,
-} from 'antd';
+import { Button } from '../components/shadcn/button';
+import { Card,
+  CardContent } from '../components/shadcn/card';
+import { Input } from '../components/shadcn/input';
+import { Textarea } from '../components/shadcn/textarea';
 import { CheckCircleIcon } from '@phosphor-icons/react';
 import { useLocation } from 'react-router-dom';
 import { submitConsultation } from '../api/consultApi';
 import {
   PRIMARY,
-  antdTheme,
   STATUS_SUCCESS,
   STATUS_SUCCESS_BG,
   STATUS_ERROR_BG,
@@ -17,7 +17,9 @@ import {
   STATUS_ERROR_TEXT,
   TEXT_INACTIVE,
   BORDER_NEUTRAL,
-} from '../constants/theme';
+  TEXT_TERTIARY,
+  TEXT_BODY,
+  BORDER_SUBTLE } from '../constants/theme';
 import TabPanel from '../components/TabPanel';
 import IntroContent from '../components/IntroContent';
 import PublicHeader from '../components/public/PublicHeader';
@@ -25,7 +27,6 @@ import PublicFooter from '../components/public/PublicFooter';
 import FloatingCtaButton from '../components/public/FloatingCtaButton';
 import ToggleButton from '../components/ui/ToggleButton';
 
-const { Title, Text } = Typography;
 
 const TABS = ['소개', '무료상담'];
 const LEVEL_OPTIONS = ['완전 처음이에요', '조금 배운 적 있어요', '어느 정도 배웠는데 막혀있어요'];
@@ -73,7 +74,8 @@ function ConsultContent() {
   if (done) {
     return (
       <div style={{ padding: '40px 16px', textAlign: 'center' }}>
-        <Card variant="borderless" style={{ borderRadius: 16 }}>
+        <Card className="rounded-2xl">
+<CardContent className="p-6">
           <div style={{ padding: '20px 0' }}>
             <div style={{
               width: 56, height: 56, borderRadius: '50%',
@@ -83,30 +85,30 @@ function ConsultContent() {
             }}>
               <CheckCircleIcon weight="fill" />
             </div>
-            <Title level={4} style={{ marginBottom: 8 }}>신청 완료!</Title>
-            <Text type="secondary" style={{ fontSize: 14, lineHeight: 1.6 }}>
+            <h4 style={{ fontSize: 20, fontWeight: 600, lineHeight: 1.4, marginBottom: 8 }}>신청 완료!</h4>
+            <span style={{ color: TEXT_TERTIARY, fontSize: 14, lineHeight: 1.6 }}>
               신청해주셔서 감사합니다.<br />확인 후 문자로 연락드릴게요.
-            </Text>
-            <Divider style={{ margin: '20px 0 16px' }} />
-            <Text style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 10 }}>
+            </span>
+            <hr style={{ border: 'none', borderTop: `1px solid ${BORDER_SUBTLE}`, margin: '20px 0 16px' }} />
+            <span style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 10 }}>
               더 빨리 연락받고 싶다면
-            </Text>
-            <Text type="secondary" style={{ fontSize: 13, lineHeight: 1.7, display: 'block', marginBottom: 14 }}>
+            </span>
+            <span style={{ color: TEXT_TERTIARY, fontSize: 13, lineHeight: 1.7, display: 'block', marginBottom: 14 }}>
               채널톡으로 신청 완료 메시지를 보내주시면<br />우선적으로 확인해드릴게요.
-            </Text>
+            </span>
             <Button
-              size="large" block
-              href="https://pf.kakao.com/_jFnFn"
-              target="_blank" rel="noopener noreferrer"
-              style={{
-                height: 48, borderRadius: 12, fontWeight: 700, fontSize: 15,
-                backgroundColor: '#FEE500', borderColor: '#FEE500', color: '#000',
-              }}
+              asChild
+              size="lg" block
+              className="text-[15px] font-bold"
+              style={{ backgroundColor: '#FEE500', borderColor: '#FEE500', color: '#000' }}
             >
-              채널톡으로 알리기
+              <a href="https://pf.kakao.com/_jFnFn" target="_blank" rel="noopener noreferrer">
+                채널톡으로 알리기
+              </a>
             </Button>
           </div>
-        </Card>
+        </CardContent>
+</Card>
       </div>
     );
   }
@@ -114,44 +116,48 @@ function ConsultContent() {
   return (
     <div style={{ maxWidth: 480, margin: '0 auto', padding: '32px 16px 80px' }}>
       <div style={{ marginBottom: 24 }}>
-        <Title level={4} style={{ marginBottom: 4 }}>무료 상담 신청</Title>
-        <Text type="secondary">Zoom 화상통화 30분 · 완전 무료</Text>
+        <h4 style={{ fontSize: 20, fontWeight: 600, lineHeight: 1.4, marginBottom: 4 }}>무료 상담 신청</h4>
+        <span style={{ color: TEXT_TERTIARY }}>Zoom 화상통화 30분 · 완전 무료</span>
       </div>
 
       {/* 상담 혜택 */}
-      <Card variant="borderless" style={{ borderRadius: 16, marginBottom: 24 }}>
-        <Text strong style={{ fontSize: 14, display: 'block', marginBottom: 12 }}>상담에서 해드리는 것</Text>
-        <Flex vertical gap={8} style={{ width: '100%' }}>
+      <Card className="rounded-2xl" style={{ marginBottom: 24 }}>
+<CardContent className="p-6">
+        <span style={{ fontWeight: 600, fontSize: 14, display: 'block', marginBottom: 12 }}>상담에서 해드리는 것</span>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%' }}>
           {[
             '현재 수준 진단 (입문~초중급)',
             '회화 실력이 안 느는 이유 찾기',
             '발음 교정 포인트 체크',
             '나에게 맞는 학습 방향 제안',
           ].map(item => (
-            <Space key={item} size={10}>
+            <span key={item} style={{ display: 'inline-flex', gap: 10 }}>
               <CheckCircleIcon weight="fill" size={16} style={{ color: PRIMARY, flexShrink: 0 }} />
-              <Text style={{ fontSize: 14 }}>{item}</Text>
-            </Space>
+              <span style={{ fontSize: 14 }}>{item}</span>
+            </span>
           ))}
-        </Flex>
-        <Divider style={{ margin: '16px 0 12px' }} />
-        <Flex vertical gap={4}>
-          <Text type="secondary" style={{ fontSize: 13 }}>· 신청 후 문자로 일정을 안내해드려요</Text>
-          <Text type="secondary" style={{ fontSize: 13 }}>· 완전 무료, 부담 없이 신청하세요</Text>
-        </Flex>
-      </Card>
+        </div>
+        <hr style={{ border: 'none', borderTop: `1px solid ${BORDER_SUBTLE}`, margin: '16px 0 12px' }} />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <span style={{ color: TEXT_TERTIARY, fontSize: 13 }}>· 신청 후 문자로 일정을 안내해드려요</span>
+          <span style={{ color: TEXT_TERTIARY, fontSize: 13 }}>· 완전 무료, 부담 없이 신청하세요</span>
+        </div>
+      </CardContent>
+</Card>
 
       {/* 폼 */}
-      <Form layout="vertical" requiredMark={false}>
-        <Form.Item label={<span>이름 <span style={{ color: PRIMARY }}>*</span></span>}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+        <div>
+          <label style={{ display: 'block', fontSize: 14, color: TEXT_BODY, marginBottom: 8 }}><span>이름 <span style={{ color: PRIMARY }}>*</span></span></label>
           <Input
             value={name} onChange={e => { setName(e.target.value); if (error) setError(''); }}
             placeholder="홍길동" size="large" autoComplete="name"
             style={{ borderRadius: 12 }}
           />
-        </Form.Item>
+        </div>
 
-        <Form.Item label={<span>전화번호 <span style={{ color: PRIMARY }}>*</span></span>}>
+        <div>
+          <label style={{ display: 'block', fontSize: 14, color: TEXT_BODY, marginBottom: 8 }}><span>전화번호 <span style={{ color: PRIMARY }}>*</span></span></label>
           <Input
             type="tel" value={phone}
             onChange={e => { setPhone(formatPhone(e.target.value)); if (error) setError(''); }}
@@ -159,22 +165,23 @@ function ConsultContent() {
             inputMode="numeric" autoComplete="tel"
             style={{ borderRadius: 12 }}
           />
-        </Form.Item>
+        </div>
 
-        <Form.Item
-          label={<span>카카오톡 ID <Text type="secondary" style={{ fontSize: 13, fontWeight: 400 }}>(선택)</Text></span>}
-          extra={<Text type="secondary" style={{ fontSize: 12 }}>카카오톡 설정 → 계정 → 계정 정보 → 아이디</Text>}
-        >
+        <div>
+          <label style={{ display: 'block', fontSize: 14, color: TEXT_BODY, marginBottom: 8 }}><span>카카오톡 ID <span style={{ color: TEXT_TERTIARY, fontSize: 13, fontWeight: 400 }}>(선택)</span></span></label>
           <Input
             value={kakaoId} onChange={e => setKakaoId(e.target.value)}
             placeholder="kakao_id" size="large"
             autoComplete="off" autoCorrect="off" autoCapitalize="off"
-            style={{ borderRadius: 12 }}
           />
-        </Form.Item>
+          <span style={{ color: TEXT_TERTIARY, fontSize: 12, display: 'block', marginTop: 4 }}>
+            카카오톡 설정 → 계정 → 계정 정보 → 아이디
+          </span>
+        </div>
 
-        <Form.Item label="현재 중국어 수준">
-          <Flex vertical gap={8} style={{ width: '100%' }}>
+        <div>
+          <label style={{ display: 'block', fontSize: 14, color: TEXT_BODY, marginBottom: 8 }}>현재 중국어 수준</label>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%' }}>
             {LEVEL_OPTIONS.map(opt => (
               <ToggleButton
                 key={opt} label={opt}
@@ -183,18 +190,17 @@ function ConsultContent() {
                 fullWidth
               />
             ))}
-          </Flex>
-        </Form.Item>
+          </div>
+        </div>
 
-        <Form.Item label={
-          <span>상담 희망 내용 <Text type="secondary" style={{ fontSize: 13, fontWeight: 400 }}>(선택)</Text></span>
-        }>
-          <Input.TextArea
+        <div>
+          <label style={{ display: 'block', fontSize: 14, color: TEXT_BODY, marginBottom: 8 }}><span>상담 희망 내용 <span style={{ color: TEXT_TERTIARY, fontSize: 13, fontWeight: 400 }}>(선택)</span></span></label>
+          <Textarea
             value={message} onChange={e => setMessage(e.target.value)}
             placeholder="궁금한 점이나 학습 목표를 자유롭게 적어주세요."
-            rows={3} style={{ borderRadius: 12 }}
+            rows={3}
           />
-        </Form.Item>
+        </div>
 
         {error && (
           <div style={{
@@ -207,13 +213,13 @@ function ConsultContent() {
         )}
 
         <Button
-          type="primary" size="large" loading={loading}
+          loading={loading}
           onClick={handleSubmit} block
           style={{ height: 52, borderRadius: 12, fontWeight: 700, fontSize: 15 }}
         >
           무료 상담 신청하기
         </Button>
-      </Form>
+      </div>
     </div>
   );
 }
@@ -266,7 +272,7 @@ export default function LandingPage() {
   }
 
   return (
-    <ConfigProvider theme={antdTheme}>
+      <>
       <FloatingCtaButton
         visible={showFloat && tab === '소개'}
         onClick={() => switchTab('무료상담')}
@@ -290,6 +296,6 @@ export default function LandingPage() {
 
         <PublicFooter />
       </div>
-    </ConfigProvider>
+      </>
   );
 }

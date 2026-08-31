@@ -1,7 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { stripEmoji } from '../utils/stringUtils.js';
-import { Alert, Button, Input, Select, Typography } from 'antd';
+import { WarningCircleIcon, CheckCircleIcon, XIcon } from '@phosphor-icons/react';
+import { Alert, AlertDescription } from '../components/shadcn/alert';
+import { Button } from '../components/shadcn/button';
+import { Input } from '../components/shadcn/input';
+import SelectField from '../components/ui/SelectField.jsx';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import SubmitButton from '../components/ui/SubmitButton.jsx';
 import SelectCheck from '../components/ui/SelectCheck.jsx';
@@ -234,40 +238,50 @@ export default function PaymentFormPage() {
 
       <form onSubmit={handleSubmit} className="px-4 pt-4 pb-8 space-y-5">
         {error && (
-          <Alert type="error" title={error} showIcon style={{ borderRadius: 12 }} />
+          <Alert variant="destructive">
+            <WarningCircleIcon size={16} weight="fill" aria-hidden />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
         )}
         {notice && (
-          <Alert type="success" title={notice} showIcon closable onClose={() => setNotice(null)} style={{ borderRadius: 12 }} />
+          <Alert variant="success" className="pr-12">
+            <CheckCircleIcon size={16} weight="fill" aria-hidden />
+            <AlertDescription>{notice}</AlertDescription>
+            <button
+              type="button"
+              aria-label="알림 닫기"
+              onClick={() => setNotice(null)}
+              className="absolute right-1 top-1 flex h-10 w-10 items-center justify-center rounded-lg"
+            >
+              <XIcon size={16} weight="bold" />
+            </button>
+          </Alert>
         )}
 
         {/* ① 수업 종류 선택 */}
         <div>
-          <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
+          <span style={{ fontSize: 14, fontWeight: 600, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
             ① 수업 종류
-          </Typography.Text>
-          <Select
+          </span>
+          <SelectField
             value={form.classTypeId || undefined}
             onChange={onSelectClassType}
-            style={{ width: '100%' }}
-            size="large"
             placeholder="선택하세요"
             disabled={isEdit && isOnlineGroup}
-          >
-            {classTypes.map((ct) => {
+            options={classTypes.map((ct) => {
               const optGroup = isOnlineGroupTitle(ct.title);
               const optFixed = isFixedPriceTitle(ct.title);
               const totalPrice = Math.round(ct.unitPrice * (ct.duration || 60) / 60);
-              return (
-                <Select.Option key={ct.id} value={ct.id}>
-                  {optGroup
-                    ? ct.title
-                    : optFixed
-                    ? `${ct.title} (${ct.duration}분 ${totalPrice.toLocaleString()}원)`
-                    : `${ct.title} (${ct.unitPrice.toLocaleString()}원)`}
-                </Select.Option>
-              );
+              return {
+                value: ct.id,
+                label: optGroup
+                  ? ct.title
+                  : optFixed
+                  ? `${ct.title} (${ct.duration}분 ${totalPrice.toLocaleString()}원)`
+                  : `${ct.title} (${ct.unitPrice.toLocaleString()}원)`,
+              };
             })}
-          </Select>
+          />
           {selectedClassType && (
             isOnlineGroup ? (
               <p className="text-xs text-gray-500 mt-1.5">
@@ -294,29 +308,26 @@ export default function PaymentFormPage() {
         {/* ② 수강생 — 온라인그룹수업(신규)이면 이름 한 명, 그 외엔 학생 선택 */}
         {isGroupCreate ? (
           <div style={{ animation: 'fadeSlideUp 0.35s ease both' }}>
-            <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
+            <span style={{ fontSize: 14, fontWeight: 600, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
               ② 수강생 이름
-            </Typography.Text>
+            </span>
             <Input
               placeholder="결제한 수강생 이름"
               value={form.guestName}
               onChange={(e) => setForm((f) => ({ ...f, guestName: e.target.value }))}
-              size="large"
-              style={{ borderRadius: 12 }}
             />
           </div>
         ) : isOnlineGroup ? null : (
           <div>
-            <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
+            <span style={{ fontSize: 14, fontWeight: 600, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
               ② 학생
-            </Typography.Text>
+            </span>
             <Input
               type="text"
               placeholder="학생 이름 검색..."
               value={studentSearch}
               onChange={(e) => setStudentSearch(e.target.value)}
-              size="large"
-              style={{ borderRadius: 12, marginBottom: 8 }}
+              style={{ marginBottom: 8 }}
             />
             <div className="space-y-2 max-h-60 overflow-y-auto px-2 py-2 -mx-2">
               {students
@@ -359,23 +370,16 @@ export default function PaymentFormPage() {
         {/* ③ 할인 이벤트 — 일반 결제만 (그룹은 금액 직접 입력) */}
         {!isOnlineGroup && (
           <div>
-            <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
+            <span style={{ fontSize: 14, fontWeight: 600, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
               ③ 할인 이벤트 (선택)
-            </Typography.Text>
-            <Select
+            </span>
+            <SelectField
               value={form.discountEventId || undefined}
               onChange={(value) => setForm((f) => ({ ...f, discountEventId: value || '' }))}
-              style={{ width: '100%' }}
-              size="large"
               placeholder="없음"
               allowClear
-            >
-              {discounts.map((d) => (
-                <Select.Option key={d.id} value={d.id}>
-                  {d.name} ({d.rate}% 할인)
-                </Select.Option>
-              ))}
-            </Select>
+              options={discounts.map((d) => ({ value: d.id, label: `${d.name} (${d.rate}% 할인)` }))}
+            />
             {discountRate > 0 && (
               <p className="text-xs text-green-600 mt-1.5">
                 {discountRate}% 할인 적용 → {formatKRW(Math.round(unitPrice * (1 - discountRate / 100)))}원/시간
@@ -387,9 +391,9 @@ export default function PaymentFormPage() {
         {/* ④ 결제 시간 — 일반 결제만 */}
         {!isOnlineGroup && (
           <div>
-            <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
+            <span style={{ fontSize: 14, fontWeight: 600, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
               ④ 결제 시간
-            </Typography.Text>
+            </span>
             <Input
               type="number"
               value={form.sessionCount}
@@ -397,8 +401,6 @@ export default function PaymentFormPage() {
               step="0.5"
               min="0"
               placeholder="예: 8 (60분 수업 8회분)"
-              size="large"
-              style={{ borderRadius: 12 }}
             />
             <p className="text-xs text-gray-400 mt-1.5">60분 수업 1회 = 1시간, 90분 = 1.5시간</p>
             {sessionCount > 0 && unitPrice > 0 && (
@@ -411,9 +413,9 @@ export default function PaymentFormPage() {
 
         {/* 결제 금액 */}
         <div>
-          <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
+          <span style={{ fontSize: 14, fontWeight: 600, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
             {isOnlineGroup ? '결제 금액' : '⑤ 실제 결제 금액'}
-          </Typography.Text>
+          </span>
           <Input
             type="number"
             value={form.actualAmount}
@@ -421,8 +423,6 @@ export default function PaymentFormPage() {
             step="1000"
             min="0"
             placeholder={isOnlineGroup ? '실제로 받은 금액' : '실제로 받은 금액'}
-            size="large"
-            style={{ borderRadius: 12 }}
           />
           {/* 일반 결제: 실시간 미수금 / 상태 표시 */}
           {!isOnlineGroup && status && (
@@ -440,49 +440,40 @@ export default function PaymentFormPage() {
 
         {/* 결제 수단 */}
         <div>
-          <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
+          <span style={{ fontSize: 14, fontWeight: 600, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
             {isOnlineGroup ? '결제 수단' : '⑥ 결제 수단'}
-          </Typography.Text>
-          <Select
+          </span>
+          <SelectField
             value={form.paymentMethod || undefined}
             onChange={(value) => setForm((f) => ({ ...f, paymentMethod: value || '' }))}
-            style={{ width: '100%' }}
-            size="large"
             placeholder="선택하세요"
             allowClear
-          >
-            {PAYMENT_METHODS.map((m) => (
-              <Select.Option key={m} value={m}>{m}</Select.Option>
-            ))}
-          </Select>
+            options={PAYMENT_METHODS.map((m) => ({ value: m, label: m }))}
+          />
         </div>
 
         {/* 결제일 */}
         <div>
-          <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
+          <span style={{ fontSize: 14, fontWeight: 600, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
             {isOnlineGroup ? '결제일' : '⑦ 결제일'}
-          </Typography.Text>
+          </span>
           <Input
             type="date"
             value={form.paymentDate}
             onChange={set('paymentDate')}
-            size="large"
-            style={{ borderRadius: 12 }}
           />
         </div>
 
         {/* 비고 (학생 없는 결제 편집 시에는 수강생 이름 = 타이틀 수정란) */}
         <div>
-          <Typography.Text strong style={{ fontSize: 14, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
+          <span style={{ fontSize: 14, fontWeight: 600, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>
             {isEdit && isOnlineGroup ? '수강생 이름' : isOnlineGroup ? '비고 (선택)' : '⑧ 비고 (선택)'}
-          </Typography.Text>
+          </span>
           <Input
             type="text"
             value={form.note}
             onChange={set('note')}
             placeholder={isEdit && isOnlineGroup ? '수강생 이름' : '메모'}
-            size="large"
-            style={{ borderRadius: 12 }}
           />
         </div>
 
@@ -490,19 +481,17 @@ export default function PaymentFormPage() {
         {isGroupCreate ? (
           <div className="space-y-2" style={{ marginTop: 8 }}>
             <Button
-              type="primary"
               block
               onClick={() => saveGroup(true)}
               disabled={saving}
-              style={{ borderRadius: 12, height: 44, fontWeight: 600 }}
             >
               {saving ? '저장 중...' : '저장하고 계속 입력'}
             </Button>
             <Button
+              variant="outline"
               block
               onClick={() => saveGroup(false)}
               disabled={saving}
-              style={{ borderRadius: 12, height: 44 }}
             >
               저장하고 닫기
             </Button>
@@ -524,10 +513,10 @@ export default function PaymentFormPage() {
 
         {isEdit && (
           <Button
-            danger
+            variant="destructiveOutline"
             block
             onClick={() => setShowDeleteConfirm(true)}
-            style={{ borderRadius: 12, height: 44, marginTop: 4 }}
+            className="mt-1"
           >
             결제 내역 삭제
           </Button>
