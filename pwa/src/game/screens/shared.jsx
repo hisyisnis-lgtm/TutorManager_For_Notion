@@ -184,6 +184,11 @@ function ConfettiBurstInner({ colors = CONFETTI_COLORS, count = 16, power = 1, s
 // ── keyframes / 글로벌 게임 스타일 ─────────────────────
 // FigmaScreen마다 <style>이 중복 주입돼 화면 전환 중 시트가 2벌 존재하던 것 → 모듈 로드 시 document.head에 1회만 주입.
 const TONE_GAME_CSS = `
+      /* 게임 컬럼 최대 폭 — 가로(데스크톱)에선 세로 9:16 레터박스, 세로 화면에선 항상 꽉 채움.
+         ★56.25vh 단일값이면 카톡 인앱 브라우저처럼 상하 툴바가 높이를 깎는 환경에서
+           컬럼이 폰 가로폭보다 좁아져 좌우 빈 띠가 생긴다(2026-08-31 사용자 지적) → orientation 분기. */
+      :root { --tg-colw: min(600px, 56.25vh); }
+      @media (orientation: portrait) { :root { --tg-colw: min(600px, 100vw); } }
       /* 감탄로드 탄탄체 — 타이틀 리디자인(2026-07-28) 필·안내문용. 상업용 무료(강원특별자치도×투게더그룹), fonts-archive CDN */
       @font-face { font-family: 'GamtanRoad Tantan'; font-weight: normal; font-display: swap;
         src: url('https://cdn.jsdelivr.net/gh/fonts-archive/GamtanRoadTantan/GamtanRoadTantan.woff2') format('woff2'),
@@ -379,8 +384,9 @@ export function ToneGameStyles() {
 // 상단 safe-area: 컬럼을 노치 아래에서 시작(top=safe-top)시켜 상단 요소(top:20 등)가 상태바에 안 가리게.
 //   배경(bgImage)은 root(inset:0)라 노치까지 덮음. 하단은 각 CTA가 env(safe-area-inset-bottom)로 개별 처리.
 // 레터박스(마스킹 영역 밖)는 전 화면 공통 고정색(TG.BG) — 화면별 bg는 컨테이너 '안'에만 칠함(2026-07-29)
-// 게임 화면 컬럼 최대 폭 — 데스크톱에서 세로 9:16 유지. 화면전환(TxLayer)도 같은 값을 써야 '창 전체가 움직이는' 느낌이 안 난다.
-export const TG_COL_MAXW = 'min(600px, 56.25vh)';
+// 게임 화면 컬럼 최대 폭 — 데스크톱(가로)에서 세로 9:16 유지, 세로 화면은 꽉 채움(값은 위 CSS --tg-colw가 단일 출처).
+// 화면전환(TxLayer)도 같은 값을 써야 '창 전체가 움직이는' 느낌이 안 난다.
+export const TG_COL_MAXW = 'var(--tg-colw)';
 // enter — 탭 화면 진입 모션(페이드 + 8px 상승). 컬럼 div는 translateX(-50%) 정렬 transform을 쓰므로
 //   애니메이션은 **안쪽 래퍼**에 건다(keyframes가 정렬 transform을 덮어쓰는 함정 회피).
 export function FigmaScreen({ children, bg = TG.BG, bgImage, enter = false }) {
