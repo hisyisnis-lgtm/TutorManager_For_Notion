@@ -9,6 +9,7 @@ import HomeworkFilterBar from '../../components/homework/HomeworkFilterBar.jsx';
 import LoadingSpinner from '../../components/ui/LoadingSpinner.jsx';
 import ErrorMessage from '../../components/ui/ErrorMessage.jsx';
 import EmptyState from '../../components/ui/EmptyState.jsx';
+import { formatDateDot } from '../../utils/dateUtils.js';
 import { FOOTNOTE } from '../../constants/styles.js';
 import { TEXT_PRIMARY, TEXT_DISABLED, BORDER_NEUTRAL } from '../../constants/theme.js';
 
@@ -22,9 +23,11 @@ function ArchiveHwCard({ hw, studentToken }) {
   // 표시는 Notion 필드 기준 — 학생 첫 확인일(feedbackSeenDate) 우선, 없으면 강사 피드백일.
   // localStorage 의 viewedAt 은 마이그레이션·forceArchive 갱신으로 시점이 바뀔 수 있어 의미가 흐려져 사용 안 함.
   const dateForDisplay = hw.feedbackSeenDate || hw.feedbackDate;
-  const viewedDateStr = dateForDisplay
-    ? new Date(dateForDisplay).toLocaleDateString("ko-KR", { month: "long", day: "numeric" })
-    : "";
+  // 등록일도 병기(2026-09-01 요청) — 두 날짜를 한 줄에 쓰므로 컴팩트 dot 표기로 통일
+  const metaStr = [
+    hw.createdTime && `등록 ${formatDateDot(hw.createdTime)}`,
+    dateForDisplay && `확인 ${formatDateDot(dateForDisplay)}`,
+  ].filter(Boolean).join(' · ');
 
   return (
     <Card className="overflow-hidden">
@@ -42,8 +45,8 @@ function ArchiveHwCard({ hw, studentToken }) {
           <p style={{ fontSize: 14, fontWeight: 600, color: TEXT_PRIMARY, margin: "0 0 2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {hw.title}
           </p>
-          {viewedDateStr && (
-            <p style={{ fontSize: 11, color: TEXT_DISABLED, margin: 0 }}>{viewedDateStr} 확인</p>
+          {metaStr && (
+            <p style={{ fontSize: 11, color: TEXT_DISABLED, margin: 0 }}>{metaStr}</p>
           )}
         </div>
         <CaretRightIcon size={16} color={TEXT_DISABLED} />

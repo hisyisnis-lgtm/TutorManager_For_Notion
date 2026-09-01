@@ -173,11 +173,11 @@ export default function StudentHomeworkPage() {
 function HomeworkCard({ hw, onClick }) {
   const fileCount = hw.submitFiles?.length ?? 0;
 
-  const dateLabel = hw.submitDate
-    ? `제출 ${formatDateDot(hw.submitDate)}`
-    : hw.createdTime
-    ? `등록 ${formatDateDot(hw.createdTime)}`
-    : '';
+  // 등록일은 제출·피드백 이후에도 계속 보여준다 — 제출일이 생기면 대체가 아니라 병기(2026-09-01 요청)
+  const dateLabel = [
+    hw.createdTime && `등록 ${formatDateDot(hw.createdTime)}`,
+    hw.submitDate && `제출 ${formatDateDot(hw.submitDate)}`,
+  ].filter(Boolean).join(' · ');
 
   return (
     <div

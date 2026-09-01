@@ -400,6 +400,12 @@ export default function PersonalHomeworkDetailPage() {
         {/* ===== 1. 이번 숙제 ===== */}
         {/* "부여한 숙제"는 선생님 시점 워딩(2026-08-31 지적) — 학생 화면은 학생 시점으로 */}
         <AreaHeading icon={<ClipboardTextIcon size={20} weight="fill" />} label="이번 숙제" first />
+        {/* 등록일은 제출·피드백 이후에도 계속 보여준다(2026-09-01 요청) — 내용 카드는 optional이라 헤딩 바로 아래 고정 */}
+        {hw.createdTime && (
+          <p style={{ fontSize: 12, color: TEXT_INACTIVE, margin: '-4px 0 10px' }}>
+            등록일: <span className="tabular-nums">{formatDateTimeCompact(hw.createdTime)}</span>
+          </p>
+        )}
         {hw.content && (
           // 바로 위 AreaHeading이 이미 "부여한 숙제"라고 말한다 — 카드 안 "숙제 내용" 제목은 이중 라벨(2026-08-31 평가)
           <SectionCard label={null}>

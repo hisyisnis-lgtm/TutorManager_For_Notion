@@ -9,7 +9,7 @@ import { peekCache, writeCacheValue, trackRevalidation } from '../../hooks/useCa
 import { fetchMyClasses } from '../../api/bookingApi.js';
 import { homeworkStatusColor } from '../../api/homework.js';
 import { getViewedMap, HW_VIEWED_KEY } from '../../utils/homeworkViewed.js';
-import { DAY_KR, timeToMin, formatDuration, addMonths } from '../../utils/dateUtils.js';
+import { DAY_KR, timeToMin, formatDuration, addMonths, formatDateDot } from '../../utils/dateUtils.js';
 import ClassCard from './ClassCard.jsx';
 import SectionHeading from '../../components/ui/SectionHeading.jsx';
 import { BADGE_SMALL } from '../../constants/styles.js';
@@ -72,6 +72,11 @@ function HwCard({ hw, studentToken, onMarkViewed }) {
             {hw.content && (
               <span style={{ fontSize: 12, color: TEXT_TERTIARY, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 160 }}>
                 {hw.content}
+              </span>
+            )}
+            {hw.createdTime && (
+              <span style={{ fontSize: 11, color: TEXT_DISABLED, flexShrink: 0 }}>
+                등록 {formatDateDot(hw.createdTime)}
               </span>
             )}
             {fileCount > 0 && (

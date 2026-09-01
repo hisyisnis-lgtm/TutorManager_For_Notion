@@ -356,6 +356,11 @@ export default function HomeworkDetailPage() {
           <div>
             {studentName && <div style={{ fontSize: 20, fontWeight: 600, color: TEXT_SECONDARY, lineHeight: 1.2 }}>{studentName}</div>}
             <div style={{ fontSize: 20, fontWeight: 600, color: TEXT_PRIMARY, lineHeight: 1.2 }}>{hw.title}</div>
+            {hw.createdTime && (
+              <div style={{ fontSize: 13, color: TEXT_TERTIARY, marginTop: 6 }}>
+                등록일: <span className="tabular-nums">{formatDateTimeCompact(hw.createdTime)}</span>
+              </div>
+            )}
           </div>
           <Badge label={hw.status} bg={bg} text={text} style={{ fontSize: 15, padding: '4px 12px', borderRadius: 10, flexShrink: 0, marginTop: 2 }} />
         </div>
