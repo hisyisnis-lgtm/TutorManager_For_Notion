@@ -155,7 +155,13 @@ export function ModeScreen({ endlessUnlocked, endlessBest = 0, onDifficulty, onT
           (space-between은 남는 공간을 전부 가운데로 몰아 중간이 비었음 — 주력을 중앙에 앉히는 방식으로 교체) */}
       <div style={{ position: 'absolute', left: 0, right: 0, top: 84, bottom: 'calc(26px + env(safe-area-inset-bottom))', display: 'flex', flexDirection: 'column' }}>
         {/* 주력 난이도·무한 — 남는 중앙 공간(flex:1)에 세로 중앙정렬로 앉혀 화면 한가운데를 차지 */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 28 }}>
+          {/* 헤드라인 — 오브만으로는 헤더~들판 사이 위쪽이 비어 보였다(2026-09-03). 닉네임 화면의 질문형 헤드라인과 같은 어법 */}
+          <Reveal i={1} style={{ paddingLeft: SPACE.x4, paddingRight: SPACE.x4 }}>
+            <span style={{ display: 'block', ...TYPE.head, fontSize: 26, lineHeight: '36px', color: TG.INK, textAlign: 'center' }}>
+              오늘은 무엇을<br />연습할까요?
+            </span>
+          </Reveal>
           <Reveal i={2} style={{ paddingLeft: SPACE.x4, paddingRight: SPACE.x4 }}>
             <div style={{ display: 'flex', gap: SPACE.xl }}>
               <BigTile Icon={Star} fill={TG.CTA} edge={TG.CTA_EDGE} glow="rgba(242,72,76,0.30)" dot={TG.CORAL_DK} title="난이도 모드" onClick={onDifficulty} coachId="mode-difficulty" />

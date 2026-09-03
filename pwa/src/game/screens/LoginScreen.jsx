@@ -51,6 +51,7 @@ export function SocialLoginButton({ provider, height = 56, labelType = TYPE.btn 
 export function LoginScreen({ onBack }) {
   return (
     <>
+      {/* ⚠️ 들판 실루엣(FieldBg)은 여기 깔지 말 것 — 하단 법정 문구(만 14세·방침)가 나무 위에 얹혀 대비 1.7까지 떨어진다(2026-09-03 실측) */}
       {/* 뒤로 — 공용 BackButton */}
       <Reveal i={0} style={{ position: 'absolute', left: 24, top: 20 }}>
         <BackButton onClick={onBack} />

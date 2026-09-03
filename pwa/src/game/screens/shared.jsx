@@ -1279,14 +1279,17 @@ const FIELD_W = 1287, FIELD_H = 942, FIELD_BOTTOM = -546;
 const CHIMNEY = { x: 592.5, y: 101 }; // 그림 좌표계의 굴뚝 입구(연기 발원점)
 // artRef — 그림 컨테이너 ref(패럴랙스용). 난이도 화면이 스크롤에 맞춰 translateY를 직접 써서 배경을 같이 움직인다.
 //   (transform은 항상 `translateX(-50%) translateY(N)` 형태로 유지할 것 — 가로 센터링이 transform에 있음)
-export function FieldBg({ artRef }) {
+// sink — 그림을 추가로 N px 내려 지평선을 낮춘다(기본 0 = 지평선 396). 결과·로그인·닉네임처럼 CTA만 있는 화면은
+//   sink 250(지평선 146)으로 하단 버튼 뒤에만 얇게 깔아 모드선택과 같은 세계로 묶는다(2026-09-03 세계관 통일).
+export function FieldBg({ artRef, sink = 0 }) {
   const reduced = prefersReducedMotion();
   return (
     <div aria-hidden="true" style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none', zIndex: 0 }}>
-      <div ref={artRef} style={{ position: 'absolute', left: '50%', bottom: FIELD_BOTTOM, width: FIELD_W, height: FIELD_H, transform: 'translateX(-50%)', willChange: 'transform' }}>
+      <div ref={artRef} style={{ position: 'absolute', left: '50%', bottom: FIELD_BOTTOM - sink, width: FIELD_W, height: FIELD_H, transform: 'translateX(-50%)', willChange: 'transform' }}>
         <img src="/game/mode-field.svg" alt="" style={{ display: 'block', width: FIELD_W, height: FIELD_H, maxWidth: 'none' }} />
-        {/* 굴뚝 연기 — 타이틀 화면과 같은 연출(피어올라 커지며 옅어짐 + 좌우 흔들림). 정적 퍼프는 SVG에서 제거했다 */}
-        <div style={{ position: 'absolute', left: CHIMNEY.x, top: CHIMNEY.y }}>
+        {/* 굴뚝 연기 — 타이틀 화면과 같은 연출(피어올라 커지며 옅어짐 + 좌우 흔들림). 정적 퍼프는 SVG에서 제거했다
+            sink>0(하단 실루엣)에선 끈다 — 연기가 CTA 바로 위로 떠올라 회색 덩어리로 보였다(2026-09-03 검수) */}
+        {sink === 0 && <div style={{ position: 'absolute', left: CHIMNEY.x, top: CHIMNEY.y }}>
           {reduced ? (
             <>
               <div style={{ position: 'absolute', left: -10.5, top: -17, width: 12, height: 11, borderRadius: 35, background: '#EEE9D3' }} />
@@ -1301,7 +1304,7 @@ export function FieldBg({ artRef }) {
               </div>
             ))
           )}
-        </div>
+        </div>}
       </div>
     </div>
   );
@@ -1403,7 +1406,7 @@ export function CrutchRow({ ctx, style }) {
   ];
   return (
     <div style={{ paddingTop: SPACE.md, borderTop: `1px solid ${TG.BORDER}`, display: 'flex', alignItems: 'center', ...style }}>
-      <span style={{ ...TYPE.meta, color: TG.MUTED }}>단어카드설정</span>
+      <span style={{ ...TYPE.meta, color: TG.SUB }}>단어카드설정</span>
       <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: SPACE.x2 }}>
         {items.map((cc) => (
           <div key={cc.label} style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>

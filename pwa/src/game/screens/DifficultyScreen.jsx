@@ -291,11 +291,12 @@ export function DifficultyScreen({ studentToken, rank = 0, onSelect, onStart, on
                   </div>
                   <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
                     <span style={{ ...TYPE.h2, lineHeight: 1, color: TG.INK, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{title}</span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.md }}>
+                    {/* 잠긴 칸은 '☆☆☆ 0점'을 숨긴다 — 같은 행이 5장 반복되며 열린 칸이 묻혔다(2026-09-03). 열리면 별·점수 표시 */}
+                    {selectable && <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.md }}>
                       <StarRow filled={boss ? (beaten ? 3 : 0) : stars} size={16} gap={2} off="#D8D2C8" shine />
                       {/* 승급시험도 스테이지와 같은 '점수' 표기(2026-08-03 사용자 요청) — 시험 종료 시 보스 id로 최고점 저장 */}
                       <span style={{ ...TYPE.num, fontSize: 13, color: SCORE_C, whiteSpace: 'nowrap' }}>{best.toLocaleString()}점</span>
-                    </div>
+                    </div>}
                   </div>
                   {/* 시작/잠김 표시 — 클릭은 카드가 받는다(중첩 버튼 금지). 여기선 시각 어포던스만 담당.
                       모양·색은 구 버튼 그대로 유지 — 유저 눈에는 달라진 게 없고 누를 수 있는 면적만 넓어진다. */}
@@ -325,7 +326,8 @@ export function DifficultyScreen({ studentToken, rank = 0, onSelect, onStart, on
         }}>
           <KeycapCta bg="#fff" edge={TG.KEY_EDGE} color={TG.STEEL} label="맨 위로"
             onClick={() => { playSfx('tap', 0.2); scrollToIdx(0); }} style={{ flex: 1 }} type="button" />
-          <KeycapCta data-coach="diff-current" label="현재 난이도로"
+          {/* 둘 다 '이동' 보조 버튼 — 빨간 키캡은 카드의 시작 버튼(진짜 행동)에만(2026-09-03 위계 정리) */}
+          <KeycapCta data-coach="diff-current" bg="#fff" edge={TG.KEY_EDGE} color={TG.INK} label="현재 난이도로"
             onClick={() => { playSfx('tap', 0.2); scrollToIdx(currentVIdx); }} style={{ flex: 1 }} type="button" />
         </div>
       </div>

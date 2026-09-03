@@ -9,7 +9,7 @@ import { TONES } from '../../constants/toneGameWords.js';
 import { play as playSfx } from '../tgSfx.js';
 import { Reveal, GameHeader, KeycapCta } from './shared.jsx';
 
-const HERO_TOP = 90, HERO_H = 190, TEXT_TOP = 300, TEXT_W = 267;
+const HERO_H = 190, TEXT_W = 267;
 
 const INTRO = {
   title: '하늘쌤의 공부법에서 시작했어요',
@@ -47,19 +47,23 @@ export function IntroScreen({ onNext }) {
     <>
       <GameHeader title="게임 소개" center glass />
 
-      <Reveal i={0} style={{ position: 'absolute', left: 24, right: 24, top: HERO_TOP }}>
-        <NoteCard />
-      </Reveal>
+      {/* 히어로 카드 + 텍스트를 한 블록으로 묶어 헤더~CTA 사이 세로 중앙에 앉힌다(2026-09-03).
+          구 시안은 y90/y300 절대배치라 844 화면에서 아래 절반이 비었다. 블록 내부 간격(20)은 고정 px. */}
+      <div style={{ position: 'absolute', left: 24, right: 24, top: 60, bottom: 'calc(112px + env(safe-area-inset-bottom))', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: SPACE.x3 }}>
+        <Reveal i={0}>
+          <NoteCard />
+        </Reveal>
 
-      {/* 제목 26/36 + 본문 14/25 — 시안 좌측정렬, 폭 267(줄바꿈 위치 고정) */}
-      <Reveal i={1} style={{ position: 'absolute', left: 24, top: TEXT_TOP, width: TEXT_W }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.sm }}>
-          <span style={{ ...TYPE.head, fontSize: 26, lineHeight: '36px', color: TG.INK }}>{INTRO.title}</span>
-          <div style={{ fontFamily: FONT_BODY, fontWeight: 500, fontSize: 14, lineHeight: '25px', color: TG.SUB }}>
-            {INTRO.body.map((line, i) => <div key={i}>{line}</div>)}
+        {/* 제목 26/36 + 본문 14/25 — 시안 좌측정렬, 폭 267(줄바꿈 위치 고정) */}
+        <Reveal i={1} style={{ width: TEXT_W }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.sm }}>
+            <span style={{ ...TYPE.head, fontSize: 26, lineHeight: '36px', color: TG.INK }}>{INTRO.title}</span>
+            <div style={{ fontFamily: FONT_BODY, fontWeight: 500, fontSize: 14, lineHeight: '25px', color: TG.SUB }}>
+              {INTRO.body.map((line, i) => <div key={i}>{line}</div>)}
+            </div>
           </div>
-        </div>
-      </Reveal>
+        </Reveal>
+      </div>
 
       {/* CTA — 하단 26의 키캡 버튼 */}
       <KeycapCta label={INTRO.cta} onClick={() => { playSfx('button'); onNext(); }}

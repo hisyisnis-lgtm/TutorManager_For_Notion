@@ -123,9 +123,9 @@ export function PlayModal({ onClose }) {
   const openLink = (href, channel) => { track('cta_play_link', { m: channel }); try { window.open(href, '_blank', 'noopener,noreferrer'); } catch { /* noop */ } };
   return (
     <ModalCard onClose={onClose} padding="28px 24px 24px" gap={18}>
-      <div style={{ width: 72, height: 72, borderRadius: 36, background: 'rgba(255,107,107,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <HandStars size={30} weight="Bold" color={TG.CORAL_DK} />
-      </div>
+      {/* 틴트 원 배경 제거(§18-2, 2026-09-03) — 아이콘을 키워 무게 유지 */}
+      <HandStars size={48} weight="Bold" color={TG.CORAL_DK} />
+
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: SPACE.sm, textAlign: 'center', width: '100%' }}>
           <span style={{ ...TYPE.titleLg, color: TG.INK }}>놀러 오세요</span>
           <span style={{ ...TYPE.sub, color: TG.SUB }}>하늘쌤 채널에서 더 많은 중국어 이야기를</span>

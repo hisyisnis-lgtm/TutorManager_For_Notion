@@ -807,7 +807,7 @@ function HomeMenu({ onClose, onHelp, onCredits, onReset, onDeleteAccount, onLogi
         {/* 액션 묶음 — 시안 802:702(행 간격 6) */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.sm }}>
           {onHelp && <MenuAction Icon={QuestionCircle} label="게임 방법" onClick={() => { onClose(); onHelp(); }} />}
-          {onLogin && <MenuAction Icon={Logout} label="로그인" color={TG.CORAL_DK} onClick={() => { onClose(); onLogin(); }} />}
+          {onLogin && <MenuAction Icon={Logout} label="로그인" onClick={() => { onClose(); onLogin(); }} />}{/* 빨강은 파괴적 동작(초기화·삭제)에만 — 2026-09-03 */}
           {isMemberUser && onEditNickname && <MenuAction Icon={Pen} label="닉네임 변경" sub={memberName || ''} onClick={() => { onClose(); onEditNickname(); }} />}
           {isMemberUser && <MenuAction Icon={Logout} label="로그아웃" onClick={() => { onClose(); onLogout && onLogout(); }} />}
           <MenuAction Icon={Logout} label="게임 나가기" onClick={() => { onClose(); onExit && onExit(); }} />

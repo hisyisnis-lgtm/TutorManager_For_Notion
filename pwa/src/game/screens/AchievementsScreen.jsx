@@ -29,7 +29,6 @@ const LOCKED_FG = TG.MUTED;       // 회색 아이콘
 
 // 시안 14 실측 — 토큰에 있는 색은 참조, 원오프만 리터럴 (2026-08-31 토큰 통합)
 const TITLE_INK = '#272622';      // 제목·업적명·진행 수치 (원오프)
-const TILE_LOCKED = TG.KEY_EDGE;  // 미획득 타일
 const ICON_LOCKED = '#A6B4C1';    // 미획득 아이콘 (원오프)
 const BAR_TRACK = HOME.GAUGE_TRACK;
 const BAR_FILL = TG.CTA;
@@ -77,8 +76,9 @@ function AchRow({ ach, earned, snapshot, onToast }) {
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 20px 10px 10px', textAlign: 'left', flexShrink: 0, ...TOUCH_OPT,
       }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.md, minWidth: 0 }}>
-        <div style={{ width: 40, height: 40, borderRadius: 10, background: got ? ACH_ACCENT : TILE_LOCKED, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-          <Icon size={32} weight="Bold" color={got ? '#fff' : ICON_LOCKED} />
+        {/* 아이콘 뒤 틴트/솔리드 박스 제거(design_system §18-2, 2026-09-03) — 획득/미획득은 아이콘 색만으로 구분. 40 슬롯은 정렬 유지용 */}
+        <div style={{ width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <Icon size={34} weight="Bold" color={got ? ACH_ACCENT : ICON_LOCKED} />
         </div>
         <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
           <span style={{ ...TYPE.h2, lineHeight: '19px', color: TITLE_INK, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ach.label}</span>

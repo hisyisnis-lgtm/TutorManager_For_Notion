@@ -93,15 +93,15 @@ export function ProfileModal({
           </div>
         )}
 
-        {/* 고유 ID + 복사 — 계정 문제 문의 시 필요. 담백하게 카드 하단. */}
+        {/* 고유 ID + 복사 — 계정 문제 문의 시 필요. 일반 사용자에겐 노이즈라 박스 없이 한 줄 메타로 격하(2026-09-03). */}
         {userId && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.md, padding: '10px 12px', borderRadius: RADIUS.md, background: TG.SURFACE }}>
-            <span style={{ ...TYPE.labelSm, color: TG.SUB, flexShrink: 0 }}>UID</span>
-            <span style={{ flex: 1, minWidth: 0, ...TYPE.num, fontSize: 12, color: TG.INK, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{userId}</span>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: SPACE.sm, minHeight: 32 }}>
+            <span style={{ ...TYPE.micro, fontWeight: 700, color: TG.SUB, flexShrink: 0 }}>UID</span>
+            <span style={{ maxWidth: 150, ...TYPE.num, fontSize: 11, fontWeight: 500, color: TG.SUB, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{userId}</span>
             <button onClick={copyId} aria-label="UID 복사" className="tg-press"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: SPACE.sm, height: 30, padding: '0 10px', borderRadius: RADIUS.md, border: 'none', cursor: 'pointer', flexShrink: 0, background: copied ? 'rgba(54,201,141,0.14)' : '#fff', boxShadow: copied ? 'none' : '0 1px 3px rgba(43,39,48,0.1)', ...TOUCH_OPT }}>
+              style={{ display: 'inline-flex', alignItems: 'center', gap: SPACE.xs, height: 32, padding: '0 8px', borderRadius: RADIUS.md, border: 'none', cursor: 'pointer', flexShrink: 0, background: 'none', ...TOUCH_OPT }}>
               {copied ? <CheckCircle size={13} weight="Bold" color={TG.SUCCESS_GLOW} /> : <Copy size={13} weight="Bold" color={TG.SUB} />}
-              <span style={{ ...TYPE.labelSm, color: copied ? TG.SUCCESS_GLOW : TG.SUB }}>{copied ? '복사됨' : '복사'}</span>
+              <span style={{ ...TYPE.micro, fontWeight: 700, color: copied ? TG.SUCCESS_GLOW : TG.SUB }}>{copied ? '복사됨' : '복사'}</span>
             </button>
           </div>
         )}
