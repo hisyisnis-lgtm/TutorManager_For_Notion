@@ -5,10 +5,10 @@
 // 아이덴티티 톤: 링·글로우·블룸 없이(이 앱엔 촌스러움) 크리스프 플래시 + 색종이 물리로 임팩트. 참조: tone_game_redesign.md §파티클.
 import { useEffect, useState } from 'react';
 import { Cup } from '@solar-icons/react';
-import { TYPE, haptic, SPACE } from '../tgTokens.js';
+import { TYPE, haptic, SPACE, TG } from '../tgTokens.js';
 import { RevealRings, BeatContent } from './shared.jsx';
 
-const RECORD_GOLD = '#FDBA28'; // 트로피 색(시안 773:55 — 골드 원 배경 없이 아이콘만)
+const RECORD_GOLD = TG.SUN; // 트로피 색(시안 773:55 — 골드 원 배경 없이 아이콘만)
 
 export function NewRecordBeat({ score = 0, previousBest = 0, onDone, hold = false }) {
   const [closing, setClosing] = useState(false);

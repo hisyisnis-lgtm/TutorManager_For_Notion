@@ -8,7 +8,7 @@ import { play as playSfx, isSfxMuted, setSfxMuted } from '../tgSfx.js';
 import { isBgmMuted, setBgmMuted } from '../tgBgm.js';
 import { MenuToggle, ModalCard, KeycapCta } from './shared.jsx';
 
-const STAT_BG = '#F7F6F5';
+const STAT_BG = TG.SURFACE;
 
 export function PauseModal({ score, combo, crutchCtx, onResume, onRestart, onQuit }) {
   const [sfxOn, setSfxOn] = useState(() => !isSfxMuted());

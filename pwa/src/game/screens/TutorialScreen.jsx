@@ -7,7 +7,7 @@
 // 게임 레이아웃 + 딤 스포트라이트. 완료 후 onDone → 모드선택.
 import { useState, useEffect, useRef } from 'react';
 import { Stopwatch, Play } from '@solar-icons/react';
-import { TG, TYPE, FONT_HANZI, TOUCH_OPT, haptic, RADIUS, SPACE } from '../tgTokens.js';
+import { TG, TYPE, FONT_HANZI, TOUCH_OPT, haptic, RADIUS, SPACE, keycap, SHADOW } from '../tgTokens.js';
 import { ToneMark } from '../tgWidgets.jsx';
 import { TONES } from '../../constants/toneGameWords.js';
 import { speakWord } from '../tgTts.js';
@@ -89,7 +89,7 @@ export function TutorialScreen({ onDone }) {
           <Stopwatch size={20} weight="Bold" color="#fff" />
         </div>
         <div style={{ flex: 1, height: 12, borderRadius: 8, background: TG.BORDER, overflow: 'hidden' }}>
-          <div style={{ width: '83%', height: '100%', background: '#FF5E62' }} />
+          <div style={{ width: '83%', height: '100%', background: TG.CTA }} />
         </div>
       </div>
 
@@ -108,7 +108,7 @@ export function TutorialScreen({ onDone }) {
       <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', top: 73, height: 30, display: 'flex', alignItems: 'center', gap: SPACE.md, background: '#fff', padding: '0 14px', borderRadius: RADIUS.lg, zIndex: 7 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
           {[0, 1, 2, 3, 4].map((i) => (
-            <div key={i} style={{ width: i === phase ? 16 : 6, height: 6, borderRadius: RADIUS.xs, background: i === phase ? TG.CORAL_DK : '#f4c4c4', transition: 'width .25s ease' }} />
+            <div key={i} style={{ width: i === phase ? 16 : 6, height: 6, borderRadius: RADIUS.xs, background: i === phase ? TG.CORAL_DK : TG.CORAL_BG_EDGE, transition: 'width .25s ease' }} />
           ))}
         </div>
         <span style={{ ...TYPE.labelSm, color: TG.CORAL_DK, whiteSpace: 'nowrap' }}>{PHASE_LABEL[phase]}</span>
@@ -148,7 +148,7 @@ export function TutorialScreen({ onDone }) {
       {phase === 0 && (
         <Reveal i={1} style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(117px + env(safe-area-inset-bottom))', zIndex: 6 }}>
           <KeycapCta height={50} label="다음" Icon={Play} onClick={() => goPhase(1)}
-            style={{ boxShadow: `0px 10px 20px rgba(242,72,76,0.1), inset 0 -4px 0 ${TG.CTA_EDGE}` }} />
+            style={{ boxShadow: keycap(TG.CTA_EDGE, { lift: SHADOW.ctaGlow }) }} />
         </Reveal>
       )}
 

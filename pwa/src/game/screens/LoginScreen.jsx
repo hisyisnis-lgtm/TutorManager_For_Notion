@@ -39,7 +39,7 @@ export function SocialLoginButton({ provider, height = 56, labelType = TYPE.btn 
   return (
     <button onClick={() => startSocialLogin(provider)} className="tg-press" style={{
       width: '100%', height, borderRadius: RADIUS.lg, cursor: 'pointer',
-      border: kakao ? 'none' : '1px solid #747775', background: kakao ? '#FEE500' : '#fff',
+      border: kakao ? 'none' : '1px solid #747775' /* BRAND — Google 로그인 규격 */, background: kakao ? '#FEE500' : '#fff', // BRAND — 카카오 규격색
       display: 'flex', alignItems: 'center', justifyContent: 'center', gap: kakao ? SPACE.md : SPACE.lg, ...TOUCH_OPT,
     }}>
       {kakao ? <KakaoLogo /> : <GoogleLogo />}

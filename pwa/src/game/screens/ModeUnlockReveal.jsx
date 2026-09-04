@@ -4,7 +4,7 @@
 // 톤: 어두운 딤(rgba(0,0,0,0.8)) + 미니멀(컨페티·글로우·설명문 없음).
 import { useEffect, useState } from 'react';
 import { Rocket, Crown, Infinity as InfinityIcon, MapPoint, ChefHat, Stars, LockUnlocked, Lock } from '@solar-icons/react';
-import { TYPE, haptic, SPACE } from '../tgTokens.js';
+import { TYPE, haptic, SPACE, TG, keycap } from '../tgTokens.js';
 import { RevealStage, RevealRings, BeatContent } from './shared.jsx';
 
 const ICONS = { Rocket, Crown, Infinity: InfinityIcon, MapPin: MapPoint, ForkKnife: ChefHat, Sparkle: Stars };
@@ -46,7 +46,7 @@ export function ModeUnlockReveal({ unlock, onDone, hold = false }) {
   }, []);
   if (!unlock) return null;
   const Icon = ICONS[unlock.icon] || LockUnlocked;
-  const fill = unlock.fill || unlock.accent || '#F3A75B';
+  const fill = unlock.fill || unlock.accent || TG.ENDLESS;
   const edge = unlock.edge || 'rgba(0,0,0,0.18)';
   // 덧획(무한 아이콘처럼 획이 얇은 글리프용) — 없으면 그대로. 값은 SVG 뷰박스(24) 기준.
   //  ★모드선택 화면 값(1.4)을 그대로 쓰면 이 연출에선 아이콘이 53px이라 화면상 3.1px로 두꺼워진다.
@@ -76,7 +76,7 @@ export function ModeUnlockReveal({ unlock, onDone, hold = false }) {
         <div style={{
           position: 'relative', width: ORB, height: ORB, borderRadius: '50%', overflow: 'hidden',
           background: opened ? fill : dim20(fill),
-          boxShadow: `inset 0 -4px 0 ${opened ? edge : dim20(edge)}`,
+          boxShadow: keycap(opened ? edge : dim20(edge), { lift: null }),
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           animation: 'mu-icon .4s cubic-bezier(.22,1,.36,1) .02s both',
         }}>

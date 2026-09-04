@@ -7,7 +7,7 @@ import { Pen, CloseCircle, Copy, CheckCircle } from '@solar-icons/react';
 import { TG, TYPE, TOUCH_OPT, RADIUS, SPACE } from '../tgTokens.js';
 import { SocialLoginButton } from './LoginScreen.jsx';
 import { levelInfo } from '../gameXp.js';
-import { ModalCard, Gauge } from './shared.jsx';
+import { ModalCard, Gauge, IconButton } from './shared.jsx';
 
 export function ProfileModal({
   tier, nickname, isGuest, isMemberUser, userId,
@@ -42,11 +42,7 @@ export function ProfileModal({
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <span style={{ ...TYPE.head, fontSize: 18, color: TG.INK }}>내 프로필</span>
           {/* 히트영역 44×44(음수 마진으로 레이아웃 자리는 30 유지) */}
-          <button onClick={onClose} aria-label="닫기" className="tg-press"
-            style={{ width: 44, height: 44, margin: -7, padding: 0, border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', ...TOUCH_OPT }}>
-            {/* 시안 461:114 = #2B2730(=INK). SUB(#9A93A0)로 잘못 들어가 다른 모달의 닫기보다 흐렸다(2026-08-09) */}
-            <CloseCircle size={28} weight="Bold" color={TG.INK} />
-          </button>
+          <IconButton Icon={CloseCircle} label="닫기" onClick={onClose} style={{ margin: -7 }} /> {/* 시안 461:114 = INK(SUB로 흐리게 두지 말 것, 2026-08-09) */}
         </div>
 
         {/* 프로필 — 엠블럼 76 + 닉네임(+수정) + 등급명·레벨 게이지(시안 461:108) */}

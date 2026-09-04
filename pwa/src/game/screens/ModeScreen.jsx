@@ -1,7 +1,7 @@
 // 모드 선택 — 주력 큰 원형(난이도·무한) + 풀폭 카드(테마·트레이닝).
 // Figma "26. 모드 선택 v2". 잠긴 카드(무한)는 흔들림+토스트.
 import { Star, Infinity as InfinityIcon, Lock, SquareAcademicCap, Album, AltArrowRight } from '@solar-icons/react';
-import { TG, TYPE, TOUCH_OPT, RADIUS, SPACE } from '../tgTokens.js';
+import { TG, TYPE, TOUCH_OPT, RADIUS, SPACE, keycap } from '../tgTokens.js';
 import { useState, useRef, useLayoutEffect } from 'react';
 import { ShakeButton, Reveal, GameHeader, FieldBg, prefersReducedMotion } from './shared.jsx';
 import { EndlessStartModal, TrainingStartModal } from './gameModals.jsx';
@@ -98,8 +98,8 @@ function BigTile({ Icon, fill, edge, glow, dot, title, locked, onClick, onLocked
         {!locked && <ToneBurst color={dot} />}
         <div style={{
           position: 'relative', zIndex: 1, width: ORB, height: ORB, borderRadius: '50%',
-          background: locked ? '#E9E3DA' : fill,
-          boxShadow: locked ? 'none' : `inset 0 -4px 0 ${edge}, 0 14px 28px ${glow}`,
+          background: locked ? TG.LOCKED : fill,
+          boxShadow: locked ? 'none' : keycap(edge, { lift: `0 14px 28px ${glow}` }),
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
           <Icon size={52} weight="Bold" color={locked ? TG.MUTED : '#fff'} style={iconStyle} />
@@ -123,7 +123,7 @@ function FeatureCard({ Icon, accent, title, locked, lockText, onClick, onLocked,
       width: '100%', height: 76, display: 'flex', alignItems: 'center', gap: SPACE.x2, textAlign: 'left', padding: '0 18px', borderRadius: RADIUS.xl, cursor: 'pointer',
       background: locked ? TG.SURFACE : '#fff', border: 'none',
       // 아래 4px 안쪽 테두리 = 도톰한 카드(오브와 같은 언어). 바깥은 옅은 드롭섀도.
-      boxShadow: locked ? 'none' : `inset 0 -4px 0 ${TG.KEY_EDGE}, 0 4px 18px rgba(43,39,48,0.07)`, ...TOUCH_OPT,
+      boxShadow: locked ? 'none' : keycap(TG.KEY_EDGE), ...TOUCH_OPT,
     }}>
       <Icon size={35} weight="Bold" color={locked ? TG.MUTED : accent} style={{ flexShrink: 0 }} />
       <span style={{ flex: 1, minWidth: 0, ...TYPE.h2, letterSpacing: '-0.01em', color: locked ? TG.SUB : TG.INK, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{title}</span>
@@ -133,7 +133,7 @@ function FeatureCard({ Icon, accent, title, locked, lockText, onClick, onLocked,
           <span style={{ ...TYPE.micro, color: TG.SUB, whiteSpace: 'nowrap' }}>{lockText}</span>
         </div>
       ) : (
-        <AltArrowRight size={22} weight="Bold" color="#c9c2bb" style={{ flexShrink: 0 }} />
+        <AltArrowRight size={22} weight="Bold" color={TG.MUTED} style={{ flexShrink: 0 }} />
       )}
     </ShakeButton>
   );
@@ -155,17 +155,11 @@ export function ModeScreen({ endlessUnlocked, endlessBest = 0, onDifficulty, onT
           (space-between은 남는 공간을 전부 가운데로 몰아 중간이 비었음 — 주력을 중앙에 앉히는 방식으로 교체) */}
       <div style={{ position: 'absolute', left: 0, right: 0, top: 84, bottom: 'calc(26px + env(safe-area-inset-bottom))', display: 'flex', flexDirection: 'column' }}>
         {/* 주력 난이도·무한 — 남는 중앙 공간(flex:1)에 세로 중앙정렬로 앉혀 화면 한가운데를 차지 */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 28 }}>
-          {/* 헤드라인 — 오브만으로는 헤더~들판 사이 위쪽이 비어 보였다(2026-09-03). 닉네임 화면의 질문형 헤드라인과 같은 어법 */}
-          <Reveal i={1} style={{ paddingLeft: SPACE.x4, paddingRight: SPACE.x4 }}>
-            <span style={{ display: 'block', ...TYPE.head, fontSize: 26, lineHeight: '36px', color: TG.INK, textAlign: 'center' }}>
-              오늘은 무엇을<br />연습할까요?
-            </span>
-          </Reveal>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
           <Reveal i={2} style={{ paddingLeft: SPACE.x4, paddingRight: SPACE.x4 }}>
             <div style={{ display: 'flex', gap: SPACE.xl }}>
               <BigTile Icon={Star} fill={TG.CTA} edge={TG.CTA_EDGE} glow="rgba(242,72,76,0.30)" dot={TG.CORAL_DK} title="난이도 모드" onClick={onDifficulty} coachId="mode-difficulty" />
-              <BigTile Icon={InfinityIcon} fill="#F3A75B" edge="#E77E33" glow="rgba(231,126,56,0.30)" dot="#E77E33" title="무한 모드"
+              <BigTile Icon={InfinityIcon} fill={TG.ENDLESS} edge={TG.ENDLESS_EDGE} glow="rgba(231,126,56,0.30)" dot={TG.ENDLESS_EDGE} title="무한 모드"
                 iconStyle={{ stroke: 'currentColor', strokeWidth: 1.4, strokeLinejoin: 'round', strokeLinecap: 'round' }}
                 locked={!endlessUnlocked} onClick={() => setEndlessOpen(true)} onLocked={() => onLocked && onLocked(`${ENDLESS_REQ}를 클리어하면 열려요`)} />
             </div>
@@ -174,11 +168,11 @@ export function ModeScreen({ endlessUnlocked, endlessBest = 0, onDifficulty, onT
         {/* 나머지 — 테마 + 연습/복습, 하단 */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.xl }}>
           <Reveal i={3} style={{ paddingLeft: SPACE.x4, paddingRight: SPACE.x4 }}>
-            <FeatureCard Icon={Album} accent="#7c5cff"
+            <FeatureCard Icon={Album} accent={TG.THEME}
               title="테마 모드" onClick={onTheme} coachId="mode-theme" />
           </Reveal>
           <Reveal i={4} style={{ paddingLeft: SPACE.x4, paddingRight: SPACE.x4 }}>
-            <FeatureCard Icon={SquareAcademicCap} accent="#2BB583"
+            <FeatureCard Icon={SquareAcademicCap} accent={TG.TRAIN}
               title="트레이닝"
               onClick={() => { onHighlightDone && onHighlightDone(); setTrainingOpen(true); }} /* 넛지 코치마크는 이 카드 onClick에서 dismiss(forceLastStep 구조) */
               coachId="mode-practice" />

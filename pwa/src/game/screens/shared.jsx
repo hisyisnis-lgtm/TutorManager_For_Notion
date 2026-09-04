@@ -4,9 +4,9 @@
 // 참조 메모리: tone_game_redesign.md §5(단어카드)·§10-B(FigmaScreen)·§10-C(연출)
 import { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { DoubleAltArrowRight, Lock, CheckCircle, VolumeLoud, VolumeCross, AltArrowLeft, Star, Eye,
-  HandStars, NotebookBookmark, Home as HomeIcon, Cup, Stars, Pause } from '@solar-icons/react';
+  HandStars, NotebookBookmark, Home as HomeIcon, Cup, Stars, Pause, AltArrowRight } from '@solar-icons/react';
 import { TG, HOME, FONT_HANZI, FONT_PINYIN, TYPE, SHADOW, DUR, TOUCH_OPT, TONE_COLORS, TONE_KEY_COLORS, ASSETS,
-  haptic, isMeaningHidden, setMeaningHidden, isPinyinHidden, setPinyinHidden, RADIUS, SPACE } from '../tgTokens.js';
+  haptic, isMeaningHidden, setMeaningHidden, isPinyinHidden, setPinyinHidden, RADIUS, SPACE, keycap, SCENE } from '../tgTokens.js';
 import { ToneMark } from '../tgWidgets.jsx';
 import { TONES } from '../../constants/toneGameWords.js';
 import { play as playSfx } from '../tgSfx.js';
@@ -101,7 +101,7 @@ function EmberRiseInner({ colors = EMBER_COLORS, count = 10, spread = 22, rise =
 
 // 파티클 버스트(색종이) — 정답·축하 등 긍정 순간의 색종이 폭발. rAF 물리(초기 폭발+중력 포물선+공기저항+나풀거림+회전/3D플립).
 // 빛 알갱이(글리터)도 이 컴포넌트에 흰/골드 팔레트(LIGHT_CONFETTI)·작은 size로 겹쳐 쓰면 동일한 물리로 움직임(별도 스파크 컴포넌트 폐기 — 촌스러움).
-export const CONFETTI_COLORS = [TG.CORAL, TG.SUN, TG.SUCCESS_GLOW, '#4D8DFF', '#7c5cff', '#ff8f34'];
+export const CONFETTI_COLORS = [TG.CTA, TG.SUN, TG.SUCCESS_GLOW, TONE_COLORS[4], TG.THEME, '#ff8f34'];
 export const LIGHT_CONFETTI = ['#ffffff', '#fff6cf', '#ffe89a', '#ffd166', '#fff0f0']; // 흰/골드 글리터(빛 알갱이)
 // 래퍼 — 모션 최소화 설정이면 장식 파티클 생략(훅 없는 바깥에서 분기해 훅 규칙 안전).
 export function ConfettiBurst(props) {
@@ -308,6 +308,8 @@ const TONE_GAME_CSS = `
       /* 누름 피드백 — 하루에 수백 번. 복귀가 280ms면 손을 뗀 뒤에도 버튼이 늘어져 굼떠 보인다 → 140ms(권장 100~160) */
       .tg-press{ transition: transform .14s cubic-bezier(.23,1,.32,1) }
       .tg-press:active{ transform: scale(.96); transition: transform .09s cubic-bezier(.23,1,.32,1) }
+      /* 하단탭 비활성 듀오톤 — Solar BoldDuotone 보조 레이어(path opacity .5)가 너무 연해 .72로(2026-09-04) */
+      .tg-tab-duo-off path[opacity]{ opacity: .72 }
       /* ── 히트영역 44px 확보 — 보이는 크기는 그대로 두고 탭 영역만 넓힌다(2026-08-18 검수) ──────
          인게임 보조 버튼(발음 듣기·정답보기 h30)과 일시정지(40)가 44 미만이라 시간 제한 중 오조작이 났다.
          시안 실측값(h30·카드 272)을 건드리지 않으려고 ::before 투명 레이어로만 넓힌다 →
@@ -607,7 +609,7 @@ export function Gauge({ pct = 0, fill = TG.CTA, track = HOME.GAUGE_TRACK, height
 }
 
 // 별 진행 행(공용) — 채운 별(filled개)/빈 별. 크기·간격·색·샤인 애니(테마 카드)·컨테이너 style 파라미터화.
-export function StarRow({ filled = 0, total = 3, size = 16, gap = 3, on = TG.SUN, off = '#e2dccf', shine = false, style }) {
+export function StarRow({ filled = 0, total = 3, size = 16, gap = 3, on = TG.SUN, off = TG.STAR_OFF, shine = false, style }) {
   return (
     <div style={{ display: 'flex', gap, alignItems: 'center', ...style }}>
       {Array.from({ length: total }, (_, i) => {
@@ -629,7 +631,7 @@ export function ModalCard({ onClose, zIndex = 60, maxWidth = 330, radius = 24, p
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(2px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: SPACE.x4, ...TOUCH_OPT }}>
       <div className="tg-enter" onClick={(e) => e.stopPropagation()} style={{
         width: '100%', maxWidth, background: TG.CARD, borderRadius: radius, padding,
-        boxShadow: '0px 4px 18px rgba(43,39,48,0.07)', display: 'flex', flexDirection: 'column', alignItems: align, gap,
+        boxShadow: SHADOW.level2, display: 'flex', flexDirection: 'column', alignItems: align, gap,
       }}>
         {children}
       </div>
@@ -666,7 +668,7 @@ export function KeycapCta({ bg = TG.CTA, edge = TG.CTA_EDGE, color = '#fff', lab
   return (
     <button className="tg-press" onClick={onClick} disabled={disabled} {...rest} style={{
       width: '100%', height, borderRadius: radius, border: 'none', cursor: disabled ? 'default' : 'pointer', paddingBottom: 4,
-      background: bg, boxShadow: `0px 4px 18px rgba(43,39,48,0.07), inset 0 -4px 0 ${edge}`,
+      background: bg, boxShadow: keycap(edge),
       display: 'flex', alignItems: 'center', justifyContent: 'center', gap: SPACE.md, ...TOUCH_OPT, ...style,
     }}>
       {children ?? (
@@ -713,13 +715,13 @@ export function CoachBubble({ text }) {
       {/* 판다·말풍선 분리 — 같은 주기(3s)에 고정 위상차(-1s)만. 항상 일정 간격으로 따라다녀 깔끔 */}
       <img src={ASSETS.pandaCoach} width={73} height={63} alt="" style={{ flexShrink: 0, filter: 'drop-shadow(0px 4px 10px rgba(43,39,48,0.08))', animation: 'tg-bob 3s ease-in-out infinite', animationDelay: '-1s' }} />
       <div style={{ position: 'relative', marginLeft: 8.8, animation: 'tg-bob 3s ease-in-out infinite' }}>
-        <div onClick={(e) => { if (!done) { e.stopPropagation(); skip(); } }} style={{ background: '#3c3c3c', padding: '10px 14px', borderRadius: RADIUS.md, cursor: done ? 'default' : 'pointer' }}>
+        <div onClick={(e) => { if (!done) { e.stopPropagation(); skip(); } }} style={{ background: TG.BUBBLE, padding: '10px 14px', borderRadius: RADIUS.md, cursor: done ? 'default' : 'pointer' }}>
           <span className={done ? '' : 'tg-caret'} style={{ ...TYPE.sub, color: '#fff', whiteSpace: 'nowrap' }}>{shown}</span>
         </div>
         {/* 꼬리 — Figma 벡터(41:39) 그대로, 회전 없음(이미 왼쪽 향함). 말풍선 좌측 -8.8px·top 9.27 (Figma 절대좌표) */}
         <span style={{ position: 'absolute', left: -8.8, top: 9.27, lineHeight: 0 }}>
           <svg width="12" height="16" viewBox="0 0 12 15" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M0.19488 1.59069C-0.28873 0.93007 0.18306 0 1.00178 0L10.076 0C10.6282 0 11.076 0.447715 11.076 1L11.076 13.3955C11.076 14.3624 9.84019 14.7664 9.26906 13.9862L0.19488 1.59069Z" fill="#3C3C3C" />
+            <path d="M0.19488 1.59069C-0.28873 0.93007 0.18306 0 1.00178 0L10.076 0C10.6282 0 11.076 0.447715 11.076 1L11.076 13.3955C11.076 14.3624 9.84019 14.7664 9.26906 13.9862L0.19488 1.59069Z" fill={TG.BUBBLE} />
           </svg>
         </span>
       </div>
@@ -730,7 +732,7 @@ export function CoachBubble({ text }) {
 // ── 단어 카드 (반응형 + 고정 슬롯, 메모리 §5) ──────────
 // 연음(반3성) 마크 — 하늘쌤 판서 이음 기호. 좌우 대칭 ˇ(3성) + 오른쪽 화살촉으로
 // "반만 내렸다 2성으로 이어짐"을 나타낸다. 정답 순간 두 글자 위에 그려져 규칙을 각인.
-export const LIANYIN_COLOR = '#7c5cff';
+export const LIANYIN_COLOR = TG.THEME;
 export function LianyinMark({ width = 108, color = LIANYIN_COLOR, stroke = 7, animate = true }) {
   return (
     <svg width={width} height={width * 48 / 80} viewBox="22 8 80 48" fill="none" aria-hidden="true" style={{ display: 'block', overflow: 'visible' }}>
@@ -768,8 +770,8 @@ function SandhiToneChip({ big = false }) {
 }
 
 // 카드 하단 액션 버튼(발음 듣기·정답보기) — 시안 09 실측 스타일. 문구는 상태와 무관하게 고정.
-const CARD_ACT_ICON = '#637481', CARD_ACT_TEXT = TG.STEEL;
-const CARD_ACT_BTN = { height: 30, padding: '0 13px', borderRadius: 10, background: '#fff', border: '1px solid #E2E7EB', display: 'inline-flex', alignItems: 'center', gap: 6, ...TOUCH_OPT };
+const CARD_ACT_ICON = TG.STEEL, CARD_ACT_TEXT = TG.STEEL;
+const CARD_ACT_BTN = { height: 30, padding: '0 13px', borderRadius: 10, background: '#fff', border: `1px solid ${TG.KEY_EDGE}`, display: 'inline-flex', alignItems: 'center', gap: 6, ...TOUCH_OPT };
 
 export function WordCard({ word, entered, currentSyl, completed, timedOut, progressText, reviewDots = null, floatScore, hideProgress, listen = false, audioOff = false, onReplay, onCantHear, draw = false, lianyinAt = -1, practice = false, onSpeak, onReveal, hideMeaning = false, hidePinyin = false, sandhiAt = -1 }) {
   const listening = listen && !audioOff && !completed && !timedOut; // 듣기 모드: 답하기 전엔 한자 가리고 소리 패널
@@ -784,9 +786,9 @@ export function WordCard({ word, entered, currentSyl, completed, timedOut, progr
 
   const glow = completed && !timedOut ? SHADOW.correctGlow : timedOut ? SHADOW.timeoutGlow : SHADOW.card;
   const guide = completed && !timedOut ? { text: '정답', color: TG.SUCCESS }
-    : timedOut ? { text: '시간초과', color: TG.DANGER }
+    : timedOut ? { text: '시간초과', color: TG.CORAL_DK }
     // 진행 안내문은 제거(시안 09 — 카드엔 뜻·마크·한자만). 정답/시간초과 결과 문구만 남긴다.
-    : { text: '', color: TG.GUIDE };
+    : { text: '', color: TG.SUB };
 
   // 발사체 착탄 동기 — 공개 팝을 착탄 시점(생성 정지+비행)만큼 지연해 '마크가 부딪히는 순간 채워지는' 인과로 보이게.
   // 그리기 문제(발사체 없음)·모션 최소화는 즉시 공개(기존 동작).
@@ -1016,13 +1018,13 @@ export function ToneButtons({ onTone, wrongBtn, disabled, heat = 0, highlight = 
               flex: 1, minWidth: 0, height: '100%', cursor: disabled ? 'default' : 'pointer', borderRadius: RADIUS.xl,
               // ★흰 키캡 — 시안 '09. 게임'(2026-08-04): 흰 카드 + 1px 연한 테두리 + 아래 4px 안쪽 엣지.
               //   색은 성조 마크가 전담(키캡은 중립) → 배경 들판 위에서도 눌린 카드처럼 읽힌다.
-              background: isWrong ? '#FFE9EA' : '#fff',
+              background: isWrong ? TG.CORAL_BG : '#fff',
               border: highlight === t.num ? `2px solid ${t.color}` : `1px solid ${TG.KEY_EDGE}`,
               boxShadow: isWrong
-                ? 'inset 0 -4px 0 #F0BCBE, 0 4px 18px rgba(43,39,48,0.04)'
+                ? keycap(TG.CORAL_BG_EDGE, { lift: SHADOW.level1 })
                 : highlight === t.num
-                  ? `inset 0 -4px 0 ${TG.KEY_EDGE}, 0 0 0 4px ${t.color}22`
-                  : `inset 0 -4px 0 ${TG.KEY_EDGE}, 0 4px 18px rgba(43,39,48,0.04)`,
+                  ? keycap(TG.KEY_EDGE, { lift: `0 0 0 4px ${t.color}22` })
+                  : keycap(TG.KEY_EDGE, { lift: SHADOW.level1 }),
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', gap: 9,
               paddingTop: 20, paddingBottom: 0, color: t.color, ...TOUCH_OPT, // 마크(currentColor)=성조색
             }}
@@ -1130,9 +1132,9 @@ export function DrawPad({ expectedTone, onDraw, disabled = false, resetKey = 0, 
     flashTimerRef.current = setTimeout(() => { setFlash(null); setPts([]); }, ok ? 380 : 560);
   };
 
-  const strokeCol = flash ? (flash.ok ? TG.SUCCESS : TG.DANGER) : TG.CORAL;
-  const borderCol = flash ? (flash.ok ? TG.SUCCESS : TG.DANGER) : 'rgba(255,107,107,0.45)';
-  const bg = flash ? (flash.ok ? '#F2FCF7' : '#FFF3F3') : '#fff';
+  const strokeCol = flash ? (flash.ok ? TG.SUCCESS : TG.CORAL_DK) : TG.CTA;
+  const borderCol = flash ? (flash.ok ? TG.SUCCESS : TG.CORAL_DK) : 'rgba(255,107,107,0.45)';
+  const bg = flash ? (flash.ok ? TG.SUCCESS_BG : TG.CORAL_BG_SOFT) : '#fff';
   const tail = pts[pts.length - 1];
   const guessName = flash ? (TONES.find((t) => t.num === flash.tone)?.name || `${flash.tone}성`) : '';
   return (
@@ -1154,13 +1156,13 @@ export function DrawPad({ expectedTone, onDraw, disabled = false, resetKey = 0, 
         <svg aria-hidden="true" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
           <rect x="1" y="1" width="100%" height="100%" rx={RADIUS.xxl - 1} ry={RADIUS.xxl - 1}
             style={{ width: 'calc(100% - 2px)', height: 'calc(100% - 2px)' }}
-            fill="none" stroke={TG.CORAL} strokeWidth="2" strokeDasharray="8 6" />
+            fill="none" stroke={TG.CTA} strokeWidth="2" strokeDasharray="8 6" />
         </svg>
       )}
       {/* 경성 음절 — 자동 통과 안내(그리기 불가) */}
       {neutral ? (
         <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: SPACE.md, pointerEvents: 'none', padding: SPACE.md }}>
-          <div style={{ width: 52, height: 52, borderRadius: RADIUS.card, background: '#eef0f3', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: TONE_COLORS[0] }}>
+          <div style={{ width: 52, height: 52, borderRadius: RADIUS.card, background: TG.KEY_EDGE, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: TONE_COLORS[0] }}>
             <ToneMark tone={0} size={30} />
           </div>
           <span style={{ ...TYPE.btn, color: TG.INK }}>경성이에요</span>
@@ -1188,7 +1190,7 @@ export function DrawPad({ expectedTone, onDraw, disabled = false, resetKey = 0, 
           <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: SPACE.lg, pointerEvents: 'none', padding: SPACE.md }}>
             <div style={{ width: 52, height: 52, borderRadius: RADIUS.card, background: TG.CORAL_BG, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <svg width={30} height={30} viewBox="0 0 60 60" fill="none" aria-hidden="true">
-                <path d="M 14 38 C 20 22 26 22 30 30 C 34 38 40 38 46 22" stroke={TG.CORAL} strokeWidth={4} strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M 14 38 C 20 22 26 22 30 30 C 34 38 40 38 46 22" stroke={TG.CTA} strokeWidth={4} strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </div>
             <span style={{ ...TYPE.btn, color: TG.INK }}>성조를 그려보세요</span>
@@ -1203,12 +1205,12 @@ export function DrawPad({ expectedTone, onDraw, disabled = false, resetKey = 0, 
       )}
       {/* 지문 끝점 표시(그리는 중) */}
       {!flash && tail && drawingRef.current && (
-        <span aria-hidden="true" style={{ position: 'absolute', left: tail.x, top: tail.y, width: 14, height: 14, marginLeft: -7, marginTop: -7, borderRadius: '50%', background: TG.CORAL, boxShadow: `0 0 8px ${TG.CORAL}`, pointerEvents: 'none' }} />
+        <span aria-hidden="true" style={{ position: 'absolute', left: tail.x, top: tail.y, width: 14, height: 14, marginLeft: -7, marginTop: -7, borderRadius: '50%', background: TG.CTA, boxShadow: `0 0 8px ${TG.CTA}`, pointerEvents: 'none' }} />
       )}
       {/* 인식 결과 라벨(떼는 순간) — 무엇으로 읽었는지 투명하게 */}
       {flash && (
         <div style={{ position: 'absolute', left: 0, right: 0, bottom: 12, display: 'flex', justifyContent: 'center', pointerEvents: 'none' }}>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: SPACE.sm, ...TYPE.h2, color: flash.ok ? TG.SUCCESS : TG.DANGER, background: '#fff', padding: '5px 12px', borderRadius: RADIUS.md, boxShadow: '0 2px 8px rgba(43,39,48,0.1)' }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: SPACE.sm, ...TYPE.h2, color: flash.ok ? TG.SUCCESS : TG.CORAL_DK, background: '#fff', padding: '5px 12px', borderRadius: RADIUS.md, boxShadow: '0 2px 8px rgba(43,39,48,0.1)' }}>
             {flash.ok ? `${guessName} · 정답!` : `${guessName}으로 그렸어요`}
           </span>
         </div>
@@ -1256,7 +1258,7 @@ const CD_WAVE_PATH = (() => {
   }
   return `${d} Z`;
 })();
-export function CdWaveEdge({ side, color = '#f96c6e' }) {
+export function CdWaveEdge({ side, color = TG.CTA }) {
   const isLeft = side === 'left';
   return (
     <svg width={CD_WAVE_W} height="100%" viewBox={`0 0 ${CD_WAVE_W} 1000`} preserveAspectRatio="none" aria-hidden="true"
@@ -1292,15 +1294,15 @@ export function FieldBg({ artRef, sink = 0 }) {
         {sink === 0 && <div style={{ position: 'absolute', left: CHIMNEY.x, top: CHIMNEY.y }}>
           {reduced ? (
             <>
-              <div style={{ position: 'absolute', left: -10.5, top: -17, width: 12, height: 11, borderRadius: 35, background: '#EEE9D3' }} />
-              <div style={{ position: 'absolute', left: -4.5, top: -52, width: 38, height: 34, borderRadius: 35, background: '#EEE9D3' }} />
-              <div style={{ position: 'absolute', left: -61.5, top: -101, width: 65, height: 58, borderRadius: 35, background: '#EEE9D3' }} />
+              <div style={{ position: 'absolute', left: -10.5, top: -17, width: 12, height: 11, borderRadius: 35, background: SCENE.SMOKE }} />
+              <div style={{ position: 'absolute', left: -4.5, top: -52, width: 38, height: 34, borderRadius: 35, background: SCENE.SMOKE }} />
+              <div style={{ position: 'absolute', left: -61.5, top: -101, width: 65, height: 58, borderRadius: 35, background: SCENE.SMOKE }} />
             </>
           ) : (
             [0, 1, 2].map((i) => (
               // 상승·팽창(linear)과 좌우 흔들림(alternate)을 분리 — 한 키프레임에 합치면 방향 전환이 뚝 끊김
               <div key={i} style={{ position: 'absolute', left: -32, top: -29, animation: `tg-smoke-rise 5s linear ${(-i * 5) / 3}s infinite` }}>
-                <div style={{ width: 65, height: 58, borderRadius: 35, background: '#EEE9D3', animation: `tg-smoke-sway ${2.3 + i * 0.4}s ease-in-out ${-i * 0.9}s infinite alternate` }} />
+                <div style={{ width: 65, height: 58, borderRadius: 35, background: SCENE.SMOKE, animation: `tg-smoke-sway ${2.3 + i * 0.4}s ease-in-out ${-i * 0.9}s infinite alternate` }} />
               </div>
             ))
           )}
@@ -1334,7 +1336,7 @@ export function GameStage({ children }) {
 //  구조: fixed inset0(입력 차단·레터박스 클리핑) > 가운데 컬럼(애니메이션 적용) > 배경색 + 안전영역 콘텐츠.
 //  ⚠️ 2026-08-03 수정 전에는 fixed inset0 자체가 슬라이드해서, PC 와이드에서 '창 전체가 밀리는' 느낌이었다.
 //     콘텐츠(FigmaScreen)는 9:16 컬럼인데 전환만 창 전체라 폭이 어긋난 게 원인.
-export function TxLayer({ style, bg = '#f96c6e', children }) {
+export function TxLayer({ style, bg = TG.CTA, children }) {
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', justifyContent: 'center', overflow: 'hidden' }}>
       <div style={{ position: 'relative', width: '100%', maxWidth: TG_COL_MAXW, height: '100%', ...style }}>
@@ -1376,6 +1378,55 @@ export function GameToast({ msg, kind = 'lock' }) {
   );
 }
 
+// ── 공용 원자 (2026-09-04 코드 추출 — Figma 디자인 시스템 v2 컴포넌트와 1:1. 화면 파일에 다시 그리지 말 것) ──
+// 아이콘 버튼 — plain: 44×44 히트영역·배경 없음(닫기·뒤로). keycap: 50×50 흰 키캡(인셋 -2 KEY_EDGE, 홈 설정 톱니).
+export function IconButton({ Icon, label, onClick, variant = 'plain', size = 28, color = TG.INK, weight = 'Bold', style, ...rest }) {
+  const isKeycap = variant === 'keycap';
+  return (
+    <button onClick={onClick} aria-label={label} className="tg-press" {...rest} style={{
+      width: isKeycap ? 50 : 44, height: isKeycap ? 50 : 44, padding: 0, border: 'none', cursor: 'pointer',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      borderRadius: isKeycap ? RADIUS.xl : 0, background: isKeycap ? TG.CARD : 'none',
+      boxShadow: isKeycap ? keycap(TG.KEY_EDGE, { depth: 2, lift: null }) : 'none', ...TOUCH_OPT, ...style,
+    }}>
+      <Icon size={size} weight={weight} color={color} />
+    </button>
+  );
+}
+// 알약 칩 — 흰 면 + 인셋 -2 KEY_EDGE(스트릭 칩 등). 내용은 children.
+export function Pill({ children, height = 38, bg = TG.CARD, edge = TG.KEY_EDGE, padding = '0 16px 4px 8px', gap = SPACE.sm, onClick, style, ...rest }) {
+  const Tag = onClick ? 'button' : 'div';
+  return (
+    <Tag onClick={onClick} className={onClick ? 'tg-press' : undefined} {...rest} style={{
+      height, display: 'flex', alignItems: 'center', gap, padding, borderRadius: RADIUS.pill, background: bg,
+      boxShadow: keycap(edge, { depth: 2, lift: null }), border: 'none', cursor: onClick ? 'pointer' : 'default', ...(onClick ? TOUCH_OPT : null), ...style,
+    }}>{children}</Tag>
+  );
+}
+// 통계 카드 — 결과·승급시험 결과의 '최고 콤보'·'반응 속도'. 128 높이, 아이콘 30 / 라벨 / 값+단위(베이스라인 정렬).
+export function StatCard({ icon, label, value, unit, style }) {
+  return (
+    <div style={{ position: 'relative', flex: 1, minWidth: 0, height: 128, background: TG.CARD, borderRadius: RADIUS.xl, boxShadow: SHADOW.level1, ...style }}>
+      <div style={{ position: 'absolute', left: 0, right: 0, top: 16, display: 'flex', justifyContent: 'center' }}>{icon}</div>
+      <span style={{ position: 'absolute', left: 0, right: 0, top: 52, textAlign: 'center', ...TYPE.h2, lineHeight: '19px', color: TG.SUB }}>{label}</span>
+      <div style={{ position: 'absolute', left: 0, right: 0, top: 81, height: 31, display: 'flex', justifyContent: 'center', alignItems: 'baseline', gap: SPACE.xxs }}>
+        <span style={{ ...TYPE.numLg, lineHeight: '31px', color: TG.INK }}>{value}</span>
+        {unit && <span style={{ ...TYPE.label, lineHeight: '17px', color: TG.SUB }}>{unit}</span>}
+      </div>
+    </div>
+  );
+}
+// 메뉴 액션 행 (도움말/로그인/나가기 등) — 시안 461:277: 행 36 · 아이콘 25 · 라벨 16 Bold · 화살표 18. (HomeScreen에서 승격)
+export function MenuAction({ Icon, label, sub, color = TG.INK, onClick }) {
+  return (
+    <button onClick={onClick} className="tg-press" style={{ display: 'flex', alignItems: 'center', gap: SPACE.xl, width: '100%', height: 36, padding: 0, background: 'none', border: 'none', cursor: 'pointer', ...TOUCH_OPT }}>
+      <Icon size={25} weight="Bold" color={color} style={{ flexShrink: 0 }} />
+      <span style={{ flex: 1, textAlign: 'left', ...TYPE.btn, color }}>{label}</span>
+      {sub && <span style={{ ...TYPE.meta, color: TG.SUB }}>{sub}</span>}
+      <AltArrowRight size={18} weight="Bold" color={TG.MUTED} />
+    </button>
+  );
+}
 // ── 설정 토글 행(공용) ─────────────────────────────────
 // 소리·음악·햅틱·단어 뜻·병음 한 줄. 시안 461:212(메뉴 모달)·807:724(일시정지 모달) 동일 규격:
 //  행 36 · 아이콘 27 · 라벨 16 Bold · 스위치 46×27(노브 21). 홈 메뉴와 일시정지 모달이 같은 컴포넌트를 쓴다.
@@ -1438,8 +1489,8 @@ const TG_TABS = [
 function HomeActiveIcon({ size = 40 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M2 12.2039C2 9.91549 2 8.77128 2.5192 7.82274C3.0384 6.87421 3.98695 6.28551 5.88403 5.10813L7.88403 3.86687C9.88939 2.62229 10.8921 2 12 2C13.1079 2 14.1106 2.62229 16.116 3.86687L18.116 5.10812C20.0131 6.28551 20.9616 6.87421 21.4808 7.82274C22 8.77128 22 9.91549 22 12.2039V13.725C22 17.6258 22 19.5763 20.8284 20.7881C19.6569 22 17.7712 22 14 22H10C6.22876 22 4.34315 22 3.17157 20.7881C2 19.5763 2 17.6258 2 13.725V12.2039Z" fill="#FFFFFF" />
-      <path d="M9 17.25C8.58579 17.25 8.25 17.5858 8.25 18C8.25 18.4142 8.58579 18.75 9 18.75H15C15.4142 18.75 15.75 18.4142 15.75 18C15.75 17.5858 15.4142 17.25 15 17.25H9Z" fill={HOME.TAB_RED} />
+      <path d="M2 12.2039C2 9.91549 2 8.77128 2.5192 7.82274C3.0384 6.87421 3.98695 6.28551 5.88403 5.10813L7.88403 3.86687C9.88939 2.62229 10.8921 2 12 2C13.1079 2 14.1106 2.62229 16.116 3.86687L18.116 5.10812C20.0131 6.28551 20.9616 6.87421 21.4808 7.82274C22 8.77128 22 9.91549 22 12.2039V13.725C22 17.6258 22 19.5763 20.8284 20.7881C19.6569 22 17.7712 22 14 22H10C6.22876 22 4.34315 22 3.17157 20.7881C2 19.5763 2 17.6258 2 13.725V12.2039Z" fill={TG.CARD} />
+      <path d="M9 17.25C8.58579 17.25 8.25 17.5858 8.25 18C8.25 18.4142 8.58579 18.75 9 18.75H15C15.4142 18.75 15.75 18.4142 15.75 18C15.75 17.5858 15.4142 17.25 15 17.25H9Z" fill={TG.CTA} />
     </svg>
   );
 }
@@ -1501,10 +1552,10 @@ export function TgTabBar({ active, onNav, dot = null }) {
       display: 'flex', alignItems: 'flex-start', padding: '8px 6px 0',
     }}>
       {/* 상단 구분선 2px — 시안 개선안(442:2) 추가. 흰 탭바가 밝은 바닥과 붙어 경계가 사라지는 걸 막음 */}
-      <div aria-hidden="true" style={{ position: 'absolute', left: 0, right: 0, top: 0, height: 2, background: HOME.TAB_BORDER }} />
+      <div aria-hidden="true" style={{ position: 'absolute', left: 0, right: 0, top: 0, height: 2, background: TG.BORDER }} />
       {/* 이동하는 키캡 배경 — 버튼들 아래 레이어(버튼은 position:relative로 위에) */}
       {/* 시안 개선안(442:2, 2026-08-04): 바닥에 붙은 키캡 → **전 모서리 r20으로 떠 있는 키캡** 109×74 @top8 */}
-      <div ref={pillRef} aria-hidden="true" style={{ position: 'absolute', left: 0, top: 8, width: 109, height: 74, borderRadius: 20, background: HOME.TAB_RED, willChange: 'transform' }} />
+      <div ref={pillRef} aria-hidden="true" style={{ position: 'absolute', left: 0, top: 8, width: 109, height: 74, borderRadius: RADIUS.xl, background: TG.CTA, boxShadow: keycap(HOME.TAB_RED_EDGE, { lift: null }), willChange: 'transform' }} />
       {TG_TABS.map(({ key, label, Icon }) => {
         const on = key === active;
         return (
@@ -1523,7 +1574,8 @@ export function TgTabBar({ active, onNav, dot = null }) {
             }}>
             {/* 아이콘 + 레드닷 — 닷은 **아이콘 우상단**에 얹는다(라벨이 아니라 아이콘 기준).
                 흰 링을 둘러 활성(빨간 키캡) 위에서도 점이 묻히지 않게 한다. */}
-            <span style={{ position: 'relative', display: 'flex' }}>
+            {/* tg-tab-duo-off: Solar BoldDuotone의 보조 레이어(path opacity .5)가 비활성 탭에서 너무 연해 .72로 올린다(index.css) */}
+            <span className={on ? undefined : 'tg-tab-duo-off'} style={{ position: 'relative', display: 'flex' }}>
               {on && key === 'home'
                 ? <HomeActiveIcon size={40} />
                 : <Icon size={40} weight="BoldDuotone" color={on ? '#fff' : HOME.TAB_INACTIVE} />}
@@ -1532,12 +1584,12 @@ export function TgTabBar({ active, onNav, dot = null }) {
                   {/* 파문 — 점 뒤에서 퍼졌다 사라짐. 모션 최소화 설정에선 생략 */}
                   {!prefersReducedMotion() && (
                     <span style={{
-                      position: 'absolute', inset: 0, borderRadius: '50%', background: TG.CORAL,
+                      position: 'absolute', inset: 0, borderRadius: '50%', background: TG.CTA,
                       animation: 'tg-dot-ring 2.2s ease-out infinite',
                     }} />
                   )}
                   {/* 점 자체는 가만히 있는다 — 흰 테두리·튀는 모션 없이 파문만으로 주목시킨다(2026-08-10 사용자) */}
-                  <span style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: TG.CORAL }} />
+                  <span style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: TG.CTA }} />
                 </span>
               )}
             </span>

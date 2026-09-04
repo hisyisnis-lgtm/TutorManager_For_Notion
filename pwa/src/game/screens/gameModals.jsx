@@ -11,9 +11,9 @@ import { ModalCard, ModalHead, ModalBody, KeycapCta, ModalTextButton } from './s
 
 // 모달 배지·CTA 색(시안 실측)
 const CTA_RED = TG.CTA;              // 기본 CTA·배지 코랄
-const ENDLESS_ORANGE = '#F3A75B';    // 무한 모드 배지
+const ENDLESS_ORANGE = TG.ENDLESS;    // 무한 모드 배지
 const EXAM_GOLD = TG.SUN;            // 승급시험 배지
-const TRAIN_GREEN = '#2BB583', TRAIN_GREEN_EDGE = '#219169'; // 트레이닝 아이덴티티(시안 461:339)
+const TRAIN_GREEN = TG.TRAIN, TRAIN_GREEN_EDGE = TG.TRAIN_EDGE; // 트레이닝 아이덴티티(시안 461:339)
 // 물음표 기호 아이콘 — Solar엔 순수 물음표가 없어 Phosphor를 쓴다(ModalHead의 Icon 인터페이스에 맞춘 래퍼)
 const QuestionMarkBadge = ({ size, color }) => <QuestionMarkIcon size={size} weight="bold" color={color} />;
 
@@ -113,8 +113,8 @@ export function LoginNudgeModal({ onLogin, onClose }) {
 // SNS 링크 (PersonalPage와 동일 URL). 인스타그램이 메인, 유튜브·블로그는 보조.
 export const PLAY_LINKS = {
   instagram: { href: 'https://www.instagram.com/tiantian_laoshi?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==', handle: '@tiantian_laoshi' },
-  youtube: { id: 'youtube', href: 'https://www.youtube.com/@tiantian_chinese', label: '유튜브', color: '#FF0000', Icon: YoutubeLogoIcon, w: 'fill' }, // 브랜드로고=phosphor라 fill
-  blog: { id: 'blog', href: 'https://blog.naver.com/tiantian_chinese/224100509217', label: '블로그', color: '#03C75A', Icon: Notebook, w: 'Bold' }, // Solar
+  youtube: { id: 'youtube', href: 'https://www.youtube.com/@tiantian_chinese', label: '유튜브', color: '#FF0000', Icon: YoutubeLogoIcon, w: 'fill' }, // 브랜드로고=phosphor라 fill // BRAND
+  blog: { id: 'blog', href: 'https://blog.naver.com/tiantian_chinese/224100509217', label: '블로그', color: '#03C75A', Icon: Notebook, w: 'Bold' }, // Solar // BRAND
 };
 
 // '놀러가기' 모달 — 인스타그램(메인 그라데이션) + 유튜브·블로그(보조). Figma "14. 놀러가기" 기준.

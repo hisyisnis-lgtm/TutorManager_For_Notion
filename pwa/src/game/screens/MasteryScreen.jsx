@@ -3,19 +3,19 @@
 //  등급은 프로필 모달, 레벨 게이지는 홈 HUD에 이미 있어 정보 손실 없음. 이 화면은 **틀린 단어 → 바로 복습**만 한다.
 //  내부 수치는 전부 시안 절대값(라인하이트 고정) — flex 중앙정렬에 맡기면 라인박스가 여백을 먹는다.
 import { VolumeLoud, Play } from '@solar-icons/react';
-import { TG, HOME, FONT_HANZI, FONT_PINYIN, FONT_NUM, TOUCH_OPT, TYPE, SPACE } from '../tgTokens.js';
+import { TG, HOME, FONT_HANZI, FONT_PINYIN, FONT_NUM, TOUCH_OPT, TYPE, SPACE, SHADOW, keycap } from '../tgTokens.js';
 import { NOTE_TARGET } from '../tgWordStats.js';
 import { speakWord } from '../tgTts.js';
 import { play as playSfx } from '../tgSfx.js';
 import { Reveal, TgTabBar, TAB_BAR_H, useStickyHeader, KeycapCta } from './shared.jsx';
 
 // 시안 13 실측 — 토큰에 있는 색은 참조, 원오프만 리터럴 (2026-08-31 토큰 통합)
-const TITLE_INK = '#272622';    // 제목 (원오프)
+const TITLE_INK = TG.INK;    // 제목 (원오프)
 const PCT_INK = HOME.INK;       // 정답률 %
 const BAR_TRACK = HOME.GAUGE_TRACK; // 정답률 트랙
 const BAR_FILL = TG.CTA;        // 정답률 채움 = CTA 레드
-const SPEAKER_EDGE = '#E6E0D6'; // 발음듣기 버튼 하단 인너 엣지 (원오프)
-const DIVIDER = HOME.TAB_BORDER; // 스크롤 시 상단 고정 블록 구분선
+const SPEAKER_EDGE = TG.BORDER; // 발음듣기 버튼 하단 인너 엣지 (원오프)
+const DIVIDER = TG.BORDER; // 스크롤 시 상단 고정 블록 구분선
 
 // 오답 단어 한 줄 — 시안 13 실측(2026-08-10 갱신): 342×77 · r20 · 흰 카드 · shadow 0/4 b18 4%.
 //  내부 = [한자행 37] gap4 [진행행 16], padding 10/10/10/14, 컬럼 223 + 발음듣기 54.
@@ -25,7 +25,7 @@ function WrongWordRow({ word, left }) {
   const pct = Math.round((done / NOTE_TARGET) * 100);
   return (
     <div style={{
-      height: 77, borderRadius: 20, background: '#fff', boxShadow: '0px 4px 18px rgba(43,39,48,0.04)',
+      height: 77, borderRadius: 20, background: '#fff', boxShadow: SHADOW.level1,
       display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 10px 10px 14px', flexShrink: 0,
     }}>
       <div style={{ width: 223, display: 'flex', flexDirection: 'column', gap: SPACE.xs }}>
@@ -52,9 +52,9 @@ function WrongWordRow({ word, left }) {
       <button onClick={() => speakWord(word)} aria-label={`${word.hanzi} 발음 듣기`} className="tg-press" style={{
         width: 54, height: 54, borderRadius: 12, background: TG.SURFACE, border: 'none', cursor: 'pointer',
         display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-        boxShadow: `inset 0 -4px 0 ${SPEAKER_EDGE}`, ...TOUCH_OPT,
+        boxShadow: keycap(SPEAKER_EDGE, { lift: null }), ...TOUCH_OPT,
       }}>
-        <VolumeLoud size={28} weight="Bold" color={TG.ICON} />
+        <VolumeLoud size={28} weight="Bold" color={TG.SUB} />
       </button>
     </div>
   );
@@ -65,7 +65,7 @@ function PrimaryCta({ label, onClick }) {
   return (
     <KeycapCta height={50} label={label} labelStyle={{ whiteSpace: 'nowrap' }} Icon={Play}
       onClick={() => { playSfx('button'); onClick(); }}
-      style={{ boxShadow: `0px 10px 20px rgba(242,72,76,0.1), inset 0 -4px 0 ${TG.CTA_EDGE}` }} />
+      style={{ boxShadow: keycap(TG.CTA_EDGE, { lift: SHADOW.ctaGlow }) }} />
   );
 }
 

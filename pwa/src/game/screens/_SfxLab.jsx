@@ -121,7 +121,7 @@ export function SfxLab({ onBack }) {
               flex: 1, padding: '14px', borderRadius: 14, cursor: 'pointer', border: `1.5px solid ${TG.LINE}`,
               background: TG.CARD, color: TG.INK, fontFamily: FONT_BODY, fontWeight: 800, fontSize: 15,
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, ...TOUCH_OPT,
-            }}><Stop size={18} weight="Bold" color={TG.DANGER} />정지</button>
+            }}><Stop size={18} weight="Bold" color={TG.CORAL_DK} />정지</button>
           </div>
         </div>
       </div>
