@@ -44,11 +44,22 @@ export function studentBearer(token) {
 // 이게 없으면 hard enforce(STUDENT_AUTH_ENFORCE=1) 시 만료 기기는 OTP 재인증 경로 없이
 // 화면마다 401 에러만 반복하는 막다른 길. 강사 기기(강사 JWT 사용)는 대상 아님.
 // 처리했으면 true 반환(호출부는 에러 표시 생략 가능).
+// 리로드는 30초에 한 번만 — 서버가 계속 401을 주는 상태(시계 오차·시크릿 오설정)에서
+// reload → 401 → reload 무한 루프가 되지 않게. 두 번째부터는 세션만 지우고 게이트가 뜨게 둔다(2026-09-04).
+const RELOAD_STAMP_KEY = 'student_auth_reload_at';
+const RELOAD_MIN_GAP_MS = 30 * 1000;
+
 export function handleStudentAuthExpiry(token) {
   if (isTeacherDevice()) return false;
   if (!token || !getStudentSession(token)) return false;
   clearStudentSession(token);
-  window.location.reload();
+  let recentlyReloaded = false;
+  try {
+    const last = Number(sessionStorage.getItem(RELOAD_STAMP_KEY) || 0);
+    recentlyReloaded = Date.now() - last < RELOAD_MIN_GAP_MS;
+    if (!recentlyReloaded) sessionStorage.setItem(RELOAD_STAMP_KEY, String(Date.now()));
+  } catch { /* sessionStorage 불가 환경 — 그냥 리로드 */ }
+  if (!recentlyReloaded) window.location.reload();
   return true;
 }
 

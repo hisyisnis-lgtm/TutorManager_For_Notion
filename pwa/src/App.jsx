@@ -32,12 +32,13 @@ import PersonalPage from './pages/PersonalPage.jsx';
 import PersonalHomeworkDetailPage from './pages/PersonalHomeworkDetailPage.jsx';
 import PersonalNoticeDetailPage from './pages/PersonalNoticeDetailPage.jsx';
 import PandaPage from './pages/PandaPage.jsx';
-import PandaTestPage from './pages/PandaTestPage.jsx';
 // 성조게임은 앱에서 가장 큰 코드 덩어리 — lazy 분리로 게임 진입 시에만 로드.
 // (게임 단독 앱 빌드(main.game.jsx)는 별도 엔트리라 여기 lazy와 무관하게 정적 import 유지)
 const ToneGamePage = lazy(() => import('./pages/ToneGamePage.jsx'));
 // 개인정보처리방침 — 거의 안 들어오는 법정 고지 페이지라 첫 로드 번들에서 뺀다(lazy).
 const PrivacyPage = lazy(() => import('./pages/PrivacyPage.jsx'));
+// 팬더 디버그 화면 — DEV 빌드에서만 존재. 운영 번들엔 라우트도 청크도 남지 않는다(2026-09-04).
+const PandaTestPage = import.meta.env.DEV ? lazy(() => import('./pages/PandaTestPage.jsx')) : null;
 import BookingsManagePage from './pages/BookingsManagePage.jsx';
 import ConsultManagePage from './pages/ConsultManagePage.jsx';
 import HomeworkFormPage from './pages/HomeworkFormPage.jsx';
@@ -102,7 +103,7 @@ function GatedStudentRoute({ children }) {
 // 현재 hash가 공개 페이지인지 확인 (로그인 불필요)
 function isPublicBookingRoute() {
   const hash = window.location.hash;
-  return hash.startsWith('#/book') || hash.startsWith('#/intro') || hash.startsWith('#/pricing') || hash.startsWith('#/consent') || hash.startsWith('#/privacy') || hash.startsWith('#/group-class') || hash.startsWith('#/bootcamp') || hash.startsWith('#/personal') || hash.startsWith('#/panda-test');
+  return hash.startsWith('#/book') || hash.startsWith('#/intro') || hash.startsWith('#/pricing') || hash.startsWith('#/consent') || hash.startsWith('#/privacy') || hash.startsWith('#/group-class') || hash.startsWith('#/bootcamp') || hash.startsWith('#/personal') || (import.meta.env.DEV && hash.startsWith('#/panda-test'));
 }
 
 // 데이터 작성 중인 폼 페이지 여부 확인
@@ -325,7 +326,7 @@ export default function App() {
             <Route path="/personal/:studentToken/notice/:noticeId" element={<GatedStudentRoute><PersonalNoticeDetailPage /></GatedStudentRoute>} />
             <Route path="/personal/:studentToken/panda" element={<GatedStudentRoute><PandaPage /></GatedStudentRoute>} />
             <Route path="/personal/:studentToken/game/tone" element={<GatedStudentRoute><Suspense fallback={<SplashScreen />}><ToneGamePage /></Suspense></GatedStudentRoute>} />
-            <Route path="/panda-test" element={<PandaTestPage />} />
+            {PandaTestPage && <Route path="/panda-test" element={<Suspense fallback={null}><PandaTestPage /></Suspense>} />}
           </Routes>
         </HashRouter>
         <FreshnessIndicator />

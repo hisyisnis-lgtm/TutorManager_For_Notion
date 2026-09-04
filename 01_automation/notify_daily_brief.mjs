@@ -249,11 +249,35 @@ async function main() {
   // ===== 6. 미확인 무료상담 =====
   const consults = await queryAll(CONSULT_DB, { property: '상태', select: { equals: '신청됨' } });
 
+  // ===== 7. 월간 지표 (매월 1일에만) =====
+  // PRD KPI(3개월 이상 수강 비율 70%+ · 평균 수강 개월)를 볼 화면이 없어 브리핑에 한 줄로 얹는다(2026-09-04).
+  // 등록일 = 학생 페이지 created_time. 상담→첫 결제 전환율은 상담 DB에 학생 연결이 생기면 추가.
+  const isFirstOfMonth = todayStr.endsWith('-01');
+  let kpiLine = null;
+  if (isFirstOfMonth) {
+    const active = students.filter((p) => p.properties['상태']?.select?.name === '🟢 수강중');
+    const months = active
+      .map((p) => (now.getTime() - new Date(p.created_time).getTime()) / (30.44 * 24 * 60 * 60 * 1000))
+      .filter((m) => Number.isFinite(m) && m >= 0);
+    const over3 = months.filter((m) => m >= 3).length;
+    const avg = months.length ? months.reduce((a, b) => a + b, 0) / months.length : 0;
+    const pct = months.length ? Math.round((over3 / months.length) * 100) : 0;
+    // 상담 전환율 = 학생이 연결된 상담 ÷ 전체 상담. 최근 14일 신청은 아직 진행 중일 수 있어 분모에서 뺀다.
+    // (연결은 학생 등록 시 전화번호로 자동 — pwa/src/api/consults.js)
+    const allConsults = await queryAll(CONSULT_DB);
+    const cutoff = now.getTime() - 14 * 24 * 60 * 60 * 1000;
+    const settled = allConsults.filter((p) => new Date(p.created_time).getTime() < cutoff);
+    const converted = settled.filter((p) => (p.properties['학생']?.relation ?? []).length > 0).length;
+    const convPct = settled.length ? Math.round((converted / settled.length) * 100) : null;
+    const convText = convPct == null ? '' : ` · 상담→등록 ${converted}/${settled.length}(${convPct}%, 목표 80%)`;
+    kpiLine = `[월간 지표] 수강중 ${active.length}명 · 3개월 이상 ${over3}명(${pct}%, 목표 70%) · 평균 수강 ${avg.toFixed(1)}개월${convText}`;
+  }
+
   // ===== 메시지 조립 =====
   const todoCount =
     paymentDue.length + pendingHw.length + unpaid.length + emptyLogs.length + consults.length +
     (stuD1Ok === false ? 1 : 0) + (conD1Ok === false ? consultRows.length : 0);
-  if (todayClasses.length === 0 && todoCount === 0) {
+  if (todayClasses.length === 0 && todoCount === 0 && !kpiLine) {
     console.log('오늘 수업도 할 일도 없음 - 발송 생략');
     return;
   }
@@ -317,6 +341,7 @@ async function main() {
   if (consults.length > 0) {
     sections.push(`[미확인 상담 ${consults.length}건]`);
   }
+  if (kpiLine) sections.push(kpiLine);
 
   const weekday = new Intl.DateTimeFormat('ko-KR', { timeZone: KST, weekday: 'short' }).format(now);
   const [, m, d] = todayStr.split('-');

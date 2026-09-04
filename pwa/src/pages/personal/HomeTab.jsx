@@ -181,7 +181,7 @@ function HwEmptyLine() {
 }
 
 // ===== 홈 탭 =====
-export default function HomeTab({ studentToken, studentLoaded, onUpcomingLoaded, hwAlerts, onSwitchToClasses }) {
+export default function HomeTab({ studentToken, studentLoaded, onUpcomingLoaded, hwAlerts, homeworkEnabled = true, onSwitchToClasses }) {
   const nowKST = new Date(Date.now() + 9 * 60 * 60 * 1000);
   const pad = n => String(n).padStart(2, '0');
   const todayStr = `${nowKST.getUTCFullYear()}-${pad(nowKST.getUTCMonth() + 1)}-${pad(nowKST.getUTCDate())}`;
@@ -206,20 +206,21 @@ export default function HomeTab({ studentToken, studentLoaded, onUpcomingLoaded,
     try {
       const kst = new Date(Date.now() + 9 * 60 * 60 * 1000);
       const thisMonth = `${kst.getUTCFullYear()}-${pad(kst.getUTCMonth() + 1)}`;
-      const [curr, next] = await trackRevalidation(Promise.all([
+      const [curr, next, after] = await trackRevalidation(Promise.all([
         fetchMyClasses(studentToken, thisMonth),
         fetchMyClasses(studentToken, addMonths(thisMonth, 1)),
+        fetchMyClasses(studentToken, addMonths(thisMonth, 2)),
       ]));
       // 잘라내지 않고 전부 담는다 — '예약된 수업' 개수가 실제 예약 건수여야 하기 때문.
       // (이전 slice(0,5) 때문에 10건 잡혀 있어도 5개로 보였다. 2026-08-26 실측: 활성 학생
       //  대부분이 8~11건이라 사실상 전원이 이 상한에 걸려 있었다.)
       // 화면에 카드로 펼치는 건 아래 렌더에서 따로 제한한다(다음 수업 1건 + 목록 3건).
-      // 조회창은 이번 달+다음 달이라 그 너머 예약은 집계에서 빠진다 — 지금 운영 패턴(1~2개월치
-      //  선등록)에선 충분하고, 더 넓히면 홈 로딩마다 월별 요청이 그만큼 늘어난다.
+      // 조회창은 이번 달 + 2개월(2026-09-04, 2개월→3개월). 일시중단 뒤 두 달 뒤로 잡힌 복귀 수업이
+      //  "예정 수업 없음"으로 보이던 구멍을 막는다. 더 넓히면 홈 로딩마다 월별 요청이 그만큼 는다.
       // 오늘 수업은 **끝나기 전까지만** '다음 수업'이다 — date만 비교하면 끝난 수업이
       // 자정까지 홈에 남는다(2026-08-30 검수 지적). 진행 중(시작~종료 사이)은 계속 보여준다.
       const nowMinFresh = kst.getUTCHours() * 60 + kst.getUTCMinutes();
-      const all = [...curr, ...next]
+      const all = [...curr, ...next, ...after]
         .filter(c => !c.isCancelled && (
           c.date > todayStr
           || (c.date === todayStr && timeToMin(c.startTime) + c.durationMin > nowMinFresh)
@@ -284,8 +285,9 @@ export default function HomeTab({ studentToken, studentLoaded, onUpcomingLoaded,
       {/* 숙제 — 상태별 섹션 대신 부여된 숙제 카드 하나의 플랫 리스트(2026-08-31 사용자 제안).
           상태는 카드 배지(미제출/제출완료/피드백완료)가 이미 말해주므로 섹션 헤더는 중복이었다.
           정렬 = 지금 해야 하는 일 순: 제출 전 → 피드백 확인 → 제출 완료(대기). 피드백이
-          쌓여도 제출할 숙제가 항상 맨 위라 묻히지 않는다. 비어 있으면 문구 한 줄. */}
-      {studentLoaded && (
+          쌓여도 제출할 숙제가 항상 맨 위라 묻히지 않는다. 비어 있으면 문구 한 줄.
+          비VIP(homeworkEnabled=false)는 섹션 자체를 내지 않는다 — 영구 빈 상태로 "나만 숙제를 안 주나" 오해를 만들던 것(2026-09-04). */}
+      {studentLoaded && homeworkEnabled && (
         <div style={{ padding: '0 16px', marginBottom: 24, animation: 'fade-in-up 400ms cubic-bezier(0.2,0,0,1) both', animationDelay: '60ms' }}>
           <SectionHeading>숙제</SectionHeading>
           {(() => {

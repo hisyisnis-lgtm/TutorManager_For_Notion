@@ -4,6 +4,7 @@ import { useData } from '../context/DataContext.jsx';
 import { useCachedResource } from '../hooks/useCachedResource.js';
 import { queryPage } from '../api/notionClient.js';
 import { CLASSES_DB, parseClass } from '../api/classes.js';
+import { attachLogInfo } from '../api/lessonLogs.js';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import PullToRefresh from '../components/ui/PullToRefresh.jsx';
@@ -25,7 +26,7 @@ function getKSTToday() {
 
 export default function PendingClassesPage() {
   const navigate = useNavigate();
-  const { studentNameMap } = useData();
+  const { studentNameMap, students } = useData();
   const { state: pendingState, dismissMany } = usePendingClassState();
   const [showConfirm, setShowConfirm] = useState(false);
 
@@ -34,7 +35,7 @@ export default function PendingClassesPage() {
   const todayStr = `${today.year}-${pad(today.month + 1)}-${pad(today.day)}`;
 
   // 오늘 수업 목록 캐시(당일 키). 재방문 즉시 표시.
-  const todayRes = useCachedResource(`pending:today:${todayStr}`, async () => {
+  const todayRes = useCachedResource(`pending:today:v2:${todayStr}`, async () => {
     const data = await queryPage(
       CLASSES_DB,
       {
@@ -48,19 +49,23 @@ export default function PendingClassesPage() {
       undefined,
       50,
     );
-    return (data?.results ?? []).map(parseClass);
+    return attachLogInfo((data?.results ?? []).map(parseClass));
   });
   const todayClasses = todayRes.data ?? [];
   const loading = todayRes.loading;
 
   const nowMs = Date.now();
+  // HomePage와 같은 규칙 — 비VIP 수업은 일지만으로 마무리(앱 숙제 = VIP 전용, 2026-09-04).
+  const vipById = Object.fromEntries(students.map((s) => [s.id, !!s.vip]));
+  const hwRequiredFor = (cls) => cls.studentIds.some((id) => vipById[id]);
   const pending = todayClasses.filter((cls) => {
     if (!cls.endTime) return false;
     if (new Date(cls.endTime).getTime() > nowMs) return false;
     const s = pendingState[cls.id] || {};
     if (s.dismissed) return false;
-    const logDone = (cls.lessonLogIds?.length ?? 0) > 0;
-    if (s.hwDone && logDone) return false;
+    const logDone = !!cls.writtenLogId; // 내용이 있는 일지만 '작성됨'
+    const hwDone = !!s.hwDone || (cls.homeworkIds?.length ?? 0) > 0; // 서버(숙제 relation) 우선, 로컬은 보조
+    if ((hwDone || !hwRequiredFor(cls)) && logDone) return false;
     return true;
   });
 
@@ -112,7 +117,8 @@ export default function PendingClassesPage() {
                 key={cls.id}
                 cls={cls}
                 studentName={names}
-                hwDone={!!s.hwDone}
+                hwDone={!!s.hwDone || (cls.homeworkIds?.length ?? 0) > 0}
+                hwRequired={hwRequiredFor(cls)}
               />
             );
           })}

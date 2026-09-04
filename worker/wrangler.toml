@@ -11,7 +11,7 @@ head_sampling_rate = 1
 
 # 정시 알림 스케줄러 — 매시 정각에 깨어나 KST 시각에 맞는 알림만 GitHub Actions로 dispatch.
 # GitHub의 schedule 트리거가 러너 혼잡에 몇 시간씩 밀리는 문제를 피하려는 구조
-# (2026-08-27 실측 8~11시간 지연). 어떤 시각에 무엇을 보낼지는 src/index.js HOURLY_JOBS.
+# (2026-08-27 실측 8~11시간 지연). 어떤 시각에 무엇을 보낼지는 src/index.js DISPATCH_JOBS.
 [triggers]
 crons = ["0 * * * *"]
 

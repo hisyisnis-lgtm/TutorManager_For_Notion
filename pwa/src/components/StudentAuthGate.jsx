@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { KAKAO_CHANNEL_CHAT_URL } from '../constants.js';
 import { Button } from './shadcn/button';
 import { Input } from './shadcn/input';
 import OtpInput from './ui/OtpInput.jsx';
@@ -112,7 +113,8 @@ export default function StudentAuthGate({ token, disabled = false, children }) {
             marginTop: 22, padding: '16px 18px', borderRadius: 14, background: PRIMARY_BG,
             color: TEXT_SECONDARY, fontSize: 14, lineHeight: 1.65, textAlign: 'center',
           }}>
-            <span style={{ fontWeight: 700, color: TEXT_PRIMARY }}>선생님께 문의</span>해<br />인증을 받아 주세요.
+            <a href={KAKAO_CHANNEL_CHAT_URL} target="_blank" rel="noopener noreferrer"
+              style={{ fontWeight: 700, color: TEXT_PRIMARY, textDecoration: 'underline', textUnderlineOffset: 3 }}>선생님께 문의</a>해<br />인증을 받아 주세요.
           </div>
         )}
 

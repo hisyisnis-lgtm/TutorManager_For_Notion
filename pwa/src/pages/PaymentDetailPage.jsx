@@ -19,6 +19,7 @@ import { parsePayment,
   paymentStatusColor,
   updatePayment,
   refundSessions,
+  effectiveSessionsAfterRefund,
   formatSessions,
   isWholeSession } from '../api/payments.js';
 import { useData } from '../context/DataContext.jsx';
@@ -74,9 +75,12 @@ export default function PaymentDetailPage() {
   const netAmount = (p.actualAmount || 0) - (p.refundAmount || 0);
   const fullyRefunded = refunded && netAmount <= 0;
 
-  // 환불 모달 실시간 환산 시간 미리보기 (학생 결제만 — 단가 0이면 0)
+  // 환불 모달 실시간 미리보기 — 정책은 "진행분을 정가로 빼고 나머지 환불"이라, 입력한 금액에서
+  // 역으로 "이 결제에 남는 유효 시간"이 나온다(학생 결제만 — 단가 0이면 표시 안 함).
   const refundAmtInput = parseFloat(refundForm.amount) || 0;
-  const previewSessions = refundSessions({ refundAmount: refundAmtInput, unitPrice: p.unitPrice, discountRate: p.discountRate });
+  const previewInput = { sessionCount: p.sessionCount, actualAmount: p.actualAmount, refundAmount: refundAmtInput, unitPrice: p.unitPrice };
+  const previewSessions = refundSessions(previewInput);
+  const previewEffective = effectiveSessionsAfterRefund(previewInput);
 
   const openRefund = () => {
     setRefundError(null);
@@ -204,12 +208,12 @@ export default function PaymentDetailPage() {
         {previewSessions > 0 && (
           <div style={{ background: PRIMARY_BG, borderRadius: 12, padding: '10px 12px', marginBottom: 12 }}>
             <p style={{ fontSize: 13, color: TEXT_SECONDARY, margin: 0 }}>
-              이 금액은 <strong style={{ color: TEXT_PRIMARY }}>{formatSessions(previewSessions)}시간</strong>에 해당해요.
-              <span style={{ color: TEXT_TERTIARY }}> 학생 잔여 시간에서 차감됩니다.</span>
+              환불 후 이 결제에 남는 시간은 <strong style={{ color: TEXT_PRIMARY }}>{formatSessions(previewEffective)}시간</strong>이에요.
+              <span style={{ color: TEXT_TERTIARY }}> (진행한 수업은 정가 {formatKRW(p.unitPrice)}/시간으로 계산 · {formatSessions(previewSessions)}시간이 예약 가능에서 빠져요)</span>
             </p>
-            {!isWholeSession(previewSessions) && (
+            {!isWholeSession(previewEffective * 2) && (
               <p style={{ fontSize: 12, color: TEXT_PRIMARY, margin: '4px 0 0', fontWeight: 600 }}>
-                ⚠ 시간이 딱 떨어지지 않아요. 금액을 1시간 단위로 맞춰보세요.
+                ⚠ 진행한 시간이 30분 단위로 떨어지지 않아요. 환불 금액을 다시 확인해 보세요.
               </p>
             )}
           </div>

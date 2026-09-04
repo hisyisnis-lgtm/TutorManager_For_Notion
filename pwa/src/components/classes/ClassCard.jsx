@@ -6,7 +6,7 @@ import { MapPinIcon, WarningCircleIcon, InfoIcon } from '@phosphor-icons/react';
 import Badge from '../ui/Badge.jsx';
 import SelectCheck from '../ui/SelectCheck.jsx';
 import { classStatusColor, notesColor } from '../../api/classes.js';
-import { createLessonLog } from '../../api/lessonLogs.js';
+import { createLessonLog, fetchLogsByClassIds } from '../../api/lessonLogs.js';
 import { invalidateCache } from '../../hooks/useCachedResource.js';
 import { formatDateTime, formatDateNoYear, formatTime, formatDuration } from '../../utils/dateUtils.js';
 import { stripEmoji } from '../../utils/stringUtils.js';
@@ -36,18 +36,19 @@ export default function ClassCard({
   const statusLabel = isOngoing ? '수업중' : stripEmoji(cls.status);
   const studentNames = cls.studentIds.map((id) => studentNameMap[id] || '(알 수 없음)').join(', ');
   const isCompleted = cls.datetime && new Date(cls.datetime) <= new Date();
-  const logId = cls.lessonLogIds?.[0];
+  // '일지가 있다'(relation)와 '일지를 썼다'(rollup '일지 작성')는 다르다 — 자동화가 빈 일지를 먼저 만들어 둔다.
+  const logWritten = !!cls.logWritten;
   const [creatingLog, setCreatingLog] = useState(false);
 
   const handleLogClick = async (e) => {
     e.stopPropagation();
-    if (logId) {
-      // 이미 있는 일지는 **읽기 전용 상세**로. 편집은 거기서 '편집' 버튼으로.
-      navigate(`/logs/${logId}`);
-      return;
-    }
     setCreatingLog(true);
     try {
+      // 목록 캐시는 오래됐을 수 있다 — 어느 일지를 열지는 서버에서 확인한다(쓴 일지 → 상세, 빈 일지 → 편집, 없음 → 생성).
+      // 같은 수업에 일지가 2개 생기던 사고(2026-09-04)의 재발 방지.
+      const info = (await fetchLogsByClassIds([cls.id]))[cls.id];
+      if (info?.writtenLogId) { navigate(`/logs/${info.writtenLogId}`); return; }
+      if (info?.anyLogId) { navigate(`/logs/${info.anyLogId}/edit`); return; }
       const names = cls.studentIds.map((id) => studentNameMap[id]).filter(Boolean).join(', ');
       const dateStr = cls.datetime
         ? new Date(cls.datetime).toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul', month: 'numeric', day: 'numeric' })
@@ -169,13 +170,13 @@ export default function ClassCard({
                 // '일지 작성'은 아직 안 한 일이라 눈에 띄어야 하고, '일지 보기'는 그냥 열어보는 것.
                 // ⛔ 연한 브랜드 면(PRIMARY_BG)으로 채우지 말 것(design_system §18-1).
                 background: GRAY_100,
-                color: logId ? TEXT_SECONDARY : PRIMARY,
+                color: logWritten ? TEXT_SECONDARY : PRIMARY,
                 transition: 'background-color 150ms ease-out',
                 opacity: creatingLog ? 0.5 : 1,
               }}
               className="hit-40 transition-[background-color] duration-150 ease-out"
             >
-              {creatingLog ? '생성 중...' : logId ? '일지 보기' : '일지 작성'}
+              {creatingLog ? '여는 중...' : logWritten ? '일지 보기' : '일지 작성'}
             </button>
           </div>
         )}

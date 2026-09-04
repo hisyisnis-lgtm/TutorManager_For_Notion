@@ -26,20 +26,6 @@ export async function fetchAllStudents() {
   return queryAll(STUDENTS_DB, undefined, SORTS);
 }
 
-/** 학생 상태 변경 */
-export async function updateStudentStatus(pageId, status) {
-  return updatePage(pageId, {
-    상태: { select: { name: status } },
-  });
-}
-
-/** 학생 VIP(숙제 관리 대상) 토글 — 켜야 숙제 등록/관리 진입 가능 */
-export async function updateStudentVip(pageId, vip) {
-  return updatePage(pageId, {
-    VIP: { checkbox: !!vip },
-  });
-}
-
 /**
  * 학생페이지 첫 공유 시점 기록 — 강사가 "학생 페이지 공유" 버튼을 처음 누른 시점.
  * 이미 기록된 학생은 건드리지 않아 재공유 시 시점이 리셋되지 않는다.
@@ -66,8 +52,7 @@ export async function updateStudent(pageId, { name, phone, email, level, goal, s
   properties['목표'] = { rich_text: goal ? [{ text: { content: goal } }] : [] };
   properties['메모'] = { rich_text: memo ? [{ text: { content: memo } }] : [] };
   properties['예약 코드'] = { rich_text: bookingCode ? [{ text: { content: bookingCode } }] : [] };
-  // VIP(숙제 관리 대상)는 수정 폼에서 함께 저장한다. undefined면 건드리지 않는다
-  // (학생 상세의 토글은 여전히 updateStudentVip으로 단독 갱신할 수 있다).
+  // VIP(숙제 관리 대상)는 수정 폼에서 함께 저장한다. undefined면 건드리지 않는다.
   if (vip !== undefined) properties['VIP'] = { checkbox: !!vip };
   return updatePage(pageId, properties);
 }

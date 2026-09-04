@@ -134,7 +134,7 @@ export default function SettingsPage() {
             style={{ minHeight: 52, textDecoration: 'none' }}
           >
             <div className="flex-1 min-w-0">
-              <p className="text-sm" style={{ color: TEXT_SECONDARY, margin: 0 }}>예약 불가 설정</p>
+              <p className="text-sm" style={{ color: TEXT_SECONDARY, margin: 0 }}>휴무·불가 시간</p>
               <p className="text-xs mt-0.5" style={{ color: TEXT_TERTIARY, margin: 0 }}>휴무일·차단 시간대를 관리해요</p>
             </div>
             <CaretRightIcon size={16} weight="bold" style={{ color: TEXT_TERTIARY, flexShrink: 0 }} />

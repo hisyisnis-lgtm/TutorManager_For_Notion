@@ -49,6 +49,9 @@ export default function PersonalPage() {
     return ['홈', '내 수업', '보관함', '공지', '하늘하늘', 'MY'].includes(t) ? t : '홈';
   });
   const [showOnboarding, setShowOnboarding] = useState(() => !localStorage.getItem(ONBOARDING_KEY));
+  // 앱 숙제는 VIP 전용(2026-09-04) — 비VIP는 숙제 섹션·보관함 탭·숙제 코치마크를 숨긴다.
+  // 서버 응답에 필드가 없는 옛 캐시(undefined)는 켜진 것으로 본다.
+  const homeworkEnabled = student?.homeworkEnabled !== false;
 
   const [classRefreshKey, setClassRefreshKey] = useState(0);
   const [myClassesMonth, setMyClassesMonth] = useState(() => {
@@ -156,6 +159,10 @@ export default function PersonalPage() {
 
   // 탭 이탈/방문 시 dot 처리
   useEffect(() => {
+    if (!homeworkEnabled && tab === '보관함') setTab('홈');
+  }, [homeworkEnabled, tab]);
+
+  useEffect(() => {
     const prev = prevTabRef.current;
     prevTabRef.current = tab;
 
@@ -204,7 +211,7 @@ export default function PersonalPage() {
   // (배너가 코치마크의 '건너뛰기/다음' 버튼과 같은 높이에 겹쳐 글자가 뭉개졌다.)
   const coachHome    = tab === '홈'      && tipHome.visible;
   const coachClasses = tab === '내 수업' && tipClasses.visible;
-  const coachArchive = tab === '보관함'  && tipArchive.visible;
+  const coachArchive = tab === '보관함'  && homeworkEnabled && tipArchive.visible;
   const coachVisible = coachHome || coachClasses || coachArchive;
   const settingsRef = useRef(null);
 
@@ -371,7 +378,7 @@ export default function PersonalPage() {
 
   return (
     <div style={{ minHeight: '100dvh', backgroundColor: BG_APP }}>
-      {showOnboarding && <OnboardingCarousel onDone={() => setShowOnboarding(false)} />}
+      {showOnboarding && <OnboardingCarousel onDone={() => setShowOnboarding(false)} showHomework={homeworkEnabled} />}
       <PullIndicator pullY={pullY} refreshing={pullRefreshing} />
 
       {/* 상단 헤더 — 홈 탭은 고정 헤더 대신 아래 인사 섹션이 대신한다(강사앱 홈과 동일 구조).
@@ -379,7 +386,7 @@ export default function PersonalPage() {
           설정 버튼은 홈 인사 섹션에만 — 다른 탭 헤더에는 두지 않는다(2026-08-31 지적). */}
       {tab !== '홈' && (
         <PageHeader
-          title={tab === '내 수업' ? '예약 현황' : tab === '보관함' ? '발음 보관함' : tab}
+          title={tab === '내 수업' ? '수업 일정' : tab === '보관함' ? '발음 보관함' : tab}
           // 공지는 하단탭이 아니라 홈 상단 벨로 진입(2026-08-31) — 뒤로가기로 홈 복귀
           back={tab === '공지'}
           onBack={() => setTab('홈')}
@@ -436,6 +443,7 @@ export default function PersonalPage() {
             studentLoaded={student !== null}
             onUpcomingLoaded={handleUpcomingLoaded}
             hwAlerts={hwAlerts}
+            homeworkEnabled={homeworkEnabled}
             onSwitchToClasses={() => setTab('내 수업')}
           />
         )}
@@ -449,7 +457,7 @@ export default function PersonalPage() {
             />
           </div>
         )}
-        {tab === '보관함' && (
+        {tab === '보관함' && homeworkEnabled && (
           <div role="tabpanel" id="tab-panel-2" aria-labelledby="nav-보관함">
             <ArchiveTab key={classRefreshKey} studentToken={studentToken} />
           </div>
@@ -485,8 +493,8 @@ export default function PersonalPage() {
         visible={coachHome}
         onDone={tipHome.dismiss}
         steps={[
-          { selector: '[data-coach="next-class"]', label: '다음 수업 날짜와 시간이 여기에 표시돼요. 예약 현황 탭에서 전체 일정을 확인할 수 있어요.' },
-          { selector: '[data-coach="homework-card"]', label: '숙제는 여기서 바로 확인하고 파일이나 음성으로 제출할 수 있어요' },
+          { selector: '[data-coach="next-class"]', label: '다음 수업 날짜와 시간이 여기에 표시돼요. 수업 일정 탭에서 전체 일정을 확인할 수 있어요.' },
+          ...(homeworkEnabled ? [{ selector: '[data-coach="homework-card"]', label: '숙제는 여기서 바로 확인하고 파일이나 음성으로 제출할 수 있어요' }] : []),
           // 팬더 카드는 MY 탭으로 이사(2026-08-31) — 홈 코치마크에서 제외
         ]}
       />
@@ -542,8 +550,9 @@ export default function PersonalPage() {
         <div style={{ display: 'flex' }}>
           {[
             { key: '홈', icon: <HouseIcon weight="fill" />, label: '홈', dot: false },
-            { key: '내 수업', icon: <BookOpenIcon weight="fill" />, label: '예약 현황', dot: classDot },
-            { key: '보관함', icon: <ArchiveIcon weight="fill" />, label: '보관함', dot: archiveDot },
+            // 라벨 '수업 일정'(2026-09-04, 자가예약 영구 폐기 후 '예약' 용어 정리). 내부 key는 팁 저장키·라우터 state 호환을 위해 '내 수업' 유지.
+            { key: '내 수업', icon: <BookOpenIcon weight="fill" />, label: '수업 일정', dot: classDot },
+            ...(homeworkEnabled ? [{ key: '보관함', icon: <ArchiveIcon weight="fill" />, label: '보관함', dot: archiveDot }] : []),
             // 브랜드 링크 허브 — 아이콘은 phosphor가 아니라 브랜드 심볼 이미지(symbol 플래그로 분기)
             { key: '하늘하늘', symbol: true, label: '하늘하늘', dot: false },
             // 공지는 홈 상단 벨로 이동(2026-08-31) — MY(내 현황·팬더)는 관례대로 맨 오른쪽

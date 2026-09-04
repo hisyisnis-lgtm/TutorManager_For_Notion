@@ -76,13 +76,15 @@ export async function fetchStudentHomework(studentPageId) {
  * @param {string} [args.content]
  * @param {Array<{fileUploadId: string, fileName: string}>} [args.files]  과제 파일(녹음·이미지·PDF 통합)
  */
-export async function createHomework({ studentPageId, title, content, files }) {
+export async function createHomework({ studentPageId, title, content, files, classId }) {
   const properties = {
     제목: { title: [{ text: { content: title } }] },
     학생: { relation: [{ id: studentPageId }] },
     '과제 내용': { rich_text: [{ text: { content: content || '' } }] },
     '제출 상태': { select: { name: '미제출' } },
   };
+  // 어느 수업의 숙제인지(마무리 카드에서 낼 때). 수업 DB '숙제' relation으로 완료 판정에 쓴다(2026-09-04).
+  if (classId) properties['수업'] = { relation: [{ id: classId }] };
   if (files && files.length > 0) {
     properties['과제 파일'] = {
       files: files.map(({ fileUploadId, fileName }) => ({

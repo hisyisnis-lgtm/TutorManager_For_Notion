@@ -39,8 +39,11 @@ export default function LessonLogsPage() {
     await res.refresh();
   };
 
-  const years = yearsOf(logs.map((l) => l.createdTime));
-  const inRange = filterByMonthRange(logs, (l) => l.createdTime, range, years);
+  // 수업일 기준(rollup). 늦게 쓴 일지가 엉뚱한 달에 나오던 문제 해소(2026-09-04). 수업 미연결 일지는 생성 시각.
+  const dateOf = (l) => l.classDate || l.createdTime;
+  const sorted = [...logs].sort((a, b) => (dateOf(b) || '').localeCompare(dateOf(a) || ''));
+  const years = yearsOf(sorted.map(dateOf));
+  const inRange = filterByMonthRange(sorted, dateOf, range, years);
   const filteredLogs = inRange.filter((log) => {
     if (!search.trim()) return true;
     const names = log.studentIds.map((sid) => studentNameMap[sid] || '').join(' ');

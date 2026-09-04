@@ -10,11 +10,12 @@ import MonthCalendar from '../../components/ui/MonthCalendar.jsx';
 import { addMonths, timeToMin } from '../../utils/dateUtils.js';
 import { FOOTNOTE } from '../../constants/styles.js';
 import { CalendarBlankIcon } from '@phosphor-icons/react';
-import { BORDER_NEUTRAL } from '../../constants/theme.js';
+import { BORDER_NEUTRAL, PRIMARY } from '../../constants/theme.js';
+import { KAKAO_CHANNEL_CHAT_URL } from '../../constants.js';
 
-// ===== 예약 현황 탭 =====
+// ===== 수업 일정 탭 =====
 // 학생 자가예약은 2026-06-10에 폐기됐다 — 여기선 잡힌 수업을 월별로 확인만 한다.
-// (내부 탭 key는 여전히 '내 수업'이지만 화면 라벨은 '예약 현황')
+// (내부 탭 key는 여전히 '내 수업'이지만 화면 라벨은 '수업 일정' — 2026-09-04 '예약' 용어 정리)
 // 2026-08-31: 텍스트 월 네비 → 강사앱 수업 캘린더와 같은 MonthCalendar 재사용.
 // 날짜 점으로 한 달이 한눈에 보이고, 날짜를 누르면 카드 안에서 그날 수업이 펼쳐진다.
 
@@ -135,8 +136,14 @@ export default function MyClassesTab({ studentToken, month, onMonthChange }) {
             </div>
           )}
 
+          {/* 변경·취소 니즈가 가장 큰 화면인데 문구만 있고 갈 곳이 없었다(2026-09-04) — 카카오 채널 채팅으로 바로. */}
           <p style={{ ...FOOTNOTE, margin: '12px 16px 24px' }}>
-            수업 변경·취소는 강사님께 문의해주세요
+            수업 변경·취소는{' '}
+            <a href={KAKAO_CHANNEL_CHAT_URL} target="_blank" rel="noopener noreferrer"
+              style={{ color: PRIMARY, fontWeight: 600, textDecoration: 'underline', textUnderlineOffset: 3 }}>
+              카카오톡으로 문의
+            </a>
+            해 주세요
           </p>
         </>
       )}

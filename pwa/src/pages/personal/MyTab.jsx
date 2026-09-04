@@ -1,9 +1,10 @@
-import { CaretRightIcon, ChatTeardropTextIcon, ArrowSquareOutIcon } from '@phosphor-icons/react';
+import { CaretRightIcon, ChatTeardropTextIcon, ChatCircleDotsIcon, ArrowSquareOutIcon } from '@phosphor-icons/react';
 import SectionHeading from '../../components/ui/SectionHeading.jsx';
 import LoadingSpinner from '../../components/ui/LoadingSpinner.jsx';
 import { getStageInfo, getPandaStorageKey } from '../../components/ui/PandaWidget.jsx';
 import { formatDuration } from '../../utils/dateUtils.js';
 import { PRIMARY, TEXT_PRIMARY, TEXT_TERTIARY, TEXT_INACTIVE } from '../../constants/theme.js';
+import { KAKAO_CHANNEL_CHAT_URL } from '../../constants.js';
 
 // 설정 패널 '피드백 남기기'와 같은 구글 폼(서비스 개선의견) — 별도 폼이 생기면 여기만 바꾼다
 const FEEDBACK_URL = 'https://forms.gle/dCwXvZAdfG12AxoJ9';
@@ -66,6 +67,33 @@ export default function MyTab({ student, studentToken, foodSources, onOpenPanda 
         </button>
       </div>
 
+      {/* 선생님께 문의 — 변경·취소·전화번호 변경·코드 분실 등 모든 문의의 단일 진입점(2026-09-04).
+          화면마다 "문의하세요"만 있고 갈 곳이 없던 막다른 길을 여기로 모은다. */}
+      <div style={{ marginBottom: 12 }}>
+        <a
+          href={KAKAO_CHANNEL_CHAT_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="press"
+          style={{
+            display: 'flex', alignItems: 'center', gap: 12,
+            padding: 16,
+            background: '#fff', borderRadius: 16,
+            boxShadow: 'var(--shadow-border)',
+            textDecoration: 'none',
+            WebkitTapHighlightColor: 'transparent' }}
+        >
+          <ChatCircleDotsIcon size={24} weight="fill" color={PRIMARY} />
+          <span style={{ flex: 1, minWidth: 0 }}>
+            <span style={{ display: 'block', fontSize: 15, fontWeight: 600, color: TEXT_PRIMARY }}>선생님께 문의</span>
+            <span style={{ display: 'block', fontSize: 13, color: TEXT_TERTIARY, marginTop: 1 }}>
+              수업 변경·취소, 전화번호 변경은 카카오톡으로
+            </span>
+          </span>
+          <ArrowSquareOutIcon size={16} weight="bold" color={TEXT_INACTIVE} />
+        </a>
+      </div>
+
       {/* 피드백 남기기 — 하늘하늘 탭 링크 카드와 같은 어법(아이콘 + 라벨·설명 + 외부 링크 표시) */}
       <div style={{ marginBottom: 24 }}>
         <a
@@ -91,6 +119,13 @@ export default function MyTab({ student, studentToken, foodSources, onOpenPanda 
           <ArrowSquareOutIcon size={16} weight="bold" color={TEXT_INACTIVE} />
         </a>
       </div>
+
+      {/* 법정 고지 — 지금까지 앱 어디에서도 못 가던 페이지(2026-09-04). 새 탭으로 열어 앱 상태를 잃지 않게. */}
+      <p style={{ fontSize: 12, color: TEXT_TERTIARY, textAlign: 'center', margin: '0 0 24px' }}>
+        <a href="/#/privacy" target="_blank" rel="noopener noreferrer" style={{ color: TEXT_TERTIARY, textDecoration: 'underline', textUnderlineOffset: 3 }}>개인정보처리방침</a>
+        {' · '}
+        <a href="/#/consent" target="_blank" rel="noopener noreferrer" style={{ color: TEXT_TERTIARY, textDecoration: 'underline', textUnderlineOffset: 3 }}>수업 동의서</a>
+      </p>
     </div>
   );
 }

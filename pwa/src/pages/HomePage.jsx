@@ -21,6 +21,7 @@ import { queryPage,
 import { swrLoad } from '../hooks/useCachedResource.js';
 import { CLASSES_DB,
   parseClass } from '../api/classes.js';
+import { attachLogInfo } from '../api/lessonLogs.js';
 import { formatSessions } from '../api/payments.js';
 import { HOMEWORK_DB,
   parseHomework } from '../api/homework.js';
@@ -222,7 +223,7 @@ export default function HomePage() {
     setTodayLoading(true);
     try {
       // 키에 날짜를 넣어 날이 바뀌면 어제 캐시를 쓰지 않게 한다.
-      await swrLoad(`home:today:${todayStr}`, async () => {
+      await swrLoad(`home:today:v2:${todayStr}`, async () => {
         const data = await queryPage(
           CLASSES_DB,
           {
@@ -235,7 +236,8 @@ export default function HomePage() {
           undefined,
           20
         );
-        return (data?.results ?? []).map(parseClass);
+        // 일지 '작성' 여부까지 붙인다 — relation 존재만으론 자동 생성된 빈 일지를 못 거른다(lessonLogs.js 주석).
+        return attachLogInfo((data?.results ?? []).map(parseClass));
       }, (list) => {
         setTodayClasses(list);
         setTodayLoading(false); // 캐시가 있으면 여기서 이미 화면이 찬다
@@ -306,13 +308,18 @@ export default function HomePage() {
 
   // 최근 완료된 수업 (오늘 종료된 수업) - 수업 마무리 카드용
   const nowMs = Date.now();
+  // 앱 숙제는 VIP 학생 전용(정책 확정 2026-09-04) — 비VIP 수업은 일지만 쓰면 마무리다.
+  // 이전엔 숙제까지 요구해서 비VIP 카드가 영영 안 사라지고 '모두 완료'로만 치워야 했다.
+  const vipById = Object.fromEntries(students.map((s) => [s.id, !!s.vip]));
+  const hwRequiredFor = (cls) => cls.studentIds.some((id) => vipById[id]);
   const recentlyCompleted = todayClasses.filter((cls) => {
     if (!cls.endTime) return false;
     if (new Date(cls.endTime).getTime() > nowMs) return false;
     const s = pendingState[cls.id] || {};
     if (s.dismissed) return false;
-    const logDone = (cls.lessonLogIds?.length ?? 0) > 0;
-    if (s.hwDone && logDone) return false;
+    const logDone = !!cls.writtenLogId; // 내용이 있는 일지만 '작성됨'
+    const hwDone = !!s.hwDone || (cls.homeworkIds?.length ?? 0) > 0; // 서버(숙제 relation) 우선, 로컬은 보조
+    if ((hwDone || !hwRequiredFor(cls)) && logDone) return false;
     return true;
   });
   const visiblePending = recentlyCompleted.slice(0, 5);
@@ -661,7 +668,8 @@ export default function HomePage() {
                   key={cls.id}
                   cls={cls}
                   studentName={names}
-                  hwDone={!!s.hwDone}
+                  hwDone={!!s.hwDone || (cls.homeworkIds?.length ?? 0) > 0}
+                  hwRequired={hwRequiredFor(cls)}
                 />
               );
             })}

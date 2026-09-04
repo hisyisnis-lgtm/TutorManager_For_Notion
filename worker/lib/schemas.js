@@ -76,7 +76,7 @@ export const HomeworkSubmitSchema = z.object({
   files: z.array(z.object({
     fileUploadId: z.string().min(1, 'fileUploadId는 필수입니다'),
     fileName: z.string().min(1).max(255, '파일명은 255자 이내'),
-  })).max(20, '한 번에 20개 이하 파일만 제출 가능').optional(),
+  })).max(5, '파일은 최대 5개까지 제출할 수 있어요').optional(),  // 서버 제출 룰(총 5개)과 동일
   deleteFileNames: z.array(z.string().max(255)).max(50).optional(),
 }).strip();
 

@@ -118,6 +118,7 @@ export default function HomeworkFormPage() {
         title: title.trim(),
         content: content.trim(),
         files: uploaded.length > 0 ? uploaded : undefined,
+        classId: fromClassId || undefined,
       });
       if (created?.id) notifyHomework('assign', created.id);
       if (fromClassId) markPendingHwDone(fromClassId);

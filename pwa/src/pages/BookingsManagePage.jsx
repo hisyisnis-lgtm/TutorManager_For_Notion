@@ -121,7 +121,7 @@ export default function BookingsManagePage() {
 
   return (
     <div>
-      <PageHeader title="예약 불가 설정" />
+      <PageHeader title="휴무·불가 시간" />
 
       <div className="flex items-center justify-between px-4 pt-4 pb-3">
         <span className="text-sm text-gray-500">{blocked.length}개 등록됨</span>
@@ -295,7 +295,7 @@ export default function BookingsManagePage() {
       {loading && <LoadingSpinner />}
       {error && <ErrorMessage message={error} onRetry={blockedRes.refresh} />}
       {!loading && !error && blocked.length === 0 && (
-        <EmptyState icon={<ProhibitIcon size={44} weight="thin" style={{ color: BORDER_NEUTRAL }} />} title="등록된 예약 불가 설정이 없습니다" />
+        <EmptyState icon={<ProhibitIcon size={44} weight="thin" style={{ color: BORDER_NEUTRAL }} />} title="등록된 휴무·불가 시간이 없습니다" />
       )}
 
       <div className="px-4 pb-24 space-y-2 mt-1">
@@ -337,7 +337,7 @@ export default function BookingsManagePage() {
 
       {confirmItem && (
         <ConfirmDialog
-          title="예약 불가 설정을 삭제하시겠습니까?"
+          title="이 휴무·불가 시간을 삭제하시겠습니까?"
           message={`"${confirmItem.memo || formatBlockedLabel(confirmItem)}" 항목이 삭제됩니다.`}
           onConfirm={handleDelete}
           onCancel={() => setConfirmItem(null)}

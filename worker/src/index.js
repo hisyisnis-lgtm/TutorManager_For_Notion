@@ -373,13 +373,6 @@ async function handleNotionWebhook(request, env, ctx) {
   return new Response('OK', { status: 200 });
 }
 
-// ===== 알림톡 발송 (Solapi 준비 전 no-op placeholder) =====
-async function sendAlimtalk(_env, { to: _to, templateCode, variables }) {
-  // TODO: Solapi API 키 준비되면 구현
-  // env.SOLAPI_API_KEY, env.SOLAPI_API_SECRET, env.KAKAO_PFID 필요
-  console.log(`[알림톡 placeholder] template=${templateCode}`, JSON.stringify(variables));
-}
-
 // ===== 카카오 알림톡 발송 (Solapi) — 강사 알림용 =====
 async function sendKakaoAlert(env, { to, templateId, variables }) {
   if (!env.SOLAPI_API_KEY || !env.SOLAPI_API_SECRET || !env.KAKAO_PFID || !templateId || !to) return;
@@ -495,7 +488,8 @@ async function studentSessionValid(request, env, token) {
 //  - 유효한 학생 세션 OR 강사 JWT(미리보기·공유) → 통과(null).
 //  - 무효 + 강제 ON(env.STUDENT_AUTH_ENFORCE==='1') → 401.
 //  - 무효 + 강제 OFF(기본 soft) → 통과하되 미세션 접근을 로그로 집계(hard 전환 전 관측용).
-// ⚠️ 현재 2단계: 강제 플래그 미설정(soft) → 동작 변화 없음. 3단계에서 플래그 ON.
+// ✅ 3단계 완료(2026-08-25): 운영 시크릿 STUDENT_AUTH_ENFORCE=1 로 hard. 코드 기본값은 soft라
+//    시크릿 삭제 + Promote version 이 곧 롤백 스위치다.
 async function enforceStudentSession(request, env, corsHeaders, token, routeTag) {
   if (await studentSessionValid(request, env, token)) return null;
   // 강사 기기 우회 — 강사가 학생 페이지를 열면 강사 JWT를 보냄.
@@ -964,7 +958,8 @@ async function handleConsultRequest(request, env, corsHeaders) {
 // ===== 학생앱 휴대폰 인증(step-up) 라우트 =====
 // 유출된 학생 링크를 받은 제3자가 새 기기에서 접근 못 하게: 새 기기는 학생 등록 휴대폰 OTP를 요구.
 // 정상 학생은 기기당 1회 인증 후 세션(JWT)으로 무마찰. 아이콘은 URL 예약코드로 동작(불변).
-// ⚠️ 1단계(현재): 발급 엔드포인트만 추가 — 기존 데이터 라우트는 미변경(soft-enforce는 2단계).
+// 발급(request-otp·verify-otp) + 데이터 라우트 enforceStudentSession 게이트 — 3단계(hard) 운영 중.
+// teacher-grant(전화 미등록 우회코드)는 2026-09-04 제거 — 강사가 학생 폼에 번호를 넣으면 정상 경로로 인증된다.
 const STUDENT_SESSION_TTL = 180 * 24 * 60 * 60; // 180일
 
 async function handleStudentAuthRoutes(request, env, corsHeaders, url) {
@@ -1025,25 +1020,6 @@ async function handleStudentAuthRoutes(request, env, corsHeaders, url) {
     await clearStudentOtp(token);
     const session = await createGameToken(env.JWT_SECRET, studentSessionSub(token), STUDENT_SESSION_TTL);
     return new Response(JSON.stringify({ ok: true, session }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-  }
-
-  // POST /personal/auth/teacher-grant — 강사 JWT 인증 → 전화 미등록 학생용 1회 우회코드 발급
-  if (url.pathname === '/personal/auth/teacher-grant') {
-    const authHeader = request.headers.get('Authorization') || '';
-    const jwt = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
-    if (!jwt || !(await verifyToken(jwt, env.JWT_SECRET))) {
-      return errRes(corsHeaders, 401, '강사 인증이 필요합니다.');
-    }
-    if (!(await rateLimitCheck(`pauth:grant:ip:${ip}`, 30, 60))) {
-      return errRes(corsHeaders, 429, '잠시 후 다시 시도해주세요.');
-    }
-    const body = await request.json().catch(() => null);
-    const v = validateBody(StudentAuthRequestSchema, body, corsHeaders);
-    if (!v.ok) return v.response;
-    const { token } = v.data;
-    const code = String(100000 + (crypto.getRandomValues(new Uint32Array(1))[0] % 900000));
-    await putStudentOtp(token, code, 3600); // 1시간 유효 — 강사가 학생에게 직접 전달
-    return new Response(JSON.stringify({ ok: true, code }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
 
   return errRes(corsHeaders, 404, 'Not Found');
@@ -1163,9 +1139,10 @@ async function handleNoticeRoutes(request, env, corsHeaders, url) {
 // ===== 예약 시스템 라우트 처리 =====
 async function handleBookingRoutes(request, env, corsHeaders, url) {
   // 모든 예약 라우트는 Notion 쿼리를 유발하므로 IP당 분당 60회 제한.
-  // 공개 GET(slots·time-slots·check-conflict)이 무제한이면 무한 루프 하나로
-  // NOTION_TOKEN 쿼터(~3rps)를 고갈시켜 예약·숙제·게임 전체가 마비될 수 있어 전 라우트에 적용.
-  // (강사 JWT 라우트 /booking/blocked도 포함 — 단일 강사 사용량엔 영향 없는 한도)
+  // 학생 공개 GET(student·my-classes)이 무제한이면 무한 루프 하나로
+  // NOTION_TOKEN 쿼터(~3rps)를 고갈시켜 숙제·공지까지 마비될 수 있어 전 라우트에 적용.
+  // (강사 JWT 라우트 time-slots·check-conflict·blocked도 포함 — 단일 강사 사용량엔 영향 없는 한도)
+  // ⛔ 학생 자가예약(reserve·slots·status·my-class 취소/복구)은 2026-06-10 폐기 → 2026-09-04 영구 폐기로 라우트 삭제.
   if (!(await rateLimitCheck(`book:${clientIp(request)}`, 60, 60))) {
     return errRes(corsHeaders, 429, '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.');
   }
@@ -1218,57 +1195,11 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
     return { isBlocked, getBlockedTimes };
   };
 
-  // GET /booking/slots?from=YYYY-MM-DD&to=YYYY-MM-DD
-  // 전일 차단된 날짜만 제외하고 오늘+2일 ~ 오늘+90일 범위 전부 반환
-  if (url.pathname === '/booking/slots' && request.method === 'GET') {
-    const nowKST = new Date(Date.now() + 9 * 60 * 60 * 1000);
-    const minDate = new Date(nowKST);
-    minDate.setUTCDate(minDate.getUTCDate() + 2);
-    const minDateStr = minDate.toISOString().slice(0, 10);
-
-    const fromParam = url.searchParams.get('from');
-    const toParam = url.searchParams.get('to');
-    const from = !fromParam || fromParam < minDateStr ? minDateStr : fromParam;
-    const to = toParam || (() => {
-      const d = new Date(minDate);
-      d.setUTCDate(d.getUTCDate() + 90);
-      return d.toISOString().slice(0, 10);
-    })();
-
-    const blockedRes = await n('POST', `/databases/${BLOCKED_DATES_DB_ID}/query`, {
-      filter: {
-        or: [
-          { property: '반복 유형', select: { equals: '반복' } },
-          {
-            and: [
-              { property: '반복 유형', select: { equals: '일회성' } },
-              { property: '날짜', date: { on_or_after: from } },
-            ],
-          },
-        ],
-      },
-      page_size: 100,
-    });
-    const { isBlocked } = buildBlockedData(blockedRes.results);
-
-    const result = [];
-    const cur = new Date(from + 'T00:00:00Z');
-    const end = new Date(to + 'T00:00:00Z');
-
-    while (cur <= end) {
-      const dateStr = cur.toISOString().slice(0, 10);
-      if (!isBlocked(dateStr)) result.push({ date: dateStr });
-      cur.setUTCDate(cur.getUTCDate() + 1);
-    }
-
-    return new Response(JSON.stringify(result), {
-      status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  }
-
-  // GET /booking/time-slots?date=YYYY-MM-DD — 해당 날짜의 30분 단위 예약 가능 시간 목록
+  // GET /booking/time-slots?date=YYYY-MM-DD — 해당 날짜의 30분 단위 슬롯 점유 현황 (강사 수업 폼 전용)
+  // 학생 자가예약이 영구 폐기(2026-09-04)되면서 공개일 이유가 사라졌다 — 강사 일정이 무인증으로 새지 않게 JWT 요구.
   if (url.pathname === '/booking/time-slots' && request.method === 'GET') {
+    const authErr = await requireJwt(request, env, corsHeaders);
+    if (authErr) return authErr;
     const date = url.searchParams.get('date');
     if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
       return new Response(JSON.stringify([]), {
@@ -1374,8 +1305,10 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
     });
   }
 
-  // GET /booking/check-conflict?date=YYYY-MM-DD&startTime=HH:MM&duration=NNN&excludeId=pageId (강사용 충돌 검사)
+  // GET /booking/check-conflict?date=YYYY-MM-DD&startTime=HH:MM&duration=NNN&excludeId=pageId (강사용 충돌 검사, JWT)
   if (url.pathname === '/booking/check-conflict' && request.method === 'GET') {
+    const authErr = await requireJwt(request, env, corsHeaders);
+    if (authErr) return authErr;
     const date = url.searchParams.get('date');
     const startTime = url.searchParams.get('startTime');
     const duration = parseInt(url.searchParams.get('duration') ?? '0');
@@ -1414,152 +1347,6 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
     }
 
     return new Response(JSON.stringify({ conflict: false }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  }
-
-  // POST /booking/reserve
-  if (url.pathname === '/booking/reserve' && request.method === 'POST') {
-    const body = await request.json().catch(() => ({}));
-    const { date, startTime, endTime, studentToken, mode } = body;
-
-    if (!date || !startTime || !endTime || !studentToken) {
-      return new Response(JSON.stringify({ error: '필수 항목이 누락되었습니다.' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // 학생 코드로 학생 조회
-    const studentRes = await n('POST', `/databases/${STUDENT_DB_ID}/query`, {
-      filter: { property: '예약 코드', rich_text: { equals: studentToken } },
-      page_size: 1,
-    });
-    const studentPage = studentRes.results?.[0];
-    if (!studentPage) {
-      return new Response(JSON.stringify({ error: '등록된 학생이 아닙니다. 예약 코드를 확인해주세요.' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    const sProps = studentPage.properties;
-    const rawName = sProps?.['이름']?.title?.[0]?.plain_text ?? '';
-    const studentName = stripEmoji(rawName);
-    const phone = sProps?.['전화번호']?.phone_number ?? '';
-    const { remainingSessions } = await loadSessionCounts(n, studentPage.id, sProps);
-
-    const durationMin = timeToMin(endTime) - timeToMin(startTime);
-
-    if (durationMin < 60) {
-      return new Response(JSON.stringify({ error: '최소 1시간 이상 예약해야 합니다.' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-    if (durationMin % 30 !== 0) {
-      return new Response(JSON.stringify({ error: '30분 단위로만 예약 가능합니다.' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // 잔여 시간 회차 체크 (60분=1회차, 90분=1.5회차 등)
-    const requiredSessions = durationMin / 60;
-    if (remainingSessions < requiredSessions) {
-      return new Response(JSON.stringify({ error: `잔여 시간이 부족합니다. (잔여: ${remainingSessions}시간, 필요: ${requiredSessions}시간)` }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Race condition 방지: 같은 날짜의 수업(CLASS_DB)과 시간 겹침 확인
-    const classCheckRes = await n('POST', `/databases/${CLASS_DB_ID}/query`, {
-      filter: { property: '수업 일시', date: { equals: date } },
-      page_size: 100,
-    });
-
-    const startMin = timeToMin(startTime);
-    const endMin = timeToMin(endTime);
-    const hasOverlap = (classCheckRes.results ?? [])
-      .filter(p => p.properties?.['특이사항']?.select?.name !== '🚫 취소')
-      .some(p => {
-        const dtStr = p.properties?.['수업 일시']?.date?.start;
-        const dur = Number(p.properties?.['수업 시간(분)']?.select?.name);
-        if (!dtStr || !dur) return false;
-        const tm = dtStr.match(/T(\d{2}):(\d{2})/);
-        if (!tm) return false;
-        const bStart = Number(tm[1]) * 60 + Number(tm[2]);
-        const bEnd = bStart + dur;
-        // 수업 사이 30분 갭 필수: 기존 수업 종료 후 30분, 시작 전 30분 이내 불가
-        return startMin < bEnd + 30 && endMin > bStart - 30;
-      });
-
-    if (hasOverlap) {
-      return new Response(JSON.stringify({ error: '해당 시간은 다른 수업과 30분 이내 겹칩니다. 다른 시간을 선택해주세요.' }), {
-        status: 409,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    const token = crypto.randomUUID();
-
-    // 수업 캘린더 DB에 등록 (예약 토큰 포함)
-    const classDatetime = `${date}T${startTime}:00+09:00`;
-    const classProps = {
-      '제목': { title: [{ text: { content: `${studentName} ${date}` } }] },
-      '수업 일시': { date: { start: classDatetime } },
-      '수업 시간(분)': { select: { name: String(durationMin) } },
-      '학생': { relation: [{ id: studentPage.id }] },
-      '예약 토큰': { rich_text: [{ text: { content: token } }] },
-    };
-    if (env.LESSON_TYPE_PAGE_ID) classProps['수업 유형'] = { relation: [{ id: env.LESSON_TYPE_PAGE_ID }] };
-    if (mode) classProps['수업 장소'] = { select: { name: mode } };
-
-    const newPage = await n('POST', '/pages', {
-      parent: { database_id: CLASS_DB_ID },
-      properties: classProps,
-    });
-
-    // 레이스 컨디션 방지: 생성 직후 재확인 (동시 요청이 겹친 경우 롤백)
-    const postCheckRes = await n('POST', `/databases/${CLASS_DB_ID}/query`, {
-      filter: { property: '수업 일시', date: { equals: date } },
-      page_size: 100,
-    });
-    const postConflicts = (postCheckRes.results ?? [])
-      .filter(p => p.id !== newPage.id && p.properties?.['특이사항']?.select?.name !== '🚫 취소')
-      .filter(p => {
-        const dtStr = p.properties?.['수업 일시']?.date?.start;
-        const dur = Number(p.properties?.['수업 시간(분)']?.select?.name);
-        if (!dtStr || !dur) return false;
-        const tm = dtStr.match(/T(\d{2}):(\d{2})/);
-        if (!tm) return false;
-        const bStart = Number(tm[1]) * 60 + Number(tm[2]);
-        const bEnd = bStart + dur;
-        return startMin < bEnd && bStart < endMin;
-      });
-    if (postConflicts.length > 0) {
-      await n('PATCH', `/pages/${newPage.id}`, { archived: true }).catch(e => {
-        console.error('[예약 롤백 실패] 중복 수업 페이지 잔존:', newPage.id, e?.message);
-      });
-      return new Response(JSON.stringify({ error: '방금 다른 분이 예약했습니다. 다른 시간을 선택해주세요.' }), {
-        status: 409,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    try {
-      await sendAlimtalk(env, {
-        to: phone,
-        templateCode: 'BOOKING_CONFIRMED',
-        variables: { name: studentName, date, startTime },
-      });
-    } catch (e) {
-      console.error('[알림톡] 발송 실패 (예약은 완료됨):', e.message);
-    }
-
-    return new Response(JSON.stringify({ token, date, startTime, endTime, durationMin, studentName }), {
-      status: 201,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
@@ -1645,57 +1432,11 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
       paidHours,
       completedMinutes,
       sharedAt,
+      // 앱 숙제는 VIP(숙제 관리 대상) 전용(정책 확정 2026-09-04). 비VIP 학생앱은 숙제 섹션·보관함을 숨긴다.
+      homeworkEnabled: !!props?.['VIP']?.checkbox,
       // 숙제 먹이: 노션 학생 DB rollup이 자동 합산. PWA가 sharedAt 게이팅 적용.
       submittedHomeworkFood: props?.['숙제 제출 먹이']?.rollup?.number ?? 0,
       feedbackSeenHomeworkFood: props?.['피드백 확인 먹이']?.rollup?.number ?? 0,
-    }), {
-      status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  }
-
-  // GET /booking/status/:token — CLASS_DB 기반
-  const statusMatch = url.pathname.match(/^\/booking\/status\/([^/]+)$/);
-  if (statusMatch && request.method === 'GET') {
-    const token = decodeURIComponent(statusMatch[1]);
-    const res = await n('POST', `/databases/${CLASS_DB_ID}/query`, {
-      filter: { property: '예약 토큰', rich_text: { equals: token } },
-      page_size: 1,
-    });
-
-    const page = res.results?.[0];
-    if (!page) {
-      return new Response(JSON.stringify({ error: '예약을 찾을 수 없습니다.' }), {
-        status: 404,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    const props = page.properties;
-    const dtStr = props['수업 일시']?.date?.start ?? '';
-    const date = dtStr.slice(0, 10);
-    const tm = dtStr.match(/T(\d{2}):(\d{2})/);
-    const startTime = tm ? `${tm[1]}:${tm[2]}` : '';
-    const durationMin = Number(props['수업 시간(분)']?.select?.name) || 0;
-    const isCancelled = props['특이사항']?.select?.name === '🚫 취소';
-
-    // 학생 이름: 학생 relation에서 조회
-    let studentName = '';
-    const studentRelation = props['학생']?.relation ?? [];
-    if (studentRelation.length > 0) {
-      try {
-        const studentPage = await n('GET', `/pages/${studentRelation[0].id}`);
-        const rawName = studentPage.properties?.['이름']?.title?.[0]?.plain_text ?? '';
-        studentName = stripEmoji(rawName);
-      } catch {}
-    }
-
-    return new Response(JSON.stringify({
-      status: isCancelled ? '취소' : '확정',
-      date,
-      startTime,
-      durationMin,
-      studentName,
     }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -1785,148 +1526,6 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
       classType: lessonTypeId ? (typeMap[lessonTypeId] ?? null) : null,
     }));
     return new Response(JSON.stringify(classes), {
-      status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  }
-
-  // DELETE /booking/my-class/:classId (학생 본인 수업 취소, 당일 불가)
-  // 토큰은 body { token } 로 전달 (URL 쿼리 노출 방지)
-  const myClassDeleteMatch = url.pathname.match(/^\/booking\/my-class\/([^/]+)$/);
-  if (myClassDeleteMatch && request.method === 'DELETE') {
-    const classId = myClassDeleteMatch[1];
-    const deleteBody = await request.json().catch(() => ({}));
-    const studentToken = deleteBody.token || '';
-    if (!studentToken) {
-      return new Response(JSON.stringify({ error: '인증이 필요합니다.' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-    const gate = await enforceStudentSession(request, env, corsHeaders, studentToken, 'booking/my-class:delete');
-    if (gate) return gate;
-    const sRes = await n('POST', `/databases/${STUDENT_DB_ID}/query`, {
-      filter: { property: '예약 코드', rich_text: { equals: studentToken } },
-      page_size: 1,
-    });
-    const sPage = sRes.results?.[0];
-    if (!sPage) {
-      return new Response(JSON.stringify({ error: '예약 코드가 올바르지 않습니다.' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-    const classPageRes = await n('GET', `/pages/${classId}`);
-    if (!classPageRes || classPageRes.object === 'error') {
-      return new Response(JSON.stringify({ error: '수업을 찾을 수 없습니다.' }), {
-        status: 404,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-    const cProps = classPageRes.properties;
-    // 소유자 확인
-    const classStudentIds = (cProps?.['학생']?.relation ?? []).map(r => r.id);
-    if (!classStudentIds.includes(sPage.id)) {
-      return new Response(JSON.stringify({ error: '이 수업을 취소할 권한이 없습니다.' }), {
-        status: 403,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-    if (cProps?.['특이사항']?.select?.name === '🚫 취소') {
-      return new Response(JSON.stringify({ error: '이미 취소된 수업입니다.' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-    // 당일 취소 불가
-    const dtStr = cProps?.['수업 일시']?.date?.start ?? '';
-    const classDate = dtStr.slice(0, 10);
-    const todayKST = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(new Date());
-    if (!classDate || classDate <= todayKST) {
-      return new Response(JSON.stringify({ error: '당일 취소는 불가합니다. 강사에게 직접 연락해주세요.' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-    // CLASS_DB 취소 처리
-    await n('PATCH', `/pages/${classId}`, {
-      properties: { '특이사항': { select: { name: '🚫 취소' } } },
-    });
-    return new Response(JSON.stringify({ ok: true }), {
-      status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  }
-
-  // POST /booking/my-class/:classId/restore (학생 본인 취소 수업 복구)
-  // 토큰은 body { token } 로 전달 (URL 쿼리 노출 방지)
-  const myClassRestoreMatch = url.pathname.match(/^\/booking\/my-class\/([^/]+)\/restore$/);
-  if (myClassRestoreMatch && request.method === 'POST') {
-    const classId = myClassRestoreMatch[1];
-    const restoreBody = await request.json().catch(() => ({}));
-    const studentToken = restoreBody.token || '';
-    if (!studentToken) {
-      return new Response(JSON.stringify({ error: '인증이 필요합니다.' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-    const gate = await enforceStudentSession(request, env, corsHeaders, studentToken, 'booking/my-class:restore');
-    if (gate) return gate;
-    const sRes = await n('POST', `/databases/${STUDENT_DB_ID}/query`, {
-      filter: { property: '예약 코드', rich_text: { equals: studentToken } },
-      page_size: 1,
-    });
-    const sPage = sRes.results?.[0];
-    if (!sPage) {
-      return new Response(JSON.stringify({ error: '예약 코드가 올바르지 않습니다.' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-    const classPageRes = await n('GET', `/pages/${classId}`);
-    if (!classPageRes || classPageRes.object === 'error') {
-      return new Response(JSON.stringify({ error: '수업을 찾을 수 없습니다.' }), {
-        status: 404,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-    const cProps = classPageRes.properties;
-    const classStudentIds = (cProps?.['학생']?.relation ?? []).map(r => r.id);
-    if (!classStudentIds.includes(sPage.id)) {
-      return new Response(JSON.stringify({ error: '이 수업을 복구할 권한이 없습니다.' }), {
-        status: 403,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-    if (cProps?.['특이사항']?.select?.name !== '🚫 취소') {
-      return new Response(JSON.stringify({ error: '취소된 수업이 아닙니다.' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-    const dtStr = cProps?.['수업 일시']?.date?.start ?? '';
-    const classDate = dtStr.slice(0, 10);
-    const todayKST = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(new Date());
-    if (!classDate || classDate <= todayKST) {
-      return new Response(JSON.stringify({ error: '과거 수업은 복구할 수 없습니다.' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-    const restoreDurationMin = Number(cProps?.['수업 시간(분)']?.select?.name) || 60;
-    const requiredForRestore = restoreDurationMin / 60;
-    const { remainingSessions: currentRemaining } = await loadSessionCounts(n, sPage.id, sPage.properties);
-    if (currentRemaining < requiredForRestore) {
-      return new Response(JSON.stringify({ error: `잔여 시간이 부족하여 복구할 수 없습니다. (잔여: ${currentRemaining}시간, 필요: ${requiredForRestore}시간)` }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-    await n('PATCH', `/pages/${classId}`, {
-      properties: { '특이사항': { select: null } },
-    });
-    return new Response(JSON.stringify({ ok: true }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
@@ -2844,7 +2443,7 @@ async function handleFetch(request, env, ctx) {
       return handleGameRoutes(request, env, corsHeaders, url);
     }
 
-    // 학생앱 휴대폰 인증(step-up) — request-otp/verify-otp는 공개, teacher-grant는 내부에서 강사 JWT 검증
+    // 학생앱 휴대폰 인증(step-up) — request-otp/verify-otp (공개)
     if (url.pathname.startsWith('/personal/auth/')) {
       return handleStudentAuthRoutes(request, env, corsHeaders, url);
     }

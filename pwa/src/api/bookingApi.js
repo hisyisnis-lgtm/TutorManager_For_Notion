@@ -50,7 +50,7 @@ async function bookingFetch(method, path, body, { auth = false, studentToken = '
 export async function fetchTimeSlotsForTeacher(date, excludeId = '') {
   const params = new URLSearchParams({ date, skipMinDate: '1' });
   if (excludeId) params.set('excludeId', excludeId);
-  const data = await bookingFetch('GET', `/booking/time-slots?${params}`);
+  const data = await bookingFetch('GET', `/booking/time-slots?${params}`, undefined, { auth: true });
   return Array.isArray(data) ? { available: data, passable: data } : data;
 }
 
@@ -86,7 +86,7 @@ export async function checkConflict(date, startTime, duration, excludeId = '') {
   const params = new URLSearchParams({ date, startTime, duration: String(duration) });
   if (excludeId) params.set('excludeId', excludeId);
   try {
-    return await bookingFetch('GET', `/booking/check-conflict?${params}`);
+    return await bookingFetch('GET', `/booking/check-conflict?${params}`, undefined, { auth: true });
   } catch {
     return { conflict: false, checkFailed: true };
   }

@@ -34,7 +34,7 @@ const SLIDES = [
     type: 'icon',
     theme: 'light',
     Icon: CalendarBlankIcon,
-    tag: '내 수업',
+    tag: '수업 일정',
     title: '수업 일정을\n한눈에 확인해요',
     desc: '예정된 수업과 완료된 수업,\n남은 수업 시간까지 볼 수 있어요.',
   },
@@ -75,13 +75,15 @@ const ZONE_HEIGHT = 256;
 // 모든 light 슬라이드가 공유하는 단일 배경 — "슬라이드마다 다른 색" 패턴 제거
 const ZONE_BG = BG_WARM;
 
-export default function OnboardingCarousel({ onDone }) {
+// showHomework=false(비VIP)면 숙제 슬라이드를 뺀다 — 마운트 시점에 한 번 고정(도중에 장수가 바뀌면 인덱스가 어긋난다).
+export default function OnboardingCarousel({ onDone, showHomework = true }) {
+  const [slides] = useState(() => (showHomework ? SLIDES : SLIDES.filter((s) => s.id !== 'homework')));
   const [current, setCurrent] = useState(0);
   const touchStartX = useRef(null);
   // 슬라이드별 진입 횟수 — 키가 바뀌면 Fragment 자식이 리마운트돼
   // stagger 애니메이션이 재실행된다.
-  const visitCounts = useRef(SLIDES.map(() => 0));
-  const isLast = current === SLIDES.length - 1;
+  const visitCounts = useRef(slides.map(() => 0));
+  const isLast = current === slides.length - 1;
   // 슬라이드 1(brand)은 어두운 배경 → 버튼·도트·skip 색상을 흰색 계열로 전환
   const isOnDark = current === 0;
 
@@ -114,7 +116,7 @@ export default function OnboardingCarousel({ onDone }) {
   const handleTouchEnd = useCallback((e) => {
     if (touchStartX.current === null) return;
     const diff = touchStartX.current - e.changedTouches[0].clientX;
-    if (diff > 60 && current < SLIDES.length - 1) advance(current + 1);
+    if (diff > 60 && current < slides.length - 1) advance(current + 1);
     if (diff < -60 && current > 0) advance(current - 1);
     touchStartX.current = null;
   }, [current, advance]);
@@ -123,7 +125,7 @@ export default function OnboardingCarousel({ onDone }) {
   // render 내부 컴포넌트 정의로 인한 unmount/remount 버그를 방지한다.
   const dots = (
     <div style={{ display: 'flex', gap: 4, alignItems: 'center', justifyContent: 'center' }}>
-      {SLIDES.map((_, i) => (
+      {slides.map((_, i) => (
         <button
           key={i}
           aria-label={`${i + 1}번째 슬라이드`}
@@ -239,19 +241,19 @@ export default function OnboardingCarousel({ onDone }) {
           <div style={{
             flex: 1,
             display: 'flex',
-            transform: `translateX(${-current * (100 / SLIDES.length)}%)`,
+            transform: `translateX(${-current * (100 / slides.length)}%)`,
             transitionProperty: 'transform',
             transitionDuration: '0.40s',
             transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)',
-            width: `${SLIDES.length * 100}%`,
+            width: `${slides.length * 100}%`,
             willChange: 'transform',
             minHeight: 0,
           }}>
-            {SLIDES.map((slide, idx) => (
+            {slides.map((slide, idx) => (
               <div
                 key={slide.id}
                 style={{
-                  width: `${100 / SLIDES.length}%`,
+                  width: `${100 / slides.length}%`,
                   flexShrink: 0,
                   display: 'flex',
                   flexDirection: 'column',

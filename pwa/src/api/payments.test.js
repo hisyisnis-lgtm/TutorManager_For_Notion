@@ -1,7 +1,7 @@
 // 돈 계산 순수 함수 테스트 — 결제 예정액·부분환불 환산·표시 포맷.
 // 매출 숫자라 틀리면 손해가 커서 경계값 위주로 고정한다.
 import { describe, it, expect } from 'vitest';
-import { calcPaymentAmount, refundSessions, formatSessions, isWholeSession, validatePaymentForm, remainingSessionsOf } from './payments.js';
+import { calcPaymentAmount, refundSessions, effectiveSessionsAfterRefund, formatSessions, isWholeSession, validatePaymentForm, remainingSessionsOf } from './payments.js';
 
 describe('validatePaymentForm — 온라인그룹수업 결제 편집 (버그 수정 검증)', () => {
   const groupForm = { classTypeId: 'ct-group', sessionCount: '0', actualAmount: '140000', studentId: '' };
@@ -51,22 +51,35 @@ describe('calcPaymentAmount — 결제 예정 금액', () => {
   });
 });
 
-describe('refundSessions — 환불 금액 → 환산 회차', () => {
-  it('할인 없는 단가 기준 환산', () => {
-    expect(refundSessions({ refundAmount: 100000, unitPrice: 50000, discountRate: 0 })).toBe(2);
+describe('환불 환산 — 진행분 정가 차감 (Notion 유효 시간 회차 formula와 동일식, 2026-09-04)', () => {
+  it('할인 없음: 10h 50만원, 30만원 환불 → 유효 4h · 환불 6h', () => {
+    const p = { sessionCount: 10, actualAmount: 500000, refundAmount: 300000, unitPrice: 50000 };
+    expect(effectiveSessionsAfterRefund(p)).toBe(4);
+    expect(refundSessions(p)).toBe(6);
   });
-  it('할인 적용 단가 기준 환산 (Notion 유효 회차 formula와 동일식)', () => {
-    // 단가 50000, 10% 할인 → 회차당 45000. 90000 환불 = 2회차
-    expect(refundSessions({ refundAmount: 90000, unitPrice: 50000, discountRate: 10 })).toBe(2);
+  it('할인 10%: 10h 45만원, 4h 진행 후 정가 차감 환불 25만원 → 유효 4h(옛 식은 4.44h)', () => {
+    const p = { sessionCount: 10, actualAmount: 450000, refundAmount: 250000, unitPrice: 50000, discountRate: 10 };
+    expect(effectiveSessionsAfterRefund(p)).toBe(4);
+    expect(refundSessions(p)).toBe(6);
   });
-  it('소수 회차는 반올림 없이 그대로', () => {
-    expect(refundSessions({ refundAmount: 75000, unitPrice: 50000, discountRate: 0 })).toBe(1.5);
+  it('90분 수업(1.5h)도 소수 그대로', () => {
+    const p = { sessionCount: 3, actualAmount: 150000, refundAmount: 75000, unitPrice: 50000 };
+    expect(effectiveSessionsAfterRefund(p)).toBe(1.5);
+    expect(refundSessions(p)).toBe(1.5);
   });
-  it('단가 0(학생 없는 그룹 결제)은 div-by-zero 없이 0', () => {
-    expect(refundSessions({ refundAmount: 100000, unitPrice: 0, discountRate: 0 })).toBe(0);
+  it('전액 환불 → 유효 0h', () => {
+    const p = { sessionCount: 6, actualAmount: 300000, refundAmount: 300000, unitPrice: 50000 };
+    expect(effectiveSessionsAfterRefund(p)).toBe(0);
+    expect(refundSessions(p)).toBe(6);
   });
-  it('환불액 0/미지정이면 0', () => {
-    expect(refundSessions({ refundAmount: 0, unitPrice: 50000 })).toBe(0);
+  it('초과 결제는 시간 회차를 넘지 않는다(cap)', () => {
+    const p = { sessionCount: 10, actualAmount: 600000, refundAmount: 100000, unitPrice: 50000 };
+    expect(effectiveSessionsAfterRefund(p)).toBe(10);
+    expect(refundSessions(p)).toBe(0);
+  });
+  it('단가 0(학생 없는 그룹 결제)·환불 없음은 시간 회차 그대로, 환불 시간 0', () => {
+    expect(effectiveSessionsAfterRefund({ sessionCount: 0, actualAmount: 100000, refundAmount: 50000, unitPrice: 0 })).toBe(0);
+    expect(refundSessions({ sessionCount: 10, actualAmount: 500000, refundAmount: 0, unitPrice: 50000 })).toBe(0);
     expect(refundSessions({})).toBe(0);
     expect(refundSessions()).toBe(0);
   });

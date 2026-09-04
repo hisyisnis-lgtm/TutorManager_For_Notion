@@ -37,16 +37,17 @@ import {
 const netPaid = (p) => (p.actualAmount || 0) - (p.refundAmount || 0);
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-// 예상 결제 간격 산정 기준: 1시간 50,000원, 주 1회 1.5시간 = 주당 75,000원
-const HOURLY_RATE = 50000;
-const WEEKLY_HOURS = 1.5;
-const WEEKLY_COST = HOURLY_RATE * WEEKLY_HOURS; // 75,000원/주
+// 결제 이력이 1건뿐이거나 간격을 못 잡을 때의 폴백 가정: 주 1회 1.5시간.
+// 시간당 단가는 고정값(예전 50,000)을 쓰지 않고 **그 학생의 마지막 결제 단가**(2:1·할인·인상 반영)를 쓴다(2026-09-04).
+const ASSUMED_WEEKLY_HOURS = 1.5;
+const FALLBACK_HOURLY_RATE = 50000; // 단가를 알 수 없는 결제(수업 종류 미연결)에만
 // 미리 결제(짧은 간격)는 평균에서 제외하는 기준 — 20일 이하 간격은 미리결제로 보고 제외
 const MIN_INTERVAL_DAYS = 20;
 
-// 결제 금액으로 다음 결제까지의 간격(ms) 추정 — 결제액만큼 수업기간이 늘어난다는 가정
-function estimateIntervalByAmount(amount) {
-  const weeks = amount / WEEKLY_COST;
+// 결제 금액 ÷ (주당 시간 × 시간당 단가) = 몇 주치인지 → 다음 결제까지의 간격(ms)
+function estimateIntervalByAmount(amount, hourlyRate) {
+  const rate = hourlyRate > 0 ? hourlyRate : FALLBACK_HOURLY_RATE;
+  const weeks = amount / (rate * ASSUMED_WEEKLY_HOURS);
   return weeks * 7 * DAY_MS;
 }
 
@@ -179,6 +180,8 @@ const IncomeSummary = forwardRef(function IncomeSummary(_props, ref) {
         if (studentPayments.length === 0) continue;          // 결제 이력 없음
         const lastPayment = studentPayments[0];
         const expectedAmount = lastPayment.actualAmount || 0;
+        // 학생이 실제로 내는 시간당 금액(할인 반영). 폴백 간격 추정에만 쓴다.
+        const paidHourlyRate = (lastPayment.unitPrice || 0) * (1 - (lastPayment.discountRate || 0) / 100);
         if (expectedAmount <= 0) continue;                    // 마지막 결제 금액 0
         if (!lastPayment.paymentDate) continue;               // 결제일 없음
         const lastPaymentDate = new Date(lastPayment.paymentDate);
@@ -207,16 +210,16 @@ const IncomeSummary = forwardRef(function IncomeSummary(_props, ref) {
           }
         } else {
           // 결제 1건 → 금액 기반 간격 (결제액만큼 수업기간이 늘어난다는 가정)
-          intervalMs = estimateIntervalByAmount(expectedAmount);
-          basis = `금액기반(${Math.round(intervalMs / DAY_MS)}일)`;
+          intervalMs = estimateIntervalByAmount(expectedAmount, paidHourlyRate);
+          basis = `금액기반(${Math.round(intervalMs / DAY_MS)}일·주${ASSUMED_WEEKLY_HOURS}h 가정)`;
         }
 
         // 추정 간격을 못 구함 (결제 2건+인데 20일 초과 간격이 하나도 없음 = 항상 미리 몰아서 결제)
         if (intervalMs == null) {
           if (firstShortage) {
             // 시간부족 날짜는 있으니 반복용 간격만 금액 기반으로 폴백
-            intervalMs = estimateIntervalByAmount(expectedAmount);
-            basis = `금액기반(간격부적합·${Math.round(intervalMs / DAY_MS)}일)`;
+            intervalMs = estimateIntervalByAmount(expectedAmount, paidHourlyRate);
+            basis = `금액기반(간격부적합·${Math.round(intervalMs / DAY_MS)}일·주${ASSUMED_WEEKLY_HOURS}h 가정)`;
           } else {
             continue; // 간격이 20일 이하로만 관측 — 정기 결제로 보기 어려움
           }

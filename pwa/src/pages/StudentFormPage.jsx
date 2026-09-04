@@ -11,6 +11,9 @@ import PageHeader from '../components/layout/PageHeader.jsx';
 import SubmitButton from '../components/ui/SubmitButton.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import { createStudent, updateStudent, parseStudent, STATUS_OPTIONS, markStudentSharedIfEmpty } from '../api/students.js';
+import { fetchUnlinkedConsults, matchConsults, linkConsultToStudent } from '../api/consults.js';
+import ConfirmDialog from '../components/ui/ConfirmDialog.jsx';
+import { invalidateCache } from '../hooks/useCachedResource.js';
 import { getPage } from '../api/notionClient.js';
 import { useData } from '../context/DataContext.jsx';
 import { PRIMARY, TEXT_PRIMARY, TEXT_SECONDARY } from '../constants/theme.js';
@@ -23,6 +26,12 @@ function generateCode() {
   const buf = new Uint8Array(12);
   crypto.getRandomValues(buf);
   return Array.from(buf, (b) => CODE_CHARS[b % CODE_CHARS.length]).join('');
+}
+
+function formatApplied(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return `${d.getMonth() + 1}월 ${d.getDate()}일`;
 }
 
 export default function StudentFormPage() {
@@ -89,6 +98,48 @@ export default function StudentFormPage() {
   // 비활성 버튼을 눌렀을 때 무엇이 모자란지 말해주려고 이유를 문자열로 들고 있는다.
   const blockedReason = !form.name.trim() ? '이름을 입력하세요.' : !isDirty ? '변경된 내용이 없어요.' : null;
 
+  // 이름만 일치한 상담 — 자동 연결 대신 한 번 묻는다. { consult, studentId }
+  const [nameMatch, setNameMatch] = useState(null);
+  const [linking, setLinking] = useState(false);
+
+  const linkConsultAfterCreate = async (studentId, { name, phone }) => {
+    if (!studentId) return false;
+    let consults;
+    try { consults = await fetchUnlinkedConsults(); } catch { return false; }
+    const { byPhone, byName } = matchConsults(consults, { name, phone });
+    if (byPhone) {
+      try {
+        await linkConsultToStudent(byPhone.id, studentId);
+        invalidateCache('consult:');
+        toast.success(`무료상담 신청(${formatApplied(byPhone.appliedAt)})과 연결했어요`);
+      } catch (e) {
+        toast.error(`상담 연결 실패: ${e.message}`);
+      }
+      return false;
+    }
+    if (byName.length > 0) {
+      setNameMatch({ consult: byName[0], studentId });
+      return true; // 다이얼로그가 닫힐 때 이동
+    }
+    return false;
+  };
+
+  const confirmNameMatch = async () => {
+    const { consult, studentId } = nameMatch;
+    setLinking(true);
+    try {
+      await linkConsultToStudent(consult.id, studentId);
+      invalidateCache('consult:');
+      toast.success('무료상담 신청과 연결했어요');
+    } catch (e) {
+      toast.error(`상담 연결 실패: ${e.message}`);
+    } finally {
+      setLinking(false);
+      setNameMatch(null);
+      navigate('/students');
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.name.trim()) {
@@ -103,9 +154,12 @@ export default function StudentFormPage() {
         refreshAll();
         navigate(-1);
       } else {
-        await createStudent({ ...form, name: form.name.trim() });
+        const created = await createStudent({ ...form, name: form.name.trim() });
         refreshAll();
-        navigate('/students');
+        // 무료상담 자동 연결(2026-09-04) — 같은 전화번호의 신청을 찾아 학생을 붙이고 '완료'로.
+        // 이름만 같으면 묻는다(동명이인). 연결 실패는 등록 자체를 막지 않는다.
+        const asked = await linkConsultAfterCreate(created?.id, { name: form.name.trim(), phone: form.phone });
+        if (!asked) navigate('/students');
       }
     } catch (e) {
       setError(e.message);
@@ -295,6 +349,18 @@ export default function StudentFormPage() {
           {isEdit ? '수정 완료' : '학생 추가'}
         </SubmitButton>
       </form>
+      {nameMatch && (
+        <ConfirmDialog
+          title="무료상담 신청 기록이 있어요"
+          message={`${nameMatch.consult.name}님이 ${formatApplied(nameMatch.consult.appliedAt)}에 신청한 상담이 있어요.\n같은 분이면 이 학생과 연결할까요? (전화번호가 달라 자동 연결하지 않았어요)`}
+          confirmLabel="연결"
+          cancelLabel="아니요"
+          danger={false}
+          loading={linking}
+          onConfirm={confirmNameMatch}
+          onCancel={() => { setNameMatch(null); navigate('/students'); }}
+        />
+      )}
     </>
   );
 }

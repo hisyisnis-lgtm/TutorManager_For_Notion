@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 
 import { CheckIcon } from '@phosphor-icons/react';
-import { createLessonLog } from '../../api/lessonLogs.js';
+import { createLessonLog, fetchLogsByClassIds } from '../../api/lessonLogs.js';
 import { invalidateCache } from '../../hooks/useCachedResource.js';
 import { formatTime,
   KST } from '../../utils/dateUtils.js';
@@ -15,12 +15,16 @@ import { PRIMARY,
   GRAY_100,
   TEXT_INACTIVE } from '../../constants/theme.js';
 
-export default function PendingClassCard({ cls, studentName, hwDone }) {
+// hwRequired=false(비VIP·학생 없는 수업)면 숙제 버튼을 아예 내지 않는다 — 눌러봐야 출제 폼에서 막히는 막다른 길이었다.
+export default function PendingClassCard({ cls, studentName, hwDone, hwRequired = true }) {
   const navigate = useNavigate();
   const [creatingLog, setCreatingLog] = useState(false);
 
-  const logId = cls.lessonLogIds?.[0];
-  const logDone = !!logId;
+  // writtenLogId = 내용이 있는 일지, anyLogId = 자동 생성된 빈 일지 포함 아무 일지.
+  // 쓴 일지가 있으면 그걸 열고(수정), 빈 일지만 있으면 그 빈 일지를 **편집 화면으로** 연다(새로 만들지 않음).
+  const writtenLogId = cls.writtenLogId ?? null;
+  const anyLogId = cls.anyLogId ?? cls.lessonLogIds?.[0] ?? null;
+  const logDone = !!writtenLogId;
 
   const timeStr = cls.datetime
     ? new Date(cls.datetime).toLocaleTimeString('ko-KR', { timeZone: KST, hour: '2-digit', minute: '2-digit', hour12: false })
@@ -38,13 +42,25 @@ export default function PendingClassCard({ cls, studentName, hwDone }) {
   };
 
   const handleLogClick = async () => {
-    if (logId) {
-      // 이미 있는 일지는 **읽기 전용 상세**로. 편집은 거기서 '편집' 버튼으로.
-      navigate(`/logs/${logId}`);
+    if (writtenLogId) {
+      // 이미 쓴 일지는 **읽기 전용 상세**로. 편집은 거기서 '편집' 버튼으로.
+      navigate(`/logs/${writtenLogId}`);
+      return;
+    }
+    if (anyLogId) {
+      // 자동 생성된 빈 일지 — 바로 편집 화면으로.
+      navigate(`/logs/${anyLogId}/edit`);
       return;
     }
     setCreatingLog(true);
     try {
+      // 캐시가 오래됐을 수 있다 — 자동화가 그새 빈 일지를 만들었으면 그걸 쓴다(같은 수업에 일지 2개 생기던 사고, 2026-09-04).
+      const fresh = (await fetchLogsByClassIds([cls.id]))[cls.id];
+      const existing = fresh?.writtenLogId ?? fresh?.anyLogId;
+      if (existing) {
+        navigate(fresh.writtenLogId ? `/logs/${existing}` : `/logs/${existing}/edit`);
+        return;
+      }
       const dateStr = cls.datetime
         ? new Date(cls.datetime).toLocaleDateString('ko-KR', { timeZone: KST, month: 'numeric', day: 'numeric' })
         : '';
@@ -110,6 +126,7 @@ export default function PendingClassCard({ cls, studentName, hwDone }) {
             숙제 부여·일지 작성이 둘 다 끝나도 즉시 사라진다. 치울 길은 전체 목록 화면의 '모두 완료'에 남아 있다. */}
       </div>
       <div style={{ display: 'flex', gap: 8 }}>
+        {hwRequired && (
         <button
           onClick={handleHwClick}
           disabled={hwDone}
@@ -123,6 +140,7 @@ export default function PendingClassCard({ cls, studentName, hwDone }) {
           )}
           {hwDone ? '숙제 부여 완료' : '숙제 부여'}
         </button>
+        )}
         <button
           onClick={handleLogClick}
           disabled={creatingLog}

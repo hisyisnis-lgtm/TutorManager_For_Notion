@@ -201,14 +201,24 @@ export function validatePaymentForm(form, { isOnlineGroup, isEdit }) {
 }
 
 /**
- * 환불 금액 → 환산 시간 (할인 적용 단가 기준, 반올림 없이 소수 그대로).
- * Notion '유효 시간 회차' formula의 차감식과 동일하게 단가 0이면 0 반환(div-by-zero 가드).
- * 학생 없는 결제(단가 0)는 0이라 시간 개념 미적용.
+ * 환불 후 이 결제에 남는 유효 시간 — Notion '유효 시간 회차' formula와 같은 식(표시용).
+ *
+ * 환불 정책(동의서 §3): 진행한 수업은 **정가(시간당 단가)** 로 계산해 빼고 나머지를 돌려준다.
+ * 그래서 "받은 돈 − 돌려준 돈 = 진행한 시간 × 정가" → 유효 시간 = (실제 결제 금액 − 환불 금액) ÷ 시간당 단가.
+ * ⚠️ 이전 식(환불 금액 ÷ 할인 단가)은 할인 결제에서 소수 시간이 예약 가능으로 남는 오류가 있었다(2026-09-04 교체).
+ *    예) 10% 할인 10h 45만원, 4h 진행 → 환불 25만원 → 옛 식 5.56h 차감(0.44h 잔존) / 새 식 유효 4h(정확).
+ * 가드: 단가 0(학생 없는 결제)·환불 없음 → 시간 회차 그대로. 초과 결제는 시간 회차를 넘지 않게 cap, 음수는 0.
  */
-export function refundSessions({ refundAmount, unitPrice, discountRate } = {}) {
-  const perSession = (unitPrice || 0) * (1 - (discountRate || 0) / 100);
-  if (!perSession || !refundAmount) return 0;
-  return refundAmount / perSession;
+export function effectiveSessionsAfterRefund({ sessionCount, actualAmount, refundAmount, unitPrice } = {}) {
+  const total = sessionCount || 0;
+  if (!unitPrice || !refundAmount) return total;
+  return Math.max(0, Math.min(total, ((actualAmount || 0) - refundAmount) / unitPrice));
+}
+
+/** 환불로 줄어드는 시간 = 시간 회차 − 환불 후 유효 시간. 표시용(카드·상세·미리보기). */
+export function refundSessions(p = {}) {
+  const total = p.sessionCount || 0;
+  return Math.max(0, total - effectiveSessionsAfterRefund(p));
 }
 
 /** 시간 표시용 숫자 포맷 — 정수면 정수, 소수면 소수점 2자리까지(불필요한 0 제거). 단위(시간)는 호출부가 붙인다 */

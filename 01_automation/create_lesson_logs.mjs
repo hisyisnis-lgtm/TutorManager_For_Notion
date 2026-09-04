@@ -73,10 +73,20 @@ async function main() {
   }
 
   let created = 0;
+  let skippedInProgress = 0;
   for (const page of pages) {
     const studentRelation = page.properties['학생']?.relation ?? [];
     const dateVal = page.properties['수업 일시']?.date?.start;
     if (!dateVal) continue;
+
+    // 위 쿼리는 '수업 일시(시작) ≤ 지금'만 거른다 → 진행 중인 수업에도 빈 일지가 생겼다(2026-09-04 이소미 12:30 수업,
+    // 12:53에 생성). 강사가 수업 끝나고 앱에서 '일지 작성'을 누르면 캐시엔 아직 없어 **같은 수업에 일지 2개**.
+    // 수업 **종료**(시작 + 수업 시간) 후에만 만든다. 시간이 비어 있으면 60분으로 본다.
+    const durationMin = parseInt(page.properties['수업 시간(분)']?.select?.name, 10) || 60;
+    if (new Date(dateVal).getTime() + durationMin * 60 * 1000 > now.getTime()) {
+      skippedInProgress++;
+      continue;
+    }
 
     // 학생 이름 조회
     const names = [];
@@ -109,7 +119,7 @@ async function main() {
     created++;
   }
 
-  console.log(`완료: ${created}개 일지 생성됨`);
+  console.log(`완료: ${created}개 일지 생성됨${skippedInProgress ? ` · 진행 중 수업 ${skippedInProgress}개는 다음 실행으로` : ''}`);
 }
 
 runWithAlert('create_lesson_logs.mjs', main);

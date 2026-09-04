@@ -1,4 +1,4 @@
-import { queryPage, queryAll, createPage, updatePage } from './notionClient.js';
+import { queryAll, createPage, updatePage } from './notionClient.js';
 import {
   getTitle,
   getRichText,
@@ -10,20 +10,6 @@ import {
 export const LESSON_LOGS_DB = '318838fa-f2a6-81f1-9b9c-fd379b1026ed';
 
 export const ENGAGEMENT_OPTIONS = ['😊 좋음', '😐 보통', '😞 저조'];
-
-export async function fetchLessonLogsPage(opts = {}) {
-  const { studentId, cursor } = opts;
-  const filter = studentId
-    ? { property: '학생', relation: { contains: studentId } }
-    : undefined;
-
-  return queryPage(
-    LESSON_LOGS_DB,
-    filter,
-    [{ timestamp: 'created_time', direction: 'descending' }],
-    cursor
-  );
-}
 
 /**
  * 수업 일지 전체 조회 (최신순).
@@ -71,8 +57,10 @@ export function parseLessonLog(page) {
   return {
     id: page.id,
     title: getTitle(p['제목']),
-    // 일지 DB엔 날짜 속성이 없다(제목에 "이름 M/D"만 들어간다) — 정렬·필터는 생성 시각 기준.
     createdTime: page.created_time ?? '',
+    // rollup '수업 일시'(수업 relation → 수업 일시, 2026-09-04). 목록 정렬·월 필터는 이 값을 우선 쓰고,
+    // 수업이 연결되지 않은 옛 일지만 생성 시각으로 대신한다.
+    classDate: page.properties['수업 일시']?.rollup?.date?.start ?? null,
     classId: getRelationId(p['수업']),
     studentIds: getRelationIds(p['학생']),
     content: getRichText(p['오늘 내용']),
@@ -85,4 +73,36 @@ export function parseLessonLog(page) {
 
 export function isEmpty(log) {
   return !log.content && !log.homework && !log.nextPrepare;
+}
+
+/**
+ * 수업 id 목록 → { [classId]: { writtenLogId, anyLogId } }.
+ *
+ * "일지가 있다"와 "일지를 썼다"는 다르다 — create_lesson_logs.mjs가 매시간 완료 수업에 **빈 일지**를
+ * 만들어 두기 때문에 relation 존재만 보면 안 쓴 일지도 '작성됨'으로 오판한다(2026-09-04, 이소미 수업:
+ * 자동 생성 빈 일지 + 앱에서 쓴 일지가 같은 수업에 2개 달려 있었고 카드는 빈 쪽을 열었다).
+ * 그래서 내용이 있는 일지(writtenLogId)와 아무 일지(anyLogId)를 구분해 돌려준다.
+ */
+export async function fetchLogsByClassIds(classIds) {
+  const ids = [...new Set((classIds ?? []).filter(Boolean))];
+  const map = {};
+  if (ids.length === 0) return map;
+  const filter = ids.length === 1
+    ? { property: '수업', relation: { contains: ids[0] } }
+    : { or: ids.map((id) => ({ property: '수업', relation: { contains: id } })) };
+  const pages = await queryAll(LESSON_LOGS_DB, filter, [{ timestamp: 'created_time', direction: 'ascending' }]);
+  for (const page of pages) {
+    const log = parseLessonLog(page);
+    if (!log.classId) continue;
+    const slot = (map[log.classId] ??= { writtenLogId: null, anyLogId: null });
+    if (!slot.anyLogId) slot.anyLogId = log.id;
+    if (!slot.writtenLogId && !isEmpty(log)) slot.writtenLogId = log.id;
+  }
+  return map;
+}
+
+/** parseClass 결과 배열에 writtenLogId·anyLogId를 붙인다(홈·수업 마무리 공용). */
+export async function attachLogInfo(classes) {
+  const map = await fetchLogsByClassIds(classes.map((c) => c.id));
+  return classes.map((c) => ({ ...c, ...(map[c.id] ?? { writtenLogId: null, anyLogId: c.lessonLogIds?.[0] ?? null }) }));
 }

@@ -206,6 +206,11 @@ export function parseClass(page) {
     // 무료 수업·🟠보강·🚫취소는 0 — 시간 집계는 반드시 이 값으로 해야 노션과 어긋나지 않는다.
     sessionHours: getFormulaNumber(p['시간 회차']),
     lessonLogIds: getRelationIds(p['수업 일지']),
+    // 숙제 DB '수업' relation의 반대편(2026-09-04). 마무리 카드 '숙제 부여' 완료를 기기 저장이 아니라 서버로 판정.
+    homeworkIds: getRelationIds(p['숙제']),
+    // 노션 rollup '일지 작성' = 연결된 일지 중 '오늘 내용'이 비어 있지 않은 개수(2026-09-04).
+    // relation 존재(lessonLogIds)는 자동 생성된 빈 일지를 못 거르므로 '썼는가'는 반드시 이 값으로 본다.
+    logWritten: (p['일지 작성']?.rollup?.number ?? 0) > 0,
     location: getSelect(p['수업 장소']),
     locationMemo: getRichText(p['수업 장소 메모']),
     noteMemo: getRichText(p['특이사항 메모']),

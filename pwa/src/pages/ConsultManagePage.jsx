@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Button } from '../components/shadcn/button';
 import { Card, CardContent } from '../components/shadcn/card';
@@ -8,10 +9,12 @@ import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import EmptyState from '../components/ui/EmptyState.jsx';
 import PullToRefresh from '../components/ui/PullToRefresh.jsx';
 import SectionHeading from '../components/ui/SectionHeading.jsx';
-import { STATUS_ERROR_TEXT, STATUS_INFO_DARK, TEXT_TERTIARY, GRAY_100, STATUS_INFO_BG, STATUS_ERROR_BG, STATUS_PURPLE_BG, STATUS_PURPLE_TEXT, STATUS_GOLD_BG, STATUS_GOLD_TEXT, BORDER_NEUTRAL } from '../constants/theme.js';
-import { queryAll, updatePage } from '../api/notionClient.js';
+import ConfirmDialog from '../components/ui/ConfirmDialog.jsx';
+import { STATUS_ERROR_TEXT, STATUS_INFO_DARK, TEXT_TERTIARY, GRAY_100, STATUS_INFO_BG, STATUS_ERROR_BG, STATUS_PURPLE_BG, STATUS_PURPLE_TEXT, STATUS_GOLD_BG, STATUS_GOLD_TEXT, BORDER_NEUTRAL, STATUS_SUCCESS_BG, STATUS_SUCCESS_DARK } from '../constants/theme.js';
+import { queryAll } from '../api/notionClient.js';
 import { CONSULT_DB } from '../constants.js';
-
+import { parseConsult, acknowledgeConsult, closeConsult } from '../api/consults.js';
+import { useData } from '../context/DataContext.jsx';
 import { KST } from '../utils/dateUtils.js';
 import { ClipboardTextIcon } from '@phosphor-icons/react';
 
@@ -26,20 +29,6 @@ function formatKST(iso) {
   } catch { return ''; }
 }
 
-function parseConsult(page) {
-  return {
-    id: page.id,
-    name: page.properties['이름']?.title?.[0]?.plain_text ?? '',
-    phone: page.properties['전화번호']?.rich_text?.[0]?.plain_text ?? '',
-    level: page.properties['수준']?.select?.name ?? '',
-    days: (page.properties['희망 요일']?.multi_select ?? []).map(o => o.name),
-    time: page.properties['희망 시간대']?.select?.name ?? '',
-    content: page.properties['상담 내용']?.rich_text?.[0]?.plain_text ?? '',
-    status: page.properties['상태']?.select?.name ?? '',
-    appliedAt: page.properties['신청 일시']?.date?.start ?? page.created_time,
-  };
-}
-
 const STATUS_STYLE = {
   '신청됨': { bg: STATUS_ERROR_BG, color: STATUS_ERROR_TEXT },
   '확인됨': { bg: STATUS_PURPLE_BG, color: STATUS_PURPLE_TEXT },
@@ -49,25 +38,39 @@ const STATUS_STYLE = {
   '불발':   { bg: GRAY_100, color: TEXT_TERTIARY },
 };
 
-function ConsultCard({ consult: c, onConfirm, confirming }) {
+// 상담 카드. 상태 전환은 두 가지뿐이다 — '확인하기'(신청됨→확인됨), '불발 처리'(열린 상담 닫기).
+// '완료'는 버튼이 없다: 학생을 등록하면 전화번호로 자동 연결되며 완료로 바뀐다(api/consults.js).
+function ConsultCard({ consult: c, studentName, onConfirm, onClose, busy }) {
   const style = STATUS_STYLE[c.status] ?? STATUS_STYLE['완료'];
   const isPending = c.status === '신청됨';
-  const faded = c.status === '완료' || c.status === '불발';
+  const isOpen = !c.studentId && ['확인됨', '연락중', '확정'].includes(c.status);
+  const faded = !!c.studentId || c.status === '완료' || c.status === '불발';
 
   return (
-    <Card className="rounded-2xl" style={{ opacity: faded ? 0.55 : 1 }}>
+    <Card className="rounded-2xl" style={{ opacity: faded ? 0.7 : 1 }}>
       <CardContent className="p-4">
       <div className="flex items-start justify-between gap-2 mb-2">
         <div className="min-w-0">
           <span className="text-base font-semibold text-gray-900">{c.name}</span>
           <span className="ml-2 text-sm text-gray-500">{c.phone}</span>
         </div>
-        <span
-          className="text-xs font-semibold px-2 py-0.5 rounded-full shrink-0"
-          style={{ backgroundColor: style.bg, color: style.color }}
-        >
-          {c.status}
-        </span>
+        <div className="flex items-center gap-1 shrink-0">
+          {c.studentId && (
+            <Link
+              to={`/students/${c.studentId}`}
+              className="text-xs font-semibold px-2 py-0.5 rounded-full"
+              style={{ backgroundColor: STATUS_SUCCESS_BG, color: STATUS_SUCCESS_DARK, textDecoration: 'none' }}
+            >
+              학생 연결됨{studentName ? ` · ${studentName}` : ''}
+            </Link>
+          )}
+          <span
+            className="text-xs font-semibold px-2 py-0.5 rounded-full"
+            style={{ backgroundColor: style.bg, color: style.color }}
+          >
+            {c.status}
+          </span>
+        </div>
       </div>
 
       <div className="space-y-0.5 text-sm text-gray-600">
@@ -82,13 +85,13 @@ function ConsultCard({ consult: c, onConfirm, confirming }) {
       <div className="flex items-center justify-between mt-3 pt-2 border-t border-gray-100">
         <span className="text-xs text-gray-400 tabular-nums">{formatKST(c.appliedAt)}</span>
         {isPending && (
-          <Button
-            size="sm"
-            loading={confirming}
-            onClick={() => onConfirm(c.id)}
-            className="min-w-16"
-          >
+          <Button size="sm" loading={busy} onClick={() => onConfirm(c.id)} className="min-w-16">
             확인하기
+          </Button>
+        )}
+        {isOpen && (
+          <Button size="sm" variant="ghost" loading={busy} onClick={() => onClose(c)} className="text-gray-500">
+            불발 처리
           </Button>
         )}
       </div>
@@ -97,9 +100,12 @@ function ConsultCard({ consult: c, onConfirm, confirming }) {
   );
 }
 
+const RECENT_DAYS = 30;
+
 export default function ConsultManagePage() {
-  // 상담 신청 목록 캐시(기억+갱신). 확인 처리 후 refresh()로 즉시 최신화.
-  const consultsRes = useCachedResource('consult:all', async () => {
+  const { studentNameMap } = useData();
+  // 상담 신청 목록 캐시(기억+갱신). 상태 변경 후 refresh()로 즉시 최신화.
+  const consultsRes = useCachedResource('consult:all:v2', async () => {
     const results = await queryAll(
       CONSULT_DB,
       undefined,
@@ -109,23 +115,52 @@ export default function ConsultManagePage() {
   });
   const consults = consultsRes.data ?? [];
   const loading = consultsRes.loading;
-  const [confirming, setConfirming] = useState(null);
+  const [busyId, setBusyId] = useState(null);
+  const [closing, setClosing] = useState(null); // 불발 처리 확인 대상
 
-  const handleConfirm = async (id) => {
-    setConfirming(id);
+  const run = async (id, fn, failMsg) => {
+    setBusyId(id);
     try {
-      await updatePage(id, { '상태': { select: { name: '확인됨' } } });
+      await fn();
       await consultsRes.refresh();
     } catch (e) {
-      toast.error(`처리 실패: ${e.message}`);
+      toast.error(`${failMsg}: ${e.message}`);
     } finally {
-      setConfirming(null);
+      setBusyId(null);
     }
   };
+  const handleConfirm = (id) => run(id, () => acknowledgeConsult(id), '처리 실패');
+  const handleClose = async () => {
+    const c = closing;
+    setClosing(null);
+    await run(c.id, () => closeConsult(c.id), '불발 처리 실패');
+  };
 
-  const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
-  const pending = consults.filter(c => c.status === '신청됨');
-  const others = consults.filter(c => c.status !== '신청됨' && new Date(c.appliedAt).getTime() > oneDayAgo);
+  const recentCutoff = Date.now() - RECENT_DAYS * 24 * 60 * 60 * 1000;
+  const pending = consults.filter((c) => c.status === '신청됨');
+  // 열린 상담 = 학생 연결 전이고 아직 닫지 않은 것. 오래됐어도 보인다 — 닫아야 목록에서 빠진다.
+  const open = consults.filter((c) => !c.studentId && ['확인됨', '연락중', '확정'].includes(c.status));
+  const closed = consults.filter((c) => (c.studentId || c.status === '완료' || c.status === '불발')
+    && new Date(c.appliedAt).getTime() > recentCutoff);
+
+  const section = (title, list, extraClass = '') => list.length > 0 && (
+    <section className={extraClass}>
+      <SectionHeading style={{ marginBottom: 12 }}>{title}</SectionHeading>
+      <ul className="space-y-3">
+        {list.map((c) => (
+          <li key={c.id}>
+            <ConsultCard
+              consult={c}
+              studentName={c.studentId ? studentNameMap[c.studentId] : ''}
+              onConfirm={handleConfirm}
+              onClose={setClosing}
+              busy={busyId === c.id}
+            />
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
 
   return (
     <PullToRefresh onRefresh={consultsRes.refresh}>
@@ -137,43 +172,26 @@ export default function ConsultManagePage() {
           <EmptyState icon={<ClipboardTextIcon size={44} weight="thin" style={{ color: BORDER_NEUTRAL }} />} title="아직 무료상담 신청이 없습니다" />
         ) : (
           <>
-            {pending.length > 0 && (
-              <section>
-                <SectionHeading style={{ marginBottom: 12 }}>
-                  미확인&nbsp;<span className="tabular-nums" style={{ color: STATUS_ERROR_TEXT }}>{pending.length}</span>건
-                </SectionHeading>
-                <ul className="space-y-3">
-                  {pending.map(c => (
-                    <li key={c.id}>
-                      <ConsultCard
-                        consult={c}
-                        onConfirm={handleConfirm}
-                        confirming={confirming === c.id}
-                      />
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            )}
-            {others.length > 0 && (
-              <section className={pending.length > 0 ? 'mt-6' : ''}>
-                <SectionHeading style={{ marginBottom: 12 }}>이전 신청</SectionHeading>
-                <ul className="space-y-3">
-                  {others.map(c => (
-                    <li key={c.id}>
-                      <ConsultCard
-                        consult={c}
-                        onConfirm={handleConfirm}
-                        confirming={confirming === c.id}
-                      />
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            )}
+            {section(<>미확인&nbsp;<span className="tabular-nums" style={{ color: STATUS_ERROR_TEXT }}>{pending.length}</span>건</>, pending)}
+            {section(<>진행 중&nbsp;<span className="tabular-nums">{open.length}</span>건</>, open, pending.length > 0 ? 'mt-6' : '')}
+            {section(`최근 ${RECENT_DAYS}일 마감`, closed, (pending.length + open.length) > 0 ? 'mt-6' : '')}
+            <p className="text-xs mt-6 text-center" style={{ color: TEXT_TERTIARY }}>
+              학생을 등록하면 같은 전화번호의 상담이 자동으로 연결돼요
+            </p>
           </>
         )}
       </div>
+      {closing && (
+        <ConfirmDialog
+          title="불발로 처리하시겠습니까?"
+          message={`${closing.name}님 상담을 닫습니다. 나중에 학생으로 등록하면 다시 연결됩니다.`}
+          confirmLabel="불발 처리"
+          cancelLabel="취소"
+          danger={false}
+          onConfirm={handleClose}
+          onCancel={() => setClosing(null)}
+        />
+      )}
     </PullToRefresh>
   );
 }
