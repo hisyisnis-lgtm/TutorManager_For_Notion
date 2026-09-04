@@ -9,7 +9,7 @@
 import { useRef, useState, useEffect, useLayoutEffect } from 'react';
 // 아이콘 = Solar (weight="Bold"). 급별 강도 램프: 잎→불꽃→불→번개→왕관. 보스=메달.
 import { Lock, Play, Leaf, Flame, Fire, Bolt, CrownStar, MedalStar, CheckCircle } from '@solar-icons/react';
-import { TG, TYPE, TOUCH_OPT, DIFF_COLORS, RADIUS, SPACE } from '../tgTokens.js';
+import { TG, TYPE, TOUCH_OPT, DIFF_COLORS, RADIUS, SPACE, keycap, SCENE, HOME } from '../tgTokens.js';
 import { STAGES, BOSSES, isStageUnlocked, stageUnlockToastText, stageStarFlags, stageScoreOf, bossState, isTierCleared } from '../gameLogic.js';
 import { play as playSfx } from '../tgSfx.js';
 import { GameHeader, StarRow, FieldBg, KeycapCta, prefersReducedMotion } from './shared.jsx';
@@ -25,15 +25,15 @@ const PAD_TOP = 80; // 헤더(60) 아래 여유 20 — 맨 위 칸이 헤더에 
 //  속 원 20(=26-4*2 + 링과 1px 겹침, 육안 무시). 체크 = 획 3 round, 14 프레임 중앙.
 const NODE = 26, NODE_RING = 4;
 const CHECK_W = 14, CHECK_H = 14, CHECK_SW = 3;
-const RAIL_DASH = '#E0D8C5', RAIL_SOLID = '#9AAC5D', CHECK_INK = '#FFFDF8';
+const RAIL_DASH = HOME.GAUGE_TRACK, RAIL_SOLID = SCENE.RAIL, CHECK_INK = TG.BG;
 // 레일 — 폭 3, 대시 6/6(시안 dashPattern 그대로). ★border-left로 그리면 브라우저가 2.667px로 반올림해
 //  레일 중심(52.83)과 노드 중심(53)이 어긋난다 → **width+background**로 그려 정확히 3px·중심 53 유지.
 const RAIL_W = 3, RAIL_LEFT = RAIL_X - RAIL_W / 2;
 const RAIL_DASH_BG = `repeating-linear-gradient(to bottom, ${RAIL_DASH} 0 6px, transparent 6px 12px)`;
 // 배경 패럴랙스 — 맨 아래(입문1)에선 들판이 그대로, 맨 위(고수5)로 갈수록 아래로 밀려 거의 사라진다.
 const FIELD_SHIFT = 460;
-const CHIP_BG = TG.KEY_EDGE, SCORE_C = '#8F9CA7';
-const ICON_BG = '#F4F4F4'; // 난이도 아이콘 칩 배경(2026-08-06 사용자 지정) — 잠김 버튼(CHIP_BG)과는 별개
+const CHIP_BG = TG.KEY_EDGE, SCORE_C = TG.STEEL_SOFT;
+const ICON_BG = '#F4F4F4'; // 난이도 아이콘 칩 배경(2026-08-06 사용자 지정) — 잠김 버튼(CHIP_BG)과는 별개 // design-audit-ignore: color-literal-game — 사용자 지정값(회색 칩)
 
 // 사다리 = 각 급 [5스테이지 (+ 그 급 승급시험이 있으면 보스)]. 승급시험은 급 사이만(입문·실전) — 마지막 급(고수)엔 없음.
 // 세로 배치용 reverse(위=고수5, 아래=입문1). 위로 오를수록 어려워짐.
@@ -280,7 +280,7 @@ export function DifficultyScreen({ studentToken, rank = 0, onSelect, onStart, on
                   position: 'absolute', left: CARD_L, right: CARD_R, top: (ROW_H - CARD_H) / 2, height: CARD_H,
                   display: 'flex', alignItems: 'center', gap: SPACE.lg, padding: '0 10px 0 10px',
                   borderRadius: RADIUS.xl, background: '#fff', border: 'none', cursor: 'pointer', textAlign: 'left',
-                  boxShadow: `inset 0 -2px 0 ${TG.KEY_EDGE}, 0 4px 18px rgba(43,39,48,0.07)`, ...TOUCH_OPT,
+                  boxShadow: keycap(TG.KEY_EDGE, { depth: 2 }), ...TOUCH_OPT,
                 }}>
                   <div style={{ position: 'relative', width: 50, height: 50, borderRadius: RADIUS.lg, background: ICON_BG, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     {/* 잠겨도 아이콘은 급 색 그대로(시안) — 잠김 표시는 오른쪽 자물쇠 버튼이 전담 */}
@@ -293,7 +293,7 @@ export function DifficultyScreen({ studentToken, rank = 0, onSelect, onStart, on
                     <span style={{ ...TYPE.h2, lineHeight: 1, color: TG.INK, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{title}</span>
                     {/* 잠긴 칸은 '☆☆☆ 0점'을 숨긴다 — 같은 행이 5장 반복되며 열린 칸이 묻혔다(2026-09-03). 열리면 별·점수 표시 */}
                     {selectable && <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.md }}>
-                      <StarRow filled={boss ? (beaten ? 3 : 0) : stars} size={16} gap={2} off="#D8D2C8" shine />
+                      <StarRow filled={boss ? (beaten ? 3 : 0) : stars} size={16} gap={2} off={TG.STAR_OFF} shine />
                       {/* 승급시험도 스테이지와 같은 '점수' 표기(2026-08-03 사용자 요청) — 시험 종료 시 보스 id로 최고점 저장 */}
                       <span style={{ ...TYPE.num, fontSize: 13, color: SCORE_C, whiteSpace: 'nowrap' }}>{best.toLocaleString()}점</span>
                     </div>}
@@ -304,7 +304,7 @@ export function DifficultyScreen({ studentToken, rank = 0, onSelect, onStart, on
                     style={{
                       width: 50, height: 50, flexShrink: 0, borderRadius: RADIUS.xl,
                       background: selectable ? TG.CTA : CHIP_BG,
-                      boxShadow: selectable ? `inset 0 -4px 0 ${TG.CTA_EDGE}, 0 4px 8px rgba(43,39,48,0.07)` : 'inset 0 -4px 0 #CFDBE6',
+                      boxShadow: selectable ? keycap(TG.CTA_EDGE) : keycap(TG.KEY_EDGE_LOCKED, { lift: null }),
                       display: 'flex', alignItems: 'center', justifyContent: 'center', paddingBottom: 4,
                     }}>
                     {selectable ? <Play size={17} weight="Bold" color="#fff" /> : <Lock size={17} weight="Bold" color={SCORE_C} />}

@@ -15,7 +15,7 @@ import {
 import { loadTierPeak } from '../game/earProfile.js';
 import { gameXpGain, loadXp, addXp, seedXpIfMissing, loadRank, saveRank, seedRankIfMissing, examPassed, EXAM_QUESTIONS } from '../game/gameXp.js';
 import { ROUND_LENGTH, DIFFICULTIES, THEMES } from '../constants/toneGameWords.js';
-import { TG, HOME, ensureGameFonts, haptic, shuffle, getTimeLimitForCombo, loadBest, saveBest, isMeaningHidden, isPinyinHidden } from '../game/tgTokens.js';
+import { TG, HOME, ensureGameFonts, haptic, shuffle, getTimeLimitForCombo, loadBest, saveBest, isMeaningHidden, isPinyinHidden, SCENE } from '../game/tgTokens.js';
 import {
   loadWordStats, saveWordStats, recordWordResult,
   buildReviewList, masteredCount, buildRoundWords, noteLeft, NOTE_TARGET,
@@ -1371,7 +1371,7 @@ export default function ToneGamePage() {
     // 공통 탭바 내비 — 홈·등급·업적·놀러가기·하늘하늘(2026-07-27 리디자인). 아래 mastery/achievements/play/linkhub 분기와 공유.
     content = (
       // 홈도 다른 탭과 **같은 자리**에서 같은 FigmaScreen으로 — 탭 전환 시 remount(진입 페이드 재생 → 탭바 깜빡임) 방지
-      <FigmaScreen bg={HOME.FLOOR} enter>
+      <FigmaScreen bg={SCENE.FLOOR} enter>
       <HomeScreen streak={startStreak} streakLongest={startStreakLongest} freezes={startFreezes} xp={xp} rank={rank}
       toneLevels={toneLevels}
       toneStatus={toneStatus} coachTone={coachTone} celebrateTone={celebrateTone}

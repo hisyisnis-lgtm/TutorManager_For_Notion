@@ -3,7 +3,7 @@
 //   / 하단 고정 키캡 CTA(342×60, 하단 26).
 // ※ 2·3페이지("눈이 아니라 반응으로" / "기록 깨는 재미로")는 2026-08-08 사용자 요청으로 삭제.
 //    캐러셀(슬라이딩 트랙·점 인디케이터)과 히어로 2종(PaceCard·RecordCard)도 함께 제거 — 첫 장 하나로 끝난다.
-import { TG, TYPE, FONT_HANZI, FONT_BODY, RADIUS, SPACE } from '../tgTokens.js';
+import { TG, TYPE, FONT_HANZI, FONT_BODY, RADIUS, SPACE, SHADOW } from '../tgTokens.js';
 import { ToneMark } from '../tgWidgets.jsx';
 import { TONES } from '../../constants/toneGameWords.js';
 import { play as playSfx } from '../tgSfx.js';
@@ -20,7 +20,7 @@ const INTRO = {
 // 히어로 카드 — 시안 342×190 흰 카드
 const HERO_CARD = {
   width: '100%', height: HERO_H, background: '#fff', borderRadius: RADIUS.xl,
-  boxShadow: '0px 4px 9px rgba(43,39,48,0.04)',
+  boxShadow: SHADOW.level1,
   display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
 };
 

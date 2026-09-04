@@ -179,7 +179,7 @@ function ToneShot({ shot, onDone, onMissImpact }) {
     return () => { alive = false; clearTimeout(flyTimer); fly.cancel(); ghostAnims.forEach((a) => a.cancel()); };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   // 성조색 원판 + 흰 마크(성조 칩과 동일 문법) — 흰 원판보다 흰 카드 위 시인성·구분이 좋음(사용자 피드백)
-  const toneColor = TONES.find((t) => t.num === shot.tone)?.color ?? TG.CORAL;
+  const toneColor = TONES.find((t) => t.num === shot.tone)?.color ?? TG.CTA;
   const puck = (
     <span style={{
       display: 'flex', width: 44, height: 44, alignItems: 'center', justifyContent: 'center', borderRadius: '50%',
@@ -437,14 +437,14 @@ export function GameScreen({ title = '', word, entered, currentSyl, completed, t
       {practice ? (
         <Reveal i={1} play={playReveal} style={{ position: 'absolute', left: 24, right: 24, top: 72 }}>
           <div data-coach="prac-badge" style={{ display: 'flex', alignItems: 'center', gap: SPACE.md }}>
-            <div style={{ width: 32, height: 32, borderRadius: RADIUS.lg, background: '#2BB583', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <div style={{ width: 32, height: 32, borderRadius: RADIUS.lg, background: TG.TRAIN, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <Stopwatch size={20} weight="Bold" color="#fff" />
             </div>
             {/* 게이지는 줄어들지만 트레이닝은 타임아웃 로직이 없어(ToneGamePage: practiceMode면 타이머 미설정)
                 다 줄어도 오답·시간초과 처리가 없다. 순수 '페이스 안내'용 — 그래서 **일반 모드보다 느리게**(PRACTICE_PACE_MS) 흐른다(2026-08-07 사용자 요청). */}
             <div style={{ flex: 1, height: 12, borderRadius: 8, background: TG.BORDER, overflow: 'hidden' }}>
               <div key={`ptimer-${runId}-${wordIndex}`} style={{
-                height: '100%', width: '100%', background: '#2BB583',
+                height: '100%', width: '100%', background: TG.TRAIN,
                 // ★단축(animation)과 롱핸드(animationPlayState)를 섞으면 React가 경고하고 재렌더 시 값이 어긋날 수 있다.
                 //   일시정지는 매 단어 완료마다 토글되므로 전부 롱핸드로 쓴다(2026-08-18).
                 animationName: 'tg-timer',
@@ -464,7 +464,7 @@ export function GameScreen({ title = '', word, entered, currentSyl, completed, t
           </div>
           {/* 시간부족이어도 트랙에 붉은 외곽선은 넣지 않는다(2026-08-06 사용자) — 텐션은 채움 색·시계 맥동만 */}
           <div style={{ flex: 1, height: 12, borderRadius: 8, background: TG.BORDER, overflow: 'hidden' }}>
-            <div key={`${runId}-${wordIndex}-${wordTimeLimit}-${gaugeOffsetMs}`} style={{ height: '100%', width: '100%', borderRadius: RADIUS.sm, background: lowTime ? 'linear-gradient(90deg,#ff5e62,#f2484c)' : '#FF5E62', animationName: 'tg-timer', animationDuration: `${wordTimeLimit}ms`, animationTimingFunction: 'linear', animationFillMode: 'forwards', animationDelay: `-${gaugeOffsetMs}ms`, animationPlayState: (paused || completed) ? 'paused' : 'running' }} />
+            <div key={`${runId}-${wordIndex}-${wordTimeLimit}-${gaugeOffsetMs}`} style={{ height: '100%', width: '100%', borderRadius: RADIUS.sm, background: lowTime ? 'linear-gradient(90deg,#ff5e62,#f2484c)' : TG.CTA, animationName: 'tg-timer', animationDuration: `${wordTimeLimit}ms`, animationTimingFunction: 'linear', animationFillMode: 'forwards', animationDelay: `-${gaugeOffsetMs}ms`, animationPlayState: (paused || completed) ? 'paused' : 'running' }} />
           </div>
         </div>
         </Reveal>
@@ -522,7 +522,7 @@ export function GameScreen({ title = '', word, entered, currentSyl, completed, t
       <CenterBurst data={burst} />
       {/* 정답 판정(완벽/훌륭/좋아) + 점수 — 카드 중앙에 크게 팝(코너 플로트는 시선이 안 가서 이관). 밀레스톤 버스트 뜰 땐 양보. 연습=점수 없음. */}
       {!practice && floatScore && !burst && (() => {
-        const J = { best: { label: '완벽!', color: '#F5A623', size: 38, glow: true }, mid: { label: '훌륭!', color: '#1fa86a', size: 32 }, base: { label: '좋아!', color: '#8a8590', size: 27 } }[floatScore.judge] || { label: '', color: TG.SUB, size: 27 };
+        const J = { best: { label: '완벽!', color: TG.SUN, size: 38, glow: true }, mid: { label: '훌륭!', color: TG.SUCCESS, size: 32 }, base: { label: '좋아!', color: '#8a8590', size: 27 } }[floatScore.judge] || { label: '', color: TG.SUB, size: 27 };
         return (
           <div key={`jp-${score}`} style={{ position: 'absolute', left: 0, right: 0, top: 240, display: 'flex', justifyContent: 'center', pointerEvents: 'none', zIndex: 19 }}>
             <style>{`@keyframes tg-judge{0%{transform:translateY(8px) scale(.5);opacity:0}20%{transform:translateY(0) scale(1.14);opacity:1}58%{transform:translateY(0) scale(1);opacity:1}100%{transform:translateY(-22px) scale(1);opacity:0}}`}</style>

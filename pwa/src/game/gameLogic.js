@@ -1,7 +1,7 @@
 // 성조게임 — 잠금 사다리 / 무한모드 / 헤드라인 최고점 등 순수 로직 헬퍼.
 // React 무관. localStorage 베스트 캐시(tgTokens) 위에서 동작 → 화면 컴포넌트·상태머신이 공유.
 // 참조 메모리: tone_game_redesign.md (잠금 사다리·무한·헤드라인)
-import { loadBest, saveBest, getTimeLimitForCombo, getBestKey } from './tgTokens.js';
+import { loadBest, saveBest, getTimeLimitForCombo, getBestKey, TG } from './tgTokens.js';
 import { DIFFICULTIES, THEMES, ROUND_LENGTH } from '../constants/toneGameWords.js';
 
 // 통합 최고점수 — 3난이도 기록 중 최고(+ 그 난이도 라벨). 타이틀 카드는 '내 최고 실력'을 보여줌.
@@ -36,7 +36,7 @@ export function isEndlessUnlocked(token, rank = 0) { // eslint-disable-line no-u
 // fill/edge = 모드선택 화면 오브와 같은 색(연출에서 그 오브가 열리는 것처럼 보이게). desc는 시안에서 폐기.
 // iconStroke = 덧획(Solar Infinity는 획이 얇음). SVG 뷰박스(24) 기준값 — 연출 아이콘은 53px이라
 //  모드선택 화면 값(1.4)을 그대로 쓰면 화면상 3.1px로 두꺼워진다. 시안 대조 실측으로 1.1.
-export const ENDLESS_UNLOCK_REVEAL = { icon: 'Infinity', label: '무한 모드', fill: '#F3A75B', edge: '#E77E33', iconStroke: 1.1 };
+export const ENDLESS_UNLOCK_REVEAL = { icon: 'Infinity', label: '무한 모드', fill: TG.ENDLESS, edge: TG.ENDLESS_EDGE, iconStroke: 1.1 };
 
 // ── 스테이지(난이도 세분화, 2026-07-16) ─────────────────
 // 각 난이도(티어)를 난이도순 5밴드로 나눔. 밴드=티어 풀을 난이도순 5구간으로 나눠 플레이. 새 단어 안 만들고 정렬만.

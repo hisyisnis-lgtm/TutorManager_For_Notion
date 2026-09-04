@@ -3,7 +3,7 @@
 // 항목은 전부 데이터(HUB_LINKS) — 특강·교재·단어장 등 새 링크는 배열에 추가만 하면 됨.
 // image: 썸네일 경로(권장 2:1 가로형). 없으면 tint+라벨 — 파일 없는 경로 금지(깨진 아이콘 뜸). SNS는 놀러가기 모달 전담.
 import { AltArrowRight, Stars } from '@solar-icons/react';
-import { TG, TYPE, TOUCH_OPT, RADIUS, SPACE } from '../tgTokens.js';
+import { TG, TYPE, TOUCH_OPT, RADIUS, SPACE, SHADOW } from '../tgTokens.js';
 import { track } from '../gameAnalytics.js';
 import { TgTabBar, TAB_BAR_H, Reveal } from './shared.jsx';
 
@@ -40,7 +40,7 @@ export function LinkHubScreen({ tabNav, achDot = false }) {
             <Reveal key={l.id} i={li + 1}>
             <button className="tg-press" onClick={() => openLink(l.href, l.id)} style={{
               display: 'block', width: '100%', padding: 0, borderRadius: RADIUS.xl, overflow: 'hidden',
-              background: '#fff', border: 'none', cursor: 'pointer', boxShadow: '0px 4px 18px rgba(43,39,48,0.07)', textAlign: 'left', ...TOUCH_OPT,
+              background: '#fff', border: 'none', cursor: 'pointer', boxShadow: SHADOW.level2, textAlign: 'left', ...TOUCH_OPT,
             }}>
               {/* 상단 썸네일 — OG 표준 비율(1200×630). 이미지 없는 항목은 tint+라벨 */}
               <div style={{ width: '100%', aspectRatio: '1200 / 630', background: l.image ? TG.SURFACE : l.tint, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

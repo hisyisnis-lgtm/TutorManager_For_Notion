@@ -99,8 +99,8 @@ export function ComboChip({ combo, flash }) {
     <div style={{
       display: 'inline-flex', alignItems: 'center', gap: SPACE.xs,
       height: 30, padding: '0 11px 0 9px',
-      borderRadius: RADIUS.chip,
-      background: '#FFFCF8',
+      borderRadius: RADIUS.md,
+      background: TG.BG,
       transform: flash ? 'scale(1.12)' : 'scale(1)',
       transition: 'transform 220ms cubic-bezier(0.34,1.56,0.64,1)',
     }}>

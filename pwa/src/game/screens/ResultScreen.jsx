@@ -1,11 +1,11 @@
 // 결과 화면 — 신기록 배지·축하 판다·점수(카운트업)·통계 2카드·코치·다시도전/난이도 바꾸기.
 import { useState, useEffect } from 'react';
 import { Cup, Bolt, Play } from '@solar-icons/react';
-import { TG, TYPE, TOUCH_OPT, pickCelebratePanda, RADIUS, SPACE } from '../tgTokens.js';
+import { TG, TYPE, TOUCH_OPT, pickCelebratePanda, RADIUS, SPACE, TONE_COLORS, SHADOW } from '../tgTokens.js';
 import { useCountUp, FlameIcon } from '../tgWidgets.jsx';
 import { play as playSfx } from '../tgSfx.js';
 import { EXAM_PASS_RATIO } from '../gameXp.js';
-import { Reveal, ConfettiBurst, CrispFlash, LIGHT_CONFETTI, GameHeader, KeycapCta, FieldBg } from './shared.jsx';
+import { Reveal, ConfettiBurst, CrispFlash, LIGHT_CONFETTI, GameHeader, KeycapCta, FieldBg, StatCard } from './shared.jsx';
 import { LoginNudgeModal } from './gameModals.jsx';
 import CoachMarkOverlay from '../../components/ui/CoachMarkOverlay.jsx';
 import { useTabTip } from '../../hooks/useTabTip.js';
@@ -33,7 +33,7 @@ const resultCoach = (homeOnly, homeHint) => [
 
 
 // 시안 12(2026-08-05) 값 — 버튼은 공용 KeycapCta로 통일(2026-08-31), 원오프 색만 상수로.
-const RES_BADGE = '#FDBA28';      // 신기록 배지(구 골드 그라데 → 단색)
+const RES_BADGE = TG.SUN;      // 신기록 배지(구 골드 그라데 → 단색)
 // 흰 보조 키캡 공통 prop(다시하기·홈으로) — 주 키캡은 KeycapCta 기본값(TG.CTA) 그대로.
 const WHITE_CAP = { bg: '#fff', edge: TG.KEY_EDGE, color: TG.STEEL };
 
@@ -48,18 +48,8 @@ function StatCards({ maxCombo, avgSec }) {
           카드 자체의 Reveal만으로 충분. delight는 신기록 배지·비트처럼 드문 순간에만. */}
       {[
         { icon: <FlameIcon size={30} color={TG.CORAL_DK} />, val: maxCombo, unit: '콤보', label: '최고 콤보' },
-        { icon: <Bolt size={30} weight="Bold" color="#4D8DFF" />, val: avgSec, unit: avgSec === '-' ? '' : '초', label: '반응 속도' },
-      ].map((s) => (
-        <div key={s.label} style={{ position: 'relative', flex: 1, minWidth: 0, background: '#fff', borderRadius: RADIUS.xl, boxShadow: '0px 4px 18px rgba(43,39,48,0.04)' }}>
-          <div style={{ position: 'absolute', left: 0, right: 0, top: 16, display: 'flex', justifyContent: 'center' }}>{s.icon}</div>
-          <span style={{ position: 'absolute', left: 0, right: 0, top: 52, textAlign: 'center', ...TYPE.h2, lineHeight: '19px', color: TG.SUB }}>{s.label}</span>
-          {/* 값+단위는 시안대로 베이스라인 정렬(items-baseline) — marginTop으로 눈대중 맞추면 폰트마다 어긋난다 */}
-          <div style={{ position: 'absolute', left: 0, right: 0, top: 81, height: 31, display: 'flex', justifyContent: 'center', alignItems: 'baseline', gap: SPACE.xxs }}>
-            <span style={{ ...TYPE.numLg, lineHeight: '31px', color: TG.INK }}>{s.val}</span>
-            {s.unit && <span style={{ ...TYPE.label, lineHeight: '17px', color: TG.SUB }}>{s.unit}</span>}
-          </div>
-        </div>
-      ))}
+        { icon: <Bolt size={30} weight="Bold" color={TONE_COLORS[4]} />, val: avgSec, unit: avgSec === '-' ? '' : '초', label: '반응 속도' },
+      ].map((s) => <StatCard key={s.label} icon={s.icon} label={s.label} value={s.val} unit={s.unit} />)}
     </div>
   );
 }
@@ -111,7 +101,7 @@ export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, 
       {/* 신기록 배지 — 시안 y312(점수 바로 아래). 오답 복습 클리어도 같은 자리·같은 배지에 문구만 바꿔 쓴다 */}
       {(isNewBest || cleared) && (
         <Reveal i={2} style={{ position: 'absolute', top: 312, left: '50%', transform: 'translateX(-50%)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, padding: '8px 16px', borderRadius: RADIUS.lg, background: RES_BADGE, boxShadow: '0px 4px 18px rgba(43,39,48,0.04)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, padding: '8px 16px', borderRadius: RADIUS.lg, background: RES_BADGE, boxShadow: SHADOW.level1 }}>
           <Cup size={16} weight="Bold" color="#fff" style={{ animation: 'tg-ic-trophy .34s cubic-bezier(.22,1,.36,1) .06s both' }} />
           <span style={{ ...TYPE.btnSm, lineHeight: '17px', color: '#fff', whiteSpace: 'nowrap' }}>{cleared ? '오답 노트를 다 비웠어요!' : '신기록 달성!'}</span>
         </div>
@@ -191,7 +181,7 @@ export function ExamResultScreen({ correct = 0, total = 20, passed = false, onRe
       {/* 합격·불합격 배지 — 시안 y312 */}
       <Reveal i={2} style={{ position: 'absolute', top: 312, left: '50%', transform: 'translateX(-50%)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, padding: '8px 16px', borderRadius: RADIUS.lg,
-          background: passed ? TG.SUCCESS : TG.BORDER, boxShadow: '0px 4px 18px rgba(43,39,48,0.04)' }}>
+          background: passed ? TG.SUCCESS : TG.BORDER, boxShadow: SHADOW.level1 }}>
           {passed && <Cup size={16} weight="Bold" color="#fff" />}
           <span style={{ ...TYPE.btnSm, lineHeight: '17px', color: passed ? '#fff' : TG.SUB, whiteSpace: 'nowrap' }}>{passed ? '승급 시험 합격!' : '승급 시험 불합격'}</span>
         </div>

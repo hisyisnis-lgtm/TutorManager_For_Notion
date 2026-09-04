@@ -35,6 +35,7 @@ const ONLY = (args.find((a) => a.startsWith('--rule=')) || '').split('=')[1];
 // 검사기가 오탐을 뱉기 시작하면 아무도 안 본다. 예외는 여기 한 곳에만, 반드시 이유와 함께.
 // 코드 쪽에 마커를 심는 방식(`// design-audit-ignore: rule — 이유`)도 지원한다.
 const ALLOW = [
+  { rule: 'color-literal-game', match: /TitleScreen\.jsx$/, why: '타이틀 화면 = 들판·집·연기 일러스트 장면. 색이 데이터(SCENE)에 가깝고 재사용되지 않는다' },
   { rule: 'color-literal', match: /constants[\\/]/, why: '토큰 정의·데이터 파일(성조 색 등)이 리터럴의 출처 그 자체' },
   { rule: 'color-literal', match: /components[\\/]ui[\\/]Badge\.jsx$/, why: 'Tailwind 클래스→토큰 매핑 계층. 이 파일이 매핑표다' },
   { rule: 'color-literal', match: /pages[\\/](PricingPage|PrivacyPage|ConsentPage|LandingPage)\.jsx$/, why: '공개·법정 고지 페이지. §4가 인정한 그라데이션 래퍼 예외 포함' },
@@ -55,7 +56,7 @@ function suppressedInline(lines, idx, ruleId) {
 // severity: error = 고쳐야 함 / warn = 드리프트 / review = 사람이 판단
 // 색 리터럴 판별 — 본체(color-literal, error)와 게임(color-literal-game, warn)이 공유
 function testColorLiteral(line) {
-  if (/^\s*(\/\/|\*|\/\*)/.test(line)) return false;      // 주석
+  if (/^\s*(\/\/|\*|\/\*|\{\/\*)/.test(line)) return false;      // 주석(JSX 주석 {/* 포함)
   if (/rgba?\(/.test(line) && !/#[0-9a-fA-F]{3,8}\b/.test(line)) return false;
   const m = line.match(/#[0-9a-fA-F]{6}\b|#[0-9a-fA-F]{3}\b/g);
   if (!m) return false;
@@ -122,12 +123,13 @@ const RULES = [
   },
   {
     id: 'color-literal-game',
-    severity: 'warn',
-    doc: 'game_design_tokens.md',
-    why: '게임 색 단일 출처는 tgTokens.js. 그라디언트 스톱·장식 틴트·데이터 정의는 규약상 리터럴 허용이라 warn — 토큰에 이미 있는 색의 재등장만 정리 대상(파일 건드릴 때 같이).',
-    // tgTokens.js가 게임의 토큰 정의 파일. _SfxLab/_ParticleLab은 DEV 전용 랩(프로덕션 미노출).
-    skipFile: (f) => !isGameFile(f) || /tgTokens\.js$/.test(f) || /_(SfxLab|ParticleLab)\.jsx$/.test(f),
-    test: testColorLiteral,
+    severity: 'error',
+    doc: 'game_design_tokens.md · figma_game_design_system.md',
+    why: '게임 색은 3층(PRIM→SEM→TG/HOME)에서만 온다(2026-09-04 규칙화). 허용 예외 = 데이터 정의 파일(achievements·earProfile·gameLogic), 데이터 행({id/min/label:…}), 그라디언트 스톱, rgba 틴트, 파티클/색종이 배열, SVG·textShadow 장식, 외부 브랜드색(// BRAND). 그 외 순수 hex는 error.',
+    // tgTokens.js가 게임의 토큰 정의 파일. _SfxLab/_ParticleLab은 DEV 전용 랩. 데이터 정의 파일은 색이 곧 데이터라 허용.
+    skipFile: (f) => !isGameFile(f) || /tgTokens\.js$/.test(f) || /_(SfxLab|ParticleLab)\.jsx$/.test(f) || /(achievements|earProfile|gameLogic)\.js$/.test(f),
+    // 장식·데이터·브랜드 문맥은 허용
+    test: (line) => testColorLiteral(line) && !/gradient|rgba?\(|colors?\s*[:=]\s*\[|CONFETTI|EMBER|PARTICLE|palette|<(path|circle|ellipse|rect|polygon)\b|fill=|stroke=|textShadow|href:|BRAND|\{\s*(id|min|label)\s*:|design-audit-ignore/i.test(line),
   },
   {
     id: 'weight-500',

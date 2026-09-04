@@ -9,8 +9,8 @@ import { play as playSfx } from '../tgSfx.js';
 import { useCountUp } from '../tgWidgets.jsx';
 
 // 시안(461:9) 값 — 이 연출 전용 원오프 색.
-const GAUGE_FILL = '#FF5E62';      // 레벨 게이지 채움(단색)
-const XP_VALUE = '#FFC94D';        // 환산 내역 수치(골드)
+const GAUGE_FILL = TG.CTA;      // 레벨 게이지 채움(단색)
+const XP_VALUE = TG.GOLD_SOFT;        // 환산 내역 수치(골드)
 const ROW_BG = 'rgba(255,255,255,0.08)';
 const SUB_WHITE = 'rgba(255,255,255,0.55)';
 // 스파크 색 — 게이지 채움과 같은 계열.

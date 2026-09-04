@@ -9,7 +9,7 @@ import { DIFFICULTIES } from '../constants/toneGameWords.js';
 // 업적 카테고리 — 업적 화면에서 분류·색상 구분(색은 게임 팔레트에서). label=섹션 제목, color=아이콘/틴트 강조색.
 // 순서 = 화면 섹션 순서. 각 업적의 cat 필드가 여기 id를 참조.
 export const ACH_CATEGORIES = [
-  { id: 'start',  label: '시작',       color: '#FF6B6B' }, // 코랄
+  { id: 'start',  label: '시작',       color: '#F96163' }, // 코랄
   { id: 'score',  label: '점수 · 콤보', color: '#F0A91E' }, // 골드
   { id: 'unlock', label: '모드 해제',   color: '#7C5CFF' }, // 퍼플
   { id: 'master', label: '단어 마스터', color: '#36C98D' }, // 그린

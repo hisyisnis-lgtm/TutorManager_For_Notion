@@ -4,16 +4,16 @@
 // 입력 묶음은 상단(y182)에 고정 — 모바일 키보드가 올라와도 가려지지 않는다.
 import { useState } from 'react';
 import { Refresh, CloseCircle } from '@solar-icons/react';
-import { TG, TYPE, TOUCH_OPT, FONT_BODY, RADIUS, ASSETS } from '../tgTokens.js';
+import { TG, TYPE, TOUCH_OPT, FONT_BODY, RADIUS } from '../tgTokens.js';
 import { play as playSfx } from '../tgSfx.js';
 import { randomNickname, NICKNAME_MAX, NICKNAME_MIN } from '../nickname.js';
 import { useKeyboardInset } from '../tgWidgets.jsx';
-import { Reveal, GameHeader, KeycapCta, FieldBg } from './shared.jsx';
+import { Reveal, GameHeader, KeycapCta } from './shared.jsx';
 
 export { NICKNAME_MAX };
 
 // 시안 색 — 입력·칩의 쿨그레이 라인/라벨(인게임 카드 액션 버튼과 동일 계열)
-const FIELD_BORDER = '#E2E7EB', CHIP_ICON = '#637481', CHIP_TEXT = TG.STEEL;
+const FIELD_BORDER = TG.KEY_EDGE, CHIP_ICON = TG.STEEL, CHIP_TEXT = TG.STEEL;
 
 // 입력 한 줄에서 제어문자만 털어내고 상한까지 자른다(설정·변경 화면 공통 규칙).
 export const cleanNickname = (raw) => raw.replace(/[\u0000-\u001f\u007f]/g, '').slice(0, NICKNAME_MAX);
@@ -84,8 +84,6 @@ export function NicknameScreen({ defaultName = '', onSubmit, saving = false }) {
   };
   return (
     <>
-      {/* 들판 실루엣 — 모드선택과 같은 세계(하단 CTA 뒤에만 얇게, 2026-09-03) */}
-      <FieldBg sink={250} />
       <GameHeader title="닉네임 설정" center glass />
 
       {/* 헤드라인 — 시안 좌측정렬 26/36 2줄(블록 중심 y126) */}
@@ -98,12 +96,6 @@ export function NicknameScreen({ defaultName = '', onSubmit, saving = false }) {
       {/* 입력 묶음 — 시안 y182 */}
       <Reveal i={1} style={{ position: 'absolute', left: 24, right: 24, top: 182 }}>
         <NicknameField value={value} onChange={setValue} onSubmit={submit} />
-      </Reveal>
-
-      {/* 판다 코치 — 입력 아래 빈 중간을 채운다(로그인 화면과 같은 무게, 2026-09-03). 블록 하나만 %로 앉힘.
-          키보드가 올라오면 가려지지만 입력·CTA와는 겹치지 않는다(짧은 화면 667에서도 입력 하단 300 < 판다 상단). */}
-      <Reveal i={2} style={{ position: 'absolute', left: 0, right: 0, top: 'calc(50% - 30px)', display: 'flex', justifyContent: 'center', pointerEvents: 'none' }}>
-        <img src={ASSETS.pandaCoach} alt="" width={140} style={{ height: 'auto', filter: 'drop-shadow(0px 6px 14px rgba(43,39,48,0.12))', animation: 'tg-bob 3s ease-in-out infinite' }} />
       </Reveal>
 
       {/* 시작하기 — 하단 고정 키캡 CTA(시안 342×60, 하단 26). 키보드가 뜨면 그 위(간격 12)로 따라 붙는다 */}

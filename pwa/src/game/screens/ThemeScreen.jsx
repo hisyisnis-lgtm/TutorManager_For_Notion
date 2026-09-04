@@ -7,7 +7,7 @@
 // 참조 메모리: tone_game_redesign.md (테마 모드)
 import { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { AltArrowLeft, AltArrowRight, Lock, Play } from '@solar-icons/react';
-import { TG, TYPE, TOUCH_OPT, DUR, RADIUS, SPACE } from '../tgTokens.js';
+import { TG, TYPE, TOUCH_OPT, DUR, RADIUS, SPACE, SHADOW, keycap } from '../tgTokens.js';
 import { isThemeUnlocked, themeBestScore, themeUnlockReqText, themeUnlockToastText, themeStars } from '../gameLogic.js';
 import { play as playSfx } from '../tgSfx.js';
 import { Reveal, GameHeader, StarRow, ShakeButton, prefersReducedMotion } from './shared.jsx';
@@ -17,7 +17,7 @@ const GAP = 20;
 const CARD_W = 280, CARD_MAX_H = 300, CAP_H = 54;
 // 카드 흰 내부 획(시안 stroke #FFF 14 INSIDE) — 이미지를 사방에서 덮어 액자처럼 보이게 한다.
 const CARD_STROKE = 14;
-const SCORE_C = '#8F9CA7', DOT_ON = '#9CADBA', DOT_OFF = '#D8E3EC';
+const SCORE_C = TG.STEEL_SOFT, DOT_ON = TG.STEEL_SOFT, DOT_OFF = TG.KEY_EDGE;
 // 스크롤 컨테이너 세로 패딩 — overflowY:hidden(가로 스크롤 강제)이 카드 그림자를 자르지 않게 여유 확보.
 const PAD_TOP = 12, PAD_BOTTOM = 22;
 // 카드 위/아래 고정 요소가 차지하는 세로 합(헤더80+코치63+간격18+스크롤패딩34+닷/힌트54=249)+여유 15.
@@ -25,9 +25,9 @@ const PAD_TOP = 12, PAD_BOTTOM = 22;
 const RESERVED_H = 400; // 헤더60 + 상단블록(제목·별·점수)116 + 닷·여백 + 하단바 96
 // 패널 텍스트 색 (화이트 패널 위)
 const PANEL_SUB = TG.SUB;
-const CHIP_BG = '#F5F1EA';
+const CHIP_BG = TG.SURFACE;
 const GOLD_BG = 'rgba(255,194,60,0.18)', GOLD_TX = '#A46A00';
-const GAUGE_BG = '#EFEAE2';
+const GAUGE_BG = TG.BORDER;
 
 // PC 웹(마우스) 판별 — 터치 스와이프가 없는 환경에만 좌우 화살표·휠 넘기기 노출.
 const FINE_POINTER = typeof window !== 'undefined' && !!window.matchMedia
@@ -141,9 +141,9 @@ function ThemeCard({ theme, unlocked, w, h, capH, unlockCur = 0 }) {
   return (
     <div style={{
       position: 'absolute', inset: 0, borderRadius: RADIUS.xl, overflow: 'hidden', background: '#fff',
-      boxShadow: '0 4px 18px rgba(43,39,48,0.04)',
+      boxShadow: SHADOW.level1,
     }}>
-      <div style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: capH - CARD_STROKE, background: theme.tint || '#eee' }}>
+      <div style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: capH - CARD_STROKE, background: theme.tint || TG.SURFACE }}>
         {theme.image
           ? (
             <img
@@ -260,7 +260,7 @@ export function ThemeScreen({ themes, studentToken, counts = {}, onStart, onBack
   // 좌우 이동 버튼(공용) — 시안: 60×60 흰 카드 버튼 + 아래 4px 엣지
   const navBtn = (disabled) => ({
     width: 60, height: 60, flexShrink: 0, borderRadius: RADIUS.xl, border: 'none', background: '#fff',
-    boxShadow: `inset 0 -4px 0 ${TG.KEY_EDGE}, 0 4px 18px rgba(43,39,48,0.07)`,
+    boxShadow: keycap(TG.KEY_EDGE),
     display: 'flex', alignItems: 'center', justifyContent: 'center', paddingBottom: 4,
     cursor: disabled ? 'default' : 'pointer', opacity: disabled ? 0.45 : 1, ...TOUCH_OPT,
   });
@@ -276,7 +276,7 @@ export function ThemeScreen({ themes, studentToken, counts = {}, onStart, onBack
       <Reveal i={1} style={{ position: 'absolute', left: 0, right: 0, top: 84, zIndex: 2 }}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: SPACE.md }}>
           <span style={{ ...TYPE.head, fontSize: 26, color: TG.INK, whiteSpace: 'nowrap' }}>{`${active + 1}. ${cur?.label || ''}`}</span>
-          <StarRow filled={curStars} size={16} gap={2} off="#D8E3EC" shine />
+          <StarRow filled={curStars} size={16} gap={2} off={TG.KEY_EDGE} shine />
           <span style={{ ...TYPE.num, fontSize: 14, color: SCORE_C }}>{`최고 ${curBest.toLocaleString()}점`}</span>
         </div>
       </Reveal>
@@ -343,8 +343,8 @@ export function ThemeScreen({ themes, studentToken, counts = {}, onStart, onBack
           style={{
             flex: 1, minWidth: 0, height: 60, borderRadius: RADIUS.xl, border: 'none',
             cursor: curUnlocked ? 'pointer' : 'default', paddingBottom: 4,
-            background: curUnlocked ? TG.CTA : '#D4DEE6',
-            boxShadow: curUnlocked ? `inset 0 -4px 0 ${TG.CTA_EDGE}, 0 4px 18px rgba(43,39,48,0.07)` : 'none',
+            background: curUnlocked ? TG.CTA : TG.KEY_EDGE_LOCKED,
+            boxShadow: curUnlocked ? keycap(TG.CTA_EDGE) : 'none',
             ...TOUCH_OPT,
           }}>
           <span style={{ ...TYPE.head, color: curUnlocked ? '#fff' : TG.STEEL }}>시작</span>

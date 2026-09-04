@@ -7,7 +7,7 @@ import {
   Flag, Bookmark, Book, CalendarMark, CalendarDate, Calendar, Soundwave,
   CheckCircle, Star, Stars, CrownStar, MedalStar, Bolt,
 } from '@solar-icons/react';
-import { TG, HOME, TYPE, FONT_NUM, TOUCH_OPT, SPACE } from '../tgTokens.js';
+import { TG, HOME, TYPE, FONT_NUM, TOUCH_OPT, SPACE, SHADOW, keycap } from '../tgTokens.js';
 import { ACHIEVEMENTS } from '../achievements.js';
 import { Reveal, TgTabBar, TAB_BAR_H, useStickyHeader, Gauge } from './shared.jsx';
 
@@ -21,19 +21,19 @@ const ACH_ICONS = {
 };
 // 업적 강조색 — 리스트 타일·축하 오버레이가 **같은 색 하나**를 쓴다.
 //  예전엔 오버레이만 카테고리별 색(achColor)이라 팝업마다 아이콘 색이 달랐다(2026-08-09 사용자 지적).
-export const ACH_ACCENT = '#FF6B6B';
+export const ACH_ACCENT = TG.CTA;
 
-const DEFAULT_EARNED = '#FFB02E'; // 기본 획득 금색(축하 오버레이 등 색 미지정 시)
-const LOCKED_BG = '#f1ece5';      // 회색 틴트(축하 오버레이 배지 안쪽)
+const DEFAULT_EARNED = TG.SUN;     // 기본 획득 금색(축하 오버레이 등 색 미지정 시)
+const LOCKED_BG = TG.SURFACE;       // 회색 틴트(축하 오버레이 배지 안쪽)
 const LOCKED_FG = TG.MUTED;       // 회색 아이콘
 
 // 시안 14 실측 — 토큰에 있는 색은 참조, 원오프만 리터럴 (2026-08-31 토큰 통합)
-const TITLE_INK = '#272622';      // 제목·업적명·진행 수치 (원오프)
-const ICON_LOCKED = '#A6B4C1';    // 미획득 아이콘 (원오프)
+const TITLE_INK = TG.INK;           // 제목·업적명·진행 수치 (원오프)
+const ICON_LOCKED = TG.ICON_LOCKED;   // 미획득 아이콘 (원오프)
 const BAR_TRACK = HOME.GAUGE_TRACK;
 const BAR_FILL = TG.CTA;
 const PCT_INK = HOME.INK;
-const DIVIDER = HOME.TAB_BORDER;
+const DIVIDER = TG.BORDER;
 
 const tint = (hex, a = 0.14) => {
   const n = parseInt(hex.slice(1), 16);
@@ -72,7 +72,7 @@ function AchRow({ ach, earned, snapshot, onToast }) {
     <button className="tg-press" onClick={() => onToast && onToast(got ? '이미 달성한 업적이에요!' : ach.cond, got ? 'done' : 'lock')}
       style={{
         // ★width 100% 필수 — button은 기본이 내용 크기라, 등장 래퍼(Reveal) 안에 들어가면 행마다 폭이 들쭉날쭉해진다(2026-08-06)
-        width: '100%', height: 70, borderRadius: 20, background: '#fff', boxShadow: '0px 4px 9px rgba(43,39,48,0.04)', border: 'none', cursor: 'pointer',
+        width: '100%', height: 70, borderRadius: 20, background: '#fff', boxShadow: SHADOW.level1, border: 'none', cursor: 'pointer',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 20px 10px 10px', textAlign: 'left', flexShrink: 0, ...TOUCH_OPT,
       }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.md, minWidth: 0 }}>
@@ -128,7 +128,7 @@ export function AchievementsScreen({ earned, snapshot, onToast, tabNav, achDot =
         <div style={{
           position: 'sticky', top: 0, zIndex: 3, margin: '0 -24px 0', padding: '50px 24px 18px',
           // ★배경엔 transition을 걸지 않는다 — 페이드 도중 반투명 구간에서 뒤 행이 비쳐 '틈'으로 보인다.
-          background: stuck ? '#fff' : 'transparent', boxShadow: stuck ? `inset 0 -2px 0 ${DIVIDER}` : 'none',
+          background: stuck ? '#fff' : 'transparent', boxShadow: stuck ? keycap(DIVIDER, { depth: 2, lift: null }) : 'none',
         }}>
           {/* 시안: 평소 16 Medium → 고정되면 24 Bold(제목 역할을 물려받음). 라인박스는 18로 고정이라 바 위치·블록 높이는 그대로 */}
           <span style={{

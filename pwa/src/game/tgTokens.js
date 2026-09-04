@@ -3,38 +3,74 @@
 // 나중에 별도 앱으로 분리해도 이 파일 + tgWidgets + gameApi + toneGameWords만 들고 가면 됨.
 // 참조 메모리: tone_game_redesign.md §3 (디자인 토큰)
 
-// ── 색상 토큰 ──────────────────────────────────────────
+// ── 원색 램프 (Primitives) — 역할 토큰(SEM)만 이 값을 참조한다. 화면 코드에서 PRIM을 직접 쓰지 말 것. (2026-09-04 규칙화)
+//   단계 50~900. 앵커는 그때까지 쓰던 실제 값이라 화면 변화 없음. 빈 단계는 필요할 때 램프 사이를 보간해 추가.
+export const PRIM = {
+  neutral: { 0: '#FFFFFF', 50: '#FFFDF8', 100: '#F3EFE9', 200: '#EBE5DE', 250: '#D8D2C8', 300: '#B8B0A8', 500: '#767079', 700: '#4A4550', 800: '#3C3C3C', 900: '#2B2730' },
+  red:     { 50: '#FFF3F3', 100: '#FFE8E8', 200: '#F0BCBE', 400: '#F96163', 500: '#F2484C', 600: '#E64244', 700: '#C23F41' },
+  green:   { 50: '#F2FCF7', 400: '#36C98D', 500: '#2BB583', 600: '#1FA86A', 700: '#219169' },
+  yellow:  { 100: '#FFEDD4', 200: '#FFE79D', 300: '#FFC94D', 400: '#FFC23C', 500: '#F0A91E' },
+  orange:  { 300: '#FFBD6B', 400: '#F3A75B', 500: '#FF6C28', 600: '#E77E33' },
+  steel:   { 100: '#E4EDF5', 200: '#CFDBE6', 300: '#AAB2BD', 400: '#98A2B0', 500: '#66727C' },
+  purple:  { 500: '#7C5CFF' },
+  brown:   { 250: '#E2D7C1', 300: '#C29271', 500: '#A65E2E', 700: '#734728', 900: '#452C1C' },
+};
+
+// ── 역할 토큰 (Semantic) — 이름은 용도만 말한다. 값은 전부 PRIM 별칭.
+export const SEM = {
+  bg:     { page: PRIM.neutral[50], card: PRIM.neutral[0], subtle: PRIM.neutral[100], track: PRIM.yellow[100], disabled: PRIM.neutral[200], starOff: PRIM.neutral[250], bubble: PRIM.neutral[800] },
+  border: { default: PRIM.neutral[200], keycap: PRIM.steel[100], keycapLocked: PRIM.steel[200] },
+  text:   { primary: PRIM.neutral[900], secondary: PRIM.neutral[500], disabled: PRIM.neutral[300], button: PRIM.steel[500], buttonSoft: PRIM.steel[400], onAction: PRIM.neutral[0] },
+  icon:   { locked: PRIM.steel[300] },
+  action: { primary: PRIM.red[400], primaryEdge: PRIM.red[600], tabEdge: PRIM.red[700], danger: PRIM.red[500], tint: PRIM.red[100], tintSoft: PRIM.red[50], tintEdge: PRIM.red[200] },
+  status: { success: PRIM.green[600], successGlow: PRIM.green[400], successTint: PRIM.green[50], warning: PRIM.yellow[400], gold: PRIM.yellow[500], goldSoft: PRIM.yellow[300] },
+  brand:  { train: PRIM.green[500], trainEdge: PRIM.green[700], endless: PRIM.orange[400], endlessEdge: PRIM.orange[600], theme: PRIM.purple[500] },
+  home:   { ink: PRIM.brown[900], accent: PRIM.brown[500], tabSoft: PRIM.brown[300], gaugeTrack: PRIM.brown[250], flame: PRIM.orange[500], flameSoft: PRIM.orange[300] },
+};
+
+// ── 호환 별칭 (TG/HOME) — 화면 코드가 쓰는 이름. 값은 SEM에서만 온다. 새 색이 필요하면 PRIM 단계 → SEM 역할 순으로 추가하고 여기엔 별칭만.
 export const TG = {
   // 배경 / 표면
-  BG: '#FFFDF8',          // 웜 화이트
-  CARD: '#FFFFFF',
+  BG: SEM.bg.page,          // 웜 화이트
+  CARD: SEM.bg.card,
   // 메인 액센트 (coral)
-  CORAL: '#FF6B6B',
-  CORAL_DK: '#F2484C',
+  CORAL_DK: SEM.action.danger,    // 코랄 진함 · 오답/시간초과(구 DANGER 흡수 — 같은 값이었다, 2026-09-04)
   CORAL_GRAD: 'linear-gradient(135deg, #FF7A7A 0%, #F2484C 100%)',
-  CORAL_BG: '#FFE8E8',    // 소프트 틴트 (콤보 칩 등)
+  CORAL_BG: SEM.action.tint,    // 소프트 틴트 (콤보 칩 등)
   // 포인트
-  SUN: '#FFC23C',         // 콤보·별·타이머
-  SUCCESS: '#1FA86A',     // 성공 텍스트
-  SUCCESS_GLOW: '#36C98D',
-  DANGER: '#F2484C',      // 시간초과·오답
+  SUN: SEM.status.warning,         // 콤보·별·타이머
+  SUCCESS: SEM.status.success,     // 성공 텍스트
+  SUCCESS_GLOW: SEM.status.successGlow,
   // 주 CTA 키캡(2026-08-31 승격 — 파일마다 CTA_RED/RES_RED/BAR_FILL 등으로 재선언되던 값을 단일 출처로)
-  CTA: '#F96163',         // 주 CTA·활성 탭·게이지 채움 레드 (= HOME.TAB_RED)
-  CTA_EDGE: '#E64244',    // CTA 키캡 인너 엣지 (= HOME.CTA_EDGE)
-  KEY_EDGE: '#E4EDF5',    // 흰 키캡 버튼 인너 엣지·하드 파스텔 섀도 (= HOME.CARD_SHADOW)
-  STEEL: '#66727C',       // 쿨 그레이 — 보조 버튼 텍스트·취소 라벨(#8F9CA7·#637481 근접 통합). 2026-09-03 대비 3.5→4.9(AA)
+  CTA: SEM.action.primary,         // 주 CTA·활성 탭·게이지 채움 레드 · 액센트(구 CORAL #FF6B6B 흡수 — 거리 14, 2026-09-04) (구 HOME.TAB_RED 흡수, 2026-09-04 A단계)
+  CTA_EDGE: SEM.action.primaryEdge,    // CTA 키캡 인너 엣지 (구 HOME.CTA_EDGE 흡수)
+  KEY_EDGE: SEM.border.keycap,    // 흰 키캡 버튼 인너 엣지·하드 파스텔 섀도 (구 HOME.CARD_SHADOW 흡수)
+  STEEL: SEM.text.button,       // 쿨 그레이 — 보조 버튼 텍스트·취소 라벨(#8F9CA7·#637481 근접 통합). 2026-09-03 대비 3.5→4.9(AA)
   // 텍스트 (의미별 계층 — 비슷한 회색은 여기로 통합, 2026-07-18)
-  INK: '#2B2730',       // 본문·제목
-  INK_SOFT: '#4A4550',  // 살짝 옅은 본문
-  SUB: '#767079',       // 보조 텍스트(비슷한 회색 #8f887f·#8b8580·#a49da6 등 통합). 2026-09-03 대비 2.9→4.7(AA) — 설명문 56곳이 이 값을 쓴다
-  MUTED: '#B8B0A8',     // 비활성·플레이스홀더(#c3bcb2·#c9c2b8·#d8d2c8 등 통합)
-  ICON: '#767676',      // 아이콘 회색(#747775 통합)
-  GUIDE: '#595959',
+  INK: SEM.text.primary,       // 본문·제목
+  SUB: SEM.text.secondary,       // 보조 텍스트(비슷한 회색 #8f887f·#8b8580·#a49da6 등 통합). 2026-09-03 대비 2.9→4.7(AA) — 설명문 56곳이 이 값을 쓴다 (구 ICON·GUIDE 흡수)
+  MUTED: SEM.text.disabled,     // 비활성·플레이스홀더(#c3bcb2·#c9c2b8·#d8d2c8 등 통합)
   // 표면 / 라인 (웜 오프화이트 계열 통합)
-  SURFACE: '#F3EFE9',   // 소프트 칩 배경(#f4efe8·#f7f3ee 통합)
-  BORDER: '#EBE5DE',    // 카드 보더·구분선(#efeae4·#e7e0d8·#ece5da·#e5ded5 통합)
-  TRACK: '#FFEDD4',     // 진행 게이지 트랙 (greige → 웜 브라이트, 2026-07-26 색감 리프레시)
-  GOLD_BG: '#FFEFC2',   // 골드 소프트 틴트(콤보 칩 등 — CORAL_BG 분홍보다 생기)
+  SURFACE: SEM.bg.subtle,   // 소프트 칩 배경(#f4efe8·#f7f3ee 통합)
+  BORDER: SEM.border.default,    // 카드 보더·구분선(#efeae4·#e7e0d8·#ece5da·#e5ded5 통합) (구 HOME.TAB_BORDER #E9E6DE 흡수)
+  TRACK: SEM.bg.track,     // 진행 게이지 트랙 (greige → 웜 브라이트, 2026-07-26 색감 리프레시)
+  // 코드 로컬 상수·리터럴에서 승격(2026-09-04 B단계)
+  TRAIN: SEM.brand.train,       // 트레이닝 아이덴티티(시안 461:339)
+  TRAIN_EDGE: SEM.brand.trainEdge,  // 트레이닝 키캡 엣지
+  ENDLESS: SEM.brand.endless,     // 무한 모드 오렌지(오브·배지·모드 해제)
+  ENDLESS_EDGE: SEM.brand.endlessEdge,// 무한 오브 엣지
+  LOCKED: SEM.bg.disabled,
+  KEY_EDGE_LOCKED: SEM.border.keycapLocked, // 잠긴 칩 인셋 엣지(steel/200, 구 #CFDBE6)
+  CORAL_BG_SOFT: SEM.action.tintSoft,  // 오답 플래시 배경(red/50)
+  CORAL_BG_EDGE: SEM.action.tintEdge,  // 오답 키캡 엣지·튜토리얼 점(red/200)
+  SUCCESS_BG: SEM.status.successTint,  // 정답 플래시 배경(green/50)
+  GOLD: SEM.status.gold,               // 골드 텍스트·상태(yellow/500)
+  GOLD_SOFT: SEM.status.goldSoft,      // 골드 수치·밝은 골드(yellow/300)
+  THEME: SEM.brand.theme,              // 테마 모드·연음 마크 퍼플
+  ICON_LOCKED: SEM.icon.locked,   // 미획득 아이콘(steel/300, 구 #A6B4C1)
+  STEEL_SOFT: SEM.text.buttonSoft, // 옅은 쿨 그레이 수치(steel/400, 구 #8F9CA7)      // 잠긴 오브 면
+  STAR_OFF: SEM.bg.starOff,    // 빈 별
+  BUBBLE: SEM.bg.bubble,      // 코치 말풍선 면
   // 라인(반투명)
   LINE: 'rgba(43,39,48,0.08)',
 };
@@ -50,8 +86,9 @@ export const BG_MESH = [
 ].join(', ') + ', #FDFEFB';
 
 // 홈 허브 팔레트 — 플랫 카툰 룸 + 공통 탭바 (2026-07-27 사용자 Figma 시안 442:2에서 추출).
-// 시그니처: 하드(블러0) 파스텔 섀도 CARD_SHADOW · 키캡 인너엣지(TAB_RED_EDGE/CTA_EDGE) · 브라운 잉크 계열.
-export const HOME = {
+// 시그니처: 하드(블러0) 파스텔 섀도(TG.KEY_EDGE) · 키캡 인너엣지(TAB_RED_EDGE) · 브라운 잉크 계열. 탭 레드·CTA 엣지·카드섀도·탭보더·BROWN은 2026-09-04 A단계에서 TG로 흡수/삭제.
+// 홈 허브 방 일러스트 팔레트(벽·몰딩·바닥·창) — UI 토큰(TG/HOME)과 섞이지 않게 분리(2026-09-04 B단계). 일러스트 전용, 버튼·텍스트에 쓰지 말 것.
+export const SCENE = {
   WALL: '#D9BA84',              // 상단 벽(탄)
   WALL_BAND: '#EFE4CF',         // 벽 하부 연크림 띠
   MOLD_DARK: '#734728',         // 몰딩 외곽 라인·창문 스트로크
@@ -61,21 +98,22 @@ export const HOME = {
   TILE: '#FBEFD7',              // 바닥 타일(라운드 사각 반복)
   GLASS: '#FFE79D',             // 창문 유리
   PANEL: '#D2B17B',             // 벽 세로 패널 스트라이프 — 시안 #F7F3ED MULTIPLY×벽(#D9BA84) 평탄화 값(2026-07-28 색 수정)
+  SMOKE: '#EEE9D3',              // 굴뚝 연기 퍼프
+  RAIL: '#9AAC5D',               // 난이도 사다리 레일(들판 올리브)
   PANEL_LINE: '#905E3D',        // 하부 웨인스코팅 패널 아웃라인 — 시안 #E0D7D1 MULTIPLY×밴드(#A46F4A) 평탄화 값
-  CARD: '#FFFFFF',              // 카드·탭바 배경(순백 — 2026-08-03 시안 개선안에서 웜 아이보리 #FFF9EE에서 변경)
-  CARD_SHADOW: TG.KEY_EDGE,     // 하드 파스텔 섀도(블러 0 — drop 0/3 + inset 0/-2)
-  INK: '#452C1C',               // 잉크 브라운(닉네임·수치)
-  BROWN: '#634633',             // 아이콘·아바타 브라운
-  ACCENT: '#A86B2E',            // 등급명 골드브라운. 2026-09-03 대비 2.6→4.3(큰 글자 AA)
-  TAB_INACTIVE: '#8F6650',      // 탭 비활성(진탄 — 듀오톤 주색). 2026-09-03 대비 2.9→4.9(AA) — 라벨 12px이 이 색
-  TAB_INACTIVE_SOFT: '#D7B59E', // 탭 비활성(연탄 — 듀오톤 보조색)
-  TAB_RED: TG.CTA,              // 활성 탭·CTA 레드
-  TAB_RED_EDGE: '#C23F41',      // 활성 탭 키캡 인너 엣지
-  CTA_EDGE: TG.CTA_EDGE,        // CTA 키캡 인너 엣지
-  GAUGE_TRACK: '#E2D7C1',       // HUD 게이지 트랙
-  TAB_BORDER: '#E9E6DE',        // 탭바 상단 2px 구분선(시안 개선안 추가)
-  STREAK_FLAME: '#FF6C28',      // 스트릭 불꽃(기본 티어) — 시안 개선안
-  STREAK_FLAME_SOFT: '#FFBD6B', // 스트릭 불꽃 안쪽 코어·글로우
+};
+
+export const HOME = {
+  // 방 일러스트 색은 SCENE으로 분리(2026-09-04 B단계) — 여기는 HUD·탭바 등 홈 UI 색만
+  CARD: SEM.bg.card,              // 카드·탭바 배경(순백 — 2026-08-03 시안 개선안에서 웜 아이보리 #FFF9EE에서 변경)
+  INK: SEM.home.ink,               // 잉크 브라운(닉네임·수치)
+  ACCENT: SEM.home.accent,            // 등급명 — TAB_INACTIVE와 거리 13이라 brown/500 하나로 통합(2026-09-04 규칙화)
+  TAB_INACTIVE: SEM.home.accent,      // 탭 비활성·홈 설정 아이콘(듀오톤 주색). 2026-09-04 채도 있는 시에나 — 대비 4.9(AA) 유지하면서 8F6650의 탁함 제거
+  TAB_INACTIVE_SOFT: SEM.home.tabSoft, // 탭 비활성 듀오톤 보조색 — 실제 렌더는 TAB_INACTIVE @ opacity .72(shared.jsx .tg-tab-duo-off)이고 이 값은 그 평탄화 값(Figma 시안과 동일). 2026-09-04
+  TAB_RED_EDGE: SEM.action.tabEdge,      // 활성 탭 키캡 인너 엣지
+  GAUGE_TRACK: SEM.home.gaugeTrack,       // HUD 게이지 트랙
+  STREAK_FLAME: SEM.home.flame,      // 스트릭 불꽃(기본 티어) — 시안 개선안
+  STREAK_FLAME_SOFT: SEM.home.flameSoft, // 스트릭 불꽃 안쪽 코어·글로우
 };
 
 // 성조 5색 — toneGameWords.js TONES.color와 동일하게 유지(단일 출처는 TONES, 여기는 참조용 상수).
@@ -101,7 +139,7 @@ export const TONE_KEY_COLORS = {
 export const DIFF_COLORS = {
   easy:   { accent: '#36C98D', tint: 'rgba(54,201,141,0.14)',  glow: 'rgba(54,201,141,0.16)' },
   normal: { accent: '#FFC23C', tint: 'rgba(255,194,60,0.14)',  glow: 'rgba(255,194,60,0.16)' },
-  hard:   { accent: '#FF6B6B', tint: 'rgba(255,107,107,0.14)', glow: 'rgba(255,107,107,0.16)' },
+  hard:   { accent: '#F96163', tint: 'rgba(255,107,107,0.14)', glow: 'rgba(255,107,107,0.16)' },
 };
 
 // Figma에서 추출한 게임 이미지 에셋 (pwa/public/game/)
@@ -131,28 +169,29 @@ export const FONT_PINYIN = '-apple-system, BlinkMacSystemFont, "Segoe UI", Robot
 // 한자 — 용량 큰 Noto SC 웹폰트 대신 시스템 스택(OS 설치 폰트)으로 처리.
 export const FONT_HANZI = '"Noto Sans SC", "PingFang SC", "Microsoft YaHei", "Heiti SC", sans-serif';
 
-// ── 타이포 스케일(2026-07-18) ──────────────────────────
+// ── 타이포 스케일(2026-07-18) ──────────────────────────
+// 2026-09-04 규칙화: 크기 스케일 11·12·13·15·17·20·24·28·32·60 · 굵기는 500(본문)/700(강조) 둘뿐(800 폐기). title 22→20 · head 21→20 · h1 18→17 · h2/btn 16→15 · label 14→13 · numLg 26→24.
 // 흩어진 fontSize 하드코딩(35종)을 의미 기반 프리셋으로 통일. family+weight+size만 묶고 색·letterSpacing은 개별 지정.
 //   사용: style={{ ...TYPE.h1, color: TG.INK }}  ·  적용 시 근처 값은 스케일에 스냅(예 16.5→16, 12.5→12).
 //   숫자 히어로(결과 60·XP 52 등)는 원오프라 TYPE.numHero에 fontSize 오버라이드로 사용.
 export const TYPE = {
   // 타이틀(FONT_TITLE — 단일 굵기 디스플레이체, weight 불필요)
   titleLg: { fontFamily: FONT_TITLE, fontSize: 24 },  // 모달·히어로 제목
-  title:   { fontFamily: FONT_TITLE, fontSize: 22 },  // 등급명·테마명 등 히어로
-  head:    { fontFamily: FONT_BODY, fontWeight: 700, fontSize: 21 },  // 화면 헤더 — 깔끔한 고딕 볼드(2026-07-23, 구 Jua 둥근체에서 변경)
+  title:   { fontFamily: FONT_TITLE, fontSize: 20},  // 등급명·테마명 등 히어로
+  head:    { fontFamily: FONT_BODY, fontWeight: 700, fontSize: 20},  // 화면 헤더 — 깔끔한 고딕 볼드(2026-07-23, 구 Jua 둥근체에서 변경)
   // 디스플레이 숫자(FONT_NUM)
-  numHero: { fontFamily: FONT_NUM, fontWeight: 800, fontSize: 60 }, // 결과 점수(원오프는 size 오버라이드)
-  numLg:   { fontFamily: FONT_NUM, fontWeight: 800, fontSize: 26 }, // 통계 수치
-  numMd:   { fontFamily: FONT_NUM, fontWeight: 800, fontSize: 20 }, // 소형 수치
+  numHero: { fontFamily: FONT_NUM, fontWeight: 700, fontSize: 60 }, // 결과 점수(원오프는 size 오버라이드)
+  numLg:   { fontFamily: FONT_NUM, fontWeight: 700, fontSize: 24}, // 통계 수치
+  numMd:   { fontFamily: FONT_NUM, fontWeight: 700, fontSize: 20 }, // 소형 수치
   num:     { fontFamily: FONT_NUM, fontWeight: 700, fontSize: 13 }, // 인라인 미니 수치
   // 본문 강조(FONT_BODY) — 제목·버튼
-  h1:      { fontFamily: FONT_BODY, fontWeight: 800, fontSize: 18 }, // 카드·섹션 강조 제목
-  h2:      { fontFamily: FONT_BODY, fontWeight: 800, fontSize: 16 }, // 소제목 강조
-  cta:     { fontFamily: FONT_BODY, fontWeight: 700, fontSize: 18 }, // 주요 CTA 라벨
-  btn:     { fontFamily: FONT_BODY, fontWeight: 700, fontSize: 16 }, // 버튼·리스트 항목
+  h1:      { fontFamily: FONT_BODY, fontWeight: 700, fontSize: 17}, // 카드·섹션 강조 제목
+  h2:      { fontFamily: FONT_BODY, fontWeight: 700, fontSize: 15}, // 소제목 강조
+  cta:     { fontFamily: FONT_BODY, fontWeight: 700, fontSize: 17}, // 주요 CTA 라벨
+  btn:     { fontFamily: FONT_BODY, fontWeight: 700, fontSize: 15}, // 버튼·리스트 항목
   btnSm:   { fontFamily: FONT_BODY, fontWeight: 700, fontSize: 15 }, // 보조 버튼
   // 본문/라벨(FONT_BODY)
-  label:   { fontFamily: FONT_BODY, fontWeight: 700, fontSize: 14 }, // 라벨(강)
+  label:   { fontFamily: FONT_BODY, fontWeight: 700, fontSize: 13}, // 라벨(강)
   labelSm: { fontFamily: FONT_BODY, fontWeight: 700, fontSize: 12 }, // 소형 라벨/배지
   body:    { fontFamily: FONT_BODY, fontWeight: 500, fontSize: 15 }, // 기본 본문
   sub:     { fontFamily: FONT_BODY, fontWeight: 500, fontSize: 13 }, // 보조 설명
@@ -161,9 +200,14 @@ export const TYPE = {
 };
 
 // ── 반경 / 그림자 ──────────────────────────────────────
-// 스케일(4px 기반) + 의미 별칭(chip/btn/card). 근접값은 스케일로 스냅(예 14·15→lg 16, 22·23→xxl 24). pill=완전 둥근 알약.
-export const RADIUS = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24, pill: 999, chip: 12, btn: 18, card: 28 };
+// 스케일(4px 기반) + 의미 별칭(btn/card). chip(=md)은 2026-09-04 삭제. 근접값은 스케일로 스냅(예 14·15→lg 16, 22·23→xxl 24). pill=완전 둥근 알약.
+export const RADIUS = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24, pill: 999, btn: 20, card: 24 }; // 2026-09-04 규칙화: btn 18→xl 20, card 28→xxl 24(별칭)
 export const SHADOW = {
+  ctaGlow: '0 10px 20px rgba(242,72,76,0.10)', // CTA 키캡의 옅은 레드 글로우 리프트(홈 모드선택·복습 CTA)
+  // 높이 3단(2026-09-04 규칙화) — level1 카드/행, level2 키캡·모달, level3 바텀시트. 인라인 리터럴 대신 이 셋을 쓴다.
+  level1: '0 4px 18px rgba(43,39,48,0.04)',
+  level2: '0 4px 18px rgba(43,39,48,0.07)',
+  level3: '0 -10px 40px rgba(26,16,20,0.25)',
   // 카드 섀도 — 무채색 → 옅은 블루·코랄 틴트 2겹(공기감, 2026-07-26 색감 리프레시)
   card: '0 10px 28px rgba(89,128,192,0.10), 0 3px 12px rgba(255,107,107,0.06)',
   btn: '0 6px 16px rgba(242,72,76,0.28)',
@@ -172,10 +216,13 @@ export const SHADOW = {
   timeoutGlow: '0 10px 28px rgba(43,39,48,0.07), 0 0 40px rgba(242,72,76,0.22), 0 2px 16px rgba(242,72,76,0.16)',
 };
 
+// ── 키캡 규칙(2026-09-04) — 게임의 모든 '눌리는 면'은 이 한 함수로 그린다. depth 4 = 버튼/오브/성조 키, 2 = 카드/칩/HUD. lift = 높이(level1 카드, level2 버튼·모달, null 없음, 또는 글로우 문자열).
+export const keycap = (edge, { depth = 4, lift = SHADOW.level2 } = {}) => lift ? `inset 0 -${depth}px 0 ${edge}, ${lift}` : `inset 0 -${depth}px 0 ${edge}`;
+
 // ── 스페이싱 토큰 ──────────────────────────────────────
 // 4px 기반 스케일. gap·margin·단일 padding 등 개별 숫자값에 사용. 근접값은 스냅(예 7→md 8, 14·15→x2 16).
 // 복합 shorthand padding('14px 16px')은 레이아웃 특화·가독성 위해 토큰화 대상 아님(리터럴 유지).
-export const SPACE = { xxs: 2, xs: 4, sm: 6, md: 8, lg: 10, xl: 12, x2: 16, x3: 20, x4: 24 };
+export const SPACE = { xxs: 4, xs: 4, sm: 8, md: 8, lg: 12, xl: 12, x2: 16, x3: 20, x4: 24, x5: 32 }; // 2026-09-04 규칙화: 4px 격자. xxs·sm·lg는 xs·md·xl의 별칭(구 2·6·10)
 
 // ── 모션 토큰 ──────────────────────────────────────────
 export const DUR = { micro: '150ms', state: '220ms', enter: '360ms' };

@@ -3,7 +3,7 @@
 import { InstagramLogoIcon } from '@phosphor-icons/react';
 import { TG, TYPE, TOUCH_OPT, RADIUS, SPACE } from '../tgTokens.js';
 
-const TITLE_INK = '#272622'; // 시안 15 제목(오답 노트·업적과 동일)
+const TITLE_INK = TG.INK; // 시안 15 제목(오답 노트·업적과 동일)
 import { track } from '../gameAnalytics.js';
 import { PLAY_LINKS } from './gameModals.jsx';
 import { TgTabBar, TAB_BAR_H, Reveal } from './shared.jsx';
