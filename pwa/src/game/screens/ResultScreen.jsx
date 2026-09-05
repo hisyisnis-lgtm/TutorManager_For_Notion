@@ -5,7 +5,7 @@ import { TG, TYPE, TOUCH_OPT, pickCelebratePanda, RADIUS, SPACE, TONE_COLORS, SH
 import { useCountUp, FlameIcon } from '../tgWidgets.jsx';
 import { play as playSfx } from '../tgSfx.js';
 import { EXAM_PASS_RATIO } from '../gameXp.js';
-import { Reveal, ConfettiBurst, CrispFlash, LIGHT_CONFETTI, GameHeader, KeycapCta, FieldBg, StatCard } from './shared.jsx';
+import { Reveal, ConfettiBurst, CrispFlash, LIGHT_CONFETTI, GameHeader, KeycapCta, StatCard } from './shared.jsx';
 import { LoginNudgeModal } from './gameModals.jsx';
 import CoachMarkOverlay from '../../components/ui/CoachMarkOverlay.jsx';
 import { useTabTip } from '../../hooks/useTabTip.js';
@@ -85,8 +85,6 @@ export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, 
       {celebrate && <ConfettiBurst colors={LIGHT_CONFETTI} count={16} power={1.3} size={6} zIndex={3} style={{ top: 150 }} />}
       {/* 헤더 — 시안 12: 글래스 60 + 스테이지명 가운데(뒤로가기 없음. 이탈은 아래 '홈으로 가기'로) */}
       {/* ★"결과화면"이 아니라 "결과" — '화면'은 개발자 용어다(2026-08-12). 표시되는 값·레이아웃은 시안 12 그대로. */}
-      {/* 들판 실루엣 — 모드선택과 같은 세계(하단 버튼 뒤에만 얇게, 2026-09-03) */}
-      <FieldBg sink={250} />
       <GameHeader title={title ? `${title} 결과` : '결과'} glass center />
       {/* 축하 판다 150×150 (가로 중앙, 시안 y90) */}
       <Reveal i={1} style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', top: 90 }}>
@@ -165,7 +163,6 @@ export function ExamResultScreen({ correct = 0, total = 20, passed = false, onRe
       {passed && <CrispFlash color="rgba(255,255,255,0.6)" zIndex={7} />}
       {passed && <ConfettiBurst count={30} power={1.3} size={10} zIndex={3} style={{ top: 150 }} />}
       {passed && <ConfettiBurst colors={LIGHT_CONFETTI} count={15} power={1.25} size={6} zIndex={3} style={{ top: 150 }} />}
-      <FieldBg sink={250} />
       <GameHeader title={title ? `${title} 결과` : '승급시험 결과'} glass center />
       {/* 판다 150×150 (시안 y90) */}
       <Reveal i={1} style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', top: 90 }}>
