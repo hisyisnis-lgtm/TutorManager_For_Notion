@@ -48,6 +48,13 @@
         }
       ]
     },
+    "일지 작성": {
+      "type": "rollup",
+      "id": "%5CNdU",
+      "relation_property_name": "수업 일지",
+      "rollup_property_name": "오늘 내용",
+      "function": "not_empty"
+    },
     "특이사항": {
       "type": "select",
       "id": "%5ClQz",
@@ -97,6 +104,11 @@
       "type": "formula",
       "id": "nKmm",
       "expression": "if(prop(\"무료 수업\") == 0, 0, if((!empty(prop(\"수업 일시\")) and (prop(\"특이사항\") != \"🟠 보강\")) and (prop(\"특이사항\") != \"🚫 취소\"), toNumber(prop(\"수업 시간(분)\")) / 60, 0))"
+    },
+    "숙제": {
+      "type": "dual_property",
+      "id": "sYjJ",
+      "database_id": "5ce7d5ef-7b80-4795-843f-325f4ca868e2"
     },
     "수업 시간(분)": {
       "type": "select",

@@ -3,6 +3,13 @@
   "title": "수업 일지",
   "url": "https://app.notion.com/p/318838faf2a681f19b9cfd379b1026ed",
   "properties": {
+    "수업 일시": {
+      "type": "rollup",
+      "id": "Fm%3Dt",
+      "relation_property_name": "수업",
+      "rollup_property_name": "수업 일시",
+      "function": "earliest_date"
+    },
     "메모": {
       "type": "rich_text",
       "id": "GKJK"
