@@ -81,7 +81,7 @@ const buttonVariants = cva(
 )
 
 const Button = React.forwardRef((
-  { className, variant, size, block, asChild = false, loading = false, disabled, children, ...props },
+  { className, variant, size, block, asChild = false, loading = false, disabled, type = "button", children, ...props },
   ref
 ) => {
   const Comp = asChild ? Slot : "button"
@@ -89,6 +89,10 @@ const Button = React.forwardRef((
     <Comp
       className={cn(buttonVariants({ variant, size, block, className }))}
       ref={ref}
+      // 네이티브 <button>의 기본 type은 submit이라 <form> 안의 "삭제"·"공유" 같은 onClick 버튼이
+      // 폼 저장까지 일으켰다(2026-09-07 수업일지 삭제 → 저장 후 navigate(-1)로 튕김). antd Button처럼
+      // 기본을 button으로 두고, 제출 버튼만 type="submit"을 명시한다(SubmitButton·LoginPage 등 전부 명시 중).
+      type={asChild ? undefined : type}
       disabled={asChild ? undefined : (disabled || loading)}
       aria-busy={loading || undefined}
       {...props}>

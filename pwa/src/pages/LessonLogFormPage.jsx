@@ -87,7 +87,9 @@ export default function LessonLogFormPage() {
       await deletePage(id);
       invalidateCache('lessonLogs');
       invalidateCache('class');
-      navigate(-1);
+      // navigate(-1)은 방금 지운 일지의 상세로 돌아간다 — Notion은 휴지통 페이지도 GET에 그대로 내려줘
+      // "안 지워진 것"처럼 보였다(2026-09-07). 지운 것의 화면으로 돌아가지 말고 목록으로.
+      navigate('/logs', { replace: true });
     } catch (e) {
       setError(e.message);
       setShowDeleteConfirm(false);

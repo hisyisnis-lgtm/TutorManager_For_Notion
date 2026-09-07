@@ -57,6 +57,8 @@ export function parseLessonLog(page) {
   return {
     id: page.id,
     title: getTitle(p['제목']),
+    // 휴지통 페이지도 GET은 200으로 온다 — 상세가 지운 일지를 멀쩡히 그리지 않게 표시해 둔다(2026-09-07).
+    deleted: Boolean(page.archived || page.in_trash),
     createdTime: page.created_time ?? '',
     // rollup '수업 일시'(수업 relation → 수업 일시, 2026-09-04). 목록 정렬·월 필터는 이 값을 우선 쓰고,
     // 수업이 연결되지 않은 옛 일지만 생성 시각으로 대신한다.

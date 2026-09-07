@@ -448,7 +448,8 @@ export default function ClassFormPage() {
       await deletePage(id);
       invalidateCache('class');
       invalidateCache('pending');
-      navigate(-1);
+      // 지운 수업의 상세로 돌아가지 않는다(LessonLogFormPage와 같은 이유, 2026-09-07).
+      navigate('/classes', { replace: true });
     } catch (e) {
       setError(e.message);
       setShowDeleteConfirm(false);

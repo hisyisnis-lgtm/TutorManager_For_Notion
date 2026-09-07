@@ -5,6 +5,7 @@ import { Card, CardContent } from '../components/shadcn/card';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import ErrorMessage from '../components/ui/ErrorMessage.jsx';
+import EmptyState from '../components/ui/EmptyState.jsx';
 import LessonLogBody from '../components/lessonLogs/LessonLogBody.jsx';
 import { getPage } from '../api/notionClient.js';
 import { parseLessonLog } from '../api/lessonLogs.js';
@@ -54,6 +55,8 @@ export default function LessonLogDetailPage() {
   if (loading) return <><PageHeader title="수업 일지" back /><LoadingSpinner /></>;
   if (error) return <><PageHeader title="수업 일지" back /><ErrorMessage message={error} onRetry={load} /></>;
   if (!log) return null;
+  // 뒤로가기로 지운 일지에 다시 들어올 수 있다(Notion은 휴지통 페이지도 200) — 멀쩡한 일지처럼 그리지 않는다.
+  if (log.deleted) return <><PageHeader title="수업 일지" back /><EmptyState title="삭제된 일지예요" description="이 일지는 휴지통으로 옮겨졌어요." /></>;
 
   const studentNames = log.studentIds.map((sid) => studentNameMap[sid]).filter(Boolean).join(', ');
 
