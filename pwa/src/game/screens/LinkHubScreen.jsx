@@ -6,15 +6,17 @@ import { AltArrowRight, Stars } from '@solar-icons/react';
 import { TG, TYPE, TOUCH_OPT, RADIUS, SPACE, SHADOW } from '../tgTokens.js';
 import { track } from '../gameAnalytics.js';
 import { TgTabBar, TAB_BAR_H, Reveal } from './shared.jsx';
+import { KakaoLogo } from './LoginScreen.jsx';
+import { BRAND_EXTERNAL } from '../../constants/theme.js';
 
-const SITE = 'https://tiantian-chinese.pages.dev';
+const KAKAO_CHANNEL = 'https://pf.kakao.com/_jFnFn';
 
-// image = 각 링크의 카톡 미리보기(OG) 이미지 그대로 (public/img, 1200×630. intro.html·group-class.html og:image와 동일)
+// 채널 카드는 기존 카카오 SVG 심볼과 브랜드 색을 사용한다.
 const HUB_LINKS = [
-  { id: 'consult', title: '무료상담', desc: '고민만 들고 오세요, 부담 없이', href: `${SITE}/#/intro`, image: '/img/카카오톡링크미리보기이미지_소개및무료상담신청.png', tint: '#7f0005' },
+  { id: 'kakao-channel', title: '카카오톡 채널', desc: '하늘하늘중국어 소식과 안내', href: KAKAO_CHANNEL, Icon: KakaoLogo, tint: BRAND_EXTERNAL.kakao },
 ];
 
-// 측정: 게임→서비스 전환 클릭(유입 깔때기의 출구) — 기존 cta_play_link 이벤트에 m: consult/group 추가
+// 측정: 게임에서 채널 등 외부 서비스로 이동한 항목을 기록한다.
 function openLink(href, channel) {
   track('cta_play_link', { m: channel });
   try { window.open(href, '_blank', 'noopener,noreferrer'); } catch { /* noop */ }
@@ -42,11 +44,13 @@ export function LinkHubScreen({ tabNav, achDot = false }) {
               display: 'block', width: '100%', padding: 0, borderRadius: RADIUS.xl, overflow: 'hidden',
               background: '#fff', border: 'none', cursor: 'pointer', boxShadow: SHADOW.level2, textAlign: 'left', ...TOUCH_OPT,
             }}>
-              {/* 상단 썸네일 — OG 표준 비율(1200×630). 이미지 없는 항목은 tint+라벨 */}
+              {/* 상단 썸네일 — OG 표준 비율(1200×630). 채널은 벡터 심볼로 표시 */}
               <div style={{ width: '100%', aspectRatio: '1200 / 630', background: l.image ? TG.SURFACE : l.tint, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 {l.image
                   ? <img src={l.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  : <span style={{ ...TYPE.btn, color: 'rgba(255,255,255,0.92)' }}>{l.title}</span>}
+                  : l.Icon
+                    ? <span aria-hidden="true" style={{ display: 'flex', transform: 'scale(4)' }}><l.Icon /></span>
+                    : <span style={{ ...TYPE.btn, color: TG.INK }}>{l.title}</span>}
               </div>
               {/* 하단 텍스트 패널 — 제목/설명 + 바로가기 어포던스(카드별 tint로 구분) */}
               <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.xl, padding: '14px 16px' }}>
@@ -55,7 +59,7 @@ export function LinkHubScreen({ tabNav, achDot = false }) {
                   <span style={{ ...TYPE.btn, lineHeight: '26px', color: TG.INK }}>{l.title}</span>
                   <span style={{ ...TYPE.sub, fontWeight: 700, lineHeight: '21px', color: TG.SUB, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{l.desc}</span>
                 </div>
-                <AltArrowRight aria-hidden="true" size={24} weight="Bold" color={l.tint} style={{ flexShrink: 0 }} />
+                <AltArrowRight aria-hidden="true" size={24} weight="Bold" color={TG.INK} style={{ flexShrink: 0 }} />
               </div>
             </button>
             </Reveal>
