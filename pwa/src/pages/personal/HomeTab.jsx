@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { captureAuthScope, isAuthScopeCurrent } from '../../api/authState.js';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { CircleNotchIcon } from '@phosphor-icons/react';
@@ -193,6 +194,7 @@ export default function HomeTab({ studentToken, studentLoaded, onUpcomingLoaded,
   const [upcomingError, setUpcomingError] = useState(false);
 
   const loadInitialData = useCallback(async () => {
+    const auth = captureAuthScope(`student:${studentToken}`);
     // 캐시 있으면 즉시 표시(홈 첫 화면 빠르게), 뒤에서 갱신. dot 판정(onUpcomingLoaded)은
     // 최신 데이터로만 — 옛 목록으로 새 수업 점을 잘못 띄우지 않게.
     const CK = `student:upcoming:${studentToken}`;
@@ -211,6 +213,7 @@ export default function HomeTab({ studentToken, studentLoaded, onUpcomingLoaded,
         fetchMyClasses(studentToken, addMonths(thisMonth, 1)),
         fetchMyClasses(studentToken, addMonths(thisMonth, 2)),
       ]));
+      if (!isAuthScopeCurrent(auth)) return;
       // 잘라내지 않고 전부 담는다 — '예약된 수업' 개수가 실제 예약 건수여야 하기 때문.
       // (이전 slice(0,5) 때문에 10건 잡혀 있어도 5개로 보였다. 2026-08-26 실측: 활성 학생
       //  대부분이 8~11건이라 사실상 전원이 이 상한에 걸려 있었다.)
@@ -228,9 +231,10 @@ export default function HomeTab({ studentToken, studentLoaded, onUpcomingLoaded,
         .sort((a, b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime));
       setUpcoming(all);
       setUpcomingError(false);
-      writeCacheValue(CK, all);
+      writeCacheValue(CK, all, auth);
       onUpcomingLoaded?.(all);
     } catch {
+      if (!isAuthScopeCurrent(auth)) return;
       if (!cached) { setUpcoming([]); setUpcomingError(true); }
     } finally {
       setUpcomingLoading(false);
@@ -349,4 +353,3 @@ export default function HomeTab({ studentToken, studentLoaded, onUpcomingLoaded,
     </div>
   );
 }
-

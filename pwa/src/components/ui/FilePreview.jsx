@@ -27,7 +27,7 @@ import { isImageByName, isPdfByName } from '../../utils/audioFile.js';
  * - file: { name: string, url: string|null }  (url은 오디오 인라인 src로만 쓰임. 이미지/PDF는 사용 안 함)
  * - onGetFreshUrl: async () => string         (AudioPlayer만 사용 — URL 만료 시 재조회)
  * - onDownload: async () => void              (다운로드 버튼 클릭 시 호출 — 학생/강사 분기는 부모가 처리)
- * - fetchInlineBlobUrl: async () => string    (이미지 미리보기용 blob URL fetcher — Worker proxy 경유)
+ * - fetchInlineBlobUrl: async () => string    (이미지·URL 없는 오디오의 인증된 Worker blob URL)
  * - onDelete: () => void                       (있을 때만 삭제 버튼 표시)
  * - deleteDisabled: boolean
  */
@@ -71,6 +71,7 @@ export default function FilePreview({
       url={file?.url}
       fileName={file?.name}
       onGetFreshUrl={onGetFreshUrl}
+      fetchInlineBlobUrl={!file?.url ? fetchInlineBlobUrl : undefined}
       onDelete={onDelete}
       deleteDisabled={deleteDisabled}
       onDownload={onDownload}

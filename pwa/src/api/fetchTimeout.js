@@ -32,15 +32,20 @@ export async function retryTransient(fn, { attempts = 3, baseDelayMs = 1000 } = 
 
 export async function fetchWithTimeout(url, opts = {}, timeoutMs = REQUEST_TIMEOUT_MS) {
   const controller = new AbortController();
+  const abortFromCaller = () => controller.abort(opts.signal?.reason);
+  if (opts.signal?.aborted) abortFromCaller();
+  else opts.signal?.addEventListener('abort', abortFromCaller, { once: true });
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     return await fetch(url, { ...opts, signal: controller.signal });
   } catch (e) {
+    if (opts.signal?.aborted) throw new globalThis.DOMException('요청이 취소되었습니다.', 'AbortError');
     if (e.name === 'AbortError') {
       throw new Error('요청 시간이 초과됐어요. 네트워크를 확인하고 잠시 후 다시 시도해주세요.');
     }
     throw e;
   } finally {
     clearTimeout(timer);
+    opts.signal?.removeEventListener('abort', abortFromCaller);
   }
 }

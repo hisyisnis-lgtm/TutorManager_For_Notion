@@ -1,4 +1,5 @@
 // worker/lib/oauth.js — 게임 계정 소셜 로그인(카카오·구글) OAuth BFF 헬퍼.
+import { base64url, signTypedToken, verifyTypedToken } from './auth.js';
 //
 // BFF(Backend-For-Frontend) 패턴: redirect_uri = Worker 콜백. Worker가 인가코드를
 // client_secret으로 교환하므로 시크릿이 클라이언트에 노출되지 않고, 토큰을 제공자
@@ -25,7 +26,7 @@ export function isSocialProvider(p) {
 }
 
 // 제공자 인가(authorize) URL 생성.
-export function buildAuthorizeUrl({ provider, clientId, redirectUri, state }) {
+export function buildAuthorizeUrl({ provider, clientId, redirectUri, state, nonce }) {
   const cfg = SOCIAL_PROVIDERS[provider];
   if (!cfg) throw new Error(`unknown provider: ${provider}`);
   const q = new URLSearchParams({
@@ -35,6 +36,7 @@ export function buildAuthorizeUrl({ provider, clientId, redirectUri, state }) {
     state,
   });
   if (cfg.scope) q.set('scope', cfg.scope);
+  if (provider === 'google' && nonce) q.set('nonce', nonce);
   return `${cfg.authorizeUrl}?${q.toString()}`;
 }
 
@@ -60,8 +62,16 @@ export function decodeJwtPayload(jwt) {
 // 제공자별 사용자 신원 추출 → { socialId, nickname }.
 //  - google: id_token(JWT) payload에서 sub·name
 //  - kakao : /v2/user/me 응답에서 id·nickname
-export function extractGoogleIdentity(idTokenPayload) {
+export function extractGoogleIdentity(idTokenPayload, expected) {
   if (!idTokenPayload || !idTokenPayload.sub) return null;
+  if (expected) {
+    const p = idTokenPayload;
+    const audiences = Array.isArray(p.aud) ? p.aud : [p.aud];
+    if (!['https://accounts.google.com', 'accounts.google.com'].includes(p.iss)
+      || !audiences.includes(expected.audience) || (audiences.length > 1 && p.azp !== expected.audience)
+      || !Number.isSafeInteger(p.exp) || p.exp <= Math.floor(Date.now() / 1000)
+      || p.nonce !== expected.nonce) return null;
+  }
   return {
     socialId: String(idTokenPayload.sub),
     nickname: idTokenPayload.name || idTokenPayload.given_name || null,
@@ -108,42 +118,29 @@ export function redirectPrefixes(env) {
   return [...DEFAULT_REDIRECT_PREFIXES, ...extra];
 }
 
-// 토큰을 복귀 대상에 프래그먼트로 실어 보낸다(#token=… — 서버 로그·Referer에 안 남음).
-export function appendTokenFragment(target, token) {
+// 장기 세션 대신 90초 일회 교환 코드만 프래그먼트에 전달한다.
+export function appendCodeFragment(target, code, transaction) {
   const sep = target.includes('#') ? '&' : '#';
-  return `${target}${sep}token=${encodeURIComponent(token)}`;
+  return `${target}${sep}login_code=${encodeURIComponent(code)}&login_tx=${encodeURIComponent(transaction)}`;
 }
 
-// ── OAuth state — 무상태 서명 토큰 (colo별 Cache 조회 실패="세션 만료" 오탐 제거) ─────────────
-// state를 서버(Cache API)에 저장하지 않고 {provider, redirect, exp}를 JWT_SECRET로 HMAC-SHA256 서명해
-// 그대로 들려보낸다. 콜백은 저장소 조회 없이 서명·만료만 검증 → /start와 /callback이 다른 데이터센터로
-// 라우팅돼도 안전. 인가코드가 제공자에서 1회용이라 콜백 재사용(replay)은 코드 교환 실패로 자연 차단됨.
-const b64urlEncode = (str) => btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-const b64urlDecode = (b64) => atob(b64.replace(/-/g, '+').replace(/_/g, '/'));
+// OAuth state는 전용 서명 문맥·브라우저 challenge·거래 ID를 담고, 콜백에서 D1로 일회 소비한다.
+export const isPkceChallenge = value => typeof value === 'string' && /^[A-Za-z0-9_-]{43}$/.test(value);
+export const isLoginTransaction = value => typeof value === 'string' && /^[A-Za-z0-9_-]{32,128}$/.test(value);
 
-async function hmacKey(secret, usage) {
-  return crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, usage);
+export async function pkceChallenge(verifier) {
+  if (typeof verifier !== 'string' || !/^[A-Za-z0-9._~-]{43,128}$/.test(verifier)) return null;
+  return base64url(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier))));
 }
 
-// {provider, redirect}에 만료(now+ttl)를 붙여 서명한 state 문자열 반환. state는 URL 쿼리에 실리므로 base64url.
-export async function signAuthState(secret, { provider, redirect }, ttlSeconds = 600) {
-  const body = b64urlEncode(JSON.stringify({ p: provider, r: redirect, exp: Math.floor(Date.now() / 1000) + ttlSeconds }));
-  const key = await hmacKey(secret, ['sign']);
-  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(body));
-  return `${body}.${b64urlEncode(String.fromCharCode(...new Uint8Array(sig)))}`;
+// The browser keeps the verifier; signed state contains only its S256 challenge.
+export async function signAuthState(secret, { provider, redirect, challenge, transaction }, ttlSeconds = 600) {
+  if (!isSocialProvider(provider) || !isPkceChallenge(challenge) || !isLoginTransaction(transaction)) throw new Error('invalid login transaction');
+  return signTypedToken(secret, 'oauth-state', transaction, ttlSeconds, { p: provider, r: redirect, challenge });
 }
 
-// 서명·만료 검증 → { provider, redirect } 또는 null(위조·만료·형식오류). 콜백은 이 값으로 provider 일치·redirect 허용을 재확인.
 export async function verifyAuthState(secret, state) {
-  const parts = String(state || '').split('.');
-  if (parts.length !== 2 || !secret) return null;
-  try {
-    const key = await hmacKey(secret, ['verify']);
-    const sigBytes = Uint8Array.from(b64urlDecode(parts[1]), (c) => c.charCodeAt(0));
-    const ok = await crypto.subtle.verify('HMAC', key, sigBytes, new TextEncoder().encode(parts[0]));
-    if (!ok) return null;
-    const obj = JSON.parse(b64urlDecode(parts[0]));
-    if (!(obj.exp > Math.floor(Date.now() / 1000))) return null;
-    return { provider: obj.p, redirect: obj.r };
-  } catch { return null; }
+  const claim = await verifyTypedToken(secret, state, 'oauth-state');
+  if (!claim || !isSocialProvider(claim.p) || typeof claim.r !== 'string' || !isPkceChallenge(claim.challenge) || !isLoginTransaction(claim.sub)) return null;
+  return { provider: claim.p, redirect: claim.r, challenge: claim.challenge, transaction: claim.sub };
 }

@@ -8,6 +8,13 @@ compatibility_date = "2026-04-27"
 [observability]
 enabled = true
 head_sampling_rate = 1
+redact_query_string = true
+
+# 학생 예약코드가 들어 있는 URL을 자동 invocation 로그에 보존하지 않는다.
+# 명시적으로 마스킹한 애플리케이션 오류 로그는 계속 남긴다.
+[observability.logs]
+enabled = true
+invocation_logs = false
 
 # 정시 알림 스케줄러 — 매시 정각에 깨어나 KST 시각에 맞는 알림만 GitHub Actions로 dispatch.
 # GitHub의 schedule 트리거가 러너 혼잡에 몇 시간씩 밀리는 문제를 피하려는 구조

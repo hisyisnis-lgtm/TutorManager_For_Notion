@@ -13,6 +13,7 @@ export function isSafeExternalUrl(rawUrl) {
   let u;
   try { u = new URL(rawUrl); } catch { return false; }
   if (u.protocol !== 'https:' && u.protocol !== 'http:') return false;
+  if (u.username || u.password || (u.port && u.port !== '80' && u.port !== '443')) return false;
 
   const host = u.hostname.toLowerCase();
   // 명백한 사설/메타데이터 호스트
@@ -85,6 +86,6 @@ export function sanitizePath(pathOrUrl) {
     (_, seg, tok) => `/${seg}/${maskToken(tok)}`,
   );
   // ?token=... / &token=... 쿼리 파라미터
-  s = s.replace(/([?&]token=)([^&#]+)/g, (_, pre, tok) => `${pre}${maskToken(tok)}`);
+  s = s.replace(/([?&#](?:token|key|code|state|access_token|refresh_token)=)([^&#]+)/gi, (_, pre) => `${pre}[redacted]`);
   return s;
 }

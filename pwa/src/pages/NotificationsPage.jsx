@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/shadcn/button';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import EmptyState from '../components/ui/EmptyState.jsx';
-import { getNtfyTopic } from './SettingsPage.jsx';
+import { WORKER_URL } from '../config.js';
+import { clearAuth } from '../api/authUtils.js';
+import { captureAuthScope, isAuthScopeCurrent, subscribeAuthChanges } from '../api/authState.js';
 import { BellIcon } from '@phosphor-icons/react';
 import { TEXT_TERTIARY,
   TEXT_INACTIVE, BORDER_NEUTRAL } from '../constants/theme.js';
@@ -22,14 +23,14 @@ const PRIORITY_STYLE = {
 
 function loadNotifications() {
   try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    return JSON.parse(sessionStorage.getItem(STORAGE_KEY) || '[]');
   } catch {
     return [];
   }
 }
 
 function saveNotifications(list) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(list.slice(0, MAX_NOTIFICATIONS)));
+  sessionStorage.setItem(STORAGE_KEY, JSON.stringify(list.slice(0, MAX_NOTIFICATIONS)));
 }
 
 function mergeNotifications(existing, incoming) {
@@ -53,19 +54,19 @@ function relativeTime(unixSec) {
 }
 
 export default function NotificationsPage() {
-  const navigate = useNavigate();
-  const topic = getNtfyTopic();
   const [notifications, setNotifications] = useState(loadNotifications);
   const [connStatus, setConnStatus] = useState('connecting'); // connecting | connected | error | off
-  const sseRef = useRef(null);
+  const authRef = useRef(captureAuthScope());
 
   // 페이지 진입 시 읽음 처리
   useEffect(() => {
-    localStorage.setItem(LAST_READ_KEY, String(Math.floor(Date.now() / 1000)));
+    if (isAuthScopeCurrent(authRef.current)) sessionStorage.setItem(LAST_READ_KEY, String(Math.floor(Date.now() / 1000)));
   }, []);
 
   const addNotifications = useCallback((incoming) => {
+    if (!isAuthScopeCurrent(authRef.current)) return;
     setNotifications((prev) => {
+      if (!isAuthScopeCurrent(authRef.current)) return [];
       const merged = mergeNotifications(prev, incoming);
       saveNotifications(merged);
       return merged;
@@ -74,59 +75,90 @@ export default function NotificationsPage() {
 
   // 히스토리 로드 + SSE 연결
   useEffect(() => {
-    if (!topic) {
-      setConnStatus('off');
-      return;
-    }
-
+    const auth = authRef.current;
+    if (!isAuthScopeCurrent(auth)) return;
     let cancelled = false;
-
-    // 최근 24시간 히스토리 로드
-    fetch(`https://ntfy.sh/${topic}/json?poll=1&since=24h`)
-      .then((r) => r.text())
-      .then((text) => {
-        if (cancelled) return;
-        const msgs = text
-          .trim()
-          .split('\n')
-          .filter(Boolean)
-          .map((line) => { try { return JSON.parse(line); } catch { return null; } })
-          .filter((m) => m && m.event === 'message');
-        addNotifications(msgs);
-      })
-      .catch((e) => console.error('[알림] 이전 알림 불러오기 오류', e));
-
-    // SSE 실시간 연결
-    const sse = new EventSource(`https://ntfy.sh/${topic}/sse`);
-    sseRef.current = sse;
-
-    sse.onopen = () => { if (!cancelled) setConnStatus('connected'); };
-    sse.onerror = () => { if (!cancelled) setConnStatus('error'); };
-    sse.addEventListener('message', (e) => {
-      if (cancelled) return;
-      try {
-        const msg = JSON.parse(e.data);
-        if (msg.event === 'message') {
-          // 새 알림 수신 시 last_read 업데이트 (현재 페이지에 있으므로 즉시 읽음)
-          localStorage.setItem(LAST_READ_KEY, String(Math.floor(Date.now() / 1000)));
-          addNotifications([msg]);
-        }
-      } catch (e) {
-        console.error('[알림] SSE 메시지 파싱 오류', e);
+    const controller = new AbortController();
+    let retryTimer;
+    const current = () => !cancelled && isAuthScopeCurrent(auth);
+    const unsubscribe = subscribeAuthChanges(() => {
+      if (!isAuthScopeCurrent(auth)) {
+        cancelled = true;
+        controller.abort();
+        clearTimeout(retryTimer);
+        setNotifications([]);
       }
     });
-
+    const receive = (line) => {
+      if (!current()) return;
+      try {
+        const msg = JSON.parse(line);
+        if (msg.event === 'message') {
+          sessionStorage.setItem(LAST_READ_KEY, String(Math.floor(Date.now() / 1000)));
+          addNotifications([msg]);
+        }
+      } catch { /* 빈 heartbeat·잘못된 줄은 표시하지 않는다. */ }
+    };
+    const request = async (stream) => {
+      const res = await fetch(`${WORKER_URL}/notifications${stream ? '?stream=1' : ''}`, {
+        headers: { Authorization: `Bearer ${auth.credential}` },
+        cache: 'no-store', signal: controller.signal,
+      });
+      if (res.status === 401 && current()) clearAuth();
+      if (!res.ok) {
+        const error = new Error('알림을 불러오지 못했습니다.');
+        error.status = res.status;
+        throw error;
+      }
+      return res;
+    };
+    const connect = async () => {
+      try {
+        const history = await request(false);
+        const text = await history.text();
+        if (!current()) return;
+        text.split('\n').filter(Boolean).forEach(receive);
+        const response = await request(true);
+        if (!current()) { await response.body?.cancel(); return; }
+        setConnStatus('connected');
+        const reader = response.body.getReader();
+        const decoder = new globalThis.TextDecoder();
+        let buffer = '';
+        try {
+          while (current()) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            if (buffer.length > 256 * 1024) throw new Error('알림 응답이 너무 큽니다.');
+            const lines = buffer.split('\n');
+            buffer = lines.pop();
+            for (const line of lines) {
+              if (line.startsWith('data:')) receive(line.slice(5).trim());
+            }
+          }
+        } finally { await reader.cancel().catch(() => {}); reader.releaseLock(); }
+      } catch (error) {
+        if (!current()) return;
+        if (error.status === 503) { setConnStatus('off'); return; }
+      }
+      if (current()) {
+        setConnStatus('error');
+        retryTimer = setTimeout(connect, 5000);
+      }
+    };
+    connect();
     return () => {
       cancelled = true;
-      sse.close();
-      sseRef.current = null;
+      unsubscribe();
+      clearTimeout(retryTimer);
+      controller.abort();
     };
-  }, [topic, addNotifications]);
+  }, [addNotifications]);
 
   const handleClearAll = () => {
     setNotifications([]);
-    localStorage.removeItem(STORAGE_KEY);
-    localStorage.setItem(LAST_READ_KEY, String(Math.floor(Date.now() / 1000)));
+    sessionStorage.removeItem(STORAGE_KEY);
+    sessionStorage.setItem(LAST_READ_KEY, String(Math.floor(Date.now() / 1000)));
   };
 
   const statusDot = {
@@ -140,25 +172,19 @@ export default function NotificationsPage() {
     connecting: '연결 중',
     connected: '연결됨',
     error: '연결 오류',
-    off: '토픽 미설정',
+    off: '알림 연결 미설정',
   }[connStatus];
 
-  if (!topic) {
+  if (connStatus === 'off') {
     return (
       <>
         <PageHeader title="알림" back />
         <div className="flex flex-col items-center justify-center px-8 pt-24 gap-4 text-center">
           <span className="text-5xl">🔔</span>
-          <p className="text-gray-700 font-semibold">ntfy 토픽이 설정되지 않았어요</p>
+          <p className="text-gray-700 font-semibold">알림 연결이 준비되지 않았어요</p>
           <p className="text-sm text-gray-500">
-            설정에서 ntfy 토픽을 입력하면<br />실시간 알림을 받을 수 있습니다.
+            관리자에게 알림 연결 설정을 요청해 주세요.
           </p>
-          <Button
-            onClick={() => navigate('/settings')}
-            className="mt-2"
-          >
-            설정으로 이동
-          </Button>
         </div>
       </>
     );
@@ -186,7 +212,6 @@ export default function NotificationsPage() {
       <div className="flex items-center gap-2 px-4 py-2 border-b border-gray-100">
         <span className={`w-2 h-2 rounded-full ${statusDot}`} />
         <span className="text-xs text-gray-500">{statusLabel}</span>
-        <span className="text-xs ml-auto" style={{ color: TEXT_TERTIARY }}>ntfy.sh/{topic}</span>
       </div>
 
       {/* 알림 목록 */}

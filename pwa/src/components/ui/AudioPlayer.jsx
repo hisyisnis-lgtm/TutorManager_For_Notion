@@ -23,7 +23,7 @@ import {
  * - fileName: 표시할 파일명
  * - onGetFreshUrl: URL 만료 시 호출할 async 함수 → 새 URL 반환
  */
-export default function AudioPlayer({ url, fileName, onGetFreshUrl, onDelete, deleteDisabled, onDownload }) {
+export default function AudioPlayer({ url, fileName, onGetFreshUrl, fetchInlineBlobUrl, onDelete, deleteDisabled, onDownload }) {
   const [downloading, setDownloading] = useState(false);
   const handleDownload = async () => {
     if (!onDownload || downloading) return;
@@ -45,15 +45,30 @@ export default function AudioPlayer({ url, fileName, onGetFreshUrl, onDelete, de
   // onError 재시도 카운터 — fresh URL이 매번 달라지는 Notion 서명 URL 특성상
   // 제한 없이 재시도하면 (예: iOS Safari가 webm을 못 여는 경우) 무한 재조회 루프가 됨.
   const errorRetryRef = useRef(0);
+  const resourceGeneration = useRef(0);
+  const ownedBlobRef = useRef(null);
 
   useEffect(() => {
+    resourceGeneration.current += 1;
+    const audio = audioRef.current;
     setSrc(url);
     setPlaying(false);
     setCurrentTime(0);
     setDuration(0);
     setError(null);
+    setLoading(false);
+    pendingPlayRef.current = false;
     errorRetryRef.current = 0;
-  }, [url]);
+    return () => {
+      resourceGeneration.current += 1;
+      pendingPlayRef.current = false;
+      audio?.pause();
+      audio?.removeAttribute('src');
+      audio?.load();
+      if (ownedBlobRef.current) URL.revokeObjectURL(ownedBlobRef.current);
+      ownedBlobRef.current = null;
+    };
+  }, [url, fileName]);
 
   function formatTime(sec) {
     if (!isFinite(sec) || isNaN(sec)) return '0:00';
@@ -64,17 +79,41 @@ export default function AudioPlayer({ url, fileName, onGetFreshUrl, onDelete, de
 
   const handlePlayPause = async () => {
     const audio = audioRef.current;
-    if (!audio || !src) return;
+    if (!audio || (!src && !fetchInlineBlobUrl) || loading) return;
+    const generation = resourceGeneration.current;
 
     if (playing) {
       audio.pause();
       return;
     }
 
-    if (onGetFreshUrl) {
+    // 학생 파일은 외부 URL을 받지 않는다. 재생을 누른 파일만 인증 프록시로 가져온다.
+    if (!src && fetchInlineBlobUrl) {
+      setLoading(true);
+      setError(null);
+      try {
+        const blobUrl = await fetchInlineBlobUrl();
+        if (generation !== resourceGeneration.current) {
+          if (blobUrl?.startsWith('blob:')) URL.revokeObjectURL(blobUrl);
+          return;
+        }
+        if (!blobUrl?.startsWith('blob:')) throw new Error('오디오를 불러올 수 없어요.');
+        ownedBlobRef.current = blobUrl;
+        pendingPlayRef.current = true;
+        setSrc(blobUrl);
+      } catch (e) {
+        if (generation === resourceGeneration.current) setError(e.message || '재생 실패. 다시 시도해주세요.');
+      } finally {
+        if (generation === resourceGeneration.current) setLoading(false);
+      }
+      return;
+    }
+
+    if (onGetFreshUrl && !fetchInlineBlobUrl) {
       setLoading(true);
       try {
         const freshUrl = await onGetFreshUrl();
+        if (generation !== resourceGeneration.current) return;
         if (freshUrl && freshUrl !== src) {
           pendingPlayRef.current = true;
           setSrc(freshUrl);
@@ -83,14 +122,15 @@ export default function AudioPlayer({ url, fileName, onGetFreshUrl, onDelete, de
       } catch {
         // 재조회 실패해도 기존 URL로 시도
       } finally {
-        setLoading(false);
+        if (generation === resourceGeneration.current) setLoading(false);
       }
     }
 
+    if (generation !== resourceGeneration.current) return;
     try {
       await audio.play();
     } catch (e) {
-      setError('재생 실패: ' + e.message);
+      if (generation === resourceGeneration.current) setError('재생 실패: ' + e.message);
     }
   };
 
@@ -98,9 +138,12 @@ export default function AudioPlayer({ url, fileName, onGetFreshUrl, onDelete, de
     const audio = audioRef.current;
     if (!audio || !src) return;
     if (playing || pendingPlayRef.current) {
+      const generation = resourceGeneration.current;
       pendingPlayRef.current = false;
       audio.load();
-      audio.play().catch((e) => setError('재생 실패: ' + e.message));
+      audio.play().catch((e) => {
+        if (generation === resourceGeneration.current) setError('재생 실패: ' + e.message);
+      });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [src]);
@@ -137,17 +180,19 @@ export default function AudioPlayer({ url, fileName, onGetFreshUrl, onDelete, de
         onPause={() => setPlaying(false)}
         onEnded={() => { setPlaying(false); setCurrentTime(0); }}
         onError={async () => {
-          if (onGetFreshUrl && errorRetryRef.current < 1) {
+          const generation = resourceGeneration.current;
+          if (onGetFreshUrl && !fetchInlineBlobUrl && errorRetryRef.current < 1) {
             errorRetryRef.current += 1;
             try {
               setLoading(true);
               const freshUrl = await onGetFreshUrl();
+              if (generation !== resourceGeneration.current) return;
               if (freshUrl) setSrc(freshUrl);
               else setError('URL이 만료되었습니다. 페이지를 새로고침해주세요.');
             } catch {
-              setError('재생 실패. 다시 시도해주세요.');
+              if (generation === resourceGeneration.current) setError('재생 실패. 다시 시도해주세요.');
             } finally {
-              setLoading(false);
+              if (generation === resourceGeneration.current) setLoading(false);
             }
           } else {
             // 새 URL로도 실패 = 만료가 아니라 재생 불가(코덱 미지원 등) — 다운로드 유도
@@ -160,15 +205,15 @@ export default function AudioPlayer({ url, fileName, onGetFreshUrl, onDelete, de
       {/* 재생/정지 버튼 */}
       <button
         onClick={handlePlayPause}
-        disabled={loading || !src}
+        disabled={loading || (!src && !fetchInlineBlobUrl)}
         aria-label={playing ? '일시정지' : '재생'}
         style={{
           width: 40, height: 40, borderRadius: '50%',
           border: 'none', background: PRIMARY,
           color: '#ffffff',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          cursor: loading || !src ? 'not-allowed' : 'pointer',
-          opacity: loading || !src ? 0.5 : 1,
+          cursor: loading || (!src && !fetchInlineBlobUrl) ? 'not-allowed' : 'pointer',
+          opacity: loading || (!src && !fetchInlineBlobUrl) ? 0.5 : 1,
           flexShrink: 0,
           // transform 명시 (scale shorthand 대신)
           transition: 'transform 150ms ease-out, opacity 150ms ease-out',

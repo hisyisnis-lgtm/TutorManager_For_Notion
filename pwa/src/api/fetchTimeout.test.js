@@ -1,5 +1,17 @@
-import { describe, it, expect, vi } from 'vitest';
-import { retryTransient } from './fetchTimeout.js';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { retryTransient, fetchWithTimeout } from './fetchTimeout.js';
+
+afterEach(() => vi.unstubAllGlobals());
+
+it('외부 AbortSignal을 전달하고 사용자의 취소를 시간 초과로 바꾸지 않는다', async () => {
+  vi.stubGlobal('fetch', vi.fn((url, { signal }) => new Promise((resolve, reject) => {
+    signal.addEventListener('abort', () => reject(new DOMException('cancelled', 'AbortError')));
+  })));
+  const controller = new AbortController();
+  const pending = fetchWithTimeout('https://fixture.invalid', { signal: controller.signal });
+  controller.abort();
+  await expect(pending).rejects.toMatchObject({ name: 'AbortError' });
+});
 
 const withStatus = (status) => Object.assign(new Error(`HTTP ${status}`), { status });
 

@@ -146,7 +146,7 @@ describe('sanitizePath', () => {
 
   it('?token= 쿼리 파라미터를 마스킹한다', () => {
     expect(sanitizePath('/booking/my-class/abc-123?token=ABCD1234EFGH'))
-      .toBe('/booking/my-class/abc-123?token=ABCD...EFGH');
+      .toBe('/booking/my-class/abc-123?token=[redacted]');
   });
 
   it('토큰이 없는 경로는 그대로 둔다', () => {

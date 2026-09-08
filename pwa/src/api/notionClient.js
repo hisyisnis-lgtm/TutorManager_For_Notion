@@ -1,5 +1,6 @@
 import { WORKER_URL } from '../config.js';
-import { getToken, clearAuth } from './authUtils.js';
+import { getToken, handleTeacherAuthExpiry } from './authUtils.js';
+import { getAuthRevision } from './authState.js';
 
 // ── Notion 요청 레이트 리미터 (토큰버킷) ──────────────────────────────
 // Notion API는 통합 토큰당 평균 초당 ~3회 제한이 있다. 강사앱은 화면 진입 시
@@ -56,8 +57,14 @@ function acquireToken() {
 }
 // ──────────────────────────────────────────────────────────────────
 
-async function notionFetch(method, path, body, attempt = 0) {
+async function notionFetch(method, path, body, attempt = 0, auth = { bearer: getToken(), revision: getAuthRevision() }) {
+  const { bearer, revision } = auth;
   await acquireToken();
+  if (revision !== getAuthRevision() || bearer !== getToken()) {
+    const error = new Error('인증 상태가 바뀌었습니다. 다시 로그인해 주세요.');
+    error.status = 401;
+    throw error;
+  }
 
   // 타임아웃: 요청이 REQUEST_TIMEOUT_MS를 넘기면 abort. 쓰기(POST/PATCH)는 서버에
   // 이미 도달했을 수 있어 자동 재시도하지 않고 명확한 오류로 던진다(이중 쓰기 방지).
@@ -69,7 +76,7 @@ async function notionFetch(method, path, body, attempt = 0) {
       method,
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${getToken()}`,
+        Authorization: `Bearer ${bearer}`,
       },
       body: body ? JSON.stringify(body) : undefined,
       signal: controller.signal,
@@ -93,17 +100,14 @@ async function notionFetch(method, path, body, attempt = 0) {
       5000,
     );
     await new Promise((r) => setTimeout(r, waitMs));
-    return notionFetch(method, path, body, attempt + 1);
+    return notionFetch(method, path, body, attempt + 1, auth);
   }
 
   if (res.status === 401) {
-    clearAuth();
-    // 강사 HashRouter엔 '/login' 라우트가 없다. hash만 바꾸면 매칭되는 라우트가 없어
-    // 콘텐츠가 흰 화면이 되고 BottomNav만 남는다. 새로고침해 App을 isAuthed()=false로
-    // 재초기화하면 LoginPage가 정상으로 뜬다. (teacher_device 플래그가 남아 있어 루트
-    // 자동 리다이렉트가 학생 페이지로 튕기지 않고 LoginPage로 간다.)
-    window.location.reload();
-    return new Promise(() => {}); // 리로드 전까지 pending 유지 (undefined 반환 방지)
+    handleTeacherAuthExpiry(bearer);
+    const error = new Error('인증이 만료되었습니다. 다시 로그인해 주세요.');
+    error.status = 401;
+    throw error;
   }
 
   const data = await res.json().catch(() => ({}));

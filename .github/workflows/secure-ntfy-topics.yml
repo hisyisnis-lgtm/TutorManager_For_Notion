@@ -1,0 +1,47 @@
+name: ntfy 비공개 접근 설정
+
+on:
+  # Initial release-branch push performs a read-only preflight using runner secrets.
+  push:
+    branches: [codex/security-hardening-20260908]
+    paths:
+      - '01_automation/secure_ntfy_topics.mjs'
+      - '.github/workflows/secure-ntfy-topics.yml'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'check: 조회만 / apply: 기존 요금제 범위에서 익명 읽기·쓰기 차단'
+        type: choice
+        options: [check, apply]
+        default: check
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ntfy-topic-security
+  cancel-in-progress: false
+
+jobs:
+  secure-topics:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+      - name: 안전한 응답·비변경 검증
+        run: node --test 01_automation/secure_ntfy_topics.test.mjs
+      - name: 토픽 접근 설정 확인·적용
+        env:
+          NTFY_SECURITY_MODE: ${{ github.event_name == 'workflow_dispatch' && inputs.mode || 'check' }}
+          NTFY_TOKEN: ${{ secrets.NTFY_TOKEN }}
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          NTFY_TOPIC_CRITICAL: ${{ secrets.NTFY_TOPIC_CRITICAL }}
+          NTFY_TOPIC_WARN: ${{ secrets.NTFY_TOPIC_WARN }}
+          NTFY_TOPIC_DIGEST: ${{ secrets.NTFY_TOPIC_DIGEST }}
+          NTFY_TOPIC_OPS: ${{ secrets.NTFY_TOPIC_OPS }}
+        run: node 01_automation/secure_ntfy_topics.mjs

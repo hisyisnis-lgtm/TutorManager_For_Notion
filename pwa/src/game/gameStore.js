@@ -16,6 +16,7 @@ import { loadStreak, saveStreak, loadFreezes, saveFreezes, diffDays } from './st
 import { loadStageScores, saveStageScore, loadBossPeak, saveBossPeak } from './gameLogic.js';
 import { DIFFICULTIES, THEMES } from '../constants/toneGameWords.js';
 import { fetchGameMe, saveGameMe } from '../api/gameApi.js';
+import { sessionClaims } from '../api/authState.js';
 
 const GUEST_ID_KEY = 'tg_guest_id';
 const MEMBER_TOKEN_KEY = 'tg_member_token';
@@ -58,10 +59,15 @@ export function getMemberSession() {
     if (!token) return null;
     let user = null;
     try { user = JSON.parse(localStorage.getItem(MEMBER_USER_KEY) || 'null'); } catch { /* noop */ }
+    if (!user?.id || !sessionClaims(token, 'game', user.id)) {
+      logoutMember();
+      return null;
+    }
     return { token, user };
   } catch { return null; }
 }
 export function loginMember(token, user) {
+  if (!user?.id || !sessionClaims(token, 'game', user.id)) throw new Error('유효한 게임 로그인이 아닙니다.');
   try { localStorage.setItem(MEMBER_TOKEN_KEY, token); localStorage.setItem(MEMBER_USER_KEY, JSON.stringify(user || {})); } catch { /* noop */ }
 }
 export function logoutMember() {
@@ -206,23 +212,28 @@ function applyGameDataToLocal(id, data) {
 }
 
 // 토큰 만료(60일)·계정없음 등 인증 실패면 세션을 정리(조용한 무기한 동기화실패 방지). 그 외(네트워크 등)는 유지.
-function logoutIfAuthError(e) {
-  if (e && (e.status === 401 || e.status === 403 || e.status === 404)) logoutMember();
+function logoutIfAuthError(e, token) {
+  if (e && (e.status === 401 || e.status === 403 || e.status === 404) && getMemberSession()?.token === token) logoutMember();
 }
 // 서버(/game/me) → 로컬 머지. 회원 진입/로그인 시.
 export async function pullMemberData(identity) {
   if (!identity || identity.kind !== 'member') return;
   try {
     const { user } = await fetchGameMe(identity.token);
+    const current = getMemberSession();
+    if (!current || current.token !== identity.token || current.user.id !== identity.id) throw new Error('게임 로그인이 변경되었습니다.');
+    if (user?.id !== identity.id) throw new Error('게임 계정이 일치하지 않습니다.');
     applyGameDataToLocal(identity.id, user?.gameData);
-  } catch (e) { logoutIfAuthError(e); throw e; }
+  } catch (e) { logoutIfAuthError(e, identity.token); throw e; }
 }
 // 로컬 → 서버(/game/me) 업로드. 게임 종료 시. nickname 주면 함께 저장(로그인 시 이름 입력).
 export async function pushMemberData(identity, nickname) {
   if (!identity || identity.kind !== 'member') return;
+  const current = getMemberSession();
+  if (!current || current.token !== identity.token || current.user.id !== identity.id) throw new Error('게임 로그인이 변경되었습니다.');
   try {
     await saveGameMe(identity.token, collectLocalGameData(identity.id), nickname || undefined);
-  } catch (e) { logoutIfAuthError(e); throw e; }
+  } catch (e) { logoutIfAuthError(e, identity.token); throw e; }
 }
 // 게스트 로컬 기록을 회원 로컬에 1회 병합(로그인 직후). 이후 pull/push로 서버 동기화.
 export function mergeGuestIntoMember(identity) {

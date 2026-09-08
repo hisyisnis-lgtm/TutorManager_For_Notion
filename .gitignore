@@ -1,6 +1,9 @@
 .claude/
 *.env
 .env.local
+.env*
+!.env.example
+!.env.*.example
 
 # PWA 빌드 산출물 (GitHub Actions에서 자동 생성)
 pwa/dist/
@@ -17,6 +20,8 @@ worker/.wrangler/
 .dev.vars
 worker/.dev.vars
 **/.dev.vars
+.dev.vars.*
+!.dev.vars.example
 
 # 일반 시크릿 패턴
 *.pem

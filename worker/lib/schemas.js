@@ -76,6 +76,7 @@ export const HomeworkSubmitSchema = z.object({
   files: z.array(z.object({
     fileUploadId: z.string().min(1, 'fileUploadId는 필수입니다'),
     fileName: z.string().min(1).max(255, '파일명은 255자 이내'),
+    uploadReceipt: z.string().min(1, '업로드 확인 정보가 필요합니다').max(2048),
   })).max(5, '파일은 최대 5개까지 제출할 수 있어요').optional(),  // 서버 제출 룰(총 5개)과 동일
   deleteFileNames: z.array(z.string().max(255)).max(50).optional(),
 }).strip();
@@ -96,15 +97,60 @@ export const MyClassesQuerySchema = z.object({
  * POST /game/event body — 게임 이벤트 카운터(유입 깔때기 측정, Workers Analytics Engine).
  * 익명 설계: PII 필드 자체가 없음(전화·토큰·이름 금지). 선택 필드는 .nullish()(클라가 빈값을 null로 보냄).
  */
+const GAME_MODES = ['easy', 'normal', 'hard', 'endless', 'practice', 'training', 'review', 'drama', 'cooking', 'travel', 'slang', 'exam'];
+const GAME_STAGES = ['easy', 'normal', 'hard'].flatMap((tier) => [1, 2, 3, 4, 5].map((n) => `${tier}-${n}`));
+const GAME_CHANNELS = ['insta', 'instagram', 'youtube', 'yt', 'blog', 'naver', 'kakao-channel'];
+const GameCounterSchema = z.number().finite().int().min(0).max(1_000_000_000);
+
 export const GameEventSchema = z.object({
-  e: z.enum(['enter', 'run_start', 'run_end', 'onboarding_done', 'cta_play_link', 'login_success'], {
+  e: z.enum(['enter', 'run_start', 'run_end', 'exam_end', 'onboarding_done', 'cta_play_link', 'login_success'], {
     errorMap: () => ({ message: '알 수 없는 이벤트입니다' }),
   }),
-  m: z.string().max(24).nullish(),   // 모드·채널 등 부가 라벨 (예: easy/endless/drama, insta/youtube)
-  src: z.string().max(16).nullish(), // 유입 소스: web | standalone | twa | ios (스토어 출시 대비)
-  k: z.string().max(10).nullish(),   // 신원 종류: guest | member | student
-  v: z.number().finite().nullish(),  // 수치(선택, 예: run_end 점수)
+  m: z.enum([...GAME_MODES, ...GAME_STAGES, ...GAME_CHANNELS]).nullish(),
+  src: z.enum(['web', 'standalone', 'twa', 'ios']).nullish(),
+  k: z.enum(['guest', 'member', 'student']).nullish(),
+  v: GameCounterSchema.nullish(),
 }).strip();
+
+// gameStore.collectLocalGameData의 전체 동기화 형식. 레거시 4/5칸 단어 통계와
+// 2칸 성조 통계도 보존한다. 잘못된 저장은 전체 거부하여 기존 정상 기록을 유지한다.
+const GameWordKeySchema = z.string().min(1).max(80)
+  .refine((s) => !/[\u0000-\u001f\u007f]/.test(s) && !['__proto__', 'prototype', 'constructor'].includes(s));
+const GameWordEntrySchema = z.union([
+  z.tuple([GameCounterSchema, GameCounterSchema, z.number().finite().int().min(0).max(Number.MAX_SAFE_INTEGER), GameCounterSchema]),
+  z.tuple([GameCounterSchema, GameCounterSchema, z.number().finite().int().min(0).max(Number.MAX_SAFE_INTEGER), GameCounterSchema, z.union([z.literal(0), z.literal(1)])]),
+  z.tuple([GameCounterSchema, GameCounterSchema, z.number().finite().int().min(0).max(Number.MAX_SAFE_INTEGER), GameCounterSchema, z.union([z.literal(0), z.literal(1)]), z.number().int().min(0).max(3)]),
+]).refine((v) => v[1] <= v[0] && v[3] <= v[0]);
+const GameToneEntrySchema = z.union([
+  z.tuple([GameCounterSchema, GameCounterSchema]),
+  z.tuple([GameCounterSchema, GameCounterSchema, z.number().finite().min(0).max(1)]),
+]).refine((v) => v[0] <= v[1]);
+const GameBestSchema = z.object({
+  bestScore: GameCounterSchema.optional(),
+  bestMaxCombo: GameCounterSchema.optional(),
+  bestAvgMs: z.number().finite().min(0).max(Number.MAX_SAFE_INTEGER).optional(),
+  playCount: GameCounterSchema.optional(),
+  updatedAt: z.number().finite().int().min(0).max(8_640_000_000_000_000).optional(),
+}).strict();
+export const GameDataSchema = z.object({
+  best: z.record(z.enum(['tone', 'tone-easy', 'tone-normal', 'tone-hard', 'tone-endless', 'tone-drama', 'tone-cooking', 'tone-travel', 'tone-slang']), GameBestSchema).optional(),
+  words: z.record(GameWordKeySchema, GameWordEntrySchema).optional(),
+  mc: GameCounterSchema.optional(),
+  tone: z.record(z.enum(['0', '1', '2', '3', '4']), GameToneEntrySchema).optional(),
+  tier: z.number().int().min(0).max(20).optional(), // 과거 귀 등급도 보존
+  xp: z.number().finite().int().min(0).max(Number.MAX_SAFE_INTEGER).optional(),
+  rk: z.number().int().min(0).max(2).optional(),
+  ach: z.array(z.string().regex(/^[a-z][a-z0-9-]{0,39}$/)).max(100).optional(),
+  rm: GameCounterSchema.optional(),
+  frz: GameCounterSchema.optional(),
+  stg: z.record(z.enum(GAME_STAGES), GameCounterSchema).optional(),
+  bp: z.number().int().min(0).max(2).optional(),
+  streak: z.object({
+    lastDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    current: GameCounterSchema,
+    longest: GameCounterSchema,
+  }).strict().optional(),
+}).strict();
 
 /**
  * PUT /game/me 의 nickname(선택) — 소셜 로그인 직후 사용자가 직접 입력하는 자유 텍스트.

@@ -1,28 +1,40 @@
-/** 인증 토큰 키 — 단일 출처 정의 */
-const TOKEN_KEY = 'auth_token';
+import { useSyncExternalStore } from 'react';
+import {
+  teacherSession, sessionClaims, clearSensitiveCache, notifyAuthChange, subscribeAuthChanges,
+  readStoredSession,
+} from './authState.js';
 
 /** 저장된 JWT 토큰 반환 (없으면 빈 문자열) */
 export function getToken() {
-  return localStorage.getItem(TOKEN_KEY) || '';
+  return teacherSession();
 }
 
-/** 로그인 상태 여부 확인 — 토큰 존재 + 만료(exp) 미경과까지 확인.
- *  JWT payload는 `btoa(JSON.stringify({ exp }))` (암호화 아님)이라 클라이언트가 직접 디코드 가능.
- *  만료된 토큰은 미인증으로 처리해 LoginPage가 즉시 뜨게 한다 (만료 후 강사 화면 진입 →
- *  첫 Notion 호출 401 → 흰 화면 되는 것을 사전 차단). 파싱 실패(빈/구형 토큰)도 미인증 처리. */
+/** 강사용 v2 용도·역할·만료 확인. 실제 권한은 서버가 서명까지 검증한다. */
 export function isAuthed() {
-  const token = localStorage.getItem(TOKEN_KEY);
-  if (!token) return false;
-  try {
-    const { exp } = JSON.parse(atob(token.split('.')[0]));
-    return typeof exp === 'number' && exp * 1000 > Date.now();
-  } catch {
-    return false;
-  }
+  return !!getToken();
+}
+
+export function useTeacherAuth() {
+  return useSyncExternalStore(subscribeAuthChanges, isAuthed, () => false);
+}
+
+export function setAuth(token) {
+  if (!sessionClaims(token, 'teacher', 'teacher')) throw new Error('유효한 강사 인증이 아닙니다.');
+  clearSensitiveCache();
+  localStorage.setItem('auth_token', token);
+  // 라우팅 선호일 뿐 권한으로 사용하지 않는다.
+  localStorage.setItem('teacher_device', '1');
+  notifyAuthChange();
 }
 
 /** 토큰 삭제 (로그아웃 / 401 응답 시) */
 export function clearAuth() {
-  localStorage.removeItem(TOKEN_KEY);
-  try { sessionStorage.removeItem(TOKEN_KEY); } catch {}
+  try { localStorage.removeItem('auth_token'); } catch {}
+  try { sessionStorage.removeItem('auth_token'); } catch {}
+  clearSensitiveCache();
+  notifyAuthChange();
+}
+
+export function handleTeacherAuthExpiry(bearer) {
+  if (bearer && bearer === readStoredSession('auth_token')) clearAuth();
 }

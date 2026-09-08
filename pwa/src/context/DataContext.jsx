@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef, useSyncExternalStore } from 'react';
+import { captureAuthScope, isAuthScopeCurrent, getAuthRevision, subscribeAuthChanges, SENSITIVE_CACHE_TTL } from '../api/authState.js';
 import { fetchAllStudents, parseStudent } from '../api/students.js';
 import { fetchAllClassTypes, parseClassType } from '../api/classTypes.js';
 import { fetchAllDiscounts, parseDiscount } from '../api/discounts.js';
@@ -6,25 +7,35 @@ import { fetchAllPayments, parsePayment, remainingSessionsOf } from '../api/paym
 
 const DataContext = createContext(null);
 
-const CACHE_KEY = 'tutor_master_cache_v2';
+const CACHE_KEY = 'tutor_master_cache_v3';
 
 function loadCache() {
   try {
-    const raw = localStorage.getItem(CACHE_KEY);
-    return raw ? JSON.parse(raw) : null;
+    const raw = sessionStorage.getItem(CACHE_KEY);
+    const cache = raw ? JSON.parse(raw) : null;
+    if (!isAuthScopeCurrent(captureAuthScope()) || !Number.isFinite(cache?.savedAt)
+      || Date.now() - cache.savedAt > SENSITIVE_CACHE_TTL || cache.savedAt > Date.now()) {
+      sessionStorage.removeItem(CACHE_KEY);
+      return null;
+    }
+    return cache.data;
   } catch {
     return null;
   }
 }
 
-function saveCache(data) {
+function saveCache(data, auth) {
+  if (!isAuthScopeCurrent(auth)) return;
   try {
-    localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+    sessionStorage.setItem(CACHE_KEY, JSON.stringify({ savedAt: Date.now(), data }));
   } catch {}
 }
 
 export function DataProvider({ children }) {
-  const cached = loadCache();
+  const revision = useSyncExternalStore(subscribeAuthChanges, getAuthRevision, () => 0);
+  const [cached] = useState(loadCache);
+  const dataRevision = useRef(revision);
+  const requestId = useRef(0);
 
   const [students, setStudents] = useState(cached?.students ?? []);
   const [classTypes, setClassTypes] = useState(cached?.classTypes ?? []);
@@ -38,6 +49,9 @@ export function DataProvider({ children }) {
   const [error, setError] = useState(null);
 
   const load = useCallback(async () => {
+    const auth = captureAuthScope();
+    if (!isAuthScopeCurrent(auth)) return;
+    const request = ++requestId.current;
     if (!staleRef.current) setLoading(true);
     setError(null);
     try {
@@ -47,6 +61,7 @@ export function DataProvider({ children }) {
         fetchAllDiscounts(),
         fetchAllPayments(),
       ]);
+      if (request !== requestId.current || !isAuthScopeCurrent(auth)) return;
       const parsedStudents = rawStudents.map(parseStudent);
       const parsedClassTypes = rawClassTypes.map(parseClassType);
       const parsedDiscounts = rawDiscounts.map(parseDiscount);
@@ -58,18 +73,25 @@ export function DataProvider({ children }) {
       setPayments(parsedPayments);
       setStale(false);
       staleRef.current = false;
-      saveCache({ students: parsedStudents, classTypes: parsedClassTypes, discounts: parsedDiscounts, payments: parsedPayments });
+      saveCache({ students: parsedStudents, classTypes: parsedClassTypes, discounts: parsedDiscounts, payments: parsedPayments }, auth);
     } catch (e) {
+      if (request !== requestId.current || !isAuthScopeCurrent(auth)) return;
       if (!staleRef.current) setError(e.message);
       // 캐시가 있으면 오류를 표시하지 않고 캐시 데이터 유지
     } finally {
-      setLoading(false);
+      if (request === requestId.current && isAuthScopeCurrent(auth)) setLoading(false);
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
+    if (dataRevision.current !== revision) {
+      setStudents([]); setClassTypes([]); setDiscounts([]); setPayments([]);
+      setStale(false); staleRef.current = false; setError(null);
+      dataRevision.current = revision;
+    }
     load();
-  }, [load]);
+    return () => { requestId.current += 1; };
+  }, [load, revision]);
 
   const studentNameMap = Object.fromEntries(students.map((s) => [s.id, s.name]));
   const classTypeMap = Object.fromEntries(classTypes.map((ct) => [ct.id, ct]));
@@ -85,21 +107,22 @@ export function DataProvider({ children }) {
     students.map((s) => [s.id, remainingSessionsOf(s, paymentsByStudent[s.id] ?? [])])
   );
 
+  const current = dataRevision.current === revision && isAuthScopeCurrent(captureAuthScope());
   return (
     <DataContext.Provider
       value={{
-        students,
-        classTypes,
-        discounts,
-        payments,
-        remainingByStudent,
+        students: current ? students : [],
+        classTypes: current ? classTypes : [],
+        discounts: current ? discounts : [],
+        payments: current ? payments : [],
+        remainingByStudent: current ? remainingByStudent : {},
         loading,
         stale,
         error,
         refresh: load,
-        studentNameMap,
-        classTypeMap,
-        activeStudents,
+        studentNameMap: current ? studentNameMap : {},
+        classTypeMap: current ? classTypeMap : {},
+        activeStudents: current ? activeStudents : [],
       }}
     >
       {children}

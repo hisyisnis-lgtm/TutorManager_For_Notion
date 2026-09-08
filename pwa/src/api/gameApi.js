@@ -26,25 +26,46 @@ async function gameFetch(method, path, body, token) {
 // ── 게임 계정(독립실행) 회원 — 카카오·구글 소셜 로그인(OAuth BFF) + 게임데이터 동기화 ──
 /**
  * 소셜 로그인 시작 URL. 브라우저를 이 URL로 보내면 Worker가 제공자 인증을 거쳐
- * redirect(현재 게임 주소)로 되돌아오며 location.hash에 #token=… 을 붙인다.
+ * 브라우저에 일회 verifier를 보관하고 redirect로 돌아온 짧은 교환 코드를 검증한다.
  * @param {'kakao'|'google'} provider
  * @param {string} redirect 로그인 후 복귀할 주소(현재 게임 URL)
  */
-export function socialLoginUrl(provider, redirect) {
-  return `${WORKER_URL}/game/auth/${encodeURIComponent(provider)}/start?redirect=${encodeURIComponent(redirect)}`;
+const LOGIN_TRANSACTION_KEY = 'tg_login_transaction_v2';
+const toBase64url = bytes => btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+
+export async function socialLoginUrl(provider, redirect) {
+  if (!['google', 'kakao'].includes(provider)) throw new Error('지원하지 않는 로그인입니다.');
+  const verifier = toBase64url(crypto.getRandomValues(new Uint8Array(32)));
+  const transaction = toBase64url(crypto.getRandomValues(new Uint8Array(32)));
+  const challenge = toBase64url(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier))));
+  // sessionStorage stays with the initiating tab; never include the verifier in a URL.
+  window.sessionStorage.setItem(LOGIN_TRANSACTION_KEY, JSON.stringify({ verifier, transaction, redirect, expiresAt: Date.now() + 600_000 }));
+  const params = new URLSearchParams({ redirect, code_challenge: challenge, transaction });
+  return `${WORKER_URL}/game/auth/${provider}/start?${params}`;
 }
-/** 복귀 URL의 location.hash에서 게임유저 JWT(#token=…)를 꺼내고 주소에서 제거한다. 없으면 null. */
-export function takeTokenFromHash() {
-  const h = (typeof window !== 'undefined' && window.location.hash) || '';
-  const m = h.match(/[#&]token=([^&]+)/);
-  if (!m) return null;
-  const token = decodeURIComponent(m[1]);
-  try {
-    const rest = h.replace(/[#&]token=[^&]+/, '').replace(/^#&?/, '#');
-    const clean = rest === '#' ? '' : rest;
-    window.history.replaceState(null, '', window.location.pathname + window.location.search + clean);
-  } catch { /* noop */ }
-  return token;
+
+/** Reject unsolicited/legacy tokens and consume only a callback bound to this tab. */
+export function takeLoginFromHash() {
+  if (typeof window === 'undefined') return null;
+  const params = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+  if (!['token', 'login_code', 'login_tx'].some(key => params.has(key))) return null;
+  const code = params.get('login_code');
+  const transaction = params.get('login_tx');
+  const legacyToken = params.has('token');
+  for (const key of ['token', 'login_code', 'login_tx']) params.delete(key);
+  const rest = params.toString();
+  window.history.replaceState(null, '', window.location.pathname + window.location.search + (rest ? `#${rest}` : ''));
+  let pending;
+  try { pending = JSON.parse(window.sessionStorage.getItem(LOGIN_TRANSACTION_KEY) || 'null'); } catch { return null; }
+  if (legacyToken || !pending || pending.transaction !== transaction || !(pending.expiresAt > Date.now())
+    || pending.redirect !== window.location.origin + window.location.pathname
+    || !/^[a-f0-9]{64}$/.test(code || '') || !/^[A-Za-z0-9_-]{43}$/.test(pending.verifier || '')) return null;
+  window.sessionStorage.removeItem(LOGIN_TRANSACTION_KEY);
+  return { code, transaction, verifier: pending.verifier };
+}
+
+export async function exchangeGameLogin(callback) {
+  return gameFetch('POST', '/game/auth/exchange', callback);
 }
 /** 게임유저 JWT로 내 계정·게임데이터 조회. @returns {Promise<{user}>} */
 export async function fetchGameMe(token) {

@@ -1,5 +1,5 @@
 import { WORKER_URL } from '../config.js';
-import { getToken } from './authUtils.js';
+import { getToken, handleTeacherAuthExpiry } from './authUtils.js';
 import { studentBearer, handleStudentAuthExpiry } from './studentAuth.js';
 
 // 단일 요청이 이보다 오래 매달리면 중단 — 무한 스피너 방지(강사앱 notionClient와 동일 정책).
@@ -36,8 +36,11 @@ async function bookingFetch(method, path, body, { auth = false, studentToken = '
   const data = await res.json().catch(() => ({}));
 
   if (!res.ok) {
-    // 학생 세션 만료 → 세션 정리 후 리로드(인증 게이트 재진입). 강사(auth) 호출은 대상 아님.
-    if (res.status === 401 && !auth && studentToken) handleStudentAuthExpiry(studentToken);
+    if (res.status === 401) {
+      const bearer = headers.Authorization?.replace(/^Bearer /, '');
+      if (auth) handleTeacherAuthExpiry(bearer);
+      else if (studentToken) handleStudentAuthExpiry(studentToken, bearer);
+    }
     const message = data?.error || `HTTP ${res.status}`;
     const err = new Error(message);
     err.status = res.status;

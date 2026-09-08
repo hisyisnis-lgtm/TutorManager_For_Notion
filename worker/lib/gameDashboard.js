@@ -4,25 +4,28 @@
 // 브라우저에서 실행되는 clientMain은 .toString()으로 직렬화해 <script>로 주입(여기선 실행 안 됨).
 
 export const KEY_LABEL = { 'tone': '성조', 'tone-easy': '초급', 'tone-normal': '중급', 'tone-hard': '고급', 'tone-endless': '무한', 'tone-drama': '드라마', 'tone-travel': '여행', 'tone-slang': '신조어' };
-export const MODE_LABEL = { easy: '초급', normal: '중급', hard: '고급', endless: '무한', practice: '연습', review: '복습', drama: '드라마', travel: '여행', slang: '신조어', exam: '시험' };
+export const MODE_LABEL = { easy: '초급', normal: '중급', hard: '고급', endless: '무한', practice: '연습', training: '트레이닝', review: '복습', drama: '드라마', cooking: '요리', travel: '여행', slang: '신조어', exam: '시험' };
 export const IDENT_LABEL = { guest: '게스트', member: '회원', student: '학생' };
-export const CH_LABEL = { insta: '인스타', instagram: '인스타', youtube: '유튜브', yt: '유튜브', blog: '블로그', naver: '블로그' };
+export const CH_LABEL = { insta: '인스타', instagram: '인스타', youtube: '유튜브', yt: '유튜브', blog: '블로그', naver: '블로그', 'kakao-channel': '카카오' };
 export const SRC_LABEL = { web: '웹', standalone: 'PWA', twa: '스토어앱', ios: 'iOS' };
 
-const num = (x) => (Number(x) || 0).toLocaleString('ko-KR');
+const safeNumber = (x) => typeof x === 'number' || typeof x === 'string'
+  ? (Number.isFinite(Number(x)) ? Math.max(0, Math.min(Number.MAX_SAFE_INTEGER, Number(x))) : 0) : 0;
+const escapeHtml = (x) => String(x ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+const dictionary = () => Object.create(null);
 
 // AE SQL 결과(일별 그룹) 6종 → { days, byDay }. nowMs로 연속 일자 목록 생성.
 // 각 rows: ev/ch/src/mp/id = {day,k,n} · ms = {day,k,sv,sn}
 export function assembleByDay(sets, maxDays, nowMs) {
   const dk = (s) => String(s).slice(0, 10);
-  const byDay = {};
-  const ens = (d) => (byDay[d] || (byDay[d] = { ev: {}, ch: {}, src: {}, mode: {}, ident: {} }));
-  for (const r of sets.ev || []) ens(dk(r.day)).ev[r.k] = Number(r.n) || 0;
-  for (const r of sets.ch || []) if (r.k) ens(dk(r.day)).ch[r.k] = Number(r.n) || 0;
-  for (const r of sets.src || []) ens(dk(r.day)).src[r.k || ''] = Number(r.n) || 0;
-  for (const r of sets.mp || []) if (r.k) { const m = ens(dk(r.day)).mode; (m[r.k] || (m[r.k] = { plays: 0, sv: 0, sn: 0 })).plays = Number(r.n) || 0; }
-  for (const r of sets.ms || []) if (r.k) { const m = ens(dk(r.day)).mode; const e = (m[r.k] || (m[r.k] = { plays: 0, sv: 0, sn: 0 })); e.sv = Number(r.sv) || 0; e.sn = Number(r.sn) || 0; }
-  for (const r of sets.id || []) ens(dk(r.day)).ident[r.k || ''] = Number(r.n) || 0;
+  const byDay = dictionary();
+  const ens = (d) => (byDay[d] || (byDay[d] = { ev: dictionary(), ch: dictionary(), src: dictionary(), mode: dictionary(), ident: dictionary() }));
+  for (const r of sets.ev || []) ens(dk(r.day)).ev[r.k] = safeNumber(r.n);
+  for (const r of sets.ch || []) if (r.k) ens(dk(r.day)).ch[r.k] = safeNumber(r.n);
+  for (const r of sets.src || []) ens(dk(r.day)).src[r.k || ''] = safeNumber(r.n);
+  for (const r of sets.mp || []) if (r.k) { const m = ens(dk(r.day)).mode; (m[r.k] || (m[r.k] = { plays: 0, sv: 0, sn: 0 })).plays = safeNumber(r.n); }
+  for (const r of sets.ms || []) if (r.k) { const m = ens(dk(r.day)).mode; const e = (m[r.k] || (m[r.k] = { plays: 0, sv: 0, sn: 0 })); e.sv = safeNumber(r.sv); e.sn = safeNumber(r.sn); }
+  for (const r of sets.id || []) ens(dk(r.day)).ident[r.k || ''] = safeNumber(r.n);
   const days = [];
   for (let i = maxDays - 1; i >= 0; i--) days.push(new Date(nowMs - i * 86400000).toISOString().slice(0, 10));
   return { days, byDay };
@@ -33,10 +36,11 @@ export function embedMembers(rows) {
   return rows.map((r) => {
     let gd = {};
     try { gd = JSON.parse(r.game_data || '{}'); } catch { gd = {}; }
-    const best = {}, plays = {}, tone = {};
-    for (const [k, b] of Object.entries(gd.best || {})) { if (!b) continue; best[k] = b.bestScore || 0; plays[k] = b.playCount || 0; }
-    if (gd.tone) for (const t of [0, 1, 2, 3, 4]) { const e = gd.tone[t]; if (Array.isArray(e)) tone[t] = [e[0] || 0, e[1] || 0]; }
-    return { nickname: r.nickname || '', provider: r.provider || '(미상)', created: (r.created_at || '').slice(0, 10), seen: (r.last_seen_at || '').slice(0, 10), best, plays, tone, streak: gd.streak?.longest || 0, xp: gd.xp || 0 };
+    gd = gd && typeof gd === 'object' ? gd : {};
+    const best = dictionary(), plays = dictionary(), tone = dictionary();
+    for (const [k, b] of Object.entries(gd.best || {})) { if (!b) continue; best[k] = safeNumber(b.bestScore); plays[k] = safeNumber(b.playCount); }
+    if (gd.tone) for (const t of [0, 1, 2, 3, 4]) { const e = gd.tone[t]; if (Array.isArray(e)) tone[t] = [Math.min(safeNumber(e[0]), safeNumber(e[1])), safeNumber(e[1])]; }
+    return { nickname: String(r.nickname || ''), provider: String(r.provider || '(미상)'), created: String(r.created_at || '').slice(0, 10), seen: String(r.last_seen_at || '').slice(0, 10), best, plays, tone, streak: safeNumber(gd.streak?.longest), xp: safeNumber(gd.xp) };
   });
 }
 
@@ -46,20 +50,22 @@ function clientMain() {
   var L = D.labels, days = D.days, byDay = D.byDay, members = D.members;
   var lastDay = days[days.length - 1], firstDay = days[0];
   var $ = function (id) { return document.getElementById(id); };
-  var num = function (x) { return (Number(x) || 0).toLocaleString('ko-KR'); };
+  var number = function (x) { return Number.isFinite(Number(x)) ? Math.max(0, Math.min(Number.MAX_SAFE_INTEGER, Number(x))) : 0; };
+  var num = function (x) { return number(x).toLocaleString('ko-KR'); };
   var pct = function (a, b) { return b > 0 ? ((a / b) * 100).toFixed(1) + '%' : '—'; };
-  var lab = function (d, k) { return (d && d[k]) || k || '(미상)'; };
+  var own = function (d, k) { return d && Object.prototype.hasOwnProperty.call(d, k) ? d[k] : undefined; };
+  var lab = function (d, k) { return own(d, k) || k || '(미상)'; };
   var mmdd = function (s) { var p = s.split('-'); return (+p[1]) + '/' + (+p[2]); };
   // 닉네임은 사용자 입력 → innerHTML 삽입 전 반드시 이스케이프(저장형 XSS 방지).
   var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
 
   var cum = (function () {
-    var byProvider = {}, agg = {}, tone = { 0: [0, 0], 1: [0, 0], 2: [0, 0], 3: [0, 0], 4: [0, 0] }, sMax = 0, xpS = 0, cnt = 0;
+    var byProvider = Object.create(null), agg = Object.create(null), tone = { 0: [0, 0], 1: [0, 0], 2: [0, 0], 3: [0, 0], 4: [0, 0] }, sMax = 0, xpS = 0, cnt = 0;
     members.forEach(function (m) {
       byProvider[m.provider] = (byProvider[m.provider] || 0) + 1;
-      Object.keys(m.best || {}).forEach(function (k) { var a = agg[k] || (agg[k] = { label: lab(L.key, k), max: 0, plays: 0 }); a.max = Math.max(a.max, m.best[k] || 0); a.plays += (m.plays && m.plays[k]) || 0; });
-      if (m.tone) [0, 1, 2, 3, 4].forEach(function (t) { if (m.tone[t]) { tone[t][0] += m.tone[t][0]; tone[t][1] += m.tone[t][1]; } });
-      sMax = Math.max(sMax, m.streak || 0); xpS += m.xp || 0; cnt++;
+      Object.keys(m.best || {}).forEach(function (k) { var a = agg[k] || (agg[k] = { label: lab(L.key, k), max: 0, plays: 0 }); a.max = Math.max(a.max, m.best[k] || 0); a.plays += number(m.plays && m.plays[k]); });
+      if (m.tone) [0, 1, 2, 3, 4].forEach(function (t) { if (m.tone[t]) { tone[t][0] += number(m.tone[t][0]); tone[t][1] += number(m.tone[t][1]); } });
+      sMax = Math.max(sMax, m.streak || 0); xpS += number(m.xp); cnt++;
     });
     var toneAcc = [1, 2, 3, 4, 0].map(function (t) { return { label: t === 0 ? '경성' : t + '성', acc: tone[t][1] > 0 ? tone[t][0] / tone[t][1] : 0, attempts: tone[t][1] }; });
     return { total: members.length, byProvider: byProvider, modes: Object.keys(agg).map(function (k) { return agg[k]; }).sort(function (a, b) { return b.max - a.max; }), toneAcc: toneAcc, streakMax: sMax, xpAvg: cnt ? Math.round(xpS / cnt) : 0 };
@@ -89,7 +95,7 @@ function clientMain() {
     var area = function (key) { return path(key) + ' L' + X(n - 1).toFixed(1) + ' ' + base + ' L' + X(0).toFixed(1) + ' ' + base + ' Z'; };
     var grid = [0, 0.25, 0.5, 0.75, 1].map(function (f) { var gy = CH.pT + g.ih - f * g.ih; return '<line x1="' + CH.pL + '" x2="' + (CH.W - CH.pR) + '" y1="' + gy.toFixed(1) + '" y2="' + gy.toFixed(1) + '" class="grid"/><text x="' + (CH.pL - 6) + '" y="' + (gy + 3).toFixed(1) + '" class="ytick">' + Math.round(f * g.maxV) + '</text>'; }).join('');
     var step = Math.ceil(n / 8);
-    var xlab = daily.map(function (d, i) { return (i % step === 0 || i === n - 1) ? '<text x="' + X(i).toFixed(1) + '" y="' + (CH.H - 10) + '" class="xtick">' + d.label + '</text>' : ''; }).join('');
+    var xlab = daily.map(function (d, i) { return (i % step === 0 || i === n - 1) ? '<text x="' + X(i).toFixed(1) + '" y="' + (CH.H - 10) + '" class="xtick">' + esc(d.label) + '</text>' : ''; }).join('');
     var dot = function (key, c) { var i = n - 1; return '<circle cx="' + X(i).toFixed(1) + '" cy="' + Y(daily[i][key]).toFixed(1) + '" r="3.4" fill="' + c + '" stroke="var(--panel)" stroke-width="1.5"/>'; };
     // 호버/터치 인터랙션용(기본 숨김): 크로스헤어·강조점·투명 히트영역
     var inter = '<line class="cross" y1="' + CH.pT + '" y2="' + base + '" style="display:none"/><circle class="hdot he" r="4.2" fill="var(--cyan)" style="display:none"/><circle class="hdot hp" r="4.2" fill="var(--brand)" style="display:none"/><rect class="hit" x="' + CH.pL + '" y="' + CH.pT + '" width="' + g.iw + '" height="' + g.ih + '" fill="transparent"/>';
@@ -108,7 +114,7 @@ function clientMain() {
       cross.setAttribute('x1', x); cross.setAttribute('x2', x); cross.style.display = '';
       he.setAttribute('cx', x); he.setAttribute('cy', ye); he.style.display = '';
       hp.setAttribute('cx', x); hp.setAttribute('cy', yp); hp.style.display = '';
-      tip.innerHTML = '<b>' + daily[i].label + '</b><span><i class="tc"></i>진입 ' + num(daily[i].enter) + '</span><span><i class="tp"></i>판 시작 ' + num(daily[i].play) + '</span>';
+      tip.innerHTML = '<b>' + esc(daily[i].label) + '</b><span><i class="tc"></i>진입 ' + num(daily[i].enter) + '</span><span><i class="tp"></i>판 시작 ' + num(daily[i].play) + '</span>';
       tip.style.display = 'block';
       var oR = outer.getBoundingClientRect(), tw = tip.offsetWidth, th = tip.offsetHeight;
       var left = (r.left - oR.left) + x / CH.W * r.width - tw / 2;
@@ -131,16 +137,16 @@ function clientMain() {
   function barList(items, color) {
     if (!items.length) return '<div class="empty">데이터 없음</div>';
     var max = Math.max.apply(null, [1].concat(items.map(function (i) { return i.value; })));
-    return '<div class="ml">' + items.map(function (i) { return '<div class="mlrow"><div class="mllabel">' + i.label + '</div><div class="mltrack"><div class="mlbar" style="width:' + Math.max(4, (i.value / max) * 100).toFixed(1) + '%;background:' + color + '"></div></div><div class="mlval">' + num(i.value) + '</div></div>'; }).join('') + '</div>';
+    return '<div class="ml">' + items.map(function (i) { return '<div class="mlrow"><div class="mllabel">' + esc(i.label) + '</div><div class="mltrack"><div class="mlbar" style="width:' + Math.max(4, (i.value / max) * 100).toFixed(1) + '%;background:' + color + '"></div></div><div class="mlval">' + num(i.value) + '</div></div>'; }).join('') + '</div>';
   }
   function modeBars(items) {
     if (!items.length) return '<div class="empty">데이터 없음</div>';
     var max = Math.max.apply(null, [1].concat(items.map(function (i) { return i.n; })));
-    return '<div class="ml">' + items.map(function (i) { return '<div class="mlrow"><div class="mllabel">' + i.label + '</div><div class="mltrack"><div class="mlbar" style="width:' + Math.max(4, (i.n / max) * 100).toFixed(1) + '%"></div></div><div class="mlval">' + num(i.n) + '<span class="mlsub">평균 ' + num(i.avg) + '</span></div></div>'; }).join('') + '</div>';
+    return '<div class="ml">' + items.map(function (i) { return '<div class="mlrow"><div class="mllabel">' + esc(i.label) + '</div><div class="mltrack"><div class="mlbar" style="width:' + Math.max(4, (i.n / max) * 100).toFixed(1) + '%"></div></div><div class="mlval">' + num(i.n) + '<span class="mlsub">평균 ' + num(i.avg) + '</span></div></div>'; }).join('') + '</div>';
   }
   function toneBars(acc) {
     if (!acc.some(function (t) { return t.attempts > 0; })) return '<div class="empty">아직 성조 데이터 없음</div>';
-    return '<div class="ml">' + acc.map(function (t) { var c = t.acc >= 0.8 ? 'var(--green)' : t.acc >= 0.6 ? 'var(--amber)' : 'var(--crit)'; return '<div class="mlrow"><div class="mllabel">' + t.label + '</div><div class="mltrack"><div class="mlbar" style="width:' + Math.max(4, t.acc * 100).toFixed(1) + '%;background:' + c + '"></div></div><div class="mlval">' + Math.round(t.acc * 100) + '%<span class="mlsub">' + num(t.attempts) + '회</span></div></div>'; }).join('') + '</div>';
+    return '<div class="ml">' + acc.map(function (t) { var c = t.acc >= 0.8 ? 'var(--green)' : t.acc >= 0.6 ? 'var(--amber)' : 'var(--crit)'; return '<div class="mlrow"><div class="mllabel">' + esc(t.label) + '</div><div class="mltrack"><div class="mlbar" style="width:' + Math.max(4, t.acc * 100).toFixed(1) + '%;background:' + c + '"></div></div><div class="mlval">' + Math.round(t.acc * 100) + '%<span class="mlsub">' + num(t.attempts) + '회</span></div></div>'; }).join('') + '</div>';
   }
   function trendChip(cur, prev) {
     if (prev == null) return '';
@@ -156,22 +162,22 @@ function clientMain() {
   function memRow(m, idx) {
     var top = Math.max.apply(null, [0].concat(Object.keys(m.best || {}).map(function (k) { return m.best[k] || 0; })));
     var nm = m.nickname && m.nickname.trim() ? esc(m.nickname) : '<span class="dim">(이름없음)</span>';
-    return '<div class="memrow clk" data-i="' + idx + '"><span class="mdot" style="background:' + (pcolMap[m.provider] || '#8b98a8') + '"></span><span class="mname">' + nm + '</span><span class="mseen">' + (m.seen || '—') + '</span><span class="mtop">' + num(top) + '</span><span class="mchev">›</span></div>';
+    return '<div class="memrow clk" data-i="' + idx + '"><span class="mdot" style="background:' + (own(pcolMap, m.provider) || '#8b98a8') + '"></span><span class="mname">' + nm + '</span><span class="mseen">' + esc(m.seen || '—') + '</span><span class="mtop">' + num(top) + '</span><span class="mchev">›</span></div>';
   }
   function membersListHtml() {
     activeList = members.filter(function (m) { return m.seen && m.seen >= curStart && m.seen <= curEnd; }).sort(function (a, b) { return (b.seen || '').localeCompare(a.seen || ''); });
     var body = activeList.length ? '<div class="mem">' + activeList.map(function (m, i) { return memRow(m, i); }).join('') + '</div>' : '<div class="empty">이 기간에 접속한 회원이 없어요.</div>';
-    return '<div class="panel"><div class="panel-h"><span>활성 회원 · ' + num(activeList.length) + '명</span><span class="tag">' + curStart + ' ~ ' + curEnd + ' 접속 · 눌러서 상세</span></div>' + body + '</div>';
+    return '<div class="panel"><div class="panel-h"><span>활성 회원 · ' + num(activeList.length) + '명</span><span class="tag">' + esc(curStart) + ' ~ ' + esc(curEnd) + ' 접속 · 눌러서 상세</span></div>' + body + '</div>';
   }
   function memberDetailHtml(m) {
     var nm = m.nickname && m.nickname.trim() ? esc(m.nickname) : '(이름없음)';
-    var totalPlays = Object.keys(m.plays || {}).reduce(function (s, k) { return s + (m.plays[k] || 0); }, 0);
+    var totalPlays = Object.keys(m.plays || {}).reduce(function (s, k) { return s + number(m.plays[k]); }, 0);
     var modeRows = Object.keys(m.best || {}).map(function (k) { return { label: lab(L.key, k), best: m.best[k] || 0, plays: (m.plays && m.plays[k]) || 0 }; }).sort(function (a, b) { return b.best - a.best; });
     var toneAcc = [1, 2, 3, 4, 0].map(function (t) { var e = m.tone && m.tone[t]; var c = e ? e[0] : 0, a = e ? e[1] : 0; return { label: t === 0 ? '경성' : t + '성', acc: a > 0 ? c / a : 0, attempts: a }; });
-    var modeTbl = modeRows.length ? '<table class="mm-tbl"><thead><tr><th>모드</th><th class="r">최고점</th><th class="r">플레이</th></tr></thead><tbody>' + modeRows.map(function (r) { return '<tr><td>' + r.label + '</td><td class="r">' + num(r.best) + '</td><td class="r">' + num(r.plays) + '</td></tr>'; }).join('') + '</tbody></table>' : '<div class="empty">아직 기록 없음</div>';
+    var modeTbl = modeRows.length ? '<table class="mm-tbl"><thead><tr><th>모드</th><th class="r">최고점</th><th class="r">플레이</th></tr></thead><tbody>' + modeRows.map(function (r) { return '<tr><td>' + esc(r.label) + '</td><td class="r">' + num(r.best) + '</td><td class="r">' + num(r.plays) + '</td></tr>'; }).join('') + '</tbody></table>' : '<div class="empty">아직 기록 없음</div>';
     return '<button class="backbtn" id="memBack">‹ 회원 목록</button>'
-      + '<div class="panel"><div class="mm-head"><span class="mm-title"><span class="mdot" style="background:' + (pcolMap[m.provider] || '#8b98a8') + '"></span>' + nm + '</span></div>'
-      + '<div class="mm-meta">' + esc(m.provider) + ' · 가입 ' + (m.created || '—') + ' · 최근접속 ' + (m.seen || '—') + '</div>'
+      + '<div class="panel"><div class="mm-head"><span class="mm-title"><span class="mdot" style="background:' + (own(pcolMap, m.provider) || '#8b98a8') + '"></span>' + nm + '</span></div>'
+      + '<div class="mm-meta">' + esc(m.provider) + ' · 가입 ' + esc(m.created || '—') + ' · 최근접속 ' + esc(m.seen || '—') + '</div>'
       + '<div class="mm-stats"><div class="mm-st"><span>최고 스트릭</span><b>' + num(m.streak) + '일</b></div><div class="mm-st"><span>누적 XP</span><b>' + num(m.xp) + '</b></div><div class="mm-st"><span>총 플레이</span><b>' + num(totalPlays) + '</b></div></div>'
       + '<div class="mm-sec">모드별 최고점</div>' + modeTbl
       + '<div class="mm-sec">성조별 정확도</div>' + toneBars(toneAcc) + '</div>';
@@ -179,16 +185,16 @@ function clientMain() {
 
   function agg(start, end) {
     var sel = days.filter(function (d) { return d >= start && d <= end; });
-    var ev = {}, ch = {}, src = {}, mode = {}, ident = {}, daily = [];
+    var ev = Object.create(null), ch = Object.create(null), src = Object.create(null), mode = Object.create(null), ident = Object.create(null), daily = [];
     sel.forEach(function (d) {
       var b = byDay[d], dd = { label: mmdd(d), enter: 0, play: 0 };
       if (b) {
-        Object.keys(b.ev).forEach(function (k) { ev[k] = (ev[k] || 0) + b.ev[k]; });
-        dd.enter = b.ev.enter || 0; dd.play = b.ev.run_start || 0;
-        Object.keys(b.ch).forEach(function (k) { ch[k] = (ch[k] || 0) + b.ch[k]; });
-        Object.keys(b.src).forEach(function (k) { src[k] = (src[k] || 0) + b.src[k]; });
-        Object.keys(b.ident).forEach(function (k) { ident[k] = (ident[k] || 0) + b.ident[k]; });
-        Object.keys(b.mode).forEach(function (k) { var e = b.mode[k], t = mode[k] || (mode[k] = { plays: 0, sv: 0, sn: 0 }); t.plays += e.plays || 0; t.sv += e.sv || 0; t.sn += e.sn || 0; });
+        Object.keys(b.ev).forEach(function (k) { ev[k] = (ev[k] || 0) + number(b.ev[k]); });
+        dd.enter = number(own(b.ev, 'enter')); dd.play = number(own(b.ev, 'run_start'));
+        Object.keys(b.ch).forEach(function (k) { ch[k] = (ch[k] || 0) + number(b.ch[k]); });
+        Object.keys(b.src).forEach(function (k) { src[k] = (src[k] || 0) + number(b.src[k]); });
+        Object.keys(b.ident).forEach(function (k) { ident[k] = (ident[k] || 0) + number(b.ident[k]); });
+        Object.keys(b.mode).forEach(function (k) { var e = b.mode[k], t = mode[k] || (mode[k] = { plays: 0, sv: 0, sn: 0 }); t.plays += number(e.plays); t.sv += number(e.sv); t.sn += number(e.sn); });
       }
       daily.push(dd);
     });
@@ -237,14 +243,14 @@ function clientMain() {
     var body;
     if (!cum.modes.length) body = '<div class="empty">회원 기록 없음</div>';
     else { var mx = Math.max.apply(null, [1].concat(cum.modes.map(function (m) { return m.max; })));
-      body = '<div class="lb">' + cum.modes.map(function (m, i) { var w = Math.max(6, (m.max / mx) * 100); return '<div class="lbrow"><div class="lbrank">' + (i + 1) + '</div><div class="lbmode">' + m.label + '</div><div class="lbtrack"><div class="lbbar" style="width:' + w.toFixed(1) + '%"></div></div><div class="lbval">' + num(m.max) + '<span class="lbsub">' + num(m.plays) + '판</span></div></div>'; }).join('') + '</div>'; }
+      body = '<div class="lb">' + cum.modes.map(function (m, i) { var w = Math.max(6, (m.max / mx) * 100); return '<div class="lbrow"><div class="lbrank">' + (i + 1) + '</div><div class="lbmode">' + esc(m.label) + '</div><div class="lbtrack"><div class="lbbar" style="width:' + w.toFixed(1) + '%"></div></div><div class="lbval">' + num(m.max) + '<span class="lbsub">' + num(m.plays) + '판</span></div></div>'; }).join('') + '</div>'; }
     return panel('모드별 최고점', '누적 · 회원', body);
   }
   function provPanel() {
     var a = A, pcol = { kakao: '#f7c948', google: '#4c8dff', '(미상)': '#8b98a8' };
-    var segs = Object.keys(cum.byProvider).map(function (p) { return { label: p, value: cum.byProvider[p], color: pcol[p] || '#a371f7' }; }).sort(function (x, y) { return y.value - x.value; });
+    var segs = Object.keys(cum.byProvider).map(function (p) { return { label: p, value: cum.byProvider[p], color: own(pcol, p) || '#a371f7' }; }).sort(function (x, y) { return y.value - x.value; });
     var body = cum.total ? '<div class="prov"><div class="prov-donut">' + donutSvg(segs, cum.total) + '</div><div class="prov-list">'
-      + segs.map(function (s) { return '<div class="prow"><span class="pdot" style="background:' + s.color + '"></span><span class="pname">' + s.label + '</span><span class="pval">' + num(s.value) + '</span></div>'; }).join('')
+      + segs.map(function (s) { return '<div class="prow"><span class="pdot" style="background:' + s.color + '"></span><span class="pname">' + esc(s.label) + '</span><span class="pval">' + num(s.value) + '</span></div>'; }).join('')
       + '<div class="prow sep"><span class="pname dim">활성 · 기간</span><span class="pval">' + num(a.active) + '</span></div><div class="prow"><span class="pname dim">신규 · 기간</span><span class="pval">' + num(a.nw) + '</span></div><div class="prow"><span class="pname dim">최고 스트릭</span><span class="pval">' + num(cum.streakMax) + '일</span></div><div class="prow"><span class="pname dim">평균 XP</span><span class="pval">' + num(cum.xpAvg) + '</span></div></div></div>' : '<div class="empty">회원 없음</div>';
     return panel('가입 수단 · 학습', '', body);
   }
@@ -406,9 +412,10 @@ export const DASH_CSS = `
 `;
 
 // 데이터 → 대시보드 body HTML(문자열). 순수 함수.
-export function renderDashboard({ byDay, days, members, maxDays, generatedAt, source = 'node 02_devtools/game-report.mjs --html' }) {
+export function renderDashboard({ byDay, days, members, maxDays, generatedAt, source = 'node 02_devtools/game-report.mjs --html' }, { nonce = '' } = {}) {
   const payload = { maxDays, generatedAt, days, byDay, members, labels: { key: KEY_LABEL, mode: MODE_LABEL, ident: IDENT_LABEL, ch: CH_LABEL, src: SRC_LABEL } };
   const json = JSON.stringify(payload).replace(/</g, '\\u003c');
+  const nonceAttr = nonce ? ` nonce="${escapeHtml(nonce)}"` : '';
   return `<style>${DASH_CSS}</style>
 <div class="ga">
   <aside class="sidebar">
@@ -433,11 +440,11 @@ export function renderDashboard({ byDay, days, members, maxDays, generatedAt, so
     </div>
     <div class="note"><span>⚠️</span><div><b>미공개 테스트 데이터</b> — 출시 전 트래픽이에요. 회원 <b>최고점·성조정확도</b>는 누적 현재값이라 기간 필터에 반응하지 않습니다(유입·퍼널·모드·활성/신규는 기간 반영).</div></div>
     <div id="content"></div>
-    <div class="foot">게임은 Notion과 완전 분리 — 지표는 Analytics Engine(유입·시계열) + D1(회원·점수)에서만.<br>최근 ${maxDays}일 원본 내장 · ${source} · 생성 ${generatedAt}</div>
+    <div class="foot">게임은 Notion과 완전 분리 — 지표는 Analytics Engine(유입·시계열) + D1(회원·점수)에서만.<br>최근 ${escapeHtml(maxDays)}일 원본 내장 · ${escapeHtml(source)} · 생성 ${escapeHtml(generatedAt)}</div>
   </main>
 </div>
-<script id="gad" type="application/json">${json}</script>
-<script>var __name=function(f){return f};(${clientMain.toString()})();</script>`;
+<script${nonceAttr} id="gad" type="application/json">${json}</script>
+<script${nonceAttr}>var __name=function(f){return f};(${clientMain.toString()})();</script>`;
 // ↑ __name shim: 워커 번들러(esbuild keepNames)가 clientMain에 __name(fn,'name') 래퍼를 주입하는데
 //   브라우저엔 그 헬퍼가 없어 ReferenceError가 난다. no-op으로 정의해 흡수(로컬 Node 빌드엔 무해).
 }

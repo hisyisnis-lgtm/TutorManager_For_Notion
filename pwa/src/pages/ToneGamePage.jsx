@@ -5,7 +5,7 @@
 // 디자인 사양: 메모리 tone_game_redesign.md
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
-import { fetchToneWords, fetchGameMe, takeTokenFromHash } from '../api/gameApi.js';
+import { fetchToneWords, takeLoginFromHash, exchangeGameLogin } from '../api/gameApi.js';
 import { track } from '../game/gameAnalytics.js';
 import {
   resolveIdentity,
@@ -416,17 +416,20 @@ export default function ToneGamePage() {
     });
   }, []);
 
-  // 소셜 로그인 복귀 — Worker 콜백이 현재 주소에 #token=… 을 붙여 되돌려보낸다.
-  // 토큰이 있으면 회원 세션을 세우고 게스트 로컬 기록을 흡수한다. 닉네임이 아직 없을 때만 설정 화면으로,
-  // 이미 있으면(재로그인·제공자 제공) 건너뛰고 바로 회원으로 재초기화(매 로그인 반복 프롬프트 방지).
+  // Only a one-time code bound to this tab can establish a session and merge guest data.
+  // Keep the exchange promise across StrictMode's effect restart: never consume a code twice.
+  const loginExchangeRef = useRef(null);
   useEffect(() => {
-    const token = takeTokenFromHash();
-    if (!token) return undefined;
+    if (!loginExchangeRef.current) {
+      const callback = takeLoginFromHash();
+      if (!callback) return undefined;
+      loginExchangeRef.current = exchangeGameLogin(callback);
+    }
     let done = false;
     (async () => {
       try {
-        loginMember(token, {});                    // 임시 세션(닉네임은 닉네임 화면에서 확정)
-        const { user } = await fetchGameMe(token);
+        const { token, user } = await loginExchangeRef.current;
+        if (done || !token || !user?.id) return;
         loginMember(token, user || {});
         const idn = resolveIdentity(undefined);     // 회원 신원
         mergeGuestIntoMember(idn);                   // 게스트 로컬 → 회원 로컬 1회 병합
@@ -439,7 +442,7 @@ export default function ToneGamePage() {
         //  구글 name은 실명인 경우가 많아 그대로 승격시키지 않는다.
         if (pulled) await pushMemberData(idn, loadGuestNickname() || user?.nickname).catch(() => {}); // 로컬(게스트∪서버) → 서버
         track('login_success');
-      } catch { /* noop */ }
+      } catch { return; }
       if (done) return;
       // 닉네임은 온보딩에서 이미 정했으므로(2026-08-07) 로그인 후 별도 질문 없이 회원으로 재초기화.
       window.location.reload();

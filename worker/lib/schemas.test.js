@@ -181,7 +181,7 @@ describe('ConsultSchema', () => {
 describe('HomeworkSubmitSchema', () => {
   it('files 배열 정상', () => {
     const result = HomeworkSubmitSchema.safeParse({
-      files: [{ fileUploadId: 'abc', fileName: 'hw.pdf' }],
+      files: [{ fileUploadId: 'abc', fileName: 'hw.pdf', uploadReceipt: 'test-receipt' }],
     });
     expect(result.success).toBe(true);
   });

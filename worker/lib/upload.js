@@ -213,6 +213,48 @@ export function validateFileUpload(file, declaredSize) {
 // 호환 별칭 (호출처 이름이 옛 이름인 경우)
 export const validateAudioUpload = validateFileUpload;
 
+// MIME/확장자는 사용자가 바꿀 수 있으므로 실제 파일 헤더와 함께 검사한다.
+// 전체 파일을 복사하지 않고 첫 1 KiB만 읽는다. 악성코드 검사를 대체하지는 않는다.
+export async function validateFileContent(file) {
+  const bytes = new Uint8Array(await file.slice(0, 1024).arrayBuffer());
+  const at = (offset, text) => [...text].every((c, i) => bytes[offset + i] === c.charCodeAt(0));
+  const hex = (...values) => values.every((value, i) => bytes[i] === value);
+  const mime = resolveFileMime(file);
+  const ext = extOf(file.name);
+  const isMp4 = at(4, 'ftyp');
+  const heifBrands = ['heic', 'heix', 'hevc', 'hevx', 'mif1', 'msf1'];
+  const isHeif = isMp4 && heifBrands.some((brand) => at(8, brand));
+  const signatures = {
+    'application/pdf': at(0, '%PDF-'),
+    'image/png': hex(137, 80, 78, 71, 13, 10, 26, 10),
+    'image/jpeg': hex(255, 216, 255),
+    'image/gif': at(0, 'GIF87a') || at(0, 'GIF89a'),
+    'image/webp': at(0, 'RIFF') && at(8, 'WEBP'),
+    'image/heic': isHeif,
+    'image/heif': isHeif,
+    'audio/mpeg': at(0, 'ID3') || (bytes[0] === 255 && (bytes[1] & 224) === 224 && (bytes[1] & 6) !== 0),
+    'audio/aac': bytes[0] === 255 && (bytes[1] & 246) === 240,
+    'audio/mp4': isMp4 && !isHeif,
+    'audio/webm': hex(26, 69, 223, 163),
+    'audio/ogg': at(0, 'OggS'),
+    'audio/opus': at(0, 'OggS'),
+    'audio/wav': at(0, 'RIFF') && at(8, 'WAVE'),
+    'audio/flac': at(0, 'fLaC'),
+  };
+  if ((ext && !ALLOWED_EXTENSIONS.has(ext)) || !signatures[mime]) {
+    return { ok: false, status: 415, error: '파일 내용이 표시된 형식과 다르거나 손상되었습니다. 원본 파일을 다시 선택해주세요.' };
+  }
+  return { ok: true };
+}
+
+export function isNotionUploadUrl(raw, id) {
+  try {
+    const url = new URL(raw);
+    return url.origin === 'https://api.notion.com' && !url.username && !url.password
+      && url.pathname === `/v1/file_uploads/${id}/send` && !url.search && !url.hash;
+  } catch { return false; }
+}
+
 /**
  * 파일 이름 중복 제거 — 같은 이름이 둘 이상이면 두 번째부터 ` (2)`, ` (3)` 접미사를 붙여 유일화한다.
  * 확장자는 보존한다: `사진.jpg`, `사진.jpg` → `사진.jpg`, `사진 (2).jpg`.

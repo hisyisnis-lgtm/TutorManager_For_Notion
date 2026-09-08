@@ -10,6 +10,7 @@ import { fetchStudentByToken } from '../api/bookingApi.js';
 import { fetchMyHomework, parseHomework } from '../api/homework.js';
 import { fetchStudentNotices } from '../api/notices.js';
 import { clearStudentSession } from '../api/studentAuth.js';
+import { captureAuthScope, isAuthScopeCurrent } from '../api/authState.js';
 import { getViewedMap, HW_VIEWED_KEY, isFeedbackArchived } from '../utils/homeworkViewed.js';
 import { PANDA_FEED_KEY } from '../components/ui/PandaWidget.jsx';
 import InstallBanner from '../components/ui/InstallBanner.jsx';
@@ -101,6 +102,7 @@ export default function PersonalPage() {
   }, [studentToken]);
 
   const checkDots = useCallback(async () => {
+    const auth = captureAuthScope(`student:${studentToken}`);
     const CK = `student:homework:${studentToken}`;
     // 홈 숙제 섹션(제출전/제출완료/피드백) 계산 — 표시용.
     const computeAlerts = (list) => {
@@ -116,8 +118,9 @@ export default function PersonalPage() {
     if (cached) computeAlerts(cached);
     try {
       const pages = await trackRevalidation(fetchMyHomework(studentToken));
+      if (!isAuthScopeCurrent(auth)) return;
       const list = pages.map(parseHomework);
-      writeCacheValue(CK, list); // ArchiveTab과 캐시 공유
+      writeCacheValue(CK, list, auth); // ArchiveTab과 캐시 공유
       computeAlerts(list);
 
       // 보관함 dot: 마지막 보관함 방문 이후 새로 archived된 항목 (최신 기준)
@@ -136,7 +139,8 @@ export default function PersonalPage() {
     // 실패해도 조용히 넘어간다 — 배지는 부가 정보라 홈 로딩을 막을 이유가 없다.
     try {
       const notices = await fetchStudentNotices(studentToken);
-      writeCacheValue(`student:notices:${studentToken}`, notices); // NoticeTab과 캐시 공유
+      if (!isAuthScopeCurrent(auth)) return;
+      writeCacheValue(`student:notices:${studentToken}`, notices, auth); // NoticeTab과 캐시 공유
       const lastSeen = parseInt(localStorage.getItem(NOTICE_SEEN_KEY) || '0', 10);
       setNoticeDot(notices.some((n) => n.publishedAt && new Date(n.publishedAt).getTime() > lastSeen));
     } catch { /* ignore */ }
@@ -243,12 +247,15 @@ export default function PersonalPage() {
   };
 
   const loadStudent = useCallback(async () => {
+    const auth = captureAuthScope(`student:${studentToken}`);
     try {
       const data = await trackRevalidation(fetchStudentByToken(studentToken));
+      if (!isAuthScopeCurrent(auth)) return;
       localStorage.setItem(SAVED_TOKEN_KEY, studentToken);
-      writeCacheValue(`student:info:${studentToken}`, data);
+      writeCacheValue(`student:info:${studentToken}`, data, auth);
       setStudent(data);
     } catch (e) {
+      if (!isAuthScopeCurrent(auth)) return;
       localStorage.removeItem(SAVED_TOKEN_KEY);
       setStudentError(e.status === 404 ? '등록된 학생 코드가 아닙니다.' : e.message);
     }
@@ -346,7 +353,7 @@ export default function PersonalPage() {
           // 폼이 버그 제보 → 서비스 개선의견으로 넓어져 라벨도 통일(2026-08-31, MY 탭과 같은 폼)
           { label: '피드백 남기기', onClick: () => window.open('https://forms.gle/dCwXvZAdfG12AxoJ9', '_blank', 'noopener,noreferrer') },
           // 공용 기기 대비 — 저장 토큰과 함께 OTP 출입 세션도 정리
-          { label: '로그아웃', onClick: () => { localStorage.removeItem(SAVED_TOKEN_KEY); clearStudentSession(studentToken); navigate('/personal'); } },
+          { label: '로그아웃', onClick: () => { clearStudentSession(studentToken); navigate('/personal', { replace: true }); } },
         ].map((item, i) => (
           <button
             key={item.label}

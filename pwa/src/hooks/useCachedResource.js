@@ -1,11 +1,15 @@
 import { useState, useEffect, useCallback, useRef, useSyncExternalStore } from 'react';
+import {
+  cacheScope, captureAuthScope, isAuthScopeCurrent, subscribeAuthChanges,
+  getAuthRevision, SENSITIVE_CACHE_TTL,
+} from '../api/authState.js';
 
 // ─────────────────────────────────────────────────────────────────────────
 // stale-while-revalidate 훅 — "기억해뒀다 즉시 보여주고, 뒤에서 갱신".
 //
 // DataContext(홈)가 학생·수업유형·할인에 쓰던 캐시 패턴을 화면 어디서나 쓰도록
 // 일반화한 것. 동작:
-//   1) localStorage에 저장된 값이 있으면 즉시 반환 → 재방문 화면이 바로 뜬다.
+//   1) 현재 탭의 15분 이내 캐시가 있으면 즉시 반환 → 재방문 화면이 바로 뜬다.
 //   2) 마운트 시 fetcher를 다시 호출(revalidate)해 최신값으로 교체·저장.
 //   3) 쓰기(생성/수정/삭제) 후 refresh()를 호출하면 그 즉시 다시 최신화 →
 //      본인이 방금 한 수정이 옛값으로 보이는 일을 막는다.
@@ -20,38 +24,13 @@ import { useState, useEffect, useCallback, useRef, useSyncExternalStore } from '
 
 const PREFIX = 'swr_';
 
-// ── 캐시 GC ──────────────────────────────────────────────────────────
-// 날짜·월 파라미터가 든 키(classes:cal:2026-07, pending:today:… 등)는 시간이 지나면
-// 다시는 읽히지 않는데 지워지지도 않아 무한 누적됐다 — 쿼터 초과 시 writeCache가
-// 조용히 전부 실패해 캐시 기능이 통째로 죽는 원인. 키별 마지막 쓰기 시각을 별도
-// 인덱스에 기록하고, 모듈 로드(앱 부팅) 시 1회 오래된 항목을 청소한다.
-const INDEX_KEY = 'swr_index_v1';
-const GC_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000; // 14일 — 활성 키는 방문마다 다시 써져 갱신됨
-
-function touchIndex(storageKey) {
-  try {
-    const idx = JSON.parse(localStorage.getItem(INDEX_KEY) || '{}');
-    idx[storageKey] = Date.now();
-    localStorage.setItem(INDEX_KEY, JSON.stringify(idx));
-  } catch { /* noop */ }
-}
-
+// 개인정보 목록은 디스크의 장기 캐시 대신 현재 탭에서만 짧게 재사용한다.
 (function gcOldEntries() {
   try {
-    const idx = JSON.parse(localStorage.getItem(INDEX_KEY) || '{}');
-    const now = Date.now();
-    let changed = false;
-    for (let i = localStorage.length - 1; i >= 0; i -= 1) {
-      const k = localStorage.key(i);
-      if (!k || k === INDEX_KEY || !k.startsWith(PREFIX)) continue;
-      const t = idx[k];
-      if (t === undefined) { idx[k] = now; changed = true; continue; } // 인덱스 도입 전 캐시 — 지금부터 추적
-      if (now - t > GC_MAX_AGE_MS) { localStorage.removeItem(k); delete idx[k]; changed = true; }
+    for (let i = sessionStorage.length - 1; i >= 0; i -= 1) {
+      const key = sessionStorage.key(i);
+      if (key?.startsWith(PREFIX)) readCache(key);
     }
-    for (const k of Object.keys(idx)) {
-      if (localStorage.getItem(k) === null) { delete idx[k]; changed = true; }
-    }
-    if (changed) localStorage.setItem(INDEX_KEY, JSON.stringify(idx));
   } catch { /* noop */ }
 })();
 
@@ -64,9 +43,9 @@ function touchIndex(storageKey) {
 export function invalidateCache(prefix) {
   try {
     const full = PREFIX + prefix;
-    for (let i = localStorage.length - 1; i >= 0; i -= 1) {
-      const k = localStorage.key(i);
-      if (k && k.startsWith(full)) localStorage.removeItem(k);
+    for (let i = sessionStorage.length - 1; i >= 0; i -= 1) {
+      const k = sessionStorage.key(i);
+      if (k && k.startsWith(full)) sessionStorage.removeItem(k);
     }
   } catch {
     // localStorage 접근 불가 시 무시 — 무효화 실패해도 마운트 시 revalidate가 어차피 최신화.
@@ -110,8 +89,8 @@ export function peekCache(key) {
   return readCache(PREFIX + key);
 }
 /** 캐시 값 쓰기 — 명령형 fetch 성공 후 캐시 갱신용. */
-export function writeCacheValue(key, value) {
-  writeCache(PREFIX + key, value);
+export function writeCacheValue(key, value, auth) {
+  writeCache(PREFIX + key, value, auth);
 }
 /** 명령형 fetch를 전역 "업데이트 중" 표시에 반영 — promise를 감싸 갱신 카운터를 증감. */
 export async function trackRevalidation(promise) {
@@ -125,17 +104,24 @@ export async function trackRevalidation(promise) {
 
 function readCache(storageKey) {
   try {
-    const raw = localStorage.getItem(storageKey);
-    return raw ? JSON.parse(raw) : undefined;
+    const auth = captureAuthScope(cacheScope(storageKey.slice(PREFIX.length)));
+    const raw = sessionStorage.getItem(storageKey);
+    const cached = raw ? JSON.parse(raw) : null;
+    if (!isAuthScopeCurrent(auth) || !Number.isFinite(cached?.savedAt)
+      || Date.now() - cached.savedAt > SENSITIVE_CACHE_TTL || cached.savedAt > Date.now()) {
+      sessionStorage.removeItem(storageKey);
+      return undefined;
+    }
+    return cached.value;
   } catch {
     return undefined;
   }
 }
 
-function writeCache(storageKey, value) {
+function writeCache(storageKey, value, auth) {
+  if (!isAuthScopeCurrent(auth) || auth.scope !== cacheScope(storageKey.slice(PREFIX.length))) return;
   try {
-    localStorage.setItem(storageKey, JSON.stringify(value));
-    touchIndex(storageKey);
+    sessionStorage.setItem(storageKey, JSON.stringify({ savedAt: Date.now(), value }));
   } catch {
     // 용량 초과 등은 조용히 무시 — 캐시는 부가기능이라 실패해도 흐름을 막지 않는다.
   }
@@ -152,6 +138,7 @@ function writeCache(storageKey, value) {
  *   - refresh: 쓰기 후 즉시 최신화하거나 당겨서 새로고침할 때 호출.
  */
 export function useCachedResource(key, fetcher) {
+  const revision = useSyncExternalStore(subscribeAuthChanges, getAuthRevision, () => 0);
   const enabled = key != null;
   const storageKey = enabled ? PREFIX + key : null;
 
@@ -159,6 +146,8 @@ export function useCachedResource(key, fetcher) {
   const [loading, setLoading] = useState(() => (storageKey ? readCache(storageKey) === undefined : false));
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
+  const dataOwner = useRef(`${storageKey}:${revision}`);
+  const requestId = useRef(0);
 
   // fetcher는 매 렌더 새 함수일 수 있으므로 ref로 잡아 revalidate 재생성을 막는다.
   const fetcherRef = useRef(fetcher);
@@ -166,14 +155,19 @@ export function useCachedResource(key, fetcher) {
 
   const revalidate = useCallback(async () => {
     if (!storageKey) return;
+    const auth = captureAuthScope(cacheScope(key));
+    if (auth.revision !== revision || !isAuthScopeCurrent(auth)) return;
+    const request = ++requestId.current;
     setRefreshing(true);
     setError(null);
     beginRevalidate();
     try {
       const fresh = await fetcherRef.current();
+      if (request !== requestId.current || !isAuthScopeCurrent(auth)) return;
       setData(fresh);
-      writeCache(storageKey, fresh);
+      writeCache(storageKey, fresh, auth);
     } catch (e) {
+      if (request !== requestId.current || !isAuthScopeCurrent(auth)) return;
       // 캐시가 있으면 옛 데이터를 유지한 채 조용히 실패, 없을 때만 에러 노출.
       setData((cur) => {
         if (cur === undefined) setError(e.message || '불러오지 못했어요.');
@@ -181,13 +175,18 @@ export function useCachedResource(key, fetcher) {
       });
     } finally {
       endRevalidate();
-      setRefreshing(false);
-      setLoading(false);
+      if (request === requestId.current && isAuthScopeCurrent(auth)) {
+        setRefreshing(false);
+        setLoading(false);
+      }
     }
-  }, [storageKey]);
+  }, [key, storageKey, revision]);
 
   // 키가 바뀌면 해당 키의 캐시를 즉시 반영하고 갱신. (파라미터 화면 대응)
   useEffect(() => {
+    dataOwner.current = `${storageKey}:${revision}`;
+    setRefreshing(false);
+    setError(null);
     if (!storageKey) {
       setData(undefined);
       setLoading(false);
@@ -197,9 +196,12 @@ export function useCachedResource(key, fetcher) {
     setData(cached);
     setLoading(cached === undefined);
     revalidate();
-  }, [storageKey, revalidate]);
+    return () => { requestId.current += 1; };
+  }, [storageKey, revision, revalidate]);
 
-  return { data, loading, refreshing, error, refresh: revalidate };
+  const current = dataOwner.current === `${storageKey}:${revision}`
+    && !!captureAuthScope(key ? cacheScope(key) : 'teacher').credential;
+  return { data: current ? data : undefined, loading, refreshing, error, refresh: revalidate };
 }
 
 /**
@@ -216,10 +218,13 @@ export function useCachedResource(key, fetcher) {
  * @returns {Promise<any>} 새로 받은 값. 실패하면 throw하므로 호출부에서 잡는다.
  */
 export async function swrLoad(key, fetcher, apply) {
+  const auth = captureAuthScope(cacheScope(key));
+  if (!isAuthScopeCurrent(auth)) return;
   const cached = peekCache(key);
   if (cached !== undefined && cached !== null) apply(cached, { fromCache: true });
   const fresh = await trackRevalidation(fetcher());
-  writeCacheValue(key, fresh);
+  if (!isAuthScopeCurrent(auth)) return;
+  writeCacheValue(key, fresh, auth);
   apply(fresh, { fromCache: false });
   return fresh;
 }

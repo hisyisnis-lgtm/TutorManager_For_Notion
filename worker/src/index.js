@@ -1,9 +1,14 @@
 // 순수 함수는 lib/로 분리되어 단위 테스트 대상.
 // 새 순수 함수 추가 시 lib/ 안에 두고 여기서 import.
 import { stripEmoji, normalizeId, normalizePhone } from '../lib/string.js';
+import { dashboardAccess } from '../lib/gameDashboardAccess.js';
 import { makeNotion } from '../lib/notion.js';
 import { isSafeExternalUrl, maskPhone, maskToken, sanitizePath } from '../lib/security.js';
-import { validateFileUpload, resolveFileMime, dedupeFileNames } from '../lib/upload.js';
+import { validateFileUpload, validateFileContent, isNotionUploadUrl, resolveFileMime, dedupeFileNames } from '../lib/upload.js';
+import { boundedRequest, RequestTooLarge, secureResponse } from '../lib/httpSecurity.js';
+import { authorizeNotionRequest, pageInDatabase } from '../lib/notionScope.js';
+import { studentHomeworkPage } from '../lib/homeworkPrivacy.js';
+import { teacherNotifications } from '../lib/notifications.js';
 import {
   ConsultSchema,
   HomeworkSubmitSchema,
@@ -11,6 +16,7 @@ import {
   NotionPageIdSchema,
   MyClassesQuerySchema,
   GameEventSchema,
+  GameDataSchema,
   GameNicknameSchema,
   StudentAuthRequestSchema,
   StudentAuthVerifySchema,
@@ -20,9 +26,11 @@ import { validateBody, validateParams, validatePathToken } from '../lib/validati
 import {
   SOCIAL_PROVIDERS, isSocialProvider, buildAuthorizeUrl, callbackUrl,
   decodeJwtPayload, extractGoogleIdentity, extractKakaoIdentity,
-  isAllowedRedirect, redirectPrefixes, appendTokenFragment,
-  signAuthState, verifyAuthState,
+  isAllowedRedirect, redirectPrefixes, appendCodeFragment,
+  signAuthState, verifyAuthState, isPkceChallenge, isLoginTransaction, pkceChallenge,
 } from '../lib/oauth.js';
+import { signTypedToken, verifyTypedToken } from '../lib/auth.js';
+import { rateLimitCheck, putChallenge, consumeChallenge, cleanupSecurityState, SecurityStoreUnavailable } from '../lib/securityStore.js';
 import { findOrCreateGameUser, getGameUserById, updateGameData, deleteGameUser } from '../lib/gameDb.js';
 import { assembleByDay, embedMembers, renderDashboard } from '../lib/gameDashboard.js';
 
@@ -92,7 +100,7 @@ function errRes(corsHeaders, status, message) {
 async function requireJwt(request, env, corsHeaders) {
   const authHeader = request.headers.get('Authorization') || '';
   const jwtToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
-  if (!jwtToken || !(await verifyToken(jwtToken, env.JWT_SECRET || env.AUTH_PASSWORD))) {
+  if (!jwtToken || !(await verifyToken(jwtToken, env.JWT_SECRET))) {
     return errRes(corsHeaders, 401, 'Unauthorized');
   }
   return null;
@@ -212,35 +220,6 @@ async function fetchWithLimit(url, init = {}, maxBytes = 5 * 1024 * 1024) {
   return { res, buffer: buffer.buffer };
 }
 
-// ===== Rate limit (Cloudflare Cache API 기반, KV 없이 동작) =====
-// 같은 키로 windowSec 동안 최대 limit번 허용. 초과 시 false 반환.
-// 카운터를 cache에 저장: key별로 호출마다 새 응답을 push하고, 매치된 응답 수로 횟수 추정.
-// 단순화 위해 키별 단일 슬롯에 카운터를 atomic하게 증가하는 대신,
-// "현재 window 시작 시점의 카운터 시리얼라이즈된 응답"을 사용한다.
-async function rateLimitCheck(key, limit, windowSec) {
-  try {
-    const cache = caches.default;
-    const bucket = Math.floor(Date.now() / 1000 / windowSec);
-    const cacheKey = new Request(`https://ratelimit.local/${encodeURIComponent(key)}/${bucket}`);
-    const hit = await cache.match(cacheKey);
-    let count = 0;
-    if (hit) {
-      const text = await hit.text();
-      count = parseInt(text, 10) || 0;
-    }
-    if (count >= limit) return false;
-    await cache.put(
-      cacheKey,
-      new Response(String(count + 1), {
-        headers: { 'Cache-Control': `public, max-age=${windowSec}` },
-      }),
-    );
-    return true;
-  } catch {
-    return true; // 캐시 실패 시 fail-open (가용성 우선)
-  }
-}
-
 // IP를 안정적으로 얻는다. 없으면 0.0.0.0으로 묶음 (테스트/내부 호출 대응).
 function clientIp(request) {
   return request.headers.get('CF-Connecting-IP') || '0.0.0.0';
@@ -250,40 +229,12 @@ function clientIp(request) {
 
 // HMAC-SHA256 서명 생성 → base64 (토큰용)
 async function createToken(secret, expSeconds) {
-  const payload = btoa(JSON.stringify({ exp: Math.floor(Date.now() / 1000) + expSeconds }));
-  const key = await crypto.subtle.importKey(
-    'raw',
-    new TextEncoder().encode(secret),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign'],
-  );
-  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(payload));
-  const sigB64 = btoa(String.fromCharCode(...new Uint8Array(sig)));
-  return `${payload}.${sigB64}`;
+  return signTypedToken(secret, 'teacher', 'teacher', expSeconds, { role: 'teacher' });
 }
 
 // 토큰 검증 → 유효하면 true, 만료/위조면 false
 async function verifyToken(token, secret) {
-  const parts = (token || '').split('.');
-  if (parts.length !== 2) return false;
-  const [payload, sig] = parts;
-  try {
-    const key = await crypto.subtle.importKey(
-      'raw',
-      new TextEncoder().encode(secret),
-      { name: 'HMAC', hash: 'SHA-256' },
-      false,
-      ['verify'],
-    );
-    const sigBytes = Uint8Array.from(atob(sig), c => c.charCodeAt(0));
-    const valid = await crypto.subtle.verify('HMAC', key, sigBytes, new TextEncoder().encode(payload));
-    if (!valid) return false;
-    const { exp } = JSON.parse(atob(payload));
-    return exp > Math.floor(Date.now() / 1000);
-  } catch {
-    return false;
-  }
+  return !!(await verifyTypedToken(secret, token, 'teacher'));
 }
 
 // HMAC-SHA256 서명 생성 → hex (Notion 웹훅 검증용)
@@ -406,36 +357,17 @@ async function sendKakaoAlert(env, { to, templateId, variables }) {
 
 // 게임유저 JWT — 강사용 createToken과 달리 sub(유저 페이지ID)를 담는다. HMAC-SHA256.
 async function createGameToken(secret, sub, expSeconds) {
-  const payload = btoa(JSON.stringify({ sub, exp: Math.floor(Date.now() / 1000) + expSeconds }));
-  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(payload));
-  return `${payload}.${btoa(String.fromCharCode(...new Uint8Array(sig)))}`;
+  return signTypedToken(secret, 'game', sub, expSeconds);
 }
 // 게임유저 JWT 검증 → claim {sub, exp} 또는 null(만료/위조)
 async function verifyGameToken(token, secret) {
-  const parts = (token || '').split('.');
-  if (parts.length !== 2 || !secret) return null;
-  try {
-    const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['verify']);
-    const sigBytes = Uint8Array.from(atob(parts[1]), c => c.charCodeAt(0));
-    const valid = await crypto.subtle.verify('HMAC', key, sigBytes, new TextEncoder().encode(parts[0]));
-    if (!valid) return null;
-    const claim = JSON.parse(atob(parts[0]));
-    return claim.exp > Math.floor(Date.now() / 1000) ? claim : null;
-  } catch { return null; }
+  return verifyTypedToken(secret, token, 'game');
 }
 
 // ===== 학생앱 휴대폰 인증(step-up) — OTP 저장 + 학생 조회 =====
 // 게임 OTP(전화번호 키)와 별도 네임스페이스(예약코드 키)로 분리. 강사 우회코드도 같은 store에 더 긴 TTL로 저장.
-function studentOtpKey(token) { return new Request(`https://studentotp.local/${encodeURIComponent(token)}`); }
-async function putStudentOtp(token, code, ttl = 180) {
-  try { await caches.default.put(studentOtpKey(token), new Response(code, { headers: { 'Cache-Control': `public, max-age=${ttl}` } })); } catch { /* noop */ }
-}
-async function getStudentOtp(token) {
-  try { const h = await caches.default.match(studentOtpKey(token)); return h ? (await h.text()) : null; } catch { return null; }
-}
-async function clearStudentOtp(token) {
-  try { await caches.default.delete(studentOtpKey(token)); } catch { /* noop */ }
+async function putStudentOtp(env, token, code, ttl = 180) {
+  await putChallenge(env, 'student-otp', token, code, { verified: true }, ttl);
 }
 
 // 학생의 결제·잔여 시간 회차 — 학생 DB의 '잔여 시간 회차' formula를 쓰지 않고 직접 합산한다.
@@ -472,34 +404,26 @@ async function findStudentForAuth(n, token) {
   return { id: page.id, phone: p['전화번호']?.phone_number || null };
 }
 
-// 학생 세션 JWT — 게임 토큰과 동일 HMAC 구조 재사용, sub에 네임스페이스(`personal:<예약코드>`)를 박아
-// 게임 JWT가 학생 세션으로 오인되지 않게 한다. createGameToken/verifyGameToken을 그대로 활용.
+// 학생 세션은 별도 purpose와 서명 문맥을 사용하고 대상 예약코드까지 검증한다.
 function studentSessionSub(token) { return `personal:${token}`; }
 
 // 학생 세션(JWT) 유효성 — Authorization: Bearer <session>의 sub가 해당 토큰과 일치하면 true.
 async function studentSessionValid(request, env, token) {
   const auth = (request.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
   if (!auth || !env.JWT_SECRET) return false;
-  const claim = await verifyGameToken(auth, env.JWT_SECRET);
+  const claim = await verifyTypedToken(env.JWT_SECRET, auth, 'student');
   return !!claim && claim.sub === studentSessionSub(token);
 }
 
 // 학생 데이터 라우트 세션 게이트.
 //  - 유효한 학생 세션 OR 강사 JWT(미리보기·공유) → 통과(null).
-//  - 무효 + 강제 ON(env.STUDENT_AUTH_ENFORCE==='1') → 401.
-//  - 무효 + 강제 OFF(기본 soft) → 통과하되 미세션 접근을 로그로 집계(hard 전환 전 관측용).
-// ✅ 3단계 완료(2026-08-25): 운영 시크릿 STUDENT_AUTH_ENFORCE=1 로 hard. 코드 기본값은 soft라
-//    시크릿 삭제 + Promote version 이 곧 롤백 스위치다.
+//  - 인증 설정이 누락되어도 무효 세션은 항상 401. 환경변수로 해제하지 않는다.
 async function enforceStudentSession(request, env, corsHeaders, token, routeTag) {
   if (await studentSessionValid(request, env, token)) return null;
   // 강사 기기 우회 — 강사가 학생 페이지를 열면 강사 JWT를 보냄.
   const auth = (request.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
   if (auth && env.JWT_SECRET && await verifyToken(auth, env.JWT_SECRET)) return null;
-  if (env.STUDENT_AUTH_ENFORCE === '1') {
-    return errRes(corsHeaders, 401, '휴대폰 인증이 필요합니다. 다시 로그인해주세요.');
-  }
-  console.log(`[학생인증:soft] 미세션 접근 — ${routeTag}`);
-  return null;
+  return errRes(corsHeaders, 401, '휴대폰 인증이 필요합니다. 다시 로그인해주세요.');
 }
 
 // 솔라피 SMS 발송 — 학생 OTP용(즉시·안정 도착). 발신번호 env.SOLAPI_SENDER(통신사 사전등록) 필요, 미설정 시 no-op.
@@ -576,7 +500,10 @@ async function sendAlert(env, { level = 'info', title, message, tags, dedupKey, 
   const PRIORITY_MAP = { critical: 5, warn: 3, digest: 2, info: 4 };
   const topic = TOPIC_MAP[level] || env.NTFY_TOPIC;
   const priority = PRIORITY_MAP[level] || 4;
-  if (!topic) { console.error(`[ntfy:${level}] 토픽 미설정`); return; }
+  if (!topic || !env.NTFY_TOKEN) {
+    console.error('[ntfy] 알림 토픽 또는 인증 설정이 없습니다.');
+    return { ok: false, reason: 'ntfy_not_configured' };
+  }
 
   // dedup: 동일 키로 ttl 내 중복 발송 차단 (Cloudflare Cache API)
   if (dedupKey) {
@@ -592,15 +519,12 @@ async function sendAlert(env, { level = 'info', title, message, tags, dedupKey, 
   }
 
   try {
-    const headers = { 'Content-Type': 'application/json' };
-    // 새 토픽(critical/warn/digest)은 anonymous public이라 토큰을 보내면 ntfy.sh가
-    // user context로 처리하면서 ACL에 없는 토픽이라 silently drop함 (200 응답은 옴).
-    // 기존 NTFY_TOPIC만 user 계정의 reserved topic이라 토큰 필요.
-    const isLegacyTopic = topic === env.NTFY_TOPIC;
-    if (isLegacyTopic && env.NTFY_TOKEN) headers['Authorization'] = `Bearer ${env.NTFY_TOKEN}`;
+    // 모든 수준의 알림은 예약된 비공개 토픽과 인증 토큰을 사용한다.
+    // 대상 토픽의 ntfy 읽기/쓰기 ACL도 운영 설정에서 익명 거부로 관리해야 한다.
+    const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${env.NTFY_TOKEN}` };
     const payload = { topic, title, message, priority };
     if (Array.isArray(tags) && tags.length > 0) payload.tags = tags;
-    const res = await fetch('https://ntfy.sh', { method: 'POST', headers, body: JSON.stringify(payload) });
+    const res = await fetch('https://ntfy.sh', { method: 'POST', headers, body: JSON.stringify(payload), redirect: 'error' });
     if (!res.ok) {
       const text = await res.text().catch(() => '');
       console.error(`[ntfy:${level}] HTTP ${res.status}:`, text);
@@ -784,7 +708,7 @@ async function captureWorkerError(err, env, request) {
 async function handleConsultRequest(request, env, corsHeaders) {
   // Abuse 방지: 무료상담 1건은 Notion 쓰기 + 카카오 알림톡(건당 과금) + GitHub Actions 발동을
   // 유발하므로 rate limit 필수. (다른 공개 라우트와 달리 여기만 누락돼 있었음)
-  if (!(await rateLimitCheck(`consult:ip:${clientIp(request)}`, 5, 300))) {
+  if (!(await rateLimitCheck(env, `consult:ip:${clientIp(request)}`, 5, 300))) {
     return errRes(corsHeaders, 429, '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.');
   }
 
@@ -803,7 +727,7 @@ async function handleConsultRequest(request, env, corsHeaders) {
   const phoneDigits = phone.replace(/\D/g, '');
 
   // 같은 번호로 하루 3회까지만 (IP 우회 스팸 차단)
-  if (!(await rateLimitCheck(`consult:ph:${phoneDigits}`, 3, 86400))) {
+  if (!(await rateLimitCheck(env, `consult:ph:${phoneDigits}`, 3, 86400))) {
     return errRes(corsHeaders, 429, '오늘 신청 횟수를 초과했습니다. 잠시 후 다시 시도해주세요.');
   }
 
@@ -978,7 +902,7 @@ async function handleStudentAuthRoutes(request, env, corsHeaders, url) {
     if (!v.ok) return v.response;
     const { token } = v.data;
     // SMS 폭탄 방지 — IP·예약코드별 제한
-    if (!(await rateLimitCheck(`pauth:otp:ip:${ip}`, 8, 600)) || !(await rateLimitCheck(`pauth:otp:tk:${token}`, 5, 600))) {
+    if (!(await rateLimitCheck(env, `pauth:otp:ip:${ip}`, 8, 600)) || !(await rateLimitCheck(env, `pauth:otp:tk:${token}`, 5, 600))) {
       return errRes(corsHeaders, 429, '잠시 후 다시 시도해주세요.');
     }
     const student = await findStudentForAuth(n, token);
@@ -990,7 +914,7 @@ async function handleStudentAuthRoutes(request, env, corsHeaders, url) {
     const code = String(100000 + (crypto.getRandomValues(new Uint32Array(1))[0] % 900000)); // 6자리 (CSPRNG)
     // 유효 5분 — 알림톡 배송이 수 분 지연될 수 있어 여유를 둠(도착 시 이미 만료되는 사고 방지).
     // brute-force는 verify rate limit(전화·IP당 5회/180s)로 별도 차단되므로 창을 늘려도 안전.
-    await putStudentOtp(token, code, 300);
+    await putStudentOtp(env, token, code, 300);
     // OTP는 즉시·안정 도착이 생명이라 SMS로 발송(알림톡 전달 지연 회피). 승인된 SOLAPI_SENDER 발신번호 필요.
     // SOLAPI_SENDER 미설정 시 sendSms가 no-op → 알림톡으로 폴백.
     if (env.SOLAPI_SENDER) {
@@ -1012,13 +936,12 @@ async function handleStudentAuthRoutes(request, env, corsHeaders, url) {
     if (!v.ok) return v.response;
     const { token, code } = v.data;
     // 무차별 대입 방지 — 예약코드·IP별 시도 상한 (6자리 추측 차단)
-    if (!(await rateLimitCheck(`pauth:vf:tk:${token}`, 5, 180)) || !(await rateLimitCheck(`pauth:vf:ip:${ip}`, 20, 180))) {
+    if (!(await rateLimitCheck(env, `pauth:vf:tk:${token}`, 5, 180)) || !(await rateLimitCheck(env, `pauth:vf:ip:${ip}`, 20, 180))) {
       return errRes(corsHeaders, 429, '잠시 후 다시 시도해주세요.');
     }
-    const saved = await getStudentOtp(token);
-    if (!saved || saved !== code) return errRes(corsHeaders, 401, '인증번호가 일치하지 않습니다.');
-    await clearStudentOtp(token);
-    const session = await createGameToken(env.JWT_SECRET, studentSessionSub(token), STUDENT_SESSION_TTL);
+    const saved = await consumeChallenge(env, 'student-otp', token, code);
+    if (!saved) return errRes(corsHeaders, 401, '인증번호가 일치하지 않거나 만료되었습니다.');
+    const session = await signTypedToken(env.JWT_SECRET, 'student', studentSessionSub(token), STUDENT_SESSION_TTL);
     return new Response(JSON.stringify({ ok: true, session }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
 
@@ -1030,7 +953,7 @@ async function handleStudentAuthRoutes(request, env, corsHeaders, url) {
 // 학생용 GET은 전체 학생 공통이라 학생별 필터가 없다. 대신 `노출` 체크박스가 켜진 것만 내보낸다.
 // 알림톡·푸시는 붙이지 않았다(사용자 결정) — 공지는 "기록으로 남는 게시판"이고 급한 통지는 카톡이다.
 async function handleNoticeRoutes(request, env, corsHeaders, url) {
-  if (!(await rateLimitCheck(`notice:${clientIp(request)}`, 60, 60))) {
+  if (!(await rateLimitCheck(env, `notice:${clientIp(request)}`, 60, 60))) {
     return errRes(corsHeaders, 429, '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.');
   }
 
@@ -1112,6 +1035,12 @@ async function handleNoticeRoutes(request, env, corsHeaders, url) {
   const idMatch = url.pathname.match(/^\/notice\/([^/]+)$/);
   if (idMatch) {
     const pageId = decodeURIComponent(idMatch[1]);
+    const idValidation = validatePathToken(NotionPageIdSchema, pageId, corsHeaders, '공지 ID');
+    if (!idValidation.ok) return idValidation.response;
+    if (request.method === 'PATCH' || request.method === 'DELETE') {
+      const current = await n('GET', `/pages/${pageId}`);
+      if (!pageInDatabase(current, new Set([normalizeId(NOTICE_DB_ID)]))) return errRes(corsHeaders, 403, '허용되지 않은 공지입니다.');
+    }
 
     // PATCH /notice/:id — 수정
     if (request.method === 'PATCH') {
@@ -1143,7 +1072,7 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
   // NOTION_TOKEN 쿼터(~3rps)를 고갈시켜 숙제·공지까지 마비될 수 있어 전 라우트에 적용.
   // (강사 JWT 라우트 time-slots·check-conflict·blocked도 포함 — 단일 강사 사용량엔 영향 없는 한도)
   // ⛔ 학생 자가예약(reserve·slots·status·my-class 취소/복구)은 2026-06-10 폐기 → 2026-09-04 영구 폐기로 라우트 삭제.
-  if (!(await rateLimitCheck(`book:${clientIp(request)}`, 60, 60))) {
+  if (!(await rateLimitCheck(env, `book:${clientIp(request)}`, 60, 60))) {
     return errRes(corsHeaders, 429, '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.');
   }
 
@@ -1622,7 +1551,12 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
     const authErr = await requireJwt(request, env, corsHeaders);
     if (authErr) return authErr;
 
-    await n('PATCH', `/pages/${blockedDeleteMatch[1]}`, { archived: true });
+    const blockedId = blockedDeleteMatch[1];
+    const idValidation = validatePathToken(NotionPageIdSchema, blockedId, corsHeaders, '예약 불가 날짜 ID');
+    if (!idValidation.ok) return idValidation.response;
+    const current = await n('GET', `/pages/${blockedId}`);
+    if (!pageInDatabase(current, new Set([normalizeId(BLOCKED_DATES_DB_ID)]))) return errRes(corsHeaders, 403, '허용되지 않은 예약 불가 날짜입니다.');
+    await n('PATCH', `/pages/${blockedId}`, { archived: true });
 
     return new Response(JSON.stringify({ ok: true }), {
       status: 200,
@@ -1650,11 +1584,14 @@ async function uploadFileToNotion(file, notionToken) {
     throw new Error(session?.message || 'Notion 파일 업로드 세션 생성 실패');
   }
 
+  if (!isNotionUploadUrl(upload_url, fileUploadId)) throw new Error('파일 업로드 주소를 확인할 수 없습니다.');
+
   // 2. 파일을 upload_url로 전송
   const uploadForm = new FormData();
   uploadForm.append('file', new Blob([arrayBuffer], { type: mimeType }), fileName);
   const uploadRes = await fetch(upload_url, {
     method: 'POST',
+    redirect: 'error',
     headers: {
       Authorization: `Bearer ${notionToken}`,
       'Notion-Version': '2022-06-28',
@@ -1679,7 +1616,7 @@ async function handleHomeworkRoutes(request, env, corsHeaders, url) {
   if (isStudentTokenPath) {
     const isUpload = url.pathname.startsWith('/homework/student-upload/');
     const limit = isUpload ? 30 : 60;
-    if (!(await rateLimitCheck(`hw:${clientIp(request)}`, limit, 60))) {
+    if (!(await rateLimitCheck(env, `hw:${clientIp(request)}`, limit, 60))) {
       return errRes(corsHeaders, 429, '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.');
     }
     // 학생 세션 게이트(soft/hard) — 숙제 학생 라우트 공통
@@ -1703,7 +1640,8 @@ async function handleHomeworkRoutes(request, env, corsHeaders, url) {
   // Notion 파일을 attachment 응답으로 스트림 — URL 만료(7일)·소유권 누출 방지를 위해 클라엔
   // Notion 임시 URL을 노출하지 않고 항상 Worker proxy를 통해 다운로드한다.
   async function streamNotionFile(sourceUrl, fileName) {
-    const upstream = await fetch(sourceUrl);
+    if (!isSafeExternalUrl(sourceUrl) || new URL(sourceUrl).protocol !== 'https:') return errRes(corsHeaders, 403, '허용되지 않은 파일 주소입니다.');
+    const upstream = await fetch(sourceUrl, { redirect: 'error' });
     if (!upstream.ok || !upstream.body) {
       return errRes(corsHeaders, 502, '파일을 가져올 수 없습니다.');
     }
@@ -1756,6 +1694,8 @@ async function handleHomeworkRoutes(request, env, corsHeaders, url) {
       // `size`는 클라이언트가 보낸 원본 바이트 수 — 전송 중 잘림 탐지용.
       const v = validateFileUpload(file, formData.get('size'));
       if (!v.ok) return errRes(corsHeaders, v.status, v.error);
+      const content = await validateFileContent(file);
+      if (!content.ok) return errRes(corsHeaders, content.status, content.error);
       const result = await uploadFileToNotion(file, env.NOTION_TOKEN);
       return new Response(JSON.stringify(result), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -1786,6 +1726,7 @@ async function handleHomeworkRoutes(request, env, corsHeaders, url) {
     }
     try {
       const hwPage = await n('GET', `/pages/${homeworkId}`);
+      if (!pageInDatabase(hwPage, new Set([normalizeId(HOMEWORK_DB_ID)]))) return errRes(corsHeaders, 403, '허용되지 않은 숙제입니다.');
       const propName = kind === 'submit' ? '학생 제출 파일'
                      : kind === 'feedback' ? '피드백 파일'
                      : '과제 파일';
@@ -1817,6 +1758,7 @@ async function handleHomeworkRoutes(request, env, corsHeaders, url) {
     const templateId = notifyAssign ? env.KAKAO_TPL_HW_ASSIGN : env.KAKAO_TPL_HW_FEEDBACK;
     try {
       const hwPage = await n('GET', `/pages/${homeworkId}`);
+      if (!pageInDatabase(hwPage, new Set([normalizeId(HOMEWORK_DB_ID)]))) return errRes(corsHeaders, 403, '허용되지 않은 숙제입니다.');
       const title = hwPage.properties?.['제목']?.title?.[0]?.plain_text ?? '숙제';
       const studentId = hwPage.properties?.['학생']?.relation?.[0]?.id;
       if (!studentId) {
@@ -1883,8 +1825,13 @@ async function handleHomeworkRoutes(request, env, corsHeaders, url) {
         await alertHomeworkFailure({ studentPage, file, stage: '사전 검증', reason: v.error });
         return errRes(corsHeaders, v.status, v.error);
       }
+      const content = await validateFileContent(file);
+      if (!content.ok) return errRes(corsHeaders, content.status, content.error);
       const result = await uploadFileToNotion(file, env.NOTION_TOKEN);
-      return new Response(JSON.stringify(result), {
+      const uploadReceipt = await signTypedToken(env.JWT_SECRET, 'homework-upload', studentPage.id, 3600, {
+        uploadId: result.fileUploadId, fileName: result.fileName,
+      });
+      return new Response(JSON.stringify({ ...result, uploadReceipt }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     } catch (e) {
@@ -1912,7 +1859,7 @@ async function handleHomeworkRoutes(request, env, corsHeaders, url) {
       filter: { property: '학생', relation: { contains: studentPage.id } },
       sorts: [{ timestamp: 'created_time', direction: 'descending' }],
     });
-    return new Response(JSON.stringify(allHomework), {
+    return new Response(JSON.stringify(allHomework.map(studentHomeworkPage)), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
@@ -1939,10 +1886,18 @@ async function handleHomeworkRoutes(request, env, corsHeaders, url) {
     // files: [{fileUploadId, fileName}] — 새로 추가할 파일 (0~20개)
     // deleteFileNames: [string] — 삭제할 기존 파일 이름 목록
     const newFiles = Array.isArray(body.files) ? body.files : [];
+    for (const file of newFiles) {
+      const receipt = await verifyTypedToken(env.JWT_SECRET, file.uploadReceipt, 'homework-upload');
+      if (!receipt || normalizeId(receipt.sub) !== normalizeId(studentPage.id)
+        || receipt.uploadId !== file.fileUploadId || receipt.fileName !== file.fileName) {
+        return errRes(corsHeaders, 403, '직접 업로드한 파일만 제출할 수 있습니다. 파일을 다시 선택해주세요.');
+      }
+    }
     const deleteFileNamesSet = new Set(Array.isArray(body.deleteFileNames) ? body.deleteFileNames : []);
 
     // 기존 제출 파일 조회 + 소유권 확인
     const currentPage = await n('GET', `/pages/${homeworkId}`);
+    if (!pageInDatabase(currentPage, new Set([normalizeId(HOMEWORK_DB_ID)]))) return errRes(corsHeaders, 403, '허용되지 않은 숙제입니다.');
     const hwStudentIds = (currentPage.properties?.['학생']?.relation ?? []).map(r => r.id);
     if (!hwStudentIds.includes(studentPage.id)) {
       return new Response(JSON.stringify({ error: '이 숙제에 접근할 권한이 없습니다.' }), {
@@ -2034,7 +1989,7 @@ async function handleHomeworkRoutes(request, env, corsHeaders, url) {
       );
     }
 
-    return new Response(JSON.stringify(updateData), {
+    return new Response(JSON.stringify(updateOk ? studentHomeworkPage(updateData) : { error: '숙제 저장에 실패했습니다. 다시 시도해주세요.' }), {
       status: updateOk ? 200 : updateStatus,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
@@ -2062,6 +2017,7 @@ async function handleHomeworkRoutes(request, env, corsHeaders, url) {
     if (!studentPage) return errRes(corsHeaders, 404, '등록된 학생이 아닙니다.');
     try {
       const hwPage = await n('GET', `/pages/${homeworkId}`);
+      if (!pageInDatabase(hwPage, new Set([normalizeId(HOMEWORK_DB_ID)]))) return errRes(corsHeaders, 403, '허용되지 않은 숙제입니다.');
       // 소유권: 이 숙제가 그 학생 것인지 relation 검증.
       const hwStudentIds = (hwPage.properties?.['학생']?.relation ?? []).map(r => r.id);
       if (!hwStudentIds.includes(studentPage.id)) {
@@ -2099,6 +2055,7 @@ async function handleHomeworkRoutes(request, env, corsHeaders, url) {
       });
     }
     const hwPage = await n('GET', `/pages/${homeworkId}`);
+    if (!pageInDatabase(hwPage, new Set([normalizeId(HOMEWORK_DB_ID)]))) return errRes(corsHeaders, 403, '허용되지 않은 숙제입니다.');
     const hwStudentIds = (hwPage.properties?.['학생']?.relation ?? []).map(r => r.id);
     if (!hwStudentIds.includes(studentPage.id)) {
       return new Response(JSON.stringify({ error: '이 숙제에 접근할 권한이 없습니다.' }), {
@@ -2157,10 +2114,14 @@ async function aeQueryAll(env, maxDays) {
   return assembleByDay({ ev, ch, src, mp, ms, id }, maxDays, Date.now());
 }
 async function handleGameDashboard(request, env, url) {
-  const H = { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'X-Frame-Options': 'SAMEORIGIN', 'Referrer-Policy': 'no-referrer' };
-  const page = (status, msg) => new Response(`<!doctype html><meta charset="utf-8"><body style="font-family:system-ui;background:#0d1117;color:#e7edf4;padding:48px;font-size:15px">${msg}`, { status, headers: H });
-  if (!env.GAME_DASH_KEY) return page(501, '대시보드가 아직 설정되지 않았어요. (GAME_DASH_KEY 미설정)');
-  if (!timingSafeEqual(url.searchParams.get('key') || '', env.GAME_DASH_KEY)) return page(401, '접근 키가 올바르지 않아요.');
+  const access = await dashboardAccess(request, env, {
+    compareSecret: timingSafeEqual,
+    limit: () => rateLimitCheck(env, `dashboard:ip:${clientIp(request)}`, 5, 600),
+    // handleFetch의 boundedRequest가 이 폼 스트림을 먼저 4KiB로 제한한다.
+    readText: (req) => req.text(),
+  });
+  if (access.response) return access.response;
+  const H = access.headers;
   const MAX_DAYS = 30;
   const [byday, members] = await Promise.all([
     aeQueryAll(env, MAX_DAYS).catch(() => ({ days: [], byDay: {} })),
@@ -2169,18 +2130,18 @@ async function handleGameDashboard(request, env, url) {
       : Promise.resolve([])).catch(() => []),
   ]);
   const now = new Date().toISOString().replace('T', ' ').slice(0, 16) + ' UTC';
-  const body = renderDashboard({ byDay: byday.byDay, days: byday.days, members, maxDays: MAX_DAYS, generatedAt: now, source: '워커 라이브(/game/dashboard)' });
+  const body = renderDashboard({ byDay: byday.byDay, days: byday.days, members, maxDays: MAX_DAYS, generatedAt: now, source: '워커 라이브(/game/dashboard)' }, { nonce: access.nonce });
   return new Response(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="icon" href="data:,"><title>성조게임 Analytics</title></head><body style="margin:0">${body}</body></html>`, { headers: H });
 }
 
 async function handleGameRoutes(request, env, corsHeaders, url) {
   // IP당 분당 60회 rate limit
-  if (!(await rateLimitCheck(`game:${clientIp(request)}`, 60, 60))) {
+  if (!(await rateLimitCheck(env, `game:${clientIp(request)}`, 60, 60))) {
     return errRes(corsHeaders, 429, '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.');
   }
 
-  // GET /game/dashboard?key=… — 라이브 지표 대시보드(노션 링크용). key 시크릿 게이팅, HTML 반환.
-  if (url.pathname === '/game/dashboard' && request.method === 'GET') {
+  // 대시보드: 깨끗한 GET 주소 + 동일 출처 POST 로그인 + 짧은 HttpOnly 세션.
+  if (url.pathname === '/game/dashboard' && ['GET', 'POST'].includes(request.method)) {
     return handleGameDashboard(request, env, url);
   }
 
@@ -2211,7 +2172,7 @@ async function handleGameRoutes(request, env, corsHeaders, url) {
   if (authStartMatch && request.method === 'GET') {
     const provider = authStartMatch[1];
     if (!isSocialProvider(provider)) return errRes(corsHeaders, 404, '지원하지 않는 로그인입니다.');
-    if (!(await rateLimitCheck(`gameauth:ip:${clientIp(request)}`, 30, 600))) {
+    if (!(await rateLimitCheck(env, `gameauth:ip:${clientIp(request)}`, 30, 600))) {
       return errRes(corsHeaders, 429, '잠시 후 다시 시도해주세요.');
     }
     const clientId = provider === 'kakao' ? env.GAME_KAKAO_REST_KEY : env.GAME_GOOGLE_CLIENT_ID;
@@ -2219,13 +2180,16 @@ async function handleGameRoutes(request, env, corsHeaders, url) {
     if (!env.JWT_SECRET) return errRes(corsHeaders, 500, '서버 설정 오류입니다.'); // state 서명 키
     const redirect = url.searchParams.get('redirect') || '';
     if (!isAllowedRedirect(redirect, redirectPrefixes(env))) return errRes(corsHeaders, 400, '허용되지 않은 복귀 주소입니다.');
-    // state = {provider, redirect, exp} 서명 토큰(무상태). 서버 저장 없음 → colo 무관.
-    const state = await signAuthState(env.JWT_SECRET, { provider, redirect });
-    const location = buildAuthorizeUrl({ provider, clientId, redirectUri: callbackUrl(url.origin, provider), state });
+    const challenge = url.searchParams.get('code_challenge');
+    const transaction = url.searchParams.get('transaction');
+    if (!isPkceChallenge(challenge) || !isLoginTransaction(transaction)) return errRes(corsHeaders, 400, '로그인 요청을 다시 시작해주세요.');
+    const state = await signAuthState(env.JWT_SECRET, { provider, redirect, challenge, transaction });
+    await putChallenge(env, 'oauth-state', transaction, challenge, { valid: true }, 600);
+    const location = buildAuthorizeUrl({ provider, clientId, redirectUri: callbackUrl(url.origin, provider), state, nonce: transaction });
     return new Response(null, { status: 302, headers: { ...corsHeaders, Location: location } });
   }
 
-  // GET /game/auth/:provider/callback?code=&state= — 인가코드 교환·신원조회·JWT 발급 → 복귀대상으로 302(#token=…).
+  // Provider callback issues a short one-time code, never a session token in a URL.
   const authCbMatch = url.pathname.match(/^\/game\/auth\/([^/]+)\/callback$/);
   if (authCbMatch && request.method === 'GET') {
     const provider = authCbMatch[1];
@@ -2234,11 +2198,14 @@ async function handleGameRoutes(request, env, corsHeaders, url) {
     const state = url.searchParams.get('state');
     if (!code || !state) return errRes(corsHeaders, 400, '로그인 응답이 올바르지 않습니다.');
     if (!env.JWT_SECRET) return errRes(corsHeaders, 500, '서버 설정 오류입니다.');
-    // 무상태 state — 서명·만료 검증(저장소 조회 없음). 위조/만료면 재로그인 유도.
+    // 전용 서명·만료를 검증한 다음 저장된 거래를 한 번만 소비한다.
     const saved = await verifyAuthState(env.JWT_SECRET, state);
     if (!saved) return errRes(corsHeaders, 400, '로그인 세션이 만료되었어요. 다시 시도해주세요.');
     if (saved.provider !== provider || !isAllowedRedirect(saved.redirect, redirectPrefixes(env))) {
       return errRes(corsHeaders, 400, '로그인 세션이 올바르지 않습니다.');
+    }
+    if (!(await consumeChallenge(env, 'oauth-state', saved.transaction, saved.challenge))) {
+      return errRes(corsHeaders, 400, '이미 사용되었거나 만료된 로그인입니다.');
     }
 
     // 인가코드 → 토큰 교환 → 신원 추출 (client_secret은 서버에만; Google id_token은 TLS 직수신이라 재검증 불필요)
@@ -2247,7 +2214,7 @@ async function handleGameRoutes(request, env, corsHeaders, url) {
     try {
       if (provider === 'google') {
         const tok = await exchangeCode('google', code, redirectUri, env);
-        identity = extractGoogleIdentity(decodeJwtPayload(tok.id_token));
+        identity = extractGoogleIdentity(decodeJwtPayload(tok.id_token), { audience: env.GAME_GOOGLE_CLIENT_ID, nonce: saved.transaction });
       } else {
         const tok = await exchangeCode('kakao', code, redirectUri, env);
         identity = extractKakaoIdentity(await fetchKakaoUser(tok.access_token));
@@ -2258,8 +2225,28 @@ async function handleGameRoutes(request, env, corsHeaders, url) {
     if (!identity?.socialId) return errRes(corsHeaders, 401, '로그인에 실패했어요. 다시 시도해주세요.');
 
     const user = await findOrCreateGameUser(env.GAME_DB, provider, identity.socialId, identity.nickname);
-    const token = await createGameToken(env.JWT_SECRET, user.id, 60 * 60 * 24 * 60); // 60일
-    return new Response(null, { status: 302, headers: { ...corsHeaders, Location: appendTokenFragment(saved.redirect, token) } });
+    const loginCode = crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, '');
+    await putChallenge(env, 'oauth-code', loginCode, saved.challenge, { sub: user.id, transaction: saved.transaction, redirect: saved.redirect }, 90);
+    return new Response(null, { status: 302, headers: { ...corsHeaders, 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer', Location: appendCodeFragment(saved.redirect, loginCode, saved.transaction) } });
+  }
+
+  // Only the initiating browser has the S256 verifier kept in sessionStorage.
+  if (url.pathname === '/game/auth/exchange' && request.method === 'POST') {
+    if (!(await rateLimitCheck(env, `gameauth:exchange:${clientIp(request)}`, 20, 600))) return errRes(corsHeaders, 429, '잠시 후 다시 시도해주세요.');
+    const body = await request.json().catch(() => null);
+    if (!body || typeof body.code !== 'string' || !/^[a-f0-9]{64}$/.test(body.code) || !isLoginTransaction(body.transaction)) return errRes(corsHeaders, 400, '로그인 요청이 올바르지 않습니다.');
+    const challenge = await pkceChallenge(body.verifier);
+    if (!challenge) return errRes(corsHeaders, 400, '로그인 요청이 올바르지 않습니다.');
+    const saved = await consumeChallenge(env, 'oauth-code', body.code, challenge);
+    const returnUrl = saved && new URL(saved.redirect);
+    const returnOrigin = returnUrl && (returnUrl.origin === 'null' ? `${returnUrl.protocol}//${returnUrl.host}` : returnUrl.origin);
+    if (!saved || saved.transaction !== body.transaction || request.headers.get('Origin') !== returnOrigin) {
+      return errRes(corsHeaders, 401, '로그인을 시작한 기기에서 다시 시도해주세요.');
+    }
+    const user = await getGameUserById(env.GAME_DB, saved.sub);
+    if (!user) return errRes(corsHeaders, 401, '계정을 찾을 수 없습니다.');
+    const token = await createGameToken(env.JWT_SECRET, user.id, 60 * 60 * 24 * 60);
+    return new Response(JSON.stringify({ token, user }), { headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
   }
 
   // GET/PUT /game/me — 게임유저 JWT 인증 → 게임데이터 read/write (D1 game_users)
@@ -2279,9 +2266,10 @@ async function handleGameRoutes(request, env, corsHeaders, url) {
     }
     // PUT — 게임데이터 갱신(클라이언트 병합 후 최종본 덮어쓰기)
     const body = await request.json().catch(() => null);
-    if (body?.gameData == null || typeof body.gameData !== 'object') return errRes(corsHeaders, 400, '게임데이터가 필요합니다.');
+    const gameData = GameDataSchema.safeParse(body?.gameData);
+    if (!gameData.success) return errRes(corsHeaders, 400, '게임데이터 형식이 올바르지 않습니다. 기존 기록은 유지됩니다.');
     // D1 TEXT는 사실상 무제한이지만 남용 방지 상한(100KB). 초과 시 이번 저장만 거부(이전 데이터 보존).
-    const json = JSON.stringify(body.gameData);
+    const json = JSON.stringify(gameData.data);
     if (json.length > 100000) return errRes(corsHeaders, 413, '게임데이터가 너무 큽니다.');
     // nickname은 사용자 자유입력(소셜 로그인 후 직접 설정) — 있을 때만 신뢰경계 검증(없으면 기존값 유지).
     let nickname = null;
@@ -2290,7 +2278,7 @@ async function handleGameRoutes(request, env, corsHeaders, url) {
       if (!nk.success) return errRes(corsHeaders, 400, nk.error.issues[0]?.message || '닉네임이 올바르지 않습니다.');
       nickname = nk.data;
     }
-    const res = await updateGameData(env.GAME_DB, claim.sub, body.gameData, nickname);
+    const res = await updateGameData(env.GAME_DB, claim.sub, gameData.data, nickname);
     if (res?.meta?.changes === 0) return errRes(corsHeaders, 404, '계정을 찾을 수 없습니다.'); // 대상 행 없음
     return new Response(JSON.stringify({ ok: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
@@ -2301,7 +2289,7 @@ async function handleGameRoutes(request, env, corsHeaders, url) {
 // ===== 클라이언트 에러 수집 (PWA window.onerror → 여기로 POST) =====
 async function handleErrorLog(request, env, corsHeaders) {
   // Abuse 방지: IP당 분당 10건만 ntfy로 전달 (초과분은 조용히 200으로 무시)
-  const allowed = await rateLimitCheck(`errlog:${clientIp(request)}`, 10, 60);
+  const allowed = await rateLimitCheck(env, `errlog:${clientIp(request)}`, 10, 60);
   let body = {};
   try { body = await request.json(); } catch { /* ignore */ }
   if (!allowed) {
@@ -2354,6 +2342,8 @@ async function handleFetch(request, env, ctx) {
 
     // Notion 웹훅은 CORS/인증 체크 없이 별도 처리
     if (url.pathname === '/notion-webhook' && request.method === 'POST') {
+      try { request = await boundedRequest(request); }
+      catch (error) { if (error instanceof RequestTooLarge) return errRes({}, 413, error.message); throw error; }
       return handleNotionWebhook(request, env, ctx);
     }
 
@@ -2366,7 +2356,7 @@ async function handleFetch(request, env, ctx) {
       if (!isSafeExternalUrl(imageUrl)) return new Response('forbidden url', { status: 403 });
       if (referer && !isSafeExternalUrl(referer)) return new Response('forbidden referer', { status: 403 });
       // 간단한 IP 기반 rate limit (분당 60건)
-      if (!(await rateLimitCheck(`og-img:${clientIp(request)}`, 60, 60))) {
+      if (!(await rateLimitCheck(env, `og-img:${clientIp(request)}`, 60, 60))) {
         return new Response('too many requests', { status: 429 });
       }
       try {
@@ -2378,7 +2368,7 @@ async function handleFetch(request, env, ctx) {
         }, 5 * 1024 * 1024);
         const contentType = res.headers.get('Content-Type') || 'image/jpeg';
         // 이미지 외 콘텐츠 타입 거부 (HTML/JS 등 다른 데이터 누설 차단)
-        if (!/^image\//i.test(contentType)) {
+        if (!/^image\/(?:jpeg|png|gif|webp|avif|heic|heif)(?:;|$)/i.test(contentType)) {
           return new Response('not an image', { status: 415 });
         }
         return new Response(buffer, {
@@ -2421,6 +2411,16 @@ async function handleFetch(request, env, ctx) {
         status: 403,
         headers: { 'Content-Type': 'application/json' },
       });
+    }
+
+    try { request = await boundedRequest(request); }
+    catch (error) { if (error instanceof RequestTooLarge) return errRes(corsHeaders, 413, error.message); throw error; }
+
+    if (url.pathname === '/notifications' && request.method === 'GET') {
+      const authError = await requireJwt(request, env, corsHeaders);
+      if (authError) return authError;
+      if (!(await rateLimitCheck(env, `notifications:${clientIp(request)}`, 30, 60))) return errRes(corsHeaders, 429, '잠시 후 다시 시도해주세요.');
+      return teacherNotifications(request, env, corsHeaders);
     }
 
     // 클라이언트 JS 에러 수집 (공개, 인증 불필요)
@@ -2472,7 +2472,7 @@ async function handleFetch(request, env, ctx) {
           status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
-      if (!(await rateLimitCheck(`og:${clientIp(request)}`, 30, 60))) {
+      if (!(await rateLimitCheck(env, `og:${clientIp(request)}`, 30, 60))) {
         return new Response(JSON.stringify({ error: 'too many requests' }), {
           status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
@@ -2569,14 +2569,14 @@ async function handleFetch(request, env, ctx) {
     // 로그인 엔드포인트: POST /auth/login
     if (url.pathname === '/auth/login' && request.method === 'POST') {
       // Brute-force 방어: IP당 5분 윈도우에 최대 10회 시도
-      if (!(await rateLimitCheck(`login:${clientIp(request)}`, 10, 300))) {
+      if (!(await rateLimitCheck(env, `login:${clientIp(request)}`, 10, 300)) || !(await rateLimitCheck(env, 'login:teacher', 30, 300))) {
         return new Response(JSON.stringify({ error: '로그인 시도가 너무 많습니다. 잠시 후 다시 시도해주세요.' }), {
           status: 429,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
       const { password } = await request.json().catch(() => ({}));
-      if (!env.AUTH_PASSWORD || password !== env.AUTH_PASSWORD) {
+      if (!env.AUTH_PASSWORD || !timingSafeEqual(password, env.AUTH_PASSWORD)) {
         return new Response(JSON.stringify({ error: '비밀번호가 틀렸습니다.' }), {
           status: 401,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -2615,53 +2615,11 @@ async function handleFetch(request, env, ctx) {
       });
     }
 
-    // Notion API 프록시 경로 화이트리스트 (실제 사용 경로만 허용)
-    const ALLOWED_NOTION_PATHS = ['/v1/databases/', '/v1/pages', '/v1/pages/'];
-    const isAllowedPath = ALLOWED_NOTION_PATHS.some(prefix => url.pathname === prefix || url.pathname.startsWith(prefix));
-    if (!isAllowedPath) {
-      return new Response(JSON.stringify({ error: '허용되지 않은 경로입니다.' }), {
-        status: 403,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // /v1/databases/:id/* 형식이면 :id가 우리 코드에서 사용하는 DB 화이트리스트에 있어야 함.
-    // 강사 토큰이 유출돼도 임의 워크스페이스 DB로의 horizontal access를 차단.
-    const dbMatch = url.pathname.match(/^\/v1\/databases\/([a-z0-9-]+)/i);
-    if (dbMatch) {
-      const dbId = dbMatch[1].replace(/-/g, '').toLowerCase();
-      if (!ALLOWED_NOTION_DB_IDS.has(dbId)) {
-        return new Response(JSON.stringify({ error: '허용되지 않은 DB입니다.' }), {
-          status: 403,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-    }
-
+    const scope = await authorizeNotionRequest(request, url, makeNotion(env.NOTION_TOKEN), ALLOWED_NOTION_DB_IDS);
+    if (!scope.ok) return errRes(corsHeaders, scope.status, scope.error);
+    if (scope.page) return new Response(JSON.stringify(scope.page), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     const notionUrl = `https://api.notion.com${url.pathname}${url.search}`;
-
-    let body;
-    if (request.method !== 'GET' && request.method !== 'HEAD') {
-      body = await request.text();
-    }
-
-    // POST /v1/pages: parent.database_id가 화이트리스트에 있는지 검증.
-    // /v1/databases/:id 경로 검증으로는 막을 수 없는 horizontal access를 차단
-    // (강사 JWT 탈취 시 NOTION_TOKEN이 접근 가능한 임의 워크스페이스 DB로의 쓰기).
-    if (url.pathname === '/v1/pages' && request.method === 'POST' && body) {
-      try {
-        const parsed = JSON.parse(body);
-        const dbId = parsed?.parent?.database_id?.replace(/-/g, '').toLowerCase();
-        if (dbId && !ALLOWED_NOTION_DB_IDS.has(dbId)) {
-          return new Response(JSON.stringify({ error: '허용되지 않은 DB입니다.' }), {
-            status: 403,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          });
-        }
-      } catch {
-        // JSON 파싱 실패는 Notion API가 400으로 처리하도록 그대로 통과
-      }
-    }
+    const body = scope.body ? JSON.stringify(scope.body) : undefined;
 
     // Notion 통합 토큰은 평균 초당 3회 제한이라, 강사앱이 화면 진입 시 동시에 여러
     // 쿼리를 쏘면 429(rate limited)가 날 수 있다. Notion이 주는 Retry-After를 존중해
@@ -2712,6 +2670,7 @@ async function handleFetch(request, env, ctx) {
 export default {
   // Cron Trigger — 매시 정각. 실제 발송 대상 선택은 runScheduledJobs가 한다.
   async scheduled(event, env, ctx) {
+    ctx.waitUntil(cleanupSecurityState(env).catch(() => console.error('[security] expired state cleanup failed')));
     ctx.waitUntil(
       runScheduledJobs(env).catch((err) => {
         console.error('[cron] 실패', err?.stack || err);
@@ -2729,16 +2688,20 @@ export default {
 
   async fetch(request, env, ctx) {
     try {
-      return await handleFetch(request, env, ctx);
+      return secureResponse(await handleFetch(request, env, ctx));
     } catch (err) {
       // unhandled exception → critical 알림 (dedup으로 폭주 방지)
       // ctx.waitUntil로 알림 발송이 응답을 막지 않도록 처리
       ctx.waitUntil(captureWorkerError(err, env, request).catch(() => {}));
       console.error('[unhandled]', err?.stack || err);
-      return new Response(JSON.stringify({ error: 'Internal Server Error' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      const origin = request.headers.get('Origin') || '';
+      const allowed = ALLOWED_ORIGINS.has(origin) || (env.ALLOWED_ORIGIN && origin === env.ALLOWED_ORIGIN)
+        || /^https:\/\/[a-z0-9-]+\.tiantian-chinese\.pages\.dev$/.test(origin) || /^https?:\/\/localhost(:\d+)?$/.test(origin) || origin === 'capacitor://localhost';
+      const unavailable = err instanceof SecurityStoreUnavailable;
+      return secureResponse(new Response(JSON.stringify({ error: unavailable ? '인증 서비스를 잠시 사용할 수 없습니다. 다시 시도해주세요.' : 'Internal Server Error' }), {
+        status: unavailable ? 503 : 500,
+        headers: { 'Content-Type': 'application/json', 'Vary': 'Origin', ...(allowed ? { 'Access-Control-Allow-Origin': origin } : {}) },
+      }));
     }
   },
 };

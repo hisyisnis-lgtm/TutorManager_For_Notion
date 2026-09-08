@@ -4,6 +4,7 @@ import {
   useCallback,
   useRef } from 'react';
 import { toast } from 'sonner';
+import { captureAuthScope, isAuthScopeCurrent } from '../api/authState.js';
 import { useParams,
   useNavigate } from 'react-router-dom';
 import { CircleNotchIcon } from '@phosphor-icons/react';
@@ -150,17 +151,19 @@ export default function PersonalHomeworkDetailPage() {
   };
 
   const load = useCallback(async () => {
+    const auth = captureAuthScope(`student:${studentToken}`);
     setLoading(true);
     setError(null);
     try {
       const pages = await fetchMyHomework(studentToken);
+      if (!isAuthScopeCurrent(auth)) return;
       const list = pages.map(parseHomework);
       const found = list.find((h) => h.id === hwId) ?? null;
       if (!found) throw new Error('숙제를 찾을 수 없습니다.');
       setHw(found);
       // 전체 목록을 이미 받아왔으니 홈/보관함 목록 캐시도 갱신 — 제출 직후 홈 복귀 시
       // 방금 제출한 숙제가 "제출 전"으로 잠깐 보이는 stale 플래시 방지
-      writeCacheValue(`student:homework:${studentToken}`, list);
+      writeCacheValue(`student:homework:${studentToken}`, list, auth);
       markViewed(studentToken, hwId);
     } catch (e) {
       setError(e.message);
@@ -211,6 +214,8 @@ export default function PersonalHomeworkDetailPage() {
 
   // 저장 — 양쪽 카테고리 pending 합쳐서 한 번에 업로드 + Notion PATCH.
   const handleSaveSubmit = async () => {
+    const auth = captureAuthScope(`student:${studentToken}`);
+    if (!isAuthScopeCurrent(auth)) return;
     const all = [...pendingAudio, ...pendingDocs];
     if (all.length === 0) return;
     const isFirstSubmit = !hw?.submitMark;
@@ -230,6 +235,7 @@ export default function PersonalHomeworkDetailPage() {
       const newNames = allNames.slice(existingNames.length);
       const uploaded = [];
       for (let i = 0; i < all.length; i += 1) {
+        if (!isAuthScopeCurrent(auth)) return;
         const pf = all[i];
         const fullName = newNames[i];
         // 앞선 시도에서 이미 올라간 파일은 건너뛴다 — 3개 중 2개를 올리고 실패했을 때
@@ -237,7 +243,7 @@ export default function PersonalHomeworkDetailPage() {
         const done = uploadedRef.current.get(pf.tempId);
         if (done && done.fileName === fullName && Date.now() - done.at < REUSE_WINDOW_MS) {
           bytesDone += pf.file?.size || 0;
-          uploaded.push({ fileUploadId: done.fileUploadId, fileName: done.fileName });
+          uploaded.push({ fileUploadId: done.fileUploadId, fileName: done.fileName, uploadReceipt: done.uploadReceipt });
           setProgress({ done: i + 1, total: all.length, percent: pct(bytesDone) });
           continue;
         }
@@ -245,16 +251,19 @@ export default function PersonalHomeworkDetailPage() {
         // 재시도가 오히려 중복 첨부 오류를 부를 수 있다. 실패해도 여기 캐시가 남아 재시도가 빠르다.
         // 재시도로 같은 파일을 다시 올려도 bytesDone은 그대로라 진행률이 뒤로 가지 않는다.
         // 원본 File 그대로 전달하고 이름만 지정 — 재포장하면 안드로이드에서 뒤가 잘린다.
-        const { fileUploadId } = await retryTransient(() => uploadStudentFile(studentToken, pf.file, {
+        const { fileUploadId, uploadReceipt } = await retryTransient(() => uploadStudentFile(studentToken, pf.file, {
           fileName: fullName,
           onProgress: (loaded) => setProgress({ done: i, total: all.length, percent: pct(bytesDone + loaded) }),
         }));
+        if (!isAuthScopeCurrent(auth)) return;
         bytesDone += pf.file?.size || 0;
-        uploadedRef.current.set(pf.tempId, { fileUploadId, fileName: fullName, at: Date.now() });
-        uploaded.push({ fileUploadId, fileName: fullName });
+        uploadedRef.current.set(pf.tempId, { fileUploadId, uploadReceipt, fileName: fullName, at: Date.now() });
+        uploaded.push({ fileUploadId, uploadReceipt, fileName: fullName });
         setProgress({ done: i + 1, total: all.length, percent: pct(bytesDone) });
       }
+      if (!isAuthScopeCurrent(auth)) return;
       await submitHomework(studentToken, hwId, uploaded);
+      if (!isAuthScopeCurrent(auth)) return;
       uploadedRef.current.clear();
       setPendingAudio([]);
       setPendingDocs([]);

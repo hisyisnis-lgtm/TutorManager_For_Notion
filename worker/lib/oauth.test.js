@@ -9,11 +9,15 @@ import {
   socialUserKey,
   isAllowedRedirect,
   redirectPrefixes,
-  appendTokenFragment,
+  appendCodeFragment,
   DEFAULT_REDIRECT_PREFIXES,
-  signAuthState,
+  signAuthState as rawSignAuthState,
   verifyAuthState,
+  pkceChallenge,
 } from './oauth.js';
+const CHALLENGE = 'c'.repeat(43);
+const TRANSACTION = 't'.repeat(43);
+const signAuthState = (secret, data, ttl) => rawSignAuthState(secret, { challenge: CHALLENGE, transaction: TRANSACTION, ...data }, ttl);
 
 describe('isSocialProvider', () => {
   it('google·kakao만 허용', () => {
@@ -145,10 +149,10 @@ describe('redirectPrefixes', () => {
   });
 });
 
-describe('appendTokenFragment', () => {
-  it('# 없으면 #token=, 있으면 &token=', () => {
-    expect(appendTokenFragment('https://w.dev/game', 'ABC')).toBe('https://w.dev/game#token=ABC');
-    expect(appendTokenFragment('https://w.dev/game#x=1', 'A B')).toBe('https://w.dev/game#x=1&token=A%20B');
+describe('appendCodeFragment', () => {
+  it('일회 교환 코드와 transaction만 fragment로 반환', () => {
+    expect(appendCodeFragment('https://w.dev/game', 'ABC', 'tx')).toBe('https://w.dev/game#login_code=ABC&login_tx=tx');
+    expect(appendCodeFragment('https://w.dev/game#x=1', 'A B', 'tx')).toBe('https://w.dev/game#x=1&login_code=A%20B&login_tx=tx');
   });
 });
 
@@ -157,7 +161,7 @@ describe('signAuthState / verifyAuthState — 무상태 서명 state', () => {
   it('round-trip: 서명한 state를 검증하면 provider·redirect 복원', async () => {
     const state = await signAuthState(SECRET, { provider: 'kakao', redirect: 'http://localhost:5178/game/tone' });
     const out = await verifyAuthState(SECRET, state);
-    expect(out).toEqual({ provider: 'kakao', redirect: 'http://localhost:5178/game/tone' });
+    expect(out).toEqual({ provider: 'kakao', redirect: 'http://localhost:5178/game/tone', challenge: CHALLENGE, transaction: TRANSACTION });
   });
   it('state는 URL-safe(base64url) — +/= 없음', async () => {
     const state = await signAuthState(SECRET, { provider: 'google', redirect: 'https://tiantian-chinese.pages.dev/game/tone' });
@@ -181,5 +185,20 @@ describe('signAuthState / verifyAuthState — 무상태 서명 state', () => {
     expect(await verifyAuthState(SECRET, '')).toBe(null);
     expect(await verifyAuthState(SECRET, 'onlyonepart')).toBe(null);
     expect(await verifyAuthState('', 'a.b')).toBe(null);
+  });
+  it('BFF 검증에는 Google issuer/audience/expiry/nonce가 모두 맞아야 한다', () => {
+    const expected = { audience: 'our-client', nonce: 'our-transaction' };
+    const claim = { sub: '42', iss: 'https://accounts.google.com', aud: 'our-client', exp: Math.floor(Date.now() / 1000) + 600, nonce: 'our-transaction' };
+    expect(extractGoogleIdentity(claim, expected)?.socialId).toBe('42');
+    for (const bad of [{ aud: 'other-client' }, { nonce: 'other-transaction' }, { exp: 0 }, { iss: 'https://attacker.test' }]) {
+      expect(extractGoogleIdentity({ ...claim, ...bad }, expected)).toBeNull();
+    }
+  });
+  it('브라우저에 결합되지 않은 state 발급 거부', async () => {
+    await expect(rawSignAuthState(SECRET, { provider: 'google', redirect: 'https://localhost/game' })).rejects.toThrow();
+  });
+  it('S256는 RFC 7636 테스트 벡터와 일치하고 잘못된 verifier는 거부', async () => {
+    expect(await pkceChallenge('dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk')).toBe('E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM');
+    expect(await pkceChallenge('short')).toBeNull();
   });
 });

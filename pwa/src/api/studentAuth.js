@@ -2,28 +2,38 @@
 //
 // 유출된 학생 링크를 받은 제3자가 새 기기에서 접근 못 하게: 새 기기는 OTP 인증 후
 // "출입 세션"(JWT)을 받아 localStorage에 보관하고, 모든 학생 데이터 호출에 첨부한다.
-// 강사 기기(강사앱 로그인 흔적)는 OTP 없이 강사 JWT로 우회 — 학생 페이지 미리보기/공유용.
+// 유효한 강사 세션은 학생 페이지 미리보기에도 사용할 수 있다.
 import { WORKER_URL } from '../config.js';
-import { getToken } from './authUtils.js';
+import { getToken, clearAuth } from './authUtils.js';
+import {
+  studentSession, sessionClaims, readStoredSession, clearSensitiveCache,
+  notifyAuthChange, getAuthRevision,
+} from './authState.js';
 import { fetchWithTimeout } from './fetchTimeout.js';
 
 const sessionKey = (token) => `student_session_${token}`;
 
 export function getStudentSession(token) {
-  try { return localStorage.getItem(sessionKey(token)) || ''; } catch { return ''; }
+  return studentSession(token);
 }
 export function setStudentSession(token, session) {
+  if (!sessionClaims(session, 'student', `personal:${token}`)) throw new Error('유효한 학생 인증이 아닙니다.');
+  clearSensitiveCache(`student:${token}`);
   try { localStorage.setItem(sessionKey(token), session); } catch { /* noop */ }
+  notifyAuthChange();
 }
 export function clearStudentSession(token) {
   try { localStorage.removeItem(sessionKey(token)); } catch { /* noop */ }
+  try {
+    if (localStorage.getItem('personal_student_token') === token) localStorage.removeItem('personal_student_token');
+  } catch {}
+  clearSensitiveCache(`student:${token}`);
+  notifyAuthChange();
 }
 
-// 강사 기기 여부 — 강사앱 로그인 흔적이 있으면 학생 페이지를 보는 강사로 간주(OTP 면제).
+// teacher_device 라우팅 힌트는 접근 권한이 아니다. 유효한 강사 세션만 인정한다.
 export function isTeacherDevice() {
-  try {
-    return !!localStorage.getItem('auth_token') || !!localStorage.getItem('teacher_device');
-  } catch { return false; }
+  return !!getToken();
 }
 
 // 학생 페이지에 접근 권한이 있는가 (강사 기기이거나 유효 세션 보유).
@@ -40,36 +50,26 @@ export function studentBearer(token) {
   return getStudentSession(token);
 }
 
-// 학생 세션 401 처리 — 만료·폐기된 세션을 지우고 리로드해 인증 게이트가 다시 뜨게 한다.
-// 이게 없으면 hard enforce(STUDENT_AUTH_ENFORCE=1) 시 만료 기기는 OTP 재인증 경로 없이
-// 화면마다 401 에러만 반복하는 막다른 길. 강사 기기(강사 JWT 사용)는 대상 아님.
-// 처리했으면 true 반환(호출부는 에러 표시 생략 가능).
-// 리로드는 30초에 한 번만 — 서버가 계속 401을 주는 상태(시계 오차·시크릿 오설정)에서
-// reload → 401 → reload 무한 루프가 되지 않게. 두 번째부터는 세션만 지우고 게이트가 뜨게 둔다(2026-09-04).
-const RELOAD_STAMP_KEY = 'student_auth_reload_at';
-const RELOAD_MIN_GAP_MS = 30 * 1000;
-
-export function handleStudentAuthExpiry(token) {
-  if (isTeacherDevice()) return false;
-  if (!token || !getStudentSession(token)) return false;
+// 401은 같은 탭 이벤트로 즉시 보호 화면을 닫는다. 리로드에 의존하지 않는다.
+export function handleStudentAuthExpiry(token, bearer) {
+  const teacher = readStoredSession('auth_token');
+  const session = readStoredSession(sessionKey(token));
+  if (bearer && bearer !== teacher && bearer !== session) return false;
+  if ((bearer && bearer === teacher) || (!bearer && isTeacherDevice())) { clearAuth(); return true; }
+  if (!token) return false;
+  const hadSession = !!session;
   clearStudentSession(token);
-  let recentlyReloaded = false;
-  try {
-    const last = Number(sessionStorage.getItem(RELOAD_STAMP_KEY) || 0);
-    recentlyReloaded = Date.now() - last < RELOAD_MIN_GAP_MS;
-    if (!recentlyReloaded) sessionStorage.setItem(RELOAD_STAMP_KEY, String(Date.now()));
-  } catch { /* sessionStorage 불가 환경 — 그냥 리로드 */ }
-  if (!recentlyReloaded) window.location.reload();
-  return true;
+  return hadSession;
 }
 
-async function authFetch(method, path, body) {
+async function authFetch(method, path, body, signal) {
   // OTP 발송/검증은 사용자가 화면에서 기다리는 경로 — 타임아웃 없으면 무한 스피너
   const res = await fetchWithTimeout(`${WORKER_URL}${path}`, {
     method,
     headers: { 'Content-Type': 'application/json' },
     body: body ? JSON.stringify(body) : undefined,
     cache: 'no-store',
+    signal,
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
@@ -81,13 +81,17 @@ async function authFetch(method, path, body) {
 }
 
 /** 인증번호(알림톡) 발송 요청. → {ok:true, phoneTail} | {ok:false, reason:'no_phone'} */
-export function requestStudentOtp(token) {
-  return authFetch('POST', '/personal/auth/request-otp', { token });
+export function requestStudentOtp(token, signal) {
+  return authFetch('POST', '/personal/auth/request-otp', { token }, signal);
 }
 
 /** 인증번호 검증 → 성공 시 세션 저장. → {ok:true, session} */
-export async function verifyStudentOtp(token, code) {
-  const data = await authFetch('POST', '/personal/auth/verify-otp', { token, code });
-  if (data.session) setStudentSession(token, data.session);
+export async function verifyStudentOtp(token, code, signal) {
+  const revision = getAuthRevision();
+  const data = await authFetch('POST', '/personal/auth/verify-otp', { token, code }, signal);
+  if (signal?.aborted) throw new globalThis.DOMException('인증 요청이 취소되었습니다.', 'AbortError');
+  if (revision !== getAuthRevision()) throw new Error('인증 상태가 바뀌었습니다. 다시 확인해 주세요.');
+  if (!data.session) throw new Error('인증 세션을 받지 못했습니다.');
+  setStudentSession(token, data.session);
   return data;
 }

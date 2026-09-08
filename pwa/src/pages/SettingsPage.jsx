@@ -13,7 +13,6 @@ import { TEXT_SECONDARY,
   STATUS_SUCCESS_DARK } from '../constants/theme.js';
 
 const STORAGE_KEY = 'instructor_name';
-const NTFY_TOPIC_KEY = 'ntfy_topic';
 
 const SHARE_LINKS = [
   { key: 'intro', label: '홈페이지', path: '/intro' },
@@ -27,13 +26,8 @@ export function getInstructorName() {
   return localStorage.getItem(STORAGE_KEY) || '';
 }
 
-export function getNtfyTopic() {
-  return localStorage.getItem(NTFY_TOPIC_KEY) || '';
-}
-
 export default function SettingsPage() {
   const [name, setName] = useState(() => localStorage.getItem(STORAGE_KEY) || '');
-  const [ntfyTopic, setNtfyTopic] = useState(() => localStorage.getItem(NTFY_TOPIC_KEY) || '');
   const [saved, setSaved] = useState(false);
   const [confirmLogout, setConfirmLogout] = useState(false);
   const [copiedKey, setCopiedKey] = useState('');
@@ -71,13 +65,6 @@ export default function SettingsPage() {
       localStorage.removeItem(STORAGE_KEY);
     }
 
-    const trimmedTopic = ntfyTopic.trim();
-    if (trimmedTopic) {
-      localStorage.setItem(NTFY_TOPIC_KEY, trimmedTopic);
-    } else {
-      localStorage.removeItem(NTFY_TOPIC_KEY);
-    }
-
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };
@@ -96,22 +83,6 @@ export default function SettingsPage() {
             maxLength={20}
           />
           <p className="text-xs text-gray-500 mt-1.5">홈 화면 인사말에 표시됩니다.</p>
-        </div>
-
-        <div>
-          <span style={{ fontSize: 14, fontWeight: 600, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>ntfy 토픽</span>
-          <Input
-            type="text"
-            value={ntfyTopic}
-            onChange={(e) => { setNtfyTopic(e.target.value); setSaved(false); }}
-            placeholder="예) tutor-alerts"
-            maxLength={64}
-            autoCapitalize="none"
-            autoCorrect="off"
-          />
-          <p className="text-xs text-gray-500 mt-1.5">
-            ntfy.sh/<span className="font-mono">{ntfyTopic || '토픽명'}</span> 으로 알림을 받습니다.
-          </p>
         </div>
 
         <div>
@@ -197,11 +168,10 @@ export default function SettingsPage() {
           title="로그아웃"
           message="로그아웃하면 다시 비밀번호를 입력해야 합니다."
           confirmLabel="로그아웃"
-          // 로그아웃은 데이터가 지워지는 동작이 아니다 — 삭제급 빨강 대신 브랜드색 확인 버튼
+          // 서버 데이터는 보존하고 이 기기에 임시 저장한 개인정보만 정리한다.
           danger={false}
           onConfirm={() => {
             clearAuth();
-            window.location.reload();
           }}
           onCancel={() => setConfirmLogout(false)}
         />

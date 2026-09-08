@@ -1,15 +1,19 @@
 // 로그인(회원) — 카카오·구글 소셜 로그인(OAuth BFF). 버튼 탭 → Worker 인증 시작 URL로 전체 이동,
-// 제공자 인증 후 현재 게임 주소로 #token=… 붙여 복귀(복귀 토큰 처리는 ToneGamePage). Figma "18b. 로그인(소셜)".
+// 제공자 인증 후 일회 교환 코드로 복귀(브라우저 거래 검증은 ToneGamePage). Figma "18b. 로그인(소셜)".
 import { TG, TYPE, TOUCH_OPT, ASSETS, RADIUS, SPACE } from '../tgTokens.js';
 import { socialLoginUrl } from '../../api/gameApi.js';
 import { play as playSfx } from '../tgSfx.js';
 import { Reveal, BackButton } from './shared.jsx';
 
-// 소셜 로그인 시작 — 제공자 인증 URL로 전체 이동(복귀는 현재 게임 주소로 #token=…). LoginScreen·ProfileModal 공용.
-export function startSocialLogin(provider) {
+// 소셜 로그인 시작 — 브라우저 거래를 보관한 뒤 제공자 인증 URL로 이동. LoginScreen·ProfileModal 공용.
+export async function startSocialLogin(provider) {
   playSfx('button');
   const redirect = window.location.origin + window.location.pathname; // 현재 게임 주소로 복귀
-  window.location.href = socialLoginUrl(provider, redirect);
+  try {
+    window.location.href = await socialLoginUrl(provider, redirect);
+  } catch {
+    window.alert('로그인을 시작하지 못했어요. 브라우저 저장소를 허용한 뒤 다시 시도해주세요.');
+  }
 }
 
 // 카카오 심볼(공식 말풍선) — 노란 버튼 위 검정.

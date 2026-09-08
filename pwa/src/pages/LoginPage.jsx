@@ -4,6 +4,7 @@ import { Input } from '@/components/shadcn/input';
 import { GRADIENTS, TEXT_PRIMARY, TEXT_TERTIARY, STATUS_ERROR_TEXT } from '../constants/theme.js';
 
 import { WORKER_URL } from '../config.js';
+import { setAuth } from '../api/authUtils.js';
 
 // 공개 랜딩 HeroSection과 같은 어법의 한자 파티클 — 로그인은 '시작 화면'이라
 // 의도 배치 한자가 허용되는 예외(§18-1). 로그인은 히어로보다 조용해야 해서 6자만.
@@ -39,10 +40,7 @@ export default function LoginPage({ onSuccess }) {
         return;
       }
       const { token } = data;
-      localStorage.setItem('auth_token', token);
-      // 이 디바이스/브라우저는 강사용임을 표시. 토큰이 만료·삭제돼도 남아 있어
-      // 루트 진입 시 학생 페이지로 자동 리다이렉트되는 것을 막는다 (App.jsx 참고).
-      localStorage.setItem('teacher_device', '1');
+      setAuth(token);
       onSuccess(token);
     } catch {
       setError('서버에 연결할 수 없습니다.');

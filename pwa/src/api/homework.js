@@ -13,7 +13,8 @@ import {
 export const HOMEWORK_DB = '5ce7d5ef-7b80-4795-843f-325f4ca868e2';
 
 import { WORKER_URL } from '../config.js';
-import { getToken } from './authUtils.js';
+import { getToken, handleTeacherAuthExpiry } from './authUtils.js';
+import { captureAuthScope, isAuthScopeCurrent } from './authState.js';
 import { studentBearer,
   handleStudentAuthExpiry } from './studentAuth.js';
 import { fetchWithTimeout,
@@ -107,16 +108,18 @@ export async function createHomework({ studentPageId, title, content, files, cla
  * FormData.append의 세 번째 인자로 이름만 지정하면 원본을 그대로 보낼 수 있다.
  */
 export async function uploadTeacherFile(file, fileName) {
+  const bearer = getToken();
   const form = new FormData();
   form.append('file', file, fileName || file.name);
   // 전송 중 잘림 탐지용 — 서버가 실제 수신 크기와 대조한다(worker/lib/upload.js).
   form.append('size', String(file.size));
   const res = await fetchWithTimeout(`${WORKER_URL}/homework/upload`, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${getToken()}` },
+    headers: { Authorization: `Bearer ${bearer}` },
     body: form,
   }, UPLOAD_TIMEOUT_MS);
   if (!res.ok) {
+    if (res.status === 401) handleTeacherAuthExpiry(bearer);
     const data = await res.json().catch(() => ({}));
     throw new Error(data.error || '파일 업로드 실패');
   }
@@ -166,16 +169,18 @@ export async function saveFeedback(id, { feedbackText, files, existingFiles, fil
  * Worker 쪽에서 템플릿/Secret 미설정 시 no-op 처리되므로 실패해도 흐름 중단 안 함.
  */
 export async function notifyHomework(kind, homeworkId) {
+  const bearer = getToken();
   try {
     const path = kind === 'feedback' ? '/homework/notify-feedback' : '/homework/notify-assign';
-    await fetch(`${WORKER_URL}${path}`, {
+    const res = await fetch(`${WORKER_URL}${path}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${getToken()}`,
+        Authorization: `Bearer ${bearer}`,
       },
       body: JSON.stringify({ homeworkId }),
     });
+    if (res.status === 401) handleTeacherAuthExpiry(bearer);
   } catch (e) {
     console.warn('[notifyHomework] 실패:', e.message);
   }
@@ -210,7 +215,7 @@ async function studentFetch(method, path, body, studentToken) {
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     // 학생 세션 만료 → 세션 정리 후 리로드(인증 게이트 재진입)
-    if (res.status === 401) handleStudentAuthExpiry(studentToken);
+    if (res.status === 401) handleStudentAuthExpiry(studentToken, headers.Authorization?.slice(7));
     const err = new Error(data.error || `HTTP ${res.status}`);
     err.status = res.status; // 재시도 판단용 — 4xx는 다시 보내도 같은 결과
     throw err;
@@ -279,7 +284,12 @@ export async function uploadStudentFile(studentToken, file, { onProgress, fileNa
   const headers = studentAuthHeader(studentToken);
 
   if (typeof onProgress === 'function' && typeof XMLHttpRequest !== 'undefined') {
-    return uploadViaXhr(url, form, headers, { onProgress, timeoutMs: UPLOAD_TIMEOUT_MS });
+    try {
+      return await uploadViaXhr(url, form, headers, { onProgress, timeoutMs: UPLOAD_TIMEOUT_MS });
+    } catch (error) {
+      if (error.status === 401) handleStudentAuthExpiry(studentToken, headers.Authorization?.slice(7));
+      throw error;
+    }
   }
 
   const res = await fetchWithTimeout(
@@ -288,12 +298,13 @@ export async function uploadStudentFile(studentToken, file, { onProgress, fileNa
     UPLOAD_TIMEOUT_MS
   );
   if (!res.ok) {
+    if (res.status === 401) handleStudentAuthExpiry(studentToken, headers.Authorization?.slice(7));
     const data = await res.json().catch(() => ({}));
     const err = new Error(data.error || '파일 업로드 실패');
     err.status = res.status;
     throw err;
   }
-  return res.json(); // { fileUploadId, fileName }
+  return res.json(); // { fileUploadId, fileName, uploadReceipt }
 }
 
 /** 학생 숙제 제출 — files: [{fileUploadId, fileName}], deleteFileNames: [string] */
@@ -333,10 +344,15 @@ function triggerBlobDownload(blob, fileName) {
   setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
-async function fetchOrThrow(url, init) {
+async function fetchOrThrow(url, init, studentToken) {
   // 파일 다운로드/미리보기 — 대용량 가능성이 있어 업로드와 같은 긴 타임아웃
   const res = await fetchWithTimeout(url, { cache: 'no-store', ...init }, UPLOAD_TIMEOUT_MS);
   if (!res.ok) {
+    if (res.status === 401) {
+      const bearer = init?.headers?.Authorization?.slice(7);
+      if (studentToken) handleStudentAuthExpiry(studentToken, bearer);
+      else handleTeacherAuthExpiry(bearer);
+    }
     const err = await res.json().catch(() => ({}));
     throw new Error(err.error || `요청 실패 (${res.status})`);
   }
@@ -351,9 +367,11 @@ async function fetchOrThrow(url, init) {
  * @param {'submit'|'feedback'} kind
  */
 export async function downloadHomeworkFileStudent(studentToken, homeworkId, fileName, kind) {
+  const auth = captureAuthScope(`student:${studentToken}`);
   const url = `${WORKER_URL}/homework/student/${encodeURIComponent(studentToken)}/${encodeURIComponent(homeworkId)}/file?name=${encodeURIComponent(fileName)}&kind=${kind}`;
-  const res = await fetchOrThrow(url, { headers: studentAuthHeader(studentToken) });
+  const res = await fetchOrThrow(url, { headers: studentAuthHeader(studentToken) }, studentToken);
   const blob = await res.blob();
+  if (!isAuthScopeCurrent(auth)) return;
   triggerBlobDownload(blob, fileName);
 }
 
@@ -361,9 +379,11 @@ export async function downloadHomeworkFileStudent(studentToken, homeworkId, file
  * 강사용 파일 다운로드 (JWT 인증).
  */
 export async function downloadHomeworkFileTeacher(homeworkId, fileName, kind) {
+  const auth = captureAuthScope();
   const url = `${WORKER_URL}/homework/${encodeURIComponent(homeworkId)}/file?name=${encodeURIComponent(fileName)}&kind=${kind}`;
   const res = await fetchOrThrow(url, { headers: { Authorization: `Bearer ${getToken()}` } });
   const blob = await res.blob();
+  if (!isAuthScopeCurrent(auth)) return;
   triggerBlobDownload(blob, fileName);
 }
 
@@ -373,16 +393,20 @@ export async function downloadHomeworkFileTeacher(homeworkId, fileName, kind) {
  * (FilePreview 같은 컴포넌트에서 useEffect cleanup에 묶어 호출)
  */
 export async function fetchHomeworkFileBlobUrlStudent(studentToken, homeworkId, fileName, kind) {
+  const auth = captureAuthScope(`student:${studentToken}`);
   const url = `${WORKER_URL}/homework/student/${encodeURIComponent(studentToken)}/${encodeURIComponent(homeworkId)}/file?name=${encodeURIComponent(fileName)}&kind=${kind}`;
-  const res = await fetchOrThrow(url, { headers: studentAuthHeader(studentToken) });
+  const res = await fetchOrThrow(url, { headers: studentAuthHeader(studentToken) }, studentToken);
   const blob = await res.blob();
+  if (!isAuthScopeCurrent(auth)) throw new Error('인증 상태가 바뀌었습니다. 다시 확인해 주세요.');
   return URL.createObjectURL(blob);
 }
 
 export async function fetchHomeworkFileBlobUrlTeacher(homeworkId, fileName, kind) {
+  const auth = captureAuthScope();
   const url = `${WORKER_URL}/homework/${encodeURIComponent(homeworkId)}/file?name=${encodeURIComponent(fileName)}&kind=${kind}`;
   const res = await fetchOrThrow(url, { headers: { Authorization: `Bearer ${getToken()}` } });
   const blob = await res.blob();
+  if (!isAuthScopeCurrent(auth)) throw new Error('인증 상태가 바뀌었습니다. 다시 확인해 주세요.');
   return URL.createObjectURL(blob);
 }
 

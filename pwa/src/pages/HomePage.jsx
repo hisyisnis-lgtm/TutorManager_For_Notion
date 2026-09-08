@@ -50,7 +50,7 @@ import {
   STATUS_WARNING_TEXT,
   STATUS_WARNING_TEXT_DARK } from '../constants/theme.js';
 import { BADGE_SMALL } from '../constants/styles.js';
-import { getInstructorName, getNtfyTopic } from './SettingsPage.jsx';
+import { getInstructorName } from './SettingsPage.jsx';
 
 // 잔여 시간 부족을 며칠 앞까지 살필지. 좁게 잡아 홈 로딩·Notion 쿼터 부담을 줄인다
 // (주 25건쯤 되는 수업 밀도에서 30일이면 queryAll 2페이지 안쪽).
@@ -130,8 +130,8 @@ export default function HomePage() {
   const todayStr = `${today.year}-${pad(today.month + 1)}-${pad(today.day)}`;
   const [unreadCount, setUnreadCount] = useState(() => {
     try {
-      const notifications = JSON.parse(localStorage.getItem('ntfy_notifications') || '[]');
-      const lastRead = parseInt(localStorage.getItem('ntfy_last_read') || '0', 10);
+      const notifications = JSON.parse(sessionStorage.getItem('ntfy_notifications') || '[]');
+      const lastRead = parseInt(sessionStorage.getItem('ntfy_last_read') || '0', 10);
       return notifications.filter((n) => n.time > lastRead).length;
     } catch {
       return 0;
@@ -288,8 +288,8 @@ export default function HomePage() {
   useEffect(() => {
     setInstructorName(getInstructorName());
     try {
-      const notifications = JSON.parse(localStorage.getItem('ntfy_notifications') || '[]');
-      const lastRead = parseInt(localStorage.getItem('ntfy_last_read') || '0', 10);
+      const notifications = JSON.parse(sessionStorage.getItem('ntfy_notifications') || '[]');
+      const lastRead = parseInt(sessionStorage.getItem('ntfy_last_read') || '0', 10);
       setUnreadCount(notifications.filter((n) => n.time > lastRead).length);
     } catch {}
   }, []);

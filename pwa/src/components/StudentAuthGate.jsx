@@ -1,7 +1,7 @@
-import { useState, useEffect, useRef } from 'react';
+import { Fragment, useState, useEffect, useRef, useSyncExternalStore } from 'react';
+import { getAuthRevision, subscribeAuthChanges } from '../api/authState.js';
 import { KAKAO_CHANNEL_CHAT_URL } from '../constants.js';
 import { Button } from './shadcn/button';
-import { Input } from './shadcn/input';
 import OtpInput from './ui/OtpInput.jsx';
 import { ShieldCheckIcon, ArrowLeftIcon, DeviceMobileIcon } from '@phosphor-icons/react';
 import {
@@ -9,7 +9,7 @@ import {
   BG_APP, STATUS_ERROR_TEXT, STATUS_SUCCESS_DARK, BORDER_DEFAULT,
 } from '../constants/theme.js';
 import {
-  hasStudentAccess, requestStudentOtp, verifyStudentOtp,
+  studentBearer, requestStudentOtp, verifyStudentOtp,
 } from '../api/studentAuth.js';
 
 const RESEND_SECONDS = 30;
@@ -17,7 +17,14 @@ const RESEND_SECONDS = 30;
 // 학생 페이지 진입 게이트 — 새 기기는 휴대폰 인증을 거쳐야 통과.
 // disabled(게스트 게임 등)이거나 이미 권한이 있으면 즉시 children 렌더.
 export default function StudentAuthGate({ token, disabled = false, children }) {
-  const [granted, setGranted] = useState(() => disabled || hasStudentAccess(token));
+  const revision = useSyncExternalStore(subscribeAuthChanges, getAuthRevision, () => 0);
+  const access = studentBearer(token);
+  if (disabled) return children;
+  if (access) return <Fragment key={`${token}:${revision}`}>{children}</Fragment>;
+  return <StudentVerification key={token} token={token} />;
+}
+
+function StudentVerification({ token }) {
   const [phase, setPhase] = useState('idle');   // idle | sent | no_phone
   const [code, setCode] = useState('');
   const [phoneTail, setPhoneTail] = useState('');
@@ -27,6 +34,9 @@ export default function StudentAuthGate({ token, disabled = false, children }) {
   const [busy, setBusy] = useState(false);
   const [resendIn, setResendIn] = useState(0);
   const timerRef = useRef(null);
+  const requestRef = useRef(null);
+
+  useEffect(() => () => requestRef.current?.abort(), []);
 
   useEffect(() => {
     if (resendIn <= 0) return undefined;
@@ -34,14 +44,14 @@ export default function StudentAuthGate({ token, disabled = false, children }) {
     return () => clearInterval(timerRef.current);
   }, [resendIn]);
 
-  if (granted) return children;
-
   function fail(msg) { setError(msg); setErrNonce((n) => n + 1); }
 
   async function sendOtp(resend = false) {
+    requestRef.current?.abort();
+    requestRef.current = new AbortController();
     setBusy(true); setError(''); setNotice('');
     try {
-      const res = await requestStudentOtp(token);
+      const res = await requestStudentOtp(token, requestRef.current.signal);
       if (res.ok === false && res.reason === 'no_phone') { setPhase('no_phone'); return; }
       setPhoneTail(res.phoneTail || '');
       setCode('');
@@ -49,6 +59,7 @@ export default function StudentAuthGate({ token, disabled = false, children }) {
       setResendIn(RESEND_SECONDS);
       if (resend) setNotice('인증번호를 다시 보냈어요.');
     } catch (e) {
+      if (e.name === 'AbortError') return;
       fail(e.status === 429 ? '요청이 많아요. 잠시 후 다시 시도해 주세요.'
         : e.status === 404 ? '학생 코드를 확인해 주세요.'
         : '인증번호 발송에 실패했어요. 잠시 후 다시 시도해 주세요.');
@@ -58,11 +69,13 @@ export default function StudentAuthGate({ token, disabled = false, children }) {
   async function submitCode(codeArg) {
     const c = codeArg ?? code;
     if (c.length !== 6 || busy) return;
+    requestRef.current?.abort();
+    requestRef.current = new AbortController();
     setBusy(true); setError('');
     try {
-      await verifyStudentOtp(token, c);
-      setGranted(true);
+      await verifyStudentOtp(token, c, requestRef.current.signal);
     } catch (e) {
+      if (e.name === 'AbortError') return;
       setCode('');
       fail(e.status === 401 ? '인증번호가 일치하지 않아요. 다시 확인해 주세요.'
         : e.status === 429 ? '시도가 많아요. 잠시 후 다시 시도해 주세요.'

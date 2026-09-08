@@ -7,6 +7,9 @@ on:
     - cron: '0 */4 * * *'  # 4시간마다 (강사가 수업 추가하는 시점에만 충돌 발생 → Worker 웹훅 dispatch 병행)
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   check-conflicts:
     runs-on: ubuntu-latest
@@ -14,9 +17,9 @@ jobs:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: '24'
 

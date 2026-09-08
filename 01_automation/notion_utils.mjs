@@ -229,19 +229,22 @@ export async function loadPaidSessions(queryAll, paymentsDbId) {
 /**
  * ntfy 알림 클라이언트 생성 (기존 단일 토픽용 — 하위호환)
  * @param {string} topic - NTFY_TOPIC 환경변수 값
- * @param {string} [ntfyToken] - NTFY_TOKEN 환경변수 값 (선택)
+ * @param {string} ntfyToken - NTFY_TOKEN 환경변수 값 (필수)
  * @returns {Function} sendNtfy(title, message, priority?)
  */
 export function createNtfyClient(topic, ntfyToken) {
   return async function sendNtfy(title, message, priority = 3) {
-    if (!topic) return;
-    const headers = { 'Content-Type': 'application/json' };
-    if (ntfyToken) headers['Authorization'] = `Bearer ${ntfyToken}`;
+    if (!topic || !ntfyToken) {
+      console.error('[ntfy] 알림 토픽 또는 인증 설정이 없습니다.');
+      return { ok: false, reason: 'ntfy_not_configured' };
+    }
+    const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${ntfyToken}` };
     try {
       const res = await fetch('https://ntfy.sh', {
         method: 'POST',
         headers,
         body: JSON.stringify({ topic, title, message, priority }),
+        redirect: 'error',
       });
       if (!res.ok) console.error(`ntfy 전송 실패 (${res.status}): ${await res.text()}`);
       else console.log(`ntfy 알림 전송 완료: ${title}`);
@@ -274,24 +277,19 @@ export async function sendAlert({ level = 'info', title, message, tags } = {}) {
   const PRIORITY_MAP = { critical: 5, warn: 3, digest: 2, info: 4 };
   const topic = TOPIC_MAP[level] || env.NTFY_TOPIC;
   const priority = PRIORITY_MAP[level] || 4;
-  if (!topic) {
-    console.error(`[ntfy:${level}] 토픽 미설정 (level=${level})`);
-    return;
+  if (!topic || !env.NTFY_TOKEN) {
+    console.error('[ntfy] 알림 토픽 또는 인증 설정이 없습니다.');
+    return { ok: false, reason: 'ntfy_not_configured' };
   }
 
-  const headers = { 'Content-Type': 'application/json' };
-  // 기존 NTFY_TOPIC은 user 계정의 reserved topic이라 토큰 필요.
-  // 새 토픽(critical/warn/digest)은 anonymous public이라 토큰을 보내면 ntfy.sh가
-  // user context로 처리하면서 ACL에 없는 토픽이라 silently drop함 (200 응답은 옴).
-  // → 토픽이 env.NTFY_TOPIC과 일치할 때만 토큰 첨부.
-  const isLegacyTopic = topic === env.NTFY_TOPIC;
-  if (isLegacyTopic && env.NTFY_TOKEN) headers['Authorization'] = `Bearer ${env.NTFY_TOKEN}`;
+  // 모든 수준은 인증 필수. 대상 토픽의 익명 읽기/쓰기 ACL도 운영에서 거부한다.
+  const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${env.NTFY_TOKEN}` };
 
   const payload = { topic, title, message, priority };
   if (Array.isArray(tags) && tags.length > 0) payload.tags = tags;
 
   try {
-    const res = await fetch('https://ntfy.sh', { method: 'POST', headers, body: JSON.stringify(payload) });
+    const res = await fetch('https://ntfy.sh', { method: 'POST', headers, body: JSON.stringify(payload), redirect: 'error' });
     if (!res.ok) console.error(`[ntfy:${level}] 전송 실패 ${res.status}: ${await res.text()}`);
     else console.log(`[ntfy:${level}] 발송: ${title}`);
   } catch (e) {

@@ -1,8 +1,9 @@
-import { useState, useEffect, lazy, Suspense } from 'react';
+import { useState, useEffect, useSyncExternalStore, lazy, Suspense } from 'react';
+import { getAuthRevision, subscribeAuthChanges } from './api/authState.js';
 import { HashRouter, BrowserRouter, Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom';
 import { Toaster } from './components/shadcn/sonner';
 import { useRegisterSW } from 'virtual:pwa-register/react';
-import { isAuthed } from './api/authUtils.js';
+import { useTeacherAuth } from './api/authUtils.js';
 import { PRIMARY } from './constants/theme.js';
 import { DataProvider } from './context/DataContext.jsx';
 import BottomNav from './components/layout/BottomNav.jsx';
@@ -200,7 +201,8 @@ if (typeof window !== 'undefined') {
 }
 
 export default function App() {
-  const [authed, setAuthed] = useState(isAuthed);
+  const authed = useTeacherAuth();
+  const authRevision = useSyncExternalStore(subscribeAuthChanges, getAuthRevision, () => 0);
   const [swReady, setSwReady] = useState(false);
 
   const [swRegistration, setSwRegistration] = useState(null);
@@ -263,7 +265,7 @@ export default function App() {
   // iOS Safari PWA "홈 화면에 추가" 시 URL의 path는 보존되므로 path 기반 라우팅이 안전.
   // hash 기반 강사 라우트와 공존하기 위해 이 분기에서만 BrowserRouter 사용.
   // `/game/*`(게스트 독립 진입)도 path 기반으로 같은 BrowserRouter 블록에서 렌더 — 학생 토큰 없이 게임만.
-  const studentPathMatch = window.location.pathname.match(/^\/(personal|student|game)\/([^/?#]+)/);
+  const studentPathMatch = window.location.pathname.match(/^\/(personal|student|game)(?:\/([^/?#]+))?(?:\/|$)/);
   if (studentPathMatch) {
     // 옛 호환 `/student/{token}`은 `/personal/{token}`로 자동 redirect
     if (studentPathMatch[1] === 'student') {
@@ -276,22 +278,20 @@ export default function App() {
         <InAppBrowserWarning />
         {/* iOS에서는 manifest를 DOM에서 제거해 "홈 화면에 추가" 시 현재 path를 PWA URL로 박는다. */}
         <DynamicStudentManifest />
-        {/* 새 기기 휴대폰 인증 게이트 — 학생 페이지만 보호, 게스트 게임(/game/*)은 면제 */}
-        <StudentAuthGate token={studentPathMatch[2]} disabled={studentPathMatch[1] === 'game'}>
         <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <ScrollToTop />
           <Routes>
-            <Route path="/personal/:studentToken" element={<PersonalPage />} />
-            <Route path="/personal/:studentToken/homework/:hwId" element={<PersonalHomeworkDetailPage />} />
-            <Route path="/personal/:studentToken/notice/:noticeId" element={<PersonalNoticeDetailPage />} />
-            <Route path="/personal/:studentToken/panda" element={<PandaPage />} />
-            <Route path="/personal/:studentToken/game/tone" element={<Suspense fallback={<SplashScreen />}><ToneGamePage /></Suspense>} />
+            <Route path="/personal" element={<PersonalEntryPage />} />
+            <Route path="/personal/:studentToken" element={<GatedStudentRoute><PersonalPage /></GatedStudentRoute>} />
+            <Route path="/personal/:studentToken/homework/:hwId" element={<GatedStudentRoute><PersonalHomeworkDetailPage /></GatedStudentRoute>} />
+            <Route path="/personal/:studentToken/notice/:noticeId" element={<GatedStudentRoute><PersonalNoticeDetailPage /></GatedStudentRoute>} />
+            <Route path="/personal/:studentToken/panda" element={<GatedStudentRoute><PandaPage /></GatedStudentRoute>} />
+            <Route path="/personal/:studentToken/game/tone" element={<GatedStudentRoute><Suspense fallback={<SplashScreen />}><ToneGamePage /></Suspense></GatedStudentRoute>} />
             {/* 게스트 독립 진입 (학생 토큰 없음) — 채널 유입 깔때기. ToneGamePage가 토큰 부재를 게스트로 처리 */}
             <Route path="/game/tone" element={<Suspense fallback={<SplashScreen />}><ToneGamePage /></Suspense>} />
           </Routes>
         </BrowserRouter>
         <FreshnessIndicator />
-        </StudentAuthGate>
         </>
     );
   }
@@ -341,7 +341,6 @@ export default function App() {
         <LoginPage
           onSuccess={() => {
             window.location.hash = '#/home';
-            setAuthed(true);
           }}
         />
       </>
@@ -351,7 +350,7 @@ export default function App() {
   return (
     <>
     <Toaster position="top-center" />
-    <DataProvider>
+    <DataProvider key={authRevision}>
       <HashRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <ScrollToTop />
         <div className="page-container">
