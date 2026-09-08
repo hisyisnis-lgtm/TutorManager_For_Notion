@@ -43,10 +43,11 @@ describe('강사 알림 인증 프록시', () => {
     expect(sessionStorage.getItem('ntfy_notifications')).toBeNull();
   });
 
-  it('서버 알림 미설정은 비밀 토픽 입력 대신 연결 준비 안내로 표시한다', async () => {
+  it('알림 상세 조회가 불가능하면 비밀 토픽 입력 대신 관련 화면을 안내한다', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response('', { status: 503 })));
     renderPage();
-    expect(await screen.findByText('알림 연결이 준비되지 않았어요')).toBeTruthy();
+    expect(await screen.findByText('알림 상세 내역을 표시할 수 없어요')).toBeTruthy();
+    expect(screen.getByText('수업·상담 등 자세한 정보는 강사앱의 해당 화면에서 확인해 주세요.')).toBeTruthy();
     expect(screen.queryByText(/ntfy.sh/)).toBeNull();
   });
 });
