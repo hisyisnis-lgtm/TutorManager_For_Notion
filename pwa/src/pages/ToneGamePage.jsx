@@ -14,7 +14,7 @@ import {
 } from '../game/gameStore.js';
 import { loadTierPeak } from '../game/earProfile.js';
 import { gameXpGain, loadXp, addXp, seedXpIfMissing, loadRank, saveRank, seedRankIfMissing, examPassed, EXAM_QUESTIONS } from '../game/gameXp.js';
-import { ROUND_LENGTH, DIFFICULTIES, THEMES } from '../constants/toneGameWords.js';
+import { ROUND_LENGTH, DIFFICULTIES, THEMES, THEME_MODE_ENABLED, THEME_MODE_NOTICE } from '../constants/toneGameWords.js';
 import { TG, HOME, ensureGameFonts, haptic, shuffle, getTimeLimitForCombo, loadBest, saveBest, isMeaningHidden, isPinyinHidden, SCENE } from '../game/tgTokens.js';
 import {
   loadWordStats, saveWordStats, recordWordResult,
@@ -1010,6 +1010,12 @@ export default function ToneGamePage() {
 
   // 테마 모드 — 테마별 단어풀로 게임. 난이도(normal)와 동일 메커니즘(테마별 best/리더보드), 타이머는 중급 페이스.
   const startTheme = (theme) => {
+    // 다시하기·다음 테마도 검수 완료 전에는 라운드를 시작하지 않는다.
+    if (!THEME_MODE_ENABLED) {
+      setScreen('modeselect');
+      showToast(THEME_MODE_NOTICE, 'info');
+      return;
+    }
     const t = theme || selectedTheme;
     if (theme && theme.id !== selectedTheme.id) setSelectedTheme(t);
     const pool = wordPoolByTheme[t.id];
@@ -1443,12 +1449,15 @@ export default function ToneGamePage() {
   } else if (screen === 'tutorial') {
     // 온보딩 경로면 완료 시 모드선택(finishOnboard) · 메뉴 '게임 방법' 경로면 홈 복귀(플래그 미변경)
     content = <FigmaScreen enter><TutorialScreen onDone={tutorialFromHelp ? () => { setTutorialFromHelp(false); setScreen('home'); } : afterTutorial} /></FigmaScreen>;
-  } else if (screen === 'modeselect') {
+  } else if (screen === 'modeselect' || (screen === 'theme' && !THEME_MODE_ENABLED)) {
     content = (
       <FigmaScreen enter>
         <ModeScreen endlessUnlocked={isPreview ? qs('locked') !== '1' : isEndlessUnlocked(studentToken, rank)} endlessBest={loadEndlessBest(studentToken)?.bestScore || 0}
           onDifficulty={() => { playSfx('button'); setScreen('difficulty'); }}
-          onTheme={() => { playSfx('button'); setScreen('theme'); }}
+          onTheme={() => {
+            if (!THEME_MODE_ENABLED) { showToast(THEME_MODE_NOTICE, 'info'); return; }
+            playSfx('button'); setScreen('theme');
+          }}
           onEndless={() => { playSfx('button'); startEndless(); }}
           onTraining={() => { playSfx('button'); setSuggestPractice(false); startTraining(); }}
           highlightPractice={suggestPractice || (isPreview && qs('nudge') === '1')} onHighlightDone={() => setSuggestPractice(false)}

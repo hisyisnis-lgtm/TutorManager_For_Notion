@@ -3,6 +3,7 @@
 # Vite가 public/ 파일을 dist/로 복사 → Pages가 이 파일을 자동으로 응답 헤더에 적용
 
 /*
+  X-Robots-Tag: noindex
   X-Frame-Options: DENY
   X-Content-Type-Options: nosniff
   Referrer-Policy: no-referrer

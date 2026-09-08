@@ -1,34 +1,6 @@
-# 검색엔진 인덱싱 정책
-# - /intro: 유일한 공개 랜딩페이지 (sitemap.xml 에 명시 + intro.html 의 canonical 자체 선언)
-# - 강사용 라우트 + 학생 토큰 URL + /pricing/consent/panda-test: 명시적 path 별 Disallow
-# - 루트 /: 명시적 차단 없음. sitemap 미포함 + 외부 링크 없음으로 자연 차단.
-#
-# 이전 버전(v2.5.92)에서 사용한 `Disallow: /$` 가 Googlebot 에서 의도와 다르게
-# /intro 까지 차단시키는 부작용이 발견되어 제거. $ 종료 매처가 표준상 지원되지만
-# 실제 동작이 불안정함.
-
+# 공식 홈페이지는 https://tiantianchinese.com/ 이다.
+# 이 도메인은 수업 관리·학생·게임 앱으로 유지하며 검색 결과에는 노출하지 않는다.
+# 크롤러가 응답의 X-Robots-Tag: noindex를 읽을 수 있도록 크롤링은 허용한다.
+# 비공개 데이터 접근은 앱/API 인증으로 보호한다.
 User-agent: *
-
-# 강사용 라우트 (해시 라우트지만 SPA fallback 시도 가능성 차단)
-Disallow: /home
-Disallow: /students
-Disallow: /classes
-Disallow: /payments
-Disallow: /logs
-Disallow: /bookings
-Disallow: /consult
-Disallow: /homework
-Disallow: /settings
-Disallow: /notifications
-
-# 학생용 path-based 라우트 (토큰 URL)
-Disallow: /personal/
-Disallow: /book/
-Disallow: /student/
-
-# 강사 공유 전까지 비공개 페이지
-Disallow: /pricing
-Disallow: /consent
-Disallow: /panda-test
-
-Sitemap: https://tiantian-chinese.pages.dev/sitemap.xml
+Allow: /

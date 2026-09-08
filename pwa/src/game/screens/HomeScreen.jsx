@@ -103,7 +103,6 @@ function startDuet(aId, range = CHAT_RANGE) {
 // DEV 전용 검수 훅 — 근접·쿨다운 무시하고 즉시 듀엣(프로덕션 빌드에선 import.meta.env.DEV=false → dead-code 제거).
 if (typeof window !== 'undefined' && import.meta.env && import.meta.env.DEV) {
   window.__tgForceDuet = () => { chatCooldown = 0; const id = [...MARKS.keys()][0]; return id ? startDuet(id, Infinity) : false; };
-  window.__tgKickBall = (vx = 320, vy = -230) => { if (!BALL.live) return false; BALL.vx = vx; BALL.vy = vy; BALL.fx = Math.hypot(vx, vy); return true; };
 }
 
 // 단일 rAF 티커 — 캐릭터(메인 5)마다 독립 rAF 루프를 돌리던 것을 하나로 합침.
@@ -130,261 +129,6 @@ const depthZ = (d) => 300 + Math.round(d * 300); // 깊이 → zIndex(앞이 위
 // 모듈 스코프: WanderingMark(캐릭터)와 메인 HomeScreen이 같은 파일이라 공유. 홈은 동시에 하나만 마운트됨.
 let homeRoomActive = false;
 const charCanSpeak = () => homeRoomActive && (typeof document === 'undefined' || document.visibilityState === 'visible');
-// ── 장난감 공(물리) ──────────────────────────────────────────
-// 방에 공 하나. 마찰로 구르다 멈추고·벽에 튕기고·메인 캐릭터 몸에 닿으면 밀린다(자연 드리블).
-// 가끔 캐릭터가 다가와 다른 캐릭터 쪽으로 뻥 찬다(패스). 물리평면 좌표(캐릭터와 동일계) + project로 렌더.
-const BALL = { x: 0, y: 0, vx: 0, vy: 0, r: 13, live: false, fx: 0 };
-const BALL_MAXV = 470;
-// 타격 이펙트(불규칙 뾰족뾰족 노란 별 단일) — 공 tick이 화면좌표로 spawn, ImpactFX 캔버스가 그림.
-const IMPACTS = [];
-function spawnImpact(x, y, power, kind) {
-  const big = kind === 'kick';
-  const n = big ? 12 : 9;                                   // 뾰족 개수
-  const base = (big ? 17 : 10) + Math.min(1, power / 320) * (big ? 14 : 7);
-  const rot = Math.random() * 6.2832;
-  const spikes = [];
-  for (let k = 0; k < n; k++) {
-    const a = rot + (k / n) * 6.2832 + (Math.random() - 0.5) * 0.6;  // 각도 지터(더 불규칙)
-    spikes.push({ a, ro: base * (0.58 + Math.random() * 0.9), ri: base * (0.24 + Math.random() * 0.13) }); // 뾰족 길이 제각각·깊은 골(날카롭게)
-  }
-  IMPACTS.push({ x, y, t0: performance.now(), spikes, rotDir: Math.random() < 0.5 ? -1 : 1, big });
-  if (IMPACTS.length > 20) IMPACTS.shift();
-}
-// 공 차기 — kicker(메인 id) 기준 공을 다른 랜덤 메인 쪽으로(없으면 랜덤) 뻥.
-function kickBall(kickerId) {
-  if (!BALL.live) return;
-  const others = [];
-  for (const [id, o] of COLL) if (id[0] === 'm' && id !== kickerId) others.push(o);
-  let ang;
-  if (others.length) { const t = others[Math.floor(Math.random() * others.length)]; ang = Math.atan2(t.y - BALL.y, t.x - BALL.x); }
-  else ang = Math.random() * Math.PI * 2;
-  ang += (Math.random() - 0.5) * 0.5; // 살짝 빗나감(사람 같은 부정확)
-  const power = 250 + Math.random() * 175;
-  BALL.vx = Math.cos(ang) * power; BALL.vy = Math.sin(ang) * power;
-  BALL.fx = power; // 다음 프레임 공 tick이 타격 이펙트 spawn(화면좌표 필요)
-  if (charCanSpeak()) playSfx('kick');
-}
-// 타격 이펙트 렌더 — 방 위 오버레이 캔버스(캐릭터 위). 방사선 + 확장 링이 짧게 팝하고 사라짐.
-function ImpactFX() {
-  const cvRef = useRef(null);
-  useLayoutEffect(() => {
-    const cv = cvRef.current, par = cv && cv.parentElement; if (!par) return undefined;
-    const ctx = cv.getContext('2d');
-    const dpr = Math.min(2, (typeof window !== 'undefined' && window.devicePixelRatio) || 1);
-    let W = 0, H = 0;
-    const resize = () => { W = par.clientWidth; H = par.clientHeight; cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); cv.style.width = W + 'px'; cv.style.height = H + 'px'; };
-    resize();
-    const LIFE = 300;
-    // 뾰족 별 경로를 현재 스케일·회전으로 ctx에 구성.
-    const starPath = (im, scale, rotOff) => {
-      const sp = im.spikes, n = sp.length;
-      ctx.beginPath();
-      for (let k = 0; k < n; k++) {
-        const s = sp[k], a = s.a + rotOff;
-        const ox = im.x + Math.cos(a) * s.ro * scale, oy = im.y + Math.sin(a) * s.ro * scale;
-        if (k === 0) ctx.moveTo(ox, oy); else ctx.lineTo(ox, oy);
-        const nx = sp[(k + 1) % n]; let na = nx.a; if (na < s.a) na += 6.2832;
-        const va = (s.a + na) / 2 + rotOff, vr = s.ri;
-        ctx.lineTo(im.x + Math.cos(va) * vr * scale, im.y + Math.sin(va) * vr * scale);
-      }
-      ctx.closePath();
-    };
-    const easeBack = (x) => { const c1 = 2.2, c3 = c1 + 1; const p = x - 1; return 1 + c3 * p * p * p + c1 * p * p; }; // 탄성 오버슈트
-    const draw = (now) => {
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      ctx.clearRect(0, 0, W, H);
-      ctx.lineJoin = 'miter'; ctx.miterLimit = 3; // 날카로운 뾰족
-      for (let i = IMPACTS.length - 1; i >= 0; i--) {
-        const im = IMPACTS[i]; const t = (now - im.t0) / LIFE;
-        if (t >= 1) { IMPACTS.splice(i, 1); continue; }
-        const scale = 0.3 + easeBack(Math.min(1, t / 0.4)) * 0.75;  // 작게→탄성 오버슈트→안착
-        const alpha = t < 0.62 ? 1 : 1 - (t - 0.62) / 0.38;         // 오래 선명하게 유지 후 페이드
-        const rotOff = im.rotDir * 0.14 * (1 - (1 - t) * (1 - t));  // 팝하며 아주 살짝 회전
-        starPath(im, scale, rotOff);
-        ctx.fillStyle = `rgba(255,199,20,${alpha.toFixed(3)})`;      // 플랫 노랑 단일(아웃라인 없음)
-        ctx.fill();
-      }
-    };
-    addTick(draw);
-    window.addEventListener('resize', resize);
-    return () => { removeTick(draw); window.removeEventListener('resize', resize); };
-  }, []);
-  return <canvas ref={cvRef} aria-hidden="true" style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 620 }} />;
-}
-// 축구공 검은 오각형 = 정이십면체 12꼭짓점(단위구). draw 시 앞면(z>0)만 원근으로 그림.
-const ICOSA = (() => {
-  const P = 1.6180339887, IN = 1 / Math.hypot(1, P);
-  return [[0, 1, P], [0, 1, -P], [0, -1, P], [0, -1, -P], [1, P, 0], [1, -P, 0], [-1, P, 0], [-1, -P, 0], [P, 0, 1], [P, 0, -1], [-P, 0, 1], [-P, 0, -1]].map((v) => [v[0] * IN, v[1] * IN, v[2] * IN]);
-})();
-function ToyBall() {
-  const elRef = useRef(null);
-  const cvRef = useRef(null); // 캔버스 — 회전하는 3D 구(축구공 검은 오각형 12개를 구면에서 굴림)
-  useLayoutEffect(() => {
-    const el = elRef.current; const par = el && el.parentElement; if (!par) return undefined;
-    const cv = cvRef.current, ctx = cv.getContext('2d');
-    const dpr = Math.min(2, (typeof window !== 'undefined' && window.devicePixelRatio) || 1);
-    const S = BALL.r * 2;
-    cv.width = Math.round(S * dpr); cv.height = Math.round(S * dpr);
-    let W = par.clientWidth, H = par.clientHeight;
-    const RB = BALL.r;
-    BALL.x = W * 0.5; BALL.y = H * 0.56; BALL.vx = 0; BALL.vy = 0; BALL.live = true;
-    let last = performance.now(), lastBumpAt = 0; // lastBumpAt = 부딪힘음 연사 방지
-    // 지금 공에 닿아 있는 캐릭터 id — '닿기 시작한 프레임'(enter)과 '계속 닿아 있음'(stay)을 구분하려고 든다.
-    //  이게 없으면 겹친 동안 매 프레임이 새 충돌로 취급돼 밀치기·소리가 초당 수십 번 반복된다(=비벼짐).
-    let ballTouch = new Set();
-    const BUMP_MIN_SPD = 70; // 이 속도 이상으로 파고들 때만 소리·타격 이펙트(살짝 스치는 접촉은 무음)
-    // ── 갇힘 탈출 ────────────────────────────────────────
-    // 레벨이 오르면 팔로워가 캐릭터당 (레벨-1)개씩 붙어 Lv.5에선 충돌체가 25개가 된다(반경도 1.8배).
-    //  그 밀도에선 공이 사방에서 밀려 벽으로 몰리고 **영영 못 빠져나온다**(2026-08-11 사용자 지적).
-    //  접촉당 임펄스를 어떻게 튜닝해도 해결이 안 되므로, '갇힘'을 상태로 감지해 빈 쪽으로 뻥 차서 꺼낸다.
-    let stuckMs = 0, lastEscapeAt = 0;
-    const STUCK_SPD = 26;    // 이 속도 아래로 캐릭터에 닿아 있으면 '갇히는 중'
-    const STUCK_MS = 600;    // 이만큼 지속되면 탈출 킥
-    const ESCAPE_V = 300;    // 탈출 킥 속도(벽에서 확실히 떨어져 나올 만큼)
-    // 밀기 세기 — 파고든 깊이를 속도로 환산(=미는 캐릭터 속도)한 뒤 GAIN을 곱해 **캐릭터보다 조금 빠르게** 굴러나가게.
-    //  고정 임펄스와 달리 실제 파고든 만큼만 주므로 살짝 닿으면 살짝, 세게 밀면 세게 — 떨림도 끌려다님도 없다.
-    const PUSH_GAIN = 1.6, PUSH_V_MAX = 190;
-    // 회전 상태를 verts에 누적(방향이 바뀌어도 연속). 초기 = 정이십면체 꼭짓점.
-    let verts = ICOSA.map((v) => [v[0], v[1], v[2]]);
-    const cx = S / 2, cy = S / 2, Rin = S / 2 - 1.2, spotR = Rin * 0.36;
-    // Rodrigues 회전(축 kz=0): v' = v·c + (k×v)·s + k(k·v)(1-c)
-    const rot = (v, kx, ky, c, s) => {
-      const dot = kx * v[0] + ky * v[1];
-      return [v[0] * c + (ky * v[2]) * s + kx * dot * (1 - c), v[1] * c + (-kx * v[2]) * s + ky * dot * (1 - c), v[2] * c + (kx * v[1] - ky * v[0]) * s];
-    };
-    const draw = () => {
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      ctx.clearRect(0, 0, S, S);
-      ctx.beginPath(); ctx.arc(cx, cy, Rin, 0, 6.2832); ctx.fillStyle = '#fff'; ctx.fill(); // 외곽선 없음(사용자 요청)
-      ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, Rin, 0, 6.2832); ctx.clip();
-      ctx.fillStyle = TG.INK;
-      for (const v of verts) {
-        const z = v[2]; // +z = 화면 앞쪽(보이는 면)
-        if (z < -0.2) continue;
-        const zc = Math.max(0, z);
-        const r = spotR * (0.45 + 0.55 * zc); if (r < 0.4) continue;
-        const px = cx + v[0] * Rin, py = cy - v[1] * Rin; // y는 위로
-        ctx.globalAlpha = z < 0 ? Math.max(0, 1 + z / 0.2) : 1; // 실루엣 근처 페이드
-        ctx.beginPath(); ctx.ellipse(px, py, r, r * (0.55 + 0.45 * zc), 0, 0, 6.2832); ctx.fill(); // 가장자리일수록 눌린 타원(구면 원근)
-      }
-      ctx.globalAlpha = 1;
-      // 구 형태 음영(form shadow) — 빛=좌상단, 우하단으로 갈수록 어두워짐(매트 셰이딩). 흰 부분=하이라이트.
-      const lx = cx - Rin * 0.32, ly = cy - Rin * 0.4;
-      const sg = ctx.createRadialGradient(lx, ly, Rin * 0.1, lx, ly, Rin * 1.9);
-      sg.addColorStop(0, 'rgba(18,14,10,0)');
-      sg.addColorStop(0.5, 'rgba(18,14,10,0.04)');
-      sg.addColorStop(0.82, 'rgba(18,14,10,0.2)');
-      sg.addColorStop(1, 'rgba(18,14,10,0.42)');
-      ctx.fillStyle = sg;
-      ctx.beginPath(); ctx.arc(cx, cy, Rin, 0, 6.2832); ctx.fill();
-      ctx.restore();
-    };
-    const tick = (now) => {
-      const dt = Math.min(0.05, (now - last) / 1000); last = now;
-      const damp = Math.max(0, 1 - 1.6 * dt); BALL.vx *= damp; BALL.vy *= damp; // 구르다 멈춤(마찰)
-      if (Math.abs(BALL.vx) < 1.5 && Math.abs(BALL.vy) < 1.5) { BALL.vx = 0; BALL.vy = 0; }
-      const sp = Math.hypot(BALL.vx, BALL.vy); if (sp > BALL_MAXV) { BALL.vx = BALL.vx / sp * BALL_MAXV; BALL.vy = BALL.vy / sp * BALL_MAXV; }
-      BALL.x += BALL.vx * dt; BALL.y += BALL.vy * dt;
-      // 벽 반사(탄성 0.62) — 튕김 감지(타격 이펙트·사운드용). wallSpd=반사 직전 속도.
-      const minX = WALL_M + RB, maxX = W - WALL_M - RB, minY = WALL_M + RB, maxY = H - WALL_M - RB;
-      let wallHit = false; const wallSpd = Math.hypot(BALL.vx, BALL.vy);
-      if (BALL.x < minX) { BALL.x = minX; BALL.vx = Math.abs(BALL.vx) * 0.62; wallHit = true; }
-      else if (BALL.x > maxX) { BALL.x = maxX; BALL.vx = -Math.abs(BALL.vx) * 0.62; wallHit = true; }
-      if (BALL.y < minY) { BALL.y = minY; BALL.vy = Math.abs(BALL.vy) * 0.62; wallHit = true; }
-      else if (BALL.y > maxY) { BALL.y = maxY; BALL.vy = -Math.abs(BALL.vy) * 0.62; wallHit = true; }
-      // 캐릭터 몸 충돌(메인+팔로워 모두) — 겹치면 밀어내고 굴림 임펄스(자연 드리블).
-      //  ★접촉 '시작'과 '유지'를 구분한다(2026-08-10 사용자: 공이 캐릭터에 비벼지고 소리가 지저분함).
-      //   구버전은 밀치기 임펄스(+46)를 겹친 **모든 프레임**에 넣었다. 캐릭터가 걸어다니며 공을 계속 따라잡으니
-      //   초당 60번 밀치는 상태가 됐고, 소리 판정까지 `nowSpd - spd0 > 45`라 그 임펄스를 자기가 충돌로 오인해
-      //   초당 열 번 넘게 울렸다. → 겹침 해소는 매 프레임, **임펄스·소리는 새 접촉일 때만**.
-      const touching = new Set();
-      let hitSpd = 0; // 이번 프레임 새 접촉 중 가장 세게 파고든 속도(소리·이펙트 세기)
-      for (const [id, o] of COLL) {
-        // ★팔로워도 공과 부딪힌다 — 공이 작은 애들을 통과하면 그게 더 어색하다(2026-08-11 사용자).
-        //  고밀도 갇힘은 '통과'가 아니라 아래 **탈출 킥**으로 푼다.
-        const dx = BALL.x - o.x, dy = BALL.y - o.y, d = Math.hypot(dx, dy), minD = o.r + RB;
-        if (d > 0.01 && d < minD) {
-          touching.add(id);
-          const ux = dx / d, uy = dy / d;
-          const depth = minD - d;                             // 이번 프레임 파고든 깊이
-          BALL.x = o.x + ux * minD; BALL.y = o.y + uy * minD; // 겹침 해소는 항상(파고들어 보이면 안 됨)
-          const along = BALL.vx * ux + BALL.vy * uy;          // 음수 = 파고드는 중
-          if (along < 0) { BALL.vx -= along * ux * 1.3; BALL.vy -= along * uy * 1.3; } // 파고드는 성분만 반사
-          // 비례 밀기 — 파고든 깊이/dt = 캐릭터가 미는 속도. 거기에 GAIN을 곱해 공이 앞서 굴러가게 한다.
-          const pushV = Math.min(PUSH_V_MAX, (depth / Math.max(dt, 1 / 120)) * PUSH_GAIN);
-          if (pushV > 0) { BALL.vx += ux * pushV; BALL.vy += uy * pushV; }
-          if (!ballTouch.has(id) && along < 0) hitSpd = Math.max(hitSpd, -along); // 새 접촉의 실제 충돌 속도만 소리로
-        }
-      }
-      ballTouch = touching;
-      // 갇힘 판정 — 캐릭터에 닿은 채 거의 안 움직이는 상태가 STUCK_MS 이상 지속되면 빈 쪽으로 차서 꺼낸다.
-      const spdNow = Math.hypot(BALL.vx, BALL.vy);
-      // [DEV] 갇힘 검수용 관찰 훅 — '정지'와 '갇힘'은 다르다(혼자 멈춘 건 정상). 접촉 수까지 봐야 구분된다.
-      //  ★프레임 단위로 **누적**한다 — 밖에서 10Hz로 샘플링하면 1~2프레임짜리 짧은 접촉을 통째로 놓친다.
-      if (import.meta.env.DEV) {
-        const b = (window.__tgBall ||= { frames: 0, contactFrames: 0, maxStuckMs: 0, escapes: 0 });
-        b.v = spdNow; b.touch = touching.size; b.stuckMs = stuckMs;
-        b.frames += 1; if (touching.size > 0) b.contactFrames += 1;
-        b.maxStuckMs = Math.max(b.maxStuckMs, stuckMs);
-      }
-      if (touching.size > 0 && spdNow < STUCK_SPD) stuckMs += dt * 1000; else stuckMs = 0;
-      if (stuckMs > STUCK_MS && now - lastEscapeAt > 1200) {
-        stuckMs = 0; lastEscapeAt = now;
-        // 방향 = 주변 캐릭터들의 반대편 + 방 중앙 쪽을 섞는다(벽에 몰린 경우 중앙 성분이 빼준다).
-        let ax = 0, ay = 0, n = 0;
-        for (const o of COLL.values()) {
-          if (Math.hypot(BALL.x - o.x, BALL.y - o.y) < o.r + RB + 70) { ax += o.x; ay += o.y; n += 1; }
-        }
-        const awx = n ? BALL.x - ax / n : 0, awy = n ? BALL.y - ay / n : 0;
-        const cwx = W / 2 - BALL.x, cwy = H / 2 - BALL.y;
-        const la = Math.hypot(awx, awy) || 1, lc = Math.hypot(cwx, cwy) || 1;
-        let ex = (awx / la) * 0.6 + (cwx / lc) * 0.9, ey = (awy / la) * 0.6 + (cwy / lc) * 0.9;
-        const le = Math.hypot(ex, ey) || 1; ex /= le; ey /= le;
-        BALL.vx = ex * ESCAPE_V; BALL.vy = ey * ESCAPE_V;
-        BALL.fx = ESCAPE_V; // 킥 이펙트 예약(아래 spawnImpact가 소비) — '캐릭터가 빼줬다'로 읽히게
-        if (charCanSpeak()) playSfx('kick');
-        if (import.meta.env.DEV) { const b = (window.__tgBall ||= {}); b.escapes = (b.escapes || 0) + 1; }
-      }
-      // 3D 구름 — 굴림 축 = 이동 방향에 수직(화면평면 내). 매 프레임 구면 회전을 verts에 누적(dθ=거리/반지름).
-      const spd = Math.hypot(BALL.vx, BALL.vy);
-      if (spd > 1) {
-        // 굴림축 k = (n̂ × v)/|v|. draw는 월드 y가 위(화면 y는 아래)라 vy 부호를 뒤집어야 세로가 맞음 → kx = ny.
-        const nx = BALL.vx / spd, ny = BALL.vy / spd, kx = ny, ky = nx;
-        const dth = spd * dt / RB, c = Math.cos(dth), s = Math.sin(dth);
-        for (let i = 0; i < verts.length; i++) { const w = rot(verts[i], kx, ky, c, s); const L = Math.hypot(w[0], w[1], w[2]) || 1; verts[i] = [w[0] / L, w[1] / L, w[2] / L]; }
-      }
-      draw();
-      const [sx, sy, ds, dep] = project(BALL.x, BALL.y, W, H);
-      // 캐릭터와 동일 규약: 앵커(투영점)에서 발(그림자)이 +44 아래. 공도 발을 +44에 둬야 같은 바닥선에서 부딪히고
-      // z 정렬도 캐릭터(머리=투영점 기준)와 자연히 일치 → 앞 캐릭터가 공을 가리고 뒤 캐릭터는 공에 가려짐.
-      el.style.transform = `translate3d(${sx.toFixed(1)}px, ${(sy + 44).toFixed(1)}px, 0) scale(${ds.toFixed(3)})`;
-      el.style.zIndex = String(depthZ(dep));
-      // 타격 이펙트 — 공 중심(화면좌표)에 spawn. 킥(강함)은 kickBall이 예약(BALL.fx), 부딪힘은 여기서 강도로 판정.
-      const icx = sx, icy = sy + 44 - RB * ds; // 공 중심
-      if (BALL.fx) { spawnImpact(icx, icy, BALL.fx, 'kick'); BALL.fx = 0; }
-      // 부딪힘음 — 판정 근거는 **실제 파고든 속도**(hitSpd)다. 구버전의 `nowSpd - spd0 > 45`는 방금 우리가 준
-      //  임펄스를 재는 자기충족 조건이라 항상 참이었다. 캐릭터가 걸어와 살짝 미는 접촉은 hitSpd가 작아 무음.
-      else if (((hitSpd >= BUMP_MIN_SPD) || (wallHit && wallSpd > 80)) && now - lastBumpAt > 160) {
-        lastBumpAt = now; spawnImpact(icx, icy, Math.max(hitSpd, wallSpd), 'bump'); // 캐릭터 부딪힘·벽 튕김 공용
-        if (charCanSpeak()) playSfx('bump');
-      }
-    };
-    addTick(tick);
-    const onResize = () => { W = par.clientWidth; H = par.clientHeight; };
-    window.addEventListener('resize', onResize);
-    return () => { removeTick(tick); BALL.live = false; window.removeEventListener('resize', onResize); };
-  }, []);
-  const S = BALL.r * 2;
-  return (
-    <div ref={elRef} data-tg-ball="1" aria-hidden="true" style={{ position: 'absolute', left: 0, top: 0, pointerEvents: 'none', willChange: 'transform' }}>
-      {/* 접지 그림자 — 성조 캐릭터 그림자와 **같은 스타일**(블러 없는 단색 타원 rgba(70,62,52,0.13), 가로:세로 ≈ 46:11).
-          위치는 공 바닥(접점 y=0)에 살짝 물리게 — 아래로 떨어뜨리면 공이 떠 보인다(2026-08-07 사용자 지적). */}
-      <div style={{ position: 'absolute', left: '50%', top: -2, transform: 'translateX(-50%)', width: S * 1.08, height: S * 0.27, borderRadius: '50%', background: 'rgba(70,62,52,0.13)' }} />
-      {/* 공 — 회전하는 3D 구(캔버스). 접점에서 반지름만큼 위(그림자 위에 얹힘) */}
-      <canvas ref={cvRef} style={{ position: 'absolute', left: '50%', top: -BALL.r, transform: 'translate(-50%,-50%)', width: S, height: S, display: 'block' }} />
-    </div>
-  );
-}
 // 레벨 변화 콜아웃 — 스포트라이트 중 캐릭터 머리 위(흰 카드+꼬리). 상승=성조색 강조 / 하락=담백.
 function LevelCallout({ change, color }) {
   const up = change.dir === 'up';
@@ -483,7 +227,7 @@ function WanderingMark({ tone, i, level = 0, prog = 0, state = 'mid', celebrate 
     };
     // 초기 배치 = 앵커 + 소지터 → 로드 직후부터 골고루
     let pos = clampRoom(ax * W + (Math.random() - 0.5) * 60, ay * H + (Math.random() - 0.5) * 50);
-    let target = pos, mode = 'idle', v = { x: 0, y: 0 }, stuck = 0, ballChase = false;
+    let target = pos, mode = 'idle', v = { x: 0, y: 0 }, stuck = 0;
     let until = performance.now() + 800 + i * 700; // 캐릭터별 시차 시작(첫 쉼)
     // 위치 반영 — left/top(매 프레임 레이아웃 무효화) 대신 translate3d(합성 전용). left/top은 0 고정.
     // ⚠️ 초기 배치도 rAF tick과 반드시 같은 함수(apply)로 — 과거 초기배치와 rAF 코드가 달라 머리 UI 스케일 버그났던 전례.
@@ -504,13 +248,10 @@ function WanderingMark({ tone, i, level = 0, prog = 0, state = 'mid', celebrate 
       release: () => { if (mode === 'chat') { mode = 'idle'; setSt('idle'); setTilt(0); setSay(null); until = performance.now() + 900 + Math.random() * 1600; } },
     });
     const pick = (now) => {
-      ballChase = false;
       const r = Math.random();
       // 위치 변경은 드물게(평균 1~2분에 한 번), 대신 움직일 땐 의미 있는 거리로(2026-07-28 2차 조정)
       const t = r < 0.1 ? pickTarget() : null;
       if (t) { target = t; setTilt(target.x > pos.x ? 1 : -1); mode = 'move'; setSt('walk'); }
-      // 공이 멈춰 있으면(누가 막 찬 게 아니면) 아주 가끔 다가가 뻥 — 공을 향해 이동
-      else if (r >= 0.1 && r < 0.14 && BALL.live && Math.hypot(BALL.vx, BALL.vy) < 40) { ballChase = true; target = { x: BALL.x, y: BALL.y }; setTilt(BALL.x > pos.x ? 1 : -1); mode = 'move'; setSt('walk'); }
       else if (r < 0.96) { mode = 'idle'; setSt('idle'); setTilt(0); until = now + 6000 + Math.random() * 8000; }
       // 근처에 자유로운 친구가 있으면 듀엣(마주보고 주고받기) — 성공하면 상태는 startDuet가 몰음. 없으면 솔로 한마디.
       else if (!startDuet(mId)) { mode = 'talk'; setSt('talk'); setTilt(0); doHop(); const p = TALK_LINES[tone.num] || ['!']; setSay(p[Math.floor(Math.random() * p.length)]); if (charCanSpeak()) playSfx('tone' + tone.num); until = now + 1900; }
@@ -550,10 +291,8 @@ function WanderingMark({ tone, i, level = 0, prog = 0, state = 'mid', celebrate 
       const px0 = pos.x, py0 = pos.y;
       // 가속도 — 목표를 향해 속도가 점점 붙고, 도착 가까이서 감속(arrive)
       if (mode === 'move') {
-        if (ballChase) { if (BALL.live) target = { x: BALL.x, y: BALL.y }; else ballChase = false; } // 공은 움직이니 매 프레임 추적
         const dx = target.x - pos.x, dy = target.y - pos.y, dist = Math.hypot(dx, dy);
-        if (ballChase && BALL.live && dist < cr + BALL.r + 10) { kickBall(mId); ballChase = false; mode = 'idle'; setSt('idle'); setTilt(0); doHop(); until = now + 1500 + Math.random() * 2200; }
-        else if (dist < 3 && Math.hypot(v.x, v.y) < 8) { mode = 'idle'; setSt('idle'); setTilt(0); until = now + 6000 + Math.random() * 8000; }
+        if (dist < 3 && Math.hypot(v.x, v.y) < 8) { mode = 'idle'; setSt('idle'); setTilt(0); until = now + 6000 + Math.random() * 8000; }
         else {
           const arrive = Math.min(speed, dist * 2.6), ux = dx / (dist || 1), uy = dy / (dist || 1), resp = Math.min(1, 3.5 * dt);
           v.x += (ux * arrive - v.x) * resp; v.y += (uy * arrive - v.y) * resp;
@@ -1161,10 +900,6 @@ export function HomeScreen({
               introLine={introActive && coachTone === t.num ? `난 너의 ${t.name}! 같이 연습하면 무럭무럭 자라요` : null}
               onOpenCard={() => setCardTone(t.num)} />;
           })}
-          {/* 장난감 공 — 캐릭터와 같은 물리평면. 가끔 캐릭터가 와서 참(패스)·부딪히면 굴러감 */}
-          <ToyBall />
-          {/* 타격 이펙트 — 캐릭터 위 오버레이(공 차기·부딪힘 시 팝). 좌표계 공유를 위해 같은 컨테이너 안 */}
-          <ImpactFX />
         </div>
       </div>
 

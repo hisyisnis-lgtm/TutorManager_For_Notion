@@ -21,6 +21,10 @@ export const DIFFICULTIES = [
     unlockReveal: { icon: 'Crown', label: '고수 모드', desc: '고수에 도전할 수 있어요', accent: '#F0A91E' } },
 ];
 
+// 강사 단어 검수 완료 후 true로 전환한다. 점수·순차 해제 판정과 별개인 공개 상태다.
+export const THEME_MODE_ENABLED = false;
+export const THEME_MODE_NOTICE = '테마 모드의 단어를 확인하고 있어요. 조금만 기다려주세요.';
+
 // 테마 모드 — 난이도와 별개 축. 각 테마가 자체 gameKey라 최고점(loadBest)이 난이도처럼 자동으로 붙는다.
 // timeMultiplier: 테마는 난이도를 안 가르므로 중급(≈20초) 페이스로 통일.
 // ── 순차 잠금 사다리(2026-07-16) ──: 배열 순서 = 진열·해제 순서(왼→오 하나씩). 드라마(입문 자석)만 오픈,

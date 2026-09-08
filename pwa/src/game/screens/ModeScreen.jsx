@@ -7,7 +7,7 @@ import { ShakeButton, Reveal, GameHeader, FieldBg, prefersReducedMotion } from '
 import { EndlessStartModal, TrainingStartModal } from './gameModals.jsx';
 import CoachMarkOverlay from '../../components/ui/CoachMarkOverlay.jsx';
 import { useTabTip } from '../../hooks/useTabTip.js';
-import { DIFFICULTIES } from '../../constants/toneGameWords.js';
+import { DIFFICULTIES, THEME_MODE_ENABLED, THEME_MODE_NOTICE } from '../../constants/toneGameWords.js';
 
 const FIRST_LABEL = DIFFICULTIES[0].label;                       // 난이도 사다리 첫 급(현재 '입문')
 const LAST_LABEL = DIFFICULTIES[DIFFICULTIES.length - 1].label;  // 마지막 급(현재 '고수')
@@ -16,7 +16,7 @@ const ENDLESS_REQ = `${LAST_LABEL} 마지막 스테이지`;             // 무�
 // 첫 진입 코치마크 — 난이도 경로 안내. Reveal 등장(≈0.9s)이 끝난 뒤 표시(ready 게이트).
 const MODE_COACH = [
   { selector: '[data-coach="mode-difficulty"]', label: `여기서 난이도를 골라요. ${FIRST_LABEL}부터 차근차근 시작해보세요!` },
-  { selector: '[data-coach="mode-theme"]', label: '드라마·여행 등 취향대로 즐기는 테마 모드도 있어요.' },
+  { selector: '[data-coach="mode-theme"]', label: THEME_MODE_ENABLED ? '드라마·여행 등 취향대로 즐기는 테마 모드도 있어요.' : THEME_MODE_NOTICE },
   { selector: '[data-coach="mode-practice"]', label: '내 실력 범위에서 약한 단어를 골라 자유롭게 트레이닝할 수 있어요.' },
 ];
 // 입문 저조 시 트레이닝 유도 코치마크(조건부·1회). 트레이닝 칩만 스포트라이트.
@@ -120,7 +120,7 @@ function BigTile({ Icon, fill, edge, glow, dot, title, locked, onClick, onLocked
 // 피처 카드 — 흰 카드 + 컬러 아이콘 + 제목 + 오른쪽 화살표. 설명 문구는 제거(사용자 요청).
 function FeatureCard({ Icon, accent, title, locked, lockText, onClick, onLocked, coachId }) {
   return (
-    <ShakeButton shakeOnClick={locked} onClick={locked ? onLocked : onClick} className={locked ? '' : 'tg-press'} data-coach={coachId} style={{
+    <ShakeButton shakeOnClick={locked} onClick={locked ? onLocked : onClick} aria-disabled={locked || undefined} aria-label={locked ? `${title}, ${lockText}` : title} className={locked ? '' : 'tg-press'} data-coach={coachId} style={{
       width: '100%', height: 76, display: 'flex', alignItems: 'center', gap: SPACE.x2, textAlign: 'left', padding: '0 18px', borderRadius: RADIUS.xl, cursor: 'pointer',
       background: locked ? TG.SURFACE : '#fff', border: 'none',
       // 아래 4px 안쪽 테두리 = 도톰한 카드(오브와 같은 언어). 바깥은 옅은 드롭섀도.
@@ -169,7 +169,8 @@ export function ModeScreen({ endlessUnlocked, endlessBest = 0, onDifficulty, onT
         <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.xl }}>
           <Reveal i={3} style={{ paddingLeft: SPACE.x4, paddingRight: SPACE.x4 }}>
             <FeatureCard Icon={Album} accent={TG.THEME}
-              title="테마 모드" onClick={onTheme} coachId="mode-theme" />
+              title="테마 모드" locked={!THEME_MODE_ENABLED} lockText="준비 중"
+              onClick={onTheme} onLocked={() => onLocked?.(THEME_MODE_NOTICE, 'info')} coachId="mode-theme" />
           </Reveal>
           <Reveal i={4} style={{ paddingLeft: SPACE.x4, paddingRight: SPACE.x4 }}>
             <FeatureCard Icon={SquareAcademicCap} accent={TG.TRAIN}
