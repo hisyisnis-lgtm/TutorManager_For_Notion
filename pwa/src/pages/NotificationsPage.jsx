@@ -172,7 +172,7 @@ export default function NotificationsPage() {
     connecting: '연결 중',
     connected: '연결됨',
     error: '연결 오류',
-    off: '알림 연결 미설정',
+    off: '알림 내역 이용 불가',
   }[connStatus];
 
   if (connStatus === 'off') {
@@ -181,9 +181,9 @@ export default function NotificationsPage() {
         <PageHeader title="알림" back />
         <div className="flex flex-col items-center justify-center px-8 pt-24 gap-4 text-center">
           <span className="text-5xl">🔔</span>
-          <p className="text-gray-700 font-semibold">알림 연결이 준비되지 않았어요</p>
+          <p className="text-gray-700 font-semibold">알림 상세 내역을 표시할 수 없어요</p>
           <p className="text-sm text-gray-500">
-            관리자에게 알림 연결 설정을 요청해 주세요.
+            수업·상담 등 자세한 정보는 강사앱의 해당 화면에서 확인해 주세요.
           </p>
         </div>
       </>

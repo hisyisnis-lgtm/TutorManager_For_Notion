@@ -98,24 +98,7 @@ jobs:
           NTFY_TOKEN: ${{ secrets.NTFY_TOKEN }}
           R2_BACKUP_BUCKET: ${{ secrets.R2_BACKUP_BUCKET }}
         run: |
-          if [ -z "$NTFY_TOPIC_OPS" ]; then
-            echo "::warning::NTFY_TOPIC_OPS 미등록 — 결제 백업 성공 알림 건너뜀"
-            exit 0
-          fi
-          MONTH=$(TZ='Asia/Seoul' date +%Y-%m)
-          SIZE_KB=$(awk "BEGIN{printf \"%.1f\", ${{ steps.backup.outputs.compressed_size }} / 1024}")
-          MSG=$(printf '월간 결제 내역 백업 R2 업로드 완료 (5년 보존).\n결제: %s건\n크기: %s KB\n키: %s/notion-payments/%s.json.gz' \
-            "${{ steps.backup.outputs.payment_count }}" \
-            "$SIZE_KB" \
-            "$R2_BACKUP_BUCKET" \
-            "$MONTH")
-          if [ -z "$NTFY_TOKEN" ]; then echo "::warning::NTFY_TOKEN 미설정 — 비공개 알림 건너뜀"; exit 0; fi
-          curl -fsS -X POST "https://ntfy.sh/$NTFY_TOPIC_OPS" \
-            -H "Authorization: Bearer $NTFY_TOKEN" \
-            -H "Title: 결제 백업 완료 (5년)" \
-            -H "Priority: 2" \
-            -H "Tags: moneybag,white_check_mark" \
-            -d "$MSG"
+          node 01_automation/ntfy_privacy.mjs NTFY_TOPIC_OPS payments-backup-complete
 
       - name: 실패 알림 (critical)
         if: steps.date_check.outputs.is_last_day == 'true' && failure()
@@ -123,15 +106,4 @@ jobs:
           NTFY_TOPIC_CRITICAL: ${{ secrets.NTFY_TOPIC_CRITICAL }}
           NTFY_TOKEN: ${{ secrets.NTFY_TOKEN }}
         run: |
-          if [ -z "$NTFY_TOPIC_CRITICAL" ]; then exit 0; fi
-          MSG=$(printf '월간 결제 백업 실패 (세법 5년 보존 의무).\n링크: %s/%s/actions/runs/%s' \
-            "${{ github.server_url }}" \
-            "${{ github.repository }}" \
-            "${{ github.run_id }}")
-          if [ -z "$NTFY_TOKEN" ]; then echo "::warning::NTFY_TOKEN 미설정 — 비공개 알림 건너뜀"; exit 0; fi
-          curl -fsS -X POST "https://ntfy.sh/$NTFY_TOPIC_CRITICAL" \
-            -H "Authorization: Bearer $NTFY_TOKEN" \
-            -H "Title: 결제 백업 실패" \
-            -H "Priority: 5" \
-            -H "Tags: rotating_light,moneybag" \
-            -d "$MSG"
+          node 01_automation/ntfy_privacy.mjs NTFY_TOPIC_CRITICAL payments-backup-failed

@@ -1,6 +1,7 @@
 // 자동화 스크립트 공통 유틸리티
 
 import { createHmac, randomBytes } from 'crypto';
+import { publishNtfySafely } from './ntfy_privacy.mjs';
 
 /**
  * Notion API 클라이언트 + queryAll 생성
@@ -234,23 +235,11 @@ export async function loadPaidSessions(queryAll, paymentsDbId) {
  */
 export function createNtfyClient(topic, ntfyToken) {
   return async function sendNtfy(title, message, priority = 3) {
-    if (!topic || !ntfyToken) {
-      console.error('[ntfy] 알림 토픽 또는 인증 설정이 없습니다.');
-      return { ok: false, reason: 'ntfy_not_configured' };
-    }
-    const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${ntfyToken}` };
-    try {
-      const res = await fetch('https://ntfy.sh', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ topic, title, message, priority }),
-        redirect: 'error',
-      });
-      if (!res.ok) console.error(`ntfy 전송 실패 (${res.status}): ${await res.text()}`);
-      else console.log(`ntfy 알림 전송 완료: ${title}`);
-    } catch (e) {
-      console.error('ntfy 전송 오류:', e.message);
-    }
+    const level = priority >= 5 ? 'critical' : priority <= 2 ? 'digest' : priority === 3 ? 'warn' : 'info';
+    const result = await publishNtfySafely({ token: ntfyToken, payload: { topic, title, message, priority }, level });
+    if (!result.ok) console.warn('[ntfy] 알림을 전송할 수 없습니다. 설정 또는 연결을 확인해주세요.');
+    else console.log('[ntfy] 알림 전송 완료.');
+    return result;
   };
 }
 
@@ -277,24 +266,13 @@ export async function sendAlert({ level = 'info', title, message, tags } = {}) {
   const PRIORITY_MAP = { critical: 5, warn: 3, digest: 2, info: 4 };
   const topic = TOPIC_MAP[level] || env.NTFY_TOPIC;
   const priority = PRIORITY_MAP[level] || 4;
-  if (!topic || !env.NTFY_TOKEN) {
-    console.error('[ntfy] 알림 토픽 또는 인증 설정이 없습니다.');
-    return { ok: false, reason: 'ntfy_not_configured' };
-  }
-
-  // 모든 수준은 인증 필수. 대상 토픽의 익명 읽기/쓰기 ACL도 운영에서 거부한다.
-  const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${env.NTFY_TOKEN}` };
-
   const payload = { topic, title, message, priority };
   if (Array.isArray(tags) && tags.length > 0) payload.tags = tags;
 
-  try {
-    const res = await fetch('https://ntfy.sh', { method: 'POST', headers, body: JSON.stringify(payload), redirect: 'error' });
-    if (!res.ok) console.error(`[ntfy:${level}] 전송 실패 ${res.status}: ${await res.text()}`);
-    else console.log(`[ntfy:${level}] 발송: ${title}`);
-  } catch (e) {
-    console.error(`[ntfy:${level}] 네트워크 오류:`, e.message);
-  }
+  const result = await publishNtfySafely({ token: env.NTFY_TOKEN, payload, level });
+  if (!result.ok) console.warn('[ntfy] 알림을 전송할 수 없습니다. 설정 또는 연결을 확인해주세요.');
+  else console.log('[ntfy] 알림 전송 완료.');
+  return result;
 }
 
 /**

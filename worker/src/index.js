@@ -9,6 +9,7 @@ import { boundedRequest, RequestTooLarge, secureResponse } from '../lib/httpSecu
 import { authorizeNotionRequest, pageInDatabase } from '../lib/notionScope.js';
 import { studentHomeworkPage } from '../lib/homeworkPrivacy.js';
 import { teacherNotifications } from '../lib/notifications.js';
+import { isPrivateNtfyTopic, publicNtfyAlert } from '../lib/ntfyPrivacy.js';
 import {
   ConsultSchema,
   HomeworkSubmitSchema,
@@ -504,6 +505,7 @@ async function sendAlert(env, { level = 'info', title, message, tags, dedupKey, 
     console.error('[ntfy] 알림 토픽 또는 인증 설정이 없습니다.');
     return { ok: false, reason: 'ntfy_not_configured' };
   }
+  const privateTopic = await isPrivateNtfyTopic(env, topic);
 
   // dedup: 동일 키로 ttl 내 중복 발송 차단 (Cloudflare Cache API)
   if (dedupKey) {
@@ -511,28 +513,27 @@ async function sendAlert(env, { level = 'info', title, message, tags, dedupKey, 
       const cache = caches.default;
       const cacheReq = new Request(`https://ntfy-dedup.local/${level}/${encodeURIComponent(dedupKey)}`);
       const hit = await cache.match(cacheReq);
-      if (hit) { console.log(`[ntfy:${level}] dedup hit:`, dedupKey); return; }
+      if (hit) { console.log('[ntfy] 중복 알림 생략'); return; }
       await cache.put(cacheReq, new Response('1', { headers: { 'Cache-Control': `public, max-age=${ttlSeconds}` } }));
-    } catch (e) {
-      console.warn('[ntfy] dedup 캐시 오류 (무시하고 발송):', e.message);
+    } catch {
+      console.warn('[ntfy] 중복 확인 실패');
     }
   }
 
   try {
-    // 모든 수준의 알림은 예약된 비공개 토픽과 인증 토큰을 사용한다.
-    // 대상 토픽의 ntfy 읽기/쓰기 ACL도 운영 설정에서 익명 거부로 관리해야 한다.
+    // 비공개 소유권·ACL 확인이 된 토픽에만 상세 내용을 보낸다.
+    // 무료/공개/확인 실패 시 정적 안내만 전달하여 개인정보를 공개하지 않는다.
     const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${env.NTFY_TOKEN}` };
-    const payload = { topic, title, message, priority };
-    if (Array.isArray(tags) && tags.length > 0) payload.tags = tags;
+    const payload = privateTopic ? { topic, title, message, priority } : { topic, ...publicNtfyAlert(level, title) };
+    if (privateTopic && Array.isArray(tags) && tags.length > 0) payload.tags = tags;
     const res = await fetch('https://ntfy.sh', { method: 'POST', headers, body: JSON.stringify(payload), redirect: 'error' });
     if (!res.ok) {
-      const text = await res.text().catch(() => '');
-      console.error(`[ntfy:${level}] HTTP ${res.status}:`, text);
+      console.error(`[ntfy] 발송 실패 HTTP ${res.status}`);
     } else {
-      console.log(`[ntfy:${level}] 발송 성공:`, title);
+      console.log('[ntfy] 발송 성공');
     }
-  } catch (e) {
-    console.error(`[ntfy:${level}] 네트워크 오류:`, e.message);
+  } catch {
+    console.error('[ntfy] 발송 연결 오류');
   }
 }
 
@@ -545,7 +546,13 @@ async function sendAlert(env, { level = 'info', title, message, tags, dedupKey, 
 // 트레이드오프: ntfy.sh 직접 호출 대비 약 5~15초 지연. 무료상담은 카톡 알림톡으로 가고
 // 이 함수를 쓰는 곳은 숙제 제출 알림 1곳뿐이라 지연 허용 가능.
 async function sendNtfy(env, message, title = 'New Consultation') {
-  await githubDispatch(env, 'ntfy-relay', { title, message, level: 'info' });
+  if (!env.NTFY_TOPIC || !env.NTFY_TOKEN) {
+    console.error('[ntfy] 알림 토픽 또는 인증 설정이 없습니다.');
+    return { ok: false, reason: 'ntfy_not_configured' };
+  }
+  const privateTopic = await isPrivateNtfyTopic(env, env.NTFY_TOPIC);
+  const alert = privateTopic ? { title, message } : publicNtfyAlert('info', title);
+  await githubDispatch(env, 'ntfy-relay', { title: alert.title, message: alert.message, level: 'info' });
 }
 
 /**
@@ -668,7 +675,7 @@ async function runScheduledJobs(env) {
   }
 
   // dispatch 실패가 조용히 사라지면 그 시간대 알림이 통째로 빠진다.
-  // critical 토픽은 anonymous라 워커에서 ntfy.sh 직접 발송이 된다(GitHub이 죽어도 뚫린다).
+  // 긴급 알림도 비공개 예약을 확인하며 공개 토픽에는 정적 안내만 직접 발송한다.
   // 재시도가 매시간 돌므로 dedup 1시간이면 시간당 1회로 묶인다.
   if (failed.length > 0) {
     await sendAlert(env, {

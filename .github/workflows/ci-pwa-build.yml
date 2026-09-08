@@ -85,16 +85,4 @@ jobs:
           NTFY_TOPIC_CRITICAL: ${{ secrets.NTFY_TOPIC_CRITICAL }}
           NTFY_TOKEN: ${{ secrets.NTFY_TOKEN }}
         run: |
-          if [ -z "$NTFY_TOPIC_CRITICAL" ]; then exit 0; fi
-          MSG=$(printf 'main 브랜치 PWA 빌드가 실패했습니다.\n커밋: %s\n링크: %s/%s/actions/runs/%s' \
-            "${{ github.sha }}" \
-            "${{ github.server_url }}" \
-            "${{ github.repository }}" \
-            "${{ github.run_id }}")
-          if [ -z "$NTFY_TOKEN" ]; then echo "::warning::NTFY_TOKEN 미설정 — 비공개 알림 건너뜀"; exit 0; fi
-          curl -fsS -X POST "https://ntfy.sh/$NTFY_TOPIC_CRITICAL" \
-            -H "Authorization: Bearer $NTFY_TOKEN" \
-            -H "Title: PWA 빌드 실패" \
-            -H "Priority: 5" \
-            -H "Tags: rotating_light,package" \
-            -d "$MSG"
+          node 01_automation/ntfy_privacy.mjs NTFY_TOPIC_CRITICAL pwa-build-failed
