@@ -1,4 +1,4 @@
-// 홈 허브 — 게임 로비. 플랫 카툰 룸(벽·몰딩·타일 바닥) 안을 성조마크 캐릭터(idle/walk/talk)가 돌아다님.
+// 홈 허브 — 게임 로비. 밝은 다락방(크림 벽·사각창·나무 바닥) 안을 성조마크 캐릭터(idle/walk/talk)가 돌아다님.
 // 좌상단 내 정보(아바타+등급명+게이지%) · 우상단 메뉴 · 중앙 하단 스트릭+게임시작 키캡 CTA · 하단 공통 탭바.
 // 2026-07-27 리디자인(사용자 Figma 시안 442:2): 2.5D 원근·바닥 영토 제거, 도크·플로팅 허브 → 탭바로 통합.
 import { useState, useRef, useEffect, useLayoutEffect } from 'react';
@@ -7,7 +7,7 @@ import {
   QuestionCircle, Logout, AltArrowLeft, VolumeLoud, VolumeCross, SmartphoneVibration, CloseCircle,
   MusicNotes, MusicNote, Pen, InfoCircle, LinkCircle, Notebook, TextField, Refresh, TrashBinTrash,
 } from '@solar-icons/react';
-import { TG, HOME, TYPE, TOUCH_OPT, TONE_KEY_COLORS, FONT_HANZI, FONT_PINYIN, haptic, isHapticMuted, setHapticMuted, isMeaningHidden, setMeaningHidden, isPinyinHidden, setPinyinHidden, RADIUS, SPACE, TONE_COLORS, SCENE, SHADOW, keycap } from '../tgTokens.js';
+import { TG, HOME, TYPE, TOUCH_OPT, TONE_KEY_COLORS, FONT_HANZI, FONT_PINYIN, haptic, isHapticMuted, setHapticMuted, isMeaningHidden, setMeaningHidden, isPinyinHidden, setPinyinHidden, RADIUS, SPACE, TONE_COLORS, SHADOW, keycap } from '../tgTokens.js';
 import { TONE_SAMPLES } from '../tutorialWords.js';
 import { speakWord } from '../tgTts.js';
 import { TONES } from '../../constants/toneGameWords.js';
@@ -22,6 +22,7 @@ import { resetGameData, getMemberSession } from '../gameStore.js';
 import { deleteGameMe } from '../../api/gameApi.js';
 import { NicknameEditModal } from './NicknameEditModal.jsx';
 import { ProfileModal } from './ProfileModal.jsx';
+import RoomBackdrop from './RoomBackdrop.jsx';
 import CoachMarkOverlay from '../../components/ui/CoachMarkOverlay.jsx';
 import { useTabTip } from '../../hooks/useTabTip.js';
 
@@ -122,48 +123,6 @@ const levelScale = (lv) => 0.62 + (Math.min(5, Math.max(1, lv || 1)) - 1) / 4 * 
 function project(x, y, W, H) {
   const d = H > 0 ? Math.min(1, Math.max(0, y / H)) : 0.5; // 0=뒤 … 1=앞(zIndex용)
   return [x, y, 1, d];
-}
-// 플랫 카툰 룸 v2 — 사용자 Figma 시안(442:2, 2026-07-27 2차 수정) 그대로.
-// 벽 = 탄 바탕 + 연크림 세로 패널(20w·40피치, x5 시작) · 하부 = 브라운 웨인스코팅(패널 아웃라인 장식)
-// 창문 = 상단 차양판 + 프레임(스트로크 없음) + 유리 상단 하드섀도 + 두께감 창턱. 다크 브라운 라인은 시안에서 제거됨.
-const TILE_PATTERN = `url("data:image/svg+xml,${encodeURIComponent(
-  `<svg xmlns='http://www.w3.org/2000/svg' width='90' height='70'><rect x='0' y='0' width='40' height='30' rx='8' fill='${SCENE.TILE}'/><rect x='45' y='35' width='40' height='30' rx='8' fill='${SCENE.TILE}'/></svg>`,
-)}")`;
-const PANEL_LINE_PATTERN = `url("data:image/svg+xml,${encodeURIComponent(
-  `<svg xmlns='http://www.w3.org/2000/svg' width='40' height='39'><rect x='5.5' y='0.5' width='19' height='25' fill='none' stroke='${SCENE.PANEL_LINE}'/></svg>`,
-)}")`;
-function RoomWindow({ left, right }) {
-  // 유리 4장 — 모서리는 창틀 바깥쪽만 2px(per-corner), 위 2장은 차양 하드섀도(0 2px)
-  const glassR = ['2px 0 0 0', '0 2px 0 0', '0 0 0 2px', '0 0 2px 0'];
-  return (
-    <div style={{ position: 'absolute', left, right, top: 12, width: 76, height: 60 }}>
-      {/* 상단 차양 판 — 프레임보다 2.3px 위로 노출 */}
-      <div style={{ position: 'absolute', left: 3, top: 0, width: 70, height: 36, borderRadius: 4, background: SCENE.MOLD_LIGHT }} />
-      {/* 프레임 + 유리 2×2 */}
-      <div style={{ position: 'absolute', left: 3, top: 2.3, width: 70, height: 55, borderRadius: 4, background: SCENE.MOLD_MID, display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gap: 4, padding: 4, boxSizing: 'border-box' }}>
-        {[0, 1, 2, 3].map((k) => <div key={k} style={{ background: SCENE.GLASS, borderRadius: glassR[k], boxShadow: k < 2 ? `0 2px 0 ${SCENE.MOLD_LIGHT}` : 'none' }} />)}
-      </div>
-      {/* 창턱 — 하단 인셋으로 두께감 */}
-      <div style={{ position: 'absolute', left: 0, top: 52, width: 76, height: 8, borderRadius: 2, background: SCENE.MOLD_LIGHT, boxShadow: keycap(SCENE.MOLD_MID, { lift: null }) }} />
-    </div>
-  );
-}
-function FlatRoom() {
-  return (
-    <div aria-hidden="true" style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
-      {/* 바닥 + 타일(40×30 r8, 가로 피치 90·행 피치 35·반칸 오프셋 45 — 시안 실측) */}
-      <div style={{ position: 'absolute', left: 0, right: 0, top: 144, bottom: 0, backgroundColor: SCENE.FLOOR, backgroundImage: TILE_PATTERN, backgroundSize: '90px 70px', backgroundPosition: '-73px 3px' }} />
-      {/* 벽(탄) + 연크림 세로 패널 스트라이프 */}
-      <div style={{ position: 'absolute', left: 0, right: 0, top: 0, height: 105, backgroundColor: SCENE.WALL, backgroundImage: `repeating-linear-gradient(90deg, transparent 0 5px, ${SCENE.PANEL} 5px 25px, transparent 25px 40px)` }} />
-      {/* 하부 웨인스코팅(브라운) — 상단 라이트 라인 + 패널 아웃라인 */}
-      <div style={{ position: 'absolute', left: 0, right: 0, top: 105, height: 39, background: SCENE.MOLD_MID, boxShadow: `inset 0 1.7px 0 ${SCENE.MOLD_LIGHT}`, backgroundImage: PANEL_LINE_PATTERN, backgroundRepeat: 'repeat-x', backgroundPosition: '0 0' }} />
-      {/* 걸레받이 라이트 라인 */}
-      <div style={{ position: 'absolute', left: 0, right: 0, top: 129, height: 2, background: SCENE.MOLD_LIGHT }} />
-      {/* 창문 2(벽 장식) — 좌 left81·우 right81(390 기준 시안과 동일, 와이드에선 좌우 대칭) */}
-      <RoomWindow left={81} />
-      <RoomWindow right={81} />
-    </div>
-  );
 }
 const depthZ = (d) => 300 + Math.round(d * 300); // 깊이 → zIndex(앞이 위)
 // 홈 방이 실제로 화면에 보이는 중인지 — 성조 캐릭터 목소리(playSfx 'tone*') 게이트.
@@ -1187,10 +1146,10 @@ export function HomeScreen({
   //  홈만 자기 FigmaScreen을 그리면 탭 전환 때 컴포넌트 타입이 달라져 통째로 remount → 진입 페이드가 재생돼 탭바가 깜빡였다(2026-08-06).
   return (
     <>
-      {/* 방 (플랫 카툰 룸) — 벽·몰딩·타일 바닥 위를 캐릭터가 돌아다님 */}
+      {/* 방 — 창가의 햇빛과 나무 바닥 위를 캐릭터가 돌아다님 */}
       <div style={{ position: 'absolute', inset: 0, zIndex: 0 }}>
         {/* 풀블리드 + 독립 stacking context(zIndex:0) — 캐릭터(내부 z300~600)가 UI(HUD/탭바/버튼) 위로 안 뜨고 방 안에만. */}
-        <FlatRoom />
+        <RoomBackdrop />
         {/* 캐릭터 컨테이너 — 물리 좌표계(평면). 걷기 영역 = 몰딩 아래 ~ 스트릭 필 위. overflow visible(말풍선·머리 배지) */}
         <div style={{ position: 'absolute', left: 0, right: 0, top: ROOM_TOP, bottom: `calc(${TAB_BAR_H + 130}px + env(safe-area-inset-bottom))`, overflow: 'visible' }}>
           {TONES.map((t, i) => {

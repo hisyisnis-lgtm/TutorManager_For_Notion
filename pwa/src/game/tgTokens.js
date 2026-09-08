@@ -89,7 +89,7 @@ export const BG_MESH = [
 // 시그니처: 하드(블러0) 파스텔 섀도(TG.KEY_EDGE) · 키캡 인너엣지(TAB_RED_EDGE) · 브라운 잉크 계열. 탭 레드·CTA 엣지·카드섀도·탭보더·BROWN은 2026-09-04 A단계에서 TG로 흡수/삭제.
 // 홈 허브 방 일러스트 팔레트(벽·몰딩·바닥·창) — UI 토큰(TG/HOME)과 섞이지 않게 분리(2026-09-04 B단계). 일러스트 전용, 버튼·텍스트에 쓰지 말 것.
 export const SCENE = {
-  WALL: '#D9BA84',              // 상단 벽(탄)
+  WALL: '#F3E8D2',              // 로비의 밝은 크림 벽
   WALL_BAND: '#EFE4CF',         // 벽 하부 연크림 띠
   MOLD_DARK: '#734728',         // 몰딩 외곽 라인·창문 스트로크
   MOLD_LIGHT: '#C48C64',        // 몰딩 상단
@@ -99,8 +99,12 @@ export const SCENE = {
   GLASS: '#FFE79D',             // 창문 유리
   PANEL: '#D2B17B',             // 벽 세로 패널 스트라이프 — 시안 #F7F3ED MULTIPLY×벽(#D9BA84) 평탄화 값(2026-07-28 색 수정)
   SMOKE: '#EEE9D3',              // 굴뚝 연기 퍼프
+  SMOKE_SHADE: '#D6CFB9',        // 원본 들판의 크림색 하늘 위에서도 보이는 연기
   RAIL: '#9AAC5D',               // 난이도 사다리 레일(들판 올리브)
   PANEL_LINE: '#905E3D',        // 하부 웨인스코팅 패널 아웃라인 — 시안 #E0D7D1 MULTIPLY×밴드(#A46F4A) 평탄화 값
+  ROOM_PANEL: '#D8D2AC',       // 들판 색과 이어지는 옅은 올리브 벽 하단
+  ROOM_LIGHT: '#FFFBEED9',     // 창가와 바닥에 번지는 부드러운 햇빛
+  ROOM_SKY: '#D8E8EF',         // 다락방 창문으로 보이는 하늘
 };
 
 export const HOME = {
@@ -180,10 +184,10 @@ export const TYPE = {
   title:   { fontFamily: FONT_TITLE, fontSize: 20},  // 등급명·테마명 등 히어로
   head:    { fontFamily: FONT_BODY, fontWeight: 700, fontSize: 20},  // 화면 헤더 — 깔끔한 고딕 볼드(2026-07-23, 구 Jua 둥근체에서 변경)
   // 디스플레이 숫자(FONT_NUM)
-  numHero: { fontFamily: FONT_NUM, fontWeight: 700, fontSize: 60 }, // 결과 점수(원오프는 size 오버라이드)
-  numLg:   { fontFamily: FONT_NUM, fontWeight: 700, fontSize: 24}, // 통계 수치
-  numMd:   { fontFamily: FONT_NUM, fontWeight: 700, fontSize: 20 }, // 소형 수치
-  num:     { fontFamily: FONT_NUM, fontWeight: 700, fontSize: 13 }, // 인라인 미니 수치
+  numHero: { fontFamily: FONT_NUM, fontWeight: 700, fontSize: 60, fontVariantNumeric: 'tabular-nums' }, // 결과 점수
+  numLg:   { fontFamily: FONT_NUM, fontWeight: 700, fontSize: 24, fontVariantNumeric: 'tabular-nums' }, // 통계 수치
+  numMd:   { fontFamily: FONT_NUM, fontWeight: 700, fontSize: 20, fontVariantNumeric: 'tabular-nums' }, // 소형 수치
+  num:     { fontFamily: FONT_NUM, fontWeight: 700, fontSize: 13, fontVariantNumeric: 'tabular-nums' }, // 인라인 미니 수치
   // 본문 강조(FONT_BODY) — 제목·버튼
   h1:      { fontFamily: FONT_BODY, fontWeight: 700, fontSize: 17}, // 카드·섹션 강조 제목
   h2:      { fontFamily: FONT_BODY, fontWeight: 700, fontSize: 15}, // 소제목 강조
@@ -226,6 +230,9 @@ export const SPACE = { xxs: 4, xs: 4, sm: 8, md: 8, lg: 12, xl: 12, x2: 16, x3: 
 
 // ── 모션 토큰 ──────────────────────────────────────────
 export const DUR = { micro: '150ms', state: '220ms', enter: '360ms' };
+
+// 실제 보이는 면과 터치 영역을 일치시킨다. 보조 동작 44, 주요 키캡 60.
+export const CONTROL = { minHit: 44, ctaHeight: 60 };
 
 // 인터랙티브 요소 공통 — 모바일 탭 지연 제거 + iOS tap highlight 끔
 export const TOUCH_OPT = {

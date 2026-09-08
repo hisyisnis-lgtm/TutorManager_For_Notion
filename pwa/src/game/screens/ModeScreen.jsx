@@ -89,7 +89,7 @@ function ToneBurstInner({ color, count }) {
 const ORB = 98;
 function BigTile({ Icon, fill, edge, glow, dot, title, locked, onClick, onLocked, coachId, iconStyle }) {
   return (
-    <ShakeButton shakeOnClick={locked} onClick={locked ? onLocked : onClick} className={locked ? '' : 'tg-press'} data-coach={coachId} style={{
+    <ShakeButton shakeOnClick={locked} onClick={locked ? onLocked : onClick} aria-label={locked ? `${title}, ${ENDLESS_REQ} 클리어 후 열림` : title} className={locked ? '' : 'tg-press'} data-coach={coachId} style={{
       flex: 1, minWidth: 0, background: 'none', border: 'none', cursor: 'pointer',
       display: 'flex', flexDirection: 'column', alignItems: 'center', gap: SPACE.x2, padding: '6px 4px', ...TOUCH_OPT,
     }}>
@@ -112,6 +112,7 @@ function BigTile({ Icon, fill, edge, glow, dot, title, locked, onClick, onLocked
       </div>
       {/* 라벨은 잠김이어도 INK — 잠김 표시는 무광 원+자물쇠 배지가 맡고 글자는 또렷하게(Figma 리디자인) */}
       <span style={{ ...TYPE.h1, color: TG.INK }}>{title}</span>
+      {locked && <span style={{ ...TYPE.meta, color: TG.SUB, marginTop: -SPACE.sm }}>마지막 스테이지 클리어 후</span>}
     </ShakeButton>
   );
 }
@@ -151,11 +152,10 @@ export function ModeScreen({ endlessUnlocked, endlessBest = 0, onDifficulty, onT
       <FieldBg />
       {/* 시안(643:1617): 60px · 반투명 크림+블러 · 타이틀 가운데 · 하선 없음 — 들판 배경이 헤더 아래로 비쳐 이어진다 */}
       <GameHeader title="모드 선택" onBack={onBack} glass center />
-      {/* 코치=상단 / 주력 원형 버튼=중앙 밴드 / 나머지=하단. 원형 주력이 화면 중앙을 채워 '빈 중간'이 사라진다.
-          (space-between은 남는 공간을 전부 가운데로 몰아 중간이 비었음 — 주력을 중앙에 앉히는 방식으로 교체) */}
-      <div style={{ position: 'absolute', left: 0, right: 0, top: 84, bottom: 'calc(26px + env(safe-area-inset-bottom))', display: 'flex', flexDirection: 'column' }}>
-        {/* 주력 난이도·무한 — 남는 중앙 공간(flex:1)에 세로 중앙정렬로 앉혀 화면 한가운데를 차지 */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+      {/* 선택지를 한 묶음으로 유지. 작은 화면은 스크롤하고 큰 화면은 풍경 위 중앙에 배치한다. */}
+      <div style={{ position: 'absolute', left: 0, right: 0, top: 72, bottom: 'env(safe-area-inset-bottom)', overflowY: 'auto', overflowX: 'hidden' }}>
+      <div style={{ minHeight: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: `clamp(${SPACE.xl}px, calc(100dvh - 560px), ${SPACE.x5}px)`, padding: '8px 0 calc(var(--tg-colw) * .472)' }}>
+        <div>
           <Reveal i={2} style={{ paddingLeft: SPACE.x4, paddingRight: SPACE.x4 }}>
             <div style={{ display: 'flex', gap: SPACE.xl }}>
               <BigTile Icon={Star} fill={TG.CTA} edge={TG.CTA_EDGE} glow="rgba(242,72,76,0.30)" dot={TG.CORAL_DK} title="난이도 모드" onClick={onDifficulty} coachId="mode-difficulty" />
@@ -165,7 +165,7 @@ export function ModeScreen({ endlessUnlocked, endlessBest = 0, onDifficulty, onT
             </div>
           </Reveal>
         </div>
-        {/* 나머지 — 테마 + 연습/복습, 하단 */}
+        {/* 테마·트레이닝도 같은 선택 영역 안에서 탐색 */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.xl }}>
           <Reveal i={3} style={{ paddingLeft: SPACE.x4, paddingRight: SPACE.x4 }}>
             <FeatureCard Icon={Album} accent={TG.THEME}
@@ -178,6 +178,7 @@ export function ModeScreen({ endlessUnlocked, endlessBest = 0, onDifficulty, onT
               coachId="mode-practice" />
           </Reveal>
         </div>
+      </div>
       </div>
       <CoachMarkOverlay visible={tip.visible} onDone={tip.dismiss} steps={MODE_COACH} delay={160} showControls={false} />
       {/* 입문 저조 유도 — 첫 진입 코치와 안 겹치게(그게 끝난 뒤에만), 트레이닝 칩만 강조.

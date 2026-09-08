@@ -1,9 +1,9 @@
 // 게임 화면 (Figma 좌표 절대배치) — 점수·일시정지·타이머·단어카드·코치·성조버튼 + 콤보/신기록 버스트 연출(P4b).
 import { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { Stopwatch, Bones, Logout } from '@solar-icons/react';
-import { TG, TYPE, TOUCH_OPT, RADIUS, SPACE } from '../tgTokens.js';
+import { TG, TYPE, TOUCH_OPT, RADIUS, SPACE, CONTROL } from '../tgTokens.js';
 import { play as playSfx } from '../tgSfx.js';
-import { Reveal, WordCard, ToneButtons, DrawPad, CoachBubble, ConfettiBurst, CrispFlash, GameHeader, PauseButton, LIGHT_CONFETTI, prefersReducedMotion, TONE_SHOT_HOVER_MS, TONE_FLIGHT_MS, TONE_IMPACT_MS } from './shared.jsx';
+import { FieldBg, Reveal, WordCard, ToneButtons, DrawPad, CoachBubble, ConfettiBurst, CrispFlash, GameHeader, PauseButton, LIGHT_CONFETTI, prefersReducedMotion, TONE_SHOT_HOVER_MS, TONE_FLIGHT_MS, TONE_IMPACT_MS } from './shared.jsx';
 import { ComboChip, ToneMark } from '../tgWidgets.jsx';
 import { TONES } from '../../constants/toneGameWords.js';
 import { useTabTip } from '../../hooks/useTabTip.js';
@@ -396,7 +396,7 @@ export function GameScreen({ title = '', word, entered, currentSyl, completed, t
   //   **아무것도 보여주지 않은 채 1회성 안내를 영구 소모**하고 있었다(tab_tips_v1에 '봤음'으로 기록).
   //   조작법은 튜토리얼이 이미 가르치므로 배선을 걷어낸다. 되살리려면 시안 09 기준 Figma 디자인이 먼저 필요.
   return (
-    <div ref={shakeRef} data-tg-shake-root="1" style={{ position: 'absolute', inset: 0 }}>
+    <div ref={shakeRef} className={`${practice ? 'tg-practice' : ''} ${draw ? 'tg-draw' : ''}`} data-tg-shake-root="1" style={{ position: 'absolute', inset: 0 }}>
       {/* 콤보 화염 — '불붙는다'는 긍정적 모멘텀(피격 비네트 아님). 사방 외곽에서 불씨가 피어오름 + 골드 글로우 플리커. 콘텐츠 뒤(zIndex0)·비차단 */}
       {heat > 0 && (
         <div aria-hidden="true" style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0, opacity: 0.72 + heat * 0.28 }}>
@@ -414,11 +414,8 @@ export function GameScreen({ title = '', word, entered, currentSyl, completed, t
       {/* 성조 발사체 — 버튼→현재 글자 비행(정답=착탄 팝 동기, 오답=튕겨 낙하). 비차단·연출 전용 */}
       {shots.map((s) => <ToneShot key={s.key} shot={s} onDone={removeShot} onMissImpact={onMissImpact} />)}
       {/* 건너뛰기 티켓 소모 — 버튼→카드 비행 후 흡수(글자 공개와 동기) */}
-      {/* 배경 — 시안 09의 들판(산맥 #F2EBDB + 동산 #DFEB8D + 그림자 타원). 원본 1287×872를 스케일 0으로 하단 정렬.
-          bottom:-588 = 시안에서 그림 아래가 화면 밖으로 내려가 있던 값 → 지평선이 항상 같은 자리 */}
-      <div aria-hidden="true" style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none', zIndex: 0 }}>
-        <img src="/game/game-field.svg" alt="" style={{ position: 'absolute', left: '50%', bottom: -588, width: 1287, height: 872, maxWidth: 'none', transform: 'translateX(-50%)', display: 'block' }} />
-      </div>
+      {/* 집에서 나와 숲속 빈터에서 연습하는 장면 — 입력 컨트롤 뒤의 하단 장식. */}
+      <FieldBg scene="forest" />
       {/* 저시간 비네트 — 막바지에 화면 가장자리 붉은 맥동(텐션 램프 보강·게이지 심박과 동기). 비차단 */}
       {lowTime && !practice && (
         <div aria-hidden="true" style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 3,
@@ -426,8 +423,8 @@ export function GameScreen({ title = '', word, entered, currentSyl, completed, t
       )}
       {/* 점수 (상단 중앙) — 트레이닝에서도 표시(2026-08-06 사용자 요청: 얼마나 잘하고 있는지 보이게) */}
       {/* 시안 09: 칩·별 없이 숫자만 크게(26) — 타이머 바로 아래 중앙 */}
-      <Reveal i={0} play={playReveal} style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', top: 108 }}>
-        <span data-testid="tg-score" style={{ ...TYPE.numMd, fontSize: 26, lineHeight: 1, color: TG.INK }}>{score}</span>
+      <Reveal i={0} play={playReveal} style={{ position: 'absolute', left: 'var(--tg-score-left, 50%)', transform: 'var(--tg-score-transform, translateX(-50%))', top: 'var(--tg-score-top, 108px)', zIndex: 4 }}>
+        <span data-testid="tg-score" style={{ ...TYPE.numMd, fontSize: 'var(--tg-score-size, 26px)', lineHeight: 1, color: TG.INK }}>{score}</span>
       </Reveal>
       {/* 헤더 — 글래스 60 + 스테이지명(가운데) + **우측 일시정지**(2026-08-12 사용자 지정).
           구 시안 09는 좌측 뒤로가기였는데, 그 버튼이 실제로 여는 건 일시정지 모달이라 라벨·아이콘과 동작이 어긋났다.
@@ -470,7 +467,7 @@ export function GameScreen({ title = '', word, entered, currentSyl, completed, t
         </Reveal>
       )}
       {/* 단어카드 top129 (폭 채움) — 단어 바뀔 때마다 키 변경으로 입장 모션(tg-card-in) */}
-      <Reveal i={2} play={playReveal} style={{ position: 'absolute', left: 24, right: 24, top: 179 }}>
+      <Reveal i={2} play={playReveal} style={{ position: 'absolute', left: 24, right: 24, top: 'var(--tg-word-top, 179px)' }}>
         <div style={{ position: 'relative' }}>
           <div key={`card-${runId}-${wordIndex}`} style={{ animation: 'tg-card-in .38s cubic-bezier(.22,1,.36,1) both' }}>
             <div style={{ position: 'relative', transform: freeze ? 'scale(1.035)' : 'none', animation: punch ? 'tg-punch .35s ease-out' : 'none', '--tg-punch-s': (1.05 + heat * 0.05).toFixed(3) }}>
@@ -498,8 +495,8 @@ export function GameScreen({ title = '', word, entered, currentSyl, completed, t
       </Reveal>
       {/* 트레이닝 종료 — 무한이라 자발적 종료용. 발음듣기/정답보기는 카드로 이관됨 → 성조버튼과 카드 사이 밴드에 배치(오터치 방지) */}
       {practice && onEndTraining && (
-        <Reveal i={3} play={playReveal} style={{ position: 'absolute', left: 0, right: 0, bottom: 'calc(150px + env(safe-area-inset-bottom))', display: 'flex', justifyContent: 'center' }}>
-          <button onClick={onEndTraining} className="tg-press" style={{ display: 'inline-flex', alignItems: 'center', gap: SPACE.sm, padding: '9px 18px', borderRadius: RADIUS.lg, background: '#fff', border: `1.5px solid ${TG.BORDER}`, boxShadow: '0px 2px 6px rgba(43,39,48,0.05)', cursor: 'pointer', ...TOUCH_OPT }}>
+        <Reveal i={3} play={playReveal} style={{ position: 'absolute', left: 0, right: 0, top: 'var(--tg-training-top, auto)', bottom: 'var(--tg-training-bottom, calc(150px + env(safe-area-inset-bottom)))', display: 'flex', justifyContent: 'center' }}>
+          <button onClick={onEndTraining} className="tg-press" style={{ minHeight: CONTROL.minHit, display: 'inline-flex', alignItems: 'center', gap: SPACE.sm, padding: '9px 18px', borderRadius: RADIUS.lg, background: TG.CARD, border: `1.5px solid ${TG.BORDER}`, boxShadow: '0px 2px 6px rgba(43,39,48,0.05)', cursor: 'pointer', ...TOUCH_OPT }}>
             <Logout size={15} weight="Bold" color={TG.SUB} />
             <span style={{ ...TYPE.label, color: TG.SUB, whiteSpace: 'nowrap' }}>{endLabel}</span>
           </button>
@@ -509,7 +506,7 @@ export function GameScreen({ title = '', word, entered, currentSyl, completed, t
           ★패드는 top/bottom으로 높이를 잡으므로 Reveal(이중 div, 안쪽 height 없음) 대신 단일 positioned div로 감싸 height:100%가 살게 함 */}
       {draw ? (
         <div
-          style={{ position: 'absolute', left: 24, right: 24, top: 518, bottom: 'calc(26px + env(safe-area-inset-bottom))', }}>
+          style={{ position: 'absolute', left: 24, right: 24, top: 'var(--tg-draw-top, 518px)', bottom: 'calc(26px + env(safe-area-inset-bottom))', }}>
           <DrawPad expectedTone={drawExpectedTone} onDraw={onDraw} disabled={completed || !playReveal || paused} resetKey={drawResetKey} />
         </div>
       ) : (

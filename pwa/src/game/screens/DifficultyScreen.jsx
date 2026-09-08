@@ -196,7 +196,7 @@ export function DifficultyScreen({ studentToken, rank = 0, onSelect, onStart, on
   return (
     <>
       {/* 배경 — 모드선택과 같은 들판(맨 뒤). 리스트가 그 위를 스크롤한다 */}
-      <FieldBg artRef={artRef} />
+      <FieldBg artRef={artRef} sink={-SPACE.x5 * 3} />
       {/* 헤더 — 시안: 60px 글래스 + 가운데 타이틀 */}
       <GameHeader title="난이도 모드" onBack={onBack} glass center />
 

@@ -1,0 +1,141 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1536" height="1024" viewBox="0 0 1536 1024">
+  <title>성조다락방 들판 배경</title>
+  <desc>단색 벡터 원본. 하늘과 들판, 뒤 수풀, 나무, 굴뚝, 집, 정지된 연기, 앞 수풀 순서로 배치한 독립 SVG.</desc>
+  <defs>
+    <g id="field-backdrop">
+  <path fill="#FFFDF8" d="M0 0H1536V1024H0Z"/>
+  <path fill="#C4C75A" d="M0 757C183 720 421 694 660 687C832 681 1001 690 1197 703C1339 712 1465 729 1536 747V1024H0Z"/>
+  <path fill="#F6E5BB" d="M704 750C696 733 727 727 746 728C767 728 780 736 779 751C778 765 758 767 756 779C751 794 782 805 817 817C854 830 887 846 882 871C878 899 835 917 794 942C758 964 728 995 742 1024H384C399 985 449 952 512 927C566 906 642 888 683 872C706 862 721 850 711 837C699 821 667 818 661 801C654 785 673 771 694 763C703 759 707 756 704 750Z"/>
+  <g fill="#E5CC98">
+    <path d="M780 847C780 839 814 839 814 847C814 856 780 856 780 847Z"/>
+    <path d="M705 914C705 903 746 903 746 914C746 925 705 925 705 914Z"/>
+    <path d="M612 937C612 926 660 926 660 937C660 948 612 948 612 937Z"/>
+    <path d="M641 958C641 948 683 948 683 958C683 967 641 967 641 958Z"/>
+  </g>
+  <g fill="#8E9635">
+    <g transform="translate(320 803) scale(.73 1)">
+      <path d="M-9 10C-14 3-27-4-23-8C-18-13-9-4-5 6ZM-2 10C-4 3-6-11 0-13C8-16 7-2 5 10ZM9 10C12 2 20-7 25-4C33 1 21 7 18 11Z"/>
+    </g>
+    <g transform="translate(503 870) scale(.96 .9)">
+      <path d="M-9 10C-14 3-27-4-23-8C-18-13-9-4-5 6ZM-2 10C-4 3-6-11 0-13C8-16 7-2 5 10ZM9 10C12 2 20-7 25-4C33 1 21 7 18 11Z"/>
+    </g>
+    <g transform="translate(1013 819) scale(.76 .83)">
+      <path d="M-9 10C-14 3-27-4-23-8C-18-13-9-4-5 6ZM-2 10C-4 3-6-11 0-13C8-16 7-2 5 10ZM9 10C12 2 20-7 25-4C33 1 21 7 18 11Z"/>
+    </g>
+    <g transform="translate(1104 804) scale(.65 .93)">
+      <path d="M-9 10C-14 3-27-4-23-8C-18-13-9-4-5 6ZM-2 10C-4 3-6-11 0-13C8-16 7-2 5 10ZM9 10C12 2 20-7 25-4C33 1 21 7 18 11Z"/>
+    </g>
+    <g transform="translate(1262 759) scale(.84 .8)">
+      <path d="M-9 10C-14 3-27-4-23-8C-18-13-9-4-5 6ZM-2 10C-4 3-6-11 0-13C8-16 7-2 5 10ZM9 10C12 2 20-7 25-4C33 1 21 7 18 11Z"/>
+    </g>
+    <g transform="translate(1192 879) scale(.98 .9)">
+      <path d="M-9 10C-14 3-27-4-23-8C-18-13-9-4-5 6ZM-2 10C-4 3-6-11 0-13C8-16 7-2 5 10ZM9 10C12 2 20-7 25-4C33 1 21 7 18 11Z"/>
+    </g>
+    <g transform="translate(940 934) scale(.98 .95)">
+      <path d="M-9 10C-14 3-27-4-23-8C-18-13-9-4-5 6ZM-2 10C-4 3-6-11 0-13C8-16 7-2 5 10ZM9 10C12 2 20-7 25-4C33 1 21 7 18 11Z"/>
+    </g>
+    <g transform="translate(1404 910) scale(.65 .95)">
+      <path d="M-9 10C-14 3-27-4-23-8C-18-13-9-4-5 6ZM-2 10C-4 3-6-11 0-13C8-16 7-2 5 10ZM9 10C12 2 20-7 25-4C33 1 21 7 18 11Z"/>
+    </g>
+  </g>
+  <g fill="#FFF8DF">
+    <g transform="translate(275 811)">
+      <path d="M0-14C5-16 10-11 8-6C14-10 21-6 19 0C18 4 13 6 10 5C14 11 8 17 3 13L0 10C-3 17-12 15-13 10C-14 7-11 4-8 3C-16 4-21-2-16-7C-12-11-7-8-5-6C-6-12-4-14 0-14Z"/>
+      <path fill="#E5AD42" d="M-6 0C-6-6 6-6 6 0C6 6-6 6-6 0Z"/>
+    </g>
+    <g transform="translate(296 789) scale(.65 .65)">
+      <path d="M0-14C5-16 10-11 8-6C14-10 21-6 19 0C18 4 13 6 10 5C14 11 8 17 3 13L0 10C-3 17-12 15-13 10C-14 7-11 4-8 3C-16 4-21-2-16-7C-12-11-7-8-5-6C-6-12-4-14 0-14Z"/>
+      <path fill="#E5AD42" d="M-6 0C-6-6 6-6 6 0C6 6-6 6-6 0Z"/>
+    </g>
+    <g transform="translate(1052 804) scale(1 1.03)">
+      <path d="M0-14C5-16 10-11 8-6C14-10 21-6 19 0C18 4 13 6 10 5C14 11 8 17 3 13L0 10C-3 17-12 15-13 10C-14 7-11 4-8 3C-16 4-21-2-16-7C-12-11-7-8-5-6C-6-12-4-14 0-14Z"/>
+      <path fill="#E5AD42" d="M-6 0C-6-6 6-6 6 0C6 6-6 6-6 0Z"/>
+    </g>
+    <g transform="translate(1077 787) scale(.57 .62)">
+      <path d="M0-14C5-16 10-11 8-6C14-10 21-6 19 0C18 4 13 6 10 5C14 11 8 17 3 13L0 10C-3 17-12 15-13 10C-14 7-11 4-8 3C-16 4-21-2-16-7C-12-11-7-8-5-6C-6-12-4-14 0-14Z"/>
+      <path fill="#E5AD42" d="M-6 0C-6-6 6-6 6 0C6 6-6 6-6 0Z"/>
+    </g>
+    <g transform="translate(1328 922) scale(1.13 1.05)">
+      <path d="M0-14C5-16 10-11 8-6C14-10 21-6 19 0C18 4 13 6 10 5C14 11 8 17 3 13L0 10C-3 17-12 15-13 10C-14 7-11 4-8 3C-16 4-21-2-16-7C-12-11-7-8-5-6C-6-12-4-14 0-14Z"/>
+      <path fill="#E5AD42" d="M-6 0C-6-6 6-6 6 0C6 6-6 6-6 0Z"/>
+    </g>
+    <g transform="translate(1366 895) scale(1.06 1.02)">
+      <path d="M0-14C5-16 10-11 8-6C14-10 21-6 19 0C18 4 13 6 10 5C14 11 8 17 3 13L0 10C-3 17-12 15-13 10C-14 7-11 4-8 3C-16 4-21-2-16-7C-12-11-7-8-5-6C-6-12-4-14 0-14Z"/>
+      <path fill="#E5AD42" d="M-6 0C-6-6 6-6 6 0C6 6-6 6-6 0Z"/>
+    </g>
+  </g>
+
+    </g>
+    <g id="field-trees">
+<g id="field-trees-small-olive">
+    <path fill="#919D29" d="M224 284C223 225 267 177 324 177C382 177 425 222 425 287C446 288 462 303 468 325C488 339 499 363 499 389C499 423 478 449 448 459C438 484 415 499 386 499C367 499 350 492 337 479C321 493 299 500 275 500C243 500 218 486 207 464C170 460 145 429 145 386C145 341 175 306 212 290Z"/>
+    <path fill="#AA792F" d="M312 395C312 373 345 373 345 395L348 444L376 421C390 409 405 424 391 438L353 478L364 564C366 575 361 581 349 581H311C299 581 295 575 298 564L307 477L265 436C252 423 268 409 281 422L310 444Z"/>
+  </g>
+  <g id="field-trees-large-lime">
+    <path fill="#C4CC43" d="M770 183C769 107 831 49 910 49C989 49 1049 108 1049 183C1116 180 1167 228 1165 290C1165 315 1157 337 1141 355C1157 372 1168 392 1168 418C1168 452 1145 476 1108 483C1093 511 1067 528 1034 528C1002 528 975 514 953 500C935 519 915 528 892 528C865 528 844 515 826 496C810 514 786 528 756 527C725 526 699 511 687 485C668 467 658 443 658 416C658 391 668 368 686 351C674 335 666 314 666 291C666 236 702 189 770 183Z"/>
+    <path fill="#AA792F" d="M891 399C891 370 930 370 930 399L934 459L971 412C983 398 1008 415 992 433L945 488L956 593C958 606 950 612 936 612H891C876 612 870 605 873 591L884 487L831 439C816 425 833 409 848 422L889 455Z"/>
+  </g>
+  <g id="field-trees-large-olive">
+    <path fill="#919D29" d="M219 775C218 697 284 634 369 634C455 634 521 695 521 774C576 768 620 808 618 865C639 883 651 908 651 937C651 978 623 1009 588 1023C575 1063 547 1091 507 1091C480 1091 456 1080 438 1061C417 1082 390 1095 361 1095C332 1095 309 1083 288 1064C269 1076 247 1081 223 1080C186 1079 155 1052 150 1018C117 1009 95 982 95 942C95 909 111 883 139 867C144 820 175 784 219 775Z"/>
+    <path fill="#AA792F" d="M341 951C341 918 382 918 385 949L390 1019L432 978C447 964 465 982 451 997L399 1049L409 1171C411 1186 403 1192 387 1192H337C321 1192 315 1185 318 1170L329 1048L283 1000C269 985 288 969 302 984L337 1019Z"/>
+  </g>
+  <g id="field-trees-small-lime">
+    <path fill="#C4CC43" d="M850 897C850 840 896 795 954 795C1013 795 1059 839 1059 898C1096 897 1127 928 1127 970C1127 1007 1105 1036 1078 1043C1067 1074 1043 1094 1012 1093C991 1093 977 1083 964 1072C947 1089 925 1098 900 1093C872 1091 851 1073 833 1054C798 1040 775 1017 775 980C775 935 806 904 850 897Z"/>
+    <path fill="#AA792F" d="M939 1000C939 977 970 977 970 1000L973 1039L994 1017C1008 1004 1023 1020 1010 1033L979 1064L987 1162C989 1174 983 1178 971 1178H940C927 1178 922 1173 924 1162L932 1064L894 1034C881 1023 895 1009 908 1019L937 1040Z"/>
+  </g>
+
+    </g>
+    <g id="field-shrubs">
+<path id="field-shrubs-shrub-left" fill="#A5B432" d="M82 581C75 552 83 527 106 512C126 496 149 501 165 510C178 459 219 429 268 429C325 429 368 469 372 521C392 510 414 516 429 532C442 546 446 563 441 581C474 575 497 594 497 623C497 651 475 665 439 666C336 669 151 667 84 665C48 664 29 651 29 625C27 599 48 582 82 581Z"/>
+  <path id="field-shrubs-shrub-center" fill="#BAC63E" d="M595 557C594 516 617 492 650 491C660 490 670 492 680 497C694 442 739 401 791 401C846 401 891 434 901 483C920 471 944 476 957 491C972 504 974 526 968 547C1000 543 1038 566 1038 611C1038 651 1013 667 973 667C877 669 709 668 617 667C575 667 550 650 550 615C550 587 569 564 595 557Z"/>
+  <path id="field-shrubs-shrub-right" fill="#929F28" d="M1144 603C1141 559 1177 544 1207 555C1213 504 1258 468 1307 468C1356 468 1392 497 1397 545C1439 542 1466 565 1460 595C1491 591 1508 607 1508 633C1508 654 1494 665 1468 666C1379 669 1227 667 1156 665C1127 664 1112 654 1112 635C1112 619 1125 607 1144 603Z"/>
+
+    </g>
+    <g id="field-house">
+<path d="M589 621H660V747H601Q589 747 589 735Z" fill="#E4D5AD"/>
+  <path d="M650 629 798 491 940 625 937 735Q937 747 925 747H662Q650 747 650 735Z" fill="#FFF2D5"/>
+  <rect x="608" y="662" width="16" height="32" rx="5" fill="#D2C194"/>
+
+  <path d="M700 747V670C700 646 718 627 740 627S780 646 780 670V747Z" fill="#B88A3B"/>
+  <path d="M706 747V671C706 651 721 636 740 636S774 651 774 671V747Z" fill="#C99B48"/>
+  <path d="M740 637V747" stroke="#BE903E" stroke-width="2"/>
+  <ellipse cx="762" cy="697" rx="7" ry="8" fill="#967226"/>
+
+  <circle cx="860" cy="656" r="38" fill="#BF913E"/>
+  <circle cx="860" cy="656" r="29" fill="#8C752D"/>
+  <clipPath id="field-house-window"><circle cx="860" cy="656" r="29"/></clipPath>
+  <path d="M860 624V688M828 656H892" stroke="#D5AB56" stroke-width="9" clip-path="url(#field-house-window)"/>
+<path d="M560 616Q563 610 571 605L681 508Q689 502 701 496L781 454Q798 445 810 452Q815 455 820 459L970 598Q980 608 973 623Q967 637 954 636Q945 637 939 632L805 507Q798 500 792 506L654 632Q642 643 627 642H578Q558 640 560 616Z" fill="#7E841E"/>
+  <path d="M561 615Q564 610 572 604L682 508Q690 502 701 496L781 454Q789 450 797 449L633 601Q627 607 623 611Z" fill="#A2AA31"/>
+  <path d="M628 604 783 455Q798 443 812 453L969 596Q978 603 976 613Q974 622 966 626Q956 632 947 624L806 496Q799 489 792 495L651 624Q641 633 630 627Q616 620 628 604Z" fill="#8E9625"/>
+
+    </g>
+    <g id="field-chimney">
+<path d="M7 15 22 22V170L7 163Z" fill="#D1BE8E"/>
+  <path d="M22 22H58V170H22Z" fill="#E3D1A6"/>
+  <path d="M2 10 20 18V27L2 19Z" fill="#C7B47F"/>
+  <path d="M20 18H63V27H20Z" fill="#DFCCA1"/>
+  <path d="M2 10H45L63 18H20Z" fill="#F0E2BD"/>
+  <path d="M12 12H42L53 17H23Z" fill="#8E7849"/>
+  <path d="M12 12H42L46 14H17Z" fill="#766239"/>
+
+    </g>
+  </defs>
+  <use href="#field-backdrop"/>
+  <svg id="hedge-left-edge" x="-24" y="675" width="210" height="110" viewBox="23 422 480 251" preserveAspectRatio="none" overflow="hidden"><use href="#field-shrubs"/></svg>
+  <svg id="hedge-left" x="267" y="641" width="195" height="109" viewBox="543 394 500 280" preserveAspectRatio="none" overflow="hidden"><use href="#field-shrubs"/></svg>
+  <svg id="hedge-right-edge" x="1372" y="663" width="210" height="110" viewBox="23 422 480 251" preserveAspectRatio="none" overflow="hidden"><use href="#field-shrubs"/></svg>
+  <svg id="tree-small-left" x="96" y="510" width="210" height="239" viewBox="135 166 374 426" preserveAspectRatio="none" overflow="hidden"><use href="#field-trees"/></svg>
+  <svg id="tree-small-right" x="1200" y="496" width="225" height="245" viewBox="765 784 372 405" preserveAspectRatio="none" overflow="hidden"><use href="#field-trees"/></svg>
+  <svg id="tree-left" x="285" y="320" width="370" height="409" viewBox="648 36 531 587" preserveAspectRatio="none" overflow="hidden"><use href="#field-trees"/></svg>
+  <svg id="tree-right" x="880" y="300" width="420" height="424" viewBox="85 621 576 582" preserveAspectRatio="none" overflow="hidden"><use href="#field-trees"/></svg>
+  <svg id="chimney" x="855" y="421" width="64" height="170" viewBox="0 0 64 170" preserveAspectRatio="none" overflow="hidden"><use href="#field-chimney"/></svg>
+  <svg id="house" x="550" y="440" width="440" height="312" viewBox="550 440 440 312" preserveAspectRatio="none" overflow="hidden"><use href="#field-house"/></svg>
+  <g id="smoke" fill="#D6CFB9"><circle cx="887.5" cy="423" r="6"/><circle cx="895" cy="406" r="9"/><circle cx="904" cy="383" r="12"/></g>
+  <svg id="hedge-right" x="1080" y="631" width="218" height="113" viewBox="1106 461 407 212" preserveAspectRatio="none" overflow="hidden"><use href="#field-shrubs"/></svg>
+  <svg id="shrub-house-left" x="420" y="665" width="183" height="95" viewBox="1106 461 407 212" preserveAspectRatio="none" overflow="hidden"><use href="#field-shrubs"/></svg>
+  <svg id="shrub-house-left-small" x="551" y="702" width="109" height="61" viewBox="543 394 500 280" preserveAspectRatio="none" overflow="hidden"><use href="#field-shrubs"/></svg>
+  <svg id="shrub-house-right" x="936" y="676" width="170" height="89" viewBox="23 422 480 251" preserveAspectRatio="none" overflow="hidden"><use href="#field-shrubs"/></svg>
+  <svg id="shrub-foreground-left" x="54" y="836" width="196" height="102" viewBox="1106 461 407 212" preserveAspectRatio="none" overflow="hidden"><use href="#field-shrubs"/></svg>
+  <svg id="shrub-foreground-right" x="1350" y="749" width="130" height="68" viewBox="23 422 480 251" preserveAspectRatio="none" overflow="hidden"><use href="#field-shrubs"/></svg>
+</svg>

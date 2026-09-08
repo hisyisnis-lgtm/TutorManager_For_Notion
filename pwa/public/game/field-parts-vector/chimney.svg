@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="170" viewBox="0 0 64 170">
+  <!-- Complete shaft; the roof masks the base. Depth recedes upper-left. -->
+  <path d="M7 15 22 22V170L7 163Z" fill="#D1BE8E"/>
+  <path d="M22 22H58V170H22Z" fill="#E3D1A6"/>
+  <path d="M2 10 20 18V27L2 19Z" fill="#C7B47F"/>
+  <path d="M20 18H63V27H20Z" fill="#DFCCA1"/>
+  <path d="M2 10H45L63 18H20Z" fill="#F0E2BD"/>
+  <path d="M12 12H42L53 17H23Z" fill="#8E7849"/>
+  <path d="M12 12H42L46 14H17Z" fill="#766239"/>
+</svg>

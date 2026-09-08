@@ -1,0 +1,36 @@
+.tg-room-backdrop {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  container-type: inline-size;
+  container-name: tone-room;
+}
+
+.tg-room-scene {
+  position: absolute;
+  inset: 0;
+  display: block;
+}
+
+.tg-room-floor {
+  height: calc(100% - 144px);
+}
+
+.tg-room-window {
+  position: absolute;
+  right: clamp(70px, 20.7%, 124px);
+  top: 16px;
+  width: 80px;
+  height: 77px;
+}
+
+/* 작은 방에서는 프로필·설정 사이에 창문을 끼우지 않고 설정 아래에 둔다. */
+@container tone-room (max-width: 359px) {
+  .tg-room-window {
+    right: 24px;
+    top: 74px;
+    width: 58px;
+    height: 56px;
+  }
+}

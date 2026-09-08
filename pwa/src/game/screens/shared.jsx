@@ -6,11 +6,13 @@ import { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { DoubleAltArrowRight, Lock, CheckCircle, VolumeLoud, VolumeCross, AltArrowLeft, Star, Eye,
   HandStars, NotebookBookmark, Home as HomeIcon, Cup, Stars, Pause, AltArrowRight } from '@solar-icons/react';
 import { TG, HOME, FONT_HANZI, FONT_PINYIN, TYPE, SHADOW, DUR, TOUCH_OPT, TONE_COLORS, TONE_KEY_COLORS, ASSETS,
-  haptic, isMeaningHidden, setMeaningHidden, isPinyinHidden, setPinyinHidden, RADIUS, SPACE, keycap, SCENE } from '../tgTokens.js';
+  haptic, isMeaningHidden, setMeaningHidden, isPinyinHidden, setPinyinHidden, RADIUS, SPACE, CONTROL, keycap } from '../tgTokens.js';
 import { ToneMark } from '../tgWidgets.jsx';
 import { TONES } from '../../constants/toneGameWords.js';
 import { play as playSfx } from '../tgSfx.js';
 import { classifyStroke } from '../toneDraw.js';
+import FieldIllustration from './FieldIllustration.jsx';
+import ForestIllustration from './ForestIllustration.jsx';
 
 // 카운트다운 슬라이드 가장자리 진폭 폭(px) — keyframes(tg-cd-out)와 CdWaveEdge가 공유.
 export const CD_WAVE_W = 12;
@@ -188,7 +190,37 @@ const TONE_GAME_CSS = `
          ★56.25vh 단일값이면 카톡 인앱 브라우저처럼 상하 툴바가 높이를 깎는 환경에서
            컬럼이 폰 가로폭보다 좁아져 좌우 빈 띠가 생긴다(2026-08-31 사용자 지적) → orientation 분기. */
       :root { --tg-colw: min(600px, 56.25vh); }
+      @keyframes tg-field-smoke-rise {
+        0% { transform: translate(0, 15%) scale(.45); opacity: 0; }
+        18% { opacity: .8; }
+        65% { opacity: .5; }
+        100% { transform: translate(70%, -390%) scale(2); opacity: 0; }
+      }
+      .tg-field-smoke { animation: tg-field-smoke-rise 4.8s ease-out infinite; }
+      .tg-field-art { aspect-ratio: 1536 / 724; }
+      @keyframes tg-field-tree-sway {
+        0%, 100% { rotate: 0deg; }
+        25% { rotate: .8deg; }
+        75% { rotate: -.8deg; }
+      }
+      .tg-field-tree { animation: tg-field-tree-sway 5.6s ease-in-out infinite; }
+      .tg-field-parts[data-paused="true"] .tg-field-tree,
+      .tg-field-parts[data-paused="true"] .tg-field-smoke { animation-play-state: paused; }
+      @media (prefers-reduced-motion: reduce) {
+        .tg-field-tree { animation: none; }
+        .tg-field-smoke { display: none; animation: none; }
+      }
       @media (orientation: portrait) { :root { --tg-colw: min(600px, 100vw); } }
+      /* 낮은 뷰포트에서도 결과 통계와 행동이 함께 보이도록 밀도만 줄인다. */
+      @media (max-height: 740px) {
+        .tg-root { --tg-result-panda: 96px; --tg-result-number: 50px; --tg-result-space: 16px; --tg-result-stat-height: 104px; --tg-stat-icon-top: 8px; --tg-stat-label-top: 40px; --tg-stat-value-top: 64px; }
+      }
+      @media (max-height: 620px) {
+        .tg-root { --tg-result-panda: 80px; }
+        .tg-practice { --tg-score-top: 20px; --tg-score-left: 24px; --tg-score-transform: none; --tg-score-size: 20px; --tg-training-top: 112px; --tg-training-bottom: auto; }
+        .tg-draw { --tg-score-top: 20px; --tg-score-left: 24px; --tg-score-transform: none; --tg-score-size: 20px; --tg-word-top: 148px; --tg-draw-top: 436px; }
+        .tg-draw [data-draw-hint] { flex-direction: row !important; }
+      }
       /* 감탄로드 탄탄체 — 타이틀 리디자인(2026-07-28) 필·안내문용. 상업용 무료(강원특별자치도×투게더그룹), fonts-archive CDN */
       @font-face { font-family: 'GamtanRoad Tantan'; font-weight: normal; font-display: swap;
         src: url('https://cdn.jsdelivr.net/gh/fonts-archive/GamtanRoadTantan/GamtanRoadTantan.woff2') format('woff2'),
@@ -306,8 +338,10 @@ const TONE_GAME_CSS = `
       .tg-idle{ display: flex; animation: tg-idle 2.6s ease-in-out infinite }
       /* 누를 땐 빠르게 쏙 들어가고(.09s), 뗄 땐 살짝 튕기며 부드럽게 복귀(back-out 스프링) */
       /* 누름 피드백 — 하루에 수백 번. 복귀가 280ms면 손을 뗀 뒤에도 버튼이 늘어져 굼떠 보인다 → 140ms(권장 100~160) */
-      .tg-press{ transition: transform .14s cubic-bezier(.23,1,.32,1) }
-      .tg-press:active{ transform: scale(.96); transition: transform .09s cubic-bezier(.23,1,.32,1) }
+      .tg-root .tg-press{ transition: scale ${DUR.micro} cubic-bezier(.23,1,.32,1) }
+      .tg-root .tg-press:active:not(:disabled){ scale: .96 }
+      .tg-root :is(button, [role="switch"], input, [data-result-content]):focus-visible{ outline: 2px solid ${TG.INK}; outline-offset: -4px }
+      @media (prefers-reduced-motion: reduce){ .tg-root .tg-press{ transition: none } .tg-root .tg-press:active:not(:disabled){ scale: 1 } }
       /* 하단탭 비활성 듀오톤 — Solar BoldDuotone 보조 레이어(path opacity .5)가 너무 연해 .72로(2026-09-04) */
       .tg-tab-duo-off path[opacity]{ opacity: .72 }
       /* ── 히트영역 44px 확보 — 보이는 크기는 그대로 두고 탭 영역만 넓힌다(2026-08-18 검수) ──────
@@ -664,9 +698,9 @@ export function ModalBody({ lines }) {
 // 화면들이 인라인으로 재구현하던 키캡(inset 0 -4px 0 엣지) 패턴의 단일 출처(2026-08-31 승격).
 //   children을 주면 라벨 대신 그대로 렌더(2줄 구성·커스텀 내용). labelStyle로 폰트만 덮어쓰기.
 export function KeycapCta({ bg = TG.CTA, edge = TG.CTA_EDGE, color = '#fff', label, labelStyle, Icon, iconSize = 18,
-  onClick, height = 60, radius = RADIUS.xl, disabled = false, style, children, ...rest }) {
+  onClick, height = CONTROL.ctaHeight, radius = RADIUS.xl, disabled = false, style, children, ...rest }) {
   return (
-    <button className="tg-press" onClick={onClick} disabled={disabled} {...rest} style={{
+    <button type="button" className="tg-press" onClick={onClick} disabled={disabled} {...rest} style={{
       width: '100%', height, borderRadius: radius, border: 'none', cursor: disabled ? 'default' : 'pointer', paddingBottom: 4,
       background: bg, boxShadow: keycap(edge),
       display: 'flex', alignItems: 'center', justifyContent: 'center', gap: SPACE.md, ...TOUCH_OPT, ...style,
@@ -683,7 +717,7 @@ export function KeycapCta({ bg = TG.CTA, edge = TG.CTA_EDGE, color = '#fff', lab
 // 보조 텍스트 버튼 — '닫기'/'나중에' 등. 14 Bold 회색(라인 24).
 export function ModalTextButton({ label = '닫기', color = TG.STEEL, onClick }) {
   return (
-    <button className="tg-press" onClick={onClick} style={{ width: '100%', padding: 0, background: 'none', border: 'none', cursor: 'pointer', ...TOUCH_OPT }}>
+    <button type="button" className="tg-press" onClick={onClick} style={{ width: '100%', minHeight: CONTROL.minHit, padding: 0, background: 'none', border: 'none', cursor: 'pointer', ...TOUCH_OPT }}>
       <span style={{ ...TYPE.label, lineHeight: '24px', color }}>{label}</span>
     </button>
   );
@@ -769,9 +803,9 @@ function SandhiToneChip({ big = false }) {
   );
 }
 
-// 카드 하단 액션 버튼(발음 듣기·정답보기) — 시안 09 실측 스타일. 문구는 상태와 무관하게 고정.
+// 보조 동작도 보이는 면 전체를 44px로. 성조 입력 키보다 얕은 키캡으로 구분한다.
 const CARD_ACT_ICON = TG.STEEL, CARD_ACT_TEXT = TG.STEEL;
-const CARD_ACT_BTN = { height: 30, padding: '0 13px', borderRadius: 10, background: '#fff', border: `1px solid ${TG.KEY_EDGE}`, display: 'inline-flex', alignItems: 'center', gap: 6, ...TOUCH_OPT };
+const CARD_ACT_BTN = { minHeight: CONTROL.minHit, padding: '0 10px', whiteSpace: 'nowrap', borderRadius: RADIUS.md, background: TG.CARD, border: `1px solid ${TG.KEY_EDGE}`, boxShadow: keycap(TG.KEY_EDGE, { depth: 2, lift: null }), display: 'inline-flex', justifyContent: 'center', alignItems: 'center', gap: SPACE.xs, ...TOUCH_OPT };
 
 export function WordCard({ word, entered, currentSyl, completed, timedOut, progressText, reviewDots = null, floatScore, hideProgress, listen = false, audioOff = false, onReplay, onCantHear, draw = false, lianyinAt = -1, practice = false, onSpeak, onReveal, hideMeaning = false, hidePinyin = false, sandhiAt = -1 }) {
   const listening = listen && !audioOff && !completed && !timedOut; // 듣기 모드: 답하기 전엔 한자 가리고 소리 패널
@@ -780,9 +814,11 @@ export function WordCard({ word, entered, currentSyl, completed, timedOut, progr
   //   그 바람에 '발음을 들으면 콤보가 끊긴다'는 규칙이 통째로 사라져 있었다. 페널티는 onSpeak(발음 듣기)이 물려받음.
   const n = word.tones.length;
   let hz, colW, gap, twoRow = false, perRow = n;
-  if (n <= 4) { hz = 66; colW = 72; gap = 14; }
-  else if (n === 5) { hz = 44; colW = 52; gap = 8; }
-  else { hz = 36; colW = 44; gap = 8; twoRow = true; perRow = Math.ceil(n / 2); }
+  // 320px 화면의 카드 안쪽 폭(232px)에서도 한자·병음·보조 동작이 잘리지 않는다.
+  if (n <= 3) { hz = 60; colW = 66; gap = 12; }
+  else if (n === 4) { hz = 44; colW = 48; gap = 8; }
+  else if (n === 5) { hz = 32; colW = 40; gap = 8; }
+  else { hz = 24; colW = 44; gap = 8; twoRow = true; perRow = Math.ceil(n / 2); }
 
   const glow = completed && !timedOut ? SHADOW.correctGlow : timedOut ? SHADOW.timeoutGlow : SHADOW.card;
   const guide = completed && !timedOut ? { text: '정답', color: TG.SUCCESS }
@@ -803,16 +839,16 @@ export function WordCard({ word, entered, currentSyl, completed, timedOut, progr
     // 3성 변조 글자(3+3의 앞 3성) — 완성 시 성조칩이 3성→2성으로 모프.
     const isSandhi = completed && sandhiAt >= 0 && i === sandhiAt && !inLianyin;
     return (
-      <div key={i} style={{ width: colW, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: SPACE.xs }}>
-        <div style={{ height: hz > 50 ? 34 : 26, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div key={i} style={{ width: colW, flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: twoRow ? 0 : SPACE.xs }}>
+        <div style={{ height: twoRow ? 16 : hz > 50 ? 28 : 26, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           {inLianyin ? null : isSandhi ? (
             <SandhiToneChip big={hz > 50} />
           ) : revealed ? (
             <span style={{
-              display: 'inline-flex', alignItems: 'center', gap: SPACE.xs, padding: '3px 8px', borderRadius: RADIUS.pill,
+              display: 'inline-flex', alignItems: 'center', gap: SPACE.xs, padding: twoRow ? '0 4px' : '3px 8px', lineHeight: twoRow ? '16px' : undefined, borderRadius: RADIUS.pill,
               background: toneColor, color: '#fff', animation: `tg-pop .3s cubic-bezier(.34,1.56,.64,1) ${popDelay} both`,
             }}>
-              <ToneMark tone={tone} size={hz > 50 ? 16 : 13} />
+              <ToneMark tone={tone} size={twoRow ? 10 : hz > 50 ? 16 : 13} />
               <span style={{ ...TYPE.labelSm, fontSize: hz > 50 ? 12 : 10 }}>{tone === 0 ? '경' : `${tone}성`}</span>
             </span>
           ) : isCurrent ? (
@@ -846,9 +882,9 @@ export function WordCard({ word, entered, currentSyl, completed, timedOut, progr
               : (isCurrent ? 'tg-breathe 1.7s ease-in-out infinite' : 'none'),
           }}>{word.hanzi[i] ?? ''}</div>
         )}
-        <div style={{ height: hz > 50 ? 26 : 20, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ height: twoRow ? 16 : 20, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           {completed && !hidePinyin && (
-            <span style={{ fontFamily: FONT_PINYIN, fontWeight: 600, fontSize: hz > 50 ? 17 : 14, color: TG.SUB,
+            <span style={{ fontFamily: FONT_PINYIN, fontWeight: 600, fontSize: twoRow ? 12 : hz > 50 ? 17 : 14, color: TG.SUB,
               animation: timedOut ? 'none' : `tg-pop .3s cubic-bezier(.34,1.56,.64,1) ${popDelay} both` }}>{word.pinyin[i] ?? ''}</span>
           )}
         </div>
@@ -939,18 +975,18 @@ export function WordCard({ word, entered, currentSyl, completed, timedOut, progr
           <div style={{ display: 'flex', gap: 16 }}>
             <button onClick={onReplay} className="tg-press tg-hit44" style={{ ...CARD_ACT_BTN, cursor: 'pointer' }}>
               <VolumeLoud size={16} weight="Bold" color={CARD_ACT_ICON} />
-              <span style={{ ...TYPE.labelSm, fontSize: 14, color: CARD_ACT_TEXT }}>발음 듣기</span>
+              <span style={{ ...TYPE.label, color: CARD_ACT_TEXT }}>발음 듣기</span>
             </button>
             <button onClick={onCantHear} className="tg-press tg-hit44" style={{ ...CARD_ACT_BTN, cursor: 'pointer' }}>
               <VolumeCross size={16} weight="Bold" color={CARD_ACT_ICON} />
-              <span style={{ ...TYPE.labelSm, fontSize: 14, color: CARD_ACT_TEXT }}>지금은 못 들어요</span>
+              <span style={{ ...TYPE.label, color: CARD_ACT_TEXT }}>소리 없이 풀기</span>
             </button>
           </div>
         </div>
       ) : (
-        // 하단 블록 = 안내 한 줄(19) + 6 + 버튼(30) 자리를 **항상 확보**(55).
+        // 안내 한 줄 + 간격 + 44px 버튼 자리를 항상 확보해 정답 공개 시 위치를 유지한다.
         //  안내가 없을 때도 높이가 같아, 정답을 맞혀도 한자·병음·버튼이 1px도 안 움직인다(2026-08-06).
-        <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: SPACE.sm, minHeight: 55, justifyContent: 'flex-end' }}>
+        <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: SPACE.sm, minHeight: 72, justifyContent: 'flex-end' }}>
           {/* 안내 한 줄 — 평소 '정답', 반3성·연음 단어면 그 자리를 규칙 문구가 물려받는다(줄 수·여백 불변) */}
           {noteOn && note ? (
             <span key="tg-note" style={{ ...TYPE.labelSm, color: note.color,
@@ -964,16 +1000,15 @@ export function WordCard({ word, entered, currentSyl, completed, timedOut, progr
           {(onSpeak && onReveal) ? (
             /* 트레이닝·일반 공용. 트레이닝은 콤보·점수가 없어 무페널티, 일반은 발음듣기가 콤보를 끊는 기존 규칙 유지 */
             <div data-coach="prac-actions" style={{ display: 'flex', gap: 16 }}>
-              {/* 시안 09 실측: 버튼 h30·r10·흰색+1px #E2E7EB / 아이콘 16 #637481 / 텍스트 14 #7E8A94 / 아이콘-텍스트 6 / 버튼 간격 16 */}
               <button onClick={onSpeak} className="tg-press tg-hit44" aria-label="발음 듣기"
                 style={{ ...CARD_ACT_BTN, cursor: 'pointer' }}>
                 <VolumeLoud size={16} weight="Bold" color={CARD_ACT_ICON} />
-                <span style={{ ...TYPE.labelSm, fontSize: 14, color: CARD_ACT_TEXT }}>발음 듣기</span>
+                <span style={{ ...TYPE.label, color: CARD_ACT_TEXT }}>발음 듣기</span>
               </button>
               <button onClick={onReveal} disabled={completed} className="tg-press tg-hit44" aria-label="정답보기"
                 style={{ ...CARD_ACT_BTN, cursor: completed ? 'default' : 'pointer', opacity: completed ? 0.5 : 1 }}>
                 <DoubleAltArrowRight size={16} weight="Bold" color={CARD_ACT_ICON} />
-                <span style={{ ...TYPE.labelSm, fontSize: 14, color: CARD_ACT_TEXT }}>정답보기</span>
+                <span style={{ ...TYPE.label, color: CARD_ACT_TEXT }}>정답보기</span>
               </button>
             </div>
           ) : null}
@@ -1187,7 +1222,7 @@ export function DrawPad({ expectedTone, onDraw, disabled = false, resetKey = 0, 
           </div>
         ) : (
           /* 빈 상태 안내 — 힌트 없이 '여기 그려요'만 */
-          <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: SPACE.lg, pointerEvents: 'none', padding: SPACE.md }}>
+          <div data-draw-hint style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: SPACE.lg, pointerEvents: 'none', padding: SPACE.md }}>
             <div style={{ width: 52, height: 52, borderRadius: RADIUS.card, background: TG.CORAL_BG, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <svg width={30} height={30} viewBox="0 0 60 60" fill="none" aria-hidden="true">
                 <path d="M 14 38 C 20 22 26 22 30 30 C 34 38 40 38 46 22" stroke={TG.CTA} strokeWidth={4} strokeLinecap="round" strokeLinejoin="round" />
@@ -1271,42 +1306,17 @@ export function CdWaveEdge({ side, color = TG.CTA }) {
   );
 }
 
-// 들판 배경 — Figma "04. 모드선택 — 무한모드잠김/해제"(2026-08-03) 리디자인.
-//  동산·나무·집·돌·구름이 벡터 조각 20여 개라 SVG 1장(public/game/mode-field.svg, 390×396)으로 export해 사용.
-//  ★프레임 클리핑(마스킹) 없이 원본 전체(1287×942)를 뽑아 **원래 크기 그대로** 얹는다(2026-08-03 2차 수정).
-//   - 구: 390폭 클리핑본 + objectFit:cover → 화면이 넓으면 위가 잘려 집·나무가 반토막(사용자 지적).
-//   - 신: 스케일 0 = 세로는 절대 안 잘림. 가로는 화면보다 넓은 그림의 가운데를 보여줌(넓을수록 들판이 더 보임).
-//   - bottom:-546 = 시안에서 그림 아래가 화면 밖으로 내려가 있던 값 → 지평선이 항상 바닥에서 396px.
-const FIELD_W = 1287, FIELD_H = 942, FIELD_BOTTOM = -546;
-const CHIMNEY = { x: 592.5, y: 101 }; // 그림 좌표계의 굴뚝 입구(연기 발원점)
-// artRef — 그림 컨테이너 ref(패럴랙스용). 난이도 화면이 스크롤에 맞춰 translateY를 직접 써서 배경을 같이 움직인다.
-//   (transform은 항상 `translateX(-50%) translateY(N)` 형태로 유지할 것 — 가로 센터링이 transform에 있음)
-// sink — 그림을 추가로 N px 내려 지평선을 낮춘다(기본 0 = 지평선 396). 결과·로그인·닉네임처럼 CTA만 있는 화면은
-//   sink 250(지평선 146)으로 하단 버튼 뒤에만 얇게 깔아 모드선택과 같은 세계로 묶는다(2026-09-03 세계관 통일).
-export function FieldBg({ artRef, sink = 0 }) {
-  const reduced = prefersReducedMotion();
+// 집 앞 들판과 숲속 연습 빈터를 독립 SVG 레이어로 배치한다.
+// artRef는 난이도 화면의 translateX(-50%) translateY(N) 패럴랙스 계약을 유지한다.
+export function FieldBg({ artRef, sink = 0, scene = 'home' }) {
   return (
     <div aria-hidden="true" style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none', zIndex: 0 }}>
-      <div ref={artRef} style={{ position: 'absolute', left: '50%', bottom: FIELD_BOTTOM - sink, width: FIELD_W, height: FIELD_H, transform: 'translateX(-50%)', willChange: 'transform' }}>
-        <img src="/game/mode-field.svg" alt="" style={{ display: 'block', width: FIELD_W, height: FIELD_H, maxWidth: 'none' }} />
-        {/* 굴뚝 연기 — 타이틀 화면과 같은 연출(피어올라 커지며 옅어짐 + 좌우 흔들림). 정적 퍼프는 SVG에서 제거했다
-            sink>0(하단 실루엣)에선 끈다 — 연기가 CTA 바로 위로 떠올라 회색 덩어리로 보였다(2026-09-03 검수) */}
-        {sink === 0 && <div style={{ position: 'absolute', left: CHIMNEY.x, top: CHIMNEY.y }}>
-          {reduced ? (
-            <>
-              <div style={{ position: 'absolute', left: -10.5, top: -17, width: 12, height: 11, borderRadius: 35, background: SCENE.SMOKE }} />
-              <div style={{ position: 'absolute', left: -4.5, top: -52, width: 38, height: 34, borderRadius: 35, background: SCENE.SMOKE }} />
-              <div style={{ position: 'absolute', left: -61.5, top: -101, width: 65, height: 58, borderRadius: 35, background: SCENE.SMOKE }} />
-            </>
-          ) : (
-            [0, 1, 2].map((i) => (
-              // 상승·팽창(linear)과 좌우 흔들림(alternate)을 분리 — 한 키프레임에 합치면 방향 전환이 뚝 끊김
-              <div key={i} style={{ position: 'absolute', left: -32, top: -29, animation: `tg-smoke-rise 5s linear ${(-i * 5) / 3}s infinite` }}>
-                <div style={{ width: 65, height: 58, borderRadius: 35, background: SCENE.SMOKE, animation: `tg-smoke-sway ${2.3 + i * 0.4}s ease-in-out ${-i * 0.9}s infinite alternate` }} />
-              </div>
-            ))
-          )}
-        </div>}
+      <div ref={artRef} className="tg-field-art" style={{
+        position: 'absolute', left: '50%',
+        bottom: `calc(var(--tg-field-bottom, 0px) - ${sink}px)`,
+        width: '100%', transform: 'translateX(-50%)', willChange: 'transform',
+      }}>
+        {scene === 'forest' ? <ForestIllustration /> : <FieldIllustration />}
       </div>
     </div>
   );
@@ -1406,10 +1416,10 @@ export function Pill({ children, height = 38, bg = TG.CARD, edge = TG.KEY_EDGE, 
 // 통계 카드 — 결과·승급시험 결과의 '최고 콤보'·'반응 속도'. 128 높이, 아이콘 30 / 라벨 / 값+단위(베이스라인 정렬).
 export function StatCard({ icon, label, value, unit, style }) {
   return (
-    <div style={{ position: 'relative', flex: 1, minWidth: 0, height: 128, background: TG.CARD, borderRadius: RADIUS.xl, boxShadow: SHADOW.level1, ...style }}>
-      <div style={{ position: 'absolute', left: 0, right: 0, top: 16, display: 'flex', justifyContent: 'center' }}>{icon}</div>
-      <span style={{ position: 'absolute', left: 0, right: 0, top: 52, textAlign: 'center', ...TYPE.h2, lineHeight: '19px', color: TG.SUB }}>{label}</span>
-      <div style={{ position: 'absolute', left: 0, right: 0, top: 81, height: 31, display: 'flex', justifyContent: 'center', alignItems: 'baseline', gap: SPACE.xxs }}>
+    <div style={{ position: 'relative', flex: 1, minWidth: 0, height: 'var(--tg-result-stat-height, 128px)', background: TG.CARD, borderRadius: RADIUS.xl, boxShadow: SHADOW.level1, ...style }}>
+      <div style={{ position: 'absolute', left: 0, right: 0, top: 'var(--tg-stat-icon-top, 16px)', display: 'flex', justifyContent: 'center' }}>{icon}</div>
+      <span style={{ position: 'absolute', left: 0, right: 0, top: 'var(--tg-stat-label-top, 52px)', textAlign: 'center', ...TYPE.h2, lineHeight: '19px', color: TG.SUB }}>{label}</span>
+      <div style={{ position: 'absolute', left: 0, right: 0, top: 'var(--tg-stat-value-top, 81px)', height: 31, display: 'flex', justifyContent: 'center', alignItems: 'baseline', gap: SPACE.xxs }}>
         <span style={{ ...TYPE.numLg, lineHeight: '31px', color: TG.INK }}>{value}</span>
         {unit && <span style={{ ...TYPE.label, lineHeight: '17px', color: TG.SUB }}>{unit}</span>}
       </div>

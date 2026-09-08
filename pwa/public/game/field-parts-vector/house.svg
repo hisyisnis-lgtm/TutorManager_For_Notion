@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1536" height="1024" viewBox="0 0 1536 1024">
+  <!-- Original house coordinates; every surface is a solid vector shape. -->
+  <path d="M589 621H660V747H601Q589 747 589 735Z" fill="#E4D5AD"/>
+  <path d="M650 629 798 491 940 625 937 735Q937 747 925 747H662Q650 747 650 735Z" fill="#FFF2D5"/>
+  <rect x="608" y="662" width="16" height="32" rx="5" fill="#D2C194"/>
+
+  <path d="M700 747V670C700 646 718 627 740 627S780 646 780 670V747Z" fill="#B88A3B"/>
+  <path d="M706 747V671C706 651 721 636 740 636S774 651 774 671V747Z" fill="#C99B48"/>
+  <path d="M740 637V747" stroke="#BE903E" stroke-width="2"/>
+  <ellipse cx="762" cy="697" rx="7" ry="8" fill="#967226"/>
+
+  <circle cx="860" cy="656" r="38" fill="#BF913E"/>
+  <circle cx="860" cy="656" r="29" fill="#8C752D"/>
+  <clipPath id="window"><circle cx="860" cy="656" r="29"/></clipPath>
+  <path d="M860 624V688M828 656H892" stroke="#D5AB56" stroke-width="9" clip-path="url(#window)"/>
+
+  <!-- The complete roof overlaps both walls; the lower edge is its shallow thickness. -->
+  <path d="M560 616Q563 610 571 605L681 508Q689 502 701 496L781 454Q798 445 810 452Q815 455 820 459L970 598Q980 608 973 623Q967 637 954 636Q945 637 939 632L805 507Q798 500 792 506L654 632Q642 643 627 642H578Q558 640 560 616Z" fill="#7E841E"/>
+  <path d="M561 615Q564 610 572 604L682 508Q690 502 701 496L781 454Q789 450 797 449L633 601Q627 607 623 611Z" fill="#A2AA31"/>
+  <path d="M628 604 783 455Q798 443 812 453L969 596Q978 603 976 613Q974 622 966 626Q956 632 947 624L806 496Q799 489 792 495L651 624Q641 633 630 627Q616 620 628 604Z" fill="#8E9625"/>
+</svg>
