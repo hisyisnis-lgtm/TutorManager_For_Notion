@@ -35,16 +35,13 @@ function saveNotifications(list) {
   sessionStorage.setItem(STORAGE_KEY, JSON.stringify(list.slice(0, MAX_NOTIFICATIONS)));
 }
 
-function mergeNotifications(existing, incoming) {
-  const ids = new Set(existing.map((n) => n.id));
-  const merged = [...existing];
+function mergeNotifications(existing, incoming, authoritative = false) {
+  const byId = new Map(existing.map((n) => [n.id, n]));
   for (const n of incoming) {
-    if (!ids.has(n.id)) {
-      ids.add(n.id);
-      merged.push(n);
-    }
+    // 암호화 푸시는 크기 제한으로 요약될 수 있다. D1 원문만 기존 내용을 교체한다.
+    if (authoritative || !byId.has(n.id)) byId.set(n.id, n);
   }
-  return merged.sort((a, b) => b.time - a.time);
+  return [...byId.values()].sort((a, b) => b.time - a.time);
 }
 
 function relativeTime(unixSec) {
@@ -75,11 +72,11 @@ export default function NotificationsPage() {
     if (isAuthScopeCurrent(authRef.current)) sessionStorage.setItem(LAST_READ_KEY, String(Math.floor(Date.now() / 1000)));
   }, []);
 
-  const addNotifications = useCallback((incoming) => {
+  const addNotifications = useCallback((incoming, authoritative = false) => {
     if (!isAuthScopeCurrent(authRef.current)) return;
     setNotifications((prev) => {
       if (!isAuthScopeCurrent(authRef.current)) return [];
-      const merged = mergeNotifications(prev, incoming);
+      const merged = mergeNotifications(prev, incoming, authoritative);
       saveNotifications(merged);
       return merged;
     });
@@ -109,7 +106,7 @@ export default function NotificationsPage() {
         const msg = JSON.parse(line);
         if (msg.event === 'message') {
           sessionStorage.setItem(LAST_READ_KEY, String(Math.floor(Date.now() / 1000)));
-          addNotifications([msg]);
+          addNotifications([msg], true);
         }
       } catch { /* 빈 heartbeat·잘못된 줄은 표시하지 않는다. */ }
     };
@@ -136,7 +133,10 @@ export default function NotificationsPage() {
       }
     };
     const onPushMessage = (event) => {
-      if (event.data?.type === 'teacher-push' && event.data.notification) addNotifications([event.data.notification]);
+      if (current() && event.data?.type === 'teacher-push' && event.data.notification) {
+        addNotifications([event.data.notification]);
+        load();
+      }
     };
     const onFocus = () => { if (current()) load(); };
     load();

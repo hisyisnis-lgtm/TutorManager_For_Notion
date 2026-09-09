@@ -101,6 +101,42 @@ describe('강사 알림 인증 프록시', () => {
     expect(await within(screen.getByRole('dialog')).findByText('보관된 알림 내역에서 이 알림을 찾을 수 없어요.')).toBeTruthy();
   });
 
+  it('캐시된 짧은 푸시 본문을 같은 id의 서버 전체 본문으로 교체한다', async () => {
+    const short = { event: 'message', id: 'fixture', title: '요약 제목', message: '짧은 요약…', time: 1 };
+    sessionStorage.setItem('teacher_push_notifications', JSON.stringify([short]));
+    let respond;
+    vi.stubGlobal('fetch', vi.fn(() => new Promise((resolve) => { respond = resolve; })));
+    renderPage('/notifications?id=fixture');
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByText(short.message)).toBeTruthy();
+    const full = { ...short, title: '서버 전체 제목', message: '[전체 내용]\n\n마지막 줄까지 표시' };
+    await act(async () => respond(new Response(JSON.stringify(full))));
+    expect(within(dialog).getByText(full.title)).toBeTruthy();
+    expect(within(dialog).getByText(/마지막 줄까지 표시/).textContent).toBe(full.message);
+    expect(JSON.parse(sessionStorage.getItem('teacher_push_notifications'))).toEqual([full]);
+  });
+
+  it('뒤늦게 온 짧은 푸시가 전체 본문을 덮지 않으며 클릭한 이전 id를 유지한다', async () => {
+    const messages = [
+      { event: 'message', id: 'newest', message: '누르지 않은 최신 알림', time: 2 },
+      { event: 'message', id: 'fixture', message: '클릭한 이전 알림 전체 본문', time: 1 },
+    ];
+    const serviceWorker = new window.EventTarget();
+    vi.stubGlobal('navigator', { serviceWorker });
+    const fetch = vi.fn(async () => new Response(messages.map((item) => JSON.stringify(item)).join('\n')));
+    vi.stubGlobal('fetch', fetch);
+    renderPage('/notifications?id=fixture');
+    const dialog = screen.getByRole('dialog');
+    expect(await within(dialog).findByText(messages[1].message)).toBeTruthy();
+    await act(async () => serviceWorker.dispatchEvent(new window.MessageEvent('message', { data: {
+      type: 'teacher-push', notification: { ...messages[1], message: '짧은 요약…' },
+    } })));
+    expect(within(dialog).getByText(messages[1].message)).toBeTruthy();
+    expect(within(dialog).queryByText(messages[0].message)).toBeNull();
+    expect(within(dialog).queryByText('짧은 요약…')).toBeNull();
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
   it('상세 조회 연결 오류도 팝업에서 안내한다', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response('', { status: 500 })));
     renderPage('/notifications?id=fixture');

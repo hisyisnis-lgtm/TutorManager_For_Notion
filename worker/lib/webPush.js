@@ -3,6 +3,10 @@ import webpush from 'web-push';
 const HTTPS_ENDPOINT = /^https:\/\/[^\s]{1,2039}$/;
 const BASE64URL = /^[A-Za-z0-9_-]+$/;
 const NOTIFICATIONS_URL = '/#/notifications';
+const PWA_ORIGIN = 'https://tiantian-chinese.pages.dev';
+const SAFE_NOTIFICATION_URL = /^\/#\/[A-Za-z0-9_?&=/%.-]*$/;
+// aes128gcm 단일 레코드의 salt/rs/id/key(86) + delimiter(1) + GCM tag(16).
+const MAX_WIRE_JSON_BYTES = 4096 - 103;
 
 function cleanText(value, maxLength) {
   return typeof value === 'string' ? value.trim().slice(0, maxLength) : '';
@@ -25,10 +29,83 @@ export function normalizePushPayload(raw) {
   const tags = Array.isArray(raw?.tags)
     ? raw.tags.filter((tag) => typeof tag === 'string').slice(0, 10).map((tag) => tag.slice(0, 64))
     : [];
-  const url = typeof raw?.url === 'string' && /^\/#\/[A-Za-z0-9_?&=/%.-]*$/.test(raw.url)
+  const url = typeof raw?.url === 'string' && SAFE_NOTIFICATION_URL.test(raw.url)
     ? raw.url.slice(0, 512)
     : NOTIFICATIONS_URL;
   return { title, message, priority, tags, url };
+}
+
+function wireText(value, maxLength) {
+  return typeof value === 'string' ? Array.from(value.trim()).slice(0, maxLength)
+    // 기존 저장 정규화의 UTF-16 제한에서 끊긴 surrogate도 wire에서는 유효한 문자로 보낸다.
+    .map((point) => /[\uD800-\uDFFF]/u.test(point) ? '\uFFFD' : point).join('') : '';
+}
+
+function notificationPreview(message) {
+  if (!message) return '';
+  const firstSection = message.split(/\n\s*\n/, 1)[0].split('\n')
+    .map((line, index) => index === 0 ? line.trim() : line.trim().replace(/^[·•-]\s*/, ''))
+    .filter(Boolean).join(' · ');
+  const points = Array.from(firstSection);
+  const clipped = points.length > 120 ? `${points.slice(0, 119).join('').trimEnd()}…` : firstSection;
+  return message.length > firstSection.length || points.length > 120
+    ? `${clipped}\n눌러서 전체 내용 보기` : clipped;
+}
+
+/** 저장된 원문은 변경하지 않고, legacy와 선언형 브라우저에 공통으로 보낼 JSON만 만든다. */
+export function serializeWebPushPayload({ id, time, title, body, priority, tags, tag }) {
+  if (typeof id !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(id)) throw new Error('invalid_push_id');
+  // 원본 내부 링크는 D1에 보존하되, 모든 푸시 클릭은 이 알림 자체의 상세 화면으로 통일한다.
+  const targetUrl = `${NOTIFICATIONS_URL}?id=${encodeURIComponent(id)}`;
+  const nativeUrl = `${PWA_ORIGIN}/?push_notification=${encodeURIComponent(id)}`;
+  const fullBody = wireText(body, 4000);
+  const wireTitle = wireText(title, 200) || '하늘하늘중국어';
+  const wireTag = wireText(tag, 64);
+  const payload = {
+    id, time: Number.isFinite(time) ? time : 0, title: wireTitle, body: fullBody,
+    priority: [1, 2, 3, 4, 5].includes(priority) ? priority : 4,
+    tags: Array.isArray(tags) ? tags.filter((value) => typeof value === 'string').slice(0, 10).map((value) => wireText(value, 64)) : [],
+    url: targetUrl, tag: wireTag,
+    web_push: 8030,
+    // mutable를 생략해 지원 브라우저가 SW 실행 없이 표시·클릭 이동을 처리한다.
+    notification: {
+      title: wireTitle, body: notificationPreview(fullBody), navigate: nativeUrl,
+      icon: `${PWA_ORIGIN}/pwa-192x192.png`, badge: `${PWA_ORIGIN}/pwa-64x64.png`,
+      tag: wireTag, data: { id, url: targetUrl },
+    },
+  };
+  const encode = () => JSON.stringify(payload);
+  const encoder = new TextEncoder();
+  const fits = () => encoder.encode(encode()).byteLength <= MAX_WIRE_JSON_BYTES;
+  // JSON escaping과 UTF-8 실제 바이트를 기준으로 코드포인트 경계에서 가장 긴 미리보기를 남긴다.
+  const fitText = (value, assign) => {
+    assign(value);
+    if (fits()) return;
+    const points = Array.from(value);
+    let low = 0;
+    let high = points.length - 1;
+    let best = '…';
+    while (low <= high) {
+      const middle = Math.floor((low + high) / 2);
+      const candidate = `${points.slice(0, middle).join('')}…`;
+      assign(candidate);
+      if (fits()) { best = candidate; low = middle + 1; } else high = middle - 1;
+    }
+    assign(best);
+  };
+  if (!fits()) payload.tags = [];
+  if (!fits()) {
+    payload.body = '…';
+    if (!fits()) {
+      // escape가 많은 제목·태그는 본문 없이도 한도를 넘을 수 있다. D1 원문은 그대로 둔다.
+      payload.tag = payload.notification.tag = '';
+      payload.notification.body = '…';
+      fitText(wireTitle, (value) => { payload.title = payload.notification.title = value; });
+    }
+    fitText(fullBody, (value) => { payload.body = value; });
+  }
+  if (!fits()) throw new Error('push_payload_too_large');
+  return encode();
 }
 
 async function endpointHash(endpoint) {
@@ -99,7 +176,7 @@ export async function publishWebPushNotification(env, raw, { sendNotification = 
   if ((rows.results || []).length === 0) return { ok: false, reason: 'no_subscriptions', delivered: 0, removed: 0, id };
   const dead = [];
   let delivered = 0;
-  const message = JSON.stringify({ id, time, title: payload.title, body: payload.message,
+  const message = serializeWebPushPayload({ id, time, title: payload.title, body: payload.message,
     priority: payload.priority, tags: payload.tags, url: targetUrl, tag: `tutor-${id}` });
   await Promise.all((rows.results || []).map(async (row) => {
     try {

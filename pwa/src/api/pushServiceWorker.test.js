@@ -251,7 +251,7 @@ describe('Web Push system notification preview', () => {
     await completion;
     await click(listeners, { id: 'private-id-123' });
     const snapshot = await message(listeners, { type: 'teacher-push-diagnostics-request' });
-    expect(snapshot.version).toBe('2.47.8');
+    expect(snapshot.version).toBe('2.47.9');
     expect(snapshot.nativeNavigateSupported).toBe(true);
     expect(snapshot.executionState).toBe('activated');
     expect(snapshot.storageReadable).toBe(true);
