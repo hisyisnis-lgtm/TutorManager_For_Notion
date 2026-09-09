@@ -28,9 +28,14 @@ self.addEventListener('push', (event) => {
     };
     const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     clients.forEach((client) => client.postMessage({ type: 'teacher-push', notification }));
+    const nativeTarget = notificationTarget({ url, id: String(data.id || '') });
+    if (nativeTarget.hash.startsWith('#/notifications?')) nativeTarget.hash += '&via=push';
     await self.registration.showNotification(title, {
       body, icon: '/pwa-192x192.png', badge: '/pwa-64x64.png',
       tag: typeof data.tag === 'string' ? data.tag : undefined,
+      // 지원하는 WebKit은 클릭 이벤트를 거치지 않고 OS가 해당 알림으로 직접 이동한다.
+      // 미지원 브라우저는 이 옵션을 무시하고 아래 notificationclick 복구 경로를 사용한다.
+      navigate: nativeTarget.href,
       data: { url, id: String(data.id || '') },
     });
   })());

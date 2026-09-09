@@ -257,4 +257,61 @@ describe('푸시 클릭 목적지 복구', () => {
     expect(window.location.hash).toBe(new URL(click.url).hash);
     expect(worker.postMessage).toHaveBeenLastCalledWith({ type: 'teacher-push-navigation-ack', clickId: click.clickId });
   });
+
+  it('native 알림 B로 시작하면 이전 pending A를 확인 처리하고 팝업 닫기 뒤에도 다시 열지 않는다', () => {
+    vi.useFakeTimers();
+    const older = pending({ createdAt: Date.now() - 1000 });
+    window.history.replaceState(null, '', '/#/notifications?id=native-start&via=push');
+    disconnect = connectPushNavigation({ canNavigate: () => true });
+    reply(older);
+    expect(window.location.hash).toBe('#/notifications?id=native-start&via=push');
+    expect(worker.postMessage).toHaveBeenLastCalledWith({ type: 'teacher-push-navigation-ack', clickId: older.clickId });
+
+    window.location.hash = '#/notifications?via=push';
+    window.dispatchEvent(new Event('focus'));
+    reply(older);
+    expect(window.location.hash).toBe('#/notifications?via=push');
+  });
+
+  it.each(['pull', 'direct'])('native 표식이 남아 있어도 이후에 새로 누른 legacy 알림 C는 처리한다 (%s)', (delivery) => {
+    vi.useFakeTimers();
+    window.history.replaceState(null, '', `/#/notifications?id=native-before-${delivery}&via=push`);
+    disconnect = connectPushNavigation({ canNavigate: () => true });
+    reply(pending({ createdAt: Date.now() - 1000 }));
+    vi.advanceTimersByTime(100);
+    const fresh = pending();
+    if (delivery === 'direct') deliver(fresh);
+    else {
+      window.dispatchEvent(new Event('focus'));
+      reply(fresh);
+    }
+    expect(window.location.hash).toBe(new URL(fresh.url).hash);
+    expect(worker.postMessage).toHaveBeenLastCalledWith({ type: 'teacher-push-navigation-ack', clickId: fresh.clickId });
+  });
+
+  it('native 목적지의 첫 관찰 시각은 인증·SW 준비에 따른 재연결에서 바뀌지 않는다', () => {
+    vi.useFakeTimers();
+    window.history.replaceState(null, '', '/#/notifications?id=native-before-login&via=push');
+    disconnect = connectPushNavigation({ canNavigate: () => false });
+    vi.advanceTimersByTime(100);
+    const fresh = pending();
+    vi.advanceTimersByTime(100);
+    disconnect();
+    disconnect = connectPushNavigation({ canNavigate: () => true });
+    reply(fresh);
+    expect(window.location.hash).toBe(new URL(fresh.url).hash);
+  });
+
+  it('이미 열린 앱의 native hash 이동도 관찰하여 이전 pending이 덮지 못하게 한다', () => {
+    vi.useFakeTimers();
+    disconnect = connectPushNavigation({ canNavigate: () => true });
+    const older = pending();
+    reply(null);
+    vi.advanceTimersByTime(100);
+    window.location.hash = '#/notifications?id=native-warm&via=push';
+    window.dispatchEvent(new Event('hashchange'));
+    reply(older);
+    expect(window.location.hash).toBe('#/notifications?id=native-warm&via=push');
+    expect(worker.postMessage).toHaveBeenLastCalledWith({ type: 'teacher-push-navigation-ack', clickId: older.clickId });
+  });
 });

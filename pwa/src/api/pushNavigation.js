@@ -4,6 +4,8 @@ const REQUEST_TIMEOUT = 2500;
 const PULL_WINDOW = 5000;
 const PULL_INTERVAL = 500;
 const appliedClicks = new Set();
+// 인증·SW 준비에 따른 effect 재연결 때도 같은 native 진입의 관찰 시각을 유지한다.
+let nativeDestination = null;
 
 // 학생·공개 화면을 보고 있던 창은 강사용 푸시가 빼앗지 않는다.
 function isTeacherWindow(location) {
@@ -24,7 +26,17 @@ function notificationDestination(value, origin) {
   } catch { return null; }
 }
 
-/** SW가 보관한 클릭 목적지는 인증·라우터 준비 후 적용하고, 적용한 클릭만 확인 응답한다. */
+function observeNativeDestination() {
+  const target = notificationDestination(window.location.href, window.location.origin);
+  const query = target && new URLSearchParams(target.hash.slice('#/notifications?'.length));
+  if (query?.get('via') !== 'push') nativeDestination = null;
+  else if (nativeDestination?.hash !== target.hash) {
+    nativeDestination = { hash: target.hash, observedAt: Date.now() };
+  }
+  return nativeDestination;
+}
+
+/** 인증·라우터 준비 후 클릭을 적용하거나 새 native 진입에 대체된 클릭을 정리한다. */
 export function connectPushNavigation({ canNavigate }) {
   const serviceWorker = navigator.serviceWorker;
   if (!serviceWorker) return () => {};
@@ -61,17 +73,24 @@ export function connectPushNavigation({ canNavigate }) {
     if (pending && (typeof pending.clickId !== 'string' || !pending.clickId
       || !Number.isFinite(pending.createdAt) || pending.createdAt > Date.now() + 60000
       || Date.now() - pending.createdAt > MAX_PENDING_AGE)) return;
-    if (pending && pending.createdAt < latestAppliedCreatedAt) return;
+    const native = observeNativeDestination();
+    // UA가 이미 새 알림으로 이동했다면 그보다 먼저 보관된 클릭은 주소를 덮지 않는다.
+    // 표식을 영구 잠금으로 쓰지 않아 나중에 새로 누른 legacy 알림은 계속 처리한다.
+    const superseded = pending && native && pending.createdAt < native.observedAt;
+    if (pending && pending.createdAt < latestAppliedCreatedAt && !superseded) return;
     const clickId = pending?.clickId;
     if (!clickId || !appliedClicks.has(clickId)) {
-      window.location.hash = target.hash;
-      if (window.location.hash !== target.hash || !eligible()) return;
+      if (!superseded) {
+        window.location.hash = target.hash;
+        if (window.location.hash !== target.hash || !eligible()) return;
+      }
       if (clickId) {
         appliedClicks.add(clickId);
         if (appliedClicks.size > 100) appliedClicks.delete(appliedClicks.values().next().value);
       }
     }
-    if (pending) latestAppliedCreatedAt = pending.createdAt;
+    if (pending) latestAppliedCreatedAt = Math.max(latestAppliedCreatedAt, pending.createdAt,
+      superseded ? native.observedAt : 0);
     stopPulling();
     acknowledge(clickId, worker);
   };
@@ -109,6 +128,7 @@ export function connectPushNavigation({ canNavigate }) {
   };
   // 앱 시작이 SW의 클릭 저장보다 빠르면 처음에는 null일 수 있으므로 잠깐 재조회한다.
   const onResume = () => {
+    observeNativeDestination();
     stopPulling();
     if (!eligible()) return;
     pullDeadline = Date.now() + PULL_WINDOW;
@@ -121,10 +141,16 @@ export function connectPushNavigation({ canNavigate }) {
     receive(event.data, event.source);
   };
   const onVisible = () => { if (document.visibilityState === 'visible') onResume(); };
+  const onHashChange = () => {
+    const previous = nativeDestination;
+    const current = observeNativeDestination();
+    if (current && current !== previous) onResume();
+  };
   serviceWorker.addEventListener('message', onMessage);
   serviceWorker.addEventListener('controllerchange', onResume);
   window.addEventListener('focus', onResume);
   window.addEventListener('pageshow', onResume);
+  window.addEventListener('hashchange', onHashChange);
   document.addEventListener('visibilitychange', onVisible);
   onResume();
   // iOS cold start에서는 controller와 메시지 수신자가 늦게 생길 수 있다.
@@ -143,6 +169,7 @@ export function connectPushNavigation({ canNavigate }) {
     serviceWorker.removeEventListener('controllerchange', onResume);
     window.removeEventListener('focus', onResume);
     window.removeEventListener('pageshow', onResume);
+    window.removeEventListener('hashchange', onHashChange);
     document.removeEventListener('visibilitychange', onVisible);
   };
 }

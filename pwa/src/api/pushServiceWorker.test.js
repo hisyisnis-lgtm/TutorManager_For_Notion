@@ -48,6 +48,40 @@ async function message(listeners, data = { type: 'teacher-push-navigation-reques
 }
 
 describe('Web Push system notification preview', () => {
+  it('gives the browser a native click destination while preserving the legacy event data', async () => {
+    const showNotification = vi.fn(async () => {});
+    const { listeners } = loadWorker({
+      registration: { showNotification },
+      clients: { matchAll: async () => [] },
+    });
+    let completion;
+    listeners.push({
+      data: { json: () => ({ id: 'notice-native', title: '일일리포트', body: '첫 줄\n\n둘째 줄', url: '/#/notifications' }) },
+      waitUntil(promise) { completion = promise; },
+    });
+    await completion;
+
+    expect(showNotification).toHaveBeenCalledWith('일일리포트', expect.objectContaining({
+      navigate: `${ORIGIN}/#/notifications?id=notice-native&via=push`,
+      data: { url: '/#/notifications', id: 'notice-native' },
+      body: '첫 줄\n눌러서 전체 내용 보기',
+    }));
+  });
+
+  it('does not allow native navigation to a URL outside the app origin', async () => {
+    const showNotification = vi.fn(async () => {});
+    const { listeners } = loadWorker({
+      registration: { showNotification }, clients: { matchAll: async () => [] },
+    });
+    let completion;
+    listeners.push({
+      data: { json: () => ({ id: 'notice-safe', title: '알림', body: '본문', url: 'https://outside.test/' }) },
+      waitUntil(promise) { completion = promise; },
+    });
+    await completion;
+    expect(showNotification.mock.calls[0][1].navigate).toBe(`${ORIGIN}/#/notifications?id=notice-safe&via=push`);
+  });
+
   it('shows one compact section and directs long alerts to the full in-app history', () => {
     const { notificationPreview: preview } = loadWorker().self;
     const message = '[오늘 수업 2건]\n  · 10:00 김학생\n  · 14:00 이학생\n\n[피드백 대기 1건]\n  · 숙제';
