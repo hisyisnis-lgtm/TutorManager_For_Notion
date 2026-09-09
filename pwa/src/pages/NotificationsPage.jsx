@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { Button } from '../components/shadcn/button';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import EmptyState from '../components/ui/EmptyState.jsx';
-import { WORKER_URL } from '../config.js';
-import { clearAuth } from '../api/authUtils.js';
 import { captureAuthScope, isAuthScopeCurrent, subscribeAuthChanges } from '../api/authState.js';
+import { getNtfyTopic, subscribeNtfyTopic, clearNtfyHistory } from '../api/ntfy.js';
 import { BellIcon } from '@phosphor-icons/react';
 import { TEXT_TERTIARY,
   TEXT_INACTIVE, BORDER_NEUTRAL } from '../constants/theme.js';
@@ -23,13 +23,21 @@ const PRIORITY_STYLE = {
 
 function loadNotifications() {
   try {
-    return JSON.parse(sessionStorage.getItem(STORAGE_KEY) || '[]');
+    if (!getNtfyTopic() || sessionStorage.getItem('ntfy_history_topic') !== getNtfyTopic()) return [];
+    const list = JSON.parse(sessionStorage.getItem(STORAGE_KEY) || '[]');
+    return Array.isArray(list) ? list.filter(isNotification).slice(0, MAX_NOTIFICATIONS) : [];
   } catch {
     return [];
   }
 }
 
-function saveNotifications(list) {
+function isNotification(msg) {
+  return msg?.event === 'message' && typeof msg.id === 'string'
+    && typeof msg.message === 'string' && Number.isFinite(msg.time);
+}
+
+function saveNotifications(list, topic) {
+  sessionStorage.setItem('ntfy_history_topic', topic);
   sessionStorage.setItem(STORAGE_KEY, JSON.stringify(list.slice(0, MAX_NOTIFICATIONS)));
 }
 
@@ -42,7 +50,7 @@ function mergeNotifications(existing, incoming) {
       merged.push(n);
     }
   }
-  return merged.sort((a, b) => b.time - a.time);
+  return merged.sort((a, b) => b.time - a.time).slice(0, MAX_NOTIFICATIONS);
 }
 
 function relativeTime(unixSec) {
@@ -54,9 +62,16 @@ function relativeTime(unixSec) {
 }
 
 export default function NotificationsPage() {
+  const [topic, setTopic] = useState(getNtfyTopic);
   const [notifications, setNotifications] = useState(loadNotifications);
-  const [connStatus, setConnStatus] = useState('connecting'); // connecting | connected | error | off
+  const [connStatus, setConnStatus] = useState('connecting'); // connecting | connected | error
   const authRef = useRef(captureAuthScope());
+
+  useEffect(() => subscribeNtfyTopic(() => {
+    setTopic(getNtfyTopic());
+    setNotifications([]);
+    setConnStatus('connecting');
+  }), []);
 
   // 페이지 진입 시 읽음 처리
   useEffect(() => {
@@ -64,100 +79,141 @@ export default function NotificationsPage() {
   }, []);
 
   const addNotifications = useCallback((incoming) => {
-    if (!isAuthScopeCurrent(authRef.current)) return;
+    if (!isAuthScopeCurrent(authRef.current) || getNtfyTopic() !== topic) return;
     setNotifications((prev) => {
-      if (!isAuthScopeCurrent(authRef.current)) return [];
+      if (!isAuthScopeCurrent(authRef.current) || getNtfyTopic() !== topic) return [];
       const merged = mergeNotifications(prev, incoming);
-      saveNotifications(merged);
+      saveNotifications(merged, topic);
       return merged;
     });
-  }, []);
+  }, [topic]);
 
-  // 히스토리 로드 + SSE 연결
+  // 저장한 ntfy 토픽의 최근 이력 + 실시간 알림. 앱 인증정보를 ntfy로 보내지 않는다.
   useEffect(() => {
     const auth = authRef.current;
-    if (!isAuthScopeCurrent(auth)) return;
+    if (!topic || !isAuthScopeCurrent(auth)) return;
     let cancelled = false;
-    const controller = new AbortController();
+    let controller;
+    let attempt = 0;
     let retryTimer;
-    const current = () => !cancelled && isAuthScopeCurrent(auth);
+    let requestTimer;
+    const current = () => !cancelled && isAuthScopeCurrent(auth) && getNtfyTopic() === topic;
+    const disconnect = () => {
+      attempt += 1;
+      clearTimeout(retryTimer);
+      clearTimeout(requestTimer);
+      controller?.abort();
+    };
     const unsubscribe = subscribeAuthChanges(() => {
       if (!isAuthScopeCurrent(auth)) {
         cancelled = true;
-        controller.abort();
-        clearTimeout(retryTimer);
+        disconnect();
         setNotifications([]);
       }
     });
-    const receive = (line) => {
-      if (!current()) return;
+    const receive = (line, stillCurrent) => {
+      if (!stillCurrent()) return;
       try {
         const msg = JSON.parse(line);
-        if (msg.event === 'message') {
+        if (isNotification(msg)) {
           sessionStorage.setItem(LAST_READ_KEY, String(Math.floor(Date.now() / 1000)));
           addNotifications([msg]);
         }
       } catch { /* 빈 heartbeat·잘못된 줄은 표시하지 않는다. */ }
     };
-    const request = async (stream) => {
-      const res = await fetch(`${WORKER_URL}/notifications${stream ? '?stream=1' : ''}`, {
-        headers: { Authorization: `Bearer ${auth.credential}` },
-        cache: 'no-store', signal: controller.signal,
+    const request = async (stream, signal) => {
+      requestTimer = setTimeout(() => controller.abort(), 15000);
+      const endpoint = stream ? 'sse' : 'json?poll=1&since=24h';
+      const res = await fetch(`https://ntfy.sh/${encodeURIComponent(topic)}/${endpoint}`, {
+        credentials: 'omit', redirect: 'error', cache: 'no-store', signal,
       });
-      if (res.status === 401 && current()) clearAuth();
       if (!res.ok) {
+        await res.body?.cancel();
         const error = new Error('알림을 불러오지 못했습니다.');
         error.status = res.status;
         throw error;
       }
       return res;
     };
-    const connect = async () => {
+    const readResponse = async (response, stream, stillCurrent) => {
+      const reader = response.body.getReader();
+      const decoder = new globalThis.TextDecoder();
+      let buffer = '';
+      let bytes = 0;
+      const emit = (line) => {
+        if (!stream) receive(line, stillCurrent);
+        else if (line.startsWith('data:')) receive(line.slice(5).trim(), stillCurrent);
+      };
       try {
-        const history = await request(false);
-        const text = await history.text();
-        if (!current()) return;
-        text.split('\n').filter(Boolean).forEach(receive);
-        const response = await request(true);
-        if (!current()) { await response.body?.cancel(); return; }
-        setConnStatus('connected');
-        const reader = response.body.getReader();
-        const decoder = new globalThis.TextDecoder();
-        let buffer = '';
-        try {
-          while (current()) {
-            const { value, done } = await reader.read();
-            if (done) break;
-            buffer += decoder.decode(value, { stream: true });
-            if (buffer.length > 256 * 1024) throw new Error('알림 응답이 너무 큽니다.');
-            const lines = buffer.split('\n');
-            buffer = lines.pop();
-            for (const line of lines) {
-              if (line.startsWith('data:')) receive(line.slice(5).trim());
-            }
+        while (stillCurrent()) {
+          if (stream) {
+            clearTimeout(requestTimer);
+            requestTimer = setTimeout(() => controller.abort(), 60000);
           }
-        } finally { await reader.cancel().catch(() => {}); reader.releaseLock(); }
-      } catch (error) {
-        if (!current()) return;
-        if (error.status === 503) { setConnStatus('off'); return; }
+          const { value, done } = await reader.read();
+          if (done) {
+            buffer += decoder.decode();
+            if (buffer) emit(buffer);
+            break;
+          }
+          bytes += value.byteLength;
+          buffer += decoder.decode(value, { stream: true });
+          if (bytes > 2 * 1024 * 1024 || buffer.length > 256 * 1024) throw new Error('알림 응답이 너무 큽니다.');
+          const lines = buffer.split('\n');
+          buffer = lines.pop();
+          lines.forEach(emit);
+        }
+      } finally {
+        if (stillCurrent()) clearTimeout(requestTimer);
+        await reader.cancel().catch(() => {});
+        reader.releaseLock();
       }
-      if (current()) {
+    };
+    const connect = async () => {
+      disconnect();
+      if (!current() || document.visibilityState === 'hidden') return;
+      controller = new AbortController();
+      const signal = controller.signal;
+      const connection = attempt;
+      const stillCurrent = () => current() && connection === attempt;
+      setConnStatus('connecting');
+      try {
+        const history = await request(false, signal);
+        if (!stillCurrent()) { await history.body?.cancel(); return; }
+        await readResponse(history, false, stillCurrent);
+        if (!stillCurrent()) return;
+        const response = await request(true, signal);
+        if (!stillCurrent()) { await response.body?.cancel(); return; }
+        setConnStatus('connected');
+        await readResponse(response, true, stillCurrent);
+      } catch {
+        if (!stillCurrent()) return;
+      }
+      if (stillCurrent()) {
+        clearTimeout(requestTimer);
         setConnStatus('error');
         retryTimer = setTimeout(connect, 5000);
       }
     };
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') disconnect();
+      else connect();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('online', connect);
     connect();
     return () => {
       cancelled = true;
       unsubscribe();
-      clearTimeout(retryTimer);
-      controller.abort();
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('online', connect);
+      disconnect();
     };
-  }, [addNotifications]);
+  }, [addNotifications, topic]);
 
   const handleClearAll = () => {
     setNotifications([]);
-    sessionStorage.removeItem(STORAGE_KEY);
+    clearNtfyHistory();
     sessionStorage.setItem(LAST_READ_KEY, String(Math.floor(Date.now() / 1000)));
   };
 
@@ -165,26 +221,25 @@ export default function NotificationsPage() {
     connecting: 'bg-yellow-400',
     connected: 'bg-green-500',
     error: 'bg-red-500',
-    off: 'bg-gray-300',
   }[connStatus];
 
   const statusLabel = {
-    connecting: '연결 중',
-    connected: '연결됨',
-    error: '연결 오류',
-    off: '알림 내역 이용 불가',
+    connecting: 'ntfy 연결 중',
+    connected: 'ntfy 연결됨',
+    error: 'ntfy 연결 오류 · 자동 재연결 중',
   }[connStatus];
 
-  if (connStatus === 'off') {
+  if (!topic) {
     return (
       <>
         <PageHeader title="알림" back />
         <div className="flex flex-col items-center justify-center px-8 pt-24 gap-4 text-center">
           <span className="text-5xl">🔔</span>
-          <p className="text-gray-700 font-semibold">알림 상세 내역을 표시할 수 없어요</p>
+          <p className="text-gray-700 font-semibold">ntfy 알림 코드를 연결해 주세요</p>
           <p className="text-sm text-gray-500">
-            수업·상담 등 자세한 정보는 강사앱의 해당 화면에서 확인해 주세요.
+            설정에 ntfy 앱에서 구독한 코드를 저장하면 같은 토픽의 알림이 여기에 표시됩니다.
           </p>
+          <Button asChild><Link to="/settings">알림 코드 설정</Link></Button>
         </div>
       </>
     );
@@ -213,6 +268,11 @@ export default function NotificationsPage() {
         <span className={`w-2 h-2 rounded-full ${statusDot}`} />
         <span className="text-xs text-gray-500">{statusLabel}</span>
       </div>
+      {connStatus === 'error' && (
+        <p className="px-4 py-2 text-xs text-gray-500">
+          네트워크와 설정의 알림 코드를 확인해 주세요. 비공개 토픽은 ntfy 앱에서 확인해 주세요.
+        </p>
+      )}
 
       {/* 알림 목록 */}
       <div className="pb-24">
@@ -222,16 +282,16 @@ export default function NotificationsPage() {
           <ul className="divide-y divide-gray-100">
             {notifications.map((n) => {
               const p = PRIORITY_STYLE[n.priority] ?? PRIORITY_STYLE[3];
-              const tags = n.tags ?? [];
+              const tags = Array.isArray(n.tags) ? n.tags.filter((tag) => typeof tag === 'string') : [];
               return (
                 <li key={n.id} className="flex gap-3 px-4 py-3 active:bg-gray-50 transition-[background-color] duration-150">
                   {/* 우선순위 색상 바 */}
                   <div className={`w-1 rounded-full shrink-0 self-stretch ${p.bar}`} />
                   <div className="flex-1 min-w-0">
                     {n.title && (
-                      <p className="text-sm font-semibold text-gray-800 leading-snug">{n.title}</p>
+                      <p className="text-sm font-semibold text-gray-800 leading-snug whitespace-pre-wrap break-words">{n.title}</p>
                     )}
-                    <p className={`text-sm leading-snug ${n.title ? 'text-gray-600' : 'font-semibold text-gray-800'}`}>
+                    <p className={`text-sm leading-relaxed whitespace-pre-wrap break-words ${n.title ? 'text-gray-600' : 'font-semibold text-gray-800'}`}>
                       {n.message}
                     </p>
                     <div className="flex items-center gap-2 mt-1.5 flex-wrap">

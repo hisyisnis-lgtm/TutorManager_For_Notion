@@ -1,5 +1,5 @@
 import {
-  useState } from 'react';
+  useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CaretRightIcon } from '@phosphor-icons/react';
 import { Button } from '../components/shadcn/button';
@@ -7,9 +7,11 @@ import { Input } from '../components/shadcn/input';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import ConfirmDialog from '../components/ui/ConfirmDialog.jsx';
 import { clearAuth } from '../api/authUtils.js';
+import { getNtfyTopic, saveNtfyTopic } from '../api/ntfy.js';
 import { TEXT_SECONDARY,
   TEXT_TERTIARY,
   STATUS_ERROR_BORDER,
+  STATUS_ERROR_TEXT,
   STATUS_SUCCESS_DARK } from '../constants/theme.js';
 
 const STORAGE_KEY = 'instructor_name';
@@ -28,6 +30,9 @@ export function getInstructorName() {
 
 export default function SettingsPage() {
   const [name, setName] = useState(() => localStorage.getItem(STORAGE_KEY) || '');
+  const [topic, setTopic] = useState(getNtfyTopic);
+  const [topicError, setTopicError] = useState('');
+  const topicInputRef = useRef(null);
   const [saved, setSaved] = useState(false);
   const [confirmLogout, setConfirmLogout] = useState(false);
   const [copiedKey, setCopiedKey] = useState('');
@@ -58,6 +63,15 @@ export default function SettingsPage() {
   };
 
   const handleSave = () => {
+    try {
+      setTopic(saveNtfyTopic(topic));
+      setTopicError('');
+    } catch (error) {
+      setTopicError(error?.message || '알림 코드를 저장하지 못했어요. 다시 시도해 주세요.');
+      setSaved(false);
+      topicInputRef.current?.focus();
+      return;
+    }
     const trimmedName = name.trim();
     if (trimmedName) {
       localStorage.setItem(STORAGE_KEY, trimmedName);
@@ -74,8 +88,9 @@ export default function SettingsPage() {
       <PageHeader title="설정" back />
       <div className="px-4 pt-6 space-y-6">
         <div>
-          <span style={{ fontSize: 14, fontWeight: 600, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>강사 이름</span>
+          <label htmlFor="instructor-name" style={{ fontSize: 14, fontWeight: 600, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>강사 이름</label>
           <Input
+            id="instructor-name"
             type="text"
             value={name}
             onChange={(e) => { setName(e.target.value); setSaved(false); }}
@@ -83,6 +98,33 @@ export default function SettingsPage() {
             maxLength={20}
           />
           <p className="text-xs text-gray-500 mt-1.5">홈 화면 인사말에 표시됩니다.</p>
+        </div>
+
+        <div>
+          <label htmlFor="ntfy-topic" style={{ fontSize: 14, fontWeight: 600, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>ntfy 알림 코드</label>
+          <Input
+            ref={topicInputRef}
+            id="ntfy-topic"
+            type="text"
+            value={topic}
+            onChange={(e) => { setTopic(e.target.value); setTopicError(''); setSaved(false); }}
+            placeholder="ntfy 앱에서 구독한 토픽 코드"
+            maxLength={128}
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="none"
+            spellCheck={false}
+            aria-invalid={Boolean(topicError)}
+            aria-describedby={`ntfy-topic-help${topicError ? ' ntfy-topic-error' : ''}`}
+          />
+          <div id="ntfy-topic-help" className="text-xs mt-1.5 space-y-1" style={{ color: TEXT_TERTIARY }}>
+            <p>ntfy 앱에서 구독한 토픽 코드를 입력하면 같은 알림을 앱 알림함에서 볼 수 있어요.</p>
+            <p>공개 토픽 코드를 아는 사람은 내용을 읽을 수 있으니 공유에 주의해 주세요. 비워서 저장하면 연결이 해제돼요.</p>
+          </div>
+          {topicError && <p id="ntfy-topic-error" role="alert" className="text-xs mt-1.5" style={{ color: STATUS_ERROR_TEXT }}>{topicError}</p>}
+          <Button asChild variant="link" className="mt-1 px-0">
+            <Link to="/notifications">알림함 보기</Link>
+          </Button>
         </div>
 
         <div>

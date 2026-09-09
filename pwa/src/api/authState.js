@@ -136,10 +136,11 @@ export function checkSessionExpiry() {
 }
 
 if (typeof window !== 'undefined') {
-  // 과거 버전에서 장기간 남긴 개인정보·알림 접근정보는 새 캐시로 이관하지 않는다.
+  // 알림 본문 캐시는 정리하되 사용자가 저장한 ntfy 연결 설정은 재실행 후에도 유지한다.
+  // 로그아웃·인증 만료 시에는 clearSensitiveCache가 연결 설정도 지운다.
   try {
     removeMatching(localStorage, (key) => key.startsWith('swr_')
-      || key.startsWith('tutor_master_cache_') || key.startsWith('ntfy_'));
+      || key.startsWith('tutor_master_cache_') || (key.startsWith('ntfy_') && key !== 'ntfy_topic'));
   } catch {}
   window.addEventListener('storage', (event) => {
     if (event.key === null || event.key === 'auth_token' || event.key?.startsWith('student_session_')) {
