@@ -51,4 +51,31 @@ describe('Web Push system notification preview', () => {
     expect(client.focus).toHaveBeenCalledTimes(1);
     expect(openWindow).not.toHaveBeenCalled();
   });
+
+  it('asks the app router to navigate when Android returns null from client.navigate()', async () => {
+    const client = {
+      navigate: vi.fn(async () => null),
+      postMessage: vi.fn(),
+      focus: vi.fn(async () => client),
+    };
+    const openWindow = vi.fn();
+    const { listeners } = loadWorker({
+      location: { origin: 'https://app.example.test' },
+      clients: { matchAll: vi.fn(async () => [client]), openWindow },
+    });
+    let completion;
+
+    listeners.notificationclick({
+      notification: { close: vi.fn(), data: { url: '/#/notifications?id=notice-2' } },
+      waitUntil(promise) { completion = promise; },
+    });
+    await completion;
+
+    expect(client.postMessage).toHaveBeenCalledWith({
+      type: 'teacher-push-navigation',
+      url: 'https://app.example.test/#/notifications?id=notice-2',
+    });
+    expect(client.focus).toHaveBeenCalledTimes(1);
+    expect(openWindow).not.toHaveBeenCalled();
+  });
 });

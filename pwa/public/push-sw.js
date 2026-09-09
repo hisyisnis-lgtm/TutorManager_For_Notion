@@ -45,8 +45,13 @@ self.addEventListener('notificationclick', (event) => {
     for (const client of windows) {
       try {
         const navigated = 'navigate' in client ? await client.navigate(target.href) : null;
-        const destination = navigated || client;
-        if ('focus' in destination) return await destination.focus();
+        if (navigated && 'focus' in navigated) return await navigated.focus();
+        // 일부 Android PWA는 기존 창 navigate()가 실패해도 예외 대신 null을 반환한다.
+        // 앱 라우터에도 목적지를 전달해 홈 화면을 그대로 포커스하는 상황을 막는다.
+        if ('postMessage' in client) {
+          client.postMessage({ type: 'teacher-push-navigation', url: target.href });
+          if ('focus' in client) return await client.focus();
+        }
       } catch {
         // 기존 창 이동이 제한된 브라우저에서는 아래 openWindow 경로를 사용한다.
       }

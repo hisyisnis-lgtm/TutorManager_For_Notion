@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Button } from '../components/shadcn/button';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../components/shadcn/dialog';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import EmptyState from '../components/ui/EmptyState.jsx';
 import { WORKER_URL } from '../config.js';
@@ -54,11 +56,14 @@ function relativeTime(unixSec) {
 }
 
 export default function NotificationsPage() {
+  const location = useLocation();
   const [notifications, setNotifications] = useState(loadNotifications);
   const [connStatus, setConnStatus] = useState('connecting'); // connecting | connected | error | off
   const authRef = useRef(captureAuthScope());
-  const selectedId = new URLSearchParams(window.location.hash.split('?')[1] || '').get('id');
+  const selectedId = new URLSearchParams(location.search).get('id');
   const selectedRef = useRef(null);
+  const [dismissedSelectedId, setDismissedSelectedId] = useState(null);
+  const selectedNotification = notifications.find((notification) => notification.id === selectedId);
 
   useEffect(() => {
     if (!selectedId || !selectedRef.current) return;
@@ -153,6 +158,8 @@ export default function NotificationsPage() {
     sessionStorage.setItem(LAST_READ_KEY, String(Math.floor(Date.now() / 1000)));
   };
 
+  const closeSelectedNotification = () => setDismissedSelectedId(selectedId);
+
   const statusDot = {
     connecting: 'bg-yellow-400',
     connected: 'bg-green-500',
@@ -227,7 +234,7 @@ export default function NotificationsPage() {
                     {n.title && (
                       <p className="text-sm font-semibold text-gray-800 leading-snug">{n.title}</p>
                     )}
-                    <p className={`text-sm leading-snug ${n.title ? 'text-gray-600' : 'font-semibold text-gray-800'}`}>
+                    <p className={`whitespace-pre-wrap break-words text-sm leading-6 ${n.title ? 'text-gray-600' : 'font-semibold text-gray-800'}`}>
                       {n.message}
                     </p>
                     <div className="flex items-center gap-2 mt-1.5 flex-wrap">
@@ -245,6 +252,29 @@ export default function NotificationsPage() {
           </ul>
         )}
       </div>
+
+      <Dialog
+        open={Boolean(selectedNotification) && dismissedSelectedId !== selectedId}
+        onOpenChange={(open) => { if (!open) closeSelectedNotification(); }}
+      >
+        <DialogContent className="max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-[480px] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="pr-8 leading-snug">{selectedNotification?.title || '알림 상세'}</DialogTitle>
+            <DialogDescription className="whitespace-pre-wrap break-words pt-2 text-sm leading-6 text-gray-700">
+              {selectedNotification?.message}
+            </DialogDescription>
+          </DialogHeader>
+          {selectedNotification && (
+            <div className="flex items-center gap-2 text-xs" style={{ color: TEXT_TERTIARY }}>
+              {(selectedNotification.tags ?? []).length > 0 && <span>{selectedNotification.tags.join(' · ')}</span>}
+              <span className="ml-auto">{relativeTime(selectedNotification.time)}</span>
+            </div>
+          )}
+          <DialogFooter>
+            <Button className="min-h-11 w-full" onClick={closeSelectedNotification}>닫기</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

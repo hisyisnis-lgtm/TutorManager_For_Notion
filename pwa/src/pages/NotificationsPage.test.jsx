@@ -1,14 +1,24 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
-import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { setAuth, clearAuth } from '../api/authUtils.js';
 import { notifyAuthChange } from '../api/authState.js';
 import { fixtureSession } from '../api/authFixtures.js';
 import NotificationsPage from './NotificationsPage.jsx';
 
-beforeEach(() => { localStorage.clear(); sessionStorage.clear(); setAuth(fixtureSession()); });
+beforeEach(() => {
+  localStorage.clear();
+  sessionStorage.clear();
+  window.location.hash = '#/notifications';
+  Element.prototype.scrollIntoView = vi.fn();
+  setAuth(fixtureSession());
+});
 afterEach(() => { cleanup(); localStorage.clear(); sessionStorage.clear(); notifyAuthChange(); vi.unstubAllGlobals(); });
-const renderPage = () => render(<MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><NotificationsPage /></MemoryRouter>);
+const renderPage = (initialEntry = '/notifications') => render(
+  <MemoryRouter initialEntries={[initialEntry]} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+    <NotificationsPage />
+  </MemoryRouter>,
+);
 const message = JSON.stringify({ event: 'message', id: 'fixture', message: '가상 알림', time: 1 });
 
 describe('강사 알림 인증 프록시', () => {
@@ -47,5 +57,20 @@ describe('강사 알림 인증 프록시', () => {
     expect(await screen.findByText('알림 상세 내역을 표시할 수 없어요')).toBeTruthy();
     expect(screen.getByText('수업·상담 등 자세한 정보는 강사앱의 해당 화면에서 확인해 주세요.')).toBeTruthy();
     expect(screen.queryByText(/ntfy.sh/)).toBeNull();
+  });
+
+  it('푸시 알림의 id로 진입하면 해당 알림 전체 내용을 팝업으로 표시한다', async () => {
+    const detailed = JSON.stringify({
+      event: 'message', id: 'fixture', title: '일일리포트',
+      message: '첫 번째 요약\n\n두 번째 상세 내용까지 전부 표시', time: 1,
+    });
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(`${detailed}\n`)));
+
+    renderPage('/notifications?id=fixture');
+
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('일일리포트')).toBeTruthy();
+    expect(within(dialog).getByText(/두 번째 상세 내용까지 전부 표시/)).toBeTruthy();
+    expect(screen.getAllByText(/두 번째 상세 내용까지 전부 표시/)[0].className).toContain('whitespace-pre-wrap');
   });
 });

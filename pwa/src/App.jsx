@@ -227,6 +227,22 @@ export default function App() {
     return () => clearInterval(id);
   }, [swRegistration]);
 
+  // Android PWA에서 WindowClient.navigate()가 null을 반환하는 경우 서비스워커가
+  // 현재 앱 창에 목적지를 전달한다. 같은 origin의 해시 라우트만 허용한다.
+  useEffect(() => {
+    const onPushNavigation = (event) => {
+      if (event.data?.type !== 'teacher-push-navigation') return;
+      try {
+        const target = new URL(event.data.url, window.location.origin);
+        if (target.origin === window.location.origin && target.pathname === '/' && target.hash.startsWith('#/')) {
+          window.location.hash = target.hash;
+        }
+      } catch { /* 잘못된 URL은 무시 */ }
+    };
+    navigator.serviceWorker?.addEventListener('message', onPushNavigation);
+    return () => navigator.serviceWorker?.removeEventListener('message', onPushNavigation);
+  }, []);
+
   useEffect(() => {
     if (!needRefresh) {
       // SW 미지원 환경 대비 최대 2초 후 강제 진행
@@ -340,7 +356,8 @@ export default function App() {
         <Toaster position="top-center" />
         <LoginPage
           onSuccess={() => {
-            window.location.hash = '#/home';
+            // 푸시 알림에서 들어온 뒤 세션이 만료됐다면 로그인 후에도 상세 목적지를 보존한다.
+            if (!window.location.hash.startsWith('#/notifications')) window.location.hash = '#/home';
           }}
         />
       </>
