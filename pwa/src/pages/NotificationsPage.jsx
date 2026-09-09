@@ -57,6 +57,13 @@ export default function NotificationsPage() {
   const [notifications, setNotifications] = useState(loadNotifications);
   const [connStatus, setConnStatus] = useState('connecting'); // connecting | connected | error | off
   const authRef = useRef(captureAuthScope());
+  const selectedId = new URLSearchParams(window.location.hash.split('?')[1] || '').get('id');
+  const selectedRef = useRef(null);
+
+  useEffect(() => {
+    if (!selectedId || !selectedRef.current) return;
+    selectedRef.current.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }, [notifications, selectedId]);
 
   // 페이지 진입 시 읽음 처리
   useEffect(() => {
@@ -209,7 +216,11 @@ export default function NotificationsPage() {
               const p = PRIORITY_STYLE[n.priority] ?? PRIORITY_STYLE[3];
               const tags = n.tags ?? [];
               return (
-                <li key={n.id} className="flex gap-3 px-4 py-3 active:bg-gray-50 transition-[background-color] duration-150">
+                <li
+                  key={n.id}
+                  ref={n.id === selectedId ? selectedRef : undefined}
+                  className={`flex gap-3 px-4 py-3 active:bg-gray-50 transition-[background-color] duration-150 ${n.id === selectedId ? 'bg-brand-50' : ''}`}
+                >
                   {/* 우선순위 색상 바 */}
                   <div className={`w-1 rounded-full shrink-0 self-stretch ${p.bar}`} />
                   <div className="flex-1 min-w-0">

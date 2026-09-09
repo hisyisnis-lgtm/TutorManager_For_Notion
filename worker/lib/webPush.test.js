@@ -44,8 +44,12 @@ describe('authenticated Web Push storage and delivery', () => {
     expect(result.delivered).toBe(1);
     expect(sendNotification).toHaveBeenCalledTimes(1);
     expect(sendNotification.mock.calls[0][0]).toMatchObject({ endpoint: subscription.endpoint, keys: subscription.keys });
-    expect(JSON.parse(sendNotification.mock.calls[0][1]).body).toBe('김학생 14:00 수업');
-    expect((await listPushNotifications(env))[0]).toMatchObject({ title: '📅 내일 수업 안내', message: '김학생 14:00 수업' });
+    const delivered = JSON.parse(sendNotification.mock.calls[0][1]);
+    expect(delivered.body).toBe('김학생 14:00 수업');
+    expect(delivered.url).toBe(`/#/notifications?id=${result.id}`);
+    expect((await listPushNotifications(env))[0]).toMatchObject({
+      title: '📅 내일 수업 안내', message: '김학생 14:00 수업', url: `/#/notifications?id=${result.id}`,
+    });
 
     const expired = Object.assign(new Error('gone'), { statusCode: 410 });
     await publishWebPushNotification(env, { title: '다음 알림', message: '내용' }, { sendNotification: vi.fn(async () => { throw expired; }) });

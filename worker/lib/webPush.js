@@ -2,6 +2,7 @@ import webpush from 'web-push';
 
 const HTTPS_ENDPOINT = /^https:\/\/[^\s]{1,2039}$/;
 const BASE64URL = /^[A-Za-z0-9_-]+$/;
+const NOTIFICATIONS_URL = '/#/notifications';
 
 function cleanText(value, maxLength) {
   return typeof value === 'string' ? value.trim().slice(0, maxLength) : '';
@@ -26,7 +27,7 @@ export function normalizePushPayload(raw) {
     : [];
   const url = typeof raw?.url === 'string' && /^\/#\/[A-Za-z0-9_?&=/%.-]*$/.test(raw.url)
     ? raw.url.slice(0, 512)
-    : '/#/notifications';
+    : NOTIFICATIONS_URL;
   return { title, message, priority, tags, url };
 }
 
@@ -83,10 +84,13 @@ export async function publishWebPushNotification(env, raw, { sendNotification = 
 
   const id = crypto.randomUUID();
   const time = Math.floor(Date.now() / 1000);
+  const targetUrl = payload.url === NOTIFICATIONS_URL
+    ? `${NOTIFICATIONS_URL}?id=${encodeURIComponent(id)}`
+    : payload.url;
   await env.GAME_DB.prepare(`
     INSERT INTO push_notifications (id, created_at, title, message, priority, tags_json, target_url)
     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
-  `).bind(id, time, payload.title, payload.message, payload.priority, JSON.stringify(payload.tags), payload.url).run();
+  `).bind(id, time, payload.title, payload.message, payload.priority, JSON.stringify(payload.tags), targetUrl).run();
   await env.GAME_DB.prepare('DELETE FROM push_notifications WHERE created_at < ?1')
     .bind(time - 30 * 86400).run();
 
@@ -96,7 +100,7 @@ export async function publishWebPushNotification(env, raw, { sendNotification = 
   const dead = [];
   let delivered = 0;
   const message = JSON.stringify({ id, time, title: payload.title, body: payload.message,
-    priority: payload.priority, tags: payload.tags, url: payload.url, tag: `tutor-${id}` });
+    priority: payload.priority, tags: payload.tags, url: targetUrl, tag: `tutor-${id}` });
   await Promise.all((rows.results || []).map(async (row) => {
     try {
       await sendNotification({ endpoint: row.endpoint, keys: { p256dh: row.p256dh, auth: row.auth } }, message, { TTL: 86400, urgency: payload.priority >= 5 ? 'high' : 'normal' });
