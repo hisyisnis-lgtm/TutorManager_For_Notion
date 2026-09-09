@@ -8,7 +8,18 @@ const HOMEWORK = '22222222-2222-2222-2222-222222222222';
 const UPLOAD = '33333333-3333-3333-3333-333333333333';
 const CODE = 'ABCDEF123456';
 const SECRET = 'isolated-security-test-secret';
-let database, env, studentToken, teacherToken, page, calls;
+const FILE_URL = 'https://files.fixture.invalid/lesson.pdf';
+const REDIRECT_URL = 'https://redirect.fixture.invalid/credential-trap';
+let database, env, studentToken, teacherToken, page, calls, uploadResponse, downloadResponse;
+const pdfForm = () => {
+  const form = new FormData();
+  form.append('file', new File(['%PDF-1.7 synthetic'], 'lesson.pdf', { type: 'application/pdf' }));
+  return form;
+};
+// Node fetch와 달리 workerd에서 거부하는 설정을 permissive stub이 놓치지 않게 한다.
+function assertWorkerRedirectMode(init) {
+  if (init.redirect === 'error') throw new TypeError('Unsupported redirect mode: error');
+}
 const ctx = { waitUntil: promise => promise.catch(() => {}) };
 const send = (path, { token = studentToken, method = 'GET', body, headers = {} } = {}) => worker.fetch(new Request('https://audit.invalid' + path, {
   method, headers: { Origin: 'http://localhost:5173', Authorization: `Bearer ${token}`, ...headers }, ...(body ? { body } : {}),
@@ -16,16 +27,20 @@ const send = (path, { token = studentToken, method = 'GET', body, headers = {} }
 const submit = files => send(`/homework/student/${CODE}/${HOMEWORK}/submit`, { method: 'POST', body: JSON.stringify({ files }) });
 beforeEach(async () => {
   database = localD1(); calls = [];
+  uploadResponse = undefined; downloadResponse = undefined;
   env = { GAME_DB: database.db, JWT_SECRET: SECRET, NOTION_TOKEN: 'synthetic-notion' };
   studentToken = await signTypedToken(SECRET, 'student', `personal:${CODE}`, 600);
   teacherToken = await signTypedToken(SECRET, 'teacher', 'teacher', 600, { role: 'teacher' });
   page = { id: HOMEWORK, parent: { database_id: DB }, properties: { '학생': { relation: [{ id: STUDENT }] }, '제출 상태': { select: { name: '미제출' } } } };
   vi.stubGlobal('fetch', vi.fn(async (raw, init = {}) => {
-    const url = new URL(raw); calls.push({ url: url.pathname, method: init.method || 'GET', body: init.body });
+    assertWorkerRedirectMode(init);
+    const url = new URL(raw); calls.push({ url: url.pathname, origin: url.origin, method: init.method || 'GET', body: init.body,
+      redirect: init.redirect, headers: init.headers });
+    if (url.href === FILE_URL) return downloadResponse || new Response('%PDF-1.7 synthetic', { headers: { 'Content-Type': 'application/pdf' } });
     if (url.hostname !== 'api.notion.com') throw new Error('Non-mocked network denied');
     if (url.pathname.includes('/databases/') && url.pathname.endsWith('/query')) return Response.json({ results: url.pathname.includes(DB) ? [page] : [{ id: STUDENT }], has_more: false });
     if (url.pathname === '/v1/file_uploads') return Response.json({ id: UPLOAD, upload_url: `https://api.notion.com/v1/file_uploads/${UPLOAD}/send` });
-    if (url.pathname.endsWith('/send')) return Response.json({ id: UPLOAD });
+    if (url.pathname.endsWith('/send')) return uploadResponse || Response.json({ id: UPLOAD });
     if (url.pathname === `/v1/pages/${HOMEWORK}`) return Response.json(page);
     throw new Error('Unexpected mock URL');
   }));
@@ -55,13 +70,61 @@ describe('production data handlers with isolated Notion and SQLite', () => {
     expect(calls).toHaveLength(0);
   });
   it('accepts a valid student file, issues an owner receipt, and submits it', async () => {
-    const form = new FormData(); form.append('file', new File(['%PDF-1.7 synthetic'], 'lesson.pdf', { type: 'application/pdf' }));
-    const upload = await send(`/homework/student-upload/${CODE}`, { method: 'POST', body: form });
+    const upload = await send(`/homework/student-upload/${CODE}`, { method: 'POST', body: pdfForm() });
     expect(upload.status).toBe(200);
     const data = await upload.json();
     expect(data.uploadReceipt).toBeTypeOf('string');
+    expect(calls.find(call => call.url.endsWith('/send'))).toMatchObject({ redirect: 'manual',
+      headers: { Authorization: 'Bearer synthetic-notion' } });
     expect((await submit([data])).status).toBe(200);
     expect(calls.some(call => call.method === 'PATCH')).toBe(true);
+  });
+  it('accepts a teacher PDF upload with manual redirects and the upstream credential', async () => {
+    const response = await send('/homework/upload', { token: teacherToken, method: 'POST', body: pdfForm() });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ fileUploadId: UPLOAD, fileName: 'lesson.pdf' });
+    expect(calls.filter(call => call.url.endsWith('/send'))).toHaveLength(1);
+    expect(calls.find(call => call.url.endsWith('/send'))).toMatchObject({ method: 'POST', redirect: 'manual',
+      headers: { Authorization: 'Bearer synthetic-notion' } });
+  });
+  it.each([['student', 302], ['student', 307], ['teacher', 302], ['teacher', 307]])('%s upload rejects upstream %s without forwarding files or credentials', async (role, status) => {
+    uploadResponse = new Response('private-redirect-body', { status, headers: { Location: REDIRECT_URL } });
+    const cancel = vi.spyOn(uploadResponse.body, 'cancel');
+    const response = await send(role === 'student' ? `/homework/student-upload/${CODE}` : '/homework/upload', {
+      token: role === 'student' ? studentToken : teacherToken, method: 'POST', body: pdfForm(),
+    });
+    expect(response.status).toBe(500);
+    expect(await response.json()).toEqual({ error: '파일 업로드 중 허용되지 않은 주소 이동이 감지되었습니다.' });
+    expect(calls.filter(call => call.url.endsWith('/send'))).toHaveLength(1);
+    expect(calls.find(call => call.url.endsWith('/send')).redirect).toBe('manual');
+    expect(cancel).toHaveBeenCalledTimes(1);
+    expect(calls.some(call => call.origin === new URL(REDIRECT_URL).origin || call.method === 'PATCH')).toBe(false);
+  });
+  it.each(['student', 'teacher'])('%s downloads stream an owned file with manual redirects', async role => {
+    page.properties['학생 제출 파일'] = { files: [{ name: 'lesson.pdf', file: { url: FILE_URL } }] };
+    const path = role === 'student' ? `/homework/student/${CODE}/${HOMEWORK}/file` : `/homework/${HOMEWORK}/file`;
+    const response = await send(`${path}?name=lesson.pdf&kind=submit`, { token: role === 'student' ? studentToken : teacherToken });
+    expect(response.status).toBe(200);
+    expect(response.headers.get('Content-Disposition')).toContain('attachment;');
+    expect(response.headers.get('Cache-Control')).toBe('private, no-store');
+    expect(await response.text()).toBe('%PDF-1.7 synthetic');
+    const downloads = calls.filter(call => call.origin === new URL(FILE_URL).origin);
+    expect(downloads).toHaveLength(1);
+    expect(downloads[0]).toMatchObject({ method: 'GET', redirect: 'manual' });
+    expect(downloads[0].headers).toBeUndefined();
+  });
+  it.each([['student', 302], ['student', 307], ['teacher', 302], ['teacher', 307]])('%s download rejects upstream %s without fetching its Location', async (role, status) => {
+    page.properties['학생 제출 파일'] = { files: [{ name: 'lesson.pdf', file: { url: FILE_URL } }] };
+    downloadResponse = new Response('private-redirect-body', { status, headers: { Location: REDIRECT_URL } });
+    const cancel = vi.spyOn(downloadResponse.body, 'cancel');
+    const path = role === 'student' ? `/homework/student/${CODE}/${HOMEWORK}/file` : `/homework/${HOMEWORK}/file`;
+    const response = await send(`${path}?name=lesson.pdf&kind=submit`, { token: role === 'student' ? studentToken : teacherToken });
+    expect(response.status).toBe(502);
+    expect(await response.json()).toEqual({ error: '파일을 가져올 수 없습니다.' });
+    expect(calls.filter(call => call.origin === new URL(FILE_URL).origin)).toHaveLength(1);
+    expect(calls.find(call => call.origin === new URL(FILE_URL).origin).redirect).toBe('manual');
+    expect(cancel).toHaveBeenCalledTimes(1);
+    expect(calls.some(call => call.origin === new URL(REDIRECT_URL).origin)).toBe(false);
   });
   it.each(['other-student', 'different-upload', 'renamed-file', 'expired'])('rejects an upload receipt with %s', async variant => {
     const file = { fileUploadId: UPLOAD, fileName: 'lesson.pdf' };

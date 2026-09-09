@@ -25,8 +25,12 @@ export async function teacherNotifications(request, env, corsHeaders) {
   const timer = setTimeout(abort, stream ? 60000 : 15000);
   let upstream;
   try {
-    upstream = await fetch(url, { headers: { Authorization: `Bearer ${env.NTFY_TOKEN}` }, redirect: 'error', signal: controller.signal });
-    if (!upstream.ok || !upstream.body) throw new Error('notification upstream unavailable');
+    upstream = await fetch(url, { headers: { Authorization: `Bearer ${env.NTFY_TOKEN}` }, redirect: 'manual', signal: controller.signal });
+    // Workers는 redirect:'error' 대신 manual을 사용하고 3xx 응답도 거부해야 한다.
+    if (!upstream.ok || !upstream.body) {
+      await upstream.body?.cancel().catch(() => {});
+      throw new Error('notification upstream unavailable');
+    }
     const reader = upstream.body.getReader();
     let bytes = 0;
     let pending = '';

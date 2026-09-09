@@ -44,9 +44,13 @@ export async function isPrivateNtfyTopic(env, topic) {
     const response = await fetch('https://ntfy.sh/v1/account', {
       method: 'GET',
       headers: { Authorization: `Bearer ${env.NTFY_TOKEN}`, Accept: 'application/json' },
-      redirect: 'error', cache: 'no-store', signal: controller.signal,
+      redirect: 'manual', cache: 'no-store', signal: controller.signal,
     });
-    if (!response.ok || !response.body) return false;
+    // 수동 리디렉션의 3xx도 거부하여 인증정보를 다른 호스트에 보내지 않는다.
+    if (!response.ok || !response.body) {
+      await response.body?.cancel().catch(() => {});
+      return false;
+    }
     const reader = response.body.getReader();
     let size = 0;
     let json = '';

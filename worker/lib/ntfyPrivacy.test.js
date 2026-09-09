@@ -4,6 +4,10 @@ import { isPrivateNtfyTopic, publicNtfyAlert } from './ntfyPrivacy.js';
 const env = { NTFY_TOKEN: 'synthetic-token' };
 const account = reservations => ({ username: 'synthetic-user', role: 'user', reservations,
   tokens: [{ token: 'must-never-appear-in-logs' }], emails: [{ address: 'never-log@example.invalid' }] });
+const workerFetch = implementation => vi.fn((url, init = {}) => {
+  if (init.redirect === 'error') throw new TypeError('Unsupported redirect mode: error');
+  return implementation(url, init);
+});
 afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); vi.useRealTimers(); });
 
 describe('live ntfy topic privacy boundary', () => {
@@ -37,12 +41,24 @@ describe('live ntfy topic privacy boundary', () => {
     expect(publicNtfyAlert('warn', '<img src=https://evil.invalid>')).toEqual(publicNtfyAlert('warn'));
   });
   it('requires an exact account-owned reservation with everyone denied', async () => {
-    const fetch = vi.fn(async () => Response.json(account([{ topic: 'private-fixture', everyone: 'deny-all' }])));
+    const fetch = workerFetch(async () => Response.json(account([{ topic: 'private-fixture', everyone: 'deny-all' }])));
     vi.stubGlobal('fetch', fetch);
     expect(await isPrivateNtfyTopic(env, 'private-fixture')).toBe(true);
     expect(fetch).toHaveBeenCalledWith('https://ntfy.sh/v1/account', expect.objectContaining({
-      headers: { Authorization: 'Bearer synthetic-token', Accept: 'application/json' }, redirect: 'error', cache: 'no-store',
+      headers: { Authorization: 'Bearer synthetic-token', Accept: 'application/json' }, redirect: 'manual', cache: 'no-store',
     }));
+  });
+  it.each([302, 307])('rejects an account HTTP %s without following Location or retaining its body', async status => {
+    const upstream = new Response(JSON.stringify(account([{ topic: 'fixture', everyone: 'deny-all' }])), {
+      status, headers: { Location: 'https://redirect.fixture.invalid/credential-trap' },
+    });
+    const cancel = vi.spyOn(upstream.body, 'cancel');
+    const fetch = workerFetch(async () => upstream); vi.stubGlobal('fetch', fetch);
+    expect(await isPrivateNtfyTopic(env, 'fixture')).toBe(false);
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(fetch.mock.calls[0][0]).toBe('https://ntfy.sh/v1/account');
+    expect(fetch.mock.calls[0][1]).toMatchObject({ redirect: 'manual', headers: { Authorization: 'Bearer synthetic-token' } });
+    expect(cancel).toHaveBeenCalledTimes(1);
   });
   it('unreserved, anonymous, readable, writable, and wildcard reservations are denied', async () => {
     const invalid = [

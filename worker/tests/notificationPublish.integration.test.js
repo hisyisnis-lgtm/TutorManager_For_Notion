@@ -6,6 +6,13 @@ import { signTypedToken } from '../lib/auth.js';
 
 let local;
 const fakeKey = 'fake-notification-key';
+function guardWorkerFetch() {
+  const implementation = fetch.getMockImplementation();
+  fetch.mockImplementation((url, init = {}) => {
+    if (init.redirect === 'error') throw new TypeError('Unsupported redirect mode: error');
+    return implementation(url, init);
+  });
+}
 beforeEach(() => {
   vi.stubGlobal('fetch', vi.fn(async url => url === 'https://ntfy.sh/v1/account'
     ? Response.json({ username: 'test', role: 'user', reservations: ['private-general', 'private-critical', 'private-warn', 'private-digest'].map(topic => ({ topic, everyone: 'deny-all' })) })
@@ -44,6 +51,7 @@ describe('all ntfy publishing requires credentials', () => {
   });
   it('Worker warn alerts authenticate the new topic; missing token suppresses publishing', async () => {
     local = localD1();
+    guardWorkerFetch();
     const env = { GAME_DB: local.db, JWT_SECRET: 'test-store-key', NTFY_TOPIC: 'private-general', NTFY_TOPIC_WARN: 'private-warn', NTFY_TOKEN: fakeKey };
     const invoke = () => worker.fetch(new Request('https://worker.test/error-log', {
       method: 'POST', headers: { Origin: 'http://localhost:5173', 'Content-Type': 'application/json' }, body: JSON.stringify({ message: 'isolated error', url: 'https://app.test/game' }),
@@ -54,10 +62,32 @@ describe('all ntfy publishing requires credentials', () => {
     expect(JSON.parse(fetch.mock.calls[0][1].body).topic).toBe('private-warn');
     expect(JSON.parse(fetch.mock.calls[0][1].body).message).toContain('isolated error');
     expect(fetch.mock.calls[0][1].headers.Authorization).toBe(`Bearer ${fakeKey}`);
+    expect(fetch.mock.calls[0][1].redirect).toBe('manual');
     fetch.mockClear();
     delete env.NTFY_TOKEN;
     expect((await invoke()).status).toBe(200);
     expect(fetch).not.toHaveBeenCalled();
+  });
+  it.each([302, 307])('Worker alert HTTP %s is logged as failure and never forwards the credential to Location', async status => {
+    local = localD1();
+    const env = { GAME_DB: local.db, JWT_SECRET: 'test-store-key', NTFY_TOPIC_WARN: 'public-fixture', NTFY_TOKEN: fakeKey };
+    const upstream = new Response('private-redirect-body', { status, headers: { Location: 'https://redirect.fixture.invalid/credential-trap' } });
+    const cancel = vi.spyOn(upstream.body, 'cancel');
+    fetch.mockImplementation(async () => upstream);
+    guardWorkerFetch();
+    const response = await worker.fetch(new Request('https://worker.test/error-log', {
+      method: 'POST', headers: { Origin: 'http://localhost:5173', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: 'isolated error', url: 'https://app.test/game' }),
+    }), env, { waitUntil: promise => promise.catch(() => {}) });
+    // 오류 접수 응답은 유지하되, 그 뒤의 ntfy 발행 실패를 성공으로 기록하지 않는다.
+    expect(response.status).toBe(200);
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(fetch.mock.calls[0][0]).toBe('https://ntfy.sh');
+    expect(fetch.mock.calls[0][1]).toMatchObject({ method: 'POST', redirect: 'manual', headers: { Authorization: `Bearer ${fakeKey}` } });
+    expect(cancel).toHaveBeenCalledTimes(1);
+    expect(console.error).toHaveBeenCalledWith(`[ntfy] 발송 실패 HTTP ${status}`);
+    expect(console.log).not.toHaveBeenCalledWith('[ntfy] 발송 성공');
+    expect(JSON.stringify([...console.error.mock.calls, ...console.log.mock.calls])).not.toMatch(/private-redirect-body|redirect.fixture|fake-notification-key/);
   });
   it('Worker restores detailed alerts to public topics while retaining student token masking and log privacy', async () => {
     local = localD1();
@@ -65,6 +95,7 @@ describe('all ntfy publishing requires credentials', () => {
     fetch.mockImplementation(async url => url === 'https://ntfy.sh/v1/account'
       ? Response.json({ username: 'test', role: 'user', reservations: [], tokens: [{ token: 'never-log-secret' }] })
       : Response.json({ id: 'notification-id' }));
+    guardWorkerFetch();
     const response = await worker.fetch(new Request('https://worker.test/error-log', {
       method: 'POST', headers: { Origin: 'http://localhost:5173', 'Content-Type': 'application/json' }, body: JSON.stringify({ message: 'private-client-diagnostic 김학생 01012345678 50000원 /personal/SECRETCODE', source: 'https://attacker.invalid/leak', url: 'https://app.test/personal/SECRETCODE' }),
     }), env, { waitUntil: promise => promise.catch(() => {}) });
@@ -78,7 +109,7 @@ describe('all ntfy publishing requires credentials', () => {
       priority: 3, tags: ['warning', 'client'],
     });
     expect(fetch.mock.calls[0][1].headers.Authorization).toBe(`Bearer ${fakeKey}`);
-    expect(fetch.mock.calls[0][1].redirect).toBe('error');
+    expect(fetch.mock.calls[0][1].redirect).toBe('manual');
     expect(payload.message).not.toMatch(/SECRETCODE|never-log-secret/);
     expect(await response.text()).not.toMatch(/public-fixture|private-client-diagnostic|fake-notification-key/);
     expect(JSON.stringify([...console.error.mock.calls, ...console.log.mock.calls])).not.toMatch(/public-fixture|private-client-diagnostic|김학생|01012345678|SECRETCODE|never-log-secret/);
@@ -130,6 +161,6 @@ describe('all ntfy publishing requires credentials', () => {
     expect(fetch).toHaveBeenCalledTimes(1);
     expect(fetch.mock.calls[0][0]).toBe('https://ntfy.sh/public-general/json?poll=1&since=24h');
     expect(fetch.mock.calls[0][1].headers.Authorization).toBe(`Bearer ${fakeKey}`);
-    expect(fetch.mock.calls[0][1].redirect).toBe('error');
+    expect(fetch.mock.calls[0][1].redirect).toBe('manual');
   });
 });

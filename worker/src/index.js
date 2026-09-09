@@ -525,7 +525,9 @@ async function sendAlert(env, { level = 'info', title, message, tags, dedupKey, 
     const payload = { topic, title: String(title || '').replace(/\S+/g, sanitizePath),
       message: String(message || '').replace(/\S+/g, sanitizePath), priority };
     if (Array.isArray(tags) && tags.length > 0) payload.tags = tags;
-    const res = await fetch('https://ntfy.sh', { method: 'POST', headers, body: JSON.stringify(payload), redirect: 'error' });
+    // Workers는 redirect:'error'를 지원하지 않는다. manual + !ok로 3xx도 거부한다.
+    const res = await fetch('https://ntfy.sh', { method: 'POST', headers, body: JSON.stringify(payload), redirect: 'manual' });
+    await res.body?.cancel().catch(() => {});
     if (!res.ok) {
       console.error(`[ntfy] 발송 실패 HTTP ${res.status}`);
     } else {
@@ -1598,13 +1600,19 @@ async function uploadFileToNotion(file, notionToken) {
   uploadForm.append('file', new Blob([arrayBuffer], { type: mimeType }), fileName);
   const uploadRes = await fetch(upload_url, {
     method: 'POST',
-    redirect: 'error',
+    // 자동으로 따라가면 Notion 인증 헤더와 파일이 다른 주소로 유출될 수 있다.
+    // Workers에서 지원되는 manual로 받은 뒤 3xx는 아래에서 명시적으로 거부한다.
+    redirect: 'manual',
     headers: {
       Authorization: `Bearer ${notionToken}`,
       'Notion-Version': '2022-06-28',
     },
     body: uploadForm,
   });
+  if (uploadRes.status >= 300 && uploadRes.status < 400) {
+    await uploadRes.body?.cancel().catch(() => {});
+    throw new Error('파일 업로드 중 허용되지 않은 주소 이동이 감지되었습니다.');
+  }
   if (!uploadRes.ok) {
     // 디버깅 정보 강화 — 다음 재발 시 정확한 거부 사유(MIME/size/format)를 확인할 수 있도록
     // 응답 본문 일부를 메시지에 포함. (PWA 토스트 표시 길이 보호용으로 200자 절단)
@@ -1612,6 +1620,7 @@ async function uploadFileToNotion(file, notionToken) {
     throw new Error(`Notion 파일 업로드 실패 (${uploadRes.status}, mime=${mimeType}): ${errBody.slice(0, 200)}`);
   }
 
+  await uploadRes.body?.cancel().catch(() => {});
   return { fileUploadId, fileName };
 }
 
@@ -1648,8 +1657,10 @@ async function handleHomeworkRoutes(request, env, corsHeaders, url) {
   // Notion 임시 URL을 노출하지 않고 항상 Worker proxy를 통해 다운로드한다.
   async function streamNotionFile(sourceUrl, fileName) {
     if (!isSafeExternalUrl(sourceUrl) || new URL(sourceUrl).protocol !== 'https:') return errRes(corsHeaders, 403, '허용되지 않은 파일 주소입니다.');
-    const upstream = await fetch(sourceUrl, { redirect: 'error' });
+    const upstream = await fetch(sourceUrl, { redirect: 'manual' });
+    // 3xx도 실패로 처리한다. 검증되지 않은 Location을 따라가지 않는다.
     if (!upstream.ok || !upstream.body) {
+      await upstream.body?.cancel().catch(() => {});
       return errRes(corsHeaders, 502, '파일을 가져올 수 없습니다.');
     }
     const contentType = upstream.headers.get('Content-Type') || 'application/octet-stream';
