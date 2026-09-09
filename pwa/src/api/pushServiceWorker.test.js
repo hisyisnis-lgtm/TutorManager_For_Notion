@@ -214,11 +214,11 @@ describe('Web Push system notification preview', () => {
   it('expires pending click metadata instead of reopening old notifications later', async () => {
     const { listeners, storage } = loadWorker({ clients: { matchAll: async () => [], openWindow: async () => null } });
     await click(listeners);
-    const key = [...storage.keys()][0];
+    const key = `${ORIGIN}/__teacher-push-click__`;
     const pending = await storage.get(key).json();
     storage.set(key, new Response(JSON.stringify({ ...pending, createdAt: Date.now() - 11 * 60 * 1000 })));
     expect((await message(listeners)).pending).toBeNull();
-    expect(storage.size).toBe(0);
+    expect(storage.has(key)).toBe(false);
   });
 
   it('ignores a hidden teacher tab so it cannot consume the clicked foreground app destination', async () => {
@@ -234,5 +234,51 @@ describe('Web Push system notification preview', () => {
     expect(reply).not.toHaveBeenCalled();
     expect(waitUntil).not.toHaveBeenCalled();
     expect((await message(listeners)).pending).toBeTruthy();
+  });
+
+  it('reports only local diagnostic flags, never notification IDs, URLs or contents', async () => {
+    const { listeners } = loadWorker({
+      Notification: { prototype: { navigate: '' } },
+      registration: { showNotification: async () => {} },
+      clients: { matchAll: async () => [], openWindow: async () => null },
+    });
+    let completion;
+    listeners.push({
+      data: { json: () => ({ id: 'private-id-123', title: 'private-title', body: 'private-body', url: '/#/notifications?id=private-id-123' }) },
+      waitUntil(promise) { completion = promise; },
+    });
+    await completion;
+    await click(listeners, { id: 'private-id-123' });
+    const snapshot = await message(listeners, { type: 'teacher-push-diagnostics-request' });
+    expect(snapshot.version).toBe('2.47.7');
+    expect(snapshot.nativeNavigateSupported).toBe(true);
+    expect(snapshot.events.map((item) => item.event)).toEqual(['push-shown', 'notificationclick']);
+    expect(snapshot.pending.present).toBe(true);
+    expect(JSON.stringify(snapshot)).not.toMatch(/private-|https:|notifications\?/);
+  });
+
+  it('bounds and expires SW diagnostic records and strips unrecognized fields', async () => {
+    const { listeners, storage } = loadWorker();
+    const now = Date.now();
+    storage.set(`${ORIGIN}/__teacher-push-diagnostics__`, new Response(JSON.stringify([
+      { event: 'push-shown', at: now - 86400001, body: 'secret' },
+      ...Array.from({ length: 30 }, () => ({ event: 'push-shown', at: now, targetKind: 'secret-url', hasId: true, token: 'secret' })),
+    ])));
+    const snapshot = await message(listeners, { type: 'teacher-push-diagnostics-request' });
+    expect(snapshot.events).toHaveLength(16);
+    expect(snapshot.events.every((item) => item.targetKind === 'other')).toBe(true);
+    expect(JSON.stringify(snapshot)).not.toContain('secret');
+    expect(await message(listeners, { type: 'teacher-push-diagnostics-request' }, `${ORIGIN}/personal/student-secret`)).toBeUndefined();
+  });
+
+  it('does not consume or delete click state while collecting diagnostics', async () => {
+    const { listeners, storage } = loadWorker();
+    const key = `${ORIGIN}/__teacher-push-click__`;
+    const expired = JSON.stringify({ clickId: 'expired', createdAt: Date.now() - 11 * 60 * 1000,
+      url: `${ORIGIN}/#/notifications?id=old` });
+    storage.set(key, new Response(expired));
+    const snapshot = await message(listeners, { type: 'teacher-push-diagnostics-request' });
+    expect(snapshot.pending).toEqual({ present: false, ageMs: null });
+    expect(await storage.get(key).clone().text()).toBe(expired);
   });
 });

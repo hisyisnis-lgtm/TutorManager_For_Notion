@@ -2,6 +2,7 @@ import { useState, useEffect, useSyncExternalStore, lazy, Suspense } from 'react
 import { captureAuthScope, getAuthRevision, isAuthScopeCurrent, subscribeAuthChanges } from './api/authState.js';
 import { connectPushNavigation, normalizePushLaunch } from './api/pushNavigation.js';
 import PushNotificationRouteSync from './components/PushNotificationRouteSync.jsx';
+import { setPushDiagnosticAppState } from './api/pushDiagnostics.js';
 import { HashRouter, BrowserRouter, Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom';
 import { Toaster } from './components/shadcn/sonner';
 import { useRegisterSW } from 'virtual:pwa-register/react';
@@ -232,6 +233,7 @@ export default function App() {
 
   // 이미 열린 Android 앱과 늦게 시작하는 iOS 앱 모두 SW에 남은 클릭 목적지를 복구한다.
   useEffect(() => {
+    setPushDiagnosticAppState({ auth: authed, swReady, needRefresh });
     const auth = captureAuthScope();
     return connectPushNavigation({
       canNavigate: () => authed && swReady && !needRefresh && isAuthScopeCurrent(auth),

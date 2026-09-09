@@ -11,7 +11,7 @@ import { fixtureSession } from '../pwa/src/api/authFixtures.js';
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.QA_PLAYWRIGHT_PACKAGE || 'playwright');
 const origin = 'http://localhost:5180';
-const output = resolve(dirname(fileURLToPath(import.meta.url)), '../04_docs/qa/push-click-v2.47.6');
+const output = resolve(dirname(fileURLToPath(import.meta.url)), '../04_docs/qa/push-click-v2.47.7');
 const notices = [
   { event: 'message', id: 'qa-click-1', title: '가상 일일리포트',
     message: '[오늘 수업 2건]\n  · 10:00 가상학생 A\n  · 14:00 가상학생 B\n\n[후속 확인]\n전체 내용의 마지막 줄입니다.' },
@@ -175,11 +175,27 @@ try {
   await page.getByRole('textbox', { name: '비밀번호' }).or(page.locator('input[type="password"]')).first().fill('local-fixture-only');
   await page.getByRole('button', { name: '로그인', exact: true }).click();
   await dialog.getByText(/전체 내용의 마지막 줄/).waitFor();
+  await close();
+  await dialog.waitFor({ state: 'hidden' });
+  await page.goto(`${origin}/#/settings`);
+  await page.getByRole('button', { name: '알림 진단', exact: true }).click();
+  const diagnosticField = dialog.getByRole('textbox', { name: '알림 진단 정보' });
+  await page.waitForFunction(() => document.querySelector('textarea[aria-label="알림 진단 정보"]')?.value.includes('appVersion'));
+  const diagnosticText = await diagnosticField.inputValue();
+  const diagnostics = JSON.parse(diagnosticText);
+  assert.equal(diagnostics.appVersion, '2.47.7');
+  assert.equal(diagnostics.serviceWorker.diagnostics.version, '2.47.7');
+  assert(!/qa-click|가상학생|local-fixture-only/.test(diagnosticText), 'no notification IDs or contents in diagnostics');
+  await dialog.getByRole('button', { name: '진단 내용 복사', exact: true }).scrollIntoViewIfNeeded();
+  await stableScreenshot('mobile-diagnostics.png');
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await stableScreenshot('desktop-diagnostics.png');
   assert.equal(errors.length, 0, errors.join('\n'));
   console.log(JSON.stringify({ productionServiceWorker: true, coldStart: true, warmNavigateFailure: true,
     sameNotificationReopen: true, clickPersistedAfterAppReady: true, nativeUrlWithoutClickEvent: true,
     nativeUrlOverridesOldPending: true, nativeQueryConsumed: true, warmMissingRouterEvent: true,
     warmQueryWithoutRouterEvent: true,
+    localDiagnostics: true, diagnosticContentsRedacted: true,
     loginRecovery: true, layout, appErrors: errors.length,
     externalWritesIntercepted: interceptedWrites, output, physicalDeviceTest: false }, null, 2));
 } finally {

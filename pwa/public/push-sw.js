@@ -46,6 +46,10 @@ self.addEventListener('push', (event) => {
       navigate: nativeTarget.href,
       data: { url, id: String(data.id || '') },
     });
+    await recordPushDiagnostic('push-shown', {
+      targetKind: nativeTarget.searchParams.has('push_notification') ? 'query' : 'hash',
+      hasId: !!data.id,
+    });
   })());
 });
 
@@ -55,6 +59,54 @@ const CLICK_CACHE = 'teacher-push-click-v1';
 const CLICK_KEY = new URL('/__teacher-push-click__', self.location.origin).href;
 const CLICK_TTL = 10 * 60 * 1000;
 let clickStorageOperation = Promise.resolve();
+const DIAGNOSTIC_VERSION = '2.47.7';
+const DIAGNOSTIC_CACHE = 'teacher-push-diagnostics-v1';
+const DIAGNOSTIC_KEY = new URL('/__teacher-push-diagnostics__', self.location.origin).href;
+let diagnosticOperation = Promise.resolve();
+
+function cleanDiagnosticEvents(value) {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item) => item && ['push-shown', 'notificationclick', 'navigation-error'].includes(item.event)
+    && Number.isFinite(item.at) && item.at <= Date.now() && Date.now() - item.at < 86400000)
+    .slice(-16).map((item) => ({
+      event: item.event, at: item.at,
+      targetKind: ['query', 'hash', 'other'].includes(item.targetKind) ? item.targetKind : 'other',
+      hasId: item.hasId === true,
+    }));
+}
+
+// 본문·제목·URL·알림 ID·토큰 없이 고정 종류와 시각만 남기는 기기 로컬 진단.
+function recordPushDiagnostic(event, details = {}) {
+  diagnosticOperation = diagnosticOperation.catch(() => {}).then(async () => {
+    const cache = await caches.open(DIAGNOSTIC_CACHE);
+    const response = await cache.match(DIAGNOSTIC_KEY);
+    const events = cleanDiagnosticEvents(response ? await response.json().catch(() => []) : []);
+    events.push({ event, at: Date.now(), targetKind: details.targetKind, hasId: details.hasId });
+    await cache.put(DIAGNOSTIC_KEY, new Response(JSON.stringify(cleanDiagnosticEvents(events))));
+  }).catch(() => {});
+  return diagnosticOperation;
+}
+
+async function pushDiagnosticSnapshot() {
+  await diagnosticOperation;
+  let events = [];
+  try {
+    const response = await (await caches.open(DIAGNOSTIC_CACHE)).match(DIAGNOSTIC_KEY);
+    events = cleanDiagnosticEvents(response ? await response.json() : []);
+  } catch {}
+  let pending = null;
+  try {
+    const response = await (await caches.open(CLICK_CACHE)).match(CLICK_KEY);
+    const value = response ? await response.json() : null;
+    if (isValidPendingClick(value)) pending = value;
+  } catch {}
+  return {
+    type: 'teacher-push-diagnostics', version: DIAGNOSTIC_VERSION,
+    nativeNavigateSupported: 'navigate' in (self.Notification?.prototype || {}),
+    events,
+    pending: { present: !!pending, ageMs: pending ? Math.max(0, Date.now() - pending.createdAt) : null },
+  };
+}
 
 function withClickStorage(operation) {
   const result = clickStorageOperation.then(async () => operation(await caches.open(CLICK_CACHE)));
@@ -83,13 +135,17 @@ function isTeacherWindow(client) {
   } catch { return false; }
 }
 
+function isValidPendingClick(pending) {
+  return !!pending && typeof pending.clickId === 'string' && Number.isFinite(pending.createdAt)
+    && Date.now() - pending.createdAt <= CLICK_TTL && pending.createdAt <= Date.now()
+    && notificationTarget({ url: pending.url }).href === pending.url;
+}
+
 async function readPendingClick(cache) {
   const response = await cache.match(CLICK_KEY);
   if (!response) return null;
   const pending = await response.json().catch(() => null);
-  if (!pending || typeof pending.clickId !== 'string' || !Number.isFinite(pending.createdAt)
-    || Date.now() - pending.createdAt > CLICK_TTL || pending.createdAt > Date.now()
-    || notificationTarget({ url: pending.url }).href !== pending.url) {
+  if (!isValidPendingClick(pending)) {
     await cache.delete(CLICK_KEY);
     return null;
   }
@@ -98,7 +154,9 @@ async function readPendingClick(cache) {
 
 self.addEventListener('message', (event) => {
   if (!isTeacherWindow(event.source) || event.source.visibilityState === 'hidden') return;
-  if (event.data?.type === 'teacher-push-navigation-request' && event.ports?.[0]) {
+  if (event.data?.type === 'teacher-push-diagnostics-request' && event.ports?.[0]) {
+    event.waitUntil(pushDiagnosticSnapshot().then((snapshot) => event.ports[0].postMessage(snapshot)).catch(() => {}));
+  } else if (event.data?.type === 'teacher-push-navigation-request' && event.ports?.[0]) {
     event.waitUntil(withClickStorage(readPendingClick).catch(() => null).then((pending) => {
       event.ports[0].postMessage({ type: 'teacher-push-navigation', pending });
     }));
@@ -111,6 +169,7 @@ self.addEventListener('message', (event) => {
 });
 
 self.addEventListener('notificationclick', (event) => {
+  event.waitUntil(recordPushDiagnostic('notificationclick', { targetKind: 'hash', hasId: !!event.notification.data?.id }));
   event.notification.close();
   event.waitUntil((async () => {
     const target = notificationTarget(event.notification.data);
@@ -124,16 +183,21 @@ self.addEventListener('notificationclick', (event) => {
     for (const client of candidates) {
       let destination;
       try { destination = await client.focus(); } catch {
+        event.waitUntil(recordPushDiagnostic('navigation-error', { targetKind: 'hash', hasId: !!event.notification.data?.id }));
         // iOS의 막 생성된 창은 focus가 거부돼도 곧 메시지를 받을 수 있다.
         try { notify(client); } catch {}
         continue;
       }
       // 포커스 성공과 주소 이동 실패를 분리한다. 시작 중인 iOS 창은 navigate가 거부될 수 있다.
-      try { destination = await client.navigate(target.href) || destination; } catch {}
+      try { destination = await client.navigate(target.href) || destination; } catch {
+        event.waitUntil(recordPushDiagnostic('navigation-error', { targetKind: 'hash', hasId: !!event.notification.data?.id }));
+      }
       try { notify(destination || client); } catch {}
       return;
     }
     // 새 창이 root로 열리거나 postMessage 수신 준비 전이어도 앱의 요청으로 목적지를 복원한다.
-    try { notify(await self.clients.openWindow(target.href)); } catch {}
+    try { notify(await self.clients.openWindow(target.href)); } catch {
+      event.waitUntil(recordPushDiagnostic('navigation-error', { targetKind: 'hash', hasId: !!event.notification.data?.id }));
+    }
   })());
 });

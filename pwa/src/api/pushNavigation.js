@@ -1,3 +1,5 @@
+import { recordPushDiagnosticEvent } from './pushDiagnostics.js';
+
 const NAVIGATION_MESSAGE = 'teacher-push-navigation';
 const MAX_PENDING_AGE = 10 * 60 * 1000;
 const REQUEST_TIMEOUT = 2500;
@@ -17,6 +19,7 @@ export function normalizePushLaunch() {
   const search = query.toString();
   window.history.replaceState(window.history.state, '',
     `/${search ? `?${search}` : ''}#/notifications?id=${encodeURIComponent(ids[0])}&via=push`);
+  recordPushDiagnosticEvent('native-query-normalized');
   return true;
 }
 
@@ -59,7 +62,10 @@ function observeNativeDestination() {
 /** 인증·라우터 준비 후 클릭을 적용하거나 새 native 진입에 대체된 클릭을 정리한다. */
 export function connectPushNavigation({ canNavigate }) {
   const serviceWorker = navigator.serviceWorker;
-  if (!serviceWorker) return () => {};
+  if (!serviceWorker) {
+    recordPushDiagnosticEvent('navigation-ignored', { reason: 'unsupported' });
+    return () => {};
+  }
   let disposed = false;
   let activeWorker;
   let latestAppliedCreatedAt = 0;
@@ -68,6 +74,9 @@ export function connectPushNavigation({ canNavigate }) {
   const requests = new Map();
   const eligible = () => !disposed && document.visibilityState !== 'hidden'
     && canNavigate() && isTeacherWindow(window.location);
+  const ignoreReason = () => disposed ? 'disposed' : document.visibilityState === 'hidden' ? 'hidden'
+    : !canNavigate() ? 'auth-or-startup' : !isTeacherWindow(window.location) ? 'public-route' : null;
+  recordPushDiagnosticEvent('bridge-connect', { eligible: eligible(), hasController: Boolean(serviceWorker.controller) });
 
   const stopPulling = () => {
     clearTimeout(pullTimer);
@@ -81,33 +90,46 @@ export function connectPushNavigation({ canNavigate }) {
       (worker || serviceWorker.controller || activeWorker)?.postMessage({
         type: 'teacher-push-navigation-ack', clickId,
       });
-    } catch { /* SW 갱신 중이면 다음 요청에서 확인 응답을 다시 보낸다. */ }
+      recordPushDiagnosticEvent('navigation-ack');
+    } catch { recordPushDiagnosticEvent('navigation-ignored', { reason: 'post-message-error' }); }
   };
 
   const receive = (data, worker) => {
-    if (data?.type !== NAVIGATION_MESSAGE || !eligible()) return;
+    if (data?.type !== NAVIGATION_MESSAGE) return;
+    if (!eligible()) { recordPushDiagnosticEvent('navigation-ignored', { reason: ignoreReason() }); return; }
+    if (data.pending === null) { recordPushDiagnosticEvent('pull-empty'); return; }
     const pending = data.pending;
     // 구버전 SW의 직접 전달도 허용하되 알림 상세 목적지만 받는다.
     const target = notificationDestination(pending?.url ?? data.url, window.location.origin);
-    if (!target) return;
+    if (!target) { recordPushDiagnosticEvent('navigation-ignored', { reason: 'invalid-target' }); return; }
     if (pending && (typeof pending.clickId !== 'string' || !pending.clickId
       || !Number.isFinite(pending.createdAt) || pending.createdAt > Date.now() + 60000
-      || Date.now() - pending.createdAt > MAX_PENDING_AGE)) return;
+      || Date.now() - pending.createdAt > MAX_PENDING_AGE)) {
+      recordPushDiagnosticEvent('navigation-ignored', { reason: 'invalid-pending' }); return;
+    }
+    if (pending) recordPushDiagnosticEvent('pull-pending', { ageMs: Date.now() - pending.createdAt });
     const native = observeNativeDestination();
     // UA가 이미 새 알림으로 이동했다면 그보다 먼저 보관된 클릭은 주소를 덮지 않는다.
     // 표식을 영구 잠금으로 쓰지 않아 나중에 새로 누른 legacy 알림은 계속 처리한다.
     const superseded = pending && native && pending.createdAt < native.observedAt;
-    if (pending && pending.createdAt < latestAppliedCreatedAt && !superseded) return;
+    if (pending && pending.createdAt < latestAppliedCreatedAt && !superseded) {
+      recordPushDiagnosticEvent('navigation-ignored', { reason: 'stale' }); return;
+    }
     const clickId = pending?.clickId;
     if (!clickId || !appliedClicks.has(clickId)) {
       if (!superseded) {
         window.location.hash = target.hash;
         if (window.location.hash !== target.hash || !eligible()) return;
+        recordPushDiagnosticEvent('navigation-applied');
+      } else {
+        recordPushDiagnosticEvent('navigation-ignored', { reason: 'superseded' });
       }
       if (clickId) {
         appliedClicks.add(clickId);
         if (appliedClicks.size > 100) appliedClicks.delete(appliedClicks.values().next().value);
       }
+    } else {
+      recordPushDiagnosticEvent('navigation-ignored', { reason: 'duplicate' });
     }
     if (pending) latestAppliedCreatedAt = Math.max(latestAppliedCreatedAt, pending.createdAt,
       superseded ? native.observedAt : 0);
@@ -134,10 +156,11 @@ export function connectPushNavigation({ canNavigate }) {
       close();
       receive(event.data, worker);
     };
-    timer = setTimeout(close, REQUEST_TIMEOUT);
+    timer = setTimeout(() => { recordPushDiagnosticEvent('pull-timeout'); close(); }, REQUEST_TIMEOUT);
     try {
+      recordPushDiagnosticEvent('pull-request');
       worker.postMessage({ type: 'teacher-push-navigation-request' }, [channel.port2]);
-    } catch { close(); }
+    } catch { recordPushDiagnosticEvent('navigation-ignored', { reason: 'post-message-error' }); close(); }
   };
 
   const pull = () => {
@@ -161,16 +184,24 @@ export function connectPushNavigation({ canNavigate }) {
     requests.forEach((close) => close());
     receive(event.data, event.source);
   };
-  const onVisible = () => { if (document.visibilityState === 'visible') onResume(); };
+  const onFocus = () => { recordPushDiagnosticEvent('browser-focus'); onResume(); };
+  const onPageShow = () => { recordPushDiagnosticEvent('browser-pageshow'); onResume(); };
+  const onPopState = () => recordPushDiagnosticEvent('browser-popstate');
+  const onVisible = () => {
+    recordPushDiagnosticEvent('browser-visibility');
+    if (document.visibilityState === 'visible') onResume();
+  };
   const onHashChange = () => {
+    recordPushDiagnosticEvent('browser-hashchange');
     const previous = nativeDestination;
     const current = observeNativeDestination();
     if (current && current !== previous) onResume();
   };
   serviceWorker.addEventListener('message', onMessage);
   serviceWorker.addEventListener('controllerchange', onResume);
-  window.addEventListener('focus', onResume);
-  window.addEventListener('pageshow', onResume);
+  window.addEventListener('focus', onFocus);
+  window.addEventListener('pageshow', onPageShow);
+  window.addEventListener('popstate', onPopState);
   window.addEventListener('hashchange', onHashChange);
   document.addEventListener('visibilitychange', onVisible);
   onResume();
@@ -178,18 +209,21 @@ export function connectPushNavigation({ canNavigate }) {
   // ready를 기다리며 렌더를 막지 않고, 이미 종료된 인증 범위에는 적용하지 않는다.
   serviceWorker.ready?.then((registration) => {
     if (disposed) return;
+    recordPushDiagnosticEvent('bridge-ready');
     activeWorker = registration.active;
     onResume();
   }).catch(() => {});
 
   return () => {
     disposed = true;
+    recordPushDiagnosticEvent('bridge-dispose');
     stopPulling();
     requests.forEach((close) => close());
     serviceWorker.removeEventListener('message', onMessage);
     serviceWorker.removeEventListener('controllerchange', onResume);
-    window.removeEventListener('focus', onResume);
-    window.removeEventListener('pageshow', onResume);
+    window.removeEventListener('focus', onFocus);
+    window.removeEventListener('pageshow', onPageShow);
+    window.removeEventListener('popstate', onPopState);
     window.removeEventListener('hashchange', onHashChange);
     document.removeEventListener('visibilitychange', onVisible);
   };

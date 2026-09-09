@@ -6,6 +6,7 @@ import { Button } from '../components/shadcn/button';
 import { Input } from '../components/shadcn/input';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import ConfirmDialog from '../components/ui/ConfirmDialog.jsx';
+import PushDiagnosticsButton from '../components/PushDiagnosticsButton.jsx';
 import { clearAuth } from '../api/authUtils.js';
 import { disablePushNotifications, enablePushNotifications, getPushStatus } from '../api/pushNotifications.js';
 import { TEXT_SECONDARY,
@@ -172,6 +173,7 @@ export default function SettingsPage() {
                 {pushState === 'enabled' ? '이 기기 알림 끄기' : '이 기기 알림 받기'}
               </Button>
             )}
+            <PushDiagnosticsButton />
           </div>
         </div>
 
