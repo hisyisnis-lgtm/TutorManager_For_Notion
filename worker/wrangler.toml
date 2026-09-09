@@ -1,6 +1,7 @@
 name = "tutor-manager-proxy"
 main = "src/index.js"
 compatibility_date = "2026-04-27"
+compatibility_flags = ["nodejs_compat"]
 
 # 워커 로그 보존(Workers Logs). 켜기 전에는 장애가 나도 남는 기록이 휴대폰 ntfy 푸시뿐이라
 # 2026-08-06 Notion 장애 때 사후에 워커 로그를 열어볼 방법이 아예 없었다.
