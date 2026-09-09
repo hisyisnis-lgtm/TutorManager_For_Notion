@@ -3,6 +3,8 @@
 // src = 유입 소스(web/standalone/twa) — 스토어(TWA) 출시 후 웹 vs 스토어 유입 구분용.
 // ⚠️ sendBeacon은 application/json이면 preflight가 필요해 조용히 실패 → text/plain으로 보냄(워커 request.json()은 content-type 무관 파싱).
 import { WORKER_URL } from '../config.js';
+import { createTracker } from '../analytics/tracker.js';
+const businessTracker = createTracker('tone', `${WORKER_URL}/analytics/event`, !import.meta.env.DEV);
 
 function detectSource() {
   try {
@@ -15,6 +17,9 @@ function detectSource() {
 /** 이벤트 1건 전송(fire-and-forget). e=이벤트명, props={ m?(라벨), k?(신원), v?(수치) } */
 export function track(e, props = {}) {
   try {
+    const businessEvent = { enter: 'game_enter', run_start: 'run_start', run_end: 'run_end' }[e];
+    if (businessEvent) businessTracker.track(businessEvent);
+    if (e === 'cta_play_link' && props.m === 'kakao-channel') businessTracker.track('business_click');
     if (import.meta.env.DEV) { console.debug('[game-track]', e, props); return; }
     const payload = JSON.stringify({ e, src: detectSource(), ...props });
     const url = `${WORKER_URL}/game/event`;

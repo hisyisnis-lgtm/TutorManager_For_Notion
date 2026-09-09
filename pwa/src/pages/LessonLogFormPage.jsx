@@ -7,6 +7,7 @@ import { Textarea } from '../components/shadcn/textarea';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import SubmitButton from '../components/ui/SubmitButton.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
+import ErrorMessage from '../components/ui/ErrorMessage.jsx';
 import { getPage, deletePage } from '../api/notionClient.js';
 import { invalidateCache } from '../hooks/useCachedResource.js';
 import ConfirmDialog from '../components/ui/ConfirmDialog.jsx';
@@ -36,11 +37,23 @@ export default function LessonLogFormPage() {
   const [deleting, setDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [error, setError] = useState(null);
+  const [loadError, setLoadError] = useState(null);
+  const [loadedId, setLoadedId] = useState(null);
+  const [loadAttempt, setLoadAttempt] = useState(0);
 
   useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setLoadError(null);
+    setError(null);
+    setLoadedId(null);
+    setLog(null);
+    setInitial(null);
+    setShowDeleteConfirm(false);
     const load = async () => {
       try {
         const page = await getPage(id);
+        if (cancelled) return;
         const parsed = parseLessonLog(page);
         setLog(parsed);
         const loaded = {
@@ -52,22 +65,26 @@ export default function LessonLogFormPage() {
         };
         setForm(loaded);
         setInitial(loaded);
+        setLoadedId(id);
       } catch (e) {
-        setError(e.message);
+        if (!cancelled) setLoadError(e.message || '수업 일지를 불러오지 못했어요.');
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
     load();
-  }, [id]);
+    return () => { cancelled = true; };
+  }, [id, loadAttempt]);
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
 
-  const isDirty = !initial || JSON.stringify(form) !== JSON.stringify(initial);
+  const canEdit = !loading && loadedId === id && initial !== null;
+  const isDirty = canEdit && JSON.stringify(form) !== JSON.stringify(initial);
   const blockedReason = !isDirty ? '변경된 내용이 없어요.' : null;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!canEdit || !isDirty || saving || deleting) return;
     setSaving(true);
     setError(null);
     try {
@@ -82,6 +99,7 @@ export default function LessonLogFormPage() {
   };
 
   const handleDelete = async () => {
+    if (!canEdit || saving || deleting) return;
     setDeleting(true);
     try {
       await deletePage(id);
@@ -98,6 +116,15 @@ export default function LessonLogFormPage() {
   };
 
   if (loading) return <><PageHeader title="수업 일지" back /><LoadingSpinner /></>;
+  if (!canEdit) return (
+    <>
+      <PageHeader title="수업 일지" back />
+      <ErrorMessage
+        message={loadError || '수업 일지를 불러오지 못했어요.'}
+        onRetry={() => setLoadAttempt((attempt) => attempt + 1)}
+      />
+    </>
+  );
 
   const studentNames = log?.studentIds?.map((sid) => studentNameMap[sid] || '').filter(Boolean).join(', ');
 

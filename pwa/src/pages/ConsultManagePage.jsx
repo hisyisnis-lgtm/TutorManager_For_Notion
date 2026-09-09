@@ -6,6 +6,7 @@ import { Card, CardContent } from '../components/shadcn/card';
 import { useCachedResource } from '../hooks/useCachedResource.js';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
+import ErrorMessage from '../components/ui/ErrorMessage.jsx';
 import EmptyState from '../components/ui/EmptyState.jsx';
 import PullToRefresh from '../components/ui/PullToRefresh.jsx';
 import SectionHeading from '../components/ui/SectionHeading.jsx';
@@ -166,8 +167,10 @@ export default function ConsultManagePage() {
     <PullToRefresh onRefresh={consultsRes.refresh}>
       <PageHeader title="무료상담 신청" back />
       <div className="px-4 pt-4 pb-24">
-        {loading ? (
+        {loading || (consultsRes.refreshing && consultsRes.data === undefined) ? (
           <LoadingSpinner />
+        ) : consultsRes.error ? (
+          <ErrorMessage message={consultsRes.error} onRetry={consultsRes.refresh} />
         ) : consults.length === 0 ? (
           <EmptyState icon={<ClipboardTextIcon size={44} weight="thin" style={{ color: BORDER_NEUTRAL }} />} title="아직 무료상담 신청이 없습니다" />
         ) : (

@@ -44,7 +44,7 @@ function Row({ label, value }) {
 
 export default function PaymentDetailPage() {
   const { id } = useParams();
-  const { studentNameMap, classTypeMap } = useData();
+  const { studentNameMap, classTypeMap, refresh: refreshAll } = useData();
   const [p, setP] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -112,9 +112,10 @@ export default function PaymentDetailPage() {
         refundDate: amt > 0 ? (refundForm.date || todayKST()) : null,
         refundReason: amt > 0 ? refundForm.reason : '',
       });
+      invalidateCache('payment'); // 환불 반영 — 결제 목록·월 매출 요약 stale 방지
+      await refreshAll(); // 학생 잔여 시간도 환불이 반영된 결제 배열로 다시 계산
       const page = await getPage(id);
       setP(parsePayment(page));
-      invalidateCache('payment'); // 환불 반영 — 결제 목록·월 매출 요약 stale 방지
       setRefundConfirm(false);
       setRefundOpen(false);
     } catch (e) {

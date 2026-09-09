@@ -101,9 +101,12 @@ export async function updatePayment(pageId, {
   }
   if (sessionCount !== undefined) properties['시간 회차'] = { number: sessionCount };
   if (actualAmount !== undefined) properties['실제 결제 금액'] = { number: actualAmount };
-  if (paymentMethod) properties['결제수단'] = { select: { name: paymentMethod } };
-  else if (paymentMethod === '') properties['결제수단'] = { select: null };
-  if (paymentDate) properties['결제일'] = { date: { start: paymentDate } };
+  if (paymentMethod !== undefined) {
+    properties['결제수단'] = paymentMethod ? { select: { name: paymentMethod } } : { select: null };
+  }
+  if (paymentDate !== undefined) {
+    properties['결제일'] = paymentDate ? { date: { start: paymentDate } } : { date: null };
+  }
   if (note !== undefined) properties['타이틀'] = { title: [{ text: { content: note } }] };
   if (refundAmount !== undefined) properties['환불 금액'] = { number: refundAmount };
   if (refundDate !== undefined) properties['환불일'] = refundDate ? { date: { start: refundDate } } : { date: null };

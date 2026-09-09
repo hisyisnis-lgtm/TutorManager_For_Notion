@@ -45,6 +45,7 @@ export default function PersonalPage() {
   // (2026-08-31 지적). 수업·공지와 같은 어법: 캐시 즉시 표시 + 뒤에서 최신화.
   const [student, setStudent] = useState(() => peekCache(`student:info:${studentToken}`) ?? null);
   const [studentError, setStudentError] = useState(null);
+  const [studentLoading, setStudentLoading] = useState(false);
   const [tab, setTab] = useState(() => {
     const t = routerLocation.state?.tab;
     return ['홈', '내 수업', '보관함', '공지', '하늘하늘', 'MY'].includes(t) ? t : '홈';
@@ -248,16 +249,20 @@ export default function PersonalPage() {
 
   const loadStudent = useCallback(async () => {
     const auth = captureAuthScope(`student:${studentToken}`);
+    setStudentLoading(true);
     try {
       const data = await trackRevalidation(fetchStudentByToken(studentToken));
       if (!isAuthScopeCurrent(auth)) return;
       localStorage.setItem(SAVED_TOKEN_KEY, studentToken);
       writeCacheValue(`student:info:${studentToken}`, data, auth);
       setStudent(data);
+      setStudentError(null);
     } catch (e) {
       if (!isAuthScopeCurrent(auth)) return;
       localStorage.removeItem(SAVED_TOKEN_KEY);
       setStudentError(e.status === 404 ? '등록된 학생 코드가 아닙니다.' : e.message);
+    } finally {
+      if (isAuthScopeCurrent(auth)) setStudentLoading(false);
     }
   }, [studentToken]);
 
@@ -287,6 +292,16 @@ export default function PersonalPage() {
           <p style={{ fontSize: 14, color: STATUS_ERROR_TEXT, margin: 0 }}>{studentError}</p>
           <Button
             block
+            onClick={loadStudent}
+            loading={studentLoading}
+            disabled={studentLoading}
+            className="mt-4"
+          >
+            다시 시도
+          </Button>
+          <Button
+            block
+            variant="outline"
             onClick={() => navigate('/personal')}
             className="mt-4"
           >

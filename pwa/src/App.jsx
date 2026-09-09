@@ -5,6 +5,7 @@ import { Toaster } from './components/shadcn/sonner';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { useTeacherAuth } from './api/authUtils.js';
 import { PRIMARY } from './constants/theme.js';
+import { isOnFormPage } from './utils/swUpdateGuard.js';
 import { DataProvider } from './context/DataContext.jsx';
 import BottomNav from './components/layout/BottomNav.jsx';
 import FreshnessIndicator from './components/layout/FreshnessIndicator.jsx';
@@ -105,12 +106,6 @@ function GatedStudentRoute({ children }) {
 function isPublicBookingRoute() {
   const hash = window.location.hash;
   return hash.startsWith('#/book') || hash.startsWith('#/intro') || hash.startsWith('#/pricing') || hash.startsWith('#/consent') || hash.startsWith('#/privacy') || hash.startsWith('#/group-class') || hash.startsWith('#/bootcamp') || hash.startsWith('#/personal') || (import.meta.env.DEV && hash.startsWith('#/panda-test'));
-}
-
-// 데이터 작성 중인 폼 페이지 여부 확인
-function isOnFormPage() {
-  const hash = window.location.hash;
-  return /\/(logs|classes|students|payments|homework)\/(new|[^/]+\/edit)/.test(hash);
 }
 
 // PWA standalone에서 root hash로 진입 + 강사 미인증 + 저장된 학생 토큰이 있으면 학생 페이지로 자동 이동.

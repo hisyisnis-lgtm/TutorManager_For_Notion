@@ -73,7 +73,7 @@ export default function PaymentFormPage() {
           sessionCount: String(p.sessionCount),
           actualAmount: String(p.actualAmount),
           paymentMethod: p.paymentMethod || '',
-          paymentDate: p.paymentDate || todayKST(),
+          paymentDate: p.paymentDate || '',
           guestName: '',
         });
       } catch (e) {
@@ -222,6 +222,7 @@ export default function PaymentFormPage() {
     try {
       await deletePage(id);
       invalidateCache('payment');
+      await refreshAll();
       navigate(-1);
     } catch (e) {
       setError(e.message);

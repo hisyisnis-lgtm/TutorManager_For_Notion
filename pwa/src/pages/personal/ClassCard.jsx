@@ -19,7 +19,8 @@ export const LOCATION_LABEL = { '강남사무실': '강남', '온라인 (Zoom/�
  * 지난 수업·취소 수업은 흐리게(isDimmed), 진행 중이면 '수업중' 배지.
  */
 export default function ClassCard({ cls, todayStr, nowMin }) {
-  const d = new Date(cls.date + 'T00:00:00+09:00');
+  // date는 이미 KST의 달력 날짜다. 기기 현지 시간으로 다시 변환하지 않는다.
+  const d = new Date(cls.date + 'T00:00:00Z');
   const clsStartMin = timeToMin(cls.startTime);
   const clsEndMin = clsStartMin + cls.durationMin;
   const isToday = cls.date === todayStr;
@@ -40,10 +41,10 @@ export default function ClassCard({ cls, todayStr, nowMin }) {
         {/* 날짜 박스 */}
         <div style={{ minWidth: 50, textAlign: 'center', backgroundColor: isDimmed ? BG_APP : PRIMARY_BG, borderRadius: 10, padding: '8px 6px', flexShrink: 0 }}>
           <div style={{ fontSize: 20, fontWeight: 700, color: isDimmed ? TEXT_INACTIVE : PRIMARY, lineHeight: 1.15 }} className="tabular-nums">
-            {d.getDate()}
+            {d.getUTCDate()}
           </div>
           <div style={{ fontSize: 11, fontWeight: 600, color: isDimmed ? TEXT_DISABLED : PRIMARY_LIGHT, marginTop: 1 }}>
-            {DAY_KR[d.getDay()]}요일
+            {DAY_KR[d.getUTCDay()]}요일
           </div>
         </div>
 

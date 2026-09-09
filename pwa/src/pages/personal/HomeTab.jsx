@@ -116,9 +116,9 @@ function NextClassHeroCard({ cls, todayStr, nowMin }) {
   const isToday = cls.date === todayStr;
   const isOngoing = isToday && nowMin >= clsStartMin && nowMin < clsEndMin;
   const daysUntil = Math.round(
-    (new Date(cls.date + 'T00:00:00') - new Date(todayStr + 'T00:00:00')) / 86400000
+    (new Date(cls.date + 'T00:00:00Z') - new Date(todayStr + 'T00:00:00Z')) / 86400000
   );
-  const d = new Date(cls.date + 'T00:00:00+09:00');
+  const d = new Date(cls.date + 'T00:00:00Z');
 
   const timeColor = isOngoing ? STATUS_INFO_DARK : PRIMARY;
 
@@ -137,7 +137,7 @@ function NextClassHeroCard({ cls, todayStr, nowMin }) {
   // 오늘/내일/수업 중은 단어로, 그 외에는 수업 날짜로 말한다.
   const whenLabel = statusWord
     ? statusWord
-    : { label: `${d.getMonth() + 1}월 ${d.getDate()}일 ${DAY_KR[d.getDay()]}요일`, color: TEXT_INACTIVE };
+    : { label: `${d.getUTCMonth() + 1}월 ${d.getUTCDate()}일 ${DAY_KR[d.getUTCDay()]}요일`, color: TEXT_INACTIVE };
 
   return (
     <div>

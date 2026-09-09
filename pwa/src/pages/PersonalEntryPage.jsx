@@ -3,7 +3,6 @@ import {
   useEffect,
   useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fetchStudentByToken } from '../api/bookingApi.js';
 import { usePullToRefresh,
   PullIndicator } from '../hooks/usePullToRefresh.jsx';
 import { Button } from '../components/shadcn/button';
@@ -25,7 +24,6 @@ const SAVED_TOKEN_KEY = 'personal_student_token';
 export default function PersonalEntryPage() {
   const navigate = useNavigate();
   const [code, setCode] = useState('');
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   // 저장된 코드 있으면 자동 이동
@@ -36,21 +34,18 @@ export default function PersonalEntryPage() {
 
   const { pullY, refreshing } = usePullToRefresh(useCallback(() => window.location.reload(), []));
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
-    const trimmed = code.trim();
+    const trimmed = code.trim().toUpperCase();
     if (!trimmed) return;
-    setLoading(true);
-    setError(null);
-    try {
-      await fetchStudentByToken(trimmed);
-      localStorage.setItem(SAVED_TOKEN_KEY, trimmed);
-      navigate(`/personal/${encodeURIComponent(trimmed)}`);
-    } catch (err) {
-      setError(err.status === 404 ? '등록된 학생 코드가 아닙니다.' : err.message);
-    } finally {
-      setLoading(false);
+    if (!/^[A-Z0-9]{12}$/.test(trimmed)) {
+      setError('학생 코드는 영문과 숫자 12자리로 입력해 주세요.');
+      return;
     }
+    setError(null);
+    // 보호 데이터 조회와 코드 저장은 StudentAuthGate의 본인 확인 이후에 수행한다.
+    // 미인증 코드를 저장하면 뒤로 돌아왔을 때 잘못된 코드로 자동 재진입할 수 있다.
+    navigate(`/personal/${encodeURIComponent(trimmed)}`);
   };
 
   const errorId = 'personal-entry-error';
@@ -148,11 +143,10 @@ export default function PersonalEntryPage() {
               block
               size="lg"
               type="submit"
-              loading={loading}
-              disabled={loading || !code.trim()}
+              disabled={!code.trim()}
               className="text-[15px] font-bold"
             >
-              {loading ? '확인 중...' : '시작하기'}
+              시작하기
             </Button>
             </CardContent>
           </Card>
