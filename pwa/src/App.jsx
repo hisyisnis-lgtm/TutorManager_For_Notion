@@ -1,5 +1,6 @@
 import { useState, useEffect, useSyncExternalStore, lazy, Suspense } from 'react';
-import { getAuthRevision, subscribeAuthChanges } from './api/authState.js';
+import { captureAuthScope, getAuthRevision, isAuthScopeCurrent, subscribeAuthChanges } from './api/authState.js';
+import { connectPushNavigation } from './api/pushNavigation.js';
 import { HashRouter, BrowserRouter, Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom';
 import { Toaster } from './components/shadcn/sonner';
 import { useRegisterSW } from 'virtual:pwa-register/react';
@@ -227,21 +228,13 @@ export default function App() {
     return () => clearInterval(id);
   }, [swRegistration]);
 
-  // Android PWA에서 WindowClient.navigate()가 null을 반환하는 경우 서비스워커가
-  // 현재 앱 창에 목적지를 전달한다. 같은 origin의 해시 라우트만 허용한다.
+  // 이미 열린 Android 앱과 늦게 시작하는 iOS 앱 모두 SW에 남은 클릭 목적지를 복구한다.
   useEffect(() => {
-    const onPushNavigation = (event) => {
-      if (event.data?.type !== 'teacher-push-navigation') return;
-      try {
-        const target = new URL(event.data.url, window.location.origin);
-        if (target.origin === window.location.origin && target.pathname === '/' && target.hash.startsWith('#/')) {
-          window.location.hash = target.hash;
-        }
-      } catch { /* 잘못된 URL은 무시 */ }
-    };
-    navigator.serviceWorker?.addEventListener('message', onPushNavigation);
-    return () => navigator.serviceWorker?.removeEventListener('message', onPushNavigation);
-  }, []);
+    const auth = captureAuthScope();
+    return connectPushNavigation({
+      canNavigate: () => authed && swReady && !needRefresh && isAuthScopeCurrent(auth),
+    });
+  }, [authed, authRevision, swReady, needRefresh]);
 
   useEffect(() => {
     if (!needRefresh) {

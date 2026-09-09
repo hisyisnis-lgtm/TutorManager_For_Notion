@@ -1,6 +1,6 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
-import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { MemoryRouter, useLocation, useNavigate } from 'react-router-dom';
 import { setAuth, clearAuth } from '../api/authUtils.js';
 import { notifyAuthChange } from '../api/authState.js';
 import { fixtureSession } from '../api/authFixtures.js';
@@ -14,8 +14,16 @@ beforeEach(() => {
   setAuth(fixtureSession());
 });
 afterEach(() => { cleanup(); localStorage.clear(); sessionStorage.clear(); notifyAuthChange(); vi.unstubAllGlobals(); });
+let navigatePage;
+let pageLocation;
+function RouterProbe() {
+  navigatePage = useNavigate();
+  pageLocation = useLocation();
+  return null;
+}
 const renderPage = (initialEntry = '/notifications') => render(
   <MemoryRouter initialEntries={[initialEntry]} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+    <RouterProbe />
     <NotificationsPage />
   </MemoryRouter>,
 );
@@ -69,8 +77,52 @@ describe('강사 알림 인증 프록시', () => {
     renderPage('/notifications?id=fixture');
 
     const dialog = await screen.findByRole('dialog');
-    expect(within(dialog).getByText('일일리포트')).toBeTruthy();
+    expect(await within(dialog).findByText('일일리포트')).toBeTruthy();
     expect(within(dialog).getByText(/두 번째 상세 내용까지 전부 표시/)).toBeTruthy();
     expect(screen.getAllByText(/두 번째 상세 내용까지 전부 표시/)[0].className).toContain('whitespace-pre-wrap');
+  });
+
+  it('조회가 느려도 팝업을 먼저 열고 원문의 줄바꿈·빈 줄을 보존한다', async () => {
+    let respond;
+    vi.stubGlobal('fetch', vi.fn(() => new Promise((resolve) => { respond = resolve; })));
+    renderPage('/notifications?id=fixture');
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByText('알림 내용을 불러오는 중이에요.')).toBeTruthy();
+    const body = '[오늘 수업]\n오후 3시 수업\n\n[숙제]\n제출 확인';
+    await act(async () => respond(new Response(JSON.stringify({ event: 'message', id: 'fixture', message: body, time: 1 }))));
+    const description = within(dialog).getByText(/제출 확인/);
+    expect(description.textContent).toBe(body);
+    expect(description.className).toContain('whitespace-pre-wrap');
+  });
+
+  it('알림 내역에 없는 id도 조용히 무시하지 않고 팝업에서 안내한다', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('')));
+    renderPage('/notifications?id=missing');
+    expect(await within(screen.getByRole('dialog')).findByText('보관된 알림 내역에서 이 알림을 찾을 수 없어요.')).toBeTruthy();
+  });
+
+  it('상세 조회 연결 오류도 팝업에서 안내한다', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('', { status: 500 })));
+    renderPage('/notifications?id=fixture');
+    expect(await within(screen.getByRole('dialog')).findByText(/알림 내용을 불러오지 못했어요/)).toBeTruthy();
+  });
+
+  it('팝업을 닫으면 id만 지우고 같은 알림을 다시 누르거나 다른 id가 오면 다시 표시한다', async () => {
+    const messages = [
+      { event: 'message', id: 'fixture', title: '첫 알림', message: '첫 내용', time: 1 },
+      { event: 'message', id: 'second', title: '다음 알림', message: '다음 내용', time: 2 },
+    ].map((item) => JSON.stringify(item)).join('\n');
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(messages)));
+    renderPage('/notifications?id=fixture&view=all');
+    expect(await within(screen.getByRole('dialog')).findByText('첫 내용')).toBeTruthy();
+    fireEvent.click(within(screen.getByRole('dialog')).getAllByRole('button', { name: '닫기' })[0]);
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(pageLocation.search).toBe('?view=all');
+
+    act(() => navigatePage('/notifications?id=fixture&view=all'));
+    expect(await within(screen.getByRole('dialog')).findByText('첫 내용')).toBeTruthy();
+    act(() => navigatePage('/notifications?id=second'));
+    expect(await within(screen.getByRole('dialog')).findByText('다음 내용')).toBeTruthy();
+    expect(within(screen.getByRole('dialog')).queryByText('첫 내용')).toBeNull();
   });
 });

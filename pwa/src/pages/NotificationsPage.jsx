@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '../components/shadcn/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../components/shadcn/dialog';
 import PageHeader from '../components/layout/PageHeader.jsx';
@@ -57,12 +57,12 @@ function relativeTime(unixSec) {
 
 export default function NotificationsPage() {
   const location = useLocation();
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState(loadNotifications);
   const [connStatus, setConnStatus] = useState('connecting'); // connecting | connected | error | off
   const authRef = useRef(captureAuthScope());
   const selectedId = new URLSearchParams(location.search).get('id');
   const selectedRef = useRef(null);
-  const [dismissedSelectedId, setDismissedSelectedId] = useState(null);
   const selectedNotification = notifications.find((notification) => notification.id === selectedId);
 
   useEffect(() => {
@@ -90,6 +90,7 @@ export default function NotificationsPage() {
   useEffect(() => {
     const auth = authRef.current;
     if (!isAuthScopeCurrent(auth)) return;
+    setConnStatus('connecting');
     let cancelled = false;
     const controller = new AbortController();
     let refreshTimer;
@@ -150,7 +151,7 @@ export default function NotificationsPage() {
       navigator.serviceWorker?.removeEventListener('message', onPushMessage);
       window.removeEventListener('focus', onFocus);
     };
-  }, [addNotifications]);
+  }, [addNotifications, selectedId]);
 
   const handleClearAll = () => {
     setNotifications([]);
@@ -158,7 +159,11 @@ export default function NotificationsPage() {
     sessionStorage.setItem(LAST_READ_KEY, String(Math.floor(Date.now() / 1000)));
   };
 
-  const closeSelectedNotification = () => setDismissedSelectedId(selectedId);
+  const closeSelectedNotification = () => {
+    const query = new URLSearchParams(location.search);
+    query.delete('id');
+    navigate({ pathname: location.pathname, search: query.toString() }, { replace: true });
+  };
 
   const statusDot = {
     connecting: 'bg-yellow-400',
@@ -174,20 +179,13 @@ export default function NotificationsPage() {
     off: '알림 내역 이용 불가',
   }[connStatus];
 
-  if (connStatus === 'off') {
-    return (
-      <>
-        <PageHeader title="알림" back />
-        <div className="flex flex-col items-center justify-center px-8 pt-24 gap-4 text-center">
-          <span className="text-5xl">🔔</span>
-          <p className="text-gray-700 font-semibold">알림 상세 내역을 표시할 수 없어요</p>
-          <p className="text-sm text-gray-500">
-            수업·상담 등 자세한 정보는 강사앱의 해당 화면에서 확인해 주세요.
-          </p>
-        </div>
-      </>
-    );
-  }
+  const selectedStatus = connStatus === 'connecting'
+    ? '알림 내용을 불러오는 중이에요.'
+    : connStatus === 'error'
+      ? '알림 내용을 불러오지 못했어요. 연결 상태를 확인하고 다시 열어 주세요.'
+      : connStatus === 'off'
+        ? '알림 상세 내역을 표시할 수 없어요.'
+        : '보관된 알림 내역에서 이 알림을 찾을 수 없어요.';
 
   return (
     <>
@@ -215,7 +213,15 @@ export default function NotificationsPage() {
 
       {/* 알림 목록 */}
       <div className="pb-24">
-        {notifications.length === 0 ? (
+        {connStatus === 'off' ? (
+          <div className="flex flex-col items-center justify-center px-8 pt-24 gap-4 text-center">
+            <span className="text-5xl">🔔</span>
+            <p className="text-gray-700 font-semibold">알림 상세 내역을 표시할 수 없어요</p>
+            <p className="text-sm text-gray-500">
+              수업·상담 등 자세한 정보는 강사앱의 해당 화면에서 확인해 주세요.
+            </p>
+          </div>
+        ) : notifications.length === 0 ? (
           <EmptyState icon={<BellIcon size={44} weight="thin" style={{ color: BORDER_NEUTRAL }} />} title="아직 받은 알림이 없습니다" />
         ) : (
           <ul className="divide-y divide-gray-100">
@@ -254,14 +260,14 @@ export default function NotificationsPage() {
       </div>
 
       <Dialog
-        open={Boolean(selectedNotification) && dismissedSelectedId !== selectedId}
+        open={Boolean(selectedId) && isAuthScopeCurrent(authRef.current)}
         onOpenChange={(open) => { if (!open) closeSelectedNotification(); }}
       >
         <DialogContent className="max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-[480px] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="pr-8 leading-snug">{selectedNotification?.title || '알림 상세'}</DialogTitle>
             <DialogDescription className="whitespace-pre-wrap break-words pt-2 text-sm leading-6 text-gray-700">
-              {selectedNotification?.message}
+              {selectedNotification?.message ?? selectedStatus}
             </DialogDescription>
           </DialogHeader>
           {selectedNotification && (
