@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { connectPushNavigation } from './pushNavigation.js';
+import { connectPushNavigation, normalizePushLaunch } from './pushNavigation.js';
 
 let serviceWorker;
 let worker;
@@ -54,6 +54,46 @@ afterEach(() => {
 });
 
 describe('푸시 클릭 목적지 복구', () => {
+  it.each([null, 'existing-auth-value'])('cold query를 인증 변경 없이 상세 주소로 한 번만 소비한다 (인증 %s)', (credential) => {
+    if (credential) localStorage.setItem('auth_token', credential);
+    else localStorage.removeItem('auth_token');
+    window.history.replaceState({ retained: true }, '', '/?push_notification=fixture-query');
+    expect(normalizePushLaunch()).toBe(true);
+    expect(window.location.hash).toBe('#/notifications?id=fixture-query&via=push');
+    expect(window.location.search).toBe('');
+    expect(window.history.state).toEqual({ retained: true });
+    expect(localStorage.getItem('auth_token')).toBe(credential);
+    expect(normalizePushLaunch()).toBe(false);
+    window.history.replaceState(window.history.state, '', '/#/notifications?via=push');
+    expect(normalizePushLaunch()).toBe(false);
+    expect(window.location.hash).toBe('#/notifications?via=push');
+    localStorage.removeItem('auth_token');
+  });
+
+  it('native query만 소비하고 다른 검색 파라미터는 보존한다', () => {
+    window.history.replaceState(null, '', '/?view=all&push_notification=fixture-query');
+    expect(normalizePushLaunch()).toBe(true);
+    expect(window.location.search).toBe('?view=all');
+    expect(window.location.hash).toBe('#/notifications?id=fixture-query&via=push');
+  });
+
+  it.each([
+    '/?push_notification=',
+    '/?push_notification=https%3A%2F%2Fevil.example',
+    '/?push_notification=%3Cscript%3E',
+    '/?push_notification=..%2Fstudent',
+    `/?push_notification=${'a'.repeat(129)}`,
+    '/?push_notification=first&push_notification=second',
+    '/personal/student?push_notification=fixture',
+    '/?push_notification=fixture#/personal/student',
+    '/?push_notification=fixture#/intro',
+  ])('잘못된 native query 또는 학생·공개 경로는 정규화하지 않는다: %s', (url) => {
+    window.history.replaceState(null, '', url);
+    const before = window.location.href;
+    expect(normalizePushLaunch()).toBe(false);
+    expect(window.location.href).toBe(before);
+  });
+
   it('시작 메시지를 놓치고 controller가 늦게 생겨도 ready 이후 목적지를 조회하고 적용한다', async () => {
     serviceWorker.controller = null;
     disconnect = connectPushNavigation({ canNavigate: () => true });

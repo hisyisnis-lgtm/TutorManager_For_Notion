@@ -7,6 +7,25 @@ const appliedClicks = new Set();
 // 인증·SW 준비에 따른 effect 재연결 때도 같은 native 진입의 관찰 시각을 유지한다.
 let nativeDestination = null;
 
+// hash만 바뀌는 native 이동을 피하는 진입 URL. 인증 정보에는 접근하지 않는다.
+export function normalizePushLaunch() {
+  if (!isTeacherWindow(window.location)) return false;
+  const query = new URLSearchParams(window.location.search);
+  const ids = query.getAll('push_notification');
+  if (ids.length !== 1 || !/^[A-Za-z0-9_-]{1,128}$/.test(ids[0])) return false;
+  query.delete('push_notification');
+  const search = query.toString();
+  window.history.replaceState(window.history.state, '',
+    `/${search ? `?${search}` : ''}#/notifications?id=${encodeURIComponent(ids[0])}&via=push`);
+  return true;
+}
+
+export function currentPushNotificationRoute() {
+  if (window.location.pathname !== '/') return null;
+  const target = notificationDestination(window.location.hash, window.location.origin);
+  return target ? target.hash.slice(1) : null;
+}
+
 // 학생·공개 화면을 보고 있던 창은 강사용 푸시가 빼앗지 않는다.
 function isTeacherWindow(location) {
   if (location.pathname !== '/') return false;
@@ -27,11 +46,12 @@ function notificationDestination(value, origin) {
 }
 
 function observeNativeDestination() {
-  const target = notificationDestination(window.location.href, window.location.origin);
-  const query = target && new URLSearchParams(target.hash.slice('#/notifications?'.length));
+  const route = currentPushNotificationRoute();
+  const hash = route && `#${route}`;
+  const query = route && new URLSearchParams(route.slice('/notifications?'.length));
   if (query?.get('via') !== 'push') nativeDestination = null;
-  else if (nativeDestination?.hash !== target.hash) {
-    nativeDestination = { hash: target.hash, observedAt: Date.now() };
+  else if (nativeDestination?.hash !== hash) {
+    nativeDestination = { hash, observedAt: Date.now() };
   }
   return nativeDestination;
 }
@@ -128,6 +148,7 @@ export function connectPushNavigation({ canNavigate }) {
   };
   // 앱 시작이 SW의 클릭 저장보다 빠르면 처음에는 null일 수 있으므로 잠깐 재조회한다.
   const onResume = () => {
+    normalizePushLaunch();
     observeNativeDestination();
     stopPulling();
     if (!eligible()) return;

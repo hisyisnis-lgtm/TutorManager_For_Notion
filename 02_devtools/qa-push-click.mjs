@@ -11,7 +11,7 @@ import { fixtureSession } from '../pwa/src/api/authFixtures.js';
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.QA_PLAYWRIGHT_PACKAGE || 'playwright');
 const origin = 'http://localhost:5180';
-const output = resolve(dirname(fileURLToPath(import.meta.url)), '../04_docs/qa/push-click-v2.47.5');
+const output = resolve(dirname(fileURLToPath(import.meta.url)), '../04_docs/qa/push-click-v2.47.6');
 const notices = [
   { event: 'message', id: 'qa-click-1', title: '가상 일일리포트',
     message: '[오늘 수업 2건]\n  · 10:00 가상학생 A\n  · 14:00 가상학생 B\n\n[후속 확인]\n전체 내용의 마지막 줄입니다.' },
@@ -117,7 +117,15 @@ try {
   await page.setViewportSize({ width: 320, height: 640 });
   await simulateClick('warm', 'qa-click-long');
   await dialog.getByText(/전체 본문의 마지막 줄/).waitFor();
-  await dialog.getByRole('button', { name: '닫기', exact: true }).last().scrollIntoViewIfNeeded();
+  await page.waitForFunction(() => getComputedStyle(document.querySelector('[role="dialog"]')).opacity === '1');
+  await dialog.getByRole('button', { name: '닫기', exact: true }).first().scrollIntoViewIfNeeded();
+  await page.waitForFunction(() => {
+    const modal = document.querySelector('[role="dialog"]');
+    const button = [...modal.querySelectorAll('button')].find((item) => item.textContent.trim() === '닫기');
+    const bounds = button.getBoundingClientRect();
+    const frame = modal.getBoundingClientRect();
+    return bounds.top >= frame.top && bounds.bottom <= frame.bottom;
+  });
   await stableScreenshot('mobile-long-bottom.png');
   const layout = await dialog.evaluate((element) => ({
     scrollable: element.scrollHeight > element.clientHeight,
@@ -129,10 +137,11 @@ try {
   // native navigate는 notificationclick을 발생시키지 않는다. 구 pending보다 명시 주소를 우선한다.
   await page.goto('about:blank');
   assert(await simulateClick('cold', 'qa-click-long'));
-  await page.goto(`${origin}/#/notifications?id=qa-click-1&via=push`);
+  await page.goto(`${origin}/?push_notification=qa-click-1`);
   await dialog.getByText(/전체 내용의 마지막 줄/).waitFor();
   await page.waitForFunction(async () => !await (await caches.open('teacher-push-click-v1')).match('/__teacher-push-click__'));
   assert(page.url().includes('id=qa-click-1'));
+  assert(!new URL(page.url()).searchParams.has('push_notification'));
   await close();
   await dialog.waitFor({ state: 'hidden' });
   await page.reload();
@@ -141,6 +150,22 @@ try {
   // 열린 앱의 native 주소 변경 역시 합성 클릭 이벤트 없이 해당 알림을 표시한다.
   await page.evaluate(() => { location.hash = '#/notifications?id=qa-click-1&via=push'; });
   await dialog.getByText(/전체 내용의 마지막 줄/).waitFor();
+  await close();
+  await dialog.waitFor({ state: 'hidden' });
+  // 브라우저가 URL만 바꾸고 popstate/hashchange를 전달하지 않은 복귀도 재현한다.
+  await page.evaluate(() => {
+    history.replaceState(history.state, '', '/#/notifications?id=qa-click-long&via=push');
+    window.dispatchEvent(new Event('focus'));
+  });
+  await dialog.getByText(/전체 본문의 마지막 줄/).waitFor();
+  await close();
+  await dialog.waitFor({ state: 'hidden' });
+  await page.evaluate(() => {
+    history.replaceState(history.state, '', '/?push_notification=qa-click-1');
+    window.dispatchEvent(new Event('focus'));
+  });
+  await dialog.getByText(/전체 내용의 마지막 줄/).waitFor();
+  assert(!new URL(page.url()).searchParams.has('push_notification'));
 
   // 로그인 전에는 클릭을 소비하지 않고 로그인 완료 후 복구한다.
   await page.evaluate(() => { sessionStorage.setItem('qa-logout', '1'); localStorage.removeItem('auth_token'); });
@@ -153,7 +178,9 @@ try {
   assert.equal(errors.length, 0, errors.join('\n'));
   console.log(JSON.stringify({ productionServiceWorker: true, coldStart: true, warmNavigateFailure: true,
     sameNotificationReopen: true, clickPersistedAfterAppReady: true, nativeUrlWithoutClickEvent: true,
-    nativeUrlOverridesOldPending: true, loginRecovery: true, layout, appErrors: errors.length,
+    nativeUrlOverridesOldPending: true, nativeQueryConsumed: true, warmMissingRouterEvent: true,
+    warmQueryWithoutRouterEvent: true,
+    loginRecovery: true, layout, appErrors: errors.length,
     externalWritesIntercepted: interceptedWrites, output, physicalDeviceTest: false }, null, 2));
 } finally {
   await browser.close();

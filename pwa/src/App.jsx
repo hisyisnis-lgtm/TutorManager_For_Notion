@@ -1,6 +1,7 @@
 import { useState, useEffect, useSyncExternalStore, lazy, Suspense } from 'react';
 import { captureAuthScope, getAuthRevision, isAuthScopeCurrent, subscribeAuthChanges } from './api/authState.js';
-import { connectPushNavigation } from './api/pushNavigation.js';
+import { connectPushNavigation, normalizePushLaunch } from './api/pushNavigation.js';
+import PushNotificationRouteSync from './components/PushNotificationRouteSync.jsx';
 import { HashRouter, BrowserRouter, Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom';
 import { Toaster } from './components/shadcn/sonner';
 import { useRegisterSW } from 'virtual:pwa-register/react';
@@ -120,6 +121,7 @@ function isOnFormPage() {
 // 갱신된 hash를 보도록 한다. 강사는 PWA로 학생 페이지를 미리보지 않으므로 isTeacher 체크로 강사 PWA 흐름은 보호.
 if (typeof window !== 'undefined') {
   try {
+    normalizePushLaunch();
     // -2) group-class 공개 페이지를 path 형식(# 없이)으로 들어온 경우 hash 라우트로 보정.
     //     이 페이지는 HashRouter 기반이라 `/group-class`(또는 옛 `/bootcamp`)로 직접 진입하면
     //     라우터가 경로를 못 잡고 #/intro(홈)로 튕긴다 → 해시 형식으로 강제 변환.
@@ -362,6 +364,7 @@ export default function App() {
     <Toaster position="top-center" />
     <DataProvider key={authRevision}>
       <HashRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <PushNotificationRouteSync />
         <ScrollToTop />
         <div className="page-container">
           <Routes>

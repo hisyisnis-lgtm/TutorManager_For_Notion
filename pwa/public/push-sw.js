@@ -29,7 +29,15 @@ self.addEventListener('push', (event) => {
     const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     clients.forEach((client) => client.postMessage({ type: 'teacher-push', notification }));
     const nativeTarget = notificationTarget({ url, id: String(data.id || '') });
-    if (nativeTarget.hash.startsWith('#/notifications?')) nativeTarget.hash += '&via=push';
+    if (nativeTarget.hash.startsWith('#/notifications?')) {
+      const notificationId = new URLSearchParams(nativeTarget.hash.slice('#/notifications?'.length)).get('id');
+      if (notificationId) {
+        // 열린 iOS PWA에서도 문서 이동으로 인식하도록 hash가 아닌 query로 운반한다.
+        // 앱이 시작·복귀 시 검증해 기존 알림 상세 hash로 한 번만 변환한다.
+        nativeTarget.searchParams.set('push_notification', notificationId);
+        nativeTarget.hash = '';
+      }
+    }
     await self.registration.showNotification(title, {
       body, icon: '/pwa-192x192.png', badge: '/pwa-64x64.png',
       tag: typeof data.tag === 'string' ? data.tag : undefined,

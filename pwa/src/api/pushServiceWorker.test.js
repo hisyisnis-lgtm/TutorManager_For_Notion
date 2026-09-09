@@ -15,6 +15,7 @@ function loadWorker(overrides = {}, storage = new Map()) {
       ...overrides,
     },
     URL,
+    URLSearchParams,
     Response,
     crypto,
     caches: { open: async () => ({
@@ -62,7 +63,7 @@ describe('Web Push system notification preview', () => {
     await completion;
 
     expect(showNotification).toHaveBeenCalledWith('일일리포트', expect.objectContaining({
-      navigate: `${ORIGIN}/#/notifications?id=notice-native&via=push`,
+      navigate: `${ORIGIN}/?push_notification=notice-native`,
       data: { url: '/#/notifications', id: 'notice-native' },
       body: '첫 줄\n눌러서 전체 내용 보기',
     }));
@@ -79,7 +80,7 @@ describe('Web Push system notification preview', () => {
       waitUntil(promise) { completion = promise; },
     });
     await completion;
-    expect(showNotification.mock.calls[0][1].navigate).toBe(`${ORIGIN}/#/notifications?id=notice-safe&via=push`);
+    expect(showNotification.mock.calls[0][1].navigate).toBe(`${ORIGIN}/?push_notification=notice-safe`);
   });
 
   it('shows one compact section and directs long alerts to the full in-app history', () => {
