@@ -1,7 +1,9 @@
 // 학생 수업 전날 리마인더 알림 스크립트
-// GitHub Actions에서 매일 20:00 KST (11:00 UTC)에 자동 실행됨
+// Worker 17:00 KST dispatch와 21시까지 재시도, GitHub 19:30 백업으로 실행.
 
-import { createNotionClient, createSolapiClient, runWithAlert, stripEmoji, shouldSkipBackupRun } from './notion_utils.mjs';
+import { createNotionClient, createSolapiClient, runWithAlert, stripEmoji, shouldSkipBackupRun, kstDayStr } from './notion_utils.mjs';
+import { createNotificationLedger, notificationDeliveryKey } from './notification_ledger.mjs';
+import { sendNotificationBatch } from './notification_batch.mjs';
 
 const TOKEN = process.env.NOTION_TOKEN;
 const CLASS_DB_ID = '314838fa-f2a6-81bc-8b67-d9e1c8fb7ecb';
@@ -25,7 +27,7 @@ const sendKakao = createSolapiClient({
   pfId: KAKAO_PFID,
 });
 
-// cron 예정 시각 (KST). GitHub Actions 스케줄 지연 보정 기준 — 워크플로우 cron('0 8 * * *' = 17:00 KST)과 일치시킬 것.
+// Worker의 정시 발송 창 시작 시각(KST). 지연 실행의 대상일 보정 기준.
 const SCHEDULED_HOUR_KST = 17;
 
 // "내일"(D-1 알림 대상일)을 계산하되, GitHub Actions cron 지연이 KST 자정을 넘겨도
@@ -46,6 +48,7 @@ function getTomorrowKST() {
   const dayAfter = new Date(tomorrow);
   dayAfter.setUTCDate(tomorrow.getUTCDate() + 1);
   return {
+    intendedDayStr: intendedDay.toISOString().split('T')[0],
     tomorrowStr: tomorrow.toISOString().split('T')[0],
     dayAfterStr: dayAfter.toISOString().split('T')[0],
   };
@@ -73,10 +76,14 @@ async function fetchClassTypeMap() {
 }
 
 async function main() {
+  const { intendedDayStr, tomorrowStr, dayAfterStr } = getTomorrowKST();
+  // 결과 불명인 이전 시도는 재발송하지 않는다. 수동 재실행에도 같은 이력을 적용한다.
+  const ledger = await createNotificationLedger({
+    workflow: 'notify-student-tomorrow.yml', day: intendedDayStr, historyUntilDay: kstDayStr(), secret: SOLAPI_API_SECRET,
+  });
   // 워커 cron(1차)이 이미 보냈으면 백업 schedule 실행은 여기서 끝낸다
-  if (await shouldSkipBackupRun({ workflow: 'notify-student-tomorrow.yml', latestHourKST: 21 })) return;
+  if (await shouldSkipBackupRun({ workflow: 'notify-student-tomorrow.yml', earliestHourKST: 17, latestHourKST: 21 })) return;
 
-  const { tomorrowStr, dayAfterStr } = getTomorrowKST();
   console.log(`[${new Date().toISOString()}] 내일(${tomorrowStr}) 수업 있는 학생 알림 시작`);
 
   // 수업 유형 맵 (무료상담/원데이클래스는 notify_consult_tomorrow에서 별도 템플릿으로 발송하므로 여기서 제외)
@@ -128,7 +135,7 @@ async function main() {
   );
   await Promise.all([...allStudentIds].map(id => getStudent(id)));
 
-  let sent = 0;
+  const notifications = [];
   for (const p of classes) {
     const dateVal = p.properties['수업 일시']?.date?.start;
     const duration = p.properties['수업 시간(분)']?.select?.name ?? '?';
@@ -148,27 +155,23 @@ async function main() {
 
     for (const { id } of studentRelation) {
       const student = await getStudent(id);
-      if (!student.phone) {
-        console.log(`  전화번호 없음 (${student.name}) - 건너뜀`);
-        continue;
-      }
-
-      await sendKakao(
-        student.phone,
-        KAKAO_TPL_STU_TOMORROW,
-        {
+      const phone = student.phone.replace(/\D/g, '').replace(/^82/, '0');
+      notifications.push({
+        key: notificationDeliveryKey(['student-tomorrow', p.id, classDate.toISOString(), id, phone, KAKAO_TPL_STU_TOMORROW || ''], SOLAPI_API_SECRET),
+        to: phone,
+        templateId: KAKAO_TPL_STU_TOMORROW,
+        variables: {
           '#{이름}': student.name,
           '#{날짜}': `${month}월 ${day}일`,
           '#{요일}': dayOfWeek,
           '#{시간}': timeStr,
           '#{분}': duration,
-        }
-      );
-      sent++;
+        },
+      });
     }
   }
 
-  console.log(`완료: 학생 ${sent}명에게 전날 리마인더 발송`);
+  await sendNotificationBatch({ notifications, ledger, sendKakao });
 }
 
 runWithAlert('notify_student_tomorrow.mjs', main);

@@ -9,6 +9,7 @@ import { boundedRequest, RequestTooLarge, secureResponse } from '../lib/httpSecu
 import { authorizeNotionRequest, pageInDatabase } from '../lib/notionScope.js';
 import { studentHomeworkPage } from '../lib/homeworkPrivacy.js';
 import { teacherNotifications } from '../lib/notifications.js';
+import { parseSolapiResult, readDeliveryJson } from '../lib/notificationDelivery.js';
 import {
   ConsultSchema,
   HomeworkSubmitSchema,
@@ -326,30 +327,44 @@ async function handleNotionWebhook(request, env, ctx) {
 
 // ===== 카카오 알림톡 발송 (Solapi) — 강사 알림용 =====
 async function sendKakaoAlert(env, { to, templateId, variables }) {
-  if (!env.SOLAPI_API_KEY || !env.SOLAPI_API_SECRET || !env.KAKAO_PFID || !templateId || !to) return;
-  const date = new Date().toISOString();
-  const salt = crypto.randomUUID().replace(/-/g, '').slice(0, 16);
-  const signature = await hmacSha256Hex(env.SOLAPI_API_SECRET, date + salt);
+  if (!env.SOLAPI_API_KEY || !env.SOLAPI_API_SECRET || !env.KAKAO_PFID || !templateId || !to) {
+    console.error('[kakao] 발송 설정 누락');
+    return { ok: false, state: 'failed', reason: 'solapi_not_configured' };
+  }
+  return sendSolapiMessage(env, { to, kakaoOptions: { pfId: env.KAKAO_PFID, templateId, variables } }, 'kakao');
+}
+
+async function sendSolapiMessage(env, message, channel) {
+  let requestStarted = false;
   try {
+    const date = new Date().toISOString();
+    const salt = crypto.randomUUID().replace(/-/g, '').slice(0, 16);
+    const signature = await hmacSha256Hex(env.SOLAPI_API_SECRET, date + salt);
+    requestStarted = true;
     const res = await fetch('https://api.solapi.com/messages/v4/send', {
       method: 'POST',
+      redirect: 'manual',
+      signal: AbortSignal.timeout(15_000),
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `HMAC-SHA256 apiKey=${env.SOLAPI_API_KEY}, date=${date}, salt=${salt}, signature=${signature}`,
       },
-      body: JSON.stringify({
-        message: { to, kakaoOptions: { pfId: env.KAKAO_PFID, templateId, variables } },
-      }),
+      body: JSON.stringify({ message }),
     });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      console.error('[kakao] 발송 실패:', JSON.stringify(data));
+    const result = parseSolapiResult(res.status, await readDeliveryJson(res));
+    if (result.ok) {
+      console.log(`[${channel}] 접수 확인 status=${result.statusCode}`);
     } else {
-      // 접수 상태 진단 — statusCode/statusMessage로 알림톡 즉시 접수 여부 확인 (PII 없음).
-      console.log(`[kakao] 접수 ${maskPhone(to)} | status=${data.statusCode || '?'} "${data.statusMessage || ''}" type=${data.type || '?'} gid=${data.groupInfo?.groupId || data.groupId || '?'}`);
+      console.error(`[${channel}] 발송 ${result.state} reason=${result.reason} HTTP=${res.status}${result.statusCode ? ` status=${result.statusCode}` : ''}`);
     }
-  } catch (e) {
-    console.error('[kakao] 발송 오류:', e.message);
+    return result;
+  } catch {
+    // A lost response may follow successful acceptance. Do not send again here.
+    const result = requestStarted
+      ? { ok: false, state: 'unknown', reason: 'solapi_response_unknown' }
+      : { ok: false, state: 'failed', reason: 'solapi_not_configured' };
+    console.error(`[${channel}] 발송 ${result.state} reason=${result.reason}`);
+    return result;
   }
 }
 
@@ -426,26 +441,13 @@ async function enforceStudentSession(request, env, corsHeaders, token, routeTag)
   return errRes(corsHeaders, 401, '휴대폰 인증이 필요합니다. 다시 로그인해주세요.');
 }
 
-// 솔라피 SMS 발송 — 학생 OTP용(즉시·안정 도착). 발신번호 env.SOLAPI_SENDER(통신사 사전등록) 필요, 미설정 시 no-op.
+// 솔라피 SMS 발송 — 학생 OTP용. 사전등록 발신번호가 없으면 명시적 실패.
 async function sendSms(env, to, text) {
-  if (!env.SOLAPI_API_KEY || !env.SOLAPI_API_SECRET || !env.SOLAPI_SENDER || !to) { console.log('[sms] 미설정 — 스킵'); return; }
-  const date = new Date().toISOString();
-  const salt = crypto.randomUUID().replace(/-/g, '').slice(0, 16);
-  const signature = await hmacSha256Hex(env.SOLAPI_API_SECRET, date + salt);
-  try {
-    const res = await fetch('https://api.solapi.com/messages/v4/send', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `HMAC-SHA256 apiKey=${env.SOLAPI_API_KEY}, date=${date}, salt=${salt}, signature=${signature}` },
-      body: JSON.stringify({ message: { to, from: env.SOLAPI_SENDER, text } }),
-    });
-    const d = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      console.error('[sms] 발송 실패:', JSON.stringify(d));
-    } else {
-      // 접수 상태 진단 (PII 없음).
-      console.log(`[sms] 접수 ${maskPhone(to)} | status=${d.statusCode || '?'} "${d.statusMessage || ''}" type=${d.type || '?'}`);
-    }
-  } catch (e) { console.error('[sms] 발송 오류:', e.message); }
+  if (!env.SOLAPI_API_KEY || !env.SOLAPI_API_SECRET || !env.SOLAPI_SENDER || !to) {
+    console.error('[sms] 발송 설정 누락');
+    return { ok: false, state: 'failed', reason: 'solapi_not_configured' };
+  }
+  return sendSolapiMessage(env, { to, from: env.SOLAPI_SENDER, text }, 'sms');
 }
 
 // 게임 회원 저장은 D1(worker/lib/gameDb.js)로 이전(2026-07-06) — findOrCreateGameUser/getGameUserById/
@@ -502,17 +504,20 @@ async function sendAlert(env, { level = 'info', title, message, tags, dedupKey, 
   const priority = PRIORITY_MAP[level] || 4;
   if (!topic || !env.NTFY_TOKEN) {
     console.error('[ntfy] 알림 토픽 또는 인증 설정이 없습니다.');
-    return { ok: false, reason: 'ntfy_not_configured' };
+    return { ok: false, state: 'failed', reason: 'ntfy_not_configured' };
   }
 
   // dedup: 동일 키로 ttl 내 중복 발송 차단 (Cloudflare Cache API)
+  let dedupCache;
+  let dedupRequest;
   if (dedupKey) {
     try {
       const cache = caches.default;
       const cacheReq = new Request(`https://ntfy-dedup.local/${level}/${encodeURIComponent(dedupKey)}`);
       const hit = await cache.match(cacheReq);
-      if (hit) { console.log('[ntfy] 중복 알림 생략'); return; }
-      await cache.put(cacheReq, new Response('1', { headers: { 'Cache-Control': `public, max-age=${ttlSeconds}` } }));
+      if (hit) { console.log('[ntfy] 중복 알림 생략'); return { ok: true, state: 'deduplicated' }; }
+      dedupCache = cache;
+      dedupRequest = cacheReq;
     } catch {
       console.warn('[ntfy] 중복 확인 실패');
     }
@@ -526,15 +531,26 @@ async function sendAlert(env, { level = 'info', title, message, tags, dedupKey, 
       message: String(message || '').replace(/\S+/g, sanitizePath), priority };
     if (Array.isArray(tags) && tags.length > 0) payload.tags = tags;
     // Workers는 redirect:'error'를 지원하지 않는다. manual + !ok로 3xx도 거부한다.
-    const res = await fetch('https://ntfy.sh', { method: 'POST', headers, body: JSON.stringify(payload), redirect: 'manual' });
+    const res = await fetch('https://ntfy.sh', { method: 'POST', headers, body: JSON.stringify(payload), redirect: 'manual', signal: AbortSignal.timeout(15_000) });
     await res.body?.cancel().catch(() => {});
     if (!res.ok) {
       console.error(`[ntfy] 발송 실패 HTTP ${res.status}`);
+      return { ok: false, state: 'failed', reason: 'ntfy_publish_failed' };
     } else {
       console.log('[ntfy] 발송 성공');
     }
+    // Failed attempts must not silence subsequent alerts. Record only acceptance.
+    if (dedupCache && dedupRequest) {
+      try {
+        await dedupCache.put(dedupRequest, new Response('1', { headers: { 'Cache-Control': `public, max-age=${ttlSeconds}` } }));
+      } catch {
+        console.warn('[ntfy] 중복 기록 실패');
+      }
+    }
+    return { ok: true, state: 'accepted' };
   } catch {
     console.error('[ntfy] 발송 연결 오류');
+    return { ok: false, state: 'unknown', reason: 'ntfy_publish_unknown' };
   }
 }
 
@@ -544,17 +560,54 @@ async function sendAlert(env, { level = 'info', title, message, tags, dedupKey, 
 // 문제를 회피하기 위함. GitHub Actions runner IP에서는 ntfy 발송이 정상 동작한다.
 // 워크플로우: .github/workflows/notify-from-worker.yml (event_type: ntfy-relay)
 //
-// 트레이드오프: ntfy.sh 직접 호출 대비 약 5~15초 지연. 무료상담은 카톡 알림톡으로 가고
-// 이 함수를 쓰는 곳은 숙제 제출 알림 1곳뿐이라 지연 허용 가능.
-async function sendNtfy(env, message, title = 'New Consultation') {
+// 상담 접수와 숙제 제출에 사용한다. dispatch 접수는 실제 ntfy 발송/수신과 다르다.
+async function sendNtfy(env, message, title = 'New Consultation', ctx) {
+  let result;
   if (!env.NTFY_TOPIC || !env.NTFY_TOKEN) {
     console.error('[ntfy] 알림 토픽 또는 인증 설정이 없습니다.');
-    return { ok: false, reason: 'ntfy_not_configured' };
+    result = { ok: false, state: 'failed', reason: 'ntfy_not_configured' };
+  } else {
+    result = await githubDispatch(env, 'ntfy-relay', {
+      title: String(title || '').replace(/\S+/g, sanitizePath),
+      message: String(message || '').replace(/\S+/g, sanitizePath), level: 'info',
+    });
   }
-  await githubDispatch(env, 'ntfy-relay', {
-    title: String(title || '').replace(/\S+/g, sanitizePath),
-    message: String(message || '').replace(/\S+/g, sanitizePath), level: 'info',
-  });
+  if (result.ok) return { ok: true, state: 'queued' };
+  // The consultation/homework was already saved. Report a delivery issue without
+  // making the business operation look failed or replaying the message.
+  await reportNotificationFailure(env, ctx, 'relay');
+  return { ok: false, state: result.state || 'failed', reason: 'ntfy_relay_failed' };
+}
+
+// Fixed operational messages only: no recipient, title/body, token, or URL from
+// the failed notification. Do not delay an already-completed business response.
+async function reportNotificationFailure(env, ctx, kind) {
+  const alerts = {
+    relay: {
+      title: '⚠️ 상담·숙제 알림 릴레이 오류',
+      message: '업무 저장은 완료됐지만 알림 릴레이 접수를 확인하지 못했습니다. GitHub Actions의 ntfy-relay 실행 및 발송 설정을 확인해 주세요.',
+      dedupKey: 'ntfy-relay-failure',
+    },
+    'consult-kakao': {
+      title: '⚠️ 상담 접수 카카오 알림 오류',
+      message: '상담 신청은 저장되었습니다. 강사 카카오 알림 접수를 확인하지 못했으니 Solapi 발송 내역과 설정을 확인해 주세요.',
+      dedupKey: 'consult-kakao-failure',
+    },
+    'homework-kakao': {
+      title: '⚠️ 숙제 카카오 알림 오류',
+      message: '숙제 저장과 별개로 학생 카카오 알림 접수를 확인하지 못했습니다. 중복 발송 전 Solapi 발송 내역과 설정을 확인해 주세요.',
+      dedupKey: 'homework-kakao-failure',
+    },
+  };
+  const task = sendAlert(env, { ...alerts[kind], level: 'critical', tags: ['warning'] })
+    .catch(() => { console.error('[ntfy] 운영 경고 처리 실패'); });
+  if (typeof ctx?.waitUntil === 'function') {
+    try { ctx.waitUntil(task); }
+    catch { console.error('[ntfy] 운영 경고 예약 실패'); }
+  } else {
+    // Isolated callers without an execution context still observe completion.
+    await task;
+  }
 }
 
 /**
@@ -565,13 +618,15 @@ async function sendNtfy(env, message, title = 'New Consultation') {
 async function githubDispatch(env, eventType, clientPayload = {}) {
   if (!env.GITHUB_PAT) {
     console.error(`[dispatch:${eventType}] GITHUB_PAT 미설정 — 발송 불가`);
-    return { ok: false, reason: 'GITHUB_PAT 미설정' };
+    return { ok: false, state: 'failed', reason: 'GITHUB_PAT 미설정' };
   }
   try {
     const res = await fetch(
       'https://api.github.com/repos/hisyisnis-lgtm/TutorManager_For_Notion/dispatches',
       {
         method: 'POST',
+        redirect: 'manual',
+        signal: AbortSignal.timeout(15_000),
         headers: {
           Authorization: `Bearer ${env.GITHUB_PAT}`,
           Accept: 'application/vnd.github+json',
@@ -582,15 +637,16 @@ async function githubDispatch(env, eventType, clientPayload = {}) {
       }
     );
     if (!res.ok) {
-      const text = await res.text().catch(() => '');
-      console.error(`[dispatch:${eventType}] HTTP ${res.status}:`, text);
-      return { ok: false, reason: `HTTP ${res.status} ${text.slice(0, 200)}` };
+      await res.body?.cancel().catch(() => {});
+      console.error(`[dispatch:${eventType}] HTTP ${res.status}`);
+      return { ok: false, state: res.status >= 500 || res.status === 408 ? 'unknown' : 'failed', reason: `HTTP ${res.status}` };
     }
+    await res.body?.cancel().catch(() => {});
     console.log(`[dispatch:${eventType}] 성공`);
     return { ok: true };
-  } catch (e) {
-    console.error(`[dispatch:${eventType}] 네트워크 오류:`, e.message);
-    return { ok: false, reason: e.message };
+  } catch {
+    console.error(`[dispatch:${eventType}] 접수 여부를 확인할 수 없습니다.`);
+    return { ok: false, state: 'unknown', reason: '접수 여부 불명' };
   }
 }
 
@@ -661,15 +717,17 @@ async function runScheduledJobs(env) {
       hourCycle: 'h23',
     }).format(new Date())
   );
-  const today0 = `${kstDayStr(0)}T00:00:00+09:00`;
+  const today = kstDayStr(0);
   const tomorrow0 = `${kstDayStr(1)}T00:00:00+09:00`;
 
   const failed = [];
   for (const [event, job] of Object.entries(DISPATCH_JOBS)) {
     if (kstHour < job.from || kstHour > job.until) continue;
 
-    const done = await workflowSucceededBetween(env, job.workflow, today0, tomorrow0);
-    if (done === true) continue; // 오늘 이미 성공 — 재시도 불필요
+    // 새벽 수동 실행은 전날 배치의 대상일일 수 있으므로 현재 발송 창의 성공만 인정한다.
+    const windowStart = `${today}T${String(job.from).padStart(2, '0')}:00:00+09:00`;
+    const done = await workflowSucceededBetween(env, job.workflow, windowStart, tomorrow0);
+    if (done === true) continue; // 현재 발송 창에서 이미 성공 — 재시도 불필요
 
     console.log(`[cron] KST ${kstHour}시 — ${event} 깨움 (오늘 성공 이력 ${done === false ? '없음' : '확인 불가'})`);
     const r = await githubDispatch(env, event, { source: 'worker-cron', kstHour });
@@ -714,7 +772,7 @@ async function captureWorkerError(err, env, request) {
 }
 
 // ===== 무료상담 신청 처리 =====
-async function handleConsultRequest(request, env, corsHeaders) {
+async function handleConsultRequest(request, env, corsHeaders, ctx) {
   // Abuse 방지: 무료상담 1건은 Notion 쓰기 + 카카오 알림톡(건당 과금) + GitHub Actions 발동을
   // 유발하므로 rate limit 필수. (다른 공개 라우트와 달리 여기만 누락돼 있었음)
   if (!(await rateLimitCheck(env, `consult:ip:${clientIp(request)}`, 5, 300))) {
@@ -863,12 +921,13 @@ async function handleConsultRequest(request, env, corsHeaders) {
 
   // ntfy 푸시 알림 (카카오 알림톡과 이중 발송). GitHub Actions 우회라 5~15초 지연 있지만,
   // 카카오 알림톡 템플릿은 솔라피 검수가 필요해서 자유롭게 수정 어려운 점을 ntfy로 보완.
-  // sendNtfy 내부에서 try/catch 처리되므로 실패해도 응답 흐름 영향 없음.
-  await sendNtfy(env, ntfyMsg, '📩 무료상담 신청');
+  // 발송 실패는 저장 성공과 분리한다. 사용자 재신청으로 중복 생성하지 않는다.
+  const ntfyResult = await sendNtfy(env, ntfyMsg, '📩 무료상담 신청', ctx);
+  let kakaoResult;
 
   // 카카오 알림톡 발송 (강사에게)
   if (env.KAKAO_TPL_CONSULT && env.MY_PHONE) {
-    await sendKakaoAlert(env, {
+    kakaoResult = await sendKakaoAlert(env, {
       to: env.MY_PHONE,
       templateId: env.KAKAO_TPL_CONSULT,
       variables: {
@@ -880,9 +939,13 @@ async function handleConsultRequest(request, env, corsHeaders) {
         '#{message}': message?.trim() || '없음',
       },
     });
+    if (!kakaoResult.ok) await reportNotificationFailure(env, ctx, 'consult-kakao');
   }
 
-  return new Response(JSON.stringify({ ok: true }), {
+  return new Response(JSON.stringify({ ok: true,
+    ...(!ntfyResult.ok || (kakaoResult && !kakaoResult.ok)
+      ? { notificationWarning: '신청은 저장되었습니다. 일부 알림의 접수를 확인하지 못했습니다.' } : {}),
+  }), {
     status: 200,
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
@@ -925,15 +988,23 @@ async function handleStudentAuthRoutes(request, env, corsHeaders, url) {
     // brute-force는 verify rate limit(전화·IP당 5회/180s)로 별도 차단되므로 창을 늘려도 안전.
     await putStudentOtp(env, token, code, 300);
     // OTP는 즉시·안정 도착이 생명이라 SMS로 발송(알림톡 전달 지연 회피). 승인된 SOLAPI_SENDER 발신번호 필요.
-    // SOLAPI_SENDER 미설정 시 sendSms가 no-op → 알림톡으로 폴백.
+    // 발신번호 미설정 시에만 알림톡 선택. 응답 불명 뒤 자동 재전송은 하지 않는다.
+    let delivery;
     if (env.SOLAPI_SENDER) {
-      await sendSms(env, student.phone, `[하늘하늘중국어] 본인확인 인증번호 [${code}] (5분 내 입력)`);
+      delivery = await sendSms(env, student.phone, `[하늘하늘중국어] 본인확인 인증번호 [${code}] (5분 내 입력)`);
     } else {
-      await sendKakaoAlert(env, {
+      delivery = await sendKakaoAlert(env, {
         to: student.phone,
         templateId: env.KAKAO_TPL_PERSONAL_OTP || env.KAKAO_TPL_GAME_OTP,
         variables: { '#{인증번호}': code },
       });
+    }
+    if (!delivery.ok) {
+      return new Response(JSON.stringify({ ok: false, sent: false, delivery: delivery.state, reason: delivery.reason,
+        error: delivery.state === 'unknown'
+          ? '인증번호 발송 접수 여부를 확인할 수 없습니다. 잠시 기다려 문자를 확인한 뒤 다시 시도해주세요.'
+          : '인증번호를 보내지 못했습니다. 잠시 후 다시 시도해주세요.',
+      }), { status: delivery.reason === 'solapi_not_configured' ? 503 : 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
     return new Response(JSON.stringify({ ok: true, phoneTail: student.phone.replace(/\D/g, '').slice(-4) }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
@@ -1625,7 +1696,7 @@ async function uploadFileToNotion(file, notionToken) {
 }
 
 // ===== 숙제 라우트 핸들러 =====
-async function handleHomeworkRoutes(request, env, corsHeaders, url) {
+async function handleHomeworkRoutes(request, env, corsHeaders, url, ctx) {
   // 학생 토큰 기반 라우트만 IP rate limit (업로드는 정상 사용량이 있어 한도 완화)
   // feedback-seen도 토큰 라우트라 포함(기존 정규식에서 누락돼 있었음).
   const isStudentTokenPath = /^\/homework\/(student(-upload)?|feedback-seen)\//.test(url.pathname);
@@ -1799,7 +1870,7 @@ async function handleHomeworkRoutes(request, env, corsHeaders, url) {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
-      await sendKakaoAlert(env, {
+      const delivery = await sendKakaoAlert(env, {
         to: phone,
         templateId,
         variables: {
@@ -1808,7 +1879,15 @@ async function handleHomeworkRoutes(request, env, corsHeaders, url) {
           '#{token}': studentToken,
         },
       });
-      return new Response(JSON.stringify({ ok: true, sent: !!templateId }), {
+      if (!delivery.ok) await reportNotificationFailure(env, ctx, 'homework-kakao');
+      return new Response(JSON.stringify(delivery.ok
+        ? { ok: true, sent: true, delivery: 'accepted' }
+        : { ok: false, sent: false, delivery: delivery.state, reason: delivery.reason,
+          error: delivery.state === 'unknown'
+            ? '숙제는 저장되었지만 알림 접수 여부를 확인할 수 없습니다. 중복 발송 전 수신 여부를 확인해 주세요.'
+            : '숙제는 저장되었지만 알림을 보내지 못했습니다.',
+        }), {
+        status: delivery.ok ? 200 : delivery.reason === 'solapi_not_configured' ? 503 : 502,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     } catch (e) {
@@ -1995,19 +2074,24 @@ async function handleHomeworkRoutes(request, env, corsHeaders, url) {
       });
     }
 
+    let notificationWarning;
     // 실제 새 파일이 업로드된 제출완료 상태일 때만 강사에게 ntfy 알림
     if (updateOk && newStatus === '제출완료' && newFiles.length > 0) {
       const studentName = stripEmoji(studentPage.properties?.['이름']?.title?.[0]?.plain_text ?? '학생');
       const homeworkTitle = currentPage.properties?.['제목']?.title?.[0]?.plain_text ?? '숙제';
       const fileDesc = newFiles.length === 1 ? '파일 1개' : `파일 ${newFiles.length}개`;
-      await sendNtfy(
+      const delivery = await sendNtfy(
         env,
         `${studentName} 학생이 "${homeworkTitle}" 숙제를 제출했습니다. (${fileDesc})`,
-        '숙제 제출'
+        '숙제 제출',
+        ctx
       );
+      if (!delivery.ok) notificationWarning = '숙제는 저장되었습니다. 강사 알림 접수를 확인하지 못했습니다.';
     }
 
-    return new Response(JSON.stringify(updateOk ? studentHomeworkPage(updateData) : { error: '숙제 저장에 실패했습니다. 다시 시도해주세요.' }), {
+    return new Response(JSON.stringify(updateOk
+      ? { ...studentHomeworkPage(updateData), ...(notificationWarning ? { notificationWarning } : {}) }
+      : { error: '숙제 저장에 실패했습니다. 다시 시도해주세요.' }), {
       status: updateOk ? 200 : updateStatus,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
@@ -2453,7 +2537,7 @@ async function handleFetch(request, env, ctx) {
 
     // 숙제 라우트 (공개 학생용 + 강사 JWT 인증 혼재)
     if (url.pathname.startsWith('/homework')) {
-      return handleHomeworkRoutes(request, env, corsHeaders, url);
+      return handleHomeworkRoutes(request, env, corsHeaders, url, ctx);
     }
 
     // 미니게임 베스트 라우트 (학생 토큰 기반 공개)
@@ -2473,7 +2557,7 @@ async function handleFetch(request, env, ctx) {
 
     // 무료상담 신청 (공개, 인증 불필요)
     if (url.pathname === '/consult' && request.method === 'POST') {
-      return handleConsultRequest(request, env, corsHeaders);
+      return handleConsultRequest(request, env, corsHeaders, ctx);
     }
 
     // OG 메타태그 파싱 프록시 — GET /og-proxy?url=<encoded>

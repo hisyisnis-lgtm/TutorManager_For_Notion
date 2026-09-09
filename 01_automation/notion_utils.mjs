@@ -2,6 +2,16 @@
 
 import { createHmac, randomBytes } from 'crypto';
 import { publishNtfySafely } from './ntfy_privacy.mjs';
+import { parseSolapiResult, readDeliveryJson } from '../worker/lib/notificationDelivery.js';
+
+// 발송 결과를 무시하는 호출부도 실패로 종료하도록 한다. 외부 응답 원문은 담지 않는다.
+export class NotificationDeliveryError extends Error {
+  constructor(channel, result) {
+    super(`${channel} 알림 접수 실패 (${result.reason})`);
+    this.name = 'NotificationDeliveryError';
+    this.result = result;
+  }
+}
 
 /**
  * Notion API 클라이언트 + queryAll 생성
@@ -152,7 +162,7 @@ export async function workflowSucceededBetween(workflow, sinceIso, untilIso) {
  * 어느 경로로 깨어났든 **오늘 이미 성공한 실행이 있으면 그냥 종료**한다 — 그래서
  * 워커가 성공 여부를 확인하지 못하고 무턱대고 재dispatch해도 중복 발송이 없다.
  *
- * 수동 실행(workflow_dispatch)·로컬 실행은 검사 없이 통과한다 (= 강제 발송).
+ * 이 실행 가드만 수동·로컬 실행을 통과시킨다. D-1의 수신자별 이력은 수동 실행에도 적용한다.
  *
  * 시각 한계(latestHourKST): 이 시각을 넘긴 실행은 발송하지 않는다. 학생 카톡이
  * 새벽에 울리는 것을 막는 마지노선이다(2026-08-27 GitHub 지연으로 03:29 발송 사고).
@@ -161,20 +171,27 @@ export async function workflowSucceededBetween(workflow, sinceIso, untilIso) {
  *
  * @param {object} o
  * @param {string} o.workflow      - 워크플로 파일명 (예: 'notify-daily-brief.yml')
+ * @param {number} [o.earliestHourKST=0] - 자동 발송 시작 시각. 이전 시각의 지연 실행은 실패로 종료
  * @param {number} o.latestHourKST - 이 시각(KST)을 넘겼으면 발송하지 않는다
  * @param {boolean} [o.alertOnMiss=true] - 한계 초과로 포기할 때 critical 알림을 올릴지.
  *   이월(carryover)처럼 "보낼 게 없어서 안 보낸 날"이 대부분인 스크립트는 false로 —
  *   지연 실행마다 오탐 알림이 뜬다.
  * @returns {Promise<boolean>} true면 발송을 건너뛴다
  */
-export async function shouldSkipBackupRun({ workflow, latestHourKST, alertOnMiss = true }) {
+export async function shouldSkipBackupRun({ workflow, earliestHourKST = 0, latestHourKST, alertOnMiss = true }) {
   const event = process.env.GITHUB_EVENT_NAME ?? '';
-  if (event !== 'schedule' && event !== 'repository_dispatch') return false; // 수동·로컬 = 강제
+  if (event !== 'schedule' && event !== 'repository_dispatch') return false;
+
+  const hour = kstHourNow();
+  if (hour < earliestHourKST) {
+    // 자정을 넘긴 전날 실행을 오늘 성공으로 남기거나 새벽 학생 알림으로 보내지 않는다.
+    throw new Error(`알림 자동 발송 창 이전(KST ${hour}시) 실행을 중단했습니다. 발송 창: ${earliestHourKST}~${latestHourKST}시.`);
+  }
 
   // ① 오늘 이미 성공했으면 조용히 종료 (재시도·백업의 정상 경로)
   const succeeded = await workflowSucceededBetween(
     workflow,
-    `${kstDayStr(0)}T00:00:00+09:00`,
+    `${kstDayStr(0)}T${String(earliestHourKST).padStart(2, '0')}:00:00+09:00`,
     `${kstDayStr(1)}T00:00:00+09:00`
   );
   if (succeeded === true) {
@@ -184,7 +201,6 @@ export async function shouldSkipBackupRun({ workflow, latestHourKST, alertOnMiss
   // null(조회 불가)이면 막지 않는다 — 중복 발송이 미발송보다 낫다
 
   // ② 아직 발송 전인데 너무 늦었으면 포기 + 알림 (새벽 발송 방지)
-  const hour = kstHourNow();
   if (hour > latestHourKST) {
     console.log(`[가드] KST ${hour}시 — 발송 한계(${latestHourKST}시) 초과, 발송 포기`);
     if (!alertOnMiss) return true;
@@ -237,8 +253,8 @@ export function createNtfyClient(topic, ntfyToken) {
   return async function sendNtfy(title, message, priority = 3) {
     const level = priority >= 5 ? 'critical' : priority <= 2 ? 'digest' : priority === 3 ? 'warn' : 'info';
     const result = await publishNtfySafely({ token: ntfyToken, payload: { topic, title, message, priority }, level });
-    if (!result.ok) console.warn('[ntfy] 알림을 전송할 수 없습니다. 설정 또는 연결을 확인해주세요.');
-    else console.log('[ntfy] 알림 전송 완료.');
+    if (!result.ok) throw new NotificationDeliveryError('ntfy', result);
+    console.log('[ntfy] 알림 전송 완료.');
     return result;
   };
 }
@@ -270,8 +286,8 @@ export async function sendAlert({ level = 'info', title, message, tags } = {}) {
   if (Array.isArray(tags) && tags.length > 0) payload.tags = tags;
 
   const result = await publishNtfySafely({ token: env.NTFY_TOKEN, payload, level });
-  if (!result.ok) console.warn('[ntfy] 알림을 전송할 수 없습니다. 설정 또는 연결을 확인해주세요.');
-  else console.log('[ntfy] 알림 전송 완료.');
+  if (!result.ok) throw new NotificationDeliveryError('ntfy', result);
+  console.log('[ntfy] 알림 전송 완료.');
   return result;
 }
 
@@ -286,16 +302,25 @@ export async function runWithAlert(scriptName, mainFn) {
   try {
     await mainFn();
   } catch (err) {
-    const msg = (err?.message || String(err)).slice(0, 400);
+    const counts = err?.counts;
+    const summary = counts && ['sent', 'alreadyAccepted', 'failed', 'unknown'].every(key => Number.isSafeInteger(counts[key]) && counts[key] >= 0)
+      ? `\n접수 ${counts.sent}, 기존 접수 ${counts.alreadyAccepted}, 실패 ${counts.failed}, 결과 불명 ${counts.unknown}` : '';
+    const msg = (err?.message || String(err)).slice(0, 400) + summary;
     const stack = (err?.stack || '').split('\n').slice(0, 6).join('\n').slice(0, 1000);
     console.error(`[${scriptName}] 실패:`, err);
-    await sendAlert({
-      level: 'critical',
-      title: `🚨 자동화 스크립트 실패: ${scriptName}`,
-      message: `${msg}\n\n${stack}`,
-      tags: ['rotating_light', 'github-actions'],
-    });
-    process.exit(1);
+    try {
+      await sendAlert({
+        level: 'critical',
+        title: `🚨 자동화 스크립트 실패: ${scriptName}`,
+        message: `${msg}\n\n${stack}`,
+        tags: ['rotating_light', 'github-actions'],
+      });
+    } catch {
+      console.error('[ntfy] 작업 실패 알림도 접수되지 않았습니다. Actions 로그를 확인해주세요.');
+    } finally {
+      // 실패 알림의 실패가 원래 작업의 실패 종료를 가리지 않도록 한다.
+      process.exitCode = 1;
+    }
   }
 }
 
@@ -336,45 +361,39 @@ export const sleep = (ms) => new Promise(r => setTimeout(r, ms));
  *   await sendKakao(to, templateId, variables, buttonsArray);    // 버튼 포함
  *
  * 동작:
- *  - apiKey/apiSecret/pfId/templateId/to 중 하나라도 비면 silent return (no-op)
- *  - HMAC-SHA256 서명 + 3회 재시도 (네트워크 오류만 재시도, API 오류는 즉시 반환)
+ *  - 설정 누락·접수 거절·응답 불명은 NotificationDeliveryError로 전달
+ *  - 응답 유실 뒤 중복 발송을 막기 위해 전송 POST는 자동 재시도하지 않음
+ *  - 성공은 Solapi 접수 확인이며 휴대폰 실수신 완료를 의미하지 않음
  *  - buttons === undefined 이면 kakaoOptions.buttons 필드를 누락 (Solapi 호환)
  *
  * @returns {Function} sendKakao(to, templateId, variables, buttons?)
  */
 export function createSolapiClient({ apiKey, apiSecret, pfId }) {
   return async function sendKakao(to, templateId, variables, buttons) {
-    if (!apiKey || !apiSecret || !pfId || !templateId || !to) return;
-    for (let attempt = 1; attempt <= 3; attempt++) {
-      const date = new Date().toISOString();
-      const salt = randomBytes(8).toString('hex');
-      const signature = createHmac('sha256', apiSecret).update(date + salt).digest('hex');
-      const kakaoOptions = { pfId, templateId, variables };
-      if (buttons !== undefined) kakaoOptions.buttons = buttons;
-      try {
-        const res = await fetch('https://api.solapi.com/messages/v4/send', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `HMAC-SHA256 apiKey=${apiKey}, date=${date}, salt=${salt}, signature=${signature}`,
-          },
-          body: JSON.stringify({ message: { to, kakaoOptions } }),
-        });
-        const data = await res.json();
-        if (!res.ok) {
-          console.error(`카카오 발송 실패 (${maskPhone(to)}):`, JSON.stringify(data));
-          return;
-        }
-        console.log(`카카오 알림톡 발송 완료: ${maskPhone(to)}`);
-        return;
-      } catch (e) {
-        if (attempt < 3) {
-          console.warn(`카카오 발송 오류 (${maskPhone(to)}), ${attempt}회 시도 실패 — 2초 후 재시도:`, e.message);
-          await new Promise(r => setTimeout(r, 2000));
-        } else {
-          console.error(`카카오 발송 오류 (${maskPhone(to)}), 최종 실패:`, e.message);
-        }
-      }
+    if (![apiKey, apiSecret, pfId, templateId, to].every(value => typeof value === 'string' && value.trim())) {
+      throw new NotificationDeliveryError('solapi', { ok: false, state: 'failed', reason: 'solapi_not_configured' });
     }
+    const date = new Date().toISOString();
+    const salt = randomBytes(8).toString('hex');
+    const signature = createHmac('sha256', apiSecret).update(date + salt).digest('hex');
+    const kakaoOptions = { pfId, templateId, variables };
+    if (buttons !== undefined) kakaoOptions.buttons = buttons;
+    let result;
+    try {
+      const res = await fetch('https://api.solapi.com/messages/v4/send', {
+        method: 'POST', redirect: 'manual', signal: AbortSignal.timeout(15_000),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `HMAC-SHA256 apiKey=${apiKey}, date=${date}, salt=${salt}, signature=${signature}`,
+        },
+        body: JSON.stringify({ message: { to, kakaoOptions } }),
+      });
+      result = parseSolapiResult(res.status, await readDeliveryJson(res));
+    } catch {
+      result = { ok: false, state: 'unknown', reason: 'solapi_response_unknown' };
+    }
+    if (!result.ok) throw new NotificationDeliveryError('solapi', result);
+    console.log('[kakao] 알림톡 접수 확인.');
+    return result;
   };
 }

@@ -94,5 +94,6 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   const result = await sendWorkflowNtfy(process.argv[2], process.argv[3]);
   if (!result.ok) {
     console.error('[ntfy] 알림을 전송할 수 없습니다. 설정 또는 연결을 확인해주세요.');
+    process.exitCode = 1;
   }
 }

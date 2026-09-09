@@ -87,6 +87,46 @@ describe('production data handlers with isolated Notion and SQLite', () => {
     expect(calls.find(call => call.url.endsWith('/send'))).toMatchObject({ method: 'POST', redirect: 'manual',
       headers: { Authorization: 'Bearer synthetic-notion' } });
   });
+  it('keeps a completed student submission successful when its notification relay fails', async () => {
+    Object.assign(env, { GITHUB_PAT: 'isolated-github', NTFY_TOKEN: 'isolated-ntfy', NTFY_TOPIC: 'isolated-topic' });
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.stubGlobal('caches', { default: { match: async () => undefined, put: async () => {} } });
+    const background = [];
+    vi.spyOn(ctx, 'waitUntil').mockImplementation(promise => background.push(promise));
+    let failWarning;
+    const upstreamWarning = new Promise((_resolve, reject) => { failWarning = () => reject(new Error('private-warning-error')); });
+    const notionFetch = fetch.getMockImplementation();
+    fetch.mockImplementation(async (url, init) => {
+      if (url.endsWith('/dispatches')) return new Response('private-upstream-error', { status: 403 });
+      if (url === 'https://ntfy.sh') return upstreamWarning;
+      return notionFetch(url, init);
+    });
+    const upload = await send(`/homework/student-upload/${CODE}`, { method: 'POST', body: pdfForm() });
+    expect(upload.status).toBe(200);
+    let timeout;
+    try {
+      const response = await Promise.race([
+        submit([await upload.json()]),
+        new Promise((_resolve, reject) => { timeout = setTimeout(() => reject(new Error('Submission waited for the operational warning')), 1500); }),
+      ]);
+      expect(response.status).toBe(200);
+      expect(await response.json()).toMatchObject({ id: HOMEWORK, notificationWarning: expect.stringContaining('저장') });
+      expect(ctx.waitUntil).toHaveBeenCalledOnce();
+      expect(calls.filter(call => call.url === `/v1/pages/${HOMEWORK}` && call.method === 'PATCH')).toHaveLength(1);
+      expect(fetch.mock.calls.filter(([url]) => url.endsWith('/dispatches'))).toHaveLength(1);
+      const warnings = fetch.mock.calls.filter(([url]) => url === 'https://ntfy.sh');
+      expect(warnings).toHaveLength(1);
+      expect(warnings[0][1].body).not.toMatch(/ABCDEF123456|lesson.pdf|private-upstream-error/);
+      failWarning();
+      await expect(Promise.all(background)).resolves.toBeDefined();
+      expect(response.status).toBe(200);
+    } finally {
+      clearTimeout(timeout);
+      failWarning();
+      await Promise.allSettled(background);
+    }
+  });
   it.each([['student', 302], ['student', 307], ['teacher', 302], ['teacher', 307]])('%s upload rejects upstream %s without forwarding files or credentials', async (role, status) => {
     uploadResponse = new Response('private-redirect-body', { status, headers: { Location: REDIRECT_URL } });
     const cancel = vi.spyOn(uploadResponse.body, 'cancel');

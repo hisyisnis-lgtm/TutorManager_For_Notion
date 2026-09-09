@@ -16,6 +16,10 @@ permissions:
   contents: read
   actions: read         # 중복 발송 방지 — 오늘 성공 실행 이력 조회
 
+concurrency:
+  group: notify-consult-tomorrow
+  cancel-in-progress: false
+
 jobs:
   notify:
     runs-on: ubuntu-latest

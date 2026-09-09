@@ -16,6 +16,11 @@ permissions:
   contents: read
   actions: read         # 중복 발송 방지 — 오늘 성공 실행 이력 조회
 
+# 백업·정시·수동 재실행이 같은 수신자를 동시에 발송하지 않도록 직렬화한다.
+concurrency:
+  group: notify-student-tomorrow
+  cancel-in-progress: false
+
 jobs:
   notify:
     runs-on: ubuntu-latest

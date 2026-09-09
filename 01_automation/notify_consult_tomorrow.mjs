@@ -4,7 +4,9 @@
 // - 원데이클래스: 수업에 연결된 학생의 전화번호로 발송 (등록된 학생만 예약 가능)
 // 수업 유형에 따라 다른 템플릿 사용: 무료상담 → KAKAO_TPL_CONSULT_TOMORROW, 원데이클래스 → KAKAO_TPL_ONEDAY_TOMORROW
 
-import { createNotionClient, createSolapiClient, runWithAlert, stripEmoji, maskPhone, shouldSkipBackupRun } from './notion_utils.mjs';
+import { createNotionClient, createSolapiClient, runWithAlert, stripEmoji, shouldSkipBackupRun, kstDayStr } from './notion_utils.mjs';
+import { createNotificationLedger, notificationDeliveryKey } from './notification_ledger.mjs';
+import { sendNotificationBatch } from './notification_batch.mjs';
 
 const TOKEN = process.env.NOTION_TOKEN;
 const CLASS_DB_ID = '314838fa-f2a6-81bc-8b67-d9e1c8fb7ecb';
@@ -29,7 +31,7 @@ const sendKakao = createSolapiClient({
   pfId: KAKAO_PFID,
 });
 
-// cron 예정 시각 (KST). GitHub Actions 스케줄 지연 보정 기준 — 워크플로우 cron('0 8 * * *' = 17:00 KST)과 일치시킬 것.
+// Worker의 정시 발송 창 시작 시각(KST). 지연 실행의 대상일 보정 기준.
 const SCHEDULED_HOUR_KST = 17;
 
 // "내일"(D-1 알림 대상일)을 계산하되, GitHub Actions cron 지연이 KST 자정을 넘겨도
@@ -50,6 +52,7 @@ function getTomorrowKST() {
   const dayAfter = new Date(tomorrow);
   dayAfter.setUTCDate(tomorrow.getUTCDate() + 1);
   return {
+    intendedDayStr: intendedDay.toISOString().split('T')[0],
     tomorrowStr: tomorrow.toISOString().split('T')[0],
     dayAfterStr: dayAfter.toISOString().split('T')[0],
   };
@@ -86,10 +89,13 @@ async function fetchStudentMap() {
 }
 
 async function main() {
+  const { intendedDayStr, tomorrowStr, dayAfterStr } = getTomorrowKST();
+  const ledger = await createNotificationLedger({
+    workflow: 'notify-consult-tomorrow.yml', day: intendedDayStr, historyUntilDay: kstDayStr(), secret: SOLAPI_API_SECRET,
+  });
   // 워커 cron(1차)이 이미 보냈으면 백업 schedule 실행은 여기서 끝낸다
-  if (await shouldSkipBackupRun({ workflow: 'notify-consult-tomorrow.yml', latestHourKST: 21 })) return;
+  if (await shouldSkipBackupRun({ workflow: 'notify-consult-tomorrow.yml', earliestHourKST: 17, latestHourKST: 21 })) return;
 
-  const { tomorrowStr, dayAfterStr } = getTomorrowKST();
   console.log(`[${new Date().toISOString()}] 내일(${tomorrowStr}) D-1 알림 시작 (무료상담/원데이클래스)`);
 
   // 수업 유형 맵 + 학생 맵 미리 조회
@@ -118,7 +124,7 @@ async function main() {
 
   console.log(`내일 수업 ${candidates.length}건 (취소 제외) — 무료상담/원데이클래스 대상 선별`);
 
-  let sent = 0;
+  const notifications = [];
   for (const p of candidates) {
     const dateVal = p.properties['수업 일시']?.date?.start;
     if (!dateVal) continue;
@@ -138,9 +144,7 @@ async function main() {
       const studentIds = p.properties['학생']?.relation?.map(r => r.id) ?? [];
       for (const sid of studentIds) {
         const student = studentMap.get(sid) ?? studentMap.get(sid.replace(/-/g, ''));
-        if (student?.phone) {
-          recipients.push({ phone: student.phone, name: student.name || '고객' });
-        }
+        recipients.push({ phone: student?.phone || '', name: student?.name || '고객' });
       }
       // fallback: 구 레코드(학생 relation 없이 수업 전화번호만 있는 경우)
       if (recipients.length === 0) {
@@ -154,10 +158,10 @@ async function main() {
       if (phone) recipients.push({ phone, name: title });
     }
 
-    if (recipients.length === 0) continue;
+    // 연락처 누락도 발송 성공으로 집계하지 않는다. 공통 발송기가 명시적 실패로 처리한다.
+    if (recipients.length === 0) recipients.push({ phone: '', name: '고객' });
 
     const templateId = isOneDay ? KAKAO_TPL_ONEDAY_TOMORROW : KAKAO_TPL_CONSULT_TOMORROW;
-    const typeLabel = isOneDay ? '원데이클래스' : '무료상담';
 
     const classDate = new Date(dateVal);
     const month = classDate.toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', month: 'numeric' }).replace('월', '');
@@ -170,22 +174,22 @@ async function main() {
     });
 
     for (const { phone, name } of recipients) {
-      console.log(`  발송 → ${maskPhone(phone)} [${typeLabel}] (${name}, ${month}월 ${day}일 ${timeStr})`);
-      await sendKakao(
-        phone,
+      const normalizedPhone = phone.replace(/\D/g, '').replace(/^82/, '0');
+      notifications.push({
+        key: notificationDeliveryKey(['consult-tomorrow', p.id, classDate.toISOString(), normalizedPhone, templateId || ''], SOLAPI_API_SECRET),
+        to: normalizedPhone,
         templateId,
-        {
+        variables: {
           '#{이름}': name,
           '#{날짜}': `${month}월 ${day}일`,
           '#{요일}': dayOfWeek,
           '#{시간}': timeStr,
-        }
-      );
-      sent++;
+        },
+      });
     }
   }
 
-  console.log(`완료: ${sent}건 D-1 알림 발송`);
+  await sendNotificationBatch({ notifications, ledger, sendKakao });
 }
 
 runWithAlert('notify_consult_tomorrow.mjs', main);

@@ -42,9 +42,9 @@ describe('all ntfy publishing requires credentials', () => {
   });
   it('missing token never falls back to anonymous publishing or logs message contents', async () => {
     vi.stubEnv('NTFY_TOKEN', '');
-    await createNtfyClient('private-general', '')('private-title', 'private-message');
+    await expect(createNtfyClient('private-general', '')('private-title', 'private-message')).rejects.toThrow();
     for (const level of ['info', 'warn', 'critical', 'digest']) {
-      expect(await sendAlert({ level, title: 'private-title', message: 'private-message' })).toEqual({ ok: false, reason: 'ntfy_not_configured' });
+      await expect(sendAlert({ level, title: 'private-title', message: 'private-message' })).rejects.toThrow();
     }
     expect(fetch).not.toHaveBeenCalled();
     expect(JSON.stringify(console.error.mock.calls)).not.toMatch(/private-title|private-message|private-general/);
@@ -139,6 +139,63 @@ describe('all ntfy publishing requires credentials', () => {
     });
     expect(relay[1].body).not.toMatch(/01012345678|private-contact|public-general|fake-notification-key|fake-github-key/);
     expect(fetch.mock.calls.some(([url]) => url === 'https://ntfy.sh/v1/account')).toBe(false);
+  });
+  it.each(['http', 'network'])('consultation stays saved when its relay has a %s failure, with a separate safe warning', async kind => {
+    local = localD1();
+    const env = { GAME_DB: local.db, JWT_SECRET: 'test-store-key', NTFY_TOPIC: 'public-general', NTFY_TOKEN: fakeKey, NOTION_TOKEN: 'test-notion-key', GITHUB_PAT: 'fake-github-key' };
+    fetch.mockImplementation(async (url, init) => {
+      if (url.endsWith('/query')) return Response.json({ results: [] });
+      if (url === 'https://api.notion.com/v1/pages') return Response.json({ id: 'fake-page' });
+      if (url.endsWith('/dispatches')) {
+        expect(init.redirect).toBe('manual');
+        if (kind === 'network') throw new Error('private-github-network');
+        return new Response('private-github-response', { status: 403 });
+      }
+      if (url === 'https://ntfy.sh') return Response.json({ id: 'separate-warning' });
+      throw new Error('Non-mocked endpoint denied');
+    });
+    const response = await worker.fetch(new Request('https://worker.test/consult', {
+      method: 'POST', headers: { Origin: 'http://localhost:5173', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: '김가상', phone: '01012345678', message: 'private-consult-content',
+        level: '완전 처음이에요', concerns: ['발음이 이상한 것 같아요'], reasons: ['기타 (직접 입력)'], reasonOther: '업무 회화', preferredDays: ['월'], preferredTime: '오후 (12-18시)' }),
+    }), env, { waitUntil: promise => promise.catch(() => {}) });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ ok: true, notificationWarning: expect.stringContaining('저장') });
+    expect(fetch.mock.calls.filter(([url]) => url === 'https://api.notion.com/v1/pages')).toHaveLength(1);
+    expect(fetch.mock.calls.filter(([url]) => url.endsWith('/dispatches'))).toHaveLength(1);
+    const warnings = fetch.mock.calls.filter(([url]) => url === 'https://ntfy.sh');
+    expect(warnings).toHaveLength(1);
+    expect(JSON.parse(warnings[0][1].body)).toMatchObject({ priority: 5, title: '⚠️ 상담·숙제 알림 릴레이 오류' });
+    expect(warnings[0][1].body).not.toMatch(/private-consult-content|01012345678|private-github/);
+    expect(JSON.stringify([...console.log.mock.calls, ...console.error.mock.calls])).not.toMatch(/private-github|private-consult-content|01012345678|fake-github-key/);
+  });
+  it.each(['http', 'network'])('direct alert %s failure does not fill the dedup cache, and the next call retries', async kind => {
+    local = localD1();
+    const env = { GAME_DB: local.db, JWT_SECRET: 'test-store-key', NTFY_TOPIC_WARN: 'public-fixture', NTFY_TOKEN: fakeKey };
+    const records = new Map();
+    const put = vi.fn(async (request, response) => records.set(request.url, response));
+    vi.stubGlobal('caches', { default: { match: async request => records.get(request.url), put } });
+    let attempts = 0;
+    fetch.mockImplementation(async () => {
+      attempts++;
+      if (attempts === 1) {
+        if (kind === 'network') throw new Error('private-network-failure');
+        return new Response(null, { status: 429 });
+      }
+      expect(put).not.toHaveBeenCalled();
+      return Response.json({ id: 'accepted-alert' });
+    });
+    const invoke = () => worker.fetch(new Request('https://worker.test/error-log', {
+      method: 'POST', headers: { Origin: 'http://localhost:5173', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: 'dedup fixture', url: 'https://app.test/game' }),
+    }), env, { waitUntil: promise => promise.catch(() => {}) });
+    expect((await invoke()).status).toBe(200);
+    expect(put).not.toHaveBeenCalled();
+    expect((await invoke()).status).toBe(200);
+    expect(put).toHaveBeenCalledOnce();
+    expect((await invoke()).status).toBe(200);
+    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(put).toHaveBeenCalledOnce();
   });
   it('public-topic history still requires the teacher JWT and allowed Origin without exposing the topic or key', async () => {
     local = localD1();

@@ -12,14 +12,14 @@ const raw = process.env.PAYLOAD || '{}';
 let payload;
 try {
   payload = JSON.parse(raw);
-} catch (e) {
-  console.error('[notify-from-worker] PAYLOAD 파싱 실패:', e.message);
+} catch {
+  console.error('[notify-from-worker] PAYLOAD 형식이 올바르지 않습니다.');
   process.exit(1);
 }
 
-const { title, message, level = 'info' } = payload;
-if (!title || !message) {
-  console.error('[notify-from-worker] title/message 누락:', payload);
+const { title, message, level = 'info' } = payload || {};
+if (typeof title !== 'string' || !title.trim() || typeof message !== 'string' || !message.trim()) {
+  console.error('[notify-from-worker] title/message가 없거나 올바르지 않습니다.');
   process.exit(1);
 }
 
