@@ -28,12 +28,13 @@ export function getInstructorName() {
   return localStorage.getItem(STORAGE_KEY) || '';
 }
 
-export default function SettingsPage() {
+export default function SettingsPage({ onUpdate }) {
   const [name, setName] = useState(() => localStorage.getItem(STORAGE_KEY) || '');
   const [saved, setSaved] = useState(false);
   const [confirmLogout, setConfirmLogout] = useState(false);
   const [copiedKey, setCopiedKey] = useState('');
   const [updating, setUpdating] = useState(false);
+  const [updateError, setUpdateError] = useState('');
   const [pushState, setPushState] = useState('loading');
   const [pushBusy, setPushBusy] = useState(false);
   const [pushError, setPushError] = useState('');
@@ -69,19 +70,16 @@ export default function SettingsPage() {
     });
   }
 
-  const handleUpdate = async () => {
+  const handleUpdate = () => {
+    if (updating) return;
     setUpdating(true);
+    setUpdateError('');
     try {
-      if ('caches' in window) {
-        const keys = await caches.keys();
-        await Promise.all(keys.map(k => caches.delete(k)));
-      }
-      if ('serviceWorker' in navigator) {
-        const registrations = await navigator.serviceWorker.getRegistrations();
-        await Promise.all(registrations.map(r => r.unregister()));
-      }
-    } finally {
-      window.location.reload();
+      // App이 업데이트 화면과 브리지를 먼저 준비한 뒤 SW 교체를 시작한다.
+      onUpdate();
+    } catch {
+      setUpdateError('업데이트 준비를 완료하지 못했어요. 잠시 후 다시 눌러주세요. 알림 연결은 유지돼요.');
+      setUpdating(false);
     }
   };
 
@@ -213,8 +211,11 @@ export default function SettingsPage() {
           onClick={handleUpdate}
           loading={updating}
         >
-          업데이트 (강력 새로고침)
+          앱 업데이트
         </Button>
+        <p role={updateError ? 'alert' : undefined} className="text-xs leading-relaxed text-gray-600">
+          {updateError || '알림 연결과 저장된 정보를 유지하면서 최신 버전을 확인해요.'}
+        </p>
 
         <Button
           variant="destructiveOutline"

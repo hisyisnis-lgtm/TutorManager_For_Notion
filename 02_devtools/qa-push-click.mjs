@@ -11,7 +11,7 @@ import { fixtureSession } from '../pwa/src/api/authFixtures.js';
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.QA_PLAYWRIGHT_PACKAGE || 'playwright');
 const origin = 'http://localhost:5180';
-const output = resolve(dirname(fileURLToPath(import.meta.url)), '../04_docs/qa/push-click-v2.47.7');
+const output = resolve(dirname(fileURLToPath(import.meta.url)), '../04_docs/qa/push-click-v2.47.8');
 const notices = [
   { event: 'message', id: 'qa-click-1', title: '가상 일일리포트',
     message: '[오늘 수업 2건]\n  · 10:00 가상학생 A\n  · 14:00 가상학생 B\n\n[후속 확인]\n전체 내용의 마지막 줄입니다.' },
@@ -183,8 +183,10 @@ try {
   await page.waitForFunction(() => document.querySelector('textarea[aria-label="알림 진단 정보"]')?.value.includes('appVersion'));
   const diagnosticText = await diagnosticField.inputValue();
   const diagnostics = JSON.parse(diagnosticText);
-  assert.equal(diagnostics.appVersion, '2.47.7');
-  assert.equal(diagnostics.serviceWorker.diagnostics.version, '2.47.7');
+  assert.equal(diagnostics.appVersion, '2.47.8');
+  assert.equal(diagnostics.serviceWorker.diagnostics.version, '2.47.8');
+  assert.equal(diagnostics.serviceWorker.controllerState, 'activated');
+  assert.equal(diagnostics.serviceWorker.activeState, 'activated');
   assert(!/qa-click|가상학생|local-fixture-only/.test(diagnosticText), 'no notification IDs or contents in diagnostics');
   await dialog.getByRole('button', { name: '진단 내용 복사', exact: true }).scrollIntoViewIfNeeded();
   await stableScreenshot('mobile-diagnostics.png');

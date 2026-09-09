@@ -131,4 +131,36 @@ describe('개인정보 없는 로컬 푸시 진단', () => {
     expect(result.serviceWorker.diagnostics).toEqual({ available: false, reason: 'invalid-response' });
     expect(JSON.stringify(result)).not.toContain(SECRET);
   });
+
+  it('SW 응답 도중 활성화가 완료되면 과거 activating 상태 대신 현재 상태를 반환한다', async () => {
+    const worker = installWorker({ type: 'teacher-push-diagnostics', version: '2.47.8' });
+    worker.state = 'activating';
+    const original = worker.postMessage.getMockImplementation();
+    worker.postMessage.mockImplementation((...args) => { worker.state = 'activated'; original(...args); });
+    const result = await collectPushDiagnostics();
+    expect(result.serviceWorker).toMatchObject({ controllerState: 'activated', activeState: 'activated', controllerMatchesActive: true });
+  });
+
+  it('구독 유무만 읽고 endpoint나 구독 키는 수집하지 않는다', async () => {
+    const worker = installWorker({ type: 'teacher-push-diagnostics', version: '2.47.8',
+      executionState: 'activated', storageReadable: true });
+    const getSubscription = vi.fn(async () => ({ endpoint: SECRET, keys: { auth: SECRET } }));
+    navigator.serviceWorker.getRegistration.mockResolvedValue({ active: worker, pushManager: { getSubscription } });
+    const result = await collectPushDiagnostics();
+    expect(result.serviceWorker.hasSubscription).toBe(true);
+    expect(result.serviceWorker.diagnostics).toMatchObject({ executionState: 'activated', storageReadable: true });
+    expect(JSON.stringify(result)).not.toContain(SECRET);
+    expect(getSubscription).toHaveBeenCalledTimes(1);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('구독 조회가 멈춰도 제한시간 안에 이미 받은 SW 진단을 반환한다', async () => {
+    vi.useFakeTimers();
+    const worker = installWorker({ type: 'teacher-push-diagnostics', version: '2.47.8' });
+    navigator.serviceWorker.getRegistration.mockResolvedValue({ active: worker,
+      pushManager: { getSubscription: () => new Promise(() => {}) } });
+    const collected = collectPushDiagnostics();
+    await vi.advanceTimersByTimeAsync(1500);
+    expect((await collected).serviceWorker).toMatchObject({ hasSubscription: null, diagnostics: { available: true, version: '2.47.8' } });
+  });
 });

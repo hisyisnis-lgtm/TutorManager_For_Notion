@@ -124,7 +124,9 @@ function sanitizeWorkerDiagnostics(data) {
     })) : [];
   return {
     available: true, version: version(data.version),
+    executionState: workerState({ state: data.executionState }),
     nativeNavigateSupported: typeof data.nativeNavigateSupported === 'boolean' ? data.nativeNavigateSupported : null,
+    storageReadable: typeof data.storageReadable === 'boolean' ? data.storageReadable : null,
     events, pending: {
       present: typeof data.pending?.present === 'boolean' ? data.pending.present : null,
       ageMs: age(data.pending?.ageMs),
@@ -137,34 +139,53 @@ function readWorkerDiagnostics() {
   const result = {
     hasController: Boolean(container?.controller), controllerState: workerState(container?.controller),
     activeState: null, waitingState: null,
+    controllerMatchesActive: null, hasSubscription: null,
     diagnostics: { available: false, reason: 'unsupported' },
   };
   if (!container || typeof globalThis.MessageChannel === 'undefined') return Promise.resolve(result);
   return new Promise((resolve) => {
     let settled = false;
     let channel;
+    let registration;
+    let workerReply = { available: false, reason: 'timeout' };
+    let replyReady = false;
+    let subscriptionReady = false;
     const finish = (diagnostics) => {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
       channel?.port1.close();
       channel?.port2.close();
-      resolve({ ...result, diagnostics });
-    };
-    const timer = setTimeout(() => finish({ available: false, reason: 'timeout' }), 1500);
-    Promise.resolve().then(() => container.getRegistration?.()).then((registration) => {
-      if (settled) return;
+      // 응답을 기다리는 사이 activating → activated가 된 경우 최신 상태로 반환한다.
+      result.hasController = Boolean(container.controller);
+      result.controllerState = workerState(container.controller);
       result.activeState = workerState(registration?.active);
       result.waitingState = workerState(registration?.waiting);
+      result.controllerMatchesActive = registration?.active && container.controller
+        ? registration.active === container.controller : null;
+      resolve({ ...result, diagnostics });
+    };
+    const maybeFinish = () => { if (replyReady && subscriptionReady) finish(workerReply); };
+    const timer = setTimeout(() => finish(workerReply), 1500);
+    Promise.resolve().then(() => container.getRegistration?.()).then((value) => {
+      if (settled) return;
+      registration = value;
+      // 구독의 존재 여부만 읽는다. endpoint/키를 수집하거나 서버로 등록하지 않는다.
+      Promise.resolve().then(() => registration?.pushManager?.getSubscription?.()).then((subscription) => {
+        if (settled) return;
+        if (registration?.pushManager?.getSubscription) result.hasSubscription = Boolean(subscription);
+      }).catch(() => {}).finally(() => { subscriptionReady = true; maybeFinish(); });
       const worker = container.controller || registration?.active;
       if (!worker) { finish({ available: false, reason: 'no-worker' }); return; }
       channel = new globalThis.MessageChannel();
       channel.port1.onmessage = (event) => {
         if (event.data?.type !== 'teacher-push-diagnostics') {
-          finish({ available: false, reason: 'invalid-response' });
-          return;
+          workerReply = { available: false, reason: 'invalid-response' };
+        } else {
+          workerReply = sanitizeWorkerDiagnostics(event.data);
         }
-        finish(sanitizeWorkerDiagnostics(event.data));
+        replyReady = true;
+        maybeFinish();
       };
       worker.postMessage({ type: 'teacher-push-diagnostics-request' }, [channel.port2]);
     }).catch(() => finish({ available: false, reason: 'error' }));

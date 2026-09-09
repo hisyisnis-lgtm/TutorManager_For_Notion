@@ -239,6 +239,7 @@ describe('Web Push system notification preview', () => {
   it('reports only local diagnostic flags, never notification IDs, URLs or contents', async () => {
     const { listeners } = loadWorker({
       Notification: { prototype: { navigate: '' } },
+      serviceWorker: { state: 'activated' },
       registration: { showNotification: async () => {} },
       clients: { matchAll: async () => [], openWindow: async () => null },
     });
@@ -250,8 +251,10 @@ describe('Web Push system notification preview', () => {
     await completion;
     await click(listeners, { id: 'private-id-123' });
     const snapshot = await message(listeners, { type: 'teacher-push-diagnostics-request' });
-    expect(snapshot.version).toBe('2.47.7');
+    expect(snapshot.version).toBe('2.47.8');
     expect(snapshot.nativeNavigateSupported).toBe(true);
+    expect(snapshot.executionState).toBe('activated');
+    expect(snapshot.storageReadable).toBe(true);
     expect(snapshot.events.map((item) => item.event)).toEqual(['push-shown', 'notificationclick']);
     expect(snapshot.pending.present).toBe(true);
     expect(JSON.stringify(snapshot)).not.toMatch(/private-|https:|notifications\?/);
@@ -280,5 +283,14 @@ describe('Web Push system notification preview', () => {
     const snapshot = await message(listeners, { type: 'teacher-push-diagnostics-request' });
     expect(snapshot.pending).toEqual({ present: false, ageMs: null });
     expect(await storage.get(key).clone().text()).toBe(expired);
+  });
+
+  it('distinguishes unreadable local records from an empty diagnostic history', async () => {
+    const { listeners, storage } = loadWorker();
+    storage.set(`${ORIGIN}/__teacher-push-diagnostics__`, new Response('private-invalid-json'));
+    const snapshot = await message(listeners, { type: 'teacher-push-diagnostics-request' });
+    expect(snapshot.storageReadable).toBe(false);
+    expect(snapshot.events).toEqual([]);
+    expect(JSON.stringify(snapshot)).not.toContain('private');
   });
 });

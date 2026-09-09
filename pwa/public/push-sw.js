@@ -59,7 +59,7 @@ const CLICK_CACHE = 'teacher-push-click-v1';
 const CLICK_KEY = new URL('/__teacher-push-click__', self.location.origin).href;
 const CLICK_TTL = 10 * 60 * 1000;
 let clickStorageOperation = Promise.resolve();
-const DIAGNOSTIC_VERSION = '2.47.7';
+const DIAGNOSTIC_VERSION = '2.47.8';
 const DIAGNOSTIC_CACHE = 'teacher-push-diagnostics-v1';
 const DIAGNOSTIC_KEY = new URL('/__teacher-push-diagnostics__', self.location.origin).href;
 let diagnosticOperation = Promise.resolve();
@@ -90,18 +90,21 @@ function recordPushDiagnostic(event, details = {}) {
 async function pushDiagnosticSnapshot() {
   await diagnosticOperation;
   let events = [];
+  let storageReadable = true;
   try {
     const response = await (await caches.open(DIAGNOSTIC_CACHE)).match(DIAGNOSTIC_KEY);
     events = cleanDiagnosticEvents(response ? await response.json() : []);
-  } catch {}
+  } catch { storageReadable = false; }
   let pending = null;
   try {
     const response = await (await caches.open(CLICK_CACHE)).match(CLICK_KEY);
     const value = response ? await response.json() : null;
     if (isValidPendingClick(value)) pending = value;
-  } catch {}
+  } catch { storageReadable = false; }
   return {
     type: 'teacher-push-diagnostics', version: DIAGNOSTIC_VERSION,
+    executionState: ['activating', 'activated', 'redundant'].includes(self.serviceWorker?.state) ? self.serviceWorker.state : null,
+    storageReadable,
     nativeNavigateSupported: 'navigate' in (self.Notification?.prototype || {}),
     events,
     pending: { present: !!pending, ageMs: pending ? Math.max(0, Date.now() - pending.createdAt) : null },

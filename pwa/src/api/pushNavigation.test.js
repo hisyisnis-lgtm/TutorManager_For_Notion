@@ -186,6 +186,8 @@ describe('푸시 클릭 목적지 복구', () => {
   });
 
   it('만료됐거나 미래 시각이 잘못된 클릭을 무시한다', () => {
+    // 허용 경계 1ms 바깥을 검사하므로 실행 부하에 따라 현재 시각이 움직이지 않게 한다.
+    vi.useFakeTimers();
     disconnect = connectPushNavigation({ canNavigate: () => true });
     deliver(pending({ createdAt: Date.now() - 600001 }));
     deliver(pending({ createdAt: Date.now() + 60001 }));

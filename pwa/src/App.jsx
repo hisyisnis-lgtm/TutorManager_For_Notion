@@ -3,8 +3,10 @@ import { captureAuthScope, getAuthRevision, isAuthScopeCurrent, subscribeAuthCha
 import { connectPushNavigation, normalizePushLaunch } from './api/pushNavigation.js';
 import PushNotificationRouteSync from './components/PushNotificationRouteSync.jsx';
 import { setPushDiagnosticAppState } from './api/pushDiagnostics.js';
+import { reloadWhenActivated, requestAppUpdate } from './api/serviceWorkerUpdate.js';
 import { HashRouter, BrowserRouter, Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom';
 import { Toaster } from './components/shadcn/sonner';
+import { toast } from 'sonner';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { useTeacherAuth } from './api/authUtils.js';
 import { PRIMARY } from './constants/theme.js';
@@ -208,10 +210,14 @@ export default function App() {
   const authed = useTeacherAuth();
   const authRevision = useSyncExternalStore(subscribeAuthChanges, getAuthRevision, () => 0);
   const [swReady, setSwReady] = useState(false);
+  const [updateReloadRequested, setUpdateReloadRequested] = useState(false);
+  const [manualUpdateRequested, setManualUpdateRequested] = useState(false);
+  const [updateFailed, setUpdateFailed] = useState(false);
 
   const [swRegistration, setSwRegistration] = useState(null);
 
-  const { needRefresh: [needRefresh], updateServiceWorker } = useRegisterSW({
+  const { needRefresh: [needRefresh, setNeedRefresh] } = useRegisterSW({
+    onNeedReload() { setUpdateReloadRequested(true); },
     onRegistered(registration) {
       setSwReady(true);
       if (registration) {
@@ -223,55 +229,70 @@ export default function App() {
     },
     onRegisterError() { setSwReady(true); },
   });
+  const updatePending = needRefresh || updateReloadRequested || manualUpdateRequested;
 
   // 60초마다 새 버전 체크 — 컴포넌트 언마운트 시 정리
   useEffect(() => {
     if (!swRegistration) return;
-    const id = setInterval(() => swRegistration.update(), 60 * 1000);
+    const id = setInterval(() => swRegistration.update().catch(() => {}), 60 * 1000);
     return () => clearInterval(id);
   }, [swRegistration]);
 
   // 이미 열린 Android 앱과 늦게 시작하는 iOS 앱 모두 SW에 남은 클릭 목적지를 복구한다.
   useEffect(() => {
-    setPushDiagnosticAppState({ auth: authed, swReady, needRefresh });
+    setPushDiagnosticAppState({ auth: authed, swReady, needRefresh: updatePending });
     const auth = captureAuthScope();
     return connectPushNavigation({
-      canNavigate: () => authed && swReady && !needRefresh && isAuthScopeCurrent(auth),
+      canNavigate: () => authed && swReady && !updatePending && isAuthScopeCurrent(auth),
     });
-  }, [authed, authRevision, swReady, needRefresh]);
+  }, [authed, authRevision, swReady, updatePending]);
 
   useEffect(() => {
-    if (!needRefresh) {
+    if (!updatePending) {
       // SW 미지원 환경 대비 최대 2초 후 강제 진행
       const fallback = setTimeout(() => setSwReady(true), 2000);
       return () => clearTimeout(fallback);
     }
 
+    let disposed = false;
+    let interval;
     function applyUpdate() {
-      const handleControllerChange = () => window.location.reload();
-      navigator.serviceWorker?.addEventListener('controllerchange', handleControllerChange);
-      updateServiceWorker(true);
-      // controllerchange가 오지 않을 경우 10초 후 강제 리로드
-      setTimeout(() => window.location.reload(), 10000);
+      clearInterval(interval);
+      // 수동 요청도 Splash 렌더와 이전 푸시 브리지 정리 이후에 갱신을 시작한다.
+      const update = manualUpdateRequested ? requestAppUpdate : reloadWhenActivated;
+      update().catch(() => {
+        if (disposed) return;
+        // 활성화 실패가 앱과 푸시 이동을 영구 차단하지 않게 현재 버전으로 복귀한다.
+        setNeedRefresh(false);
+        setUpdateReloadRequested(false);
+        setManualUpdateRequested(false);
+        setSwReady(true);
+        setUpdateFailed(true);
+      });
     }
 
     // 폼 작성 중이면 이탈 후 업데이트
     if (isOnFormPage()) {
-      const interval = setInterval(() => {
+      interval = setInterval(() => {
         if (!isOnFormPage()) {
           clearInterval(interval);
           applyUpdate();
         }
       }, 500);
-      return () => clearInterval(interval);
-    }
+    } else applyUpdate();
+    return () => { disposed = true; clearInterval(interval); };
+  }, [updatePending, manualUpdateRequested, setNeedRefresh]);
 
-    applyUpdate();
-  }, [needRefresh, updateServiceWorker]);
+  useEffect(() => {
+    if (!updateFailed || !swReady || updatePending) return;
+    // Splash에는 Toaster가 없으므로 기존 화면이 다시 마운트된 뒤 한 번 안내한다.
+    setUpdateFailed(false);
+    toast.error('업데이트를 완료하지 못했어요. 잠시 후 다시 시도해 주세요.', { id: 'app-update-failed' });
+  }, [updateFailed, swReady, updatePending]);
 
   // SW 준비 전 또는 업데이트 적용 중 (폼 작성 중이면 업데이트 미표시)
-  if (!swReady || (needRefresh && !isOnFormPage())) {
-    return <SplashScreen updating={needRefresh} />;
+  if (!swReady || (updatePending && !isOnFormPage())) {
+    return <SplashScreen updating={updatePending} />;
   }
 
   // Path-based 학생 라우트 — BrowserRouter로 학생 라우트만 렌더.
@@ -406,7 +427,7 @@ export default function App() {
             <Route path="/homework/new" element={<HomeworkFormPage />} />
             <Route path="/homework/:id" element={<HomeworkDetailPage />} />
 
-            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/settings" element={<SettingsPage onUpdate={() => setManualUpdateRequested(true)} />} />
             <Route path="/notices" element={<NoticesPage />} />
             <Route path="/notifications" element={<NotificationsPage />} />
 
