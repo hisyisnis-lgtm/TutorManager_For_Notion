@@ -1,5 +1,3 @@
-import { isPrivateNtfyTopic } from './ntfyPrivacy.js';
-
 // The topic and ntfy credential remain on the server. The caller must authorize
 // the teacher before entering this handler. No caller-selected topic or host.
 export function notificationMessage(raw) {
@@ -18,7 +16,6 @@ export function notificationMessage(raw) {
 export async function teacherNotifications(request, env, corsHeaders) {
   if (!env.NTFY_TOPIC || !env.NTFY_TOKEN) return Response.json({ error: '알림 연결이 설정되지 않았습니다.' }, { status: 503, headers: corsHeaders });
   if (!/^[A-Za-z0-9_-]{1,128}$/.test(env.NTFY_TOPIC)) return Response.json({ error: '알림 연결 설정을 확인해주세요.' }, { status: 503, headers: corsHeaders });
-  if (!(await isPrivateNtfyTopic(env, env.NTFY_TOPIC))) return Response.json({ error: '비공개 알림 채널을 확인할 수 없습니다. 설정을 확인해주세요.' }, { status: 503, headers: corsHeaders });
   const stream = new URL(request.url).searchParams.get('stream') === '1';
   const url = `https://ntfy.sh/${encodeURIComponent(env.NTFY_TOPIC)}/${stream ? 'sse' : 'json?poll=1&since=24h'}`;
   const controller = new AbortController();

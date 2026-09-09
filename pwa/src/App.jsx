@@ -1,12 +1,7 @@
 import { useState, useEffect, useSyncExternalStore, lazy, Suspense } from 'react';
-import { captureAuthScope, getAuthRevision, isAuthScopeCurrent, subscribeAuthChanges } from './api/authState.js';
-import { connectPushNavigation, normalizePushLaunch } from './api/pushNavigation.js';
-import PushNotificationRouteSync from './components/PushNotificationRouteSync.jsx';
-import { setPushDiagnosticAppState } from './api/pushDiagnostics.js';
-import { reloadWhenActivated, requestAppUpdate } from './api/serviceWorkerUpdate.js';
+import { getAuthRevision, subscribeAuthChanges } from './api/authState.js';
 import { HashRouter, BrowserRouter, Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom';
 import { Toaster } from './components/shadcn/sonner';
-import { toast } from 'sonner';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { useTeacherAuth } from './api/authUtils.js';
 import { PRIMARY } from './constants/theme.js';
@@ -124,7 +119,6 @@ function isOnFormPage() {
 // 갱신된 hash를 보도록 한다. 강사는 PWA로 학생 페이지를 미리보지 않으므로 isTeacher 체크로 강사 PWA 흐름은 보호.
 if (typeof window !== 'undefined') {
   try {
-    normalizePushLaunch();
     // -2) group-class 공개 페이지를 path 형식(# 없이)으로 들어온 경우 hash 라우트로 보정.
     //     이 페이지는 HashRouter 기반이라 `/group-class`(또는 옛 `/bootcamp`)로 직접 진입하면
     //     라우터가 경로를 못 잡고 #/intro(홈)로 튕긴다 → 해시 형식으로 강제 변환.
@@ -210,14 +204,10 @@ export default function App() {
   const authed = useTeacherAuth();
   const authRevision = useSyncExternalStore(subscribeAuthChanges, getAuthRevision, () => 0);
   const [swReady, setSwReady] = useState(false);
-  const [updateReloadRequested, setUpdateReloadRequested] = useState(false);
-  const [manualUpdateRequested, setManualUpdateRequested] = useState(false);
-  const [updateFailed, setUpdateFailed] = useState(false);
 
   const [swRegistration, setSwRegistration] = useState(null);
 
-  const { needRefresh: [needRefresh, setNeedRefresh] } = useRegisterSW({
-    onNeedReload() { setUpdateReloadRequested(true); },
+  const { needRefresh: [needRefresh], updateServiceWorker } = useRegisterSW({
     onRegistered(registration) {
       setSwReady(true);
       if (registration) {
@@ -229,70 +219,46 @@ export default function App() {
     },
     onRegisterError() { setSwReady(true); },
   });
-  const updatePending = needRefresh || updateReloadRequested || manualUpdateRequested;
 
   // 60초마다 새 버전 체크 — 컴포넌트 언마운트 시 정리
   useEffect(() => {
     if (!swRegistration) return;
-    const id = setInterval(() => swRegistration.update().catch(() => {}), 60 * 1000);
+    const id = setInterval(() => swRegistration.update(), 60 * 1000);
     return () => clearInterval(id);
   }, [swRegistration]);
 
-  // 이미 열린 Android 앱과 늦게 시작하는 iOS 앱 모두 SW에 남은 클릭 목적지를 복구한다.
   useEffect(() => {
-    setPushDiagnosticAppState({ auth: authed, swReady, needRefresh: updatePending });
-    const auth = captureAuthScope();
-    return connectPushNavigation({
-      canNavigate: () => authed && swReady && !updatePending && isAuthScopeCurrent(auth),
-    });
-  }, [authed, authRevision, swReady, updatePending]);
-
-  useEffect(() => {
-    if (!updatePending) {
+    if (!needRefresh) {
       // SW 미지원 환경 대비 최대 2초 후 강제 진행
       const fallback = setTimeout(() => setSwReady(true), 2000);
       return () => clearTimeout(fallback);
     }
 
-    let disposed = false;
-    let interval;
     function applyUpdate() {
-      clearInterval(interval);
-      // 수동 요청도 Splash 렌더와 이전 푸시 브리지 정리 이후에 갱신을 시작한다.
-      const update = manualUpdateRequested ? requestAppUpdate : reloadWhenActivated;
-      update().catch(() => {
-        if (disposed) return;
-        // 활성화 실패가 앱과 푸시 이동을 영구 차단하지 않게 현재 버전으로 복귀한다.
-        setNeedRefresh(false);
-        setUpdateReloadRequested(false);
-        setManualUpdateRequested(false);
-        setSwReady(true);
-        setUpdateFailed(true);
-      });
+      const handleControllerChange = () => window.location.reload();
+      navigator.serviceWorker?.addEventListener('controllerchange', handleControllerChange);
+      updateServiceWorker(true);
+      // controllerchange가 오지 않을 경우 10초 후 강제 리로드
+      setTimeout(() => window.location.reload(), 10000);
     }
 
     // 폼 작성 중이면 이탈 후 업데이트
     if (isOnFormPage()) {
-      interval = setInterval(() => {
+      const interval = setInterval(() => {
         if (!isOnFormPage()) {
           clearInterval(interval);
           applyUpdate();
         }
       }, 500);
-    } else applyUpdate();
-    return () => { disposed = true; clearInterval(interval); };
-  }, [updatePending, manualUpdateRequested, setNeedRefresh]);
+      return () => clearInterval(interval);
+    }
 
-  useEffect(() => {
-    if (!updateFailed || !swReady || updatePending) return;
-    // Splash에는 Toaster가 없으므로 기존 화면이 다시 마운트된 뒤 한 번 안내한다.
-    setUpdateFailed(false);
-    toast.error('업데이트를 완료하지 못했어요. 잠시 후 다시 시도해 주세요.', { id: 'app-update-failed' });
-  }, [updateFailed, swReady, updatePending]);
+    applyUpdate();
+  }, [needRefresh, updateServiceWorker]);
 
   // SW 준비 전 또는 업데이트 적용 중 (폼 작성 중이면 업데이트 미표시)
-  if (!swReady || (updatePending && !isOnFormPage())) {
-    return <SplashScreen updating={updatePending} />;
+  if (!swReady || (needRefresh && !isOnFormPage())) {
+    return <SplashScreen updating={needRefresh} />;
   }
 
   // Path-based 학생 라우트 — BrowserRouter로 학생 라우트만 렌더.
@@ -374,8 +340,7 @@ export default function App() {
         <Toaster position="top-center" />
         <LoginPage
           onSuccess={() => {
-            // 푸시 알림에서 들어온 뒤 세션이 만료됐다면 로그인 후에도 상세 목적지를 보존한다.
-            if (!window.location.hash.startsWith('#/notifications')) window.location.hash = '#/home';
+            window.location.hash = '#/home';
           }}
         />
       </>
@@ -387,7 +352,6 @@ export default function App() {
     <Toaster position="top-center" />
     <DataProvider key={authRevision}>
       <HashRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-        <PushNotificationRouteSync />
         <ScrollToTop />
         <div className="page-container">
           <Routes>
@@ -427,7 +391,7 @@ export default function App() {
             <Route path="/homework/new" element={<HomeworkFormPage />} />
             <Route path="/homework/:id" element={<HomeworkDetailPage />} />
 
-            <Route path="/settings" element={<SettingsPage onUpdate={() => setManualUpdateRequested(true)} />} />
+            <Route path="/settings" element={<SettingsPage />} />
             <Route path="/notices" element={<NoticesPage />} />
             <Route path="/notifications" element={<NotificationsPage />} />
 

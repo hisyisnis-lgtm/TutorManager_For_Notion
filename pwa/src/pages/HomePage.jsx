@@ -130,8 +130,8 @@ export default function HomePage() {
   const todayStr = `${today.year}-${pad(today.month + 1)}-${pad(today.day)}`;
   const [unreadCount, setUnreadCount] = useState(() => {
     try {
-      const notifications = JSON.parse(sessionStorage.getItem('teacher_push_notifications') || '[]');
-      const lastRead = parseInt(sessionStorage.getItem('teacher_push_last_read') || '0', 10);
+      const notifications = JSON.parse(sessionStorage.getItem('ntfy_notifications') || '[]');
+      const lastRead = parseInt(sessionStorage.getItem('ntfy_last_read') || '0', 10);
       return notifications.filter((n) => n.time > lastRead).length;
     } catch {
       return 0;
@@ -284,30 +284,14 @@ export default function HomePage() {
     loadShortage();
   }, []);
 
-  // 설정/알림 페이지에서 돌아올 때 이름·뱃지를 갱신하고, 열린 앱의 Web Push도 즉시 반영한다.
+  // 설정/알림 페이지에서 돌아올 때 이름 및 뱃지 갱신 (마운트 시 1회)
   useEffect(() => {
-    const refreshUnread = () => {
-      try {
-        const notifications = JSON.parse(sessionStorage.getItem('teacher_push_notifications') || '[]');
-        const lastRead = parseInt(sessionStorage.getItem('teacher_push_last_read') || '0', 10);
-        setUnreadCount(notifications.filter((n) => n.time > lastRead).length);
-      } catch {}
-    };
-    const handlePush = (event) => {
-      const notification = event.data?.type === 'teacher-push' ? event.data.notification : null;
-      if (!notification?.id) return;
-      try {
-        const current = JSON.parse(sessionStorage.getItem('teacher_push_notifications') || '[]');
-        if (!current.some((item) => item.id === notification.id)) {
-          sessionStorage.setItem('teacher_push_notifications', JSON.stringify([notification, ...current].slice(0, 100)));
-        }
-      } catch {}
-      refreshUnread();
-    };
     setInstructorName(getInstructorName());
-    refreshUnread();
-    navigator.serviceWorker?.addEventListener('message', handlePush);
-    return () => navigator.serviceWorker?.removeEventListener('message', handlePush);
+    try {
+      const notifications = JSON.parse(sessionStorage.getItem('ntfy_notifications') || '[]');
+      const lastRead = parseInt(sessionStorage.getItem('ntfy_last_read') || '0', 10);
+      setUnreadCount(notifications.filter((n) => n.time > lastRead).length);
+    } catch {}
   }, []);
 
   const handleRefresh = async () => {

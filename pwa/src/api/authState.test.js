@@ -42,7 +42,7 @@ describe('인증 용도와 개인정보 수명', () => {
   it('강사 로그아웃은 양 저장소 개인정보·토픽을 제거하고 게임 기록은 보존한다', () => {
     setAuth(fixtureSession());
     for (const storage of [localStorage, sessionStorage]) {
-      for (const key of ['swr_home:today', 'swr_student:info:STUDENT_A', 'tutor_master_cache_v2', 'ntfy_topic', 'ntfy_notifications', 'ntfy_last_read', 'teacher_push_notifications', 'teacher_push_last_read']) storage.setItem(key, 'private');
+      for (const key of ['swr_home:today', 'swr_student:info:STUDENT_A', 'tutor_master_cache_v2', 'ntfy_topic', 'ntfy_notifications', 'ntfy_last_read']) storage.setItem(key, 'private');
       storage.setItem('tone_game_progress', 'keep');
     }
     const auth = captureAuthScope();
@@ -53,7 +53,6 @@ describe('인증 용도와 개인정보 수명', () => {
       expect(storage.getItem('tutor_master_cache_v2')).toBeNull();
       expect(storage.getItem('ntfy_topic')).toBeNull();
       expect(storage.getItem('ntfy_notifications')).toBeNull();
-      expect(storage.getItem('teacher_push_notifications')).toBeNull();
       expect(storage.getItem('tone_game_progress')).toBe('keep');
     }
     expect(isAuthScopeCurrent(auth)).toBe(false);

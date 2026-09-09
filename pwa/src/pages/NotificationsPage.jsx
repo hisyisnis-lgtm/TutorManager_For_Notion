@@ -1,7 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '../components/shadcn/button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../components/shadcn/dialog';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import EmptyState from '../components/ui/EmptyState.jsx';
 import { WORKER_URL } from '../config.js';
@@ -11,8 +9,8 @@ import { BellIcon } from '@phosphor-icons/react';
 import { TEXT_TERTIARY,
   TEXT_INACTIVE, BORDER_NEUTRAL } from '../constants/theme.js';
 
-const STORAGE_KEY = 'teacher_push_notifications';
-const LAST_READ_KEY = 'teacher_push_last_read';
+const STORAGE_KEY = 'ntfy_notifications';
+const LAST_READ_KEY = 'ntfy_last_read';
 const MAX_NOTIFICATIONS = 100;
 
 const PRIORITY_STYLE = {
@@ -35,13 +33,16 @@ function saveNotifications(list) {
   sessionStorage.setItem(STORAGE_KEY, JSON.stringify(list.slice(0, MAX_NOTIFICATIONS)));
 }
 
-function mergeNotifications(existing, incoming, authoritative = false) {
-  const byId = new Map(existing.map((n) => [n.id, n]));
+function mergeNotifications(existing, incoming) {
+  const ids = new Set(existing.map((n) => n.id));
+  const merged = [...existing];
   for (const n of incoming) {
-    // 암호화 푸시는 크기 제한으로 요약될 수 있다. D1 원문만 기존 내용을 교체한다.
-    if (authoritative || !byId.has(n.id)) byId.set(n.id, n);
+    if (!ids.has(n.id)) {
+      ids.add(n.id);
+      merged.push(n);
+    }
   }
-  return [...byId.values()].sort((a, b) => b.time - a.time);
+  return merged.sort((a, b) => b.time - a.time);
 }
 
 function relativeTime(unixSec) {
@@ -53,50 +54,38 @@ function relativeTime(unixSec) {
 }
 
 export default function NotificationsPage() {
-  const location = useLocation();
-  const navigate = useNavigate();
   const [notifications, setNotifications] = useState(loadNotifications);
   const [connStatus, setConnStatus] = useState('connecting'); // connecting | connected | error | off
   const authRef = useRef(captureAuthScope());
-  const selectedId = new URLSearchParams(location.search).get('id');
-  const selectedRef = useRef(null);
-  const selectedNotification = notifications.find((notification) => notification.id === selectedId);
-
-  useEffect(() => {
-    if (!selectedId || !selectedRef.current) return;
-    selectedRef.current.scrollIntoView({ block: 'center', behavior: 'smooth' });
-  }, [notifications, selectedId]);
 
   // 페이지 진입 시 읽음 처리
   useEffect(() => {
     if (isAuthScopeCurrent(authRef.current)) sessionStorage.setItem(LAST_READ_KEY, String(Math.floor(Date.now() / 1000)));
   }, []);
 
-  const addNotifications = useCallback((incoming, authoritative = false) => {
+  const addNotifications = useCallback((incoming) => {
     if (!isAuthScopeCurrent(authRef.current)) return;
     setNotifications((prev) => {
       if (!isAuthScopeCurrent(authRef.current)) return [];
-      const merged = mergeNotifications(prev, incoming, authoritative);
+      const merged = mergeNotifications(prev, incoming);
       saveNotifications(merged);
       return merged;
     });
   }, []);
 
-  // D1 히스토리 로드. 열린 앱에는 서비스 워커가 push 메시지를 직접 전달하고,
-  // 포커스 복귀/주기 갱신으로 닫혀 있던 동안의 알림도 보충한다.
+  // 히스토리 로드 + SSE 연결
   useEffect(() => {
     const auth = authRef.current;
     if (!isAuthScopeCurrent(auth)) return;
-    setConnStatus('connecting');
     let cancelled = false;
     const controller = new AbortController();
-    let refreshTimer;
+    let retryTimer;
     const current = () => !cancelled && isAuthScopeCurrent(auth);
     const unsubscribe = subscribeAuthChanges(() => {
       if (!isAuthScopeCurrent(auth)) {
         cancelled = true;
         controller.abort();
-        clearInterval(refreshTimer);
+        clearTimeout(retryTimer);
         setNotifications([]);
       }
     });
@@ -106,63 +95,70 @@ export default function NotificationsPage() {
         const msg = JSON.parse(line);
         if (msg.event === 'message') {
           sessionStorage.setItem(LAST_READ_KEY, String(Math.floor(Date.now() / 1000)));
-          addNotifications([msg], true);
+          addNotifications([msg]);
         }
       } catch { /* 빈 heartbeat·잘못된 줄은 표시하지 않는다. */ }
     };
-    const load = async () => {
-      try {
-        const res = await fetch(`${WORKER_URL}/notifications`, {
+    const request = async (stream) => {
+      const res = await fetch(`${WORKER_URL}/notifications${stream ? '?stream=1' : ''}`, {
         headers: { Authorization: `Bearer ${auth.credential}` },
         cache: 'no-store', signal: controller.signal,
-        });
-        if (res.status === 401 && current()) clearAuth();
-        if (!res.ok) {
-          const error = new Error('알림을 불러오지 못했습니다.');
-          error.status = res.status;
-          throw error;
-        }
-        const text = await res.text();
+      });
+      if (res.status === 401 && current()) clearAuth();
+      if (!res.ok) {
+        const error = new Error('알림을 불러오지 못했습니다.');
+        error.status = res.status;
+        throw error;
+      }
+      return res;
+    };
+    const connect = async () => {
+      try {
+        const history = await request(false);
+        const text = await history.text();
         if (!current()) return;
         text.split('\n').filter(Boolean).forEach(receive);
+        const response = await request(true);
+        if (!current()) { await response.body?.cancel(); return; }
         setConnStatus('connected');
+        const reader = response.body.getReader();
+        const decoder = new globalThis.TextDecoder();
+        let buffer = '';
+        try {
+          while (current()) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            if (buffer.length > 256 * 1024) throw new Error('알림 응답이 너무 큽니다.');
+            const lines = buffer.split('\n');
+            buffer = lines.pop();
+            for (const line of lines) {
+              if (line.startsWith('data:')) receive(line.slice(5).trim());
+            }
+          }
+        } finally { await reader.cancel().catch(() => {}); reader.releaseLock(); }
       } catch (error) {
         if (!current()) return;
         if (error.status === 503) { setConnStatus('off'); return; }
+      }
+      if (current()) {
         setConnStatus('error');
+        retryTimer = setTimeout(connect, 5000);
       }
     };
-    const onPushMessage = (event) => {
-      if (current() && event.data?.type === 'teacher-push' && event.data.notification) {
-        addNotifications([event.data.notification]);
-        load();
-      }
-    };
-    const onFocus = () => { if (current()) load(); };
-    load();
-    refreshTimer = setInterval(load, 60000);
-    navigator.serviceWorker?.addEventListener('message', onPushMessage);
-    window.addEventListener('focus', onFocus);
+    connect();
     return () => {
       cancelled = true;
       unsubscribe();
-      clearInterval(refreshTimer);
+      clearTimeout(retryTimer);
       controller.abort();
-      navigator.serviceWorker?.removeEventListener('message', onPushMessage);
-      window.removeEventListener('focus', onFocus);
     };
-  }, [addNotifications, selectedId]);
+  }, [addNotifications]);
 
   const handleClearAll = () => {
     setNotifications([]);
     sessionStorage.removeItem(STORAGE_KEY);
     sessionStorage.setItem(LAST_READ_KEY, String(Math.floor(Date.now() / 1000)));
-  };
-
-  const closeSelectedNotification = () => {
-    const query = new URLSearchParams(location.search);
-    query.delete('id');
-    navigate({ pathname: location.pathname, search: query.toString() }, { replace: true });
   };
 
   const statusDot = {
@@ -179,13 +175,20 @@ export default function NotificationsPage() {
     off: '알림 내역 이용 불가',
   }[connStatus];
 
-  const selectedStatus = connStatus === 'connecting'
-    ? '알림 내용을 불러오는 중이에요.'
-    : connStatus === 'error'
-      ? '알림 내용을 불러오지 못했어요. 연결 상태를 확인하고 다시 열어 주세요.'
-      : connStatus === 'off'
-        ? '알림 상세 내역을 표시할 수 없어요.'
-        : '보관된 알림 내역에서 이 알림을 찾을 수 없어요.';
+  if (connStatus === 'off') {
+    return (
+      <>
+        <PageHeader title="알림" back />
+        <div className="flex flex-col items-center justify-center px-8 pt-24 gap-4 text-center">
+          <span className="text-5xl">🔔</span>
+          <p className="text-gray-700 font-semibold">알림 상세 내역을 표시할 수 없어요</p>
+          <p className="text-sm text-gray-500">
+            수업·상담 등 자세한 정보는 강사앱의 해당 화면에서 확인해 주세요.
+          </p>
+        </div>
+      </>
+    );
+  }
 
   return (
     <>
@@ -213,15 +216,7 @@ export default function NotificationsPage() {
 
       {/* 알림 목록 */}
       <div className="pb-24">
-        {connStatus === 'off' ? (
-          <div className="flex flex-col items-center justify-center px-8 pt-24 gap-4 text-center">
-            <span className="text-5xl">🔔</span>
-            <p className="text-gray-700 font-semibold">알림 상세 내역을 표시할 수 없어요</p>
-            <p className="text-sm text-gray-500">
-              수업·상담 등 자세한 정보는 강사앱의 해당 화면에서 확인해 주세요.
-            </p>
-          </div>
-        ) : notifications.length === 0 ? (
+        {notifications.length === 0 ? (
           <EmptyState icon={<BellIcon size={44} weight="thin" style={{ color: BORDER_NEUTRAL }} />} title="아직 받은 알림이 없습니다" />
         ) : (
           <ul className="divide-y divide-gray-100">
@@ -229,18 +224,14 @@ export default function NotificationsPage() {
               const p = PRIORITY_STYLE[n.priority] ?? PRIORITY_STYLE[3];
               const tags = n.tags ?? [];
               return (
-                <li
-                  key={n.id}
-                  ref={n.id === selectedId ? selectedRef : undefined}
-                  className={`flex gap-3 px-4 py-3 active:bg-gray-50 transition-[background-color] duration-150 ${n.id === selectedId ? 'bg-brand-50' : ''}`}
-                >
+                <li key={n.id} className="flex gap-3 px-4 py-3 active:bg-gray-50 transition-[background-color] duration-150">
                   {/* 우선순위 색상 바 */}
                   <div className={`w-1 rounded-full shrink-0 self-stretch ${p.bar}`} />
                   <div className="flex-1 min-w-0">
                     {n.title && (
                       <p className="text-sm font-semibold text-gray-800 leading-snug">{n.title}</p>
                     )}
-                    <p className={`whitespace-pre-wrap break-words text-sm leading-6 ${n.title ? 'text-gray-600' : 'font-semibold text-gray-800'}`}>
+                    <p className={`text-sm leading-snug ${n.title ? 'text-gray-600' : 'font-semibold text-gray-800'}`}>
                       {n.message}
                     </p>
                     <div className="flex items-center gap-2 mt-1.5 flex-wrap">
@@ -258,29 +249,6 @@ export default function NotificationsPage() {
           </ul>
         )}
       </div>
-
-      <Dialog
-        open={Boolean(selectedId) && isAuthScopeCurrent(authRef.current)}
-        onOpenChange={(open) => { if (!open) closeSelectedNotification(); }}
-      >
-        <DialogContent className="max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-[480px] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="pr-8 leading-snug">{selectedNotification?.title || '알림 상세'}</DialogTitle>
-            <DialogDescription className="whitespace-pre-wrap break-words pt-2 text-sm leading-6 text-gray-700">
-              {selectedNotification?.message ?? selectedStatus}
-            </DialogDescription>
-          </DialogHeader>
-          {selectedNotification && (
-            <div className="flex items-center gap-2 text-xs" style={{ color: TEXT_TERTIARY }}>
-              {(selectedNotification.tags ?? []).length > 0 && <span>{selectedNotification.tags.join(' · ')}</span>}
-              <span className="ml-auto">{relativeTime(selectedNotification.time)}</span>
-            </div>
-          )}
-          <DialogFooter>
-            <Button className="min-h-11 w-full" onClick={closeSelectedNotification}>닫기</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </>
   );
 }

@@ -1,7 +1,9 @@
-// 개인정보는 소유한 비공개 토픽에만, 공개/확인 불가 토픽에는 고정 안내만 보낸다.
+// 발행은 설정된 토픽에 원문을 전달한다. 공개 토픽에서는 토픽을 아는 사람이 읽을 수 있다.
+// 비공개 여부는 요청한 경우에만 별도로 검사하며, 발행 내용을 자동 대체하지 않는다.
 // /v1/account에는 토큰·이메일 등이 있으므로 응답과 원본 예외는 절대 로그/반환하지 않는다.
 import { pathToFileURL } from 'node:url';
 import { publicNtfyAlert } from '../worker/lib/ntfyPrivacy.js';
+import { sanitizePath } from '../worker/lib/security.js';
 
 const BASE = 'https://ntfy.sh';
 const TOPIC_ALIAS = /^NTFY_TOPIC(?:_(?:CRITICAL|WARN|DIGEST|OPS))?$/;
@@ -51,11 +53,14 @@ export async function verifyPrivateNtfyTopic({ topic, token, fetchImpl = fetch }
   }
 }
 
-export async function publishNtfySafely({ token, payload, level = 'info', workflowKind, fetchImpl = fetch } = {}) {
+export async function publishNtfySafely({ token, payload, fetchImpl = fetch } = {}) {
   if (!validConfiguration(payload?.topic, token)) return { ok: false, reason: 'ntfy_not_configured' };
-  const privacy = await verifyPrivateNtfyTopic({ topic: payload?.topic, token, fetchImpl });
-  const outgoing = privacy.ok ? payload : publicNtfyPayload(payload.topic, level, workflowKind, payload.title);
   try {
+    const outgoing = { ...payload };
+    // 접근 토큰만 기존 규칙으로 가리고, URL 다음 줄의 수업 정보와 공백은 그대로 둔다.
+    for (const field of ['title', 'message']) {
+      if (typeof outgoing[field] === 'string') outgoing[field] = outgoing[field].replace(/\S+/g, sanitizePath);
+    }
     const response = await fetchImpl(BASE, {
       method: 'POST', redirect: 'error', signal: AbortSignal.timeout(15_000),
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },

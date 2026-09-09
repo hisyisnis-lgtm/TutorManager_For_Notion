@@ -72,7 +72,7 @@ export function clearSensitiveCache(scope = 'teacher') {
       return scope === 'teacher' || cacheScope(key.slice(4)) === scope;
     }
     return scope === 'teacher' && (key.startsWith('tutor_master_cache_')
-      || key.startsWith('ntfy_') || key.startsWith('teacher_push_') || key === 'instructor_name');
+      || key.startsWith('ntfy_') || key === 'instructor_name');
   };
   try { removeMatching(localStorage, matches); } catch {}
   try { removeMatching(sessionStorage, matches); } catch {}

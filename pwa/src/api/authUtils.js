@@ -29,9 +29,6 @@ export function setAuth(token) {
 
 /** 토큰 삭제 (로그아웃 / 401 응답 시) */
 export function clearAuth() {
-  const bearer = readStoredSession('auth_token');
-  // 동적 import로 인증 모듈의 순환 의존을 피한다. 로컬 PushSubscription도 즉시 해제된다.
-  void import('./revokePushSubscription.js').then(({ revokePushSubscription }) => revokePushSubscription(bearer)).catch(() => {});
   try { localStorage.removeItem('auth_token'); } catch {}
   try { sessionStorage.removeItem('auth_token'); } catch {}
   clearSensitiveCache();

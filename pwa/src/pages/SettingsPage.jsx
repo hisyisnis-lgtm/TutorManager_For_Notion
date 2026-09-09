@@ -1,14 +1,12 @@
 import {
-  useEffect, useState } from 'react';
+  useState } from 'react';
 import { Link } from 'react-router-dom';
-import { BellIcon, CaretRightIcon } from '@phosphor-icons/react';
+import { CaretRightIcon } from '@phosphor-icons/react';
 import { Button } from '../components/shadcn/button';
 import { Input } from '../components/shadcn/input';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import ConfirmDialog from '../components/ui/ConfirmDialog.jsx';
-import PushDiagnosticsButton from '../components/PushDiagnosticsButton.jsx';
 import { clearAuth } from '../api/authUtils.js';
-import { disablePushNotifications, enablePushNotifications, getPushStatus } from '../api/pushNotifications.js';
 import { TEXT_SECONDARY,
   TEXT_TERTIARY,
   STATUS_ERROR_BORDER,
@@ -28,39 +26,12 @@ export function getInstructorName() {
   return localStorage.getItem(STORAGE_KEY) || '';
 }
 
-export default function SettingsPage({ onUpdate }) {
+export default function SettingsPage() {
   const [name, setName] = useState(() => localStorage.getItem(STORAGE_KEY) || '');
   const [saved, setSaved] = useState(false);
   const [confirmLogout, setConfirmLogout] = useState(false);
   const [copiedKey, setCopiedKey] = useState('');
   const [updating, setUpdating] = useState(false);
-  const [updateError, setUpdateError] = useState('');
-  const [pushState, setPushState] = useState('loading');
-  const [pushBusy, setPushBusy] = useState(false);
-  const [pushError, setPushError] = useState('');
-
-  useEffect(() => {
-    let active = true;
-    getPushStatus().then(({ state }) => { if (active) setPushState(state); })
-      .catch((error) => { if (active) { setPushState('error'); setPushError(error.message); } });
-    return () => { active = false; };
-  }, []);
-
-  const handlePushToggle = async () => {
-    setPushBusy(true);
-    setPushError('');
-    try {
-      const result = pushState === 'enabled'
-        ? await disablePushNotifications()
-        : await enablePushNotifications();
-      setPushState(result.state);
-    } catch (error) {
-      setPushError(error.message);
-      setPushState(error.message.includes('권한') ? 'denied' : 'error');
-    } finally {
-      setPushBusy(false);
-    }
-  };
 
   function copyLink(key, path) {
     const url = `${window.location.origin}${path}`;
@@ -70,16 +41,19 @@ export default function SettingsPage({ onUpdate }) {
     });
   }
 
-  const handleUpdate = () => {
-    if (updating) return;
+  const handleUpdate = async () => {
     setUpdating(true);
-    setUpdateError('');
     try {
-      // App이 업데이트 화면과 브리지를 먼저 준비한 뒤 SW 교체를 시작한다.
-      onUpdate();
-    } catch {
-      setUpdateError('업데이트 준비를 완료하지 못했어요. 잠시 후 다시 눌러주세요. 알림 연결은 유지돼요.');
-      setUpdating(false);
+      if ('caches' in window) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map(k => caches.delete(k)));
+      }
+      if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(registrations.map(r => r.unregister()));
+      }
+    } finally {
+      window.location.reload();
     }
   };
 
@@ -139,43 +113,6 @@ export default function SettingsPage({ onUpdate }) {
         </div>
 
         <div>
-          <span style={{ fontSize: 14, fontWeight: 600, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>알림 설정</span>
-          <div className="bg-white shadow-border rounded-2xl p-3">
-            <div className="flex items-start gap-3">
-              <span className="w-10 h-10 rounded-xl bg-brand-50 text-brand-700 flex items-center justify-center shrink-0">
-                <BellIcon size={20} weight="fill" />
-              </span>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold" style={{ color: TEXT_SECONDARY }}>이 기기 푸시 알림</p>
-                <p className="text-xs mt-1 leading-relaxed" style={{ color: TEXT_TERTIARY }}>
-                  {{
-                    loading: '현재 알림 상태를 확인하고 있어요.',
-                    enabled: '수업·상담·숙제의 상세 알림을 받고 있어요.',
-                    disabled: '앱을 닫아도 상세 알림을 받을 수 있어요.',
-                    denied: '기기 설정에서 이 앱의 알림 권한을 허용해주세요.',
-                    unsupported: '이 기기에서는 Web Push를 지원하지 않아요.',
-                    unconfigured: '서버 알림 설정이 아직 완료되지 않았어요.',
-                    error: pushError || '알림 상태를 확인하지 못했어요.',
-                  }[pushState]}
-                </p>
-              </div>
-            </div>
-            {!['loading', 'unsupported', 'unconfigured', 'denied'].includes(pushState) && (
-              <Button
-                variant={pushState === 'enabled' ? 'outline' : 'default'}
-                block
-                className="mt-3"
-                loading={pushBusy}
-                onClick={handlePushToggle}
-              >
-                {pushState === 'enabled' ? '이 기기 알림 끄기' : '이 기기 알림 받기'}
-              </Button>
-            )}
-            <PushDiagnosticsButton />
-          </div>
-        </div>
-
-        <div>
           <span style={{ fontSize: 14, fontWeight: 600, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>공유 링크</span>
           <div className="space-y-2">
             {SHARE_LINKS.map(({ key, label, path }) => (
@@ -211,11 +148,8 @@ export default function SettingsPage({ onUpdate }) {
           onClick={handleUpdate}
           loading={updating}
         >
-          앱 업데이트
+          업데이트 (강력 새로고침)
         </Button>
-        <p role={updateError ? 'alert' : undefined} className="text-xs leading-relaxed text-gray-600">
-          {updateError || '알림 연결과 저장된 정보를 유지하면서 최신 버전을 확인해요.'}
-        </p>
 
         <Button
           variant="destructiveOutline"
