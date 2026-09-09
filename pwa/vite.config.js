@@ -75,6 +75,7 @@ export default defineConfig(({ mode }) => {
       manifest: false,
       workbox: {
         clientsClaim: true,
+        importScripts: ['/push-sw.js'],
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
         // 외부 공식 웹으로 301 이동하는 소개 페이지는 SW 설치 캐시에 넣지 않는다.
         globIgnores: ['intro.html'],

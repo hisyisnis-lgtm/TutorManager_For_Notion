@@ -9,8 +9,8 @@ import { BellIcon } from '@phosphor-icons/react';
 import { TEXT_TERTIARY,
   TEXT_INACTIVE, BORDER_NEUTRAL } from '../constants/theme.js';
 
-const STORAGE_KEY = 'ntfy_notifications';
-const LAST_READ_KEY = 'ntfy_last_read';
+const STORAGE_KEY = 'teacher_push_notifications';
+const LAST_READ_KEY = 'teacher_push_last_read';
 const MAX_NOTIFICATIONS = 100;
 
 const PRIORITY_STYLE = {
@@ -73,19 +73,20 @@ export default function NotificationsPage() {
     });
   }, []);
 
-  // 히스토리 로드 + SSE 연결
+  // D1 히스토리 로드. 열린 앱에는 서비스 워커가 push 메시지를 직접 전달하고,
+  // 포커스 복귀/주기 갱신으로 닫혀 있던 동안의 알림도 보충한다.
   useEffect(() => {
     const auth = authRef.current;
     if (!isAuthScopeCurrent(auth)) return;
     let cancelled = false;
     const controller = new AbortController();
-    let retryTimer;
+    let refreshTimer;
     const current = () => !cancelled && isAuthScopeCurrent(auth);
     const unsubscribe = subscribeAuthChanges(() => {
       if (!isAuthScopeCurrent(auth)) {
         cancelled = true;
         controller.abort();
-        clearTimeout(retryTimer);
+        clearInterval(refreshTimer);
         setNotifications([]);
       }
     });
@@ -99,59 +100,43 @@ export default function NotificationsPage() {
         }
       } catch { /* 빈 heartbeat·잘못된 줄은 표시하지 않는다. */ }
     };
-    const request = async (stream) => {
-      const res = await fetch(`${WORKER_URL}/notifications${stream ? '?stream=1' : ''}`, {
+    const load = async () => {
+      try {
+        const res = await fetch(`${WORKER_URL}/notifications`, {
         headers: { Authorization: `Bearer ${auth.credential}` },
         cache: 'no-store', signal: controller.signal,
-      });
-      if (res.status === 401 && current()) clearAuth();
-      if (!res.ok) {
-        const error = new Error('알림을 불러오지 못했습니다.');
-        error.status = res.status;
-        throw error;
-      }
-      return res;
-    };
-    const connect = async () => {
-      try {
-        const history = await request(false);
-        const text = await history.text();
+        });
+        if (res.status === 401 && current()) clearAuth();
+        if (!res.ok) {
+          const error = new Error('알림을 불러오지 못했습니다.');
+          error.status = res.status;
+          throw error;
+        }
+        const text = await res.text();
         if (!current()) return;
         text.split('\n').filter(Boolean).forEach(receive);
-        const response = await request(true);
-        if (!current()) { await response.body?.cancel(); return; }
         setConnStatus('connected');
-        const reader = response.body.getReader();
-        const decoder = new globalThis.TextDecoder();
-        let buffer = '';
-        try {
-          while (current()) {
-            const { value, done } = await reader.read();
-            if (done) break;
-            buffer += decoder.decode(value, { stream: true });
-            if (buffer.length > 256 * 1024) throw new Error('알림 응답이 너무 큽니다.');
-            const lines = buffer.split('\n');
-            buffer = lines.pop();
-            for (const line of lines) {
-              if (line.startsWith('data:')) receive(line.slice(5).trim());
-            }
-          }
-        } finally { await reader.cancel().catch(() => {}); reader.releaseLock(); }
       } catch (error) {
         if (!current()) return;
         if (error.status === 503) { setConnStatus('off'); return; }
-      }
-      if (current()) {
         setConnStatus('error');
-        retryTimer = setTimeout(connect, 5000);
       }
     };
-    connect();
+    const onPushMessage = (event) => {
+      if (event.data?.type === 'teacher-push' && event.data.notification) addNotifications([event.data.notification]);
+    };
+    const onFocus = () => { if (current()) load(); };
+    load();
+    refreshTimer = setInterval(load, 60000);
+    navigator.serviceWorker?.addEventListener('message', onPushMessage);
+    window.addEventListener('focus', onFocus);
     return () => {
       cancelled = true;
       unsubscribe();
-      clearTimeout(retryTimer);
+      clearInterval(refreshTimer);
       controller.abort();
+      navigator.serviceWorker?.removeEventListener('message', onPushMessage);
+      window.removeEventListener('focus', onFocus);
     };
   }, [addNotifications]);
 

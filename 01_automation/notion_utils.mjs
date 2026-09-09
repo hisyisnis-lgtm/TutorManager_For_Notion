@@ -2,6 +2,7 @@
 
 import { createHmac, randomBytes } from 'crypto';
 import { publishNtfySafely } from './ntfy_privacy.mjs';
+import { publishTeacherPush } from './web_push_delivery.mjs';
 
 /**
  * Notion API 클라이언트 + queryAll 생성
@@ -235,6 +236,12 @@ export async function loadPaidSessions(queryAll, paymentsDbId) {
  */
 export function createNtfyClient(topic, ntfyToken) {
   return async function sendNtfy(title, message, priority = 3) {
+    if (process.env.PUSH_PUBLISH_TOKEN) {
+      const result = await publishTeacherPush({ title, message, priority });
+      if (!result.ok) console.warn('[web-push] 강사 알림을 전송할 수 없습니다.');
+      else console.log('[web-push] 강사 알림 전송 완료.');
+      return result;
+    }
     const level = priority >= 5 ? 'critical' : priority <= 2 ? 'digest' : priority === 3 ? 'warn' : 'info';
     const result = await publishNtfySafely({ token: ntfyToken, payload: { topic, title, message, priority }, level });
     if (!result.ok) console.warn('[ntfy] 알림을 전송할 수 없습니다. 설정 또는 연결을 확인해주세요.');
@@ -257,6 +264,12 @@ export function createNtfyClient(topic, ntfyToken) {
  */
 export async function sendAlert({ level = 'info', title, message, tags } = {}) {
   const env = process.env;
+  if (level === 'info' && env.PUSH_PUBLISH_TOKEN) {
+    const result = await publishTeacherPush({ title, message, priority: 4, tags });
+    if (!result.ok) console.warn('[web-push] 강사 알림을 전송할 수 없습니다.');
+    else console.log('[web-push] 강사 알림 전송 완료.');
+    return result;
+  }
   const TOPIC_MAP = {
     critical: env.NTFY_TOPIC_CRITICAL || env.NTFY_TOPIC,
     warn: env.NTFY_TOPIC_WARN || env.NTFY_TOPIC,

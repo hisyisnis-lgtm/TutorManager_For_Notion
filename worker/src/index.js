@@ -8,8 +8,11 @@ import { validateFileUpload, validateFileContent, isNotionUploadUrl, resolveFile
 import { boundedRequest, RequestTooLarge, secureResponse } from '../lib/httpSecurity.js';
 import { authorizeNotionRequest, pageInDatabase } from '../lib/notionScope.js';
 import { studentHomeworkPage } from '../lib/homeworkPrivacy.js';
-import { teacherNotifications } from '../lib/notifications.js';
 import { isPrivateNtfyTopic, publicNtfyAlert } from '../lib/ntfyPrivacy.js';
+import {
+  listPushNotifications, publishWebPushNotification, removePushSubscription,
+  savePushSubscription, webPushConfigured,
+} from '../lib/webPush.js';
 import {
   ConsultSchema,
   HomeworkSubmitSchema,
@@ -537,22 +540,11 @@ async function sendAlert(env, { level = 'info', title, message, tags, dedupKey, 
   }
 }
 
-// info level 알림은 GitHub repository_dispatch로 우회한다.
-//
-// Cloudflare Workers의 공유 IP가 ntfy.sh의 IP-based daily quota에 자주 걸려 429를 받는
-// 문제를 회피하기 위함. GitHub Actions runner IP에서는 ntfy 발송이 정상 동작한다.
-// 워크플로우: .github/workflows/notify-from-worker.yml (event_type: ntfy-relay)
-//
-// 트레이드오프: ntfy.sh 직접 호출 대비 약 5~15초 지연. 무료상담은 카톡 알림톡으로 가고
-// 이 함수를 쓰는 곳은 숙제 제출 알림 1곳뿐이라 지연 허용 가능.
+// 강사용 비즈니스 알림은 공개 ntfy 토픽을 거치지 않고 인증된 기기의 Web Push로 보낸다.
 async function sendNtfy(env, message, title = 'New Consultation') {
-  if (!env.NTFY_TOPIC || !env.NTFY_TOKEN) {
-    console.error('[ntfy] 알림 토픽 또는 인증 설정이 없습니다.');
-    return { ok: false, reason: 'ntfy_not_configured' };
-  }
-  const privateTopic = await isPrivateNtfyTopic(env, env.NTFY_TOPIC);
-  const alert = privateTopic ? { title, message } : publicNtfyAlert('info', title);
-  await githubDispatch(env, 'ntfy-relay', { title: alert.title, message: alert.message, level: 'info' });
+  const result = await publishWebPushNotification(env, { title, message, priority: 4 });
+  if (!result.ok) console.error('[web-push] 강사 알림을 전송할 수 없습니다.');
+  return result;
 }
 
 /**
@@ -2413,7 +2405,9 @@ async function handleFetch(request, env, ctx) {
     const isOauthNav = /^\/game\/auth\/[^/]+\/(start|callback)$/.test(url.pathname);
     // 지표 대시보드도 전체 페이지 네비(브라우저가 Origin 미첨부) — ?key= 시크릿으로 게이팅되므로 Origin 예외.
     const isDashNav = url.pathname === '/game/dashboard';
-    if (!allowed && !isOauthNav && !isDashNav) {
+    // GitHub Actions가 호출하는 서버 간 발송 경로는 Origin이 없으며 별도 공유 시크릿으로 인증한다.
+    const isPushPublish = url.pathname === '/push/publish' && request.method === 'POST';
+    if (!allowed && !isOauthNav && !isDashNav && !isPushPublish) {
       return new Response(JSON.stringify({ error: '허용되지 않은 출처입니다.' }), {
         status: 403,
         headers: { 'Content-Type': 'application/json' },
@@ -2423,11 +2417,54 @@ async function handleFetch(request, env, ctx) {
     try { request = await boundedRequest(request); }
     catch (error) { if (error instanceof RequestTooLarge) return errRes(corsHeaders, 413, error.message); throw error; }
 
+    if (url.pathname === '/push/config' && request.method === 'GET') {
+      const authError = await requireJwt(request, env, corsHeaders);
+      if (authError) return authError;
+      return Response.json({ configured: webPushConfigured(env), publicKey: env.VAPID_PUBLIC_KEY || '' }, {
+        headers: { ...corsHeaders, 'Cache-Control': 'private, no-store' },
+      });
+    }
+
+    if (url.pathname === '/push/subscription' && request.method === 'POST') {
+      const authError = await requireJwt(request, env, corsHeaders);
+      if (authError) return authError;
+      if (!(await rateLimitCheck(env, `push-subscribe:${clientIp(request)}`, 10, 60))) return errRes(corsHeaders, 429, '잠시 후 다시 시도해주세요.');
+      const result = await savePushSubscription(env, await request.json().catch(() => null));
+      if (!result.ok) return errRes(corsHeaders, result.reason === 'push_not_configured' ? 503 : 400, '푸시 알림을 설정할 수 없습니다.');
+      return Response.json({ ok: true }, { headers: corsHeaders });
+    }
+
+    if (url.pathname === '/push/subscription' && request.method === 'DELETE') {
+      const authError = await requireJwt(request, env, corsHeaders);
+      if (authError) return authError;
+      const { endpoint } = await request.json().catch(() => ({}));
+      const result = await removePushSubscription(env, endpoint);
+      if (!result.ok) return errRes(corsHeaders, 400, '푸시 구독 정보가 올바르지 않습니다.');
+      return Response.json({ ok: true }, { headers: corsHeaders });
+    }
+
+    if (isPushPublish) {
+      const bearer = (request.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
+      if (!env.PUSH_PUBLISH_TOKEN || !timingSafeEqual(bearer, env.PUSH_PUBLISH_TOKEN)) return errRes(corsHeaders, 401, 'Unauthorized');
+      if (!(await rateLimitCheck(env, `push-publish:${clientIp(request)}`, 120, 60))) return errRes(corsHeaders, 429, 'Too many requests');
+      const result = await publishWebPushNotification(env, await request.json().catch(() => null));
+      if (!result.ok) {
+        const status = result.reason === 'push_not_configured' ? 503
+          : result.reason === 'no_subscriptions' ? 409
+            : result.reason === 'push_delivery_failed' ? 502 : 400;
+        return errRes(corsHeaders, status, '알림을 전송할 수 없습니다.');
+      }
+      return Response.json(result, { headers: corsHeaders });
+    }
+
     if (url.pathname === '/notifications' && request.method === 'GET') {
       const authError = await requireJwt(request, env, corsHeaders);
       if (authError) return authError;
       if (!(await rateLimitCheck(env, `notifications:${clientIp(request)}`, 30, 60))) return errRes(corsHeaders, 429, '잠시 후 다시 시도해주세요.');
-      return teacherNotifications(request, env, corsHeaders);
+      const notifications = await listPushNotifications(env);
+      return new Response(notifications.map((item) => JSON.stringify(item)).join('\n') + (notifications.length ? '\n' : ''), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/x-ndjson; charset=utf-8', 'Cache-Control': 'private, no-store' },
+      });
     }
 
     // 클라이언트 JS 에러 수집 (공개, 인증 불필요)

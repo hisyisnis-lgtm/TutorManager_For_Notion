@@ -90,9 +90,9 @@ describe('production data handlers with isolated Notion and SQLite', () => {
     expect(text).not.toContain('private');
     expect(text).not.toContain(STUDENT);
   });
-  it('notification data requires a teacher token and configured private account', async () => {
+  it('notification history requires a teacher token and stays inside D1', async () => {
     expect((await send('/notifications')).status).toBe(401);
-    expect((await send('/notifications', { token: teacherToken })).status).toBe(503);
+    expect((await send('/notifications', { token: teacherToken })).status).toBe(200);
     expect(calls).toHaveLength(0);
   });
   it('oversized public events are rejected before processing', async () => {

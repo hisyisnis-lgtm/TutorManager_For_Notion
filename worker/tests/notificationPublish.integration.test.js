@@ -78,7 +78,7 @@ describe('all ntfy publishing requires credentials', () => {
     expect(fetch.mock.calls[1][1].body).not.toMatch(/김학생|01012345678|50000|SECRETCODE|attacker|private-client-diagnostic|never-log-secret/);
     expect(JSON.stringify(console.error.mock.calls)).not.toMatch(/public-fixture|private-client-diagnostic|never-log-secret/);
   });
-  it('public-topic GitHub relays contain only static guidance before leaving the Worker', async () => {
+  it('does not send private consultation details to ntfy or GitHub when Web Push is not configured', async () => {
     local = localD1();
     const env = { GAME_DB: local.db, JWT_SECRET: 'test-store-key', NTFY_TOPIC: 'public-general', NTFY_TOKEN: fakeKey, NOTION_TOKEN: 'test-notion-key', GITHUB_PAT: 'fake-github-key' };
     fetch.mockImplementation(async url => {
@@ -93,11 +93,6 @@ describe('all ntfy publishing requires credentials', () => {
       body: JSON.stringify({ name: '김개인정보', phone: '01012345678', kakaoId: 'private-contact', message: 'private-consult-content' }),
     }), env, { waitUntil: promise => promise.catch(() => {}) });
     expect(response.status).toBe(200);
-    const relay = fetch.mock.calls.find(([url]) => url.endsWith('/dispatches'));
-    expect(relay).toBeTruthy();
-    expect(JSON.parse(relay[1].body).client_payload).toEqual({
-      title: '새 상담 신청 알림', message: '강사앱의 수업·상담 등 관련 항목을 확인해주세요.\nhttps://tiantian-chinese.pages.dev/', level: 'info',
-    });
-    expect(relay[1].body).not.toMatch(/김|5678|private-contact|private-consult-content|public-general/);
+    expect(fetch.mock.calls.some(([url]) => url === 'https://ntfy.sh' || url.endsWith('/dispatches'))).toBe(false);
   });
 });
