@@ -68,8 +68,10 @@ export function notificationDeliveryKey(parts, secret) {
  * optionally through the following day for a post-midnight retry. Earlier
  * attempts of the current run are also included. The workflow must use shared
  * concurrency so a provably queued future attempt cannot start during this run.
+ * An optional shouldSkip guard runs after the signed start and before restoration.
+ * Returning true skips without restoring history or exposing a writable ledger (null).
  */
-export async function createNotificationLedger({ workflow, day, historyUntilDay = day, secret, env = process.env, fetchImpl = fetch, log = console.log }) {
+export async function createNotificationLedger({ workflow, day, historyUntilDay = day, secret, env = process.env, fetchImpl = fetch, log = console.log, shouldSkip }) {
   const since = dayStart(day);
   const historyEnd = dayStart(historyUntilDay);
   const oneDay = 24 * 60 * 60 * 1000;
@@ -81,7 +83,8 @@ export async function createNotificationLedger({ workflow, day, historyUntilDay 
     || ![0, oneDay].includes(historyEnd - since) || !validSecret(secret)
     || !validId(runId) || !validAttempt(attempt) || typeof repository !== 'string'
     || !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repository)
-    || typeof env.GITHUB_TOKEN !== 'string' || !env.GITHUB_TOKEN || typeof log !== 'function') throw fail('configuration');
+    || typeof env.GITHUB_TOKEN !== 'string' || !env.GITHUB_TOKEN || typeof log !== 'function'
+    || (shouldSkip !== undefined && typeof shouldSkip !== 'function')) throw fail('configuration');
 
   const states = new Map();
   let sequence = 0;
@@ -92,6 +95,8 @@ export async function createNotificationLedger({ workflow, day, historyUntilDay 
   };
   // A failed restoration sends nothing, but its log remains recognisable on retry.
   write('-', 'start');
+  // Even skipped or guard-rejected runs must remain recognisable on a later retry.
+  if (shouldSkip && await shouldSkip() === true) return null;
 
   const deadline = Date.now() + 60_000;
   let totalBytes = 0;

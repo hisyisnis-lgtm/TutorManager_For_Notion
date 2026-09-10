@@ -68,6 +68,9 @@ async function childMain(config) {
     if (url.origin === 'https://api.github.com') {
       if (method !== 'GET' || options.headers?.Authorization !== 'Bearer fixture-github-token') return unexpected();
       if (url.pathname === runPath) {
+        if (config.successLookupUnavailable && url.searchParams.get('status') === 'success') {
+          return Response.json({ message: 'Fixture success lookup unavailable' }, { status: 503 });
+        }
         const candidates = url.searchParams.get('status') === 'success'
           ? pastRuns.filter(run => run.conclusion === 'success')
           : [...pastRuns, {
@@ -147,10 +150,10 @@ async function childMain(config) {
 
 function runScript(scriptCase, {
   runId = 100, history = [], outcomes = {}, event = 'workflow_dispatch', noRecipients = false,
-  clock = fixedNow, classDay = '2026-09-10',
+  clock = fixedNow, classDay = '2026-09-10', successLookupUnavailable = false,
 } = {}) {
   const config = {
-    ...scriptCase, runId, history, outcomes, noRecipients, fixedNow: clock, classDay,
+    ...scriptCase, runId, history, outcomes, noRecipients, fixedNow: clock, classDay, successLookupUnavailable,
     scriptUrl: new URL(`../../01_automation/${scriptCase.script}`, import.meta.url).href,
   };
   const result = spawnSync(process.execPath, ['--input-type=module'], {
@@ -178,6 +181,12 @@ function runScript(scriptCase, {
 
 const asHistory = (run, conclusion = run.status === 0 ? 'success' : 'failure') => ({ runId: run.runId, createdAt: run.createdAt, conclusion, logs: run.logs });
 const states = run => run.logs.filter(line => line.startsWith(prefix)).map(line => line.slice(prefix.length).split(' ')[6]);
+const legacyHistory = conclusion => ({
+  runId: 99,
+  createdAt: '2026-09-09T08:00:00.000Z', // 17:00 KST, before signed ledger logs were introduced.
+  conclusion,
+  logs: ['[2026-09-09T08:00:00.000Z] D-1 알림 시작', `알림 실행 ${conclusion}`],
+});
 
 describe.each(scriptCases)('$script recipient retry integration', scriptCase => {
   it('restores signed failed-run logs in a fresh process and only retries the rejected recipient', () => {
@@ -205,10 +214,89 @@ describe.each(scriptCases)('$script recipient retry integration', scriptCase => 
     expect(successful.posts).toHaveLength(2);
     const backup = runScript(scriptCase, { runId: 101, history: [asHistory(successful)], event: 'schedule' });
     expect(backup.status).toBe(0);
-    expect(backup.logDownloads).toBe(1);
+    expect(backup.logDownloads).toBe(0);
     expect(backup.posts).toEqual([]);
     expect(backup.notionCalls).toBe(0);
     expect(backup.alerts).toBe(0);
+    expect(states(backup)).toEqual(['start']);
+  });
+
+  it.each([
+    { event: 'schedule', clock: '2026-09-09T10:30:00.000Z' },
+    { event: 'repository_dispatch', clock: '2026-09-09T10:30:00.000Z' },
+    { event: 'schedule', clock: '2026-09-09T14:43:00.000Z' },
+    { event: 'repository_dispatch', clock: '2026-09-09T14:43:00.000Z' },
+  ])('skips $event at $clock after a legacy success without restoring old logs', ({ event, clock }) => {
+    const backup = runScript(scriptCase, { history: [legacyHistory('success')], event, clock });
+    expect(backup.status).toBe(0);
+    expect(backup.logDownloads).toBe(0);
+    expect(backup.posts).toEqual([]);
+    expect(backup.notionCalls).toBe(0);
+    expect(backup.alerts).toBe(0);
+    expect(states(backup)).toEqual(['start']);
+  });
+
+  it.each(['schedule', 'repository_dispatch'])('keeps an unrecognised legacy failure closed for %s', event => {
+    const backup = runScript(scriptCase, {
+      history: [legacyHistory('failure')], event, clock: '2026-09-09T10:30:00.000Z',
+    });
+    expect(backup.status).toBe(1);
+    expect(backup.logDownloads).toBe(1);
+    expect(backup.posts).toEqual([]);
+    expect(backup.notionCalls).toBe(0);
+    expect(backup.alerts).toBe(1);
+    expect(backup.logs.join('\n')).toContain('[unrecognized_log]');
+    expect(states(backup)).toEqual(['start']);
+  });
+
+  it('still requires recognisable delivery history for manual retries after a legacy success', () => {
+    const manual = runScript(scriptCase, { history: [legacyHistory('success')] });
+    expect(manual.status).toBe(1);
+    expect(manual.logDownloads).toBe(1);
+    expect(manual.posts).toEqual([]);
+    expect(manual.notionCalls).toBe(0);
+    expect(manual.alerts).toBe(1);
+    expect(manual.logs.join('\n')).toContain('[unrecognized_log]');
+    expect(states(manual)).toEqual(['start']);
+  });
+
+  it.each([
+    { event: 'schedule', successLookupUnavailable: false },
+    { event: 'repository_dispatch', successLookupUnavailable: false },
+    { event: 'schedule', successLookupUnavailable: true },
+    { event: 'repository_dispatch', successLookupUnavailable: true },
+  ])('fails a late $event when success cannot be confirmed (lookup unavailable: $successLookupUnavailable)', ({ event, successLookupUnavailable }) => {
+    const late = runScript(scriptCase, {
+      event, successLookupUnavailable, clock: '2026-09-09T14:43:00.000Z',
+      history: successLookupUnavailable ? [legacyHistory('success')] : [],
+    });
+    expect(late.status).toBe(1);
+    expect(late.logDownloads).toBe(0);
+    expect(late.posts).toEqual([]);
+    expect(late.notionCalls).toBe(0);
+    expect(late.alerts).toBe(1);
+    expect(states(late)).toEqual(['start']);
+  });
+
+  it('restores a skipped backup log on a later manual retry without resending accepted notifications', () => {
+    const successful = runScript(scriptCase, { clock: '2026-09-09T08:00:00.000Z' });
+    expect(successful.status).toBe(0);
+    expect(successful.posts).toHaveLength(2);
+    const backup = runScript(scriptCase, {
+      runId: 101, history: [asHistory(successful)], event: 'schedule', clock: '2026-09-09T10:30:00.000Z',
+    });
+    expect(backup.status).toBe(0);
+    expect(backup.logDownloads).toBe(0);
+    expect(states(backup)).toEqual(['start']);
+    const manual = runScript(scriptCase, {
+      runId: 102, history: [asHistory(successful), asHistory(backup)], clock: '2026-09-09T11:00:00.000Z',
+    });
+    expect(manual.status).toBe(0);
+    expect(manual.logDownloads).toBe(2);
+    expect(manual.posts).toEqual([]);
+    expect(manual.batchErrors).toEqual([]);
+    expect(manual.alerts).toBe(0);
+    expect(states(manual)).toEqual(['start']);
   });
 
   it('finishes with no delivery POST when there are no target classes', () => {

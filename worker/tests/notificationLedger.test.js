@@ -275,6 +275,59 @@ describe('signed recipient notification checkpoints', () => {
     expect(fetchImpl.mock.calls.some(([url]) => url.endsWith('/logs'))).toBe(false);
   });
 
+  it('allows an async skip before legacy successful history is read while preserving its signed start', async () => {
+    const log = vi.fn();
+    const fetchImpl = fixture({ runs: [run(100, { conclusion: 'success' })] });
+    const shouldSkip = vi.fn(async () => {
+      expect(log).toHaveBeenCalledExactlyOnceWith(marker({ runId: env.GITHUB_RUN_ID }).replace(/^\S+ /, ''));
+      expect(fetchImpl).not.toHaveBeenCalled();
+      return true;
+    });
+    await expect(create(fetchImpl, { log, shouldSkip })).resolves.toBeNull();
+    expect(shouldSkip).toHaveBeenCalledTimes(1);
+    expect(log).toHaveBeenCalledTimes(1);
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it.each([false, undefined, 'true', 1])('keeps legacy history fail-closed when the skip callback returns %s', async result => {
+    const log = vi.fn();
+    const fetchImpl = fixture({ runs: [run(100, { conclusion: 'success' })] });
+    const shouldSkip = vi.fn(async () => result);
+    await expect(create(fetchImpl, { log, shouldSkip })).rejects.toMatchObject({ reason: 'unrecognized_log' });
+    expect(shouldSkip).toHaveBeenCalledTimes(1);
+    expect(log).toHaveBeenCalledExactlyOnceWith(marker({ runId: env.GITHUB_RUN_ID }).replace(/^\S+ /, ''));
+    expect(fetchImpl.mock.calls.some(([url]) => url.endsWith('/logs'))).toBe(true);
+  });
+
+  it('propagates a skip callback failure after writing start and before restoring history', async () => {
+    const log = vi.fn();
+    const fetchImpl = fixture();
+    const error = new Error('synthetic skip decision failed');
+    const shouldSkip = vi.fn(async () => { throw error; });
+    await expect(create(fetchImpl, { log, shouldSkip })).rejects.toBe(error);
+    expect(shouldSkip).toHaveBeenCalledTimes(1);
+    expect(log).toHaveBeenCalledExactlyOnceWith(marker({ runId: env.GITHUB_RUN_ID }).replace(/^\S+ /, ''));
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it.each([null, true, 'true', 1, {}])('rejects a non-function skip callback before any output or I/O %#', async shouldSkip => {
+    const log = vi.fn();
+    const fetchImpl = fixture();
+    await expect(create(fetchImpl, { log, shouldSkip })).rejects.toMatchObject({ reason: 'configuration' });
+    expect(log).not.toHaveBeenCalled();
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it('validates existing configuration before running a skip callback', async () => {
+    const log = vi.fn();
+    const fetchImpl = fixture();
+    const shouldSkip = vi.fn(async () => true);
+    await expect(create(fetchImpl, { secret: '', log, shouldSkip })).rejects.toMatchObject({ reason: 'configuration' });
+    expect(shouldSkip).not.toHaveBeenCalled();
+    expect(log).not.toHaveBeenCalled();
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
   it.each(['success', 'failure', null])('does not infer no delivery from zero jobs with conclusion %s', async conclusion => {
     await expect(create(fixture({ runs: [run(100, { conclusion })], jobs: { '100/1': [] } }))).rejects.toThrow();
   });

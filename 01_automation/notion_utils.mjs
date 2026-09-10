@@ -176,9 +176,11 @@ export async function workflowSucceededBetween(workflow, sinceIso, untilIso) {
  * @param {boolean} [o.alertOnMiss=true] - 한계 초과로 포기할 때 critical 알림을 올릴지.
  *   이월(carryover)처럼 "보낼 게 없어서 안 보낸 날"이 대부분인 스크립트는 false로 —
  *   지연 실행마다 오탐 알림이 뜬다.
+ * @param {boolean} [o.failOnMiss=false] - D-1은 한계 초과·성공 미확인을 실패로 남긴다.
+ *   runWithAlert가 한 번만 경고하도록 직접 알림을 보내기 전에 예외를 전달한다.
  * @returns {Promise<boolean>} true면 발송을 건너뛴다
  */
-export async function shouldSkipBackupRun({ workflow, earliestHourKST = 0, latestHourKST, alertOnMiss = true }) {
+export async function shouldSkipBackupRun({ workflow, earliestHourKST = 0, latestHourKST, alertOnMiss = true, failOnMiss = false }) {
   const event = process.env.GITHUB_EVENT_NAME ?? '';
   if (event !== 'schedule' && event !== 'repository_dispatch') return false;
 
@@ -203,6 +205,9 @@ export async function shouldSkipBackupRun({ workflow, earliestHourKST = 0, lates
   // ② 아직 발송 전인데 너무 늦었으면 포기 + 알림 (새벽 발송 방지)
   if (hour > latestHourKST) {
     console.log(`[가드] KST ${hour}시 — 발송 한계(${latestHourKST}시) 초과, 발송 포기`);
+    if (failOnMiss) {
+      throw new Error(`알림 미발송 — ${workflow}: 발송 한계(KST ${latestHourKST}시)까지 성공한 실행을 확인하지 못했습니다.${succeeded === null ? ' (성공 여부 조회 불가)' : ''}`);
+    }
     if (!alertOnMiss) return true;
     await sendAlert({
       level: 'critical',

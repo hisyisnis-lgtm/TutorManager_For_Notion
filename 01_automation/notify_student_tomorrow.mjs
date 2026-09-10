@@ -77,12 +77,13 @@ async function fetchClassTypeMap() {
 
 async function main() {
   const { intendedDayStr, tomorrowStr, dayAfterStr } = getTomorrowKST();
-  // 결과 불명인 이전 시도는 재발송하지 않는다. 수동 재실행에도 같은 이력을 적용한다.
+  // 서명 시작을 남긴 뒤 성공한 자동 실행은 이력 복원 전에 생략한다.
+  // 실제 발송·수동 재실행은 기존 수신자 이력을 복원해 중복과 결과 불명 재발송을 막는다.
   const ledger = await createNotificationLedger({
     workflow: 'notify-student-tomorrow.yml', day: intendedDayStr, historyUntilDay: kstDayStr(), secret: SOLAPI_API_SECRET,
+    shouldSkip: () => shouldSkipBackupRun({ workflow: 'notify-student-tomorrow.yml', earliestHourKST: 17, latestHourKST: 21, failOnMiss: true }),
   });
-  // 워커 cron(1차)이 이미 보냈으면 백업 schedule 실행은 여기서 끝낸다
-  if (await shouldSkipBackupRun({ workflow: 'notify-student-tomorrow.yml', earliestHourKST: 17, latestHourKST: 21 })) return;
+  if (!ledger) return;
 
   console.log(`[${new Date().toISOString()}] 내일(${tomorrowStr}) 수업 있는 학생 알림 시작`);
 
