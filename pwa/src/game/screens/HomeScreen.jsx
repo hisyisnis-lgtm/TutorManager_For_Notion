@@ -2,6 +2,7 @@
 // 좌상단 내 정보(아바타+등급명+게이지%) · 우상단 메뉴 · 중앙 하단 스트릭+게임시작 키캡 CTA · 하단 공통 탭바.
 // 2026-07-27 리디자인(사용자 Figma 시안 442:2): 2.5D 원근·바닥 영토 제거, 도크·플로팅 허브 → 탭바로 통합.
 import { useState, useRef, useEffect, useLayoutEffect } from 'react';
+import { ArrowsClockwiseIcon, CloudCheckIcon, DeviceMobileIcon } from '@phosphor-icons/react';
 import {
   Settings, Play, Flame, Snowflake,
   QuestionCircle, Logout, AltArrowLeft, VolumeLoud, VolumeCross, SmartphoneVibration, CloseCircle,
@@ -15,11 +16,10 @@ import { ToneMark, useCountUp } from '../tgWidgets.jsx';
 import { rankInfo, levelInfo } from '../gameXp.js';
 import { play as playSfx, isSfxMuted, setSfxMuted } from '../tgSfx.js';
 import { isBgmMuted, setBgmMuted, startBgm } from '../tgBgm.js';
-import { EmberRise, MenuToggle, TgTabBar, TAB_BAR_H, TG_COL_MAXW, ModalCard, ModalBody, KeycapCta, ModalTextButton, Gauge, IconButton, Pill, MenuAction } from './shared.jsx';
+import { EmberRise, MenuToggle, TgTabBar, TAB_BAR_H, TG_COL_MAXW, ModalCard, ModalBody, KeycapCta, ModalTextButton, Gauge, IconButton, Pill, MenuAction, GameToast } from './shared.jsx';
 import { markSize, Eyes } from './eyes.jsx';
 import { DebugScoreModal } from './gameModals.jsx';
-import { resetGameData, getMemberSession } from '../gameStore.js';
-import { deleteGameMe } from '../../api/gameApi.js';
+import { resetGameData, deleteMemberAccount } from '../gameStore.js';
 import { NicknameEditModal } from './NicknameEditModal.jsx';
 import { ProfileModal } from './ProfileModal.jsx';
 import RoomBackdrop from './RoomBackdrop.jsx';
@@ -563,11 +563,12 @@ function CreditsModal({ onClose }) {
 //  다만 **아이콘 배지는 넣지 않는다** — 확인만 받는 창에 72px 배지까지 얹으면 과하다(같은 날 지적).
 //   그래서 ModalHead 대신 그 안의 제목 스타일만 그대로 가져다 쓴다.
 //  zIndex는 설정 메뉴(HomeMenu) 위에 떠야 해서 기본 60이 아니라 64.
-function ConfirmModal({ title, lines, confirmLabel, busy, onCancel, onConfirm }) {
+function ConfirmModal({ title, lines, confirmLabel, busy, error, onCancel, onConfirm }) {
   return (
     <ModalCard onClose={busy ? undefined : onCancel} zIndex={64}>
       <span style={{ ...TYPE.head, fontSize: 24, lineHeight: '29px', color: TG.INK, textAlign: 'center' }}>{title}</span>
       <ModalBody lines={lines} />
+      {error && <p role="alert" style={{ ...TYPE.body, color: TG.INK, textAlign: 'center', margin: 0 }}>{error}</p>}
       {/* 처리 중엔 onClick을 비워 이중 탭을 막는다(공용 버튼에 disabled가 없어서). */}
       <KeycapCta label={busy ? '처리 중…' : confirmLabel} onClick={busy ? undefined : onConfirm} />
       <ModalTextButton label="취소" onClick={busy ? undefined : onCancel} />
@@ -804,6 +805,35 @@ function ToneCard({ tone, status, level, onClose }) {
 }
 
 
+export function GameSaveStatus({ status, onRetry, onLogin }) {
+  const failed = status === 'read-error' || status === 'save-error';
+  const signedOut = status === 'signed-out';
+  const actionable = failed || signedOut;
+  const label = {
+    local: '이 기기에 기록을 저장해요',
+    checking: '서버 기록 확인 중…',
+    saving: '이 기기 기록 · 서버에 저장 중…',
+    saved: '서버 저장 완료',
+    'read-error': '서버 기록을 읽지 못해 서버 저장을 보류했어요.',
+    'save-error': '서버 저장이 실패했습니다.',
+    'signed-out': '이 기기 기록은 유지돼요. 다시 로그인해 주세요.',
+  }[status];
+  if (!label) return null;
+  const StatusIcon = status === 'saved' ? CloudCheckIcon : status === 'local' ? DeviceMobileIcon : ArrowsClockwiseIcon;
+  return (
+    <div style={{ position: 'absolute', top: ROOM_TOP + SPACE.md, left: SPACE.x4, right: SPACE.x4, zIndex: 5, display: 'flex', justifyContent: 'center', pointerEvents: 'none' }}>
+      {actionable ? <GameToast msg={label} kind="info" inline persistent action={{ label: signedOut ? '로그인' : '재시도', onClick: signedOut ? onLogin : onRetry }} /> : <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.lg, maxWidth: '100%', minWidth: 0, minHeight: 28 }}>
+        <span aria-hidden="true" style={{ display: 'grid', placeItems: 'center', width: 28, height: 28, borderRadius: RADIUS.pill, flexShrink: 0,
+          color: HOME.ACCENT }}>
+          <StatusIcon size={18} weight="duotone" />
+        </span>
+        <span role="status" aria-live="polite" style={{ ...TYPE.sub, color: TG.SUB,
+          flex: 1, minWidth: 0, lineHeight: '20px', wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>{label}</span>
+      </div>}
+    </div>
+  );
+}
+
 export function HomeScreen({
   // ※ onExam·examPrompt·onExamPromptClose 제거 — 본문에서 쓰이지 않는 죽은 배선이었다(유일한 소비처였을
   //   ProfileModal에는 onExam={null}이 하드코딩돼 있음). 승급시험 진입은 난이도 사다리와 결과화면이 담당한다.
@@ -812,6 +842,7 @@ export function HomeScreen({
   homeReady = true,
   onPlay, onNavTab, onHelp,
   onLogin, isMemberUser, memberName, nickname = null, onEditNickname, onLogout, onExit, studentToken, onRefreshBest, onDebugIntro, achDot = false,
+  syncStatus = 'local', onSyncRetry, onLoginRequired,
 }) {
   const tier = { ...rankInfo(rank), xp }; // 엠블럼·이름 = 등급(rank=급). xp는 MyInfo·ProfileModal의 레벨 게이지(levelInfo)용
   const isGuest = !!onLogin; // onLogin은 게스트일 때만 내려온다(회원/학생은 null)
@@ -824,6 +855,8 @@ export function HomeScreen({
   const [resetOpen, setResetOpen] = useState(false);     // 데이터 초기화 확인창
   const [delOpen, setDelOpen] = useState(false);         // 계정 삭제 확인창
   const [delBusy, setDelBusy] = useState(false);
+  const [delError, setDelError] = useState('');
+  const delBusyRef = useRef(false);
   const [cardTone, setCardTone] = useState(null); // 탭한 성조 미니 카드
   const [streakOpen, setStreakOpen] = useState(false); // 스트릭 상세 시트
   const [showIntro, setShowIntro] = useState(() => { try { return !localStorage.getItem('tg_home_intro'); } catch { return false; } });
@@ -932,6 +965,7 @@ export function HomeScreen({
       <MyInfo tier={tier} nickname={nickname} onClick={() => setProfileOpen(true)} />
       <StreakPill streak={streak} freezes={freezes} onClick={() => setStreakOpen(true)} />
       <IconButton variant="keycap" Icon={Settings} label="메뉴" size={30} color={HOME.TAB_INACTIVE} onClick={() => setMenuOpen(true)} style={{ position: 'absolute', right: 24, top: 20, zIndex: 5 }} />
+      <GameSaveStatus status={syncStatus} onRetry={onSyncRetry} onLogin={onLoginRequired} />
 
       {/* 모드 선택 키캡 CTA(중앙 하단·은은한 펄스) — 탭 시 모드선택 화면으로 */}
       {/* 센터링은 flex로(펄스 keyframes가 transform을 덮어써 translateX 센터링 불가) */}
@@ -949,7 +983,7 @@ export function HomeScreen({
         onExam={null}
         onLogout={onLogout}
         onClose={() => setProfileOpen(false)} />}
-      {menuOpen && <HomeMenu onClose={() => setMenuOpen(false)} onHelp={onHelp} onCredits={() => setCreditsOpen(true)} onReset={() => setResetOpen(true)} onDeleteAccount={() => setDelOpen(true)} onLogin={onLogin} isMemberUser={isMemberUser} memberName={memberName} onEditNickname={onEditNickname ? () => setNickEditOpen(true) : null} onLogout={onLogout} onExit={onExit} onDebugIntro={onDebugIntro} onDebugScore={() => setDebugScoreOpen(true)} />}
+      {menuOpen && <HomeMenu onClose={() => setMenuOpen(false)} onHelp={onHelp} onCredits={() => setCreditsOpen(true)} onReset={() => setResetOpen(true)} onDeleteAccount={() => { setDelError(''); setDelOpen(true); }} onLogin={onLogin} isMemberUser={isMemberUser} memberName={memberName} onEditNickname={onEditNickname ? () => setNickEditOpen(true) : null} onLogout={onLogout} onExit={onExit} onDebugIntro={onDebugIntro} onDebugScore={() => setDebugScoreOpen(true)} />}
       {creditsOpen && <CreditsModal onClose={() => setCreditsOpen(false)} />}
       {resetOpen && (
         <ConfirmModal
@@ -971,6 +1005,7 @@ export function HomeScreen({
           title="계정을 삭제할까요?"
           confirmLabel="계정 삭제"
           busy={delBusy}
+          error={delError}
           lines={[
             '계정이 완전히 삭제돼요.',
             '이 기기 기록도 함께 지워져요.',
@@ -978,11 +1013,15 @@ export function HomeScreen({
           ]}
           onCancel={() => setDelOpen(false)}
           onConfirm={async () => {
+            if (delBusyRef.current) return;
+            delBusyRef.current = true;
             setDelBusy(true);
-            const sess = getMemberSession();
-            try { if (sess?.token) await deleteGameMe(sess.token); } catch { /* 서버 실패해도 아래 로컬 정리는 진행 */ }
-            resetGameData();
-            try { window.location.reload(); } catch { /* noop */ }
+            setDelError('');
+            try {
+              await deleteMemberAccount();
+              window.location.reload();
+            } catch (error) { setDelError(error.message); }
+            finally { delBusyRef.current = false; setDelBusy(false); }
           }} />
       )}
       {nickEditOpen && <NicknameEditModal current={nickname || memberName || ''} onSave={onEditNickname} onClose={() => setNickEditOpen(false)} />}

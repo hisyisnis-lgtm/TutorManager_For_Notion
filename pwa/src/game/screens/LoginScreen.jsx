@@ -2,6 +2,7 @@
 // 제공자 인증 후 일회 교환 코드로 복귀(브라우저 거래 검증은 ToneGamePage). Figma "18b. 로그인(소셜)".
 import { TG, TYPE, TOUCH_OPT, ASSETS, RADIUS, SPACE } from '../tgTokens.js';
 import { socialLoginUrl } from '../../api/gameApi.js';
+import { SITE_ORIGIN } from '../../constants.js';
 import { play as playSfx } from '../tgSfx.js';
 import { Reveal, BackButton } from './shared.jsx';
 
@@ -90,7 +91,7 @@ export function LoginScreen({ onBack }) {
         <span style={{ ...TYPE.meta, color: TG.SUB, display: 'block', marginTop: 6 }}>
           만 14세 이상만 로그인할 수 있어요 ·{' '}
           <a
-            href={`${window.location.origin}/#/privacy`}
+            href={`${import.meta.env.MODE === 'game-site' ? SITE_ORIGIN : window.location.origin}/#/privacy`}
             target="_blank"
             rel="noreferrer"
             style={{ color: TG.SUB, textDecoration: 'underline', textUnderlineOffset: 2 }}

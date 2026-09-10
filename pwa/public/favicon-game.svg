@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none">
+  <title>성조 다락방</title>
+  <rect width="64" height="64" rx="16" fill="#FFFDF8"/>
+  <path d="M44 14V24" stroke="#E64244" stroke-width="6" stroke-linecap="round"/>
+  <path d="M12 29L32 13L52 29V49C52 53.418 48.418 57 44 57H20C15.582 57 12 53.418 12 49V29Z" fill="#E64244"/>
+  <path d="M12 27L32 11L52 27V46C52 50.418 48.418 54 44 54H20C15.582 54 12 50.418 12 46V27Z" fill="#F96163"/>
+  <path d="M8 29L29.501 11.799C30.962 10.63 33.038 10.63 34.499 11.799L56 29" stroke="#F96163" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M21 44H43" stroke="#FFFDF8" stroke-width="6" stroke-linecap="round"/>
+  <path d="M27 32V37M37 32V37" stroke="#2B2730" stroke-width="4" stroke-linecap="round"/>
+</svg>

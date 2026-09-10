@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite';
+import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 import { readFileSync, renameSync, existsSync, readdirSync, unlinkSync } from 'fs';
@@ -10,9 +10,13 @@ const { version } = JSON.parse(readFileSync('./package.json', 'utf-8'));
 // `vite build --mode game` = 성조게임 단독 앱 빌드(엔트리 game.html→main.game.jsx, dist-game).
 // 통합 웹은 기존 그대로(index.html→main.jsx, dist). __GAME_APP__로 학생 조회 코드 등을 빌드별로 DCE.
 export default defineConfig(({ mode }) => {
-  const isGameApp = mode === 'game';
+  const isGameSite = mode === 'game-site';
+  const isGameApp = mode === 'game' || isGameSite;
+  const gameOutDir = isGameSite ? 'dist-game-site' : 'dist-game';
+  const env = isGameSite ? loadEnv(mode, process.cwd(), 'VITE_') : {};
+  const workerOrigin = isGameSite ? new URL(env.VITE_WORKER_URL).origin : '';
   return {
-  base: '/',
+  base: isGameSite ? '/game/tone/' : '/',
   define: {
     __APP_VERSION__: JSON.stringify(version),
     __GAME_APP__: JSON.stringify(isGameApp),
@@ -45,16 +49,27 @@ export default defineConfig(({ mode }) => {
         },
       },
     },
-    ...(isGameApp ? { outDir: 'dist-game' } : {}),
+    ...(isGameApp ? { outDir: gameOutDir } : {}),
+    // 공식 사이트는 게임 미디어만 조립한다. PWA SW·라우팅·헤더를 사이트 루트에 복사하지 않는다.
+    ...(isGameSite ? { copyPublicDir: false } : {}),
   },
   plugins: [
     react(),
+    ...(isGameSite ? [{
+      name: 'game-site-security',
+      transformIndexHtml() {
+        return [{ tag: 'meta', attrs: {
+          'http-equiv': 'content-security-policy',
+          content: ["default-src 'self'", "base-uri 'none'", "object-src 'none'", "script-src 'self'", "style-src 'self' 'unsafe-inline'", "style-src-attr 'unsafe-inline'", "font-src 'self' https://cdn.jsdelivr.net", "img-src 'self' data: blob:", "media-src 'self' blob: data:", `connect-src 'self' ${workerOrigin}`, "form-action 'self'"].join('; '),
+        }, injectTo: 'head-prepend' }];
+      },
+    }] : []),
     // 게임 단독 앱은 서비스워커/PWA manifest를 쓰지 않는다(Capacitor 네이티브 래핑 대상).
     // 대신 빌드 산출물의 game.html을 index.html로 바꾼다 — Capacitor는 webDir 루트에 index.html을 요구.
     ...(isGameApp ? [{
       name: 'game-html-as-index',
       closeBundle() {
-        const dir = path.resolve('dist-game');
+        const dir = path.resolve(gameOutDir);
         // Capacitor는 webDir 루트에 index.html을 요구 → 게임 엔트리(game.html)를 index.html로.
         const from = path.join(dir, 'game.html');
         if (existsSync(from)) renameSync(from, path.join(dir, 'index.html'));

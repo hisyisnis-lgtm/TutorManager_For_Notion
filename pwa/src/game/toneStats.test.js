@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import {
   recordTone, toneAccuracy, weakestTone, allTonesAbove,
-  loadToneStats, saveToneStats, TONE_NUMS,
+  loadToneStats, saveToneStats, TONE_NUMS, summarizeTonePractice,
 } from './toneStats.js';
 
 beforeEach(() => { localStorage.clear(); });
@@ -102,5 +102,40 @@ describe('load/save 라운드트립', () => {
     expect(loadToneStats('u')).toEqual({});
     localStorage.setItem('game_tone_u', '{broken');
     expect(loadToneStats('u')).toEqual({});
+  });
+});
+
+describe('결과의 누적 성조 정답률과 다음 연습', () => {
+  it('EMA와 구분해 실제 정답/응답 수로 계산하고 원기록을 바꾸지 않는다', () => {
+    const stats = { 1: [9, 10, 0.1], 2: [4, 10, 0.95] }, before = globalThis.structuredClone(stats);
+    const result = summarizeTonePractice(stats);
+    expect(result.rows[0]).toMatchObject({ accuracy: 0.9, correct: 9, attempts: 10 });
+    expect(result).toMatchObject({ state: 'practice', suggestedTone: 2 });
+    expect(toneAccuracy(stats[1])).toBe(0.1);
+    expect(stats).toEqual(before);
+  });
+  it('10회 미만 성조는 정답률을 보여도 연습 후보로 단정하지 않는다', () => {
+    expect(summarizeTonePractice({ 1: [0, 9], 2: [9, 10] })).toMatchObject({ state: 'building', suggestedTone: null });
+    expect(summarizeTonePractice({ 1: [0, 10] })).toMatchObject({ state: 'practice', suggestedTone: 1 });
+  });
+  it('모든 성조가 충분하고 80% 이상이면 가장 낮은 성조에도 약점 표시를 하지 않는다', () => {
+    const stats = Object.fromEntries(TONE_NUMS.map(tone => [tone, [10, 10]])); stats[0] = [8, 10];
+    expect(summarizeTonePractice(stats)).toMatchObject({ state: 'steady', suggestedTone: null });
+  });
+  it('기록 없음은 0%로 표시하지 않고 손상된 항목도 판단에서 제외한다', () => {
+    const result = summarizeTonePractice({ 1: [15, 10], 2: [-1, 10], 3: [1, NaN], 4: 'corrupt' });
+    expect(result).toMatchObject({ state: 'building', totalAttempts: 0, suggestedTone: null });
+    expect(result.rows.every(row => row.accuracy === null && !row.enough)).toBe(true);
+    expect(summarizeTonePractice(null).rows).toHaveLength(5);
+  });
+  it('경성 0도 다음 연습에 선택되며 부분 기록을 전체 성조 성취로 보지 않는다', () => {
+    expect(summarizeTonePractice({ 0: [5, 10] })).toMatchObject({ state: 'practice', suggestedTone: 0 });
+    expect(summarizeTonePractice({ 0: [10, 10] }).state).toBe('building');
+  });
+  it('게스트와 계정별로 읽은 기존 저장키의 기록을 각각 요약한다', () => {
+    saveToneStats(null, { 1: [0, 10] }); saveToneStats('member-a', { 2: [4, 10] }); saveToneStats('member-b', { 4: [2, 10] });
+    expect(summarizeTonePractice(loadToneStats(null)).suggestedTone).toBe(1);
+    expect(summarizeTonePractice(loadToneStats('member-a')).suggestedTone).toBe(2);
+    expect(summarizeTonePractice(loadToneStats('member-b')).suggestedTone).toBe(4);
   });
 });

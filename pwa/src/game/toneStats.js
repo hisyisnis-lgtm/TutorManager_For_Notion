@@ -2,7 +2,8 @@
 // 단어별 숙련도(tgWordStats)와 별개: 그건 "어느 단어가 약한가", 이건 "어느 성조가 약한가".
 // 기록 단위 = 성조 버튼 탭 1회(기대 성조 기준). 저장: localStorage(게스트 포함, 기기별 — 서버 동기화는 후속).
 // ★ ema(3번째 원소) = 최근 가중 정확도(지수이동평균, α=0.1 ≈ 최근 ~20회 반영). 평생 누적은 시도가 쌓일수록
-//   한 판의 성과가 반영 안 돼 레벨이 고착 → 화면 표시·레벨·약점 진단은 전부 ema 기준으로 통일.
+//   한 판의 성과가 반영 안 돼 레벨이 고착 → 기존 레벨·레이더·약점 후보는 ema를 사용한다.
+//   결과 화면의 누적 정답률은 별도로 summarizeTonePractice가 정답/시도 비율을 사용한다.
 //   레거시 [정답,시도] 2원소 항목은 첫 기록 때 누적 정확도로 시드(자동 마이그레이션)·구버전은 3번째 원소 무시(롤백 안전).
 // 참조 메모리: tone_game_redesign.md (성취 레이어 P1 · EMA 전환)
 
@@ -26,6 +27,27 @@ export function recordTone(stats, tone, correct) {
 export function toneAccuracy(e) {
   if (!e || !(e[1] > 0)) return 0;
   return typeof e[2] === 'number' ? e[2] : e[0] / e[1];
+}
+
+// 결과 안내용 실제 누적 비율. 반복 오답도 각각 한 번의 응답으로 센다.
+// 레벨/업적의 최근 가중치(ema), 기존 저장 형식과 판정 기준은 변경하지 않는다.
+export const MIN_TONE_SUMMARY_ATTEMPTS = 10;
+const TONE_PRACTICE_THRESHOLD = 0.8;
+export function summarizeTonePractice(stats) {
+  const rows = TONE_NUMS.map(tone => {
+    const entry = stats?.[tone];
+    const valid = Array.isArray(entry) && Number.isSafeInteger(entry[0]) && Number.isSafeInteger(entry[1])
+      && entry[0] >= 0 && entry[1] >= entry[0];
+    const correct = valid ? entry[0] : 0, attempts = valid ? entry[1] : 0;
+    return { tone, correct, attempts, accuracy: attempts > 0 ? correct / attempts : null,
+      enough: attempts >= MIN_TONE_SUMMARY_ATTEMPTS };
+  });
+  const eligible = rows.filter(row => row.enough);
+  const candidate = eligible.filter(row => row.accuracy < TONE_PRACTICE_THRESHOLD)
+    .sort((a, b) => a.accuracy - b.accuracy)[0] || null;
+  return { rows, totalAttempts: rows.reduce((sum, row) => sum + row.attempts, 0),
+    state: candidate ? 'practice' : eligible.length === TONE_NUMS.length ? 'steady' : 'building',
+    suggestedTone: candidate?.tone ?? null };
 }
 
 // 가장 약한 성조(시도 minAttempts 이상 중 정답률 최저). 없으면 null.

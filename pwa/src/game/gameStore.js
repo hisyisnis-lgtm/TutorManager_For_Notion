@@ -13,14 +13,15 @@ import { loadTierPeak, bumpTierPeak } from './earProfile.js';
 import { loadXp, saveXp, mergeXp, loadRank, saveRank, mergeRank } from './gameXp.js';
 import { loadAchievements, saveAchievements, loadReviewMastered, addReviewMastered } from './achievements.js';
 import { loadStreak, saveStreak, loadFreezes, saveFreezes, diffDays } from './streak.js';
-import { loadStageScores, saveStageScore, loadBossPeak, saveBossPeak } from './gameLogic.js';
+import { loadStageScores, saveStageScore, loadBossPeak, saveBossPeak, rankUpperBound } from './gameLogic.js';
 import { DIFFICULTIES, THEMES } from '../constants/toneGameWords.js';
-import { fetchGameMe, saveGameMe } from '../api/gameApi.js';
+import { fetchGameMe, saveGameMe, deleteGameMe } from '../api/gameApi.js';
 import { sessionClaims } from '../api/authState.js';
 
 const GUEST_ID_KEY = 'tg_guest_id';
 const MEMBER_TOKEN_KEY = 'tg_member_token';
 const MEMBER_USER_KEY = 'tg_member_user';
+const deletingMemberTokens = new Set();
 // 병합 대상 베스트 키 — DIFFICULTIES에서 파생(새 난이도 자동 포함). 무한 키는 gameLogic ENDLESS_BEST_KEY와 일치 유지.
 const DIFF_KEYS = DIFFICULTIES.map((d) => d.gameKey);
 const ENDLESS_KEY = 'tone-endless';
@@ -213,15 +214,17 @@ function applyGameDataToLocal(id, data) {
 
 // 토큰 만료(60일)·계정없음 등 인증 실패면 세션을 정리(조용한 무기한 동기화실패 방지). 그 외(네트워크 등)는 유지.
 function logoutIfAuthError(e, token) {
-  if (e && (e.status === 401 || e.status === 403 || e.status === 404) && getMemberSession()?.token === token) logoutMember();
+  if (!deletingMemberTokens.has(token) && e && (e.status === 401 || e.status === 403 || e.status === 404) && getMemberSession()?.token === token) logoutMember();
 }
 // 서버(/game/me) → 로컬 머지. 회원 진입/로그인 시.
 export async function pullMemberData(identity) {
   if (!identity || identity.kind !== 'member') return;
+  if (deletingMemberTokens.has(identity.token)) throw new Error('계정 삭제 결과를 확인하고 있습니다.');
   try {
     const { user } = await fetchGameMe(identity.token);
     const current = getMemberSession();
     if (!current || current.token !== identity.token || current.user.id !== identity.id) throw new Error('게임 로그인이 변경되었습니다.');
+    if (deletingMemberTokens.has(identity.token)) throw new Error('계정 삭제 결과를 확인하고 있습니다.');
     if (user?.id !== identity.id) throw new Error('게임 계정이 일치하지 않습니다.');
     applyGameDataToLocal(identity.id, user?.gameData);
   } catch (e) { logoutIfAuthError(e, identity.token); throw e; }
@@ -229,11 +232,60 @@ export async function pullMemberData(identity) {
 // 로컬 → 서버(/game/me) 업로드. 게임 종료 시. nickname 주면 함께 저장(로그인 시 이름 입력).
 export async function pushMemberData(identity, nickname) {
   if (!identity || identity.kind !== 'member') return;
+  if (deletingMemberTokens.has(identity.token)) throw new Error('계정 삭제 결과를 확인하고 있습니다.');
   const current = getMemberSession();
   if (!current || current.token !== identity.token || current.user.id !== identity.id) throw new Error('게임 로그인이 변경되었습니다.');
   try {
-    await saveGameMe(identity.token, collectLocalGameData(identity.id), nickname || undefined);
+    const saved = await saveGameMe(identity.token, collectLocalGameData(identity.id), nickname || undefined);
+    if (saved?.ok !== true) throw new Error('서버 저장 결과를 확인하지 못했습니다.');
+    const latest = getMemberSession();
+    if (!latest || latest.token !== identity.token || latest.user.id !== identity.id) throw new Error('게임 로그인이 변경되었습니다.');
+    if (deletingMemberTokens.has(identity.token)) throw new Error('계정 삭제 결과를 확인하고 있습니다.');
+    // 응답을 기다리는 동안 다음 판을 진행할 수 있다. 획득 기록만 병합하고
+    // 복습·소모품·현재 숙련도·스트릭은 더 오래된 응답으로 되돌리지 않는다.
+    // 구 Worker 응답({ok:true})도 호환한다.
+    if (saved?.gameData) {
+      const { best, tier, xp, rk, ach, rm, stg, bp } = saved.gameData;
+      applyGameDataToLocal(identity.id, { best, tier, xp, rk, ach, rm, stg, bp });
+      // 과거 XP 기반 시딩으로 부풀린 rank를 서버 max 병합이 되살릴 수 있다.
+      // 스테이지·시험 기록까지 반영한 뒤 정당하게 획득한 등급으로 한정한다.
+      saveRank(identity.id, Math.min(loadRank(identity.id) ?? 0, rankUpperBound(identity.id)));
+    }
   } catch (e) { logoutIfAuthError(e, identity.token); throw e; }
+}
+// DELETE 응답을 잃어도 인증된 GET의 404로 부재를 확인할 수 있다.
+// 401/403·네트워크 오류는 삭제 증거가 아니므로 로컬 기록을 보존한다.
+export async function deleteMemberAccount() {
+  const session = getMemberSession();
+  if (!session) throw new Error('로그인을 다시 확인해 주세요. 이 기기 기록은 유지돼요.');
+  if (deletingMemberTokens.has(session.token)) throw new Error('계정 삭제 결과를 확인하고 있습니다.');
+  deletingMemberTokens.add(session.token);
+  try {
+    let confirmed = false;
+    try {
+      const result = await deleteGameMe(session.token);
+      confirmed = result?.ok === true;
+    } catch { /* 결과가 불명확하면 아래에서 실제 계정 상태를 조회한다. */ }
+    if (!confirmed) {
+      let exists = false;
+      const unknown = '삭제 여부를 확인하지 못했어요. 이 기기 기록은 유지돼요. 연결 후 다시 시도해 주세요.';
+      try {
+        const result = await fetchGameMe(session.token);
+        exists = result?.user?.id === session.user.id;
+      } catch (error) {
+        if (error?.status === 404) confirmed = true;
+        else throw new Error(unknown);
+      }
+      if (!confirmed) throw new Error(exists
+        ? '계정이 아직 남아 있어요. 이 기기 기록은 유지돼요. 잠시 후 다시 시도해 주세요.'
+        : unknown);
+    }
+    const current = getMemberSession();
+    if (current?.token !== session.token || current?.user.id !== session.user.id) {
+      throw new Error('로그인이 변경되어 이 기기 기록은 지우지 않았어요.');
+    }
+    if (confirmed) resetGameData();
+  } finally { deletingMemberTokens.delete(session.token); }
 }
 // 게스트 로컬 기록을 회원 로컬에 1회 병합(로그인 직후). 이후 pull/push로 서버 동기화.
 export function mergeGuestIntoMember(identity) {

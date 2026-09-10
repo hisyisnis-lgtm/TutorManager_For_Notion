@@ -9,9 +9,10 @@ import { fetchToneWords, takeLoginFromHash, exchangeGameLogin } from '../api/gam
 import { track } from '../game/gameAnalytics.js';
 import {
   resolveIdentity,
-  pullMemberData, pushMemberData, loginMember, mergeGuestIntoMember, logoutMember,
+  loginMember, mergeGuestIntoMember, logoutMember,
   getMemberSession, loadMasteredSync, storeMasteredSync,
 } from '../game/gameStore.js';
+import { useMemberSync } from '../game/useMemberSync.js';
 import { loadTierPeak } from '../game/earProfile.js';
 import { gameXpGain, loadXp, addXp, seedXpIfMissing, loadRank, saveRank, seedRankIfMissing, examPassed, EXAM_QUESTIONS } from '../game/gameXp.js';
 import { ROUND_LENGTH, DIFFICULTIES, THEMES, THEME_MODE_ENABLED, THEME_MODE_NOTICE } from '../constants/toneGameWords.js';
@@ -20,7 +21,7 @@ import {
   loadWordStats, saveWordStats, recordWordResult,
   buildReviewList, masteredCount, buildRoundWords, noteLeft, NOTE_TARGET,
 } from '../game/tgWordStats.js';
-import { recordTone, loadToneStats, saveToneStats, weakestTone, toneAccuracy } from '../game/toneStats.js';
+import { recordTone, loadToneStats, saveToneStats, weakestTone, toneAccuracy, summarizeTonePractice } from '../game/toneStats.js';
 import { findLianyin, findToneSandhi } from '../game/lianyin.js';
 import { recordPlay, loadStreak, effectiveCurrent, dateKeyKST, loadFreezes } from '../game/streak.js';
 import { syncAchievements, loadAchievements, achievementById, loadReviewMastered, addReviewMastered, markAchievementsSeen, hasUnseenAchievements } from '../game/achievements.js';
@@ -191,7 +192,6 @@ export default function ToneGamePage() {
   const [showGameOverBeat, setShowGameOverBeat] = useState(() => isPreview && previewScreen === 'gameover');
   const [rankUp, setRankUp] = useState(null); // 등급 상승 연출 {prevIdx, nowIdx} — XP 임계 넘겨 승급 시 비트 다음·결과 전
   const masteredAtStartRef = useRef(0); // 판 시작 시 마스터 단어 수 스냅샷 — 종료 시 증가분 판정
-  const pullOkRef = useRef(false);      // 회원 서버 pull 성공 여부 — pull 성공 전엔 push 보류(빈/구 로컬로 서버 덮어쓰기 방지, 2026-07-21)
 
   const wordTimeLimitRef = useRef(7000);
   const wordElapsedRef = useRef(0); // 현재 단어의 누적 '진행' 시간(일시정지·카운트다운 제외)
@@ -328,11 +328,14 @@ export default function ToneGamePage() {
   useEffect(() => { pausedRef.current = paused; }, [paused]);
   const addPausable = (fn, ms) => { addTimer(setTimeout(() => { if (pausedRef.current) pendingResumeRef.current.push(fn); else fn(); }, ms)); };
   useEffect(() => {
-    if (paused) return undefined;
-    const q = pendingResumeRef.current;
-    if (!q.length) return undefined;
-    pendingResumeRef.current = [];
-    const t = setTimeout(() => q.forEach((f) => f()), 350);
+    if (paused || !pendingResumeRef.current.length) return undefined;
+    // 실행할 때만 소비해야 재개 유예 중 다시 일시정지해도 진행 액션을 잃지 않는다.
+    const t = setTimeout(() => {
+      while (!pausedRef.current && pendingResumeRef.current.length) {
+        pendingResumeRef.current.shift()();
+      }
+    }, 350);
+    timersRef.current.push(t); // 그만두기·새 런의 clearTimers가 재개 유예 타이머도 취소한다.
     return () => clearTimeout(t);
   }, [paused]);
 
@@ -403,8 +406,15 @@ export default function ToneGamePage() {
     const link = document.querySelector("link[rel~='icon']");
     if (!link) return undefined;
     const prev = link.getAttribute('href');
-    link.setAttribute('href', `/favicon-game.png?v=${__APP_VERSION__}`);
-    return () => { if (prev != null) link.setAttribute('href', prev); };
+    const prevType = link.getAttribute('type');
+    link.setAttribute('href', `/favicon-game.svg?v=${__APP_VERSION__}`);
+    link.setAttribute('type', 'image/svg+xml');
+    return () => {
+      if (prev != null) link.setAttribute('href', prev);
+      else link.removeAttribute('href');
+      if (prevType != null) link.setAttribute('type', prevType);
+      else link.removeAttribute('type');
+    };
   }, []);
 
   useEffect(() => {
@@ -433,14 +443,9 @@ export default function ToneGamePage() {
         loginMember(token, user || {});
         const idn = resolveIdentity(undefined);     // 회원 신원
         mergeGuestIntoMember(idn);                   // 게스트 로컬 → 회원 로컬 1회 병합
-        // ★ 서버 기존 데이터를 로컬에 max 병합한 뒤 push해야 다른 기기 데이터를 안 덮어쓴다.
-        //   (이 pull이 빠져 있어 새 기기 로그인이 서버를 그 기기의 적은 로컬로 덮어쓰던 데이터손실 버그)
-        //   pull 실패 시 push 보류 — 게스트/구 로컬로 서버 완본을 덮어쓰지 않게(신규 계정은 pull이 빈 데이터로 성공하므로 정상 push).
-        let pulled = false;
-        try { await pullMemberData(idn); pulled = true; pullOkRef.current = true; } catch { /* noop */ }
-        // ★닉네임 = 온보딩에서 사용자가 직접 정한 로컬 이름 우선(A안 2026-08-07). 없을 때만 제공자 이름.
-        //  구글 name은 실명인 경우가 많아 그대로 승격시키지 않는다.
-        if (pulled) await pushMemberData(idn, loadGuestNickname() || user?.nickname).catch(() => {}); // 로컬(게스트∪서버) → 서버
+        // 새 화면의 동기화 제어기가 먼저 서버 기록을 읽은 뒤 저장한다.
+        // 온보딩에서 정한 이름은 로컬 세션에 남겨 실패 후 재시도에도 유지한다.
+        loginMember(token, { ...user, nickname: loadGuestNickname() || user.nickname });
         track('login_success');
       } catch { return; }
       if (done) return;
@@ -457,10 +462,7 @@ export default function ToneGamePage() {
     const sess = getMemberSession();
     loginMember(identity.token, { ...((sess && sess.user) || {}), nickname: clean }); // 세션 갱신
     setMemberNick(clean);                                                              // 홈 표시 즉시 반영
-    // ★push 전 pull — 다른 기기 진행분을 로컬에 max 병합. pull 실패 시 push 보류(구 로컬로 서버 덮어쓰기 방지 — 닉네임 저장은 다음 성공 세션에 반영).
-    let pulled = false;
-    try { await pullMemberData(identity); pulled = true; pullOkRef.current = true; } catch { /* noop */ }
-    if (pulled) await pushMemberData(identity, clean).catch(() => {});                 // 서버(game_users.nickname) 저장
+    await memberSync.save(clean);
   };
 
   // 온보딩 닉네임 확정(2026-08-07) — 게스트·회원 공통. 게스트는 로컬만, 회원이면 세션·서버까지 저장.
@@ -477,36 +479,27 @@ export default function ToneGamePage() {
       setMemberNick(clean);
       const sess = getMemberSession();
       loginMember(identity.token, { ...((sess && sess.user) || {}), nickname: clean });
-      let pulled = false;
-      try { await pullMemberData(identity); pulled = true; pullOkRef.current = true; } catch { /* noop */ }
-      if (pulled) await pushMemberData(identity, clean).catch(() => {});
+      await memberSync.save(clean);
     }
     setSavingNick(false);
     finishOnboardRef.current();
   };
 
-  // 진입 시: 회원이면 게스트 로컬 병합 + 서버(/game/me) pull, 그다음 로컬 통계·헤드라인 로드. 게스트/프리뷰는 로컬만.
-  // (게임은 Notion·학생과 완전 분리 — 학생 서버 베스트(GAME_BEST_DB) 복원 경로 제거, 2026-07-12. 회원은 /game/me JSON으로 기기간 동기화)
+  const memberSync = useMemberSync(identity, () => {
+    clearOrphanThemeBests(studentToken);
+    setXp(loadXp(studentToken) ?? 0);
+    const r = Math.min(loadRank(studentToken) ?? 0, rankUpperBound(studentToken));
+    saveRank(studentToken, r); setRank(r);
+    wordStatsRef.current = loadWordStats(studentToken);
+    toneStatsRef.current = loadToneStats(studentToken);
+  });
+
+  // 서버 확인 중에도 이 기기의 기록으로 플레이할 수 있다.
   useEffect(() => {
     if (isPreview) return undefined;
-    let cancelled = false;
-    (async () => {
-      if (identity.kind === 'member') {
-        // 게스트→회원 병합은 멱등(max·합집합) — 로그인 콜백에서 fetchGameMe가 실패해 병합을 못 했어도 다음 진입에서 흡수.
-        mergeGuestIntoMember(identity);
-        // ★pull 성공 시에만 이후 push 허용 — pull 실패(네트워크 등) 상태로 push하면 빈/구 로컬이 서버 완본을 덮어써 유실(2026-07-21).
-        try { await pullMemberData(identity); pullOkRef.current = true; } catch { /* pull 실패 — pullOkRef=false 유지, 이번 세션 push 보류 */ }
-        if (cancelled) return;
-        // pull이 서버 rank/xp/스테이지점수를 로컬에 병합했으니 React 상태도 재동기화 — 안 하면 마운트 시점(pull 전) 값에 고착돼 상위 급이 잠긴 채로 보임.
-        setXp(loadXp(studentToken) ?? 0);
-        const r = Math.min(loadRank(studentToken) ?? 0, rankUpperBound(studentToken)); // 클램프 불변식 유지(스테이지 점수·bossPeak 복원 후 재산정)
-        saveRank(studentToken, r); setRank(r);
-      }
-      clearOrphanThemeBests(studentToken); // 체인상 잠긴 테마의 유령 best(옛 '전부 오픈' 시절 기록 등) 정리 — 진입마다 멱등
-      wordStatsRef.current = loadWordStats(studentToken);
-      toneStatsRef.current = loadToneStats(studentToken);
-    })();
-    return () => { cancelled = true; };
+    clearOrphanThemeBests(studentToken);
+    wordStatsRef.current = loadWordStats(studentToken);
+    toneStatsRef.current = loadToneStats(studentToken);
   }, [identity, isPreview]);
 
   useEffect(() => { initGameAds(); }, []); // 웹 전면 광고 — 켜져 있을 때만 스크립트 로드(기본 OFF)
@@ -622,7 +615,7 @@ export default function ToneGamePage() {
         }
       }
 
-      if (identity.kind === 'member' && pullOkRef.current) pushMemberData(identity).catch(() => {}); // 회원: 로컬 → 서버(/game/me). pull 성공했을 때만(빈 로컬로 서버 덮어쓰기 방지)
+      if (identity.kind === 'member') memberSync.save();
       // 측정: 런 종료(모드 라벨 + 점수) — 유입 깔때기의 '플레이' 카운트.
       //  트레이닝은 내부 모드가 'practice'지만 run_start와 라벨을 맞춰 'training'으로(깔때기 시작↔종료 정합).
       track('run_end', { m: mode === 'normal' ? (themeMode ? selectedTheme.id : selectedDifficulty.id) : mode === 'practice' ? 'training' : mode, k: identity.kind, v: score });
@@ -680,7 +673,7 @@ export default function ToneGamePage() {
       setExamResult({ correct, total, passed: false });
       setScreen('examresult');
     }
-    if (!isPreview && identity.kind === 'member' && pullOkRef.current) pushMemberData(identity).catch(() => {}); // 회원: 등급/XP 서버 동기화(pull 성공 시만)
+    if (!isPreview && identity.kind === 'member') memberSync.save();
     if (!isPreview) track('exam_end', { m: DIFFICULTIES[Math.min(rank, DIFFICULTIES.length - 1)]?.id, k: identity.kind, v: correct });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showGameOverBeat, examMode]);
@@ -994,7 +987,10 @@ export default function ToneGamePage() {
   //  복습은 오답 노트에서 시작하고, 이번 복습의 성과(단어별 졸업 진행 0/3→1/3)가 **오답 노트에만** 표시된다.
   //  홈으로 보내면 방금 한 일의 결과를 볼 자리가 사라진다(2026-08-11 UX 검수). 트레이닝은 진입이 모드선택이지만
   //  '한 판 더'보다 쉬었다 가는 흐름이 자연스러워 홈 유지.
-  const endTraining = () => tipTransitionTo(practiceKind === 'review' ? 'mastery' : 'home');
+  const endTraining = () => {
+    if (!isPreview && identity.kind === 'member') memberSync.save();
+    tipTransitionTo(practiceKind === 'review' ? 'mastery' : 'home');
+  };
 
   // 무한 모드 — 전 난이도 랜덤 스트림. 점점 가속, 첫 시간초과 종료, 헤드라인 최고점.
   const startEndless = () => {
@@ -1272,7 +1268,7 @@ export default function ToneGamePage() {
 
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [screen, wordPoolByDiff, isPreview, previewScreen, studentToken]);
+  }, [screen, wordPoolByDiff, isPreview, previewScreen, studentToken, memberSync.status]);
 
   const word = words[wordIndex];
   const avgMsForResult = answeredCount > 0 ? totalAnswerTime / answeredCount : 0;
@@ -1368,7 +1364,7 @@ export default function ToneGamePage() {
       : buildAchSnapshot(studentToken, masteredN, toneStatsRef.current, startStreakLongest);
 
   // 화면별 본문 (카운트다운 오버레이/일시정지 모달은 아래에서 위에 덧댐)
-  const exitGame = () => { window.location.href = '/'; }; // 게임은 독립 — 항상 게임 홈으로(학생앱 복귀 경로 폐기, 2026-07-12)
+  const exitGame = () => { window.location.href = import.meta.env.MODE === 'game-site' ? '/game/' : '/'; };
   let content;
   if (isPreview && previewScreen === 'fx') { // [임시·DEV] 파티클 검수 랩 (?screen=fx) — 검수 후 이 분기 + _ParticleLab.jsx 삭제
     content = <ParticleLab onBack={exitGame} />;
@@ -1390,6 +1386,7 @@ export default function ToneGamePage() {
       onHelp={() => setHelpOpen(true)}
       onLogin={identity.kind === 'guest' ? () => setScreen('login') : null}
       isMemberUser={identity.kind === 'member'} memberName={identity.kind === 'member' ? memberNick : null}
+      syncStatus={memberSync.status} onSyncRetry={memberSync.retry} onLoginRequired={() => setScreen('login')}
       nickname={isPreview ? (qs('nick') || '하늘') : identity.kind === 'member' ? memberNick : guestNick}
       onEditNickname={identity.kind === 'member' ? editNickname : null}
       onLogout={() => { logoutMember(); window.location.reload(); }} onExit={exitGame}
@@ -1518,6 +1515,8 @@ export default function ToneGamePage() {
     content = (
       <FigmaScreen enter>
         <ResultScreen score={score} maxCombo={maxCombo} avgMs={avgMsForResult}
+          toneSummary={summarizeTonePractice(isPreview ? PREVIEW_TONE : toneStatsRef.current)}
+          onTraining={() => startTraining()} onChooseMode={() => tipTransitionTo('modeselect')}
           title={practiceMode ? practiceLabel : endlessMode ? '무한 모드' : themeMode ? (selectedTheme?.label || '테마') : (selectedDifficulty?.label || '')} /* 시안 12: 헤더 "{스테이지} 결과화면" */
           onExam={(examReady || (isPreview && previewScreen === 'end' && qs('exam') === '1')) ? () => startExam(tierIdx >= 0 ? tierIdx : rank) : undefined}
           onNextLevel={canNextStage ? () => startGame(nextStage)
@@ -1547,6 +1546,8 @@ export default function ToneGamePage() {
     content = (
       <FigmaScreen enter>
         <ExamResultScreen correct={er.correct} total={er.total} passed={er.passed}
+          toneSummary={summarizeTonePractice(isPreview ? PREVIEW_TONE : toneStatsRef.current)}
+          onTraining={() => startTraining()} onChooseMode={() => tipTransitionTo('modeselect')}
           title={(BOSSES[examTierRef.current] || BOSSES[0])?.label} /* 예: "실전 승급시험" — 통과 시 승급하는 다음 급 이름 */
           maxCombo={isPreview ? (Number(qs('combo')) || 4) : maxCombo}
           avgMs={isPreview ? (Number(qs('avgms')) || 700) : avgMsForResult}
@@ -1627,7 +1628,10 @@ export default function ToneGamePage() {
               default: startGame(selectedDifficulty);
             }
           }}
-          onQuit={() => tipTransitionTo('home')} />
+          onQuit={() => {
+            if (!isPreview && identity.kind === 'member') memberSync.save();
+            tipTransitionTo('home');
+          }} />
       )}
       {toast && <GameToast key={toast.key} msg={toast.msg} kind={toast.kind} />}
       {/* 게임 방법 확인 팝업 — 확인 시 인게임 튜토리얼로(완료 후 홈 복귀) */}
@@ -1714,7 +1718,7 @@ export default function ToneGamePage() {
           ? { gained: Number(qs('xpgain') || 936), prevXp: Number(qs('xp') || 3000), newXp: Number(qs('xp') || 3000) + Number(qs('xpgain') || 936), score: Number(qs('score') || 800), correct: Number(qs('correct') || 12), isNewBest: qs('newbest') === '1' }
           : xpGain;
         return <XpGainReveal gained={g.gained} prevXp={g.prevXp} newXp={g.newXp} score={g.score} correct={g.correct} isNewBest={g.isNewBest}
-          rank={isPreview ? Number(qs('rank') || 0) : rank} onDone={() => { if (!isPreview) setScreen('end'); }} />;
+          rank={isPreview ? Number(qs('rank') || 0) : rank} onDone={() => { if (!isPreview) { setXpGain(null); setScreen('end'); } }} />;
       })()}
       {/* [DEV] 설정 모달 미리보기(?screen=settings) — 머지 전 백도어 제거 대상 */}
       {/* 모드 잠금해제 연출 — 결과 위, 업적보다 먼저. 미리보기 ?screen=modeunlock */}

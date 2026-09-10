@@ -1372,17 +1372,19 @@ export function ShakeButton({ shakeOnClick, onClick, className = '', style, chil
   return <button onClick={handle} className={`${className} ${shaking ? 'tg-shake' : ''}`.trim()} style={style} {...rest}>{children}</button>;
 }
 
-// 중앙 토스트 — 다크 알약 + 상황별 아이콘 + 문구. tg-toast로 페이드 인·아웃.
-//  kind: 'lock'(잠금 안내·기본) | 'done'(이미 달성 등 완료) | 'info'(문구에 자체 이모지 있어 아이콘 생략)
-export function GameToast({ msg, kind = 'lock' }) {
+// 공용 토스트 — 다크 알약 + 상황별 아이콘 + 문구. 기본은 중앙에서 잠깐 표시.
+//  kind: 'lock'(잠금 안내·기본) | 'done'(이미 달성 등 완료) | 'info'(아이콘 생략)
+// inline은 호출부의 위치·레이어를 사용한다. 복구 동작이 있는 안내는 persistent로 유지한다.
+export function GameToast({ msg, kind = 'lock', inline = false, persistent = false, action }) {
   const Icon = kind === 'done' ? CheckCircle : kind === 'info' ? null : Lock;
   // 광학 중앙 보정: 정중앙(50%)이면 눈에는 아래로 쏠려 보임(하단 CTA로 무게중심도 아래) → 하단 패딩을 키워 살짝 위로.
   // 애니메이션(tg-toast)이 transform:translateY를 쓰므로 토스트 박스가 아닌 바깥 컨테이너 패딩으로 올림. safe-area-top도 함께 정합.
   return (
-    <div style={{ position: 'fixed', top: 'env(safe-area-inset-top)', bottom: 0, left: 0, right: 0, zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', padding: '24px 24px calc(24px + 12vh)' }}>
-      <div className="tg-toast" style={{ display: 'flex', alignItems: 'center', gap: SPACE.md, background: 'rgba(43,39,48,0.94)', boxShadow: '0 8px 22px rgba(26,16,20,0.28)', borderRadius: RADIUS.lg, padding: '12px 18px 12px 16px', maxWidth: '90%' }}>
-        {Icon && <Icon size={16} weight="Bold" color="#fff" style={{ flexShrink: 0 }} />}
-        <span style={{ ...TYPE.sub, color: '#fff', whiteSpace: 'normal', lineHeight: 1.35, wordBreak: 'keep-all' }}>{msg}</span>
+    <div style={{ ...(!inline && { position: 'fixed', top: 'env(safe-area-inset-top)', bottom: 0, left: 0, right: 0, zIndex: 300, padding: '24px 24px calc(24px + 12vh)' }), display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', minWidth: 0, maxWidth: '100%' }}>
+      <div className={persistent ? 'tg-enter' : 'tg-toast'} style={{ display: 'flex', alignItems: 'center', gap: SPACE.md, background: 'rgba(43,39,48,0.94)', boxShadow: '0 8px 22px rgba(26,16,20,0.28)', borderRadius: RADIUS.lg, padding: action ? '8px 8px 8px 16px' : '12px 18px 12px 16px', maxWidth: inline ? '100%' : '90%', minWidth: 0 }}>
+        {Icon && <Icon size={16} weight="Bold" color="#fff" aria-hidden="true" style={{ flexShrink: 0 }} />}
+        <span role="status" aria-live="polite" style={{ ...TYPE.sub, color: '#fff', whiteSpace: 'normal', lineHeight: 1.35, wordBreak: 'keep-all', overflowWrap: 'anywhere', minWidth: 0 }}>{msg}</span>
+        {action && <Pill onClick={action.onClick} height={44} padding="0 14px 2px" style={{ ...TYPE.label, color: TG.INK, flexShrink: 0, pointerEvents: 'auto' }}>{action.label}</Pill>}
       </div>
     </div>
   );
