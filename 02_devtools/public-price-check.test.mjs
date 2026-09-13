@@ -56,6 +56,29 @@ test('새 HTML·JS·이미지 이름·인코딩 OG 참조와 과거 파일을 �
   await assert.rejects(checkPublicPrice('pwa', { dist }), /기존 가격 번들/);
 }));
 
+test('구매 도메인의 공유 수강료는 전용 경로만 허용하고 홈페이지 링크·사이트맵·일반 번들 유입을 막는다', async () => temporary(async dist => {
+  const asset = '/pricing/assets/pricing-fixture.js';
+  await put(dist, 'index.html', '<html>공식 홈페이지</html>');
+  await put(dist, 'pricing/index.html', `<meta name="robots" content="noindex, nofollow"><script type="module" src="${asset}"></script>`);
+  await put(dist, '_headers', '/pricing/*\n  X-Robots-Tag: noindex, nofollow\n');
+  await put(dist, asset, 'const price = "시간당 50,000원";');
+  assert.deepEqual((await checkPublicPrice('site', { dist })).sharedPricingAssets, [asset]);
+  await put(dist, 'index.html', '<a href="/pricing/">수강료 안내</a>');
+  await assert.rejects(checkPublicPrice('site', { dist }), /경로를 노출/);
+  await put(dist, 'index.html', '<html>공식 홈페이지</html>');
+  await put(dist, 'sitemap.xml', '<loc>https://tiantianchinese.com/pricing/</loc>');
+  await assert.rejects(checkPublicPrice('site', { dist }), /경로를 노출/);
+  await put(dist, 'sitemap.xml', '<loc>https://tiantianchinese.com/lessons/</loc>');
+  await put(dist, 'pricing/assets/vendor-fixture.js', 'const price = "시간당 50,000원";');
+  await assert.rejects(checkPublicPrice('site', { dist }), /공개 가격/);
+  await put(dist, 'pricing/assets/vendor-fixture.js', 'export default {};');
+  await put(dist, '_headers', '/*\n  X-Content-Type-Options: nosniff\n');
+  await assert.rejects(checkPublicPrice('site', { dist }), /검색 제외 헤더/);
+  await put(dist, '_headers', '/pricing/*\n  X-Robots-Tag: noindex, nofollow\n');
+  await put(dist, 'pricing/index.html', `<script type="module" src="${asset}"></script>`);
+  await assert.rejects(checkPublicPrice('site', { dist }), /검색 제외 설정/);
+}));
+
 test('실제 운영·로컬 과거 번들은 다운로드하지 않고 제외하며 모르는 가격 번들도 보존 전에 막는다', async () => temporary(async dist => {
   const policy = JSON.parse(await readFile(path.join(root, '02_devtools/release-asset-policy.json'), 'utf8'));
   await put(dist, 'index.html', '<html>수업 안내</html>'); await put(dist, 'assets/new.js', 'new code');

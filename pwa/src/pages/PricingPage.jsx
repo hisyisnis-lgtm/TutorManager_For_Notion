@@ -1,11 +1,9 @@
-import { useState } from 'react';
 import { Card,
   CardContent } from '../components/shadcn/card';
 import { CheckCircleIcon,
   GiftIcon,
   CaretRightIcon,
   InfoIcon } from '@phosphor-icons/react';
-import { useNavigate } from 'react-router-dom';
 import {
   PRIMARY,
   PRIMARY_BG,
@@ -20,31 +18,16 @@ import {
   BORDER_SUBTLE,
   TEXT_TERTIARY } from '../constants/theme';
 import FadeUp from '../components/FadeUp';
-import TabPanel from '../components/TabPanel';
 import CheckItem from '../components/ui/CheckItem';
 import SectionLabel from '../components/ui/SectionLabel';
 import HeroSection from '../components/ui/HeroSection';
-import IntroContent from '../components/IntroContent';
 import PublicHeader from '../components/public/PublicHeader';
 import PublicFooter from '../components/public/PublicFooter';
-import FloatingCtaButton from '../components/public/FloatingCtaButton';
 import CtaSection from '../components/public/CtaSection';
 
 
 
-const TABS = ['소개', '수강료 안내'];
-
 export default function PricingPage() {
-  const navigate = useNavigate();
-  const [tab, setTab] = useState('수강료 안내');
-  const [showFloat, setShowFloat] = useState(false);
-
-  function switchTab(t) {
-    setTab(t);
-    setShowFloat(false);
-    window.scrollTo({ top: 0, behavior: 'instant' });
-  }
-
   return (
       <>
       <style>{`
@@ -66,32 +49,13 @@ export default function PricingPage() {
         @media (prefers-reduced-motion: reduce) {
           [data-particle] { display: none !important; }
         }
-        @media (hover: none) {
-          .review-nav-btn { display: none !important; }
-        }
         .cta-btn { transition: transform 100ms ease, box-shadow 100ms ease !important; }
         .cta-btn:active { transform: scale(0.96) !important; }
       `}</style>
 
-      <FloatingCtaButton
-        visible={showFloat && tab === '소개'}
-        onClick={() => navigate('/intro', { state: { tab: '상담' } })}
-      />
-
       <div style={{ minHeight: '100vh', backgroundColor: '#f5f5f5', fontFamily: 'inherit' }}>
 
-        <PublicHeader tabs={TABS} activeTab={tab} onTabChange={switchTab} />
-
-        <TabPanel active={tab === '소개'} id="panel-소개" labelledBy="tab-소개">
-          <div style={{ maxWidth: 480, margin: '0 auto' }}>
-            <IntroContent
-              onConsult={() => navigate('/intro', { state: { tab: '상담' } })}
-              onFloatChange={setShowFloat}
-            />
-          </div>
-        </TabPanel>
-
-        <TabPanel active={tab === '수강료 안내'} id="panel-수강료 안내" labelledBy="tab-수강료 안내">
+        <PublicHeader tabs={[]} rightSlot={<span style={{ fontSize: 13, fontWeight: 600, color: TEXT_SECONDARY }}>수강료 안내</span>} />
         <main style={{ maxWidth: 480, margin: '0 auto', paddingBottom: 80 }}>
 
           {/* ── 히어로 ── */}
@@ -101,7 +65,7 @@ export default function PricingPage() {
             <FadeUp delay={0}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 28 }}>
                 <img
-                  src="/img/profile.jpg"
+                  src={`${import.meta.env.BASE_URL}img/profile.jpg`}
                   alt="하늘쌤"
                   style={{
                     width: 46, height: 46, borderRadius: '50%',
@@ -539,11 +503,10 @@ export default function PricingPage() {
           {/* ── CTA ── */}
           <CtaSection
             className="cta-btn"
-            onCtaClick={() => { window.location.hash = '#/intro'; }}
+            onCtaClick={() => { window.location.assign('https://pf.kakao.com/_jFnFn/chat'); }}
           />
 
         </main>
-        </TabPanel>
 
         <PublicFooter />
 

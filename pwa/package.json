@@ -1,7 +1,7 @@
 {
   "name": "tutor-manager-pwa",
   "private": true,
-  "version": "2.48.2",
+  "version": "2.48.3",
   "type": "module",
   "scripts": {
     "predev": "node ../02_devtools/tone-words-build.mjs && node ../02_devtools/tone-tts-build.mjs",
@@ -9,6 +9,7 @@
     "dev:game": "vite --mode game",
     "prebuild": "node ../02_devtools/tone-words-build.mjs && node ../02_devtools/tone-tts-build.mjs",
     "build": "vite build",
+    "build:pricing": "vite build --config vite.pricing.config.js",
     "test": "vitest run",
     "lint": "eslint src/",
     "postbuild": "node ../02_devtools/gen-game-og-route.mjs",

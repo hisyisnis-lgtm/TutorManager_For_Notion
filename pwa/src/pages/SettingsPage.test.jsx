@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import SettingsPage from './SettingsPage.jsx';
 
@@ -20,6 +20,23 @@ afterEach(() => {
 });
 
 describe('설정의 ntfy 알림 코드 연결', () => {
+  it('수강료 안내는 앱 주소와 무관하게 구매 도메인의 공유 링크를 복사한다', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    const previous = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
+    try {
+      renderPage();
+      const row = screen.getByText('수강료 안내 · 개별 공유용').parentElement.parentElement;
+      expect(within(row).getByText('https://tiantianchinese.com/pricing/')).toBeTruthy();
+      await act(async () => { fireEvent.click(within(row).getByRole('button', { name: '복사' })); });
+      expect(writeText).toHaveBeenCalledWith('https://tiantianchinese.com/pricing/');
+      expect(within(row).getByRole('button', { name: '복사됨' })).toBeTruthy();
+    } finally {
+      if (previous) Object.defineProperty(navigator, 'clipboard', previous);
+      else delete navigator.clipboard;
+    }
+  });
+
   it('기존 저장 버튼으로 이름과 코드를 저장하고 다시 진입해도 유지한다', () => {
     const page = renderPage();
     fireEvent.change(screen.getByLabelText('강사 이름'), { target: { value: ' 가상 강사 ' } });

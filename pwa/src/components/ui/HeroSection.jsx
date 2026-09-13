@@ -36,7 +36,7 @@ export default function HeroSection({ children, sectionRef, style }) {
       {/* 배경: 심볼 로고 장식 */}
       <img
         aria-hidden="true"
-        src="/logo/symbol-white.png"
+        src={`${import.meta.env.BASE_URL}logo/symbol-white.png`}
         alt=""
         style={{
           position: 'absolute', right: -24, bottom: -20,

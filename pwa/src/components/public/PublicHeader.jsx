@@ -20,13 +20,13 @@ export default function PublicHeader({ tabs, activeTab, onTabChange, rightSlot }
       <div style={{ maxWidth: 480, margin: '0 auto', padding: '0 20px' }}>
         <div style={{ height: 48, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <img
-            src="/logo/logo-red.png"
+            src={`${import.meta.env.BASE_URL}logo/logo-red.png`}
             alt="하늘하늘 중국어"
             style={{ height: 24, objectFit: 'contain', outline: 'none' }}
           />
           {rightSlot}
         </div>
-        <div role="tablist" aria-label="페이지 섹션" style={{ display: 'flex', marginBottom: -1 }}>
+        {tabs.length > 0 && <div role="tablist" aria-label="페이지 섹션" style={{ display: 'flex', marginBottom: -1 }}>
           {tabs.map(t => (
             <button
               key={t}
@@ -47,7 +47,7 @@ export default function PublicHeader({ tabs, activeTab, onTabChange, rightSlot }
               {t}
             </button>
           ))}
-        </div>
+        </div>}
       </div>
     </header>
   );
