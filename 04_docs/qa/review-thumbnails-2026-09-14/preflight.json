@@ -1,0 +1,15 @@
+{
+  "checkedAt": "2026-09-13T22:40:07.254Z",
+  "inlineScriptsVerified": 5,
+  "inlineStylesVerified": 1,
+  "thumbnailCount": 3,
+  "imgCspExactPath": true,
+  "publicPriceCheck": {
+    "target": "site",
+    "textFiles": 34,
+    "files": 938,
+    "sharedPricingAssets": [
+      "/pricing/assets/pricing-4IH8T82A.js"
+    ]
+  }
+}
