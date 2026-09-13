@@ -1,0 +1,145 @@
+{
+  "verifiedAt": "2026-09-13T22:43:09.986Z",
+  "deployed": {
+    "id": "014aca80-27f4-494e-9352-d523ced901f2",
+    "url": "https://014aca80.tiantianchinese.pages.dev",
+    "commit": "114263d559a050013e3243577052568ae16d38a1"
+  },
+  "previous": "84da1323-bcb4-432f-92ed-55e93baf4951",
+  "remoteAssetHashesVerified": 936,
+  "fileCount": 938,
+  "bytes": 110623197,
+  "preserved": 936,
+  "pricingFilesPreserved": 12,
+  "gameFilesPreserved": 24,
+  "pwaUnchanged": "49cf77aa-619c-49bb-ad35-55de28b6813d",
+  "retiredCheckout302": true,
+  "checked": [
+    {
+      "base": "https://014aca80.tiantianchinese.pages.dev",
+      "route": "/reviews/",
+      "status": 200,
+      "responseSha256": "272ec716ff0f22d4cc784b24ac3080526c73ca07319bf77cbf174614673f555e",
+      "sourceSha256": "272ec716ff0f22d4cc784b24ac3080526c73ca07319bf77cbf174614673f555e",
+      "cloudflareEmailProtection": false,
+      "robots": "noindex"
+    },
+    {
+      "base": "https://014aca80.tiantianchinese.pages.dev",
+      "route": "/_astro/Footer.xx-6iswi.css",
+      "status": 200,
+      "responseSha256": "7be82f64d63bd0aa067b1f09f3584b930c4f61505e1d48e23ac96f322c8c8098",
+      "sourceSha256": "7be82f64d63bd0aa067b1f09f3584b930c4f61505e1d48e23ac96f322c8c8098",
+      "cloudflareEmailProtection": false,
+      "robots": "noindex"
+    },
+    {
+      "base": "https://014aca80.tiantianchinese.pages.dev",
+      "route": "/",
+      "status": 200,
+      "responseSha256": "ac419ff3d72aefd8d3d5263bbb086f654ed9ece73d723f5da8baba0005d43ee7",
+      "sourceSha256": "ac419ff3d72aefd8d3d5263bbb086f654ed9ece73d723f5da8baba0005d43ee7",
+      "cloudflareEmailProtection": false,
+      "robots": "noindex"
+    },
+    {
+      "base": "https://014aca80.tiantianchinese.pages.dev",
+      "route": "/pricing/",
+      "status": 200,
+      "responseSha256": "59b8292c6fa2c87531d7149bcd7d46b84d30d6994ce214b0243cad71a89275ee",
+      "sourceSha256": "59b8292c6fa2c87531d7149bcd7d46b84d30d6994ce214b0243cad71a89275ee",
+      "cloudflareEmailProtection": false,
+      "robots": "noindex, nofollow"
+    },
+    {
+      "base": "https://014aca80.tiantianchinese.pages.dev",
+      "route": "/pricing/assets/pricing-4IH8T82A.js",
+      "status": 200,
+      "responseSha256": "78e2be0b89b1dcbafa5b3c7b9fb313d48221dd3a04ebe7f34a124a7f95aa3914",
+      "sourceSha256": "78e2be0b89b1dcbafa5b3c7b9fb313d48221dd3a04ebe7f34a124a7f95aa3914",
+      "cloudflareEmailProtection": false,
+      "robots": "noindex, nofollow"
+    },
+    {
+      "base": "https://014aca80.tiantianchinese.pages.dev",
+      "route": "/game/tone/",
+      "status": 200,
+      "responseSha256": "e6465a49260c51ea630e3c980f40e9fb661cfbbc9ab5e9a54ea2558ed0aa59aa",
+      "sourceSha256": "e6465a49260c51ea630e3c980f40e9fb661cfbbc9ab5e9a54ea2558ed0aa59aa",
+      "cloudflareEmailProtection": false,
+      "robots": "noindex"
+    },
+    {
+      "base": "https://014aca80.tiantianchinese.pages.dev",
+      "route": "/game/tone/assets/game-CtldDNEV.js",
+      "status": 200,
+      "responseSha256": "41ab501514ba8b524ad09d0f7eda9d3dfe6c6cd904990ea6d8de841de8d5fb68",
+      "sourceSha256": "41ab501514ba8b524ad09d0f7eda9d3dfe6c6cd904990ea6d8de841de8d5fb68",
+      "cloudflareEmailProtection": false,
+      "robots": "noindex"
+    },
+    {
+      "base": "https://tiantianchinese.com",
+      "route": "/reviews/",
+      "status": 200,
+      "responseSha256": "c46514ecab5ca048e80272ae74d36f8a08077085bc101ea24265afc08fa7b5c6",
+      "sourceSha256": "272ec716ff0f22d4cc784b24ac3080526c73ca07319bf77cbf174614673f555e",
+      "cloudflareEmailProtection": true,
+      "robots": null
+    },
+    {
+      "base": "https://tiantianchinese.com",
+      "route": "/_astro/Footer.xx-6iswi.css",
+      "status": 200,
+      "responseSha256": "7be82f64d63bd0aa067b1f09f3584b930c4f61505e1d48e23ac96f322c8c8098",
+      "sourceSha256": "7be82f64d63bd0aa067b1f09f3584b930c4f61505e1d48e23ac96f322c8c8098",
+      "cloudflareEmailProtection": false,
+      "robots": null
+    },
+    {
+      "base": "https://tiantianchinese.com",
+      "route": "/",
+      "status": 200,
+      "responseSha256": "79f4fda35fd48afceeb3686a4cd475717b0054831d860c1cb74f7b0c856e322a",
+      "sourceSha256": "ac419ff3d72aefd8d3d5263bbb086f654ed9ece73d723f5da8baba0005d43ee7",
+      "cloudflareEmailProtection": true,
+      "robots": null
+    },
+    {
+      "base": "https://tiantianchinese.com",
+      "route": "/pricing/",
+      "status": 200,
+      "responseSha256": "59b8292c6fa2c87531d7149bcd7d46b84d30d6994ce214b0243cad71a89275ee",
+      "sourceSha256": "59b8292c6fa2c87531d7149bcd7d46b84d30d6994ce214b0243cad71a89275ee",
+      "cloudflareEmailProtection": false,
+      "robots": "noindex, nofollow"
+    },
+    {
+      "base": "https://tiantianchinese.com",
+      "route": "/pricing/assets/pricing-4IH8T82A.js",
+      "status": 200,
+      "responseSha256": "78e2be0b89b1dcbafa5b3c7b9fb313d48221dd3a04ebe7f34a124a7f95aa3914",
+      "sourceSha256": "78e2be0b89b1dcbafa5b3c7b9fb313d48221dd3a04ebe7f34a124a7f95aa3914",
+      "cloudflareEmailProtection": false,
+      "robots": "noindex, nofollow"
+    },
+    {
+      "base": "https://tiantianchinese.com",
+      "route": "/game/tone/",
+      "status": 200,
+      "responseSha256": "e6465a49260c51ea630e3c980f40e9fb661cfbbc9ab5e9a54ea2558ed0aa59aa",
+      "sourceSha256": "e6465a49260c51ea630e3c980f40e9fb661cfbbc9ab5e9a54ea2558ed0aa59aa",
+      "cloudflareEmailProtection": false,
+      "robots": null
+    },
+    {
+      "base": "https://tiantianchinese.com",
+      "route": "/game/tone/assets/game-CtldDNEV.js",
+      "status": 200,
+      "responseSha256": "41ab501514ba8b524ad09d0f7eda9d3dfe6c6cd904990ea6d8de841de8d5fb68",
+      "sourceSha256": "41ab501514ba8b524ad09d0f7eda9d3dfe6c6cd904990ea6d8de841de8d5fb68",
+      "cloudflareEmailProtection": false,
+      "robots": null
+    }
+  ]
+}
