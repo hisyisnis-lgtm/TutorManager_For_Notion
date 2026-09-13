@@ -1,6 +1,11 @@
 {
   "pwa": [
     {
+      "prefix": "/assets/PricingPage-",
+      "previousOnly": true,
+      "reason": "강사가 개별 공유하는 수강료 안내의 이전 버전은 보존하지 않는다. 현재 빌드의 전용 청크만 제공한다."
+    },
+    {
       "prefix": "/assets/index-Dgh3ZfNf.js",
       "reason": "공개 가격과 동의서 금액이 포함된 이전 운영 번들. 정책에 따라 재공개하지 않는다."
     },

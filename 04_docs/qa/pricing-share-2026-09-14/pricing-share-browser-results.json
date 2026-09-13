@@ -1,0 +1,32 @@
+{
+  "ok": true,
+  "results": [
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "copied": "http://127.0.0.1:5194/pricing",
+      "pricingLoadsOnDemand": true,
+      "recipientLoginNotRequired": true,
+      "originalPricePresent": true,
+      "tabsAndConsultationWork": true,
+      "noHorizontalOverflow": true
+    },
+    {
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      },
+      "copied": "http://127.0.0.1:5194/pricing",
+      "pricingLoadsOnDemand": true,
+      "recipientLoginNotRequired": true,
+      "originalPricePresent": true,
+      "tabsAndConsultationWork": true,
+      "noHorizontalOverflow": true
+    }
+  ],
+  "errors": [],
+  "unexpected": [],
+  "environment": "Actual compiled PWA. Teacher sign-in uses isolated HTTP fixtures and clipboard write is observed without modifying the system clipboard. Recipient sharing page requires no authentication. No live business writes."
+}

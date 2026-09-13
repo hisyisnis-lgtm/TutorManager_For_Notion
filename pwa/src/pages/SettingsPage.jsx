@@ -19,6 +19,7 @@ const STORAGE_KEY = 'instructor_name';
 const SHARE_LINKS = [
   { key: 'intro', label: '홈페이지', path: 'https://tiantianchinese.com/' },
   { key: 'lessons', label: '수업 안내', path: 'https://tiantianchinese.com/lessons/' },
+  { key: 'pricing', label: '수강료 안내 · 개별 공유용', path: '/pricing' },
   { key: 'consent', label: '수업 동의서', path: '/#/consent' },
 ];
 

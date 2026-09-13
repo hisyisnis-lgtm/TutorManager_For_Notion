@@ -50,7 +50,8 @@ import StudentClassesPage from './pages/StudentClassesPage.jsx';
 import StudentPaymentsPage from './pages/StudentPaymentsPage.jsx';
 import HomeworkManagePage from './pages/HomeworkManagePage.jsx';
 import LandingPage from './pages/LandingPage.jsx';
-import PricingPage from './pages/PricingPage.jsx';
+// 강사가 링크로 공유하는 수강료 안내는 해당 주소를 열 때만 불러온다.
+const PricingPage = lazy(() => import('./pages/PricingPage.jsx'));
 import ConsentPage, { AuthenticatedConsentPage } from './pages/ConsentPage.jsx';
 
 import GroupClassPage from './pages/GroupClassPage.jsx';
@@ -308,7 +309,7 @@ export default function App() {
           <ScrollToTop />
           <Routes>
             <Route path="/intro" element={<LandingPage />} />
-            <Route path="/pricing" element={<PricingPage />} />
+            <Route path="/pricing" element={<Suspense fallback={<SplashScreen />}><PricingPage /></Suspense>} />
             <Route path="/consent" element={<ConsentPage />} />
             {/* 개인정보처리방침 — 카카오·구글 OAuth 콘솔이 요구하는 공개 URL(#/privacy) */}
             <Route path="/privacy" element={<Suspense fallback={null}><PrivacyPage /></Suspense>} />

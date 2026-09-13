@@ -91,8 +91,8 @@ export default defineConfig(({ mode }) => {
       workbox: {
         clientsClaim: true,
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
-        // 외부 공식 웹으로 301 이동하는 소개 페이지는 SW 설치 캐시에 넣지 않는다.
-        globIgnores: ['intro.html', 'pricing.html', 'group-class.html'],
+        // 외부 소개 페이지와 개별 공유용 수강료 안내는 일반 앱 설치 때 미리 내려받지 않는다.
+        globIgnores: ['intro.html', 'pricing.html', 'group-class.html', 'assets/PricingPage-*.js'],
         navigateFallback: '/index.html',
         navigateFallbackDenylist: [/^\/(intro|pricing|group-class|bootcamp)(?:\/|\.html)?$/],
         runtimeCaching: [

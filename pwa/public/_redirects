@@ -11,10 +11,10 @@
 /intro.html https://tiantianchinese.com/ 301
 /sitemap.xml https://tiantianchinese.com/sitemap-index.xml 301
 
+# 강사가 개별 공유하는 수강료 주소는 검색 비노출 OG 페이지를 유지한다.
+/pricing/ /pricing 302
+
 # 이전 공개 수업 주소는 공식 안내로 통합한다.
-/pricing https://tiantianchinese.com/lessons/ 301
-/pricing/ https://tiantianchinese.com/lessons/ 301
-/pricing.html https://tiantianchinese.com/lessons/ 301
 /group-class https://tiantianchinese.com/lessons/ 301
 /group-class/ https://tiantianchinese.com/lessons/ 301
 /group-class.html https://tiantianchinese.com/lessons/ 301

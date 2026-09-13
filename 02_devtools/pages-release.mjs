@@ -78,6 +78,8 @@ export async function retainPreviousAssets({ dist, previous, exclusions = [], fe
     const file = safeFile(dist, name);
     const exclusion = exclusions.find(rule => name.startsWith(rule.prefix));
     if (exclusion) {
+      // 현재 소스로 다시 빌드한 동일 청크는 최신 파일이다. 이전 전용 청크만 보존에서 제외한다.
+      if (exclusion.previousOnly && hash && own[name] === hash) continue;
       assert.ok(!own[name], `${name}: 제외한 자산이 새 빌드에도 존재합니다.`);
       excluded[name] = exclusion.reason;
       continue;

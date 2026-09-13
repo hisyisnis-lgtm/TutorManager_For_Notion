@@ -84,7 +84,7 @@ describe('설정의 ntfy 알림 코드 연결', () => {
     expect(input.getAttribute('autocapitalize')).toBe('none');
     expect(input.getAttribute('spellcheck')).toBe('false');
     expect(screen.getByText(/공개 토픽 코드를 아는 사람/)).toBeTruthy();
-    expect(screen.getAllByRole('button', { name: '복사' })).toHaveLength(3);
+    expect(screen.getAllByRole('button', { name: '복사' })).toHaveLength(4);
     expect(screen.getByRole('button', { name: '업데이트 (강력 새로고침)' })).toBeTruthy();
     expect(screen.getByRole('button', { name: '로그아웃' })).toBeTruthy();
   });

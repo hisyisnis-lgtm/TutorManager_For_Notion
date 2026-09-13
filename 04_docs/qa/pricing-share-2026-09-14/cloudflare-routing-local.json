@@ -1,0 +1,72 @@
+{
+  "checkedAt": "2026-09-13T15:25:17.376Z",
+  "base": "http://127.0.0.1:52735",
+  "results": [
+    {
+      "route": "/pricing",
+      "firstStatus": 200,
+      "location": null,
+      "finalPath": "/pricing",
+      "status": 200,
+      "robots": "noindex, nofollow, noindex",
+      "hasPricingOg": true,
+      "metaRefresh": "0; url=/#/pricing",
+      "entry": null
+    },
+    {
+      "route": "/pricing.html",
+      "firstStatus": 308,
+      "location": "/pricing",
+      "finalPath": "/pricing",
+      "status": 200,
+      "robots": "noindex, nofollow, noindex",
+      "hasPricingOg": true,
+      "metaRefresh": "0; url=/#/pricing",
+      "entry": null
+    },
+    {
+      "route": "/pricing/",
+      "firstStatus": 302,
+      "location": "/pricing",
+      "finalPath": "/pricing",
+      "status": 200,
+      "robots": "noindex, nofollow, noindex",
+      "hasPricingOg": true,
+      "metaRefresh": "0; url=/#/pricing",
+      "entry": null
+    },
+    {
+      "route": "/",
+      "firstStatus": 200,
+      "location": null,
+      "finalPath": "/",
+      "status": 200,
+      "robots": "noindex",
+      "hasPricingOg": false,
+      "metaRefresh": null,
+      "entry": "/assets/index-BoVIvHi1.js"
+    },
+    {
+      "route": "/personal",
+      "firstStatus": 200,
+      "location": null,
+      "finalPath": "/personal",
+      "status": 200,
+      "robots": "noindex",
+      "hasPricingOg": false,
+      "metaRefresh": null,
+      "entry": "/assets/index-BoVIvHi1.js"
+    },
+    {
+      "route": "/unmatched-pricing-qa",
+      "firstStatus": 200,
+      "location": null,
+      "finalPath": "/unmatched-pricing-qa",
+      "status": 200,
+      "robots": "noindex",
+      "hasPricingOg": false,
+      "metaRefresh": null,
+      "entry": "/assets/index-BoVIvHi1.js"
+    }
+  ]
+}

@@ -2,6 +2,12 @@
 # https://developers.cloudflare.com/pages/configuration/headers/
 # Vite가 public/ 파일을 dist/로 복사 → Pages가 이 파일을 자동으로 응답 헤더에 적용
 
+/pricing
+  X-Robots-Tag: noindex, nofollow
+
+/pricing.html
+  X-Robots-Tag: noindex, nofollow
+
 /*
   X-Robots-Tag: noindex
   X-Frame-Options: DENY
