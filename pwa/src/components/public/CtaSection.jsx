@@ -7,10 +7,10 @@ import { TEXT_BODY,
 
 
 /**
- * CtaSection — "무료 상담 신청하기" 하단 CTA 섹션
+ * CtaSection — "상담 신청하기" 하단 CTA 섹션
  * IntroContent · PricingPage 에서 공통으로 사용합니다.
  *
- * @param {Function} onCtaClick - "무료 상담 신청하기" 버튼 클릭 콜백
+ * @param {Function} onCtaClick - "상담 신청하기" 버튼 클릭 콜백
  * @param {string}   [className] - 버튼에 추가할 className (예: "cta-btn")
  * @param {React.Ref} [sectionRef] - section 엘리먼트에 연결할 ref (선택)
  */
@@ -22,7 +22,7 @@ export default function CtaSection({ onCtaClick, className, sectionRef }) {
           현재 레벨과 목표에 따라<br />가장 적합한 방향을 함께 안내드립니다.
         </span>
         <span style={{ color: TEXT_TERTIARY, fontSize: 13, display: 'block', marginBottom: 24, textAlign: 'center' }}>
-          편하게 상담 신청해 주세요 :)
+          문의는 언제든 · 공식 응대 09:00~23:00
         </span>
         <Button
           size="lg" block
@@ -30,14 +30,14 @@ export default function CtaSection({ onCtaClick, className, sectionRef }) {
           onClick={onCtaClick}
           style={{ marginBottom: 14 }}
         >
-          무료 상담 신청하기
+          상담 신청하기
         </Button>
         <a
-          href="https://pf.kakao.com/_jFnFn"
+          href="https://pf.kakao.com/_jFnFn/chat"
           target="_blank" rel="noopener noreferrer"
           style={{ display: 'block', textAlign: 'center', fontSize: 13, color: TEXT_SECONDARY, textDecoration: 'none' }}
         >
-          채널톡으로 문의하기 →
+          카카오 채널로 문의하기 →
         </a>
       </section>
     </FadeUp>

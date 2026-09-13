@@ -120,3 +120,31 @@ describe('production auth handlers with isolated data', () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 });
+
+describe('official game site origins', () => {
+  it.each(['https://tiantianchinese.com', 'https://www.tiantianchinese.com', 'https://tiantianchinese.pages.dev'])('allows game CORS at %s without allowing teacher or student routes', async origin => {
+    const preflight = await request('/game/me', { method: 'OPTIONS', origin });
+    expect(preflight.status).toBe(204);
+    expect(preflight.headers.get('Access-Control-Allow-Origin')).toBe(origin);
+    const anonymous = await request('/game/me', { origin });
+    expect(anonymous.status).toBe(401);
+    expect(anonymous.headers.get('Access-Control-Allow-Origin')).toBe(origin);
+    const gameToken = await signTypedToken(SECRET, 'game', 'user-a', 600);
+    expect((await request('/game/me', { origin, token: gameToken })).status).toBe(404);
+    expect((await request('/notifications', { origin })).status).toBe(403);
+    expect((await request('/personal/auth/request-otp', { origin })).status).toBe(403);
+    const params = new URLSearchParams({ redirect: origin + '/game/tone/', transaction, code_challenge: await pkceChallenge(verifier) });
+    const start = await request('/game/auth/google/start?' + params, { origin });
+    expect(start.status).toBe(302);
+    const state = new URL(start.headers.get('Location')).searchParams.get('state');
+    expect((await verifyAuthState(SECRET, state)).redirect).toBe(origin + '/game/tone/');
+    expect(fetch).not.toHaveBeenCalled();
+  });
+  it('rejects lookalike site origins', async () => {
+    for (const origin of ['https://tiantianchinese.com.evil.test', 'http://tiantianchinese.com']) {
+      expect((await request('/game/me', { origin })).status).toBe(403);
+      const options = await request('/game/me', { origin, method: 'OPTIONS' });
+      expect(options.headers.get('Access-Control-Allow-Origin')).toBe('');
+    }
+  });
+});

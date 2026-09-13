@@ -136,7 +136,12 @@ describe('all ntfy publishing requires credentials', () => {
       title: '📩 무료상담 신청',
       message: '이름: 김**\n전화: ***-****-5678\n카카오톡 ID: pr***\n수준: 완전 처음이에요\n고민: 발음이 이상한 것 같아요\n이유: 기타: 업무 회화\n희망 요일: 월, 수\n희망 시간대: 오후 (12-18시)\n※ 자세한 내용은 Notion 무료상담 DB에서 확인하세요.',
       level: 'info',
+      followup: { id: expect.stringMatching(/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i), kind: 'consult-relay', referenceId: null },
     });
+    expect(fetch.mock.calls.filter(([url]) => url.endsWith('/dispatches'))).toHaveLength(1);
+    expect(local.sqlite.prepare('SELECT id, kind, delivery_state FROM notification_followups').all()).toEqual([
+      { id: JSON.parse(relay[1].body).client_payload.followup.id, kind: 'consult-relay', delivery_state: 'queued' },
+    ]);
     expect(relay[1].body).not.toMatch(/01012345678|private-contact|public-general|fake-notification-key|fake-github-key/);
     expect(fetch.mock.calls.some(([url]) => url === 'https://ntfy.sh/v1/account')).toBe(false);
   });

@@ -1,0 +1,21 @@
+{
+  "previous": "3f94f4c2-27d9-4845-8248-58141049fcd4",
+  "retained": {
+    "retained": {
+      "/assets/PrivacyPage-Dd8c_1eN.js": "f9e2fc15312cdfc01687989105ee22902e1a96d0a4d7a201f5f60e33c1a21af5",
+      "/assets/ToneGamePage-BrIGFtFe.js": "db68be908894e1eef75002ef6edf21aa9a37fd7210efdc1a3ca77dc5d6edbf1d",
+      "/assets/index-Be6HLLI_.css": "8a9bcf565e08e3080da6ebdd2c8aae9b69def74e76309988091da80beaf97a5b",
+      "/assets/vendor-CGjsNWRZ.js": "d397c1dfaeec596839808c7619f98a9abc501c8ecb5f606f2ca147f957673b48"
+    },
+    "excluded": {
+      "/assets/index-Dgh3ZfNf.js": "공개 가격과 동의서 금액이 포함된 이전 운영 번들. 정책에 따라 재공개하지 않는다."
+    },
+    "bootstrap": true,
+    "generations": 1
+  },
+  "price": {
+    "target": "pwa",
+    "textFiles": 15,
+    "files": 843
+  }
+}

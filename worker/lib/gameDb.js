@@ -4,6 +4,8 @@
 // rich_text 2000자 트림 한계 제거. 조회 키=(provider, social_id) UNIQUE, id=UUID(게임 JWT sub).
 //
 // parseGameUserRow는 순수(테스트 용이). DB 함수는 D1Database(env.GAME_DB)를 받는다.
+import { mergeGameData } from './gameDataMerge.js';
+import { GameDataSchema } from './schemas.js';
 
 // D1 행 → 앱 유저 객체. game_data JSON 파싱(깨지면 {}).
 export function parseGameUserRow(row) {
@@ -41,14 +43,28 @@ export async function getGameUserById(db, id) {
   return parseGameUserRow(row);
 }
 
-// 게임데이터(JSON 객체) + 최종접속 갱신. 닉네임 주면 함께(없으면 기존 유지). 대상 없으면 changes=0.
+// 읽은 사본과 같은 행에만 저장한다(CAS). 경합 시 최신 행과 다시 병합하므로
+// 기기 A의 저장 직후 기기 B가 이전 사본으로 UPDATE해도 A의 진행도를 잃지 않는다.
 export async function updateGameData(db, id, gameDataObj, nickname) {
-  const json = JSON.stringify(gameDataObj);
-  const now = new Date().toISOString();
-  const res = await db.prepare(
-    'UPDATE game_users SET game_data = ?, last_seen_at = ?, nickname = COALESCE(?, nickname) WHERE id = ?',
-  ).bind(json, now, nickname || null, id).run();
-  return res;
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    const row = await db.prepare('SELECT * FROM game_users WHERE id = ?').bind(id).first();
+    if (!row) return { meta: { changes: 0 } };
+    let existing;
+    try { existing = row.game_data ? JSON.parse(row.game_data) : {}; }
+    catch { throw Object.assign(new Error('기존 게임 기록을 확인할 수 없습니다. 기록은 유지됩니다.'), { status: 409 }); }
+    const stored = GameDataSchema.safeParse(existing);
+    if (!stored.success) throw Object.assign(new Error('기존 게임 기록을 확인할 수 없습니다. 기록은 유지됩니다.'), { status: 409 });
+    const gameData = mergeGameData(stored.data, gameDataObj);
+    const json = JSON.stringify(gameData);
+    if (json.length > 100000 || !GameDataSchema.safeParse(gameData).success) {
+      throw Object.assign(new Error('게임 기록을 합칠 수 없습니다. 기존 기록은 유지됩니다.'), { status: 413 });
+    }
+    const res = await db.prepare(
+      'UPDATE game_users SET game_data = ?, last_seen_at = ?, nickname = COALESCE(?, nickname) WHERE id = ? AND game_data IS ?',
+    ).bind(json, new Date().toISOString(), nickname || null, id, row.game_data).run();
+    if (res?.meta?.changes > 0) return { ...res, gameData };
+  }
+  throw Object.assign(new Error('다른 기기에서 기록을 저장 중입니다. 잠시 후 다시 시도해주세요.'), { status: 409 });
 }
 
 // 계정 삭제(회원 탈퇴) — 행 자체를 지운다. 다시 로그인하면 findOrCreateGameUser가 새 행을 만든다.

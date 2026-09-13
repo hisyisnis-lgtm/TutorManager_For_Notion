@@ -4,6 +4,7 @@ import { fetchAllStudents, parseStudent } from '../api/students.js';
 import { fetchAllClassTypes, parseClassType } from '../api/classTypes.js';
 import { fetchAllDiscounts, parseDiscount } from '../api/discounts.js';
 import { fetchAllPayments, parsePayment, remainingSessionsOf } from '../api/payments.js';
+import { trackRevalidation, pruneRevalidations } from '../hooks/useCachedResource.js';
 
 const DataContext = createContext(null);
 
@@ -18,7 +19,7 @@ function loadCache() {
       sessionStorage.removeItem(CACHE_KEY);
       return null;
     }
-    return cache.data;
+    return cache;
   } catch {
     return null;
   }
@@ -33,7 +34,8 @@ function saveCache(data, auth) {
 
 export function DataProvider({ children }) {
   const revision = useSyncExternalStore(subscribeAuthChanges, getAuthRevision, () => 0);
-  const [cached] = useState(loadCache);
+  const [cachedEntry] = useState(loadCache);
+  const cached = cachedEntry?.data;
   const dataRevision = useRef(revision);
   const requestId = useRef(0);
 
@@ -43,24 +45,25 @@ export function DataProvider({ children }) {
   const [payments, setPayments] = useState(cached?.payments ?? []);
   const [loading, setLoading] = useState(!cached);
   const [stale, setStale] = useState(!!cached);
-  // stale은 load가 useCallback([])이라 클로저에 갇힌다. 캐시로 시작한 세션에서 이후 조회
-  // 실패가 영원히 조용히 무시되던 원인이라, 현재 값을 보도록 ref로 함께 들고 있는다.
-  const staleRef = useRef(!!cached);
   const [error, setError] = useState(null);
+  const [refreshError, setRefreshError] = useState(null);
+  const [lastSuccessAt, setLastSuccessAt] = useState(cachedEntry?.savedAt ?? null);
+  const hasData = useRef(!!cached);
 
   const load = useCallback(async () => {
     const auth = captureAuthScope();
     if (!isAuthScopeCurrent(auth)) return;
     const request = ++requestId.current;
-    if (!staleRef.current) setLoading(true);
+    if (!hasData.current) setLoading(true);
     setError(null);
     try {
-      const [rawStudents, rawClassTypes, rawDiscounts, rawPayments] = await Promise.all([
+      const [rawStudents, rawClassTypes, rawDiscounts, rawPayments] = await trackRevalidation(() => Promise.all([
         fetchAllStudents(),
         fetchAllClassTypes(),
         fetchAllDiscounts(),
         fetchAllPayments(),
-      ]);
+      ]), { key: 'master', label: '학생·수강 정보', global: true, lastSuccessAt: loadCache()?.savedAt,
+        retry: () => load(), isCurrent: () => request === requestId.current && isAuthScopeCurrent(auth) });
       if (request !== requestId.current || !isAuthScopeCurrent(auth)) return;
       const parsedStudents = rawStudents.map(parseStudent);
       const parsedClassTypes = rawClassTypes.map(parseClassType);
@@ -72,12 +75,15 @@ export function DataProvider({ children }) {
       setDiscounts(parsedDiscounts);
       setPayments(parsedPayments);
       setStale(false);
-      staleRef.current = false;
+      hasData.current = true;
+      setRefreshError(null);
+      setLastSuccessAt(Date.now());
       saveCache({ students: parsedStudents, classTypes: parsedClassTypes, discounts: parsedDiscounts, payments: parsedPayments }, auth);
     } catch (e) {
       if (request !== requestId.current || !isAuthScopeCurrent(auth)) return;
-      if (!staleRef.current) setError(e.message);
-      // 캐시가 있으면 오류를 표시하지 않고 캐시 데이터 유지
+      if (!hasData.current) setError(e.message);
+      setRefreshError(e.message || '최신 정보를 확인하지 못했어요.');
+      setStale(hasData.current);
     } finally {
       if (request === requestId.current && isAuthScopeCurrent(auth)) setLoading(false);
     }
@@ -86,11 +92,12 @@ export function DataProvider({ children }) {
   useEffect(() => {
     if (dataRevision.current !== revision) {
       setStudents([]); setClassTypes([]); setDiscounts([]); setPayments([]);
-      setStale(false); staleRef.current = false; setError(null);
+      setStale(false); setError(null);
+      hasData.current = false; setRefreshError(null); setLastSuccessAt(null);
       dataRevision.current = revision;
     }
     load();
-    return () => { requestId.current += 1; };
+    return () => { requestId.current += 1; pruneRevalidations(); };
   }, [load, revision]);
 
   const studentNameMap = Object.fromEntries(students.map((s) => [s.id, s.name]));
@@ -119,6 +126,8 @@ export function DataProvider({ children }) {
         loading,
         stale,
         error,
+        refreshError,
+        lastSuccessAt,
         refresh: load,
         studentNameMap: current ? studentNameMap : {},
         classTypeMap: current ? classTypeMap : {},

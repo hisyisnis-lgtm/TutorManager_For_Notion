@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Button } from '../components/shadcn/button';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import EmptyState from '../components/ui/EmptyState.jsx';
+import NotificationFollowups from '../components/ui/NotificationFollowups.jsx';
 import { captureAuthScope, isAuthScopeCurrent, subscribeAuthChanges } from '../api/authState.js';
 import { getNtfyTopic, subscribeNtfyTopic, clearNtfyHistory } from '../api/ntfy.js';
 import { BellIcon } from '@phosphor-icons/react';
@@ -233,7 +234,8 @@ export default function NotificationsPage() {
     return (
       <>
         <PageHeader title="알림" back />
-        <div className="flex flex-col items-center justify-center px-8 pt-24 gap-4 text-center">
+        <NotificationFollowups />
+        <div className="flex flex-col items-center justify-center px-8 pt-8 pb-24 gap-4 text-center">
           <span className="text-5xl">🔔</span>
           <p className="text-gray-700 font-semibold">ntfy 알림 코드를 연결해 주세요</p>
           <p className="text-sm text-gray-500">
@@ -263,6 +265,7 @@ export default function NotificationsPage() {
         }
       />
 
+      <NotificationFollowups />
       {/* 연결 상태 바 */}
       <div className="flex items-center gap-2 px-4 py-2 border-b border-gray-100">
         <span className={`w-2 h-2 rounded-full ${statusDot}`} />

@@ -3,6 +3,7 @@ import {
   useEffect } from 'react';
 import { useNavigate,
   useSearchParams } from 'react-router-dom';
+import { toast } from 'sonner';
 import { CircleNotchIcon, WarningCircleIcon, WarningIcon } from '@phosphor-icons/react';
 import { Alert, AlertTitle, AlertDescription } from '../components/shadcn/alert';
 import { Input } from '../components/shadcn/input';
@@ -120,7 +121,9 @@ export default function HomeworkFormPage() {
         files: uploaded.length > 0 ? uploaded : undefined,
         classId: fromClassId || undefined,
       });
-      if (created?.id) notifyHomework('assign', created.id);
+      if (created?.id) void notifyHomework('assign', created.id).then(result => {
+        if (!result.ok && !result.ignored) toast.warning(result.message);
+      });
       if (fromClassId) markPendingHwDone(fromClassId);
       invalidateCache('homework');
       navigate(-1);
@@ -305,4 +308,3 @@ function PendingCard({ label, items, onRemove }) {
     </div>
   );
 }
-

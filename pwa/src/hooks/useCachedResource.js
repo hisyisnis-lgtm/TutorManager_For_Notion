@@ -56,30 +56,85 @@ export function invalidateCache(prefix) {
 // 아무 리소스라도 백그라운드 revalidate 중이면 "업데이트 중"으로 본다.
 // React Query의 useIsFetching 전역 표시와 같은 개념 — 화면마다 표시를 달지 않고
 // 앱에 하나만 두고 여기서 상태를 구독한다.
-let activeRevalidations = 0;
+const revalidations = new Map();
+const imperativeRequests = new Map();
+const snapshots = new Map();
 const revalidateListeners = new Set();
 function notifyRevalidate() {
+  snapshots.clear();
   revalidateListeners.forEach((l) => l());
 }
-function beginRevalidate() {
-  activeRevalidations += 1;
+/** 화면이 해제된 로더의 상태·재시도 콜백을 남기지 않는다. */
+export function pruneRevalidations() {
+  for (const [id, record] of revalidations) if (!record.isCurrent()) revalidations.delete(id);
   notifyRevalidate();
 }
-function endRevalidate() {
-  activeRevalidations = Math.max(0, activeRevalidations - 1);
+function currentPath() {
+  if (typeof window === 'undefined') return '/';
+  return window.location.hash.startsWith('#/')
+    ? window.location.hash.slice(1).split('?')[0]
+    : window.location.pathname;
+}
+function beginRevalidate({ key, label = '정보', lastSuccessAt = null, retry, global = false, isCurrent = () => true } = {}) {
+  const path = global ? '*' : currentPath();
+  const id = `${path}:${key ?? 'unscoped'}`;
+  const previous = revalidations.get(id);
+  const record = { id, path, label, lastSuccessAt: previous?.lastSuccessAt ?? lastSuccessAt,
+    retry, isCurrent, pending: true, error: previous?.error ?? null, completedAt: null };
+  revalidations.set(id, record);
   notifyRevalidate();
+  return record;
+}
+function endRevalidate(record, error) {
+  if (revalidations.get(record.id) !== record) return;
+  if (!record.isCurrent()) revalidations.delete(record.id);
+  else {
+    record.pending = false;
+    record.error = error ? '최신 정보를 확인하지 못했어요' : null;
+    if (!error) {
+      record.lastSuccessAt = record.completedAt = Date.now();
+      record.retry = null;
+    }
+  }
+  notifyRevalidate();
+}
+
+subscribeAuthChanges(() => { revalidations.clear(); imperativeRequests.clear(); notifyRevalidate(); });
+
+function freshnessSnapshot(path) {
+  if (!snapshots.has(path)) {
+    const records = [...revalidations.values()].filter((record) => (record.path === path || record.path === '*') && record.isCurrent());
+    snapshots.set(path, {
+      refreshing: records.some((record) => record.pending),
+      failures: records.filter((record) => record.error).map((record) => ({ ...record })),
+      completedAt: Math.max(0, ...records.map((record) => record.completedAt ?? 0)),
+    });
+  }
+  return snapshots.get(path);
+}
+
+/** 현재 화면의 실패는 다른 리소스의 성공으로 지워지지 않는다. */
+export function useRevalidationStatus(path = currentPath()) {
+  return useSyncExternalStore(
+    (cb) => { revalidateListeners.add(cb); return () => revalidateListeners.delete(cb); },
+    () => freshnessSnapshot(path),
+    () => freshnessSnapshot('/'),
+  );
+}
+
+function resourceLabel(key) {
+  if (/homework|submittedHw/.test(key)) return '숙제';
+  if (/notice/.test(key)) return '공지';
+  if (/class|today|tomorrow|upcoming|prep|bookings/.test(key)) return '수업 정보';
+  if (/payment|shortage/.test(key)) return '수강 내역';
+  if (/consult/.test(key)) return '상담';
+  if (/student/.test(key)) return '학생 정보';
+  return '정보';
 }
 
 /** 앱 전역에서 하나라도 백그라운드 갱신 중이면 true. (전역 최신화 표시용) */
 export function useIsRevalidating() {
-  return useSyncExternalStore(
-    (cb) => {
-      revalidateListeners.add(cb);
-      return () => revalidateListeners.delete(cb);
-    },
-    () => activeRevalidations > 0,
-    () => false,
-  );
+  return useRevalidationStatus().refreshing;
 }
 
 // 명령형 코드(imperative fetch)에서 stale-while-revalidate를 직접 구현할 때 쓰는 프리미티브.
@@ -88,21 +143,32 @@ export function useIsRevalidating() {
 export function peekCache(key) {
   return readCache(PREFIX + key);
 }
+export function peekCacheSavedAt(key) {
+  return readCacheEntry(PREFIX + key)?.savedAt ?? null;
+}
 /** 캐시 값 쓰기 — 명령형 fetch 성공 후 캐시 갱신용. */
 export function writeCacheValue(key, value, auth) {
   writeCache(PREFIX + key, value, auth);
 }
 /** 명령형 fetch를 전역 "업데이트 중" 표시에 반영 — promise를 감싸 갱신 카운터를 증감. */
-export async function trackRevalidation(promise) {
-  beginRevalidate();
+export async function trackRevalidation(promise, options) {
+  const record = beginRevalidate(options);
+  let failure;
   try {
-    return await promise;
+    return await (typeof promise === 'function' ? promise() : promise);
+  } catch (error) {
+    failure = error || new Error('불러오지 못했어요.');
+    throw error;
   } finally {
-    endRevalidate();
+    endRevalidate(record, failure);
   }
 }
 
 function readCache(storageKey) {
+  return readCacheEntry(storageKey)?.value;
+}
+
+function readCacheEntry(storageKey) {
   try {
     const auth = captureAuthScope(cacheScope(storageKey.slice(PREFIX.length)));
     const raw = sessionStorage.getItem(storageKey);
@@ -112,7 +178,7 @@ function readCache(storageKey) {
       sessionStorage.removeItem(storageKey);
       return undefined;
     }
-    return cached.value;
+    return cached;
   } catch {
     return undefined;
   }
@@ -134,7 +200,9 @@ function writeCache(storageKey, value, auth) {
  *   - data: 캐시값 → 최신값 (없으면 undefined)
  *   - loading: 캐시가 전혀 없어 처음 받아오는 중일 때만 true (재방문은 false)
  *   - refreshing: 백그라운드 갱신 중 (캐시는 이미 보이는 상태)
- *   - error: 캐시도 없고 fetch도 실패했을 때만 메시지. 캐시가 있으면 조용히 유지.
+ *   - error: 캐시가 전혀 없는 실패. 기존 화면의 전체 오류 처리와 호환한다.
+ *   - refreshError: 캐시 유무와 관계없이 최신 조회 실패. 데이터는 유지한다.
+ *   - lastSuccessAt: 마지막 서버 조회 성공 시각(캐시의 저장 시각 포함).
  *   - refresh: 쓰기 후 즉시 최신화하거나 당겨서 새로고침할 때 호출.
  */
 export function useCachedResource(key, fetcher) {
@@ -146,6 +214,8 @@ export function useCachedResource(key, fetcher) {
   const [loading, setLoading] = useState(() => (storageKey ? readCache(storageKey) === undefined : false));
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
+  const [refreshError, setRefreshError] = useState(null);
+  const [lastSuccessAt, setLastSuccessAt] = useState(() => key ? peekCacheSavedAt(key) : null);
   const dataOwner = useRef(`${storageKey}:${revision}`);
   const requestId = useRef(0);
 
@@ -160,21 +230,26 @@ export function useCachedResource(key, fetcher) {
     const request = ++requestId.current;
     setRefreshing(true);
     setError(null);
-    beginRevalidate();
+    const isCurrent = () => request === requestId.current && isAuthScopeCurrent(auth);
     try {
-      const fresh = await fetcherRef.current();
+      const fresh = await trackRevalidation(() => fetcherRef.current(), {
+        key, label: resourceLabel(key), lastSuccessAt: peekCacheSavedAt(key),
+        retry: () => revalidate(), isCurrent,
+      });
       if (request !== requestId.current || !isAuthScopeCurrent(auth)) return;
       setData(fresh);
       writeCache(storageKey, fresh, auth);
+      setLastSuccessAt(Date.now());
+      setRefreshError(null);
     } catch (e) {
       if (request !== requestId.current || !isAuthScopeCurrent(auth)) return;
-      // 캐시가 있으면 옛 데이터를 유지한 채 조용히 실패, 없을 때만 에러 노출.
+      setRefreshError(e.message || '불러오지 못했어요.');
+      // 기존 화면은 캐시를 유지하고, 갱신 실패는 전역 상태와 refreshError로 알린다.
       setData((cur) => {
         if (cur === undefined) setError(e.message || '불러오지 못했어요.');
         return cur;
       });
     } finally {
-      endRevalidate();
       if (request === requestId.current && isAuthScopeCurrent(auth)) {
         setRefreshing(false);
         setLoading(false);
@@ -187,6 +262,8 @@ export function useCachedResource(key, fetcher) {
     dataOwner.current = `${storageKey}:${revision}`;
     setRefreshing(false);
     setError(null);
+    setRefreshError(null);
+    setLastSuccessAt(key ? peekCacheSavedAt(key) : null);
     if (!storageKey) {
       setData(undefined);
       setLoading(false);
@@ -196,12 +273,14 @@ export function useCachedResource(key, fetcher) {
     setData(cached);
     setLoading(cached === undefined);
     revalidate();
-    return () => { requestId.current += 1; };
+    return () => { requestId.current += 1; notifyRevalidate(); };
   }, [storageKey, revision, revalidate]);
 
   const current = dataOwner.current === `${storageKey}:${revision}`
     && !!captureAuthScope(key ? cacheScope(key) : 'teacher').credential;
-  return { data: current ? data : undefined, loading, refreshing, error, refresh: revalidate };
+  return { data: current ? data : undefined, loading, refreshing, error,
+    refreshError: current ? refreshError : null, lastSuccessAt: current ? lastSuccessAt : null,
+    refresh: revalidate };
 }
 
 /**
@@ -222,8 +301,18 @@ export async function swrLoad(key, fetcher, apply) {
   if (!isAuthScopeCurrent(auth)) return;
   const cached = peekCache(key);
   if (cached !== undefined && cached !== null) apply(cached, { fromCache: true });
-  const fresh = await trackRevalidation(fetcher());
-  if (!isAuthScopeCurrent(auth)) return;
+  const path = currentPath();
+  const requestKey = `${path}:${key}`;
+  const request = Symbol(key);
+  imperativeRequests.set(requestKey, request);
+  const isCurrent = () => isAuthScopeCurrent(auth) && currentPath() === path
+    && imperativeRequests.get(requestKey) === request;
+  const fresh = await trackRevalidation(fetcher, {
+    key, label: resourceLabel(key), lastSuccessAt: peekCacheSavedAt(key),
+    isCurrent,
+    retry: () => swrLoad(key, fetcher, apply),
+  });
+  if (!isCurrent()) return;
   writeCacheValue(key, fresh, auth);
   apply(fresh, { fromCache: false });
   return fresh;

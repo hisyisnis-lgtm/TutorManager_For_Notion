@@ -1,7 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import { isOnFormPage } from './swUpdateGuard.js';
+import { hasUnsavedChanges, setUnsavedChanges } from './unsavedChanges.js';
 
 describe('작성 중 서비스워커 자동 업데이트 유예', () => {
+  it('공지처럼 경로가 그대로인 화면도 변경 중에만 보호하고 저장·이탈 후 해제한다', () => {
+    const notice = Symbol('notice');
+    const location = { pathname: '/', hash: '#/notices' };
+    expect(isOnFormPage(location)).toBe(false);
+    setUnsavedChanges(notice, true);
+    expect(hasUnsavedChanges()).toBe(true);
+    expect(isOnFormPage(location)).toBe(true);
+    setUnsavedChanges(notice, false);
+    expect(hasUnsavedChanges()).toBe(false);
+    expect(isOnFormPage(location)).toBe(false);
+  });
   it.each([
     { pathname: '/personal/ABCD1234EFGH/homework/hw-1', hash: '' },
     { pathname: '/personal/ABCD1234EFGH/homework/hw-1/', hash: '#audio' },

@@ -10,6 +10,7 @@ import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import ErrorMessage from '../components/ui/ErrorMessage.jsx';
 import EmptyState from '../components/ui/EmptyState.jsx';
 import ConfirmDialog from '../components/ui/ConfirmDialog.jsx';
+import useUnsavedChanges from '../hooks/useUnsavedChanges.js';
 import AutoLink from '../components/ui/AutoLink.jsx';
 import { fetchNotices, createNotice, updateNotice, deleteNotice } from '../api/notices.js';
 import { formatDateDot } from '../utils/dateUtils.js';
@@ -27,8 +28,16 @@ export default function NoticesPage() {
   const [list, setList] = useState(null);
   const [error, setError] = useState('');
   const [editing, setEditing] = useState(null); // null | { id?, title, content, visible, important }
+  const [initialDraft, setInitialDraft] = useState(null);
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(null);
+  const isDirty = editing !== null && JSON.stringify(editing) !== JSON.stringify(initialDraft);
+  const leaveGuard = useUnsavedChanges(isDirty);
+
+  const startEditing = (draft) => {
+    setInitialDraft(draft);
+    setEditing(draft);
+  };
 
   const load = async () => {
     setError('');
@@ -55,6 +64,7 @@ export default function NoticesPage() {
       if (editing.id) await updateNotice(editing.id, payload);
       else await createNotice(payload);
       toast.success(editing.id ? '공지를 수정했어요' : '공지를 올렸어요');
+      leaveGuard.markSaved();
       setEditing(null);
       await load();
     } catch (e) {
@@ -82,11 +92,12 @@ export default function NoticesPage() {
   if (editing) {
     return (
       <>
-        <PageHeader title={editing.id ? '공지 수정' : '공지 작성'} back onBack={() => setEditing(null)} />
+        <PageHeader title={editing.id ? '공지 수정' : '공지 작성'} back onBack={() => leaveGuard.requestLeave(() => setEditing(null))} />
         <div className="px-4 py-4 space-y-4">
           <div>
             <label style={LABEL}>제목</label>
             <Input
+              disabled={saving}
               value={editing.title}
               onChange={(e) => setEditing({ ...editing, title: e.target.value })}
               placeholder="예) 추석 연휴 휴강 안내"
@@ -97,6 +108,7 @@ export default function NoticesPage() {
           <div>
             <label style={LABEL}>내용</label>
             <Textarea
+              disabled={saving}
               value={editing.content}
               onChange={(e) => setEditing({ ...editing, content: e.target.value })}
               placeholder="학생들에게 전할 내용을 적어주세요"
@@ -114,7 +126,7 @@ export default function NoticesPage() {
               <p className="text-sm" style={{ color: TEXT_PRIMARY, margin: 0 }}>학생에게 보이기</p>
               <p className="text-xs mt-0.5" style={{ color: TEXT_TERTIARY, margin: 0 }}>끄면 나만 볼 수 있어요</p>
             </div>
-            <Switch checked={editing.visible} onCheckedChange={(v) => setEditing({ ...editing, visible: v })} />
+            <Switch disabled={saving} checked={editing.visible} onCheckedChange={(v) => setEditing({ ...editing, visible: v })} />
           </div>
 
           <div className="flex items-center justify-between" style={{ minHeight: 44 }}>
@@ -122,7 +134,7 @@ export default function NoticesPage() {
               <p className="text-sm" style={{ color: TEXT_PRIMARY, margin: 0 }}>중요 공지</p>
               <p className="text-xs mt-0.5" style={{ color: TEXT_TERTIARY, margin: 0 }}>학생 앱 목록 맨 위에 고정돼요</p>
             </div>
-            <Switch checked={editing.important} onCheckedChange={(v) => setEditing({ ...editing, important: v })} />
+            <Switch disabled={saving} checked={editing.important} onCheckedChange={(v) => setEditing({ ...editing, important: v })} />
           </div>
 
           {/* 알림을 보내지 않는다는 점을 여기서 분명히 알린다 —
@@ -143,6 +155,17 @@ export default function NoticesPage() {
             {editing.id ? '수정 완료' : '공지 올리기'}
           </Button>
         </div>
+        {leaveGuard.showLeaveConfirm && (
+          <ConfirmDialog
+            title="작성 중인 내용을 두고 나갈까요?"
+            message="저장하지 않은 변경 내용이 사라져요."
+            confirmLabel="나가기"
+            cancelLabel="계속 작성"
+            onConfirm={leaveGuard.confirmLeave}
+            onCancel={leaveGuard.cancelLeave}
+            loading={saving}
+          />
+        )}
       </>
     );
   }
@@ -155,7 +178,7 @@ export default function NoticesPage() {
         back
         action={(
           <Button
-            onClick={() => setEditing({ ...emptyDraft })}
+            onClick={() => startEditing({ ...emptyDraft })}
             className="h-9 rounded-full px-3 text-[13px]"
           >
             <PlusIcon size={16} weight="bold" />
@@ -212,7 +235,7 @@ export default function NoticesPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setEditing({ id: n.id, title: n.title, content: n.content, visible: n.visible, important: n.important })}
+                    onClick={() => startEditing({ id: n.id, title: n.title, content: n.content || '', visible: n.visible, important: n.important })}
                   >
                     수정
                   </Button>

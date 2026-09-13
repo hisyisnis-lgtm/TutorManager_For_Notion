@@ -5,6 +5,16 @@
 /intro.html https://tiantianchinese.com/ 301
 /sitemap.xml https://tiantianchinese.com/sitemap-index.xml 301
 
+# 이전 공개 수업 주소는 공식 안내로 통합한다.
+/pricing https://tiantianchinese.com/lessons/ 301
+/pricing/ https://tiantianchinese.com/lessons/ 301
+/pricing.html https://tiantianchinese.com/lessons/ 301
+/group-class https://tiantianchinese.com/lessons/ 301
+/group-class/ https://tiantianchinese.com/lessons/ 301
+/group-class.html https://tiantianchinese.com/lessons/ 301
+/bootcamp https://tiantianchinese.com/lessons/ 301
+/bootcamp/ https://tiantianchinese.com/lessons/ 301
+
 # 앱 루트와 나머지 path는 기존 SPA 진입을 유지한다.
 # hash는 서버에 전달되지 않으므로 / 자체를 외부로 리디렉트하면 앱 링크도 영향을 받는다.
 /* /index.html 200

@@ -107,6 +107,9 @@ export function isAllowedRedirect(target, allowedPrefixes) {
 // 기본 허용 복귀 prefix. env.GAME_AUTH_REDIRECTS(콤마 구분)로 덮어쓸 수 있음.
 export const DEFAULT_REDIRECT_PREFIXES = [
   'https://tiantian-chinese.pages.dev',
+  'https://tiantianchinese.com',
+  'https://www.tiantianchinese.com',
+  'https://tiantianchinese.pages.dev',
   'http://localhost',
   'https://localhost',
   'capacitor://localhost',

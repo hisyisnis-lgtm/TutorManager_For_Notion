@@ -1,0 +1,389 @@
+{
+  "base": "b8ecfc4",
+  "release": "C:\\development\\TutorManager_For_Notion\\99_external\\pwa-live-service-release-20260913",
+  "results": [
+    {
+      "file": "pwa/src/App.jsx",
+      "baseline": "5a0c3f1518681efd4d271eb2d5d3a1fbca8224cedb55e6bac95af82674ee3a04",
+      "source": "17b4dfcae3b02533af65e003292e7a35bffdd5058f76f66cbaa572d09c9ac106",
+      "previous": "630af14ef861065abbbcf9198ed264008712be791ea509c3d2c20f5578ea715f",
+      "status": "merged",
+      "result": "1d5184620056608e20230e8cebd030827029c59a3f10e424204dd862dc233afd"
+    },
+    {
+      "file": "pwa/src/components/StudentAuthGate.jsx",
+      "baseline": "0b68215967b129b9203a2f4f96e3ed5ab1e2826c54e5350fb083cacfd16df0d7",
+      "source": "edbedc848f71dee4905189ef5d73bebdfed62704e675b0f20b18831b25e77517",
+      "previous": "0b68215967b129b9203a2f4f96e3ed5ab1e2826c54e5350fb083cacfd16df0d7",
+      "status": "merged",
+      "result": "edbedc848f71dee4905189ef5d73bebdfed62704e675b0f20b18831b25e77517"
+    },
+    {
+      "file": "pwa/src/pages/PersonalEntryPage.jsx",
+      "baseline": "059f63ffeeb9523e8c0c3a2710d111894e6577ebc420b0a6eff054c47a17c320",
+      "source": "32ff1ec7ebeacb220b87b7fec09caa410e9067a59ebe4b79dd085e10f14ea18f",
+      "previous": "059f63ffeeb9523e8c0c3a2710d111894e6577ebc420b0a6eff054c47a17c320",
+      "status": "merged",
+      "result": "32ff1ec7ebeacb220b87b7fec09caa410e9067a59ebe4b79dd085e10f14ea18f"
+    },
+    {
+      "file": "pwa/src/components/layout/FreshnessIndicator.jsx",
+      "baseline": "77c152e7b153836500274efb43b91cf8e303dce8b54ec018f3e36d278012c657",
+      "source": "153f1c709a7befaac52f6c97cb1b808aec39cee050a0f18b8a5f8a5aaa8716cf",
+      "previous": "77c152e7b153836500274efb43b91cf8e303dce8b54ec018f3e36d278012c657",
+      "status": "merged",
+      "result": "153f1c709a7befaac52f6c97cb1b808aec39cee050a0f18b8a5f8a5aaa8716cf"
+    },
+    {
+      "file": "pwa/src/context/DataContext.jsx",
+      "baseline": "c5eb1cc27ae3ab6f48e22f4a52cca9fd568de7634d400dc36b0366ac056046fb",
+      "source": "c680891cb0e66a12e783147cfa91874aa92ea9bc1335b38d3f754554a101c2b5",
+      "previous": "c5eb1cc27ae3ab6f48e22f4a52cca9fd568de7634d400dc36b0366ac056046fb",
+      "status": "merged",
+      "result": "c680891cb0e66a12e783147cfa91874aa92ea9bc1335b38d3f754554a101c2b5"
+    },
+    {
+      "file": "pwa/src/hooks/useCachedResource.js",
+      "baseline": "7c51c7013e6aeafffc140ea19998865c5d18cd62ad2380ea3da6c4ef48473f57",
+      "source": "d804a567c332b91d0e686c7e9ae217ce71fdd897644201975d4e3c9e3ce3b1a2",
+      "previous": "7c51c7013e6aeafffc140ea19998865c5d18cd62ad2380ea3da6c4ef48473f57",
+      "status": "merged",
+      "result": "d804a567c332b91d0e686c7e9ae217ce71fdd897644201975d4e3c9e3ce3b1a2"
+    },
+    {
+      "file": "pwa/src/pages/PersonalPage.jsx",
+      "baseline": "635412df91817990bbf7dd27fb456e4b9287b39666c2f07a85bb003437d8e332",
+      "source": "80fa2f7eba213679c7fde623a01d5746d903637b1e5f8ff71527838f375d2dde",
+      "previous": "635412df91817990bbf7dd27fb456e4b9287b39666c2f07a85bb003437d8e332",
+      "status": "merged",
+      "result": "80fa2f7eba213679c7fde623a01d5746d903637b1e5f8ff71527838f375d2dde"
+    },
+    {
+      "file": "pwa/src/pages/personal/HomeTab.jsx",
+      "baseline": "40948589b2cb94ec10190ffdb651fa84939d8077be853f07ca21e85b33088ebe",
+      "source": "9300a1a6dea5427b8f53632e27404bb31a074beb753633d62023a9933683ab12",
+      "previous": "40948589b2cb94ec10190ffdb651fa84939d8077be853f07ca21e85b33088ebe",
+      "status": "merged",
+      "result": "9300a1a6dea5427b8f53632e27404bb31a074beb753633d62023a9933683ab12"
+    },
+    {
+      "file": "pwa/src/pages/personal/MyTab.jsx",
+      "baseline": "90b001bbd41e201cd9cea57dfbbfce804648c3f6cff7a8371ddb14bf93b89221",
+      "source": "aa99096fd1008bd5b99e0cc660d2f13e570e7e671475a9927f773a79e314cc6e",
+      "previous": "90b001bbd41e201cd9cea57dfbbfce804648c3f6cff7a8371ddb14bf93b89221",
+      "status": "merged",
+      "result": "aa99096fd1008bd5b99e0cc660d2f13e570e7e671475a9927f773a79e314cc6e"
+    },
+    {
+      "file": "pwa/src/pages/LessonLogFormPage.jsx",
+      "baseline": "7d4589239b01a00cf453e209c94f851d7956a0b15676e156fa5d91bf380291de",
+      "source": "7394f60be4ceb2bd04d0cbcbd39e1bbc3d5137be53fb06d6a508b23d8295d57c",
+      "previous": "7d4589239b01a00cf453e209c94f851d7956a0b15676e156fa5d91bf380291de",
+      "status": "merged",
+      "result": "7394f60be4ceb2bd04d0cbcbd39e1bbc3d5137be53fb06d6a508b23d8295d57c"
+    },
+    {
+      "file": "pwa/src/pages/NoticesPage.jsx",
+      "baseline": "2e04a2e0d1fed51e7739f4c3cc0a2921e12b0f59f3f06ad5f7682e813073336c",
+      "source": "af4f519203198506b2e7e31c4cf927c663d963d1b7472e5dac37fdc720cb8530",
+      "previous": "2e04a2e0d1fed51e7739f4c3cc0a2921e12b0f59f3f06ad5f7682e813073336c",
+      "status": "merged",
+      "result": "af4f519203198506b2e7e31c4cf927c663d963d1b7472e5dac37fdc720cb8530"
+    },
+    {
+      "file": "pwa/src/utils/swUpdateGuard.js",
+      "baseline": "5a062c06c5bf0e0e8ff3164bafa7c2af270beb09ba5f1702be4ff89ba667772f",
+      "source": "2794898bed06b8f12905dea2aa12c37943d047251549a5fef5bbc2c8047b73ba",
+      "previous": "5a062c06c5bf0e0e8ff3164bafa7c2af270beb09ba5f1702be4ff89ba667772f",
+      "status": "merged",
+      "result": "2794898bed06b8f12905dea2aa12c37943d047251549a5fef5bbc2c8047b73ba"
+    },
+    {
+      "file": "pwa/src/pages/NotificationsPage.jsx",
+      "baseline": "31fc42658acfafb3ed271cd61c88ab89d4d3b59a73d6964511d422234bbe9fd0",
+      "source": "0c4b96a1b399e82d64bdf5bc618f18cc61c9a21071ea70306331f4afadf584a8",
+      "previous": "31fc42658acfafb3ed271cd61c88ab89d4d3b59a73d6964511d422234bbe9fd0",
+      "status": "merged",
+      "result": "0c4b96a1b399e82d64bdf5bc618f18cc61c9a21071ea70306331f4afadf584a8"
+    },
+    {
+      "file": "pwa/src/api/homework.js",
+      "baseline": "c7c33c3f316661bdffe110011096fa9c1d237fa4f4b6371e2ea48c8f7780f65e",
+      "source": "f06b6fddfd3e9c96e83ee9e1e07211b0d75694448af6b09c57561ffec849e970",
+      "previous": "c7c33c3f316661bdffe110011096fa9c1d237fa4f4b6371e2ea48c8f7780f65e",
+      "status": "merged",
+      "result": "f06b6fddfd3e9c96e83ee9e1e07211b0d75694448af6b09c57561ffec849e970"
+    },
+    {
+      "file": "pwa/src/pages/HomeworkFormPage.jsx",
+      "baseline": "f999daacc1fcc41f0affda3c1b297a10be413eb4a3e8470983f1229b9d10ec46",
+      "source": "10afa30f914f0973ba0cf3d37fc373dd29e644354a5f4da5f5d64eae97b1497b",
+      "previous": "f999daacc1fcc41f0affda3c1b297a10be413eb4a3e8470983f1229b9d10ec46",
+      "status": "merged",
+      "result": "10afa30f914f0973ba0cf3d37fc373dd29e644354a5f4da5f5d64eae97b1497b"
+    },
+    {
+      "file": "pwa/src/pages/HomeworkDetailPage.jsx",
+      "baseline": "40ef1b89f3572880d0225fe6dbe0f71bd77d68b06c2a927a1599aa82085f8473",
+      "source": "ba0959912e9dd3859ec08f0a2e6bf478f1a7e25639abac357c1923a48539c321",
+      "previous": "40ef1b89f3572880d0225fe6dbe0f71bd77d68b06c2a927a1599aa82085f8473",
+      "status": "merged",
+      "result": "ba0959912e9dd3859ec08f0a2e6bf478f1a7e25639abac357c1923a48539c321"
+    },
+    {
+      "file": "pwa/src/pages/ConsentPage.jsx",
+      "baseline": "fa465f3ad2763c07d34bde1bd892442884595f090313891420ee1d21ed055d06",
+      "source": "f248555755126e91fa868022a6d1ff2c28aec18826e91609aa6b7d5b8d735b6e",
+      "previous": "fa465f3ad2763c07d34bde1bd892442884595f090313891420ee1d21ed055d06",
+      "status": "merged",
+      "result": "f248555755126e91fa868022a6d1ff2c28aec18826e91609aa6b7d5b8d735b6e"
+    },
+    {
+      "file": "pwa/src/pages/SettingsPage.jsx",
+      "baseline": "79c854e69d82e0fe065b7a87b04bd694711d6609d57168d4193153c3b017e4e5",
+      "source": "12bf2718a45ae27ee9edb6301e3b3e328da7552a5ac38a21ab56931d5a78630e",
+      "previous": "79c854e69d82e0fe065b7a87b04bd694711d6609d57168d4193153c3b017e4e5",
+      "status": "merged",
+      "result": "12bf2718a45ae27ee9edb6301e3b3e328da7552a5ac38a21ab56931d5a78630e"
+    },
+    {
+      "file": "pwa/src/hooks/useUnsavedChanges.js",
+      "baseline": null,
+      "source": "23362ce6fb594fcdc78cd317b5788a2bfd406759429c2593b9f3d668c20b0be9",
+      "previous": null,
+      "status": "added",
+      "result": "23362ce6fb594fcdc78cd317b5788a2bfd406759429c2593b9f3d668c20b0be9"
+    },
+    {
+      "file": "pwa/src/utils/unsavedChanges.js",
+      "baseline": null,
+      "source": "927332df30eabff980a4107c315aac9bd33813a295590d09d6b7eca8eedd36db",
+      "previous": null,
+      "status": "added",
+      "result": "927332df30eabff980a4107c315aac9bd33813a295590d09d6b7eca8eedd36db"
+    },
+    {
+      "file": "pwa/src/api/notificationFollowups.js",
+      "baseline": null,
+      "source": "956879b940d9f0badf8ae754c88feb74a2c7b823dd98b4288c7ab913ff196bb6",
+      "previous": null,
+      "status": "added",
+      "result": "956879b940d9f0badf8ae754c88feb74a2c7b823dd98b4288c7ab913ff196bb6"
+    },
+    {
+      "file": "pwa/src/components/ui/NotificationFollowups.jsx",
+      "baseline": null,
+      "source": "9fbb773d546c6453876889c898b2969d43e173527ea2a587d247e444225a3957",
+      "previous": null,
+      "status": "added",
+      "result": "9fbb773d546c6453876889c898b2969d43e173527ea2a587d247e444225a3957"
+    },
+    {
+      "file": "pwa/src/api/consent.js",
+      "baseline": null,
+      "source": "6b8e7251f795d65d67aedf189b9d017e1ece753b63f54382c3f38d1b8392c6e3",
+      "previous": null,
+      "status": "added",
+      "result": "6b8e7251f795d65d67aedf189b9d017e1ece753b63f54382c3f38d1b8392c6e3"
+    },
+    {
+      "file": "pwa/src/pages/PricingPage.jsx",
+      "baseline": "a40db03c09f32d4bbe22b581f610c1589096a0bb62dd0eb83437199df41955a5",
+      "source": "77be81b6221992ce77f95d14feac68c7a69093bedcf9080a51539810013aa6ca",
+      "previous": "a40db03c09f32d4bbe22b581f610c1589096a0bb62dd0eb83437199df41955a5",
+      "status": "merged",
+      "result": "77be81b6221992ce77f95d14feac68c7a69093bedcf9080a51539810013aa6ca"
+    },
+    {
+      "file": "pwa/src/pages/GroupClassPage.jsx",
+      "baseline": "e31398f596c428b4c919f63ff6646ef4466a433e2f575bd7bfcd095f0a14b25a",
+      "source": "77be81b6221992ce77f95d14feac68c7a69093bedcf9080a51539810013aa6ca",
+      "previous": "e31398f596c428b4c919f63ff6646ef4466a433e2f575bd7bfcd095f0a14b25a",
+      "status": "merged",
+      "result": "77be81b6221992ce77f95d14feac68c7a69093bedcf9080a51539810013aa6ca"
+    },
+    {
+      "file": "pwa/src/pages/LandingPage.jsx",
+      "baseline": "a8ecbdede9e4a2f5efd67459fa1d21583f8633bb47394b692cb7003930971c1a",
+      "source": "fbc1dbe317afafcd857b86f9f3b5fd9d221d908fca2cb9ab798cc2b945ccf1cb",
+      "previous": "a8ecbdede9e4a2f5efd67459fa1d21583f8633bb47394b692cb7003930971c1a",
+      "status": "merged",
+      "result": "fbc1dbe317afafcd857b86f9f3b5fd9d221d908fca2cb9ab798cc2b945ccf1cb"
+    },
+    {
+      "file": "pwa/src/components/IntroContent.jsx",
+      "baseline": "5bc59ea15f8bff5aa7ea00016ea487205b14feac7699b920b2784750341f81a2",
+      "source": "9d910f3975e125fb0079f2a3fa1302dc7f45be8324c1272c7157b3cf60adda56",
+      "previous": "5bc59ea15f8bff5aa7ea00016ea487205b14feac7699b920b2784750341f81a2",
+      "status": "merged",
+      "result": "9d910f3975e125fb0079f2a3fa1302dc7f45be8324c1272c7157b3cf60adda56"
+    },
+    {
+      "file": "pwa/src/components/public/CtaSection.jsx",
+      "baseline": "5c16420d6f5ee302c8f26cb4b65bbe8c362027efc72120c7623648462220e29a",
+      "source": "3ab8ff8196438b4eadbfcf3f8898d123650afd920633196c779aa09e8af33cf8",
+      "previous": "5c16420d6f5ee302c8f26cb4b65bbe8c362027efc72120c7623648462220e29a",
+      "status": "merged",
+      "result": "3ab8ff8196438b4eadbfcf3f8898d123650afd920633196c779aa09e8af33cf8"
+    },
+    {
+      "file": "pwa/src/components/public/FloatingCtaButton.jsx",
+      "baseline": "a59031e23a438c094ae9319c0e3e9a0434bf025efca6f76999637ee0b85442dd",
+      "source": "f11ebcf01137fda0527199bbdf68fe43860a64a9d425fab065a62826d4f9a181",
+      "previous": "a59031e23a438c094ae9319c0e3e9a0434bf025efca6f76999637ee0b85442dd",
+      "status": "merged",
+      "result": "f11ebcf01137fda0527199bbdf68fe43860a64a9d425fab065a62826d4f9a181"
+    },
+    {
+      "file": "pwa/src/components/public/PublicHeader.jsx",
+      "baseline": "a3ea50f5defdb8fd1cddb90c86fac177a43bc921693adb9d1333e374da161ebe",
+      "source": "e231ebbf23ad20532122480486ba19043eae95aebf2e7bba5a38888cbf740fbc",
+      "previous": "a3ea50f5defdb8fd1cddb90c86fac177a43bc921693adb9d1333e374da161ebe",
+      "status": "merged",
+      "result": "e231ebbf23ad20532122480486ba19043eae95aebf2e7bba5a38888cbf740fbc"
+    },
+    {
+      "file": "pwa/src/components/public/OfficialLessonsPage.jsx",
+      "baseline": null,
+      "source": "147e426ab900ab21aee6aaefaa4690cef3d070c49ee1273efe0d632fe715c1c5",
+      "previous": null,
+      "status": "added",
+      "result": "147e426ab900ab21aee6aaefaa4690cef3d070c49ee1273efe0d632fe715c1c5"
+    },
+    {
+      "file": "pwa/src/components/StudentAuthGate.test.jsx",
+      "baseline": "a76f8427d5da28ad79a8953600c2a6ee09dafbdf4648035d7d17a85433f0e907",
+      "source": "8c22a0c0b05a447dfc293d1071f9a31c5284cd11a51ef1ae81337ed2df189c75",
+      "previous": "a76f8427d5da28ad79a8953600c2a6ee09dafbdf4648035d7d17a85433f0e907",
+      "status": "merged",
+      "result": "8c22a0c0b05a447dfc293d1071f9a31c5284cd11a51ef1ae81337ed2df189c75"
+    },
+    {
+      "file": "pwa/src/pages/PersonalEntryPage.test.jsx",
+      "baseline": "6a76878310e123692ba7fea356252e1e4b6c8bdeebfd1ec8ee0c2ef36dcf05a0",
+      "source": "b4f8adc2c77ab95d55c49801d3b8b511b70db29b061a7edf4e47b08cdee80fd7",
+      "previous": "6a76878310e123692ba7fea356252e1e4b6c8bdeebfd1ec8ee0c2ef36dcf05a0",
+      "status": "merged",
+      "result": "b4f8adc2c77ab95d55c49801d3b8b511b70db29b061a7edf4e47b08cdee80fd7"
+    },
+    {
+      "file": "pwa/src/components/layout/FreshnessIndicator.test.jsx",
+      "baseline": null,
+      "source": "8ee8f7d09556ba9f9d85a6a2ccac9339ac4d1b234bf49caaacf80103f4dba19b",
+      "previous": null,
+      "status": "added",
+      "result": "8ee8f7d09556ba9f9d85a6a2ccac9339ac4d1b234bf49caaacf80103f4dba19b"
+    },
+    {
+      "file": "pwa/src/context/DataContext.test.jsx",
+      "baseline": "85c10d8ca255ba3d2031cb8c298d7dc06746b731881478d61cf50042fcfc1361",
+      "source": "aeb9a4a68b994c93be9893e60958dd0966dd4e9e35d0c5a3c4c2cf02f4d0fdc2",
+      "previous": "85c10d8ca255ba3d2031cb8c298d7dc06746b731881478d61cf50042fcfc1361",
+      "status": "merged",
+      "result": "aeb9a4a68b994c93be9893e60958dd0966dd4e9e35d0c5a3c4c2cf02f4d0fdc2"
+    },
+    {
+      "file": "pwa/src/pages/PersonalPage.test.jsx",
+      "baseline": "56357d7ba7da8484fb1f98d134f218e40cbaad208e914aff3ea66546b24e6db8",
+      "source": "1806ffd4ae7fbfa7dad6cdc91db9f66df4df7f2c78fdcf79c82db451847d00e3",
+      "previous": "56357d7ba7da8484fb1f98d134f218e40cbaad208e914aff3ea66546b24e6db8",
+      "status": "merged",
+      "result": "1806ffd4ae7fbfa7dad6cdc91db9f66df4df7f2c78fdcf79c82db451847d00e3"
+    },
+    {
+      "file": "pwa/src/pages/personal/HomeTab.test.jsx",
+      "baseline": null,
+      "source": "721d3a466e6cf07d1a7c8fc061c021200cf570413d91db68be96879289697380",
+      "previous": null,
+      "status": "added",
+      "result": "721d3a466e6cf07d1a7c8fc061c021200cf570413d91db68be96879289697380"
+    },
+    {
+      "file": "pwa/src/pages/personal/MyTab.test.jsx",
+      "baseline": null,
+      "source": "59ef9c1fc3d4d67325d95bdfe17b8944ce63cd27de668a0cc7c1795adbe74e40",
+      "previous": null,
+      "status": "added",
+      "result": "59ef9c1fc3d4d67325d95bdfe17b8944ce63cd27de668a0cc7c1795adbe74e40"
+    },
+    {
+      "file": "pwa/src/pages/LessonLogFormPage.test.jsx",
+      "baseline": "f7b199ef9521b42935d5a336c1c006c75b2ec794190b2cd564d715719e753ae2",
+      "source": "9f532d1fef74a266ab59c61c8d2c2131d50b6f5a00aff6e799dd06f18f776fd6",
+      "previous": "f7b199ef9521b42935d5a336c1c006c75b2ec794190b2cd564d715719e753ae2",
+      "status": "merged",
+      "result": "9f532d1fef74a266ab59c61c8d2c2131d50b6f5a00aff6e799dd06f18f776fd6"
+    },
+    {
+      "file": "pwa/src/pages/NoticesPage.test.jsx",
+      "baseline": null,
+      "source": "2702e6688a71ef37c34a467a0fc3ca8cac7fc761c91f4a0ff4ba70043ea2c408",
+      "previous": null,
+      "status": "added",
+      "result": "2702e6688a71ef37c34a467a0fc3ca8cac7fc761c91f4a0ff4ba70043ea2c408"
+    },
+    {
+      "file": "pwa/src/utils/swUpdateGuard.test.js",
+      "baseline": "b54740b931d87143e97eaec6662d2f68ef24a288b4bb4bbb1d2497545957ef1c",
+      "source": "2fe6cdb77a90d17905e00335afc35d11629f893173f7865a2cb2c6ce915e0bbb",
+      "previous": "b54740b931d87143e97eaec6662d2f68ef24a288b4bb4bbb1d2497545957ef1c",
+      "status": "merged",
+      "result": "2fe6cdb77a90d17905e00335afc35d11629f893173f7865a2cb2c6ce915e0bbb"
+    },
+    {
+      "file": "pwa/src/pages/NotificationsPage.test.jsx",
+      "baseline": "174c217fc8be584ff367a371ea647839d05718a97547fb6ce9a9ed3ddcbfd1d8",
+      "source": "7ee915a0eb3a67bcc6b9363f90fb03809f3f0e6e4f84f5761dd1389ee17ae90f",
+      "previous": "174c217fc8be584ff367a371ea647839d05718a97547fb6ce9a9ed3ddcbfd1d8",
+      "status": "merged",
+      "result": "7ee915a0eb3a67bcc6b9363f90fb03809f3f0e6e4f84f5761dd1389ee17ae90f"
+    },
+    {
+      "file": "pwa/src/pages/ConsentPage.test.jsx",
+      "baseline": null,
+      "source": "ad4d658394196bbc9389031ded61329874ea9508a6d884a959c6d2d4660156f6",
+      "previous": null,
+      "status": "added",
+      "result": "ad4d658394196bbc9389031ded61329874ea9508a6d884a959c6d2d4660156f6"
+    },
+    {
+      "file": "pwa/src/pages/SettingsPage.test.jsx",
+      "baseline": "a3e8b91483f3c0b047155e8ab6bff63492636325fdeaba31f35b8dafe1ae89df",
+      "source": "a3e8b91483f3c0b047155e8ab6bff63492636325fdeaba31f35b8dafe1ae89df",
+      "previous": "a3e8b91483f3c0b047155e8ab6bff63492636325fdeaba31f35b8dafe1ae89df",
+      "status": "already-current"
+    },
+    {
+      "file": "pwa/src/api/notificationFollowups.test.js",
+      "baseline": null,
+      "source": "78003d456df7a49dd5d61ab2aaab53b9c9ee922928764055b7cc300a6c573095",
+      "previous": null,
+      "status": "added",
+      "result": "78003d456df7a49dd5d61ab2aaab53b9c9ee922928764055b7cc300a6c573095"
+    },
+    {
+      "file": "pwa/src/components/ui/NotificationFollowups.test.jsx",
+      "baseline": null,
+      "source": "c04a5d11906bbe23158c621585db64bc12909d9bd6ee87784c6c21ce600ce836",
+      "previous": null,
+      "status": "added",
+      "result": "c04a5d11906bbe23158c621585db64bc12909d9bd6ee87784c6c21ce600ce836"
+    },
+    {
+      "file": "pwa/src/api/consent.test.js",
+      "baseline": null,
+      "source": "fb5be057c8ff1e0437f04b23d4d6b05aa660701696258a7a89fee967647f1cc1",
+      "previous": null,
+      "status": "added",
+      "result": "fb5be057c8ff1e0437f04b23d4d6b05aa660701696258a7a89fee967647f1cc1"
+    },
+    {
+      "file": "pwa/src/pages/LandingPage.test.jsx",
+      "baseline": null,
+      "source": "640a0eff00e225cd4530057cbf3b4ade49d9d5dd09d0c154bd40d0df5352ae7b",
+      "previous": null,
+      "status": "added",
+      "result": "640a0eff00e225cd4530057cbf3b4ade49d9d5dd09d0c154bd40d0df5352ae7b"
+    }
+  ]
+}

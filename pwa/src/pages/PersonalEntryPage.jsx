@@ -2,12 +2,13 @@ import {
   useState,
   useEffect,
   useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { usePullToRefresh,
   PullIndicator } from '../hooks/usePullToRefresh.jsx';
 import { Button } from '../components/shadcn/button';
 import { Card, CardContent } from '../components/shadcn/card';
 import { Input } from '../components/shadcn/input';
+import { KAKAO_CHANNEL_CHAT_URL } from '../constants.js';
 import PublicHeader from '../components/public/PublicHeader.jsx';
 import PublicFooter from '../components/public/PublicFooter.jsx';
 import {
@@ -23,14 +24,18 @@ const SAVED_TOKEN_KEY = 'personal_student_token';
 
 export default function PersonalEntryPage() {
   const navigate = useNavigate();
+  const { state } = useLocation();
   const [code, setCode] = useState('');
   const [error, setError] = useState(null);
 
   // 저장된 코드 있으면 자동 이동
   useEffect(() => {
-    const saved = localStorage.getItem(SAVED_TOKEN_KEY);
-    if (saved) navigate(`/personal/${encodeURIComponent(saved)}`, { replace: true });
-  }, [navigate]);
+    if (state?.reenterCode) return;
+    try {
+      const saved = localStorage.getItem(SAVED_TOKEN_KEY);
+      if (saved) navigate(`/personal/${encodeURIComponent(saved)}`, { replace: true });
+    } catch { /* 저장소를 사용할 수 없어도 코드는 직접 입력할 수 있다. */ }
+  }, [navigate, state?.reenterCode]);
 
   const { pullY, refreshing } = usePullToRefresh(useCallback(() => window.location.reload(), []));
 
@@ -151,9 +156,12 @@ export default function PersonalEntryPage() {
             </CardContent>
           </Card>
 
-          <p style={{ textAlign: 'center', fontSize: 13, color: TEXT_INACTIVE, marginTop: 16 }}>
-            코드를 모르시면 강사님께 카카오톡으로 문의해주세요 💬
+          <p style={{ textAlign: 'center', fontSize: 13, color: TEXT_INACTIVE, marginTop: 16, marginBottom: 0 }}>
+            학생 코드를 모르거나 접속이 어려우신가요?
           </p>
+          <Button variant="ghost" block asChild>
+            <a href={KAKAO_CHANNEL_CHAT_URL} target="_blank" rel="noopener noreferrer">선생님께 문의</a>
+          </Button>
         </form>
       </div>
 

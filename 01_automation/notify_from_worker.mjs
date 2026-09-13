@@ -7,6 +7,7 @@
 // 페이로드: { title, message, level? }
 
 import { sendAlert } from './notion_utils.mjs';
+import { reportNotificationRelay } from './notification_followups.mjs';
 
 const raw = process.env.PAYLOAD || '{}';
 let payload;
@@ -23,4 +24,11 @@ if (typeof title !== 'string' || !title.trim() || typeof message !== 'string' ||
   process.exit(1);
 }
 
-await sendAlert({ level, title, message });
+let outcome = 'unknown';
+try {
+  await sendAlert({ level, title, message });
+  outcome = 'accepted';
+} catch (error) {
+  outcome = error?.result?.state === 'failed' ? 'failed' : 'unknown';
+  throw error;
+} finally { await reportNotificationRelay(payload.followup, outcome); }

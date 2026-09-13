@@ -164,15 +164,18 @@ export async function saveFeedback(id, { feedbackText, files, existingFiles, fil
 }
 
 /**
- * 학생에게 카카오 알림톡 발송 요청 (fire-and-forget)
+ * 저장과 별도로 알림 접수 결과를 안내한다. 응답 불명확 시 재발송하지 않는다.
  * kind: 'assign' | 'feedback'
- * Worker 쪽에서 템플릿/Secret 미설정 시 no-op 처리되므로 실패해도 흐름 중단 안 함.
+ * 실패를 throw하지 않아 이미 끝난 숙제/피드백 저장을 실패로 바꾸지 않는다.
  */
 export async function notifyHomework(kind, homeworkId) {
   const bearer = getToken();
+  const auth = captureAuthScope();
+  const ignored = { ok: false, ignored: true };
+  if (!bearer) return ignored;
   try {
     const path = kind === 'feedback' ? '/homework/notify-feedback' : '/homework/notify-assign';
-    const res = await fetch(`${WORKER_URL}${path}`, {
+    const res = await fetchWithTimeout(`${WORKER_URL}${path}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -181,8 +184,16 @@ export async function notifyHomework(kind, homeworkId) {
       body: JSON.stringify({ homeworkId }),
     });
     if (res.status === 401) handleTeacherAuthExpiry(bearer);
-  } catch (e) {
-    console.warn('[notifyHomework] 실패:', e.message);
+    const data = await res.json().catch(() => null);
+    if (!isAuthScopeCurrent(auth)) return ignored;
+    if (res.ok && data?.ok && data.sent === true && data.delivery === 'accepted') return { ok: true, state: 'accepted' };
+    const state = data?.delivery === 'failed' || ['no_phone', 'no_token'].includes(data?.reason) ? 'failed' : 'unknown';
+    return { ok: false, state, message: state === 'failed'
+      ? '저장은 완료됐지만 알림은 접수되지 않았어요. 알림함에서 발송 후속 기록을 확인해 주세요.'
+      : '저장은 완료됐지만 알림 접수 여부를 확인하지 못했어요. 다시 보내기 전에 알림함이나 발송 내역을 확인해 주세요.' };
+  } catch {
+    if (!isAuthScopeCurrent(auth)) return ignored;
+    return { ok: false, state: 'unknown', message: '저장은 완료됐지만 알림 접수 여부를 확인하지 못했어요. 다시 보내기 전에 알림함이나 발송 내역을 확인해 주세요.' };
   }
 }
 

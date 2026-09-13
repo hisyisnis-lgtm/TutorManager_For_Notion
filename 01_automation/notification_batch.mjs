@@ -6,7 +6,7 @@ const KNOWN_STATES = new Set(['pending', 'accepted', 'failed', 'unknown']);
  * pending/unknown은 이미 접수되었을 수 있으므로 자동으로 다시 보내지 않는다.
  * ledger.record는 동기적으로 기록을 완료하거나 예외를 던져야 한다.
  */
-export async function sendNotificationBatch({ notifications, ledger, sendKakao } = {}) {
+export async function sendNotificationBatch({ notifications, ledger, sendKakao, onResult } = {}) {
   if (!Array.isArray(notifications)
     || !notifications.every(item => item && typeof item === 'object' && !Array.isArray(item)
       && typeof item.key === 'string' && DELIVERY_KEY.test(item.key))
@@ -50,6 +50,10 @@ export async function sendNotificationBatch({ notifications, ledger, sendKakao }
   }
 
   console.log(`[kakao] 배치 결과: 접수 ${counts.sent}, 기존 접수 ${counts.alreadyAccepted}, 실패 ${counts.failed}, 결과 불명 ${counts.unknown}`);
+  if (onResult) {
+    try { await onResult(counts); }
+    catch { console.error('[notification-followups] 배치 결과 보관 실패'); }
+  }
   if (counts.failed > 0 || counts.unknown > 0) {
     const error = new Error('일부 알림이 접수되지 않았거나 접수 결과를 확인할 수 없습니다.');
     error.counts = counts;

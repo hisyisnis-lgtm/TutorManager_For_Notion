@@ -1,0 +1,13 @@
+{
+  "pwa": [
+    {
+      "prefix": "/assets/index-Dgh3ZfNf.js",
+      "reason": "공개 가격과 동의서 금액이 포함된 이전 운영 번들. 정책에 따라 재공개하지 않는다."
+    },
+    {
+      "prefix": "/assets/index-kC_0tvip.js",
+      "reason": "공개 가격 정리 직전 로컬 번들. 정책에 따라 재공개하지 않는다."
+    }
+  ],
+  "site": []
+}

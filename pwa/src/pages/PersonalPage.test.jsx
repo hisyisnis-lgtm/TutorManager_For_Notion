@@ -3,6 +3,7 @@ import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import PersonalPage from './PersonalPage.jsx';
 import { fetchStudentByToken } from '../api/bookingApi.js';
+import { fetchMyHomework } from '../api/homework.js';
 import { setStudentSession } from '../api/studentAuth.js';
 import { fixtureSession } from '../api/authFixtures.js';
 import { notifyAuthChange } from '../api/authState.js';
@@ -10,7 +11,17 @@ import { notifyAuthChange } from '../api/authState.js';
 vi.mock('../api/bookingApi.js', () => ({ fetchStudentByToken: vi.fn() }));
 vi.mock('../api/homework.js', () => ({ fetchMyHomework: vi.fn(async () => []), parseHomework: h => h }));
 vi.mock('../api/notices.js', () => ({ fetchStudentNotices: vi.fn(async () => []) }));
-vi.mock('./personal/HomeTab.jsx', () => ({ default: () => <p>학생 홈 콘텐츠</p> }));
+vi.mock('./personal/HomeTab.jsx', () => ({ default: ({ hwLoading, hwError, hwAlerts, onRetryHomework }) => <>
+  <p>학생 홈 콘텐츠</p>
+  {hwLoading && <p>숙제 로딩</p>}
+  {hwError && <><p>{hwError}</p><button onClick={onRetryHomework}>숙제 재시도</button></>}
+  {hwAlerts?.pending?.map(hw => <p key={hw.id}>{hw.title}</p>)}
+</> }));
+vi.mock('@phosphor-icons/react', () => ({
+  HouseIcon: () => null, BookOpenIcon: () => null, BellIcon: () => null, GearSixIcon: () => null,
+  ArchiveIcon: () => null, UserIcon: () => null, WarningCircleIcon: () => null,
+  CircleNotchIcon: () => null, CaretLeftIcon: () => null,
+}));
 vi.mock('./personal/MyClassesTab.jsx', () => ({ default: () => null }));
 vi.mock('./personal/ArchiveTab.jsx', () => ({ default: () => null }));
 vi.mock('./personal/NoticeTab.jsx', () => ({ default: () => null }));
@@ -33,10 +44,30 @@ beforeEach(() => {
   localStorage.clear(); sessionStorage.clear(); notifyAuthChange();
   setStudentSession(token, fixtureSession('student', `personal:${token}`));
   vi.mocked(fetchStudentByToken).mockReset();
+  vi.mocked(fetchMyHomework).mockReset().mockResolvedValue([]);
 });
 afterEach(() => { cleanup(); localStorage.clear(); sessionStorage.clear(); notifyAuthChange(); vi.restoreAllMocks(); });
 
 describe('학생 조회 오류에서 복구', () => {
+  it('숙제 실패 상태를 홈에 전달하고 재시도 성공 시 제거한다', async () => {
+    vi.mocked(fetchStudentByToken).mockResolvedValue({ ...recovered, homeworkEnabled: true });
+    vi.mocked(fetchMyHomework).mockRejectedValueOnce(new Error('숙제 조회 실패'))
+      .mockResolvedValueOnce([{ id: 'hw', title: '복구된 숙제', status: '미제출' }]);
+    renderPage();
+    expect(await screen.findByText('숙제를 불러오지 못했어요')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: '숙제 재시도' }));
+    expect(await screen.findByText('복구된 숙제')).toBeTruthy();
+    expect(screen.queryByText('숙제를 불러오지 못했어요')).toBeNull();
+  });
+
+  it('캐시가 있는 학생 정보 조회 실패는 기존 홈을 유지한다', async () => {
+    sessionStorage.setItem(`swr_student:info:${token}`, JSON.stringify({ savedAt: Date.now() - 60000, value: recovered }));
+    vi.mocked(fetchStudentByToken).mockRejectedValue(new Error('최신 정보 조회 실패'));
+    renderPage();
+    expect(await screen.findByText('학생 홈 콘텐츠')).toBeTruthy();
+    expect(screen.getByRole('heading', { name: /테스트 학생님/ })).toBeTruthy();
+  });
+
   it('재시도가 성공하면 오류가 사라지고 학생 홈을 표시한다', async () => {
     let resolveRetry;
     vi.mocked(fetchStudentByToken).mockRejectedValueOnce(new Error('네트워크 연결 실패'))

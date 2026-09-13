@@ -35,10 +35,7 @@ jobs:
 
       - name: 버전 동기화 (git 태그 → package.json)
         if: startsWith(github.ref, 'refs/tags/')
-        run: |
-          VERSION=${GITHUB_REF_NAME#v}
-          npm version "$VERSION" --no-git-tag-version || true
-        working-directory: pwa
+        run: node 02_devtools/release-guard.mjs sync-version
 
       - name: 의존성 설치
         if: steps.npm-cache.outputs.cache-hit != 'true'
@@ -59,16 +56,51 @@ jobs:
         run: npm run generate-icons
         working-directory: pwa
 
-      - name: PWA 빌드
+      - name: 배포 보호 도구 회귀 검사
+        run: node --test 02_devtools/release-guard.test.mjs 02_devtools/public-price-check.test.mjs
+
+      - name: 동일 소스 테스트·린트·감사·빌드 및 해시 기록
         env:
           VITE_WORKER_URL: ${{ secrets.VITE_WORKER_URL }}
-        run: npm run build
-        working-directory: pwa
+        run: node 02_devtools/release-guard.mjs check pwa
+
+      - name: 직전 운영 기록 및 이전 세션 자산 보존
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node 02_devtools/pages-release.mjs prepare pwa
+
+      - name: 배포 직전 소스·산출물·운영 버전 재확인
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node 02_devtools/pages-release.mjs assert pwa
 
       - name: Cloudflare Pages 배포
+        id: deploy
         uses: cloudflare/wrangler-action@ebbaa1584979971c8614a24965b4405ff95890e0 # v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           wranglerVersion: '4.129.1'
           command: pages deploy pwa/dist --project-name=tiantian-chinese --branch=main --commit-dirty=true --commit-message="Deploy ${{ github.ref_name }}" --commit-hash=${{ github.sha }}
+
+      - name: 배포 결과 및 공개·자산·인증 경계 확인 (GET만)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          DEPLOYMENT_URL: ${{ steps.deploy.outputs.deployment-url }}
+          VITE_WORKER_URL: ${{ secrets.VITE_WORKER_URL }}
+        run: node 02_devtools/pages-release.mjs finish pwa
+
+      - name: 후보 산출물과 배포 기록 보관
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: pwa-release-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            pwa/dist
+            .tmp_qa/release-gate/pwa/release.json
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 30

@@ -82,7 +82,7 @@ export function sanitizePath(pathOrUrl) {
   let s = String(pathOrUrl || '');
   // 토큰이 뒤따르는 경로 세그먼트 (학생/예약/숙제/게임 라우트)
   s = s.replace(
-    /\/(personal|student|student-upload|feedback-seen|my-classes|status|best)\/([^/?#]+)/g,
+    /\/(personal|student|student-upload|feedback-seen|my-classes|consent|status|best)\/([^/?#]+)/g,
     (_, seg, tok) => `/${seg}/${maskToken(tok)}`,
   );
   // ?token=... / &token=... 쿼리 파라미터

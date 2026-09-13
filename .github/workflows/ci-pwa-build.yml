@@ -5,12 +5,30 @@ on:
     branches: [main]
     paths:
       - 'pwa/**'
+      - '03_data/tone-words/**'
+      - '02_devtools/tone-*.mjs'
+      - '02_devtools/gen-game-og-route.mjs'
+      - '02_devtools/release-*.mjs'
+      - '02_devtools/pages-release.mjs'
+      - '02_devtools/public-price-check.mjs'
+      - '02_devtools/public-price-check.test.mjs'
+      - '02_devtools/release-asset-policy.json'
+      - '.github/workflows/deploy-pwa.yml'
       - '02_devtools/design-audit.mjs'
       - '.github/workflows/ci-pwa-build.yml'
   pull_request:
     branches: [main]
     paths:
       - 'pwa/**'
+      - '03_data/tone-words/**'
+      - '02_devtools/tone-*.mjs'
+      - '02_devtools/gen-game-og-route.mjs'
+      - '02_devtools/release-*.mjs'
+      - '02_devtools/pages-release.mjs'
+      - '02_devtools/public-price-check.mjs'
+      - '02_devtools/public-price-check.test.mjs'
+      - '02_devtools/release-asset-policy.json'
+      - '.github/workflows/deploy-pwa.yml'
       - '02_devtools/design-audit.mjs'
       - '.github/workflows/ci-pwa-build.yml'
   workflow_dispatch:
@@ -57,6 +75,9 @@ jobs:
       - name: 아이콘 생성
         run: npm run generate-icons
         working-directory: pwa
+
+      - name: 배포 보호 도구 회귀 검사
+        run: node --test 02_devtools/release-guard.test.mjs 02_devtools/public-price-check.test.mjs
 
       # 게임 순수 로직(gameLogic·tgWordStats·streak·gameXp 등) 회귀 방어.
       # 테스트는 예전부터 있었지만 CI가 빌드만 돌려서 한 번도 실행되지 않고 있었다(2026-08-10 검수).

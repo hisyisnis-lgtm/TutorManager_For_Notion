@@ -80,9 +80,9 @@ describe('getGameUserById', () => {
 
 describe('updateGameData', () => {
   it('UPDATE game_data + last_seen_at, gameData를 JSON 문자열로 바인딩', async () => {
-    const db = mockDb();
+    const db = mockDb({ firstRow: { id: 'u1', game_data: '{}' } });
     await updateGameData(db, 'u1', { best: { 'tone-easy': { bestScore: 100 } } }, 'Nick');
-    const call = db.calls[0];
+    const call = db.calls.find(item => item.op === 'run');
     expect(call.op).toBe('run');
     expect(call.sql).toMatch(/UPDATE game_users SET game_data = \?/);
     expect(call.args[0]).toBe('{"best":{"tone-easy":{"bestScore":100}}}');
@@ -90,10 +90,12 @@ describe('updateGameData', () => {
     expect(call.args).toContain('Nick');
   });
   it('nickname 없으면 null 바인딩(기존 유지 COALESCE)', async () => {
-    const db = mockDb();
+    const db = mockDb({ firstRow: { id: 'u1', game_data: '{}' } });
     await updateGameData(db, 'u1', {}, null);
-    expect(db.calls[0].args).toContain(null);
-    expect(db.calls[0].sql).toMatch(/COALESCE\(\?, nickname\)/);
+    const call = db.calls.find(item => item.op === 'run');
+    expect(call.args).toContain(null);
+    expect(call.sql).toMatch(/COALESCE\(\?, nickname\)/);
+    expect(call.sql).toContain('AND game_data IS ?');
   });
 });
 

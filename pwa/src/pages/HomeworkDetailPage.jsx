@@ -214,7 +214,9 @@ export default function HomeworkDetailPage() {
       const hasNewFiles = uploadedFiles && uploadedFiles.length > 0;
       const hasNewText = feedbackText.trim() && feedbackText.trim() !== savedFeedbackText.trim();
       if (hasNewFiles || hasNewText) {
-        notifyHomework('feedback', id);
+        void notifyHomework('feedback', id).then(result => {
+          if (!result.ok && !result.ignored) toast.warning(result.message);
+        });
       }
       // 저장 성공 → 재조회 없이 결과를 즉시 반영(낙관적). 저장에 필요한 왕복은 PATCH 1번뿐.
       // (재조회를 안 하므로 Notion read-after-write 지연에 옛값으로 덮일 위험도 없음)

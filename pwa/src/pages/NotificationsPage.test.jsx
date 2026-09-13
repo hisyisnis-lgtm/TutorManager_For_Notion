@@ -7,6 +7,9 @@ import { saveNtfyTopic } from '../api/ntfy.js';
 import { fixtureSession } from '../api/authFixtures.js';
 import NotificationsPage from './NotificationsPage.jsx';
 
+// ntfy transport regression tests stay isolated; durable follow-up behavior has its own suite.
+vi.mock('../components/ui/NotificationFollowups.jsx', () => ({ default: () => null }));
+
 beforeEach(() => {
   localStorage.clear(); sessionStorage.clear(); setAuth(fixtureSession());
   saveNtfyTopic('fixture-topic');

@@ -114,6 +114,11 @@ describe('isAllowedRedirect', () => {
   const prefixes = DEFAULT_REDIRECT_PREFIXES;
   it('허용 prefix로 시작하면 true', () => {
     expect(isAllowedRedirect('https://tiantian-chinese.pages.dev/game/tone', prefixes)).toBe(true);
+    expect(isAllowedRedirect('https://tiantianchinese.com/game/tone', prefixes)).toBe(true);
+    expect(isAllowedRedirect('https://tiantianchinese.com/game/tone/', prefixes)).toBe(true);
+    expect(isAllowedRedirect('https://tiantianchinese.pages.dev/game/tone/', prefixes)).toBe(true);
+    expect(isAllowedRedirect('https://tiantianchinese.com.evil.test/game/tone/', prefixes)).toBe(false);
+    expect(isAllowedRedirect('http://tiantianchinese.com/game/tone/', prefixes)).toBe(false);
     expect(isAllowedRedirect('capacitor://localhost/x', prefixes)).toBe(true);
     expect(isAllowedRedirect('http://localhost:5173/game/tone', prefixes)).toBe(true);
   });

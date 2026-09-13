@@ -17,8 +17,8 @@ import { TEXT_SECONDARY,
 const STORAGE_KEY = 'instructor_name';
 
 const SHARE_LINKS = [
-  { key: 'intro', label: '홈페이지', path: '/intro' },
-  { key: 'pricing', label: '수강료 안내', path: '/pricing' },
+  { key: 'intro', label: '홈페이지', path: 'https://tiantianchinese.com/' },
+  { key: 'lessons', label: '수업 안내', path: 'https://tiantianchinese.com/lessons/' },
   { key: 'consent', label: '수업 동의서', path: '/#/consent' },
 ];
 
@@ -39,7 +39,7 @@ export default function SettingsPage() {
   const [updating, setUpdating] = useState(false);
 
   function copyLink(key, path) {
-    const url = `${window.location.origin}${path}`;
+    const url = new URL(path, window.location.origin).href;
     navigator.clipboard.writeText(url).then(() => {
       setCopiedKey(key);
       setTimeout(() => setCopiedKey(''), 2000);
@@ -156,17 +156,18 @@ export default function SettingsPage() {
 
         <div>
           <span style={{ fontSize: 14, fontWeight: 600, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>공유 링크</span>
+          <Link to="/agreement" className="inline-flex items-center min-h-[44px] text-sm underline mb-2">수업 동의서 원문 확인</Link>
           <div className="space-y-2">
             {SHARE_LINKS.map(({ key, label, path }) => (
               <div key={key} className="flex items-center gap-2 bg-white shadow-border rounded-2xl px-3 py-2.5">
                 <div className="flex-1 min-w-0">
                   <p className="text-xs text-gray-500 mb-0.5">{label}</p>
-                  <p className="text-xs text-gray-600 font-mono truncate">{window.location.origin}{path}</p>
+                  <p className="text-xs text-gray-600 font-mono truncate">{new URL(path, window.location.origin).href}</p>
                 </div>
                 <button
                   type="button"
                   onClick={() => copyLink(key, path)}
-                  className="press shrink-0 text-xs text-brand-600 border border-brand-100 rounded-lg px-3 min-h-[40px] flex items-center active:bg-brand-50 transition-[background-color] duration-150 ease-out"
+                  className="press shrink-0 text-xs text-brand-600 border border-brand-100 rounded-lg px-3 min-h-[44px] flex items-center active:bg-brand-50 transition-[background-color] duration-150 ease-out"
                 >
                   {copiedKey === key ? '복사됨' : '복사'}
                 </button>

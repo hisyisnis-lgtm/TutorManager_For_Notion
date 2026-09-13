@@ -5,11 +5,31 @@ on:
     branches: [main]
     paths:
       - 'worker/**'
+      - '01_automation/**'
+      - 'pwa/src/game/**'
+      - 'pwa/src/api/**'
+      - 'pwa/src/constants/**'
+      - 'pwa/src/analytics/**'
+      - '02_devtools/release-*.mjs'
+      - '02_devtools/pages-release.mjs'
+      - '02_devtools/public-price-check.mjs'
+      - '02_devtools/public-price-check.test.mjs'
+      - '02_devtools/release-asset-policy.json'
       - '.github/workflows/ci-worker-build.yml'
   pull_request:
     branches: [main]
     paths:
       - 'worker/**'
+      - '01_automation/**'
+      - 'pwa/src/game/**'
+      - 'pwa/src/api/**'
+      - 'pwa/src/constants/**'
+      - 'pwa/src/analytics/**'
+      - '02_devtools/release-*.mjs'
+      - '02_devtools/pages-release.mjs'
+      - '02_devtools/public-price-check.mjs'
+      - '02_devtools/public-price-check.test.mjs'
+      - '02_devtools/release-asset-policy.json'
       - '.github/workflows/ci-worker-build.yml'
   workflow_dispatch:
 
@@ -51,6 +71,9 @@ jobs:
           echo "::error::npm ci가 3회 모두 실패했습니다 (package-lock.json 동기화 확인 필요)"
           exit 1
         working-directory: worker
+
+      - name: 배포 보호 도구 회귀 검사
+        run: node --test 02_devtools/release-guard.test.mjs 02_devtools/public-price-check.test.mjs
 
       - name: 단위 테스트 (Vitest)
         run: npm test

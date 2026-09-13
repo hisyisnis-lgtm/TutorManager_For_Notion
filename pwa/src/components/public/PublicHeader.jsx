@@ -4,7 +4,7 @@ import { PRIMARY, BORDER_DEFAULT, TEXT_SECONDARY } from '../../constants/theme';
  * PublicHeader — 공개 페이지 공통 스티키 헤더
  * LandingPage · PricingPage 에서 사용합니다.
  *
- * @param {string[]}  tabs        - 탭 라벨 배열 (예: ['소개', '무료상담'])
+ * @param {string[]}  tabs        - 탭 라벨 배열 (예: ['소개', '상담'])
  * @param {string}    activeTab   - 현재 활성 탭 라벨
  * @param {Function}  onTabChange - 탭 클릭 시 호출되는 콜백 (tab: string) => void
  * @param {React.ReactNode} rightSlot - 헤더 오른쪽 슬롯 (선택, 예: <ShareButton />)

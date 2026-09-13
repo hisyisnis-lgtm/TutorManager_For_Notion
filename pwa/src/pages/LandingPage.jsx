@@ -28,10 +28,10 @@ import FloatingCtaButton from '../components/public/FloatingCtaButton';
 import ToggleButton from '../components/ui/ToggleButton';
 
 
-const TABS = ['소개', '무료상담'];
+const TABS = ['소개', '상담'];
 const LEVEL_OPTIONS = ['완전 처음이에요', '조금 배운 적 있어요', '어느 정도 배웠는데 막혀있어요'];
 
-// ─── 탭 2: 무료 상담 신청 ─────────────────────────────────────
+// ─── 탭 2: 상담 신청 ─────────────────────────────────────
 function ConsultContent() {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -87,14 +87,14 @@ function ConsultContent() {
             </div>
             <h4 style={{ fontSize: 20, fontWeight: 600, lineHeight: 1.4, marginBottom: 8 }}>신청 완료!</h4>
             <span style={{ color: TEXT_TERTIARY, fontSize: 14, lineHeight: 1.6 }}>
-              신청해주셔서 감사합니다.<br />확인 후 문자로 연락드릴게요.
+              신청 내용을 접수했어요.<br />공식 응대 시간은 09:00~23:00이며,<br />답변 가능한 때 확인 후 연락드릴게요.
             </span>
             <hr style={{ border: 'none', borderTop: `1px solid ${BORDER_SUBTLE}`, margin: '20px 0 16px' }} />
             <span style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 10 }}>
-              더 빨리 연락받고 싶다면
+              추가로 전할 내용이 있다면
             </span>
             <span style={{ color: TEXT_TERTIARY, fontSize: 13, lineHeight: 1.7, display: 'block', marginBottom: 14 }}>
-              채널톡으로 신청 완료 메시지를 보내주시면<br />우선적으로 확인해드릴게요.
+              카카오 채널로 메시지를 남겨 주세요.<br />문의는 언제든 남길 수 있어요.
             </span>
             <Button
               asChild
@@ -102,8 +102,8 @@ function ConsultContent() {
               className="text-[15px] font-bold"
               style={{ backgroundColor: '#FEE500', borderColor: '#FEE500', color: '#000' }}
             >
-              <a href="https://pf.kakao.com/_jFnFn" target="_blank" rel="noopener noreferrer">
-                채널톡으로 알리기
+              <a href="https://pf.kakao.com/_jFnFn/chat" target="_blank" rel="noopener noreferrer">
+                카카오 채널로 알리기
               </a>
             </Button>
           </div>
@@ -116,8 +116,8 @@ function ConsultContent() {
   return (
     <div style={{ maxWidth: 480, margin: '0 auto', padding: '32px 16px 80px' }}>
       <div style={{ marginBottom: 24 }}>
-        <h4 style={{ fontSize: 20, fontWeight: 600, lineHeight: 1.4, marginBottom: 4 }}>무료 상담 신청</h4>
-        <span style={{ color: TEXT_TERTIARY }}>Zoom 화상통화 30분 · 완전 무료</span>
+        <h4 style={{ fontSize: 20, fontWeight: 600, lineHeight: 1.4, marginBottom: 4 }}>상담 신청</h4>
+        <span style={{ color: TEXT_TERTIARY }}>문의 → 목표·수준 확인 → 방식·일정 조율</span>
       </div>
 
       {/* 상담 혜택 */}
@@ -139,8 +139,8 @@ function ConsultContent() {
         </div>
         <hr style={{ border: 'none', borderTop: `1px solid ${BORDER_SUBTLE}`, margin: '16px 0 12px' }} />
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <span style={{ color: TEXT_TERTIARY, fontSize: 13 }}>· 신청 후 문자로 일정을 안내해드려요</span>
-          <span style={{ color: TEXT_TERTIARY, fontSize: 13 }}>· 완전 무료, 부담 없이 신청하세요</span>
+          <span style={{ color: TEXT_TERTIARY, fontSize: 13 }}>· 문의는 언제든 접수하며, 답변 가능한 때 확인 후 안내해드려요</span>
+          <span style={{ color: TEXT_TERTIARY, fontSize: 13 }}>· 공식 응대 시간은 09:00~23:00입니다</span>
         </div>
       </CardContent>
 </Card>
@@ -217,7 +217,7 @@ function ConsultContent() {
           onClick={handleSubmit} block
           style={{ height: 52, borderRadius: 12, fontWeight: 700, fontSize: 15 }}
         >
-          무료 상담 신청하기
+          상담 신청하기
         </Button>
       </div>
     </div>
@@ -227,7 +227,7 @@ function ConsultContent() {
 // ─── 공유 버튼 ───────────────────────────────────────────────
 function ShareButton() {
   const [copied, setCopied] = useState(false);
-  const url = 'https://hisyisnis-lgtm.github.io/TutorManager_For_Notion/#/intro';
+  const url = 'https://tiantianchinese.com/';
 
   async function handleShare() {
     if (navigator.share) {
@@ -275,7 +275,7 @@ export default function LandingPage() {
       <>
       <FloatingCtaButton
         visible={showFloat && tab === '소개'}
-        onClick={() => switchTab('무료상담')}
+        onClick={() => switchTab('상담')}
       />
       <div style={{ minHeight: '100vh', backgroundColor: '#f5f5f5', fontFamily: 'inherit' }}>
         <PublicHeader
@@ -287,9 +287,9 @@ export default function LandingPage() {
 
         <main style={{ maxWidth: 480, margin: '0 auto' }}>
           <TabPanel active={tab === '소개'} id="panel-소개" labelledBy="tab-소개">
-            <IntroContent onConsult={() => switchTab('무료상담')} onFloatChange={setShowFloat} />
+            <IntroContent onConsult={() => switchTab('상담')} onFloatChange={setShowFloat} />
           </TabPanel>
-          <TabPanel active={tab === '무료상담'} id="panel-무료상담" labelledBy="tab-무료상담">
+          <TabPanel active={tab === '상담'} id="panel-상담" labelledBy="tab-상담">
             <ConsultContent />
           </TabPanel>
         </main>

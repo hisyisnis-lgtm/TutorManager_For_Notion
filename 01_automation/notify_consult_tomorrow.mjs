@@ -7,6 +7,7 @@
 import { createNotionClient, createSolapiClient, runWithAlert, stripEmoji, shouldSkipBackupRun, kstDayStr } from './notion_utils.mjs';
 import { createNotificationLedger, notificationDeliveryKey } from './notification_ledger.mjs';
 import { sendNotificationBatch } from './notification_batch.mjs';
+import { reportNotificationBatch } from './notification_followups.mjs';
 
 const TOKEN = process.env.NOTION_TOKEN;
 const CLASS_DB_ID = '314838fa-f2a6-81bc-8b67-d9e1c8fb7ecb';
@@ -191,7 +192,8 @@ async function main() {
     }
   }
 
-  await sendNotificationBatch({ notifications, ledger, sendKakao });
+  await sendNotificationBatch({ notifications, ledger, sendKakao,
+    onResult: counts => reportNotificationBatch('notify-consult-tomorrow.yml', counts) });
 }
 
 runWithAlert('notify_consult_tomorrow.mjs', main);

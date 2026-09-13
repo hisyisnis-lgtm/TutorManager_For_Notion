@@ -1,8 +1,10 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { createMemoryRouter, RouterProvider } from 'react-router-dom';
+import { createMemoryRouter, RouterProvider, Routes, Route } from 'react-router-dom';
 import LessonLogFormPage from './LessonLogFormPage.jsx';
 import { getPage, updatePage } from '../api/notionClient.js';
+import BottomNav from '../components/layout/BottomNav.jsx';
+import { hasUnsavedChanges } from '../utils/unsavedChanges.js';
 
 vi.mock('../api/notionClient.js', () => ({ getPage: vi.fn(), updatePage: vi.fn(), deletePage: vi.fn(), queryAll: vi.fn(), createPage: vi.fn() }));
 vi.mock('../context/DataContext.jsx', () => ({ useData: () => ({ studentNameMap: {} }) }));
@@ -15,7 +17,14 @@ const lesson = (id, content) => ({ id, properties: {
   메모: { rich_text: [{ plain_text: '기존 메모' }] },
 } });
 const renderPage = () => {
-  const router = createMemoryRouter([{ path: '/logs/:id/edit', element: <LessonLogFormPage /> }], { initialEntries: ['/logs/first/edit'] });
+  const router = createMemoryRouter([{ path: '*', element: <>
+    <Routes>
+      <Route path="/logs/:id/edit" element={<LessonLogFormPage />} />
+      <Route path="/logs" element={<p>일지 목록</p>} />
+      <Route path="/home" element={<p>강사 홈</p>} />
+    </Routes>
+    <BottomNav />
+  </> }], { initialEntries: ['/logs', '/logs/first/edit'] });
   render(<RouterProvider router={router} />);
   return router;
 };
@@ -72,9 +81,59 @@ describe('수업 일지 원본 조회와 저장 보호', () => {
     const content = await screen.findByDisplayValue('첫 일지');
     fireEvent.change(content, { target: { value: '수정 중 내용' } });
     await act(async () => { await router.navigate('/logs/second/edit'); });
+    fireEvent.click(screen.getByRole('button', { name: '나가기' }));
     await screen.findByText('새 일지 조회 실패');
     expect(screen.queryByRole('textbox')).toBeNull();
     expect(updatePage).not.toHaveBeenCalled();
+    router.dispose();
+  });
+
+  it('변경이 없으면 뒤로가기를 허용한다', async () => {
+    getPage.mockResolvedValue(lesson('first', '기존 내용'));
+    const router = renderPage();
+    await screen.findByDisplayValue('기존 내용');
+    fireEvent.click(screen.getByRole('button', { name: '뒤로가기' }));
+    expect(await screen.findByText('일지 목록')).toBeTruthy();
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(hasUnsavedChanges()).toBe(false);
+    router.dispose();
+  });
+
+  it('변경 후 뒤로가기를 취소하면 입력을 유지하고 BottomNav 이탈을 확인하면 이동한다', async () => {
+    getPage.mockResolvedValue(lesson('first', '기존 내용'));
+    const router = renderPage();
+    fireEvent.change(await screen.findByDisplayValue('기존 내용'), { target: { value: '작성 중 내용' } });
+    expect(hasUnsavedChanges()).toBe(true);
+    await act(async () => router.navigate(-1));
+    expect(screen.getByRole('dialog')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: '계속 작성' }));
+    expect(screen.getByDisplayValue('작성 중 내용')).toBeTruthy();
+    fireEvent.click(screen.getByRole('link', { name: '홈' }));
+    expect(screen.getByRole('dialog')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: '나가기' }));
+    expect(await screen.findByText('강사 홈')).toBeTruthy();
+    expect(hasUnsavedChanges()).toBe(false);
+    router.dispose();
+  });
+
+  it('저장 실패 시 입력과 종료 경고를 유지하고 재시도 성공 시 경고 없이 돌아간다', async () => {
+    getPage.mockResolvedValue(lesson('first', '기존 내용'));
+    updatePage.mockRejectedValueOnce(new Error('저장 실패')).mockResolvedValueOnce({});
+    const router = renderPage();
+    fireEvent.change(await screen.findByDisplayValue('기존 내용'), { target: { value: '보존할 내용' } });
+    fireEvent.click(screen.getByRole('button', { name: '저장하기' }));
+    await screen.findByText('저장 실패');
+    expect(screen.getByDisplayValue('보존할 내용')).toBeTruthy();
+    const event = new Event('beforeunload', { cancelable: true });
+    window.dispatchEvent(event);
+    expect(event.defaultPrevented).toBe(true);
+    fireEvent.click(screen.getByRole('button', { name: '저장하기' }));
+    expect(await screen.findByText('일지 목록')).toBeTruthy();
+    expect(screen.queryByRole('dialog')).toBeNull();
+    const afterSave = new Event('beforeunload', { cancelable: true });
+    window.dispatchEvent(afterSave);
+    expect(afterSave.defaultPrevented).toBe(false);
+    expect(hasUnsavedChanges()).toBe(false);
     router.dispose();
   });
 });

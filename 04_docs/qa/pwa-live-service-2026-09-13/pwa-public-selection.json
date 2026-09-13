@@ -1,0 +1,17 @@
+{
+  "copied": [
+    "pwa/index.html",
+    "pwa/public/intro.html",
+    "pwa/public/pricing.html",
+    "pwa/public/group-class.html",
+    "pwa/public/_redirects",
+    "pwa/src/components/ui/AudioPlayer.test.jsx"
+  ],
+  "changed": [
+    "pwa/vite.config.js"
+  ],
+  "removed": [
+    "pwa/public/img/카카오톡링크미리보기이미지_수강료안내.png",
+    "pwa/public/img/카카오톡링크미리보기이미지_소개및무료상담신청.png"
+  ]
+}

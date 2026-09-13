@@ -1,3 +1,9 @@
+import { useEffect, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
+import { fetchConsentTerms } from '../api/consent.js';
+import { useTeacherAuth } from '../api/authUtils.js';
+import { KAKAO_CHANNEL_CHAT_URL } from '../constants.js';
+import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import { Button } from '../components/shadcn/button';
 import { Card,
   CardContent } from '../components/shadcn/card';
@@ -14,15 +20,6 @@ import { PRIMARY,
   TEXT_TERTIARY,
   BORDER_SUBTLE } from '../constants/theme';
 
-
-const theme = {
-  token: {
-    colorPrimary: PRIMARY,
-    borderRadius: 12,
-    colorBgContainer: '#ffffff',
-    fontFamily: 'inherit',
-  },
-};
 
 function Section({ icon, title, children }) {
   return (
@@ -67,13 +64,28 @@ function NoteList({ items }) {
   );
 }
 
-export default function ConsentPage() {
+export function AuthenticatedConsentPage() {
+  const { studentToken } = useParams();
+  const [terms, setTerms] = useState(null);
+  const [error, setError] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+  useEffect(() => {
+    const request = new AbortController();
+    setTerms(null); setError(false);
+    fetchConsentTerms(studentToken, request.signal).then(data => {
+      if (!request.signal.aborted) setTerms(data);
+    }).catch(() => { if (!request.signal.aborted) setError(true); });
+    return () => request.abort();
+  }, [studentToken, attempt]);
+  if (!terms) return <main className="mx-auto max-w-[480px] px-4 py-12">
+    {error ? <div role="alert" className="space-y-4"><h1 className="text-xl font-semibold">동의서를 불러오지 못했어요</h1><p>연결 상태를 확인하고 다시 시도해 주세요. 계속 열리지 않으면 선생님께 문의해 주세요.</p><Button onClick={() => setAttempt(n => n + 1)}>다시 시도</Button><Button asChild variant="outline"><a href={KAKAO_CHANNEL_CHAT_URL} target="_blank" rel="noopener noreferrer">선생님께 문의</a></Button></div> : <LoadingSpinner />}
+  </main>;
   return (
       <div style={{ minHeight: '100vh', backgroundColor: BG_SECTION_ALT, fontFamily: 'inherit' }}>
 
         {/* 헤더 */}
         <header style={{
-          position: 'sticky', top: 0, zIndex: 50,
+          position: 'sticky', top: 0, zIndex: 40,
           backgroundColor: 'rgba(255,255,255,0.92)',
           backdropFilter: 'blur(8px)',
           borderBottom: '1px solid #f0f0f0',
@@ -132,7 +144,7 @@ export default function ConsentPage() {
               '수업 시작 24시간 이내 취소 또는 무단 결석 시, 해당 수업은 수업 완료(소진) 처리됩니다.',
               '지각으로 인해 늦게 시작하더라도, 수업은 예정된 정규 시간에 종료되며 보강이나 시간 연장은 불가합니다. (15분 이상 지각 시 당일 취소로 간주되어 1회 차감됩니다.)',
               '수강 기간 홀딩(일시 정지): 질병, 장기 출장 등 유사시, 전체 수강 기간 중 단 1회에 한하여 최대 14일간 수강 기간을 홀딩할 수 있습니다.',
-              '강사의 사정으로 당일 취소 시, 취소된 수업 시간뿐만 아니라 해당하는 시간만큼 무료 보강을 추가로 진행해 드립니다.',
+              terms.teacherCancellation,
             ]} />
           </Section>
 
@@ -144,7 +156,7 @@ export default function ConsentPage() {
                 <div>
                   <span style={{ fontWeight: 600, fontSize: 14, display: 'block', marginBottom: 4 }}>수업 시작 전</span>
                   <span style={{ color: TEXT_TERTIARY, fontSize: 14, lineHeight: 1.7 }}>
-                    첫 수업 시작 전 환불 요청 시 전액 환불이 가능합니다.
+                    {terms.refundBefore}
                   </span>
                 </div>
                 <hr style={{ border: 'none', borderTop: `1px solid ${BORDER_SUBTLE}`, margin: 0 }} />
@@ -152,20 +164,15 @@ export default function ConsentPage() {
                   <span style={{ fontWeight: 600, fontSize: 14, display: 'block', marginBottom: 4 }}>수업 시작 후</span>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                     <span style={{ color: TEXT_TERTIARY, fontSize: 14, lineHeight: 1.7 }}>
-                      수업 시작 이후에는 시작한 달을 포함하여 다음 달 말까지, 잔여 수업 횟수에 한해 환불이 가능합니다. 모든 수업 횟수는 해당 기간 내 소진해 주시기 바랍니다.
+                      {terms.refundAfter[0]}
                     </span>
                     <span style={{ color: TEXT_TERTIARY, fontSize: 14, lineHeight: 1.7 }}>
-                      환불 시에는 진행된 수업 금액을 재결제하신 후 기존 결제를 전체 취소하는 방식으로 처리됩니다. 현재 결제 시스템상 부분 환불이 어려운 점 양해 부탁드립니다.
+                      {terms.refundAfter[1]}
                     </span>
                   </div>
                 </div>
                 <hr style={{ border: 'none', borderTop: `1px solid ${BORDER_SUBTLE}`, margin: 0 }} />
-                <NoteList items={[
-                  '이벤트·원데이 클래스는 특성상 환불이 불가합니다.',
-                  '할인 적용 수업의 경우 중도 환불 시, 이미 진행된 수업은 할인가가 아닌 정상가(시간당 50,000원)로 계산하여 차감한 후 잔여 금액이 환불됩니다.',
-                  '교재가 제공된 경우, 교재 비용은 환불 대상에서 제외됩니다.',
-                  '환불은 영업일 기준 3~7일 이내 처리됩니다.',
-                ]} />
+                <NoteList items={terms.refundNotes} />
               </div>
             </CardContent>
 </Card>
@@ -192,7 +199,7 @@ export default function ConsentPage() {
               아래 버튼을 눌러 동의 확인을 완료해 주세요.
             </span>
             <Button asChild block className="h-[52px] text-[15px] font-bold">
-              <a href="https://forms.gle/GSrU2jruYTuFQxwo8" target="_blank" rel="noopener noreferrer">
+              <a href={terms.confirmationUrl} target="_blank" rel="noopener noreferrer">
                 동의 확인 완료하기
               </a>
             </Button>
@@ -202,7 +209,7 @@ export default function ConsentPage() {
           <span style={{ color: TEXT_TERTIARY, display: 'block', textAlign: 'center', fontSize: 13, lineHeight: 1.7 }}>
             문의 사항이 있으시면{' '}
             <a
-              href="https://pf.kakao.com/_jFnFn"
+              href={KAKAO_CHANNEL_CHAT_URL}
               target="_blank"
               rel="noopener noreferrer"
               style={{ color: PRIMARY, textDecoration: 'underline' }}
@@ -239,4 +246,18 @@ export default function ConsentPage() {
         </footer>
       </div>
   );
+}
+
+// 공개 주소에는 약정과 확인 폼 링크를 포함하지 않는다. 원문은 인증 경로에서 조회한다.
+export default function ConsentPage() {
+  const teacher = useTeacherAuth();
+  return <main className="mx-auto max-w-[480px] px-4 py-12 space-y-6">
+    <img src="/logo/logo-red.png" alt="하늘하늘 중국어" className="h-6 w-auto" />
+    <h1 className="text-xl font-semibold">수업 동의서 확인</h1>
+    <p className="text-sm leading-7">수업 동의서는 본인 확인 후 학생앱의 MY에서 확인할 수 있어요. 아직 학생 코드를 받지 않았다면 선생님께 문의해 주세요.</p>
+    <Button asChild block><a href="/personal">학생앱에서 확인하기</a></Button>
+    {teacher && <Button asChild variant="outline" block><Link to="/agreement">강사용 동의서 확인</Link></Button>}
+    <Button asChild variant="outline" block><a href={KAKAO_CHANNEL_CHAT_URL} target="_blank" rel="noopener noreferrer">선생님께 문의</a></Button>
+    <p className="text-sm leading-6" style={{ color: TEXT_TERTIARY }}>문의는 언제든 남겨 주세요.<br />공식 응대 시간은 09:00~23:00이며, 답변 가능한 때 확인 후 안내해 드려요.</p>
+  </main>;
 }

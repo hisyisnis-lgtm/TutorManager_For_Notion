@@ -3,13 +3,17 @@
 import { stripEmoji, normalizeId, normalizePhone } from '../lib/string.js';
 import { dashboardAccess } from '../lib/gameDashboardAccess.js';
 import { makeNotion } from '../lib/notion.js';
+import { collectBusinessEvent, queryBusinessAnalytics } from '../lib/businessAnalytics.js';
 import { isSafeExternalUrl, maskPhone, maskToken, sanitizePath } from '../lib/security.js';
 import { validateFileUpload, validateFileContent, isNotionUploadUrl, resolveFileMime, dedupeFileNames } from '../lib/upload.js';
 import { boundedRequest, RequestTooLarge, secureResponse } from '../lib/httpSecurity.js';
 import { authorizeNotionRequest, pageInDatabase } from '../lib/notionScope.js';
+import { handleConsentTerms } from '../lib/consentTerms.js';
 import { studentHomeworkPage } from '../lib/homeworkPrivacy.js';
+import { buildStudentLedger, queryStudentTimePages, studentSessionTotals } from '../lib/studentLedger.js';
 import { teacherNotifications } from '../lib/notifications.js';
 import { parseSolapiResult, readDeliveryJson } from '../lib/notificationDelivery.js';
+import { queueNotificationRecord, ingestNotificationFollowup, handleNotificationFollowups } from '../lib/notificationFollowups.js';
 import {
   ConsultSchema,
   HomeworkSubmitSchema,
@@ -391,21 +395,8 @@ async function putStudentOtp(env, token, code, ttl = 180) {
 // 결제 행의 '유효 시간 회차'(환불 차감 포함)는 정확하므로 그것을 합산한다.
 // PWA의 payments.js remainingSessionsOf와 같은 계산 — 한쪽만 고치지 말 것.
 async function loadSessionCounts(n, studentPageId, studentProps) {
-  let paidSessions = 0;
-  let cursor;
-  do {
-    const res = await n('POST', `/databases/${PAYMENT_DB_ID}/query`, {
-      filter: { property: '학생', relation: { contains: studentPageId } },
-      page_size: 100,
-      ...(cursor ? { start_cursor: cursor } : {}),
-    });
-    for (const pay of res.results ?? []) {
-      paidSessions += pay.properties?.['유효 시간 회차']?.formula?.number ?? 0;
-    }
-    cursor = res.has_more ? res.next_cursor : undefined;
-  } while (cursor);
-  const used = studentProps?.['사용 시간 회차']?.rollup?.number ?? 0;
-  return { paidSessions, remainingSessions: paidSessions - used };
+  const payments = await queryStudentTimePages(n, PAYMENT_DB_ID, studentPageId);
+  return { ...studentSessionTotals(payments, studentProps), payments };
 }
 
 // 예약 코드로 학생 조회 → 인증에 필요한 최소 정보(전화번호)만. 없으면 null.
@@ -561,8 +552,10 @@ async function sendAlert(env, { level = 'info', title, message, tags, dedupKey, 
 // 워크플로우: .github/workflows/notify-from-worker.yml (event_type: ntfy-relay)
 //
 // 상담 접수와 숙제 제출에 사용한다. dispatch 접수는 실제 ntfy 발송/수신과 다르다.
-async function sendNtfy(env, message, title = 'New Consultation', ctx) {
+async function sendNtfy(env, message, title = 'New Consultation', ctx, metadata) {
   let result;
+  const followup = metadata ? { id: crypto.randomUUID(), kind: metadata.kind,
+    referenceId: /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(metadata.referenceId || '') ? metadata.referenceId : null } : null;
   if (!env.NTFY_TOPIC || !env.NTFY_TOKEN) {
     console.error('[ntfy] 알림 토픽 또는 인증 설정이 없습니다.');
     result = { ok: false, state: 'failed', reason: 'ntfy_not_configured' };
@@ -570,9 +563,14 @@ async function sendNtfy(env, message, title = 'New Consultation', ctx) {
     result = await githubDispatch(env, 'ntfy-relay', {
       title: String(title || '').replace(/\S+/g, sanitizePath),
       message: String(message || '').replace(/\S+/g, sanitizePath), level: 'info',
+      ...(followup ? { followup } : {}),
     });
   }
-  if (result.ok) return { ok: true, state: 'queued' };
+  if (result.ok) {
+    if (followup) void queueNotificationRecord(env, ctx, followup, { state: 'queued', reason: 'ntfy_queued' });
+    return { ok: true, state: 'queued' };
+  }
+  if (followup) void queueNotificationRecord(env, ctx, followup, { state: result.state || 'failed', reason: 'ntfy_relay_failed' });
   // The consultation/homework was already saved. Report a delivery issue without
   // making the business operation look failed or replaying the message.
   await reportNotificationFailure(env, ctx, 'relay');
@@ -922,7 +920,7 @@ async function handleConsultRequest(request, env, corsHeaders, ctx) {
   // ntfy 푸시 알림 (카카오 알림톡과 이중 발송). GitHub Actions 우회라 5~15초 지연 있지만,
   // 카카오 알림톡 템플릿은 솔라피 검수가 필요해서 자유롭게 수정 어려운 점을 ntfy로 보완.
   // 발송 실패는 저장 성공과 분리한다. 사용자 재신청으로 중복 생성하지 않는다.
-  const ntfyResult = await sendNtfy(env, ntfyMsg, '📩 무료상담 신청', ctx);
+  const ntfyResult = await sendNtfy(env, ntfyMsg, '📩 무료상담 신청', ctx, { kind: 'consult-relay', referenceId: notionRes.id });
   let kakaoResult;
 
   // 카카오 알림톡 발송 (강사에게)
@@ -939,6 +937,7 @@ async function handleConsultRequest(request, env, corsHeaders, ctx) {
         '#{message}': message?.trim() || '없음',
       },
     });
+    void queueNotificationRecord(env, ctx, { kind: 'consult-kakao', referenceId: notionRes.id }, kakaoResult);
     if (!kakaoResult.ok) await reportNotificationFailure(env, ctx, 'consult-kakao');
   }
 
@@ -1360,7 +1359,7 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
     });
   }
 
-  // GET /booking/student/:token (공개, 학생 예약 코드로 학생 정보 조회)
+  // GET /booking/student/:token (본인 인증 학생 또는 강사 미리보기)
   const studentLookupMatch = url.pathname.match(/^\/booking\/student\/([^/]+)$/);
   if (studentLookupMatch && request.method === 'GET') {
     const token = decodeURIComponent(studentLookupMatch[1]);
@@ -1372,6 +1371,7 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
       filter: { property: '예약 코드', rich_text: { equals: token } },
       page_size: 1,
     });
+    if (!Array.isArray(res?.results)) return errRes(corsHeaders, 502, '학생 정보를 확인하지 못했습니다. 다시 시도해주세요.');
     const page = res.results?.[0];
     if (!page) {
       return new Response(JSON.stringify({ error: '등록된 학생이 아닙니다.' }), {
@@ -1391,50 +1391,31 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
     const nowISO = new Date().toISOString();
     const sharedAt = props?.['공유일']?.date?.start ?? null;
 
-    // 완료된 유료 수업의 시간 합계 (취소·보강 제외, 예정 제외)
-    // 분 단위로 누적해 부동소수 오차를 피한다.
-    //   completedMinutesAll : 잔여 시간(remainingHours) 계산용 — 전체 기간
-    //   completedMinutes    : 팬더 먹이 계산용 — 공유 시점(sharedAt) 이후만 집계
-    const { paidSessions: paidHours, remainingSessions } = await loadSessionCounts(n, page.id, props);
-    const sharedTs = sharedAt ? new Date(sharedAt).getTime() : null;
-    let completedMinutesAll = 0;
-    let completedMinutes = 0;
-    let classCursor;
-    do {
-      const classRes = await n('POST', `/databases/${CLASS_DB_ID}/query`, {
-        filter: {
-          and: [
-            { property: '학생', relation: { contains: page.id } },
-            { property: '수업 일시', date: { on_or_before: nowISO } },
-            { property: '특이사항', select: { does_not_equal: '🚫 취소' } },
-            { property: '특이사항', select: { does_not_equal: '🟠 보강' } },
-            { property: '무료 수업', rollup: { number: { greater_than: 0 } } },
-          ],
-        },
-        page_size: 100,
-        ...(classCursor ? { start_cursor: classCursor } : {}),
-      });
-      for (const cls of classRes.results ?? []) {
-        const minStr = cls.properties?.['수업 시간(분)']?.select?.name;
-        if (!minStr) continue;
-        const min = parseInt(minStr, 10);
-        completedMinutesAll += min;
-        if (sharedTs == null) continue; // 공유 전: 먹이 0
-        const dt = cls.properties?.['수업 일시']?.date?.start;
-        const dtTs = dt ? new Date(dt).getTime() : null;
-        if (dtTs != null && dtTs >= sharedTs) {
-          completedMinutes += min;
-        }
-      }
-      classCursor = classRes.has_more ? classRes.next_cursor : undefined;
-    } while (classCursor);
+    // 명세와 강사앱은 동일한 formula/rollup을 사용한다. 예정 수업은 이미 예약 가능 시간에서 차감돼 있다.
+    const [{ paidSessions: paidHours, remainingSessions, payments }, classes] = await Promise.all([
+      loadSessionCounts(n, page.id, props),
+      queryStudentTimePages(n, CLASS_DB_ID, page.id),
+    ]);
+    const timeLedger = buildStudentLedger({ payments, classes, studentProps: props, asOf: nowISO });
+    const remainingHours = timeLedger.summary.remainingHours;
 
-    const remainingHours = Math.max(0, paidHours - completedMinutesAll / 60);
+    // 판다 먹이는 기존대로 공유일 이후 시작한 유료 수업의 분량만 사용한다.
+    // 시간 명세의 전체 사용 시간과 섞거나 기존 먹이 기준을 변경하지 않는다.
+    const sharedTs = sharedAt ? new Date(sharedAt).getTime() : null;
+    let completedMinutes = 0;
+    for (const cls of classes) {
+      const cp = cls.properties || {};
+      const special = cp['특이사항']?.select?.name;
+      const dtTs = Date.parse(cp['수업 일시']?.date?.start);
+      const min = parseInt(cp['수업 시간(분)']?.select?.name, 10);
+      if (sharedTs != null && dtTs >= sharedTs && dtTs <= Date.parse(nowISO)
+        && special !== '🚫 취소' && special !== '🟠 보강'
+        && cp['무료 수업']?.rollup?.number > 0 && Number.isFinite(min)) completedMinutes += min;
+    }
 
     return new Response(JSON.stringify({
       id: page.id,
       name: stripEmoji(rawName),
-      phone: props?.['전화번호']?.phone_number ?? '',
       remainingSessions,
       totalSessions: props?.['총 수업 횟수']?.rollup?.number ?? 0,
       remainingHours,
@@ -1448,7 +1429,7 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
       feedbackSeenHomeworkFood: props?.['피드백 확인 먹이']?.rollup?.number ?? 0,
     }), {
       status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Cache-Control': 'private, no-store' },
     });
   }
 
@@ -1860,12 +1841,14 @@ async function handleHomeworkRoutes(request, env, corsHeaders, url, ctx) {
       const phone = (studentPage.properties?.['전화번호']?.phone_number ?? '').replace(/-/g, '');
       const studentToken = studentPage.properties?.['예약 코드']?.rich_text?.[0]?.plain_text ?? '';
       if (!phone) {
+        void queueNotificationRecord(env, ctx, { kind: notifyAssign ? 'homework-assign' : 'homework-feedback', referenceId: homeworkId }, { state: 'failed', reason: 'no_phone' });
         return new Response(JSON.stringify({ ok: false, reason: 'no_phone' }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
       if (!studentToken) {
         // 버튼 URL 변수가 비면 Kakao 발송 실패 위험 → 예약 코드 없으면 skip
+        void queueNotificationRecord(env, ctx, { kind: notifyAssign ? 'homework-assign' : 'homework-feedback', referenceId: homeworkId }, { state: 'failed', reason: 'no_token' });
         return new Response(JSON.stringify({ ok: false, reason: 'no_token' }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
@@ -1879,6 +1862,7 @@ async function handleHomeworkRoutes(request, env, corsHeaders, url, ctx) {
           '#{token}': studentToken,
         },
       });
+      void queueNotificationRecord(env, ctx, { kind: notifyAssign ? 'homework-assign' : 'homework-feedback', referenceId: homeworkId }, delivery);
       if (!delivery.ok) await reportNotificationFailure(env, ctx, 'homework-kakao');
       return new Response(JSON.stringify(delivery.ok
         ? { ok: true, sent: true, delivery: 'accepted' }
@@ -2084,7 +2068,8 @@ async function handleHomeworkRoutes(request, env, corsHeaders, url, ctx) {
         env,
         `${studentName} 학생이 "${homeworkTitle}" 숙제를 제출했습니다. (${fileDesc})`,
         '숙제 제출',
-        ctx
+        ctx,
+        { kind: 'homework-submit', referenceId: homeworkId }
       );
       if (!delivery.ok) notificationWarning = '숙제는 저장되었습니다. 강사 알림 접수를 확인하지 못했습니다.';
     }
@@ -2168,9 +2153,12 @@ async function handleHomeworkRoutes(request, env, corsHeaders, url, ctx) {
     const already = hwPage.properties?.['피드백 확인일']?.date?.start;
     // 피드백완료 상태이고 아직 확인일이 비어있을 때만 기록 (race condition: 동시 호출이 와도 두 번째는 skip)
     if (status === '피드백완료' && !already) {
-      await n('PATCH', `/pages/${homeworkId}`, {
+      const recorded = await n('PATCH', `/pages/${homeworkId}`, {
         properties: { '피드백 확인일': { date: { start: new Date().toISOString() } } },
       });
+      if (recorded?.object === 'error') {
+        return errRes(corsHeaders, 502, '피드백 확인을 기록하지 못했습니다. 잠시 후 다시 시도해주세요.');
+      }
       return new Response(JSON.stringify({ ok: true, recorded: true }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -2366,7 +2354,7 @@ async function handleGameRoutes(request, env, corsHeaders, url) {
       await deleteGameUser(env.GAME_DB, claim.sub);
       return new Response(JSON.stringify({ ok: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
-    // PUT — 게임데이터 갱신(클라이언트 병합 후 최종본 덮어쓰기)
+    // PUT — 최신 서버 진행도와 병합한 뒤 원자적으로 갱신
     const body = await request.json().catch(() => null);
     const gameData = GameDataSchema.safeParse(body?.gameData);
     if (!gameData.success) return errRes(corsHeaders, 400, '게임데이터 형식이 올바르지 않습니다. 기존 기록은 유지됩니다.');
@@ -2380,9 +2368,15 @@ async function handleGameRoutes(request, env, corsHeaders, url) {
       if (!nk.success) return errRes(corsHeaders, 400, nk.error.issues[0]?.message || '닉네임이 올바르지 않습니다.');
       nickname = nk.data;
     }
-    const res = await updateGameData(env.GAME_DB, claim.sub, gameData.data, nickname);
+    let res;
+    try {
+      res = await updateGameData(env.GAME_DB, claim.sub, gameData.data, nickname);
+    } catch (error) {
+      if (error.status === 409 || error.status === 413) return errRes(corsHeaders, error.status, error.message);
+      throw error;
+    }
     if (res?.meta?.changes === 0) return errRes(corsHeaders, 404, '계정을 찾을 수 없습니다.'); // 대상 행 없음
-    return new Response(JSON.stringify({ ok: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ ok: true, gameData: res.gameData }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
 
   return errRes(corsHeaders, 404, '요청한 항목을 찾을 수 없습니다.');
@@ -2485,10 +2479,21 @@ async function handleFetch(request, env, ctx) {
       }
     }
 
+    // Server-to-server ingestion has its own bounded body + signed, timestamped
+    // authentication. This exact route never grants access to teacher records.
+    if (url.pathname === '/notification-followups/ingest' && request.method === 'POST') {
+      if (!(await rateLimitCheck(env, `notification-ingest:${clientIp(request)}`, 60, 60))) return Response.json({ error: '요청이 너무 많습니다.' }, { status: 429 });
+      return ingestNotificationFollowup(request, env);
+    }
+
     const origin = request.headers.get('Origin') || '';
     // localhost: 로컬 dev(http, 포트有) + Capacitor 네이티브 앱 웹뷰(안드로이드=https://localhost, iOS=capacitor://localhost).
     // 게임 단독 앱이 /game/* API를 CORS로 호출하려면 이 스킴들이 허용돼야 함(민감 라우트는 JWT로 별도 게이팅).
-    const allowed = ALLOWED_ORIGINS.has(origin) || (env.ALLOWED_ORIGIN && origin === env.ALLOWED_ORIGIN) || /^https:\/\/[a-z0-9-]+\.tiantian-chinese\.pages\.dev$/.test(origin) || /^https?:\/\/localhost(:\d+)?$/.test(origin) || origin === 'capacitor://localhost';
+    const officialSite = ['https://tiantianchinese.com', 'https://www.tiantianchinese.com', 'https://tiantianchinese.pages.dev'].includes(origin);
+    const analyticsSite = officialSite && url.pathname === '/analytics/event';
+    const gameSite = officialSite && (url.pathname.startsWith('/game/') || url.pathname === '/error-log');
+    const insightsSite = origin === 'https://hanul-insights.pages.dev' && ['/auth/login', '/analytics/report'].includes(url.pathname);
+    const allowed = insightsSite || analyticsSite || gameSite || ALLOWED_ORIGINS.has(origin) || (env.ALLOWED_ORIGIN && origin === env.ALLOWED_ORIGIN) || /^https:\/\/[a-z0-9-]+\.tiantian-chinese\.pages\.dev$/.test(origin) || /^https?:\/\/localhost(:\d+)?$/.test(origin) || origin === 'capacitor://localhost';
 
     const corsHeaders = {
       'Access-Control-Allow-Origin': allowed ? origin : '',
@@ -2518,6 +2523,31 @@ async function handleFetch(request, env, ctx) {
     try { request = await boundedRequest(request); }
     catch (error) { if (error instanceof RequestTooLarge) return errRes(corsHeaders, 413, error.message); throw error; }
 
+    if (url.pathname === '/analytics/event' && request.method === 'POST') {
+      if (!env.GAME_AE) return errRes(corsHeaders, 503, '측정 연결이 필요합니다.');
+      if (!(await rateLimitCheck(env, `analytics:${clientIp(request)}`, 120, 60))) return errRes(corsHeaders, 429, '요청이 너무 많습니다.');
+      const body = await request.json().catch(() => null);
+      if (analyticsSite && !['site', 'tone'].includes(body?.service)) return errRes(corsHeaders, 400, '서비스가 일치하지 않습니다.');
+      if (!collectBusinessEvent(env, body)) return errRes(corsHeaders, 400, '잘못된 이벤트입니다.');
+      return new Response(null, { status: 204, headers: corsHeaders });
+    }
+    if (url.pathname === '/analytics/report' && request.method === 'GET') {
+      const authError = await requireJwt(request, env, corsHeaders);
+      if (authError) return authError;
+      const days = Number(url.searchParams.get('days') || 7);
+      const source = url.searchParams.get('source') || 'all';
+      if (![7, 14, 30].includes(days) || !['all', 'direct', 'instagram', 'youtube', 'naver', 'kakao', 'google', 'referral'].includes(source)) return errRes(corsHeaders, 400, '잘못된 조회 조건입니다.');
+      if (!(await rateLimitCheck(env, `analytics-report:${clientIp(request)}`, 10, 60))) return errRes(corsHeaders, 429, '잠시 후 다시 조회해주세요.');
+      try {
+        return new Response(JSON.stringify(await queryBusinessAnalytics(env, { days, source })), { headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Cache-Control': 'private, no-store' } });
+      } catch (error) { return errRes(corsHeaders, 503, error.message); }
+    }
+    if (url.pathname === '/notification-followups' || url.pathname.startsWith('/notification-followups/')) {
+      const authError = await requireJwt(request, env, corsHeaders);
+      if (authError) return authError;
+      if (!(await rateLimitCheck(env, `notification-followups:${clientIp(request)}`, 60, 60))) return errRes(corsHeaders, 429, '잠시 후 다시 시도해주세요.');
+      return handleNotificationFollowups(request, env, corsHeaders);
+    }
     if (url.pathname === '/notifications' && request.method === 'GET') {
       const authError = await requireJwt(request, env, corsHeaders);
       if (authError) return authError;
@@ -2528,6 +2558,12 @@ async function handleFetch(request, env, ctx) {
     // 클라이언트 JS 에러 수집 (공개, 인증 불필요)
     if (url.pathname === '/error-log' && request.method === 'POST') {
       return handleErrorLog(request, env, corsHeaders);
+    }
+
+    // 동의서 원문은 강사 또는 해당 학생 세션으로 확인한 뒤에만 반환한다.
+    if (url.pathname === '/booking/consent' || url.pathname.startsWith('/booking/consent/')) {
+      const token = url.pathname === '/booking/consent' ? undefined : url.pathname.slice('/booking/consent/'.length);
+      return handleConsentTerms(request, env, corsHeaders, { token, authorizeStudent: enforceStudentSession, authorizeTeacher: requireJwt });
     }
 
     // 예약 시스템 라우트 (공개 + 강사 인증 혼재, 내부에서 분기)

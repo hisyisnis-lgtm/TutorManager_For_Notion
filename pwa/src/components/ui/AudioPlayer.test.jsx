@@ -1,5 +1,6 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import FilePreview from './FilePreview.jsx';
 import StudentAuthGate from '../StudentAuthGate.jsx';
 import { setStudentSession, clearStudentSession } from '../../api/studentAuth.js';
@@ -37,7 +38,7 @@ describe('학생 오디오 인증 blob 재생', () => {
     setStudentSession('STUDENT_A', fixtureSession('student'));
     let respond;
     render(<StudentAuthGate token="STUDENT_A"><FilePreview file={{ name: '녹음.m4a' }}
-      fetchInlineBlobUrl={() => new Promise((resolve) => { respond = resolve; })} /></StudentAuthGate>);
+      fetchInlineBlobUrl={() => new Promise((resolve) => { respond = resolve; })} /></StudentAuthGate>, { wrapper: MemoryRouter });
     fireEvent.click(screen.getByRole('button', { name: '재생' }));
     act(() => clearStudentSession('STUDENT_A'));
     await act(async () => respond('blob:late-private'));

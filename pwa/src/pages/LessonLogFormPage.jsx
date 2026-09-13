@@ -10,6 +10,7 @@ import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import ErrorMessage from '../components/ui/ErrorMessage.jsx';
 import { getPage, deletePage } from '../api/notionClient.js';
 import { invalidateCache } from '../hooks/useCachedResource.js';
+import useUnsavedChanges from '../hooks/useUnsavedChanges.js';
 import ConfirmDialog from '../components/ui/ConfirmDialog.jsx';
 import { parseLessonLog, updateLessonLog, ENGAGEMENT_OPTIONS } from '../api/lessonLogs.js';
 import { useData } from '../context/DataContext.jsx';
@@ -80,6 +81,7 @@ export default function LessonLogFormPage() {
 
   const canEdit = !loading && loadedId === id && initial !== null;
   const isDirty = canEdit && JSON.stringify(form) !== JSON.stringify(initial);
+  const leaveGuard = useUnsavedChanges(isDirty);
   const blockedReason = !isDirty ? '변경된 내용이 없어요.' : null;
 
   const handleSubmit = async (e) => {
@@ -91,6 +93,7 @@ export default function LessonLogFormPage() {
       await updateLessonLog(id, form);
       invalidateCache('lessonLogs');
       invalidateCache('class'); // 수업 상세의 일지 연결 정보도 stale 방지
+      leaveGuard.markSaved();
       navigate(-1);
     } catch (e) {
       setError(e.message);
@@ -105,6 +108,7 @@ export default function LessonLogFormPage() {
       await deletePage(id);
       invalidateCache('lessonLogs');
       invalidateCache('class');
+      leaveGuard.markSaved();
       // navigate(-1)은 방금 지운 일지의 상세로 돌아간다 — Notion은 휴지통 페이지도 GET에 그대로 내려줘
       // "안 지워진 것"처럼 보였다(2026-09-07). 지운 것의 화면으로 돌아가지 말고 목록으로.
       navigate('/logs', { replace: true });
@@ -147,6 +151,7 @@ export default function LessonLogFormPage() {
         <div>
           <span style={LABEL_STYLE}>오늘 내용</span>
           <Textarea
+            disabled={saving || deleting}
             value={form.content}
             onChange={set('content')}
             rows={4}
@@ -157,6 +162,7 @@ export default function LessonLogFormPage() {
         <div>
           <span style={LABEL_STYLE}>숙제</span>
           <Textarea
+            disabled={saving || deleting}
             value={form.homework}
             onChange={set('homework')}
             rows={3}
@@ -167,6 +173,7 @@ export default function LessonLogFormPage() {
         <div>
           <span style={LABEL_STYLE}>다음 수업 준비</span>
           <Textarea
+            disabled={saving || deleting}
             value={form.nextPrepare}
             onChange={set('nextPrepare')}
             rows={3}
@@ -179,6 +186,7 @@ export default function LessonLogFormPage() {
           <div className="grid grid-cols-3 gap-2">
             <button
               type="button"
+              disabled={saving || deleting}
               onClick={() => setForm((f) => ({ ...f, engagement: '' }))}
               className={`seg-option py-3 rounded-xl text-sm font-semibold ${
                 !form.engagement ? 'seg-on-neutral' : 'seg-off'
@@ -190,6 +198,7 @@ export default function LessonLogFormPage() {
               <button
                 key={opt}
                 type="button"
+                disabled={saving || deleting}
                 onClick={() => setForm((f) => ({ ...f, engagement: opt }))}
                 className={`seg-option py-3 rounded-xl text-sm font-semibold ${
                   form.engagement === opt
@@ -206,6 +215,7 @@ export default function LessonLogFormPage() {
         <div>
           <span style={LABEL_STYLE}>메모 (특이사항)</span>
           <Textarea
+            disabled={saving || deleting}
             value={form.memo}
             onChange={set('memo')}
             rows={2}
@@ -220,6 +230,7 @@ export default function LessonLogFormPage() {
         <Button
           variant="destructiveOutline"
           block
+          disabled={saving || deleting}
           onClick={() => setShowDeleteConfirm(true)}
           className="mt-1"
         >
@@ -234,6 +245,17 @@ export default function LessonLogFormPage() {
           onConfirm={handleDelete}
           onCancel={() => setShowDeleteConfirm(false)}
           loading={deleting}
+        />
+      )}
+      {leaveGuard.showLeaveConfirm && (
+        <ConfirmDialog
+          title="작성 중인 내용을 두고 나갈까요?"
+          message="저장하지 않은 변경 내용이 사라져요."
+          confirmLabel="나가기"
+          cancelLabel="계속 작성"
+          onConfirm={leaveGuard.confirmLeave}
+          onCancel={leaveGuard.cancelLeave}
+          loading={saving || deleting}
         />
       )}
     </>

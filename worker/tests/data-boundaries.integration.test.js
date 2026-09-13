@@ -48,6 +48,24 @@ beforeEach(async () => {
 afterEach(() => { database.close(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
 describe('production data handlers with isolated Notion and SQLite', () => {
+  it('does not report a rejected feedback-seen write as recorded', async () => {
+    page.properties['제출 상태'] = { select: { name: '피드백완료' } };
+    const normalFetch = fetch.getMockImplementation();
+    fetch.mockImplementation((url, init) => init?.method === 'PATCH'
+      ? Response.json({ object: 'error', status: 400, message: 'fixture-only validation error' }, { status: 400 })
+      : normalFetch(url, init));
+    const response = await send(`/homework/feedback-seen/${CODE}`, { method: 'POST', body: JSON.stringify({ homeworkId: HOMEWORK }) });
+    expect(response.status).toBe(502);
+    expect(await response.json()).not.toHaveProperty('recorded', true);
+  });
+
+  it('reports feedback-seen success only after an accepted write', async () => {
+    page.properties['제출 상태'] = { select: { name: '피드백완료' } };
+    const response = await send(`/homework/feedback-seen/${CODE}`, { method: 'POST', body: JSON.stringify({ homeworkId: HOMEWORK }) });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ ok: true, recorded: true });
+    expect(calls.filter(call => call.method === 'PATCH')).toHaveLength(1);
+  });
   it.each([
     ['/notice/', 'f93b423b-8ab0-493b-bdf3-78fde6ec430f'],
     ['/booking/blocked/', '31e838fa-f2a6-81d3-b034-c47a4f0e5f3e'],
@@ -112,14 +130,22 @@ describe('production data handlers with isolated Notion and SQLite', () => {
       ]);
       expect(response.status).toBe(200);
       expect(await response.json()).toMatchObject({ id: HOMEWORK, notificationWarning: expect.stringContaining('저장') });
-      expect(ctx.waitUntil).toHaveBeenCalledOnce();
+      // Ancillary tasks are one outcome record plus one operational warning;
+      // provider delivery is still attempted exactly once below.
+      expect(ctx.waitUntil).toHaveBeenCalledTimes(2);
       expect(calls.filter(call => call.url === `/v1/pages/${HOMEWORK}` && call.method === 'PATCH')).toHaveLength(1);
-      expect(fetch.mock.calls.filter(([url]) => url.endsWith('/dispatches'))).toHaveLength(1);
+      const relays = fetch.mock.calls.filter(([url]) => url.endsWith('/dispatches'));
+      expect(relays).toHaveLength(1);
+      const followup = JSON.parse(relays[0][1].body).client_payload.followup;
+      expect(followup).toMatchObject({ kind: 'homework-submit', referenceId: HOMEWORK });
       const warnings = fetch.mock.calls.filter(([url]) => url === 'https://ntfy.sh');
       expect(warnings).toHaveLength(1);
       expect(warnings[0][1].body).not.toMatch(/ABCDEF123456|lesson.pdf|private-upstream-error/);
       failWarning();
       await expect(Promise.all(background)).resolves.toBeDefined();
+      const outcomes = database.sqlite.prepare('SELECT id, kind, reference_id, delivery_state, reason_code, resolved_at FROM notification_followups').all();
+      expect(outcomes).toEqual([{ id: followup.id, kind: 'homework-submit', reference_id: HOMEWORK,
+        delivery_state: 'failed', reason_code: 'ntfy_relay_failed', resolved_at: null }]);
       expect(response.status).toBe(200);
     } finally {
       clearTimeout(timeout);

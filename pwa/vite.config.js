@@ -92,9 +92,9 @@ export default defineConfig(({ mode }) => {
         clientsClaim: true,
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
         // 외부 공식 웹으로 301 이동하는 소개 페이지는 SW 설치 캐시에 넣지 않는다.
-        globIgnores: ['intro.html'],
+        globIgnores: ['intro.html', 'pricing.html', 'group-class.html'],
         navigateFallback: '/index.html',
-        navigateFallbackDenylist: [/^\/intro$/, /^\/pricing$/],
+        navigateFallbackDenylist: [/^\/(intro|pricing|group-class|bootcamp)(?:\/|\.html)?$/],
         runtimeCaching: [
           {
             // Cloudflare Worker API는 항상 네트워크에서 가져옴 (최신 데이터)

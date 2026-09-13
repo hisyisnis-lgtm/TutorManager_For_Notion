@@ -25,21 +25,19 @@ export default function MyTab({ student, studentToken, foodSources, onOpenPanda 
     <div style={{ padding: '16px 16px 0' }}>
       <div style={{ marginBottom: 24 }}>
         <SectionHeading>내 현황</SectionHeading>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <dl style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8, margin: 0 }}>
           {[
-            { label: '남은 수업 시간', value: formatDuration((student.remainingHours ?? 0) * 60) },
-            { label: '완료한 수업', value: formatDuration(student.completedMinutes ?? 0) },
-          ].map(({ label, value }) => (
-            <div key={label} style={{
-              flex: 1, background: '#fff', borderRadius: 12, padding: '12px 14px',
-              boxShadow: 'var(--shadow-border)' }}>
-              <p style={{ fontSize: 11, fontWeight: 600, color: TEXT_TERTIARY, margin: '0 0 4px' }}>{label}</p>
-              <p style={{ fontSize: 20, fontWeight: 700, color: TEXT_PRIMARY, margin: 0, lineHeight: 1.15 }} className="tabular-nums">
-                {value}
-              </p>
-            </div>
-          ))}
-        </div>
+            // paidHours는 환불 차감을 반영한 결제별 유효 시간 합계다.
+            ['결제한 시간', student.paidHours],
+            ['남은 수업 시간', student.remainingHours],
+          ].map(([label, hours]) => <div key={label} style={{ background: '#fff', borderRadius: 12, padding: '12px 14px', boxShadow: 'var(--shadow-border)' }}>
+            <dt style={{ fontSize: 11, fontWeight: 600, color: TEXT_TERTIARY, margin: '0 0 4px' }}>{label}</dt>
+            <dd style={{ fontSize: 20, fontWeight: 700, color: TEXT_PRIMARY, margin: 0, lineHeight: 1.15 }} className="tabular-nums">
+              {Number.isFinite(hours) ? formatDuration(hours * 60) : '확인 필요'}
+            </dd>
+          </div>)}
+        </dl>
+        <p style={{ fontSize: 12, color: TEXT_TERTIARY, margin: '8px 0 0' }}>남은 시간에는 예정된 수업이 포함돼요.</p>
         <button
           data-coach="panda"
           type="button"
@@ -124,7 +122,7 @@ export default function MyTab({ student, studentToken, foodSources, onOpenPanda 
       <p style={{ fontSize: 12, color: TEXT_TERTIARY, textAlign: 'center', margin: '0 0 24px' }}>
         <a href="/#/privacy" target="_blank" rel="noopener noreferrer" style={{ color: TEXT_TERTIARY, textDecoration: 'underline', textUnderlineOffset: 3 }}>개인정보처리방침</a>
         {' · '}
-        <a href="/#/consent" target="_blank" rel="noopener noreferrer" style={{ color: TEXT_TERTIARY, textDecoration: 'underline', textUnderlineOffset: 3 }}>수업 동의서</a>
+        <a href={`/personal/${encodeURIComponent(studentToken)}/consent`} target="_blank" rel="noopener noreferrer" style={{ color: TEXT_TERTIARY, textDecoration: 'underline', textUnderlineOffset: 3 }}>수업 동의서</a>
       </p>
     </div>
   );

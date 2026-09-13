@@ -197,7 +197,7 @@ function ReviewScrollSection() {
 }
 
 // ─── 메인 컴포넌트 ────────────────────────────────────────────
-// onConsult  : 무료 상담 신청 버튼 클릭 시 호출되는 콜백
+// onConsult  : 상담 신청 버튼 클릭 시 호출되는 콜백
 // onFloatChange : 플로팅 버튼 표시 여부 변경 시 호출되는 콜백
 export default function IntroContent({ onConsult, onFloatChange }) {
   const heroRef = useRef(null);
@@ -269,14 +269,14 @@ export default function IntroContent({ onConsult, onFloatChange }) {
                 className="font-bold"
                 style={{ backgroundColor: 'white', color: PRIMARY, border: 'none' }}
               >
-                무료 상담 신청
+                상담 신청
               </Button>
               <p style={{ margin: '12px 0 0', fontSize: 13, color: 'rgba(255,255,255,0.85)', textAlign: 'center' }}>
-                수강료 문의는{' '}
-                <a href="https://pf.kakao.com/_jFnFn" target="_blank" rel="noopener noreferrer"
+                수업 문의는{' '}
+                <a href="https://pf.kakao.com/_jFnFn/chat" target="_blank" rel="noopener noreferrer"
                   style={{ color: 'rgba(255,255,255,0.9)', textDecoration: 'underline', textDecorationColor: 'rgba(255,255,255,0.4)' }}
-                >채널톡</a>
-                으로 부탁드립니다.
+                >카카오 채널</a>
+                로 부탁드립니다.
               </p>
             </FadeUp>
           </div>

@@ -5,6 +5,7 @@ import PersonalEntryPage from './PersonalEntryPage.jsx';
 import StudentAuthGate from '../components/StudentAuthGate.jsx';
 import { fetchStudentByToken } from '../api/bookingApi.js';
 import { notifyAuthChange } from '../api/authState.js';
+import { fixtureSession } from '../api/authFixtures.js';
 
 vi.mock('../api/bookingApi.js', () => ({ fetchStudentByToken: vi.fn() }));
 vi.mock('../components/public/PublicHeader.jsx', () => ({ default: () => null }));
@@ -59,5 +60,28 @@ describe('학생 코드로 새 기기 인증 진입', () => {
     await act(async () => router.navigate(-1));
     expect(screen.getByLabelText('학생 코드')).toBeTruthy();
     expect(screen.queryByText('본인 확인')).toBeNull();
+  });
+
+  it('저장된 잘못된 코드에서도 직접 재입력한 뒤 본인 인증을 완료할 수 있다', async () => {
+    localStorage.setItem('personal_student_token', 'WRONG0000000');
+    const fetchMock = vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify({ error: '없음' }), { status: 404 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, phoneTail: '5678' })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, session: fixtureSession('student', 'personal:ABCD1234EFGH') })));
+    const router = renderEntry();
+    await act(async () => fireEvent.click(screen.getByRole('button', { name: '인증번호 받기' })));
+    expect(screen.getByText('학생 코드를 확인해 주세요.')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: '학생 코드 다시 입력' }));
+    expect(screen.getByLabelText('학생 코드')).toBeTruthy();
+    expect(localStorage.getItem('personal_student_token')).toBeNull();
+    expect(router.state.location.pathname).toBe('/personal');
+    expect(screen.getByRole('link', { name: '선생님께 문의' })).toBeTruthy();
+    fireEvent.change(screen.getByLabelText('학생 코드'), { target: { value: 'ABCD1234EFGH' } });
+    fireEvent.click(screen.getByRole('button', { name: '시작하기' }));
+    await act(async () => fireEvent.click(screen.getByRole('button', { name: '인증번호 받기' })));
+    await act(async () => fireEvent.change(screen.getByLabelText('인증번호 1번째 자리'), { target: { value: '123456' } }));
+    expect(screen.getByText('보호된 학생 정보')).toBeTruthy();
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(fetchStudentByToken).not.toHaveBeenCalled();
   });
 });

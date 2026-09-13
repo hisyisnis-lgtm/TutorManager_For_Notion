@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { captureAuthScope, isAuthScopeCurrent } from '../../api/authState.js';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
@@ -6,7 +6,7 @@ import { CircleNotchIcon } from '@phosphor-icons/react';
 import { Button } from '../../components/shadcn/button';
 import { Card, CardContent } from '../../components/shadcn/card';
 import { ChatTeardropTextIcon, CaretRightIcon, MusicNotesIcon } from '@phosphor-icons/react';
-import { peekCache, writeCacheValue, trackRevalidation } from '../../hooks/useCachedResource.js';
+import { peekCache, peekCacheSavedAt, writeCacheValue, trackRevalidation, pruneRevalidations } from '../../hooks/useCachedResource.js';
 import { fetchMyClasses } from '../../api/bookingApi.js';
 import { homeworkStatusColor } from '../../api/homework.js';
 import { getViewedMap, HW_VIEWED_KEY } from '../../utils/homeworkViewed.js';
@@ -182,7 +182,9 @@ function HwEmptyLine() {
 }
 
 // ===== 홈 탭 =====
-export default function HomeTab({ studentToken, studentLoaded, onUpcomingLoaded, hwAlerts, homeworkEnabled = true, onSwitchToClasses }) {
+export default function HomeTab({ studentToken, studentLoaded, onUpcomingLoaded, hwAlerts,
+  hwLoading = false, hwRefreshing = false, hwError = null, hwLastSuccessAt = null, onRetryHomework,
+  homeworkEnabled = true, onSwitchToClasses }) {
   const nowKST = new Date(Date.now() + 9 * 60 * 60 * 1000);
   const pad = n => String(n).padStart(2, '0');
   const todayStr = `${nowKST.getUTCFullYear()}-${pad(nowKST.getUTCMonth() + 1)}-${pad(nowKST.getUTCDate())}`;
@@ -192,9 +194,15 @@ export default function HomeTab({ studentToken, studentLoaded, onUpcomingLoaded,
   const [upcomingLoading, setUpcomingLoading] = useState(true);
   // 캐시 없는 첫 방문에서 네트워크 실패를 "수업 없음" 빈 상태로 위장하지 않기
   const [upcomingError, setUpcomingError] = useState(false);
+  const [upcomingRefreshing, setUpcomingRefreshing] = useState(false);
+  const upcomingRequestId = useRef(0);
+  const upcomingLastSuccess = useRef(peekCacheSavedAt(`student:upcoming:${studentToken}`));
 
   const loadInitialData = useCallback(async () => {
     const auth = captureAuthScope(`student:${studentToken}`);
+    if (!isAuthScopeCurrent(auth)) return;
+    const request = ++upcomingRequestId.current;
+    const isCurrent = () => request === upcomingRequestId.current && isAuthScopeCurrent(auth);
     // 캐시 있으면 즉시 표시(홈 첫 화면 빠르게), 뒤에서 갱신. dot 판정(onUpcomingLoaded)은
     // 최신 데이터로만 — 옛 목록으로 새 수업 점을 잘못 띄우지 않게.
     const CK = `student:upcoming:${studentToken}`;
@@ -202,18 +210,20 @@ export default function HomeTab({ studentToken, studentLoaded, onUpcomingLoaded,
     if (cached) {
       setUpcoming(cached);
       setUpcomingLoading(false);
-    } else {
+    } else if (!upcomingLastSuccess.current) {
       setUpcomingLoading(true);
     }
+    setUpcomingRefreshing(true);
     try {
       const kst = new Date(Date.now() + 9 * 60 * 60 * 1000);
       const thisMonth = `${kst.getUTCFullYear()}-${pad(kst.getUTCMonth() + 1)}`;
-      const [curr, next, after] = await trackRevalidation(Promise.all([
+      const [curr, next, after] = await trackRevalidation(() => Promise.all([
         fetchMyClasses(studentToken, thisMonth),
         fetchMyClasses(studentToken, addMonths(thisMonth, 1)),
         fetchMyClasses(studentToken, addMonths(thisMonth, 2)),
-      ]));
-      if (!isAuthScopeCurrent(auth)) return;
+      ]), { key: CK, label: '다음 수업', lastSuccessAt: upcomingLastSuccess.current,
+        retry: () => loadInitialData(), isCurrent });
+      if (!isCurrent()) return;
       // 잘라내지 않고 전부 담는다 — '예약된 수업' 개수가 실제 예약 건수여야 하기 때문.
       // (이전 slice(0,5) 때문에 10건 잡혀 있어도 5개로 보였다. 2026-08-26 실측: 활성 학생
       //  대부분이 8~11건이라 사실상 전원이 이 상한에 걸려 있었다.)
@@ -232,16 +242,17 @@ export default function HomeTab({ studentToken, studentLoaded, onUpcomingLoaded,
       setUpcoming(all);
       setUpcomingError(false);
       writeCacheValue(CK, all, auth);
+      upcomingLastSuccess.current = Date.now();
       onUpcomingLoaded?.(all);
     } catch {
-      if (!isAuthScopeCurrent(auth)) return;
-      if (!cached) { setUpcoming([]); setUpcomingError(true); }
+      if (!isCurrent()) return;
+      setUpcomingError(true);
     } finally {
-      setUpcomingLoading(false);
+      if (isCurrent()) { setUpcomingLoading(false); setUpcomingRefreshing(false); }
     }
   }, [studentToken]);
 
-  useEffect(() => { loadInitialData(); }, [loadInitialData]);
+  useEffect(() => { loadInitialData(); return () => { upcomingRequestId.current += 1; pruneRevalidations(); }; }, [loadInitialData]);
 
   // 잡혀 있는 수업은 결제 잔여와 무관하게 전부 보여준다.
   //
@@ -260,6 +271,15 @@ export default function HomeTab({ studentToken, studentLoaded, onUpcomingLoaded,
       {/* 다음 수업 */}
       <div data-coach="next-class" style={{ padding: '0 16px', marginBottom: 24, animation: 'fade-in-up 400ms cubic-bezier(0.2,0,0,1) both' }}>
         <SectionHeading>다음 수업</SectionHeading>
+        {upcomingError && (
+          <div role="status" className="mb-3">
+            <p className="mb-1 text-sm" style={{ color: TEXT_TERTIARY }}>수업 정보를 불러오지 못했어요</p>
+            {upcomingLastSuccess.current && <p className="mb-2 text-xs" style={{ color: TEXT_TERTIARY }}>
+              마지막 확인 {new Date(upcomingLastSuccess.current).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}
+            </p>}
+            <Button variant="outline" size="sm" className="min-h-11" disabled={upcomingRefreshing} onClick={loadInitialData}>수업 다시 시도</Button>
+          </div>
+        )}
         {upcomingLoading ? (
           <div style={{
             height: 86, borderRadius: 12, background: '#fff',
@@ -267,13 +287,8 @@ export default function HomeTab({ studentToken, studentLoaded, onUpcomingLoaded,
             display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <CircleNotchIcon size={16} weight="bold" className="animate-spin" aria-hidden />
           </div>
-        ) : upcomingError ? (
-          <div style={{
-            borderRadius: 12, background: '#fff',
-            boxShadow: 'var(--shadow-border)', padding: '20px', textAlign: 'center' }}>
-            <p style={{ fontSize: 14, color: TEXT_TERTIARY, margin: '0 0 10px' }}>수업 정보를 불러오지 못했어요</p>
-            <Button variant="outline" size="sm" onClick={loadInitialData}>다시 시도</Button>
-          </div>
+        ) : upcomingError && visibleUpcoming.length === 0 ? (
+          null
         ) : visibleUpcoming.length === 0 ? (
           <div style={{
             borderRadius: 12, background: '#fff',
@@ -294,13 +309,21 @@ export default function HomeTab({ studentToken, studentLoaded, onUpcomingLoaded,
       {studentLoaded && homeworkEnabled && (
         <div style={{ padding: '0 16px', marginBottom: 24, animation: 'fade-in-up 400ms cubic-bezier(0.2,0,0,1) both', animationDelay: '60ms' }}>
           <SectionHeading>숙제</SectionHeading>
+          {hwLoading && <p role="status" className="text-sm" style={{ color: TEXT_TERTIARY }}>숙제를 불러오는 중이에요…</p>}
+          {hwError && !hwLoading && <div role="status" className="mb-3">
+            <p className="mb-1 text-sm" style={{ color: TEXT_TERTIARY }}>{hwError}</p>
+            {hwLastSuccessAt && <p className="mb-2 text-xs" style={{ color: TEXT_TERTIARY }}>
+              마지막 확인 {new Date(hwLastSuccessAt).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}
+            </p>}
+            <Button variant="outline" size="sm" className="min-h-11" disabled={hwRefreshing} onClick={onRetryHomework}>숙제 다시 시도</Button>
+          </div>}
           {(() => {
             const all = [
               ...(hwAlerts?.pending ?? []),
               ...(hwAlerts?.feedback ?? []),
               ...(hwAlerts?.submitted ?? []),
             ];
-            if (all.length === 0) return <HwEmptyLine />;
+            if (all.length === 0) return hwLoading || hwError ? null : <HwEmptyLine />;
             return (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {all.map((hw, i) => (

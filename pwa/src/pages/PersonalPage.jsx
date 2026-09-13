@@ -5,7 +5,7 @@ import { Button } from '../components/shadcn/button';
 import { Card, CardContent } from '../components/shadcn/card';
 import { HouseIcon, BookOpenIcon, BellIcon, GearSixIcon, ArchiveIcon, UserIcon, WarningCircleIcon } from '@phosphor-icons/react';
 import { usePullToRefresh, PullIndicator } from '../hooks/usePullToRefresh.jsx';
-import { peekCache, writeCacheValue, trackRevalidation } from '../hooks/useCachedResource.js';
+import { peekCache, peekCacheSavedAt, writeCacheValue, trackRevalidation, pruneRevalidations } from '../hooks/useCachedResource.js';
 import { fetchStudentByToken } from '../api/bookingApi.js';
 import { fetchMyHomework, parseHomework } from '../api/homework.js';
 import { fetchStudentNotices } from '../api/notices.js';
@@ -46,6 +46,12 @@ export default function PersonalPage() {
   const [student, setStudent] = useState(() => peekCache(`student:info:${studentToken}`) ?? null);
   const [studentError, setStudentError] = useState(null);
   const [studentLoading, setStudentLoading] = useState(false);
+  const studentRequestId = useRef(0);
+  const homeworkRequestId = useRef(0);
+  const [hwLoading, setHwLoading] = useState(true);
+  const [hwRefreshing, setHwRefreshing] = useState(false);
+  const [hwError, setHwError] = useState(null);
+  const [hwLastSuccessAt, setHwLastSuccessAt] = useState(() => peekCacheSavedAt(`student:homework:${studentToken}`));
   const [tab, setTab] = useState(() => {
     const t = routerLocation.state?.tab;
     return ['홈', '내 수업', '보관함', '공지', '하늘하늘', 'MY'].includes(t) ? t : '홈';
@@ -104,6 +110,9 @@ export default function PersonalPage() {
 
   const checkDots = useCallback(async () => {
     const auth = captureAuthScope(`student:${studentToken}`);
+    if (!isAuthScopeCurrent(auth)) return;
+    const request = ++homeworkRequestId.current;
+    const isCurrent = () => request === homeworkRequestId.current && isAuthScopeCurrent(auth);
     const CK = `student:homework:${studentToken}`;
     // 홈 숙제 섹션(제출전/제출완료/피드백) 계산 — 표시용.
     const computeAlerts = (list) => {
@@ -117,12 +126,17 @@ export default function PersonalPage() {
     // 캐시 있으면 즉시 표시(홈 빠르게). '새 피드백' 여부는 아래 fresh로 ~1초 뒤 갱신.
     const cached = peekCache(CK);
     if (cached) computeAlerts(cached);
+    setHwLoading(cached === undefined);
+    setHwRefreshing(true);
     try {
-      const pages = await trackRevalidation(fetchMyHomework(studentToken));
-      if (!isAuthScopeCurrent(auth)) return;
-      const list = pages.map(parseHomework);
+      const list = await trackRevalidation(async () => (await fetchMyHomework(studentToken)).map(parseHomework), {
+        key: CK, label: '숙제', lastSuccessAt: peekCacheSavedAt(CK), retry: () => checkDots(), isCurrent,
+      });
+      if (!isCurrent()) return;
       writeCacheValue(CK, list, auth); // ArchiveTab과 캐시 공유
       computeAlerts(list);
+      setHwError(null);
+      setHwLastSuccessAt(Date.now());
 
       // 보관함 dot: 마지막 보관함 방문 이후 새로 archived된 항목 (최신 기준)
       const viewedMap = getViewedMap(studentToken);
@@ -134,7 +148,11 @@ export default function PersonalPage() {
           return viewedAt && isFeedbackArchived(studentToken, h.id, h.feedbackDate, h.feedbackSeenDate) && viewedAt > lastSeenTime;
         })
       );
-    } catch { /* ignore */ }
+    } catch {
+      if (isCurrent()) setHwError('숙제를 불러오지 못했어요');
+    } finally {
+      if (isCurrent()) { setHwLoading(false); setHwRefreshing(false); }
+    }
 
     // 공지 dot: 마지막으로 공지 탭을 본 시각 이후에 게시된 공지가 있으면 점을 켠다.
     // 실패해도 조용히 넘어간다 — 배지는 부가 정보라 홈 로딩을 막을 이유가 없다.
@@ -160,7 +178,7 @@ export default function PersonalPage() {
     }
   }, [studentToken]);
 
-  useEffect(() => { checkDots(); }, [checkDots]);
+  useEffect(() => { checkDots(); return () => { homeworkRequestId.current += 1; pruneRevalidations(); }; }, [checkDots]);
 
   // 탭 이탈/방문 시 dot 처리
   useEffect(() => {
@@ -249,20 +267,26 @@ export default function PersonalPage() {
 
   const loadStudent = useCallback(async () => {
     const auth = captureAuthScope(`student:${studentToken}`);
+    if (!isAuthScopeCurrent(auth)) return;
+    const request = ++studentRequestId.current;
+    const isCurrent = () => request === studentRequestId.current && isAuthScopeCurrent(auth);
+    const CK = `student:info:${studentToken}`;
     setStudentLoading(true);
     try {
-      const data = await trackRevalidation(fetchStudentByToken(studentToken));
-      if (!isAuthScopeCurrent(auth)) return;
+      const data = await trackRevalidation(() => fetchStudentByToken(studentToken), {
+        key: CK, label: '학생 정보', lastSuccessAt: peekCacheSavedAt(CK), retry: () => loadStudent(), isCurrent,
+      });
+      if (!isCurrent()) return;
       localStorage.setItem(SAVED_TOKEN_KEY, studentToken);
       writeCacheValue(`student:info:${studentToken}`, data, auth);
       setStudent(data);
       setStudentError(null);
     } catch (e) {
-      if (!isAuthScopeCurrent(auth)) return;
-      localStorage.removeItem(SAVED_TOKEN_KEY);
+      if (!isCurrent()) return;
+      if (e.status === 404) { localStorage.removeItem(SAVED_TOKEN_KEY); setStudent(null); }
       setStudentError(e.status === 404 ? '등록된 학생 코드가 아닙니다.' : e.message);
     } finally {
-      if (isAuthScopeCurrent(auth)) setStudentLoading(false);
+      if (isCurrent()) setStudentLoading(false);
     }
   }, [studentToken]);
 
@@ -272,6 +296,7 @@ export default function PersonalPage() {
       return;
     }
     loadStudent();
+    return () => { studentRequestId.current += 1; pruneRevalidations(); };
   }, [studentToken, navigate, loadStudent]);
 
   const handlePullRefresh = useCallback(async () => {
@@ -281,7 +306,7 @@ export default function PersonalPage() {
 
   const { pullY, refreshing: pullRefreshing } = usePullToRefresh(handlePullRefresh);
 
-  if (studentError) {
+  if (studentError && !student) {
     return (
       <div className="min-h-dvh bg-gray-50 flex flex-col items-center justify-center px-4">
         <Card className="w-full max-w-[360px] text-center shadow-[shadow:var(--shadow-card)]">
@@ -465,6 +490,11 @@ export default function PersonalPage() {
             studentLoaded={student !== null}
             onUpcomingLoaded={handleUpcomingLoaded}
             hwAlerts={hwAlerts}
+            hwLoading={hwLoading}
+            hwRefreshing={hwRefreshing}
+            hwError={hwError}
+            hwLastSuccessAt={hwLastSuccessAt}
+            onRetryHomework={checkDots}
             homeworkEnabled={homeworkEnabled}
             onSwitchToClasses={() => setTab('내 수업')}
           />

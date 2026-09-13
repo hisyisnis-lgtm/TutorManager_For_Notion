@@ -1,6 +1,6 @@
 import { useState, useEffect, useSyncExternalStore, lazy, Suspense } from 'react';
 import { getAuthRevision, subscribeAuthChanges } from './api/authState.js';
-import { HashRouter, BrowserRouter, Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom';
+import { HashRouter, BrowserRouter, createHashRouter, RouterProvider, Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom';
 import { Toaster } from './components/shadcn/sonner';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { useTeacherAuth } from './api/authUtils.js';
@@ -51,7 +51,7 @@ import StudentPaymentsPage from './pages/StudentPaymentsPage.jsx';
 import HomeworkManagePage from './pages/HomeworkManagePage.jsx';
 import LandingPage from './pages/LandingPage.jsx';
 import PricingPage from './pages/PricingPage.jsx';
-import ConsentPage from './pages/ConsentPage.jsx';
+import ConsentPage, { AuthenticatedConsentPage } from './pages/ConsentPage.jsx';
 
 import GroupClassPage from './pages/GroupClassPage.jsx';
 import InAppBrowserWarning from './components/ui/InAppBrowserWarning.jsx';
@@ -132,7 +132,8 @@ if (typeof window !== 'undefined') {
       const oldHashToken = decodeURIComponent(oldHashMatch[1]);
       if (oldHashToken && oldHashToken !== 'undefined' && oldHashToken.length >= 4) {
         // location.replace로 history 항목을 덮어써 뒤로 가기가 hash URL로 돌아가지 않게.
-        window.location.replace(`/personal/${encodeURIComponent(oldHashToken)}`);
+        const childPath = window.location.hash.slice(oldHashMatch[0].length).split(/[?#]/)[0];
+        window.location.replace(`/personal/${encodeURIComponent(oldHashToken)}${childPath}`);
         // replace 후엔 페이지가 즉시 다시 로드되므로 IIFE를 명시적으로 종료.
         throw new Error('redirecting');
       }
@@ -279,14 +280,15 @@ export default function App() {
             <Route path="/personal" element={<PersonalEntryPage />} />
             <Route path="/personal/:studentToken" element={<GatedStudentRoute><PersonalPage /></GatedStudentRoute>} />
             <Route path="/personal/:studentToken/homework/:hwId" element={<GatedStudentRoute><PersonalHomeworkDetailPage /></GatedStudentRoute>} />
+            <Route path="/personal/:studentToken/consent" element={<GatedStudentRoute><AuthenticatedConsentPage /></GatedStudentRoute>} />
             <Route path="/personal/:studentToken/notice/:noticeId" element={<GatedStudentRoute><PersonalNoticeDetailPage /></GatedStudentRoute>} />
             <Route path="/personal/:studentToken/panda" element={<GatedStudentRoute><PandaPage /></GatedStudentRoute>} />
             <Route path="/personal/:studentToken/game/tone" element={<GatedStudentRoute><Suspense fallback={<SplashScreen />}><ToneGamePage /></Suspense></GatedStudentRoute>} />
             {/* 게스트 독립 진입 (학생 토큰 없음) — 채널 유입 깔때기. ToneGamePage가 토큰 부재를 게스트로 처리 */}
             <Route path="/game/tone" element={<Suspense fallback={<SplashScreen />}><ToneGamePage /></Suspense>} />
           </Routes>
+          <FreshnessIndicator />
         </BrowserRouter>
-        <FreshnessIndicator />
         </>
     );
   }
@@ -318,13 +320,14 @@ export default function App() {
             <Route path="/personal" element={<PersonalEntryPage />} />
             <Route path="/personal/:studentToken" element={<GatedStudentRoute><PersonalPage /></GatedStudentRoute>} />
             <Route path="/personal/:studentToken/homework/:hwId" element={<GatedStudentRoute><PersonalHomeworkDetailPage /></GatedStudentRoute>} />
+            <Route path="/personal/:studentToken/consent" element={<GatedStudentRoute><AuthenticatedConsentPage /></GatedStudentRoute>} />
             <Route path="/personal/:studentToken/notice/:noticeId" element={<GatedStudentRoute><PersonalNoticeDetailPage /></GatedStudentRoute>} />
             <Route path="/personal/:studentToken/panda" element={<GatedStudentRoute><PandaPage /></GatedStudentRoute>} />
             <Route path="/personal/:studentToken/game/tone" element={<GatedStudentRoute><Suspense fallback={<SplashScreen />}><ToneGamePage /></Suspense></GatedStudentRoute>} />
             {PandaTestPage && <Route path="/panda-test" element={<Suspense fallback={null}><PandaTestPage /></Suspense>} />}
           </Routes>
+          <FreshnessIndicator />
         </HashRouter>
-        <FreshnessIndicator />
         </>
     );
   }
@@ -346,7 +349,27 @@ export default function App() {
     <>
     <Toaster position="top-center" />
     <DataProvider key={authRevision}>
-      <HashRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+      <TeacherRouter />
+    </DataProvider>
+    </>
+  );
+}
+
+// 강사 화면만 data router로 실행해 작성 중 BottomNav·브라우저 뒤로가기를 함께 보호한다.
+// effect에서 만들고 정리하므로 StrictMode 재실행이나 로그아웃 뒤 history listener가 남지 않는다.
+function TeacherRouter() {
+  const [router, setRouter] = useState(null);
+  useEffect(() => {
+    const nextRouter = createHashRouter([{ path: '*', element: <TeacherRoutes /> }]);
+    setRouter(nextRouter);
+    return () => nextRouter.dispose();
+  }, []);
+  return router ? <RouterProvider router={router} /> : <SplashScreen />;
+}
+
+function TeacherRoutes() {
+  return (
+    <>
         <ScrollToTop />
         <div className="page-container">
           <Routes>
@@ -387,6 +410,7 @@ export default function App() {
             <Route path="/homework/:id" element={<HomeworkDetailPage />} />
 
             <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/agreement" element={<AuthenticatedConsentPage />} />
             <Route path="/notices" element={<NoticesPage />} />
             <Route path="/notifications" element={<NotificationsPage />} />
 
@@ -397,8 +421,6 @@ export default function App() {
         </div>
         <FreshnessIndicator />
         <BottomNav />
-      </HashRouter>
-    </DataProvider>
     </>
   );
 }

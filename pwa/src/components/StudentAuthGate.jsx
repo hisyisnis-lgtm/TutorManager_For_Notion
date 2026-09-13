@@ -1,4 +1,5 @@
 import { Fragment, useState, useEffect, useRef, useSyncExternalStore } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { getAuthRevision, subscribeAuthChanges } from '../api/authState.js';
 import { KAKAO_CHANNEL_CHAT_URL } from '../constants.js';
 import { Button } from './shadcn/button';
@@ -25,6 +26,7 @@ export default function StudentAuthGate({ token, disabled = false, children }) {
 }
 
 function StudentVerification({ token }) {
+  const navigate = useNavigate();
   const [phase, setPhase] = useState('idle');   // idle | sent | no_phone
   const [code, setCode] = useState('');
   const [phoneTail, setPhoneTail] = useState('');
@@ -36,7 +38,18 @@ function StudentVerification({ token }) {
   const timerRef = useRef(null);
   const requestRef = useRef(null);
 
-  useEffect(() => () => requestRef.current?.abort(), []);
+  useEffect(() => () => {
+    requestRef.current?.abort();
+    clearInterval(timerRef.current);
+  }, []);
+
+  function reenterStudentCode() {
+    requestRef.current?.abort();
+    clearInterval(timerRef.current);
+    // 자동 진입용 코드만 지운다. 다른 학생의 인증 세션은 변경하지 않는다.
+    try { localStorage.removeItem('personal_student_token'); } catch {}
+    navigate('/personal', { replace: true, state: { reenterCode: true } });
+  }
 
   useEffect(() => {
     if (resendIn <= 0) return undefined;
@@ -48,10 +61,12 @@ function StudentVerification({ token }) {
 
   async function sendOtp(resend = false) {
     requestRef.current?.abort();
-    requestRef.current = new AbortController();
+    const request = new AbortController();
+    requestRef.current = request;
     setBusy(true); setError(''); setNotice('');
     try {
-      const res = await requestStudentOtp(token, requestRef.current.signal);
+      const res = await requestStudentOtp(token, request.signal);
+      if (request.signal.aborted || requestRef.current !== request) return;
       if (res.ok === false && res.reason === 'no_phone') { setPhase('no_phone'); return; }
       setPhoneTail(res.phoneTail || '');
       setCode('');
@@ -59,28 +74,33 @@ function StudentVerification({ token }) {
       setResendIn(RESEND_SECONDS);
       if (resend) setNotice('인증번호를 다시 보냈어요.');
     } catch (e) {
-      if (e.name === 'AbortError') return;
+      if (e.name === 'AbortError' || request.signal.aborted || requestRef.current !== request) return;
       fail(e.status === 429 ? '요청이 많아요. 잠시 후 다시 시도해 주세요.'
         : e.status === 404 ? '학생 코드를 확인해 주세요.'
         : '인증번호 발송에 실패했어요. 잠시 후 다시 시도해 주세요.');
-    } finally { setBusy(false); }
+    } finally {
+      if (!request.signal.aborted && requestRef.current === request) setBusy(false);
+    }
   }
 
   async function submitCode(codeArg) {
     const c = codeArg ?? code;
     if (c.length !== 6 || busy) return;
     requestRef.current?.abort();
-    requestRef.current = new AbortController();
+    const request = new AbortController();
+    requestRef.current = request;
     setBusy(true); setError('');
     try {
-      await verifyStudentOtp(token, c, requestRef.current.signal);
+      await verifyStudentOtp(token, c, request.signal);
     } catch (e) {
-      if (e.name === 'AbortError') return;
+      if (e.name === 'AbortError' || request.signal.aborted || requestRef.current !== request) return;
       setCode('');
       fail(e.status === 401 ? '인증번호가 일치하지 않아요. 다시 확인해 주세요.'
         : e.status === 429 ? '시도가 많아요. 잠시 후 다시 시도해 주세요.'
         : '인증에 실패했어요. 잠시 후 다시 시도해 주세요.');
-    } finally { setBusy(false); }
+    } finally {
+      if (!request.signal.aborted && requestRef.current === request) setBusy(false);
+    }
   }
 
   return (
@@ -126,8 +146,7 @@ function StudentVerification({ token }) {
             marginTop: 22, padding: '16px 18px', borderRadius: 14, background: PRIMARY_BG,
             color: TEXT_SECONDARY, fontSize: 14, lineHeight: 1.65, textAlign: 'center',
           }}>
-            <a href={KAKAO_CHANNEL_CHAT_URL} target="_blank" rel="noopener noreferrer"
-              style={{ fontWeight: 700, color: TEXT_PRIMARY, textDecoration: 'underline', textUnderlineOffset: 3 }}>선생님께 문의</a>해<br />인증을 받아 주세요.
+            선생님께 휴대폰 번호 등록을 요청한 뒤<br />다시 인증해 주세요.
           </div>
         )}
 
@@ -195,16 +214,6 @@ function StudentVerification({ token }) {
                 </Button>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, marginTop: 2 }}>
                   <Button
-                    variant="ghost" size="sm"
-                    onClick={() => { setPhase('idle'); setCode(''); setError(''); }}
-                    style={{ color: TEXT_TERTIARY }}
-                    className="px-2"
-                  >
-                    <ArrowLeftIcon size={16} />
-                    처음으로
-                  </Button>
-                  <span style={{ color: BORDER_DEFAULT }}>·</span>
-                  <Button
                     variant="ghost" size="sm" disabled={resendIn > 0 || busy} onClick={() => sendOtp(true)}
                     style={{ color: resendIn > 0 ? TEXT_TERTIARY : PRIMARY }}
                     className="px-2"
@@ -217,14 +226,15 @@ function StudentVerification({ token }) {
           </div>
         )}
 
-        {phase === 'no_phone' && (
-          <Button
-            variant="outline" size="lg" block onClick={() => { setPhase('idle'); setError(''); }}
-            className="mt-[18px] rounded-[14px]"
-          >
-            처음으로
+        <div className="mt-5 flex flex-col gap-1">
+          <Button variant="outline" block onClick={reenterStudentCode}>
+            <ArrowLeftIcon size={16} />
+            학생 코드 다시 입력
           </Button>
-        )}
+          <Button variant="ghost" block asChild>
+            <a href={KAKAO_CHANNEL_CHAT_URL} target="_blank" rel="noopener noreferrer">선생님께 문의</a>
+          </Button>
+        </div>
       </div>
     </div>
   );

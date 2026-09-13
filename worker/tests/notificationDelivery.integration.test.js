@@ -131,7 +131,13 @@ describe('Worker Solapi callers distinguish acceptance from failure', () => {
         new Promise((_resolve, reject) => { timeout = setTimeout(() => reject(new Error('Response waited for the operational warning')), 1500); }),
       ]);
       expect(warningPending).toBe(true);
-      expect(executionContext.waitUntil).toHaveBeenCalledOnce();
+      expect(executionContext.waitUntil).toHaveBeenCalledTimes(isConsult ? 3 : 2);
+      expect(solapiCalls()).toHaveLength(1);
+      expect(fetch.mock.calls.filter(([url]) => url.endsWith('/dispatches'))).toHaveLength(isConsult ? 1 : 0);
+      expect(local.sqlite.prepare('SELECT kind, delivery_state FROM notification_followups ORDER BY kind').all()).toEqual(isConsult ? [
+        { kind: 'consult-kakao', delivery_state: kind === 'consult-relay' ? 'accepted' : 'failed' },
+        { kind: 'consult-relay', delivery_state: kind === 'consult-relay' ? 'failed' : 'queued' },
+      ] : [{ kind: 'homework-assign', delivery_state: 'failed' }]);
       expect(response.status).toBe(isConsult ? 200 : 502);
       expect(await response.json()).toMatchObject(isConsult
         ? { ok: true, notificationWarning: expect.stringContaining('저장') }
