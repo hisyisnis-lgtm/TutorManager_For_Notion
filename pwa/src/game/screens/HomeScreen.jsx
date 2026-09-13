@@ -2,7 +2,6 @@
 // 좌상단 내 정보(아바타+등급명+게이지%) · 우상단 메뉴 · 중앙 하단 스트릭+게임시작 키캡 CTA · 하단 공통 탭바.
 // 2026-07-27 리디자인(사용자 Figma 시안 442:2): 2.5D 원근·바닥 영토 제거, 도크·플로팅 허브 → 탭바로 통합.
 import { useState, useRef, useEffect, useLayoutEffect } from 'react';
-import { ArrowsClockwiseIcon, CloudCheckIcon, DeviceMobileIcon } from '@phosphor-icons/react';
 import {
   Settings, Play, Flame, Snowflake,
   QuestionCircle, Logout, AltArrowLeft, VolumeLoud, VolumeCross, SmartphoneVibration, CloseCircle,
@@ -806,30 +805,17 @@ function ToneCard({ tone, status, level, onClose }) {
 
 
 export function GameSaveStatus({ status, onRetry, onLogin }) {
-  const failed = status === 'read-error' || status === 'save-error';
   const signedOut = status === 'signed-out';
-  const actionable = failed || signedOut;
   const label = {
-    local: '이 기기에 기록을 저장해요',
-    checking: '서버 기록 확인 중…',
-    saving: '이 기기 기록 · 서버에 저장 중…',
-    saved: '서버 저장 완료',
     'read-error': '서버 기록을 읽지 못해 서버 저장을 보류했어요.',
     'save-error': '서버 저장이 실패했습니다.',
     'signed-out': '이 기기 기록은 유지돼요. 다시 로그인해 주세요.',
   }[status];
+  // 평상시 저장 상태는 숨기고, 복구에 사용자 동작이 필요할 때만 알린다.
   if (!label) return null;
-  const StatusIcon = status === 'saved' ? CloudCheckIcon : status === 'local' ? DeviceMobileIcon : ArrowsClockwiseIcon;
   return (
     <div style={{ position: 'absolute', top: ROOM_TOP + SPACE.md, left: SPACE.x4, right: SPACE.x4, zIndex: 5, display: 'flex', justifyContent: 'center', pointerEvents: 'none' }}>
-      {actionable ? <GameToast msg={label} kind="info" inline persistent action={{ label: signedOut ? '로그인' : '재시도', onClick: signedOut ? onLogin : onRetry }} /> : <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.lg, maxWidth: '100%', minWidth: 0, minHeight: 28 }}>
-        <span aria-hidden="true" style={{ display: 'grid', placeItems: 'center', width: 28, height: 28, borderRadius: RADIUS.pill, flexShrink: 0,
-          color: HOME.ACCENT }}>
-          <StatusIcon size={18} weight="duotone" />
-        </span>
-        <span role="status" aria-live="polite" style={{ ...TYPE.sub, color: TG.SUB,
-          flex: 1, minWidth: 0, lineHeight: '20px', wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>{label}</span>
-      </div>}
+      <GameToast msg={label} kind="info" inline persistent action={{ label: signedOut ? '로그인' : '재시도', onClick: signedOut ? onLogin : onRetry }} />
     </div>
   );
 }

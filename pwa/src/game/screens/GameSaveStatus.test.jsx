@@ -17,13 +17,18 @@ describe('홈 저장 상태 안내', () => {
     expect(retry).toHaveBeenCalledTimes(2);
     rerender(<GameSaveStatus status="checking" onRetry={retry} />);
     expect(screen.queryByRole('button')).toBeNull();
-    expect(screen.getByRole('status').textContent).toBe('서버 기록 확인 중…');
+    expect(screen.queryByRole('status')).toBeNull();
+    rerender(<GameSaveStatus status="saving" onRetry={retry} />);
+    expect(screen.queryByRole('status')).toBeNull();
     rerender(<GameSaveStatus status="saved" onRetry={retry} />);
-    expect(screen.getByRole('status').textContent).toBe('서버 저장 완료');
+    expect(screen.queryByRole('status')).toBeNull();
   });
   it('인증이 끝났다면 저장 재시도 대신 로그인 동선을 제공한다', () => {
     const login = vi.fn();
-    render(<GameSaveStatus status="signed-out" onLogin={login} />);
+    const { rerender } = render(<GameSaveStatus status="local" onLogin={login} />);
+    expect(screen.queryByRole('status')).toBeNull();
+    expect(screen.queryByRole('button')).toBeNull();
+    rerender(<GameSaveStatus status="signed-out" onLogin={login} />);
     expect(screen.queryByRole('button', { name: '재시도' })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: '로그인' }));
     expect(login).toHaveBeenCalledTimes(1);
