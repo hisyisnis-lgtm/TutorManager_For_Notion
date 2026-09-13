@@ -1,0 +1,74 @@
+{
+  "passed": true,
+  "version": "2.48.3",
+  "commit": "8cbf6a3daccf668cc477fb85abf2f5982e47ebbf",
+  "deployed": {
+    "id": "505a0f76-9af3-40c0-8c86-a7b09288f5fa",
+    "url": "https://505a0f76.tiantian-chinese.pages.dev",
+    "commit": "8cbf6a3daccf668cc477fb85abf2f5982e47ebbf"
+  },
+  "previous": {
+    "id": "f053f6b3-5621-48ed-902f-771286e7a979",
+    "url": "https://f053f6b3.tiantian-chinese.pages.dev",
+    "commit": "e80fbc76fe8f674a6986a5b2398ef0ae925a3c37"
+  },
+  "verifiedAt": "2026-09-13T16:27:39.062Z",
+  "files": 843,
+  "bytes": 43547862,
+  "assets": [
+    {
+      "path": "/sw.js",
+      "sha256": "01fde48b07f1fbdca4d7520c26041f5bef4b48dadf58320e11222ba8e34fb133",
+      "bytes": 7080,
+      "cacheControl": "public, max-age=0, must-revalidate"
+    },
+    {
+      "path": "/assets/index-DYloNbmU.js",
+      "sha256": "92071630983ccae4dfb9d49b47e1b008d362405604b340b900765a8f152b6263",
+      "bytes": 478319,
+      "cacheControl": "public, max-age=0, must-revalidate"
+    },
+    {
+      "path": "/assets/PricingPage-B5cVBFBu.js",
+      "sha256": "73f3c323514246a6a000aca8f58737b95777e3b648ac154d64bf7c417548279e",
+      "bytes": 24546,
+      "cacheControl": "public, max-age=0, must-revalidate"
+    }
+  ],
+  "routes": [
+    {
+      "route": "/",
+      "status": 200
+    },
+    {
+      "route": "/personal",
+      "status": 200
+    },
+    {
+      "route": "/pricing",
+      "status": 200
+    }
+  ],
+  "price": {
+    "target": "pwa",
+    "textFiles": 16,
+    "files": 843,
+    "sharedPricingAssets": [
+      "/assets/PricingPage-B5cVBFBu.js"
+    ]
+  },
+  "assetRetention": {
+    "retained": {
+      "/assets/index-DjHfQSni.js": "ef056c6f554afeff04fd3d1d59da9f518d9c529e6050316fbf1f5001615cea11",
+      "/assets/PrivacyPage-5c-vindP.js": "4c0a11b5db000c55d9f1073346540774dd19f76fe7cf7af6c776f3e8936a6b5b",
+      "/assets/ToneGamePage-CU77bxXZ.js": "6116cb8c03539fd54ba03927f754fd1a08c6e7f42d18db91382fdac2e5cbd031"
+    },
+    "excluded": {
+      "/assets/PricingPage-sTbG-k-c.js": "강사가 개별 공유하는 수강료 안내의 이전 버전은 보존하지 않는다. 현재 빌드의 전용 청크만 제공한다."
+    },
+    "bootstrap": false,
+    "generations": 1
+  },
+  "workerChanged": false,
+  "domainChanged": false
+}

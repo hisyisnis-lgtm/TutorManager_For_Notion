@@ -52,3 +52,10 @@
 실제 동의서 원문은 인증된 학생 `/personal/학생코드/consent`, 강사 `/#/agreement`에서 확인한다. `/intro`는 공식 홈페이지, `/group-class`·`/bootcamp`는 공식 `/lessons/`로 이동하며, 해시가 있는 옛 소개·상담 주소와 구분해야 한다. Worker의 `.workers.dev` 주소는 앱 API 서버여서 위 페이지 호스트와 구분한다. Cloudflare 계정 Pages 프로젝트 목록은 3개로 확인했다.
 
 배포 결과는 같은 폴더의 deployment 기록으로 별도 확정한다.
+
+## 최종 배포 전·후 추가 확인
+
+- 최종 PWA 전체 검사: 65파일 559개 통과. main CI 34768318089의 테스트·린트·디자인·빌드와 자동 실행된 Worker CI 34768318056 모두 통과했다. Worker는 재배포하지 않았다.
+- 기존 사이트 원본에서 바뀐 것은 9페이지의 후기 메뉴, 교재·게임 목록의 승인된 문구 5곳, sitemap의 후기 경로, 검색 제외 헤더다. 미참조 옛 checkout 자산 1개만 제외하고 정확한 주소의 302를 추가했다. 게임 본체 22파일과 기존 908파일은 바이트 그대로 보존했다.
+- 운영 브라우저에서 구매 도메인의 /reviews/ 메뉴·블로그 원문 3개·가격 링크 없음, /pricing/ 이미지 3개·탭 없음·noindex/nofollow를 확인했다. 두 화면 모두 가로 넘침·콘솔 오류 0.
+- .dev 목록 보완: Worker는 주로 API 서버지만 `https://tutor-manager-proxy.hisyisnis.workers.dev/game/dashboard`에는 관리자용 성조게임 통계 HTML과 로그인 키 입력 화면이 있다. `/analytics/report`는 HTML 페이지가 아닌 JSON API다.

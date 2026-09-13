@@ -1,0 +1,66 @@
+---
+import Base from '../layouts/Base.astro';
+import Header from '../components/Header.jsx';
+import SectionTitle from '../components/SectionTitle.jsx';
+import Icon from '../components/Icon.jsx';
+import Footer from '../components/Footer.jsx';
+
+// 기존 소개 페이지의 실제 후기 카드에서 확인한 원문과 제목.
+const reviews = [
+  { blog: 'strolling-around', title: '한국어 직역 탈출 특강 후기', href: 'https://blog.naver.com/strolling-around/224268868564' },
+  { blog: 'strolling-around', title: '발음 특강 후기', href: 'https://blog.naver.com/strolling-around/224202928037' },
+  { blog: 'naningumusme', title: '하늘쌤 중국어 3회 특강 후기', href: 'https://m.blog.naver.com/naningumusme/224232796614' },
+];
+---
+<Base title="수강생 후기" description="하늘하늘 중국어 수강생이 남긴 이야기와 블로그 후기를 확인하세요." path="/reviews/">
+  <Header client:load active="/reviews/" />
+
+  <main id="main-content" tabindex="-1" class="reviews-page">
+    <section class="section reviews-page__intro">
+      <div class="container stack stack--80">
+        <SectionTitle as="h1" lead="수강생이 남긴 이야기와 블로그 후기를 모았습니다.">수강생 후기</SectionTitle>
+        <div class="grid grid--2">
+          <figure class="quote">
+            <blockquote class="t-body-b quote__text">"스탠딩코미디를 보는 것 같이{'\n'}재미있으면서도 머리에 쏙쏙 들어와요."</blockquote>
+            <figcaption class="t-label faint">특강 수강생 공통 후기</figcaption>
+          </figure>
+          <figure class="quote">
+            <blockquote class="t-body-b quote__text">"HSK 5급인데 왕기초 회화부터{'\n'}다시 잡았어요. 그게 맞았어요."</blockquote>
+            <figcaption class="t-label faint">1:1 수강생</figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <section class="section section--warm">
+      <div class="container stack stack--80">
+        <SectionTitle lead="작성자의 블로그에서 수강 후기 원문을 읽어보세요.">블로그 후기</SectionTitle>
+        <ul class="grid grid--3 reviews-page__links">
+          {reviews.map((review, index) => (
+            <li>
+              <article class="reviews-page__card">
+                <div class="reviews-page__source t-caption muted">
+                  <span>네이버 블로그</span>
+                  <span aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
+                </div>
+                <h3 class="t-h3">{review.title}</h3>
+                <p class="t-caption muted">{review.blog}</p>
+                <a
+                  class="btn btn--md btn--outline-ink reviews-page__link"
+                  href={review.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={`${review.title} 읽기 (새 창)`}
+                >
+                  후기 읽기 <Icon name="arrowUpRight" size={16} />
+                </a>
+              </article>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
+  </main>
+
+  <Footer />
+</Base>
