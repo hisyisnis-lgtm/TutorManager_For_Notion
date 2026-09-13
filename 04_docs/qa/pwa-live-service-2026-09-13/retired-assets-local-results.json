@@ -1,0 +1,25 @@
+{
+  "checkedAt": "2026-09-13T14:55:40.613Z",
+  "checks": [
+    {
+      "path": "/assets/index-Dgh3ZfNf.js",
+      "status": 302,
+      "location": "/"
+    },
+    {
+      "path": "/assets/index-kC_0tvip.js",
+      "status": 302,
+      "location": "/"
+    },
+    {
+      "path": "/img/%EC%B9%B4%EC%B9%B4%EC%98%A4%ED%86%A1%EB%A7%81%ED%81%AC%EB%AF%B8%EB%A6%AC%EB%B3%B4%EA%B8%B0%EC%9D%B4%EB%AF%B8%EC%A7%80_%EC%88%98%EA%B0%95%EB%A3%8C%EC%95%88%EB%82%B4.png",
+      "status": 302,
+      "location": "/"
+    },
+    {
+      "path": "/img/%EC%B9%B4%EC%B9%B4%EC%98%A4%ED%86%A1%EB%A7%81%ED%81%AC%EB%AF%B8%EB%A6%AC%EB%B3%B4%EA%B8%B0%EC%9D%B4%EB%AF%B8%EC%A7%80_%EC%86%8C%EA%B0%9C%EB%B0%8F%EB%AC%B4%EB%A3%8C%EC%83%81%EB%8B%B4%EC%8B%A0%EC%B2%AD.png",
+      "status": 302,
+      "location": "/"
+    }
+  ]
+}

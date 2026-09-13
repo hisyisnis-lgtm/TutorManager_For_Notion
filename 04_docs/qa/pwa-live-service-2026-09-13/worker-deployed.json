@@ -1,0 +1,62 @@
+{
+  "verifiedAt": "2026-09-13T14:45:38.187Z",
+  "commit": "42e02f32582136b5738143a1cd536443b5578f3b",
+  "deployed": {
+    "id": "cb7ce6d3-11c9-41ba-a399-c98c00c63bfb",
+    "versions": [
+      {
+        "version_id": "2018e22c-8392-49cf-bdb3-255d65ff4b68",
+        "percentage": 100
+      }
+    ]
+  },
+  "tag": "42e02f325821-live-service",
+  "bundleSha256": "47b4b785a4a0ae3460e83be51e7e73b560c4f0644d519f9987061876b6b2fe6b",
+  "kib": 376.1,
+  "gzipKib": 84.01,
+  "d1": {
+    "migration": "0003_notification_followups.sql",
+    "applied": true,
+    "bookmarkBefore": "00000153-00000000-000050e5-8e209c0c9ae678522740de70a81d19fd"
+  },
+  "smoke": [
+    {
+      "route": "/notifications",
+      "origin": "https://tiantian-chinese.pages.dev",
+      "status": 401
+    },
+    {
+      "route": "/booking/student/ZZZZ00000000",
+      "origin": "https://tiantian-chinese.pages.dev",
+      "status": 401
+    },
+    {
+      "route": "/booking/consent",
+      "origin": "https://tiantian-chinese.pages.dev",
+      "status": 401
+    },
+    {
+      "route": "/booking/consent/ZZZZ00000000",
+      "origin": "https://tiantian-chinese.pages.dev",
+      "status": 401
+    },
+    {
+      "route": "/game/me",
+      "origin": "https://tiantianchinese.com",
+      "status": 401
+    },
+    {
+      "route": "/game/me",
+      "origin": "https://invalid.example",
+      "status": 403
+    },
+    {
+      "route": "/notification-followups",
+      "status": 401
+    },
+    {
+      "route": "/",
+      "status": 401
+    }
+  ]
+}

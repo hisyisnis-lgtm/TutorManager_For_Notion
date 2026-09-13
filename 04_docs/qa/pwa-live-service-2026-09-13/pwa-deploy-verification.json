@@ -1,0 +1,209 @@
+{
+  "version": "2.48.1",
+  "commit": "300ca74ee986af3c14bc13bd5d60fdb410f290bd",
+  "source": "fb1729c2aae2b639ceb939233624e96d6529093d03f657d72661d2e9f97d22d4",
+  "checkedAt": "2026-09-13T14:59:24.902Z",
+  "preparedAt": "2026-09-13T14:59:27.509Z",
+  "verifiedAt": "2026-09-13T14:59:48.055Z",
+  "previous": {
+    "id": "afd1df53-01f4-4b29-9377-2829e278fd9c",
+    "url": "https://afd1df53.tiantian-chinese.pages.dev",
+    "commit": "42e02f32582136b5738143a1cd536443b5578f3b"
+  },
+  "deployed": {
+    "id": "adec06f5-33d8-44af-a096-ec5cc1a9ea9e",
+    "url": "https://adec06f5.tiantian-chinese.pages.dev",
+    "commit": "300ca74ee986af3c14bc13bd5d60fdb410f290bd"
+  },
+  "checks": [
+    {
+      "command": [
+        "npm",
+        "test"
+      ],
+      "directory": "pwa",
+      "passed": true
+    },
+    {
+      "command": [
+        "node",
+        "node_modules/eslint/bin/eslint.js",
+        "src/",
+        "--quiet"
+      ],
+      "directory": "pwa",
+      "passed": true
+    },
+    {
+      "command": [
+        "node",
+        "02_devtools/design-audit.mjs",
+        "--quiet"
+      ],
+      "directory": ".",
+      "passed": true
+    },
+    {
+      "command": [
+        "npm",
+        "run",
+        "build"
+      ],
+      "directory": "pwa",
+      "passed": true
+    },
+    {
+      "command": [
+        "node",
+        "02_devtools/public-price-check.mjs",
+        "pwa"
+      ],
+      "directory": ".",
+      "passed": true
+    }
+  ],
+  "files": 842,
+  "totalBytes": 43516031,
+  "assetRetention": {
+    "retained": {
+      "/assets/index-CVzszwV4.js": "4393916083304a255f576e80f4a63ab2b6b13602629ee8bc34fda0885709853a",
+      "/assets/PrivacyPage-C2vm0JGt.js": "129bde3950cecfa292ee3bcbf918c31906d47e546818a05756d80c41765fd964",
+      "/assets/ToneGamePage-Cp1jyIJe.js": "869f878891676771b9367f20d89755393d2238ef59c5b4be688cbb42fdaefca1"
+    },
+    "excluded": {},
+    "bootstrap": false,
+    "generations": 1
+  },
+  "publicPriceCheck": {
+    "target": "pwa",
+    "textFiles": 15,
+    "files": 842
+  },
+  "smoke": {
+    "https://adec06f5.tiantian-chinese.pages.dev": {
+      "routes": [
+        {
+          "route": "/",
+          "status": 200
+        },
+        {
+          "route": "/personal",
+          "status": 200
+        }
+      ],
+      "assets": 12
+    },
+    "https://tiantian-chinese.pages.dev": {
+      "routes": [
+        {
+          "route": "/",
+          "status": 200
+        },
+        {
+          "route": "/personal",
+          "status": 200
+        }
+      ],
+      "assets": 12
+    }
+  },
+  "workerSmoke": [
+    {
+      "route": "/notifications",
+      "origin": "https://tiantian-chinese.pages.dev",
+      "status": 401
+    },
+    {
+      "route": "/booking/student/ZZZZ00000000",
+      "origin": "https://tiantian-chinese.pages.dev",
+      "status": 401
+    },
+    {
+      "route": "/booking/consent",
+      "origin": "https://tiantian-chinese.pages.dev",
+      "status": 401
+    },
+    {
+      "route": "/booking/consent/ZZZZ00000000",
+      "origin": "https://tiantian-chinese.pages.dev",
+      "status": 401
+    },
+    {
+      "route": "/game/me",
+      "origin": "https://tiantianchinese.com",
+      "status": 401
+    },
+    {
+      "route": "/game/me",
+      "origin": "https://invalid.example",
+      "status": 403
+    }
+  ],
+  "servedChecks": [
+    {
+      "path": "/sw.js",
+      "status": 200,
+      "sha256": "479df221c6bb0739870e2b59988d769c22c5ead8c9d60e803123715ffde469a2",
+      "bytes": 7080,
+      "cacheControl": "public, max-age=0, must-revalidate"
+    },
+    {
+      "path": "/assets/index-BqXB2EuT.js",
+      "status": 200,
+      "sha256": "9247cfabbb1d7af226051282022b12dd9873656f56948d13155319f26f98357e",
+      "bytes": 477932,
+      "cacheControl": "public, max-age=0, must-revalidate"
+    }
+  ],
+  "swChanged": true,
+  "retiredPublicPaths": [
+    {
+      "base": "https://tiantian-chinese.pages.dev",
+      "path": "/assets/index-Dgh3ZfNf.js",
+      "status": 302,
+      "location": "/"
+    },
+    {
+      "base": "https://tiantian-chinese.pages.dev",
+      "path": "/assets/index-kC_0tvip.js",
+      "status": 302,
+      "location": "/"
+    },
+    {
+      "base": "https://tiantian-chinese.pages.dev",
+      "path": "/img/%EC%B9%B4%EC%B9%B4%EC%98%A4%ED%86%A1%EB%A7%81%ED%81%AC%EB%AF%B8%EB%A6%AC%EB%B3%B4%EA%B8%B0%EC%9D%B4%EB%AF%B8%EC%A7%80_%EC%88%98%EA%B0%95%EB%A3%8C%EC%95%88%EB%82%B4.png",
+      "status": 302,
+      "location": "/"
+    },
+    {
+      "base": "https://tiantian-chinese.pages.dev",
+      "path": "/img/%EC%B9%B4%EC%B9%B4%EC%98%A4%ED%86%A1%EB%A7%81%ED%81%AC%EB%AF%B8%EB%A6%AC%EB%B3%B4%EA%B8%B0%EC%9D%B4%EB%AF%B8%EC%A7%80_%EC%86%8C%EA%B0%9C%EB%B0%8F%EB%AC%B4%EB%A3%8C%EC%83%81%EB%8B%B4%EC%8B%A0%EC%B2%AD.png",
+      "status": 302,
+      "location": "/"
+    },
+    {
+      "base": "https://adec06f5.tiantian-chinese.pages.dev",
+      "path": "/assets/index-Dgh3ZfNf.js",
+      "status": 302,
+      "location": "/"
+    },
+    {
+      "base": "https://adec06f5.tiantian-chinese.pages.dev",
+      "path": "/assets/index-kC_0tvip.js",
+      "status": 302,
+      "location": "/"
+    },
+    {
+      "base": "https://adec06f5.tiantian-chinese.pages.dev",
+      "path": "/img/%EC%B9%B4%EC%B9%B4%EC%98%A4%ED%86%A1%EB%A7%81%ED%81%AC%EB%AF%B8%EB%A6%AC%EB%B3%B4%EA%B8%B0%EC%9D%B4%EB%AF%B8%EC%A7%80_%EC%88%98%EA%B0%95%EB%A3%8C%EC%95%88%EB%82%B4.png",
+      "status": 302,
+      "location": "/"
+    },
+    {
+      "base": "https://adec06f5.tiantian-chinese.pages.dev",
+      "path": "/img/%EC%B9%B4%EC%B9%B4%EC%98%A4%ED%86%A1%EB%A7%81%ED%81%AC%EB%AF%B8%EB%A6%AC%EB%B3%B4%EA%B8%B0%EC%9D%B4%EB%AF%B8%EC%A7%80_%EC%86%8C%EA%B0%9C%EB%B0%8F%EB%AC%B4%EB%A3%8C%EC%83%81%EB%8B%B4%EC%8B%A0%EC%B2%AD.png",
+      "status": 302,
+      "location": "/"
+    }
+  ]
+}

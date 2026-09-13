@@ -38,3 +38,21 @@
 - 개발 서버 스크린샷은 현재 폴더, 실제 빌드 스크린샷은 `production/`에 저장했다.
 
 재실행은 저장소 루트에서 `node 04_docs/qa/pwa-live-service-2026-09-13/run-browser-qa.mjs <검수 스크립트 파일명>`으로 수행한다.
+
+## 배포 후 운영 진입 화면 확인
+
+`v2.48.0` 배포 후 실제 `https://tiantian-chinese.pages.dev`의 강사 `/#/home`과 학생 `/personal`을 각각 390px·1280px에서 확인했다.
+
+- 4개 화면 모두 HTTP 200, 실제 배포 진입 번들 `/assets/index-CVzszwV4.js`와 일치했다.
+- 강사 비밀번호 입력·로그인 버튼과 학생 코드 입력 화면이 정상 표시됐다. 모바일 스크린샷도 직접 확인했다.
+- 가로 넘침, 런타임 오류, 운영 사이트 자산 오류, 업무 변경 요청은 모두 0건이었다.
+- 실제 로그인이나 OTP 요청은 수행하지 않았고, GET/HEAD 이외 요청을 차단하는 격리 컨텍스트를 사용했다.
+- 첫 시도는 sandbox 네트워크 제한으로 `ERR_NETWORK_ACCESS_DENIED`가 발생했다. 같은 읽기 전용 검수를 네트워크 허용 환경에서 다시 실행해 통과했다.
+
+증거: `live-entry-browser-results.json`, `live-teacher-390.png`, `live-teacher-1280.png`, `live-student-390.png`, `live-student-1280.png`.
+
+### 최종 v2.48.1
+
+예전 가격 파일의 잔존 CDN 응답을 차단하는 정확한 4개 리다이렉트와 버전만 추가한 `v2.48.1` 배포 후, 위 운영 진입 4개 화면을 다시 확인했다. 모두 HTTP 200이며 `/assets/index-BqXB2EuT.js`를 불러왔다. 가로 넘침·런타임 오류·자산 오류·업무 변경 요청은 모두 0건이다.
+
+최종 증거는 `live-v2-48-1-entry-browser-results.json`과 `live-v2.48.1/` 스크린샷에 별도로 보관했다. 첫 `v2.48.0` 검수 증거도 유지했다.

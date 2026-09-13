@@ -156,7 +156,6 @@
     "worker/tests/notificationDelivery.integration.test.js",
     "worker/tests/notificationFollowups.integration.test.js",
     "worker/tests/notificationPublish.integration.test.js",
-    "worker/tests/studentLedger.integration.test.js",
-    ""
+    "worker/tests/studentLedger.integration.test.js"
   ]
 }
