@@ -1,0 +1,172 @@
+{
+  "version": "2.48.2",
+  "commit": "e80fbc76fe8f674a6986a5b2398ef0ae925a3c37",
+  "source": "ab0f6c9482540d91c5fe1b1d82a38aca55f1841a323023d6499d87126220aea2",
+  "verifiedAt": "2026-09-13T15:37:57.529Z",
+  "previous": {
+    "id": "adec06f5-33d8-44af-a096-ec5cc1a9ea9e",
+    "url": "https://adec06f5.tiantian-chinese.pages.dev",
+    "commit": "300ca74ee986af3c14bc13bd5d60fdb410f290bd"
+  },
+  "deployed": {
+    "id": "f053f6b3-5621-48ed-902f-771286e7a979",
+    "url": "https://f053f6b3.tiantian-chinese.pages.dev",
+    "commit": "e80fbc76fe8f674a6986a5b2398ef0ae925a3c37"
+  },
+  "files": 845,
+  "bytes": 44845233,
+  "checks": [
+    {
+      "command": [
+        "npm",
+        "test"
+      ],
+      "directory": "pwa",
+      "passed": true
+    },
+    {
+      "command": [
+        "node",
+        "node_modules/eslint/bin/eslint.js",
+        "src/",
+        "--quiet"
+      ],
+      "directory": "pwa",
+      "passed": true
+    },
+    {
+      "command": [
+        "node",
+        "02_devtools/design-audit.mjs",
+        "--quiet"
+      ],
+      "directory": ".",
+      "passed": true
+    },
+    {
+      "command": [
+        "npm",
+        "run",
+        "build"
+      ],
+      "directory": "pwa",
+      "passed": true
+    },
+    {
+      "command": [
+        "node",
+        "02_devtools/public-price-check.mjs",
+        "pwa"
+      ],
+      "directory": ".",
+      "passed": true
+    }
+  ],
+  "assetRetention": {
+    "retained": {
+      "/assets/index-BA_ahtBt.css": "b74e711694b4f5c01ddaaba59a6ef1839e051d48e68d2cf04dd5f8f62d4a7d1d",
+      "/assets/index-BqXB2EuT.js": "9247cfabbb1d7af226051282022b12dd9873656f56948d13155319f26f98357e",
+      "/assets/PrivacyPage-DjurH2GR.js": "3fcdb89321e464276d95f8fc892f4e771af4024f1298d3e9032a8287b9160d5f",
+      "/assets/ToneGamePage-e1fNYeCC.js": "aae2ba3698a4648a7aa27c015639b0a5e829412530fe5685de8c1aa45ad6e37b",
+      "/assets/vendor-BkjzX1ij.js": "66a33be01840ae3bcf2a7d0c3e0ea3c7088a1bf51811f51a5e346ea8657ee2ed"
+    },
+    "excluded": {},
+    "bootstrap": false,
+    "generations": 1
+  },
+  "publicPriceCheck": {
+    "target": "pwa",
+    "textFiles": 17,
+    "files": 845,
+    "sharedPricingAssets": [
+      "/assets/PricingPage-sTbG-k-c.js"
+    ]
+  },
+  "assetChecks": [
+    {
+      "path": "/sw.js",
+      "status": 200,
+      "sha256": "f0953851b2fae073f2c14fb1fe407f48892c75e4ab63e3194bc66511a02cceec",
+      "bytes": 7080,
+      "cacheControl": "public, max-age=0, must-revalidate"
+    },
+    {
+      "path": "/assets/index-DjHfQSni.js",
+      "status": 200,
+      "sha256": "ef056c6f554afeff04fd3d1d59da9f518d9c529e6050316fbf1f5001615cea11",
+      "bytes": 478303,
+      "cacheControl": "public, max-age=0, must-revalidate"
+    },
+    {
+      "path": "/assets/PricingPage-sTbG-k-c.js",
+      "status": 200,
+      "sha256": "0eb992608a21f0f6b72a6ab4318cfa6d6fa6fa4d40f6e15e28c43faed22df55a",
+      "bytes": 25163,
+      "cacheControl": "public, max-age=0, must-revalidate"
+    }
+  ],
+  "routes": [
+    {
+      "base": "https://tiantian-chinese.pages.dev",
+      "route": "/pricing",
+      "firstStatus": 200,
+      "location": null,
+      "finalStatus": 200,
+      "robots": "noindex, nofollow, noindex",
+      "pricingHtml": true,
+      "spaDestination": "/#/pricing"
+    },
+    {
+      "base": "https://tiantian-chinese.pages.dev",
+      "route": "/pricing.html",
+      "firstStatus": 308,
+      "location": "/pricing",
+      "finalStatus": 200,
+      "robots": "noindex, nofollow, noindex",
+      "pricingHtml": true,
+      "spaDestination": "/#/pricing"
+    },
+    {
+      "base": "https://tiantian-chinese.pages.dev",
+      "route": "/pricing/",
+      "firstStatus": 302,
+      "location": "/pricing",
+      "finalStatus": 200,
+      "robots": "noindex, nofollow, noindex",
+      "pricingHtml": true,
+      "spaDestination": "/#/pricing"
+    },
+    {
+      "base": "https://f053f6b3.tiantian-chinese.pages.dev",
+      "route": "/pricing",
+      "firstStatus": 200,
+      "location": null,
+      "finalStatus": 200,
+      "robots": "noindex, nofollow, noindex",
+      "pricingHtml": true,
+      "spaDestination": "/#/pricing"
+    },
+    {
+      "base": "https://f053f6b3.tiantian-chinese.pages.dev",
+      "route": "/pricing.html",
+      "firstStatus": 308,
+      "location": "/pricing",
+      "finalStatus": 200,
+      "robots": "noindex, nofollow, noindex",
+      "pricingHtml": true,
+      "spaDestination": "/#/pricing"
+    },
+    {
+      "base": "https://f053f6b3.tiantian-chinese.pages.dev",
+      "route": "/pricing/",
+      "firstStatus": 302,
+      "location": "/pricing",
+      "finalStatus": 200,
+      "robots": "noindex, nofollow, noindex",
+      "pricingHtml": true,
+      "spaDestination": "/#/pricing"
+    }
+  ],
+  "workerChanged": false,
+  "definition": "Unlisted and directly shareable; recipient login is not required."
+}
