@@ -1,0 +1,108 @@
+{
+  "version": "2.48.3",
+  "baselineProduction": "03f92a8a-b9b0-4aca-ad0e-4f0bd8c5a3e4",
+  "method": "Preserve production and apply only selected Header/Footer navigation, reviews route, standalone pricing and explicitly approved legacy-copy cleanup.",
+  "sources": {
+    "site/src/config.js": {
+      "sha256": "dffdc9498d990e3e39fdfd23a659f5ecb75b93a79e8ea544f48df78418858542",
+      "bytes": 1675,
+      "role": "selected-change"
+    },
+    "site/src/pages/reviews.astro": {
+      "sha256": "4220a9a4a530a611a2f670f744f9c254544beecff51012dad584b5475eafcad4",
+      "bytes": 3166,
+      "role": "selected-change"
+    },
+    "site/src/styles/global.css": {
+      "sha256": "82c2c300fccb759fd117c7158545db31a752e580a7a972637e7a77b984abc2a6",
+      "bytes": 18077,
+      "role": "selected-change"
+    },
+    "site/src/components/Header.jsx": {
+      "sha256": "e4c1da6ae0dbe9b8e096e480b1fc55926fba749e6f2934d37b4bfd93bc05026e",
+      "bytes": 4749,
+      "role": "build-context-reference"
+    },
+    "site/src/components/Footer.jsx": {
+      "sha256": "469783d7ec79fe880e7e8b8bd6513914f7bc1f884abc55a35ece98f5f4797dcc",
+      "bytes": 1995,
+      "role": "build-context-reference"
+    },
+    "site/src/layouts/Base.astro": {
+      "sha256": "7845935fd790dfd6bfb0aa829b8577f7428a0e07e8eb232ac0d82b8dd1df1cc3",
+      "bytes": 2377,
+      "role": "build-context-reference"
+    },
+    "site/package.json": {
+      "sha256": "c56146b96aa68bf83d3d80d7a1401e6370de996918373319b82ae1ac6c53379e",
+      "bytes": 749,
+      "role": "build-context-reference"
+    },
+    "site/package-lock.json": {
+      "sha256": "507886f4b098836139276bf234eb9b405be1028eca275bcd83644775f7681405",
+      "bytes": 168636,
+      "role": "build-context-reference"
+    },
+    "site/astro.config.mjs": {
+      "sha256": "b3ddc10b2d5a5eb534e482667d1c9c344161933577263cc0d0e17d509cc70a24",
+      "bytes": 1110,
+      "role": "build-context-reference"
+    },
+    "pwa/pricing-share.html": {
+      "sha256": "c2a9a26cb7a26d3e6cb87ee3783d34cb46b664fccf02d2fbec2016c8d58cec36",
+      "bytes": 1601,
+      "role": "tracked-release-source"
+    },
+    "pwa/vite.pricing.config.js": {
+      "sha256": "2a33704392b5630906806b14fa34db75cf224094c5fdf6af59e0c7fa9c975153",
+      "bytes": 1492,
+      "role": "tracked-release-source"
+    },
+    "pwa/src/main.pricing.jsx": {
+      "sha256": "f050049abd756baef64bb2c7dd15700e9f4e631f5689ff1dfae9397d23d0029b",
+      "bytes": 404,
+      "role": "tracked-release-source"
+    },
+    "pwa/src/pages/PricingPage.jsx": {
+      "sha256": "7c7256c64b39d01e2fa96651ecd92a24679b4bcb83f086b0c725af0a249b293c",
+      "bytes": 33989,
+      "role": "tracked-release-source"
+    },
+    "pwa/src/pages/SettingsPage.jsx": {
+      "sha256": "64be3fa05270d02ead20795b12c65fb73d7dc177793ad5d8512a113321c2a425",
+      "bytes": 9858,
+      "role": "tracked-release-source"
+    },
+    "pwa/src/components/public/PublicHeader.jsx": {
+      "sha256": "80cd1478aa69cf081b8fcdd09d20b45602b27ddbc6994472935c03c46b84e4e5",
+      "bytes": 2286,
+      "role": "tracked-release-source"
+    },
+    "pwa/src/components/ui/HeroSection.jsx": {
+      "sha256": "c2abdeff209055a17600fb403a743cd8cb4b9303ae01d2f9def027e48e492bac",
+      "bytes": 3221,
+      "role": "tracked-release-source"
+    },
+    "02_devtools/public-price-check.mjs": {
+      "sha256": "e8594bbbbac52b7c2d8f4ad2fcd078f9d668bbae4986805b718835402a47c253",
+      "bytes": 5529,
+      "role": "tracked-release-source"
+    },
+    "02_devtools/public-price-check.test.mjs": {
+      "sha256": "61beea9e04809a637610287150f96cb5b8d7384e80fff7595b7bfa5c37478a96",
+      "bytes": 8236,
+      "role": "tracked-release-source"
+    },
+    "pwa/package.json": {
+      "role": "tracked-release-source",
+      "sha256": "e0292d16cc3c937692b2c9ce261db293cc11042481338c71592644c9b6fa9c53",
+      "bytes": 2768
+    },
+    "pwa/package-lock.json": {
+      "role": "tracked-release-source",
+      "sha256": "e238dba16537bd0338ec6cca0930601b15faa905df5988845e28cc3e8138dc6d",
+      "bytes": 484607
+    }
+  },
+  "commit": "8cbf6a3daccf668cc477fb85abf2f5982e47ebbf"
+}

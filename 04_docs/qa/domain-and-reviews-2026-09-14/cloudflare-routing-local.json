@@ -1,0 +1,41 @@
+{
+  "passed": true,
+  "results": [
+    {
+      "pathname": "/pricing",
+      "status": 308,
+      "location": "/pricing/",
+      "robots": "noindex, nofollow"
+    },
+    {
+      "pathname": "/pricing/",
+      "status": 200,
+      "location": null,
+      "robots": "noindex, nofollow"
+    },
+    {
+      "pathname": "/pricing/assets/pricing-4IH8T82A.js",
+      "status": 200,
+      "location": null,
+      "robots": "noindex, nofollow"
+    },
+    {
+      "pathname": "/reviews/",
+      "status": 200,
+      "location": null,
+      "robots": null
+    },
+    {
+      "pathname": "/_astro/WorkbookCheckout.R5WACr9n.js",
+      "status": 302,
+      "location": "/books/",
+      "robots": null
+    },
+    {
+      "pathname": "/books/",
+      "status": 200,
+      "location": null,
+      "robots": null
+    }
+  ]
+}

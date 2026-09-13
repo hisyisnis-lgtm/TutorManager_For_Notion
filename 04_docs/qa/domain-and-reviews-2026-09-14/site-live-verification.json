@@ -1,0 +1,333 @@
+{
+  "passed": true,
+  "version": "2.48.3",
+  "commit": "8cbf6a3daccf668cc477fb85abf2f5982e47ebbf",
+  "id": "6a2cff10-b412-4c42-a652-1f10f81e01e7",
+  "url": "https://6a2cff10.tiantianchinese.pages.dev",
+  "previous": "03f92a8a-b9b0-4aca-ad0e-4f0bd8c5a3e4",
+  "verifiedAt": "2026-09-13T16:25:11.421Z",
+  "files": 935,
+  "uploadedPublicFiles": 933,
+  "bytes": 110113440,
+  "unchangedBaselineFiles": 908,
+  "unchangedGameFiles": 22,
+  "checkedAssets": [
+    {
+      "path": "/_astro/Footer.Bamq8CL0.css",
+      "sha256": "1d974083e65b41911707dabc59546fc8ff89a05e00ee401816c573314dd0243a",
+      "bytes": 25161
+    },
+    {
+      "path": "/_astro/Header.M0PIqr-F.js",
+      "sha256": "d284a72a03241bd510066989174acd24944b1a68121d0ee900e4f7b72c1c5037",
+      "bytes": 4037
+    },
+    {
+      "path": "/books/index.html",
+      "sha256": "cea3cf6546bdfa1f8b073fa1563cc5f1d908877044c2b1b58a85f3f8c9840b42",
+      "bytes": 24622
+    },
+    {
+      "path": "/books/pronunciation-workbook/index.html",
+      "sha256": "30333367ca7a05a41a1bf313f690daf9780248aaebe0bb9bdbc0a0f7192c79e8",
+      "bytes": 25617
+    },
+    {
+      "path": "/channels/index.html",
+      "sha256": "96ed1e5babc3ffae937a222ee938ef61150c98e5f841b1dde086b601fd444a18",
+      "bytes": 26571
+    },
+    {
+      "path": "/checkout/index.html",
+      "sha256": "fcbcbaaafecb5ff31cc9b08584a780470da91cde308a42ba58e8c179e429f658",
+      "bytes": 23276
+    },
+    {
+      "path": "/game/index.html",
+      "sha256": "24d290a4a7d4bbe43abca88100b322ebfdaa6b4984ea26ce0c9d6c3e1f825f51",
+      "bytes": 24893
+    },
+    {
+      "path": "/game/tone/assets/baloo-2-latin-600-normal-B4tNaogw.woff",
+      "sha256": "b1cd520fb9d51312a0ee40b12d0b3b61c7f171aa4abc2a2871b2b0504b3a390c",
+      "bytes": 23544
+    },
+    {
+      "path": "/game/tone/assets/baloo-2-latin-600-normal-tIfxVoAe.woff2",
+      "sha256": "ffc22b431dcb01372be1986bc472bd400bbcb56b712a863c3abec7f8302e1bdd",
+      "bytes": 19496
+    },
+    {
+      "path": "/game/tone/assets/baloo-2-latin-700-normal-CqTg7A15.woff2",
+      "sha256": "8e7ffc9b993aa8caa89bcab81e103c9eb2da4e3e042f37b7a5115d0ddbff12c0",
+      "bytes": 19436
+    },
+    {
+      "path": "/game/tone/assets/baloo-2-latin-700-normal-Ld3Zm3l2.woff",
+      "sha256": "f1fcdf0b18ee5099fcc4fcd46e1ea0eaef63bc18ea85d4b1ba946ec29a88fe85",
+      "bytes": 23408
+    },
+    {
+      "path": "/game/tone/assets/baloo-2-latin-800-normal-B8BXfZF7.woff",
+      "sha256": "e0581d15d3d71d1aab1b7fd4e1245583d0d18c30d3b8845e0856cf1e18474ef7",
+      "bytes": 22604
+    },
+    {
+      "path": "/game/tone/assets/baloo-2-latin-800-normal-BbF3Etk1.woff2",
+      "sha256": "3e36c57e37bda5b5f28cf10636d6d3aed4de5250df923f1b203b64ad857c79a7",
+      "bytes": 18632
+    },
+    {
+      "path": "/game/tone/assets/game-_OfLuu2U.js",
+      "sha256": "6c899daa9caff05768867b3d142d8ffdd1e0848abdf2c1648aca4a311f8c8307",
+      "bytes": 424794
+    },
+    {
+      "path": "/game/tone/assets/game-C5KAdoM_.js",
+      "sha256": "a3ca11ee4c3d8b8647070e68a62aeaa1e30636d1d6e53a78b724ebe9c581d338",
+      "bytes": 417420
+    },
+    {
+      "path": "/game/tone/assets/game-CXyhrwBN.js",
+      "sha256": "9f7cbd1b74772ff30328cf214e77290ea0d6238adb6d973964d8b726df72f0f9",
+      "bytes": 417394
+    },
+    {
+      "path": "/game/tone/assets/game-D7W_0Spd.css",
+      "sha256": "b690fd847fd188a7fd58b2c0bb76c5e12d33d1ce0882e3e88519015b5c134b4a",
+      "bytes": 59613
+    },
+    {
+      "path": "/game/tone/assets/game-DBeWmQ2r.css",
+      "sha256": "30098839d26df04901d95695b202d59739102349a6281a847efe1564d4544fbe",
+      "bytes": 56919
+    },
+    {
+      "path": "/game/tone/assets/jua-korean-400-normal-Dr8ebh5I.woff",
+      "sha256": "fb74e2564bc8aedab8fe494b2bbcdbdfcfbc24f7b14dc9b7d000bffc4eb7af8e",
+      "bytes": 672152
+    },
+    {
+      "path": "/game/tone/assets/jua-korean-400-normal-WRlc2lCz.woff2",
+      "sha256": "b5c280f7c75d6634c3011682ab7787b73b8cfc4acaee4b70fa7aad228adf7d70",
+      "bytes": 368172
+    },
+    {
+      "path": "/game/tone/assets/jua-latin-400-normal-B0wF3VKp.woff2",
+      "sha256": "a317499f46a11810207ace4e5fdf04c9949250abeb914a1e713c391e4606c4f2",
+      "bytes": 16620
+    },
+    {
+      "path": "/game/tone/assets/jua-latin-400-normal-DW1ANaNr.woff",
+      "sha256": "f8e668d6cb2ec90b754564c8df97787eeab3f6b81bf0cbcb5c61c004fb43ebd6",
+      "bytes": 15632
+    },
+    {
+      "path": "/game/tone/assets/vendor-3R7j1HM6.js",
+      "sha256": "9ec1d1ad1312a9beb94aa7fc791cfeb7e9590b41bd187dafc97b1e46b7e9a26c",
+      "bytes": 727188
+    },
+    {
+      "path": "/game/tone/assets/vendor-CS9mxCJV.css",
+      "sha256": "cd748b3f61cab97ed22f70f8884128ed207a8cf45cf95832a9e316eee62ac837",
+      "bytes": 1200
+    },
+    {
+      "path": "/game/tone/assets/vendor-DIAvFUf3.js",
+      "sha256": "ab9cccf9f698584c5dcbf56c73f793709f48893570a4011424ef3ec62418bac7",
+      "bytes": 719413
+    },
+    {
+      "path": "/game/tone/favicon-game.png",
+      "sha256": "84e900d30ad1536f4bc0a5eddfa3c0a26ae41a22871119baf54bb786aa4f7014",
+      "bytes": 16655
+    },
+    {
+      "path": "/game/tone/favicon-game.svg",
+      "sha256": "249ec8dae1f86b7e104f48ca313ad1382290d7cc5d6d4319dd4e2066046dccc2",
+      "bytes": 826
+    },
+    {
+      "path": "/game/tone/game-og-v3.png",
+      "sha256": "389ba271943d69fe4d5641c87da83ddfaed35a418e81b184e116cd000a804f49",
+      "bytes": 74065
+    },
+    {
+      "path": "/game/tone/index.html",
+      "sha256": "55f23e4dcf5759093368c321902e6be601189faf7c394e6f2c3b452ba61a4164",
+      "bytes": 3319
+    },
+    {
+      "path": "/games/tone/index.html",
+      "sha256": "d23dfcfa89fd78a379dc5e3cb9b4134d1f74614288e4a0354ec80550e7c8a712",
+      "bytes": 30640
+    },
+    {
+      "path": "/index.html",
+      "sha256": "ac419ff3d72aefd8d3d5263bbb086f654ed9ece73d723f5da8baba0005d43ee7",
+      "bytes": 36708
+    },
+    {
+      "path": "/learn/index.html",
+      "sha256": "7e26b9f995c877c842dd82447d81c044ceeb410e530e85edf0ff40582b65617b",
+      "bytes": 35471
+    },
+    {
+      "path": "/lessons/index.html",
+      "sha256": "dc70b73225bde58f0820ef8164907e16fd7dde6d54063d276e437341a600a412",
+      "bytes": 26533
+    },
+    {
+      "path": "/pricing/assets/pricing-4IH8T82A.js",
+      "sha256": "78e2be0b89b1dcbafa5b3c7b9fb313d48221dd3a04ebe7f34a124a7f95aa3914",
+      "bytes": 33720
+    },
+    {
+      "path": "/pricing/assets/pricing-share-GOhsVk_v.css",
+      "sha256": "936ba61866a115f8201d202276f9bb4a13283b7e0138d5ac709d4e0ddccd240f",
+      "bytes": 56608
+    },
+    {
+      "path": "/pricing/assets/vendor-BNK76QRO.js",
+      "sha256": "fed2c7bd02b4963fd5639c79e077ca5b0c76bb17d142d11e01d0b5bc8a194639",
+      "bytes": 181296
+    },
+    {
+      "path": "/pricing/fonts/KimjungchulGothic-Bold.ttf",
+      "sha256": "2fe26b4a28ff1f004b251c2cbc50400ea722a0bf4100202500a504d069d5ab8b",
+      "bytes": 5099496
+    },
+    {
+      "path": "/pricing/fonts/KimjungchulGothic-Light.ttf",
+      "sha256": "a94e36a505bb3efe7ecfc42ccfb8dd401127404cc5bf2afd10222c9590504021",
+      "bytes": 5367448
+    },
+    {
+      "path": "/pricing/fonts/KimjungchulGothic-Regular.ttf",
+      "sha256": "ed9b15cc4fa00d8b385bcd4b418ce3ead469864fc2b749b01d4b9b0dd6f63f13",
+      "bytes": 5357444
+    },
+    {
+      "path": "/pricing/icon.svg",
+      "sha256": "1d5d7363b716a0300dc457e0026e91e1e964f5be1a5a1b82a21c9855d9154603",
+      "bytes": 123
+    },
+    {
+      "path": "/pricing/img/og-group-class.png",
+      "sha256": "0f5b2a07dcb1aa28b97f16191c75a0416a91ac019e0d28e2ceb3e407697175df",
+      "bytes": 345444
+    },
+    {
+      "path": "/pricing/img/profile.jpg",
+      "sha256": "d1879d01d4056d74be317f6e1095159281635d8254123ed86955f304c09b101d",
+      "bytes": 11014977
+    },
+    {
+      "path": "/pricing/index.html",
+      "sha256": "59b8292c6fa2c87531d7149bcd7d46b84d30d6994ce214b0243cad71a89275ee",
+      "bytes": 1774
+    },
+    {
+      "path": "/pricing/logo/logo-red.png",
+      "sha256": "fa2e12a493e964d3812f44b2ef5c73c96e026579775b16466e6ee68801de7a58",
+      "bytes": 37212
+    },
+    {
+      "path": "/pricing/logo/symbol-white.png",
+      "sha256": "0275d82283c8decac15ce9f2c6f4174ca62b28e0922686d3eac24b0438733e92",
+      "bytes": 7306
+    },
+    {
+      "path": "/reviews/index.html",
+      "sha256": "281f8142da17dcc138de3a80eab1375af54148f550ef7c8967503ea25a7894ff",
+      "bytes": 26413
+    },
+    {
+      "path": "/robots.txt",
+      "sha256": "78b35910f468af8d1ddac23042adda0c662d4423cb2ef039a6166e9de10b1d00",
+      "bytes": 79
+    },
+    {
+      "path": "/sitemap-0.xml",
+      "sha256": "b54097774369e1382ab5e5aa4fcc319fb552d12f9f583713ab05abb06890bb2a",
+      "bytes": 866
+    },
+    {
+      "path": "/sitemap-index.xml",
+      "sha256": "0f8b92055332922c90890f3f136726db2b8ef234940a41d4d471ffbb5f0e83ab",
+      "bytes": 190
+    }
+  ],
+  "routes": [
+    {
+      "base": "https://tiantianchinese.com",
+      "route": "/pricing",
+      "status": 308,
+      "location": "/pricing/",
+      "robots": "noindex, nofollow"
+    },
+    {
+      "base": "https://tiantianchinese.com",
+      "route": "/pricing/",
+      "status": 200,
+      "location": null,
+      "robots": "noindex, nofollow"
+    },
+    {
+      "base": "https://tiantianchinese.com",
+      "route": "/pricing/assets/pricing-4IH8T82A.js",
+      "status": 200,
+      "location": null,
+      "robots": "noindex, nofollow"
+    },
+    {
+      "base": "https://tiantianchinese.com",
+      "route": "/reviews/",
+      "status": 200,
+      "location": null,
+      "robots": null
+    },
+    {
+      "base": "https://tiantianchinese.com",
+      "route": "/_astro/WorkbookCheckout.R5WACr9n.js",
+      "status": 302,
+      "location": "/books/",
+      "robots": null
+    },
+    {
+      "base": "https://6a2cff10.tiantianchinese.pages.dev",
+      "route": "/pricing",
+      "status": 308,
+      "location": "/pricing/",
+      "robots": "noindex, nofollow"
+    },
+    {
+      "base": "https://6a2cff10.tiantianchinese.pages.dev",
+      "route": "/pricing/",
+      "status": 200,
+      "location": null,
+      "robots": "noindex, nofollow"
+    },
+    {
+      "base": "https://6a2cff10.tiantianchinese.pages.dev",
+      "route": "/pricing/assets/pricing-4IH8T82A.js",
+      "status": 200,
+      "location": null,
+      "robots": "noindex, nofollow"
+    },
+    {
+      "base": "https://6a2cff10.tiantianchinese.pages.dev",
+      "route": "/reviews/",
+      "status": 200,
+      "location": null,
+      "robots": "noindex"
+    },
+    {
+      "base": "https://6a2cff10.tiantianchinese.pages.dev",
+      "route": "/_astro/WorkbookCheckout.R5WACr9n.js",
+      "status": 302,
+      "location": "/books/",
+      "robots": null
+    }
+  ]
+}
