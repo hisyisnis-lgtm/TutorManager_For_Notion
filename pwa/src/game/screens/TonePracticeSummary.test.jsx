@@ -7,7 +7,7 @@ afterEach(cleanup);
 describe('게임 결과 학습 요약', () => {
   it('최근 가중치가 아닌 실제 누적 수치를 보여준다', () => {
     render(<TonePracticeSummary summary={summarizeTonePractice({ 2: [4, 10, 0.95] })} />);
-    expect(screen.getByText('40%')).not.toBeNull();
+    expect(screen.getByText('40').textContent).toBe('40%');
     expect(screen.getByLabelText('2성 정답 4/10회')).not.toBeNull();
     expect(screen.queryByText(/발음 실력|발음 평가/)).toBeNull();
   });
@@ -18,7 +18,7 @@ describe('게임 결과 학습 요약', () => {
   });
   it('모두 양호하면 특정 성조를 지목하지 않는다', () => {
     render(<TonePracticeSummary summary={summarizeTonePractice(Object.fromEntries(TONE_NUMS.map(tone => [tone, [9, 10]])))} />);
-    expect(screen.getAllByText('90%')).toHaveLength(5);
+    expect(screen.getAllByText('90').map(node => node.textContent)).toEqual(Array(5).fill('90%'));
     expect(screen.queryByText(/응답을 한 번 더 연습/)).toBeNull();
   });
   it('기록 카드에는 행동 버튼을 중복 배치하지 않는다', () => {

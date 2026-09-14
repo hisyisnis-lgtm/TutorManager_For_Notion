@@ -1,10 +1,10 @@
 // 닉네임 설정 — 소셜 로그인 직후 '항상' 표시. 랜덤 닉네임을 자동으로 채우고('닉네임 뽑기'로 재생성),
 // 사용자가 그대로 시작하거나 직접 고쳐 쓸 수 있다. 카카오 닉네임 동의를 안 눌러도 '게스트'로 안 남는다.
-// 시안(755:11): 글래스 헤더 + 좌측정렬 2줄 헤드라인 + 입력(342×56)·안내문·'닉네임 뽑기' 칩 + 하단 고정 CTA.
-// 입력 묶음은 상단(y182)에 고정 — 모바일 키보드가 올라와도 가려지지 않는다.
-import { useState } from 'react';
+// 글래스 헤더 + 헤드라인·입력·조건·뽑기 묶음 + 하단 고정 CTA.
+// 입력 묶음은 키보드 위 가용 영역에서 스크롤되어 짧은 화면에서도 끝까지 접근할 수 있다.
+import { useId, useState } from 'react';
 import { Refresh, CloseCircle } from '@solar-icons/react';
-import { TG, TYPE, TOUCH_OPT, FONT_BODY, RADIUS } from '../tgTokens.js';
+import { TG, TYPE, TOUCH_OPT, FONT_BODY, RADIUS, SPACE, CONTROL } from '../tgTokens.js';
 import { play as playSfx } from '../tgSfx.js';
 import { randomNickname, NICKNAME_MAX, NICKNAME_MIN } from '../nickname.js';
 import { useKeyboardInset } from '../tgWidgets.jsx';
@@ -19,8 +19,9 @@ const FIELD_BORDER = TG.KEY_EDGE, CHIP_ICON = TG.STEEL, CHIP_TEXT = TG.STEEL;
 export const cleanNickname = (raw) => raw.replace(/[\u0000-\u001f\u007f]/g, '').slice(0, NICKNAME_MAX);
 
 // 닉네임 입력 묶음(입력칸 + 안내문 + 뽑기 칩) — 설정 화면과 변경 모달이 그대로 공유한다.
-// chipGap: 안내문↔칩 간격(시안 — 설정 화면 20 · 변경 모달 10).
-export function NicknameField({ value, onChange, onSubmit, chipGap = 20 }) {
+// chipGap: 안내문↔뽑기 간격. 입력 조건과 보조 동작이 같은 묶음으로 읽히도록 가깝게 둔다.
+export function NicknameField({ value, onChange, onSubmit, chipGap = SPACE.lg }) {
+  const hintId = useId();
   const reroll = () => { playSfx('button'); onChange(randomNickname()); };
   // 한 덩어리(block)로 감싼다 — 모달처럼 flex column 안에 놓여도 부모 gap이 내부 간격(6·chipGap)에 끼어들지 않게.
   return (
@@ -37,6 +38,7 @@ export function NicknameField({ value, onChange, onSubmit, chipGap = 20 }) {
           maxLength={NICKNAME_MAX}
           placeholder="닉네임"
           aria-label="닉네임"
+          aria-describedby={hintId}
           enterKeyHint="done"
           style={{
             flex: 1, minWidth: 0, height: '100%', border: 'none', background: 'none', outline: 'none', padding: 0,
@@ -54,11 +56,11 @@ export function NicknameField({ value, onChange, onSubmit, chipGap = 20 }) {
         )}
       </div>
       {/* 안내문 — 길이 규칙은 상수에서 그대로 읽어 문구와 검증이 어긋나지 않게 */}
-      <span style={{ display: 'block', marginTop: 6, fontFamily: FONT_BODY, fontWeight: 500, fontSize: 14, lineHeight: '19px', color: TG.SUB }}>
+      <span id={hintId} style={{ display: 'block', marginTop: SPACE.md, fontFamily: FONT_BODY, fontWeight: 500, fontSize: 14, lineHeight: '19px', color: TG.SUB }}>
         {NICKNAME_MIN}자 이상 {NICKNAME_MAX}자 이하로 가능합니다.
       </span>
       <button onClick={reroll} className="tg-press" aria-label="닉네임 다시 뽑기" style={{
-        marginTop: chipGap, display: 'flex', width: 'fit-content', alignItems: 'center', gap: 6, padding: '7px 13px',
+        marginTop: chipGap, display: 'flex', width: 'fit-content', minHeight: CONTROL.minHit, alignItems: 'center', gap: SPACE.md, padding: '8px 12px',
         borderRadius: RADIUS.md, background: '#fff', border: `1px solid ${FIELD_BORDER}`, cursor: 'pointer', ...TOUCH_OPT,
       }}>
         <Refresh size={17} weight="Bold" color={CHIP_ICON} />
@@ -86,17 +88,20 @@ export function NicknameScreen({ defaultName = '', onSubmit, saving = false }) {
     <>
       <GameHeader title="닉네임 설정" center glass />
 
-      {/* 헤드라인 — 시안 좌측정렬 26/36 2줄(블록 중심 y126) */}
-      <Reveal i={0} style={{ position: 'absolute', left: 24, right: 24, top: 90 }}>
-        <span style={{ display: 'block', ...TYPE.head, fontSize: 26, lineHeight: '36px', color: TG.INK }}>
-          어떻게<br />불러드릴까요?
-        </span>
-      </Reveal>
-
-      {/* 입력 묶음 — 시안 y182 */}
-      <Reveal i={1} style={{ position: 'absolute', left: 24, right: 24, top: 182 }}>
-        <NicknameField value={value} onChange={setValue} onSubmit={submit} />
-      </Reveal>
+      <div className="tg-noscroll" style={{
+        position: 'absolute', left: 24, right: 24, top: 80,
+        bottom: kbInset > 0 ? kbInset + 88 : 'calc(102px + env(safe-area-inset-bottom))',
+        overflowY: 'auto', WebkitOverflowScrolling: 'touch', padding: '10px 0 16px',
+      }}>
+        <Reveal i={0}>
+          <span style={{ display: 'block', ...TYPE.head, fontSize: 26, lineHeight: '36px', color: TG.INK }}>
+            어떻게<br />불러드릴까요?
+          </span>
+        </Reveal>
+        <Reveal i={1} style={{ marginTop: SPACE.x3 }}>
+          <NicknameField value={value} onChange={setValue} onSubmit={submit} />
+        </Reveal>
+      </div>
 
       {/* 시작하기 — 하단 고정 키캡 CTA(시안 342×60, 하단 26). 키보드가 뜨면 그 위(간격 12)로 따라 붙는다 */}
       <KeycapCta bg={canSubmit ? TG.CTA : TG.BORDER} color={canSubmit ? '#fff' : TG.MUTED}

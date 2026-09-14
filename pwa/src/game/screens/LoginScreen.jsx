@@ -58,48 +58,49 @@ export function LoginScreen({ onBack }) {
     <>
       {/* ⚠️ 들판 실루엣(FieldBg)은 여기 깔지 말 것 — 하단 법정 문구(만 14세·방침)가 나무 위에 얹혀 대비 1.7까지 떨어진다(2026-09-03 실측) */}
       {/* 뒤로 — 공용 BackButton */}
-      <Reveal i={0} style={{ position: 'absolute', left: 24, top: 20 }}>
+      <Reveal i={0} style={{ position: 'absolute', left: 24, top: 20, zIndex: 3 }}>
         <BackButton onClick={onBack} />
       </Reveal>
 
-      {/* 판다 히어로 (가운데) */}
-      <Reveal i={1} style={{ position: 'absolute', left: 0, right: 0, top: 168, display: 'flex', justifyContent: 'center' }}>
-        <img src={ASSETS.pandaCoach} alt="" width={140} style={{ height: 'auto', filter: 'drop-shadow(0px 6px 14px rgba(43,39,48,0.12))', animation: 'tg-bob 3s ease-in-out infinite' }} />
-      </Reveal>
+      {/* 설명·로그인 선택·이용 안내를 하나의 흐름으로 묶고, 짧은 화면에서는 내용이 스크롤된다. */}
+      <div className="tg-noscroll" style={{ position: 'absolute', inset: 0, overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
+        <div style={{
+          minHeight: '100%', boxSizing: 'border-box', padding: '88px 24px calc(24px + env(safe-area-inset-bottom))',
+          display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: SPACE.x4,
+        }}>
+          <Reveal i={1}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: SPACE.x2, textAlign: 'center' }}>
+              <img src={ASSETS.pandaCoach} alt="" width={140} style={{ height: 'auto', filter: 'drop-shadow(0px 6px 14px rgba(43,39,48,0.12))', animation: 'tg-bob 3s ease-in-out infinite' }} />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.md }}>
+                <span style={{ ...TYPE.titleLg, lineHeight: '32px', color: TG.INK, textWrap: 'balance' }}>로그인하고 기록을 지켜요</span>
+                <span style={{ ...TYPE.sub, lineHeight: '20px', color: TG.SUB, textWrap: 'pretty' }}>기기를 바꿔도 최고 점수·진도가 그대로예요</span>
+              </div>
+            </div>
+          </Reveal>
 
-      {/* 헤드라인 */}
-      <Reveal i={2} style={{ position: 'absolute', left: 24, right: 24, top: 330, textAlign: 'center' }}>
-        <span style={{ ...TYPE.titleLg, color: TG.INK }}>로그인하고 기록을 지켜요</span>
-      </Reveal>
-      {/* 보조문구 */}
-      <Reveal i={3} style={{ position: 'absolute', left: 24, right: 24, top: 374, textAlign: 'center' }}>
-        <span style={{ ...TYPE.sub, color: TG.SUB }}>기기를 바꿔도 최고 점수·진도가 그대로예요</span>
-      </Reveal>
-
-      {/* 카카오 로그인 */}
-      <Reveal i={4} style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(146px + env(safe-area-inset-bottom))' }}>
-        <SocialLoginButton provider="kakao" />
-      </Reveal>
-      {/* 구글 로그인 */}
-      <Reveal i={5} style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(78px + env(safe-area-inset-bottom))' }}>
-        <SocialLoginButton provider="google" />
-      </Reveal>
-      {/* 안내 — 만 14세 고지와 방침 링크는 법정 요구사항(개인정보보호법 §22-2·§30)이자
-          카카오·구글 OAuth 콘솔 심사 항목이라 지우지 말 것. 방침은 해시 라우트라 origin부터 붙인다. */}
-      <Reveal i={6} style={{ position: 'absolute', left: 24, right: 24, bottom: 'calc(24px + env(safe-area-inset-bottom))', textAlign: 'center' }}>
-        <span style={{ ...TYPE.meta, color: TG.SUB, display: 'block' }}>로그인 정보는 기록 저장·동기화에만 써요</span>
-        <span style={{ ...TYPE.meta, color: TG.SUB, display: 'block', marginTop: 6 }}>
-          만 14세 이상만 로그인할 수 있어요 ·{' '}
-          <a
-            href={`${import.meta.env.MODE === 'game-site' ? SITE_ORIGIN : window.location.origin}/#/privacy`}
-            target="_blank"
-            rel="noreferrer"
-            style={{ color: TG.SUB, textDecoration: 'underline', textUnderlineOffset: 2 }}
-          >
-            개인정보처리방침
-          </a>
-        </span>
-      </Reveal>
+          <Reveal i={2}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.lg }}>
+              <SocialLoginButton provider="kakao" />
+              <SocialLoginButton provider="google" />
+            </div>
+            {/* 만 14세 안내와 방침 링크는 로그인 선택과 함께 보이게 유지한다. */}
+            <div style={{ marginTop: SPACE.x2, textAlign: 'center' }}>
+              <span style={{ ...TYPE.meta, color: TG.SUB, display: 'block', lineHeight: '18px' }}>로그인 정보는 기록 저장·동기화에만 써요</span>
+              <span style={{ ...TYPE.meta, color: TG.SUB, display: 'block', lineHeight: '18px', marginTop: SPACE.xs, textWrap: 'pretty' }}>
+                만 14세 이상만 로그인할 수 있어요 ·{' '}
+                <a
+                  href={`${import.meta.env.MODE === 'game-site' ? SITE_ORIGIN : window.location.origin}/#/privacy`}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ color: TG.SUB, textDecoration: 'underline', textUnderlineOffset: 2 }}
+                >
+                  개인정보처리방침
+                </a>
+              </span>
+            </div>
+          </Reveal>
+        </div>
+      </div>
     </>
   );
 }

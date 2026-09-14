@@ -3,6 +3,7 @@
 // 단어 카드/성조 버튼·카운트다운 비주얼·토스트·흔들림 버튼.
 // 참조 메모리: tone_game_redesign.md §5(단어카드)·§10-B(FigmaScreen)·§10-C(연출)
 import { useState, useEffect, useRef, useLayoutEffect } from 'react';
+import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { DoubleAltArrowRight, Lock, CheckCircle, VolumeLoud, VolumeCross, AltArrowLeft, Star, Eye,
   HandStars, NotebookBookmark, Home as HomeIcon, Cup, Stars, Pause, AltArrowRight } from '@solar-icons/react';
 import { TG, HOME, FONT_HANZI, FONT_PINYIN, TYPE, SHADOW, DUR, TOUCH_OPT, TONE_COLORS, TONE_KEY_COLORS, ASSETS,
@@ -660,16 +661,36 @@ export function StarRow({ filled = 0, total = 3, size = 16, gap = 3, on = TG.SUN
 
 // 공용 모달 셸 — 고정 딤 오버레이(백드롭 탭 닫기) + tg-enter 카드. 게임 모달들의 동일한 껍데기를 통일.
 //   기본값 = **시안 표준 안내 모달**(330 · r24 · padding 28/22/22 · gap 16 · 가운데정렬, 2026-08-06 전 모달 통일).
-export function ModalCard({ onClose, zIndex = 60, maxWidth = 330, radius = 24, padding = '28px 22px 22px', gap = 16, align = 'center', children }) {
+export function GameDialog({ onClose, ariaLabel = '안내', zIndex = 60, maxWidth = 330, sheet = false, closing = false, style, children }) {
+  const returnFocus = useRef(typeof document === 'undefined' ? null : document.activeElement);
   return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(2px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: SPACE.x4, ...TOUCH_OPT }}>
-      <div className="tg-enter" onClick={(e) => e.stopPropagation()} style={{
-        width: '100%', maxWidth, background: TG.CARD, borderRadius: radius, padding,
-        boxShadow: SHADOW.level2, display: 'flex', flexDirection: 'column', alignItems: align, gap,
+    <DialogPrimitive.Root open onOpenChange={(open) => { if (!open) onClose?.(); }}>
+      <DialogPrimitive.Overlay style={{
+        position: 'fixed', inset: 0, zIndex, display: 'flex', alignItems: sheet ? 'flex-end' : 'center', justifyContent: 'center', boxSizing: 'border-box',
+        padding: sheet ? `calc(${SPACE.x4}px + env(safe-area-inset-top)) 0 0` : `calc(${SPACE.x4}px + env(safe-area-inset-top)) ${SPACE.x4}px calc(${SPACE.x4}px + env(safe-area-inset-bottom))`, ...TOUCH_OPT,
       }}>
-        {children}
-      </div>
-    </div>
+        <div aria-hidden="true" style={{ position: 'absolute', inset: 0, background: sheet ? 'rgba(26,16,20,0.5)' : 'rgba(0,0,0,0.8)', backdropFilter: 'blur(2px)', animation: sheet ? (closing ? 'tg-fade-out .28s ease forwards' : 'tg-dim-in .28s ease') : undefined }} />
+        <DialogPrimitive.Content aria-describedby={undefined} className={sheet ? undefined : 'tg-enter'}
+          onCloseAutoFocus={(event) => {
+            event.preventDefault();
+            if (returnFocus.current?.isConnected) returnFocus.current.focus({ preventScroll: true });
+          }}
+          style={{ position: 'relative', width: '100%', maxWidth, minHeight: 0, boxSizing: 'border-box', background: TG.CARD,
+            maxHeight: sheet ? `calc(100dvh - ${SPACE.x4}px - env(safe-area-inset-top))` : `calc(100dvh - ${SPACE.x4 * 2}px - env(safe-area-inset-top) - env(safe-area-inset-bottom))`,
+            overflowY: 'auto', overscrollBehavior: 'contain', ...style }}>
+          <DialogPrimitive.Title className="sr-only">{ariaLabel}</DialogPrimitive.Title>
+          {children}
+        </DialogPrimitive.Content>
+      </DialogPrimitive.Overlay>
+    </DialogPrimitive.Root>
+  );
+}
+
+export function ModalCard({ onClose, ariaLabel = '안내', zIndex = 60, maxWidth = 330, radius = 24, padding = '28px 22px 22px', gap = 16, align = 'center', children }) {
+  return (
+    <GameDialog onClose={onClose} ariaLabel={ariaLabel} zIndex={zIndex} maxWidth={maxWidth} style={{ borderRadius: radius, padding, boxShadow: SHADOW.level2 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: align, gap }}>{children}</div>
+    </GameDialog>
   );
 }
 

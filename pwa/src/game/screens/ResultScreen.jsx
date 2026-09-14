@@ -1,11 +1,11 @@
-// 결과 화면 — 신기록 배지·축하 판다·점수(카운트업)·통계 2카드·코치·다시도전/난이도 바꾸기.
+// 결과 화면 — 이번 판 기록과 누적 성조 기록을 구분하고 다음 행동의 우선순위를 표시한다.
 import { useState, useEffect } from 'react';
 import { Cup, Bolt } from '@solar-icons/react';
-import { TG, TYPE, pickCelebratePanda, RADIUS, SPACE, TONE_COLORS } from '../tgTokens.js';
+import { TG, TYPE, pickCelebratePanda, RADIUS, SPACE, TONE_COLORS, CONTROL, TOUCH_OPT, SHADOW, keycap } from '../tgTokens.js';
 import { useCountUp, FlameIcon } from '../tgWidgets.jsx';
 import { play as playSfx } from '../tgSfx.js';
 import { EXAM_PASS_RATIO } from '../gameXp.js';
-import { Reveal, ConfettiBurst, CrispFlash, LIGHT_CONFETTI, GameHeader, KeycapCta, StatCard } from './shared.jsx';
+import { Reveal, ConfettiBurst, CrispFlash, LIGHT_CONFETTI, GameHeader, KeycapCta } from './shared.jsx';
 import { LoginNudgeModal } from './gameModals.jsx';
 import CoachMarkOverlay from '../../components/ui/CoachMarkOverlay.jsx';
 import { useTabTip } from '../../hooks/useTabTip.js';
@@ -35,52 +35,65 @@ const resultCoach = (homeOnly, homeHint) => [
 
 // 시안 12(2026-08-05) 값 — 버튼은 공용 KeycapCta로 통일(2026-08-31), 원오프 색만 상수로.
 const RES_BADGE = TG.SUN;      // 신기록 배지(구 골드 그라데 → 단색)
-// 흰 보조 키캡 공통 prop(다시하기·홈으로) — 주 키캡은 KeycapCta 기본값(TG.CTA) 그대로.
-const WHITE_CAP = { bg: TG.CARD, edge: TG.KEY_EDGE, color: TG.STEEL };
-
-// PauseModal과 같은 [보조 | 주행동] + 홈 키캡 조합. 학습 요약은 정보만 표시한다.
+// 주요 행동은 전체 폭 키캡 하나, 보조 행동은 최대 세 개의 얕은 키캡 한 줄.
+// 행동 수가 달라져도 2×2 키캡 배치로 바뀌지 않는다. 온보딩은 단일 행동을 유지한다.
 export function ResultActions({ retryLabel = '다시하기', continueLabel = '계속하기', onRetry, onContinue = null,
   onHome, homeOnly = false, homeLabel = '홈으로 가기', toneSummary = null, onTraining, onChooseMode }) {
   const training = toneSummary?.state === 'practice';
   const toneAction = toneSummary ? (training ? onTraining : onChooseMode) : null;
   const act = handler => () => { playSfx('button'); handler(); };
-  const cell = { flex: 1, minWidth: 0 };
-  const toneButton = toneAction && <KeycapCta {...WHITE_CAP} label={training ? '트레이닝' : '모드 선택'} onClick={act(toneAction)} style={cell} />;
-  return <>
-    {!homeOnly && <Reveal i={4}>
-      <div data-coach="result-actions" style={{ display: 'flex', gap: SPACE.lg }}>
-        {onContinue ? <KeycapCta {...WHITE_CAP} label="다시하기" onClick={act(onRetry)} style={cell} /> : toneButton}
-        <KeycapCta label={onContinue ? continueLabel : retryLabel} labelStyle={{ lineHeight: 1.25 }} onClick={act(onContinue || onRetry)} style={cell} />
-      </div>
-    </Reveal>}
-    <Reveal i={5}>
-      <div style={{ display: 'flex', gap: SPACE.lg }}>
-        {!homeOnly && onContinue && toneButton}
-        <KeycapCta data-coach={homeOnly ? 'result-actions' : 'result-home'} {...(homeOnly ? null : WHITE_CAP)}
-          label={homeLabel} onClick={act(onHome)} style={cell} />
-      </div>
-    </Reveal>
-  </>;
+  const secondary = homeOnly ? [] : [
+    ...(onContinue ? [{ label: '다시하기', handler: onRetry }] : []),
+    ...(toneAction ? [{ label: training ? '트레이닝' : '모드 선택', handler: toneAction }] : []),
+    { label: homeLabel, handler: onHome, home: true },
+  ];
+  return (
+    <div data-coach="result-actions" style={{ display: 'flex', flexDirection: 'column', gap: SPACE.lg }}>
+      <Reveal i={4}>
+        <KeycapCta label={homeOnly ? homeLabel : onContinue ? continueLabel : retryLabel}
+          labelStyle={{ lineHeight: 1.25 }} onClick={act(homeOnly ? onHome : onContinue || onRetry)} />
+      </Reveal>
+      {secondary.length > 0 && <Reveal i={5}>
+        <div role="group" aria-label="다른 결과 동작" style={{ display: 'flex', gap: SPACE.md }}>
+          {secondary.map(action => <button key={action.label} type="button" className="tg-press"
+            data-coach={action.home ? 'result-home' : undefined} onClick={act(action.handler)}
+            style={{ ...TYPE.label, ...TOUCH_OPT, flex: 1, minWidth: 0, minHeight: CONTROL.minHit,
+              padding: `${SPACE.sm}px ${SPACE.xs}px`, border: `1px solid ${TG.BORDER}`, borderRadius: RADIUS.md,
+              background: TG.CARD, boxShadow: keycap(TG.KEY_EDGE, { depth: 2, lift: SHADOW.level1 }),
+              color: TG.INK, cursor: 'pointer', lineHeight: 1.4, wordBreak: 'keep-all' }}>
+            {action.label}
+          </button>)}
+        </div>
+      </Reveal>}
+    </div>
+  );
 }
 
 // 결과 본문과 행동을 서로 다른 행에 배치. 짧은 화면은 본문만 스크롤한다.
 // footer 높이를 계산하지 않아 온보딩(버튼 1개)과 일반/시험(2행)이 같은 규칙을 쓴다.
-function ResultLayout({ title, children, actions, compact = false }) {
+function ResultLayout({ title, children, actions }) {
   return (
     <>
       <GameHeader title={title} glass center />
       <div style={{ position: 'absolute', inset: '60px 0 0', display: 'flex', flexDirection: 'column' }}>
         <div data-result-content tabIndex={0} role="region" aria-label="결과 요약" style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
-          <div style={{ minHeight: '100%', padding: compact ? '16px 24px' : 'var(--tg-result-space, 24px) 24px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: compact ? SPACE.x2 : 'var(--tg-result-space, 24px)' }}>
+          <div style={{ minHeight: '100%', padding: `${SPACE.x2}px ${SPACE.x4}px`, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: SPACE.x4 }}>
             {children}
           </div>
         </div>
-        <div data-result-footer style={{ flexShrink: 0, padding: '16px 24px calc(24px + env(safe-area-inset-bottom))', display: 'flex', flexDirection: 'column', gap: SPACE.lg, background: TG.BG }}>
+        <div data-result-footer style={{ flexShrink: 0, padding: '12px 24px calc(16px + env(safe-area-inset-bottom))', background: TG.BG }}>
           {actions}
         </div>
       </div>
     </>
   );
+}
+
+function RoundOverview({ children }) {
+  return <section aria-label="이번 판 기록" style={{ background: TG.CARD, borderRadius: RADIUS.card,
+    padding: SPACE.x3, boxShadow: SHADOW.level1, display: 'flex', flexDirection: 'column', gap: SPACE.x2 }}>
+    {children}
+  </section>;
 }
 
 function ResultHero({ pandaSrc, children, compact = false }) {
@@ -105,17 +118,26 @@ function ResultBadge({ children, success = false }) {
 }
 
 // 일반 결과·시험 결과가 같은 통계 컴포넌트를 공유한다.
-function StatCards({ maxCombo, avgSec, compact = false }) {
+function RoundStats({ maxCombo, avgSec }) {
   return (
-    <div data-coach="result-stats" style={{ ...(compact ? { '--tg-result-stat-height': '104px', '--tg-stat-icon-top': '8px', '--tg-stat-label-top': '40px', '--tg-stat-value-top': '64px' } : null), height: 'var(--tg-result-stat-height, 128px)', display: 'flex', gap: SPACE.lg, alignItems: 'stretch' }}>
+    <dl data-coach="result-stats" style={{ margin: 0, paddingTop: SPACE.x2, borderTop: `1px solid ${TG.BORDER}`,
+      display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: SPACE.x2 }}>
       {/* ★통계 아이콘엔 개별 등장 모션을 걸지 않는다 — 결과화면은 **매 판** 보는 자리라,
           아이콘마다 성격 있는 모션이 매번 재생되면 그게 곧 촌스러움이 된다(빈도 규칙).
           카드 자체의 Reveal만으로 충분. delight는 신기록 배지·비트처럼 드문 순간에만. */}
       {[
-        { icon: <FlameIcon size={30} color={TG.CORAL_DK} />, val: maxCombo, unit: '콤보', label: '최고 콤보' },
-        { icon: <Bolt size={30} weight="Bold" color={TONE_COLORS[4]} />, val: avgSec, unit: avgSec === '-' ? '' : '초', label: '반응 속도' },
-      ].map((s) => <StatCard key={s.label} icon={s.icon} label={s.label} value={s.val} unit={s.unit} />)}
-    </div>
+        { icon: <FlameIcon size={20} color={TG.CORAL_DK} />, val: maxCombo, unit: '콤보', label: '최고 콤보' },
+        { icon: <Bolt size={20} weight="Bold" color={TONE_COLORS[4]} />, val: avgSec, unit: avgSec === '-' ? '' : '초', label: '반응 속도' },
+      ].map(s => <div key={s.label} style={{ minWidth: 0, textAlign: 'center' }}>
+        <dt style={{ ...TYPE.label, color: TG.SUB, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: SPACE.xs }}>
+          {s.icon}{s.label}
+        </dt>
+        <dd style={{ margin: `${SPACE.sm}px 0 0`, display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: SPACE.xs }}>
+          <span style={{ ...TYPE.numLg, color: TG.INK, lineHeight: 1 }}>{s.val}</span>
+          {s.unit && <span style={{ ...TYPE.labelSm, color: TG.SUB }}>{s.unit}</span>}
+        </dd>
+      </div>)}
+    </dl>
   );
 }
 
@@ -123,6 +145,8 @@ function StatCards({ maxCombo, avgSec, compact = false }) {
 //  신기록과 같은 자리·같은 연출(파티클+배지)을 문구만 바꿔 재사용한다(2026-08-10).
 export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, onRetry, onHome, onExam = null, onNextLevel = null, onLogin = null, retryLabel = '다시하기', continueLabel = '계속하기', title = '', practice = false, cleared = false, coachReady = true, homeOnly = false, homeLabel = '홈으로 가기', homeHint = '홈에서 이어서 해요!', toneSummary = null, onTraining, onChooseMode }) {
   const animScore = useCountUp(score, 1100);
+  // 큰 무한 점수도 카드의 안쪽 여백을 지킨다. 카운트업 중에는 글자 크기를 바꾸지 않는다.
+  const scoreScale = Math.min(1, 7 / score.toLocaleString().length);
   // 로그인 유도 모달(게스트가 '이전 기록'을 실제로 넘긴 순간) — 마운트 때 1회 판정(세션·쿨다운).
   //  previousBest>0: 첫 판(항상 신기록·이전0) 코치마크와 안 겹치고, 재도전+향상=투자 있는 성취에만.
   //  신기록 축하(파티클·점수 카운트업)를 먼저 보이게 1.3s 뒤 등장. coachReady로 다른 오버레이와 겹침 방지.
@@ -148,24 +172,26 @@ export function ResultScreen({ score, maxCombo, avgMs, isNewBest, previousBest, 
       {celebrate && <CrispFlash color="rgba(255,255,255,0.6)" zIndex={7} />}
       {celebrate && <ConfettiBurst count={32} power={1.35} size={10} zIndex={3} style={{ top: 150 }} />}
       {celebrate && <ConfettiBurst colors={LIGHT_CONFETTI} count={16} power={1.3} size={6} zIndex={3} style={{ top: 150 }} />}
-      <ResultLayout title={title ? `${title} 결과` : '결과'} compact={!!toneSummary} actions={
+      <ResultLayout title={title ? `${title} 결과` : '결과'} actions={
         <ResultActions retryLabel={retryLabel} continueLabel={continueLabel} onRetry={onRetry} onContinue={onExam || onNextLevel}
           homeOnly={homeOnly} homeLabel={homeLabel} toneSummary={toneSummary} onTraining={onTraining} onChooseMode={onChooseMode}
           onHome={() => { if (homeOnly && tip.visible) tip.dismiss(); onHome(); }} />
       }>
-        <ResultHero pandaSrc={pandaSrc} compact={!!toneSummary}>
+        <RoundOverview>
+        <ResultHero pandaSrc={pandaSrc} compact>
           <Reveal i={2}>
             <div data-coach="result-score" style={{ textAlign: 'center' }}>
               <div style={{ ...TYPE.sub, color: TG.SUB, marginBottom: SPACE.sm }}>이번 판 점수</div>
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: SPACE.sm }}>
-                <span style={{ ...TYPE.numHero, fontSize: 'var(--tg-result-number, 60px)', color: TG.INK, lineHeight: 1 }}>{animScore.toLocaleString()}</span>
+                <span style={{ ...TYPE.numHero, fontSize: `calc(var(--tg-result-number, 60px) * ${scoreScale})`, color: TG.INK, lineHeight: 1 }}>{animScore.toLocaleString()}</span>
                 <span style={{ ...TYPE.h1, color: TG.SUB }}>점</span>
               </div>
             </div>
           </Reveal>
           {(isNewBest || cleared) && <Reveal i={2}><ResultBadge>{cleared ? '오답 노트를 다 비웠어요!' : '신기록 달성!'}</ResultBadge></Reveal>}
         </ResultHero>
-        <Reveal i={3}><StatCards maxCombo={maxCombo} avgSec={avgSec} compact={!!toneSummary} /></Reveal>
+        <Reveal i={3}><RoundStats maxCombo={maxCombo} avgSec={avgSec} /></Reveal>
+        </RoundOverview>
         <TonePracticeSummary summary={toneSummary} />
       </ResultLayout>
       <CoachMarkOverlay visible={tip.visible && coachReady} onDone={tip.dismiss} steps={resultCoach(homeOnly, homeHint)} delay={260} showControls={false} forceLastStep={homeOnly} />
@@ -189,11 +215,12 @@ export function ExamResultScreen({ correct = 0, total = 20, passed = false, onRe
       {passed && <CrispFlash color="rgba(255,255,255,0.6)" zIndex={7} />}
       {passed && <ConfettiBurst count={30} power={1.3} size={10} zIndex={3} style={{ top: 150 }} />}
       {passed && <ConfettiBurst colors={LIGHT_CONFETTI} count={15} power={1.25} size={6} zIndex={3} style={{ top: 150 }} />}
-      <ResultLayout title={title ? `${title} 결과` : '승급시험 결과'} compact={!!toneSummary} actions={
+      <ResultLayout title={title ? `${title} 결과` : '승급시험 결과'} actions={
         <ResultActions onRetry={onRetry} onContinue={onContinue || onPractice} continueLabel={onContinue ? '계속하기' : '연습하고 오기'}
           onHome={onHome} toneSummary={toneSummary} onTraining={onTraining} onChooseMode={onChooseMode} />
       }>
-        <ResultHero pandaSrc={pandaSrc} compact={!!toneSummary}>
+        <RoundOverview>
+        <ResultHero pandaSrc={pandaSrc} compact>
           <Reveal i={2}>
             <div data-coach="result-score" style={{ textAlign: 'center' }}>
               <div style={{ ...TYPE.sub, color: TG.SUB, marginBottom: SPACE.sm }}>맞힌 문제</div>
@@ -204,12 +231,15 @@ export function ExamResultScreen({ correct = 0, total = 20, passed = false, onRe
             </div>
           </Reveal>
           <Reveal i={2}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: SPACE.sm }}>
             {passed ? <ResultBadge success>승급 시험 합격!</ResultBadge>
               : <span style={{ ...TYPE.h2, color: TG.INK }}>승급 시험 불합격</span>}
+            <span style={{ ...TYPE.sub, color: TG.SUB, textAlign: 'center' }}>합격 기준 · {need}문제 이상 정답</span>
+            </div>
           </Reveal>
-          <span style={{ ...TYPE.sub, color: TG.SUB, textAlign: 'center' }}>합격 기준 · {need}문제 이상 정답</span>
         </ResultHero>
-        <Reveal i={3}><StatCards maxCombo={maxCombo} avgSec={avgSec} compact={!!toneSummary} /></Reveal>
+        <Reveal i={3}><RoundStats maxCombo={maxCombo} avgSec={avgSec} /></Reveal>
+        </RoundOverview>
         <TonePracticeSummary summary={toneSummary} />
       </ResultLayout>
     </>

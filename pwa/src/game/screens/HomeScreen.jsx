@@ -15,7 +15,7 @@ import { ToneMark, useCountUp } from '../tgWidgets.jsx';
 import { rankInfo, levelInfo } from '../gameXp.js';
 import { play as playSfx, isSfxMuted, setSfxMuted } from '../tgSfx.js';
 import { isBgmMuted, setBgmMuted, startBgm } from '../tgBgm.js';
-import { EmberRise, MenuToggle, TgTabBar, TAB_BAR_H, TG_COL_MAXW, ModalCard, ModalBody, KeycapCta, ModalTextButton, Gauge, IconButton, Pill, MenuAction, GameToast } from './shared.jsx';
+import { EmberRise, MenuToggle, TgTabBar, TAB_BAR_H, TG_COL_MAXW, GameDialog, ModalCard, ModalBody, KeycapCta, ModalTextButton, Gauge, IconButton, Pill, MenuAction, GameToast } from './shared.jsx';
 import { markSize, Eyes } from './eyes.jsx';
 import { DebugScoreModal } from './gameModals.jsx';
 import { resetGameData, deleteMemberAccount } from '../gameStore.js';
@@ -409,7 +409,9 @@ function WanderingMark({ tone, i, level = 0, prog = 0, state = 'mid', celebrate 
           </div>
         );
       })}
-    <div ref={elRef} onClick={onTap} style={{ position: 'absolute', left: 0, top: 0, cursor: 'pointer', willChange: 'transform' }}>
+    <div ref={elRef} style={{ position: 'absolute', left: 0, top: 0, willChange: 'transform' }}>
+      <button type="button" onClick={onTap} aria-label={`${tone.name} 상세 보기`} aria-haspopup="dialog"
+        style={{ position: 'absolute', inset: 0, minWidth: 44, minHeight: 44, border: 'none', borderRadius: RADIUS.md, padding: 0, background: 'none', cursor: 'pointer', zIndex: 10, ...TOUCH_OPT }} />
       {/* 몸통 — 원근 스케일은 여기만(머리 UI 제외). transformOrigin=발 */}
       <div ref={bodyRef} style={{ transformOrigin: '50% 44px', willChange: 'transform' }}>
         {/* 접지 그림자 — 점프하면 작아짐 */}
@@ -470,8 +472,7 @@ function HomeMenu({ onClose, onHelp, onCredits, onReset, onDeleteAccount, onLogi
   const [meaningOn, setMeaningOn] = useState(() => !isMeaningHidden('g'));
   const [pinyinOn, setPinyinOn] = useState(() => !isPinyinHidden('g'));
   return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(2px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: SPACE.x4, ...TOUCH_OPT }}>
-      <div className="tg-enter" onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 330, background: TG.CARD, borderRadius: RADIUS.xxl, padding: '20px 22px 18px', boxShadow: SHADOW.level1, display: 'flex', flexDirection: 'column', gap: SPACE.x2 }}>
+    <ModalCard onClose={onClose} ariaLabel="메뉴" radius={RADIUS.xxl} padding="20px 22px 18px" align="stretch">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <span style={{ ...TYPE.head, fontSize: 18, color: TG.INK }}>메뉴</span>
           {/* 히트영역 44×44(음수 마진으로 레이아웃 자리는 30 유지), 시각 크기는 안쪽 30×30 원 그대로 */}
@@ -514,8 +515,7 @@ function HomeMenu({ onClose, onHelp, onCredits, onReset, onDeleteAccount, onLogi
         )}
         {/* 버전 — 배포 빌드에서 태그로 동기화되는 __APP_VERSION__ (담백하게 하단 표기) */}
         <div style={{ textAlign: 'center', ...TYPE.micro, fontWeight: 700, color: TG.MUTED, marginTop: SPACE.xxs, letterSpacing: 0.2 }}>버전 {__APP_VERSION__}</div>
-      </div>
-    </div>
+    </ModalCard>
   );
 }
 
@@ -530,15 +530,14 @@ const CREDITS = [
 // 자료출처 화면 — 메뉴 '자료출처'에서 진입. 뒤로가기(‹)로 닫음. 각 항목 탭 → 출처 링크(새 탭).
 function CreditsModal({ onClose }) {
   return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 62, background: 'rgba(26,16,20,0.55)', backdropFilter: 'blur(2px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: SPACE.x4, ...TOUCH_OPT }}>
-      <div className="tg-enter" onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 320, maxHeight: '82vh', background: TG.CARD, borderRadius: RADIUS.xxl, padding: '16px 22px 20px', boxShadow: '0 20px 50px rgba(26,16,20,0.3)', display: 'flex', flexDirection: 'column', gap: SPACE.x2, overflow: 'hidden' }}>
+    <ModalCard onClose={onClose} ariaLabel="자료출처" zIndex={62} maxWidth={320} radius={RADIUS.xxl} padding="16px 22px 20px" align="stretch">
         <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.md }}>
           <button onClick={onClose} aria-label="뒤로" className="tg-press" style={{ width: 44, height: 44, margin: '-7px -7px -7px -13px', padding: 0, border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', ...TOUCH_OPT }}>
             <AltArrowLeft weight="Bold" size={26} color={TG.SUB} />
           </button>
           <span style={{ ...TYPE.head, fontSize: 18, color: TG.INK }}>자료출처</span>
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.md, overflowY: 'auto', margin: `${SPACE.sm}px -6px 0`, padding: '0 6px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.md, margin: `${SPACE.sm}px -6px 0`, padding: '0 6px' }}>
           {CREDITS.map((c) => (
             <a key={c.name} href={c.url} target="_blank" rel="noopener noreferrer" className="tg-press"
               style={{ display: 'flex', alignItems: 'center', gap: SPACE.xl, textDecoration: 'none', padding: '10px 12px', borderRadius: RADIUS.md, background: TG.SURFACE, ...TOUCH_OPT }}>
@@ -550,8 +549,7 @@ function CreditsModal({ onClose }) {
             </a>
           ))}
         </div>
-      </div>
-    </div>
+    </ModalCard>
   );
 }
 
@@ -564,7 +562,7 @@ function CreditsModal({ onClose }) {
 //  zIndex는 설정 메뉴(HomeMenu) 위에 떠야 해서 기본 60이 아니라 64.
 function ConfirmModal({ title, lines, confirmLabel, busy, error, onCancel, onConfirm }) {
   return (
-    <ModalCard onClose={busy ? undefined : onCancel} zIndex={64}>
+    <ModalCard onClose={busy ? undefined : onCancel} ariaLabel={title} zIndex={64}>
       <span style={{ ...TYPE.head, fontSize: 24, lineHeight: '29px', color: TG.INK, textAlign: 'center' }}>{title}</span>
       <ModalBody lines={lines} />
       {error && <p role="alert" style={{ ...TYPE.body, color: TG.INK, textAlign: 'center', margin: 0 }}>{error}</p>}
@@ -652,30 +650,43 @@ function BigCount({ num, unit }) {
   );
 }
 
-// 스트릭 상세 시트 — Pill 탭. 티어·최장·다음 마일스톤·보호권. 하단 슬라이드(dim 페이드). 버튼 없음(순수 정보).
-function StreakSheet({ streak, longest, freezes, onClose }) {
+// 종료 애니메이션 동안 dialog와 초점 가두기를 유지하고, 언마운트 후 트리거로 복귀한다.
+function useSheetClose(onClose) {
   const [closing, setClosing] = useState(false);
-  const close = () => { if (closing) return; setClosing(true); setTimeout(onClose, 270); };
+  const timer = useRef(null);
+  useEffect(() => () => clearTimeout(timer.current), []);
+  const close = () => {
+    if (timer.current != null) return;
+    setClosing(true);
+    timer.current = setTimeout(onClose, 270);
+  };
+  return { closing, close };
+}
+
+// 스트릭 상세 시트 — Pill 탭. 티어·최장·다음 마일스톤·보호권. 하단 슬라이드(dim 페이드).
+function StreakSheet({ streak, longest, freezes, onClose }) {
+  const { closing, close } = useSheetClose(onClose);
   const tier = streakTier(streak);
   const next = STREAK_MILESTONES.find((m) => m > streak) || null;
   const prevM = [...STREAK_MILESTONES].reverse().find((m) => m <= streak) || 0;
   const prog = next ? Math.max(0, Math.min(1, (streak - prevM) / (next - prevM))) : 1;
   const sub = streak > 0 ? '연속 플레이 중' : (longest > 0 ? '다시 불붙여봐요!' : '오늘 첫 불씨를 붙여봐요');
   return (
-    <div onClick={close} style={{ position: 'fixed', inset: 0, zIndex: 60, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', ...TOUCH_OPT }}>
-      <div style={{ position: 'absolute', inset: 0, background: 'rgba(26,16,20,0.5)', backdropFilter: 'blur(2px)', animation: closing ? 'tg-fade-out .28s ease forwards' : 'tg-dim-in .28s ease' }} />
-      <div onClick={(e) => e.stopPropagation()} style={{ position: 'relative', width: '100%', maxWidth: TG_COL_MAXW, background: TG.CARD, borderRadius: '26px 26px 0 0', padding: '20px 20px calc(40px + env(safe-area-inset-bottom))', boxShadow: SHADOW.level3, display: 'flex', flexDirection: 'column', gap: 22, animation: closing ? 'tg-sheet-down .26s ease forwards' : 'tg-sheet-up .32s cubic-bezier(.2,.85,.25,1)' }}>
-        {/* 헤더 — 불꽃 56 + [연속일 · 상태 한 줄] (닫기 버튼 없음: 딤 탭으로 닫는다) */}
+    <GameDialog onClose={close} ariaLabel="연속 플레이 기록" maxWidth={TG_COL_MAXW} sheet closing={closing}
+      style={{ borderRadius: '26px 26px 0 0', padding: '20px 20px calc(24px + env(safe-area-inset-bottom))', boxShadow: SHADOW.level3, animation: closing ? 'tg-sheet-down .26s ease forwards' : 'tg-sheet-up .32s cubic-bezier(.2,.85,.25,1)' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.x4 }}>
+        {/* 현재 연속 기록과 상태를 한 묶음으로 표시한다. */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <div style={{ position: 'relative', width: 56, height: 56, borderRadius: RADIUS.lg, background: `${tier.color}1c`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             {streak > 0 && <EmberRise colors={[tier.color, tier.glow]} count={12} spread={26} rise={48} size={3.6} zIndex={0} style={{ bottom: '22%' }} />}
             <Flame size={32} weight="Bold" color={tier.color} style={{ position: 'relative', filter: streak > 0 ? `drop-shadow(0 0 6px ${tier.glow})` : 'none' }} />
           </div>
-          <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: SPACE.lg }}>
+          <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: SPACE.lg }}>
             <BigCount num={streak} unit="일" />
-            {/* 시안 769:50은 cap 박스(h10) — 라인박스로 두면 숫자와의 간격이 벌어진다 */}
-            <span style={{ ...TYPE.body, fontWeight: 400, fontSize: 14, lineHeight: '10px', color: TG.INK }}>{sub}</span>
+            {/* 좁은 화면에서 설명이 줄바뀌어도 행이 겹치지 않게 읽기 높이를 확보한다. */}
+            <span style={{ ...TYPE.body, fontWeight: 400, fontSize: 14, lineHeight: '19px', color: TG.INK }}>{sub}</span>
           </div>
+          <IconButton Icon={CloseCircle} label="연속 플레이 기록 닫기" onClick={close} style={{ alignSelf: 'flex-start', flexShrink: 0 }} />
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.x2 }}>
           {next ? (
@@ -689,7 +700,7 @@ function StreakSheet({ streak, longest, freezes, onClose }) {
               </div>
             </div>
           ) : (
-            <div style={{ ...TYPE.label, color: TG.SUCCESS_GLOW }}>모든 마일스톤 달성! 🎉</div>
+            <div style={{ ...TYPE.label, color: TG.INK }}>모든 마일스톤 달성! 🎉</div>
           )}
           <div style={{ display: 'flex', gap: SPACE.lg }}>
             <CardStat label="최장 기록" value={`${longest}일`} />
@@ -702,14 +713,13 @@ function StreakSheet({ streak, longest, freezes, onClose }) {
           </div>
         </div>
       </div>
-    </div>
+    </GameDialog>
   );
 }
 
 // 성조 미니 카드 — 캐릭터 탭 시. 순수 진단(정확도·시도·상태). 하단 시트(슬라이드 업/다운).
 // 연습/복습 CTA는 뺌(사용자 지적): 성조 하나만 나오는 문제는 만들 수 없고, 안다고 풀면 성조 학습 의미가 없음.
 const STATE_LABEL = { unknown: '아직 데이터가 적어요', weak: '아직 헷갈려요', mid: '꽤 익숙해요', strong: '탄탄해요' };
-const STATE_COLOR = { unknown: TG.SUB, weak: TG.CORAL_DK, mid: TG.GOLD, strong: TG.SUCCESS_GLOW };
 const STATE_NOTE = { unknown: '게임을 더 하면 이 성조 실력이 보여요.', weak: '게임에서 이 성조가 나올 때 귀 기울여보세요.', mid: '조금만 더 하면 탄탄해져요.', strong: '이 성조는 거의 마스터했어요! 👍' };
 // 성조 '소리' 한 줄 — 표준 5도 표기법(1성 55 · 2성 35 · 3성 214 · 4성 51 / 경성은 자체 높이 없음)을 말로 푼 것.
 //  ★출처 구분(chinese_tone_rules 규약): 아래는 **전부 표준 중국어 규범**이고, 하늘쌤 고유 교수 규칙은
@@ -736,17 +746,15 @@ function CardStat({ label, value, children }) {
   );
 }
 function ToneCard({ tone, status, level, onClose }) {
-  const [closing, setClosing] = useState(false);
-  const close = () => { if (closing) return; setClosing(true); setTimeout(onClose, 270); }; // 슬라이드 다운 후 언마운트
+  const { closing, close } = useSheetClose(onClose);
   const s = status || { acc: 0, attempts: 0, state: 'unknown' };
   const accTxt = s.attempts > 0 ? `${Math.round(s.acc * 100)}%` : '—';
   const sample = TONE_SAMPLES[tone.num]; // 妈麻马骂吗 — 성조만 다른 최소대립쌍(TTS 기생성)
   return (
-    <div onClick={close} style={{ position: 'fixed', inset: 0, zIndex: 60, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', ...TOUCH_OPT }}>
-      {/* Dim — 별도 레이어로 분리(카드와 형제). opacity 페이드가 카드에 안 번지게 */}
-      <div style={{ position: 'absolute', inset: 0, background: 'rgba(26,16,20,0.5)', backdropFilter: 'blur(2px)', animation: closing ? 'tg-fade-out .28s ease forwards' : 'tg-dim-in .28s ease' }} />
-      <div onClick={(e) => e.stopPropagation()} style={{ position: 'relative', width: '100%', maxWidth: TG_COL_MAXW, background: TG.CARD, borderRadius: '26px 26px 0 0', padding: '23px 20px calc(40px + env(safe-area-inset-bottom))', boxShadow: SHADOW.level3, display: 'flex', flexDirection: 'column', gap: 22, animation: closing ? 'tg-sheet-down .26s ease forwards' : 'tg-sheet-up .32s cubic-bezier(.2,.85,.25,1)' }}>
-        {/* 헤더 — 성조 마크 54(아래에 Lv 배지가 걸침) + [n성 · 상태] (닫기 버튼 없음: 딤 탭으로 닫는다) */}
+    <GameDialog onClose={close} ariaLabel={`${tone.name} 상세`} maxWidth={TG_COL_MAXW} sheet closing={closing}
+      style={{ borderRadius: '26px 26px 0 0', padding: '20px 20px calc(24px + env(safe-area-inset-bottom))', boxShadow: SHADOW.level3, animation: closing ? 'tg-sheet-down .26s ease forwards' : 'tg-sheet-up .32s cubic-bezier(.2,.85,.25,1)' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.x4 }}>
+        {/* 성조 이름·레벨·상태 */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <div style={{ width: 54, display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0 }}>
             <div style={{ width: 54, height: 54, borderRadius: RADIUS.lg, background: `${tone.color}22`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: tone.color }}>
@@ -758,10 +766,11 @@ function ToneCard({ tone, status, level, onClose }) {
               <span style={{ ...TYPE.numMd, fontWeight: 900, fontSize: 16, lineHeight: '17px' }}>{level}</span>
             </span>
           </div>
-          <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: SPACE.md }}>
+          <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: SPACE.md }}>
             <BigCount num={tone.num === 0 ? '' : tone.num} unit={tone.num === 0 ? tone.name : '성'} />
-            <span style={{ ...TYPE.labelSm, lineHeight: '19px', color: STATE_COLOR[s.state] }}>{STATE_LABEL[s.state]}</span>
+            <span style={{ ...TYPE.labelSm, lineHeight: '19px', color: TG.INK }}>{STATE_LABEL[s.state]}</span>
           </div>
+          <IconButton Icon={CloseCircle} label={`${tone.name} 상세 닫기`} onClick={close} style={{ alignSelf: 'flex-start', flexShrink: 0 }} />
         </div>
         {/* 소리 — "이 성조가 어떤 소리인지"를 **아무 때나** 볼 수 있는 자리(2026-08-12).
             구버전 시트는 정확도·시도 통계뿐이라 "3성이 뭐였지?"에 답하지 못했다. 성조 설명이 있는 곳은
@@ -770,21 +779,23 @@ function ToneCard({ tone, status, level, onClose }) {
               TTS 음성도 이미 생성돼 있다(새 에셋 0개).
             ※ 여기 CTA는 '들어보기'뿐 — 연습/복습 CTA는 이 시트에서 뺀 상태를 유지한다(위 주석). */}
         {sample && (
-          <div style={{ background: SHEET_STAT_BG, borderRadius: RADIUS.lg, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: SPACE.lg }}>
-            <span style={{ ...TYPE.body, fontSize: 14, lineHeight: '21px', color: TG.INK }}>{TONE_SOUND[tone.num]}</span>
-            {TONE_NOTE2[tone.num] && (
-              <span style={{ ...TYPE.body, fontSize: 13, lineHeight: '19px', color: TG.SUB }}>{TONE_NOTE2[tone.num]}</span>
-            )}
+          <div style={{ background: SHEET_STAT_BG, borderRadius: RADIUS.lg, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: SPACE.x2 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.sm }}>
+              <span style={{ ...TYPE.body, fontSize: 14, lineHeight: '21px', color: TG.INK }}>{TONE_SOUND[tone.num]}</span>
+              {TONE_NOTE2[tone.num] && (
+                <span style={{ ...TYPE.body, fontSize: 13, lineHeight: '19px', color: TG.SUB }}>{TONE_NOTE2[tone.num]}</span>
+              )}
+            </div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: SPACE.lg }}>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: SPACE.md, minWidth: 0 }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', columnGap: SPACE.md, rowGap: SPACE.xs, minWidth: 0 }}>
                 <span style={{ fontFamily: FONT_HANZI, fontWeight: 700, fontSize: 28, lineHeight: 1, color: TG.INK }}>{sample.hanzi}</span>
-                <span style={{ fontFamily: FONT_PINYIN, fontSize: 15, color: tone.color }}>{sample.pinyin.join('')}</span>
+                <span style={{ fontFamily: FONT_PINYIN, fontSize: 15, color: TG.INK }}>{sample.pinyin.join('')}</span>
                 <span style={{ ...TYPE.labelSm, color: TG.SUB, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{sample.meaning}</span>
               </div>
               <button type="button" className="tg-press" onClick={() => { playSfx('tap'); haptic(10); speakWord(sample); }}
                 aria-label={`${tone.name} 예시 ${sample.hanzi} 발음 듣기`}
                 style={{
-                  flexShrink: 0, height: 34, padding: '0 12px', borderRadius: RADIUS.lg, border: 'none', cursor: 'pointer',
+                  flexShrink: 0, height: 44, padding: '0 12px', borderRadius: RADIUS.lg, border: 'none', cursor: 'pointer',
                   background: '#fff', boxShadow: keycap(TG.KEY_EDGE, { depth: 2, lift: SHADOW.level1 }),
                   display: 'flex', alignItems: 'center', gap: SPACE.sm, ...TOUCH_OPT,
                 }}>
@@ -794,12 +805,15 @@ function ToneCard({ tone, status, level, onClose }) {
             </div>
           </div>
         )}
-        <div style={{ display: 'flex', gap: SPACE.lg }}>
-          <CardStat label="정확도" value={accTxt} />
-          <CardStat label="시도" value={`${s.attempts}`} />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.sm }}>
+          <span style={{ ...TYPE.label, color: TG.INK }}>게임에서 쌓은 기록</span>
+          <div style={{ display: 'flex', gap: SPACE.md }}>
+            <CardStat label="정확도" value={accTxt} />
+            <CardStat label="시도" value={`${s.attempts}`} />
+          </div>
         </div>
       </div>
-    </div>
+    </GameDialog>
   );
 }
 
@@ -890,7 +904,7 @@ export function HomeScreen({
   // ★인트로가 '보류'된 방문(스포트라이트 겹침)에는 showIntro가 true로 남아도 화면을 안 덮으므로, raw showIntro가 아니라 introActive로 게이트해야
   //  레벨업 스포트라이트 목소리(playSfx('tone'…))가 음소거되지 않음(2026-07-21 수정).
   useEffect(() => {
-    homeRoomActive = !(menuOpen || profileOpen || nickEditOpen || streakOpen || debugScoreOpen || !!cardTone || introActive);
+    homeRoomActive = !(menuOpen || profileOpen || nickEditOpen || streakOpen || debugScoreOpen || cardTone != null || introActive);
     return () => { homeRoomActive = false; };
   }, [menuOpen, profileOpen, nickEditOpen, streakOpen, debugScoreOpen, cardTone, introActive]);
   // 첫 방문 코치 1회 — 약점 성조가 정해지면 표시·플래그 저장, 잠시 후 종료. 플래그 저장은 말풍선이 실제로 뜨는 경로에서만.

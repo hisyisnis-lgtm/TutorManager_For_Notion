@@ -18,7 +18,7 @@ export function PauseModal({ score, combo, crutchCtx, onResume, onRestart, onQui
   const [meaningOn, setMeaningOn] = useState(() => !isMeaningHidden(crutchCtx));
   const [pinyinOn, setPinyinOn] = useState(() => !isPinyinHidden(crutchCtx));
   return (
-    <ModalCard>
+    <ModalCard onClose={onResume} ariaLabel="잠깐 멈췄어요">
         {/* 아이콘 + 제목 (간격 10) */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: SPACE.lg }}>
           {/* IDLE 호흡 — 모달이 떠 있는 동안 아이콘이 천천히 숨 쉰다(공용 .tg-idle) */}
@@ -35,8 +35,9 @@ export function PauseModal({ score, combo, crutchCtx, onResume, onRestart, onQui
             </div>
           ))}
         </div>
-        {/* 설정 토글 — 홈 메뉴와 같은 행 규격(공용 MenuToggle), 행 간격 6 */}
-        <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: SPACE.sm }}>
+        {/* 소리·진동 설정과 학습 도움 설정은 가까운 항목끼리 묶는다. */}
+        <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: SPACE.x2 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.sm }}>
           <MenuToggle Icon={sfxOn ? VolumeLoud : VolumeCross} label="소리" on={sfxOn}
             onToggle={() => { const n = !sfxOn; setSfxOn(n); setSfxMuted(!n); if (n) playSfx('button'); }} />
           {/* 음악은 게임 중 정지 상태 — 여기선 설정만 저장하고 재생하지 않는다(홈으로 나가면 그때 재생) */}
@@ -44,10 +45,13 @@ export function PauseModal({ score, combo, crutchCtx, onResume, onRestart, onQui
             onToggle={() => { const n = !bgmOn; setBgmOn(n); setBgmMuted(!n); }} />
           <MenuToggle Icon={SmartphoneVibration} label="햅틱" on={hapticOn}
             onToggle={() => { const n = !hapticOn; setHapticOn(n); setHapticMuted(!n); if (n) haptic(20); }} />
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.sm, borderTop: `1px solid ${TG.BORDER}`, paddingTop: SPACE.lg }}>
           <MenuToggle Icon={Notebook} label="단어 뜻" on={meaningOn}
             onToggle={() => { const n = !meaningOn; setMeaningOn(n); setMeaningHidden(crutchCtx, !n); }} />
           <MenuToggle Icon={TextField} label="병음" on={pinyinOn}
             onToggle={() => { const n = !pinyinOn; setPinyinOn(n); setPinyinHidden(crutchCtx, !n); }} />
+          </div>
         </div>
         {/* 버튼 — 시안 461:46 실측: ①[다시하기 138 | gap10 | 계속하기 138] ②홈으로 286 풀폭. 행 간격 10, 높이 60.
             ★주 액션(계속하기)이 **오른쪽** — 결과화면의 [다시하기 | 계속하기]와 같은 배치라 손이 같은 자리를 기억한다.

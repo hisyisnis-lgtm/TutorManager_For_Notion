@@ -17,8 +17,9 @@ export function ProfileModal({
   const lv = levelInfo(tier.xp || 0);           // 레벨 = 누적 XP 성장(Lv.N). 등급(tier.emblem/name)은 보스 클리어.
   const pct = Math.round(lv.progress * 100);
   const [copied, setCopied] = useState(false);
-  const copyId = async () => {
+  const copyId = async (event) => {
     if (!userId) return;
+    const copyButton = event.currentTarget;
     const text = String(userId);
     try {
       if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(text);
@@ -28,16 +29,17 @@ export function ProfileModal({
       try {
         const ta = document.createElement('textarea');
         ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
-        document.body.appendChild(ta); ta.select();
+        (copyButton.closest('[role="dialog"]') || document.body).appendChild(ta); ta.select();
         document.execCommand('copy');
-        document.body.removeChild(ta);
+        ta.remove();
+        copyButton.focus({ preventScroll: true });
       } catch { /* 그래도 안 되면 표시만 */ }
     }
     setCopied(true);
     setTimeout(() => setCopied(false), 1600);
   };
   return (
-    <ModalCard onClose={onClose} maxWidth={320} radius={24} padding="20px 22px 22px" gap={16} align="stretch">
+    <ModalCard onClose={onClose} ariaLabel="내 프로필" maxWidth={320} radius={24} padding="20px 22px 22px" gap={24} align="stretch">
         {/* 헤더 */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <span style={{ ...TYPE.head, fontSize: 18, color: TG.INK }}>내 프로필</span>
@@ -54,7 +56,7 @@ export function ProfileModal({
               <span style={{ ...TYPE.h1, color: TG.INK, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{displayName}</span>
               {onEditNickname && (
                 <button onClick={onEditNickname} aria-label="닉네임 수정" className="tg-press"
-                  style={{ width: 30, height: 30, margin: -6, padding: 0, border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, ...TOUCH_OPT }}>
+                  style={{ width: 44, height: 44, padding: 0, border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, ...TOUCH_OPT }}>
                   <Pen size={18} weight="Bold" color={TG.CORAL_DK} />
                 </button>
               )}
@@ -71,36 +73,37 @@ export function ProfileModal({
           </div>
         </div>
 
-        <div style={{ height: 1, background: TG.BORDER }} />
-
-        {/* 로그인 상태 */}
+        {/* 로그인 상태·계정 ID는 같은 계정정보 묶음, 로그인/로그아웃 행동은 아래에 둔다. */}
+        <div style={{ borderTop: `1px solid ${TG.BORDER}`, paddingTop: SPACE.x2, display: 'flex', flexDirection: 'column', gap: SPACE.x2 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.xs }}>
+            <span style={{ ...TYPE.label, color: TG.SUB, textAlign: 'center' }}>
+              {isGuest ? '로그인하면 기기를 바꿔도 기록이 그대로예요' : '로그인됨 · 기록이 안전하게 저장되고 있어요'}
+            </span>
+            {userId && (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: SPACE.sm, minHeight: 44 }}>
+                <span style={{ ...TYPE.micro, fontWeight: 700, color: TG.SUB, flexShrink: 0 }}>UID</span>
+                <span style={{ minWidth: 0, maxWidth: 150, ...TYPE.num, fontSize: 11, fontWeight: 500, color: TG.SUB, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{userId}</span>
+                <button type="button" onClick={copyId} aria-label="UID 복사" className="tg-press"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: SPACE.xs, minWidth: 44, height: 44, padding: '0 8px', borderRadius: RADIUS.md, border: 'none', cursor: 'pointer', flexShrink: 0, background: 'none', ...TOUCH_OPT }}>
+                  {copied ? <CheckCircle size={13} weight="Bold" color={TG.INK} /> : <Copy size={13} weight="Bold" color={TG.SUB} />}
+                  <span aria-live="polite" style={{ ...TYPE.micro, fontWeight: 700, color: TG.SUB }}>{copied ? '복사됨' : '복사'}</span>
+                </button>
+              </div>
+            )}
+          </div>
         {isGuest ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.lg }}>
-            <span style={{ ...TYPE.label, color: TG.SUB, textAlign: 'center' }}>로그인하면 기기를 바꿔도 기록이 그대로예요</span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.md }}>
             <SocialLoginButton provider="kakao" height={52} labelType={TYPE.btnSm} />
             <SocialLoginButton provider="google" height={52} labelType={TYPE.btnSm} />
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.lg }}>
-            <span style={{ ...TYPE.label, color: TG.SUB, textAlign: 'center' }}>로그인됨 · 기록이 안전하게 저장되고 있어요</span>
+          <div>
             {isMemberUser && onLogout && (
               <button onClick={onLogout} className="tg-press" style={{ width: '100%', height: 48, borderRadius: RADIUS.lg, border: `1.5px solid ${TG.BORDER}`, background: '#fff', cursor: 'pointer', ...TYPE.btnSm, color: TG.SUB, ...TOUCH_OPT }}>로그아웃</button>
             )}
           </div>
         )}
-
-        {/* 고유 ID + 복사 — 계정 문제 문의 시 필요. 일반 사용자에겐 노이즈라 박스 없이 한 줄 메타로 격하(2026-09-03). */}
-        {userId && (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: SPACE.sm, minHeight: 32 }}>
-            <span style={{ ...TYPE.micro, fontWeight: 700, color: TG.SUB, flexShrink: 0 }}>UID</span>
-            <span style={{ maxWidth: 150, ...TYPE.num, fontSize: 11, fontWeight: 500, color: TG.SUB, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{userId}</span>
-            <button onClick={copyId} aria-label="UID 복사" className="tg-press"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: SPACE.xs, height: 32, padding: '0 8px', borderRadius: RADIUS.md, border: 'none', cursor: 'pointer', flexShrink: 0, background: 'none', ...TOUCH_OPT }}>
-              {copied ? <CheckCircle size={13} weight="Bold" color={TG.SUCCESS_GLOW} /> : <Copy size={13} weight="Bold" color={TG.SUB} />}
-              <span style={{ ...TYPE.micro, fontWeight: 700, color: copied ? TG.SUCCESS_GLOW : TG.SUB }}>{copied ? '복사됨' : '복사'}</span>
-            </button>
-          </div>
-        )}
+        </div>
     </ModalCard>
   );
 }

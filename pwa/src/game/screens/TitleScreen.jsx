@@ -121,7 +121,9 @@ export function TitleScreen({ onStart }) {
   return (
     <FigmaScreen>
       {/* 화면 전체 터치 시작 (뒤로가기 버튼 없음 — 나가기는 홈 메뉴에서) */}
-      <div onClick={() => onStart && onStart()} style={{ position: 'absolute', inset: 0, cursor: 'pointer', ...TOUCH_OPT }}>
+      <div style={{ position: 'absolute', inset: 0 }}>
+        <button type="button" aria-label="성조다락방 시작" onClick={() => onStart?.()}
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', padding: 0, border: 'none', background: 'none', cursor: 'pointer', zIndex: 1020, ...TOUCH_OPT }} />
         {/* 같은 들판을 확대해 타이틀 무대로 사용. 캐릭터는 화면 폭 안에서만 돌며 배경과 높이를 공유한다. */}
         <div aria-hidden="true" className="tg-title-field" style={{ '--tg-title-field-height': FIELD_HEIGHT, position: 'absolute', left: 0, right: 0, bottom: 0, height: FIELD_HEIGHT, pointerEvents: 'none' }}>
           <div style={{ position: 'absolute', left: '50%', bottom: 0, width: 'calc(var(--tg-title-field-height) * 1.5)', height: '100%', transform: 'translateX(-50%)', maskImage: 'linear-gradient(to bottom, transparent, black 28%)' }}>
