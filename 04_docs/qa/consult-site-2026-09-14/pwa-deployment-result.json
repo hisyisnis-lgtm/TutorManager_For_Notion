@@ -1,0 +1,54 @@
+{
+  "checkedAt": "2026-09-14T01:37:07.6447496Z",
+  "version": "v2.48.5",
+  "source": "78d5c5264cf8e7f9db03c50884b142353807d9d6",
+  "deploymentId": "dba17c14-e2b6-4262-9bcb-859cfa47fd53",
+  "deploymentUrl": "https://dba17c14.tiantian-chinese.pages.dev",
+  "canonicalUrl": "https://tiantian-chinese.pages.dev",
+  "actionsRun": 34796312379,
+  "actionsConclusion": "success",
+  "entry": "/assets/index-CV5Uy-Si.js",
+  "liveVersionConfirmed": true,
+  "checks": [
+    {
+      "path": "/",
+      "status": 200,
+      "sha256": "f176245b13bfb534024ba8a429427e9e57004b6c2bbb6ecb8f4ed651c1f68c1a",
+      "contentType": "text/html; charset=utf-8"
+    },
+    {
+      "path": "/personal",
+      "status": 200,
+      "sha256": "f176245b13bfb534024ba8a429427e9e57004b6c2bbb6ecb8f4ed651c1f68c1a",
+      "contentType": "text/html; charset=utf-8"
+    },
+    {
+      "path": "/sw.js",
+      "status": 200,
+      "sha256": "bb1437b019fc474b0c1c3697627d46f0e45cfce65f0856cadf60c391af55fd5f",
+      "contentType": "application/javascript"
+    },
+    {
+      "path": "/release-assets.json",
+      "status": 200,
+      "sha256": "f6bcfebf9f221e2ddf291aace1150c42ae80b60a286f18f8a7838a5cf425caa1",
+      "contentType": "application/json"
+    }
+  ],
+  "note": "Canonical/deployment HTML, service worker and asset index hashes agree; Actions verified current and retained assets plus Worker auth boundaries.",
+  "tests": {
+    "failed": 0,
+    "files": 65,
+    "releaseGuard": 23,
+    "passed": 560
+  },
+  "designAudit": {
+    "warnings": 0,
+    "review": 84,
+    "errors": 0
+  },
+  "entrySizeKB": 455.31,
+  "entryGzipKB": 132.07,
+  "precacheEntries": 81,
+  "precacheKiB": 7499.67
+}

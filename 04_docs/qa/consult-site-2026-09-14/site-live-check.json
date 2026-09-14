@@ -1,0 +1,72 @@
+{
+  "checkedAt": "2026-09-14T01:33:25.046Z",
+  "commit": "78d5c5264cf8e7f9db03c50884b142353807d9d6",
+  "deployment": "https://54bed96a.tiantianchinese.pages.dev",
+  "normalization": "Only the observed Cloudflare business-email obfuscation and its decoder script are reversed; decoded email is asserted.",
+  "results": [
+    {
+      "route": "/",
+      "status": 200,
+      "hash": "01cc0ab6418fc63000ce86a9d2d8c3f176dd1e48c9f8ae3795bfd5e1cead170a",
+      "expected": "10059770ab2c26251850ca253f2228534caa3b9195477997dbd09939795528bc",
+      "exactMatch": false,
+      "normalizedMatch": true
+    },
+    {
+      "route": "/contact/",
+      "status": 200,
+      "hash": "dce848e668bc80cccc0c4c45fab7e1745ea8855e2c51b499d93c6d1e6ec6e025",
+      "expected": "af7c0df1b51aa1d9642a695e6d662d557f968bd6410bc3c3fa98b37167cd2962",
+      "exactMatch": false,
+      "normalizedMatch": true
+    },
+    {
+      "route": "/consult/",
+      "status": 200,
+      "hash": "9f435c06cc699369ac504b46f0f2cea60a001b47c94ad9d66d4b1147426645bf",
+      "expected": "1def78e231124bf3ada622a7efaed73f832f29b1c7a6742c6cce62289282b527",
+      "exactMatch": false,
+      "normalizedMatch": true
+    },
+    {
+      "route": "/reviews/",
+      "status": 200,
+      "hash": "7c8b232d990c3bf5235005e46162cb5f67d2dd4d5f1c2b66c70b942761c7bde6",
+      "expected": "e42ced58509ebe7bdd282822d83c7060795ca9d8edc5e3f3351f502a85e64869",
+      "exactMatch": false,
+      "normalizedMatch": true
+    },
+    {
+      "route": "/games/tone/",
+      "status": 200,
+      "hash": "82855701418939420a7fa317b42cb47307d8d97a741fadcd6dc6dec2fe5b271d",
+      "expected": "05d13fb107afffffba487d2363d29aaf4c4e45674c28b78e48df709010214132",
+      "exactMatch": false,
+      "normalizedMatch": true
+    },
+    {
+      "route": "/lessons/",
+      "status": 200,
+      "hash": "afb12b02caa6ffb808b723e2c435e71b909dd61c09889e94d40f1af8f859327a",
+      "expected": "edf82e7774761a096081cc518895d273de37bbb8646d9b16732f0b46a76b7f56",
+      "exactMatch": false,
+      "normalizedMatch": true
+    },
+    {
+      "route": "/pricing/",
+      "status": 200,
+      "hash": "59b8292c6fa2c87531d7149bcd7d46b84d30d6994ce214b0243cad71a89275ee",
+      "expected": "59b8292c6fa2c87531d7149bcd7d46b84d30d6994ce214b0243cad71a89275ee",
+      "exactMatch": true,
+      "normalizedMatch": true
+    },
+    {
+      "route": "/game/tone/",
+      "status": 200,
+      "hash": "e6465a49260c51ea630e3c980f40e9fb661cfbbc9ab5e9a54ea2558ed0aa59aa",
+      "expected": "e6465a49260c51ea630e3c980f40e9fb661cfbbc9ab5e9a54ea2558ed0aa59aa",
+      "exactMatch": true,
+      "normalizedMatch": true
+    }
+  ]
+}

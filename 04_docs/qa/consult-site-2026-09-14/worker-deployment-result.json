@@ -1,0 +1,41 @@
+{
+  "deployedAt": "2026-09-14T01:30:22.278319Z",
+  "source": "78d5c5264cf8e7f9db03c50884b142353807d9d6",
+  "branch": "main",
+  "version": "32113c40-6cef-4bf6-93e5-b79d978ab835",
+  "sizeKiB": 380.67,
+  "gzipKiB": 85.27,
+  "startupMs": 5,
+  "checks": [
+    {
+      "path": "/consult",
+      "method": "OPTIONS",
+      "status": 204,
+      "allowedOrigin": "https://tiantianchinese.com",
+      "allowedMethods": "POST"
+    },
+    {
+      "path": "/contact",
+      "method": "OPTIONS",
+      "status": 204,
+      "allowedOrigin": "https://tiantianchinese.com",
+      "allowedMethods": "POST"
+    },
+    {
+      "path": "/",
+      "method": "GET",
+      "status": 403,
+      "body": "{\"error\":\"허용되지 않은 출처입니다.\"}"
+    },
+    {
+      "path": "/contact",
+      "method": "OPTIONS",
+      "untrustedOrigin": true,
+      "status": 204,
+      "allowedOrigin": ""
+    }
+  ],
+  "emailTests": "No additional mail sent during release",
+  "deploymentId": "d8f54763-67aa-4429-b7ec-71b545bfe125",
+  "trafficPercentage": 100
+}

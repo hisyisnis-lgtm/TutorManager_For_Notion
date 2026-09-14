@@ -1,0 +1,25 @@
+{
+  "checkedAt": "2026-09-14T10:35:43.0221060+09:00",
+  "origin": "https://tiantianchinese.com",
+  "contact": {
+    "arrowInset": 16,
+    "consoleErrors": 0,
+    "submitEnabled": true,
+    "horizontalOverflow": 0,
+    "viewport": 1050,
+    "hydrated": true
+  },
+  "consult": {
+    "headerNavigation": true,
+    "consoleErrors": 0,
+    "submitEnabled": true
+  },
+  "home": {
+    "profileCount": 1,
+    "photoWidth": 64,
+    "credentials": 7,
+    "photoLoaded": true,
+    "titlePhotoLeftAligned": true
+  },
+  "actualInquirySubmitted": false
+}
