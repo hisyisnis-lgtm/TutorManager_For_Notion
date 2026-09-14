@@ -15,12 +15,13 @@ import { TEXT_SECONDARY,
   STATUS_SUCCESS_DARK } from '../constants/theme.js';
 
 const STORAGE_KEY = 'instructor_name';
+const CONSENT_URL = 'https://tiantianchinese.com/consent/';
 
 const SHARE_LINKS = [
   { key: 'intro', label: '홈페이지', path: 'https://tiantianchinese.com/' },
   { key: 'lessons', label: '수업 안내', path: 'https://tiantianchinese.com/lessons/' },
   { key: 'pricing', label: '수강료 안내 · 개별 공유용', path: 'https://tiantianchinese.com/pricing/' },
-  { key: 'consent', label: '수업 동의서', path: 'https://tiantianchinese.com/consent/' },
+  { key: 'consent', label: '수업 동의서', path: CONSENT_URL },
 ];
 
 // 이름 미설정이면 빈 문자열 — 호출부가 "<이름> 강사님"으로 조립하므로
@@ -157,7 +158,7 @@ export default function SettingsPage() {
 
         <div>
           <span style={{ fontSize: 14, fontWeight: 600, color: TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>공유 링크</span>
-          <Link to="/agreement" className="inline-flex items-center min-h-[44px] text-sm underline mb-2">수업 동의서 원문 확인</Link>
+          <a href={CONSENT_URL} className="inline-flex items-center min-h-[44px] text-sm underline mb-2">수업 동의서 원문 확인</a>
           <div className="space-y-2">
             {SHARE_LINKS.map(({ key, label, path }) => (
               <div key={key} className="flex items-center gap-2 bg-white shadow-border rounded-2xl px-3 py-2.5">
