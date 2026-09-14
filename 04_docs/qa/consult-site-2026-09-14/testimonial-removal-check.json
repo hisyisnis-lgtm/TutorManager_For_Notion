@@ -1,0 +1,13 @@
+{
+  "checkedAt": "2026-09-13T23:05:03.578Z",
+  "files": 943,
+  "incrementalChanged": [
+    "/lessons/index.html"
+  ],
+  "allOtherFilesUnchanged": 942,
+  "testimonialRemoved": true,
+  "consultCtaPreserved": true,
+  "threeStepSectionStillExcluded": true,
+  "preview": "http://127.0.0.1:5199/lessons/",
+  "previewMatchesStage": true
+}

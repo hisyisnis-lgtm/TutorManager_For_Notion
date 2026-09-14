@@ -1,0 +1,28 @@
+{
+  "checkedAt": "2026-09-13T23:31:43.636Z",
+  "files": 949,
+  "newCss": "/_astro/Footer.2nUupzbG.css",
+  "cssOnlyArrowOpacityAndTransition": true,
+  "restOpacity": 0.65,
+  "hoverAndFocusOpacity": 1,
+  "transitionSeconds": 0.18,
+  "changedHtmlCssReferenceOnly": [
+    "/books/index.html",
+    "/books/pronunciation-workbook/index.html",
+    "/channels/index.html",
+    "/checkout/index.html",
+    "/consult/index.html",
+    "/game/index.html",
+    "/games/tone/index.html",
+    "/index.html",
+    "/learn/index.html",
+    "/lessons/index.html",
+    "/reviews/index.html"
+  ],
+  "otherOldFilesUnchanged": 937,
+  "scriptAndCspUnchanged": true,
+  "pricingFilesPreserved": 12,
+  "gameFilesPreserved": 24,
+  "lessonTestimonialsStillRemoved": true,
+  "previewMatchesStage": true
+}

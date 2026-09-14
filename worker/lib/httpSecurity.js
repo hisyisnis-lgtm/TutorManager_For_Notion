@@ -9,7 +9,7 @@ export function requestByteLimit(path) {
   if (path === '/game/dashboard') return 4 * 1024;
   if (path === '/homework/upload' || /^\/homework\/student-upload\/[^/]+$/.test(path)) return MAX_FILE_BYTES + 64 * 1024;
   if (path.startsWith('/personal/auth/') || path.startsWith('/game/auth/') || path === '/auth/login' || path === '/game/event') return 8 * 1024;
-  if (path === '/consult' || path === '/error-log') return 32 * 1024;
+  if (path === '/consult' || path === '/contact' || path === '/error-log') return 32 * 1024;
   return 512 * 1024;
 }
 

@@ -1,0 +1,49 @@
+{
+  "recordedAt": "2026-09-14T00:34:42.4440391Z",
+  "stageFileCount": 964,
+  "sourceCount": 13,
+  "sourceSnapshotHashesMatchManifest": true,
+  "formTests": {
+    "passed": 11,
+    "failed": 0,
+    "sourceSha256": "1494ec93e766d61ec7fe7cffb50ccf0bad607d81a39e5f7c138b20a87a9a10a1",
+    "report": "contact-form-results.json"
+  },
+  "integrationReportedBy": "/root",
+  "astroRoutes": 12,
+  "preservationPassed": true,
+  "worker": {
+    "testsPassed": 62,
+    "suites": [
+      "contact",
+      "auth",
+      "httpSecurity"
+    ],
+    "dryRunKiB": 380.99,
+    "dryRunGzipKiB": 85.31
+  },
+  "browser": {
+    "previewUrl": "http://127.0.0.1:5199/contact/",
+    "widths": [
+      1280,
+      375
+    ],
+    "mobileButtonHeight": 56,
+    "overflow": 0,
+    "invalidFields": 5,
+    "firstInvalidFocus": "type",
+    "mockUrl": "http://127.0.0.1:5207/contact/",
+    "mockProviderFailure": "inputs retained, alert focused",
+    "mockSuccess": "done heading focused",
+    "mockMobileWidth": 375,
+    "mockOverflow": 0
+  },
+  "pending": [
+    "operational email configuration: see separate status record",
+    "actual recipient inbox delivery",
+    "production Contact valid-submission end-to-end",
+    "deployment and post-deployment verification"
+  ],
+  "committed": false,
+  "deployed": false
+}

@@ -1,0 +1,46 @@
+{
+  "checkedAt": "2026-09-14T01:28:30.749Z",
+  "status": "PASS",
+  "kind": "offline static release preflight",
+  "stage": "C:/development/TutorManager_For_Notion/.tmp_qa/consult-site-release-20260914/site-staging",
+  "stageFiles": 968,
+  "stageHashesMatchManifest": true,
+  "candidateManifestMatches": true,
+  "sourcesVerified": 13,
+  "rootAndSnapshotHashesMatch": true,
+  "pages": 14,
+  "pagesWithCsp": 13,
+  "pagesWithoutCsp": [
+    "/pricing/index.html"
+  ],
+  "pagesWithoutInlineCode": [
+    "/game/tone/index.html",
+    "/pricing/index.html"
+  ],
+  "inlineScriptsVerified": 50,
+  "inlineStylesVerified": 15,
+  "nonExecutableJsonLdValidated": 1,
+  "publicPriceCheck": {
+    "target": "site",
+    "textFiles": 45,
+    "files": 968,
+    "sharedPricingAssets": [
+      "/pricing/assets/pricing-4IH8T82A.js"
+    ]
+  },
+  "protectedOriginalHashesVerified": {
+    "pricing": 12,
+    "game": 24,
+    "videoDirectory": 19
+  },
+  "videoDirectoryBreakdown": {
+    "videoMedia": 15,
+    "captions": 3,
+    "readme": 1
+  },
+  "buildRun": false,
+  "browserRun": false,
+  "networkRequests": 0,
+  "gitMutations": false,
+  "deploymentPerformedByThisCheck": false
+}

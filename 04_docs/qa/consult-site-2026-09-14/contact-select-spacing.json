@@ -1,0 +1,19 @@
+{
+  "checkedAt": "2026-09-14T09:53:11.3822304+09:00",
+  "route": "http://127.0.0.1:5199/contact/",
+  "change": "Native select retained; decorative existing caret icon inset 16px",
+  "desktopWidth": 1280,
+  "mobileWidth": 375,
+  "iconRightInset": 16,
+  "verticalCenterOffset": 0,
+  "textRightPadding": 48,
+  "keyboardSelection": "lecture",
+  "keyboardTabFocus": "company",
+  "mobileHorizontalOverflow": 0,
+  "browserWarningsAndErrors": 0,
+  "astroBuildRoutes": 12,
+  "stageGuard": "passed",
+  "stageFileCount": 966,
+  "submitted": false,
+  "deployed": false
+}

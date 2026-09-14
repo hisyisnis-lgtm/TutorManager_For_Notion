@@ -1,0 +1,36 @@
+{
+  "checkedAt": "2026-09-13T23:22:27.383Z",
+  "files": 946,
+  "newCss": "/_astro/Footer.CTm5mudh.css",
+  "arrowButtons": 2,
+  "addedInlineScripts": 1,
+  "newScriptHash": "'sha256-O5rgUjKx/PrncLJhqQ2XKK9QRyM9flgskaB/hWf0jOM='",
+  "allExistingScriptsPreserved": true,
+  "cspOnlyNewScriptHashAdded": true,
+  "allExecutableHashesVerified": 6,
+  "otherChangedHtmlCssReferenceOnly": [
+    "/books/index.html",
+    "/books/pronunciation-workbook/index.html",
+    "/channels/index.html",
+    "/checkout/index.html",
+    "/consult/index.html",
+    "/game/index.html",
+    "/games/tone/index.html",
+    "/index.html",
+    "/learn/index.html",
+    "/lessons/index.html"
+  ],
+  "otherFilesUnchanged": 934,
+  "pricingFilesPreserved": 12,
+  "gameFilesPreserved": 24,
+  "lessonTestimonialsStillRemoved": true,
+  "previewMatchesStage": true,
+  "publicPriceCheck": {
+    "target": "site",
+    "textFiles": 38,
+    "files": 946,
+    "sharedPricingAssets": [
+      "/pricing/assets/pricing-4IH8T82A.js"
+    ]
+  }
+}

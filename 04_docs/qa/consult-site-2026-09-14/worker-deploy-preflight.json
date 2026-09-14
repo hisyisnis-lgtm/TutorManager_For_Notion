@@ -1,0 +1,28 @@
+{
+  "checkedAt": "2026-09-14T01:28:00.9060115Z",
+  "target": "worker",
+  "candidate": "99_external/consult-site-release-20260914",
+  "tests": {
+    "files": 38,
+    "passed": 673,
+    "failed": 0
+  },
+  "dryRun": {
+    "gzipKiB": 85.31,
+    "sizeKiB": 380.99,
+    "wrangler": "4.129.1"
+  },
+  "productionBefore": {
+    "deployment": "cb7ce6d3-11c9-41ba-a399-c98c00c63bfb",
+    "version": "2018e22c-8392-49cf-bdb3-255d65ff4b68",
+    "percentage": 100
+  },
+  "files": {
+    "worker/lib/contact.js": "e8a41bb558921e4258e389a15eec4568b30318be475a395ba6c674ce59bf6fcf",
+    "worker/src/index.js": "ac14d1cace82f4004314abeaf4df86583dcf7c752579f9c964af57cf6c6673bf",
+    "pwa/src/pages/LandingPage.jsx": "3caa30a0225c90ac98f64ab9b1e497c4eec811b6490634064b75576df0fac7cd",
+    "pwa/package.json": "f4e8d7017c57b33c5cc8223d2c324cd811f5db82326fafce75b37a9bcc7de385",
+    "worker/lib/httpSecurity.js": "1cde0a01232ed119a4975d4758f40beb48c60e19b20d9850e90c1c096ba553e9",
+    "worker/wrangler.toml": "4435a756306b5e1fe17297f759c0bff80b37721bb3283cd8e502525379d5b515"
+  }
+}

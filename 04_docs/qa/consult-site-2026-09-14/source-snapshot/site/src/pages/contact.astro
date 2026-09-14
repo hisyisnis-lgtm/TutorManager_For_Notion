@@ -1,0 +1,42 @@
+---
+import Base from '../layouts/Base.astro';
+import Header from '../components/Header.jsx';
+import Footer from '../components/Footer.jsx';
+import TextLink from '../components/TextLink.jsx';
+import ContactForm from '../components/ContactForm.jsx';
+import { CONTACT_URL, CONSULT_URL } from '../config.js';
+import '../styles/contact.css';
+---
+<Base title="Contact · 출강·협업 문의" description="기업·기관 중국어 출강, 교육 콘텐츠 제작과 브랜드 협업을 제안해 주세요." path={CONTACT_URL}>
+  <Header client:load active={CONTACT_URL} />
+  <main id="main-content" tabindex="-1">
+    <section class="section contact-page">
+      <div class="container">
+        <div class="contact-page__intro">
+          <h1 class="t-h2">Contact</h1>
+          <p class="t-body muted">기업·기관 출강과 콘텐츠·브랜드 협업을 제안해 주세요.</p>
+        </div>
+
+        <div class="contact-page__layout">
+          <div class="contact-page__topics">
+            <div class="contact-page__topic">
+              <h2 class="t-h3">기업·기관 출강</h2>
+              <p class="t-body muted">임직원 중국어 교육<br />회화·발음 특강</p>
+            </div>
+            <div class="contact-page__topic">
+              <h2 class="t-h3">콘텐츠·브랜드 협업</h2>
+              <p class="t-body muted">중국어 교육 콘텐츠 제작<br />브랜드 협업 및 공동 프로젝트</p>
+            </div>
+          </div>
+          <ContactForm client:load />
+        </div>
+
+        <div class="contact-page__consult">
+          <p class="t-body muted">개인 수업이 궁금하신가요?</p>
+          <TextLink href={CONSULT_URL}>수업 상담 신청</TextLink>
+        </div>
+      </div>
+    </section>
+  </main>
+  <Footer />
+</Base>

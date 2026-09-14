@@ -1,0 +1,29 @@
+/* Consultation-only styles. Keep the site's existing tokens and typography. */
+.consult-page { padding-top: calc(var(--section-y) / 2); }
+.consult-page__container { max-width: calc(640px + var(--gutter) * 2); }
+.consult-page__container > .section__title { margin-bottom: 40px; }
+.consult-form { display: flex; flex-direction: column; gap: 24px; width: 100%; min-width: 0; padding: 32px; border: 1px solid var(--border-default); border-radius: 12px; background: var(--bg-card); box-shadow: 0 1px 3px var(--border-subtle); }
+.consult-form__fields { display: flex; flex-direction: column; gap: 24px; min-width: 0; margin: 0; padding: 0; border: 0; }
+.consult-form__field { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.consult-form__field label { font-size: 15px; font-weight: 600; line-height: 1.5; }
+.consult-form__required { font-weight: 400; }
+.consult-form__optional { color: var(--text-secondary); font-size: 13px; font-weight: 400; }
+.consult-form__field input, .consult-form__field select, .consult-form__field textarea { box-sizing: border-box; width: 100%; min-width: 0; min-height: var(--touch-target); border: 1px solid var(--border-neutral); border-radius: 12px; padding: 12px 14px; background: var(--bg-card); color: var(--text-primary); font: inherit; font-size: 16px; line-height: 1.5; }
+.consult-form__field textarea { min-height: 128px; resize: vertical; }
+.consult-form__field input::placeholder, .consult-form__field textarea::placeholder { color: var(--text-tertiary); }
+.consult-form__field input:focus, .consult-form__field select:focus, .consult-form__field textarea:focus { border-color: var(--primary); outline: 2px solid var(--primary); outline-offset: 2px; }
+.consult-form__field [aria-invalid="true"] { border-color: var(--primary); }
+.consult-form__field :disabled { cursor: wait; background: var(--gray-100); }
+.consult-form__field-error { color: var(--primary); font-size: 14px; line-height: 1.5; }
+.consult-form__privacy { color: var(--text-secondary); font-size: 13px; line-height: 1.7; }
+.consult-form__privacy a, .consult-form__error a { display: inline-flex; align-items: center; min-height: var(--touch-target); text-decoration: underline; text-underline-offset: 3px; }
+.consult-form__error { padding: 14px 16px; border: 1px solid var(--primary); border-radius: 12px; background: var(--primary-bg); color: var(--text-primary); font-size: 14px; line-height: 1.7; }
+.consult-form__submit { width: 100%; min-height: 52px; padding: 14px 20px; border-radius: 12px; background: var(--primary); color: var(--bg-card); font-weight: 600; white-space: normal; line-height: 1.5; }
+.consult-form__submit:hover:not(:disabled) { background: var(--primary-dark); }
+.consult-form__submit:disabled { cursor: wait; opacity: .65; }
+.consult-form__contact { align-self: flex-start; }
+.consult-form--done { gap: 20px; }
+@media (max-width: 639px) {
+  .consult-form { padding: 24px 20px; }
+  .consult-form__contact { width: 100%; padding-inline: 12px; font-size: 15px; }
+}

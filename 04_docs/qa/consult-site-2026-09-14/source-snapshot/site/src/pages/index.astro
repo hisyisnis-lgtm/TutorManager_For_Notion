@@ -1,0 +1,126 @@
+---
+import Base from '../layouts/Base.astro';
+import { Image } from 'astro:assets';
+import teacherProfile from '../assets/teacher-profile.jpg';
+import Header from '../components/Header.jsx';
+import Hero from '../components/Hero.jsx';
+import PostCard from '../components/PostCard.jsx';
+import TextLink from '../components/TextLink.jsx';
+import Banner from '../components/Banner.jsx';
+import SectionTitle from '../components/SectionTitle.jsx';
+import FeatureItem from '../components/FeatureItem.jsx';
+import Footer from '../components/Footer.jsx';
+import posts from '../content/posts.json';
+import { CHANNELS } from '../config.js';
+
+const featured = posts.filter((p) => p.featured).slice(0, 3);
+
+// 히어로 슬라이드 3개 — 강의 영상 3편에서 페이스 트래킹 리프레임(02_devtools/video-reframe.py)한 20·18·20초 컷.
+// 영상이 끝나면 다음 슬라이드로 넘어가며 순환. HERO_VIDEO=false 면 포스터만 8초 간격 전환.
+import { HERO_VIDEO } from '../config.js';
+const mk = (n, lines) => ({
+  lines,
+  ...(HERO_VIDEO ? { mp4: `/video/hero-${n}.mp4`, webm: `/video/hero-${n}.webm`, mp4Mobile: `/video/hero-${n}-mobile.mp4`, webmMobile: `/video/hero-${n}-mobile.webm` } : {}),
+  poster: `/img/hero-${n}-poster.jpg`, posterMobile: `/img/hero-${n}-poster-mobile.jpg`,
+});
+const slides = [
+  mk(1, ['말할 수 있어야', '진짜 아는 언어입니다.']),
+  mk(2, ['“한국어도 잘하시네요?”', '중국인도 깜빡 속은 발음.']),
+  mk(3, ['배운 중국어가', '내 말이 되는 시간.']),
+]; // 1 특강(2026-06, 밝은 강의실) · 2 수업 후 대화(IMG_2920 200~218초) · 3 특강(2026-02, 좌우 반전본)
+---
+<Base path="/">
+  <Header client:load overlay active="/" />
+
+  <main id="main-content" tabindex="-1">
+  <Hero client:load
+    cta={{ label: '수업 안내 보기', href: '/lessons/' }}
+    slides={slides}
+    scrollTarget="#learn-preview"
+  />
+
+  <section class="section">
+    <div class="container grid grid--asym">
+      <div class="stack stack--96">
+        <div class="section__title">
+          <h2 id="learn-preview" tabindex="-1" class="t-h2">회화.<br />발음.<br />공부습관.</h2>
+          <TextLink href="/learn/">중국어 배우기 전체 글 보기</TextLink>
+        </div>
+        <PostCard post={featured[0]} />
+      </div>
+      <div class="stack stack--80">
+        <PostCard post={featured[1]} />
+        <PostCard post={featured[2]} />
+      </div>
+    </div>
+  </section>
+
+  <section class="container" style="padding-bottom: var(--section-y)">
+    <Banner
+      title={'수업 밖에서도 이어지는 중국어,\n인스타그램과 유튜브에서 만나요'}
+      cta={{ label: '채널 보기', href: '/channels/' }}
+    />
+  </section>
+
+  <section class="section teacher-profile" aria-labelledby="teacher-profile-title" id="teacher-profile">
+    <div class="container">
+      <div class="teacher-profile__heading">
+        <h2 class="t-h2" id="teacher-profile-title">왜 하늘하늘 중국어인가</h2>
+        <div class="teacher-profile__identity">
+          <Image
+            class="teacher-profile__photo"
+            src={teacherProfile}
+            alt="하늘하늘 중국어 대표 강사 최하늘"
+            width={960}
+            widths={[400, 640, 960]}
+            sizes="64px"
+            format="webp"
+            loading="lazy"
+            decoding="async"
+          />
+          <div class="teacher-profile__intro">
+            <p class="teacher-profile__name">하늘쌤 <span>최하늘</span></p>
+            <p class="t-caption muted">대표 강사 · 회화 전문 · 발음 교정</p>
+          </div>
+        </div>
+      </div>
+      <div class="grid grid--3 teacher-profile__reasons">
+        <div class="teacher-profile__reason">
+          <FeatureItem label="중국인도 인정한 발음"
+            body={'"동북 사람이냐"는 질문을 받는 발음.\n현지에서 익힌 자연스러운 소리를\n그대로 옮겨드립니다.'} />
+          <dl class="teacher-profile__history">
+            <div><dt>중국 인민대학교</dt><dd>신문방송학과 졸업</dd></div>
+            <div><dt>베이징·다롄</dt><dd>약 8년 거주</dd></div>
+          </dl>
+          <TextLink href={`${CHANNELS.blog}/224109330421`} external>하늘쌤 이야기 바로가기</TextLink>
+        </div>
+        <div class="teacher-profile__reason">
+          <FeatureItem label="한국인 시선의 설명"
+            body={'왜 한국인이 성조에서 막히는지\n아는 강사가, 발음이 왜 어려운지부터\n설명합니다.'} />
+          <dl class="teacher-profile__history">
+            <div><dt>YBM 종로센터</dt><dd>회화 전문 강사 역임</dd></div>
+            <div><dt>YBMNET</dt><dd>〈구어먹는 중국어〉 제작 및 강의</dd></div>
+          </dl>
+          <TextLink href="/lessons/">수업 안내 바로가기</TextLink>
+        </div>
+        <div class="teacher-profile__reason">
+          <FeatureItem label="재미있어서 몰입되는 수업"
+            body={'오늘 본 드라마 이야기로 즉석 회화 연습.\n스탠딩코미디처럼 재밌는데\n머리에 쏙쏙 들어옵니다.'} />
+          <dl class="teacher-profile__history">
+            <div><dt>〈오색중국어〉</dt><dd>제작 및 강의</dd></div>
+            <div><dt>재능 EnglishTV</dt><dd>〈티엔의 미라클 중국어〉 강의</dd></div>
+            <div><dt>대교 차이홍</dt><dd>〈유패스〉 영상 강의</dd></div>
+          </dl>
+          <TextLink href="/channels/">채널 바로가기</TextLink>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section--warm"><div class="container stack stack--80"><SectionTitle lead="글로 배운 중국어를 내 것으로 만드는 두 가지 방법.">배움 다음에는,<br />직접 해보는 시간.</SectionTitle><div class="grid grid--2">
+    <FeatureItem label="교재 · 출간 준비 중" body={'소리를 이해하고, 문장으로 말하기.\n첫 발음 워크북을\n차근차근 준비하고 있어요.'} link={{ href: '/books/', label: '준비 중인 교재 보기' }} />
+    <FeatureItem label="성조게임" body={'듣고 고르는 짧은 도전.\n한 판씩 쌓아가는\n나만의 성조 감각.'} link={{ href: '/games/tone/', label: '지금 플레이하기' }} />
+  </div></div></section>
+  </main>
+  <Footer />
+</Base>

@@ -1,0 +1,135 @@
+---
+import Base from '../layouts/Base.astro';
+import Header from '../components/Header.jsx';
+import SectionTitle from '../components/SectionTitle.jsx';
+import Icon from '../components/Icon.jsx';
+import Footer from '../components/Footer.jsx';
+
+// 기존 후기 카드에서 확인한 원문의 OG 이미지. 공개 이미지 프록시만 허용한다.
+const imageProxy = 'https://tutor-manager-proxy.hisyisnis.workers.dev/og-proxy/image';
+Astro.csp?.insertDirective(`img-src 'self' data: ${imageProxy}`);
+const reviews = [
+  {
+    blog: 'strolling-around', title: '한국어 직역 탈출 특강 후기', href: 'https://blog.naver.com/strolling-around/224268868564',
+    image: 'https://blogthumb.pstatic.net/MjAyNjA0MjlfMTUz/MDAxNzc3NDE2MjY2Mjg5.B6nDiMGN4aEMGGa7cjobpcaajnFFoWWeut6Mn7imoiUg.BEq0WG03B-vmO1YRvNfLmAUdiWUfvC2F13PHr2pbDNAg.JPEG/900_20260425_153953.jpg?type=w2',
+  },
+  {
+    blog: 'strolling-around', title: '발음 특강 후기', href: 'https://blog.naver.com/strolling-around/224202928037',
+    image: 'https://blogthumb.pstatic.net/MjAyNjAzMDNfODEg/MDAxNzcyNTQ2MzE3ODQy.Da8nHcxvWdbKZlrgZjg1kNhsxTbIhmgkji2YQcsaMzgg.uAiPlT-bzfGaOvVWROZ4RGeWxLv1h4gdkHJpuLg4duIg.JPEG/1772546316897.jpg?type=w2',
+  },
+  {
+    blog: 'naningumusme', title: '하늘쌤 중국어 3회 특강 후기', href: 'https://m.blog.naver.com/naningumusme/224232796614',
+    image: 'https://blogthumb.pstatic.net/MjAyNjAzMjhfNjkg/MDAxNzc0NzA1NjQ0OTUx.a1v7S1NPheA-EAU188f8UOg5x3j3az9H_u0EMcebISsg.hVGppxsSNqf2jqL0Jzg435r1btd7pApO7bSsrYUn4acg.JPEG/20260328%A3%DF221416.jpg?type=w2',
+  },
+].map(review => ({ ...review, thumbnail: `${imageProxy}?${new URLSearchParams({ url: review.image, referer: review.href })}` }));
+---
+<Base title="수강생 후기" description="하늘하늘 중국어 수강생이 남긴 이야기와 블로그 후기를 확인하세요." path="/reviews/">
+  <Header client:load active="/reviews/" />
+
+  <main id="main-content" tabindex="-1" class="reviews-page">
+    <section class="section reviews-page__intro">
+      <div class="container stack stack--80">
+        <SectionTitle as="h1" lead="수강생이 남긴 이야기와 블로그 후기를 모았습니다.">수강생 후기</SectionTitle>
+        <div class="grid grid--2">
+          <figure class="quote">
+            <blockquote class="t-body-b quote__text">"스탠딩코미디를 보는 것 같이{'\n'}재미있으면서도 머리에 쏙쏙 들어와요."</blockquote>
+            <figcaption class="t-label faint">특강 수강생 공통 후기</figcaption>
+          </figure>
+          <figure class="quote">
+            <blockquote class="t-body-b quote__text">"HSK 5급인데 왕기초 회화부터{'\n'}다시 잡았어요. 그게 맞았어요."</blockquote>
+            <figcaption class="t-label faint">1:1 수강생</figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <section class="section section--warm">
+      <div class="container stack stack--80">
+        <SectionTitle lead="작성자의 블로그에서 수강 후기 원문을 읽어보세요.">블로그 후기</SectionTitle>
+        <div class="reviews-page__carousel">
+          <button class="icircle reviews-page__arrow reviews-page__arrow--prev" type="button" aria-label="이전 후기" aria-controls="blog-reviews" hidden>
+            <Icon name="caretLeft" size={20} />
+          </button>
+          <button class="icircle reviews-page__arrow reviews-page__arrow--next" type="button" aria-label="다음 후기" aria-controls="blog-reviews" hidden>
+            <Icon name="caretRight" size={20} />
+          </button>
+          <ul id="blog-reviews" class="reviews-page__links" tabindex="0" aria-label="블로그 후기 목록 (좌우 스크롤)">
+          {reviews.map(review => (
+            <li>
+              <article class="reviews-page__card">
+                <div class="reviews-page__thumb" aria-hidden="true">
+                  <Icon name="article" size={40} />
+                  <img src={review.thumbnail} alt="" width="800" height="600" loading="lazy" decoding="async" referrerpolicy="no-referrer" />
+                </div>
+                <div class="reviews-page__body">
+                  <div class="reviews-page__copy">
+                    <p class="t-caption muted">네이버 블로그</p>
+                    <h3 class="t-h3">{review.title}</h3>
+                  </div>
+                  <div class="reviews-page__footer">
+                    <p class="reviews-page__author t-caption muted">{review.blog}</p>
+                    <a
+                      class="btn btn--md btn--outline-ink reviews-page__link"
+                      href={review.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={`${review.title} 읽기 (새 창)`}
+                    >
+                      후기 읽기 <Icon name="arrowUpRight" size={16} />
+                    </a>
+                  </div>
+                </div>
+              </article>
+            </li>
+          ))}
+          </ul>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <Footer />
+</Base>
+
+<script>
+  document.querySelectorAll<HTMLImageElement>('.reviews-page__thumb img').forEach((image) => {
+    const showFallback = () => image.classList.add('is-unavailable');
+    image.addEventListener('error', showFallback, { once: true });
+    if (image.complete && image.naturalWidth === 0) showFallback();
+  });
+</script>
+
+<script>
+  const carousel = document.querySelector<HTMLElement>('.reviews-page__carousel');
+  const list = carousel?.querySelector<HTMLElement>('.reviews-page__links');
+  const previous = carousel?.querySelector<HTMLButtonElement>('.reviews-page__arrow--prev');
+  const next = carousel?.querySelector<HTMLButtonElement>('.reviews-page__arrow--next');
+
+  if (carousel && list && previous && next) {
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const updateButtons = () => {
+      const maxScroll = Math.max(0, list.scrollWidth - list.clientWidth);
+      previous.hidden = maxScroll <= 1 || list.scrollLeft <= 1;
+      next.hidden = maxScroll <= 1 || list.scrollLeft >= maxScroll - 1;
+      carousel.classList.toggle('can-scroll-left', !previous.hidden);
+      carousel.classList.toggle('can-scroll-right', !next.hidden);
+    };
+    const move = (direction: number) => {
+      const card = list.querySelector('li');
+      if (!card) return;
+      const gap = Number.parseFloat(getComputedStyle(list).columnGap) || 0;
+      list.scrollBy({
+        left: direction * (card.getBoundingClientRect().width + gap),
+        behavior: reducedMotion.matches ? 'auto' : 'smooth',
+      });
+    };
+
+    previous.addEventListener('click', () => move(-1));
+    next.addEventListener('click', () => move(1));
+    list.addEventListener('scroll', updateButtons, { passive: true });
+    const resizeObserver = new ResizeObserver(updateButtons);
+    resizeObserver.observe(list);
+    carousel.classList.add('is-ready');
+    updateButtons();
+  }
+</script>

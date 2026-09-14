@@ -11,8 +11,8 @@ const transaction = 't'.repeat(43);
 const verifier = 'v'.repeat(43);
 let local, env;
 const ctx = { waitUntil: promise => promise.catch(() => {}) };
-const request = (path, { token, body, origin = ORIGIN, method = body ? 'POST' : 'GET' } = {}) => worker.fetch(new Request(`https://worker.test${path}`, {
-  method, headers: { Origin: origin, ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(body ? { 'Content-Type': 'application/json' } : {}) },
+const request = (path, { token, body, origin = ORIGIN, method = body ? 'POST' : 'GET', headers = {} } = {}) => worker.fetch(new Request(`https://worker.test${path}`, {
+  method, headers: { Origin: origin, ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(body ? { 'Content-Type': 'application/json' } : {}), ...headers },
   ...(body ? { body: JSON.stringify(body) } : {}),
 }), env, ctx);
 
@@ -146,5 +146,80 @@ describe('official game site origins', () => {
       const options = await request('/game/me', { origin, method: 'OPTIONS' });
       expect(options.headers.get('Access-Control-Allow-Origin')).toBe('');
     }
+  });
+});
+
+describe('official consultation origins', () => {
+  it.each(['https://tiantianchinese.com', 'https://www.tiantianchinese.com', 'https://tiantianchinese.pages.dev'])('allows consultation POST preflight and validation errors at %s without granting sensitive routes', async origin => {
+    const preflight = await request('/consult', { origin, method: 'OPTIONS', headers: { 'Access-Control-Request-Method': 'POST', 'Access-Control-Request-Headers': 'content-type' } });
+    expect(preflight.status).toBe(204);
+    expect(preflight.headers.get('Access-Control-Allow-Origin')).toBe(origin);
+    expect(preflight.headers.get('Access-Control-Allow-Methods')).toBe('POST');
+    expect(preflight.headers.get('Access-Control-Allow-Headers')).toContain('Content-Type');
+    const invalid = await request('/consult', { origin, body: {} });
+    expect(invalid.status).toBe(400);
+    expect(invalid.headers.get('Access-Control-Allow-Origin')).toBe(origin);
+    expect(invalid.headers.get('Vary')).toBe('Origin');
+    for (const [path, method] of [
+      ['/auth/login', 'POST'], ['/notifications', 'GET'], ['/personal/auth/request-otp', 'POST'],
+      ['/v1/pages/12345678-1234-1234-1234-123456789abc', 'GET'], ['/og-proxy?url=https%3A%2F%2Fblog.naver.com%2Fexample', 'GET'],
+    ]) {
+      const blocked = await request(path, { origin, method, ...(method === 'POST' ? { body: {} } : {}) });
+      expect(blocked.status).toBe(403);
+      expect(blocked.headers.has('Access-Control-Allow-Origin')).toBe(false);
+      const options = await request(path, { origin, method: 'OPTIONS', headers: { 'Access-Control-Request-Method': method } });
+      expect(options.headers.get('Access-Control-Allow-Origin')).toBe('');
+    }
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('only allows the exact consultation path and POST method from the official site', async () => {
+    const origin = 'https://tiantianchinese.com';
+    for (const path of ['/consult/', '/consult/extra']) {
+      expect((await request(path, { origin, body: {} })).status).toBe(403);
+      const preflight = await request(path, { origin, method: 'OPTIONS', headers: { 'Access-Control-Request-Method': 'POST' } });
+      expect(preflight.headers.get('Access-Control-Allow-Origin')).toBe('');
+    }
+    for (const method of ['GET', 'PUT', 'DELETE']) {
+      expect((await request('/consult', { origin, method })).status).toBe(403);
+      const preflight = await request('/consult', { origin, method: 'OPTIONS', headers: { 'Access-Control-Request-Method': method } });
+      expect(preflight.headers.get('Access-Control-Allow-Origin')).toBe('');
+    }
+    expect((await request('/consult', { origin, method: 'OPTIONS' })).headers.get('Access-Control-Allow-Origin')).toBe('');
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('rejects lookalike and untrusted consultation origins before handling the body', async () => {
+    for (const origin of ['https://tiantianchinese.com.evil.test', 'http://tiantianchinese.com', 'https://untrusted.example']) {
+      expect((await request('/consult', { origin, body: {} })).status).toBe(403);
+      const preflight = await request('/consult', { origin, method: 'OPTIONS', headers: { 'Access-Control-Request-Method': 'POST' } });
+      expect(preflight.headers.get('Access-Control-Allow-Origin')).toBe('');
+    }
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('preserves existing PWA consultation validation responses', async () => {
+    const origin = 'https://tiantian-chinese.pages.dev';
+    const response = await request('/consult', { origin, body: {} });
+    expect(response.status).toBe(400);
+    expect(response.headers.get('Access-Control-Allow-Origin')).toBe(origin);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('keeps unexpected consultation errors readable from the official site', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const origin = 'https://tiantianchinese.com';
+    const pending = [];
+    const response = await worker.fetch(new Request('https://worker.test/consult', {
+      method: 'POST', headers: { Origin: origin, 'Content-Type': 'application/json' }, duplex: 'half',
+      body: new ReadableStream({ start(controller) { controller.error(new Error('isolated consultation body failure')); } }),
+    }), env, { waitUntil: promise => pending.push(promise) });
+    await Promise.allSettled(pending);
+    expect(response.status).toBe(500);
+    expect(response.headers.get('Access-Control-Allow-Origin')).toBe(origin);
+    expect(response.headers.get('Vary')).toBe('Origin');
+    expect(response.headers.get('Cache-Control')).toBe('private, no-store');
+    expect(await response.json()).toEqual({ error: 'Internal Server Error' });
+    expect(fetch).not.toHaveBeenCalled();
   });
 });

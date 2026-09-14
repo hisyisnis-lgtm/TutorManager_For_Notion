@@ -1,0 +1,47 @@
+{
+  "checkedAt": "2026-09-13T23:50:53.315Z",
+  "fileCount": 955,
+  "newCss": "/_astro/Footer.6sH0LFeq.css",
+  "homeHeroPreserved": true,
+  "insertedImmediatelyAfterHero": true,
+  "homeOtherBodyAndScriptsAndCspUnchanged": true,
+  "scrollTarget": "#learn-preview",
+  "otherHtmlCssReferenceOnly": [
+    "/books/index.html",
+    "/books/pronunciation-workbook/index.html",
+    "/channels/index.html",
+    "/checkout/index.html",
+    "/consult/index.html",
+    "/game/index.html",
+    "/games/tone/index.html",
+    "/learn/index.html",
+    "/lessons/index.html",
+    "/reviews/index.html"
+  ],
+  "otherOldFilesUnchanged": 940,
+  "portraitMatchesExistingSource": true,
+  "images": [
+    {
+      "path": "/_astro/teacher-profile.CEfkmUVI_SxjiX.webp",
+      "bytes": 34676,
+      "sha256": "ea79548045a8aab2a3d22594258bb5f018c9edc6b85a9bd4c4f1f6863439c2a4",
+      "status": 200
+    },
+    {
+      "path": "/_astro/teacher-profile.CEfkmUVI_1PsHyi.webp",
+      "bytes": 7546,
+      "sha256": "19ea7a686dc815c1dabcb306dda6818e93be3c752a177460383df0932115204c",
+      "status": 200
+    },
+    {
+      "path": "/_astro/teacher-profile.CEfkmUVI_dzBxl.webp",
+      "bytes": 16092,
+      "sha256": "8001422a4e45dd940d6ef6e93de9b413a20690cfecb175de61f81d3b5f2ce656",
+      "status": 200
+    }
+  ],
+  "videoFilesPreserved": 19,
+  "pricingFilesPreserved": 12,
+  "gameFilesPreserved": 24,
+  "previewMatchesStage": true
+}

@@ -1,0 +1,69 @@
+{
+  "checkedAt": "2026-09-14T01:26:44.281Z",
+  "source": "site\\src\\components\\ContactForm.jsx",
+  "sourceSha256": "bb4c7a5268353e23f590c2a3de364e30856f0420432af3858e3127b6dca416aa",
+  "runtime": "v24.14.0",
+  "react": "19.2.8",
+  "checks": [
+    {
+      "name": "SSR: POST, disabled inputs, no successful form fields, accessible no-JS email fallback",
+      "status": "PASS",
+      "durationMs": 67
+    },
+    {
+      "name": "Hydration: initial locks open only after React mounts, with no recoverable mismatch",
+      "status": "PASS",
+      "durationMs": 42
+    },
+    {
+      "name": "Required fields: first invalid control receives focus; typing does not jump to the next error",
+      "status": "PASS",
+      "durationMs": 37
+    },
+    {
+      "name": "Email: malformed addresses stay in the form, focus email, and never submit",
+      "status": "PASS",
+      "durationMs": 44
+    },
+    {
+      "name": "Duplicate submit: same-tick events send once; fields and button remain locked while pending",
+      "status": "PASS",
+      "durationMs": 21
+    },
+    {
+      "name": "Provider failure: retain all five fields, focus error, no auto retry; explicit retry succeeds",
+      "status": "PASS",
+      "durationMs": 64
+    },
+    {
+      "name": "Timeout: abort once, preserve inputs, show uncertainty; late success does not replace the error",
+      "status": "PASS",
+      "durationMs": 78
+    },
+    {
+      "name": "Acknowledgement: missing, false, or string ok cannot show success",
+      "status": "PASS",
+      "durationMs": 75
+    },
+    {
+      "name": "Unmount: pending request aborts and its late resolution does not update the page",
+      "status": "PASS",
+      "durationMs": 19
+    },
+    {
+      "name": "Transport: exactly one JSON POST, supplied signal, no auth or credential option, no cache or redirects",
+      "status": "PASS",
+      "durationMs": 4
+    },
+    {
+      "name": "Transport failure: HTTP/provider failures, bad JSON and missing acknowledgement never retry or falsely succeed",
+      "status": "PASS",
+      "durationMs": 1
+    }
+  ],
+  "passed": 11,
+  "failed": 0,
+  "blockedLiveRequests": 0,
+  "liveRequests": 0,
+  "status": "PASS"
+}

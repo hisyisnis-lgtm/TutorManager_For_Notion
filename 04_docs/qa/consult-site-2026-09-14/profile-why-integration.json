@@ -1,0 +1,25 @@
+{
+  "checkedAt": "2026-09-14T09:58:32.4255849+09:00",
+  "route": "http://127.0.0.1:5199/#teacher-profile",
+  "change": "Standalone teacher profile merged into existing why section",
+  "preservedCredentials": 7,
+  "sectionCount": 1,
+  "desktop": {
+    "columns": 3,
+    "horizontalOverflow": 0,
+    "width": 1280,
+    "photoSize": 96
+  },
+  "mobile": {
+    "columns": 1,
+    "linkTouchTarget": 44,
+    "horizontalOverflow": 0,
+    "width": 375,
+    "photoSize": 72
+  },
+  "browserWarningsAndErrors": 0,
+  "astroBuildRoutes": 12,
+  "stageGuard": "passed",
+  "stageFileCount": 967,
+  "deployed": false
+}

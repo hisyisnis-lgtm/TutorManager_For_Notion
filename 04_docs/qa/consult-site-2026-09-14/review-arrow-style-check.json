@@ -1,0 +1,28 @@
+{
+  "checkedAt": "2026-09-13T23:26:40.559Z",
+  "files": 947,
+  "newCss": "/_astro/Footer.DrVAUGYc.css",
+  "replacedScrollScript": 1,
+  "sharedInlineScriptsPreserved": 5,
+  "hiddenAtEndpoints": true,
+  "disabledHandlingRemoved": true,
+  "fallbackPreserved": true,
+  "cspOnlyScrollScriptHashReplaced": true,
+  "otherChangedHtmlCssReferenceOnly": [
+    "/books/index.html",
+    "/books/pronunciation-workbook/index.html",
+    "/channels/index.html",
+    "/checkout/index.html",
+    "/consult/index.html",
+    "/game/index.html",
+    "/games/tone/index.html",
+    "/index.html",
+    "/learn/index.html",
+    "/lessons/index.html"
+  ],
+  "otherFilesUnchanged": 935,
+  "pricingFilesPreserved": 12,
+  "gameFilesPreserved": 24,
+  "lessonTestimonialsStillRemoved": true,
+  "previewMatchesStage": true
+}

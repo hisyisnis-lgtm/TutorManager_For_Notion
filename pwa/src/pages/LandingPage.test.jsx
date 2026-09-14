@@ -1,25 +1,21 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import LandingPage from './LandingPage.jsx';
-import { submitConsultation } from '../api/consultApi';
-vi.mock('../api/consultApi', () => ({ submitConsultation: vi.fn() }));
-vi.mock('../components/IntroContent', () => ({ default: () => <div>소개</div> }));
-beforeEach(() => { submitConsultation.mockReset(); vi.spyOn(window, 'scrollTo').mockImplementation(() => {}); });
-afterEach(() => { cleanup(); vi.restoreAllMocks(); });
-it('공개 상담 화면에 가격 없이 순서와 응대 시간을 안내하고 실패한 입력을 유지한다', async () => {
-  submitConsultation.mockRejectedValueOnce(new Error('잠시 연결되지 않아요.')).mockResolvedValueOnce({ ok: true });
-  render(<MemoryRouter initialEntries={[{ pathname: '/intro', state: { tab: '상담' } }]}><LandingPage /></MemoryRouter>);
-  expect(document.body.textContent).not.toMatch(/무료|수강료|가격|할인/);
-  expect(screen.getByText('문의 → 목표·수준 확인 → 방식·일정 조율')).toBeTruthy();
-  fireEvent.change(screen.getByPlaceholderText('홍길동'), { target: { value: '가상 상담자' } });
-  fireEvent.change(screen.getByPlaceholderText('010-0000-0000'), { target: { value: '01012345678' } });
-  fireEvent.click(screen.getByRole('button', { name: '상담 신청하기' }));
-  expect(await screen.findByText('잠시 연결되지 않아요.')).toBeTruthy();
-  expect(screen.getByPlaceholderText('홍길동').value).toBe('가상 상담자');
-  fireEvent.click(screen.getByRole('button', { name: '상담 신청하기' }));
-  expect(await screen.findByText('신청 완료!')).toBeTruthy();
-  expect(document.body.textContent).toContain('09:00~23:00');
-  expect(document.body.textContent).toContain('답변 가능한 때');
-  expect(document.body.textContent).not.toMatch(/우선적으로|더 빨리|즉시/);
+
+const replace = vi.fn();
+beforeEach(() => {
+  replace.mockReset();
+  vi.stubGlobal('location', { replace });
+});
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
+
+it.each([
+  { name: '기존 소개 주소', state: undefined, target: 'https://tiantianchinese.com/lessons/', link: '공식 수업 안내 열기' },
+  { name: '상담 탭 진입', state: { tab: '상담' }, target: 'https://tiantianchinese.com/consult/', link: '상담 신청 페이지 열기' },
+])('$name을 공식 홈페이지로 이동하고 수동 이동 링크를 제공한다', ({ state, target, link }) => {
+  render(<MemoryRouter initialEntries={[{ pathname: '/intro', state }]}><LandingPage /></MemoryRouter>);
+  expect(replace).toHaveBeenCalledExactlyOnceWith(target);
+  expect(screen.getByRole('link', { name: link }).getAttribute('href')).toBe(target);
+  expect(screen.queryByRole('textbox')).toBeNull();
 });

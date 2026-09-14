@@ -1,0 +1,27 @@
+{
+  "checkedAt": "2026-09-13T23:35:37.319Z",
+  "files": 950,
+  "newCss": "/_astro/Footer.BlizEFQW.css",
+  "scrollScriptReplaced": 1,
+  "existingScriptsPreserved": 5,
+  "fadeStateClassesPresent": true,
+  "cspOnlyScrollScriptHashReplaced": true,
+  "reviewsHtmlOtherwiseUnchanged": true,
+  "otherHtmlCssReferenceOnly": [
+    "/books/index.html",
+    "/books/pronunciation-workbook/index.html",
+    "/channels/index.html",
+    "/checkout/index.html",
+    "/consult/index.html",
+    "/game/index.html",
+    "/games/tone/index.html",
+    "/index.html",
+    "/learn/index.html",
+    "/lessons/index.html"
+  ],
+  "otherOldFilesUnchanged": 938,
+  "pricingFilesPreserved": 12,
+  "gameFilesPreserved": 24,
+  "lessonTestimonialsStillRemoved": true,
+  "previewMatchesStage": true
+}

@@ -40,5 +40,11 @@ binding = "GAME_DB"
 database_name = "tone-game-users"
 database_id = "1cb6265b-95e4-47cc-a0c8-5ac00266b9fa"
 
+# 출강·협업 문의 전용. 운영에서는 도메인 설정과 수신 주소 인증을 먼저 완료한다.
+# 로컬에서는 메일을 실제 발송하는 remote binding을 사용하지 않는다.
+[[send_email]]
+name = "CONTACT_EMAIL"
+destination_address = "tiantianchinese_@naver.com"
+
 # NOTION_TOKEN은 아래 명령으로 등록 (이 파일에 직접 기입 금지)
 # npx wrangler secret put NOTION_TOKEN

@@ -1,0 +1,26 @@
+{
+  "checkedAt": "2026-09-13T23:57:06.983Z",
+  "fileCount": 956,
+  "newCss": "/_astro/Footer.A_LbBzm6.css",
+  "teacherRows": 7,
+  "homeOutsideTeacherProfileUnchanged": true,
+  "homeHeroAndScriptsAndCspUnchanged": true,
+  "otherHtmlCssReferenceOnly": [
+    "/books/index.html",
+    "/books/pronunciation-workbook/index.html",
+    "/channels/index.html",
+    "/checkout/index.html",
+    "/consult/index.html",
+    "/game/index.html",
+    "/games/tone/index.html",
+    "/learn/index.html",
+    "/lessons/index.html",
+    "/reviews/index.html"
+  ],
+  "otherOldFilesUnchanged": 944,
+  "portraitFilesPreserved": 3,
+  "videoFilesPreserved": 19,
+  "pricingFilesPreserved": 12,
+  "gameFilesPreserved": 24,
+  "previewMatchesStage": true
+}

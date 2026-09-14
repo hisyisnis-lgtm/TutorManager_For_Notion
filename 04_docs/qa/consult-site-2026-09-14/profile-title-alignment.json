@@ -1,0 +1,24 @@
+{
+  "checkedAt": "2026-09-14T10:20:48.6800377+09:00",
+  "route": "http://127.0.0.1:5199/#teacher-profile",
+  "layout": "Title then left-aligned compact teacher identity then reasons",
+  "desktop": {
+    "photoWidth": 64,
+    "viewport": 1027,
+    "identityX": 24,
+    "horizontalOverflow": 0,
+    "titleX": 24
+  },
+  "mobile": {
+    "photoWidth": 64,
+    "viewport": 375,
+    "identityX": 20,
+    "horizontalOverflow": 0,
+    "titleX": 20
+  },
+  "browserWarningsAndErrors": 0,
+  "credentialCount": 7,
+  "buildRoutes": 12,
+  "stageFiles": 968,
+  "deployed": false
+}

@@ -9,6 +9,7 @@ import { validateFileUpload, validateFileContent, isNotionUploadUrl, resolveFile
 import { boundedRequest, RequestTooLarge, secureResponse } from '../lib/httpSecurity.js';
 import { authorizeNotionRequest, pageInDatabase } from '../lib/notionScope.js';
 import { handleConsentTerms } from '../lib/consentTerms.js';
+import { handleContactRequest } from '../lib/contact.js';
 import { studentHomeworkPage } from '../lib/homeworkPrivacy.js';
 import { buildStudentLedger, queryStudentTimePages, studentSessionTotals } from '../lib/studentLedger.js';
 import { teacherNotifications } from '../lib/notifications.js';
@@ -167,6 +168,17 @@ const ALLOWED_ORIGINS = new Set([
   'http://localhost:5173',
   'http://localhost:4173',
 ]);
+const OFFICIAL_SITE_ORIGINS = new Set([
+  'https://tiantianchinese.com',
+  'https://www.tiantianchinese.com',
+  'https://tiantianchinese.pages.dev',
+]);
+
+function isOfficialFormRequest(request, origin) {
+  return OFFICIAL_SITE_ORIGINS.has(origin) && ['/consult', '/contact'].includes(new URL(request.url).pathname)
+    && (request.method === 'POST' || (request.method === 'OPTIONS'
+      && request.headers.get('Access-Control-Request-Method') === 'POST'));
+}
 
 // ===== Notion 프록시 화이트리스트 =====
 // /v1/databases/:id 또는 /v1/pages/:id 경로에 들어올 수 있는 ID 집합.
@@ -2489,15 +2501,16 @@ async function handleFetch(request, env, ctx) {
     const origin = request.headers.get('Origin') || '';
     // localhost: 로컬 dev(http, 포트有) + Capacitor 네이티브 앱 웹뷰(안드로이드=https://localhost, iOS=capacitor://localhost).
     // 게임 단독 앱이 /game/* API를 CORS로 호출하려면 이 스킴들이 허용돼야 함(민감 라우트는 JWT로 별도 게이팅).
-    const officialSite = ['https://tiantianchinese.com', 'https://www.tiantianchinese.com', 'https://tiantianchinese.pages.dev'].includes(origin);
+    const officialSite = OFFICIAL_SITE_ORIGINS.has(origin);
     const analyticsSite = officialSite && url.pathname === '/analytics/event';
     const gameSite = officialSite && (url.pathname.startsWith('/game/') || url.pathname === '/error-log');
+    const formSite = isOfficialFormRequest(request, origin);
     const insightsSite = origin === 'https://hanul-insights.pages.dev' && ['/auth/login', '/analytics/report'].includes(url.pathname);
-    const allowed = insightsSite || analyticsSite || gameSite || ALLOWED_ORIGINS.has(origin) || (env.ALLOWED_ORIGIN && origin === env.ALLOWED_ORIGIN) || /^https:\/\/[a-z0-9-]+\.tiantian-chinese\.pages\.dev$/.test(origin) || /^https?:\/\/localhost(:\d+)?$/.test(origin) || origin === 'capacitor://localhost';
+    const allowed = insightsSite || analyticsSite || gameSite || formSite || ALLOWED_ORIGINS.has(origin) || (env.ALLOWED_ORIGIN && origin === env.ALLOWED_ORIGIN) || /^https:\/\/[a-z0-9-]+\.tiantian-chinese\.pages\.dev$/.test(origin) || /^https?:\/\/localhost(:\d+)?$/.test(origin) || origin === 'capacitor://localhost';
 
     const corsHeaders = {
       'Access-Control-Allow-Origin': allowed ? origin : '',
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE',
+      'Access-Control-Allow-Methods': formSite ? 'POST' : 'GET, POST, PUT, PATCH, DELETE',
       'Access-Control-Allow-Headers': 'Content-Type, Authorization',
       'Access-Control-Max-Age': '86400',
       'Vary': 'Origin',
@@ -2594,6 +2607,11 @@ async function handleFetch(request, env, ctx) {
     // 무료상담 신청 (공개, 인증 불필요)
     if (url.pathname === '/consult' && request.method === 'POST') {
       return handleConsultRequest(request, env, corsHeaders, ctx);
+    }
+
+    // 출강·협업 문의는 학생 상담 DB와 분리하여 고정 업무용 이메일로만 전달한다.
+    if (url.pathname === '/contact' && request.method === 'POST') {
+      return handleContactRequest(request, env, corsHeaders);
     }
 
     // OG 메타태그 파싱 프록시 — GET /og-proxy?url=<encoded>
@@ -2833,7 +2851,7 @@ export default {
       ctx.waitUntil(captureWorkerError(err, env, request).catch(() => {}));
       console.error('[unhandled]', err?.stack || err);
       const origin = request.headers.get('Origin') || '';
-      const allowed = ALLOWED_ORIGINS.has(origin) || (env.ALLOWED_ORIGIN && origin === env.ALLOWED_ORIGIN)
+      const allowed = isOfficialFormRequest(request, origin) || ALLOWED_ORIGINS.has(origin) || (env.ALLOWED_ORIGIN && origin === env.ALLOWED_ORIGIN)
         || /^https:\/\/[a-z0-9-]+\.tiantian-chinese\.pages\.dev$/.test(origin) || /^https?:\/\/localhost(:\d+)?$/.test(origin) || origin === 'capacitor://localhost';
       const unavailable = err instanceof SecurityStoreUnavailable;
       return secureResponse(new Response(JSON.stringify({ error: unavailable ? '인증 서비스를 잠시 사용할 수 없습니다. 다시 시도해주세요.' : 'Internal Server Error' }), {

@@ -1,0 +1,31 @@
+{
+  "checkedAt": "2026-09-13T22:46:15.633Z",
+  "site": {
+    "project": "tiantianchinese",
+    "id": "014aca80-27f4-494e-9352-d523ced901f2",
+    "url": "https://014aca80.tiantianchinese.pages.dev",
+    "status": "success",
+    "commit": "114263d559a050013e3243577052568ae16d38a1"
+  },
+  "pwa": {
+    "project": "tiantian-chinese",
+    "id": "49cf77aa-619c-49bb-ad35-55de28b6813d",
+    "url": "https://49cf77aa.tiantian-chinese.pages.dev",
+    "status": "success",
+    "commit": "d0fefa482c9b65f60482ae9f4bbe94674e201e3f"
+  },
+  "worker": [
+    {
+      "id": "cb7ce6d3-11c9-41ba-a399-c98c00c63bfb",
+      "createdOn": "2026-09-13T14:44:48.949497Z",
+      "source": "wrangler",
+      "strategy": "percentage",
+      "versions": [
+        {
+          "version_id": "2018e22c-8392-49cf-bdb3-255d65ff4b68",
+          "percentage": 100
+        }
+      ]
+    }
+  ]
+}

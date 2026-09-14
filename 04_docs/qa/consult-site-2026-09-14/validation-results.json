@@ -1,0 +1,36 @@
+{
+  "pwaTests": {
+    "success": true,
+    "files": 65,
+    "passed": 560,
+    "failed": 0
+  },
+  "landingTests": 2,
+  "workerAuthTests": 18,
+  "consultFormTests": 9,
+  "workerDryRun": {
+    "kib": 376.66,
+    "gzipKib": 84.16
+  },
+  "lint": {
+    "errors": 0,
+    "existingWarnings": 68
+  },
+  "design": {
+    "errors": 0,
+    "warnings": 0
+  },
+  "pwaBuild": {
+    "version": "2.48.5",
+    "entry": "/assets/index-CV5Uy-Si.js",
+    "publicPriceCheck": {
+      "target": "pwa",
+      "textFiles": 12,
+      "files": 839,
+      "sharedPricingAssets": [
+        "/assets/PricingPage-wf5R0yuz.js"
+      ]
+    },
+    "workerOrigin": "https://tutor-manager-proxy.hisyisnis.workers.dev"
+  }
+}

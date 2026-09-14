@@ -1,0 +1,28 @@
+{
+  "checkedAt": "2026-09-13T23:14:41.883Z",
+  "files": 945,
+  "newCss": "/_astro/Footer.Cby1GHqH.css",
+  "updatedReviewList": true,
+  "otherChangedHtmlCssReferenceOnly": [
+    "/books/index.html",
+    "/books/pronunciation-workbook/index.html",
+    "/channels/index.html",
+    "/checkout/index.html",
+    "/consult/index.html",
+    "/game/index.html",
+    "/games/tone/index.html",
+    "/index.html",
+    "/learn/index.html",
+    "/lessons/index.html"
+  ],
+  "otherFilesUnchanged": 933,
+  "reviewCount": 3,
+  "numberingRemoved": true,
+  "keyboardFocusableList": true,
+  "articleAndThumbnailUrlsPreserved": true,
+  "fallbackScriptPreserved": true,
+  "lessonTestimonialsStillRemoved": true,
+  "pricingFilesPreserved": 12,
+  "gameFilesPreserved": 24,
+  "previewMatchesStage": true
+}

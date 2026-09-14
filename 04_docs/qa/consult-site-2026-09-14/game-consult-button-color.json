@@ -1,0 +1,21 @@
+{
+  "checkedAt": "2026-09-14T09:46:04.8724925+09:00",
+  "route": "http://127.0.0.1:5199/games/tone/",
+  "change": "White button foreground uses fixed ink-900 instead of theme-sensitive text-primary",
+  "before": {
+    "background": "#ffffff",
+    "text": "#ffffff"
+  },
+  "after": {
+    "background": "#ffffff",
+    "text": "#262626",
+    "arrow": "#262626"
+  },
+  "viewportWidth": 1027,
+  "horizontalOverflow": false,
+  "browserWarningsAndErrors": 0,
+  "astroBuildRoutes": 12,
+  "stageGuard": "passed",
+  "scope": "Desktop game introduction header; mobile variant unchanged",
+  "deployed": false
+}
