@@ -149,6 +149,38 @@ function upload(role, audio = false) {
 }
 
 describe('homework uploads in real workerd with isolated D1 and fail-closed outbound mocks', () => {
+  it.each(['중국어 숙제.pdf', '중국어 "쓰기" 숙제.pdf'])('submits the returned name for %s after multipart parsing', async fileName => {
+    const { calls } = await start();
+    const form = new FormData();
+    form.append('file', new Blob(['%PDF-1.7 synthetic'], { type: 'application/pdf' }), fileName);
+    const request = new Request('https://audit.fixture.invalid', { method: 'POST', body: form });
+    const response = await send(`/homework/student-upload/${CODE}`, 'student',
+      await request.arrayBuffer(), request.headers.get('Content-Type'));
+    expect(response.status).toBe(200);
+    const uploaded = await response.json();
+    const receipt = await verifyTypedToken(SECRET, uploaded.uploadReceipt, 'homework-upload');
+    expect(receipt).toMatchObject({ sub: STUDENT, uploadId: UPLOAD, fileName: uploaded.fileName });
+    expect(uploaded.fileName).toBe(fileName.replaceAll('"', '%22'));
+
+    // The previous PWA discarded this returned name and sent the pre-multipart name.
+    // Keep the ownership boundary strict: it must still reject that mismatch.
+    if (uploaded.fileName !== fileName) {
+      const rejected = await send(`/homework/student/${CODE}/${HOMEWORK}/submit`, 'student',
+        JSON.stringify({ files: [{ ...uploaded, fileName }] }));
+      expect(rejected.status).toBe(403);
+      expect((await rejected.json()).error).toContain('직접 업로드한 파일만');
+      expect(calls.some(call => call.method === 'PATCH')).toBe(false);
+    }
+
+    const submission = await send(`/homework/student/${CODE}/${HOMEWORK}/submit`, 'student',
+      JSON.stringify({ files: [uploaded] }));
+    expect(submission.status).toBe(200);
+    await submission.text();
+    expect(calls.find(call => call.method === 'PATCH')?.body.properties).toMatchObject({
+      '학생 제출 파일': { files: [{ name: uploaded.fileName, type: 'file_upload', file_upload: { id: UPLOAD } }] },
+    });
+  }, 30_000);
+
   it('reproduces the former redirect:error runtime failure before sending the student file', async () => {
     const { calls } = await start({ negativeControl: true });
     const response = await upload('student');

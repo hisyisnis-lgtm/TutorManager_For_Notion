@@ -84,7 +84,7 @@ export default function PersonalHomeworkDetailPage() {
   const [deletingFileName, setDeletingFileName] = useState(null);
   const [deleteConfirmFile, setDeleteConfirmFile] = useState(null);
 
-  // 이번 화면에서 이미 Notion에 올라간 파일 — tempId → { fileUploadId, fileName, at }.
+  // 이번 화면에서 이미 Notion에 올라간 파일 — tempId → { fileUploadId, fileName, uploadReceipt, requestedFileName, at }.
   // 중간에 실패해도 성공한 파일은 다시 올리지 않는다(Notion file_upload는 1시간 유효).
   const uploadedRef = useRef(new Map());
 
@@ -241,7 +241,7 @@ export default function PersonalHomeworkDetailPage() {
         // 앞선 시도에서 이미 올라간 파일은 건너뛴다 — 3개 중 2개를 올리고 실패했을 때
         // 처음부터 다시 올리느라 또 오래 기다리는 일을 막는다.
         const done = uploadedRef.current.get(pf.tempId);
-        if (done && done.fileName === fullName && Date.now() - done.at < REUSE_WINDOW_MS) {
+        if (done && done.requestedFileName === fullName && Date.now() - done.at < REUSE_WINDOW_MS) {
           bytesDone += pf.file?.size || 0;
           uploaded.push({ fileUploadId: done.fileUploadId, fileName: done.fileName, uploadReceipt: done.uploadReceipt });
           setProgress({ done: i + 1, total: all.length, percent: pct(bytesDone) });
@@ -251,14 +251,16 @@ export default function PersonalHomeworkDetailPage() {
         // 재시도가 오히려 중복 첨부 오류를 부를 수 있다. 실패해도 여기 캐시가 남아 재시도가 빠르다.
         // 재시도로 같은 파일을 다시 올려도 bytesDone은 그대로라 진행률이 뒤로 가지 않는다.
         // 원본 File 그대로 전달하고 이름만 지정 — 재포장하면 안드로이드에서 뒤가 잘린다.
-        const { fileUploadId, uploadReceipt } = await retryTransient(() => uploadStudentFile(studentToken, pf.file, {
+        const { fileUploadId, fileName, uploadReceipt } = await retryTransient(() => uploadStudentFile(studentToken, pf.file, {
           fileName: fullName,
           onProgress: (loaded) => setProgress({ done: i, total: all.length, percent: pct(bytesDone + loaded) }),
         }));
         if (!isAuthScopeCurrent(auth)) return;
         bytesDone += pf.file?.size || 0;
-        uploadedRef.current.set(pf.tempId, { fileUploadId, uploadReceipt, fileName: fullName, at: Date.now() });
-        uploaded.push({ fileUploadId, uploadReceipt, fileName: fullName });
+        // multipart 전송에서 따옴표 등이 바뀔 수 있으므로 영수증에 서명된 서버 파일명을 그대로 쓴다.
+        // 재사용 여부는 사용자가 요청한 이름으로 따로 비교한다.
+        uploadedRef.current.set(pf.tempId, { fileUploadId, fileName, uploadReceipt, requestedFileName: fullName, at: Date.now() });
+        uploaded.push({ fileUploadId, fileName, uploadReceipt });
         setProgress({ done: i + 1, total: all.length, percent: pct(bytesDone) });
       }
       if (!isAuthScopeCurrent(auth)) return;
