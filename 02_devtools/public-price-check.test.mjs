@@ -104,3 +104,42 @@ test('수강료 페이지는 현재 빌드의 같은 청크를 유지하고 이�
   assert.deepEqual(Object.keys(retained.excluded), [oldName]);
   assert.equal(await readFile(path.join(dist, currentName), 'utf8'), current);
 }));
+
+const pricingDocument = (body = "시간당 50,000원", robots = '<meta name="robots" content="noindex, nofollow">') => `<html><head>${robots}</head><body>${body}</body></html>`;
+
+async function putSharedConsent(dist, body = '할인 적용 수업의 정상가 시간당 50,000원') {
+  await put(dist, 'index.html', '<html>공식 홈페이지</html>');
+  await put(dist, 'consent/index.html', pricingDocument(body));
+  await put(dist, '_headers', '/consent/*\n  X-Robots-Tag: noindex, nofollow\n');
+}
+
+test('승인된 동의서는 검색 제외한 정확한 정적 HTML만 허용하고 외부 이동 요소를 금지한다', async () => temporary(async dist => {
+  await putSharedConsent(dist);
+  assert.equal((await checkPublicPrice('site', { dist })).textFiles, 2);
+  await assert.rejects(checkPublicPrice('pwa', { dist }), /공개 가격/);
+  await put(dist, 'consent/index.html', pricingDocument('50,000원', ''));
+  await assert.rejects(checkPublicPrice('site', { dist }), /head.*검색 제외/);
+  await putSharedConsent(dist);
+  await put(dist, '_headers', '/*\n  X-Robots-Tag: noindex, nofollow\n');
+  await assert.rejects(checkPublicPrice('site', { dist }), /검색 제외 헤더/);
+  for (const markup of ['<button>이동</button>', '<a href="/lessons/">수업 안내</a>', '<a href="https://example.com">이동</a>', '<form></form>', '<iframe></iframe>', 'https://forms.gle/fixture']) {
+    await putSharedConsent(dist, markup);
+    await assert.rejects(checkPublicPrice('site', { dist }), /동의서/, markup);
+  }
+  await putSharedConsent(dist, '<a href="#main-content">본문으로 바로가기</a><main id="main-content">50,000원</main><script>if (now<a&&(allowed)) {}</script>');
+  assert.equal((await checkPublicPrice('site', { dist })).textFiles, 2);
+}));
+
+test('공유 동의서 조항이나 경로를 공용 번들·공개 페이지·사이트맵으로 복제하지 않는다', async () => temporary(async dist => {
+  await putSharedConsent(dist);
+  for (const name of ['consent/details/index.html', 'consent/assets/terms.js', '_astro/shared.js', 'data/terms.json']) {
+    await put(dist, name, '정상가 50,000원');
+    await assert.rejects(checkPublicPrice('site', { dist }), /공개 가격/, name);
+    await put(dist, name, '수업 정보');
+  }
+  for (const [name, content] of [['index.html','<a href="/consent/">동의서</a>'], ['sitemap.xml','<loc>https://tiantianchinese.com/consent/</loc>'], ['_astro/navigation.js','const path = "/consent/";']]) {
+    await put(dist, name, content);
+    await assert.rejects(checkPublicPrice('site', { dist }), /경로를 노출/, name);
+    await put(dist, name, '수업 정보');
+  }
+}));

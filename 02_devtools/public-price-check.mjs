@@ -30,6 +30,19 @@ export async function checkPublicPrice(target, { root = ROOT, dist = path.join(r
   const files = await inventory(dist);
   const textFiles = Object.keys(files).filter(name => /\.(?:html|js|json|xml)$/.test(name));
   assert.ok(textFiles.length > 0, '공개 배포물이 없습니다. 먼저 빌드해 주세요.');
+  const sharedConsentPage = target === 'site' && textFiles.includes('/consent/index.html') ? '/consent/index.html' : null;
+  if (sharedConsentPage) {
+    const entry = await readFile(safeFile(dist, sharedConsentPage), 'utf8');
+    const head = entry.match(/<head\b[^>]*>([\s\S]*?)<\/head\s*>/i)?.[1] || '';
+    const excluded = (head.match(/<meta\b[^>]*>/gi) || []).some(tag => {
+      if (!/\bname\s*=\s*(["'])robots\1/i.test(tag)) return false;
+      const directives = (tag.match(/\bcontent\s*=\s*(["'])(.*?)\1/i)?.[2] || '').toLowerCase().split(/[\s,]+/);
+      return directives.includes('noindex') && directives.includes('nofollow');
+    });
+    assert.ok(excluded, `${sharedConsentPage}: head에 noindex, nofollow 검색 제외 설정이 필요합니다.`);
+    const headers = await readFile(safeFile(dist, '/_headers'), 'utf8');
+    assert.match(headers, /(?:^|\n)\/consent\/\*\r?\n(?:[ \t]+[^\r\n]*\r?\n)*[ \t]+X-Robots-Tag:[ \t]*noindex,[ \t]*nofollow(?:[ \t]*\r?\n|$)/i, `${sharedConsentPage}: 검색 제외 헤더가 필요합니다.`);
+  }
   const sharedPricingAssets = textFiles.filter(name => target === 'pwa'
     ? /^\/assets\/PricingPage-[A-Za-z0-9_-]+\.js$/.test(name)
     : /^\/pricing\/assets\/pricing-[A-Za-z0-9_-]+\.js$/.test(name));
@@ -59,9 +72,21 @@ export async function checkPublicPrice(target, { root = ROOT, dist = path.join(r
   }
   for (const name of textFiles) {
     const text = await readFile(safeFile(dist, name), 'utf8');
-    if (!sharedPricingAssets.includes(name)) assertNoPublicPriceText(text, name);
+    if (!sharedPricingAssets.includes(name) && name !== sharedConsentPage) assertNoPublicPriceText(text, name);
     if (target === 'site' && !name.startsWith('/pricing/')) {
       assert.ok(!text.includes('/pricing/') && !/(?:href|src)=["'](?:https:\/\/tiantianchinese\.com)?\/pricing(?:["'#?]|\s)/i.test(text), `${name}: 공식 홈페이지·게임·사이트맵에서 개별 공유 수강료 경로를 노출할 수 없습니다.`);
+    }
+    if (target === 'site' && name !== sharedConsentPage) {
+      assert.ok(!/\/consent(?=[/"'?#\s<]|$)/i.test(text), `${name}: 공식 홈페이지·게임·사이트맵에서 개별 공유 동의서 경로를 노출할 수 없습니다.`);
+    }
+    if (name === sharedConsentPage) {
+      const markup = text.replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, '');
+      assert.ok(!/<(?:button|form|nav|iframe)\b/i.test(markup), '공유 동의서에는 다른 페이지 이동 버튼·폼·메뉴를 둘 수 없습니다.');
+      for (const [, attrs] of markup.matchAll(/<a\b([^>]*)>/gi)) {
+        const href = attrs.match(/\bhref\s*=\s*(["'])(.*?)\1/i)?.[2] || '';
+        assert.ok(/^#[^\s]+$/.test(href), '공유 동의서에는 같은 페이지 바로가기만 허용합니다.');
+      }
+      assert.ok(!text.includes('forms.gle'), '공유 동의서에 외부 동의 확인 폼을 노출할 수 없습니다.');
     }
     assert.ok(!legacyPriceImageNames.some(image => text.includes(image) || text.includes(encodeURIComponent(image))), `${name}: 기존 OG 이미지 참조가 남아 있습니다.`);
   }

@@ -40,7 +40,7 @@ export async function inventory(dir) {
   return result;
 }
 export function sourcePaths(target) {
-  const common = ['02_devtools/release-guard.mjs', '02_devtools/pages-release.mjs', '02_devtools/release-guard.test.mjs', '02_devtools/release-asset-policy.json', '02_devtools/public-price-check.mjs', '02_devtools/public-price-check.test.mjs'];
+  const common = ['03_data/consent', '02_devtools/release-guard.mjs', '02_devtools/pages-release.mjs', '02_devtools/release-guard.test.mjs', '02_devtools/release-asset-policy.json', '02_devtools/public-price-check.mjs', '02_devtools/public-price-check.test.mjs'];
   const pwa = ['pwa/src', 'pwa/public', 'pwa/package.json', 'pwa/package-lock.json', 'pwa/index.html', 'pwa/game.html', 'pwa/vite.config.js', 'pwa/vitest.config.js', 'pwa/eslint.config.js', 'pwa/tailwind.config.js', 'pwa/postcss.config.js', '03_data/tone-words', '02_devtools/tone-words-build.mjs', '02_devtools/tone-tts-build.mjs', '02_devtools/gen-game-og-route.mjs', '02_devtools/design-audit.mjs'];
   if (target === 'worker') return [...common, 'worker/src', 'worker/lib', 'worker/tests', 'worker/migrations', 'worker/wrangler.toml', 'worker/package.json', 'worker/package-lock.json', '01_automation', 'pwa/src/game', 'pwa/src/api', 'pwa/src/constants', 'pwa/src/analytics'];
   return [...common, ...pwa, 'site/src', 'site/scripts', ...(target === 'site' ? ['site/public', 'site/package.json', 'site/package-lock.json', 'site/astro.config.mjs', 'site/tsconfig.json'] : []), `.github/workflows/deploy-${target}.yml`];

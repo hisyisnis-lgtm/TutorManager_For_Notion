@@ -14,15 +14,15 @@ const renderStudent = () => render(<MemoryRouter initialEntries={[`/personal/${c
   <Route path="/personal/:studentToken/consent" element={<StudentAuthGate token={code}><AuthenticatedConsentPage /></StudentAuthGate>} />
 </Routes></MemoryRouter>);
 beforeEach(() => { localStorage.clear(); fetchConsentTerms.mockReset(); });
-afterEach(() => { cleanup(); localStorage.clear(); });
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); localStorage.clear(); });
 
 describe('공개 안내와 인증 동의서', () => {
-  it('공개 주소에는 원문·금액·확인 폼 없이 학생앱과 문의를 안내한다', () => {
+  it('예전 공개 공유 주소는 공식 동의서로 이동하고 인증 원문을 요청하지 않는다', () => {
+    const replace = vi.fn();
+    vi.stubGlobal('location', { replace });
     render(<MemoryRouter><ConsentPage /></MemoryRouter>);
-    expect(screen.getByRole('link', { name: '학생앱에서 확인하기' }).getAttribute('href')).toBe('/personal');
-    expect(screen.getByRole('link', { name: '선생님께 문의' }).getAttribute('href')).toMatch(/\/chat$/);
-    expect(document.body.textContent).toContain('09:00~23:00');
-    expect(document.body.textContent).not.toMatch(/환불|할인|원문|50,000/);
+    expect(replace).toHaveBeenCalledWith('https://tiantianchinese.com/consent/');
+    expect(screen.getByRole('link', { name: '수업 동의서 열기' }).getAttribute('href')).toBe('https://tiantianchinese.com/consent/');
     expect(fetchConsentTerms).not.toHaveBeenCalled();
     expect(document.querySelector('a[href*="forms.gle"]')).toBeNull();
   });

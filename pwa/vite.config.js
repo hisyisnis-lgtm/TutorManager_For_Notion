@@ -94,7 +94,7 @@ export default defineConfig(({ mode }) => {
         // 외부 소개 페이지와 개별 공유용 수강료 안내는 일반 앱 설치 때 미리 내려받지 않는다.
         globIgnores: ['intro.html', 'pricing.html', 'group-class.html', 'assets/PricingPage-*.js'],
         navigateFallback: '/index.html',
-        navigateFallbackDenylist: [/^\/(intro|pricing|group-class|bootcamp)(?:\/|\.html)?$/],
+        navigateFallbackDenylist: [/^\/(intro|pricing|group-class|bootcamp|consent)(?:\/|\.html)?$/],
         runtimeCaching: [
           {
             // Cloudflare Worker API는 항상 네트워크에서 가져옴 (최신 데이터)

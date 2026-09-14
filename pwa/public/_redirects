@@ -23,4 +23,9 @@
 
 # 앱 루트와 나머지 path는 기존 SPA 진입을 유지한다.
 # hash는 서버에 전달되지 않으므로 / 자체를 외부로 리디렉트하면 앱 링크도 영향을 받는다.
+# 구 동의서 공유 주소는 공식 도메인으로 이동한다.
+/consent https://tiantianchinese.com/consent/ 301
+/consent/ https://tiantianchinese.com/consent/ 301
+/consent.html https://tiantianchinese.com/consent/ 301
+
 /* /index.html 200

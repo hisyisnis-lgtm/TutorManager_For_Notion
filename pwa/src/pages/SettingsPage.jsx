@@ -20,7 +20,7 @@ const SHARE_LINKS = [
   { key: 'intro', label: '홈페이지', path: 'https://tiantianchinese.com/' },
   { key: 'lessons', label: '수업 안내', path: 'https://tiantianchinese.com/lessons/' },
   { key: 'pricing', label: '수강료 안내 · 개별 공유용', path: 'https://tiantianchinese.com/pricing/' },
-  { key: 'consent', label: '수업 동의서', path: '/#/consent' },
+  { key: 'consent', label: '수업 동의서', path: 'https://tiantianchinese.com/consent/' },
 ];
 
 // 이름 미설정이면 빈 문자열 — 호출부가 "<이름> 강사님"으로 조립하므로

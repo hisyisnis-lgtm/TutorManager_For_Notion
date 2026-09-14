@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { fetchConsentTerms } from '../api/consent.js';
-import { useTeacherAuth } from '../api/authUtils.js';
 import { KAKAO_CHANNEL_CHAT_URL } from '../constants.js';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import { Button } from '../components/shadcn/button';
@@ -248,16 +247,13 @@ export function AuthenticatedConsentPage() {
   );
 }
 
-// 공개 주소에는 약정과 확인 폼 링크를 포함하지 않는다. 원문은 인증 경로에서 조회한다.
+// 예전 공유 링크는 공식 도메인으로 이동한다. 학생·강사 인증 경로는 기존대로 유지한다.
 export default function ConsentPage() {
-  const teacher = useTeacherAuth();
+  const officialUrl = 'https://tiantianchinese.com/consent/';
+  useEffect(() => { location.replace(officialUrl); }, []);
   return <main className="mx-auto max-w-[480px] px-4 py-12 space-y-6">
     <img src="/logo/logo-red.png" alt="하늘하늘 중국어" className="h-6 w-auto" />
-    <h1 className="text-xl font-semibold">수업 동의서 확인</h1>
-    <p className="text-sm leading-7">수업 동의서는 본인 확인 후 학생앱의 MY에서 확인할 수 있어요. 아직 학생 코드를 받지 않았다면 선생님께 문의해 주세요.</p>
-    <Button asChild block><a href="/personal">학생앱에서 확인하기</a></Button>
-    {teacher && <Button asChild variant="outline" block><Link to="/agreement">강사용 동의서 확인</Link></Button>}
-    <Button asChild variant="outline" block><a href={KAKAO_CHANNEL_CHAT_URL} target="_blank" rel="noopener noreferrer">선생님께 문의</a></Button>
-    <p className="text-sm leading-6" style={{ color: TEXT_TERTIARY }}>문의는 언제든 남겨 주세요.<br />공식 응대 시간은 09:00~23:00이며, 답변 가능한 때 확인 후 안내해 드려요.</p>
+    <h1 className="text-xl font-semibold">수업 동의서로 이동합니다</h1>
+    <Button asChild block><a href={officialUrl}>수업 동의서 열기</a></Button>
   </main>;
 }
