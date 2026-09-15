@@ -1,4 +1,5 @@
 import { spawnSync } from 'node:child_process';
+import { createHmac } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 
 const scriptCases = [
@@ -17,7 +18,10 @@ async function childMain(config) {
     constructor(...args) { super(...(args.length ? args : [config.fixedNow])); }
     static now() { return NativeDate.parse(config.fixedNow); }
   };
-  const captured = { logs: [], posts: [], notionCalls: 0, logDownloads: 0, alerts: 0, unexpected: 0, batchErrors: [], historyRanges: [] };
+  const captured = { logs: [], posts: [], sends: [], accepted: [], groupRequests: [], groups: structuredClone(config.groups),
+    notionCalls: 0, logDownloads: 0, alerts: 0, unexpected: 0, batchErrors: [], historyRanges: [] };
+  let nextGroup = 0;
+  const sendAttempts = new Map();
   for (const method of ['log', 'warn', 'error']) {
     console[method] = (...args) => {
       captured.logs.push(args.map(value => typeof value === 'string' ? value : String(value)).join(' '));
@@ -127,15 +131,77 @@ async function childMain(config) {
       }
       return unexpected();
     }
-    if (url.origin === 'https://api.solapi.com' && url.pathname === '/messages/v4/send') {
-      if (method !== 'POST' || !options.headers?.Authorization?.includes('apiKey=fixture-solapi-key')) return unexpected();
-      const payload = JSON.parse(options.body).message;
-      if (!['01000000001', '01000000002'].includes(payload.to)) return unexpected();
-      captured.posts.push({ to: payload.to, templateId: payload.kakaoOptions.templateId });
-      const outcome = config.outcomes[payload.to] || 'accepted';
-      if (outcome === 'unknown') throw new Error('ECONNRESET fixture-solapi-secret');
-      if (outcome === 'failed') return Response.json({ errorCode: 'InvalidParameter', errorMessage: 'private-provider-response' }, { status: 400 });
-      return Response.json({ statusCode: '2000', messageId: 'fixture-message-id' });
+    if (url.origin === 'https://api.solapi.com') {
+      if (!options.headers?.Authorization?.includes('apiKey=fixture-solapi-key')) return unexpected();
+      captured.groupRequests.push({ method, path: url.pathname });
+      const view = group => ({ groupId: group.groupId, status: group.status, allowDuplicates: false,
+        customFields: group.customFields, count: group.count, ...(group.dateSent ? { dateSent: group.dateSent } : {}) });
+      if (method === 'POST' && url.pathname === '/messages/v4/groups') {
+        const body = JSON.parse(options.body);
+        if (body.allowDuplicates !== false || !/^[a-f0-9]{64}$/.test(body.customFields?.notificationKey || '')) return unexpected();
+        const group = { groupId: `G4V${String(config.runId).padStart(25, '0')}${String(++nextGroup).padStart(4, '0')}`,
+          status: 'PENDING', customFields: body.customFields, message: null,
+          count: { registeredSuccess: 0, registeredFailed: 0, sentTotal: 0, sentSuccess: 0, sentFailed: 0,
+            sentPending: 0, sentReplacement: 0, total: 0 } };
+        captured.groups.push(group);
+        return Response.json(view(group));
+      }
+      const match = url.pathname.match(/^\/messages\/v4\/groups\/(G4V[a-zA-Z0-9]{29})(?:\/(messages|send))?$/);
+      const group = match && captured.groups.find(entry => entry.groupId === match[1]);
+      if (!group) return unexpected();
+      if (method !== 'GET') {
+        const persisted = [...history.flatMap(entry => entry.logs), ...captured.logs].some(line => {
+          if (!line.startsWith('[notification-ledger:v1] ')) return false;
+          const fields = line.slice('[notification-ledger:v1] '.length).split(' ');
+          return fields[5] === group.customFields.notificationKey && fields[6] === `solapi-group:${group.groupId}`;
+        });
+        if (!persisted) return unexpected();
+      }
+      if (method === 'GET' && !match[2]) {
+        if (group.status !== 'PENDING' && config.outcomes[group.message?.to] === 'lost-response-deferred') {
+          throw new Error('ECONNRESET fixture-solapi-secret');
+        }
+        return Response.json(view(group));
+      }
+      if (method === 'PUT' && match[2] === 'messages') {
+        const body = JSON.parse(options.body);
+        if (!Array.isArray(body.messages) || body.messages.length !== 1) return unexpected();
+        const payload = body.messages[0];
+        if (!['01000000001', '01000000002'].includes(payload.to) || payload.kakaoOptions?.pfId !== 'fixture-kakao-profile') return unexpected();
+        captured.posts.push({ to: payload.to, templateId: payload.kakaoOptions.templateId, groupId: group.groupId });
+        if (config.outcomes[payload.to] === 'failed') {
+          return Response.json({ errorCode: 'InvalidParameter', errorMessage: 'private-provider-response' }, { status: 400 });
+        }
+        // Duplicate registration must never add a second recipient to the same group.
+        if (group.message) return Response.json({ errorCode: 'DuplicateMessage' }, { status: 400 });
+        group.message = payload;
+        group.count.registeredSuccess = 1;
+        group.count.total = 1;
+        return Response.json({ ...view(group), errorCount: 0, successCount: 1,
+          messageList: { 'fixture-message-id': { messageId: 'fixture-message-id', groupId: group.groupId } } });
+      }
+      if (method === 'POST' && match[2] === 'send' && group.message) {
+        if (JSON.stringify(JSON.parse(options.body)) !== '{}') return unexpected();
+        const outcome = config.outcomes[group.message.to] || 'accepted';
+        const attempt = (sendAttempts.get(group.groupId) || 0) + 1;
+        sendAttempts.set(group.groupId, attempt);
+        captured.sends.push({ groupId: group.groupId, to: group.message.to });
+        if (outcome === 'unknown' || (outcome === 'transient-unknown' && attempt === 1)) {
+          throw new Error('ECONNRESET fixture-solapi-secret');
+        }
+        if (group.status === 'PENDING') {
+          group.status = 'SENDING';
+          group.count.sentTotal = 1;
+          group.count.sentPending = 1;
+          group.dateSent = config.fixedNow;
+          captured.accepted.push({ groupId: group.groupId, to: group.message.to });
+        }
+        if (outcome === 'lost-response' || outcome === 'lost-response-deferred') {
+          throw new Error('ECONNRESET fixture-solapi-secret');
+        }
+        return Response.json(view(group));
+      }
+      return unexpected();
     }
     if (url.origin === 'https://ntfy.sh' && url.pathname === '/') {
       if (method !== 'POST' || options.headers?.Authorization !== 'Bearer fixture-ntfy-token') return unexpected();
@@ -151,14 +217,15 @@ async function childMain(config) {
 function runScript(scriptCase, {
   runId = 100, history = [], outcomes = {}, event = 'workflow_dispatch', noRecipients = false,
   clock = fixedNow, classDay = '2026-09-10', successLookupUnavailable = false,
+  groups = history.at(-1)?.groups || [],
 } = {}) {
   const config = {
-    ...scriptCase, runId, history, outcomes, noRecipients, fixedNow: clock, classDay, successLookupUnavailable,
+    ...scriptCase, runId, history, groups, outcomes, noRecipients, fixedNow: clock, classDay, successLookupUnavailable,
     scriptUrl: new URL(`../../01_automation/${scriptCase.script}`, import.meta.url).href,
   };
   const result = spawnSync(process.execPath, ['--input-type=module'], {
     input: `await (${childMain.toString()})(${JSON.stringify(config)});`,
-    encoding: 'utf8', timeout: 10_000, windowsHide: true,
+    encoding: 'utf8', timeout: 25_000, windowsHide: true,
     env: {
       ...(process.env.SystemRoot ? { SystemRoot: process.env.SystemRoot } : {}),
       NOTION_TOKEN: 'fixture-notion-token',
@@ -179,8 +246,23 @@ function runScript(scriptCase, {
   return { ...captured, status: result.status, runId, createdAt: clock };
 }
 
-const asHistory = (run, conclusion = run.status === 0 ? 'success' : 'failure') => ({ runId: run.runId, createdAt: run.createdAt, conclusion, logs: run.logs });
-const states = run => run.logs.filter(line => line.startsWith(prefix)).map(line => line.slice(prefix.length).split(' ')[6]);
+const asHistory = (run, conclusion = run.status === 0 ? 'success' : 'failure') => ({ runId: run.runId, createdAt: run.createdAt,
+  conclusion, logs: run.logs, groups: run.groups });
+const checkpoints = run => run.logs.filter(line => line.startsWith(prefix)).map(line => line.slice(prefix.length).split(' '));
+const states = run => checkpoints(run).map(fields => fields[6]).filter(state => !state.startsWith('solapi-group:'));
+const legacyRecipientHistory = (run, state) => {
+  const fields = checkpoints(run).filter(entry => !entry[6].startsWith('solapi-group:'));
+  const secondKey = run.groups.find(group => group.message?.to === secondPhone).customFields.notificationKey;
+  const logs = fields.map((entry, sequence) => {
+    const signed = entry.slice(0, 7);
+    signed[4] = String(sequence);
+    if (signed[5] === secondKey && signed[6] === 'accepted') signed[6] = state;
+    const signature = createHmac('sha256', 'fixture-solapi-secret')
+      .update(`notification-ledger/v1\n${JSON.stringify(signed)}`).digest('hex');
+    return `${prefix}${signed.join(' ')} ${signature}`;
+  });
+  return { ...asHistory(run, 'failure'), logs, groups: [] };
+};
 const legacyHistory = conclusion => ({
   runId: 99,
   createdAt: '2026-09-09T08:00:00.000Z', // 17:00 KST, before signed ledger logs were introduced.
@@ -308,7 +390,7 @@ describe.each(scriptCases)('$script recipient retry integration', scriptCase => 
     expect(states(empty)).toEqual(['start']);
   });
 
-  it.each(['accepted', 'unknown'])('preserves the prior evening %s history after midnight in a fresh manual run', outcome => {
+  it.each(['accepted', 'lost-response-deferred'])('preserves the prior evening %s history after midnight in a fresh manual run', outcome => {
     const evening = runScript(scriptCase, { outcomes: { [secondPhone]: outcome } });
     expect(evening.status).toBe(outcome === 'accepted' ? 0 : 1);
     expect(evening.posts).toHaveLength(2);
@@ -316,14 +398,16 @@ describe.each(scriptCases)('$script recipient retry integration', scriptCase => 
     const midnight = runScript(scriptCase, {
       runId: 101, history: [asHistory(evening)], clock: '2026-09-09T15:05:00.000Z',
     });
-    expect(midnight.status).toBe(outcome === 'accepted' ? 0 : 1);
+    expect(midnight.status).toBe(0);
     expect(midnight.posts).toEqual([]);
+    expect(midnight.sends).toEqual([]);
+    expect(midnight.accepted).toEqual([]);
+    expect(midnight.groups).toHaveLength(evening.groups.length);
     expect(midnight.logDownloads).toBe(1);
     expect(midnight.historyRanges).toEqual(['2026-09-08T15:00:00.000Z..2026-09-10T14:59:59.999Z']);
     expect(midnight.logs.find(line => line.startsWith(prefix)).slice(prefix.length).split(' ')[1]).toBe('2026-09-09');
-    expect(midnight.batchErrors).toEqual(outcome === 'accepted' ? []
-      : [{ sent: 0, alreadyAccepted: 1, failed: 0, unknown: 1 }]);
-  });
+    expect(midnight.batchErrors).toEqual([]);
+  }, 20_000);
 
   it('restores an acceptance recorded after midnight on the next manual retry', () => {
     const evening = runScript(scriptCase, { outcomes: { [secondPhone]: 'failed' } });
@@ -360,19 +444,75 @@ describe.each(scriptCases)('$script recipient retry integration', scriptCase => 
     expect(evening.posts.map(post => post.to)).toEqual([firstPhone, secondPhone]);
     expect(evening.alerts).toBe(0);
   });
-});
 
-it('keeps a student delivery with a lost response on hold after a fresh process restores the log', () => {
-  const first = runScript(scriptCases[0], { outcomes: { [secondPhone]: 'unknown' } });
-  expect(first.status).toBe(1);
-  expect(first.posts.map(post => post.to)).toEqual([firstPhone, secondPhone]);
-  expect(first.batchErrors).toEqual([{ sent: 1, alreadyAccepted: 0, failed: 0, unknown: 1 }]);
-  expect(states(first)).toEqual(['start', 'pending', 'accepted', 'pending', 'unknown']);
+  it('recovers an accepted group after the send response is lost without a duplicate delivery', () => {
+    const first = runScript(scriptCase, { outcomes: { [secondPhone]: 'lost-response' } });
+    expect(first.status).toBe(0);
+    expect(first.posts.map(post => post.to)).toEqual([firstPhone, secondPhone]);
+    expect(first.accepted.map(post => post.to)).toEqual([firstPhone, secondPhone]);
+    expect(first.sends.filter(post => post.to === secondPhone)).toHaveLength(1);
+    expect(first.batchErrors).toEqual([]);
+    expect(first.groups).toHaveLength(2);
+    const groupRecords = checkpoints(first).filter(fields => fields[6].startsWith('solapi-group:G4V'));
+    expect(groupRecords.map(fields => fields[6].slice('solapi-group:'.length)).sort())
+      .toEqual(first.groups.map(group => group.groupId).sort());
 
-  const retry = runScript(scriptCases[0], { runId: 101, history: [asHistory(first)] });
-  expect(retry.status).toBe(1);
-  expect(retry.logDownloads).toBe(1);
-  expect(retry.posts).toEqual([]);
-  expect(retry.batchErrors).toEqual([{ sent: 0, alreadyAccepted: 1, failed: 0, unknown: 1 }]);
-  expect(states(retry)).toEqual(['start']);
+    const retry = runScript(scriptCase, { runId: 101, history: [asHistory(first)] });
+    expect(retry.status).toBe(0);
+    expect(retry.posts).toEqual([]);
+    expect(retry.sends).toEqual([]);
+    expect(retry.accepted).toEqual([]);
+    expect(retry.groups).toHaveLength(2);
+  }, 20_000);
+
+  it('resumes the same registered group in a fresh process after a send was never received', () => {
+    const first = runScript(scriptCase, { outcomes: { [secondPhone]: 'unknown' } });
+    expect(first.status).toBe(1);
+    expect(first.posts.map(post => post.to)).toEqual([firstPhone, secondPhone]);
+    expect(first.accepted.map(post => post.to)).toEqual([firstPhone]);
+    expect(first.batchErrors).toEqual([{ sent: 1, alreadyAccepted: 0, failed: 0, unknown: 1 }]);
+    expect(states(first)).toEqual(['start', 'pending', 'accepted', 'pending', 'unknown']);
+    const originalGroup = first.groups.find(group => group.message?.to === secondPhone);
+    expect(originalGroup.status).toBe('PENDING');
+
+    const retry = runScript(scriptCase, { runId: 101, history: [asHistory(first)] });
+    expect(retry.status).toBe(0);
+    expect(retry.logDownloads).toBe(1);
+    expect(retry.posts).toEqual([]);
+    expect(retry.sends).toEqual([{ groupId: originalGroup.groupId, to: secondPhone }]);
+    expect(retry.accepted).toEqual([{ groupId: originalGroup.groupId, to: secondPhone }]);
+    expect(retry.groups).toHaveLength(2);
+    expect(retry.batchErrors).toEqual([]);
+
+    const later = runScript(scriptCase, { runId: 102, history: [asHistory(first), asHistory(retry)] });
+    expect(later.status).toBe(0);
+    expect(later.posts).toEqual([]);
+    expect(later.sends).toEqual([]);
+    expect(later.accepted).toEqual([]);
+  }, 20_000);
+
+  it('recovers a transient send failure in the same run using one group and one registration', () => {
+    const run = runScript(scriptCase, { outcomes: { [secondPhone]: 'transient-unknown' } });
+    expect(run.status).toBe(0);
+    expect(run.posts.map(post => post.to)).toEqual([firstPhone, secondPhone]);
+    expect(run.accepted.map(post => post.to)).toEqual([firstPhone, secondPhone]);
+    const attempts = run.sends.filter(post => post.to === secondPhone);
+    expect(attempts).toHaveLength(2);
+    expect(new Set(attempts.map(post => post.groupId)).size).toBe(1);
+    expect(run.groups).toHaveLength(2);
+    expect(run.batchErrors).toEqual([]);
+  }, 20_000);
+
+  it.each(['pending', 'unknown'])('keeps a legacy signed %s without a group on hold', state => {
+    const completed = runScript(scriptCase);
+    const history = legacyRecipientHistory(completed, state);
+    const retry = runScript(scriptCase, { runId: 101, history: [history] });
+    expect(retry.status).toBe(1);
+    expect(retry.logDownloads).toBe(1);
+    expect(retry.posts).toEqual([]);
+    expect(retry.sends).toEqual([]);
+    expect(retry.groupRequests).toEqual([]);
+    expect(retry.batchErrors).toEqual([{ sent: 0, alreadyAccepted: 1, failed: 0, unknown: 1 }]);
+    expect(states(retry)).toEqual(['start']);
+  });
 });

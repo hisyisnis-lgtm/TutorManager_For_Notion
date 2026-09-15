@@ -8,6 +8,8 @@ const secret = 'synthetic-ledger-signing-secret';
 const env = { GITHUB_TOKEN: 'synthetic-github-token', GITHUB_REPOSITORY: 'fixture/repository', GITHUB_RUN_ID: '900', GITHUB_RUN_ATTEMPT: '1' };
 const key = notificationDeliveryKey(['student', 'class-fixture', '01000000000'], secret);
 const otherKey = notificationDeliveryKey(['student', 'other-class'], secret);
+const groupId = 'G4V20260915123456abcdefghijklmn';
+const otherGroupId = 'G4V20260915123456opqrstuvwxyzAB';
 const deliveryStep = (extra = {}) => ({
   name: '학생 전날 수업 리마인더 발송', status: 'completed', conclusion: 'skipped', started_at: null, ...extra,
 });
@@ -458,5 +460,141 @@ describe('signed recipient notification checkpoints', () => {
     log.mockImplementation(() => { throw new Error('private logger details'); });
     expect(() => ledger.record(key, 'pending')).toThrow('알림 발송 이력');
     expect(ledger.get(key)).toBeUndefined();
+  });
+});
+
+describe('signed Solapi group checkpoints', () => {
+  it('persists the protocol and group synchronously without changing delivery state or exposing PII', async () => {
+    const log = vi.fn();
+    const ledger = await create(fixture(), { log });
+    expect(ledger.getGroup(key)).toBeUndefined();
+    expect(ledger.recordGroup(key, null)).toBeNull();
+    expect(ledger.getGroup(key)).toBeNull();
+    expect(ledger.get(key)).toBeUndefined();
+    ledger.record(key, 'pending');
+    expect(ledger.recordGroup(key, groupId)).toBe(groupId);
+    expect(ledger.getGroup(key)).toBe(groupId);
+    expect(ledger.get(key)).toBe('pending');
+    ledger.record(key, 'accepted');
+    expect(ledger.recordGroup(key, groupId)).toBe(groupId);
+    expect(ledger.record(key, 'unknown')).toBe('accepted');
+    expect(log).toHaveBeenCalledTimes(5);
+    const output = log.mock.calls.flat().join('\n');
+    expect(output).toContain('solapi-group:none');
+    expect(output).toContain(`solapi-group:${groupId}`);
+    for (const privateValue of ['01000000000', 'class-fixture', secret, env.GITHUB_TOKEN]) {
+      expect(output).not.toContain(privateValue);
+    }
+    for (const line of log.mock.calls.flat()) {
+      const fields = line.slice('[notification-ledger:v1] '.length).split(' ');
+      expect(fields.pop()).toBe(createHmac('sha256', secret).update(`notification-ledger/v1\n${JSON.stringify(fields)}`).digest('hex'));
+    }
+  });
+
+  it('restores emitted metadata and pending state after the process stops before its final checkpoint', async () => {
+    const log = vi.fn();
+    const first = await create(fixture(), { log, env: { ...env, GITHUB_RUN_ID: '100' } });
+    first.recordGroup(key, null);
+    first.record(key, 'pending');
+    first.recordGroup(key, groupId);
+    const recovered = await create(fixture({ runs: [run()], logs: { 1001: log.mock.calls.flat().join('\n') } }));
+    expect(recovered.getGroup(key)).toBe(groupId);
+    expect(recovered.get(key)).toBe('pending');
+  });
+
+  it('distinguishes a tracked send with no saved group from a legacy pending send', async () => {
+    const ledger = await create(fixture({ runs: [run()], logs: {
+      1001: logLines(['solapi-group:none', 'pending']) + '\n' + marker({ seq: 3, deliveryKey: otherKey, state: 'unknown' }),
+    } }));
+    expect(ledger.getGroup(key)).toBeNull();
+    expect(ledger.get(key)).toBe('pending');
+    expect(ledger.getGroup(otherKey)).toBeUndefined();
+    expect(ledger.get(otherKey)).toBe('unknown');
+  });
+
+  it('preserves the same group across subsequent attempts and never regresses acceptance', async () => {
+    const ledger = await create(fixture({
+      runs: [run(100), run(101)],
+      jobs: { '101/1': [job(101, 1, { started_at: '2026-09-09T03:00:00Z' })] },
+      logs: {
+        1001: logLines(['solapi-group:none', 'pending', `solapi-group:${groupId}`, 'accepted']),
+        1011: logLines([`solapi-group:${groupId}`, 'unknown'], { runId: '101' }),
+      },
+    }));
+    expect(ledger.getGroup(key)).toBe(groupId);
+    expect(ledger.get(key)).toBe('accepted');
+  });
+
+  it('does not consume a different intended-day group or confuse it with the current group', async () => {
+    const ledger = await create(fixture({
+      runs: [run(100), run(101, { created_at: '2026-09-09T15:10:00Z' })],
+      jobs: { '101/1': [job(101, 1, { started_at: '2026-09-09T15:10:00Z' })] },
+      logs: {
+        1001: logLines([`solapi-group:${groupId}`, 'unknown']),
+        1011: logLines(['solapi-group:none', `solapi-group:${otherGroupId}`, 'accepted'], { runId: '101', markedDay: '2026-09-10' }),
+      },
+    }), { historyUntilDay: '2026-09-10' });
+    expect(ledger.getGroup(key)).toBe(groupId);
+    expect(ledger.get(key)).toBe('unknown');
+  });
+
+  it.each([null, otherGroupId])('rejects replacing or clearing a saved group: %s', async replacement => {
+    const log = vi.fn();
+    const ledger = await create(fixture(), { log });
+    ledger.recordGroup(key, groupId);
+    expect(() => ledger.recordGroup(key, replacement)).toThrow('알림 발송 이력');
+    expect(ledger.getGroup(key)).toBe(groupId);
+    expect(log).toHaveBeenCalledTimes(2);
+    await expect(create(fixture({ runs: [run()], logs: { 1001: logLines([
+      `solapi-group:${groupId}`, `solapi-group:${replacement === null ? 'none' : replacement}`,
+    ]) } }))).rejects.toMatchObject({ code: 'NOTIFICATION_LEDGER_UNAVAILABLE' });
+  });
+
+  it.each([undefined, false, 'none', '', 'G4Vshort', 'G4V' + 'x'.repeat(41), 'G4V' + 'x'.repeat(20) + '/private'])('rejects malformed group identifiers without logging the input: %s', async invalid => {
+    const log = vi.fn();
+    const ledger = await create(fixture(), { log });
+    expect(() => ledger.recordGroup(key, invalid)).toThrow('알림 발송 이력');
+    expect(log).toHaveBeenCalledTimes(1);
+    expect(ledger.getGroup(key)).toBeUndefined();
+  });
+
+  it.each(['solapi-group:', 'solapi-group:null', 'solapi-group:G4Vshort', `solapi-group:G4V${'x'.repeat(41)}`])('rejects malformed signed metadata: %s', async state => {
+    await expect(create(fixture({ runs: [run()], logs: { 1001: logLines([state]) } })))
+      .rejects.toMatchObject({ code: 'NOTIFICATION_LEDGER_UNAVAILABLE' });
+  });
+
+  it('rejects group or recipient substitutions without a valid matching signature', async () => {
+    const original = logLines([`solapi-group:${groupId}`]);
+    for (const contents of [original.replace(groupId, otherGroupId), original.replace(key, otherKey)]) {
+      await expect(create(fixture({ runs: [run()], logs: { 1001: contents } })))
+        .rejects.toMatchObject({ code: 'NOTIFICATION_LEDGER_UNAVAILABLE' });
+    }
+  });
+
+  it('rejects sharing one group between two recipient keys before logging or restoring it', async () => {
+    const log = vi.fn();
+    const ledger = await create(fixture(), { log });
+    ledger.recordGroup(key, groupId);
+    expect(() => ledger.recordGroup(otherKey, groupId)).toThrow('알림 발송 이력');
+    expect(ledger.getGroup(otherKey)).toBeUndefined();
+    expect(log).toHaveBeenCalledTimes(2);
+    const contents = logLines([`solapi-group:${groupId}`]) + '\n'
+      + marker({ seq: 2, deliveryKey: otherKey, state: `solapi-group:${groupId}` });
+    await expect(create(fixture({ runs: [run()], logs: { 1001: contents } })))
+      .rejects.toMatchObject({ code: 'NOTIFICATION_LEDGER_UNAVAILABLE' });
+  });
+
+  it('does not change group state if synchronous persistence fails', async () => {
+    const log = vi.fn();
+    const ledger = await create(fixture(), { log });
+    log.mockImplementationOnce(() => { throw new Error('private logger details'); });
+    expect(() => ledger.recordGroup(key, null)).toThrow('알림 발송 이력');
+    expect(ledger.getGroup(key)).toBeUndefined();
+    ledger.recordGroup(key, null);
+    log.mockImplementationOnce(() => { throw new Error('private logger details'); });
+    expect(() => ledger.recordGroup(key, groupId)).toThrow('알림 발송 이력');
+    expect(ledger.getGroup(key)).toBeNull();
+    expect(() => ledger.getGroup('private phone')).toThrow('알림 발송 이력');
+    expect(() => ledger.recordGroup('private phone', groupId)).toThrow('알림 발송 이력');
   });
 });

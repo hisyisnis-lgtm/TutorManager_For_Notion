@@ -4,9 +4,10 @@
 // - 원데이클래스: 수업에 연결된 학생의 전화번호로 발송 (등록된 학생만 예약 가능)
 // 수업 유형에 따라 다른 템플릿 사용: 무료상담 → KAKAO_TPL_CONSULT_TOMORROW, 원데이클래스 → KAKAO_TPL_ONEDAY_TOMORROW
 
-import { createNotionClient, createSolapiClient, runWithAlert, stripEmoji, shouldSkipBackupRun, kstDayStr } from './notion_utils.mjs';
+import { createNotionClient, runWithAlert, stripEmoji, shouldSkipBackupRun, kstDayStr } from './notion_utils.mjs';
 import { createNotificationLedger, notificationDeliveryKey } from './notification_ledger.mjs';
 import { sendNotificationBatch } from './notification_batch.mjs';
+import { createSolapiReminderClient } from './solapi_reminder.mjs';
 import { reportNotificationBatch } from './notification_followups.mjs';
 
 const TOKEN = process.env.NOTION_TOKEN;
@@ -26,7 +27,7 @@ if (!TOKEN) {
 }
 
 const { queryAll } = createNotionClient(TOKEN);
-const sendKakao = createSolapiClient({
+const sendReminder = createSolapiReminderClient({
   apiKey: SOLAPI_API_KEY,
   apiSecret: SOLAPI_API_SECRET,
   pfId: KAKAO_PFID,
@@ -192,7 +193,7 @@ async function main() {
     }
   }
 
-  await sendNotificationBatch({ notifications, ledger, sendKakao,
+  await sendNotificationBatch({ notifications, ledger, sendTracked: sendReminder,
     onResult: counts => reportNotificationBatch('notify-consult-tomorrow.yml', counts) });
 }
 

@@ -10,6 +10,7 @@ const second = Object.freeze({
   variables: { '#{이름}': '가상학생2', '#{시간}': '15:00' },
 });
 const accepted = Object.freeze({ ok: true, state: 'accepted' });
+const groupId = 'G4V20260915123456abcdefghijklmn';
 const rejected = () => Object.assign(new Error('provider-private-response 01000000001 fixture-api-secret'), {
   result: { ok: false, state: 'failed' },
 });
@@ -20,6 +21,15 @@ function memoryLedger(initial = []) {
     states,
     get: vi.fn(key => states.get(key)),
     record: vi.fn((key, state) => { states.set(key, state); }),
+  };
+}
+
+function trackedLedger(initial = [], initialGroups = []) {
+  const groups = new Map(initialGroups);
+  return {
+    ...memoryLedger(initial), groups,
+    getGroup: vi.fn(key => groups.get(key)),
+    recordGroup: vi.fn((key, id) => { groups.set(key, id); return id; }),
   };
 }
 
@@ -202,5 +212,186 @@ describe('sendNotificationBatch', () => {
     expect(sendKakao).not.toHaveBeenCalled();
     expect(ledger.get).not.toHaveBeenCalled();
     expectPrivateOutput();
+  });
+});
+
+describe('tracked notification batch recovery', () => {
+  it('initializes tracking before pending, persists the group, and preserves the complete item', async () => {
+    const ledger = trackedLedger();
+    const events = [];
+    ledger.recordGroup.mockImplementation((key, id) => { events.push(id === null ? 'tracking' : 'save-group'); ledger.groups.set(key, id); });
+    ledger.record.mockImplementation((key, state) => { events.push(state); ledger.states.set(key, state); });
+    const sendKakao = vi.fn();
+    const sendTracked = vi.fn(async (item, context) => {
+      events.push('create-empty-group');
+      expect(item).toBe(first);
+      expect(context.groupId).toBeNull();
+      expect(ledger.get(first.key)).toBe('pending');
+      context.saveGroup(groupId);
+      events.push('add-and-send');
+      expect(ledger.getGroup(first.key)).toBe(groupId);
+      return accepted;
+    });
+    await expect(sendNotificationBatch({ notifications: [first], ledger, sendTracked, sendKakao }))
+      .resolves.toEqual({ sent: 1, alreadyAccepted: 0, failed: 0, unknown: 0 });
+    expect(events).toEqual(['tracking', 'pending', 'create-empty-group', 'save-group', 'add-and-send', 'accepted']);
+    expect(sendKakao).not.toHaveBeenCalled();
+    expectPrivateOutput();
+  });
+
+  it('retries an unknown delivery through its saved group and skips accepted recipients', async () => {
+    const ledger = trackedLedger();
+    const onResult = vi.fn();
+    const sendTracked = vi.fn(async (item, context) => {
+      if (item.key === second.key) return accepted;
+      if (context.groupId === null) {
+        context.saveGroup(groupId);
+        throw new Error('ECONNRESET fixture-api-secret');
+      }
+      expect(context.groupId).toBe(groupId);
+      return accepted;
+    });
+    const run = () => sendNotificationBatch({ notifications: [first, second], ledger, sendTracked, onResult });
+    const failure = await run().catch(error => error);
+    expect(failure.counts).toEqual({ sent: 1, alreadyAccepted: 0, failed: 0, unknown: 1 });
+    expect(ledger.getGroup(first.key)).toBe(groupId);
+    expect(ledger.get(first.key)).toBe('unknown');
+    expectPrivateOutput(failure);
+    ledger.recordGroup.mockClear();
+    sendTracked.mockClear();
+    await expect(run()).resolves.toEqual({ sent: 1, alreadyAccepted: 1, failed: 0, unknown: 0 });
+    expect(sendTracked).toHaveBeenCalledTimes(1);
+    expect(ledger.recordGroup).not.toHaveBeenCalled();
+    expect(onResult.mock.calls).toEqual([
+      [{ sent: 1, alreadyAccepted: 0, failed: 0, unknown: 1 }],
+      [{ sent: 1, alreadyAccepted: 1, failed: 0, unknown: 0 }],
+    ]);
+  });
+
+  it.each([undefined, 'pending'])('holds truncated tracked history with no saved group and state %s', async state => {
+    const ledger = trackedLedger(state === undefined ? [] : [[first.key, state]], [[first.key, null]]);
+    const sendTracked = vi.fn().mockResolvedValue(accepted);
+    await expect(sendNotificationBatch({ notifications: [first], ledger, sendTracked }))
+      .rejects.toMatchObject({ counts: { sent: 0, alreadyAccepted: 0, failed: 0, unknown: 1 } });
+    expect(sendTracked).not.toHaveBeenCalled();
+    expect(ledger.record).not.toHaveBeenCalled();
+    expect(ledger.recordGroup).not.toHaveBeenCalled();
+    expect(ledger.getGroup(first.key)).toBeNull();
+    expect(ledger.get(first.key)).toBe(state);
+  });
+
+  it.each(['unknown', 'failed'])('resumes tracked %s with no group after a confirmed request termination', async state => {
+    const ledger = trackedLedger([[first.key, state]], [[first.key, null]]);
+    const sendTracked = vi.fn(async (_item, context) => {
+      expect(context.groupId).toBeNull();
+      context.saveGroup(groupId);
+      return accepted;
+    });
+    await expect(sendNotificationBatch({ notifications: [first], ledger, sendTracked })).resolves.toMatchObject({ sent: 1 });
+    expect(ledger.recordGroup.mock.calls).toEqual([[first.key, groupId]]);
+  });
+
+  it('retries an empty-group creation timeout after recording the completed unknown result', async () => {
+    const ledger = trackedLedger();
+    const sendTracked = vi.fn()
+      .mockRejectedValueOnce(new Error('empty-group creation timed out'))
+      .mockImplementationOnce(async (_item, context) => {
+        expect(context.groupId).toBeNull();
+        context.saveGroup(groupId);
+        return accepted;
+      });
+    const run = () => sendNotificationBatch({ notifications: [first], ledger, sendTracked });
+    await expect(run()).rejects.toMatchObject({ counts: { unknown: 1 } });
+    expect(ledger.get(first.key)).toBe('unknown');
+    expect(ledger.getGroup(first.key)).toBeNull();
+    expect(ledger.record.mock.calls).toEqual([[first.key, 'pending'], [first.key, 'unknown']]);
+    await expect(run()).resolves.toEqual({ sent: 1, alreadyAccepted: 0, failed: 0, unknown: 0 });
+    expect(sendTracked).toHaveBeenCalledTimes(2);
+    expect(ledger.recordGroup.mock.calls).toEqual([[first.key, null], [first.key, groupId]]);
+  });
+
+  it.each(['pending', 'unknown', 'failed'])('resumes restored tracked %s through exactly the saved group', async state => {
+    const ledger = trackedLedger([[first.key, state]], [[first.key, groupId]]);
+    const sendTracked = vi.fn().mockResolvedValue(accepted);
+    await expect(sendNotificationBatch({ notifications: [first], ledger, sendTracked })).resolves.toMatchObject({ sent: 1 });
+    expect(sendTracked).toHaveBeenCalledWith(first, { groupId, saveGroup: expect.any(Function) });
+    expect(ledger.recordGroup).not.toHaveBeenCalled();
+  });
+
+  it.each(['pending', 'unknown'])('holds legacy %s without starting a tracked send', async state => {
+    const ledger = trackedLedger([[first.key, state]]);
+    const sendTracked = vi.fn().mockResolvedValue(accepted);
+    await expect(sendNotificationBatch({ notifications: [first], ledger, sendTracked }))
+      .rejects.toMatchObject({ counts: { sent: 0, alreadyAccepted: 0, failed: 0, unknown: 1 } });
+    expect(sendTracked).not.toHaveBeenCalled();
+    expect(ledger.recordGroup).not.toHaveBeenCalled();
+    expect(ledger.record).not.toHaveBeenCalled();
+  });
+
+  it('can initialize tracking for a legacy explicitly rejected send', async () => {
+    const ledger = trackedLedger([[first.key, 'failed']]);
+    const sendTracked = vi.fn().mockResolvedValue(accepted);
+    await expect(sendNotificationBatch({ notifications: [first], ledger, sendTracked })).resolves.toMatchObject({ sent: 1 });
+    expect(ledger.recordGroup.mock.calls).toEqual([[first.key, null]]);
+  });
+
+  it('does not start a provider request if tracking initialization fails', async () => {
+    const ledger = trackedLedger();
+    const storageError = new Error('fixture storage failed');
+    ledger.recordGroup.mockImplementation(() => { throw storageError; });
+    const sendTracked = vi.fn().mockResolvedValue(accepted);
+    await expect(sendNotificationBatch({ notifications: [first, second], ledger, sendTracked })).rejects.toBe(storageError);
+    expect(sendTracked).not.toHaveBeenCalled();
+    expect(ledger.record).not.toHaveBeenCalled();
+  });
+
+  it.each([false, true])('aborts the batch on group persistence failure even if the client catches it: %s', async swallowed => {
+    const ledger = trackedLedger();
+    const storageError = rejected();
+    ledger.recordGroup.mockImplementation((key, id) => {
+      if (id !== null) throw storageError;
+      ledger.groups.set(key, id);
+    });
+    const sendTracked = vi.fn(async (_item, context) => {
+      if (swallowed) {
+        try { context.saveGroup(groupId); } catch { return accepted; }
+      } else context.saveGroup(groupId);
+      throw new Error('Unreachable after a failed checkpoint');
+    });
+    await expect(sendNotificationBatch({ notifications: [first, second], ledger, sendTracked })).rejects.toBe(storageError);
+    expect(sendTracked).toHaveBeenCalledTimes(1);
+    expect(ledger.record.mock.calls).toEqual([[first.key, 'pending']]);
+    expect(ledger.getGroup(first.key)).toBeNull();
+    expect(ledger.get(second.key)).toBeUndefined();
+  });
+
+  it('continues later recipients after a provider rejection and preserves the saved group', async () => {
+    const ledger = trackedLedger([[first.key, 'unknown']], [[first.key, groupId]]);
+    const sendTracked = vi.fn().mockRejectedValueOnce(rejected()).mockResolvedValue(accepted);
+    const failure = await sendNotificationBatch({ notifications: [first, second], ledger, sendTracked }).catch(error => error);
+    expect(failure.counts).toEqual({ sent: 1, alreadyAccepted: 0, failed: 1, unknown: 0 });
+    expect(ledger.getGroup(first.key)).toBe(groupId);
+    expect(ledger.get(first.key)).toBe('failed');
+    expectPrivateOutput(failure);
+  });
+
+  it.each(['getGroup', 'recordGroup'])('requires synchronous ledger %s support before any send', async method => {
+    const ledger = trackedLedger();
+    ledger[method] = undefined;
+    const sendTracked = vi.fn();
+    await expect(sendNotificationBatch({ notifications: [first], ledger, sendTracked })).rejects.toThrow();
+    expect(sendTracked).not.toHaveBeenCalled();
+    expect(ledger.get).not.toHaveBeenCalled();
+  });
+
+  it('rejects an unreadable saved group before modifying delivery state', async () => {
+    const ledger = trackedLedger([[first.key, 'unknown']], [[first.key, 'private-invalid-group']]);
+    const sendTracked = vi.fn();
+    const error = await sendNotificationBatch({ notifications: [first], ledger, sendTracked }).catch(error => error);
+    expect(error).toBeInstanceOf(Error);
+    expect(sendTracked).not.toHaveBeenCalled();
+    expect(ledger.record).not.toHaveBeenCalled();
+    expect(ledger.recordGroup).not.toHaveBeenCalled();
+    expect(String(error)).not.toContain('private-invalid-group');
   });
 });

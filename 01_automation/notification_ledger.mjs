@@ -10,6 +10,8 @@ const DELIVERY_STEPS = {
 };
 const WORKFLOW = /^[A-Za-z0-9_.-]{1,100}\.ya?ml$/;
 const KEY = /^[a-f0-9]{64}$/;
+const GROUP = /^G4V[A-Za-z0-9]{20,40}$/;
+const GROUP_PREFIX = 'solapi-group:';
 const MAX_RUNS = 50;
 const MAX_JOBS = 50;
 const MAX_BYTES = 2 * 1024 * 1024;
@@ -62,7 +64,8 @@ export function notificationDeliveryKey(parts, secret) {
 /**
  * Restore signed checkpoints from GitHub's plain-text job logs (no ZIP dependency).
  * Call record(key, 'pending') synchronously BEFORE a provider POST. Recovered
- * pending/unknown must never be automatically resent. This is not a durable DB:
+ * legacy pending/unknown must never be automatically resent. Tracked sends save
+ * a Solapi group before adding messages and resume only that same group. This is not a durable DB:
  * missing/expired/legacy logs fail closed, and a lost final log tail cannot prove
  * exactly-once delivery. History uses KST run creation dates: the partition day,
  * optionally through the following day for a post-midnight retry. Earlier
@@ -87,6 +90,18 @@ export async function createNotificationLedger({ workflow, day, historyUntilDay 
     || (shouldSkip !== undefined && typeof shouldSkip !== 'function')) throw fail('configuration');
 
   const states = new Map();
+  const groups = new Map();
+  const groupOwners = new Map();
+  const checkGroup = (key, groupId) => {
+    const previous = groups.get(key);
+    if (previous !== undefined && previous !== null && previous !== groupId) throw fail();
+    if (groupId !== null && groupOwners.has(groupId) && groupOwners.get(groupId) !== key) throw fail();
+  };
+  const setGroup = (key, groupId) => {
+    checkGroup(key, groupId);
+    groups.set(key, groupId);
+    if (groupId !== null) groupOwners.set(groupId, key);
+  };
   let sequence = 0;
   const write = (key, state) => {
     const fields = [workflow, day, runId, String(attempt), String(sequence++), key, state];
@@ -269,8 +284,13 @@ export async function createNotificationLedger({ workflow, day, historyUntilDay 
         || !/^(?:0|[1-9]\d{0,8})$/.test(seq) || Number(seq) !== previousSequence + 1) throw fail();
       previousSequence = Number(seq);
       if (state === 'start' && key === '-' && Number(seq) === 0 && !started) { started = true; markedJobDay = markedDay; continue; }
-      if (!started || markedDay !== markedJobDay || !KEY.test(key) || !STATES.has(state)) throw fail();
-      if (markedDay === day && states.get(key) !== 'accepted') states.set(key, state);
+      const groupValue = state.startsWith(GROUP_PREFIX) ? state.slice(GROUP_PREFIX.length) : undefined;
+      const isGroup = groupValue === 'none' || (groupValue !== undefined && GROUP.test(groupValue));
+      if (!started || markedDay !== markedJobDay || !KEY.test(key) || (!STATES.has(state) && !isGroup)) throw fail();
+      if (markedDay === day) {
+        if (isGroup) setGroup(key, groupValue === 'none' ? null : groupValue);
+        else if (states.get(key) !== 'accepted') states.set(key, state);
+      }
     }
     // No signed start means legacy, truncated or otherwise indeterminate logs.
     if (!started) throw fail('unrecognized_log');
@@ -280,6 +300,19 @@ export async function createNotificationLedger({ workflow, day, historyUntilDay 
     get(key) {
       if (!KEY.test(key || '')) throw fail();
       return states.get(key);
+    },
+    getGroup(key) {
+      if (!KEY.test(key || '')) throw fail();
+      return groups.get(key);
+    },
+    recordGroup(key, groupId) {
+      if (!KEY.test(key || '') || (groupId !== null && (typeof groupId !== 'string' || !GROUP.test(groupId)))) throw fail();
+      const previous = groups.get(key);
+      checkGroup(key, groupId);
+      if (previous === groupId) return groupId;
+      write(key, `${GROUP_PREFIX}${groupId === null ? 'none' : groupId}`);
+      setGroup(key, groupId);
+      return groupId;
     },
     record(key, state) {
       if (!KEY.test(key || '') || !STATES.has(state)) throw fail();

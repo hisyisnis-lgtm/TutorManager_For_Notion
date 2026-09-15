@@ -1,9 +1,10 @@
 // 학생 수업 전날 리마인더 알림 스크립트
 // Worker 17:00 KST dispatch와 21시까지 재시도, GitHub 19:30 백업으로 실행.
 
-import { createNotionClient, createSolapiClient, runWithAlert, stripEmoji, shouldSkipBackupRun, kstDayStr } from './notion_utils.mjs';
+import { createNotionClient, runWithAlert, stripEmoji, shouldSkipBackupRun, kstDayStr } from './notion_utils.mjs';
 import { createNotificationLedger, notificationDeliveryKey } from './notification_ledger.mjs';
 import { sendNotificationBatch } from './notification_batch.mjs';
+import { createSolapiReminderClient } from './solapi_reminder.mjs';
 import { reportNotificationBatch } from './notification_followups.mjs';
 
 const TOKEN = process.env.NOTION_TOKEN;
@@ -22,7 +23,7 @@ if (!TOKEN) {
 }
 
 const { notion } = createNotionClient(TOKEN);
-const sendKakao = createSolapiClient({
+const sendReminder = createSolapiReminderClient({
   apiKey: SOLAPI_API_KEY,
   apiSecret: SOLAPI_API_SECRET,
   pfId: KAKAO_PFID,
@@ -173,7 +174,7 @@ async function main() {
     }
   }
 
-  await sendNotificationBatch({ notifications, ledger, sendKakao,
+  await sendNotificationBatch({ notifications, ledger, sendTracked: sendReminder,
     onResult: counts => reportNotificationBatch('notify-student-tomorrow.yml', counts) });
 }
 
