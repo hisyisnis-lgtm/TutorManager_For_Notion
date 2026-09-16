@@ -9,6 +9,7 @@ const scriptCases = [
 const prefix = '[notification-ledger:v1] ';
 const firstPhone = '01000000001';
 const secondPhone = '01000000002';
+const personalScheduleStudentId = '358838fa-f2a6-8176-8021-f815e7614fa5';
 const fixedNow = '2026-09-09T10:00:00.000Z'; // 19:00 KST, within the D-1 sending window.
 
 // Serialized into a fresh Node process. It has no inherited test state or real fetch fallback.
@@ -40,25 +41,33 @@ async function childMain(config) {
     ['fixture-consult-type', '무료상담'],
     ['fixture-oneday-type', '원데이클래스'],
   ].map(([id, name]) => ({ id, properties: { '타이틀': { title: [{ plain_text: name }] } } }));
-  const students = [1, 2].map(number => ({
-    id: `fixture-student-${number}`,
+  const studentFixtures = config.studentFixtures ?? [1, 2].map(number => ({
+    id: `fixture-student-${number}`, name: `가상학생${number}`, phone: `010-0000-000${number}`,
+  }));
+  const students = studentFixtures.map(student => ({
+    id: student.id,
     properties: {
-      '이름': { title: [{ plain_text: `가상학생${number}` }] },
-      '전화번호': { phone_number: `010-0000-000${number}` },
+      '이름': { title: [{ plain_text: student.name }] },
+      '전화번호': { phone_number: student.phone },
+      '상태': { select: { name: student.status ?? '수강 중' } },
     },
   }));
-  const classes = config.noRecipients ? [] : [1, 2].map(number => ({
-    id: `fixture-class-${number}`,
-    properties: {
-      '수업 일시': { date: { start: `${config.classDay}T${number === 1 ? '14' : '15'}:00:00+09:00` } },
-      '수업 유형': { relation: [{ id: config.kind === 'student' ? 'fixture-regular-type'
-        : number === 1 ? 'fixture-consult-type' : 'fixture-oneday-type' }] },
-      '학생': { relation: [{ id: `fixture-student-${number}` }] },
-      '수업 시간(분)': { select: { name: '60' } },
-      '제목': { title: [{ plain_text: `가상상담${number}` }] },
-      '전화번호': { rich_text: [{ plain_text: `010-0000-000${number}` }] },
-    },
-  }));
+  const classStudentIds = config.classStudentIds ?? [['fixture-student-1'], ['fixture-student-2']];
+  const classes = config.noRecipients ? [] : classStudentIds.map((studentIds, index) => {
+    const number = index + 1;
+    return {
+      id: `fixture-class-${number}`,
+      properties: {
+        '수업 일시': { date: { start: `${config.classDay}T${number === 1 ? '14' : '15'}:00:00+09:00` } },
+        '수업 유형': { relation: [{ id: config.kind === 'student' ? 'fixture-regular-type'
+          : number === 1 ? 'fixture-consult-type' : 'fixture-oneday-type' }] },
+        '학생': { relation: studentIds.map(id => ({ id })) },
+        '수업 시간(분)': { select: { name: '60' } },
+        '제목': { title: [{ plain_text: `가상상담${number}` }] },
+        '전화번호': { rich_text: [{ plain_text: `010-0000-000${number}` }] },
+      },
+    };
+  });
   const githubBase = '/repos/fixture/notification-tests';
   const runPath = `${githubBase}/actions/workflows/${config.workflow}/runs`;
   const history = config.history;
@@ -218,9 +227,11 @@ function runScript(scriptCase, {
   runId = 100, history = [], outcomes = {}, event = 'workflow_dispatch', noRecipients = false,
   clock = fixedNow, classDay = '2026-09-10', successLookupUnavailable = false,
   groups = history.at(-1)?.groups || [],
+  studentFixtures, classStudentIds,
 } = {}) {
   const config = {
     ...scriptCase, runId, history, groups, outcomes, noRecipients, fixedNow: clock, classDay, successLookupUnavailable,
+    studentFixtures, classStudentIds,
     scriptUrl: new URL(`../../01_automation/${scriptCase.script}`, import.meta.url).href,
   };
   const result = spawnSync(process.execPath, ['--input-type=module'], {
@@ -268,6 +279,80 @@ const legacyHistory = conclusion => ({
   createdAt: '2026-09-09T08:00:00.000Z', // 17:00 KST, before signed ledger logs were introduced.
   conclusion,
   logs: ['[2026-09-09T08:00:00.000Z] D-1 알림 시작', `알림 실행 ${conclusion}`],
+});
+
+describe('student reminder personal schedule exclusion', () => {
+  const studentScript = scriptCases.find(scriptCase => scriptCase.kind === 'student');
+  const regularStudent = { id: 'fixture-student-1', name: '가상학생1', phone: firstPhone };
+  const personalStudent = { id: personalScheduleStudentId, name: '하늘쌤', phone: null };
+
+  it.each([
+    personalScheduleStudentId,
+    personalScheduleStudentId.toUpperCase(),
+    personalScheduleStudentId.replace(/-/g, ''),
+    personalScheduleStudentId.replace(/-/g, '').toUpperCase(),
+  ])('finishes successfully without recipients for personal schedule ID %s', id => {
+    const run = runScript(studentScript, {
+      studentFixtures: [{ ...personalStudent, id }], classStudentIds: [[id]],
+    });
+    expect(run.status).toBe(0);
+    expect(run.posts).toEqual([]);
+    expect(run.sends).toEqual([]);
+    expect(run.groupRequests).toEqual([]);
+    expect(run.batchErrors).toEqual([]);
+    expect(run.alerts).toBe(0);
+    expect(states(run)).toEqual(['start']);
+  });
+
+  it('sends only to the ordinary student when separate classes include a personal schedule', () => {
+    const run = runScript(studentScript, {
+      studentFixtures: [personalStudent, regularStudent],
+      classStudentIds: [[personalScheduleStudentId], [regularStudent.id]],
+    });
+    expect(run.status).toBe(0);
+    expect(run.posts.map(post => post.to)).toEqual([firstPhone]);
+    expect(run.accepted.map(post => post.to)).toEqual([firstPhone]);
+    expect(run.batchErrors).toEqual([]);
+    expect(run.alerts).toBe(0);
+    expect(states(run)).toEqual(['start', 'pending', 'accepted']);
+  });
+
+  it('preserves an ordinary recipient in the same class relation as a personal schedule', () => {
+    const run = runScript(studentScript, {
+      studentFixtures: [{ ...personalStudent, phone: secondPhone }, regularStudent],
+      classStudentIds: [[personalScheduleStudentId, regularStudent.id]],
+    });
+    expect(run.status).toBe(0);
+    expect(run.posts.map(post => post.to)).toEqual([firstPhone]);
+    expect(run.accepted.map(post => post.to)).toEqual([firstPhone]);
+    expect(run.batchErrors).toEqual([]);
+    expect(run.alerts).toBe(0);
+  });
+
+  it('does not exclude another student with the same name or a personal schedule-like status', () => {
+    const run = runScript(studentScript, {
+      studentFixtures: [{ ...regularStudent, name: personalStudent.name, status: '개인 일정' }],
+      classStudentIds: [[regularStudent.id]],
+    });
+    expect(run.status).toBe(0);
+    expect(run.posts.map(post => post.to)).toEqual([firstPhone]);
+    expect(run.accepted.map(post => post.to)).toEqual([firstPhone]);
+    expect(run.batchErrors).toEqual([]);
+    expect(run.alerts).toBe(0);
+  });
+
+  it('still reports a missing phone for an ordinary student as a delivery failure', () => {
+    const run = runScript(studentScript, {
+      studentFixtures: [personalStudent, { ...regularStudent, phone: null }],
+      classStudentIds: [[personalScheduleStudentId], [regularStudent.id]],
+    });
+    expect(run.status).toBe(1);
+    expect(run.posts).toEqual([]);
+    expect(run.accepted).toEqual([]);
+    expect(run.batchErrors).toEqual([{ sent: 0, alreadyAccepted: 0, failed: 1, unknown: 0 }]);
+    expect(run.alerts).toBe(1);
+    expect(states(run)).toEqual(['start', 'pending', 'failed']);
+  });
 });
 
 describe.each(scriptCases)('$script recipient retry integration', scriptCase => {

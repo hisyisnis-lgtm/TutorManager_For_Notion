@@ -58,6 +58,13 @@ function getTomorrowKST() {
 
 const DAY_KR = ['일', '월', '화', '수', '목', '금', '토'];
 
+// 강사 개인 일정용 '하늘쌤' 학생. 이름·수강 상태·전화번호와 무관하게 이 레코드만 제외한다.
+const PERSONAL_SCHEDULE_STUDENT_ID = '358838faf2a681768021f815e7614fa5';
+function getReminderStudents(classPage) {
+  return (classPage.properties['학생']?.relation ?? []).filter(({ id }) =>
+    id.replace(/-/g, '').toLowerCase() !== PERSONAL_SCHEDULE_STUDENT_ID);
+}
+
 // 수업 유형 DB 조회 → Map<pageId, 타이틀>
 async function fetchClassTypeMap() {
   const map = new Map();
@@ -105,6 +112,7 @@ async function main() {
 
   const classes = res.results.filter(p => {
     if (p.properties['특이사항']?.select?.name === '🚫 취소') return false;
+    if (getReminderStudents(p).length === 0) return false;
     const classTypeId = p.properties['수업 유형']?.relation?.[0]?.id ?? '';
     const classTypeTitle = classTypeMap.get(classTypeId) ?? classTypeMap.get(classTypeId.replace(/-/g, '')) ?? '';
     // 무료상담/원데이클래스는 notify_consult_tomorrow에서 전용 템플릿으로 발송
@@ -112,7 +120,7 @@ async function main() {
     return true;
   });
 
-  console.log(`내일 수업 ${classes.length}개 (취소·원데이·상담 제외)`);
+  console.log(`내일 수업 ${classes.length}개 (취소·원데이·상담·개인 일정 제외)`);
 
   if (classes.length === 0) {
     console.log('내일 수업 없음 - 알림 생략');
@@ -134,7 +142,7 @@ async function main() {
 
   // 중복 없는 학생 ID 수집 후 병렬 조회 (N+1 쿼리 최적화)
   const allStudentIds = new Set(
-    classes.flatMap(p => p.properties['학생']?.relation?.map(r => r.id) ?? [])
+    classes.flatMap(p => getReminderStudents(p).map(r => r.id))
   );
   await Promise.all([...allStudentIds].map(id => getStudent(id)));
 
@@ -142,7 +150,7 @@ async function main() {
   for (const p of classes) {
     const dateVal = p.properties['수업 일시']?.date?.start;
     const duration = p.properties['수업 시간(분)']?.select?.name ?? '?';
-    const studentRelation = p.properties['학생']?.relation ?? [];
+    const studentRelation = getReminderStudents(p);
 
     if (!dateVal || studentRelation.length === 0) continue;
 
