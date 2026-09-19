@@ -218,7 +218,8 @@ async function main() {
   // 다음날 아침 여기서 알린다. 당일 리마인더 카톡 대체 발송은 사용자 결정으로 하지 않는다
   // (2026-08-29) — 학생에게 당일 카톡은 불필요, 강사가 알고 있으면 된다.
   // 성공 여부 조회가 안 되면(null) 섹션을 만들지 않는다 — 오탐 경고 방지.
-  const y0 = `${kstDayStr(-1)}T00:00:00+09:00`;
+  // 새벽에 정상 생략된 전전날 백업을 어제 저녁의 발송 성공으로 세지 않는다.
+  const y0 = `${kstDayStr(-1)}T17:00:00+09:00`;
   const y1 = `${kstDayStr(0)}T00:00:00+09:00`;
   const [stuD1Ok, conD1Ok] = await Promise.all([
     workflowSucceededBetween('notify-student-tomorrow.yml', y0, y1),

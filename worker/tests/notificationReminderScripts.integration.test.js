@@ -393,6 +393,9 @@ describe.each(scriptCases)('$script recipient retry integration', scriptCase => 
     { event: 'repository_dispatch', clock: '2026-09-09T10:30:00.000Z' },
     { event: 'schedule', clock: '2026-09-09T14:43:00.000Z' },
     { event: 'repository_dispatch', clock: '2026-09-09T14:43:00.000Z' },
+    { event: 'schedule', clock: '2026-09-09T15:00:00.000Z' },
+    { event: 'repository_dispatch', clock: '2026-09-09T15:10:00.000Z' },
+    { event: 'schedule', clock: '2026-09-10T07:59:00.000Z' },
   ])('skips $event at $clock after a legacy success without restoring old logs', ({ event, clock }) => {
     const backup = runScript(scriptCase, { history: [legacyHistory('success')], event, clock });
     expect(backup.status).toBe(0);
@@ -443,6 +446,38 @@ describe.each(scriptCases)('$script recipient retry integration', scriptCase => 
     expect(late.notionCalls).toBe(0);
     expect(late.alerts).toBe(1);
     expect(states(late)).toEqual(['start']);
+  });
+
+  it.each(['schedule', 'repository_dispatch'])('keeps midnight %s closed unless the prior evening succeeded', event => {
+    for (const scenario of ['missing', 'failed', 'unavailable', 'older', 'midnight']) {
+      const prior = legacyHistory('success');
+      if (scenario === 'failed') prior.conclusion = 'failure';
+      if (scenario === 'older') prior.createdAt = '2026-09-08T08:00:00.000Z';
+      if (scenario === 'midnight') prior.createdAt = '2026-09-09T15:00:00.000Z';
+      const late = runScript(scriptCase, {
+        event, clock: '2026-09-09T15:10:00.000Z',
+        history: scenario === 'missing' ? [] : [prior],
+        successLookupUnavailable: scenario === 'unavailable',
+      });
+      expect(late.status).toBe(1);
+      expect(late.posts).toEqual([]);
+      expect(late.notionCalls).toBe(0);
+      expect(late.logDownloads).toBe(0);
+      expect(late.alerts).toBe(1);
+    }
+  });
+
+  it('does not let a skipped midnight backup suppress the next evening delivery', () => {
+    const backup = runScript(scriptCase, {
+      runId: 101, history: [legacyHistory('success')], event: 'schedule', clock: '2026-09-09T15:10:00.000Z',
+    });
+    expect(backup.status).toBe(0);
+    const evening = runScript(scriptCase, {
+      runId: 102, history: [legacyHistory('success'), asHistory(backup)],
+      event: 'repository_dispatch', clock: '2026-09-10T08:00:00.000Z', classDay: '2026-09-11',
+    });
+    expect(evening.status).toBe(0);
+    expect(evening.posts).toHaveLength(2);
   });
 
   it('restores a skipped backup log on a later manual retry without resending accepted notifications', () => {

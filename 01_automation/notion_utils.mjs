@@ -171,7 +171,7 @@ export async function workflowSucceededBetween(workflow, sinceIso, untilIso) {
  *
  * @param {object} o
  * @param {string} o.workflow      - 워크플로 파일명 (예: 'notify-daily-brief.yml')
- * @param {number} [o.earliestHourKST=0] - 자동 발송 시작 시각. 이전 시각의 지연 실행은 실패로 종료
+ * @param {number} [o.earliestHourKST=0] - 자동 발송 시작 시각. 이전 시각은 전날 성공 확인 시에만 생략
  * @param {number} o.latestHourKST - 이 시각(KST)을 넘겼으면 발송하지 않는다
  * @param {boolean} [o.alertOnMiss=true] - 한계 초과로 포기할 때 critical 알림을 올릴지.
  *   이월(carryover)처럼 "보낼 게 없어서 안 보낸 날"이 대부분인 스크립트는 false로 —
@@ -186,8 +186,20 @@ export async function shouldSkipBackupRun({ workflow, earliestHourKST = 0, lates
 
   const hour = kstHourNow();
   if (hour < earliestHourKST) {
-    // 자정을 넘긴 전날 실행을 오늘 성공으로 남기거나 새벽 학생 알림으로 보내지 않는다.
-    throw new Error(`알림 자동 발송 창 이전(KST ${hour}시) 실행을 중단했습니다. 발송 창: ${earliestHourKST}~${latestHourKST}시.`);
+    // 자정을 넘긴 백업은 전날 저녁 성공만 확인한다. 새벽 생략 실행은
+    // 조회 구간 밖이므로 다음 저녁의 발송 완료로 잘못 인정되지 않는다.
+    const previousDay = kstDayStr(-1);
+    const succeeded = await workflowSucceededBetween(
+      workflow,
+      `${previousDay}T${String(earliestHourKST).padStart(2, '0')}:00:00+09:00`,
+      `${kstDayStr()}T00:00:00+09:00`
+    );
+    if (succeeded === true) {
+      console.log(`[가드] 전날(${previousDay}) 이미 발송 완료 — 지연 실행 종료 (${workflow})`);
+      return true;
+    }
+    // 성공 미확인·조회 불가는 실패로 유지하고 새벽 발송은 허용하지 않는다.
+    throw new Error(`전날(${previousDay}) 알림 성공 미확인 — ${workflow}: 지연 실행(KST ${hour}시)을 중단했습니다.${succeeded === null ? ' 성공 여부 조회 불가.' : ''} 새벽 발송은 하지 않습니다.`);
   }
 
   // ① 오늘 이미 성공했으면 조용히 종료 (재시도·백업의 정상 경로)
