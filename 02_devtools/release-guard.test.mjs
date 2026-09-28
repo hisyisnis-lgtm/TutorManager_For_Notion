@@ -4,7 +4,7 @@ import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { assertRelease, checkRelease, deployWorker, inventory, publicOrigin, recordPath, releaseVersion, safeFile, sha256, smokeWorker, sourceHash } from './release-guard.mjs';
+import { assertRelease, assertWorkerSourceHistory, checkRelease, deployWorker, inventory, publicOrigin, recordPath, releaseVersion, runCommand, safeFile, sha256, smokeWorker, sourceHash } from './release-guard.mjs';
 import { assertPages, checkContent, finishPages, pagesApi, preparePages, retainPreviousAssets } from './pages-release.mjs';
 
 const roots = [];
@@ -209,18 +209,111 @@ test('Pages 배포 완료는 고유주소·운영주소·파일 해시·인증 �
 });
 
 test('Worker는 검사한 번들만 업로드하고 버전 tag·직전 버전·실패 상태를 보존한다', async () => {
-  const root = await fixture(), calls = []; const base = fakeRun(root, calls); let deployed = false, tag;
+  const root = await fixture(), calls = []; const base = fakeRun(root, calls); let deployed = false, tag, message;
   const run = async (kind, args, cwd) => {
     if (kind === 'wrangler' && args[0] === 'deploy' && !args.includes('--dry-run')) {
       calls.push({ kind, args }); assert.ok(args.includes('--no-bundle')); assert.ok(args.includes('dist-check/index.js'));
-      deployed = true; tag = args.at(-1); return '';
+      deployed = true; tag = args[args.indexOf('--tag') + 1]; message = args[args.indexOf('--message') + 1]; return '';
     }
     if (kind === 'wrangler' && args[0] === 'deployments') return JSON.stringify({ id: deployed ? 'new' : 'old', versions: [{ version_id: deployed ? 'v2' : 'v1', percentage: 100 }] });
-    if (kind === 'wrangler' && args[0] === 'versions') return JSON.stringify({ annotations: { 'workers/tag': tag } });
+    if (kind === 'wrangler' && args[0] === 'versions') return JSON.stringify({ id: args[2], annotations: { 'workers/tag': tag, 'workers/message': deployed ? message : 'Source commit: ' + 'a'.repeat(40) } });
     return base(kind, args, cwd);
   };
   await assert.rejects(deployWorker({ root, run, fetchImpl: async () => new Response('{}', { status: 503 }) }), /응답 불일치/);
   const record = JSON.parse(await readFile(recordPath(root, 'worker'), 'utf8'));
   assert.equal(record.previous.versions[0].version_id, 'v1'); assert.equal(record.deployed.versions[0].version_id, 'v2');
   assert.equal(record.postdeployFailed, true); assert.equal(calls.some(call => call.args[0] === 'rollback'), false);
+});
+
+const previousWorker = { id: 'old', versions: [{ version_id: 'v1', percentage: 100 }] };
+const sourceVersion = (commit = 'a'.repeat(40)) => ({ id: 'v1', annotations: { 'workers/message': 'Source commit: ' + commit } });
+function guardedRun(root, calls, { version = sourceVersion(), rejectCommit = false, rejectAncestry = false, dirty = false, race = false } = {}) {
+  const base = fakeRun(root, calls); let reads = 0;
+  return async (kind, args, cwd, options) => {
+    if (kind === 'wrangler' && args[0] === 'versions') return JSON.stringify(version);
+    if (kind === 'wrangler' && args[0] === 'deployments') return JSON.stringify({ ...previousWorker, id: race && ++reads > 1 ? 'concurrent' : 'old' });
+    if (kind === 'git' && args[0] === 'status' && dirty) return ' M worker/src/index.js';
+    if (kind === 'git' && args.includes('--verify') && rejectCommit) throw new Error('commit unavailable');
+    if (kind === 'git' && args[0] === 'merge-base' && rejectAncestry) throw new Error('not an ancestor');
+    return base(kind, args, cwd, options);
+  };
+}
+const uploadedWorker = calls => calls.some(call => call.kind === 'wrangler' && call.args[0] === 'deploy' && !call.args.includes('--dry-run'));
+
+test('이전 운영 소스가 미등록·축약 메시지·다른 버전이면 Worker 업로드 전에 중단한다', async () => {
+  for (const version of [
+    { id: 'v1', annotations: {} },
+    { id: 'v1', annotations: { 'workers/message': 'Deploy finder abc1234' } },
+    { ...sourceVersion(), id: 'unexpected' },
+  ]) {
+    const root = await fixture(), calls = [];
+    await assert.rejects(deployWorker({ root, run: guardedRun(root, calls, { version }) }), /이전 운영 소스|조회 결과/);
+    assert.equal(uploadedWorker(calls), false);
+    assert.equal(JSON.parse(await readFile(recordPath(root, 'worker'), 'utf8')).predeployFailed, true);
+  }
+});
+
+test('이전 운영 커밋이 없거나 후보의 조상이 아니면 업로드를 차단한다', async () => {
+  for (const options of [{ rejectCommit: true }, { rejectAncestry: true }]) {
+    const root = await fixture(), calls = [];
+    await assert.rejects(deployWorker({ root, run: guardedRun(root, calls, options) }), /이전 운영 커밋/);
+    assert.equal(uploadedWorker(calls), false);
+    assert.equal(calls.some(call => call.args[0] === 'rollback'), false);
+  }
+});
+
+test('Worker 미커밋 코드와 검증 도중 운영 배포 경합은 업로드 전에 차단한다', async () => {
+  for (const options of [{ dirty: true }, { race: true }]) {
+    const root = await fixture(), calls = [];
+    await assert.rejects(deployWorker({ root, run: guardedRun(root, calls, options) }), /깨끗한 체크아웃|운영 배포가 바뀌/);
+    assert.equal(uploadedWorker(calls), false);
+  }
+});
+
+test('legacy 운영 기준은 version ID와 etag에 묶이며 잘못된 기준은 사용할 수 없다', async () => {
+  const root = await fixture(), baseline = { schema: 1, versions: { v1: { commit: 'a'.repeat(40), scriptEtag: 'verified-etag', bundleSha256: 'b'.repeat(64) } } };
+  await put(root, '02_devtools/worker-release-baselines.json', JSON.stringify(baseline));
+  const version = { id: 'v1', annotations: {}, resources: { script: { etag: 'verified-etag' } } };
+  const run = guardedRun(root, [], { version });
+  const history = await assertWorkerSourceHistory(previousWorker, 'a'.repeat(40), { root, run });
+  assert.deepEqual(history, [{ versionId: 'v1', percentage: 100, commit: 'a'.repeat(40), basis: 'reviewed-baseline' }]);
+  version.resources.script.etag = 'changed-etag';
+  await assert.rejects(assertWorkerSourceHistory(previousWorker, 'a'.repeat(40), { root, run }), /etag/);
+  version.resources.script.etag = 'verified-etag'; delete baseline.versions.v1;
+  await put(root, '02_devtools/worker-release-baselines.json', JSON.stringify(baseline));
+  await assert.rejects(assertWorkerSourceHistory(previousWorker, 'a'.repeat(40), { root, run }), /이전 운영 소스/);
+});
+
+test('운영 baseline 변경은 이전 Worker 검사 기록을 무효화한다', async () => {
+  const root = await fixture();
+  await put(root, '02_devtools/worker-release-baselines.json', '{"schema":1,"versions":{}}');
+  await checkRelease('worker', { root, run: fakeRun(root) });
+  await put(root, '02_devtools/worker-release-baselines.json', '{"schema":1,"versions":{"changed":{}}}');
+  await assert.rejects(assertRelease('worker', { root }), /소스가 변경/);
+});
+
+test('분할 배포의 모든 활성 버전 이력을 확인하고 잘못된 비율을 거부한다', async () => {
+  const root = await fixture(), commits = [], candidate = 'a'.repeat(40);
+  const run = async (kind, args) => {
+    if (kind === 'wrangler') return JSON.stringify({ id: args[2], annotations: { 'workers/message': 'Source commit: ' + (args[2] === 'v1' ? candidate : 'b'.repeat(40)) } });
+    if (args[0] === 'rev-parse') return args[2].slice(0, 40);
+    commits.push(args[2]); if (args[2] !== candidate) throw new Error('missing active ancestor'); return '';
+  };
+  const split = { id: 'split', versions: [{ version_id: 'v1', percentage: 90 }, { version_id: 'v2', percentage: 10 }] };
+  await assert.rejects(assertWorkerSourceHistory(split, candidate, { root, run }), /이전 운영 커밋이 포함/);
+  assert.deepEqual(commits, [candidate, 'b'.repeat(40)]);
+  await assert.rejects(assertWorkerSourceHistory({ ...split, versions: [{ version_id: 'v1', percentage: 0 }] }, candidate, { root, run }), /트래픽 비율/);
+});
+
+test('실제 Git에서 운영 커밋의 정확한 객체와 ancestry를 요구한다', async () => {
+  const root = await fixture(), git = (...args) => runCommand('git', args, root, { capture: true });
+  git('init', '--quiet'); git('config', 'user.name', 'Release Guard Fixture'); git('config', 'user.email', 'release-guard@example.invalid');
+  git('add', '.'); git('commit', '--quiet', '-m', 'production fixture'); const previous = git('rev-parse', 'HEAD');
+  await put(root, 'worker/src/index.js', 'export default { next: true };'); git('add', '.'); git('commit', '--quiet', '-m', 'candidate fixture'); const candidate = git('rev-parse', 'HEAD');
+  const run = (kind, args, cwd, options) => kind === 'wrangler' ? JSON.stringify(sourceVersion(previous)) : runCommand(kind, args, cwd, options);
+  assert.equal((await assertWorkerSourceHistory(previousWorker, candidate, { root, run }))[0].commit, previous);
+  const reversed = (kind, args, cwd, options) => kind === 'wrangler' ? JSON.stringify(sourceVersion(candidate)) : runCommand(kind, args, cwd, options);
+  await assert.rejects(assertWorkerSourceHistory(previousWorker, previous, { root, run: reversed }), /이전 운영 커밋이 포함/);
+  const absent = (kind, args, cwd, options) => kind === 'wrangler' ? JSON.stringify(sourceVersion('0'.repeat(40))) : runCommand(kind, args, cwd, options);
+  await assert.rejects(assertWorkerSourceHistory(previousWorker, candidate, { root, run: absent }), /이전 운영 커밋을 찾을 수/);
 });
