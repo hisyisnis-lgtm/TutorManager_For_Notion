@@ -38,6 +38,7 @@ import {
 import { signTypedToken, verifyTypedToken } from '../lib/auth.js';
 import { rateLimitCheck, putChallenge, consumeChallenge, cleanupSecurityState, SecurityStoreUnavailable } from '../lib/securityStore.js';
 import { findOrCreateGameUser, getGameUserById, updateGameData, deleteGameUser } from '../lib/gameDb.js';
+import { findOrCreateFinderUser, getFinderUserById, handleFinderMe } from '../lib/finderDb.js';
 import { assembleByDay, embedMembers, renderDashboard } from '../lib/gameDashboard.js';
 
 const CLASS_DB_ID = '314838fa-f2a6-81bc-8b67-d9e1c8fb7ecb';
@@ -2270,7 +2271,7 @@ async function handleGameRoutes(request, env, corsHeaders, url) {
 
   // ===== 게임 계정(독립실행) — 카카오·구글 소셜 로그인 (OAuth BFF) + 게임데이터 =====
   // GET /game/auth/:provider/start?redirect=<복귀대상> — state 발급 후 제공자 인가 페이지로 302.
-  const authStartMatch = url.pathname.match(/^\/game\/auth\/([^/]+)\/start$/);
+  const authStartMatch = url.pathname.match(/^\/(?:game|finder)\/auth\/([^/]+)\/start$/);
   if (authStartMatch && request.method === 'GET') {
     const provider = authStartMatch[1];
     if (!isSocialProvider(provider)) return errRes(corsHeaders, 404, '지원하지 않는 로그인입니다.');
@@ -2285,8 +2286,9 @@ async function handleGameRoutes(request, env, corsHeaders, url) {
     const challenge = url.searchParams.get('code_challenge');
     const transaction = url.searchParams.get('transaction');
     if (!isPkceChallenge(challenge) || !isLoginTransaction(transaction)) return errRes(corsHeaders, 400, '로그인 요청을 다시 시작해주세요.');
-    const state = await signAuthState(env.JWT_SECRET, { provider, redirect, challenge, transaction });
-    await putChallenge(env, 'oauth-state', transaction, challenge, { valid: true }, 600);
+    const app = url.pathname.startsWith('/finder/') ? 'finder' : undefined;
+    const state = await signAuthState(env.JWT_SECRET, { provider, redirect, challenge, transaction, app });
+    await putChallenge(env, app ? 'finder-oauth-state' : 'oauth-state', transaction, challenge, { valid: true }, 600);
     const location = buildAuthorizeUrl({ provider, clientId, redirectUri: callbackUrl(url.origin, provider), state, nonce: transaction });
     return new Response(null, { status: 302, headers: { ...corsHeaders, Location: location } });
   }
@@ -2306,7 +2308,7 @@ async function handleGameRoutes(request, env, corsHeaders, url) {
     if (saved.provider !== provider || !isAllowedRedirect(saved.redirect, redirectPrefixes(env))) {
       return errRes(corsHeaders, 400, '로그인 세션이 올바르지 않습니다.');
     }
-    if (!(await consumeChallenge(env, 'oauth-state', saved.transaction, saved.challenge))) {
+    if (!(await consumeChallenge(env, saved.app === 'finder' ? 'finder-oauth-state' : 'oauth-state', saved.transaction, saved.challenge))) {
       return errRes(corsHeaders, 400, '이미 사용되었거나 만료된 로그인입니다.');
     }
 
@@ -2326,32 +2328,38 @@ async function handleGameRoutes(request, env, corsHeaders, url) {
     }
     if (!identity?.socialId) return errRes(corsHeaders, 401, '로그인에 실패했어요. 다시 시도해주세요.');
 
-    const user = await findOrCreateGameUser(env.GAME_DB, provider, identity.socialId, identity.nickname);
+    const user = saved.app === 'finder'
+      ? await findOrCreateFinderUser(env.GAME_DB, provider, identity.socialId)
+      : await findOrCreateGameUser(env.GAME_DB, provider, identity.socialId, identity.nickname);
     const loginCode = crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, '');
-    await putChallenge(env, 'oauth-code', loginCode, saved.challenge, { sub: user.id, transaction: saved.transaction, redirect: saved.redirect }, 90);
+    await putChallenge(env, saved.app === 'finder' ? 'finder-oauth-code' : 'oauth-code', loginCode, saved.challenge, { sub: user.id, transaction: saved.transaction, redirect: saved.redirect }, 90);
     return new Response(null, { status: 302, headers: { ...corsHeaders, 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer', Location: appendCodeFragment(saved.redirect, loginCode, saved.transaction) } });
   }
 
   // Only the initiating browser has the S256 verifier kept in sessionStorage.
-  if (url.pathname === '/game/auth/exchange' && request.method === 'POST') {
+  if (['/game/auth/exchange', '/finder/auth/exchange'].includes(url.pathname) && request.method === 'POST') {
     if (!(await rateLimitCheck(env, `gameauth:exchange:${clientIp(request)}`, 20, 600))) return errRes(corsHeaders, 429, '잠시 후 다시 시도해주세요.');
     const body = await request.json().catch(() => null);
     if (!body || typeof body.code !== 'string' || !/^[a-f0-9]{64}$/.test(body.code) || !isLoginTransaction(body.transaction)) return errRes(corsHeaders, 400, '로그인 요청이 올바르지 않습니다.');
     const challenge = await pkceChallenge(body.verifier);
     if (!challenge) return errRes(corsHeaders, 400, '로그인 요청이 올바르지 않습니다.');
-    const saved = await consumeChallenge(env, 'oauth-code', body.code, challenge);
+    const isFinder = url.pathname.startsWith('/finder/');
+    const saved = await consumeChallenge(env, isFinder ? 'finder-oauth-code' : 'oauth-code', body.code, challenge);
     const returnUrl = saved && new URL(saved.redirect);
     const returnOrigin = returnUrl && (returnUrl.origin === 'null' ? `${returnUrl.protocol}//${returnUrl.host}` : returnUrl.origin);
     if (!saved || saved.transaction !== body.transaction || request.headers.get('Origin') !== returnOrigin) {
       return errRes(corsHeaders, 401, '로그인을 시작한 기기에서 다시 시도해주세요.');
     }
-    const user = await getGameUserById(env.GAME_DB, saved.sub);
+    const user = isFinder ? await getFinderUserById(env.GAME_DB, saved.sub) : await getGameUserById(env.GAME_DB, saved.sub);
     if (!user) return errRes(corsHeaders, 401, '계정을 찾을 수 없습니다.');
-    const token = await createGameToken(env.JWT_SECRET, user.id, 60 * 60 * 24 * 60);
+    const token = isFinder
+      ? await signTypedToken(env.JWT_SECRET, 'finder', user.id, 60 * 60 * 24 * 60)
+      : await createGameToken(env.JWT_SECRET, user.id, 60 * 60 * 24 * 60);
     return new Response(JSON.stringify({ token, user }), { headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
   }
 
   // GET/PUT /game/me — 게임유저 JWT 인증 → 게임데이터 read/write (D1 game_users)
+  if (url.pathname === '/finder/me') return handleFinderMe(request, env, corsHeaders);
   if (url.pathname === '/game/me' && (request.method === 'GET' || request.method === 'PUT' || request.method === 'DELETE')) {
     const auth = (request.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
     const claim = await verifyGameToken(auth, env.JWT_SECRET);
@@ -2503,7 +2511,7 @@ async function handleFetch(request, env, ctx) {
     // 게임 단독 앱이 /game/* API를 CORS로 호출하려면 이 스킴들이 허용돼야 함(민감 라우트는 JWT로 별도 게이팅).
     const officialSite = OFFICIAL_SITE_ORIGINS.has(origin);
     const analyticsSite = officialSite && url.pathname === '/analytics/event';
-    const gameSite = officialSite && (url.pathname.startsWith('/game/') || url.pathname === '/error-log');
+    const gameSite = officialSite && (url.pathname.startsWith('/game/') || url.pathname.startsWith('/finder/') || url.pathname === '/error-log');
     const formSite = isOfficialFormRequest(request, origin);
     const insightsSite = origin === 'https://hanul-insights.pages.dev' && ['/auth/login', '/analytics/report'].includes(url.pathname);
     const allowed = insightsSite || analyticsSite || gameSite || formSite || ALLOWED_ORIGINS.has(origin) || (env.ALLOWED_ORIGIN && origin === env.ALLOWED_ORIGIN) || /^https:\/\/[a-z0-9-]+\.tiantian-chinese\.pages\.dev$/.test(origin) || /^https?:\/\/localhost(:\d+)?$/.test(origin) || origin === 'capacitor://localhost';
@@ -2523,7 +2531,7 @@ async function handleFetch(request, env, ctx) {
     // 소셜 로그인 OAuth 진입/콜백은 전체 페이지 네비게이션(브라우저가 Origin 헤더를 안 붙임)이라
     // Origin 게이트에서 예외 처리한다. 자체 보안(state 1회용·redirect 허용목록·provider 검증)으로 보호되고
     // 응답은 302 리다이렉트라 CORS 헤더가 불필요하다. (예외 없으면 로그인 진입이 403으로 막힘)
-    const isOauthNav = /^\/game\/auth\/[^/]+\/(start|callback)$/.test(url.pathname);
+    const isOauthNav = /^\/game\/auth\/[^/]+\/(start|callback)$/.test(url.pathname) || /^\/finder\/auth\/[^/]+\/start$/.test(url.pathname);
     // 지표 대시보드도 전체 페이지 네비(브라우저가 Origin 미첨부) — ?key= 시크릿으로 게이팅되므로 Origin 예외.
     const isDashNav = url.pathname === '/game/dashboard';
     if (!allowed && !isOauthNav && !isDashNav) {
@@ -2590,7 +2598,7 @@ async function handleFetch(request, env, ctx) {
     }
 
     // 미니게임 베스트 라우트 (학생 토큰 기반 공개)
-    if (url.pathname.startsWith('/game/')) {
+    if (url.pathname.startsWith('/game/') || url.pathname.startsWith('/finder/')) {
       return handleGameRoutes(request, env, corsHeaders, url);
     }
 

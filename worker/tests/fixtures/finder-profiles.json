@@ -1,0 +1,139 @@
+{
+  "source": "pwa/src/game/toneFinderStore.js working-tree snapshot, 2026-09-28",
+  "fresh": {
+    "version": 1,
+    "nickname": "카드친구",
+    "onboarded": false,
+    "xp": 0,
+    "rank": 0,
+    "level": 1,
+    "bestStage": 0,
+    "runs": [],
+    "mistakes": {},
+    "achievements": [],
+    "settings": {
+      "sfx": true,
+      "bgm": true,
+      "haptic": true,
+      "pinyin": false,
+      "autoSpeak": false
+    },
+    "totals": {
+      "correct": 0,
+      "mistakes": 0,
+      "normalRuns": 0,
+      "reviewRuns": 0,
+      "graduates": 0
+    },
+    "daily": {
+      "day": null,
+      "correct": 0,
+      "mistakes": 0,
+      "bestStage": 0
+    },
+    "lastPlayedDay": null,
+    "streak": 0,
+    "processedRunIds": [],
+    "discardedResultThrough": null,
+    "resetAt": null
+  },
+  "progressed": {
+    "version": 1,
+    "nickname": "카드친구",
+    "onboarded": false,
+    "xp": 16,
+    "rank": 0,
+    "level": 1,
+    "bestStage": 2,
+    "runs": [
+      {
+        "id": "mail-1",
+        "mode": "normal",
+        "reason": "timeout",
+        "completedStages": 2,
+        "correct": 0,
+        "mistakes": 1,
+        "hints": 0,
+        "elapsedMs": 3000,
+        "completedAt": "2026-09-28T00:00:00.000Z",
+        "xp": 16
+      }
+    ],
+    "mistakes": {
+      "妈": {
+        "remaining": 3,
+        "lastAt": "2026-09-28T00:00:00.000Z",
+        "tones": [
+          1
+        ]
+      }
+    },
+    "achievements": [],
+    "settings": {
+      "sfx": true,
+      "bgm": true,
+      "haptic": true,
+      "pinyin": false,
+      "autoSpeak": false
+    },
+    "totals": {
+      "correct": 0,
+      "mistakes": 1,
+      "normalRuns": 1,
+      "reviewRuns": 0,
+      "graduates": 0
+    },
+    "daily": {
+      "day": "2026-09-28",
+      "correct": 0,
+      "mistakes": 1,
+      "bestStage": 2
+    },
+    "lastPlayedDay": "2026-09-28",
+    "streak": 1,
+    "processedRunIds": [
+      "mail-1"
+    ],
+    "discardedResultThrough": null,
+    "resetAt": null
+  },
+  "reset": {
+    "version": 1,
+    "nickname": "카드친구",
+    "onboarded": false,
+    "xp": 0,
+    "rank": 0,
+    "level": 1,
+    "bestStage": 0,
+    "runs": [],
+    "mistakes": {},
+    "achievements": [],
+    "settings": {
+      "sfx": true,
+      "bgm": true,
+      "haptic": true,
+      "pinyin": false,
+      "autoSpeak": false
+    },
+    "totals": {
+      "correct": 0,
+      "mistakes": 0,
+      "normalRuns": 0,
+      "reviewRuns": 0,
+      "graduates": 0
+    },
+    "daily": {
+      "day": null,
+      "correct": 0,
+      "mistakes": 0,
+      "bestStage": 0
+    },
+    "lastPlayedDay": null,
+    "streak": 0,
+    "processedRunIds": [
+      "mail-1"
+    ],
+    "discardedResultThrough": null,
+    "resetAt": "2026-09-28T09:47:46.608Z"
+  }
+}

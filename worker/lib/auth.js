@@ -2,7 +2,7 @@
 // Legacy tokens without v/purpose/aud/subject are deliberately invalidated.
 const encoder = new TextEncoder();
 const ISSUER = 'tutor-manager';
-const PURPOSES = new Set(['teacher', 'student', 'game', 'oauth-state', 'dashboard', 'homework-upload']);
+const PURPOSES = new Set(['teacher', 'student', 'game', 'finder', 'oauth-state', 'dashboard', 'homework-upload']);
 
 export function base64url(bytes) {
   return btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
@@ -26,6 +26,7 @@ function validSubject(purpose, sub, role) {
   if (purpose === 'teacher') return sub === 'teacher' && role === 'teacher';
   if (purpose === 'student') return /^personal:[A-Za-z0-9_-]+$/.test(sub);
   if (purpose === 'game') return !sub.startsWith('personal:');
+  if (purpose === 'finder') return /^finder:[a-f0-9-]{36}$/.test(sub);
   if (purpose === 'dashboard') return sub === 'dashboard';
   return true;
 }
