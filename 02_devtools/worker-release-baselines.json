@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "versions": {
+    "91d3f82e-2288-4c3a-9b1e-16e9ab3deb87": {
+      "commit": "530c531573e2f3d4aa621261466a144249bdb585",
+      "scriptEtag": "c30f104fb7b215977adad9ec419856c627f8bb1ff4dcf3c9a1fb285ed49a0a93",
+      "bundleSha256": "3f74f73d81061623545d8c1107c2f69be70bbb07b334ed4bc7aa89a184045ba1",
+      "evidence": "04_docs/qa/service-project-separation-2026-09-28/worker-deployment-2026-09-28.md"
+    }
+  }
+}

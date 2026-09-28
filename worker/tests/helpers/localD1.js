@@ -7,6 +7,7 @@ export function localD1() {
   sqlite.exec(readFileSync(new URL('../../migrations/0002_security_state.sql', import.meta.url), 'utf8'));
   sqlite.exec(readFileSync(new URL('../../migrations/0001_game_users.sql', import.meta.url), 'utf8'));
   sqlite.exec(readFileSync(new URL('../../migrations/0003_notification_followups.sql', import.meta.url), 'utf8'));
+  sqlite.exec(readFileSync(new URL('../../migrations/0004_finder_users.sql', import.meta.url), 'utf8'));
   const db = {
     prepare(sql) {
       const statement = sqlite.prepare(sql);

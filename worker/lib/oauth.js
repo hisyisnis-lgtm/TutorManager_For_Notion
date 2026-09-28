@@ -137,13 +137,15 @@ export async function pkceChallenge(verifier) {
 }
 
 // The browser keeps the verifier; signed state contains only its S256 challenge.
-export async function signAuthState(secret, { provider, redirect, challenge, transaction }, ttlSeconds = 600) {
+export async function signAuthState(secret, { provider, redirect, challenge, transaction, app }, ttlSeconds = 600) {
   if (!isSocialProvider(provider) || !isPkceChallenge(challenge) || !isLoginTransaction(transaction)) throw new Error('invalid login transaction');
-  return signTypedToken(secret, 'oauth-state', transaction, ttlSeconds, { p: provider, r: redirect, challenge });
+  if (app !== undefined && app !== 'finder') throw new Error('invalid login application');
+  return signTypedToken(secret, 'oauth-state', transaction, ttlSeconds, { p: provider, r: redirect, challenge, ...(app ? { app } : {}) });
 }
 
 export async function verifyAuthState(secret, state) {
   const claim = await verifyTypedToken(secret, state, 'oauth-state');
   if (!claim || !isSocialProvider(claim.p) || typeof claim.r !== 'string' || !isPkceChallenge(claim.challenge) || !isLoginTransaction(claim.sub)) return null;
-  return { provider: claim.p, redirect: claim.r, challenge: claim.challenge, transaction: claim.sub };
+  if (claim.app !== undefined && claim.app !== 'finder') return null;
+  return { provider: claim.p, redirect: claim.r, challenge: claim.challenge, transaction: claim.sub, ...(claim.app ? { app: claim.app } : {}) };
 }

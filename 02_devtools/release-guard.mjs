@@ -42,7 +42,7 @@ export async function inventory(dir) {
 export function sourcePaths(target) {
   const common = ['03_data/consent', '02_devtools/release-guard.mjs', '02_devtools/pages-release.mjs', '02_devtools/release-guard.test.mjs', '02_devtools/release-asset-policy.json', '02_devtools/public-price-check.mjs', '02_devtools/public-price-check.test.mjs'];
   const pwa = ['pwa/src', 'pwa/public', 'pwa/package.json', 'pwa/package-lock.json', 'pwa/index.html', 'pwa/game.html', 'pwa/vite.config.js', 'pwa/vitest.config.js', 'pwa/eslint.config.js', 'pwa/tailwind.config.js', 'pwa/postcss.config.js', '03_data/tone-words', '02_devtools/tone-words-build.mjs', '02_devtools/tone-tts-build.mjs', '02_devtools/gen-game-og-route.mjs', '02_devtools/design-audit.mjs'];
-  if (target === 'worker') return [...common, 'worker/src', 'worker/lib', 'worker/tests', 'worker/migrations', 'worker/wrangler.toml', 'worker/package.json', 'worker/package-lock.json', '01_automation', 'pwa/src/game', 'pwa/src/api', 'pwa/src/constants', 'pwa/src/analytics'];
+  if (target === 'worker') return [...common, '02_devtools/worker-release-baselines.json', 'worker/src', 'worker/lib', 'worker/tests', 'worker/migrations', 'worker/wrangler.toml', 'worker/package.json', 'worker/package-lock.json', '01_automation', 'pwa/src/game', 'pwa/src/api', 'pwa/src/constants', 'pwa/src/analytics'];
   return [...common, ...pwa, 'site/src', 'site/scripts', ...(target === 'site' ? ['site/public', 'site/package.json', 'site/package-lock.json', 'site/astro.config.mjs', 'site/tsconfig.json'] : []), `.github/workflows/deploy-${target}.yml`];
 }
 export async function sourceHash(root, target) {
@@ -159,25 +159,69 @@ function workerDeployment(text) {
   assert.ok(data.id && Array.isArray(data.versions) && data.versions.length, 'Worker 운영 버전 확인 실패');
   return { id: data.id, versions: data.versions.map(({ version_id, percentage }) => ({ version_id, percentage })) };
 }
+// Legacy deployments may lack an exact commit annotation. Only reviewed, version-bound
+// baselines may fill that gap; this never guesses a commit from a message or bypasses ancestry.
+export async function assertWorkerSourceHistory(previous, candidateCommit, { root = ROOT, run = runCommand } = {}) {
+  assert.match(candidateCommit, /^[a-f0-9]{40}$/, 'Worker 후보의 정확한 Git 커밋이 필요합니다.');
+  const file = path.join(root, '02_devtools/worker-release-baselines.json');
+  const baselines = existsSync(file) ? JSON.parse(await readFile(file, 'utf8')) : { schema: 1, versions: {} };
+  assert.ok(baselines.schema === 1 && baselines.versions && typeof baselines.versions === 'object', 'Worker 운영 소스 기준 형식 오류');
+  assert.ok(previous.versions.length && previous.versions.every(item => Number.isFinite(item.percentage) && item.percentage >= 0 && item.percentage <= 100)
+    && previous.versions.reduce((sum, item) => sum + item.percentage, 0) === 100, 'Worker 운영 트래픽 비율 확인 실패');
+  const result = [];
+  for (const item of previous.versions.filter(item => item.percentage > 0)) {
+    const version = JSON.parse(await run('wrangler', ['versions', 'view', item.version_id, '--json'], path.join(root, 'worker'), { capture: true }));
+    assert.equal(version.id, item.version_id, 'Worker 운영 버전 조회 결과가 다릅니다.');
+    const annotated = /^Source commit: ([a-f0-9]{40})$/.exec(version.annotations?.['workers/message'] || '')?.[1];
+    const baseline = baselines.versions[item.version_id];
+    if (!annotated) {
+      assert.ok(baseline && /^[a-f0-9]{40}$/.test(baseline.commit) && /^[a-f0-9]{64}$/.test(baseline.bundleSha256)
+        && typeof baseline.scriptEtag === 'string' && baseline.scriptEtag.length, 'Worker 이전 운영 소스를 확인할 수 없습니다. 검증한 배포 기준을 먼저 등록해 주세요.');
+      assert.equal(version.resources?.script?.etag, baseline.scriptEtag, 'Worker 운영 소스 기준과 실제 버전 etag가 다릅니다.');
+    }
+    const commit = annotated || baseline.commit;
+    let resolved;
+    try { resolved = await run('git', ['rev-parse', '--verify', commit + '^{commit}'], root, { capture: true }); }
+    catch { throw new Error('Worker 이전 운영 커밋을 찾을 수 없습니다. 정확한 운영 이력을 가져온 뒤 배포해 주세요.'); }
+    assert.equal(resolved, commit, 'Worker 이전 운영 커밋 조회 불일치');
+    try { await run('git', ['merge-base', '--is-ancestor', commit, candidateCommit], root, { capture: true }); }
+    catch { throw new Error('Worker 후보에 이전 운영 커밋이 포함되지 않습니다. 운영 이력을 병합한 뒤 배포해 주세요.'); }
+    result.push({ versionId: item.version_id, percentage: item.percentage, commit, basis: annotated ? 'version-metadata' : 'reviewed-baseline' });
+  }
+  return result;
+}
 export async function deployWorker({ root = ROOT, run = runCommand, fetchImpl = fetch } = {}) {
   const record = await checkRelease('worker', { root, run });
   const cwd = path.join(root, 'worker');
-  record.previous = workerDeployment(await run('wrangler', ['deployments', 'status', '--json'], cwd, { capture: true }));
-  await writeJson(recordPath(root, 'worker'), record);
-  await assertRelease('worker', { root });
+  try {
+    assert.equal(record.dirty, false, 'Worker 배포는 커밋된 깨끗한 체크아웃에서만 가능합니다.');
+    record.previous = workerDeployment(await run('wrangler', ['deployments', 'status', '--json'], cwd, { capture: true }));
+    record.previousSourceHistory = await assertWorkerSourceHistory(record.previous, record.commit, { root, run });
+    await assertRelease('worker', { root });
+    assert.equal(await run('git', ['rev-parse', 'HEAD'], root, { capture: true }), record.commit, 'Worker 검사 후 HEAD가 바뀌었습니다.');
+    assert.equal(await run('git', ['status', '--porcelain', '--untracked-files=normal'], root, { capture: true }), '', 'Worker 검사 후 작업 트리가 바뀌었습니다.');
+    const current = workerDeployment(await run('wrangler', ['deployments', 'status', '--json'], cwd, { capture: true }));
+    assert.deepEqual(current, record.previous, 'Worker 운영 배포가 바뀌었습니다. 다시 검증해 주세요.');
+  } catch (error) {
+    record.predeployFailed = true;
+    await writeJson(recordPath(root, 'worker'), record);
+    throw error;
+  }
   // 기존 대시보드 vars를 보존한다. 시크릿 변경이나 D1 migration은 이 도구의 범위가 아니다.
   assert.ok(record.files['/index.js'], '검증한 Worker 번들이 없습니다.');
   record.versionTag = `${record.commit.slice(0, 12)}-${record.source.slice(0, 12)}`;
+  record.sourceMessage = `Source commit: ${record.commit}`;
   record.deploymentStartedAt = new Date().toISOString();
   await writeJson(recordPath(root, 'worker'), record);
   try {
-    await run('wrangler', ['deploy', 'dist-check/index.js', '--no-bundle', '--keep-vars', '--tag', record.versionTag], cwd);
+    await run('wrangler', ['deploy', 'dist-check/index.js', '--no-bundle', '--keep-vars', '--tag', record.versionTag, '--message', record.sourceMessage], cwd);
     record.uploadReturned = true;
     record.deployed = workerDeployment(await run('wrangler', ['deployments', 'status', '--json'], cwd, { capture: true }));
     assert.notEqual(record.deployed.id, record.previous.id, '새 Worker 배포를 확인하지 못했습니다.');
     assert.equal(record.deployed.versions.length, 1, '예상 밖 Worker 분할 배포');
     const version = JSON.parse(await run('wrangler', ['versions', 'view', record.deployed.versions[0].version_id, '--json'], cwd, { capture: true }));
     assert.equal(version.annotations?.['workers/tag'], record.versionTag, '검증한 Worker 소스와 운영 버전이 다릅니다.');
+    assert.equal(version.annotations?.['workers/message'], record.sourceMessage, 'Worker 운영 소스 커밋 메타데이터 불일치');
     record.smoke = await smokeWorker(TARGETS.worker.url, { fetchImpl });
     record.verifiedAt = new Date().toISOString();
   } catch (error) {
