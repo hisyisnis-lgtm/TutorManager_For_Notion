@@ -133,6 +133,7 @@ const GameBestSchema = z.object({
   updatedAt: z.number().finite().int().min(0).max(8_640_000_000_000_000).optional(),
 }).strict();
 export const GameDataSchema = z.object({
+  onboardingDone: z.boolean().optional(), // 튜토리얼 시작/건너뛰기 선택 완료 — true는 되돌리지 않음
   best: z.record(z.enum(['tone', 'tone-easy', 'tone-normal', 'tone-hard', 'tone-endless', 'tone-drama', 'tone-cooking', 'tone-travel', 'tone-slang']), GameBestSchema).optional(),
   words: z.record(GameWordKeySchema, GameWordEntrySchema).optional(),
   mc: GameCounterSchema.optional(),

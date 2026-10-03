@@ -17,6 +17,9 @@ function mergeStreak(a, b) {
 
 export function mergeGameData(stored, incoming) {
   const merged = { ...stored, ...incoming };
+  if ('onboardingDone' in stored || 'onboardingDone' in incoming) {
+    merged.onboardingDone = stored.onboardingDone === true || incoming.onboardingDone === true;
+  }
   for (const key of peakFields) {
     if (key in stored || key in incoming) merged[key] = max(stored[key], incoming[key]);
   }
