@@ -9,6 +9,7 @@ import { validateFileUpload, validateFileContent, isNotionUploadUrl, resolveFile
 import { boundedRequest, RequestTooLarge, secureResponse } from '../lib/httpSecurity.js';
 import { authorizeNotionRequest, pageInDatabase } from '../lib/notionScope.js';
 import { handleConsentTerms } from '../lib/consentTerms.js';
+import { handlePandaRoutes } from '../lib/pandaRoutes.js';
 import { handleContactRequest } from '../lib/contact.js';
 import { studentHomeworkPage } from '../lib/homeworkPrivacy.js';
 import { buildStudentLedger, queryStudentTimePages, studentSessionTotals } from '../lib/studentLedger.js';
@@ -2600,6 +2601,14 @@ async function handleFetch(request, env, ctx) {
     // 미니게임 베스트 라우트 (학생 토큰 기반 공개)
     if (url.pathname.startsWith('/game/') || url.pathname.startsWith('/finder/')) {
       return handleGameRoutes(request, env, corsHeaders, url);
+    }
+
+    const pandaRoute = url.pathname.match(/^\/personal\/student\/([^/]+)\/panda(\/action)?$/);
+    if (pandaRoute) {
+      return handlePandaRoutes(request, env, corsHeaders, {
+        token: pandaRoute[1], actionRoute: !!pandaRoute[2], authorizeStudent: enforceStudentSession,
+        studentDbId: STUDENT_DB_ID, classDbId: CLASS_DB_ID,
+      });
     }
 
     // 학생앱 휴대폰 인증(step-up) — request-otp/verify-otp (공개)
