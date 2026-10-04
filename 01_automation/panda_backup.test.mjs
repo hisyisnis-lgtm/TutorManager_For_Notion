@@ -194,6 +194,11 @@ test('export orchestration suppresses provider output and writes a completion ma
   await assert.rejects(access(bad.receipt), { code: 'ENOENT' });
   const failed = await files();
   await assert.rejects(exportPandaBackup({ ...failed, run: () => { throw new Error('secret-output'); } }), error => !error.message.includes('secret-output'));
+  await assert.rejects(exportPandaBackup({ ...failed, run: () => { throw Object.assign(new Error('secret-output'), { stderr: 'private-token student-name [code: 7403]' }); } }), error => {
+    assert.deepEqual(error.providerCodes, ['7403']);
+    assert.ok(!JSON.stringify(error).includes('private-token') && !error.message.includes('student-name'));
+    return true;
+  });
   await assert.rejects(backupMain([]), /명시적인/);
 });
 
