@@ -205,7 +205,7 @@ function TransitionDialog({ open, startingFood, onConfirm, onRetry, notice, busy
 }
 
 export default function PandaGameView({
-  stage, stageIdx = 0, levelInfo, fedTotal = 0, available = 0, progress = 0, remaining = 0,
+  stage, stageIdx = 0, levelInfo, fedTotal = 0, available = 0, feedingAvailable = available, progress = 0, remaining = 0,
   equipped, nickname, isFeeding = false, isBusy = false, canTransact = true, loading = false, hasProfile = true, error, onRetry,
   canFeed = canTransact && !isBusy && !loading,
   action = { motion: 'idle', id: 0 }, pandaRef, feedBtnRef, feedAllBtnRef, wardrobeTriggerRef,
@@ -213,7 +213,7 @@ export default function PandaGameView({
   namingOpen = false, namingMode = 'edit', onSaveName, onDismissName,
   wardrobeGuideOpen = false, onDismissWardrobeGuide, onStartWardrobeGuide,
   transitionOpen = false, transition, onConfirmTransition,
-  notice, fullscreen = false, speechPaused = false,
+  notice, noticePending = false, fullscreen = false, speechPaused = false,
   growthPulses = [], celebration = null, displayStage = stageIdx,
 }) {
   const [toast, setToast] = useState(null);
@@ -228,10 +228,10 @@ export default function PandaGameView({
     else setToast(null);
   }, [notice, error]);
   useEffect(() => {
-    if (!toast || toast.error) return undefined;
+    if (!toast || toast.error || noticePending) return undefined;
     const timer = setTimeout(() => setToast(null), 3000);
     return () => clearTimeout(timer);
-  }, [toast]);
+  }, [toast, noticePending]);
   const level = levelInfo || getPandaLevelInfo(fedTotal);
   const celebrating = Boolean(celebration);
   const busy = isFeeding || isBusy || loading || Boolean(celebration);
@@ -241,14 +241,14 @@ export default function PandaGameView({
   const visibleToast = toast || (error && error !== dismissedError ? { message: typeof error === 'string' ? error : '기록을 불러오지 못했어요.', error: true } : null);
   const title = nickname || (stage?.label || PANDA_STAGE_LABELS[stageIdx]).replace('판다', '랴오랴오');
   const showToast = message => setToast({ message, error: false });
-  const feedReason = count => showToast(available === 0 ? NO_FOOD
-    : `먹이가 ${count - available}개 부족해요.\n수업과 학습 활동으로 먹이를 모아보세요.`);
+  const feedReason = count => showToast(feedingAvailable === 0 ? NO_FOOD
+    : `먹이가 ${count - feedingAvailable}개 부족해요.\n수업과 학습 활동으로 먹이를 모아보세요.`);
   const feedButton = (count, ref, primary) => <div className="panda-game-feed-control">
     <Button ref={ref} variant={primary ? 'default' : 'outline'}
       className={cn('panda-game-button', primary ? 'panda-game-button--primary' : 'panda-game-button--secondary')}
-      disabled={feedBlocked || available < count} onClick={() => onFeed?.(count)}
-      aria-describedby={available < count && toast ? noticeId : undefined}>먹이주기 x{count}</Button>
-    {available < count && !feedBlocked && <button type="button" className="panda-game-lock-hit"
+      disabled={feedBlocked || feedingAvailable < count} onClick={() => onFeed?.(count)}
+      aria-describedby={feedingAvailable < count && toast ? noticeId : undefined}>먹이주기 x{count}</Button>
+    {feedingAvailable < count && !feedBlocked && <button type="button" className="panda-game-lock-hit"
       aria-label={`먹이주기 x${count} 불가 이유 보기`} onClick={() => feedReason(count)} />}
   </div>;
 

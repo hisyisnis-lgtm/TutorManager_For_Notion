@@ -1,0 +1,115 @@
+{
+  "samples": [
+    {
+      "elapsed": 2524,
+      "food": "보유 먹이 0개",
+      "title": "레벨1 : 알",
+      "stage": "0",
+      "motion": "eating",
+      "phase": null,
+      "server": {
+        "version": 2,
+        "fedTotal": 11,
+        "spentFood": 0,
+        "refundFood": 0,
+        "owned": [],
+        "equipped": {
+          "hat": null,
+          "costume": null,
+          "neck": null,
+          "hand": null
+        },
+        "purchasePrices": {},
+        "nickname": "",
+        "namingPromptSeen": false,
+        "revision": 2
+      },
+      "receiptCount": 2,
+      "overflow": false
+    },
+    {
+      "elapsed": 7052,
+      "food": "보유 먹이 0개",
+      "title": "레벨1 : 알",
+      "stage": "0",
+      "motion": "idle",
+      "phase": "charge",
+      "server": {
+        "version": 2,
+        "fedTotal": 23,
+        "spentFood": 0,
+        "refundFood": 0,
+        "owned": [],
+        "equipped": {
+          "hat": null,
+          "costume": null,
+          "neck": null,
+          "hand": null
+        },
+        "purchasePrices": {},
+        "nickname": "",
+        "namingPromptSeen": false,
+        "revision": 6
+      },
+      "receiptCount": 6,
+      "overflow": false
+    },
+    {
+      "elapsed": 11566,
+      "food": "보유 먹이 0개",
+      "title": "레벨3 : 아기 랴오랴오",
+      "stage": "2",
+      "motion": "idle",
+      "phase": "reveal",
+      "server": {
+        "version": 2,
+        "fedTotal": 23,
+        "spentFood": 0,
+        "refundFood": 0,
+        "owned": [],
+        "equipped": {
+          "hat": null,
+          "costume": null,
+          "neck": null,
+          "hand": null
+        },
+        "purchasePrices": {},
+        "nickname": "",
+        "namingPromptSeen": false,
+        "revision": 6
+      },
+      "receiptCount": 6,
+      "overflow": false
+    },
+    {
+      "elapsed": 15648,
+      "food": "보유 먹이 0개",
+      "title": "레벨3 : 아기 랴오랴오",
+      "stage": "2",
+      "motion": "idle",
+      "phase": null,
+      "server": {
+        "version": 2,
+        "fedTotal": 23,
+        "spentFood": 0,
+        "refundFood": 0,
+        "owned": [],
+        "equipped": {
+          "hat": null,
+          "costume": null,
+          "neck": null,
+          "hand": null
+        },
+        "purchasePrices": {},
+        "nickname": "",
+        "namingPromptSeen": false,
+        "revision": 6
+      },
+      "receiptCount": 6,
+      "overflow": false
+    }
+  ],
+  "errors": [],
+  "hotUpdates": [],
+  "passed": true
+}

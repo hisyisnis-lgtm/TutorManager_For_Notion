@@ -326,6 +326,25 @@ describe('랴오랴오 게임 화면의 거래 입력', () => {
     expect(onFeed.mock.calls).toEqual([[1], [5]]);
   });
 
+  it('비행 중 표시 먹이는 유지하면서 예약된 수량만큼 추가 먹이 버튼을 막는다', () => {
+    const onFeed = vi.fn();
+    render(<PandaGameView {...base} available={7} feedingAvailable={0} isFeeding onFeed={onFeed} />);
+    expect(screen.getByLabelText('보유 먹이 7개')).toBeTruthy();
+    expect(screen.getByRole('button', { name: '먹이주기 x1' }).disabled).toBe(true);
+    expect(screen.getByRole('button', { name: '먹이주기 x5' }).disabled).toBe(true);
+    fireEvent.click(screen.getByRole('button', { name: '먹이주기 x1' }));
+    expect(onFeed).not.toHaveBeenCalled();
+  });
+
+  it('늦은 저장 안내는 응답이 끝날 때까지 유지하고 끝나면 사라진다', () => {
+    vi.useFakeTimers();
+    const { rerender } = render(<PandaGameView {...base} notice="성장 기록을 저장하고 있어요…" noticePending />);
+    act(() => vi.advanceTimersByTime(8000));
+    expect(screen.getByRole('status').textContent).toContain('저장하고 있어요');
+    rerender(<PandaGameView {...base} />);
+    expect(screen.queryByRole('status')).toBeNull();
+  });
+
   it('먹이 연출과 먹이 전용 저장 중에도 추가 먹이를 받되 일반 거래 차단을 유지한다', () => {
     const onFeed = vi.fn();
     const view = render(<PandaGameView {...base} isFeeding onFeed={onFeed} />);

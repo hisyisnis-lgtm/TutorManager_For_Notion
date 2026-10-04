@@ -1,0 +1,359 @@
+{
+  "date": "2026-10-05",
+  "environment": "isolated localhost simulated server; no production data mutation",
+  "slowResponse": {
+    "samples": [
+      {
+        "elapsed": 3,
+        "food": "보유 먹이 5개",
+        "title": "레벨2 : 알에서 깨어나는 랴오랴오",
+        "exp": "경험치16 / 17",
+        "bodyStage": "1",
+        "motion": "idle",
+        "savingCue": false,
+        "serverFed": 19,
+        "overflow": false
+      },
+      {
+        "elapsed": 810,
+        "food": "보유 먹이 4개",
+        "title": "레벨2 : 알에서 깨어나는 랴오랴오",
+        "exp": "경험치17 / 17",
+        "bodyStage": "1",
+        "motion": "eating",
+        "savingCue": false,
+        "serverFed": 19,
+        "overflow": false
+      },
+      {
+        "elapsed": 1410,
+        "food": "보유 먹이 0개",
+        "title": "레벨2 : 알에서 깨어나는 랴오랴오",
+        "exp": "경험치17 / 17",
+        "bodyStage": "1",
+        "motion": "eating",
+        "savingCue": false,
+        "serverFed": 19,
+        "overflow": false
+      },
+      {
+        "elapsed": 3002,
+        "food": "보유 먹이 0개",
+        "title": "레벨2 : 알에서 깨어나는 랴오랴오",
+        "exp": "경험치17 / 17",
+        "bodyStage": "1",
+        "motion": "idle",
+        "savingCue": true,
+        "serverFed": 19,
+        "overflow": false
+      },
+      {
+        "elapsed": 7936,
+        "food": "보유 먹이 0개",
+        "title": "레벨2 : 알에서 깨어나는 랴오랴오",
+        "exp": "경험치17 / 17",
+        "bodyStage": "1",
+        "motion": "idle",
+        "savingCue": true,
+        "serverFed": 19,
+        "overflow": false
+      },
+      {
+        "elapsed": 8436,
+        "food": "보유 먹이 0개",
+        "title": "레벨2 : 알에서 깨어나는 랴오랴오",
+        "exp": "경험치17 / 17",
+        "bodyStage": "1",
+        "motion": "idle",
+        "phase": "charge",
+        "savingCue": true,
+        "serverFed": 24,
+        "overflow": false
+      },
+      {
+        "elapsed": 9870,
+        "food": "보유 먹이 0개",
+        "title": "레벨3 : 아기 랴오랴오",
+        "exp": "경험치4 / 28",
+        "bodyStage": "2",
+        "motion": "idle",
+        "phase": "reveal",
+        "savingCue": false,
+        "serverFed": 24,
+        "overflow": false
+      },
+      {
+        "elapsed": 11807,
+        "food": "보유 먹이 0개",
+        "title": "레벨3 : 아기 랴오랴오",
+        "exp": "경험치4 / 28",
+        "bodyStage": "2",
+        "motion": "idle",
+        "savingCue": false,
+        "serverFed": 24,
+        "overflow": false
+      }
+    ],
+    "errors": [],
+    "hotUpdates": [],
+    "navigations": 1,
+    "stable": true
+  },
+  "rejected": {
+    "samples": [
+      {
+        "elapsed": 7,
+        "food": "보유 먹이 5개",
+        "title": "레벨2 : 알에서 깨어나는 랴오랴오",
+        "exp": "경험치16 / 17",
+        "motion": "idle",
+        "serverFed": 19,
+        "errorVisible": false,
+        "overflow": false
+      },
+      {
+        "elapsed": 852,
+        "food": "보유 먹이 3개",
+        "title": "레벨2 : 알에서 깨어나는 랴오랴오",
+        "exp": "경험치17 / 17",
+        "motion": "eating",
+        "serverFed": 19,
+        "errorVisible": false,
+        "overflow": false
+      },
+      {
+        "elapsed": 1607,
+        "food": "보유 먹이 0개",
+        "title": "레벨2 : 알에서 깨어나는 랴오랴오",
+        "exp": "경험치17 / 17",
+        "motion": "eating",
+        "serverFed": 19,
+        "errorVisible": false,
+        "overflow": false
+      },
+      {
+        "elapsed": 3502,
+        "food": "보유 먹이 5개",
+        "title": "레벨2 : 알에서 깨어나는 랴오랴오",
+        "exp": "경험치16 / 17",
+        "motion": "idle",
+        "serverFed": 19,
+        "errorVisible": true,
+        "overflow": false
+      },
+      {
+        "elapsed": 5002,
+        "food": "보유 먹이 5개",
+        "title": "레벨2 : 알에서 깨어나는 랴오랴오",
+        "exp": "경험치16 / 17",
+        "motion": "idle",
+        "serverFed": 19,
+        "errorVisible": true,
+        "overflow": false
+      }
+    ],
+    "errors": [],
+    "passed": true
+  },
+  "lostResponseRetry": {
+    "samples": [
+      {
+        "label": "click",
+        "elapsed": 0,
+        "food": "보유 먹이 5개",
+        "title": "레벨2 : 알에서 깨어나는 랴오랴오",
+        "exp": "경험치16 / 17",
+        "stage": "1",
+        "motion": "idle",
+        "phase": null,
+        "server": {
+          "version": 2,
+          "fedTotal": 19,
+          "spentFood": 0,
+          "refundFood": 0,
+          "owned": [],
+          "equipped": {
+            "hat": null,
+            "costume": null,
+            "neck": null,
+            "hand": null
+          },
+          "purchasePrices": {},
+          "nickname": "",
+          "namingPromptSeen": false,
+          "revision": 0
+        },
+        "receiptCount": 0,
+        "overflow": false
+      },
+      {
+        "label": "after arrival",
+        "elapsed": 1560,
+        "food": "보유 먹이 0개",
+        "title": "레벨2 : 알에서 깨어나는 랴오랴오",
+        "exp": "경험치17 / 17",
+        "stage": "1",
+        "motion": "eating",
+        "phase": null,
+        "server": {
+          "version": 2,
+          "fedTotal": 19,
+          "spentFood": 0,
+          "refundFood": 0,
+          "owned": [],
+          "equipped": {
+            "hat": null,
+            "costume": null,
+            "neck": null,
+            "hand": null
+          },
+          "purchasePrices": {},
+          "nickname": "",
+          "namingPromptSeen": false,
+          "revision": 0
+        },
+        "receiptCount": 0,
+        "overflow": false
+      },
+      {
+        "label": "response lost",
+        "elapsed": 3398,
+        "food": "보유 먹이 5개",
+        "title": "레벨2 : 알에서 깨어나는 랴오랴오",
+        "exp": "경험치16 / 17",
+        "stage": "1",
+        "motion": "idle",
+        "phase": null,
+        "server": {
+          "version": 2,
+          "fedTotal": 24,
+          "spentFood": 0,
+          "refundFood": 0,
+          "owned": [],
+          "equipped": {
+            "hat": null,
+            "costume": null,
+            "neck": null,
+            "hand": null
+          },
+          "purchasePrices": {},
+          "nickname": "",
+          "namingPromptSeen": false,
+          "revision": 1
+        },
+        "receiptCount": 1,
+        "alert": "예시 응답이 유실됐어요. 결과를 다시 확인해 주세요.다시 시도",
+        "overflow": false
+      },
+      {
+        "label": "retry pending",
+        "elapsed": 5164,
+        "food": "보유 먹이 5개",
+        "title": "레벨2 : 알에서 깨어나는 랴오랴오",
+        "exp": "경험치16 / 17",
+        "stage": "1",
+        "motion": "idle",
+        "phase": null,
+        "server": {
+          "version": 2,
+          "fedTotal": 24,
+          "spentFood": 0,
+          "refundFood": 0,
+          "owned": [],
+          "equipped": {
+            "hat": null,
+            "costume": null,
+            "neck": null,
+            "hand": null
+          },
+          "purchasePrices": {},
+          "nickname": "",
+          "namingPromptSeen": false,
+          "revision": 1
+        },
+        "receiptCount": 1,
+        "overflow": false
+      },
+      {
+        "label": "retry confirmed",
+        "elapsed": 7172,
+        "food": "보유 먹이 0개",
+        "title": "레벨2 : 알에서 깨어나는 랴오랴오",
+        "exp": "경험치17 / 17",
+        "stage": "1",
+        "motion": "idle",
+        "phase": "charge",
+        "server": {
+          "version": 2,
+          "fedTotal": 24,
+          "spentFood": 0,
+          "refundFood": 0,
+          "owned": [],
+          "equipped": {
+            "hat": null,
+            "costume": null,
+            "neck": null,
+            "hand": null
+          },
+          "purchasePrices": {},
+          "nickname": "",
+          "namingPromptSeen": false,
+          "revision": 1
+        },
+        "receiptCount": 1,
+        "overflow": false
+      },
+      {
+        "label": "final",
+        "elapsed": 9878,
+        "food": "보유 먹이 0개",
+        "title": "레벨3 : 아기 랴오랴오",
+        "exp": "경험치4 / 28",
+        "stage": "2",
+        "motion": "idle",
+        "phase": null,
+        "server": {
+          "version": 2,
+          "fedTotal": 24,
+          "spentFood": 0,
+          "refundFood": 0,
+          "owned": [],
+          "equipped": {
+            "hat": null,
+            "costume": null,
+            "neck": null,
+            "hand": null
+          },
+          "purchasePrices": {},
+          "nickname": "",
+          "namingPromptSeen": false,
+          "revision": 1
+        },
+        "receiptCount": 1,
+        "overflow": false
+      }
+    ],
+    "errors": [],
+    "hotUpdates": [],
+    "navigations": 1,
+    "stable": true,
+    "passed": true
+  },
+  "validation": {
+    "unitTests": {
+      "files": 4,
+      "passed": 123
+    },
+    "build": "PASS",
+    "designAudit": {
+      "errors": 0,
+      "warnings": 0,
+      "review": 69
+    },
+    "targetedLint": {
+      "errors": 0,
+      "warnings": 1,
+      "warning": "existing unused getPandaGameStorageKey import in PandaWidget.test.jsx"
+    }
+  }
+}

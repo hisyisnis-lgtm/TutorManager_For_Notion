@@ -8,7 +8,7 @@ import PandaGameView from './PandaGameView.jsx';
 import PandaWardrobe from './PandaWardrobe.jsx';
 import PandaFeedLeaf from './PandaFeedLeaf.jsx';
 import usePandaGame from '../../hooks/usePandaGame.js';
-import { PANDA_ADULT_FED, PANDA_GROWTH_THRESHOLDS, getPandaLevelInfo, getWearablePandaWardrobe, pandaEquippedToWardrobe } from '../../constants/pandaWardrobe.js';
+import { PANDA_ADULT_FED, PANDA_ADULT_LEVEL, PANDA_ADULT_LEVEL_FOOD, PANDA_GROWTH_THRESHOLDS, getPandaLevelInfo, getWearablePandaWardrobe, pandaEquippedToWardrobe } from '../../constants/pandaWardrobe.js';
 import { PANDA_MOTION_DURATION } from '../../constants/pandaMascot.js';
 import { PANDA_GAME_THEME } from '../../constants/pandaGameTheme.js';
 import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion.js';
@@ -121,9 +121,10 @@ function PandaWidgetContent({ foodSources = [], storageKey, fullscreen = false, 
   const totalFood = foodSources.reduce((sum, source) => sum + Math.max(0, Math.floor(source.count || 0)), 0);
   const game = usePandaGame({ storageKey, earnedTotal: totalFood, studentToken, serverEnabled });
   const { profile, available } = game;
-  const fedTotal = profile.fedTotal;
+  const [feedDisplay, setFeedDisplay] = useState(null);
+  const [revealedFed, setRevealedFed] = useState(profile.fedTotal);
   const reducedMotion = usePrefersReducedMotion();
-  const growth = usePandaGrowthFeedback({ fedTotal, reducedMotion });
+  const growth = usePandaGrowthFeedback({ fedTotal: revealedFed, reducedMotion });
   const celebrating = Boolean(growth.celebration);
   const [wardrobeOpen, setWardrobeOpen] = useState(false);
   const [namingOpen, setNamingOpen] = useState(false);
@@ -151,6 +152,10 @@ function PandaWidgetContent({ foodSources = [], storageKey, fullscreen = false, 
   const reservedFoodRef = useRef(0);
   const chewingRef = useRef(false);
   const confirmedChewUntilRef = useRef(0);
+  const feedDisplayRef = useRef(null);
+  const mealStartRef = useRef(null);
+  const mealResultRef = useRef(null);
+  const finishMealRef = useRef(null);
   const aliveRef = useRef(true);
   const gameRef = useRef(game);
   const balanceRef = useRef({ profile, available });
@@ -198,8 +203,7 @@ function PandaWidgetContent({ foodSources = [], storageKey, fullscreen = false, 
       setAction(prev => ({ ...prev, motion: 'idle' }));
       if (motion === 'eating') {
         chewingRef.current = false;
-        feedingRef.current = feedQueueRef.current.length > 0;
-        setIsFeeding(feedingRef.current);
+        finishMealRef.current?.();
       }
     }, duration);
   }, [cancelTimer, schedule]);
@@ -218,11 +222,24 @@ function PandaWidgetContent({ foodSources = [], storageKey, fullscreen = false, 
     }, lifetime + Math.max(0, ...list.map(p => p.delay || 0)));
   }, [schedule]);
 
-  const { stage, idx: stageIdx } = getStageInfo(fedTotal);
-  const levelInfo = getPandaLevelInfo(fedTotal);
-  const equipped = getWearablePandaWardrobe(pandaEquippedToWardrobe(profile.equipped), fedTotal);
+  // A leaf can fill EXP optimistically, but only a confirmed meal can reveal
+  // a new body, level, or wardrobe. Keep those changes on the same reveal frame.
+  const stageIdx = growth.displayStage;
+  const stage = STAGES[stageIdx];
+  const visibleLevel = growth.celebration
+    ? growth.celebration.phase === 'charge' ? growth.celebration.fromLevel : growth.celebration.toLevel
+    : getPandaLevelInfo(revealedFed).level;
+  const levelMin = visibleLevel < PANDA_ADULT_LEVEL ? PANDA_GROWTH_THRESHOLDS[visibleLevel - 1]
+    : PANDA_ADULT_FED + (visibleLevel - PANDA_ADULT_LEVEL) * PANDA_ADULT_LEVEL_FOOD;
+  const levelInfo = getPandaLevelInfo(levelMin);
+  const fedTotal = Math.max(levelInfo.min, Math.min(feedDisplay?.fedTotal ?? profile.fedTotal, levelInfo.nextAt));
+  const equipped = getWearablePandaWardrobe(pandaEquippedToWardrobe(profile.equipped), stageIdx < PANDA_ADULT_LEVEL - 1 ? 0 : revealedFed);
   const progress = Math.round((fedTotal - levelInfo.min) / (levelInfo.nextAt - levelInfo.min) * 100);
   const transitionPending = Boolean(game.transition && !game.transition.noticeSeen);
+
+  useEffect(() => {
+    if (!feedQueueRef.current.length && !feedDisplayRef.current) setRevealedFed(profile.fedTotal);
+  }, [profile.fedTotal]);
 
   useEffect(() => {
     if (!transitionPending) { setTransitionOpen(false); return; }
@@ -255,16 +272,46 @@ function PandaWidgetContent({ foodSources = [], storageKey, fullscreen = false, 
     }
   }, [wardrobeHandoff, transitionPending, speechPaused, wardrobeOpen, namingOpen, namingPending, isFeeding, growth.busy, game.busy, game.loading]);
 
-  function acknowledgeFeed(previous, next, restart = true) {
+  function acknowledgeGrowth(previous, next) {
     if (!aliveRef.current || !next) return;
-    feedingRef.current = true;
-    setIsFeeding(true);
-    confirmedChewUntilRef.current = Date.now() + PANDA_MOTION_DURATION.eating;
-    playAction('eating', PANDA_MOTION_DURATION.eating, restart);
     growth.recordFeed(previous, next);
     if (previous.fedTotal < PANDA_ADULT_FED && next.fedTotal >= PANDA_ADULT_FED && !previous.namingPromptSeen) {
       setNamingPending(true);
     }
+  }
+
+  function finishMeal() {
+    if (!aliveRef.current || chewingRef.current || feedQueueRef.current.some(entry => entry.status !== 'confirmed' || entry.arrived < entry.count)) return;
+    feedQueueRef.current.splice(0);
+    const previous = mealStartRef.current, next = mealResultRef.current;
+    mealStartRef.current = null;
+    mealResultRef.current = null;
+    feedDisplayRef.current = null;
+    setFeedDisplay(null);
+    setRevealedFed(committedProfileRef.current.fedTotal);
+    feedingRef.current = false;
+    setIsFeeding(false);
+    if (previous && next) acknowledgeGrowth(previous, next);
+  }
+  finishMealRef.current = finishMeal;
+
+  function arriveFeed(entry, count = 1, pulse = true) {
+    if (!aliveRef.current || entry.canceled) return;
+    entry.arrived += count;
+    const current = feedDisplayRef.current;
+    if (current) {
+      const next = { fedTotal: current.fedTotal + count, available: Math.max(0, current.available - count) };
+      feedDisplayRef.current = next;
+      setFeedDisplay(next);
+    }
+    if (pulse) growth.recordArrival();
+    if (!reducedMotion) {
+      entry.chewUntil = Date.now() + PANDA_MOTION_DURATION.eating;
+      if (entry.status === 'confirmed') confirmedChewUntilRef.current = Math.max(confirmedChewUntilRef.current, entry.chewUntil);
+      // Continuing leaves extend the meal without rewinding the reaction to 0.
+      playAction('eating', PANDA_MOTION_DURATION.eating, !chewingRef.current);
+    }
+    finishMeal();
   }
 
   function cancelQueuedFeeds() {
@@ -283,6 +330,9 @@ function PandaWidgetContent({ foodSources = [], storageKey, fullscreen = false, 
     reservedFoodRef.current = 0;
     setReservedFood(0);
     setParticles(current => current.filter(p => !ids.has(p.id)));
+    // Roll back provisional EXP/balance, preserving any earlier confirmed meal.
+    feedDisplayRef.current = null;
+    setFeedDisplay(null);
     // Discard chewing added by failed arrivals, but preserve an earlier success.
     const remainingChew = confirmedChewUntilRef.current - Date.now();
     if (remainingChew > 0) playAction('eating', remainingChew, false);
@@ -290,6 +340,7 @@ function PandaWidgetContent({ foodSources = [], storageKey, fullscreen = false, 
       cancelTimer(actionTimerRef.current);
       chewingRef.current = false;
       setAction(current => ({ ...current, motion: 'idle' }));
+      finishMeal();
     }
   }
 
@@ -297,9 +348,9 @@ function PandaWidgetContent({ foodSources = [], storageKey, fullscreen = false, 
     if (drainingFeedRef.current || !aliveRef.current) return;
     drainingFeedRef.current = true;
     try {
-      while (aliveRef.current && feedQueueRef.current[0]?.arrived) {
-        const entry = feedQueueRef.current[0];
-        const previous = committedProfileRef.current;
+      let entry;
+      while (aliveRef.current && (entry = feedQueueRef.current.find(item => item.status === 'queued'))) {
+        entry.status = 'saving';
         const next = await gameRef.current.transact({ type: 'feed', count: entry.count });
         if (!aliveRef.current) return;
         if (!next) {
@@ -307,16 +358,19 @@ function PandaWidgetContent({ foodSources = [], storageKey, fullscreen = false, 
           cancelQueuedFeeds();
           break;
         }
-        feedQueueRef.current.shift();
+        entry.status = 'confirmed';
+        entry.next = next;
         availableRef.current = balanceRef.current.profile === next
           ? balanceRef.current.available : Math.max(0, availableRef.current - entry.count);
         committedProfileRef.current = next;
+        mealResultRef.current = next;
         reservedFoodRef.current -= entry.count;
         setReservedFood(reservedFoodRef.current);
-        // Leaf arrivals already replayed the reaction. A server acknowledgement
-        // extends that meal without making the same leaf trigger a second hop.
-        acknowledgeFeed(previous, next, entry.arrivalTimers.length === 0);
+        confirmedChewUntilRef.current = Math.max(confirmedChewUntilRef.current, entry.chewUntil);
+        // Receipt processing never starts or extends a visual reaction. A slow
+        // response may confirm growth after chewing has already finished.
         entry.resolve(true);
+        finishMeal();
       }
     } finally {
       drainingFeedRef.current = false;
@@ -338,6 +392,13 @@ function PandaWidgetContent({ foodSources = [], storageKey, fullscreen = false, 
       return false;
     }
     setNotice('');
+    if (!mealStartRef.current) {
+      mealStartRef.current = committedProfileRef.current;
+      mealResultRef.current = null;
+      confirmedChewUntilRef.current = 0;
+      feedDisplayRef.current = { fedTotal: committedProfileRef.current.fedTotal, available: availableRef.current };
+      setFeedDisplay(feedDisplayRef.current);
+    }
     feedingRef.current = true;
     setIsFeeding(true);
     reservedFoodRef.current += count;
@@ -347,12 +408,8 @@ function PandaWidgetContent({ foodSources = [], storageKey, fullscreen = false, 
       setAction(prev => ({ ...prev, motion: 'idle' }));
     }
     return new Promise(resolve => {
-      const entry = { count, resolve, arrived: false, canceled: false, particles: [], arrivalTimers: [], particleTimer: null };
+      const entry = { count, resolve, status: 'queued', arrived: 0, canceled: false, chewUntil: 0, particles: [], arrivalTimers: [], particleTimer: null };
       feedQueueRef.current.push(entry);
-      const arrive = () => {
-        entry.arrived = true;
-        void drainFeedQueue();
-      };
       const from = (count > 1 ? feedAllBtnRef : feedBtnRef).current?.getBoundingClientRect();
       const bounds = pandaRef.current?.getBoundingClientRect();
       if (from && bounds && !reducedMotion) {
@@ -362,14 +419,11 @@ function PandaWidgetContent({ foodSources = [], storageKey, fullscreen = false, 
           makeFeedParticle(from.left + from.width / 2, from.top + from.height / 2, target.x, target.y, index * PANDA_FEED_STAGGER_MS));
         entry.particleTimer = spawnParticles(entry.particles, 850);
         entry.arrivalTimers = Array.from({ length: dots }, (_, index) => schedule(() => {
-          if (!aliveRef.current || entry.canceled) return;
-          growth.recordArrival();
-          playAction('eating');
-          // Appearance follows each leaf; the existing batch transaction still
-          // enters the FIFO only once, when its final leaf has arrived.
-          if (index === dots - 1) arrive();
+          arriveFeed(entry, index === dots - 1 ? count - dots + 1 : 1);
         }, PANDA_FEED_FLIGHT_MS + index * PANDA_FEED_STAGGER_MS));
-      } else arrive();
+      } else arriveFeed(entry, count, false);
+      // Hide network latency inside the flight instead of waiting for it.
+      void drainFeedQueue();
     });
   }
 
@@ -446,9 +500,17 @@ function PandaWidgetContent({ foodSources = [], storageKey, fullscreen = false, 
     if (next && result.action?.type === 'nickname') {
       finishNaming();
     }
-    if (result?.action?.type === 'feed' && next?.fedTotal > before.fedTotal) acknowledgeFeed(before, next);
+    if (result?.action?.type === 'feed' && next?.fedTotal > before.fedTotal) {
+      setRevealedFed(next.fedTotal);
+      acknowledgeGrowth(before, next);
+    }
     return next;
   }
+
+  const savingFeed = isFeeding && game.busy && action.motion === 'idle'
+    && feedQueueRef.current.every(entry => entry.arrived >= entry.count);
+  const wardrobeProfile = (isFeeding || growth.busy) && profile.fedTotal >= levelInfo.nextAt
+    ? { ...profile, fedTotal: levelInfo.nextAt - 1 } : profile;
 
   return (
     <>
@@ -463,7 +525,7 @@ function PandaWidgetContent({ foodSources = [], storageKey, fullscreen = false, 
         }}>{p.type === 'heart' ? '❤️' : <PandaFeedLeaf />}</div>
       ))}
       <PandaGameView stage={stage} stageIdx={stageIdx} levelInfo={levelInfo} fedTotal={fedTotal}
-        available={Math.max(0, available - reservedFood)} progress={progress} remaining={levelInfo.nextAt - fedTotal}
+        available={feedDisplay?.available ?? available} feedingAvailable={Math.max(0, available - reservedFood)} progress={progress} remaining={levelInfo.nextAt - fedTotal}
         equipped={equipped} nickname={profile.nickname} fullscreen={fullscreen} speechPaused={speechPaused || wardrobeOpen || transitionPending}
         hasProfile={game.hasProfile !== false}
         isFeeding={isFeeding} isBusy={game.busy} canTransact={game.canTransact} loading={game.loading}
@@ -477,10 +539,11 @@ function PandaWidgetContent({ foodSources = [], storageKey, fullscreen = false, 
         wardrobeGuideOpen={wardrobeGuideOpen} onDismissWardrobeGuide={handleDismissWardrobeGuide} onStartWardrobeGuide={handleStartWardrobeGuide}
         transitionOpen={transitionOpen && !speechPaused} transition={game.transition}
         onConfirmTransition={async () => Boolean(await game.transact({ type: 'dismiss-transition' }))}
-        notice={notice} error={game.error} onRetry={game.retry ? handleRetry : null} foodSources={foodSources} />
+        notice={savingFeed ? '성장 기록을 저장하고 있어요…' : notice} noticePending={savingFeed}
+        error={game.error} onRetry={game.retry ? handleRetry : null} foodSources={foodSources} />
       <PandaWardrobe open={wardrobeOpen} onOpenChange={setWardrobeOpen}
         returnFocusRef={wardrobeTriggerRef}
-        profile={profile} available={available} busy={game.busy || game.loading || isFeeding} blocked={!game.canTransact}
+        profile={wardrobeProfile} available={available} busy={game.busy || game.loading || isFeeding} blocked={!game.canTransact}
         onAction={handleWardrobeAction} notice={game.error || notice} onHelp={onOpenHelp} onRetry={game.retry ? handleRetry : null} />
     </>
   );
