@@ -19,7 +19,11 @@ export async function exportPandaBackup({ output, receipt, run = execFileSync })
         cwd: path.join(ROOT, 'worker'), stdio: 'pipe', windowsHide: true, timeout: 5 * 60 * 1000,
         env: { ...process.env, WRANGLER_SEND_METRICS: 'false', WRANGLER_LOG_PATH: path.join(work, 'wrangler.log') },
       });
-    } catch { throw new Error('D1 판다 테이블 내보내기 실패: DB 준비와 백업 토큰 권한을 확인하세요.'); }
+    } catch (error) {
+      const output = String(error.stderr || '') + String(error.stdout || '');
+      const providerCodes = [...new Set([...output.matchAll(/\[code:\s*(\d{3,6})\]/g)].map(match => match[1]))].slice(0, 4);
+      throw Object.assign(new Error('D1 판다 테이블 내보내기 실패: DB 준비와 백업 토큰 권한을 확인하세요.'), { providerCodes });
+    }
     const source = await readFile(sqlFile);
     await mkdir(path.dirname(path.resolve(output)), { recursive: true });
     await mkdir(path.dirname(path.resolve(receipt)), { recursive: true });
@@ -45,5 +49,5 @@ export async function main(args = process.argv.slice(2)) {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
-  main().catch(() => { console.error('판다 백업 실패. 필수 인자·시크릿·D1 준비·백업 무결성을 확인하세요. 원본 데이터는 출력하지 않습니다.'); process.exitCode = 1; });
+  main().catch(error => { console.error('판다 백업 실패. 필수 인자·시크릿·D1 준비·백업 무결성을 확인하세요. 원본 데이터는 출력하지 않습니다.'); if (error.providerCodes?.length) console.error('Cloudflare 오류 코드: ' + error.providerCodes.join(', ')); process.exitCode = 1; });
 }
