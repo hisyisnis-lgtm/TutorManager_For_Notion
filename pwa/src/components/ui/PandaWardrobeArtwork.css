@@ -1,0 +1,20 @@
+.panda-wardrobe-equip-pending { opacity: 0; }
+
+.panda-wardrobe-equip-flash {
+  pointer-events: none;
+  filter: brightness(0) invert(1);
+  opacity: 0;
+  animation: panda-wardrobe-equip-flash var(--panda-equip-flash-duration, 300ms) ease-out both;
+}
+
+.panda-wardrobe-equip-flash.is-waiting { opacity: 1; animation: none; }
+
+@keyframes panda-wardrobe-equip-flash {
+  0%, 14% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panda-wardrobe-equip-pending { opacity: 1; }
+  .panda-wardrobe-equip-flash { display: none; animation: none; }
+}

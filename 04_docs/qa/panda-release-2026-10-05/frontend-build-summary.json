@@ -1,0 +1,25 @@
+{
+  "version": "2.49.0",
+  "mainModule": "/assets/index-C7NjoKsY.js",
+  "serverPersistenceCompiledTrue": true,
+  "workerOriginPresent": true,
+  "serviceWorker": true,
+  "gameOgRoute": true,
+  "forestBackground": {
+    "path": "panda/ui/liaoliao-my-forest-background.webp",
+    "bytes": 18218,
+    "sourceHashMatches": true
+  },
+  "onboardingMatchesApprovedSource": true,
+  "previousBannerImagesIncluded": [],
+  "tests": {
+    "files": 20,
+    "passed": 332,
+    "failed": 0
+  },
+  "designAudit": {
+    "errors": 0,
+    "warnings": 0,
+    "reviewItems": 79
+  }
+}

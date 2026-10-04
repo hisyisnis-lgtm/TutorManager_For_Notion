@@ -1,25 +1,47 @@
+import '@fontsource/jua/korean-400.css';
 import { CaretRightIcon, ChatTeardropTextIcon, ChatCircleDotsIcon, ArrowSquareOutIcon } from '@phosphor-icons/react';
+import { Button } from '../../components/shadcn/button.jsx';
 import SectionHeading from '../../components/ui/SectionHeading.jsx';
 import LoadingSpinner from '../../components/ui/LoadingSpinner.jsx';
 import { getStageInfo, getPandaStorageKey } from '../../components/ui/PandaWidget.jsx';
+import PandaMascot from '../../components/ui/PandaMascot.jsx';
+import { getWearablePandaWardrobe, pandaEquippedToWardrobe } from '../../constants/pandaWardrobe.js';
+import usePandaGame from '../../hooks/usePandaGame.js';
+import { PANDA_GAME_THEME } from '../../constants/pandaGameTheme.js';
 import { formatDuration } from '../../utils/dateUtils.js';
-import { PRIMARY, TEXT_PRIMARY, TEXT_TERTIARY, TEXT_INACTIVE } from '../../constants/theme.js';
+import { PRIMARY, TEXT_PRIMARY, TEXT_TERTIARY, TEXT_INACTIVE, BG_DARK } from '../../constants/theme.js';
 import { KAKAO_CHANNEL_CHAT_URL } from '../../constants.js';
+import './MyTab.css';
 
 // 설정 패널 '피드백 남기기'와 같은 구글 폼(서비스 개선의견) — 별도 폼이 생기면 여기만 바꾼다
 const FEEDBACK_URL = 'https://forms.gle/dCwXvZAdfG12AxoJ9';
+
+function PandaEntryBanner({ studentToken, onOpenPanda, serverEnabled }) {
+  const game = usePandaGame({ storageKey: getPandaStorageKey(studentToken), earnedTotal: 0, studentToken, serverEnabled });
+  const { profile, loading } = game;
+  const pending = game.hasProfile === false;
+  const { idx } = getStageInfo(profile.fedTotal);
+  const wardrobe = getWearablePandaWardrobe(pandaEquippedToWardrobe(profile.equipped), profile.fedTotal);
+  return <Button variant="ghost" className="my-panda-card"
+    style={{ '--my-panda-background': PANDA_GAME_THEME.forest, '--my-panda-title-font': PANDA_GAME_THEME.fontTitle, '--my-panda-dim-color': BG_DARK }}
+    data-coach="panda" aria-label="랴오랴오 키우기 만나러 가기" type="button" onClick={onOpenPanda} aria-busy={loading || undefined}
+  >
+    <img className="my-panda-card__image" src="/panda/ui/liaoliao-my-forest-background.webp" alt="" aria-hidden="true" width="1200" height="400" draggable="false" />
+    <span className="my-panda-card__dim" aria-hidden="true" />
+    {!pending && <span className="my-panda-card__character" aria-hidden="true"><PandaMascot stage={idx} wardrobe={wardrobe} size={116} decorative ambient /></span>}
+    <span className="my-panda-card__copy">
+      <span className="my-panda-card__title">랴오랴오 키우기</span>
+      <span className="my-panda-card__action">만나러 가기<CaretRightIcon size={16} weight="bold" aria-hidden="true" /></span>
+    </span>
+  </Button>;
+}
 
 // ===== MY 탭 =====
 // 홈에 있던 '내 현황'(지표 + 팬더)을 이사시킨 개인 공간 (2026-08-31 하단탭 재편).
 // 홈은 수업·숙제 흐름에 집중하고, 나에 대한 정보는 여기로 모은다.
 
-export default function MyTab({ student, studentToken, foodSources, onOpenPanda }) {
+export default function MyTab({ student, studentToken, onOpenPanda, serverEnabled }) {
   if (!student) return <LoadingSpinner />;
-
-  const total = foodSources.reduce((s, x) => s + (x.count || 0), 0);
-  // 학생별 키 사용 → 다른 학생의 EXP가 섞여 표시되던 문제 해결 (HomeTab에서 이어짐)
-  const fed = Math.min(parseInt(localStorage.getItem(getPandaStorageKey(studentToken)) || '0', 10), total);
-  const { stage } = getStageInfo(fed);
 
   return (
     <div style={{ padding: '16px 16px 0' }}>
@@ -38,31 +60,7 @@ export default function MyTab({ student, studentToken, foodSources, onOpenPanda 
           </div>)}
         </dl>
         <p style={{ fontSize: 12, color: TEXT_TERTIARY, margin: '8px 0 0' }}>남은 시간에는 예정된 수업이 포함돼요.</p>
-        <button
-          data-coach="panda"
-          type="button"
-          onClick={onOpenPanda}
-          style={{
-            marginTop: 8, width: '100%',
-            display: 'flex', alignItems: 'center', gap: 12,
-            background: '#fff', border: 'none', cursor: 'pointer',
-            borderRadius: 16, boxShadow: 'var(--shadow-border)',
-            padding: '12px 14px', textAlign: 'left',
-            WebkitTapHighlightColor: 'transparent' }}
-        >
-          <img
-            src={stage.img} alt="" aria-hidden="true"
-            width={44} height={44}
-            style={{ objectFit: 'contain', flexShrink: 0 }}
-          />
-          <span style={{ flex: 1, minWidth: 0 }}>
-            <span style={{ display: 'block', fontSize: 14, fontWeight: 600, color: TEXT_PRIMARY }}>내 팬더</span>
-            <span style={{ display: 'block', fontSize: 13, color: TEXT_TERTIARY, marginTop: 2 }}>
-              {stage.label} · 수업할수록 자라요
-            </span>
-          </span>
-          <CaretRightIcon size={16} weight="bold" color={TEXT_INACTIVE} style={{ flexShrink: 0 }} />
-        </button>
+        <PandaEntryBanner key={studentToken} studentToken={studentToken} onOpenPanda={onOpenPanda} serverEnabled={serverEnabled} />
       </div>
 
       {/* 선생님께 문의 — 변경·취소·전화번호 변경·코드 분실 등 모든 문의의 단일 진입점(2026-09-04).

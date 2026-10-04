@@ -41,6 +41,8 @@ export async function inventory(dir) {
 }
 export function sourcePaths(target) {
   const common = ['03_data/consent', '02_devtools/release-guard.mjs', '02_devtools/pages-release.mjs', '02_devtools/release-guard.test.mjs', '02_devtools/release-asset-policy.json', '02_devtools/public-price-check.mjs', '02_devtools/public-price-check.test.mjs'];
+  common.push('03_data/panda', '02_devtools/panda-release-check.mjs', '02_devtools/panda-release-check.test.mjs', '04_docs/releases/panda-readiness.json');
+  if (target === 'pwa') common.push('worker/migrations/0005_student_panda.sql', 'worker/migrations/0006_panda_transition.sql', 'worker/lib/pandaRules.js', 'worker/lib/pandaDb.js', 'worker/lib/pandaRoutes.js');
   const pwa = ['pwa/src', 'pwa/public', 'pwa/package.json', 'pwa/package-lock.json', 'pwa/index.html', 'pwa/game.html', 'pwa/vite.config.js', 'pwa/vitest.config.js', 'pwa/eslint.config.js', 'pwa/tailwind.config.js', 'pwa/postcss.config.js', '03_data/tone-words', '02_devtools/tone-words-build.mjs', '02_devtools/tone-tts-build.mjs', '02_devtools/gen-game-og-route.mjs', '02_devtools/design-audit.mjs'];
   if (target === 'worker') return [...common, '02_devtools/worker-release-baselines.json', 'worker/src', 'worker/lib', 'worker/tests', 'worker/migrations', 'worker/wrangler.toml', 'worker/package.json', 'worker/package-lock.json', '01_automation', 'pwa/src/game', 'pwa/src/api', 'pwa/src/constants', 'pwa/src/analytics'];
   return [...common, ...pwa, 'site/src', 'site/scripts', ...(target === 'site' ? ['site/public', 'site/package.json', 'site/package-lock.json', 'site/astro.config.mjs', 'site/tsconfig.json'] : []), `.github/workflows/deploy-${target}.yml`];
@@ -81,6 +83,7 @@ export function checkSteps(target) {
     ['wrangler', ['deploy', '--dry-run', '--outdir=dist-check'], 'worker'],
   ];
   return [
+    ...(target === 'pwa' ? [['node', ['02_devtools/panda-release-check.mjs'], '']] : []),
     ['npm', target === 'site' ? ['test', '--', 'src/game', 'src/pages/ToneGamePage.test.jsx', 'src/api/gameApi.test.js', 'src/analytics/tracker.test.js'] : ['test'], 'pwa'],
     ['node', ['node_modules/eslint/bin/eslint.js', 'src/', '--quiet'], 'pwa'],
     ['node', ['02_devtools/design-audit.mjs', '--quiet'], ''],
@@ -96,7 +99,7 @@ export function publicOrigin(value) {
 export async function checkRelease(target, { root = ROOT, run = runCommand, backendUrl = process.env.VITE_WORKER_URL || TARGETS.worker.url } = {}) {
   assert.ok(TARGETS[target], '알 수 없는 배포 대상');
   const workerOrigin = publicOrigin(target === 'worker' ? TARGETS.worker.url : backendUrl);
-  const buildOptions = { env: { VITE_WORKER_URL: workerOrigin } };
+  const buildOptions = { env: { VITE_WORKER_URL: workerOrigin, VITE_PANDA_SERVER_PERSISTENCE: process.env.VITE_PANDA_SERVER_PERSISTENCE || 'false' } };
   await rm(recordPath(root, target), { force: true });
   // 생성 소스를 먼저 갱신하여 실제 빌드에 쓰일 데이터로 시험한다.
   if (target !== 'worker') await run('npm', ['run', 'prebuild'], path.join(root, 'pwa'), buildOptions);

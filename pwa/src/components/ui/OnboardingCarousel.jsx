@@ -1,9 +1,12 @@
+import '@fontsource/jua/korean-400.css';
 import {
   useState,
   useRef,
   useCallback,
   useEffect } from 'react';
 import { Fragment } from 'react';
+import PandaMascot from './PandaMascot.jsx';
+import { PANDA_GAME_THEME } from '../../constants/pandaGameTheme.js';
 import { CalendarBlankIcon,
   ClipboardTextIcon,
   CaretRightIcon } from '@phosphor-icons/react';
@@ -27,7 +30,7 @@ const SLIDES = [
     zoneBg: GRADIENTS.onboarding,
     tag: '환영해요',
     title: '하늘하늘중국어\n학생 앱이에요',
-    desc: '수업 일정, 숙제, 팬더 키우기까지\n모두 여기서 확인할 수 있어요.',
+    desc: '수업 일정과 랴오랴오 키우기까지\n모두 여기서 만나요.',
   },
   {
     id: 'classes',
@@ -51,10 +54,9 @@ const SLIDES = [
     id: 'panda',
     type: 'panda',
     theme: 'light',
-    pandaImg: '/panda/Cha_Panda_Step_03.svg',
-    tag: '팬더',
-    title: '수업을 들을수록\n팬더가 자라요',
-    desc: '수업을 완료하면 팬더에게 먹이를 줄 수 있어요.\n마스터 팬더가 될 때까지 함께해요!',
+    tag: '랴오랴오 키우기',
+    title: '랴오랴오를\n알부터 키워요',
+    desc: '수업·숙제 제출·피드백 확인으로\n먹이를 모아 알부터 함께 키워요.',
   },
 ];
 
@@ -72,12 +74,14 @@ const HANZI_PARTICLES = [
 // light theme 슬라이드의 상단 비주얼존 고정 높이
 const ZONE_HEIGHT = 256;
 
-// 모든 light 슬라이드가 공유하는 단일 배경 — "슬라이드마다 다른 색" 패턴 제거
+// 수업·숙제 슬라이드는 기존 공통 배경을 유지한다.
 const ZONE_BG = BG_WARM;
 
 // showHomework=false(비VIP)면 숙제 슬라이드를 뺀다 — 마운트 시점에 한 번 고정(도중에 장수가 바뀌면 인덱스가 어긋난다).
 export default function OnboardingCarousel({ onDone, showHomework = true }) {
-  const [slides] = useState(() => (showHomework ? SLIDES : SLIDES.filter((s) => s.id !== 'homework')));
+  const [slides] = useState(() => (showHomework ? SLIDES : SLIDES
+    .filter((s) => s.id !== 'homework')
+    .map((s) => s.id === 'panda' ? { ...s, desc: '수업으로 모은 먹이를 주며\n작은 알부터 함께 키워요.' } : s)));
   const [current, setCurrent] = useState(0);
   const touchStartX = useRef(null);
   // 슬라이드별 진입 횟수 — 키가 바뀌면 Fragment 자식이 리마운트돼
@@ -95,7 +99,8 @@ export default function OnboardingCarousel({ onDone, showHomework = true }) {
   }, []);
 
   const finish = useCallback(() => {
-    localStorage.setItem(ONBOARDING_KEY, '1');
+    try { localStorage.setItem(ONBOARDING_KEY, '1'); }
+    catch { /* 확인 기록을 저장하지 못해도 앱 이용을 계속한다. */ }
     onDone();
   }, [onDone]);
 
@@ -364,19 +369,26 @@ export default function OnboardingCarousel({ onDone, showHomework = true }) {
                      Light 슬라이드 — 상단 컬러존 + 하단 흰색존 2단 구조.
                      ════════════════════════════════════════════ */
                   <>
-                    {/* 상단: 비주얼존 — 모든 light 슬라이드가 같은 배경 */}
-                    <div style={{
-                      height: ZONE_HEIGHT,
-                      background: ZONE_BG,
+                    {/* 마지막 슬라이드는 승인된 숲 배경과 움직이는 랴오랴오를 사용한다. */}
+                    <div className={slide.type === 'panda' ? 'onboarding-panda-scene' : undefined} style={{
+                      position: 'relative',
+                      height: slide.type === 'panda' ? 'clamp(168px, 34dvh, 256px)' : ZONE_HEIGHT,
+                      background: slide.type === 'panda' ? PANDA_GAME_THEME.forest : ZONE_BG,
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       flexShrink: 0,
+                      overflow: slide.type === 'panda' ? 'hidden' : undefined,
                     }}>
+                      {slide.type === 'panda' && <img
+                        src="/panda/ui/liaoliao-my-forest-background.webp" alt="" aria-hidden="true" draggable="false"
+                        width={1200} height={400}
+                        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'right center' }}
+                      />}
                       <Fragment key={`${slide.id}-v${visitCounts.current[idx]}`}>
                         <div
                           className="stagger-item"
-                          style={{ animationDelay: '0ms' }}
+                          style={{ position: 'relative', animationDelay: '0ms' }}
                         >
                           {slide.type === 'icon' ? (
                             /*
@@ -390,19 +402,8 @@ export default function OnboardingCarousel({ onDone, showHomework = true }) {
                               style={{ filter: 'drop-shadow(0 6px 20px rgba(127,0,5,0.18))' }}
                             />
                           ) : (
-                            /* 팬더 — 비주얼존을 가득 채우는 크기, panda-float 루프 */
-                            <img
-                              src={slide.pandaImg}
-                              alt=""
-                              width={210}
-                              height={210}
-                              style={{
-                                display: 'block',
-                                animationName: 'panda-float',
-                                animationDuration: '3s',
-                                animationTimingFunction: 'ease-in-out',
-                                animationIterationCount: 'infinite',
-                              }}
+                            <PandaMascot stage={5} size={210} decorative ambient={current === idx}
+                              style={{ width: 'clamp(152px, 30dvh, 210px)', height: 'auto' }}
                             />
                           )}
                         </div>
@@ -410,7 +411,7 @@ export default function OnboardingCarousel({ onDone, showHomework = true }) {
                     </div>
 
                     {/* 하단: 흰색 텍스트존 */}
-                    <div style={{
+                    <div className={slide.type === 'panda' ? 'onboarding-panda-copy' : undefined} style={{
                       flex: 1,
                       backgroundColor: '#ffffff',
                       display: 'flex',
@@ -418,13 +419,14 @@ export default function OnboardingCarousel({ onDone, showHomework = true }) {
                       alignItems: 'flex-start',
                       padding: '24px 28px 16px',
                       minHeight: 0,
+                      overflowY: slide.type === 'panda' ? 'auto' : undefined,
                     }}>
                       <Fragment key={`${slide.id}-text-v${visitCounts.current[idx]}`}>
                         {/* 태그 — pill 제거, 간결한 uppercase 라벨 */}
                         <div
                           className="stagger-item"
                           style={{
-                            color: PRIMARY,
+                            color: slide.type === 'panda' ? PANDA_GAME_THEME.forest : PRIMARY,
                             fontSize: 11, fontWeight: 600,
                             letterSpacing: '0.14em',
                             textTransform: 'uppercase',
@@ -439,7 +441,9 @@ export default function OnboardingCarousel({ onDone, showHomework = true }) {
                         <h2
                           className="stagger-item"
                           style={{
-                            fontSize: 30, fontWeight: 700, color: TEXT_PRIMARY,
+                            fontSize: slide.type === 'panda' ? 32 : 30,
+                            fontFamily: slide.type === 'panda' ? PANDA_GAME_THEME.fontTitle : undefined,
+                            fontWeight: slide.type === 'panda' ? 400 : 700, color: TEXT_PRIMARY,
                             textAlign: 'left', lineHeight: 1.18,
                             margin: '0 0 12px',
                             letterSpacing: '-0.6px',

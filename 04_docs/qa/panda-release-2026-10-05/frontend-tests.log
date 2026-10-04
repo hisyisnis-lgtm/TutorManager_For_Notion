@@ -1,0 +1,9 @@
+
+ RUN  v4.1.11 C:/development/TutorManager_For_Notion/99_external/panda-release-20261003/pwa
+
+
+ Test Files  20 passed (20)
+      Tests  332 passed (332)
+   Start at  02:54:57
+   Duration  224.09s (transform 3.90s, setup 0ms, import 246.31s, tests 33.39s, environment 111.59s)
+

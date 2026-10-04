@@ -1,0 +1,105 @@
+/* Exact source inventory: 04_docs/qa/liaoliao-figma-exact-2026-09-29/view-source-inventory.json. */
+.panda-game-view, div.panda-game-dialog { color: var(--pg-ink); font-family: var(--pg-font-body); font-weight: 500; font-variant-numeric: tabular-nums; -webkit-tap-highlight-color: transparent; }
+.panda-game-view { display: flex; flex-direction: column; justify-content: space-between; gap: 12px; min-width: 0; width: 100%; }
+.panda-game-view--fullscreen { height: 100%; min-height: 0; overflow: visible; overscroll-behavior: contain; scrollbar-width: none; }
+.panda-game-view--fullscreen::-webkit-scrollbar { display: none; }
+.panda-game-view:not(.panda-game-view--fullscreen) { padding: 16px; border-radius: 24px; background: var(--pg-background); }
+.panda-game-world { flex-shrink: 0; }
+.panda-game-stage { --panda-ground-bottom: 40px; position: relative; height: 360px; overflow: hidden; border-radius: 28px; isolation: isolate; }
+.panda-game-food { position: absolute; top: 12px; left: 12px; z-index: 2; display: flex; align-items: center; height: 44px; width: 125px; gap: 8px; padding: 0 12px; border-radius: 20px; color: var(--pg-ink); background: var(--pg-card); font-size: 16px; line-height: 1.4; }
+.panda-game-food strong { font-weight: 700; }
+.panda-game-speech { position: absolute; top: 64px; left: 50%; z-index: 2; transform: translateX(-50%); width: 181px; max-width: calc(100% - 24px); height: 40px; margin: 0; padding: 10px 16px; border-radius: 14px; color: var(--pg-card); background: var(--pg-ink); text-align: center; font-size: 14px; font-weight: 700; line-height: 20px; white-space: nowrap; opacity: 0; visibility: hidden; pointer-events: none; transition: opacity 160ms ease-out, visibility 0s linear 160ms; }
+.panda-game-speech::after { content: ''; position: absolute; z-index: -1; left: 50%; bottom: -6px; width: 12px; height: 12px; border-radius: 0 0 3px 0; background: var(--pg-ink); transform: translateX(-50%) rotate(45deg); }
+.panda-game-speech.is-visible { opacity: 1; visibility: visible; transition-delay: 0s; }
+.panda-game-ground-shadow { position: absolute; bottom: calc(var(--panda-ground-bottom) - 9px); left: 50%; transform: translateX(-50%); }
+button.panda-game-panda { position: absolute; bottom: 30.4px; left: 50%; display: flex; align-items: center; justify-content: center; width: 160px; height: 217.6px; padding: 0; border: 0; border-radius: 0; transform: translateX(-50%); background: transparent; touch-action: manipulation; }
+/* Ground the smaller authored egg without changing its artwork or guide icon. */
+button.panda-game-panda--egg { bottom: calc(var(--panda-ground-bottom) - var(--panda-egg-bottom-gap)); }
+button.panda-game-panda:hover, button.panda-game-panda:active { background: transparent; transform: translateX(-50%); }
+button.panda-game-panda:disabled { opacity: 1; }
+svg.panda-game-mascot { max-width: none; flex-shrink: 0; overflow: visible; }
+.panda-game-tools { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+button.panda-game-tool { min-width: 0; height: 44px; gap: 8px; padding: 0; border: 0; border-radius: 12px; color: var(--pg-forest); background: transparent; box-shadow: none; font-family: var(--pg-font-body); font-weight: 600; font-size: var(--pg-button-font-size); line-height: 1.4; }
+button.panda-game-tool:hover { background: transparent; }
+button.panda-game-tool:active { background: var(--pg-stage); }
+button.panda-game-tool.is-locked { opacity: .5; }
+button.panda-game-tool--room { color: var(--pg-secondary); }
+button.panda-game-tool small { padding: 2px 5px; border-radius: 12px; background: var(--pg-muted); font-size: 12px; line-height: 1.4; }
+.panda-game-growth-card { position: relative; display: flex; flex-direction: column; flex-shrink: 0; gap: 8px; width: 100%; min-height: 172px; padding: 16px; border-radius: 20px; background: var(--pg-card); box-shadow: var(--pg-shadow); }
+h2.panda-game-growth-title { height: 28px; flex-shrink: 0; width: calc(100% - 52px); overflow: hidden; margin: 0; padding: 0; color: var(--pg-ink); font-family: var(--pg-font-title); font-weight: 400; font-size: 20px; line-height: 28px; text-overflow: ellipsis; white-space: nowrap; }
+button.panda-game-name-button { position: absolute; right: 16px; top: 8px; width: 44px; height: 44px; padding: 11px; color: var(--pg-forest); background: transparent; border: 0; border-radius: 12px; }
+button.panda-game-name-button:hover { background: transparent; }
+button.panda-game-name-button:active { background: var(--pg-stage); }
+.panda-game-progress-copy { display: flex; align-items: center; justify-content: space-between; height: 20px; flex-shrink: 0; font-size: 12px; font-weight: 500; line-height: 20px; color: var(--pg-secondary); }
+.panda-game-progress { height: 8px; flex-shrink: 0; overflow: hidden; border-radius: 12px; background: var(--pg-progress-track); }
+.panda-game-progress > span { display: block; height: 100%; border-radius: inherit; background: var(--pg-progress); }
+.panda-game-feed-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; height: 60px; opacity: 1; visibility: visible; transition: opacity 140ms ease-out; }
+.panda-game-view--celebrating .panda-game-feed-actions { opacity: 0; visibility: hidden; pointer-events: none; transition: none; }
+.panda-game-feed-actions--empty { grid-template-columns: 1fr 1fr; }
+.panda-game-feed-control { position: relative; min-width: 0; height: 60px; }
+.panda-game-feed-control > button.panda-game-button { width: 100%; height: 60px; font-size: var(--pg-button-font-size); }
+button.panda-game-lock-hit { position: absolute; inset: 0; width: 100%; height: 100%; padding: 0; border: 0; border-radius: 20px; background: transparent; cursor: pointer; }
+button.panda-game-button { min-height: 52px; height: 52px; min-width: 0; padding: 12px; border: 0; border-radius: 20px; color: var(--pg-ink); font-family: var(--pg-font-title); font-size: var(--pg-button-font-size); font-weight: 400; line-height: 28px; box-shadow: var(--pg-button-shadow); transition: transform 120ms ease-out, box-shadow 120ms ease-out; }
+button.panda-game-button--primary, button.panda-game-button--primary:hover { color: var(--pg-ink); background: var(--pg-action); box-shadow: var(--pg-shadow), 0 var(--pg-button-depth) 0 var(--pg-action-edge); }
+button.panda-game-button--secondary, button.panda-game-button--secondary:hover { color: var(--pg-ink); background: var(--pg-secondary-button); box-shadow: var(--pg-button-shadow); }
+button.panda-game-button:active:not(:disabled) { transform: translateY(calc(var(--pg-button-depth) - var(--pg-button-pressed-depth))); box-shadow: var(--pg-shadow), 0 var(--pg-button-pressed-depth) 0 var(--pg-edge); transition-duration: 80ms; }
+button.panda-game-button--primary:active:not(:disabled) { box-shadow: var(--pg-shadow), 0 var(--pg-button-pressed-depth) 0 var(--pg-action-edge); }
+button.panda-game-button--secondary:active:not(:disabled) { box-shadow: var(--pg-shadow), 0 var(--pg-button-pressed-depth) 0 var(--pg-secondary-button-edge); }
+button.panda-game-button:disabled { color: var(--pg-secondary); background: var(--pg-muted); box-shadow: none; opacity: 1; }
+.panda-game-view button:focus-visible, div.panda-game-dialog button:focus-visible { outline: 2px solid var(--pg-forest); outline-offset: 2px; }
+.panda-game-toast { position: fixed; z-index: 49; bottom: max(40px, env(safe-area-inset-bottom)); left: 50%; display: flex; align-items: center; gap: 12px; width: calc(100% - 48px); max-width: 342px; min-height: 72px; padding: 16px; transform: translateX(-50%); border-radius: 20px; color: var(--pg-card); background: var(--pg-ink); font-family: var(--pg-font-body); font-size: 14px; font-weight: 500; line-height: 1.4; }
+.panda-game-toast > img { flex-shrink: 0; }
+.panda-game-toast-copy { flex: 1; min-width: 0; }
+.panda-game-toast-copy > p { margin: 0; white-space: pre-line; }
+button.panda-game-toast-retry { flex-shrink: 0; padding: 0 8px; height: 44px; color: var(--pg-card); font-size: var(--pg-button-font-size); font-weight: 600; }
+button.panda-game-toast-retry:hover { background: transparent; text-decoration: underline; }
+div.panda-game-overlay { background: var(--pg-overlay); }
+div.panda-game-dialog { position: fixed; z-index: 51; top: 50%; left: 50%; display: flex; flex-direction: column; gap: 20px; width: calc(100% - 48px); max-width: 342px; max-height: calc(100dvh - 32px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); padding: 24px; overflow-y: auto; overscroll-behavior: contain; transform: translate(-50%, -50%); border: 0; border-radius: 28px; background: var(--pg-card); box-shadow: var(--pg-shadow); }
+div.panda-game-name-dialog { gap: 20px; }
+.panda-game-dialog-intro { display: flex; flex-direction: column; gap: 8px; text-align: center; }
+.panda-game-dialog-intro > h2 { height: 34px; margin: 0; color: var(--pg-ink); font-family: var(--pg-font-title); font-size: 24px; font-weight: 400; line-height: 1.4; letter-spacing: 0; }
+.panda-game-dialog-intro > p { min-height: 20px; margin: 0; color: var(--pg-secondary); font-size: 14px; font-weight: 500; line-height: 20px; }
+.panda-game-name-dialog--first .panda-game-dialog-intro > p { min-height: 40px; }
+.panda-game-guide-icon { display: grid; place-items: center; align-self: center; flex-shrink: 0; width: 72px; height: 72px; border-radius: 50%; background: var(--pg-stage); }
+.panda-game-name-form { display: flex; flex-direction: column; gap: 20px; }
+.panda-game-name-field { display: flex; flex-direction: column; gap: 8px; }
+.panda-game-name-field > label { height: 20px; font-size: 14px; font-weight: 500; line-height: 20px; }
+input.panda-game-input { height: 52px; padding: 0 16px; border: 2px solid var(--pg-forest); border-radius: 12px; color: var(--pg-ink); background: var(--pg-card); font-family: var(--pg-font-body); font-size: 16px; font-weight: 700; line-height: 1.4; }
+input.panda-game-input--empty { border-color: var(--pg-sage-dark); }
+input.panda-game-input::placeholder { color: var(--pg-secondary); opacity: 1; }
+input.panda-game-input:focus-visible { border-color: var(--pg-forest); outline: none; }
+input.panda-game-input[aria-invalid=true] { border-color: var(--pg-danger); }
+.panda-game-name-actions, .panda-game-dialog-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.panda-game-error { margin: 0; color: var(--pg-danger); font-size: 13px; line-height: 1.4; }
+button.panda-game-small-button { min-height: 44px; height: auto; padding: 8px 12px; border-color: var(--pg-secondary-button-edge); color: var(--pg-forest); background: var(--pg-secondary-button); font-size: var(--pg-button-font-size); font-weight: 600; }
+button.panda-game-small-button:hover { background: var(--pg-stage); }
+button.panda-game-icon-button { width: 44px; height: 44px; color: var(--pg-forest); background: transparent; }
+button.panda-game-quantity-entry { min-height: 44px; height: auto; color: var(--pg-secondary); font-size: var(--pg-button-font-size); font-weight: 600; }
+@media (max-height: 700px) {
+  .panda-game-view--fullscreen { overflow-y: auto; }
+  .panda-game-view--fullscreen .panda-game-world { display: flex; flex: 1; flex-direction: column; min-height: 360px; }
+  .panda-game-view--fullscreen .panda-game-stage { flex: 1; min-height: 304px; max-height: 360px; }
+  .panda-game-tools { flex-shrink: 0; }
+  button.panda-game-panda { transform: translateX(-50%) scale(.75); transform-origin: 50% 100%; }
+  button.panda-game-panda:hover, button.panda-game-panda:active { transform: translateX(-50%) scale(.75); }
+}
+@media (max-width: 359px) {
+  .panda-game-tools { gap: 6px; }
+  button.panda-game-tool { gap: 5px; font-size: var(--pg-button-font-size); }
+  button.panda-game-tool small { padding-inline: 3px; font-size: 10px; }
+  .panda-game-feed-actions { gap: 8px; }
+  button.panda-game-button { padding-inline: 6px; font-size: var(--pg-button-font-size); }
+  .panda-game-toast { width: calc(100% - 32px); font-size: 12px; }
+  div.panda-game-dialog { width: calc(100% - 32px); }
+}
+/* Keep the full 18px tool labels readable before the two columns become too narrow. */
+@media (max-width: 389px) {
+  .panda-game-tools { grid-template-columns: 1fr; gap: 6px; }
+}
+@media (max-width: 389px) and (max-height: 700px) {
+  /* 304px stage + 12px top margin + two 44px tool rows + 6px row gap. */
+  .panda-game-view--fullscreen .panda-game-world { min-height: 410px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .panda-game-speech, .panda-game-progress > span, .panda-game-feed-actions, button.panda-game-button { transition: none; }
+}

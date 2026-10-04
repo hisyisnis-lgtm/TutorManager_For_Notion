@@ -1,0 +1,55 @@
+button.my-panda-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  isolation: isolate;
+  overflow: hidden;
+  width: 100%;
+  height: auto;
+  min-height: 112px;
+  margin-top: 16px;
+  padding: 20px;
+  border-radius: 12px;
+  background: var(--my-panda-background);
+  color: hsl(var(--primary-foreground));
+  text-align: left;
+  white-space: normal;
+}
+button.my-panda-card:hover { background: var(--my-panda-background); color: hsl(var(--primary-foreground)); }
+.my-panda-card__image {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: right center;
+  pointer-events: none;
+  transition: transform 180ms ease-out;
+}
+.my-panda-card__dim {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(90deg, var(--my-panda-dim-color) 0%, var(--my-panda-dim-color) 35%, transparent 78%);
+  opacity: .65;
+  pointer-events: none;
+}
+.my-panda-card__character {
+  position: absolute;
+  right: clamp(0px, calc(21% - 58px), 36px);
+  bottom: 0;
+  width: 116px;
+  height: 116px;
+  pointer-events: none;
+}
+.my-panda-card__copy { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; max-width: 65%; min-width: 0; }
+.my-panda-card__title { font-family: var(--my-panda-title-font); font-size: 22px; font-weight: 400; line-height: 1.2; white-space: nowrap; }
+.my-panda-card__action { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; line-height: 18px; }
+@media (hover: hover) and (pointer: fine) {
+  button.my-panda-card:hover .my-panda-card__image { transform: scale(1.025); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .my-panda-card__image { transition: none; }
+}

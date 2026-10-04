@@ -35,6 +35,7 @@ const ONLY = (args.find((a) => a.startsWith('--rule=')) || '').split('=')[1];
 // 검사기가 오탐을 뱉기 시작하면 아무도 안 본다. 예외는 여기 한 곳에만, 반드시 이유와 함께.
 // 코드 쪽에 마커를 심는 방식(`// design-audit-ignore: rule — 이유`)도 지원한다.
 const ALLOW = [
+  { rule: 'color-literal', match: /components[\\/]ui[\\/]PandaGrowthArtwork\.jsx$/, why: '사용자가 편집한 SVG에서 생성한 일러스트 원본 색·그라데이션. UI 색이 아니며 theme 토큰으로 바꾸면 승인된 그림이 달라진다' },
   { rule: 'color-literal-game', match: /TitleScreen\.jsx$/, why: '타이틀 화면 = 들판·집·연기 일러스트 장면. 색이 데이터(SCENE)에 가깝고 재사용되지 않는다' },
   { rule: 'color-literal', match: /constants[\\/]/, why: '토큰 정의·데이터 파일(성조 색 등)이 리터럴의 출처 그 자체' },
   { rule: 'color-literal', match: /components[\\/]ui[\\/]Badge\.jsx$/, why: 'Tailwind 클래스→토큰 매핑 계층. 이 파일이 매핑표다' },

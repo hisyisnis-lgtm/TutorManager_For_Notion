@@ -2,32 +2,28 @@
 import {
   useState,
   useRef,
+  useEffect,
   useCallback } from 'react';
-import { LeafIcon,
-  HandHeartIcon } from '@phosphor-icons/react';
-import {
-  PRIMARY,
-  PRIMARY_LIGHT,
-  PRIMARY_BG,
-  TEXT_PRIMARY,
-  TEXT_SECONDARY,
-  TEXT_TERTIARY,
-  TEXT_INACTIVE,
-  TEXT_DISABLED,
-  BORDER_DEFAULT,
-  GRADIENTS,
-  GRAY_100,
-  STATUS_SUCCESS_DARK,
-  GRAY_300 } from '../../constants/theme.js';
+import PandaGameView from './PandaGameView.jsx';
+import PandaWardrobe from './PandaWardrobe.jsx';
+import PandaFeedLeaf from './PandaFeedLeaf.jsx';
+import usePandaGame from '../../hooks/usePandaGame.js';
+import { PANDA_ADULT_FED, PANDA_GROWTH_THRESHOLDS, getPandaLevelInfo, getWearablePandaWardrobe, pandaEquippedToWardrobe } from '../../constants/pandaWardrobe.js';
+import { PANDA_MOTION_DURATION } from '../../constants/pandaMascot.js';
+import { PANDA_GAME_THEME } from '../../constants/pandaGameTheme.js';
+import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion.js';
+import { createPandaFeedFlight, getPandaFeedingTarget, PANDA_FEED_FLIGHT_MS, PANDA_FEED_STAGGER_MS } from '../../constants/pandaFeedMotion.js';
+import usePandaGrowthFeedback from '../../hooks/usePandaGrowthFeedback.js';
 
 export const STAGES = [
-  { min: 0,   max: 2,         label: '알에서 깨어나는 중', message: '첫 수업이 기다려져요! 🥚', img: '/panda/Cha_Panda_Step_00.svg', nextAt: 3 },
-  { min: 3,   max: 19,        label: '아기 팬더',           message: '이제 막 시작했어요 🌱',     img: '/panda/Cha_Panda_Step_01.svg', nextAt: 20 },
-  { min: 20,  max: 47,        label: '꼬마 팬더',           message: '쑥쑥 자라고 있어요 🌿',     img: '/panda/Cha_Panda_Step_02.svg', nextAt: 48 },
-  { min: 48,  max: 79,        label: '청소년 팬더',         message: '많이 성장했어요 🌳',         img: '/panda/Cha_Panda_Step_03.svg', nextAt: 80 },
-  { min: 80,  max: 111,       label: '어른 팬더',           message: '완전히 성장했어요 ✨',       img: '/panda/Cha_Panda_Step_04.svg', nextAt: 112 },
-  { min: 112, max: Infinity,  label: '마스터 팬더',         message: '전설이 되었어요 👑',         img: '/panda/Cha_Panda_Step_05.svg', nextAt: null },
-];
+  { label: '알', message: '곧 만날 날을 기다리고 있어요 🥚' },
+  { label: '알에서 깨어나는 판다', message: '반가워요! 이제 막 깨어났어요 🌱' },
+  { label: '아기 판다', message: '조금씩 쑥쑥 자라고 있어요 🍼' },
+  { label: '어린이 판다', message: '함께 배우고 놀아요 🧩' },
+  { label: '청소년 판다', message: '하루하루 더 자라고 있어요 📖' },
+  { label: '다 자란 판다', message: '함께해서 멋지게 자랐어요 🌿' },
+].map((stage, index) => ({ ...stage, min: PANDA_GROWTH_THRESHOLDS[index],
+  max: (PANDA_GROWTH_THRESHOLDS[index + 1] ?? Infinity) - 1, nextAt: PANDA_GROWTH_THRESHOLDS[index + 1] ?? null }));
 
 export function getStageInfo(fedTotal) {
   for (let i = STAGES.length - 1; i >= 0; i--) {
@@ -49,6 +45,7 @@ export function getPandaStorageKey(studentToken) {
 }
 
 const DEFAULT_FEED_KEY = PANDA_FEED_KEY;
+const FEED_PARTICLE_SIZE = 30;
 let _pid = 0;
 
 function makeBezierKeyframes(p1x, p1y, p2x, p2y, opacityFn, scaleFn, steps = 20) {
@@ -73,30 +70,15 @@ function injectKeyframe(name, body) {
   document.head.appendChild(el);
 }
 
-function removeKeyframe(name, delay) {
-  setTimeout(() => document.getElementById(`kf-${name}`)?.remove(), delay);
-}
-
 function makeFeedParticle(srcX, srcY, destX, destY, particleDelay = 0) {
-  const tx = destX - srcX;
-  const ty = destY - srcY;
-  const len = Math.sqrt(tx * tx + ty * ty) || 1;
-  const perpX = -ty / len;
-  const perpY = tx / len;
-  const side = Math.random() > 0.5 ? 1 : -1;
-  const curve = side * (90 + Math.random() * 80);
-  const p1x = tx / 2 + perpX * curve;
-  const p1y = ty / 2 + perpY * curve;
   const pid = ++_pid;
   const kfName = `panda-feed-${pid}`;
-  const body = makeBezierKeyframes(
-    p1x, p1y, tx, ty,
-    t => (t < 0.88 ? 1 : 1 - (t - 0.88) / 0.12),
-    t => 1 + 0.15 * Math.sin(t * Math.PI) - 0.75 * t * t,
-  );
+  const frames = createPandaFeedFlight({ from: { x: srcX, y: srcY }, to: { x: destX, y: destY }, viewportWidth: window.innerWidth });
+  const body = frames.map(({ offset, x, y, rotation, scale, opacity }) =>
+    `${(offset * 100).toFixed(2)}%{transform:translate(${x.toFixed(2)}px,${y.toFixed(2)}px) rotate(${rotation.toFixed(2)}deg) scale(${scale.toFixed(3)});opacity:${opacity.toFixed(3)}}`).join('');
   injectKeyframe(kfName, body);
-  removeKeyframe(kfName, 2200 + particleDelay);
-  return { id: pid, type: 'feed', x: srcX - 9, y: srcY - 9, kfName, delay: particleDelay };
+  return { id: pid, type: 'feed', x: srcX - FEED_PARTICLE_SIZE / 2, y: srcY - FEED_PARTICLE_SIZE / 2,
+    size: FEED_PARTICLE_SIZE, kfName, delay: particleDelay };
 }
 
 function makeHeartParticle(pRect, index) {
@@ -117,7 +99,6 @@ function makeHeartParticle(pRect, index) {
     18,
   );
   injectKeyframe(kfName, body);
-  removeKeyframe(kfName, 2200 + delay);
   return { id: pid, type: 'heart', x: startX - size / 2, y: startY - size / 2, kfName, size, delay };
 }
 
@@ -131,396 +112,376 @@ function makeHeartParticle(pRect, index) {
  *   ]
  * 총 먹이 = foodSources의 count 합계
  */
-export default function PandaWidget({ foodSources = [], storageKey = DEFAULT_FEED_KEY, fullscreen = false }) {
-  const totalFood = foodSources.reduce((sum, s) => sum + (s.count || 0), 0);
+export default function PandaWidget({ storageKey = DEFAULT_FEED_KEY, ...props }) {
+  // 학생이 바뀌면 진행 중인 먹이 타이머와 착장을 함께 초기화한다.
+  return <PandaWidgetContent key={storageKey} storageKey={storageKey} {...props} />;
+}
 
-  // localStorage 에는 "학생이 실제로 누른 횟수" 그대로 저장. 표시·available 계산 시점에만 cap 한다.
-  // 옛 코드는 마운트 시 totalFood 초과분을 localStorage 에 영구 저장(capping)했는데, 학생 API 응답이
-  // 일시적으로 누락돼서 totalFood 가 0 으로 들어오면 누른 횟수가 영구 0 으로 덮어써지는 버그가 있었음 (2026-05-21).
-  const [fedTotal, setFedTotal] = useState(() => {
-    return parseInt(localStorage.getItem(storageKey) || '0', 10);
-  });
+function PandaWidgetContent({ foodSources = [], storageKey, fullscreen = false, studentToken, serverEnabled, onOpenHelp, speechPaused = false }) {
+  const totalFood = foodSources.reduce((sum, source) => sum + Math.max(0, Math.floor(source.count || 0)), 0);
+  const game = usePandaGame({ storageKey, earnedTotal: totalFood, studentToken, serverEnabled });
+  const { profile, available } = game;
+  const fedTotal = profile.fedTotal;
+  const reducedMotion = usePrefersReducedMotion();
+  const growth = usePandaGrowthFeedback({ fedTotal, reducedMotion });
+  const celebrating = Boolean(growth.celebration);
+  const [wardrobeOpen, setWardrobeOpen] = useState(false);
+  const [namingOpen, setNamingOpen] = useState(false);
+  const [namingMode, setNamingMode] = useState('edit');
+  const [namingPending, setNamingPending] = useState(false);
+  const [wardrobeGuideOpen, setWardrobeGuideOpen] = useState(false);
+  const [transitionOpen, setTransitionOpen] = useState(false);
+  const [wardrobeHandoff, setWardrobeHandoff] = useState(null);
+  const [notice, setNotice] = useState('');
   const [particles, setParticles] = useState([]);
-  const [levelingUp, setLevelingUp] = useState(false);
-  const [showBadge, setShowBadge] = useState(false);
   const [isFeeding, setIsFeeding] = useState(false);
-  const [toast, setToast] = useState(false);
-
+  const [reservedFood, setReservedFood] = useState(0);
+  const [action, setAction] = useState({ motion: 'idle', id: 0 });
   const pandaRef = useRef(null);
   const feedBtnRef = useRef(null);
   const feedAllBtnRef = useRef(null);
-  const toastTimerRef = useRef(null);
+  const wardrobeTriggerRef = useRef(null);
+  const wardrobeGuideConsumedRef = useRef(false);
+  const actionTimerRef = useRef(null);
+  const feedingRef = useRef(false);
+  const timersRef = useRef(new Set());
+  const keyframesRef = useRef(new Set());
+  const feedQueueRef = useRef([]);
+  const drainingFeedRef = useRef(false);
+  const reservedFoodRef = useRef(0);
+  const chewingRef = useRef(false);
+  const confirmedChewUntilRef = useRef(0);
+  const aliveRef = useRef(true);
+  const gameRef = useRef(game);
+  const balanceRef = useRef({ profile, available });
+  const availableRef = useRef(available);
+  const committedProfileRef = useRef(profile);
+  gameRef.current = game;
+  // Keep a synchronous balance between an acknowledged commit and React's next render.
+  if (balanceRef.current.profile !== profile || balanceRef.current.available !== available) {
+    balanceRef.current = { profile, available };
+    availableRef.current = available;
+    committedProfileRef.current = profile;
+  }
 
-  const showFeedToast = useCallback(() => {
-    setToast(true);
-    clearTimeout(toastTimerRef.current);
-    toastTimerRef.current = setTimeout(() => setToast(false), 2400);
+  const schedule = useCallback((callback, delay) => {
+    const timer = setTimeout(() => { timersRef.current.delete(timer); callback(); }, delay);
+    timersRef.current.add(timer);
+    return timer;
   }, []);
 
-  const { stage, idx: stageIdx } = getStageInfo(fedTotal);
-  const available = Math.max(0, totalFood - fedTotal);
-  const progress = stage.nextAt == null
-    ? 100
-    : Math.round(((fedTotal - stage.min) / (stage.nextAt - stage.min)) * 100);
-  const remaining = stage.nextAt == null ? 0 : stage.nextAt - fedTotal;
+  const cancelTimer = useCallback(timer => {
+    clearTimeout(timer);
+    timersRef.current.delete(timer);
+  }, []);
+
+  useEffect(() => {
+    aliveRef.current = true;
+    const timers = timersRef.current, keyframes = keyframesRef.current, feedQueue = feedQueueRef.current;
+    return () => {
+      aliveRef.current = false;
+      timers.forEach(clearTimeout);
+      timers.clear();
+      keyframes.forEach(name => document.getElementById('kf-' + name)?.remove());
+      keyframes.clear();
+      // A submitted remote request may still commit; only unsent work is abandoned here.
+      feedQueue.splice(0).forEach(entry => entry.resolve(false));
+      reservedFoodRef.current = 0;
+    };
+  }, []);
+
+  const playAction = useCallback((motion, duration = PANDA_MOTION_DURATION[motion], restart = true) => {
+    cancelTimer(actionTimerRef.current);
+    chewingRef.current = motion === 'eating';
+    setAction(prev => !restart && prev.motion === motion ? prev : { motion, id: prev.id + 1 });
+    actionTimerRef.current = schedule(() => {
+      setAction(prev => ({ ...prev, motion: 'idle' }));
+      if (motion === 'eating') {
+        chewingRef.current = false;
+        feedingRef.current = feedQueueRef.current.length > 0;
+        setIsFeeding(feedingRef.current);
+      }
+    }, duration);
+  }, [cancelTimer, schedule]);
 
   const spawnParticles = useCallback((list, lifetime) => {
+    list.forEach(p => { if (p.kfName) keyframesRef.current.add(p.kfName); });
     setParticles(prev => [...prev, ...list]);
     const ids = list.map(p => p.id);
-    const maxDelay = Math.max(0, ...list.map(p => p.delay || 0));
-    setTimeout(() => setParticles(prev => prev.filter(p => !ids.includes(p.id))), lifetime + maxDelay);
-  }, []);
-
-  const triggerArrival = useCallback((newFed, isLevelUp) => {
-    // setItem이 throw(사파리 프라이빗 모드·쿼터 초과)해도 먹이주기 버튼이 isFeeding=true로
-    // 고착되지 않게 가드 — 저장 실패 시 세션 내 카운트만 유지되고 새로고침 시 사라짐(무해)
-    try { localStorage.setItem(storageKey, String(newFed)); } catch { /* noop */ }
-    setFedTotal(newFed);
-    const pRect = pandaRef.current?.getBoundingClientRect();
-    if (pRect) {
-      const cx = pRect.left + pRect.width / 2 - 3;
-      const cy = pRect.top + pRect.height / 2 - 3;
-      const bursts = Array.from({ length: 10 }, (_, i) => {
-        const angle = (i / 10) * Math.PI * 2 + Math.random() * 0.35;
-        const dist = 28 + Math.random() * 36;
-        return { id: ++_pid, type: 'burst', x: cx, y: cy, tx: Math.cos(angle) * dist, ty: Math.sin(angle) * dist, delay: Math.floor(Math.random() * 60) };
+    return schedule(() => {
+      setParticles(prev => prev.filter(p => !ids.includes(p.id)));
+      list.forEach(p => {
+        if (!p.kfName) return;
+        document.getElementById('kf-' + p.kfName)?.remove();
+        keyframesRef.current.delete(p.kfName);
       });
-      spawnParticles(bursts, 500);
+    }, lifetime + Math.max(0, ...list.map(p => p.delay || 0)));
+  }, [schedule]);
+
+  const { stage, idx: stageIdx } = getStageInfo(fedTotal);
+  const levelInfo = getPandaLevelInfo(fedTotal);
+  const equipped = getWearablePandaWardrobe(pandaEquippedToWardrobe(profile.equipped), fedTotal);
+  const progress = Math.round((fedTotal - levelInfo.min) / (levelInfo.nextAt - levelInfo.min) * 100);
+  const transitionPending = Boolean(game.transition && !game.transition.noticeSeen);
+
+  useEffect(() => {
+    if (!transitionPending) { setTransitionOpen(false); return; }
+    // Once open, an offline response must not dismiss the unacknowledged notice.
+    if (game.serverReady && !speechPaused && !wardrobeOpen && !wardrobeGuideOpen && !namingOpen && !isFeeding && !growth.busy) setTransitionOpen(true);
+  }, [transitionPending, game.serverReady, speechPaused, wardrobeOpen, wardrobeGuideOpen, namingOpen, isFeeding, growth.busy]);
+
+  useEffect(() => {
+    if (!namingPending || transitionPending || speechPaused || wardrobeOpen || wardrobeGuideOpen || namingOpen || isFeeding || growth.busy || game.busy || game.loading) return;
+    setNamingPending(false);
+    setNamingMode('first');
+    setNamingOpen(true);
+  }, [namingPending, transitionPending, speechPaused, wardrobeOpen, wardrobeGuideOpen, namingOpen, isFeeding, growth.busy, game.busy, game.loading]);
+
+  useEffect(() => {
+    if (!wardrobeHandoff || wardrobeHandoff.ready) return;
+    const markReady = () => setWardrobeHandoff(current => current === wardrobeHandoff ? { ...current, ready: true } : current);
+    if (reducedMotion) { markReady(); return; }
+    const timer = schedule(markReady, Math.max(0, Number.parseFloat(PANDA_GAME_THEME.motionExit) || 0));
+    return () => cancelTimer(timer);
+  }, [wardrobeHandoff, reducedMotion, schedule, cancelTimer]);
+
+  useEffect(() => {
+    if (!wardrobeHandoff?.ready || transitionPending || speechPaused || wardrobeOpen || namingOpen || namingPending || isFeeding || growth.busy || game.busy || game.loading) return;
+    setWardrobeHandoff(null);
+    if (wardrobeHandoff.target === 'wardrobe') setWardrobeOpen(true);
+    else {
+      wardrobeGuideConsumedRef.current = true;
+      setWardrobeGuideOpen(true);
     }
-    if (isLevelUp) {
-      setLevelingUp(true);
-      setShowBadge(true);
-      const pRect2 = pandaRef.current?.getBoundingClientRect();
-      if (pRect2) {
-        const cx2 = pRect2.left + pRect2.width / 2 - 8;
-        const cy2 = pRect2.top + pRect2.height / 2 - 8;
-        const sparkles = Array.from({ length: 14 }, (_, i) => {
-          const angle = (i / 14) * Math.PI * 2 + Math.random() * 0.4;
-          const dist = 45 + Math.random() * 50;
-          return { id: ++_pid, type: 'sparkle', x: cx2, y: cy2, tx: Math.cos(angle) * dist, ty: Math.sin(angle) * dist, delay: Math.floor(Math.random() * 180) };
-        });
-        spawnParticles(sparkles, 950);
+  }, [wardrobeHandoff, transitionPending, speechPaused, wardrobeOpen, namingOpen, namingPending, isFeeding, growth.busy, game.busy, game.loading]);
+
+  function acknowledgeFeed(previous, next, restart = true) {
+    if (!aliveRef.current || !next) return;
+    feedingRef.current = true;
+    setIsFeeding(true);
+    confirmedChewUntilRef.current = Date.now() + PANDA_MOTION_DURATION.eating;
+    playAction('eating', PANDA_MOTION_DURATION.eating, restart);
+    growth.recordFeed(previous, next);
+    if (previous.fedTotal < PANDA_ADULT_FED && next.fedTotal >= PANDA_ADULT_FED && !previous.namingPromptSeen) {
+      setNamingPending(true);
+    }
+  }
+
+  function cancelQueuedFeeds() {
+    const canceled = feedQueueRef.current.splice(0);
+    const ids = new Set(canceled.flatMap(entry => entry.particles.map(p => p.id)));
+    canceled.forEach(entry => {
+      entry.canceled = true;
+      entry.arrivalTimers.forEach(cancelTimer);
+      cancelTimer(entry.particleTimer);
+      entry.particles.forEach(p => {
+        document.getElementById('kf-' + p.kfName)?.remove();
+        keyframesRef.current.delete(p.kfName);
+      });
+      entry.resolve(false);
+    });
+    reservedFoodRef.current = 0;
+    setReservedFood(0);
+    setParticles(current => current.filter(p => !ids.has(p.id)));
+    // Discard chewing added by failed arrivals, but preserve an earlier success.
+    const remainingChew = confirmedChewUntilRef.current - Date.now();
+    if (remainingChew > 0) playAction('eating', remainingChew, false);
+    else {
+      cancelTimer(actionTimerRef.current);
+      chewingRef.current = false;
+      setAction(current => ({ ...current, motion: 'idle' }));
+    }
+  }
+
+  async function drainFeedQueue() {
+    if (drainingFeedRef.current || !aliveRef.current) return;
+    drainingFeedRef.current = true;
+    try {
+      while (aliveRef.current && feedQueueRef.current[0]?.arrived) {
+        const entry = feedQueueRef.current[0];
+        const previous = committedProfileRef.current;
+        const next = await gameRef.current.transact({ type: 'feed', count: entry.count });
+        if (!aliveRef.current) return;
+        if (!next) {
+          // Leave the hook's unresolved request intact for an idempotent retry.
+          cancelQueuedFeeds();
+          break;
+        }
+        feedQueueRef.current.shift();
+        availableRef.current = balanceRef.current.profile === next
+          ? balanceRef.current.available : Math.max(0, availableRef.current - entry.count);
+        committedProfileRef.current = next;
+        reservedFoodRef.current -= entry.count;
+        setReservedFood(reservedFoodRef.current);
+        // Leaf arrivals already replayed the reaction. A server acknowledgement
+        // extends that meal without making the same leaf trigger a second hop.
+        acknowledgeFeed(previous, next, entry.arrivalTimers.length === 0);
+        entry.resolve(true);
       }
-      setTimeout(() => { setLevelingUp(false); setShowBadge(false); }, 1600);
+    } finally {
+      drainingFeedRef.current = false;
+      if (aliveRef.current) {
+        feedingRef.current = feedQueueRef.current.length > 0 || chewingRef.current;
+        setIsFeeding(feedingRef.current);
+      }
     }
-  }, [spawnParticles]);
+  }
 
-  const handleFeed = useCallback(() => {
-    if (isFeeding) return;
-    if (available <= 0) { showFeedToast(); return; }
-    const newFed = fedTotal + 1;
-    const { idx: newIdx } = getStageInfo(newFed);
+  async function handleFeed(count = 1) {
+    // Growth reveals block new input, not already accepted queue entries.
+    if (celebrating || transitionPending) return false;
+    const currentGame = gameRef.current;
+    const ownFeedInFlight = drainingFeedRef.current && currentGame.busy;
+    if (!aliveRef.current || currentGame.loading || (!currentGame.canTransact && !ownFeedInFlight)) return false;
+    if (!Number.isSafeInteger(count) || count < 1 || count > availableRef.current - reservedFoodRef.current) {
+      setNotice('먹이가 부족해요. 수량을 확인해 주세요.');
+      return false;
+    }
+    setNotice('');
+    feedingRef.current = true;
     setIsFeeding(true);
-    const fRect = feedBtnRef.current?.getBoundingClientRect();
-    const pRect = pandaRef.current?.getBoundingClientRect();
-    if (fRect && pRect) {
-      const p = makeFeedParticle(fRect.left + fRect.width / 2, fRect.top + fRect.height / 2, pRect.left + pRect.width / 2, pRect.top + pRect.height / 2);
-      spawnParticles([p], 850);
-      setTimeout(() => { triggerArrival(newFed, newIdx > stageIdx); setTimeout(() => setIsFeeding(false), 200); }, 750);
-    } else {
-      triggerArrival(newFed, newIdx > stageIdx);
-      setIsFeeding(false);
+    reservedFoodRef.current += count;
+    setReservedFood(reservedFoodRef.current);
+    if (!chewingRef.current) {
+      cancelTimer(actionTimerRef.current);
+      setAction(prev => ({ ...prev, motion: 'idle' }));
     }
-  }, [available, fedTotal, stageIdx, isFeeding, showFeedToast, spawnParticles, triggerArrival]);
+    return new Promise(resolve => {
+      const entry = { count, resolve, arrived: false, canceled: false, particles: [], arrivalTimers: [], particleTimer: null };
+      feedQueueRef.current.push(entry);
+      const arrive = () => {
+        entry.arrived = true;
+        void drainFeedQueue();
+      };
+      const from = (count > 1 ? feedAllBtnRef : feedBtnRef).current?.getBoundingClientRect();
+      const bounds = pandaRef.current?.getBoundingClientRect();
+      if (from && bounds && !reducedMotion) {
+        const target = getPandaFeedingTarget(pandaRef.current, bounds);
+        const dots = Math.min(count, 5);
+        entry.particles = Array.from({ length: dots }, (_, index) =>
+          makeFeedParticle(from.left + from.width / 2, from.top + from.height / 2, target.x, target.y, index * PANDA_FEED_STAGGER_MS));
+        entry.particleTimer = spawnParticles(entry.particles, 850);
+        entry.arrivalTimers = Array.from({ length: dots }, (_, index) => schedule(() => {
+          if (!aliveRef.current || entry.canceled) return;
+          growth.recordArrival();
+          playAction('eating');
+          // Appearance follows each leaf; the existing batch transaction still
+          // enters the FIFO only once, when its final leaf has arrived.
+          if (index === dots - 1) arrive();
+        }, PANDA_FEED_FLIGHT_MS + index * PANDA_FEED_STAGGER_MS));
+      } else arrive();
+    });
+  }
 
-  const handleFeedAll = useCallback(() => {
-    if (available <= 0 || isFeeding) return;
-    const newFed = fedTotal + available;
-    const { idx: newIdx } = getStageInfo(newFed);
-    setIsFeeding(true);
-    const fRect = feedAllBtnRef.current?.getBoundingClientRect();
-    const pRect = pandaRef.current?.getBoundingClientRect();
-    if (fRect && pRect) {
-      const count = Math.min(available, 5);
-      const STAGGER = 130;
-      const srcX = fRect.left + fRect.width / 2, srcY = fRect.top + fRect.height / 2;
-      const dstX = pRect.left + pRect.width / 2, dstY = pRect.top + pRect.height / 2;
-      const feedPs = Array.from({ length: count }, (_, i) => makeFeedParticle(srcX, srcY, dstX, dstY, i * STAGGER));
-      spawnParticles(feedPs, 850 + (count - 1) * STAGGER);
-      setTimeout(() => { triggerArrival(newFed, newIdx > stageIdx); setTimeout(() => setIsFeeding(false), 200); }, 750 + (count - 1) * STAGGER);
+  function handlePet() {
+    if (feedingRef.current || growth.busy || game.busy || game.hasProfile === false || transitionPending) return;
+    playAction('petting');
+    const bounds = pandaRef.current?.getBoundingClientRect();
+    if (bounds && !reducedMotion) spawnParticles(Array.from({ length: 7 }, (_, i) => makeHeartParticle(bounds, i)), 1100);
+  }
+
+  function finishNaming() {
+    if (!aliveRef.current) return false;
+    setNamingOpen(false);
+    // Only the first adulthood flow in this session offers the new wardrobe.
+    // Loading an adult profile or editing a saved name never schedules it.
+    if (namingMode === 'first' && !wardrobeGuideConsumedRef.current) {
+      setWardrobeHandoff({ target: 'guide', ready: false });
     } else {
-      triggerArrival(newFed, newIdx > stageIdx);
-      setIsFeeding(false);
+      setWardrobeHandoff(current => current ? { ...current, ready: false } : null);
     }
-  }, [available, fedTotal, stageIdx, isFeeding, spawnParticles, triggerArrival]);
+    return true;
+  }
 
-  const handlePet = useCallback(() => {
-    const pRect = pandaRef.current?.getBoundingClientRect();
-    if (!pRect) return;
-    spawnParticles(Array.from({ length: 7 }, (_, i) => makeHeartParticle(pRect, i)), 1100);
-  }, [spawnParticles]);
+  async function handleSaveName(nickname) {
+    if (feedingRef.current) return false;
+    const next = await game.transact({ type: 'nickname', nickname });
+    if (!next) return false;
+    return finishNaming();
+  }
 
-  const canFeed = available > 0 && !isFeeding;
+  async function handleDismissName() {
+    if (game.busy) return false;
+    if (namingMode === 'first' && !profile.namingPromptSeen) {
+      if (!await game.transact({ type: 'dismiss-naming' })) return false;
+    }
+    return finishNaming();
+  }
+
+  function handleDismissWardrobeGuide() {
+    wardrobeGuideConsumedRef.current = true;
+    setWardrobeGuideOpen(false);
+    setWardrobeHandoff(null);
+  }
+
+  function handleStartWardrobeGuide() {
+    if (!wardrobeGuideOpen) return;
+    handleDismissWardrobeGuide();
+    setNotice('');
+    setWardrobeHandoff({ target: 'wardrobe', ready: false });
+  }
+
+  function handleOpenWardrobe() {
+    if (transitionPending || game.hasProfile === false) return;
+    wardrobeGuideConsumedRef.current = true;
+    setNotice('');
+    setWardrobeGuideOpen(false);
+    if (wardrobeGuideOpen || namingOpen) setWardrobeHandoff({ target: 'wardrobe', ready: false });
+    else if (wardrobeHandoff) setWardrobeHandoff(current => ({ ...current, target: 'wardrobe' }));
+    else setWardrobeOpen(true);
+  }
+
+  async function handleWardrobeAction(nextAction) {
+    if (feedingRef.current) return false;
+    const next = await game.transact(nextAction);
+    return Boolean(next);
+  }
+
+  async function handleRetry() {
+    if (feedQueueRef.current.length || gameRef.current.busy) return null;
+    const before = gameRef.current.profile;
+    const result = await game.retry?.();
+    if (!aliveRef.current) return null;
+    const next = result?.profile;
+    if (next && result.action?.type === 'nickname') {
+      finishNaming();
+    }
+    if (result?.action?.type === 'feed' && next?.fedTotal > before.fedTotal) acknowledgeFeed(before, next);
+    return next;
+  }
 
   return (
     <>
-      {/* 파티클 레이어 */}
-      {particles.map(p => {
-        if (p.type === 'feed') return (
-          <div key={p.id} style={{ position: 'fixed', zIndex: 9999, pointerEvents: 'none', left: p.x, top: p.y, width: 18, height: 18, borderRadius: '50%', background: 'radial-gradient(circle at 35% 35%, #dcfce7, #22c55e)', boxShadow: '0 0 14px rgba(34,197,94,0.9)', animationName: p.kfName, animationDuration: '0.8s', animationTimingFunction: 'linear', animationFillMode: 'both', animationDelay: `${p.delay || 0}ms` }} />
-        );
-        if (p.type === 'burst') return (
-          <div key={p.id} style={{ position: 'fixed', zIndex: 9999, pointerEvents: 'none', left: p.x, top: p.y, width: 14, height: 14, borderRadius: '50%', background: `radial-gradient(circle at 35% 35%, #bbf7d0, ${STATUS_SUCCESS_DARK})`, boxShadow: '0 0 12px rgba(34,197,94,0.95)', animationName: 'panda-burst', animationDuration: '0.5s', animationTimingFunction: 'ease-out', animationFillMode: 'forwards', animationDelay: `${p.delay}ms`, '--tx': `${p.tx}px`, '--ty': `${p.ty}px` }} />
-        );
-        if (p.type === 'heart') return (
-          <div key={p.id} style={{ position: 'fixed', zIndex: 9999, pointerEvents: 'none', left: p.x, top: p.y, fontSize: p.size, userSelect: 'none', lineHeight: 1, animationName: p.kfName, animationDuration: '1.05s', animationTimingFunction: 'linear', animationFillMode: 'both', animationDelay: `${p.delay}ms` }}>❤️</div>
-        );
-        if (p.type === 'sparkle') return (
-          <div key={p.id} style={{ position: 'fixed', zIndex: 9999, pointerEvents: 'none', left: p.x, top: p.y, fontSize: 17, userSelect: 'none', animationName: 'panda-sparkle-burst', animationDuration: '0.85s', animationTimingFunction: 'ease-out', animationFillMode: 'forwards', animationDelay: `${p.delay}ms`, '--tx': `${p.tx}px`, '--ty': `${p.ty}px` }}>✨</div>
-        );
-        return null;
-      })}
-
-      {/* ── 게임 HUD 위젯 (카드 없음) ── */}
-      <div style={{ userSelect: 'none', ...(fullscreen ? { height: '100%', display: 'flex', flexDirection: 'column' } : {}) }}>
-
-        {/* ─ 상단 HUD 행: 레벨 + 스테이지명 / 먹이 카운터 ─ */}
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          marginBottom: 4, flexShrink: 0 }}>
-          {/* 왼쪽: Lv 배지 + 스테이지 이름 */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{
-              background: PRIMARY,
-              color: 'white',
-              fontSize: 12, fontWeight: 700,
-              padding: '3px 7px',
-              borderRadius: 6,
-              letterSpacing: '0.08em',
-              textTransform: 'uppercase',
-              lineHeight: 1.4 }}>
-              LV.{stageIdx + 1}
-            </div>
-            <span style={{ fontSize: 15, fontWeight: 700, color: TEXT_PRIMARY }}>
-              {stage.label}
-            </span>
-          </div>
-
-          {/* 오른쪽: 먹이 카운터 (게임 재화 스타일) */}
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 5,
-            background: available > 0 ? PRIMARY_BG : GRAY_100,
-            border: `1px solid ${available > 0 ? 'rgba(127,0,5,0.12)' : 'rgba(0,0,0,0.05)'}`,
-            borderRadius: 8, padding: '4px 10px',
-            transitionProperty: 'background-color, border-color',
-            transitionDuration: '0.3s',
-            transitionTimingFunction: 'ease' }}>
-            <LeafIcon size={16} weight="fill" color={available > 0 ? PRIMARY : TEXT_DISABLED} />
-            <span style={{
-              fontSize: 14, fontWeight: 700,
-              color: available > 0 ? PRIMARY : TEXT_DISABLED,
-              fontVariantNumeric: 'tabular-nums' }}>
-              ×{available}
-            </span>
-          </div>
-        </div>
-
-        {/* ─ 캐릭터 영역 ─ */}
-        <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', ...(fullscreen ? { flex: 1, minHeight: 0 } : {}) }}>
-
-          {/* 레벨업 배지 */}
-          {showBadge && (
-            <div style={{
-              position: 'absolute', top: 8, left: '50%', transform: 'translateX(-50%)',
-              background: `linear-gradient(135deg, ${PRIMARY}, ${PRIMARY_LIGHT})`,
-              color: 'white', fontWeight: 700, fontSize: 12,
-              padding: '5px 16px', borderRadius: 20,
-              zIndex: 10, whiteSpace: 'nowrap',
-              boxShadow: 'var(--shadow-brand-button)',
-              animationName: 'panda-badge-in',
-              animationDuration: '0.35s',
-              animationTimingFunction: 'ease-out',
-              animationFillMode: 'forwards' }}>
-              레벨 업
-            </div>
-          )}
-
-          {/* 팬더 이미지 */}
-          <div
-            ref={pandaRef}
-            style={{
-              animationName: levelingUp ? 'panda-levelup-bounce' : 'panda-float',
-              animationDuration: levelingUp ? '0.55s' : '3s',
-              animationTimingFunction: 'ease-in-out',
-              animationIterationCount: levelingUp ? 1 : 'infinite',
-              animationFillMode: levelingUp ? 'forwards' : 'none' }}
-          >
-            <img
-              src={stage.img}
-              alt={stage.label}
-              width={fullscreen ? 220 : 180}
-              height={fullscreen ? 220 : 180}
-              style={{
-                display: 'block',
-                outline: 'none',
-                filter: levelingUp
-                  ? 'brightness(1.28) drop-shadow(0 0 16px rgba(251,191,36,0.75))'
-                  : 'none',
-                transitionProperty: 'filter',
-                transitionDuration: '0.35s',
-                transitionTimingFunction: 'ease' }}
-            />
-          </div>
-
-          {/* 스테이지 메시지 */}
-          <p style={{
-            fontSize: 15, color: TEXT_SECONDARY, margin: '2px 0 0',
-            textAlign: 'center', wordBreak: 'keep-all', lineHeight: 1.5 }}>
-            {stage.message}
-          </p>
-        </div>
-
-        {/* ─ EXP 바 (게임 RPG 스타일) ─ */}
-        <div style={{ marginTop: 16, flexShrink: 0 }}>
-          <div style={{
-            display: 'flex', justifyContent: 'space-between', alignItems: 'baseline',
-            marginBottom: 6 }}>
-            <span style={{
-              fontSize: 12, fontWeight: 700, color: PRIMARY,
-              letterSpacing: '0.12em', textTransform: 'uppercase' }}>
-              EXP
-            </span>
-            {stage.nextAt != null ? (
-              <span style={{ fontSize: 13, color: TEXT_INACTIVE, fontVariantNumeric: 'tabular-nums' }}>
-                <strong style={{ color: TEXT_PRIMARY }}>{fedTotal}</strong>
-                {' / '}{stage.nextAt}
-              </span>
-            ) : (
-              <span style={{ fontSize: 13, fontWeight: 700, color: PRIMARY }}>
-                MAX 👑
-              </span>
-            )}
-          </div>
-
-          {/* 두꺼운 게임형 바 — inset shadow로 홈파인 느낌 */}
-          <div style={{
-            width: '100%', height: 12,
-            background: GRAY_300,
-            borderRadius: 4,
-            overflow: 'hidden',
-            boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.12)' }}>
-            <div style={{
-              width: `${progress}%`, height: '100%',
-              background: stage.nextAt == null
-                ? GRADIENTS.xp
-                : GRADIENTS.panda,
-              borderRadius: 4,
-              boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.28)',
-              transitionProperty: 'width',
-              transitionDuration: '0.65s',
-              transitionTimingFunction: 'cubic-bezier(0.34, 1.56, 0.64, 1)' }} />
-          </div>
-
-          {/* 다음 레벨까지 */}
-          {stage.nextAt != null && (
-            <p style={{
-              fontSize: 12, color: TEXT_DISABLED,
-              margin: '5px 0 0', textAlign: 'right',
-              fontVariantNumeric: 'tabular-nums' }}>
-              다음 단계까지 {remaining}회
-            </p>
-          )}
-        </div>
-
-        {/* ─ 액션 버튼 ─ */}
-        <div style={{ display: 'flex', gap: 8, marginTop: 14, flexShrink: 0 }}>
-          {/* 먹이주기 — primary (먹이 없어도 클릭 가능 → 토스트 표시) */}
-          <button
-            ref={feedBtnRef}
-            onClick={handleFeed}
-            disabled={isFeeding}
-            className=""
-            style={{
-              flex: 1, height: 52, borderRadius: 12,
-              border: 'none',
-              cursor: isFeeding ? 'not-allowed' : 'pointer',
-              background: canFeed
-                ? GRADIENTS.panda
-                : BORDER_DEFAULT,
-              color: canFeed ? '#ffffff' : TEXT_DISABLED,
-              fontSize: 15, fontWeight: 700,
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
-              WebkitTapHighlightColor: 'transparent',
-              opacity: available > 0 ? 1 : 0.55,
-              boxShadow: canFeed ? 'inset 0 1px 0 rgba(255,255,255,0.18), 0 2px 8px rgba(127,0,5,0.28)' : 'none',
-              transitionProperty: 'opacity, background-color, box-shadow',
-              transitionDuration: '0.15s',
-              transitionTimingFunction: 'ease-out' }}
-          >
-            <LeafIcon size={16} weight="fill" />
-            먹이주기
-          </button>
-
-          {/* 쓰다듬기 — secondary */}
-          <button
-            onClick={handlePet}
-            className=""
-            style={{
-              flex: 1, height: 52, borderRadius: 12,
-              border: '1px solid rgba(0,0,0,0.1)',
-              cursor: 'pointer',
-              background: '#ffffff',
-              color: TEXT_SECONDARY,
-              fontSize: 15, fontWeight: 600,
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
-              WebkitTapHighlightColor: 'transparent',
-              boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-              transitionProperty: 'background-color',
-              transitionDuration: '0.15s',
-              transitionTimingFunction: 'ease-out' }}
-          >
-            <HandHeartIcon size={16} weight="fill" />
-            쓰다듬기
-          </button>
-        </div>
-
-        {/* 먹이 전부 주기 */}
-        {available >= 2 && (
-          <button
-            ref={feedAllBtnRef}
-            onClick={handleFeedAll}
-            disabled={!canFeed}
-            className=""
-            style={{
-              width: '100%', height: 42, borderRadius: 12, marginTop: 8,
-              cursor: canFeed ? 'pointer' : 'not-allowed',
-              // 위젯의 주 액션이라 **브랜드 채움**. 연한 브랜드 면은 주 액션도 보조도 아닌
-              // 어중간한 자리에 있어 어느 쪽으로도 안 읽힌다(design_system §18-1).
-              border: canFeed ? 'none' : `1px solid ${GRAY_300}`,
-              background: canFeed ? PRIMARY : GRAY_100,
-              color: canFeed ? '#fff' : TEXT_DISABLED,
-              fontSize: 14, fontWeight: 700,
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-              WebkitTapHighlightColor: 'transparent',
-              transitionProperty: 'background-color',
-              transitionDuration: '0.15s',
-              transitionTimingFunction: 'ease-out' }}
-          >
-            <LeafIcon size={16} weight="fill" />
-            먹이 {available}개 전부 주기
-          </button>
-        )}
-
-        {/* 먹이 없음 알림 — 위젯 내부 슬라이드인 */}
-        <div style={{
-          overflow: 'hidden',
-          maxHeight: toast ? 48 : 0,
-          opacity: toast ? 1 : 0,
-          marginTop: toast ? 8 : 0,
-          transitionProperty: 'max-height, opacity, margin-top',
-          transitionDuration: '0.22s',
-          transitionTimingFunction: 'ease' }}>
-          <div style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
-            background: GRAY_100,
-            borderRadius: 10,
-            padding: '10px 14px',
-            fontSize: 14, color: TEXT_TERTIARY, fontWeight: 600 }}>
-            <LeafIcon size={12} weight="fill" color={TEXT_DISABLED} />
-            수업 30분마다 먹이가 생겨요
-          </div>
-        </div>
-      </div>
+      {particles.map(p => (
+        <div key={p.id} data-particle={p.type} aria-hidden="true" style={{
+          position: 'fixed', zIndex: 45, pointerEvents: 'none', left: p.x, top: p.y,
+          ...(p.type === 'heart' ? { fontSize: p.size, lineHeight: 1 } : {
+            width: p.size, height: p.size,
+          }),
+          animationName: p.kfName, animationDuration: p.type === 'heart' ? '1.05s' : `${PANDA_FEED_FLIGHT_MS}ms`,
+          animationTimingFunction: 'linear', animationFillMode: 'both', animationDelay: (p.delay || 0) + 'ms',
+        }}>{p.type === 'heart' ? '❤️' : <PandaFeedLeaf />}</div>
+      ))}
+      <PandaGameView stage={stage} stageIdx={stageIdx} levelInfo={levelInfo} fedTotal={fedTotal}
+        available={Math.max(0, available - reservedFood)} progress={progress} remaining={levelInfo.nextAt - fedTotal}
+        equipped={equipped} nickname={profile.nickname} fullscreen={fullscreen} speechPaused={speechPaused || wardrobeOpen || transitionPending}
+        hasProfile={game.hasProfile !== false}
+        isFeeding={isFeeding} isBusy={game.busy} canTransact={game.canTransact} loading={game.loading}
+        canFeed={!celebrating && !transitionPending && (game.canTransact || (drainingFeedRef.current && game.busy && !game.loading))}
+        action={action}
+        growthPulses={growth.pulses} celebration={growth.celebration} displayStage={growth.displayStage}
+        pandaRef={pandaRef} feedBtnRef={feedBtnRef} feedAllBtnRef={feedAllBtnRef} wardrobeTriggerRef={wardrobeTriggerRef}
+        onFeed={handleFeed} onPet={handlePet} onOpenWardrobe={handleOpenWardrobe}
+        onOpenName={() => { if (!transitionPending && game.hasProfile !== false && !feedingRef.current && !growth.busy && !wardrobeGuideOpen) { setNotice(''); setNamingMode('edit'); setNamingOpen(true); } }}
+        namingOpen={namingOpen} namingMode={namingMode} onSaveName={handleSaveName} onDismissName={handleDismissName}
+        wardrobeGuideOpen={wardrobeGuideOpen} onDismissWardrobeGuide={handleDismissWardrobeGuide} onStartWardrobeGuide={handleStartWardrobeGuide}
+        transitionOpen={transitionOpen && !speechPaused} transition={game.transition}
+        onConfirmTransition={async () => Boolean(await game.transact({ type: 'dismiss-transition' }))}
+        notice={notice} error={game.error} onRetry={game.retry ? handleRetry : null} foodSources={foodSources} />
+      <PandaWardrobe open={wardrobeOpen} onOpenChange={setWardrobeOpen}
+        returnFocusRef={wardrobeTriggerRef}
+        profile={profile} available={available} busy={game.busy || game.loading || isFeeding} blocked={!game.canTransact}
+        onAction={handleWardrobeAction} notice={game.error || notice} onHelp={onOpenHelp} onRetry={game.retry ? handleRetry : null} />
     </>
   );
 }

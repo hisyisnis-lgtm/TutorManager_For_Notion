@@ -69,12 +69,13 @@ test('dry-run 실패도 실제 Worker 업로드를 막는다', async () => {
 test('PWA 시험·lint·감사·빌드 성공 후 manifest와 소스 지문이 일치한다', async () => {
   const root = await fixture(), calls = [];
   const record = await checkRelease('pwa', { root, run: fakeRun(root, calls) });
-  assert.equal(record.version, '1.2.3'); assert.equal(record.checks.length, 5);
+  assert.equal(record.version, '1.2.3'); assert.equal(record.checks.length, 6);
   assert.equal(record.source, await sourceHash(root, 'pwa'));
   assert.equal(record.files['/assets/new.js'], sha256('new code'));
   await assertRelease('pwa', { root });
   const commands = calls.map(call => [call.kind, ...call.args].join(' '));
   assert.ok(commands.indexOf('npm test') < commands.indexOf('npm run build'));
+  assert.ok(commands.indexOf('node 02_devtools/panda-release-check.mjs') < commands.indexOf('npm run build'));
   assert.ok(commands.includes('node 02_devtools/design-audit.mjs --quiet'));
   assert.ok(commands.indexOf('npm run build') < commands.indexOf('node 02_devtools/public-price-check.mjs pwa'));
 });
@@ -317,3 +318,14 @@ test('실제 Git에서 운영 커밋의 정확한 객체와 ancestry를 요구�
   const absent = (kind, args, cwd, options) => kind === 'wrangler' ? JSON.stringify(sourceVersion('0'.repeat(40))) : runCommand(kind, args, cwd, options);
   await assert.rejects(assertWorkerSourceHistory(previousWorker, candidate, { root, run: absent }), /이전 운영 커밋을 찾을 수/);
 });
+
+test('PWA 검사 후 전환 마이그레이션만 변경되어도 배포를 막는다', async () => {
+  const root = await fixture();
+  const migration = 'worker/migrations/0006_panda_transition.sql';
+  await put(root, migration, '-- checked transition migration');
+  await checkRelease('pwa', { root, run: fakeRun(root) });
+  await assertRelease('pwa', { root });
+  await put(root, migration, '-- changed transition migration');
+  await assert.rejects(assertRelease('pwa', { root }), /소스가 변경/);
+});
+

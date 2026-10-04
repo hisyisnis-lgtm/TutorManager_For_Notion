@@ -1,0 +1,237 @@
+{
+  "version": 1,
+  "growth": {
+    "thresholds": [
+      0,
+      3,
+      20,
+      48,
+      80,
+      112
+    ],
+    "adultLevel": 6,
+    "foodPerAdultLevel": 40
+  },
+  "economy": {
+    "minutesPerFood": 30,
+    "saleRefundDivisor": 2
+  },
+  "nameMaxLength": 12,
+  "sets": [
+    {
+      "id": "gardener",
+      "planId": "S01",
+      "name": "새싹 정원사",
+      "level": 6,
+      "minFed": 112,
+      "rarity": "common",
+      "sourceFile": "랴오랴오_새싹정원사.ai"
+    },
+    {
+      "id": "strawberry",
+      "planId": "S02",
+      "name": "딸기 소풍",
+      "level": 7,
+      "minFed": 152,
+      "rarity": "common",
+      "sourceFile": "랴오랴오_딸기소풍.ai"
+    },
+    {
+      "id": "reader",
+      "planId": "S03",
+      "name": "포근한 독서",
+      "level": 8,
+      "minFed": 192,
+      "rarity": "common",
+      "sourceFile": "랴오랴오_포근한독서.ai"
+    }
+  ],
+  "slots": [
+    {
+      "id": "hat",
+      "name": "모자",
+      "price": 6,
+      "layers": [
+        "hat-back",
+        "hat-front"
+      ]
+    },
+    {
+      "id": "costume",
+      "name": "코스튬",
+      "price": 8,
+      "layers": [
+        "back",
+        "sleeve-left",
+        "sleeve-right",
+        "costume"
+      ]
+    },
+    {
+      "id": "neck",
+      "name": "목장식",
+      "price": 4,
+      "layers": [
+        "neck"
+      ]
+    },
+    {
+      "id": "hand",
+      "name": "손 소품",
+      "price": 6,
+      "layers": [
+        "hand"
+      ]
+    }
+  ],
+  "rarities": {
+    "common": {
+      "name": "일반",
+      "planFirstSet": "S01",
+      "planLastSet": "S06",
+      "minLevel": 6,
+      "maxLevel": 11,
+      "background": "#B8C2CC",
+      "backgroundCenter": "#E8EDF1"
+    },
+    "uncommon": {
+      "name": "고급",
+      "planFirstSet": "S07",
+      "planLastSet": "S12",
+      "minLevel": 12,
+      "maxLevel": 22,
+      "background": "#6EBA92",
+      "backgroundCenter": "#C7ECD0"
+    },
+    "rare": {
+      "name": "희귀",
+      "planFirstSet": "S13",
+      "planLastSet": "S18",
+      "minLevel": 24,
+      "maxLevel": 34,
+      "background": "#66ACDD",
+      "backgroundCenter": "#C3E6F9"
+    },
+    "epic": {
+      "name": "영웅",
+      "planFirstSet": "S19",
+      "planLastSet": "S24",
+      "minLevel": 36,
+      "maxLevel": 46,
+      "background": "#A38CD4",
+      "backgroundCenter": "#E1D3F4"
+    },
+    "legendary": {
+      "name": "전설",
+      "planFirstSet": "S25",
+      "planLastSet": "S30",
+      "minLevel": 48,
+      "maxLevel": 60,
+      "background": "#DFB35F",
+      "backgroundCenter": "#F9E6AD"
+    }
+  },
+  "art": {
+    "viewBox": [
+      0,
+      0,
+      1254,
+      1254
+    ],
+    "layerOrder": [
+      "back",
+      "hat-back",
+      "costume",
+      "neck",
+      "hat-front",
+      "hand",
+      "sleeve-left",
+      "sleeve-right"
+    ],
+    "bounds": {
+      "gardener:hat": [
+        235,
+        163,
+        770,
+        494
+      ],
+      "gardener:neck": [
+        466,
+        708,
+        318,
+        150
+      ],
+      "gardener:costume": [
+        388,
+        675,
+        474,
+        359
+      ],
+      "gardener:hand": [
+        749,
+        739,
+        258,
+        266
+      ],
+      "strawberry:hat": [
+        235,
+        199,
+        770,
+        458
+      ],
+      "strawberry:neck": [
+        500,
+        712,
+        249,
+        178
+      ],
+      "strawberry:costume": [
+        390,
+        675,
+        470,
+        359
+      ],
+      "strawberry:hand": [
+        736,
+        855,
+        227,
+        223
+      ],
+      "reader:hat": [
+        387,
+        131,
+        521,
+        290
+      ],
+      "reader:neck": [
+        485,
+        687,
+        280,
+        231
+      ],
+      "reader:costume": [
+        388,
+        675,
+        474,
+        359
+      ],
+      "reader:hand": [
+        745,
+        829,
+        179,
+        198
+      ]
+    },
+    "sticker": {
+      "width": 70,
+      "height": 56,
+      "padding": 10,
+      "rimRadius": 2.25,
+      "rimBlur": 0.3,
+      "shadowBlur": 1.8,
+      "shadowOffsetY": 1.5,
+      "shadowOpacity": 0.14,
+      "color": "#FFFCF3"
+    }
+  }
+}

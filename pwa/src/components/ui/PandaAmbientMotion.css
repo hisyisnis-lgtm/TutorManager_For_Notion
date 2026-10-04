@@ -1,0 +1,34 @@
+/* Separate wrappers preserve Illustrator's original ear transforms. */
+.panda-mascot__ear-action { transform-box: fill-box; transform-origin: 50% 90%; }
+.panda-mascot__ear-action--left { --panda-ear-out: -10deg; --panda-ear-return: 3deg; }
+.panda-mascot__ear-action--right { --panda-ear-out: 10deg; --panda-ear-return: -3deg; }
+.panda-mascot__pupil-look { transform-box: fill-box; transform-origin: center; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .panda-mascot[data-motion='idle'][data-ambient='ears'] .panda-mascot__ear-action {
+    animation: panda-ear-flick 600ms cubic-bezier(.4, 0, .2, 1) both;
+  }
+  .panda-mascot[data-motion='idle'][data-ambient='ears'] .panda-mascot__ear-action--right { animation-delay: 50ms; }
+  .panda-mascot[data-motion='idle'][data-ambient='look'] .panda-mascot__head-action {
+    animation: panda-look-around 2400ms cubic-bezier(.4, 0, .2, 1) both;
+  }
+  .panda-mascot[data-motion='idle'][data-ambient='pupils'] .panda-mascot__pupil-look {
+    animation: panda-pupils-look 2200ms cubic-bezier(.4, 0, .2, 1) both;
+  }
+}
+
+@keyframes panda-ear-flick {
+  0%, 100% { transform: rotate(0); }
+  20%, 57% { transform: rotate(var(--panda-ear-out)); }
+  38%, 76% { transform: rotate(var(--panda-ear-return)); }
+}
+@keyframes panda-look-around {
+  0%, 100% { transform: translateX(0) rotate(0); }
+  20%, 36% { transform: translateX(-6px) rotate(-3.2deg); }
+  60%, 78% { transform: translateX(5px) rotate(2.8deg); }
+}
+@keyframes panda-pupils-look {
+  0%, 100% { transform: translate(0, 0); }
+  18%, 36% { transform: translate(-11px, -2px); }
+  58%, 76% { transform: translate(11px, 1px); }
+}

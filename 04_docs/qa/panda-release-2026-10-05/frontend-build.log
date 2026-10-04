@@ -1,0 +1,52 @@
+
+> tutor-manager-pwa@2.49.0 prebuild
+> node ../02_devtools/tone-words-build.mjs && node ../02_devtools/tone-tts-build.mjs
+
+⚠️  경고:
+  tone-words-easy.csv 150행: 중복 단어 '上午 (shàng wǔ)' — tone-words-easy.csv 142행에 이미 있어 건너뜀(1개로 인식)
+  tone-words-normal.csv 26행: 중복 단어 '开 (kāi)' — tone-words-easy.csv 37행에 이미 있어 건너뜀(1개로 인식)
+  tone-words-normal.csv 27행: 중복 단어 '在 (zài)' — tone-words-easy.csv 42행에 이미 있어 건너뜀(1개로 인식)
+  tone-words-normal.csv 43행: 중복 단어 '分 (fēn)' — tone-words-easy.csv 138행에 이미 있어 건너뜀(1개로 인식)
+  tone-words-normal.csv 174행: 중복 단어 '要 (yào)' — tone-words-easy.csv 173행에 이미 있어 건너뜀(1개로 인식)
+  tone-words-normal.csv 234행: 중복 단어 '最近 (zuì jìn)' — tone-words-normal.csv 42행에 이미 있어 건너뜀(1개로 인식)
+  tone-words-hard.csv 16행: 중복 단어 '开心 (kāi xīn)' — tone-words-easy.csv 174행에 이미 있어 건너뜀(1개로 인식)
+✅ 단어 변환 완료 → toneWordsData.json · 난이도 616개 (초급 183 · 중급 409 · 고급 24) · 테마 112개 (드라마 28 · 여행 28 · 신조어 28 · 요리 28)
+🔊 TTS 음성 최신 (698개, 생성 불필요)
+
+> tutor-manager-pwa@2.49.0 build
+> vite build
+
+vite v6.4.3 building for production...
+transforming...
+✓ 9086 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                                       4.96 kB │ gzip:   2.31 kB
+dist/assets/jua-korean-400-normal-WRlc2lCz.woff2    368.17 kB
+dist/assets/jua-korean-400-normal-Dr8ebh5I.woff     672.15 kB
+dist/assets/vendor-dAqE_L3o.css                       0.21 kB │ gzip:   0.16 kB
+dist/assets/ToneGamePage-CXrSIQJ0.css                 0.47 kB │ gzip:   0.27 kB
+dist/assets/index-Bmjo5oET.css                      112.81 kB │ gzip:  19.59 kB
+dist/assets/PrivacyPage-C7b_Cy8Q.js                  11.53 kB │ gzip:   4.08 kB
+dist/assets/PricingPage-GBfJ5BUr.js                  27.77 kB │ gzip:   6.67 kB
+dist/assets/ToneGamePage-b2kTBtR4.js                404.99 kB │ gzip: 121.31 kB
+dist/assets/index-C7NjoKsY.js                       595.70 kB │ gzip: 176.32 kB
+dist/assets/vendor-DKZMJ9uF.js                    1,222.23 kB │ gzip: 323.67 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 1m 4s
+
+PWA v1.3.0
+mode      generateSW
+precache  123 entries (7800.64 KiB)
+files generated
+  dist/sw.js
+  dist/workbox-250e2fb9.js
+
+> tutor-manager-pwa@2.49.0 postbuild
+> node ../02_devtools/gen-game-og-route.mjs
+
+✅ dist/game/tone.html 생성 — /game/tone 공유 시 게임 OG 노출

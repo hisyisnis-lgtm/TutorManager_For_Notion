@@ -1,173 +1,114 @@
-import {
-  useState,
-  useEffect,
-  useRef } from 'react';
-import { useParams,
-  useNavigate } from 'react-router-dom';
-import { CaretLeftIcon } from '@phosphor-icons/react';
-import PandaWidget,
-  { PANDA_FEED_KEY,
-  getPandaStorageKey,
-  getStageInfo } from '../components/ui/PandaWidget.jsx';
-import { fetchStudentByToken } from '../api/bookingApi.js';
+import { useEffect, useRef, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { Content as DialogSurface } from '@radix-ui/react-dialog';
+import PandaWidget, { PANDA_FEED_KEY, getPandaStorageKey } from '../components/ui/PandaWidget.jsx';
+import PandaFigure from '../components/ui/PandaFigure.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
-import { GRADIENTS,
-  PRIMARY,
-  TEXT_PRIMARY,
-  TEXT_SECONDARY,
-  STATUS_ERROR_TEXT,
-  BG_WARM } from '../constants/theme.js';
-
-const COACH_KEY = 'panda_coach_seen';
+import { Button } from '../components/shadcn/button.jsx';
+import { Dialog, DialogDescription, DialogOverlay, DialogPortal, DialogTitle } from '../components/shadcn/dialog.jsx';
+import { fetchStudentByToken } from '../api/bookingApi.js';
+import { PANDA_GAME_VARS } from '../constants/pandaGameTheme.js';
+import usePandaDialogFocus from '../hooks/usePandaDialogFocus.js';
+import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion.js';
+import '../components/ui/PandaGameView.css';
+import '../components/ui/PandaUiMotion.css';
+import './PandaPage.css';
 
 export default function PandaPage() {
   const { studentToken } = useParams();
   const navigate = useNavigate();
   const [student, setStudent] = useState(null);
   const [error, setError] = useState(false);
-  const [showCoach, setShowCoach] = useState(false);
-  const coachTimerRef = useRef(null);
+  const [retry, setRetry] = useState(0);
+  const [showHelp, setShowHelp] = useState(false);
+  const [showExit, setShowExit] = useState(false);
+  const reducedMotion = usePrefersReducedMotion();
+  const helpTriggerRef = useRef(null), exitTriggerRef = useRef(null);
+  const { titleRef: helpTitleRef, ...helpFocus } = usePandaDialogFocus(helpTriggerRef);
+  const { titleRef: exitTitleRef, ...exitFocus } = usePandaDialogFocus(exitTriggerRef);
 
   useEffect(() => {
-    if (!studentToken) { navigate(-1); return; }
-    // 옛 공통 키(`panda_fed_total`)에 다른 학생/세션의 누적값이 남아있으면 정리.
-    // 학생별 키 도입 전 잔존물이라 어느 학생 것인지 알 수 없어 단순 삭제가 맞음.
-    try { localStorage.removeItem(PANDA_FEED_KEY); } catch {}
-    fetchStudentByToken(studentToken)
-      .then((data) => {
-        setStudent(data);
-        if (!localStorage.getItem(COACH_KEY)) {
-          coachTimerRef.current = setTimeout(() => setShowCoach(true), 600);
-        }
-      })
-      .catch(() => setError(true));
-    return () => clearTimeout(coachTimerRef.current);
-  }, [studentToken, navigate]);
+    if (!studentToken) { navigate(-1); return undefined; }
+    let cancelled = false;
+    setStudent(null);
+    setError(false);
+    setShowHelp(false);
+    setShowExit(false);
+    // 학생을 구분할 수 없는 이전 공통 키만 정리한다.
+    try { localStorage.removeItem(PANDA_FEED_KEY); } catch { /* 저장소를 사용할 수 없는 환경 */ }
+    fetchStudentByToken(studentToken).then(data => {
+      if (cancelled) return;
+      setStudent(data);
+    }).catch(() => { if (!cancelled) setError(true); });
+    return () => { cancelled = true; };
+  }, [studentToken, navigate, retry]);
 
-  const dismissCoach = () => {
-    localStorage.setItem(COACH_KEY, '1');
-    setShowCoach(false);
+  const changeHelp = open => {
+    setShowHelp(open);
   };
-
-  // 수업시간 30분당 먹이 1개. 학생페이지 공유 전(sharedAt 없음)에는 모든 먹이가 0으로 게이팅 —
-  // "공유 전엔 먹이가 쌓이지 않는다"는 정책을 sessions·숙제 먹이 모두에 일관 적용.
+  const leave = () => {
+    setShowExit(false);
+    if (window.history.state?.idx > 0) navigate(-1);
+    else navigate(`/personal/${studentToken}`, { replace: true });
+  };
   const hasShared = !!student?.sharedAt;
   const foodSources = student ? [
-    { key: 'sessions', label: '완료 수업', count: Math.floor((student.completedMinutes ?? 0) / 30) },
+    { key: 'sessions', label: '완료 수업', count: hasShared ? Math.floor((student.completedMinutes ?? 0) / 30) : 0 },
     { key: 'hw_submit', label: '숙제 제출', count: hasShared ? (student.submittedHomeworkFood ?? 0) : 0 },
     { key: 'hw_feedback', label: '피드백 확인', count: hasShared ? (student.feedbackSeenHomeworkFood ?? 0) : 0 },
   ] : [];
 
   return (
-    // 게임성 화면인데 순백 배경이라 심심하다는 평가(2026-08-31) — 따뜻한 중립톤 + 캐릭터 뒤 광원
-    <div style={{ position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column', background: BG_WARM }}>
-      {/* 헤더 */}
-      <div style={{
-        flexShrink: 0,
-        backgroundColor: 'rgba(255,255,255,0.82)',
-        backdropFilter: 'saturate(180%) blur(20px)',
-        WebkitBackdropFilter: 'saturate(180%) blur(20px)',
-        borderBottom: '1px solid rgba(0,0,0,0.06)',
-      }}>
-        <div style={{
-          maxWidth: 480, margin: '0 auto',
-          height: 56, display: 'flex', alignItems: 'center', padding: '0 16px',
-        }}>
-          <button
-            onClick={() => navigate(-1)}
-            aria-label="뒤로"
-            className="transition-[color] duration-150 ease-out"
-            style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              width: 44, height: 44, marginLeft: -8, padding: 0,
-              border: 'none', background: 'none', cursor: 'pointer',
-              color: TEXT_SECONDARY, WebkitTapHighlightColor: 'transparent', flexShrink: 0,
-            }}
-          >
-            <CaretLeftIcon weight="bold" size={20} />
-          </button>
-          <h1 style={{ fontSize: 17, fontWeight: 700, color: TEXT_PRIMARY, margin: 0, flex: 1 }}>
-            내 팬더
-          </h1>
-        </div>
-      </div>
-
-      {/* 콘텐츠 — 하단은 iOS 홈 인디케이터 회피를 위해 safe-area-inset-bottom 추가
-           (PandaPage는 position:fixed inset:0이라 body의 padding-bottom이 적용 안 됨) */}
-      <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-        <div style={{ position: 'relative', flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', maxWidth: 480, width: '100%', margin: '0 auto', padding: '16px 20px calc(20px + env(safe-area-inset-bottom))' }}>
-          {/* 캐릭터 뒤 은은한 흰 광원 — 알/팬더가 무대 위에 앉은 느낌 */}
-          <div
-            aria-hidden="true"
-            style={{
-              position: 'absolute', left: '50%', top: '40%',
-              width: 360, height: 360, transform: 'translate(-50%, -50%)',
-              borderRadius: '50%', pointerEvents: 'none',
-              background: 'radial-gradient(circle, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 70%)',
-            }}
-          />
+    <div className="panda-page" style={PANDA_GAME_VARS}>
+      <div className="panda-page__shell">
+        <header className="panda-page__header">
+          <Button ref={exitTriggerRef} variant="ghost" size="icon" aria-label="뒤로" onClick={() => setShowExit(true)}><img src="/panda/ui/back.svg" width={24} height={24} alt="" /></Button>
+          <h1>랴오랴오 키우기</h1>
+          <Button ref={helpTriggerRef} variant="ghost" size="icon" aria-label="도움말" onClick={() => changeHelp(true)}><img src="/panda/ui/help.svg" width={24} height={24} alt="" /></Button>
+        </header>
+        <main className="panda-page__main">
           {error ? (
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: STATUS_ERROR_TEXT, fontSize: 14 }}>
-              정보를 불러오지 못했어요
+            <div className="panda-page__status" role="alert">
+              <p>정보를 불러오지 못했어요.</p>
+              <Button className="panda-game-button panda-game-button--primary" onClick={() => setRetry(value => value + 1)}>다시 시도</Button>
             </div>
-          ) : !student ? (
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <LoadingSpinner />
-            </div>
-          ) : (
-            <PandaWidget
-              foodSources={foodSources}
-              storageKey={getPandaStorageKey(studentToken)}
-              fullscreen
-            />
+          ) : !student ? <div className="panda-page__status"><LoadingSpinner /></div> : (
+            <PandaWidget key={studentToken} foodSources={foodSources} storageKey={getPandaStorageKey(studentToken)} studentToken={studentToken} onOpenHelp={() => changeHelp(true)} speechPaused={showHelp || showExit} fullscreen />
           )}
-        </div>
+        </main>
       </div>
-
-      {/* 코치마크 오버레이 */}
-      {showCoach && (
-        <div
-          onClick={dismissCoach}
-          style={{
-            position: 'fixed', inset: 0, zIndex: 200,
-            background: 'rgba(0,0,0,0.55)',
-            display: 'flex', flexDirection: 'column',
-            alignItems: 'center', justifyContent: 'center',
-            padding: '0 32px',
-            animation: 'fade-in 200ms ease-out both',
-          }}
-        >
-          <div style={{
-            background: '#fff', borderRadius: 20,
-            padding: '28px 24px', maxWidth: 320, width: '100%',
-            textAlign: 'center',
-            animation: 'fade-in-up 250ms cubic-bezier(0.2,0,0,1) both',
-          }}>
-            <p style={{ fontSize: 36, margin: '0 0 12px', lineHeight: 1 }}>🐼</p>
-            <p style={{ fontSize: 17, fontWeight: 700, color: TEXT_PRIMARY, margin: '0 0 10px', wordBreak: 'keep-all' }}>
-              내 팬더를 키워보세요!
-            </p>
-            <div style={{ fontSize: 14, color: TEXT_SECONDARY, lineHeight: 1.65, margin: '0 0 20px', wordBreak: 'keep-all' }}>
-              {/* 본문 강조는 굵기로 — 빨강 텍스트 강조는 디자인 시스템 금지(강조는 600 또는 PRIMARY_BG 박스) */}
-              <p style={{ margin: '0 0 8px' }}>수업 <strong style={{ fontWeight: 600, color: TEXT_PRIMARY }}>30분</strong>마다 <strong style={{ fontWeight: 600, color: TEXT_PRIMARY }}>먹이</strong>가 생겨요.</p>
-              <p style={{ margin: '0 0 8px' }}><strong style={{ fontWeight: 600, color: TEXT_PRIMARY }}>먹이주기</strong>를 누르면 팬더가 성장해요.</p>
-              <p style={{ margin: 0 }}><strong style={{ fontWeight: 600, color: TEXT_PRIMARY }}>쓰다듬기</strong>로 팬더를 응원해 주세요 ❤️</p>
+      <Dialog open={showHelp} onOpenChange={changeHelp}>
+        {(showHelp || !reducedMotion) && <DialogPortal>
+          <DialogOverlay className="panda-page__overlay panda-ui-overlay" style={PANDA_GAME_VARS} />
+          <DialogSurface className="panda-page__popup panda-page__popup--help panda-ui-dialog" style={PANDA_GAME_VARS} {...helpFocus} inert={!showHelp ? '' : undefined} aria-hidden={!showHelp || undefined}>
+            <DialogTitle ref={helpTitleRef} tabIndex={-1} className="panda-page__popup-title">랴오랴오와 함께 자라요</DialogTitle>
+            <DialogDescription className="sr-only">먹이 획득, 성장 단계와 아이템 구매 안내</DialogDescription>
+            <ol className="panda-page__growth-strip">
+              {['알', '깨어남', '아기', '어린이', '청소년', '성인'].map((label, stage) => <li key={label}><PandaFigure width={42} stage={stage} decorative /><span>{label}</span></li>)}
+            </ol>
+            <div className="panda-page__help-copy">
+              <section><h3>먹이는 어떻게 얻나요?</h3><p>완료한 수업 30분마다 먹이가 생겨요.<br />일부 숙제 활동으로도 받을 수 있어요.</p></section>
+              <section><h3>다 자란 뒤에도 계속 성장해요</h3><p>먹이를 주면 경험치와 레벨이 올라가요.<br />6단계 성체부터 꾸미기를 시작할 수 있어요.</p></section>
+              <section><h3>아이템은 어떻게 얻나요?</h3><p>필요 레벨에 도달하면 먹이로 살 수 있어요.<br />구매해도 경험치는 오르지 않아요.</p></section>
             </div>
-            <button
-              onClick={dismissCoach}
-              style={{
-                width: '100%', height: 48, borderRadius: 12,
-                background: GRADIENTS.panda,
-                color: '#fff', fontSize: 15, fontWeight: 700,
-                border: 'none', cursor: 'pointer',
-                WebkitTapHighlightColor: 'transparent',
-              }}
-            >
-              시작하기
-            </button>
-          </div>
-        </div>
-      )}
+            <Button className="panda-game-button panda-game-button--primary" onClick={() => changeHelp(false)}>알겠어요</Button>
+          </DialogSurface>
+        </DialogPortal>}
+      </Dialog>
+      <Dialog open={showExit} onOpenChange={setShowExit}>
+        {(showExit || !reducedMotion) && <DialogPortal>
+          <DialogOverlay className="panda-page__overlay panda-ui-overlay" style={PANDA_GAME_VARS} />
+          <DialogSurface className="panda-page__popup panda-page__popup--exit panda-ui-dialog" style={PANDA_GAME_VARS} {...exitFocus} inert={!showExit ? '' : undefined} aria-hidden={!showExit || undefined}>
+            <PandaFigure width={80} stage={5} decorative />
+            <DialogTitle ref={exitTitleRef} tabIndex={-1} className="panda-page__popup-title">잠깐, 벌써 가려고요?</DialogTitle>
+            <DialogDescription className="panda-page__popup-description">랴오랴오 키우기를 나갈까요?<br />언제든 다시 만나러 와 주세요.</DialogDescription>
+            <div className="panda-page__exit-actions">
+              <Button className="panda-game-button panda-game-button--secondary" onClick={leave}>나가기</Button>
+              <Button className="panda-game-button panda-game-button--primary" onClick={() => setShowExit(false)}>계속하기</Button>
+            </div>
+          </DialogSurface>
+        </DialogPortal>}
+      </Dialog>
     </div>
   );
 }

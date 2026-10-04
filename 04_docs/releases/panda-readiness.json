@@ -1,0 +1,17 @@
+{
+  "schema": 1,
+  "status": "pending",
+  "workerOrigin": "https://tutor-manager-proxy.hisyisnis.workers.dev",
+  "workerVersion": null,
+  "contractHash": null,
+  "verifiedAt": null,
+  "checks": {
+    "d1Migration": false,
+    "authenticatedReadWrite": false,
+    "retryWithoutDoubleDebit": false,
+    "secondDeviceSync": false,
+    "transitionOnce": false,
+    "backupRestore": false
+  },
+  "evidence": null
+}

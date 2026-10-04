@@ -13,6 +13,8 @@ import { clearStudentSession } from '../api/studentAuth.js';
 import { captureAuthScope, isAuthScopeCurrent } from '../api/authState.js';
 import { getViewedMap, HW_VIEWED_KEY, isFeedbackArchived } from '../utils/homeworkViewed.js';
 import { PANDA_FEED_KEY } from '../components/ui/PandaWidget.jsx';
+import PandaUpdateNotice from '../components/ui/PandaUpdateNotice.jsx';
+import usePandaUpdateNotice from '../hooks/usePandaUpdateNotice.js';
 import InstallBanner from '../components/ui/InstallBanner.jsx';
 import { useInstallPrompt } from '../hooks/useInstallPrompt.js';
 import OnboardingCarousel, { ONBOARDING_KEY } from '../components/ui/OnboardingCarousel.jsx';
@@ -56,7 +58,10 @@ export default function PersonalPage() {
     const t = routerLocation.state?.tab;
     return ['홈', '내 수업', '보관함', '공지', '하늘하늘', 'MY'].includes(t) ? t : '홈';
   });
-  const [showOnboarding, setShowOnboarding] = useState(() => !localStorage.getItem(ONBOARDING_KEY));
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    try { return !localStorage.getItem(ONBOARDING_KEY); }
+    catch { return true; }
+  });
   // 앱 숙제는 VIP 전용(2026-09-04) — 비VIP는 숙제 섹션·보관함 탭·숙제 코치마크를 숨긴다.
   // 서버 응답에 필드가 없는 옛 캐시(undefined)는 켜진 것으로 본다.
   const homeworkEnabled = student?.homeworkEnabled !== false;
@@ -97,8 +102,8 @@ export default function PersonalPage() {
   useEffect(() => {
     if (!studentToken) return;
     const MIGRATION_KEY = `hw_viewed_migrated_v2_${studentToken}`;
-    if (localStorage.getItem(MIGRATION_KEY)) return;
     try {
+      if (localStorage.getItem(MIGRATION_KEY)) return;
       const map = getViewedMap(studentToken);
       const now = Date.now();
       const shifted = {};
@@ -223,18 +228,20 @@ export default function PersonalPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab]);
 
-  // 탭별 튜토리얼 팁 (온보딩 완료 후 활성화)
+  // 기본 온보딩 → 업데이트 소개 → 탭 코치마크 순서로 한 번에 하나만 표시한다.
+  const pandaUpdate = usePandaUpdateNotice(studentToken);
+  const showPandaUpdate = !showOnboarding && pandaUpdate.pending && !settingsOpen && !showIOSGuide;
   const [tipResetKey, setTipResetKey] = useState(0);
-  const onboardingDone = !showOnboarding;
+  const onboardingDone = !showOnboarding && !pandaUpdate.pending;
   const tipHome     = useTabTip('홈',     onboardingDone, tipResetKey);
   const tipClasses  = useTabTip('내 수업', onboardingDone, tipResetKey);
   const tipArchive  = useTabTip('보관함', onboardingDone, tipResetKey);
 
   // 코치마크 표시 여부 — 오버레이가 떠 있는 동안에는 설치 배너를 내보내지 않는다.
   // (배너가 코치마크의 '건너뛰기/다음' 버튼과 같은 높이에 겹쳐 글자가 뭉개졌다.)
-  const coachHome    = tab === '홈'      && tipHome.visible;
-  const coachClasses = tab === '내 수업' && tipClasses.visible;
-  const coachArchive = tab === '보관함'  && homeworkEnabled && tipArchive.visible;
+  const coachHome    = onboardingDone && tab === '홈'      && tipHome.visible;
+  const coachClasses = onboardingDone && tab === '내 수업' && tipClasses.visible;
+  const coachArchive = onboardingDone && tab === '보관함'  && homeworkEnabled && tipArchive.visible;
   const coachVisible = coachHome || coachClasses || coachArchive;
   const settingsRef = useRef(null);
 
@@ -250,7 +257,9 @@ export default function PersonalPage() {
     return () => document.removeEventListener('pointerdown', handler);
   }, [settingsOpen]);
 
-  useEffect(() => { setSettingsOpen(false); }, [tab]);
+  useEffect(() => { setSettingsOpen(false); }, [tab, studentToken]);
+  // 학생 전환 시 이전 설치 안내가 새 학생의 업데이트 소개를 막지 않게 한다.
+  useEffect(() => { setShowIOSGuide(false); }, [studentToken]);
 
   const handleInstallAction = async () => {
     if (install.isInstalled) {
@@ -426,6 +435,12 @@ export default function PersonalPage() {
   return (
     <div style={{ minHeight: '100dvh', backgroundColor: BG_APP }}>
       {showOnboarding && <OnboardingCarousel onDone={() => setShowOnboarding(false)} showHomework={homeworkEnabled} />}
+      {showPandaUpdate && <PandaUpdateNotice
+        key={studentToken}
+        open
+        onDismiss={pandaUpdate.dismiss}
+        onVisit={() => { pandaUpdate.dismiss(); navigate(`/personal/${studentToken}/panda`); }}
+      />}
       <PullIndicator pullY={pullY} refreshing={pullRefreshing} />
 
       {/* 상단 헤더 — 홈 탭은 고정 헤더 대신 아래 인사 섹션이 대신한다(강사앱 홈과 동일 구조).
@@ -569,7 +584,7 @@ export default function PersonalPage() {
 
       {/* 온보딩·코치마크가 떠 있는 동안에는 배너를 내보내지 않는다(겹침 방지).
           표시 상태는 useInstallPrompt 훅에 있어 잠시 언마운트해도 "닫음"이 풀리지 않는다. */}
-      {!showOnboarding && !coachVisible && (
+      {!showOnboarding && !pandaUpdate.pending && !coachVisible && (
         <InstallBanner {...install} showIOSGuide={showIOSGuide} setShowIOSGuide={setShowIOSGuide} />
       )}
 

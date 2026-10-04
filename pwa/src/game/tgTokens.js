@@ -75,6 +75,26 @@ export const TG = {
   LINE: 'rgba(43,39,48,0.08)',
 };
 
+// 성조우체국 Figma의 독립 팔레트. 기존 다락방의 TG/HOME 색을 바꾸지 않는다.
+const POSTAL_PRIM = {
+  ink: '#173544', sub: '#45616B', forest: '#36581C', white: '#FFFFFF',
+  paper: '#FFF6B7', edge: '#E3E3E3', surface: '#F3F3F3', yellow: '#FFD735',
+  yellowEdge: '#EAB524', orange: '#FFA400', coral: '#FF6857', coralEdge: '#DE4938',
+  blue: '#00B4F0', blueEdge: '#0088C2', green: '#2FC773', greenEdge: '#18A258',
+  switchOff: '#909090', toneInk1: '#4A120B', toneInk2: '#4E2808', toneInk3: '#0A3E21', toneInk4: '#104152',
+  logoInk: '#102804', logoPaper: '#D9EBD1', resultPandaBg: '#D5EAD1',
+};
+export const FINDER_COLORS = {
+  text: POSTAL_PRIM.ink, secondary: POSTAL_PRIM.sub, header: POSTAL_PRIM.forest,
+  card: POSTAL_PRIM.white, paper: POSTAL_PRIM.paper, edge: POSTAL_PRIM.edge,
+  surface: POSTAL_PRIM.surface, action: POSTAL_PRIM.yellow, actionEdge: POSTAL_PRIM.yellowEdge,
+  timer: POSTAL_PRIM.orange, danger: POSTAL_PRIM.coral, dangerEdge: POSTAL_PRIM.coralEdge,
+  blue: POSTAL_PRIM.blue, blueEdge: POSTAL_PRIM.blueEdge, success: POSTAL_PRIM.green,
+  switchOff: POSTAL_PRIM.switchOff, toneInk1: POSTAL_PRIM.toneInk1, toneInk2: POSTAL_PRIM.toneInk2,
+  toneInk3: POSTAL_PRIM.toneInk3, toneInk4: POSTAL_PRIM.toneInk4,
+  logoInk: POSTAL_PRIM.logoInk, logoPaper: POSTAL_PRIM.logoPaper, resultPandaBg: POSTAL_PRIM.resultPandaBg,
+};
+
 // 인게임 배경 — 컬러 블롭 메시(단색·선형 띠 대신 유기적 공기감. 2026-07-26 색감 리프레시, Figma 35번 프레임).
 // radial 5겹(하늘·피치·민트·코랄·웜크림)을 비대칭으로 흩뿌리고 베이스는 맑은 웜화이트.
 export const BG_MESH = [

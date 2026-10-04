@@ -57,11 +57,12 @@ jobs:
         working-directory: pwa
 
       - name: 배포 보호 도구 회귀 검사
-        run: node --test 02_devtools/release-guard.test.mjs 02_devtools/public-price-check.test.mjs
+        run: node --test 02_devtools/release-guard.test.mjs 02_devtools/panda-release-check.test.mjs 02_devtools/public-price-check.test.mjs
 
       - name: 동일 소스 테스트·린트·감사·빌드 및 해시 기록
         env:
           VITE_WORKER_URL: ${{ secrets.VITE_WORKER_URL }}
+          VITE_PANDA_SERVER_PERSISTENCE: ${{ vars.VITE_PANDA_SERVER_PERSISTENCE }}
         run: node 02_devtools/release-guard.mjs check pwa
 
       - name: 직전 운영 기록 및 이전 세션 자산 보존

@@ -1,0 +1,342 @@
+.panda-mascot {
+  display: block;
+  max-width: 100%;
+  flex-shrink: 0;
+  overflow: visible;
+}
+
+/* The button positions the frame with translateX(-50%). Scaling that button
+   also scales its translation. Keep press feedback inside the positioned frame
+   so the original sole midpoint stays fixed, independently of clothing. */
+.panda-figure { transition: scale 150ms ease-out; }
+button.panda-game-panda:active:not(:disabled) > .panda-figure { scale: .96; }
+
+/* Motion wrappers have no Illustrator transform. Painted paths stay intact. */
+.panda-mascot__head-action,
+.panda-mascot__mouth,
+.panda-mascot__eyes-open,
+.panda-mascot__cheek,
+.panda-mascot__arm-idle,
+.panda-mascot__egg {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.panda-mascot__head-action { transform-origin: 50% 90%; }
+.panda-mascot__arm-idle { transform-origin: 50% 12%; }
+.panda-mascot__egg { transform-origin: 50% 95%; }
+
+/* Full-canvas costume images must not move the adult's original animation pivots. */
+.panda-mascot[data-stage='5'] .panda-mascot__head-action {
+  transform-box: view-box;
+  transform-origin: 626.5px 701.5px;
+}
+.panda-mascot[data-stage='5'] .panda-mascot__arm-idle {
+  transform-box: view-box;
+}
+.panda-mascot[data-stage='5'] .panda-mascot__arm-idle--left {
+  transform-origin: 520px 760px;
+}
+.panda-mascot[data-stage='5'] .panda-mascot__arm-idle--right {
+  transform-origin: 730px 760px;
+}
+.panda-mascot:not([data-stage='5']) .panda-mascot__arm-idle--right {
+  transform-box: view-box;
+  transform-origin: var(--panda-wave-shoulder);
+}
+
+.panda-mascot[data-motion='idle'] .panda-mascot__head-breath {
+  animation: panda-mascot-breathe 4.6s ease-in-out infinite;
+}
+.panda-mascot[data-motion='idle'] .panda-mascot__eyes-open {
+  animation: panda-mascot-blink 6.8s linear infinite;
+}
+.panda-mascot[data-motion='idle'] .panda-mascot__arm-idle--left {
+  animation: panda-mascot-idle-left 4.6s ease-in-out infinite;
+}
+.panda-mascot[data-motion='idle'] .panda-mascot__arm-idle--right {
+  animation: panda-mascot-idle-right 4.6s ease-in-out infinite;
+}
+.panda-mascot[data-motion='idle'] .panda-mascot__egg {
+  animation: panda-mascot-egg-idle 4.6s ease-in-out infinite;
+}
+
+/* Adult idle: plant the soles, compress before rising, then let the head and
+   arms catch up. All layers share one clock; the offsets live in the poses,
+   so newly equipped rear hats and hand props can join without drifting. */
+.panda-mascot[data-stage='5'] .panda-mascot__body-idle {
+  transform-box: view-box;
+  transform-origin: 624.900024px 1123.142212px;
+}
+.panda-mascot[data-stage='5'] .panda-mascot__head-breath {
+  transform-box: view-box;
+  transform-origin: 626.5px 701.5px;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .panda-mascot[data-stage='5'][data-motion='idle'] .panda-mascot__body-idle {
+    animation: panda-mascot-adult-idle 4.6s cubic-bezier(.45, 0, .25, 1) infinite;
+  }
+  .panda-mascot[data-stage='5'][data-motion='idle'] .panda-mascot__head-breath {
+    animation: panda-mascot-adult-breathe 4.6s cubic-bezier(.45, 0, .25, 1) infinite;
+  }
+  .panda-mascot[data-stage='5'][data-motion='idle'] .panda-mascot__arm-idle--left {
+    animation: panda-mascot-adult-idle-left 4.6s cubic-bezier(.45, 0, .25, 1) infinite;
+  }
+  .panda-mascot[data-stage='5'][data-motion='idle'] .panda-mascot__arm-idle--right {
+    animation: panda-mascot-adult-idle-right 4.6s cubic-bezier(.45, 0, .25, 1) infinite;
+  }
+}
+
+@keyframes panda-mascot-adult-idle {
+  0%, 100% { transform: rotate(0deg) scale(1, 1); }
+  12% { transform: rotate(-.25deg) scale(1.01, .99); }
+  29% { transform: rotate(.75deg) scale(.994, 1.008); }
+  43% { transform: rotate(.5deg) scale(1.004, .996); }
+  55% { transform: rotate(.12deg) scale(1, 1); }
+  67% { transform: rotate(.2deg) scale(1.007, .993); }
+  82% { transform: rotate(-.65deg) scale(.995, 1.006); }
+  93% { transform: rotate(-.2deg) scale(1.002, .998); }
+}
+@keyframes panda-mascot-adult-breathe {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  16% { transform: translateY(4px) rotate(-.7deg); }
+  34% { transform: translateY(-6px) rotate(1.2deg); }
+  48% { transform: translateY(2px) rotate(-.4deg); }
+  58% { transform: translateY(0) rotate(0deg); }
+  71% { transform: translateY(3px) rotate(.6deg); }
+  86% { transform: translateY(-5px) rotate(-1deg); }
+  96% { transform: translateY(1px) rotate(.2deg); }
+}
+@keyframes panda-mascot-adult-idle-left {
+  0%, 100% { transform: rotate(0deg); }
+  16% { transform: rotate(-4deg); }
+  36% { transform: rotate(13deg); }
+  49% { transform: rotate(-2deg); }
+  59% { transform: rotate(2deg); }
+  71% { transform: rotate(-3deg); }
+  87% { transform: rotate(9deg); }
+  97% { transform: rotate(-1deg); }
+}
+@keyframes panda-mascot-adult-idle-right {
+  0%, 100% { transform: rotate(0deg); }
+  18% { transform: rotate(4deg); }
+  38% { transform: rotate(-10deg); }
+  51% { transform: rotate(2deg); }
+  60% { transform: rotate(-1deg); }
+  73% { transform: rotate(3deg); }
+  89% { transform: rotate(-12deg); }
+  98% { transform: rotate(1deg); }
+}
+
+/* Closed/open frames share the original mouth anchor, without squashing the tongue. */
+.panda-mascot__mouth-closed,
+.panda-mascot__baby-mouth { opacity: 0; }
+
+.panda-mascot__eyes-squeezed { opacity: 0; }
+.panda-mascot[data-stage='5']:is([data-motion='eating'], [data-motion='petting']) .panda-mascot__eyes-open {
+  opacity: 0;
+  animation: none;
+}
+.panda-mascot[data-stage='5']:is([data-motion='eating'], [data-motion='petting']) .panda-mascot__eyes-squeezed {
+  opacity: 1;
+}
+
+/* The adult hops with its clothing as one unit; chewing keeps its own clock. */
+@media (prefers-reduced-motion: no-preference) {
+  .panda-mascot[data-stage='5'][data-motion='eating'] .panda-mascot__body-action {
+    animation: panda-mascot-eat-hop var(--panda-eating-duration) cubic-bezier(.45, 0, .25, 1) both;
+  }
+  .panda-mascot[data-stage='5'][data-motion='eating'] .panda-mascot__arm-idle {
+    animation: panda-mascot-eat-arms var(--panda-eating-duration) cubic-bezier(.45, 0, .25, 1) both;
+  }
+  .panda-mascot[data-stage='5'][data-motion='eating'] .panda-mascot__arm-idle--left {
+    --panda-hop-spread: 14deg;
+    --panda-hop-recoil: -1.5deg;
+  }
+  .panda-mascot[data-stage='5'][data-motion='eating'] .panda-mascot__arm-idle--right {
+    --panda-hop-spread: -14deg;
+    --panda-hop-recoil: 1.5deg;
+  }
+  .panda-mascot[data-stage='5'][data-motion='eating'] .panda-mascot__leg-action {
+    transform-box: view-box;
+    animation: panda-mascot-eat-legs var(--panda-eating-duration) cubic-bezier(.45, 0, .25, 1) both;
+  }
+  .panda-mascot[data-stage='5'][data-motion='eating'] .panda-mascot__leg-action--left {
+    transform-origin: 525px 935px;
+    --panda-hop-spread: 5.5deg;
+  }
+  .panda-mascot[data-stage='5'][data-motion='eating'] .panda-mascot__leg-action--right {
+    transform-origin: 725px 935px;
+    --panda-hop-spread: -5.5deg;
+  }
+}
+@keyframes panda-mascot-eat-hop {
+  0%, 100% { transform: translateY(0) scale(1, 1); }
+  10% {
+    transform: translateY(0) scale(1.01, .99);
+    animation-timing-function: cubic-bezier(.22, .61, .36, 1);
+  }
+  29% {
+    transform: translateY(-56px) scale(.996, 1.004);
+    animation-timing-function: cubic-bezier(.55, 0, .8, .45);
+  }
+  48% { transform: translateY(0) scale(1.01, .99); }
+  62% { transform: translateY(0) scale(.998, 1.002); }
+  76% { transform: translateY(0) scale(1, 1); }
+}
+@keyframes panda-mascot-eat-arms {
+  0%, 10%, 76%, 100% { transform: rotate(0deg); }
+  31%, 36% { transform: rotate(var(--panda-hop-spread)); }
+  58% { transform: rotate(var(--panda-hop-recoil)); }
+}
+@keyframes panda-mascot-eat-legs {
+  /* Open in the air, then plant both feet before the body lands at 48%. */
+  0%, 13%, 46%, 100% { transform: rotate(0deg); }
+  28%, 33% { transform: rotate(var(--panda-hop-spread)); }
+}
+
+.panda-mascot[data-motion='eating'] .panda-mascot__head-action {
+  animation: panda-mascot-eat-nod var(--panda-eating-duration) ease-in-out both;
+}
+.panda-mascot[data-motion='eating'] .panda-mascot__mouth-open {
+  animation: panda-mascot-mouth-open calc(var(--panda-eating-duration) / 3) steps(1, end) infinite;
+}
+.panda-mascot[data-motion='eating'] .panda-mascot__mouth-closed {
+  animation: panda-mascot-mouth-closed calc(var(--panda-eating-duration) / 3) steps(1, end) infinite;
+}
+.panda-mascot[data-motion='eating'] .panda-mascot__pacifier { opacity: 0; }
+.panda-mascot[data-motion='eating'] .panda-mascot__baby-mouth { opacity: 1; }
+.panda-mascot[data-motion='eating'] .panda-mascot__egg {
+  animation: panda-mascot-egg-react var(--panda-eating-duration) ease-in-out both;
+}
+.panda-mascot[data-motion='petting'] .panda-mascot__head-action {
+  animation: panda-mascot-pet-head var(--panda-petting-duration) ease-in-out both;
+}
+.panda-mascot[data-motion='petting'] .panda-mascot__eyes-open {
+  animation: panda-mascot-pet-eyes var(--panda-petting-duration) ease-in-out both;
+}
+.panda-mascot[data-motion='petting'] .panda-mascot__cheek {
+  animation: panda-mascot-pet-cheeks var(--panda-petting-duration) ease-in-out both;
+}
+.panda-mascot[data-motion='petting'] .panda-mascot__egg {
+  animation: panda-mascot-egg-react var(--panda-petting-duration) ease-in-out both;
+}
+
+/* A quiet, occasional greeting is opt-in for the main scene only. Original
+   arms keep their sleeves; hand props stay on the non-waving arm. */
+.panda-mascot {
+  --panda-wave-lift: -118deg;
+  --panda-wave-tip: -138deg;
+  --panda-greeting-lean: -2.4deg;
+  --panda-greeting-head: -6deg;
+}
+.panda-mascot[data-wave-side='left'] {
+  --panda-wave-lift: 118deg;
+  --panda-wave-tip: 138deg;
+  --panda-greeting-lean: 2.4deg;
+  --panda-greeting-head: 6deg;
+}
+.panda-mascot[data-wave-side='none'] { --panda-greeting-head: -1.5deg; }
+.panda-mascot[data-stage='4'] .panda-mascot__body-action {
+  transform-box: view-box;
+  transform-origin: 632.677124px 1123.128052px;
+}
+.panda-mascot[data-stage='5'] .panda-mascot__body-action {
+  transform-box: view-box;
+  transform-origin: 624.900024px 1123.142212px;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .panda-mascot[data-ambient='greeting'] .panda-mascot__head-action {
+    animation: panda-mascot-greeting-head 1800ms ease-in-out both;
+  }
+  .panda-mascot[data-ambient='greeting'][data-wave-side='right'] .panda-mascot__arm-wave--right,
+  .panda-mascot[data-ambient='greeting'][data-wave-side='left'] .panda-mascot__arm-wave--left {
+    transform-box: view-box;
+    transform-origin: var(--panda-wave-shoulder);
+    animation: panda-mascot-wave 1800ms ease-in-out both;
+  }
+  .panda-mascot[data-ambient='greeting']:is([data-stage='4'], [data-stage='5']) .panda-mascot__body-action {
+    animation: panda-mascot-greeting-lean 1800ms ease-in-out both;
+  }
+  .panda-mascot[data-ambient='greeting'][data-wave-side='right'] .panda-mascot__leg-action--right,
+  .panda-mascot[data-ambient='greeting'][data-wave-side='left'] .panda-mascot__leg-action--left {
+    animation: panda-mascot-greeting-foot 1800ms ease-in-out both;
+  }
+}
+@keyframes panda-mascot-wave {
+  /* The inner action returns to identity while its outer idle keeps flowing.
+     Reflection is a curve morph in the bind frame, never a zero-width scale. */
+  0%, 100% { transform: rotate(0deg); }
+  24%, 44%, 64% { transform: rotate(calc(var(--panda-wave-lift) - var(--panda-arm-bind))); }
+  34%, 54%, 74% { transform: rotate(calc(var(--panda-wave-tip) - var(--panda-arm-bind))); }
+}
+@keyframes panda-mascot-greeting-head {
+  0%, 100% { transform: rotate(0); }
+  24%, 76% { transform: rotate(var(--panda-greeting-head)); }
+}
+@keyframes panda-mascot-greeting-lean {
+  0%, 100% { transform: rotate(0); }
+  26%, 75% { transform: rotate(var(--panda-greeting-lean)); }
+}
+@keyframes panda-mascot-greeting-foot {
+  0%, 100% { transform: translateY(0); }
+  28%, 72% { transform: translateY(-5px); }
+}
+@keyframes panda-mascot-breathe {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+@keyframes panda-mascot-blink {
+  0%, 42%, 45%, 100% { transform: scaleY(1); }
+  43.5% { transform: scaleY(.08); }
+}
+@keyframes panda-mascot-idle-left {
+  0%, 100% { transform: rotate(0); }
+  50% { transform: rotate(5deg); }
+}
+@keyframes panda-mascot-idle-right {
+  0%, 100% { transform: rotate(0); }
+  50% { transform: rotate(-5deg); }
+}
+@keyframes panda-mascot-eat-nod {
+  0%, 39%, 61%, 83%, 100% { transform: translateY(0); }
+  28%, 50%, 72% { transform: translateY(1.5px); }
+}
+@keyframes panda-mascot-mouth-open {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+@keyframes panda-mascot-mouth-closed {
+  0%, 100% { opacity: 0; }
+  50% { opacity: 1; }
+}
+@keyframes panda-mascot-egg-idle {
+  0%, 100% { transform: rotate(0); }
+  45% { transform: rotate(.7deg); }
+  60% { transform: rotate(-.7deg); }
+}
+@keyframes panda-mascot-egg-react {
+  0%, 100% { transform: rotate(0); }
+  28%, 65% { transform: rotate(1.2deg); }
+  45%, 82% { transform: rotate(-1.2deg); }
+}
+@keyframes panda-mascot-pet-head {
+  0%, 100% { transform: rotate(0); }
+  30% { transform: rotate(-2deg); }
+  65% { transform: rotate(-1deg); }
+}
+@keyframes panda-mascot-pet-eyes {
+  0%, 100% { transform: scaleY(1); }
+  25%, 75% { transform: scaleY(.15); }
+}
+@keyframes panda-mascot-pet-cheeks {
+  0%, 100% { transform: scale(1); }
+  30%, 68% { transform: scale(1.07); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .panda-figure { transition: none; }
+  button.panda-game-panda:active:not(:disabled) > .panda-figure { scale: 1; }
+  .panda-mascot[data-motion] .panda-mascot__action,
+  .panda-mascot[data-motion] .panda-mascot__head-breath,
+  .panda-mascot[data-motion] .panda-mascot__arm-idle { animation: none; }
+  .panda-mascot[data-motion='petting'] .panda-mascot__eyes-open { transform: scaleY(.15); }
+}

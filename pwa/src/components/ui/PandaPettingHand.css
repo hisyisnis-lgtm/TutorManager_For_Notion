@@ -1,0 +1,29 @@
+.panda-mascot__petting-hand {
+  opacity: 0;
+  pointer-events: none;
+  transform-origin: 228px 184px;
+}
+
+.panda-mascot[data-motion='petting'] .panda-mascot__petting-hand {
+  animation: panda-mascot-petting-hand var(--panda-petting-duration) ease-in-out both;
+}
+
+/* 손가락이 머리에 닿는 높이를 유지하며 두 번 왕복한 뒤 들어 올린다. */
+@keyframes panda-mascot-petting-hand {
+  0% { opacity: 0; transform: translate(30px, -22px) rotate(4deg); }
+  10% { opacity: 1; transform: translate(28px, -4px) rotate(3deg); }
+  26% { opacity: 1; transform: translate(-34px, 0) rotate(-3deg); }
+  43% { opacity: 1; transform: translate(28px, -4px) rotate(3deg); }
+  60% { opacity: 1; transform: translate(-34px, 0) rotate(-3deg); }
+  77% { opacity: 1; transform: translate(28px, -4px) rotate(3deg); }
+  88% { opacity: 1; transform: translate(0, -6px) rotate(0); }
+  100% { opacity: 0; transform: translate(20px, -26px) rotate(4deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panda-mascot[data-motion='petting'] .panda-mascot__petting-hand {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}

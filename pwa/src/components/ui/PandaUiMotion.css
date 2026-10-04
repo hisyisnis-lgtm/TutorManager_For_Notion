@@ -1,0 +1,97 @@
+/* Panda UI only: character keyframes and the game timers are independent. */
+/* Raised buttons travel into their base; the app-wide press scale must not shrink them. */
+:is(.panda-page, .panda-game-view, .panda-game-dialog, .panda-page__popup, .panda-wardrobe-screen, .panda-wardrobe-transaction) button:active:not(:disabled):not(.press-static) {
+  scale: 1;
+}
+.panda-game-view button.panda-game-button, div.panda-game-dialog button.panda-game-button,
+.panda-wardrobe-screen button.panda-wardrobe-small span,
+.panda-wardrobe-screen button.panda-wardrobe-action, .panda-wardrobe-transaction button.panda-wardrobe-action {
+  transition-duration: var(--pg-motion-fast, 120ms);
+  transition-timing-function: var(--pg-ease-out, cubic-bezier(.22, 1, .36, 1));
+}
+.panda-wardrobe-screen .panda-wardrobe-tabs button, .panda-wardrobe-screen .panda-wardrobe-categories button {
+  transition: background-color var(--pg-motion-fast, 120ms) var(--pg-ease-out, cubic-bezier(.22, 1, .36, 1)),
+    color var(--pg-motion-fast, 120ms) var(--pg-ease-out, cubic-bezier(.22, 1, .36, 1));
+}
+.panda-game-view .panda-game-progress > span {
+  transform-origin: left center;
+  transition: transform var(--pg-motion-enter, 220ms) var(--pg-ease-out, cubic-bezier(.22, 1, .36, 1));
+}
+.panda-game-speech.panda-ui-speech {
+  /* Keep both horizontal edges fixed; only fade and move vertically. */
+  transform: translate(-50%, 4px);
+  transition: opacity var(--pg-motion-exit, 160ms) var(--pg-ease-out, cubic-bezier(.22, 1, .36, 1)),
+    transform var(--pg-motion-exit, 160ms) var(--pg-ease-out, cubic-bezier(.22, 1, .36, 1)),
+    visibility 0s linear var(--pg-motion-exit, 160ms);
+}
+.panda-game-speech.panda-ui-speech.is-visible {
+  transform: translate(-50%, 0);
+  transition-duration: var(--pg-motion-enter, 220ms), var(--pg-motion-enter, 220ms), 0s;
+  transition-delay: 0s;
+}
+
+.panda-ui-toast[data-state] {
+  opacity: 1;
+  translate: 0 0;
+  transition: opacity var(--pg-motion-enter, 220ms) var(--pg-ease-out, cubic-bezier(.22, 1, .36, 1)),
+    translate var(--pg-motion-enter, 220ms) var(--pg-ease-out, cubic-bezier(.22, 1, .36, 1));
+}
+.panda-ui-toast button.panda-toast-close { flex: 0 0 44px; width: 44px; height: 44px; padding: 0; color: var(--pg-card); background: transparent; }
+.panda-ui-toast button.panda-toast-close:focus-visible { outline: none; border-color: var(--pg-card); }
+.panda-ui-toast button.panda-toast-close:active { background: var(--pg-forest); }
+@media (hover: hover) and (pointer: fine) {
+  .panda-ui-toast button.panda-toast-close:hover { color: var(--pg-card); background: var(--pg-forest); }
+}
+.panda-ui-toast[data-state=closed] {
+  pointer-events: none;
+  opacity: 0;
+  translate: 0 8px;
+  transition-duration: var(--pg-motion-exit, 160ms);
+}
+/* A mounted notice reverses from its current value; only a new node starts below. */
+@starting-style {
+  .panda-ui-toast[data-state=open] { opacity: 0; translate: 0 8px; }
+}
+div.panda-ui-dialog {
+  transform-origin: 50% 50%;
+}
+div.panda-ui-dialog[data-state=open] {
+  animation: panda-ui-dialog-in var(--pg-motion-enter, 220ms) var(--pg-ease-out, cubic-bezier(.22, 1, .36, 1)) backwards;
+}
+div.panda-ui-dialog[data-state=closed] {
+  pointer-events: none;
+  animation: panda-ui-dialog-out var(--pg-motion-exit, 160ms) var(--pg-ease-out, cubic-bezier(.22, 1, .36, 1)) forwards;
+}
+div.panda-ui-overlay[data-state=open] {
+  animation: panda-ui-fade-in var(--pg-motion-enter, 220ms) var(--pg-ease-out, cubic-bezier(.22, 1, .36, 1)) backwards;
+}
+div.panda-ui-overlay[data-state=closed] {
+  animation: panda-ui-fade-out var(--pg-motion-exit, 160ms) var(--pg-ease-out, cubic-bezier(.22, 1, .36, 1)) forwards;
+}
+.panda-wardrobe-screen.panda-ui-wardrobe[data-state=open] {
+  animation: panda-ui-wardrobe-in var(--pg-motion-enter, 220ms) var(--pg-ease-out, cubic-bezier(.22, 1, .36, 1)) backwards;
+}
+.panda-wardrobe-screen.panda-ui-wardrobe[data-state=closed] {
+  pointer-events: none;
+  animation: panda-ui-wardrobe-out var(--pg-motion-exit, 160ms) var(--pg-ease-out, cubic-bezier(.22, 1, .36, 1)) forwards;
+}
+
+/* Compose centering before scale in one transform so both axes stay anchored. */
+@keyframes panda-ui-dialog-in { from { opacity: 0; transform: translate(-50%, -50%) scale(.98); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
+@keyframes panda-ui-dialog-out { from { opacity: 1; transform: translate(-50%, -50%) scale(1); } to { opacity: 0; transform: translate(-50%, -50%) scale(.98); } }
+@keyframes panda-ui-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes panda-ui-fade-out { from { opacity: 1; } to { opacity: 0; } }
+@keyframes panda-ui-wardrobe-in { from { opacity: 0; translate: 0 6px; } to { opacity: 1; translate: 0 0; } }
+@keyframes panda-ui-wardrobe-out { from { opacity: 1; translate: 0 0; } to { opacity: 0; translate: 0 6px; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .panda-game-view button.panda-game-button, div.panda-game-dialog button.panda-game-button,
+  .panda-wardrobe-screen button.panda-wardrobe-small span,
+  .panda-wardrobe-screen button.panda-wardrobe-action, .panda-wardrobe-transaction button.panda-wardrobe-action,
+  .panda-wardrobe-screen .panda-wardrobe-tabs button, .panda-wardrobe-screen .panda-wardrobe-categories button { transition: none; }
+  .panda-game-view .panda-game-progress > span { transition: none; }
+  .panda-game-speech.panda-ui-speech { transition: none; transform: translateX(-50%); }
+  .panda-ui-toast[data-state] { transition: none; }
+  div.panda-ui-dialog[data-state], div.panda-ui-overlay[data-state],
+  .panda-wardrobe-screen.panda-ui-wardrobe[data-state] { animation: none; }
+}

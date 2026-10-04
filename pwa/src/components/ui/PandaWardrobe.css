@@ -1,0 +1,124 @@
+/* Keep the preview and filters visible while only the item list scrolls. */
+.panda-wardrobe-screen, .panda-wardrobe-transaction {
+  --pw-tab: #e5dcc7; --pw-tab-active: #fffefc; --pw-tab-ink: #7b5f30;
+  --pw-slot: #c9b999; --pw-slot-edge: #ac976e; --pw-thumbnail: #b8c2cc; --pw-thumbnail-center: #e8edf1;
+  --pw-selected: #8b9d67; --pw-selected-edge: #74874d;
+  --pw-remove: #cf483f; --pw-remove-edge: #a6322c; --pw-empty-ink: #3d331e;
+  color: var(--pg-ink); font-family: var(--pg-font-body); font-weight: 500; line-height: 1.4; -webkit-tap-highlight-color: transparent;
+}
+.panda-wardrobe-screen { position: fixed; inset: 0; z-index: 50; display: flex; flex-direction: column; width: 100%; max-width: 480px; height: 100dvh; margin: 0 auto; padding: max(24px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left)); overflow: hidden; background: var(--pg-background); outline: none; }
+.panda-wardrobe-screen p, .panda-wardrobe-transaction p { margin: 0; }
+/* A temporary save lock must not flash every control at half opacity. */
+.panda-wardrobe-screen[aria-busy=true] button:disabled { opacity: 1; }
+.panda-wardrobe-header { flex: 0 0 52px; display: flex; align-items: center; gap: 8px; padding: 4px; margin-bottom: 12px; }
+h2.panda-wardrobe-title { flex: 1; margin: 0; min-width: 0; font: 400 24px/1.4 var(--pg-font-title); text-align: center; letter-spacing: 0; white-space: nowrap; }
+button.panda-wardrobe-icon { flex: 0 0 44px; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 12px; background: transparent; }
+button.panda-wardrobe-icon img { width: 24px; height: 24px; }
+.panda-wardrobe-stage { flex: 0 0 200px; position: relative; overflow: hidden; border-radius: 28px; background: var(--pg-stage); }
+.panda-wardrobe-floor { position: absolute; inset: 145px 0 0; border-top: 4px solid var(--pg-floor-edge); background: var(--pg-floor); }
+.panda-wardrobe-balance { position: absolute; z-index: 1; top: 6px; left: 50%; display: flex; align-items: center; justify-content: center; gap: 8px; min-width: 104px; height: 32px; padding: 0 12px; transform: translateX(-50%); border-radius: 20px; background: var(--pg-card); font-size: 16px; font-weight: 700; }
+.panda-wardrobe-balance img, .panda-wardrobe-price img { width: 22px; height: 22px; }
+.panda-wardrobe-figure { position: absolute; left: calc(50% + .33px); top: 49px; transform: translateX(-50%); }
+.panda-wardrobe-slots { position: absolute; inset: 28px 12px 12px; display: flex; align-items: center; justify-content: space-between; pointer-events: none; }
+.panda-wardrobe-slot-column { display: flex; flex-direction: column; gap: 8px; }
+button.panda-wardrobe-slot { width: 56px; height: 48px; flex-shrink: 0; padding: 4px 8px; border: 1px solid var(--pw-slot-edge); border-radius: 12px; background: var(--pw-slot); pointer-events: auto; }
+button.panda-wardrobe-slot:hover { background: var(--pw-slot); }
+button.panda-wardrobe-slot.is-equipped { position: relative; border-color: transparent; background: var(--pw-thumbnail); }
+button.panda-wardrobe-slot img { width: 28px; height: 28px; }
+button.panda-wardrobe-slot .panda-wardrobe-part { width: 40px; height: 34px; }
+.panda-wardrobe-tabs { flex: 0 0 52px; display: flex; gap: 4px; padding: 4px; margin-top: 12px; border-radius: 39px; background: var(--pw-tab); }
+.panda-wardrobe-tabs button { flex: 1; min-width: 0; height: 44px; padding: 0; border: 0; border-radius: 28px; background: transparent; color: var(--pw-tab-ink); font: 700 var(--pg-button-font-size)/1.4 var(--pg-font-body); }
+.panda-wardrobe-tabs button[aria-pressed=true] { background: var(--pw-tab-active); }
+.panda-wardrobe-scroll { flex: 1; min-height: 0; margin: 12px -4px 0; padding: 4px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; }
+.panda-wardrobe-scroll::-webkit-scrollbar { display: none; }
+.panda-wardrobe-categories { flex: 0 0 44px; display: flex; justify-content: space-between; gap: 8px; margin-top: 12px; }
+.panda-wardrobe-categories button { width: 62px; flex: 0 1 62px; min-width: 0; height: 44px; padding: 0; border: 0; border-radius: 20px; background: transparent; color: var(--pg-secondary); font: 500 var(--pg-button-font-size)/1.4 var(--pg-font-body); }
+.panda-wardrobe-categories button[aria-pressed=true] { background: var(--pg-forest); color: var(--pg-card); }
+.panda-wardrobe-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 12px; padding-bottom: 10px; }
+.panda-wardrobe-card { position: relative; height: 176px; min-width: 0; border-radius: 20px; background: var(--pg-card); box-shadow: var(--pg-shadow), 0 4px 0 var(--pg-edge); }
+/* Figma shadows include the 4px outside stroke; CSS outline does not cast a shadow. */
+.panda-wardrobe-card.is-selected { outline: 4px solid var(--pw-selected); box-shadow: 0 10px 10px 4px rgba(0, 0, 0, .06), 0 4px 0 4px var(--pw-selected-edge); }
+.panda-wardrobe-preview { position: absolute; inset: 0; width: 100%; border-radius: inherit; background: transparent; }
+.panda-wardrobe-part { display: block; overflow: visible; }
+/* Shop and inventory share a 12px thumbnail inset and a 4px label gap. Artwork remains 70x56. */
+.panda-wardrobe-card-thumbnail { position: absolute; top: 12px; left: 12px; right: 12px; height: 83px; overflow: hidden; border-radius: 12px; background: var(--pw-thumbnail); pointer-events: none; }
+.panda-wardrobe-card-part { position: absolute; top: 13.5px; left: 50%; width: 70px; height: 56px; transform: translateX(-50%); pointer-events: none; }
+.panda-wardrobe-card .panda-wardrobe-item-name { position: absolute; top: 99px; left: 12px; right: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; pointer-events: none; font-size: 14px; }
+.panda-wardrobe-item-level { position: absolute; top: 17px; right: 19px; padding: 2px 4px; border-radius: 12px; background: var(--pg-card); color: var(--pg-secondary); font-size: 12px; pointer-events: none; }
+.panda-wardrobe-price { position: absolute; bottom: 16px; left: 17.5px; display: flex; align-items: center; gap: 2px; font: 400 20px/1.4 var(--pg-font-title); pointer-events: none; }
+.panda-wardrobe-card-actions { position: absolute; bottom: 8px; right: 8px; left: 8px; display: flex; justify-content: flex-end; gap: 8px; pointer-events: none; }
+button.panda-wardrobe-small { pointer-events: auto; display: flex; position: relative; height: 44px; min-width: 44px; padding: 0; border: 0; background: transparent; border-radius: 20px; }
+button.panda-wardrobe-small span { display: flex; align-items: center; justify-content: center; width: 100%; height: 44px; border-radius: 20px; background: var(--pg-action); box-shadow: var(--pg-shadow), 0 var(--pg-button-depth) 0 var(--pg-action-edge); color: var(--pg-ink); font: 600 var(--pg-button-font-size)/1.4 var(--pg-font-body); transition: transform 80ms ease-out, box-shadow 80ms ease-out; }
+button.panda-wardrobe-small.is-buy { width: calc((100% - 8px) / 2); }
+button.panda-wardrobe-small.is-sell, button.panda-wardrobe-small.is-equip { flex: 1 1 0; min-width: 0; }
+button.panda-wardrobe-small.is-sell span { background: var(--pg-secondary-button); box-shadow: var(--pg-shadow), 0 var(--pg-button-depth) 0 var(--pg-secondary-button-edge); }
+button.panda-wardrobe-small.is-remove span { color: var(--pg-card); background: var(--pw-remove); box-shadow: var(--pg-shadow), 0 var(--pg-button-depth) 0 var(--pw-remove-edge); }
+button.panda-wardrobe-small.is-unavailable span { background: var(--pg-muted); color: var(--pg-secondary); box-shadow: none; }
+button.panda-wardrobe-small:active:not(:disabled) { transform: none; scale: 1; }
+button.panda-wardrobe-small:active:not(:disabled):not(.is-unavailable) span { transform: translateY(calc(var(--pg-button-depth) - var(--pg-button-pressed-depth))); box-shadow: var(--pg-shadow), 0 var(--pg-button-pressed-depth) 0 var(--pg-action-edge); }
+button.panda-wardrobe-small.is-remove:active:not(:disabled) span { box-shadow: var(--pg-shadow), 0 var(--pg-button-pressed-depth) 0 var(--pw-remove-edge); }
+button.panda-wardrobe-small.is-sell:active:not(:disabled) span { box-shadow: var(--pg-shadow), 0 var(--pg-button-pressed-depth) 0 var(--pg-secondary-button-edge); }
+.panda-wardrobe-empty { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 24px; }
+.panda-wardrobe-empty > img { width: 40px; height: 40px; }
+.panda-wardrobe-empty > p { color: var(--pw-empty-ink); font: 400 20px/1.4 var(--pg-font-title); text-align: center; }
+button.panda-wardrobe-action { min-width: 0; width: 100%; height: 52px; padding: 12px; border: 0; border-radius: 20px; background: var(--pg-action); color: var(--pg-ink); font: 400 var(--pg-button-font-size)/1.4 var(--pg-font-title); box-shadow: var(--pg-shadow), 0 var(--pg-button-depth) 0 var(--pg-action-edge); transition: transform 80ms ease-out, box-shadow 80ms ease-out; }
+button.panda-wardrobe-action:hover { background: var(--pg-action); }
+button.panda-wardrobe-action.is-secondary { background: var(--pg-secondary-button); box-shadow: var(--pg-shadow), 0 var(--pg-button-depth) 0 var(--pg-secondary-button-edge); }
+button.panda-wardrobe-action:active:not(:disabled) { transform: translateY(calc(var(--pg-button-depth) - var(--pg-button-pressed-depth))); scale: 1; box-shadow: var(--pg-shadow), 0 var(--pg-button-pressed-depth) 0 var(--pg-action-edge); }
+button.panda-wardrobe-action.is-secondary:active:not(:disabled) { box-shadow: var(--pg-shadow), 0 var(--pg-button-pressed-depth) 0 var(--pg-secondary-button-edge); }
+button.panda-wardrobe-action.is-processing { grid-column: 1 / -1; opacity: 1; background: var(--pg-muted); color: var(--pg-secondary); box-shadow: none; }
+.panda-wardrobe-screen button:focus-visible, .panda-wardrobe-transaction button:focus-visible { outline: 2px solid var(--pg-forest); outline-offset: 2px; }
+.panda-wardrobe-toast { position: absolute; bottom: max(40px, env(safe-area-inset-bottom)); left: 24px; right: 24px; z-index: 2; display: flex; align-items: center; gap: 12px; min-height: 72px; padding: 16px; border-radius: 20px; background: var(--pg-ink); color: var(--pg-card); font-size: 14px; white-space: pre-line; }
+.panda-wardrobe-toast img { flex: 0 0 24px; width: 24px; height: 24px; }
+.panda-wardrobe-toast > span { flex: 1; min-width: 0; }
+.panda-wardrobe-recovery { margin-top: 20px; color: var(--pg-secondary); font-size: 14px; }
+.panda-wardrobe-recovery button { margin-top: 12px; }
+div.panda-wardrobe-overlay { z-index: 51; background: var(--pg-overlay); }
+.panda-wardrobe-transaction { position: fixed; top: 50%; left: 50%; z-index: 52; display: flex; flex-direction: column; gap: 20px; width: calc(100% - 48px); max-width: 342px; max-height: calc(100dvh - 48px); padding: 24px; overflow-y: auto; transform: translate(-50%, -50%); border-radius: 28px; background: var(--pg-card); box-shadow: var(--pg-shadow); }
+.panda-wardrobe-transaction.is-sale { margin-top: -16.5px; }
+.panda-wardrobe-transaction-item { position: relative; flex: 0 0 140px; border-radius: 12px; background: var(--pw-thumbnail); }
+/* Figma rarity paint: a bright center with a softer colored edge, shared by all thumbnail surfaces. */
+.panda-wardrobe-card-thumbnail, button.panda-wardrobe-slot.is-equipped, .panda-wardrobe-transaction-item { background: var(--pw-thumbnail) radial-gradient(ellipse 75% 75% at 50% 40%, var(--pw-thumbnail-center), var(--pw-thumbnail)); }
+.panda-wardrobe-transaction-item .panda-wardrobe-part { position: absolute; top: 26px; left: 50%; width: 90px; height: 72px; transform: translateX(-50%); }
+.panda-wardrobe-transaction-item p { position: absolute; top: 103px; width: 100%; padding: 0 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center; color: black; font-size: 14px; }
+.panda-wardrobe-transaction-price { display: flex; align-items: center; justify-content: center; gap: 8px; height: 39px; font: 400 28px/1.4 var(--pg-font-title); }
+.panda-wardrobe-transaction-price img { width: 30px; height: 30px; }
+h2.panda-wardrobe-transaction-title { margin: 0; color: var(--pg-ink); font: 400 20px/1.4 var(--pg-font-title); text-align: center; white-space: pre-line; letter-spacing: 0; }
+.panda-wardrobe-transaction-description { min-height: 44px; margin: 0; color: var(--pg-secondary); font: 500 14px/1.4 var(--pg-font-body); text-align: center; }
+.panda-wardrobe-transaction-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.panda-wardrobe-legacy-note { color: var(--pg-secondary); font-size: 12px; text-align: center; }
+@media (max-width: 374px) {
+  .panda-wardrobe-screen { padding-right: max(16px, env(safe-area-inset-right)); padding-left: max(16px, env(safe-area-inset-left)); }
+  button.panda-wardrobe-slot { width: 48px; padding: 4px; }
+  .panda-wardrobe-categories { gap: 0; }
+  h2.panda-wardrobe-title { font-size: 20px; }
+  .panda-wardrobe-item-level { right: 8px; }
+  .panda-wardrobe-empty { padding: 24px 8px; }
+  .panda-wardrobe-toast { right: 16px; left: 16px; }
+}
+
+/* Reserve a complete card row on short phones without shrinking touch targets. */
+@media (max-height: 740px) {
+  .panda-wardrobe-screen { padding-top: max(12px, env(safe-area-inset-top)); padding-bottom: max(12px, env(safe-area-inset-bottom)); }
+}
+@media (max-height: 600px) {
+  .panda-wardrobe-header { flex-basis: 44px; padding: 0; margin-bottom: 8px; }
+  .panda-wardrobe-stage { flex-basis: 180px; }
+  .panda-wardrobe-floor { top: 130px; }
+  .panda-wardrobe-figure { top: 42px; transform: translateX(-50%) scale(.9); }
+  .panda-wardrobe-slots { inset: 12px; }
+  .panda-wardrobe-slot-column { gap: 6px; }
+  .panda-wardrobe-tabs, .panda-wardrobe-categories, .panda-wardrobe-scroll { margin-top: 8px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  button.panda-wardrobe-small span, button.panda-wardrobe-action { transition: none; }
+}
+
+/* Prevent the app Button hover utility from painting unselected Figma tabs. */
+button.panda-wardrobe-icon:hover, button.panda-wardrobe-small:hover, .panda-wardrobe-categories button:hover, .panda-wardrobe-tabs button:hover { background: transparent; }
+.panda-wardrobe-categories button[aria-pressed=true]:hover { background: var(--pg-forest); color: var(--pg-card); }
+.panda-wardrobe-tabs button[aria-pressed=true]:hover { background: var(--pw-tab-active); }
+
+button.panda-wardrobe-slot.is-base { padding: 0; border: 0; background: transparent; overflow: hidden; }
+button.panda-wardrobe-slot.is-base img { width: 56px; height: 48px; max-width: none; }
+

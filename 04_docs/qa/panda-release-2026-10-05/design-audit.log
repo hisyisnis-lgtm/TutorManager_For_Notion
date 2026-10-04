@@ -1,0 +1,54 @@
+
+디자인 시스템 검사 — 272개 파일 (게임 포함)
+
+✅ antd-deprecated  (0)
+✅ antd-icons-legacy  (0)
+✅ phosphor-legacy-export  (0)
+✅ transition-all  (0)
+✅ color-literal  (0)
+✅ color-literal-game  (0)
+✅ weight-500  (0)
+✅ dead-transition  (0)
+✅ radius-offscale  (0)
+✅ thick-color-border  (0)
+✅ inline-multi-shadow  (0)
+✅ emptystate-emoji-icon  (0)
+✅ viewport-width-fullbleed  (0)
+✅ icon-size-offscale  (0)
+👁  REVIEW primary-as-text  (57)  §12
+   PRIMARY는 인터랙티브·아이콘·배지 배경 전용. 본문 데이터에 쓰였는지 사람이 확인할 것.
+   pwa/src/components/classes/ClassCard.jsx:34  const { bg, text } = isOngoing ? { bg: 'bg-brand-50', text: 'text-brand-700' } : classStatusColor(cls.status);
+   pwa/src/components/home/PendingClassCard.jsx:85  background: '#fff', color: PRIMARY,
+   pwa/src/components/IntroContent.jsx:114  <span style={{ display: 'inline-block', lineHeight: 1.6667, whiteSpace: 'nowrap', borderRadius: 20, marginBott
+   pwa/src/components/IntroContent.jsx:130  <span style={{ fontSize: 12, color: PRIMARY, fontWeight: 600 }}>전체 보기 →</span>
+   pwa/src/components/IntroContent.jsx:270  style={{ backgroundColor: 'white', color: PRIMARY, border: 'none' }}
+   pwa/src/components/IntroContent.jsx:356  <span style={{ fontSize: 13, fontWeight: 600, color: PRIMARY, letterSpacing: '0.05em', display: 'block', margi
+   pwa/src/components/lessonLogs/LessonLogBody.jsx:20  <span style={{ ...BADGE_SMALL, display: 'inline-block', borderRadius: 980, background: PRIMARY_BG, color: PRIM
+   pwa/src/components/payments/IncomeSummary.jsx:415  <span className="tabular-nums" style={{ fontSize: 18, fontWeight: 700, color: PRIMARY }}>
+   pwa/src/components/StudentAuthGate.jsx:158  color: PRIMARY, fontWeight: 700, fontSize: 13,
+   pwa/src/components/ui/AudioPlayer.jsx:317  color: PRIMARY,
+   pwa/src/components/ui/AutoLink.jsx:26  color: PRIMARY,
+   pwa/src/components/ui/Badge.jsx:47  'text-brand-700': PRIMARY_DARK,
+   … 그 외 45건
+
+👁  REVIEW small-hit-area  (22)  §7.4 · Better #16
+   세로 패딩이 작은 버튼은 히트영역이 40px에 못 미칠 수 있다. .hit-40 확인.
+   pwa/src/components/classes/ClassCard.jsx:149  <span style={{ fontSize: 12, color: STATUS_WARNING_TEXT, background: STATUS_WARNING_BG, padding: '2px 8px', bo
+   pwa/src/components/classes/ClassCard.jsx:154  <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: STATUS_ERROR_TEXT, backgrou
+   pwa/src/components/classes/ClassCard.jsx:168  padding: '5px 12px', borderRadius: 8, border: 'none', cursor: 'pointer',
+   pwa/src/components/StudentAuthGate.jsx:157  padding: '5px 12px', borderRadius: 999, background: PRIMARY_BG,
+   pwa/src/components/ui/CoachMarkOverlay.jsx:263  display: 'inline-block', padding: '5px 13px', borderRadius: 999,
+   pwa/src/game/screens/HomeScreen.jsx:443  <div style={{ position: 'relative', background: '#fff', color: TG.INK, ...TYPE.labelSm, lineHeight: 1.3, textA
+   pwa/src/game/screens/HomeScreen.jsx:764  <span style={{ marginTop: -15, display: 'flex', alignItems: 'center', padding: '2px 7px', borderRadius: RADIUS
+   pwa/src/game/screens/shared.jsx:817  <span key={to2 ? '2' : '3'} style={{ display: 'inline-flex', alignItems: 'center', gap: SPACE.xs, padding: '3p
+   pwa/src/game/screens/shared.jsx:1269  <span style={{ display: 'inline-flex', alignItems: 'center', gap: SPACE.sm, ...TYPE.h2, color: flash.ok ? TG.S
+   pwa/src/game/screens/TitleScreen.jsx:98  <div className="tg-enter" style={{ position: 'relative', background: '#fff', color: TG.INK, ...TYPE.labelSm, l
+   pwa/src/pages/HomeworkDetailPage.jsx:367  <Badge label={hw.status} bg={bg} text={text} style={{ fontSize: 15, padding: '4px 12px', borderRadius: 10, fle
+   pwa/src/pages/PandaTestPage.jsx:90  padding: '3px 10px', borderRadius: 8, border: '1px solid',
+   … 그 외 10건
+
+────────────────────────────────────────────────────────────────
+ERROR 0 · WARN 0 · REVIEW 79
+〓 예외 25건: color-literal(20) · thick-color-border(1) · color-literal-game(1) · weight-500(3)
+  이유는 스크립트의 ALLOW 목록 참조. 이유 없는 예외는 두지 않는다.
+REVIEW는 위반이 아니라 "사람이 봐야 하는 것"이다 — 0을 목표로 하지 말 것.

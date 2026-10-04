@@ -1,0 +1,85 @@
+.panda-growth-effects { position: absolute; inset: 0; z-index: 1; overflow: hidden; pointer-events: none; }
+.panda-growth-field { position: absolute; bottom: 130px; left: 50%; width: 0; height: 0; }
+.panda-growth-pulse .panda-growth-confetti { top: 0; }
+.panda-growth-confetti { position: absolute; top: 120px; left: 50%; width: 0; height: 0; }
+.panda-growth-confetti > i { position: absolute; top: 0; left: 0; opacity: 0; will-change: transform, opacity; }
+.panda-growth-confetti > i > svg { display: block; }
+@media (prefers-reduced-motion: reduce) {
+  .panda-growth-field, .panda-growth-confetti { display: none; }
+}
+
+/* RankUpReveal / BeatDim / RevealRings: same 80% dim, concentric rings and reveal beats.
+   The overlay never takes focus. Feed controls stay hidden until the reveal ends. */
+.panda-evolution-overlay { position: fixed; inset: 0; z-index: 48; pointer-events: none; overflow: hidden; font-family: var(--pg-font-body); }
+.panda-evolution-dim { position: absolute; inset: 0; background: rgba(0, 0, 0, .8); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); animation: panda-evolution-dim-in 350ms ease-out both; }
+.panda-evolution-rings { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+.panda-evolution-rings > i { position: absolute; border-radius: 50%; background: rgba(0, 0, 0, .2); animation: panda-evolution-ring-in 380ms var(--pg-ease-out) var(--ring-in-delay) both, panda-evolution-ring-idle 2400ms ease-in-out var(--ring-idle-delay) infinite; }
+.panda-evolution-overlay[data-phase='out']:not([data-continuing]) .panda-evolution-dim { animation: panda-evolution-dim-out 260ms ease-out both; }
+.panda-evolution-overlay[data-phase='out']:not([data-continuing]) .panda-evolution-rings > i { animation: panda-evolution-ring-out 175ms var(--pg-ease-out) var(--ring-out-delay) both; }
+.panda-evolution-stage { position: absolute; left: 0; right: 0; top: 50%; height: 844px; margin-top: -422px; }
+.panda-evolution-stage[data-closing] { animation: panda-evolution-content-out 260ms var(--pg-ease-out) both; }
+.panda-evolution-figure { position: absolute; top: 218px; left: 0; right: 0; height: 240px; display: flex; align-items: center; justify-content: center; }
+.panda-evolution-silhouette, .panda-evolution-color { position: relative; z-index: 4; }
+.panda-evolution-silhouette { transform: scale(.82); filter: brightness(0) invert(1) drop-shadow(0 0 8px var(--pg-action)); will-change: transform, filter; }
+.panda-evolution-figure .panda-figure * { animation: none !important; }
+.panda-evolution-color { animation: panda-evolution-tada 580ms cubic-bezier(.34, 1.56, .64, 1) both; }
+.panda-evolution-energy { position: absolute; left: 50%; top: 50%; width: 7px; height: 7px; margin: -3.5px; border-radius: 50%; background: var(--pg-card); box-shadow: 0 0 6px var(--pg-action); animation: panda-evolution-converge var(--energy-duration) ease-in var(--energy-delay) infinite both; }
+.panda-evolution-flash { position: absolute; z-index: 5; top: 50%; left: 50%; width: 280px; height: 280px; margin: -140px; border-radius: 50%; background: radial-gradient(closest-side, var(--pg-card), transparent); animation: panda-evolution-flash 360ms ease-out both; }
+.panda-evolution-figure .panda-growth-confetti { top: 50%; z-index: 6; }
+.panda-evolution-hint { position: absolute; top: 469.5px; left: 0; right: 0; margin: 0; color: var(--pg-card); text-align: center; font-size: 16px; line-height: 25px; animation: panda-evolution-hint 1000ms ease-in-out infinite; }
+.panda-evolution-caption { position: absolute; top: 478px; left: 16px; right: 16px; display: flex; flex-direction: column; align-items: center; text-align: center; color: var(--pg-card); }
+.panda-evolution-caption > span { font-size: 16px; font-weight: 600; line-height: 25px; animation: panda-evolution-pop 500ms cubic-bezier(.34, 1.56, .64, 1) both; }
+.panda-evolution-caption > strong { margin-top: 1px; font-family: var(--pg-font-title); font-size: 30px; font-weight: 400; line-height: 34px; animation: panda-evolution-pop 500ms cubic-bezier(.34, 1.56, .64, 1) 120ms both; }
+.panda-evolution-caption > .panda-evolution-level { margin-top: 8px; animation-delay: 180ms; }
+@keyframes panda-evolution-dim-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes panda-evolution-dim-out { from { opacity: 1; } to { opacity: 0; } }
+@keyframes panda-evolution-ring-in { 0% { opacity: 0; transform: scale(.55); } 70% { opacity: 1; transform: scale(1.045); } 100% { opacity: 1; transform: scale(1); } }
+@keyframes panda-evolution-ring-idle { 0%, 100% { transform: scale(1); } 45% { transform: scale(1.075); } }
+@keyframes panda-evolution-ring-out { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(1.5); } }
+@keyframes panda-evolution-content-out { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(.97); } }
+@keyframes panda-evolution-pop { 0% { opacity: 0; transform: scale(.5); } 55% { opacity: 1; transform: scale(1.12); } 100% { opacity: 1; transform: scale(1); } }
+@keyframes panda-evolution-tada { 0% { opacity: 0; transform: scale(1.3); } 28% { opacity: 1; transform: scale(1.18); } 60% { transform: scale(.96); } 100% { transform: scale(1); } }
+@keyframes panda-evolution-hint { 0%, 100% { opacity: .45; } 50% { opacity: .9; } }
+@keyframes panda-evolution-converge { 0% { opacity: 0; transform: translate(var(--energy-x), var(--energy-y)) scale(1); } 22% { opacity: .95; } 100% { opacity: 0; transform: translate(0, 0) scale(.2); } }
+@keyframes panda-evolution-flash { 0% { opacity: 0; } 9% { opacity: .97; } 100% { opacity: 0; } }
+@media (max-height: 620px) {
+  .panda-evolution-stage { margin-top: -462px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .panda-evolution-overlay *, .panda-evolution-stage[data-closing] { animation: none !important; }
+  .panda-evolution-energy, .panda-evolution-flash { display: none; }
+}
+
+/* A shorter celebration at the same visual scale as evolution. Paper only:
+   dark lettering uses a crisp white stroke, with no halo or light burst. */
+.panda-level-overlay { position: fixed; inset: 0; z-index: 48; pointer-events: none; overflow: hidden; font-family: var(--pg-font-body); }
+.panda-level-dim { position: absolute; inset: 0; background: rgba(0, 0, 0, .8); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); animation: panda-evolution-dim-in 220ms ease-out both; }
+.panda-level-stage { position: absolute; left: 0; right: 0; top: 50%; height: 844px; margin-top: -390px; }
+.panda-level-figure { position: absolute; top: 172px; left: 0; right: 0; height: 250px; display: flex; align-items: center; justify-content: center; }
+.panda-celebration-surface { position: absolute; top: calc(50% - 16px); left: 50%; width: min(296px, calc(100vw - 24px)); aspect-ratio: 1; overflow: hidden; border-radius: 50%; transform: translate(-50%, -50%); animation: panda-celebration-surface-in 380ms var(--pg-ease-out) both; }
+.panda-celebration-ground-shadow { position: absolute; transform: translate(-50%, -50%); }
+.panda-evolution-figure .panda-celebration-surface { top: calc(50% - 12px); }
+.panda-level-figure > .panda-figure { animation: panda-level-hop 760ms var(--pg-ease-out) both; }
+.panda-level-figure .panda-figure * { animation: none !important; }
+.panda-level-caption { position: absolute; top: 450px; left: 16px; right: 16px; display: flex; flex-direction: column; align-items: center; text-align: center; font-family: var(--pg-font-title); color: var(--pg-ink); }
+.panda-level-caption > strong, .panda-level-number { font-weight: 400; white-space: nowrap; -webkit-text-stroke: 6px var(--pg-card); paint-order: stroke fill; animation: panda-level-title-in 440ms cubic-bezier(.22, 1.3, .4, 1) 90ms both; }
+.panda-level-caption > strong { font-size: 36px; line-height: 44px; }
+.panda-level-number { margin-top: 4px; font-size: 60px; line-height: 68px; animation-delay: 180ms; font-variant-numeric: tabular-nums; }
+.panda-level-confetti { position: absolute; top: 345px; z-index: 2; }
+.panda-level-confetti--left { left: 18%; }
+.panda-level-confetti--right { right: 18%; }
+.panda-level-confetti .panda-growth-confetti { top: 0; left: 0; }
+.panda-level-overlay[data-phase='out'] .panda-level-dim { animation: panda-evolution-dim-out 240ms ease-out both; }
+.panda-level-overlay[data-phase='out'] .panda-level-stage { animation: panda-level-content-out 240ms var(--pg-ease-out) both; }
+@keyframes panda-level-hop {
+  0% { opacity: 0; transform: scale(.86, .9); }
+  16% { opacity: 1; transform: scale(1.06, .94); }
+  42% { transform: translateY(-28px) rotate(-4deg) scale(.98, 1.04); }
+  64% { transform: translateY(0) rotate(2deg) scale(1.05, .95); }
+  83% { transform: translateY(-5px) rotate(-1deg) scale(.99, 1.01); }
+  100% { opacity: 1; transform: translateY(0) rotate(0) scale(1); }
+}
+@keyframes panda-level-title-in { 0% { opacity: 0; transform: translateY(12px) scale(.7); } 70% { opacity: 1; transform: translateY(0) scale(1.08); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes panda-level-content-out { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(8px); } }
+@keyframes panda-celebration-surface-in { from { opacity: 0; transform: translate(-50%, -50%) scale(.92); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
+@media (prefers-reduced-motion: reduce) { .panda-level-overlay * { animation: none !important; } }

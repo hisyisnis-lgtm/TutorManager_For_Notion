@@ -1,0 +1,3 @@
+.panda-room-backdrop { position: absolute; inset: 0; overflow: hidden; background: var(--pg-stage); pointer-events: none; }
+.panda-room-floor { position: absolute; inset: auto 0 0; height: 64px; background: var(--pg-floor); }
+.panda-room-baseboard { position: absolute; inset: auto 0 62px; height: 8px; background: var(--pg-floor-edge); }
