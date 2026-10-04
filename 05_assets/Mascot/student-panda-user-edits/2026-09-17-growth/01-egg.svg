@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" viewBox="0 0 1254 1254">
+  <!-- Generator: Adobe Illustrator 30.8.1, SVG Export Plug-In . SVG Version: 2.1.4 Build 1)  -->
+  <defs>
+    <style>
+      .st0 {
+        fill: #fffefa;
+      }
+
+      .st1 {
+        fill: #f6edde;
+      }
+
+      .st2 {
+        fill: #c4dfdb;
+      }
+
+      .st3 {
+        fill: #f5f0e4;
+      }
+    </style>
+  </defs>
+  <g id="panda-01-egg-svg-1" data-stage="1">
+    <g id="panda-01-egg-background" data-editable="part" data-part="background" inkscape:groupmode="layer" inkscape:label="諛곌꼍 쨌 ④린硫щ챸">
+      <rect id="panda-01-egg-rect-5" class="st2" width="1254" height="1254"/>
+    </g>
+    <g id="panda-01-egg-closed-egg" data-group="closed-egg" inkscape:groupmode="layer" inkscape:label="ロ엺 ">
+      <g id="panda-01-egg-egg-base" data-editable="part" data-part="egg-base" inkscape:groupmode="layer" inkscape:label="쨌 꾩꽦諛뷀깢">
+        <path id="panda-01-egg-path-7" class="st3" d="M307,811c0,199,115,306,320,306s318-107,318-306c0-216-174-469-318-469-144,0-320,253-320,469Z"/>
+      </g>
+      <g id="panda-01-egg-egg-light" data-editable="part" data-part="egg-light" inkscape:groupmode="layer" inkscape:label="쨌 諛앹 硫">
+        <path id="panda-01-egg-path-8" class="st0" d="M670,349c96,70,165,211,173,360,6,99-9,210-80,289-71,79-192,114-297,85-98-27-159-121-159-272,0-216,176-469,320-469,15,0,29,2,43,7Z"/>
+      </g>
+      <g id="panda-01-egg-egg-spot-top" data-editable="part" data-part="egg-spot-top" inkscape:groupmode="layer" inkscape:label="쨌 꾩そ 臾대뒳">
+        <ellipse id="panda-01-egg-ellipse-9" class="st1" cx="462" cy="562" rx="67" ry="47" transform="translate(-263.4 618.1) rotate(-55)"/>
+      </g>
+      <g id="panda-01-egg-egg-spot-left" data-editable="part" data-part="egg-spot-left" inkscape:groupmode="layer" inkscape:label="쨌 쇱そ 臾대뒳">
+        <ellipse id="panda-01-egg-ellipse-10" class="st1" cx="748" cy="856" rx="49" ry="38" transform="translate(-367.3232 1075.7901) rotate(-60)"/>
+      </g>
+      <g id="panda-01-egg-egg-spot-right" data-editable="part" data-part="egg-spot-right" inkscape:groupmode="layer" inkscape:label="쨌 ㅻⅨ履臾대뒳">
+        <ellipse id="panda-01-egg-ellipse-11" class="st1" cx="441" cy="880" rx="85" ry="126" transform="translate(-351.4 296.1) rotate(-27)"/>
+      </g>
+    </g>
+  </g>
+</svg>

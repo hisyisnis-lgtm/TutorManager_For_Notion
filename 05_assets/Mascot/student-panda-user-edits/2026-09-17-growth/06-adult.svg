@@ -1,0 +1,323 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 1254 1254">
+  <!-- Generator: Adobe Illustrator 30.8.1, SVG Export Plug-In . SVG Version: 2.1.4 Build 1)  -->
+  <defs>
+    <style>
+      .st0 {
+        stroke: #fff;
+        stroke-width: 11px;
+      }
+
+      .st0, .st1, .st2, .st3 {
+        fill: none;
+      }
+
+      .st0, .st1, .st4, .st3, .st5, .st6, .st7 {
+        display: none;
+      }
+
+      .st0, .st1, .st3, .st5 {
+        stroke-linecap: round;
+      }
+
+      .st8 {
+        fill: url(#_무제_그라디언트_12);
+      }
+
+      .st9 {
+        fill: url(#_무제_그라디언트_15);
+      }
+
+      .st10 {
+        fill: #fe7355;
+      }
+
+      .st11 {
+        fill: url(#_무제_그라디언트_5);
+      }
+
+      .st12 {
+        fill: url(#_무제_그라디언트_13);
+      }
+
+      .st13, .st5 {
+        fill: #fff;
+      }
+
+      .st14 {
+        fill: url(#_무제_그라디언트_10);
+      }
+
+      .st1 {
+        stroke: #b7cf8e;
+        stroke-width: 5.6px;
+      }
+
+      .st15 {
+        fill: url(#_무제_그라디언트_21);
+      }
+
+      .st16 {
+        fill: url(#_무제_그라디언트_8);
+      }
+
+      .st17 {
+        fill: url(#_무제_그라디언트_14);
+      }
+
+      .st18 {
+        fill: url(#_무제_그라디언트_2);
+      }
+
+      .st4 {
+        fill: #b7cf8e;
+      }
+
+      .st3, .st5 {
+        stroke: #30332f;
+        stroke-linejoin: round;
+        stroke-width: 4.3px;
+      }
+
+      .st19 {
+        clip-path: url(#clippath-1);
+      }
+
+      .st20 {
+        fill: #c4dfdb;
+      }
+
+      .st21 {
+        fill: #720107;
+      }
+
+      .st22 {
+        fill: url(#_무제_그라디언트_4);
+      }
+
+      .st6 {
+        fill: #6d995c;
+      }
+
+      .st23 {
+        fill: url(#_무제_그라디언트_11);
+      }
+
+      .st24 {
+        fill: url(#_무제_그라디언트_6);
+      }
+
+      .st25 {
+        fill: #fd5d72;
+      }
+
+      .st26 {
+        clip-path: url(#clippath);
+      }
+
+      .st27 {
+        fill: url(#_무제_그라디언트_41);
+      }
+
+      .st28 {
+        fill: url(#_무제_그라디언트_9);
+      }
+
+      .st29 {
+        fill: url(#_무제_그라디언트_7);
+      }
+    </style>
+    <linearGradient id="_무제_그라디언트_2" data-name="무제 그라디언트 2" x1="219.4" y1="932.6" x2="849.7" y2="72.9" gradientTransform="translate(0 1254) scale(1 -1)" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#1c1d19"/>
+      <stop offset="1" stop-color="#191916"/>
+    </linearGradient>
+    <linearGradient id="_무제_그라디언트_21" data-name="무제 그라디언트 2" x1="219.4" y1="932.6" x2="849.7" y2="72.9" gradientTransform="translate(1249.8884 1254) rotate(-180)" xlink:href="#_무제_그라디언트_2"/>
+    <linearGradient id="_무제_그라디언트_4" data-name="무제 그라디언트 4" x1="290.1" y1="1087.6" x2="967.2" y2="164" gradientTransform="translate(35.9519 1316.5559) rotate(-4.6413) scale(1 -1)" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#1c1d19"/>
+      <stop offset="1" stop-color="#191916"/>
+    </linearGradient>
+    <linearGradient id="_무제_그라디언트_41" data-name="무제 그라디언트 4" x1="290.1" y1="1087.6" x2="967.2" y2="164" gradientTransform="translate(1213.9365 1316.5559) rotate(-175.3587)" xlink:href="#_무제_그라디언트_4"/>
+    <linearGradient id="_무제_그라디언트_5" data-name="무제 그라디언트 5" x1="214.5" y1="927.3" x2="846.5" y2="65.3" gradientTransform="translate(0 1254) scale(1 -1)" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#1c1d19"/>
+      <stop offset="1" stop-color="#191916"/>
+    </linearGradient>
+    <clipPath id="clippath">
+      <path class="st2" d="M625,682c102.1,0,180.6,122,176.9,236-2.7,62-52.6,109-176.9,109s-176-46-177.8-109c-3.6-111,74.8-236,177.8-236Z"/>
+    </clipPath>
+    <radialGradient id="_무제_그라디언트_6" data-name="무제 그라디언트 6" cx="516.4" cy="-2" fx="516.4" fy="-2" r="739.7" gradientTransform="translate(54.9761 1257.4) scale(.912 -.9)" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#fffefa"/>
+      <stop offset="1" stop-color="#fdfcf8"/>
+    </radialGradient>
+    <linearGradient id="_무제_그라디언트_7" data-name="무제 그라디언트 7" x1="507.7" y1="575.2" x2="808.6" y2="406" gradientTransform="translate(0 1254) scale(1 -1)" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#940009"/>
+      <stop offset="1" stop-color="#840309"/>
+    </linearGradient>
+    <linearGradient id="_무제_그라디언트_8" data-name="무제 그라디언트 8" x1="315.9" y1="1015.6" x2="955.9" y2="142.6" gradientTransform="translate(0 1254) scale(1 -1)" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#1c1d19"/>
+      <stop offset="1" stop-color="#191916"/>
+    </linearGradient>
+    <linearGradient id="_무제_그라디언트_9" data-name="무제 그라디언트 9" x1="615.6" y1="1235.3" x2="1255.6" y2="362.3" gradientTransform="translate(0 1254) scale(1 -1)" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#1c1d19"/>
+      <stop offset="1" stop-color="#191916"/>
+    </linearGradient>
+    <radialGradient id="_무제_그라디언트_10" data-name="무제 그라디언트 10" cx="520" cy="814" fx="520" fy="814" r="750" gradientTransform="translate(0 1254) scale(1 -1)" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#fffefa"/>
+      <stop offset="1" stop-color="#fdfcf8"/>
+    </radialGradient>
+    <radialGradient id="_무제_그라디언트_11" data-name="무제 그라디언트 11" cx="520" cy="814" fx="520" fy="814" r="750" gradientTransform="translate(0 1254) scale(1 -1)" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#fffefa"/>
+      <stop offset="1" stop-color="#fdfcf8"/>
+    </radialGradient>
+    <linearGradient id="_무제_그라디언트_12" data-name="무제 그라디언트 12" x1="286.6" y1="994.2" x2="926.6" y2="121.2" gradientTransform="translate(0 1254) scale(1 -1)" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#1c1d19"/>
+      <stop offset="1" stop-color="#191916"/>
+    </linearGradient>
+    <linearGradient id="_무제_그라디언트_13" data-name="무제 그라디언트 13" x1="457" y1="1119.1" x2="1097" y2="246.1" gradientTransform="translate(0 1254) scale(1 -1)" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#1c1d19"/>
+      <stop offset="1" stop-color="#191916"/>
+    </linearGradient>
+    <linearGradient id="_무제_그라디언트_14" data-name="무제 그라디언트 14" x1="351" y1="1041.4" x2="991" y2="168.4" gradientTransform="translate(0 1254) scale(1 -1)" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#1c1d19"/>
+      <stop offset="1" stop-color="#191916"/>
+    </linearGradient>
+    <linearGradient id="_무제_그라디언트_15" data-name="무제 그라디언트 15" x1="319.6" y1="1018.4" x2="959.6" y2="145.4" gradientTransform="translate(0 1254) scale(1 -1)" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#1c1d19"/>
+      <stop offset="1" stop-color="#191916"/>
+    </linearGradient>
+    <clipPath id="clippath-1">
+      <path class="st2" d="M580,627c14,0,29,2,44,2s30-2,42-2,15,5,15,15c0,31-25,62-57,62s-61-31-61-62,5-15,17-15Z"/>
+    </clipPath>
+  </defs>
+  <g id="panda-06-adult-canvas" data-stage="6">
+    <g id="panda-06-adult-part-background" data-part="background" inkscape:groupmode="layer" inkscape:label="諛곌꼍 쨌 ④린硫щ챸">
+      <rect id="panda-06-adult-background-outline-1" class="st20" width="1254" height="1254" inkscape:label="諛곌꼍 쨌 젣 媛ν븳 誘몄깋 諛곌꼍 쨌 꾪삎 1"/>
+    </g>
+    <g id="panda-06-adult-part-base" data-base="grown" data-part="base" inkscape:groupmode="layer" inkscape:label="먮떎 議곕┰">
+      <g id="panda-06-adult-part-body-size" data-part="body-size" inkscape:groupmode="layer" inkscape:label="紐깆옣 鍮꾩쑉">
+        <path id="panda-06-adult-part-leg-right" class="st18" d="M724.7,887c-49.4,0-88.4,38-90.3,88,1,39,12.4,95,19,123,2.9,18,23.8,25,76,25s54.2,2,66.5-9c7.6-6,7.6-15,4.8-25-2.9-10-15.2-15-14.3-28,3.8-25,14.3-74,18.1-109,3.8-38-36.1-65-79.8-65Z" data-part="leg-right" inkscape:label="ㅻⅨ履ㅻ━"/>
+        <path id="panda-06-adult-part-leg-right1" data-name="panda-06-adult-part-leg-right" class="st15" d="M445.3,952c3.8,35,14.3,84,18.1,109,1,13-11.4,18-14.3,28-2.9,10-2.9,19,4.8,25,12.4,11,14.3,9,66.5,9,52.3,0,73.2-7,76-25,6.7-28,18.1-84,19-123-1.9-50-40.9-88-90.3-88-43.7,0-83.6,27-79.8,65Z" data-part="leg-right" inkscape:label="ㅻⅨ履ㅻ━"/>
+        <g id="panda-06-adult-part-arms" data-part="arms" inkscape:groupmode="layer" inkscape:label="湲곕낯 묓뙏">
+          <g id="panda-06-adult-part-arm-right" data-part="arm-right" inkscape:groupmode="layer" inkscape:label="ㅻⅨ履湲곕낯 ">
+            <path id="panda-06-adult-arm-right-outline-1" class="st22" d="M732.6,690c-66.4,31.6-13.6,109.1,7.1,155.6,14.3,27.9,22.7,81.2,35.5,102.3,20.6,48.5,97.6,28,106.2-13.6,24.8-62.2-95.4-246-148.8-244.2Z" inkscape:label="ㅻⅨ履湲곕낯 쨌 꾪삎 1"/>
+          </g>
+        </g>
+        <g id="panda-06-adult-part-arms1" data-name="panda-06-adult-part-arms" data-part="arms" inkscape:groupmode="layer" inkscape:label="湲곕낯 묓뙏">
+          <g id="panda-06-adult-part-arm-right1" data-name="panda-06-adult-part-arm-right" data-part="arm-right" inkscape:groupmode="layer" inkscape:label="ㅻⅨ履湲곕낯 ">
+            <path id="panda-06-adult-arm-right-outline-11" data-name="panda-06-adult-arm-right-outline-1" class="st27" d="M368.5,934.2c8.6,41.7,85.6,62.2,106.2,13.6,12.7-21,21.2-74.4,35.5-102.3,20.6-46.5,73.5-123.9,7.1-155.6-53.4-1.8-173.6,182-148.8,244.2Z" inkscape:label="ㅻⅨ履湲곕낯 쨌 꾪삎 1"/>
+          </g>
+        </g>
+        <g id="panda-06-adult-part-body" data-part="body" inkscape:groupmode="layer" inkscape:label="紐명넻怨諛">
+          <path id="panda-06-adult-part-torso" class="st11" d="M625,682c102.1,0,180.6,122,176.9,236-2.7,62-52.6,109-176.9,109s-176-46-177.8-109c-3.6-111,74.8-236,177.8-236Z" data-part="torso" inkscape:label="寃 紐명넻"/>
+          <g class="st26">
+            <g id="panda-06-adult-part-belly-clip" data-part="belly-clip" inkscape:groupmode="layer" inkscape:label="紐명넻 덉쓽 諛">
+              <path id="panda-06-adult-part-belly" class="st24" d="M812.4,941.8c-1.7-32.5,8.2-59.8-23.3-95-34.7-38.8-73.4-58-164.2-58s-129.4,19.2-164.2,58c-31.5,35.2-21.5,62.5-23.3,95-6.4,73.7,77.1,95.7,187.4,95.7s193.8-22,187.4-95.7Z" data-part="belly" inkscape:label="諛"/>
+            </g>
+          </g>
+        </g>
+        <g id="panda-06-adult-part-scarf" data-part="scarf" inkscape:groupmode="layer" inkscape:label="ㅼ뭅꾩껜">
+          <path id="panda-06-adult-part-scarf-cloth" class="st29" d="M456.8,683c41.1-22,108.4-31,168.2-31s129.9,9,168.2,31c12.1,21,11.2,48,.9,68-17.8,34-51.4,62-87.8,91-28,23-57.9,43-81.3,59-26.2-16-56.1-37-85-58-36.4-29-65.4-57-82.2-87-13.1-23-16.8-52-.9-73Z" data-part="scarf-cloth" inkscape:label="ㅼ뭅泥"/>
+          <path id="panda-06-adult-part-scarf-fold" class="st21" d="M450.2,729c115.9,36.7,232,36.7,348.5,0-4.4,18-62.6,41.3-174.7,70-95.3-27.3-153.2-50.7-173.8-70Z" data-part="scarf-fold" inkscape:label="ㅼ뭅묓엺 硫"/>
+        </g>
+      </g>
+      <g id="panda-06-adult-part-head-size" data-part="head-size" inkscape:groupmode="layer" inkscape:label="癒몃━ 깆옣 鍮꾩쑉">
+        <g id="panda-06-adult-part-head-breath" data-part="head-breath" inkscape:groupmode="layer" inkscape:label="癒몃━ 명씉 異">
+          <g id="panda-06-adult-part-head-action" data-part="head-action" inkscape:groupmode="layer" inkscape:label="癒몃━ 숈옉 異">
+            <g id="panda-06-adult-part-head" data-part="head" inkscape:groupmode="layer" inkscape:label="癒몃━ 꾩껜">
+              <g id="panda-06-adult-part-ears" data-part="ears" inkscape:groupmode="layer" inkscape:label="묒そ 洹">
+                <g id="panda-06-adult-part-ear-left" data-part="ear-left" inkscape:groupmode="layer" inkscape:label="쇱そ 洹">
+                  <path id="panda-06-adult-ear-left-outline-1" class="st16" d="M299,349c0-53.6,43.9-97,98-97s98,43.4,98,97-43.9,97-98,97-98-43.4-98-97Z" inkscape:label="쇱そ 洹 쨌 꾪삎 1"/>
+                </g>
+                <g id="panda-06-adult-part-ear-right" data-part="ear-right" inkscape:groupmode="layer" inkscape:label="ㅻⅨ履洹">
+                  <path id="panda-06-adult-ear-right-outline-1" class="st28" d="M760,348c0-53.6,43.4-97,97-97s97,43.4,97,97-43.4,97-97,97-97-43.4-97-97Z" inkscape:label="ㅻⅨ履洹 쨌 꾪삎 1"/>
+                </g>
+              </g>
+              <g id="panda-06-adult-part-face" data-part="face" inkscape:groupmode="layer" inkscape:label="쇨뎬怨癒몃━">
+                <g id="panda-06-adult-part-hair-tuft" data-part="hair-tuft" inkscape:groupmode="layer" inkscape:label="援щ쫫 癒몃━">
+                  <path id="panda-06-adult-hair-tuft-outline-1" class="st14" d="M499,297c0-23.8,19.2-43,43-43s18,2.8,24,8c4,3.5,7,8,7,5,0-31,24-56,54-56s54,25,54,56,3-1.5,7-5c6-5.2,15-8,24-8,23.8,0,43,19.2,43,43,0,41-57,74-128,74s-128-33-128-74Z" inkscape:label="援щ쫫 癒몃━쨌 꾪삎 1"/>
+                </g>
+                <g id="panda-06-adult-part-face-base" data-part="face-base" inkscape:groupmode="layer" inkscape:label="쇨뎬 諛뷀깢">
+                  <path id="panda-06-adult-face-base-outline-1" class="st23" d="M625,287c-91,0-144,25-184,55-71,53.2-115,134-115,210s33,130,88,163c48,28.8,130,41,211,41s163-12.2,211-41c55-33,86-72,86-163s-42-156.8-113-210-93-55-184-55Z" inkscape:label="쇨뎬 諛뷀깢 쨌 꾪삎 1"/>
+                </g>
+              </g>
+              <g id="panda-06-adult-part-facial-features" data-part="facial-features" inkscape:groupmode="layer" inkscape:label="쒖젙 뚯툩">
+                <g id="panda-06-adult-part-eyes" data-part="eyes" inkscape:groupmode="layer" inkscape:label="묒そ ">
+                  <g id="panda-06-adult-part-eye-left" data-part="eye-left" inkscape:groupmode="layer" inkscape:label="쇱そ 꾩껜">
+                    <g id="panda-06-adult-part-eye-patch-left" data-part="eye-patch-left" inkscape:groupmode="layer" inkscape:label="쇱そ 寃 덈Т">
+                      <path id="panda-06-adult-eye-patch-left-outline-1" class="st8" d="M553.3,569.9c-18.2,39-59.8,58.2-92.8,42.8-33-15.4-45.1-59.5-26.9-98.6,18.2-39,59.8-58.2,92.8-42.8,33,15.4,45.1,59.5,26.9,98.6Z" inkscape:label="쇱そ 寃 덈Т쨌 꾪삎 1"/>
+                    </g>
+                    <g id="panda-06-adult-part-eye-open-left" data-part="eye-open-left" inkscape:groupmode="layer" inkscape:label="쇱そ 덇튇鍮≪엫 異">
+                      <g id="panda-06-adult-part-eye-white-left" data-part="eye-white-left" inkscape:groupmode="layer" inkscape:label="쇱そ 곕늿">
+                        <ellipse id="panda-06-adult-eye-white-left-outline-1" class="st13" cx="515" cy="532" rx="16" ry="23" inkscape:label="쇱そ 곕늿 쨌 꾪삎 1"/>
+                      </g>
+                    </g>
+                    <g id="panda-06-adult-part-eye-smile-left" data-part="eye-smile-left" inkscape:groupmode="layer" inkscape:label="쇱そ 껊뒗 ">
+                      <path id="panda-06-adult-eye-smile-left-outline-1" class="st0" d="M493,544c14.7-18.7,29.3-18.7,44,0" inkscape:label="쇱そ 껊뒗 쨌 꾪삎 1"/>
+                    </g>
+                  </g>
+                  <g id="panda-06-adult-part-eye-right" data-part="eye-right" inkscape:groupmode="layer" inkscape:label="ㅻⅨ履꾩껜">
+                    <g id="panda-06-adult-part-eye-patch-right" data-part="eye-patch-right" inkscape:groupmode="layer" inkscape:label="ㅻⅨ履寃 덈Т">
+                      <path id="panda-06-adult-eye-patch-right-outline-1" class="st12" d="M815.3,514.1c18.2,39,6.2,83.2-26.9,98.6-33,15.4-74.6-3.8-92.8-42.8-18.2-39-6.2-83.2,26.9-98.6,33-15.4,74.6,3.8,92.8,42.8Z" inkscape:label="ㅻⅨ履寃 덈Т쨌 꾪삎 1"/>
+                    </g>
+                    <g id="panda-06-adult-part-eye-open-right" data-part="eye-open-right" inkscape:groupmode="layer" inkscape:label="ㅻⅨ履덇튇鍮≪엫 異">
+                      <g id="panda-06-adult-part-eye-white-right" data-part="eye-white-right" inkscape:groupmode="layer" inkscape:label="ㅻⅨ履곕늿">
+                        <ellipse id="panda-06-adult-eye-white-right-outline-1" class="st13" cx="735" cy="532" rx="16" ry="23" inkscape:label="ㅻⅨ履곕늿 쨌 꾪삎 1"/>
+                      </g>
+                    </g>
+                    <g id="panda-06-adult-part-eye-smile-right" data-part="eye-smile-right" inkscape:groupmode="layer" inkscape:label="ㅻⅨ履껊뒗 ">
+                      <path id="panda-06-adult-eye-smile-right-outline-1" class="st0" d="M713,544c14.7-18.7,29.3-18.7,44,0" inkscape:label="ㅻⅨ履껊뒗 쨌 꾪삎 1"/>
+                    </g>
+                  </g>
+                </g>
+                <g id="panda-06-adult-part-cheeks" data-part="cheeks" inkscape:groupmode="layer" inkscape:label="묒そ 蹂">
+                  <g id="panda-06-adult-part-cheek-left" data-part="cheek-left" inkscape:groupmode="layer" inkscape:label="쇱そ 蹂">
+                    <path id="panda-06-adult-cheek-left-outline-1" class="st25" d="M485,647c0,15.5-17.9,28-40,28s-40-12.5-40-28,17.9-28,40-28,40,12.5,40,28Z" inkscape:label="쇱そ 蹂쨌 꾪삎 1"/>
+                  </g>
+                  <g id="panda-06-adult-part-cheek-right" data-part="cheek-right" inkscape:groupmode="layer" inkscape:label="ㅻⅨ履蹂">
+                    <path id="panda-06-adult-cheek-right-outline-1" class="st25" d="M842,647c0,15.5-17.9,28-40,28s-40-12.5-40-28,17.9-28,40-28,40,12.5,40,28Z" inkscape:label="ㅻⅨ履蹂쨌 꾪삎 1"/>
+                  </g>
+                </g>
+                <g id="panda-06-adult-part-nose" data-part="nose" inkscape:groupmode="layer" inkscape:label="肄">
+                  <path id="panda-06-adult-nose-outline-1" class="st17" d="M660,585c0,11.6-16.1,21-36,21s-36-9.4-36-21,16.1-21,36-21,36,9.4,36,21Z" inkscape:label="肄쨌 꾪삎 1"/>
+                </g>
+                <g id="panda-06-adult-part-mouth" data-part="mouth" inkscape:groupmode="layer" inkscape:label="꾩껜">
+                  <g id="panda-06-adult-part-mouth-cavity" data-part="mouth-cavity" inkscape:groupmode="layer" inkscape:label="낆븞">
+                    <path id="panda-06-adult-mouth-cavity-outline-1" class="st9" d="M580,627c14,0,29,2,44,2s30-2,42-2,15,5,15,15c0,31-25,62-57,62s-61-31-61-62,5-15,17-15Z" inkscape:label="낆븞 쨌 꾪삎 1"/>
+                  </g>
+                  <g class="st19">
+                    <g id="panda-06-adult-part-tongue-clip" data-part="tongue-clip" inkscape:groupmode="layer" inkscape:label="낆븞  대━">
+                      <g id="panda-06-adult-part-tongue" data-part="tongue" inkscape:groupmode="layer" inkscape:label=" 꾩껜">
+                        <path id="panda-06-adult-tongue-outline-1" class="st10" d="M668,686c0,18.8-19.7,34-44,34s-44-15.2-44-34,19.7-34,44-34,44,15.2,44,34Z" inkscape:label=" 꾩껜 쨌 꾪삎 1"/>
+                      </g>
+                    </g>
+                  </g>
+                </g>
+              </g>
+            </g>
+          </g>
+        </g>
+        <g id="panda-06-adult-part-petting-hand-position" data-part="petting-hand-position" inkscape:groupmode="layer" inkscape:label="곕떎щ뒗 꾩튂">
+          <g id="panda-06-adult-part-petting-hand" data-part="petting-hand" inkscape:groupmode="layer" inkscape:label="곕떎щ뒗 꾩껜">
+            <g id="panda-06-adult-part-petting-hand-mirrored" data-part="petting-hand-mirrored" inkscape:groupmode="layer" inkscape:label="petting-hand-mirrored">
+              <path id="panda-06-adult-part-hand-palm" class="st5" d="M722.6,247.2c-1.8-43.2-28.8-72-75.6-104.4-18-12.6-25.2-39.6-41.4-41.4-7.2,0-12.6,1.8-18,7.2-10.8-16.2-25.2-16.2-37.8,1.8-16.2-7.2-32.4,1.8-37.8,14.4-3.6,9,0,18,3.6,23.4-14.4,7.2-18,21.6-12.6,37.8,7.2,25.2,32.4,48.6,61.2,70.2s16.2,18,5.4,27c-19.8,12.6-31,19.3-30.7,36.2s17.2,28.8,28.8,22.1c8.5-4.9,17.5-13.8,26.4-18.8s24.4,0,44-5.4c14.4-10.8,68.4-55.8,84.6-70.2Z" data-part="hand-palm" inkscape:label="κ컩 먮컮멸낸"/>
+              <path id="panda-06-adult-part-hand-finger-lines" class="st3" d="M632.6,159c-19.8-12.6-32.4-34.2-45-50.4M611,177c-27-18-46.8-52.2-61.2-66.6M580.4,200.4c-23.4-7.2-34.2-55.8-57.6-54l-7.2,1.8" data-part="hand-finger-lines" inkscape:label="먭援щ텇"/>
+              <path id="panda-06-adult-part-hand-cuff" class="st5" d="M726.2,247.2c-43.2-20.4-132.4,65.7-73.8,95.4,37.9,19.2,120.9-64.6,73.8-95.4Z" data-part="hand-cuff" inkscape:label="먮ぉ 뚮몢由"/>
+              <path id="panda-06-adult-part-hand-cuff-opening" class="st3" d="M715.4,274.2c-5.4-1.9-15.4-1.4-33.7,19.6-16.2,18.7-13.9,27.3-12.5,28.8" data-part="hand-cuff-opening" inkscape:label="먮ぉ 덉そ 怨≪꽑"/>
+            </g>
+          </g>
+        </g>
+      </g>
+      <g id="panda-06-adult-part-feeding-size" data-part="feeding-size" inkscape:groupmode="layer" inkscape:label="癒밴린 먯꽭 깆옣 鍮꾩쑉">
+        <g id="panda-06-adult-part-feeding-pose" data-part="feeding-pose" inkscape:groupmode="layer" inkscape:label="癒밴린 꾩슜 먯꽭">
+          <g id="panda-06-adult-part-bamboo" data-part="bamboo" inkscape:groupmode="layer" inkscape:label="섎Т 꾩껜">
+            <path id="panda-06-adult-part-bamboo-stem" class="st6" d="M624.9,652.5c9.2-1.5,16.2.6,20.9,6.4l-35.9,106.7c-7.8,4.1-14.8,2-20.9-6.4l35.9-106.7Z" data-part="bamboo-stem" inkscape:label="섎Т 以꾧린"/>
+            <path id="panda-06-adult-part-bamboo-joints" class="st1" d="M613.1,691.3l17.9,5.5M602.1,727.2l17.9,5.5" data-part="bamboo-joints" inkscape:label="섎Т 留덈뵒"/>
+            <path id="panda-06-adult-part-bamboo-leaf-dark" class="st6" d="M624.3,707.9c30.9-29.8,52.2-35.2,63.8-16.4-8.7,21.3-30,26.8-63.8,16.4Z" data-part="bamboo-leaf-dark" inkscape:label="吏숈 섎Т "/>
+            <path id="panda-06-adult-part-bamboo-leaf-light" class="st4" d="M605.1,728.1c-26.8-19.1-35.8-36-27-50.7,19.9,6.1,28.9,23,27,50.7Z" data-part="bamboo-leaf-light" inkscape:label="諛앹 섎Т "/>
+          </g>
+          <path id="panda-06-adult-part-arm-feeding-right" class="st7" d="M768.5,863.5c-2.1,0-4.2-.3-6.3-.6-29.3-4.5-57.2-19.1-79.5-37.1-20.2-16.2-37.4-37-50.6-58.7-31.8-56.2,41.7-108.7,84.8-61.4,7.6,7.9,15.2,14.3,24.1,19.7,7.4,4.4,15.5,8,23.9,9.6,2.4.5,5.3-.2,10.4-.3,30.5-.2,61.3,29.8,59.3,66-.9,35.6-30.5,63.7-66.1,62.8h0Z" data-part="arm-feeding-right" inkscape:label="ㅻⅨ履癒밴린 꾩슜 "/>
+          <path id="panda-06-adult-part-arm-feeding-left" class="st7" d="M481.5,863.5c2.1,0,4.2-.3,6.3-.6,29.3-4.5,57.2-19.1,79.5-37.1,20.2-16.2,37.4-37,50.6-58.7,31.8-56.2-41.7-108.7-84.8-61.4-7.6,7.9-15.2,14.3-24.1,19.7-7.4,4.4-15.5,8-23.9,9.6-2.4.5-5.3-.2-10.4-.3-30.5-.2-61.3,29.8-59.3,66,.9,35.6,30.5,63.7,66.1,62.8h0Z" data-part="arm-feeding-left" inkscape:label="쇱そ 癒밴린 꾩슜 "/>
+        </g>
+      </g>
+    </g>
+  </g>
+</svg>
