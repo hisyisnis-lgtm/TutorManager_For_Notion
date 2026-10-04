@@ -37,7 +37,8 @@ d1Migration, authenticatedReadWrite, retryWithoutDoubleDebit, secondDeviceSync, 
 ## 학생 공지 게시
 
 - 정상 강사 로그인 세션으로 기존 제목 중복이 없는 것을 확인하고 POST /notice HTTP 200으로 한 번 게시했다.
-- 제목: 랴오랴오 키우기가 새로워졌어요!
+- 최종 제목: 2.49.0 버전 업데이트 소식
 - 게시 시각: 2026-10-05 03:39 KST. 학생 노출 및 중요 공지 켜짐.
 - 학생의 정상 인증으로 GET /notice/student 재조회 HTTP 200: 게시한 공지 ID와 제목·내용 모두 일치, 중요 공지 true, 동일 제목 1개.
 - 공지 ID: 3ef838fa-f2a6-814a-81cd-eef67010b59c. 별도 외부 메시지를 전송하지 않았다.
+- 기존 공지의 중국어 인사, 친근한 ‘쌤’ 말투와 이모지, 버전 제목 형식에 맞춰 같은 ID에 PATCH HTTP 200으로 수정했다. 게시 시각·노출·중요 설정을 유지했고, 학생 GET HTTP 200에서 최종 제목·본문 일치 및 같은 ID 1개를 확인했다.
