@@ -63,7 +63,7 @@ jobs:
           node worker/node_modules/wrangler/bin/wrangler.js r2 object get "${R2_BACKUP_BUCKET}/${KEY}.sql.gz" \
             --file "$RUNNER_TEMP/panda-downloaded.sql.gz" --remote
           node 02_devtools/restore-panda-backup.mjs --input "$RUNNER_TEMP/panda-downloaded.sql.gz" \
-            --receipt "$RUNNER_TEMP/panda.complete.json"
+            --receipt "$RUNNER_TEMP/panda.complete.json" --local-output "$RUNNER_TEMP/panda-restored.sqlite"
           # The completion marker is published only after upload + download verification.
           node worker/node_modules/wrangler/bin/wrangler.js r2 object put "${R2_BACKUP_BUCKET}/${KEY}.complete.json" \
             --file "$RUNNER_TEMP/panda.complete.json" --content-type application/json --remote
