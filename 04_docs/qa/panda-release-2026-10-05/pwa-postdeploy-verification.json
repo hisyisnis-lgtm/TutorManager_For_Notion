@@ -1,0 +1,137 @@
+{
+  "schema": 1,
+  "target": "pwa",
+  "version": "2.49.0",
+  "commit": "c00329ac82bf408308b8b832dfbb63a400526b02",
+  "originalWorkflow": "https://github.com/hisyisnis-lgtm/TutorManager_For_Notion/actions/runs/37224725459",
+  "originalPostdeployFailed": true,
+  "originalError": "/assets/index-C7NjoKsY.js: JavaScript 대신 다른 응답",
+  "deployed": {
+    "id": "9d859e69-df8b-434a-8bf1-3acdfdd200c2",
+    "url": "https://9d859e69.tiantian-chinese.pages.dev",
+    "commit": "c00329ac82bf408308b8b832dfbb63a400526b02"
+  },
+  "previous": {
+    "id": "753addbc-5bdd-4b8b-9f11-fe98c4103bf6",
+    "url": "https://753addbc.tiantian-chinese.pages.dev",
+    "commit": "7749605c3d863f7be187f73ea276c9ce99fe4cbf"
+  },
+  "ciArtifactHashMatch": true,
+  "smoke": {
+    "https://9d859e69.tiantian-chinese.pages.dev": {
+      "routes": [
+        {
+          "route": "/",
+          "status": 200
+        },
+        {
+          "route": "/personal",
+          "status": 200
+        }
+      ],
+      "assets": 18
+    },
+    "https://tiantian-chinese.pages.dev": {
+      "routes": [
+        {
+          "route": "/",
+          "status": 200
+        },
+        {
+          "route": "/personal",
+          "status": 200
+        }
+      ],
+      "assets": 18
+    }
+  },
+  "criticalFiles": {
+    "https://9d859e69.tiantian-chinese.pages.dev/sw.js": {
+      "status": 200,
+      "contentType": "application/javascript",
+      "sha256": "2eaaebf4622da3402273ffd2f98df84551d651494fb393622431dafe73eb6307",
+      "bytes": 10533
+    },
+    "https://9d859e69.tiantian-chinese.pages.dev/manifest.webmanifest": {
+      "status": 200,
+      "contentType": "application/manifest+json",
+      "sha256": "350f7a22e4c468611382842bf4db8ba81613ce76c30bb6e8ef467b79ac449e91",
+      "bytes": 655
+    },
+    "https://9d859e69.tiantian-chinese.pages.dev/assets/index-C7NjoKsY.js": {
+      "status": 200,
+      "contentType": "application/javascript",
+      "sha256": "a11df4b1af01bf914ea94e1293b23637ef35e43878c6c82eea94eb2ba2bf5e59",
+      "bytes": 595700
+    },
+    "https://9d859e69.tiantian-chinese.pages.dev/panda/ui/liaoliao-my-forest-background.webp": {
+      "status": 200,
+      "contentType": "image/webp",
+      "sha256": "446f690019427ff37dc99775d73938bcd443fe09cb3e69754efd338cbacabd5c",
+      "bytes": 18218
+    },
+    "https://tiantian-chinese.pages.dev/sw.js": {
+      "status": 200,
+      "contentType": "application/javascript",
+      "sha256": "2eaaebf4622da3402273ffd2f98df84551d651494fb393622431dafe73eb6307",
+      "bytes": 10533
+    },
+    "https://tiantian-chinese.pages.dev/manifest.webmanifest": {
+      "status": 200,
+      "contentType": "application/manifest+json",
+      "sha256": "350f7a22e4c468611382842bf4db8ba81613ce76c30bb6e8ef467b79ac449e91",
+      "bytes": 655
+    },
+    "https://tiantian-chinese.pages.dev/assets/index-C7NjoKsY.js": {
+      "status": 200,
+      "contentType": "application/javascript",
+      "sha256": "a11df4b1af01bf914ea94e1293b23637ef35e43878c6c82eea94eb2ba2bf5e59",
+      "bytes": 595700
+    },
+    "https://tiantian-chinese.pages.dev/panda/ui/liaoliao-my-forest-background.webp": {
+      "status": 200,
+      "contentType": "image/webp",
+      "sha256": "446f690019427ff37dc99775d73938bcd443fe09cb3e69754efd338cbacabd5c",
+      "bytes": 18218
+    }
+  },
+  "workerSmoke": [
+    {
+      "route": "/notifications",
+      "origin": "https://tiantian-chinese.pages.dev",
+      "status": 401
+    },
+    {
+      "route": "/booking/student/ZZZZ00000000",
+      "origin": "https://tiantian-chinese.pages.dev",
+      "status": 401
+    },
+    {
+      "route": "/booking/consent",
+      "origin": "https://tiantian-chinese.pages.dev",
+      "status": 401
+    },
+    {
+      "route": "/booking/consent/ZZZZ00000000",
+      "origin": "https://tiantian-chinese.pages.dev",
+      "status": 401
+    },
+    {
+      "route": "/game/me",
+      "origin": "https://tiantianchinese.com",
+      "status": 401
+    },
+    {
+      "route": "/game/me",
+      "origin": "https://invalid.example",
+      "status": 403
+    }
+  ],
+  "size": {
+    "files": 892,
+    "totalBytes": 50058224,
+    "entryBytes": 595700,
+    "entryGzipBytes": 176319
+  },
+  "verifiedAt": "2026-10-04T18:35:45.198Z"
+}
