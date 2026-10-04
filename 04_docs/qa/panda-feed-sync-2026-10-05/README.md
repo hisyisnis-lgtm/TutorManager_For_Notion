@@ -22,4 +22,13 @@
 - [응답 유실 재시도 완료 화면](./retry-390.png)
 - [로컬 지연 검수](http://127.0.0.1:5212/screen?fed=19&available=5&delay=8000&reset=1)
 
-운영 배포와 운영 검증 결과는 완료 후 추가한다.
+## 운영 배포 및 후검증 완료 — v2.49.1
+
+- 깨끗한 격리 main `e36861633ba1326564541c2c5960c1ee7bb024a3`에서 태그 `v2.49.1` 발행. 승인 UI4파일, 검수 fixture/근거, package/lock 버전만 포함했다. 공유 작업 트리의 무관한 작업은 보존했다.
+- [main CI 37229157784](https://github.com/hisyisnis-lgtm/TutorManager_For_Notion/actions/runs/37229157784) 및 [태그 배포 37229279458](https://github.com/hisyisnis-lgtm/TutorManager_For_Notion/actions/runs/37229279458) 모두 성공. 전체84파일/885tests, lint, 디자인 ERROR/WARN0, build 통과. 이번 배포는 후검증 실패나 재배포 없이 완료됐다.
+- 운영 https://tiantian-chinese.pages.dev, 고유 https://f09abb82.tiantian-chinese.pages.dev. Pages ID `f09abb82-73ca-4b57-96de-b04d25ce4d7b`. 직전9d859e69/v2.49.0의 세션 코드 자산을 보존했다.
+- 890파일/48,904,739bytes. 새 entry `index-DqZaFkaW.js` 597,233bytes / gzip176,946bytes.
+- CI에서 고유/공식 각2라우트·16자산 해시 및 Worker6개 인증 경계 GET 통과(04:44:11 KST). 정확한 CI artifact 전체 해시와 고유/공식 SW·manifest·새 entry·배너8개 GET·해시도 통과(04:46:01). [원본 CI 기록](./pwa-ci-release.json), [공개 파일 검증](./public-verification.json).
+- Worker `a7f48e4a-5924-476f-9be1-bef31e1833a5`, D1, 성장 기준·카탈로그, 전환 version1, 서버 저장·기존 백업 설정은 변경하지 않았다.
+- 정상 학생 세션의 새 공식 브라우저390×844에서 업데이트 팝업 CTA→게임 실제 진입 확인. 레벨3/body2/EXP4/28/먹이0/idle, 가로넘침·알림오류·pageerror0. GET200의 fed24/revision25/earned24/available0/transition1/noticeSeen true는 배포 전과 동일하며 운영 먹이 POST는 실행하지 않았다. [공개 학생 화면 검수](./live-ui-verification.json). 실제 학생 화면 캡처는 공유 root 로컬 QA에만 보관한다.
+- 기존 공지 ID `3ef838fa-f2a6-814a-81cd-eef67010b59c`의 제목만 ‘2.49.1 버전 업데이트 소식’으로 PATCH200. 본문 말투·게시시각·학생 노출·중요 설정 유지. 학생 GET200에서 같은 ID1개 및 내용 일치 확인. [최종 공지](../../releases/liaoliao-update-notice-2026-10-05.md).

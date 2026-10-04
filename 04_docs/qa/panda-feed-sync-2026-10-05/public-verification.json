@@ -1,0 +1,130 @@
+{
+  "schema": 1,
+  "version": "2.49.1",
+  "commit": "e36861633ba1326564541c2c5960c1ee7bb024a3",
+  "deployed": {
+    "id": "f09abb82-73ca-4b57-96de-b04d25ce4d7b",
+    "url": "https://f09abb82.tiantian-chinese.pages.dev",
+    "commit": "e36861633ba1326564541c2c5960c1ee7bb024a3"
+  },
+  "ciVerifiedAt": "2026-10-04T19:44:11.317Z",
+  "ciArtifactHashMatch": true,
+  "criticalFiles": {
+    "https://f09abb82.tiantian-chinese.pages.dev/sw.js": {
+      "status": 200,
+      "contentType": "application/javascript",
+      "sha256": "8acde021ecaff141f4ef51370cd366377826c8d9fe6e55376c2915a3674e80a7",
+      "bytes": 10533
+    },
+    "https://f09abb82.tiantian-chinese.pages.dev/manifest.webmanifest": {
+      "status": 200,
+      "contentType": "application/manifest+json",
+      "sha256": "350f7a22e4c468611382842bf4db8ba81613ce76c30bb6e8ef467b79ac449e91",
+      "bytes": 655
+    },
+    "https://f09abb82.tiantian-chinese.pages.dev/assets/index-DqZaFkaW.js": {
+      "status": 200,
+      "contentType": "application/javascript",
+      "sha256": "ab101535a04d34c9984cba0a2e7d8e487ec7898f0d3268f9d7cbaa4dcec63a82",
+      "bytes": 597233
+    },
+    "https://f09abb82.tiantian-chinese.pages.dev/panda/ui/liaoliao-my-forest-background.webp": {
+      "status": 200,
+      "contentType": "image/webp",
+      "sha256": "446f690019427ff37dc99775d73938bcd443fe09cb3e69754efd338cbacabd5c",
+      "bytes": 18218
+    },
+    "https://tiantian-chinese.pages.dev/sw.js": {
+      "status": 200,
+      "contentType": "application/javascript",
+      "sha256": "8acde021ecaff141f4ef51370cd366377826c8d9fe6e55376c2915a3674e80a7",
+      "bytes": 10533
+    },
+    "https://tiantian-chinese.pages.dev/manifest.webmanifest": {
+      "status": 200,
+      "contentType": "application/manifest+json",
+      "sha256": "350f7a22e4c468611382842bf4db8ba81613ce76c30bb6e8ef467b79ac449e91",
+      "bytes": 655
+    },
+    "https://tiantian-chinese.pages.dev/assets/index-DqZaFkaW.js": {
+      "status": 200,
+      "contentType": "application/javascript",
+      "sha256": "ab101535a04d34c9984cba0a2e7d8e487ec7898f0d3268f9d7cbaa4dcec63a82",
+      "bytes": 597233
+    },
+    "https://tiantian-chinese.pages.dev/panda/ui/liaoliao-my-forest-background.webp": {
+      "status": 200,
+      "contentType": "image/webp",
+      "sha256": "446f690019427ff37dc99775d73938bcd443fe09cb3e69754efd338cbacabd5c",
+      "bytes": 18218
+    }
+  },
+  "ciSmoke": {
+    "https://f09abb82.tiantian-chinese.pages.dev": {
+      "routes": [
+        {
+          "route": "/",
+          "status": 200
+        },
+        {
+          "route": "/personal",
+          "status": 200
+        }
+      ],
+      "assets": 16
+    },
+    "https://tiantian-chinese.pages.dev": {
+      "routes": [
+        {
+          "route": "/",
+          "status": 200
+        },
+        {
+          "route": "/personal",
+          "status": 200
+        }
+      ],
+      "assets": 16
+    }
+  },
+  "ciWorkerBoundaries": [
+    {
+      "route": "/notifications",
+      "origin": "https://tiantian-chinese.pages.dev",
+      "status": 401
+    },
+    {
+      "route": "/booking/student/ZZZZ00000000",
+      "origin": "https://tiantian-chinese.pages.dev",
+      "status": 401
+    },
+    {
+      "route": "/booking/consent",
+      "origin": "https://tiantian-chinese.pages.dev",
+      "status": 401
+    },
+    {
+      "route": "/booking/consent/ZZZZ00000000",
+      "origin": "https://tiantian-chinese.pages.dev",
+      "status": 401
+    },
+    {
+      "route": "/game/me",
+      "origin": "https://tiantianchinese.com",
+      "status": 401
+    },
+    {
+      "route": "/game/me",
+      "origin": "https://invalid.example",
+      "status": 403
+    }
+  ],
+  "size": {
+    "files": 890,
+    "totalBytes": 48904739,
+    "entry": "/assets/index-DqZaFkaW.js",
+    "entryBytes": 597233,
+    "entryGzipBytes": 176946
+  },
+  "verifiedAt": "2026-10-04T19:46:01.992Z"
+}
