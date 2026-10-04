@@ -1,6 +1,6 @@
 # 랴오랴오 서버 저장 전환·백업 운영
 
-작성일: 2026-09-30. 현재 운영 전환과 원격 백업은 **미실행**이며, `panda-readiness.json`은 `pending`이다.
+작성일: 2026-09-30. 2026-10-05 운영 D1·Worker와 정상 TEST 학생의 전환/동기화 및 실제 원격 백업·격리 복구 검증을 완료했다. `panda-readiness.json`은 근거 문서를 연결한 `verified`이며 PWA 공개 및 지속 활성화는 별도 진행 기록을 따른다.
 
 ## 저장과 전환 기준
 
@@ -32,7 +32,7 @@ Node.js 24.14.0 이상의 Node 24 런타임과 `npm ci --prefix worker`로 설�
 
 | GitHub 설정 | 역할 |
 | --- | --- |
-| `CLOUDFLARE_D1_BACKUP_API_TOKEN` secret | 해당 계정 D1 조회·export 전용 토큰. 최소 D1 Read 권한으로 수동 실행에서 export 가능 여부를 확인한다. 기존 배포 토큰을 확대 재사용하지 않는다. |
+| `CLOUDFLARE_D1_BACKUP_API_TOKEN` secret | 해당 운영 계정으로 제한한 별도 D1 백업 토큰. 실제 확인에서 D1 Read는 메타데이터 조회200/export10000이었고, 사용자가 Edit로 변경한 뒤 export 성공했다. 자동화는 두 판다 테이블 export만 호출하며 기존 배포 토큰을 확대 재사용하지 않는다. |
 | `CLOUDFLARE_R2_API_TOKEN` secret | 기존 R2 백업용 토큰. 대상 버킷 객체 업로드·다운로드 권한 필요. |
 | `CLOUDFLARE_ACCOUNT_ID` secret | 기존 Cloudflare 계정 ID 재사용. |
 | `R2_BACKUP_BUCKET` secret | 기존 `tutormanager-backup` 값 재사용. |

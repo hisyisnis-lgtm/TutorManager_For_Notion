@@ -1,17 +1,17 @@
 {
   "schema": 1,
-  "status": "pending",
+  "status": "verified",
   "workerOrigin": "https://tutor-manager-proxy.hisyisnis.workers.dev",
-  "workerVersion": null,
-  "contractHash": null,
-  "verifiedAt": null,
+  "workerVersion": "a7f48e4a-5924-476f-9be1-bef31e1833a5",
+  "contractHash": "9c9c1c8a5fcd0f5b38fdb56c234f55f107dc5c4de7e5bad81f66e75cdc752726",
+  "verifiedAt": "2026-10-04T18:18:42.928Z",
   "checks": {
-    "d1Migration": false,
-    "authenticatedReadWrite": false,
-    "retryWithoutDoubleDebit": false,
-    "secondDeviceSync": false,
-    "transitionOnce": false,
-    "backupRestore": false
+    "d1Migration": true,
+    "authenticatedReadWrite": true,
+    "retryWithoutDoubleDebit": true,
+    "secondDeviceSync": true,
+    "transitionOnce": true,
+    "backupRestore": true
   },
-  "evidence": null
+  "evidence": "04_docs/qa/panda-release-2026-10-05/rollout-verification.md"
 }

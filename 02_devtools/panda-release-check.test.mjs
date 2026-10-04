@@ -54,3 +54,14 @@ test('transition migration and rollout/backup evidence cannot be skipped', async
   await f.put('worker/migrations/0006_panda_transition.sql', 'changed transition');
   await assert.rejects(checkPandaRelease(f), /변경/);
 });
+
+test('contract fingerprint is stable across Git LF and CRLF checkouts', async () => {
+  const f = await fixture();
+  const file = 'worker/lib/pandaRules.js';
+  await f.put(file, 'const first = 1;\nconst second = 2;\n');
+  const lf = await pandaContractHash(f.root);
+  await f.put(file, 'const first = 1;\r\nconst second = 2;\r\n');
+  assert.equal(await pandaContractHash(f.root), lf);
+  await f.put(file, 'const first = 3;\r\nconst second = 2;\r\n');
+  assert.notEqual(await pandaContractHash(f.root), lf);
+});

@@ -10,7 +10,8 @@ export async function pandaContractHash(root = ROOT) {
   const files = ['worker/migrations/0005_student_panda.sql', 'worker/migrations/0006_panda_transition.sql', 'worker/lib/pandaRules.js',
     'worker/lib/pandaDb.js', 'worker/lib/pandaRoutes.js', '03_data/panda/wardrobe.json'];
   const hash = createHash('sha256');
-  for (const file of files) hash.update(file).update('\0').update(await readFile(path.join(root, file))).update('\0');
+  // Git may check out text as CRLF on Windows; fingerprint the same LF source on CI.
+  for (const file of files) hash.update(file).update('\0').update((await readFile(path.join(root, file), 'utf8')).replace(/\r\n/g, '\n')).update('\0');
   return hash.digest('hex');
 }
 
