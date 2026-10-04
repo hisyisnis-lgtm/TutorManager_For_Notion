@@ -76,6 +76,7 @@ export default [
       globals: {
         describe: 'readonly', it: 'readonly', expect: 'readonly', beforeEach: 'readonly', afterEach: 'readonly', vi: 'readonly',
         Element: 'readonly', // jsdom shim(Element.prototype.animate)용
+        DOMParser: 'readonly', Node: 'readonly', SVGElement: 'readonly', Storage: 'readonly',
       },
     },
   },
