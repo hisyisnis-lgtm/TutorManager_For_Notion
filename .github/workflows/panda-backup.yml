@@ -1,0 +1,70 @@
+name: 판다 D1 일일 백업 (R2)
+
+# KST 04:00. Activate only after DB preparation and a successful manual rehearsal.
+on:
+  schedule:
+    - cron: '0 19 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: panda-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    if: github.event_name == 'workflow_dispatch' || vars.PANDA_BACKUP_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24.14.0'
+          cache: npm
+          cache-dependency-path: worker/package-lock.json
+      - run: npm ci
+        working-directory: worker
+      - name: 판다 백업·격리 복구 회귀 검사
+        run: node --test 01_automation/panda_backup.test.mjs 02_devtools/panda-release-check.test.mjs
+      - name: 필수 시크릿 확인
+        env:
+          CLOUDFLARE_D1_BACKUP_API_TOKEN: ${{ secrets.CLOUDFLARE_D1_BACKUP_API_TOKEN }}
+          CLOUDFLARE_R2_API_TOKEN: ${{ secrets.CLOUDFLARE_R2_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          R2_BACKUP_BUCKET: ${{ secrets.R2_BACKUP_BUCKET }}
+        run: |
+          for name in CLOUDFLARE_D1_BACKUP_API_TOKEN CLOUDFLARE_R2_API_TOKEN CLOUDFLARE_ACCOUNT_ID R2_BACKUP_BUCKET; do
+            if [ -z "${!name}" ]; then
+              echo "::error::필수 판다 백업 시크릿 누락: $name"
+              exit 1
+            fi
+          done
+      - name: 판다 테이블만 내보내기 및 무결성 검사
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_D1_BACKUP_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          node 01_automation/backup_panda_to_r2.mjs --remote \
+            --output "$RUNNER_TEMP/panda.sql.gz" --receipt "$RUNNER_TEMP/panda.complete.json"
+      - name: 기존 R2 버킷에 업로드 후 내려받아 검사
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_R2_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          R2_BACKUP_BUCKET: ${{ secrets.R2_BACKUP_BUCKET }}
+        run: |
+          KEY="panda-backup/$(date -u +%Y-%m-%d)-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          node worker/node_modules/wrangler/bin/wrangler.js r2 object put "${R2_BACKUP_BUCKET}/${KEY}.sql.gz" \
+            --file "$RUNNER_TEMP/panda.sql.gz" --content-type application/gzip --remote
+          node worker/node_modules/wrangler/bin/wrangler.js r2 object get "${R2_BACKUP_BUCKET}/${KEY}.sql.gz" \
+            --file "$RUNNER_TEMP/panda-downloaded.sql.gz" --remote
+          node 02_devtools/restore-panda-backup.mjs --input "$RUNNER_TEMP/panda-downloaded.sql.gz" \
+            --receipt "$RUNNER_TEMP/panda.complete.json"
+          # The completion marker is published only after upload + download verification.
+          node worker/node_modules/wrangler/bin/wrangler.js r2 object put "${R2_BACKUP_BUCKET}/${KEY}.complete.json" \
+            --file "$RUNNER_TEMP/panda.complete.json" --content-type application/json --remote
+          echo "판다 R2 백업 및 재다운로드 검사 완료"
