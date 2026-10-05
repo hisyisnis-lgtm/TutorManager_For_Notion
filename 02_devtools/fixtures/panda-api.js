@@ -10,7 +10,9 @@ export function createPandaFixtureApi({ storageKey, query = new URLSearchParams(
   const transitionKey = `${serverKey}_transition`;
   const failure = query.get('failure');
   const failureAction = query.get('failureAction') || 'nickname';
+  const failureAt = Math.max(1, integer('failureAt', 1));
   let failed = false;
+  let matchingActions = 0;
   const responseDelay = Math.max(0, Math.min(15000, Math.floor(Number(query.get('delay')) || 0)));
   const delay = () => new Promise(resolve => setTimeout(resolve, responseDelay));
   const profile = () => normalizePandaGameProfile(JSON.parse(localStorage.getItem(serverKey)));
@@ -41,7 +43,9 @@ export function createPandaFixtureApi({ storageKey, query = new URLSearchParams(
           { status: 409, code: 'request_id_reused', snapshot: snapshot() });
         return { ...snapshot(), ok: true, action: receipt.action, replayed: true };
       }
-      if (failure === 'reject-once' && action.type === failureAction && !failed) {
+      if (action.type === failureAction) matchingActions += 1;
+      const injectFailure = action.type === failureAction && matchingActions === failureAt && !failed;
+      if (failure === 'reject-once' && injectFailure) {
         failed = true;
         throw Object.assign(new Error('예시 착용 요청이 거절됐어요. 다시 시도해 주세요.'), { status: 409, code: 'fixture_rejected', snapshot: snapshot() });
       }
@@ -55,7 +59,7 @@ export function createPandaFixtureApi({ storageKey, query = new URLSearchParams(
       if (action.type === 'dismiss-transition') localStorage.setItem(transitionKey, JSON.stringify({ ...transition(), noticeSeen: true }));
       receipts[action.requestId] = { signature, action: { type: action.type, requestId: action.requestId } };
       localStorage.setItem(receiptKey, JSON.stringify(receipts));
-      if (failure === 'lost-once' && action.type === failureAction && !failed) {
+      if (failure === 'lost-once' && injectFailure) {
         failed = true; throw new Error('예시 응답이 유실됐어요. 결과를 다시 확인해 주세요.');
       }
       return { ...snapshot(), ok: true, action: receipts[action.requestId].action };

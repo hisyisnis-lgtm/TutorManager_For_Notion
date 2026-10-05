@@ -1,0 +1,64 @@
+{
+  "scenario": "egg +500, x1 rapid 5, per-response delay3000ms, no character touch",
+  "samples": [
+    {
+      "elapsed": 1503,
+      "food": 495,
+      "exp": "3/3",
+      "stage": 0,
+      "motion": "eating",
+      "serverFed": 0,
+      "receipts": 0
+    },
+    {
+      "elapsed": 3003,
+      "food": 495,
+      "exp": "3/3",
+      "stage": 0,
+      "motion": "idle",
+      "saving": true,
+      "serverFed": 0,
+      "receipts": 0
+    },
+    {
+      "elapsed": 7005,
+      "food": 495,
+      "exp": "3/3",
+      "stage": 0,
+      "motion": "idle",
+      "saving": true,
+      "serverFed": 2,
+      "receipts": 2
+    },
+    {
+      "elapsed": 11017,
+      "food": 495,
+      "exp": "3/3",
+      "stage": 0,
+      "motion": "idle",
+      "saving": true,
+      "serverFed": 3,
+      "receipts": 3
+    },
+    {
+      "elapsed": 16011,
+      "food": 495,
+      "stage": 0,
+      "motion": "idle",
+      "phase": "charge",
+      "serverFed": 5,
+      "receipts": 5
+    },
+    {
+      "elapsed": 19005,
+      "food": 495,
+      "exp": "2/17",
+      "stage": 1,
+      "motion": "idle",
+      "serverFed": 5,
+      "receipts": 5
+    }
+  ],
+  "errors": [],
+  "hotUpdates": []
+}

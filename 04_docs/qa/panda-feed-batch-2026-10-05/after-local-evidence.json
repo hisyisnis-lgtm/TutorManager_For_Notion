@@ -1,0 +1,1022 @@
+{
+  "scenario": "x1 rapid 5 at egg, isolated browser-only fixture; no production actions",
+  "rapid": {
+    "clicks": [
+      88,
+      150,
+      198,
+      249,
+      303
+    ],
+    "samples": [
+      {
+        "elapsed": 102,
+        "food": "보유 먹이 500개",
+        "title": "레벨1 : 알",
+        "exp": "경험치0 / 3",
+        "stage": "0",
+        "motion": "idle",
+        "phase": null,
+        "saving": false,
+        "server": {
+          "version": 2,
+          "fedTotal": 0,
+          "spentFood": 0,
+          "refundFood": 0,
+          "owned": [],
+          "equipped": {
+            "hat": null,
+            "costume": null,
+            "neck": null,
+            "hand": null
+          },
+          "purchasePrices": {},
+          "nickname": "",
+          "namingPromptSeen": false,
+          "revision": 0
+        },
+        "receiptCount": 0,
+        "overflow": false
+      },
+      {
+        "elapsed": 904,
+        "food": "보유 먹이 498개",
+        "title": "레벨1 : 알",
+        "exp": "경험치2 / 3",
+        "stage": "0",
+        "motion": "eating",
+        "phase": null,
+        "saving": false,
+        "server": {
+          "version": 2,
+          "fedTotal": 0,
+          "spentFood": 0,
+          "refundFood": 0,
+          "owned": [],
+          "equipped": {
+            "hat": null,
+            "costume": null,
+            "neck": null,
+            "hand": null
+          },
+          "purchasePrices": {},
+          "nickname": "",
+          "namingPromptSeen": false,
+          "revision": 0
+        },
+        "receiptCount": 0,
+        "overflow": false
+      },
+      {
+        "elapsed": 1009,
+        "food": "보유 먹이 496개",
+        "title": "레벨1 : 알",
+        "exp": "경험치3 / 3",
+        "stage": "0",
+        "motion": "eating",
+        "phase": null,
+        "saving": false,
+        "server": {
+          "version": 2,
+          "fedTotal": 0,
+          "spentFood": 0,
+          "refundFood": 0,
+          "owned": [],
+          "equipped": {
+            "hat": null,
+            "costume": null,
+            "neck": null,
+            "hand": null
+          },
+          "purchasePrices": {},
+          "nickname": "",
+          "namingPromptSeen": false,
+          "revision": 0
+        },
+        "receiptCount": 0,
+        "overflow": false
+      },
+      {
+        "elapsed": 1107,
+        "food": "보유 먹이 495개",
+        "title": "레벨1 : 알",
+        "exp": "경험치3 / 3",
+        "stage": "0",
+        "motion": "eating",
+        "phase": null,
+        "saving": false,
+        "server": {
+          "version": 2,
+          "fedTotal": 0,
+          "spentFood": 0,
+          "refundFood": 0,
+          "owned": [],
+          "equipped": {
+            "hat": null,
+            "costume": null,
+            "neck": null,
+            "hand": null
+          },
+          "purchasePrices": {},
+          "nickname": "",
+          "namingPromptSeen": false,
+          "revision": 0
+        },
+        "receiptCount": 0,
+        "overflow": false
+      },
+      {
+        "elapsed": 2302,
+        "food": "보유 먹이 495개",
+        "title": "레벨1 : 알",
+        "exp": "경험치3 / 3",
+        "stage": "0",
+        "motion": "idle",
+        "phase": null,
+        "saving": true,
+        "server": {
+          "version": 2,
+          "fedTotal": 0,
+          "spentFood": 0,
+          "refundFood": 0,
+          "owned": [],
+          "equipped": {
+            "hat": null,
+            "costume": null,
+            "neck": null,
+            "hand": null
+          },
+          "purchasePrices": {},
+          "nickname": "",
+          "namingPromptSeen": false,
+          "revision": 0
+        },
+        "receiptCount": 0,
+        "overflow": false
+      },
+      {
+        "elapsed": 3518,
+        "food": "보유 먹이 495개",
+        "title": "레벨1 : 알",
+        "exp": "경험치3 / 3",
+        "stage": "0",
+        "motion": "idle",
+        "phase": "charge",
+        "saving": true,
+        "server": {
+          "version": 2,
+          "fedTotal": 5,
+          "spentFood": 0,
+          "refundFood": 0,
+          "owned": [],
+          "equipped": {
+            "hat": null,
+            "costume": null,
+            "neck": null,
+            "hand": null
+          },
+          "purchasePrices": {},
+          "nickname": "",
+          "namingPromptSeen": false,
+          "revision": 1
+        },
+        "receiptCount": 1,
+        "overflow": false
+      },
+      {
+        "elapsed": 3706,
+        "food": "보유 먹이 495개",
+        "title": "레벨1 : 알",
+        "exp": "경험치3 / 3",
+        "stage": "0",
+        "motion": "idle",
+        "phase": "charge",
+        "saving": false,
+        "server": {
+          "version": 2,
+          "fedTotal": 5,
+          "spentFood": 0,
+          "refundFood": 0,
+          "owned": [],
+          "equipped": {
+            "hat": null,
+            "costume": null,
+            "neck": null,
+            "hand": null
+          },
+          "purchasePrices": {},
+          "nickname": "",
+          "namingPromptSeen": false,
+          "revision": 1
+        },
+        "receiptCount": 1,
+        "overflow": false
+      },
+      {
+        "elapsed": 5049,
+        "food": "보유 먹이 495개",
+        "title": "레벨2 : 알에서 깨어나는 랴오랴오",
+        "exp": "경험치2 / 17",
+        "stage": "1",
+        "motion": "idle",
+        "phase": "reveal",
+        "saving": false,
+        "server": {
+          "version": 2,
+          "fedTotal": 5,
+          "spentFood": 0,
+          "refundFood": 0,
+          "owned": [],
+          "equipped": {
+            "hat": null,
+            "costume": null,
+            "neck": null,
+            "hand": null
+          },
+          "purchasePrices": {},
+          "nickname": "",
+          "namingPromptSeen": false,
+          "revision": 1
+        },
+        "receiptCount": 1,
+        "overflow": false
+      },
+      {
+        "elapsed": 6508,
+        "food": "보유 먹이 495개",
+        "title": "레벨2 : 알에서 깨어나는 랴오랴오",
+        "exp": "경험치2 / 17",
+        "stage": "1",
+        "motion": "idle",
+        "phase": "out",
+        "saving": false,
+        "server": {
+          "version": 2,
+          "fedTotal": 5,
+          "spentFood": 0,
+          "refundFood": 0,
+          "owned": [],
+          "equipped": {
+            "hat": null,
+            "costume": null,
+            "neck": null,
+            "hand": null
+          },
+          "purchasePrices": {},
+          "nickname": "",
+          "namingPromptSeen": false,
+          "revision": 1
+        },
+        "receiptCount": 1,
+        "overflow": false
+      },
+      {
+        "elapsed": 6802,
+        "food": "보유 먹이 495개",
+        "title": "레벨2 : 알에서 깨어나는 랴오랴오",
+        "exp": "경험치2 / 17",
+        "stage": "1",
+        "motion": "idle",
+        "phase": null,
+        "saving": false,
+        "server": {
+          "version": 2,
+          "fedTotal": 5,
+          "spentFood": 0,
+          "refundFood": 0,
+          "owned": [],
+          "equipped": {
+            "hat": null,
+            "costume": null,
+            "neck": null,
+            "hand": null
+          },
+          "purchasePrices": {},
+          "nickname": "",
+          "namingPromptSeen": false,
+          "revision": 1
+        },
+        "receiptCount": 1,
+        "overflow": false
+      }
+    ],
+    "errors": [],
+    "updates": [],
+    "touched": false,
+    "growthStartMs": 3518,
+    "passed": true
+  },
+  "partial": [
+    {
+      "failure": "reject-once",
+      "samples": [
+        {
+          "elapsed": 101,
+          "food": "보유 먹이 500개",
+          "title": "레벨1 : 알",
+          "exp": "경험치0 / 3",
+          "stage": "0",
+          "motion": "idle",
+          "phase": null,
+          "error": null,
+          "server": {
+            "version": 2,
+            "fedTotal": 0,
+            "spentFood": 0,
+            "refundFood": 0,
+            "owned": [],
+            "equipped": {
+              "hat": null,
+              "costume": null,
+              "neck": null,
+              "hand": null
+            },
+            "purchasePrices": {},
+            "nickname": "",
+            "namingPromptSeen": false,
+            "revision": 0
+          },
+          "receiptCount": 0,
+          "overflow": false
+        },
+        {
+          "elapsed": 905,
+          "food": "보유 먹이 498개",
+          "title": "레벨1 : 알",
+          "exp": "경험치2 / 3",
+          "stage": "0",
+          "motion": "eating",
+          "phase": null,
+          "error": null,
+          "server": {
+            "version": 2,
+            "fedTotal": 0,
+            "spentFood": 0,
+            "refundFood": 0,
+            "owned": [],
+            "equipped": {
+              "hat": null,
+              "costume": null,
+              "neck": null,
+              "hand": null
+            },
+            "purchasePrices": {},
+            "nickname": "",
+            "namingPromptSeen": false,
+            "revision": 0
+          },
+          "receiptCount": 0,
+          "overflow": false
+        },
+        {
+          "elapsed": 1009,
+          "food": "보유 먹이 497개",
+          "title": "레벨1 : 알",
+          "exp": "경험치3 / 3",
+          "stage": "0",
+          "motion": "eating",
+          "phase": null,
+          "error": null,
+          "server": {
+            "version": 2,
+            "fedTotal": 0,
+            "spentFood": 0,
+            "refundFood": 0,
+            "owned": [],
+            "equipped": {
+              "hat": null,
+              "costume": null,
+              "neck": null,
+              "hand": null
+            },
+            "purchasePrices": {},
+            "nickname": "",
+            "namingPromptSeen": false,
+            "revision": 0
+          },
+          "receiptCount": 0,
+          "overflow": false
+        },
+        {
+          "elapsed": 1110,
+          "food": "보유 먹이 496개",
+          "title": "레벨1 : 알",
+          "exp": "경험치3 / 3",
+          "stage": "0",
+          "motion": "eating",
+          "phase": null,
+          "error": null,
+          "server": {
+            "version": 2,
+            "fedTotal": 0,
+            "spentFood": 0,
+            "refundFood": 0,
+            "owned": [],
+            "equipped": {
+              "hat": null,
+              "costume": null,
+              "neck": null,
+              "hand": null
+            },
+            "purchasePrices": {},
+            "nickname": "",
+            "namingPromptSeen": false,
+            "revision": 0
+          },
+          "receiptCount": 0,
+          "overflow": false
+        },
+        {
+          "elapsed": 2004,
+          "food": "보유 먹이 495개",
+          "title": "레벨1 : 알",
+          "exp": "경험치3 / 3",
+          "stage": "0",
+          "motion": "eating",
+          "phase": null,
+          "error": null,
+          "server": {
+            "version": 2,
+            "fedTotal": 0,
+            "spentFood": 0,
+            "refundFood": 0,
+            "owned": [],
+            "equipped": {
+              "hat": null,
+              "costume": null,
+              "neck": null,
+              "hand": null
+            },
+            "purchasePrices": {},
+            "nickname": "",
+            "namingPromptSeen": false,
+            "revision": 0
+          },
+          "receiptCount": 0,
+          "overflow": false
+        },
+        {
+          "elapsed": 3205,
+          "food": "보유 먹이 495개",
+          "title": "레벨1 : 알",
+          "exp": "경험치3 / 3",
+          "stage": "0",
+          "motion": "idle",
+          "phase": null,
+          "error": null,
+          "server": {
+            "version": 2,
+            "fedTotal": 0,
+            "spentFood": 0,
+            "refundFood": 0,
+            "owned": [],
+            "equipped": {
+              "hat": null,
+              "costume": null,
+              "neck": null,
+              "hand": null
+            },
+            "purchasePrices": {},
+            "nickname": "",
+            "namingPromptSeen": false,
+            "revision": 0
+          },
+          "receiptCount": 0,
+          "overflow": false
+        },
+        {
+          "elapsed": 3503,
+          "food": "보유 먹이 495개",
+          "title": "레벨1 : 알",
+          "exp": "경험치3 / 3",
+          "stage": "0",
+          "motion": "idle",
+          "phase": "charge",
+          "error": null,
+          "server": {
+            "version": 2,
+            "fedTotal": 4,
+            "spentFood": 0,
+            "refundFood": 0,
+            "owned": [],
+            "equipped": {
+              "hat": null,
+              "costume": null,
+              "neck": null,
+              "hand": null
+            },
+            "purchasePrices": {},
+            "nickname": "",
+            "namingPromptSeen": false,
+            "revision": 1
+          },
+          "receiptCount": 1,
+          "overflow": false
+        },
+        {
+          "elapsed": 5012,
+          "food": "보유 먹이 495개",
+          "title": "레벨2 : 알에서 깨어나는 랴오랴오",
+          "exp": "경험치2 / 17",
+          "stage": "1",
+          "motion": "idle",
+          "phase": "reveal",
+          "error": null,
+          "server": {
+            "version": 2,
+            "fedTotal": 4,
+            "spentFood": 0,
+            "refundFood": 0,
+            "owned": [],
+            "equipped": {
+              "hat": null,
+              "costume": null,
+              "neck": null,
+              "hand": null
+            },
+            "purchasePrices": {},
+            "nickname": "",
+            "namingPromptSeen": false,
+            "revision": 1
+          },
+          "receiptCount": 1,
+          "overflow": false
+        },
+        {
+          "elapsed": 6502,
+          "food": "보유 먹이 496개",
+          "title": "레벨2 : 알에서 깨어나는 랴오랴오",
+          "exp": "경험치1 / 17",
+          "stage": "1",
+          "motion": "idle",
+          "phase": "out",
+          "error": "예시 착용 요청이 거절됐어요. 다시 시도해 주세요.다시 시도",
+          "server": {
+            "version": 2,
+            "fedTotal": 4,
+            "spentFood": 0,
+            "refundFood": 0,
+            "owned": [],
+            "equipped": {
+              "hat": null,
+              "costume": null,
+              "neck": null,
+              "hand": null
+            },
+            "purchasePrices": {},
+            "nickname": "",
+            "namingPromptSeen": false,
+            "revision": 1
+          },
+          "receiptCount": 1,
+          "overflow": false
+        },
+        {
+          "elapsed": 6802,
+          "food": "보유 먹이 496개",
+          "title": "레벨2 : 알에서 깨어나는 랴오랴오",
+          "exp": "경험치1 / 17",
+          "stage": "1",
+          "motion": "idle",
+          "phase": null,
+          "error": "예시 착용 요청이 거절됐어요. 다시 시도해 주세요.다시 시도",
+          "server": {
+            "version": 2,
+            "fedTotal": 4,
+            "spentFood": 0,
+            "refundFood": 0,
+            "owned": [],
+            "equipped": {
+              "hat": null,
+              "costume": null,
+              "neck": null,
+              "hand": null
+            },
+            "purchasePrices": {},
+            "nickname": "",
+            "namingPromptSeen": false,
+            "revision": 1
+          },
+          "receiptCount": 1,
+          "overflow": false
+        }
+      ],
+      "errors": [],
+      "updates": [],
+      "touched": false,
+      "passed": true
+    },
+    {
+      "failure": "lost-once",
+      "samples": [
+        {
+          "elapsed": 103,
+          "food": "보유 먹이 500개",
+          "title": "레벨1 : 알",
+          "exp": "경험치0 / 3",
+          "stage": "0",
+          "motion": "idle",
+          "phase": null,
+          "error": null,
+          "server": {
+            "version": 2,
+            "fedTotal": 0,
+            "spentFood": 0,
+            "refundFood": 0,
+            "owned": [],
+            "equipped": {
+              "hat": null,
+              "costume": null,
+              "neck": null,
+              "hand": null
+            },
+            "purchasePrices": {},
+            "nickname": "",
+            "namingPromptSeen": false,
+            "revision": 0
+          },
+          "receiptCount": 0,
+          "overflow": false
+        },
+        {
+          "elapsed": 912,
+          "food": "보유 먹이 498개",
+          "title": "레벨1 : 알",
+          "exp": "경험치2 / 3",
+          "stage": "0",
+          "motion": "eating",
+          "phase": null,
+          "error": null,
+          "server": {
+            "version": 2,
+            "fedTotal": 0,
+            "spentFood": 0,
+            "refundFood": 0,
+            "owned": [],
+            "equipped": {
+              "hat": null,
+              "costume": null,
+              "neck": null,
+              "hand": null
+            },
+            "purchasePrices": {},
+            "nickname": "",
+            "namingPromptSeen": false,
+            "revision": 0
+          },
+          "receiptCount": 0,
+          "overflow": false
+        },
+        {
+          "elapsed": 1020,
+          "food": "보유 먹이 496개",
+          "title": "레벨1 : 알",
+          "exp": "경험치3 / 3",
+          "stage": "0",
+          "motion": "eating",
+          "phase": null,
+          "error": null,
+          "server": {
+            "version": 2,
+            "fedTotal": 0,
+            "spentFood": 0,
+            "refundFood": 0,
+            "owned": [],
+            "equipped": {
+              "hat": null,
+              "costume": null,
+              "neck": null,
+              "hand": null
+            },
+            "purchasePrices": {},
+            "nickname": "",
+            "namingPromptSeen": false,
+            "revision": 0
+          },
+          "receiptCount": 0,
+          "overflow": false
+        },
+        {
+          "elapsed": 2010,
+          "food": "보유 먹이 495개",
+          "title": "레벨1 : 알",
+          "exp": "경험치3 / 3",
+          "stage": "0",
+          "motion": "eating",
+          "phase": null,
+          "error": null,
+          "server": {
+            "version": 2,
+            "fedTotal": 0,
+            "spentFood": 0,
+            "refundFood": 0,
+            "owned": [],
+            "equipped": {
+              "hat": null,
+              "costume": null,
+              "neck": null,
+              "hand": null
+            },
+            "purchasePrices": {},
+            "nickname": "",
+            "namingPromptSeen": false,
+            "revision": 0
+          },
+          "receiptCount": 0,
+          "overflow": false
+        },
+        {
+          "elapsed": 3203,
+          "food": "보유 먹이 495개",
+          "title": "레벨1 : 알",
+          "exp": "경험치3 / 3",
+          "stage": "0",
+          "motion": "idle",
+          "phase": null,
+          "error": null,
+          "server": {
+            "version": 2,
+            "fedTotal": 0,
+            "spentFood": 0,
+            "refundFood": 0,
+            "owned": [],
+            "equipped": {
+              "hat": null,
+              "costume": null,
+              "neck": null,
+              "hand": null
+            },
+            "purchasePrices": {},
+            "nickname": "",
+            "namingPromptSeen": false,
+            "revision": 0
+          },
+          "receiptCount": 0,
+          "overflow": false
+        },
+        {
+          "elapsed": 3505,
+          "food": "보유 먹이 495개",
+          "title": "레벨1 : 알",
+          "exp": "경험치3 / 3",
+          "stage": "0",
+          "motion": "idle",
+          "phase": "charge",
+          "error": null,
+          "server": {
+            "version": 2,
+            "fedTotal": 4,
+            "spentFood": 0,
+            "refundFood": 0,
+            "owned": [],
+            "equipped": {
+              "hat": null,
+              "costume": null,
+              "neck": null,
+              "hand": null
+            },
+            "purchasePrices": {},
+            "nickname": "",
+            "namingPromptSeen": false,
+            "revision": 1
+          },
+          "receiptCount": 1,
+          "overflow": false
+        },
+        {
+          "elapsed": 5011,
+          "food": "보유 먹이 495개",
+          "title": "레벨2 : 알에서 깨어나는 랴오랴오",
+          "exp": "경험치2 / 17",
+          "stage": "1",
+          "motion": "idle",
+          "phase": "reveal",
+          "error": null,
+          "server": {
+            "version": 2,
+            "fedTotal": 4,
+            "spentFood": 0,
+            "refundFood": 0,
+            "owned": [],
+            "equipped": {
+              "hat": null,
+              "costume": null,
+              "neck": null,
+              "hand": null
+            },
+            "purchasePrices": {},
+            "nickname": "",
+            "namingPromptSeen": false,
+            "revision": 1
+          },
+          "receiptCount": 1,
+          "overflow": false
+        },
+        {
+          "elapsed": 6501,
+          "food": "보유 먹이 496개",
+          "title": "레벨2 : 알에서 깨어나는 랴오랴오",
+          "exp": "경험치1 / 17",
+          "stage": "1",
+          "motion": "idle",
+          "phase": "out",
+          "error": "예시 응답이 유실됐어요. 결과를 다시 확인해 주세요.다시 시도",
+          "server": {
+            "version": 2,
+            "fedTotal": 5,
+            "spentFood": 0,
+            "refundFood": 0,
+            "owned": [],
+            "equipped": {
+              "hat": null,
+              "costume": null,
+              "neck": null,
+              "hand": null
+            },
+            "purchasePrices": {},
+            "nickname": "",
+            "namingPromptSeen": false,
+            "revision": 2
+          },
+          "receiptCount": 2,
+          "overflow": false
+        },
+        {
+          "elapsed": 6706,
+          "food": "보유 먹이 496개",
+          "title": "레벨2 : 알에서 깨어나는 랴오랴오",
+          "exp": "경험치1 / 17",
+          "stage": "1",
+          "motion": "idle",
+          "phase": "out",
+          "error": null,
+          "server": {
+            "version": 2,
+            "fedTotal": 5,
+            "spentFood": 0,
+            "refundFood": 0,
+            "owned": [],
+            "equipped": {
+              "hat": null,
+              "costume": null,
+              "neck": null,
+              "hand": null
+            },
+            "purchasePrices": {},
+            "nickname": "",
+            "namingPromptSeen": false,
+            "revision": 2
+          },
+          "receiptCount": 2,
+          "overflow": false
+        },
+        {
+          "elapsed": 6802,
+          "food": "보유 먹이 496개",
+          "title": "레벨2 : 알에서 깨어나는 랴오랴오",
+          "exp": "경험치1 / 17",
+          "stage": "1",
+          "motion": "idle",
+          "phase": null,
+          "error": null,
+          "server": {
+            "version": 2,
+            "fedTotal": 5,
+            "spentFood": 0,
+            "refundFood": 0,
+            "owned": [],
+            "equipped": {
+              "hat": null,
+              "costume": null,
+              "neck": null,
+              "hand": null
+            },
+            "purchasePrices": {},
+            "nickname": "",
+            "namingPromptSeen": false,
+            "revision": 2
+          },
+          "receiptCount": 2,
+          "overflow": false
+        },
+        {
+          "elapsed": 9704,
+          "food": "보유 먹이 495개",
+          "title": "레벨2 : 알에서 깨어나는 랴오랴오",
+          "exp": "경험치2 / 17",
+          "stage": "1",
+          "motion": "idle",
+          "phase": null,
+          "error": null,
+          "server": {
+            "version": 2,
+            "fedTotal": 5,
+            "spentFood": 0,
+            "refundFood": 0,
+            "owned": [],
+            "equipped": {
+              "hat": null,
+              "costume": null,
+              "neck": null,
+              "hand": null
+            },
+            "purchasePrices": {},
+            "nickname": "",
+            "namingPromptSeen": false,
+            "revision": 2
+          },
+          "receiptCount": 2,
+          "overflow": false
+        }
+      ],
+      "errors": [],
+      "updates": [],
+      "touched": false,
+      "passed": true
+    }
+  ],
+  "lostBatch": {
+    "lost": {
+      "food": "보유 먹이 500개",
+      "title": "레벨1 : 알",
+      "stage": "0",
+      "phase": null,
+      "server": {
+        "version": 2,
+        "fedTotal": 5,
+        "spentFood": 0,
+        "refundFood": 0,
+        "owned": [],
+        "equipped": {
+          "hat": null,
+          "costume": null,
+          "neck": null,
+          "hand": null
+        },
+        "purchasePrices": {},
+        "nickname": "",
+        "namingPromptSeen": false,
+        "revision": 1
+      },
+      "receipts": [
+        {
+          "requestId": "46e6c1f2-e00b-4dba-beef-1888225745e6",
+          "expectedRevision": 0,
+          "type": "feed",
+          "count": 5
+        }
+      ],
+      "overflow": false
+    },
+    "final": {
+      "food": "보유 먹이 495개",
+      "title": "레벨2 : 알에서 깨어나는 랴오랴오",
+      "stage": "1",
+      "phase": null,
+      "server": {
+        "version": 2,
+        "fedTotal": 5,
+        "spentFood": 0,
+        "refundFood": 0,
+        "owned": [],
+        "equipped": {
+          "hat": null,
+          "costume": null,
+          "neck": null,
+          "hand": null
+        },
+        "purchasePrices": {},
+        "nickname": "",
+        "namingPromptSeen": false,
+        "revision": 1
+      },
+      "receipts": [
+        {
+          "requestId": "46e6c1f2-e00b-4dba-beef-1888225745e6",
+          "expectedRevision": 0,
+          "type": "feed",
+          "count": 5
+        }
+      ],
+      "overflow": false
+    },
+    "errors": [],
+    "updates": [],
+    "passed": true
+  },
+  "checks": {
+    "relatedTests": 135,
+    "testFiles": 4,
+    "build": "PASS",
+    "designAudit": {
+      "errors": 0,
+      "warnings": 0,
+      "review": 69
+    },
+    "targetedLint": {
+      "errors": 0,
+      "warnings": 1,
+      "warning": "existing unused import in PandaWidget.test.jsx"
+    }
+  }
+}

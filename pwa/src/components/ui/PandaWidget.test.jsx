@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
-import PandaWidget, { getPandaStorageKey } from './PandaWidget.jsx';
+import PandaWidget, { getPandaStorageKey, PANDA_FEED_BATCH_IDLE_MS, PANDA_FEED_BATCH_MAX_WAIT_MS } from './PandaWidget.jsx';
 import { PANDA_MOTION_DURATION } from '../../constants/pandaMascot.js';
 import { PANDA_GAME_THEME } from '../../constants/pandaGameTheme.js';
 import { PANDA_FEED_PULSE_LIMIT, PANDA_GROWTH_FEEDBACK_DURATION } from '../../hooks/usePandaGrowthFeedback.js';
@@ -65,6 +65,279 @@ beforeEach(() => {
   localStorage.clear();
   vi.mocked(fetchPandaProfile).mockReset();
   vi.mocked(performPandaAction).mockReset();
+});
+
+describe('원격 먹이 입력 묶음', () => {
+  const initial = { fedTotal: 0, revision: 1 };
+  const renderRemote = async () => {
+    fetchPandaProfile.mockResolvedValue(remoteSnapshot({ profile: initial, availableFood: 500 }));
+    let view;
+    await act(async () => { view = render(<PandaWidget storageKey={KEY} studentToken="fixture-panda" serverEnabled />); });
+    return view;
+  };
+  const queueOnes = count => act(() => {
+    for (let index = 0; index < count; index++) fireEvent.click(screen.getByRole('button', { name: '먹이 1개', exact: true }));
+  });
+
+  it('빠른 x1 다섯 번은 잎·예약·Promise를 각각 유지하고 하나의 count5 요청으로 저장한다', async () => {
+    performPandaAction.mockResolvedValue(remoteSnapshot({ profile: { fedTotal: 5, revision: 2 }, availableFood: 495 }));
+    await renderRemote();
+    const settled = [];
+    act(() => {
+      for (let index = 0; index < 5; index++) gameViewProps.current.onFeed(1).then(result => settled.push(result));
+    });
+    expect(gameViewProps.current.available).toBe(500);
+    expect(gameViewProps.current.feedingAvailable).toBe(495);
+    expect(gameViewProps.current.isBusy).toBe(false);
+    expect(gameViewProps.current.canFeed).toBe(true);
+    expect(performPandaAction).not.toHaveBeenCalled();
+    expect(document.querySelectorAll('[data-particle="feed"]')).toHaveLength(5);
+    await advance(PANDA_FEED_BATCH_IDLE_MS - 1);
+    expect(performPandaAction).not.toHaveBeenCalled();
+    await advance(1);
+    expect(performPandaAction).toHaveBeenCalledTimes(1);
+    expect(performPandaAction.mock.calls[0][1]).toMatchObject({ type: 'feed', count: 5, expectedRevision: 1 });
+    expect(settled).toEqual([true, true, true, true, true]);
+    expect(readPandaServerCache(KEY).profile).toMatchObject({ fedTotal: 5, revision: 2 });
+    expect(gameViewProps.current.available).toBe(500);
+    expect(gameViewProps.current.feedingAvailable).toBe(495);
+    await advance(PANDA_FEED_FLIGHT_MS - PANDA_FEED_BATCH_IDLE_MS);
+    expect(gameViewProps.current.available).toBe(495);
+    expect(gameViewProps.current.celebration).toBeNull();
+    await advance(PANDA_MOTION_DURATION.eating);
+    expect(gameViewProps.current.celebration.type).toBe('evolution');
+    expect(mascot().dataset.motion).toBe('idle');
+  });
+
+  it('첫 x1 전송 이후 누른 네 번은 전송 중 payload를 바꾸지 않고 다음 count4 요청으로 합친다', async () => {
+    let finish;
+    performPandaAction.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }))
+      .mockResolvedValueOnce(remoteSnapshot({ profile: { fedTotal: 5, revision: 3 }, availableFood: 495 }));
+    await renderRemote();
+    await click('먹이 1개');
+    await advance(PANDA_FEED_BATCH_IDLE_MS);
+    const firstPayload = { ...performPandaAction.mock.calls[0][1] };
+    queueOnes(4);
+    expect(gameViewProps.current.feedingAvailable).toBe(495);
+    expect(gameViewProps.current.canFeed).toBe(true);
+    await advance(1000);
+    expect(performPandaAction).toHaveBeenCalledTimes(1);
+    expect(performPandaAction.mock.calls[0][1]).toEqual(firstPayload);
+    await act(async () => finish(remoteSnapshot({ profile: { fedTotal: 1, revision: 2 }, availableFood: 499 })));
+    expect(performPandaAction.mock.calls.map(([, payload]) => [payload.count, payload.expectedRevision])).toEqual([[1, 1], [4, 2]]);
+    expect(performPandaAction.mock.calls[1][1].requestId).not.toBe(firstPayload.requestId);
+    expect(readPandaServerCache(KEY).profile).toMatchObject({ fedTotal: 5, revision: 3 });
+    expect(gameViewProps.current.feedingAvailable).toBe(495);
+    await advance(PANDA_MOTION_DURATION.eating);
+    expect(gameViewProps.current.available).toBe(495);
+    expect(gameViewProps.current.celebration.type).toBe('evolution');
+  });
+
+  it('입력이 계속 이어져도 첫 전송은600ms를 넘기지 않고 남은 입력은 다음 배치로 보낸다', async () => {
+    let finish;
+    const started = Date.now();
+    const sentAt = [];
+    performPandaAction.mockImplementationOnce(() => {
+      sentAt.push(Date.now() - started);
+      return new Promise(resolve => { finish = resolve; });
+    }).mockResolvedValueOnce(remoteSnapshot({ profile: { fedTotal: 10, revision: 3 }, availableFood: 490 }));
+    await renderRemote();
+    await click('먹이 1개');
+    for (let index = 0; index < 5; index++) { await advance(100); await click('먹이 1개'); }
+    await advance(99);
+    expect(performPandaAction).not.toHaveBeenCalled();
+    await advance(1);
+    expect(sentAt).toEqual([PANDA_FEED_BATCH_MAX_WAIT_MS]);
+    expect(performPandaAction.mock.calls[0][1].count).toBe(6);
+    for (let index = 0; index < 4; index++) { await advance(100); await click('먹이 1개'); }
+    expect(performPandaAction).toHaveBeenCalledTimes(1);
+    await act(async () => finish(remoteSnapshot({ profile: { fedTotal: 6, revision: 2 }, availableFood: 494 })));
+    expect(performPandaAction.mock.calls.map(([, payload]) => payload.count)).toEqual([6, 4]);
+    expect(readPandaServerCache(KEY).profile).toMatchObject({ fedTotal: 10, revision: 3 });
+  });
+
+  it('한 이벤트 루프의 많은 입력도 예약을 중복 해제하지 않고 하나의 합계로 저장한다', async () => {
+    performPandaAction.mockResolvedValue(remoteSnapshot({ profile: { fedTotal: 40, revision: 2 }, availableFood: 460 }));
+    await renderRemote();
+    queueOnes(40);
+    expect(gameViewProps.current.feedingAvailable).toBe(460);
+    await advance(PANDA_FEED_BATCH_IDLE_MS);
+    expect(performPandaAction).toHaveBeenCalledTimes(1);
+    expect(performPandaAction.mock.calls[0][1].count).toBe(40);
+    expect(gameViewProps.current.feedingAvailable).toBe(460);
+    expect(readPandaServerCache(KEY).availableFood).toBe(460);
+  });
+
+  it('배치 전 focus 재조회가 진행되어도 받아둔 입력을 취소하지 않고 조회 후 전송한다', async () => {
+    performPandaAction.mockResolvedValue(remoteSnapshot({ profile: { fedTotal: 5, revision: 2 }, availableFood: 495 }));
+    await renderRemote();
+    let refresh;
+    fetchPandaProfile.mockImplementationOnce(() => new Promise(resolve => { refresh = resolve; }));
+    queueOnes(5);
+    await act(async () => window.dispatchEvent(new Event('focus')));
+    expect(gameViewProps.current.loading).toBe(true);
+    await advance(PANDA_FEED_BATCH_IDLE_MS);
+    expect(performPandaAction).not.toHaveBeenCalled();
+    expect(gameViewProps.current.feedingAvailable).toBe(495);
+    await act(async () => refresh(remoteSnapshot({ profile: initial, availableFood: 500 })));
+    await advance(PANDA_FEED_BATCH_IDLE_MS);
+    expect(performPandaAction).toHaveBeenCalledTimes(1);
+    expect(performPandaAction.mock.calls[0][1]).toMatchObject({ count: 5, expectedRevision: 1 });
+    expect(readPandaServerCache(KEY).profile.fedTotal).toBe(5);
+  });
+
+  it('합산 응답이 유실되어도 같은count·requestId로 재시도하며 서버 먹이를 두 번 차감하지 않는다', async () => {
+    let serverFed = 0;
+    const receipts = new Set();
+    performPandaAction.mockImplementation((_student, payload) => {
+      const replay = receipts.has(payload.requestId);
+      if (!replay) { receipts.add(payload.requestId); serverFed += payload.count; }
+      if (!replay) return new Promise((_, reject) => setTimeout(() => reject(new Error('응답 유실')), 2000));
+      return Promise.resolve(remoteSnapshot({ profile: { fedTotal: serverFed, revision: 2 }, availableFood: 500 - serverFed }));
+    });
+    await renderRemote();
+    queueOnes(5);
+    await advance(PANDA_FEED_BATCH_IDLE_MS + 2000);
+    expect(gameViewProps.current.available).toBe(500);
+    expect(gameViewProps.current.celebration).toBeNull();
+    await click('다시 시도');
+    expect(performPandaAction).toHaveBeenCalledTimes(2);
+    expect(performPandaAction.mock.calls[1][1]).toEqual(performPandaAction.mock.calls[0][1]);
+    expect(performPandaAction.mock.calls[0][1].count).toBe(5);
+    expect(receipts.size).toBe(1);
+    expect(serverFed).toBe(5);
+    expect(gameViewProps.current.available).toBe(495);
+    expect(mascot().dataset.motion).toBe('idle');
+  });
+
+  it('배치 거절은 모든 입력을 복원하고 아직 전송하지 않은 요청을 취소한다', async () => {
+    performPandaAction.mockRejectedValueOnce(Object.assign(new Error('요청 거절'), { status: 409,
+      snapshot: remoteSnapshot({ profile: initial, availableFood: 500 }) }));
+    await renderRemote();
+    const settled = [];
+    act(() => { for (let index = 0; index < 5; index++) gameViewProps.current.onFeed(1).then(result => settled.push(result)); });
+    await advance(PANDA_FEED_BATCH_IDLE_MS);
+    expect(settled).toEqual([false, false, false, false, false]);
+    expect(gameViewProps.current.available).toBe(500);
+    expect(gameViewProps.current.feedingAvailable).toBe(500);
+    expect(gameViewProps.current.celebration).toBeNull();
+    await advance(5000);
+    expect(performPandaAction).toHaveBeenCalledTimes(1);
+    expect(document.querySelector('[data-particle="feed"]')).toBeNull();
+  });
+
+  it('첫 성공 후 다음 합산 요청이 실패해도 성공 먹이만 남기고 나머지를 복원한다', async () => {
+    let finish, reject;
+    performPandaAction.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }))
+      .mockImplementationOnce(() => new Promise((_, failure) => { reject = failure; }));
+    await renderRemote();
+    await click('먹이 1개');
+    await advance(PANDA_FEED_BATCH_IDLE_MS);
+    queueOnes(4);
+    await advance(1200);
+    await act(async () => finish(remoteSnapshot({ profile: { fedTotal: 1, revision: 2 }, availableFood: 499 })));
+    expect(performPandaAction.mock.calls.map(([, payload]) => payload.count)).toEqual([1, 4]);
+    await act(async () => reject(new Error('다음 묶음 응답 실패')));
+    expect(gameViewProps.current.available).toBe(499);
+    expect(gameViewProps.current.feedingAvailable).toBe(499);
+    expect(gameViewProps.current.celebration).toBeNull();
+    await advance(PANDA_MOTION_DURATION.eating);
+    expect(readPandaServerCache(KEY).profile.fedTotal).toBe(1);
+    expect(gameViewProps.current.fedTotal).toBe(1);
+    expect(gameViewProps.current.celebration).toBeNull();
+  });
+
+  it('첫4개가 확정되면 마지막1개 응답을 기다리는 동안 진화하고 거절돼도 확정 단계를 유지한다', async () => {
+    let finish, reject;
+    performPandaAction.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }))
+      .mockImplementationOnce(() => new Promise((_, failure) => { reject = failure; }));
+    await renderRemote();
+    queueOnes(4);
+    await advance(PANDA_FEED_BATCH_IDLE_MS);
+    await click('먹이 1개');
+    await act(async () => finish(remoteSnapshot({ profile: { fedTotal: 4, revision: 2 }, availableFood: 496 })));
+    expect(performPandaAction.mock.calls.map(([, payload]) => payload.count)).toEqual([4, 1]);
+    await advance(PANDA_FEED_FLIGHT_MS + PANDA_MOTION_DURATION.eating);
+    expect(gameViewProps.current.celebration.type).toBe('evolution');
+    expect(gameViewProps.current.celebration.toLevel).toBe(2);
+    expect(gameViewProps.current.isFeeding).toBe(true);
+    expect(readPandaServerCache(KEY).profile.fedTotal).toBe(4);
+    await advance(PANDA_GROWTH_FEEDBACK_DURATION.charge);
+    expect(gameViewProps.current.levelInfo.level).toBe(2);
+    expect(mascot().dataset.stage).toBe('1');
+    await act(async () => reject(Object.assign(new Error('마지막 묶음 거절'), { status: 409,
+      snapshot: remoteSnapshot({ profile: { fedTotal: 4, revision: 2 }, availableFood: 496 }) })));
+    expect(gameViewProps.current.available).toBe(496);
+    expect(gameViewProps.current.fedTotal - gameViewProps.current.levelInfo.min).toBe(1);
+    expect(mascot().dataset.stage).toBe('1');
+    await advance(PANDA_GROWTH_FEEDBACK_DURATION.evolution);
+    expect(gameViewProps.current.celebration).toBeNull();
+    expect(mascot().dataset.stage).toBe('1');
+    expect(readPandaServerCache(KEY).profile.fedTotal).toBe(4);
+  });
+
+  it('첫1개만 확정되고 다음4개가 미확정이면 EXP가 가득해도 진화를 먼저 보여주지 않는다', async () => {
+    let finish, complete;
+    performPandaAction.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }))
+      .mockImplementationOnce(() => new Promise(resolve => { complete = resolve; }));
+    await renderRemote();
+    await click('먹이 1개');
+    await advance(PANDA_FEED_BATCH_IDLE_MS);
+    queueOnes(4);
+    await act(async () => finish(remoteSnapshot({ profile: { fedTotal: 1, revision: 2 }, availableFood: 499 })));
+    await advance(PANDA_FEED_FLIGHT_MS + PANDA_MOTION_DURATION.eating);
+    expect(gameViewProps.current.progress).toBe(100);
+    expect(gameViewProps.current.levelInfo.level).toBe(1);
+    expect(gameViewProps.current.celebration).toBeNull();
+    expect(mascot().dataset.stage).toBe('0');
+    expect(readPandaServerCache(KEY).profile.fedTotal).toBe(1);
+    await act(async () => complete(remoteSnapshot({ profile: { fedTotal: 5, revision: 3 }, availableFood: 495 })));
+    expect(gameViewProps.current.celebration.type).toBe('evolution');
+    expect(mascot().dataset.motion).toBe('idle');
+    await advance(PANDA_GROWTH_FEEDBACK_DURATION.charge);
+    expect(gameViewProps.current.levelInfo.level).toBe(2);
+    expect(mascot().dataset.stage).toBe('1');
+  });
+
+  it('후속 확정이 다음 성장 경계를 넘으면 이전 확정 다음부터 연출해 단계를 되돌리거나 중복하지 않는다', async () => {
+    let finish, complete;
+    performPandaAction.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }))
+      .mockImplementationOnce(() => new Promise(resolve => { complete = resolve; }));
+    await renderRemote();
+    queueOnes(3);
+    await advance(PANDA_FEED_BATCH_IDLE_MS);
+    act(() => { void gameViewProps.current.onFeed(20); });
+    await act(async () => finish(remoteSnapshot({ profile: { fedTotal: 3, revision: 2 }, availableFood: 497 })));
+    await advance(PANDA_FEED_FLIGHT_MS + 4 * PANDA_FEED_STAGGER_MS + PANDA_MOTION_DURATION.eating);
+    const firstId = gameViewProps.current.celebration.id;
+    expect(gameViewProps.current.celebration).toMatchObject({ fromStage: 0, toStage: 1 });
+    await advance(PANDA_GROWTH_FEEDBACK_DURATION.charge);
+    expect(mascot().dataset.stage).toBe('1');
+    await act(async () => complete(remoteSnapshot({ profile: { fedTotal: 23, revision: 3 }, availableFood: 477 })));
+    expect(gameViewProps.current.celebration.id).toBe(firstId);
+    await advance(PANDA_GROWTH_FEEDBACK_DURATION.evolution - PANDA_GROWTH_FEEDBACK_DURATION.charge);
+    expect(gameViewProps.current.celebration).toMatchObject({ fromStage: 1, toStage: 2, phase: 'charge' });
+    expect(mascot().dataset.stage).toBe('1');
+    await advance(PANDA_GROWTH_FEEDBACK_DURATION.charge);
+    expect(mascot().dataset.stage).toBe('2');
+    expect(gameViewProps.current.levelInfo.level).toBe(3);
+    await advance(PANDA_GROWTH_FEEDBACK_DURATION.evolution);
+    expect(gameViewProps.current.celebration).toBeNull();
+    expect(gameViewProps.current.fedTotal).toBe(23);
+  });
+
+  it('입력 묶음 대기 중 화면을 닫으면 전송·잎·대기 Promise를 모두 정리한다', async () => {
+    const view = await renderRemote();
+    const settled = [];
+    act(() => { for (let index = 0; index < 5; index++) gameViewProps.current.onFeed(1).then(result => settled.push(result)); });
+    await advance(PANDA_FEED_BATCH_IDLE_MS - 1);
+    await act(async () => view.unmount());
+    expect(settled).toEqual([false, false, false, false, false]);
+    expect(vi.getTimerCount()).toBe(0);
+    await advance(5000);
+    expect(performPandaAction).not.toHaveBeenCalled();
+    expect(document.head.querySelector('style[id^="kf-panda-"]')).toBeNull();
+  });
 });
 afterEach(() => {
   cleanup(); vi.clearAllTimers(); vi.useRealTimers(); vi.restoreAllMocks(); vi.unstubAllGlobals(); localStorage.clear();
@@ -169,16 +442,17 @@ describe('PandaWidget 상태와 거래 연결', () => {
     expect(screen.getByTestId('speech-paused').textContent).toBe('false');
   });
 
-  it('x5는 즉시 한 번 저장을 요청하고 각 잎 도착마다 잔액·EXP를 바꾸며 먹는 동작을 되감지 않는다', async () => {
+  it('x5는 첫 잎 도착 전에 한 번 저장을 요청하고 각 도착마다 잔액·EXP를 바꾸며 먹기를 되감지 않는다', async () => {
     const profile = { version: 2, fedTotal: 20, spentFood: 0, refundFood: 0, owned: [], equipped: {}, revision: 1 };
     fetchPandaProfile.mockResolvedValue(remoteSnapshot({ profile, availableFood: 10 }));
     let finish;
     performPandaAction.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
     await act(async () => render(<PandaWidget storageKey={KEY} foodSources={foods(30)} studentToken="fixture-panda" serverEnabled />));
     await click('먹이 5개');
-    expect(performPandaAction).toHaveBeenCalledTimes(1);
+    expect(performPandaAction).not.toHaveBeenCalled();
     expect(screen.getByTestId('available').textContent).toBe('10');
     await advance(PANDA_FEED_FLIGHT_MS - 1);
+    expect(performPandaAction).toHaveBeenCalledTimes(1);
     expect(gameViewProps.current.growthPulses).toHaveLength(0);
     expect(mascot().dataset.motion).toBe('idle');
     let eatingId = Number(mascot().dataset.action);
@@ -209,8 +483,7 @@ describe('PandaWidget 상태와 거래 연결', () => {
   it('연속 x5 두 번은 열 번의 도착을 받으며 파티클 예산과 두 번의 FIFO 저장을 유지한다', async () => {
     const profile = { version: 2, fedTotal: 20, spentFood: 0, refundFood: 0, owned: [], equipped: {}, revision: 1 };
     fetchPandaProfile.mockResolvedValue(remoteSnapshot({ profile, availableFood: 10 }));
-    performPandaAction.mockResolvedValueOnce(remoteSnapshot({ profile: { ...profile, fedTotal: 25, revision: 2 }, availableFood: 5 }))
-      .mockResolvedValueOnce(remoteSnapshot({ profile: { ...profile, fedTotal: 30, revision: 3 }, availableFood: 0 }));
+    performPandaAction.mockResolvedValueOnce(remoteSnapshot({ profile: { ...profile, fedTotal: 30, revision: 2 }, availableFood: 0 }));
     await act(async () => render(<PandaWidget storageKey={KEY} foodSources={foods(30)} studentToken="fixture-panda" serverEnabled />));
     await click('먹이 5개');
     await click('먹이 5개');
@@ -223,7 +496,7 @@ describe('PandaWidget 상태와 거래 연결', () => {
       expect(seen.size).toBe((index + 1) * 2);
       expect(Number(mascot().dataset.action)).toBe(initialActionId + 1);
     }
-    expect(performPandaAction.mock.calls.map(([, payload]) => [payload.count, payload.expectedRevision])).toEqual([[5, 1], [5, 2]]);
+    expect(performPandaAction.mock.calls.map(([, payload]) => [payload.count, payload.expectedRevision])).toEqual([[10, 1]]);
     expect(readPandaServerCache(KEY).profile.fedTotal).toBe(30);
     expect(screen.getByTestId('available').textContent).toBe('0');
   });
@@ -282,6 +555,7 @@ describe('PandaWidget 상태와 거래 연결', () => {
       .mockImplementationOnce(() => new Promise((_, failure) => { reject = failure; }));
     await act(async () => render(<PandaWidget storageKey={KEY} foodSources={foods(26)} studentToken="fixture-panda" serverEnabled />));
     await click('먹이 1개');
+    await advance(PANDA_FEED_BATCH_IDLE_MS);
     await click('먹이 5개');
     await advance(PANDA_FEED_FLIGHT_MS);
     expect(readPandaServerCache(KEY).profile.fedTotal).toBe(21);
@@ -292,7 +566,7 @@ describe('PandaWidget 상태와 거래 연결', () => {
     expect(readPandaServerCache(KEY).profile.fedTotal).toBe(21);
     expect(mascot().dataset.motion).toBe('eating');
     expect(Number(mascot().dataset.action)).toBe(Number(eatingId));
-    await advance(PANDA_MOTION_DURATION.eating - stagger - 1);
+    await advance(PANDA_MOTION_DURATION.eating - stagger - PANDA_FEED_BATCH_IDLE_MS - 1);
     expect(mascot().dataset.motion).toBe('eating');
     await advance(1);
     expect(mascot().dataset.motion).toBe('idle');
@@ -352,14 +626,17 @@ describe('PandaWidget 상태와 거래 연결', () => {
     await click('옷장');
     await click('상점');
     await click('손 소품');
-    await act(async () => { expect(await gameViewProps.current.onFeed(1)).toBe(true); });
+    let result;
+    act(() => { result = gameViewProps.current.onFeed(1); });
+    await advance(PANDA_FEED_BATCH_IDLE_MS);
+    await act(async () => { expect(await result).toBe(true); });
     const buy = () => screen.getByRole('button', { name: '딸기 소풍 손 소품 구매' });
     expect(buy().classList.contains('is-unavailable')).toBe(true);
     expect(buy().disabled).toBe(true);
     expect(readPandaServerCache(KEY).profile.fedTotal).toBe(152);
     expect(screen.getByRole('button', { name: '상점' }).getAttribute('aria-pressed')).toBe('true');
     expect(screen.getByRole('button', { name: '손 소품', exact: true }).getAttribute('aria-pressed')).toBe('true');
-    await advance(PANDA_FEED_FLIGHT_MS);
+    await advance(PANDA_FEED_FLIGHT_MS - PANDA_FEED_BATCH_IDLE_MS);
     expect(buy().classList.contains('is-unavailable')).toBe(true);
     await advance(PANDA_MOTION_DURATION.eating);
     expect(gameViewProps.current.celebration.type).toBe('level');
@@ -487,11 +764,12 @@ describe('PandaWidget 상태와 거래 연결', () => {
       .mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
     await act(async () => render(<PandaWidget storageKey={KEY} foodSources={foods(117)} studentToken="fixture-panda" serverEnabled />));
     await click('먹이 1개');
+    await advance(PANDA_FEED_BATCH_IDLE_MS);
     await click('먹이 5개');
     await advance(750);
     // Both batches finish chewing while the second receipt is still pending.
-    await advance(PANDA_GROWTH_FEEDBACK_DURATION.evolution);
-    expect(screen.getByTestId('celebration').textContent).toBe('');
+    await advance(4 * PANDA_FEED_STAGGER_MS + PANDA_MOTION_DURATION.eating);
+    expect(screen.getByTestId('celebration').textContent).toBe('evolution');
     expect(readPandaServerCache(KEY).profile.fedTotal).toBe(112);
     expect(performPandaAction.mock.calls.map(([, payload]) => payload.count)).toEqual([1, 5]);
     expect(screen.queryByRole('dialog')).toBeNull();
@@ -515,7 +793,7 @@ describe('PandaWidget 상태와 거래 연결', () => {
     }));
     await act(async () => render(<PandaWidget storageKey={KEY} studentToken="fixture-panda" serverEnabled />));
     await click('먹이 5개');
-    expect(performPandaAction).toHaveBeenCalledTimes(1);
+    expect(performPandaAction).not.toHaveBeenCalled();
     expect(screen.getByTestId('available').textContent).toBe('5');
     expect(screen.getByTestId('fed').textContent).toBe('19');
     expect(screen.getByText('LV.2')).toBeTruthy();
@@ -531,11 +809,12 @@ describe('PandaWidget 상태와 거래 연결', () => {
     expect(mascot().dataset.action).toBe(eatingId);
     await advance(1);
     const mealEnd = PANDA_FEED_FLIGHT_MS + 4 * PANDA_FEED_STAGGER_MS + PANDA_MOTION_DURATION.eating;
-    if (receiptDelay > mealEnd) {
+    const receiptAt = receiptDelay + PANDA_FEED_BATCH_IDLE_MS;
+    if (receiptAt > mealEnd) {
       expect(screen.getByTestId('celebration').textContent).toBe('');
       expect(gameViewProps.current.noticePending).toBe(true);
       expect(screen.getByRole('status').textContent).toContain('저장하고 있어요');
-      await advance(receiptDelay - mealEnd);
+      await advance(receiptAt - mealEnd);
     }
     expect(mascot().dataset.motion).toBe('idle');
     expect(mascot().dataset.action).toBe(eatingId);
@@ -860,6 +1139,7 @@ describe('PandaWidget 상태와 거래 연결', () => {
       .mockResolvedValueOnce(remoteSnapshot({ profile: { ...profile, fedTotal: 112, revision: 2 }, availableFood: 5 }));
     await act(async () => render(<PandaWidget storageKey={KEY} foodSources={foods(117)} studentToken="fixture-panda" serverEnabled />));
     await click('먹이 1개');
+    await advance(PANDA_FEED_BATCH_IDLE_MS);
     await click('먹이 5개');
     await advance(2000);
     expect(performPandaAction).toHaveBeenCalledTimes(1);

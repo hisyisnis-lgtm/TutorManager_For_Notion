@@ -46,6 +46,8 @@ export function getPandaStorageKey(studentToken) {
 
 const DEFAULT_FEED_KEY = PANDA_FEED_KEY;
 const FEED_PARTICLE_SIZE = 30;
+export const PANDA_FEED_BATCH_IDLE_MS = 180;
+export const PANDA_FEED_BATCH_MAX_WAIT_MS = 600;
 let _pid = 0;
 
 function makeBezierKeyframes(p1x, p1y, p2x, p2y, opacityFn, scaleFn, steps = 20) {
@@ -149,11 +151,13 @@ function PandaWidgetContent({ foodSources = [], storageKey, fullscreen = false, 
   const keyframesRef = useRef(new Set());
   const feedQueueRef = useRef([]);
   const drainingFeedRef = useRef(false);
+  const feedDrainTimerRef = useRef(null);
+  const firstQueuedAtRef = useRef(null);
   const reservedFoodRef = useRef(0);
   const chewingRef = useRef(false);
   const confirmedChewUntilRef = useRef(0);
   const feedDisplayRef = useRef(null);
-  const mealStartRef = useRef(null);
+  const presentedProfileRef = useRef(null);
   const mealResultRef = useRef(null);
   const finishMealRef = useRef(null);
   const aliveRef = useRef(true);
@@ -281,17 +285,24 @@ function PandaWidgetContent({ foodSources = [], storageKey, fullscreen = false, 
   }
 
   function finishMeal() {
-    if (!aliveRef.current || chewingRef.current || feedQueueRef.current.some(entry => entry.status !== 'confirmed' || entry.arrived < entry.count)) return;
+    if (!aliveRef.current || chewingRef.current || feedQueueRef.current.some(entry => entry.arrived < entry.count)) return;
+    const previous = presentedProfileRef.current, next = mealResultRef.current;
+    // A later request cannot delay growth already earned by a confirmed batch.
+    // Advance this watermark once; provisional leaves never unlock a new level.
+    if (previous && next && next.fedTotal > previous.fedTotal) {
+      presentedProfileRef.current = next;
+      setRevealedFed(next.fedTotal);
+      acknowledgeGrowth(previous, next);
+    }
+    if (feedQueueRef.current.some(entry => entry.status !== 'confirmed')) return;
     feedQueueRef.current.splice(0);
-    const previous = mealStartRef.current, next = mealResultRef.current;
-    mealStartRef.current = null;
+    presentedProfileRef.current = null;
     mealResultRef.current = null;
     feedDisplayRef.current = null;
     setFeedDisplay(null);
     setRevealedFed(committedProfileRef.current.fedTotal);
     feedingRef.current = false;
     setIsFeeding(false);
-    if (previous && next) acknowledgeGrowth(previous, next);
   }
   finishMealRef.current = finishMeal;
 
@@ -315,6 +326,9 @@ function PandaWidgetContent({ foodSources = [], storageKey, fullscreen = false, 
   }
 
   function cancelQueuedFeeds() {
+    cancelTimer(feedDrainTimerRef.current);
+    feedDrainTimerRef.current = null;
+    firstQueuedAtRef.current = null;
     const canceled = feedQueueRef.current.splice(0);
     const ids = new Set(canceled.flatMap(entry => entry.particles.map(p => p.id)));
     canceled.forEach(entry => {
@@ -346,30 +360,42 @@ function PandaWidgetContent({ foodSources = [], storageKey, fullscreen = false, 
 
   async function drainFeedQueue() {
     if (drainingFeedRef.current || !aliveRef.current) return;
+    cancelTimer(feedDrainTimerRef.current);
+    feedDrainTimerRef.current = null;
+    // A focus/online refresh may start inside the short batching window. Keep
+    // accepted inputs queued until that read settles, instead of losing them.
+    if (gameRef.current.loading) {
+      feedDrainTimerRef.current = schedule(() => { void drainFeedQueue(); }, PANDA_FEED_BATCH_IDLE_MS);
+      return;
+    }
+    firstQueuedAtRef.current = null;
     drainingFeedRef.current = true;
     try {
-      let entry;
-      while (aliveRef.current && (entry = feedQueueRef.current.find(item => item.status === 'queued'))) {
-        entry.status = 'saving';
-        const next = await gameRef.current.transact({ type: 'feed', count: entry.count });
+      while (aliveRef.current) {
+        // Capture only unsent entries. Arrivals keep their own timing, while the
+        // immutable sum receives one request ID and revision from the model.
+        const batch = feedQueueRef.current.filter(entry => entry.status === 'queued');
+        if (!batch.length) break;
+        const count = batch.reduce((sum, entry) => sum + entry.count, 0);
+        batch.forEach(entry => { entry.status = 'saving'; });
+        const next = await gameRef.current.transact({ type: 'feed', count });
         if (!aliveRef.current) return;
         if (!next) {
           // Leave the hook's unresolved request intact for an idempotent retry.
           cancelQueuedFeeds();
           break;
         }
-        entry.status = 'confirmed';
-        entry.next = next;
+        batch.forEach(entry => { entry.status = 'confirmed'; });
         availableRef.current = balanceRef.current.profile === next
-          ? balanceRef.current.available : Math.max(0, availableRef.current - entry.count);
+          ? balanceRef.current.available : Math.max(0, availableRef.current - count);
         committedProfileRef.current = next;
         mealResultRef.current = next;
-        reservedFoodRef.current -= entry.count;
+        reservedFoodRef.current -= count;
         setReservedFood(reservedFoodRef.current);
-        confirmedChewUntilRef.current = Math.max(confirmedChewUntilRef.current, entry.chewUntil);
+        confirmedChewUntilRef.current = Math.max(confirmedChewUntilRef.current, ...batch.map(entry => entry.chewUntil));
         // Receipt processing never starts or extends a visual reaction. A slow
         // response may confirm growth after chewing has already finished.
-        entry.resolve(true);
+        batch.forEach(entry => entry.resolve(true));
         finishMeal();
       }
     } finally {
@@ -379,6 +405,16 @@ function PandaWidgetContent({ foodSources = [], storageKey, fullscreen = false, 
         setIsFeeding(feedingRef.current);
       }
     }
+  }
+
+  function requestFeedDrain() {
+    if (drainingFeedRef.current) return;
+    if (!gameRef.current.remote) { void drainFeedQueue(); return; }
+    const now = Date.now();
+    firstQueuedAtRef.current ??= now;
+    const wait = Math.min(PANDA_FEED_BATCH_IDLE_MS, Math.max(0, firstQueuedAtRef.current + PANDA_FEED_BATCH_MAX_WAIT_MS - now));
+    cancelTimer(feedDrainTimerRef.current);
+    feedDrainTimerRef.current = schedule(() => { void drainFeedQueue(); }, wait);
   }
 
   async function handleFeed(count = 1) {
@@ -392,8 +428,8 @@ function PandaWidgetContent({ foodSources = [], storageKey, fullscreen = false, 
       return false;
     }
     setNotice('');
-    if (!mealStartRef.current) {
-      mealStartRef.current = committedProfileRef.current;
+    if (!presentedProfileRef.current) {
+      presentedProfileRef.current = committedProfileRef.current;
       mealResultRef.current = null;
       confirmedChewUntilRef.current = 0;
       feedDisplayRef.current = { fedTotal: committedProfileRef.current.fedTotal, available: availableRef.current };
@@ -422,8 +458,8 @@ function PandaWidgetContent({ foodSources = [], storageKey, fullscreen = false, 
           arriveFeed(entry, index === dots - 1 ? count - dots + 1 : 1);
         }, PANDA_FEED_FLIGHT_MS + index * PANDA_FEED_STAGGER_MS));
       } else arriveFeed(entry, count, false);
-      // Hide network latency inside the flight instead of waiting for it.
-      void drainFeedQueue();
+      // A short burst is one server meal, dispatched before the first arrival.
+      requestFeedDrain();
     });
   }
 
