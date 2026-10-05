@@ -1,0 +1,58 @@
+{
+  "version": "2.49.2",
+  "before": {
+    "status": 200,
+    "fed": 5,
+    "revision": 31,
+    "available": 495,
+    "earned": 500,
+    "transitionVersion": 1,
+    "noticeSeen": true
+  },
+  "after": {
+    "ui": {
+      "entry": "https://tiantian-chinese.pages.dev/assets/index-CYksEfam.js",
+      "food": "보유 먹이 495개",
+      "title": "레벨2 : 알에서 깨어나는 랴오랴오",
+      "exp": "경험치2 / 17",
+      "stage": "1",
+      "phase": null,
+      "alert": null,
+      "overflow": false
+    },
+    "server": {
+      "status": 200,
+      "fed": 5,
+      "revision": 31,
+      "available": 495,
+      "earned": 500,
+      "transitionVersion": 1,
+      "noticeSeen": true
+    },
+    "errors": [],
+    "feedPosts": [],
+    "passed": true
+  },
+  "notice": {
+    "change": {
+      "id": "3ef838fa-f2a6-814a-81cd-eef67010b59c",
+      "patchStatus": 200,
+      "count": 1,
+      "title": "2.49.2 버전 업데이트 소식",
+      "content": "同学们好！😊\nMY 탭의 팬더 키우기가 '랴오랴오 키우기'로 새로워졌어요 🐼💕\n\n이번에는 알부터 다시 키워요 🥚 지금까지 모은 먹이는 이미 먹인 것까지 전부 다시 드리니, 알이 나와도 놀라지 마세요!\n\n수업을 듣고 숙제를 제출하거나 쌤 피드백을 확인하면 먹이가 생겨요 🌱 먹이를 주면서 키워 보세요! 다 자라면 모자나 옷으로 꾸밀 수도 있어요 🩷\n\nMY 탭의 '랴오랴오 키우기' 배너에서 만나 보아요 🫶🏻",
+      "publishedAt": "2026-10-04T18:39:00.000+00:00",
+      "visible": true,
+      "important": true,
+      "bodyUnchanged": true,
+      "settingsUnchanged": true
+    },
+    "studentView": {
+      "status": 200,
+      "count": 1,
+      "title": "2.49.2 버전 업데이트 소식",
+      "body": "同学们好！😊\nMY 탭의 팬더 키우기가 '랴오랴오 키우기'로 새로워졌어요 🐼💕\n\n이번에는 알부터 다시 키워요 🥚 지금까지 모은 먹이는 이미 먹인 것까지 전부 다시 드리니, 알이 나와도 놀라지 마세요!\n\n수업을 듣고 숙제를 제출하거나 쌤 피드백을 확인하면 먹이가 생겨요 🌱 먹이를 주면서 키워 보세요! 다 자라면 모자나 옷으로 꾸밀 수도 있어요 🩷\n\nMY 탭의 '랴오랴오 키우기' 배너에서 만나 보아요 🫶🏻"
+    },
+    "passed": true
+  },
+  "verification": "Normal signed student session, fresh 390x844 Chromium context, production feed POST count0; all write tests used isolated fixture only."
+}

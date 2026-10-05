@@ -27,4 +27,13 @@ Worker·DB·먹이 획득/성장 기준·전환 버전은 수정하지 않는다
 
 [수정 전 기록](./before-local-evidence.json) · [수정 후 기록](./after-local-evidence.json)
 
-상태: 로컬 검수 완료. 운영 배포와 검수 결과는 완료 후 추가한다.
+## 운영 배포 및 검수 완료 — v2.49.2
+
+- 승인 Widget2파일, QA fixture/근거, package/lock 버전만 격리 main `5209679c6949cf963452a3af48228d83b3cf8e66`에 반영하고 태그 `v2.49.2`를 발행했다. 공유 작업 트리의 무관한 변경과 운영 v2.49.1 이력을 보존했다.
+- [main CI37268452730](https://github.com/hisyisnis-lgtm/TutorManager_For_Notion/actions/runs/37268452730) 및 [태그 배포37268671231](https://github.com/hisyisnis-lgtm/TutorManager_For_Notion/actions/runs/37268671231) 모두 success. 전체84파일897tests·lint·디자인 ERROR/WARN0·build PASS. 최초 실행에 성공했으며 가드 완화나 재배포는 하지 않았다.
+- 운영 https://tiantian-chinese.pages.dev, 고유 https://967fdba6.tiantian-chinese.pages.dev. Pages ID `967fdba6-8daf-410f-a52e-0b3742e48bb1`. 이전f09abb82/v2.49.1의 세션 코드 자산을 보존했다.
+- 890파일/48,906,851bytes. 새 entry `index-CYksEfam.js` 597,812bytes / gzip177,105bytes.
+- 고유/공식 각2라우트·16자산 해시와 Worker6개 인증 경계 GET PASS(14:40:34 KST). 추가 SW·manifest·entry·배너8GET·해시 및 정확한 CI artifact 전체 해시도 PASS(14:42:11). [CI 기록](./pwa-ci-release.json), [공개 파일 검증](./public-verification.json).
+- GameView, Worker `a7f48e4a-5924-476f-9be1-bef31e1833a5`, D1, 먹이·성장 기준·카탈로그·전환version1 및 기존 서버저장/백업 설정은 변경하지 않았다.
+- 정상 학생 새390×844 컨텍스트의 공식 entry, 레벨2/body1/EXP2/17/먹이495 확인. GET200 fed5/revision31/earned500/available495/transition1/noticeSeen true는 배포 전후 동일. 오류·가로넘침·진행 중 성장phase·먹이 POST 없음. [공개 학생 읽기 검수](./live-ui-verification.json). 실제 학생 live-390.png는 공유 root 로컬 QA에만 보관하며 공개 Git에 넣지 않는다.
+- 기존 공지 ID `3ef838fa-f2a6-814a-81cd-eef67010b59c`의 제목만 ‘2.49.2 버전 업데이트 소식’으로 PATCH200. 본문 말투·게시시각·학생 노출·중요 설정 유지. 학생 GET200에서 같은 공지1개 및 최종 제목·본문 일치 확인. [최종 공지](../../releases/liaoliao-update-notice-2026-10-05.md).
