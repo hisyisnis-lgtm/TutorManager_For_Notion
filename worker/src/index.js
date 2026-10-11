@@ -2818,10 +2818,10 @@ async function handleFetch(request, env, ctx) {
         (Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : 2 ** attempt) * 1000,
         5000,
       );
+      // Release a rejected body before opening the next upstream connection.
+      await notionResponse.body?.cancel().catch(() => {});
       await new Promise((r) => setTimeout(r, waitMs));
     }
-
-    const responseText = await notionResponse.text();
 
     // 재시도를 다 쓰고도 429면 클라이언트가 추가 backoff할 수 있게 Retry-After를 전달.
     // (브라우저가 읽으려면 Expose-Headers 필요)
@@ -2834,7 +2834,8 @@ async function handleFetch(request, env, ctx) {
       }
     }
 
-    return new Response(responseText, {
+    // Forward the body without copying the full Notion result into a string.
+    return new Response(notionResponse.body, {
       status: notionResponse.status,
       headers: responseHeaders,
     });
