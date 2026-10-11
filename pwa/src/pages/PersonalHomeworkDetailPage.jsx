@@ -37,7 +37,7 @@ import { retryTransient } from '../api/fetchTimeout.js';
 import { reportHandledError } from '../utils/errorReporter.js';
 import { formatDateTimeCompact } from '../utils/dateUtils.js';
 import { markViewed } from '../utils/homeworkViewed.js';
-import { writeCacheValue } from '../hooks/useCachedResource.js';
+import { peekCache, peekCacheSavedAt, writeCacheValue, trackRevalidation, pruneRevalidations } from '../hooks/useCachedResource.js';
 import useFileAttach,
   { MAX_FILES } from '../hooks/useFileAttach.js';
 import {
@@ -69,9 +69,13 @@ export default function PersonalHomeworkDetailPage() {
   const { studentToken, hwId } = useParams();
   const navigate = useNavigate();
 
-  const [hw, setHw] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [hw, setHw] = useState(() => peekCache(`student:homework:${studentToken}`)?.find(item => item.id === hwId) ?? null);
+  const [loading, setLoading] = useState(() => !peekCache(`student:homework:${studentToken}`)?.some(item => item.id === hwId));
   const [error, setError] = useState(null);
+  const [verifiedHwId, setVerifiedHwId] = useState(null);
+  const homeworkRef = useRef(hw);
+  homeworkRef.current = hw;
+  const requestId = useRef(0);
 
   // 외부 페이지에 표시되는 저장 대기 — 카테고리별 분리.
   // 항목: { tempId, file, baseName, ext } — ext는 점 포함(`.mp3`) 또는 빈 문자열
@@ -152,39 +156,59 @@ export default function PersonalHomeworkDetailPage() {
 
   const load = useCallback(async () => {
     const auth = captureAuthScope(`student:${studentToken}`);
-    setLoading(true);
+    if (!isAuthScopeCurrent(auth)) return;
+    const request = ++requestId.current;
+    const isCurrent = () => request === requestId.current && isAuthScopeCurrent(auth);
+    const CK = `student:homework:${studentToken}`;
+    const cached = peekCache(CK)?.find(item => item.id === hwId);
+    const hasCurrent = homeworkRef.current?.id === hwId;
+    if (!hasCurrent) setHw(cached ?? null);
+    setLoading(!hasCurrent && !cached);
     setError(null);
     try {
-      const pages = await fetchMyHomework(studentToken);
-      if (!isAuthScopeCurrent(auth)) return;
+      const pages = await trackRevalidation(() => fetchMyHomework(studentToken), {
+        key: CK, label: '숙제', lastSuccessAt: peekCacheSavedAt(CK), retry: () => load(), isCurrent,
+      });
+      if (!isCurrent()) return;
       const list = pages.map(parseHomework);
+      // 전체 목록을 이미 받아왔으니 홈/보관함 목록 캐시도 갱신 — 삭제되거나 제출된
+      // 숙제가 복귀 화면에서 이전 상태로 다시 나타나지 않게 한다.
+      writeCacheValue(CK, list, auth);
       const found = list.find((h) => h.id === hwId) ?? null;
-      if (!found) throw new Error('숙제를 찾을 수 없습니다.');
+      if (!found) { setHw(null); throw new Error('숙제를 찾을 수 없습니다.'); }
       setHw(found);
-      // 전체 목록을 이미 받아왔으니 홈/보관함 목록 캐시도 갱신 — 제출 직후 홈 복귀 시
-      // 방금 제출한 숙제가 "제출 전"으로 잠깐 보이는 stale 플래시 방지
-      writeCacheValue(`student:homework:${studentToken}`, list, auth);
+      setVerifiedHwId(hwId);
       markViewed(studentToken, hwId);
     } catch (e) {
+      if (!isCurrent()) return;
+      if (e.status === 404) setHw(null);
       setError(e.message);
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
   }, [studentToken, hwId]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    setVerifiedHwId(null);
+    load();
+    return () => { requestId.current += 1; pruneRevalidations(); };
+  }, [load]);
 
   // 학생이 피드백완료 숙제를 처음 열어본 시점 기록 — Worker가 비어있을 때만 PATCH(idempotent).
   useEffect(() => {
-    if (hw?.status === '피드백완료' && !hw.feedbackSeenDate) {
+    if (verifiedHwId === hwId && hw?.status === '피드백완료' && !hw.feedbackSeenDate) {
+      const auth = captureAuthScope(`student:${studentToken}`);
+      let active = true;
       markFeedbackSeen(studentToken, hwId)
         .then(() => {
+          if (!active || !isAuthScopeCurrent(auth)) return;
           setHw(prev => prev ? { ...prev, feedbackSeenDate: new Date().toISOString() } : prev);
           toast.success('피드백 확인 완료 · 먹이 +1');
         })
         .catch(e => console.warn('피드백 확인 기록 실패:', e?.message));
+      return () => { active = false; };
     }
-  }, [hw?.status, hw?.feedbackSeenDate, studentToken, hwId]);
+  }, [hw?.status, hw?.feedbackSeenDate, studentToken, hwId, verifiedHwId]);
 
   const getFreshHw = useCallback(async () => {
     const pages = await fetchMyHomework(studentToken);
@@ -342,7 +366,7 @@ export default function PersonalHomeworkDetailPage() {
     </div>
   );
 
-  if (error) return (
+  if (error && !hw) return (
     <div style={{ minHeight: '100dvh', background: BG_APP }}>
       <div style={headerStyle}>
         <div style={innerStyle}>
@@ -407,6 +431,8 @@ export default function PersonalHomeworkDetailPage() {
 
       <div style={{ background: BG_APP, minHeight: 'calc(100dvh - 56px)' }}>
         <div style={{ maxWidth: 480, margin: '0 auto', padding: '20px 16px 80px' }}>
+
+        {error && <ErrorMessage message={error} onRetry={load} />}
 
         {/* ===== 1. 이번 숙제 ===== */}
         {/* "부여한 숙제"는 선생님 시점 워딩(2026-08-31 지적) — 학생 화면은 학생 시점으로 */}

@@ -94,8 +94,8 @@ export default function ClassDetailPage() {
   const res = useCachedResource(`class:full:v2:${id}`, async () => {
     const parsed = parseClass(await getPage(id));
     // 이 수업의 일지 — 쓴 일지(writtenLogId)와 빈 일지(anyLogId)를 구분해 '작성됨/미작성'을 정확히 낸다.
-    const logInfo = (await fetchLogsByClassIds([id]))[id] ?? null;
-    return { cls: parsed, prep: await loadPrepSlides(parsed), logInfo };
+    const [logs, prep] = await Promise.all([fetchLogsByClassIds([id]), loadPrepSlides(parsed)]);
+    return { cls: parsed, prep, logInfo: logs[id] ?? null };
   });
   const cls = res.data?.cls ?? null;
   const prep = res.data?.prep ?? [];

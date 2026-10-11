@@ -1,15 +1,24 @@
 import { WORKER_URL } from '../config.js';
 import { getToken, handleTeacherAuthExpiry } from './authUtils.js';
 import { studentBearer, handleStudentAuthExpiry } from './studentAuth.js';
+import { studentRequest } from './studentRequest.js';
 
 // 단일 요청이 이보다 오래 매달리면 중단 — 무한 스피너 방지(강사앱 notionClient와 동일 정책).
 const REQUEST_TIMEOUT_MS = 25000;
 
-async function bookingFetch(method, path, body, { auth = false, studentToken = '' } = {}) {
+function bookingFetch(method, path, body, options = {}) {
+  if (!options.auth && options.studentToken) {
+    return studentRequest(options.studentToken, method, path, credential =>
+      executeBookingFetch(method, path, body, { ...options, credential }));
+  }
+  return executeBookingFetch(method, path, body, options);
+}
+
+async function executeBookingFetch(method, path, body, { auth = false, studentToken = '', credential } = {}) {
   const headers = { 'Content-Type': 'application/json' };
   if (auth) headers['Authorization'] = `Bearer ${getToken()}`;
   else if (studentToken) {
-    const bearer = studentBearer(studentToken);
+    const bearer = credential ?? studentBearer(studentToken);
     if (bearer) headers['Authorization'] = `Bearer ${bearer}`;
   }
 

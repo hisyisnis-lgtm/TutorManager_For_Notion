@@ -1,6 +1,7 @@
+import { invalidateStudentReads } from './studentRequest.js';
 import { WORKER_URL } from '../config.js';
 import { getToken, handleTeacherAuthExpiry } from './authUtils.js';
-import { getAuthRevision } from './authState.js';
+import { getAuthRevision, subscribeAuthChanges } from './authState.js';
 
 // ── Notion 요청 레이트 리미터 (토큰버킷) ──────────────────────────────
 // Notion API는 통합 토큰당 평균 초당 ~3회 제한이 있다. 강사앱은 화면 진입 시
@@ -57,14 +58,51 @@ function acquireToken() {
 }
 // ──────────────────────────────────────────────────────────────────
 
-async function notionFetch(method, path, body, attempt = 0, auth = { bearer: getToken(), revision: getAuthRevision() }) {
-  const { bearer, revision } = auth;
-  await acquireToken();
+// 진행 중인 동일 읽기만 함께 기다린다. 완료 응답을 보관하지 않으므로 다음 조회는
+// 항상 서버로 가며, 쓰기 시작·완료나 인증 변경을 넘어서 이전 요청을 재사용하지 않는다.
+const pendingReads = new Map();
+let readGeneration = 0;
+const captureNotionAuth = () => ({ bearer: getToken(), revision: getAuthRevision() });
+
+function invalidatePendingReads() {
+  invalidateStudentReads();
+  readGeneration += 1;
+  pendingReads.clear();
+}
+subscribeAuthChanges(invalidatePendingReads);
+
+function sharePendingRead(key, fetcher) {
+  if (pendingReads.has(key)) return pendingReads.get(key);
+  const pending = fetcher().finally(() => {
+    if (pendingReads.get(key) === pending) pendingReads.delete(key);
+  });
+  pendingReads.set(key, pending);
+  return pending;
+}
+
+function assertCurrentAuth({ bearer, revision }) {
   if (revision !== getAuthRevision() || bearer !== getToken()) {
     const error = new Error('인증 상태가 바뀌었습니다. 다시 로그인해 주세요.');
     error.status = 401;
     throw error;
   }
+}
+
+function notionFetch(method, path, body, auth = captureNotionAuth(), generation = readGeneration) {
+  const bodyText = body ? JSON.stringify(body) : undefined;
+  const readOnly = method === 'GET' || (method === 'POST' && /\/query(?:\?|$)/.test(path));
+  if (readOnly) {
+    const key = JSON.stringify([auth.revision, auth.bearer, generation, method, path, bodyText]);
+    return sharePendingRead(key, () => performNotionFetch(method, path, bodyText, 0, auth, true));
+  }
+  invalidatePendingReads();
+  return performNotionFetch(method, path, bodyText, 0, auth, false).finally(invalidatePendingReads);
+}
+
+async function performNotionFetch(method, path, bodyText, attempt, auth, readOnly) {
+  const { bearer, revision } = auth;
+  await acquireToken();
+  assertCurrentAuth({ bearer, revision });
 
   // 타임아웃: 요청이 REQUEST_TIMEOUT_MS를 넘기면 abort. 쓰기(POST/PATCH)는 서버에
   // 이미 도달했을 수 있어 자동 재시도하지 않고 명확한 오류로 던진다(이중 쓰기 방지).
@@ -78,7 +116,7 @@ async function notionFetch(method, path, body, attempt = 0, auth = { bearer: get
         'Content-Type': 'application/json',
         Authorization: `Bearer ${bearer}`,
       },
-      body: body ? JSON.stringify(body) : undefined,
+      body: bodyText,
       signal: controller.signal,
     });
   } catch (e) {
@@ -89,18 +127,18 @@ async function notionFetch(method, path, body, attempt = 0, auth = { bearer: get
   } finally {
     clearTimeout(timer);
   }
+  assertCurrentAuth(auth);
 
   // Notion rate limit(429): 워커가 이미 Retry-After backoff 재시도를 하지만, 그래도
-  // 드물게 올라오면 클라이언트에서 한 번 더 backoff 재시도한다. 429는 요청이 처리되기
-  // 전 거부된 것이라 재시도해도 중복 쓰기 위험이 없다.
-  if (res.status === 429 && attempt < 2) {
+  // 드물게 올라오면 읽기만 한 번 더 backoff 재시도한다. 쓰기는 자동 재시도하지 않는다.
+  if (readOnly && res.status === 429 && attempt < 2) {
     const retryAfter = Number(res.headers.get('Retry-After'));
     const waitMs = Math.min(
       (Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : 2 ** attempt) * 1000,
       5000,
     );
     await new Promise((r) => setTimeout(r, waitMs));
-    return notionFetch(method, path, body, attempt + 1, auth);
+    return performNotionFetch(method, path, bodyText, attempt + 1, auth, readOnly);
   }
 
   if (res.status === 401) {
@@ -111,6 +149,7 @@ async function notionFetch(method, path, body, attempt = 0, auth = { bearer: get
   }
 
   const data = await res.json().catch(() => ({}));
+  assertCurrentAuth(auth);
 
   if (!res.ok) {
     const message = data?.message || data?.error || `HTTP ${res.status}`;
@@ -121,7 +160,23 @@ async function notionFetch(method, path, body, attempt = 0, auth = { bearer: get
 }
 
 /** 페이지네이션을 자동 처리해 전체 결과 수집 */
-export async function queryAll(databaseId, filter, sorts) {
+export function queryAll(databaseId, filter, sorts, options) {
+  const auth = captureNotionAuth();
+  const generation = readGeneration;
+  let path = `/v1/databases/${databaseId}/query`;
+  if (options?.filterProperties?.length) {
+    const params = new URLSearchParams();
+    for (const propertyId of options.filterProperties) {
+      // Notion이 돌려주는 속성 ID는 이미 percent-encoded일 수 있다.
+      params.append('filter_properties', decodeURIComponent(propertyId));
+    }
+    path += `?${params}`;
+  }
+  const key = JSON.stringify([auth.revision, auth.bearer, generation, 'queryAll', path, filter, sorts]);
+  return sharePendingRead(key, () => queryAllPages(path, filter, sorts, auth, generation));
+}
+
+async function queryAllPages(path, filter, sorts, auth, generation) {
   const results = [];
   let cursor;
 
@@ -131,7 +186,7 @@ export async function queryAll(databaseId, filter, sorts) {
     if (sorts) body.sorts = sorts;
     if (cursor) body.start_cursor = cursor;
 
-    const data = await notionFetch('POST', `/v1/databases/${databaseId}/query`, body);
+    const data = await notionFetch('POST', path, body, auth, generation);
     results.push(...data.results);
     cursor = data.has_more ? data.next_cursor : null;
   } while (cursor);

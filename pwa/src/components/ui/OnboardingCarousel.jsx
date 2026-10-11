@@ -20,7 +20,8 @@ import {
   TEXT_INACTIVE,
   BG_WARM } from '../../constants/theme.js';
 
-export const ONBOARDING_KEY = 'onboarding_v1_done';
+import { ONBOARDING_KEY } from '../../constants/studentOnboarding.js';
+export { ONBOARDING_KEY } from '../../constants/studentOnboarding.js';
 
 const SLIDES = [
   {

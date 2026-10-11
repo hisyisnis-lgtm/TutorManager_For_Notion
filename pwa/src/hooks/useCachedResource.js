@@ -1,7 +1,8 @@
+import { readSWRCacheEntry, writeSWRCacheEntry, invalidateSWRCache } from './swrCacheStorage.js';
 import { useState, useEffect, useCallback, useRef, useSyncExternalStore } from 'react';
 import {
   cacheScope, captureAuthScope, isAuthScopeCurrent, subscribeAuthChanges,
-  getAuthRevision, SENSITIVE_CACHE_TTL,
+  getAuthRevision,
 } from '../api/authState.js';
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -24,33 +25,8 @@ import {
 
 const PREFIX = 'swr_';
 
-// 개인정보 목록은 디스크의 장기 캐시 대신 현재 탭에서만 짧게 재사용한다.
-(function gcOldEntries() {
-  try {
-    for (let i = sessionStorage.length - 1; i >= 0; i -= 1) {
-      const key = sessionStorage.key(i);
-      if (key?.startsWith(PREFIX)) readCache(key);
-    }
-  } catch { /* noop */ }
-})();
-
-/**
- * 캐시 무효화 — 주어진 접두사로 시작하는 모든 캐시 키를 지운다.
- * 편집(생성/수정/삭제) 직후 호출하면, 해당 목록·상세를 다음에 열 때 옛값 대신
- * 새로 불러온다 → 본인이 방금 한 수정이 옛 데이터로 보이는 것을 막는다.
- * 예: 수업 저장 후 invalidateCache('class') → classes 목록·상세 캐시 제거.
- */
-export function invalidateCache(prefix) {
-  try {
-    const full = PREFIX + prefix;
-    for (let i = sessionStorage.length - 1; i >= 0; i -= 1) {
-      const k = sessionStorage.key(i);
-      if (k && k.startsWith(full)) sessionStorage.removeItem(k);
-    }
-  } catch {
-    // localStorage 접근 불가 시 무시 — 무효화 실패해도 마운트 시 revalidate가 어차피 최신화.
-  }
-}
+/** 쓰기 직후 목록/상세 캐시를 접두사로 무효화한다. */
+export const invalidateCache = invalidateSWRCache;
 
 // ── 전역 갱신 상태 ────────────────────────────────────────────────────
 // 아무 리소스라도 백그라운드 revalidate 중이면 "업데이트 중"으로 본다.
@@ -61,6 +37,13 @@ const imperativeRequests = new Map();
 const snapshots = new Map();
 const revalidateListeners = new Set();
 function notifyRevalidate() {
+  // 탭을 떠난 로더와 완료된 오래된 기록은 콜백/요청 상태를 붙잡지 않는다.
+  for (const [id, record] of revalidations) {
+    if (!record.isCurrent() || (record.path !== '*' && record.path !== currentPath())) revalidations.delete(id);
+  }
+  // 성공 기록은 최근 표시용만 남긴다. 현재 실패/진행 중 요청은 재시도를 위해 보존한다.
+  const succeeded = [...revalidations.values()].filter(record => !record.pending && !record.error);
+  for (const record of succeeded.slice(0, Math.max(0, succeeded.length - 80))) revalidations.delete(record.id);
   snapshots.clear();
   revalidateListeners.forEach((l) => l());
 }
@@ -169,28 +152,11 @@ function readCache(storageKey) {
 }
 
 function readCacheEntry(storageKey) {
-  try {
-    const auth = captureAuthScope(cacheScope(storageKey.slice(PREFIX.length)));
-    const raw = sessionStorage.getItem(storageKey);
-    const cached = raw ? JSON.parse(raw) : null;
-    if (!isAuthScopeCurrent(auth) || !Number.isFinite(cached?.savedAt)
-      || Date.now() - cached.savedAt > SENSITIVE_CACHE_TTL || cached.savedAt > Date.now()) {
-      sessionStorage.removeItem(storageKey);
-      return undefined;
-    }
-    return cached;
-  } catch {
-    return undefined;
-  }
+  return readSWRCacheEntry(storageKey);
 }
 
 function writeCache(storageKey, value, auth) {
-  if (!isAuthScopeCurrent(auth) || auth.scope !== cacheScope(storageKey.slice(PREFIX.length))) return;
-  try {
-    sessionStorage.setItem(storageKey, JSON.stringify({ savedAt: Date.now(), value }));
-  } catch {
-    // 용량 초과 등은 조용히 무시 — 캐시는 부가기능이라 실패해도 흐름을 막지 않는다.
-  }
+  writeSWRCacheEntry(storageKey, value, auth);
 }
 
 /**
@@ -305,15 +271,23 @@ export async function swrLoad(key, fetcher, apply) {
   const requestKey = `${path}:${key}`;
   const request = Symbol(key);
   imperativeRequests.set(requestKey, request);
+  let settled = false;
   const isCurrent = () => isAuthScopeCurrent(auth) && currentPath() === path
-    && imperativeRequests.get(requestKey) === request;
-  const fresh = await trackRevalidation(fetcher, {
-    key, label: resourceLabel(key), lastSuccessAt: peekCacheSavedAt(key),
-    isCurrent,
-    retry: () => swrLoad(key, fetcher, apply),
-  });
-  if (!isCurrent()) return;
-  writeCacheValue(key, fresh, auth);
-  apply(fresh, { fromCache: false });
-  return fresh;
+    && (settled || imperativeRequests.get(requestKey) === request);
+  try {
+    const fresh = await trackRevalidation(fetcher, {
+      key, label: resourceLabel(key), lastSuccessAt: peekCacheSavedAt(key),
+      isCurrent,
+      retry: () => swrLoad(key, fetcher, apply),
+    });
+    if (!isCurrent()) return;
+    writeCacheValue(key, fresh, auth);
+    apply(fresh, { fromCache: false });
+    return fresh;
+  } finally {
+    if (imperativeRequests.get(requestKey) === request) {
+      settled = true;
+      imperativeRequests.delete(requestKey);
+    }
+  }
 }

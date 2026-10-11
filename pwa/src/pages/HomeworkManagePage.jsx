@@ -43,7 +43,7 @@ function elapsedLabel(iso) {
 }
 
 export default function HomeworkManagePage() {
-  const { students, remainingByStudent, loading: studentsLoading, error: studentsError, refresh: refreshStudents } = useData();
+  const { students, remainingByStudent, studentsLoading, studentsReady, error: studentsError, refresh: refreshStudents } = useData();
   const [search, setSearch] = useState('');
   // 액션이 필요한 두 섹션은 늘 펼쳐 둔다. '진행 중 없음'만 접었다 편다.
   const [openSection, setOpenSection] = useState({});
@@ -77,9 +77,9 @@ export default function HomeworkManagePage() {
     }
     return map;
   });
-  const counts = countsRes.data ?? {};
-  const countsLoading = countsRes.loading;
-  const countsError = countsRes.error;
+  const counts = countsRes.data;
+  const countsReady = counts != null;
+  const countsError = countsRes.refreshError || countsRes.error;
 
   const handleRefresh = async () => {
     await Promise.all([refreshStudents(), countsRes.refresh()]);
@@ -88,7 +88,7 @@ export default function HomeworkManagePage() {
   const searching = Boolean(search.trim());
   const filtered = students.filter((s) => !searching || s.name.includes(search));
 
-  const countOf = (s) => counts[s.id] || { pending: 0, submitted: 0, oldestPending: null, oldestSubmitted: null };
+  const countOf = (s) => counts?.[s.id] || { pending: 0, submitted: 0, oldestPending: null, oldestSubmitted: null };
   // 학생 1명은 한 섹션에만. 피드백 대기가 있으면 그쪽이 먼저다 — 내가 할 일이니까.
   const sectionOf = (s) => {
     const c = countOf(s);
@@ -109,13 +109,10 @@ export default function HomeworkManagePage() {
     if (activeA !== activeB) return activeA - activeB;
     return (remainingByStudent[b.id] ?? 0) - (remainingByStudent[a.id] ?? 0);
   };
-  const groups = SECTIONS.map((sec) => ({
+  const groups = countsReady ? SECTIONS.map((sec) => ({
     ...sec,
     items: filtered.filter((s) => sectionOf(s) === sec.key).sort(bySection(sec.key)),
-  }));
-
-  const loading = studentsLoading || countsLoading;
-  const error = studentsError || countsError;
+  })) : [];
 
   return (
     <PullToRefresh onRefresh={handleRefresh}>
@@ -129,10 +126,19 @@ export default function HomeworkManagePage() {
         />
       </div>
 
-      {loading && students.length === 0 && <LoadingSpinner />}
-      {error && students.length === 0 && <ErrorMessage message={error} onRetry={handleRefresh} />}
+      {studentsLoading && students.length === 0 && <LoadingSpinner />}
+      {studentsError && !studentsReady && students.length === 0 && <ErrorMessage message={studentsError} onRetry={refreshStudents} />}
+      {studentsReady && students.length === 0 && (
+        <EmptyState
+          icon={<UsersThreeIcon size={44} weight="thin" style={{ color: BORDER_NEUTRAL }} />}
+          title="학생이 없습니다"
+          description="학생 관리에서 학생을 추가하세요."
+        />
+      )}
+      {students.length > 0 && !countsReady && !countsError && <LoadingSpinner message="숙제 현황을 확인하고 있어요" />}
+      {students.length > 0 && countsError && <ErrorMessage message={countsError} onRetry={countsRes.refresh} />}
 
-      {students.length > 0 && (
+      {students.length > 0 && countsReady && (
         <>
           {filtered.length === 0 ? (
             <EmptyState

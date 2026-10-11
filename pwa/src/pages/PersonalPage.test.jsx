@@ -4,6 +4,8 @@ import { MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom';
 import PersonalPage from './PersonalPage.jsx';
 import { fetchStudentByToken } from '../api/bookingApi.js';
 import { fetchMyHomework } from '../api/homework.js';
+import { fetchStudentNotices } from '../api/notices.js';
+import { peekCache } from '../hooks/useCachedResource.js';
 import { setStudentSession } from '../api/studentAuth.js';
 import { fixtureSession } from '../api/authFixtures.js';
 import { notifyAuthChange } from '../api/authState.js';
@@ -31,6 +33,7 @@ vi.mock('./personal/NoticeTab.jsx', () => ({ default: () => null }));
 vi.mock('./personal/HanulTab.jsx', () => ({ default: () => null }));
 vi.mock('./personal/MyTab.jsx', () => ({ default: () => null }));
 vi.mock('../components/ui/PandaWidget.jsx', () => ({ PANDA_FEED_KEY: 'panda_fed_total' }));
+vi.mock('../constants/studentOnboarding.js', () => ({ ONBOARDING_KEY: 'test:onboarding' }));
 vi.mock('../components/ui/OnboardingCarousel.jsx', () => ({ default: ({ onDone }) => <button onClick={onDone}>기본 온보딩 완료</button>, ONBOARDING_KEY: 'test:onboarding' }));
 vi.mock('../components/ui/PandaFigure.jsx', () => ({ default: () => <span aria-hidden="true" /> }));
 vi.mock('../components/ui/InstallBanner.jsx', () => ({ default: ({ showIOSGuide }) => showIOSGuide ? <p>iOS 설치 안내</p> : null }));
@@ -54,6 +57,7 @@ beforeEach(() => {
   vi.mocked(useTabTip).mockImplementation((_tab, enabled) => ({ visible: enabled, dismiss: vi.fn() }));
   vi.mocked(fetchStudentByToken).mockReset();
   vi.mocked(fetchMyHomework).mockReset().mockResolvedValue([]);
+  vi.mocked(fetchStudentNotices).mockReset().mockResolvedValue([]);
 });
 afterEach(() => { cleanup(); localStorage.clear(); sessionStorage.clear(); notifyAuthChange(); vi.restoreAllMocks(); });
 
@@ -164,6 +168,21 @@ describe('랴오랴오 업데이트 소개', () => {
 });
 
 describe('학생 조회 오류에서 복구', () => {
+  it('숙제 조회가 지연돼도 공지는 즉시 조회하고 탭 캐시를 채운다', async () => {
+    let finishHomework;
+    vi.mocked(fetchStudentByToken).mockResolvedValue({ ...recovered, homeworkEnabled: true });
+    vi.mocked(fetchMyHomework).mockImplementationOnce(() => new Promise(resolve => { finishHomework = resolve; }));
+    vi.mocked(fetchStudentNotices).mockResolvedValue([{ id: 'notice', title: '먼저 도착한 공지' }]);
+    renderPage();
+    await screen.findByText('학생 홈 콘텐츠');
+    expect(fetchStudentNotices).toHaveBeenCalledOnce();
+    expect(peekCache(`student:notices:${token}`)).toEqual([{ id: 'notice', title: '먼저 도착한 공지' }]);
+    expect(screen.getByText('숙제 로딩')).toBeTruthy();
+    await act(async () => finishHomework([]));
+    expect(screen.queryByText('숙제 로딩')).toBeNull();
+  });
+
+
   it('숙제 실패 상태를 홈에 전달하고 재시도 성공 시 제거한다', async () => {
     vi.mocked(fetchStudentByToken).mockResolvedValue({ ...recovered, homeworkEnabled: true });
     vi.mocked(fetchMyHomework).mockRejectedValueOnce(new Error('숙제 조회 실패'))

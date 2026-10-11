@@ -1,7 +1,54 @@
 // 돈 계산 순수 함수 테스트 — 결제 예정액·부분환불 환산·표시 포맷.
 // 매출 숫자라 틀리면 손해가 커서 경계값 위주로 고정한다.
-import { describe, it, expect } from 'vitest';
-import { calcPaymentAmount, refundSessions, effectiveSessionsAfterRefund, formatSessions, isWholeSession, validatePaymentForm, remainingSessionsOf } from './payments.js';
+import { beforeEach, describe, it, expect, vi } from 'vitest';
+import { calcPaymentAmount, refundSessions, effectiveSessionsAfterRefund, formatSessions, isWholeSession, validatePaymentForm, remainingSessionsOf, parsePayment, fetchAllPayments, PAYMENTS_DB } from './payments.js';
+import { queryAll } from './notionClient.js';
+
+vi.mock('./notionClient.js', () => ({ queryPage: vi.fn(), queryAll: vi.fn(), createPage: vi.fn(), updatePage: vi.fn() }));
+
+describe('잔여 시간 원장 속성 조회', () => {
+  const row = (id, effective, studentIds = ['student']) => ({ id, properties: {
+    '학생': { relation: studentIds.map(studentId => ({ id: studentId })) }, '유효 시간 회차': { formula: { number: effective } },
+  } });
+  beforeEach(() => vi.mocked(queryAll).mockReset());
+
+  it('기본 학생 결제 조회는 원장 속성만으로 제한하지 않는다', async () => {
+    const full = { ...row('full', 3), properties: { ...row('full', 3).properties, '시간당 단가': { rollup: { number: 50000 } }, '실제 결제 금액': { number: 200000 } } };
+    vi.mocked(queryAll).mockResolvedValueOnce([full]);
+    expect(await fetchAllPayments('student')).toEqual([full]);
+    expect(queryAll).toHaveBeenCalledWith(PAYMENTS_DB, { property: '학생', relation: { contains: 'student' } }, [{ property: '결제일', direction: 'descending' }], undefined);
+    expect(parsePayment(full).actualAmount).toBe(200000);
+    expect(parsePayment(full).unitPrice).toBe(50000);
+  });
+
+  it('원장 조회는 두 속성만 요청하고 100건 초과 전체 결과와 파싱 계약을 유지한다', async () => {
+    const pages = Array.from({ length: 101 }, (_, index) => row(`payment-${index}`, index === 0 ? 0 : 1.5));
+    vi.mocked(queryAll).mockResolvedValueOnce(pages);
+    const received = await fetchAllPayments(undefined, { ledgerOnly: true });
+    expect(received).toEqual(pages);
+    expect(queryAll).toHaveBeenCalledWith(PAYMENTS_DB, undefined, [{ property: '결제일', direction: 'descending' }], { filterProperties: ['k%3EA%3E', '%7C~~v'] });
+    const parsed = received.map(parsePayment);
+    expect(remainingSessionsOf({ usedSessions: 2 }, parsed)).toBe(148);
+    expect(parsed[0]).toMatchObject({ studentIds: ['student'], effectiveSessions: 0, actualAmount: 0 });
+  });
+
+  it('결제가 없거나 학생이 없는 그룹결제의 0회차도 정상 원장으로 허용한다', async () => {
+    vi.mocked(queryAll).mockResolvedValueOnce([]).mockResolvedValueOnce([row('group', 0, [])]);
+    expect(await fetchAllPayments(undefined, { ledgerOnly: true })).toEqual([]);
+    expect(parsePayment((await fetchAllPayments(undefined, { ledgerOnly: true }))[0])).toMatchObject({ studentIds: [], effectiveSessions: 0 });
+  });
+
+  it.each([
+    ['학생 속성 누락', { '유효 시간 회차': { formula: { number: 3 } } }],
+    ['학생 관계 형식 오류', { '학생': { relation: [{ id: null }] }, '유효 시간 회차': { formula: { number: 3 } } }],
+    ['유효 시간 속성 누락', { '학생': { relation: [] } }],
+    ['유효 시간 null', { '학생': { relation: [] }, '유효 시간 회차': { formula: { number: null } } }],
+    ['유효 시간 문자열', { '학생': { relation: [] }, '유효 시간 회차': { formula: { number: '3' } } }],
+  ])('%s를 잔여 시간 0으로 확정하지 않는다', async (_label, properties) => {
+    vi.mocked(queryAll).mockResolvedValueOnce([{ id: 'invalid', properties }]);
+    await expect(fetchAllPayments(undefined, { ledgerOnly: true })).rejects.toThrow('결제 유효 시간 원장을 확인하지 못했어요.');
+  });
+});
 
 describe('validatePaymentForm — 온라인그룹수업 결제 편집 (버그 수정 검증)', () => {
   const groupForm = { classTypeId: 'ct-group', sessionCount: '0', actualAmount: '140000', studentId: '' };

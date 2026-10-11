@@ -45,7 +45,8 @@ export default defineConfig(({ mode }) => {
         // React.lazy로 분리되어 게임 코드는 게임 진입 시에만 로드된다.
         // 벤더를 둘로 쪼개면(antd/react) 상호 참조로 순환 청크가 생기므로 단일 vendor로.
         manualChunks(id) {
-          return id.includes('node_modules') ? 'vendor' : undefined;
+          // React/라우터만 공통 청크로 두고 화면 전용 라이브러리는 lazy 경계를 따른다.
+          return /[\/]node_modules[\/](?:react|react-dom|scheduler|react-router|react-router-dom)[\/]/.test(id) ? 'vendor' : undefined;
         },
       },
     },
@@ -107,7 +108,7 @@ export default defineConfig(({ mode }) => {
             handler: 'CacheFirst',
             options: {
               cacheName: 'fonts-cache',
-              expiration: { maxAgeSeconds: 60 * 60 * 24 * 365 },
+              expiration: { maxEntries: 16, maxAgeSeconds: 60 * 60 * 24 * 365 },
             },
           },
         ],

@@ -217,11 +217,13 @@ export default function HomeTab({ studentToken, studentLoaded, onUpcomingLoaded,
     try {
       const kst = new Date(Date.now() + 9 * 60 * 60 * 1000);
       const thisMonth = `${kst.getUTCFullYear()}-${pad(kst.getUTCMonth() + 1)}`;
-      const [curr, next, after] = await trackRevalidation(() => Promise.all([
-        fetchMyClasses(studentToken, thisMonth),
-        fetchMyClasses(studentToken, addMonths(thisMonth, 1)),
-        fetchMyClasses(studentToken, addMonths(thisMonth, 2)),
-      ]), { key: CK, label: '다음 수업', lastSuccessAt: upcomingLastSuccess.current,
+      const months = [thisMonth, addMonths(thisMonth, 1), addMonths(thisMonth, 2)];
+      const [curr, next, after] = await trackRevalidation(() => Promise.all(months.map(async month => {
+        const classes = await fetchMyClasses(studentToken, month);
+        // 완료된 월별 원본을 일정 탭과 공유한다. 다른 달 실패로 완료된 결과를 버리지 않는다.
+        if (isCurrent()) writeCacheValue(`student:classes:${studentToken}:${month}`, classes, auth);
+        return classes;
+      })), { key: CK, label: '다음 수업', lastSuccessAt: upcomingLastSuccess.current,
         retry: () => loadInitialData(), isCurrent });
       if (!isCurrent()) return;
       // 잘라내지 않고 전부 담는다 — '예약된 수업' 개수가 실제 예약 건수여야 하기 때문.

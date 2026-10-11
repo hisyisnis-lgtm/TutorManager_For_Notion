@@ -14,6 +14,9 @@ import {
 
 export const PAYMENTS_DB = '314838fa-f2a6-8154-935b-edd3d2fbea83';
 
+// 잔여 시간 원장은 안정적인 학생/유효시간 속성 ID만 요청한다.
+const LEDGER_PROPERTIES = ['k%3EA%3E', '%7C~~v'];
+
 export const PAYMENT_METHODS = [
   '카드',
   '계좌이체(현영O)',
@@ -145,13 +148,26 @@ export function parsePayment(page) {
   };
 }
 
-/** 학생의 결제 전체 조회 — 잔여 시간 계산용이라 100건 초과에도 누락되면 안 되므로 queryAll. */
-export async function fetchAllPayments(studentId) {
-  return queryAll(
+/** 전체 페이지를 읽는다. ledgerOnly는 master 잔여 시간 계산의 응답 속성만 줄인다. */
+export async function fetchAllPayments(studentId, { ledgerOnly = false } = {}) {
+  const pages = await queryAll(
     PAYMENTS_DB,
     studentId ? { property: '학생', relation: { contains: studentId } } : undefined,
-    [{ property: '결제일', direction: 'descending' }]
+    [{ property: '결제일', direction: 'descending' }],
+    ledgerOnly ? { filterProperties: LEDGER_PROPERTIES } : undefined,
   );
+  if (ledgerOnly) {
+    for (const page of pages) {
+      const studentRelation = page?.properties?.['학생']?.relation;
+      const effective = page?.properties?.['유효 시간 회차']?.formula?.number;
+      // 누락된 속성을 parsePayment의 fallback 0으로 확정하지 않는다.
+      if (!Array.isArray(studentRelation) || studentRelation.some(student => typeof student?.id !== 'string' || !student.id)
+        || typeof effective !== 'number' || !Number.isFinite(effective)) {
+        throw new Error('결제 유효 시간 원장을 확인하지 못했어요. 다시 조회해 주세요.');
+      }
+    }
+  }
+  return pages;
 }
 
 /**

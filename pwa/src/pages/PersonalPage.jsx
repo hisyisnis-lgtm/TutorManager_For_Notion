@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { lazy, Suspense, useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { Button } from '../components/shadcn/button';
@@ -12,28 +12,29 @@ import { fetchStudentNotices } from '../api/notices.js';
 import { clearStudentSession } from '../api/studentAuth.js';
 import { captureAuthScope, isAuthScopeCurrent } from '../api/authState.js';
 import { getViewedMap, HW_VIEWED_KEY, isFeedbackArchived } from '../utils/homeworkViewed.js';
-import { PANDA_FEED_KEY } from '../components/ui/PandaWidget.jsx';
 import PandaUpdateNotice from '../components/ui/PandaUpdateNotice.jsx';
 import usePandaUpdateNotice from '../hooks/usePandaUpdateNotice.js';
 import InstallBanner from '../components/ui/InstallBanner.jsx';
 import { useInstallPrompt } from '../hooks/useInstallPrompt.js';
-import OnboardingCarousel, { ONBOARDING_KEY } from '../components/ui/OnboardingCarousel.jsx';
+import { ONBOARDING_KEY } from '../constants/studentOnboarding.js';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import CoachMarkOverlay from '../components/ui/CoachMarkOverlay.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import { useTabTip, resetAllTabTips } from '../hooks/useTabTip.js';
-import HomeTab from './personal/HomeTab.jsx';
-import MyClassesTab from './personal/MyClassesTab.jsx';
-import ArchiveTab from './personal/ArchiveTab.jsx';
-import NoticeTab from './personal/NoticeTab.jsx';
-import HanulTab from './personal/HanulTab.jsx';
-import MyTab from './personal/MyTab.jsx';
 import {
   PRIMARY,
   TEXT_PRIMARY, TEXT_INACTIVE, TEXT_TERTIARY,
   BG_APP, BORDER_SUBTLE,
   STATUS_ERROR_TEXT,
 } from '../constants/theme.js';
+
+const OnboardingCarousel = lazy(() => import('../components/ui/OnboardingCarousel.jsx'));
+const HomeTab = lazy(() => import('./personal/HomeTab.jsx'));
+const MyClassesTab = lazy(() => import('./personal/MyClassesTab.jsx'));
+const ArchiveTab = lazy(() => import('./personal/ArchiveTab.jsx'));
+const NoticeTab = lazy(() => import('./personal/NoticeTab.jsx'));
+const HanulTab = lazy(() => import('./personal/HanulTab.jsx'));
+const MyTab = lazy(() => import('./personal/MyTab.jsx'));
 
 const SAVED_TOKEN_KEY = 'personal_student_token';
 
@@ -93,7 +94,7 @@ export default function PersonalPage() {
   // 옛 공통 팬더 EXP 키(`panda_fed_total`) 정리 — 학생별 키 도입 전 누적된 잔존물.
   // 어느 학생 것인지 식별 불가능하므로 단순 삭제. 이미 없으면 무동작.
   useEffect(() => {
-    try { localStorage.removeItem(PANDA_FEED_KEY); } catch {}
+    try { localStorage.removeItem('panda_fed_total'); } catch {}
   }, []);
 
   // viewedMap 마이그레이션 (2026-05-21) — 옛 forceArchive 가 viewedAt 을 가짜로 "24h+1s 전" 시점에 기록하던
@@ -119,6 +120,16 @@ export default function PersonalPage() {
     const request = ++homeworkRequestId.current;
     const isCurrent = () => request === homeworkRequestId.current && isAuthScopeCurrent(auth);
     const CK = `student:homework:${studentToken}`;
+    // 공지는 숙제와 독립적으로 조회하여 느린 숙제 응답을 기다리지 않는다.
+    const noticesRequest = (async () => {
+      try {
+        const notices = await fetchStudentNotices(studentToken);
+        if (!isCurrent()) return;
+        writeCacheValue(`student:notices:${studentToken}`, notices, auth);
+        const lastSeen = parseInt(localStorage.getItem(NOTICE_SEEN_KEY) || '0', 10);
+        setNoticeDot(notices.some(n => n.publishedAt && new Date(n.publishedAt).getTime() > lastSeen));
+      } catch { /* 공지 배지는 홈 로딩을 막지 않는다. */ }
+    })();
     // 홈 숙제 섹션(제출전/제출완료/피드백) 계산 — 표시용.
     const computeAlerts = (list) => {
       setHwAlerts({
@@ -159,15 +170,7 @@ export default function PersonalPage() {
       if (isCurrent()) { setHwLoading(false); setHwRefreshing(false); }
     }
 
-    // 공지 dot: 마지막으로 공지 탭을 본 시각 이후에 게시된 공지가 있으면 점을 켠다.
-    // 실패해도 조용히 넘어간다 — 배지는 부가 정보라 홈 로딩을 막을 이유가 없다.
-    try {
-      const notices = await fetchStudentNotices(studentToken);
-      if (!isAuthScopeCurrent(auth)) return;
-      writeCacheValue(`student:notices:${studentToken}`, notices, auth); // NoticeTab과 캐시 공유
-      const lastSeen = parseInt(localStorage.getItem(NOTICE_SEEN_KEY) || '0', 10);
-      setNoticeDot(notices.some((n) => n.publishedAt && new Date(n.publishedAt).getTime() > lastSeen));
-    } catch { /* ignore */ }
+    await noticesRequest;
   }, [studentToken]);
 
   // 내 수업 dot: HomeTab에서 upcoming classes 로드 시 호출
@@ -434,7 +437,7 @@ export default function PersonalPage() {
 
   return (
     <div style={{ minHeight: '100dvh', backgroundColor: BG_APP }}>
-      {showOnboarding && <OnboardingCarousel onDone={() => setShowOnboarding(false)} showHomework={homeworkEnabled} />}
+      {showOnboarding && <Suspense fallback={null}><OnboardingCarousel onDone={() => setShowOnboarding(false)} showHomework={homeworkEnabled} /></Suspense>}
       {showPandaUpdate && <PandaUpdateNotice
         key={studentToken}
         open
@@ -459,6 +462,7 @@ export default function PersonalPage() {
       {/* 하단 96 = 캡슐 점유 66 + 숨쉴 틈 (강사앱 .page-container pb-24와 동일 기준).
           헤더가 sticky(플로우 차지)라 상단 패딩 불필요. */}
       <div style={{ maxWidth: 480, margin: '0 auto', paddingBottom: 96 }}>
+        <Suspense fallback={<LoadingSpinner />}>
         {tab === '홈' && (
           // 가장자리 여백은 강사앱 홈(px-4=16)과 동일하게 16 (2026-08-31 통일)
           <div style={{ padding: '32px 16px 0', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
@@ -553,6 +557,7 @@ export default function PersonalPage() {
             />
           </div>
         )}
+        </Suspense>
       </div>
 
       {/* 코치마크 — 탭별 최초 방문 시 1회 표시 */}

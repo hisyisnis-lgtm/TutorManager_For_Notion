@@ -56,11 +56,11 @@ function estimateIntervalByAmount(amount, hourlyRate) {
  * 결제 탭(PaymentsPage)에서 사용. 마운트 시 자체적으로 데이터를 로드하고,
  * ref.reload()로 외부(PullToRefresh)에서 새로고침을 트리거할 수 있다.
  */
-const IncomeSummary = forwardRef(function IncomeSummary(_props, ref) {
-  const { studentNameMap, classTypeMap, students } = useData();
+const IncomeSummary = forwardRef(function IncomeSummary({ paymentsResource } = {}, ref) {
+  const { studentNameMap, classTypeMap, students, classTypes, studentsReady, classTypesReady } = useData();
 
-  // 이번 달 결제 요약 — 캐시(기억+갱신). 예상 수익 계산은 그대로 라이브 유지.
-  const monthRes = useCachedResource('payments:monthSummary', async () => {
+  // 이번 달 결제 요약 — 캐시(기억+갱신).
+  const ownMonthRes = useCachedResource(paymentsResource ? null : 'payments:monthSummary', async () => {
     const monthStart = getMonthStart();
     const monthEnd = getMonthEnd();
     // 월 단위 집계는 queryAll 필수 — queryPage 단발 100건은 결제 100건 초과 월에 매출 과소 표시
@@ -70,12 +70,44 @@ const IncomeSummary = forwardRef(function IncomeSummary(_props, ref) {
     ] });
     return (results ?? []).map(parsePayment);
   });
-  const monthPayments = monthRes.data ?? [];
-  const monthLoading = monthRes.loading;
+  // 차트의 최근 6개월 조회가 이번 달도 포함하므로 같은 응답을 월 합계에 재사용한다.
+  const monthRes = paymentsResource ?? ownMonthRes;
+  const monthStart = Date.parse(getMonthStart());
+  const nextMonthStart = Date.parse(getMonthEnd()) + 1000;
+  const monthPayments = paymentsResource ? (monthRes.data ?? []).filter((payment) => {
+    if (!payment.paymentDate) return false;
+    const paymentDate = /^\d{4}-\d{2}-\d{2}$/.test(payment.paymentDate)
+      ? `${payment.paymentDate}T00:00:00+09:00` : payment.paymentDate;
+    const timestamp = Date.parse(paymentDate);
+    return timestamp >= monthStart && timestamp < nextMonthStart;
+  }) : monthRes.data ?? [];
+  const monthLoading = monthRes.loading || (monthRes.data == null && !monthRes.error);
+  const monthError = monthRes.data == null && !!monthRes.error;
+
+  const forecastReady = studentsReady && classTypesReady;
+  const hasActiveStudents = students.some((student) => student.status === '🟢 수강중');
+  // 계산 결과 대신 입력을 캐시해 학생 상태·수업 유형 변경도 최신 데이터로 다시 분류한다.
+  // 학생을 먼저 확인하면 유형 조회와 예측 입력 조회를 함께 진행할 수 있다.
+  const forecastRes = useCachedResource(studentsReady && hasActiveStudents
+    ? `payments:forecastInputs:v1:${getTodayStart().slice(0, 10)}` : null, async () => {
+    const [paymentsData, futureClassData] = await Promise.all([
+      queryPage(PAYMENTS_DB, undefined, [{ property: '결제일', direction: 'descending' }], undefined, 100),
+      queryPage(CLASSES_DB, { and: [
+        { property: '수업 일시', date: { on_or_after: getTodayStart() } },
+        { property: '특이사항', select: { does_not_equal: '🚫 취소' } },
+      ] }, [{ property: '수업 일시', direction: 'ascending' }], undefined, 100),
+    ]);
+    return {
+      payments: (paymentsData?.results ?? []).map(parsePayment),
+      futureClasses: (futureClassData?.results ?? []).map(parseClass),
+    };
+  });
 
   const [forecastThisMonth, setForecastThisMonth] = useState(0);
   const [forecastNextMonth, setForecastNextMonth] = useState(0);
   const [forecastLoading, setForecastLoading] = useState(true);
+  const showForecastLoading = !forecastReady || forecastLoading;
+  const showThisMonthLoading = showForecastLoading || monthLoading;
   const [forecastError, setForecastError] = useState(false); // 실패를 ₩0 정상값처럼 표시하지 않기
   const [forecastBreakdown, setForecastBreakdown] = useState([]); // 학생별 예상 상세
   const [breakdownModalOpen, setBreakdownModalOpen] = useState(false);
@@ -93,41 +125,18 @@ const IncomeSummary = forwardRef(function IncomeSummary(_props, ref) {
    *   (월납 학생이 이번 달·다음 달 양쪽에 반영됨 — 학생당 한 주기만 보던 한계 해소)
    * - 이번 달에 이미 정기 결제한 학생은 이번 달 occurrence 제외 (confirmed와 이중 계산 방지)
    */
-  const loadForecast = async () => {
+  const loadForecast = () => {
     setForecastLoading(true);
     try {
       const activeStudents = students.filter((s) => s.status === '🟢 수강중');
       if (activeStudents.length === 0) {
         setForecastThisMonth(0);
         setForecastNextMonth(0);
+        setForecastBreakdown([]);
+        setForecastError(false);
         return;
       }
-
-      const [paymentsData, futureClassData] = await Promise.all([
-        // 최근 결제 100건 — 학생별 마지막 결제 + 평균 간격 산정용
-        queryPage(
-          PAYMENTS_DB,
-          undefined,
-          [{ property: '결제일', direction: 'descending' }],
-          undefined,
-          100
-        ),
-        // 오늘 이후 미래 수업 — sessionShortage 첫 발생 시점 산정용
-        queryPage(
-          CLASSES_DB,
-          {
-            and: [
-              { property: '수업 일시', date: { on_or_after: getTodayStart() } },
-              { property: '특이사항', select: { does_not_equal: '🚫 취소' } },
-            ] },
-          [{ property: '수업 일시', direction: 'ascending' }],
-          undefined,
-          100
-        ),
-      ]);
-
-      const payments = (paymentsData?.results ?? []).map(parsePayment);
-      const futureClasses = (futureClassData?.results ?? []).map(parseClass);
+      const { payments, futureClasses } = forecastRes.data;
 
       // 학생별 결제 이력 (paymentDate desc 유지) — 원데이클래스 결제는 정기 결제 추정에서 제외
       const paymentsByStudent = new Map();
@@ -285,16 +294,22 @@ const IncomeSummary = forwardRef(function IncomeSummary(_props, ref) {
     }
   };
 
-  // 학생 데이터가 로드된 후 예상 결제 수익 계산 (students 의존)
+  // 유형 확인 전에는 체험·원데이 결제를 정기 결제로 오분류하지 않는다.
   useEffect(() => {
-    if (students.length > 0) {
+    if (!forecastReady) return;
+    if (!hasActiveStudents || forecastRes.data) {
       loadForecast();
+    } else if (forecastRes.error) {
+      setForecastError(true);
+      setForecastLoading(false);
+    } else {
+      setForecastLoading(true);
     }
-  }, [students]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [students, classTypes, forecastReady, hasActiveStudents, forecastRes.data, forecastRes.error]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // PullToRefresh 등 외부에서 새로고침 트리거
   useImperativeHandle(ref, () => ({
-    reload: () => Promise.all([monthRes.refresh(), loadForecast()]),
+    reload: () => Promise.all([...(paymentsResource ? [] : [monthRes.refresh()]), forecastRes.refresh()]),
   }));
 
   return (
@@ -307,39 +322,39 @@ const IncomeSummary = forwardRef(function IncomeSummary(_props, ref) {
           <button
             type="button"
             onClick={() => { setBreakdownBucket('thisMonth'); setBreakdownModalOpen(true); }}
-            disabled={monthLoading}
+            disabled={monthLoading || monthError}
             className="flex items-center justify-between w-full transition-[background-color] duration-150 ease-out"
             style={{
               background: 'none', border: 'none', textAlign: 'left', padding: 0,
-              cursor: monthLoading ? 'default' : 'pointer' }}
+              cursor: monthLoading || monthError ? 'default' : 'pointer' }}
           >
             <span className="text-sm flex items-center gap-1" style={{ color: TEXT_TERTIARY }}>
               이번 달 결제 수입
               <CaretRightIcon size={12} weight="bold" />
             </span>
             <span className="tabular-nums" style={{ fontSize: 14, fontWeight: 600, color: TEXT_PRIMARY }}>
-              {formatKRW(monthPayments.reduce((s, p) => s + netPaid(p), 0))}
+              {monthLoading ? '확인 중…' : monthError ? '확인 실패 · 새로고침' : formatKRW(monthPayments.reduce((s, p) => s + netPaid(p), 0))}
             </span>
           </button>
           <button
             type="button"
             onClick={() => { setBreakdownBucket('thisMonth'); setBreakdownModalOpen(true); }}
-            disabled={forecastLoading}
+            disabled={showThisMonthLoading || monthError}
             className="flex items-center justify-between w-full transition-[background-color] duration-150 ease-out"
             style={{
               marginTop: 10, paddingTop: 10,
               background: 'none', textAlign: 'left', padding: '10px 0 0',
               // border:none 을 먼저 둬야 한다 — 뒤에 오면 borderTop 을 덮어써서 구분선이 사라진다.
               border: 'none', borderTop: `1px solid ${GRAY_100}`,
-              cursor: forecastLoading ? 'default' : 'pointer' }}
+              cursor: showThisMonthLoading ? 'default' : 'pointer' }}
           >
             <span className="text-sm flex items-center gap-1" style={{ color: TEXT_TERTIARY }}>
               예상 이번 달
               <CaretRightIcon size={12} weight="bold" />
             </span>
-            {forecastLoading ? (
+            {showThisMonthLoading ? (
               <span className="w-1.5 h-1.5 rounded-full bg-brand-400 animate-pulse" />
-            ) : forecastError ? (
+            ) : forecastError || monthError ? (
               <span style={{ fontSize: 13, color: TEXT_TERTIARY }}>계산 실패 · 새로고침</span>
             ) : (() => {
               const confirmed = monthPayments.reduce((s, p) => s + netPaid(p), 0);
@@ -354,18 +369,18 @@ const IncomeSummary = forwardRef(function IncomeSummary(_props, ref) {
           <button
             type="button"
             onClick={() => { setBreakdownBucket('nextMonth'); setBreakdownModalOpen(true); }}
-            disabled={forecastLoading}
+            disabled={showForecastLoading}
             className="flex items-center justify-between w-full transition-[background-color] duration-150 ease-out"
             style={{
               marginTop: 6,
               background: 'none', border: 'none', textAlign: 'left', padding: 0,
-              cursor: forecastLoading ? 'default' : 'pointer' }}
+              cursor: showForecastLoading ? 'default' : 'pointer' }}
           >
             <span className="text-sm flex items-center gap-1" style={{ color: TEXT_TERTIARY }}>
               예상 다음 달
               <CaretRightIcon size={12} weight="bold" />
             </span>
-            {forecastLoading ? (
+            {showForecastLoading ? (
               <span className="w-1.5 h-1.5 rounded-full bg-brand-400 animate-pulse" />
             ) : forecastError ? (
               <span style={{ fontSize: 13, color: TEXT_TERTIARY }}>계산 실패 · 새로고침</span>

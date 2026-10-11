@@ -1,0 +1,230 @@
+{
+  "schema": 1,
+  "target": "worker",
+  "checkedAt": "2026-10-11T06:24:13.665Z",
+  "source": "b75ffe2d84cafe7aa72cd7c62dbf5877875325ceef18c2de56cabe26ac2d5072",
+  "workerOrigin": "https://tutor-manager-proxy.hisyisnis.workers.dev",
+  "commit": "709b5636850063af01141c3ff4b1be6eed49600e",
+  "dirty": false,
+  "version": null,
+  "files": {
+    "/index.js": "50afef633cb9c67f3a362da94ff700eb6b6bc2df5bd321ad67d9d30170c20964",
+    "/index.js.map": "87d7b5142c23c900e370984a1b880e54c23b3f609a6c293acd240217311ec3f5",
+    "/README.md": "3b427bced71e75098673f331a4734c663a90bfb4293a70319628ad32193038bc"
+  },
+  "checks": [
+    {
+      "command": [
+        "npm",
+        "test"
+      ],
+      "directory": "worker",
+      "passed": true
+    },
+    {
+      "command": [
+        "wrangler",
+        "deploy",
+        "--dry-run",
+        "--outdir=dist-check"
+      ],
+      "directory": "worker",
+      "passed": true
+    }
+  ],
+  "previous": {
+    "versionId": "a7f48e4a-5924-476f-9be1-bef31e1833a5",
+    "commit": "9ff670a8166dea3735e86d1d2b923ca63863d2ee"
+  },
+  "deployed": {
+    "versionId": "2b65074b-cd8c-403c-b321-db5a6441d436",
+    "etag": "00ec398c42b95cce8e1987dcfdcedb9f366b31640b86e59e6c85aec09acc02e0"
+  },
+  "bindingComparison": {
+    "equal": true,
+    "bindings": [
+      {
+        "name": "ALLOWED_ORIGIN",
+        "type": "plain_text"
+      },
+      {
+        "name": "AUTH_PASSWORD",
+        "type": "secret_text"
+      },
+      {
+        "name": "CF_ANALYTICS_TOKEN",
+        "type": "secret_text"
+      },
+      {
+        "name": "CONTACT_EMAIL",
+        "type": "send_email"
+      },
+      {
+        "name": "GAME_AE",
+        "type": "analytics_engine"
+      },
+      {
+        "name": "GAME_DASH_KEY",
+        "type": "secret_text"
+      },
+      {
+        "name": "GAME_DB",
+        "type": "d1"
+      },
+      {
+        "name": "GAME_GOOGLE_CLIENT_ID",
+        "type": "secret_text"
+      },
+      {
+        "name": "GAME_GOOGLE_CLIENT_SECRET",
+        "type": "secret_text"
+      },
+      {
+        "name": "GAME_KAKAO_CLIENT_SECRET",
+        "type": "secret_text"
+      },
+      {
+        "name": "GAME_KAKAO_REST_KEY",
+        "type": "secret_text"
+      },
+      {
+        "name": "GITHUB_PAT",
+        "type": "secret_text"
+      },
+      {
+        "name": "JWT_SECRET",
+        "type": "secret_text"
+      },
+      {
+        "name": "KAKAO_PFID",
+        "type": "secret_text"
+      },
+      {
+        "name": "KAKAO_TPL_CONSULT",
+        "type": "secret_text"
+      },
+      {
+        "name": "KAKAO_TPL_GAME_OTP",
+        "type": "secret_text"
+      },
+      {
+        "name": "KAKAO_TPL_HW_ASSIGN",
+        "type": "secret_text"
+      },
+      {
+        "name": "KAKAO_TPL_HW_FEEDBACK",
+        "type": "secret_text"
+      },
+      {
+        "name": "KAKAO_TPL_PERSONAL_OTP",
+        "type": "secret_text"
+      },
+      {
+        "name": "LESSON_TYPE_PAGE_ID",
+        "type": "plain_text"
+      },
+      {
+        "name": "MY_PHONE",
+        "type": "secret_text"
+      },
+      {
+        "name": "NOTION_TOKEN",
+        "type": "secret_text"
+      },
+      {
+        "name": "NOTION_WEBHOOK_SECRET",
+        "type": "secret_text"
+      },
+      {
+        "name": "NTFY_TOKEN",
+        "type": "secret_text"
+      },
+      {
+        "name": "NTFY_TOPIC",
+        "type": "secret_text"
+      },
+      {
+        "name": "NTFY_TOPIC_CRITICAL",
+        "type": "secret_text"
+      },
+      {
+        "name": "NTFY_TOPIC_WARN",
+        "type": "secret_text"
+      },
+      {
+        "name": "PUSH_PUBLISH_TOKEN",
+        "type": "secret_text"
+      },
+      {
+        "name": "SOLAPI_API_KEY",
+        "type": "secret_text"
+      },
+      {
+        "name": "SOLAPI_API_SECRET",
+        "type": "secret_text"
+      },
+      {
+        "name": "SOLAPI_SENDER",
+        "type": "secret_text"
+      },
+      {
+        "name": "STUDENT_AUTH_ENFORCE",
+        "type": "secret_text"
+      },
+      {
+        "name": "VAPID_PRIVATE_KEY",
+        "type": "secret_text"
+      },
+      {
+        "name": "VAPID_PUBLIC_KEY",
+        "type": "secret_text"
+      },
+      {
+        "name": "VAPID_SUBJECT",
+        "type": "secret_text"
+      }
+    ]
+  },
+  "smoke": [
+    {
+      "route": "/notifications",
+      "origin": "https://tiantian-chinese.pages.dev",
+      "status": 401
+    },
+    {
+      "route": "/booking/student/ZZZZ00000000",
+      "origin": "https://tiantian-chinese.pages.dev",
+      "status": 401
+    },
+    {
+      "route": "/booking/consent",
+      "origin": "https://tiantian-chinese.pages.dev",
+      "status": 401
+    },
+    {
+      "route": "/booking/consent/ZZZZ00000000",
+      "origin": "https://tiantian-chinese.pages.dev",
+      "status": 401
+    },
+    {
+      "route": "/game/me",
+      "origin": "https://tiantianchinese.com",
+      "status": 401
+    },
+    {
+      "route": "/game/me",
+      "origin": "https://invalid.example",
+      "status": 403
+    }
+  ],
+  "verifiedAt": "2026-10-11T06:26:54.567Z",
+  "directDeploy": {
+    "reason": "Production baseline package script invokes wrangler deploy; predeploy release guard checks passed, source history retained by main ancestry and version-bound reviewed baseline",
+    "keepVarsFlag": false,
+    "bindingsPreserved": true,
+    "sourceAnnotation": false,
+    "artifactKiB": 419.39,
+    "gzipKiB": 93.91,
+    "startupMs": 5
+  }
+}

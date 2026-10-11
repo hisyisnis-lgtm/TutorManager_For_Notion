@@ -1,6 +1,7 @@
-﻿import {
+import {
   useState,
   useEffect,
+  useRef,
   useMemo } from 'react';
 import { BellIcon,
   GearSixIcon,
@@ -19,6 +20,7 @@ import { useData } from '../context/DataContext.jsx';
 import { queryPage,
   queryAll } from '../api/notionClient.js';
 import { swrLoad } from '../hooks/useCachedResource.js';
+import { captureAuthScope, isAuthScopeCurrent } from '../api/authState.js';
 import { CLASSES_DB,
   parseClass } from '../api/classes.js';
 import { attachLogInfo } from '../api/lessonLogs.js';
@@ -71,15 +73,18 @@ function getKSTToday() {
 
 export default function HomePage() {
   const navigate = useNavigate();
-  const { studentNameMap, students, remainingByStudent, refresh: refreshData } = useData();
+  const { studentNameMap, students, studentsReady, remainingByStudent, refresh: refreshData } = useData();
   // loadShortage가 채우는 수업 인덱스.
   //  firstShortage: 학생별 '가장 이른 시간부족 수업' 일시 — 이미 결제한 시간을 넘긴 경우
   //  lastClass    : 학생별 '가장 늦은 예정 수업' 일시 — 언제까지 커버되는지 알려주는 용도
   const [classIndex, setClassIndex] = useState({ firstShortage: {}, lastClass: {} });
+  const [shortageReady, setShortageReady] = useState(false);
   const [consultCount, setConsultCount] = useState(0);
   const [submittedHomework, setSubmittedHomework] = useState([]);
   const [todayClasses, setTodayClasses] = useState([]);
   const [todayLoading, setTodayLoading] = useState(true);
+  const [todayLogsLoading, setTodayLogsLoading] = useState(true);
+  const todayRequest = useRef(0);
   const [tomorrowPrepCount, setTomorrowPrepCount] = useState(0);
   // 로더 실패 시 빈 상태("오늘 수업 없음")로 위장하지 않도록 실패 배너 표시용
   const [loadFailed, setLoadFailed] = useState(false);
@@ -91,6 +96,7 @@ export default function HomePage() {
   //  ② 여유 없음: 잔여 0시간 이하 — 수업을 더 잡으려면 결제가 필요하다
   // ②를 빼면 "다음 수업도 안 잡힌 잔여 0시간" 학생을 통째로 놓친다(2026-08-25 실측 3명).
   const paymentDueRows = useMemo(() => {
+    if (!shortageReady) return [];
     // '결제가 필요해지는 날' 기준 D-PAYMENT_DUE_LEAD_DAYS 안에 든 학생만 띄운다.
     //  ① 초과: 그 날 = 첫 '시간 회차 부족' 수업일
     //  ② 여유 없음: 그 날 = 마지막 예정 수업일 (그 뒤로는 수업을 못 잡으니 그때까지는 결제 필요)
@@ -102,7 +108,8 @@ export default function HomePage() {
     for (const s of students) {
       if (s.status !== STATUS_ACTIVE) continue;
       const shortageAt = classIndex.firstShortage[s.id];
-      const remaining = remainingByStudent[s.id] ?? 0;
+      const remaining = remainingByStudent[s.id];
+      if (remaining == null) continue;
       if (shortageAt) {
         if (!withinLead(shortageAt)) continue;
         rows.push({ id: s.id, name: s.name, urgent: true, dueAt: shortageAt, reason: `${formatShort(shortageAt)} 수업부터 초과` });
@@ -120,7 +127,7 @@ export default function HomePage() {
     }
     // 이미 넘긴 사람 먼저, 그다음 결제가 필요해지는 날이 이른 순.
     return rows.sort((a, b) => (b.urgent === true) - (a.urgent === true) || String(a.dueAt ?? '').localeCompare(String(b.dueAt ?? '')));
-  }, [students, classIndex, remainingByStudent]);
+  }, [students, classIndex, remainingByStudent, shortageReady]);
 
   // 피드백 대기 숙제 가로 스크롤 (Embla 자유 스크롤 — 드래그·관성·끝 저항, 마우스+터치)
   const [hwEmblaRef] = useEmblaCarousel({ dragFree: true, containScroll: 'trimSnaps' });
@@ -179,7 +186,7 @@ export default function HomePage() {
           }
         }
         return { firstShortage, lastClass };
-      }, setClassIndex);
+      }, (index) => { setClassIndex(index); setShortageReady(true); });
     } catch (e) {
       console.error('[홈] 잔여 시간 부족 수업 불러오기 오류', e); setLoadFailed(true);
     }
@@ -220,6 +227,11 @@ export default function HomePage() {
   };
 
   const loadTodayClasses = async () => {
+    const auth = captureAuthScope();
+    const request = ++todayRequest.current;
+    const path = window.location.hash || window.location.pathname;
+    const isCurrent = () => request === todayRequest.current && isAuthScopeCurrent(auth)
+      && path === (window.location.hash || window.location.pathname);
     setTodayLoading(true);
     try {
       // 키에 날짜를 넣어 날이 바뀌면 어제 캐시를 쓰지 않게 한다.
@@ -236,16 +248,26 @@ export default function HomePage() {
           undefined,
           20
         );
+        const classes = (data?.results ?? []).map(parseClass);
+        if (isCurrent()) {
+          // 일정 요약은 일지 조회를 기다릴 필요가 없다. 마무리 카드는 확인 후 공개한다.
+          setTodayClasses(classes);
+          setTodayLoading(false);
+          setTodayLogsLoading(true);
+        }
         // 일지 '작성' 여부까지 붙인다 — relation 존재만으론 자동 생성된 빈 일지를 못 거른다(lessonLogs.js 주석).
-        return attachLogInfo((data?.results ?? []).map(parseClass));
+        if (!isCurrent()) return classes;
+        return attachLogInfo(classes);
       }, (list) => {
+        if (!isCurrent()) return;
         setTodayClasses(list);
         setTodayLoading(false); // 캐시가 있으면 여기서 이미 화면이 찬다
+        setTodayLogsLoading(false);
       });
     } catch (e) {
-      console.error('[홈] 오늘 수업 불러오기 오류', e); setLoadFailed(true);
+      if (isCurrent()) { console.error('[홈] 오늘 수업 불러오기 오류', e); setLoadFailed(true); }
     } finally {
-      setTodayLoading(false);
+      if (isCurrent()) setTodayLoading(false);
     }
   };
 
@@ -277,11 +299,12 @@ export default function HomePage() {
   };
 
   useEffect(() => {
+    loadTodayClasses();
     loadConsultCount();
     loadSubmittedHomework();
-    loadTodayClasses();
     loadTomorrowPrep();
     loadShortage();
+    return () => { todayRequest.current += 1; };
   }, []);
 
   // 설정/알림 페이지에서 돌아올 때 이름 및 뱃지 갱신 (마운트 시 1회)
@@ -484,7 +507,7 @@ export default function HomePage() {
                         {timeStr}{endTimeStr && `~${endTimeStr}`}
                       </span>
                       <span className="flex-1 text-sm font-semibold text-gray-800 truncate">
-                        {names || cls.title || '학생 미정'}
+                        {names || cls.title || (studentsReady ? '학생 미정' : '학생 정보 확인 중')}
                       </span>
                       {cls.duration && (
                         <span className="text-xs tabular-nums text-gray-400 shrink-0">{formatDuration(parseInt(cls.duration))}</span>
@@ -649,7 +672,7 @@ export default function HomePage() {
       )}
 
       {/* 수업 마무리 */}
-      {!todayLoading && recentlyCompleted.length > 0 && (
+      {!todayLoading && !todayLogsLoading && studentsReady && recentlyCompleted.length > 0 && (
         <div
           className="px-4 pt-6"
           style={{ animation: 'fade-in-up 400ms cubic-bezier(0.2, 0, 0, 1) both', animationDelay: '120ms' }}

@@ -1,11 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import HomeTab from './HomeTab.jsx';
 import { fetchMyClasses } from '../../api/bookingApi.js';
 import { setStudentSession } from '../../api/studentAuth.js';
 import { fixtureSession } from '../../api/authFixtures.js';
-import { notifyAuthChange } from '../../api/authState.js';
+import { captureAuthScope, notifyAuthChange } from '../../api/authState.js';
+import { peekCache, writeCacheValue } from '../../hooks/useCachedResource.js';
 
 vi.mock('../../api/bookingApi.js', () => ({ fetchMyClasses: vi.fn(async () => []) }));
 vi.mock('./ClassCard.jsx', () => ({ default: () => null }));
@@ -22,6 +23,19 @@ beforeEach(() => {
 afterEach(() => { cleanup(); localStorage.clear(); sessionStorage.clear(); notifyAuthChange(); });
 
 describe('학생 홈 조회 상태', () => {
+  it('먼저 도착한 월별 수업은 나머지 달을 기다리지 않고 수업 일정 캐시에 저장한다', async () => {
+    const finish = [];
+    fetchMyClasses.mockImplementation(() => new Promise(resolve => finish.push(resolve)));
+    view();
+    const month = fetchMyClasses.mock.calls[0][1];
+    const classes = [{ id: 'current', date: `${month}-28`, startTime: '13:00', durationMin: 60 }];
+    await act(async () => finish[0](classes));
+    expect(peekCache(`student:classes:${token}:${month}`)).toEqual(classes);
+    await act(async () => { finish[1]([]); finish[2]([]); });
+    expect(fetchMyClasses).toHaveBeenCalledTimes(3);
+  });
+
+
   it('숙제 로딩·실패·정상 빈 결과를 서로 다른 안내로 표시한다', async () => {
     const retry = vi.fn();
     const props = { studentToken: token, studentLoaded: true, hwAlerts: { pending: [], submitted: [], feedback: [] } };
@@ -48,9 +62,9 @@ describe('학생 홈 조회 상태', () => {
   });
 
   it('수업 캐시가 있는 조회 실패는 이전 일정을 유지하고 재시도를 제공한다', async () => {
-    sessionStorage.setItem(`swr_student:upcoming:${token}`, JSON.stringify({ savedAt: Date.now() - 60000, value: [{
+    writeCacheValue(`student:upcoming:${token}`, [{
       id: 'class', date: '2099-01-01', startTime: '13:00', durationMin: 60, location: '이전 장소',
-    }] }));
+    }], captureAuthScope(`student:${token}`));
     fetchMyClasses.mockRejectedValue(new Error('일시적 실패'));
     view();
     expect(await screen.findByText('수업 정보를 불러오지 못했어요')).toBeTruthy();

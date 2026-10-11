@@ -1,39 +1,39 @@
-import { useState, useEffect, useSyncExternalStore, lazy, Suspense } from 'react';
+import { useState, useEffect, useRef, useSyncExternalStore, lazy, Suspense } from 'react';
 import { getAuthRevision, subscribeAuthChanges } from './api/authState.js';
 import { HashRouter, BrowserRouter, createHashRouter, RouterProvider, Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom';
 import { Toaster } from './components/shadcn/sonner';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { useTeacherAuth } from './api/authUtils.js';
 import { PRIMARY } from './constants/theme.js';
-import { isOnFormPage } from './utils/swUpdateGuard.js';
+import { isOnFormPage, startGuardedSwUpdate } from './utils/swUpdateGuard.js';
 import { DataProvider } from './context/DataContext.jsx';
 import BottomNav from './components/layout/BottomNav.jsx';
 import FreshnessIndicator from './components/layout/FreshnessIndicator.jsx';
-import LoginPage from './pages/LoginPage.jsx';
+const LoginPage = lazy(() => import('./pages/LoginPage.jsx'));
 
-import StudentsPage from './pages/StudentsPage.jsx';
-import StudentDetailPage from './pages/StudentDetailPage.jsx';
-import StudentFormPage from './pages/StudentFormPage.jsx';
-import ClassesPage from './pages/ClassesPage.jsx';
-import ClassFormPage from './pages/ClassFormPage.jsx';
-import ClassDetailPage from './pages/ClassDetailPage.jsx';
-import PaymentsPage from './pages/PaymentsPage.jsx';
-import PaymentFormPage from './pages/PaymentFormPage.jsx';
-import PaymentDetailPage from './pages/PaymentDetailPage.jsx';
-import LessonLogsPage from './pages/LessonLogsPage.jsx';
-import LessonLogFormPage from './pages/LessonLogFormPage.jsx';
-import LessonLogDetailPage from './pages/LessonLogDetailPage.jsx';
-import HomePage from './pages/HomePage.jsx';
-import PendingClassesPage from './pages/PendingClassesPage.jsx';
-import TomorrowPrepPage from './pages/TomorrowPrepPage.jsx';
-import SettingsPage from './pages/SettingsPage.jsx';
-import NoticesPage from './pages/NoticesPage.jsx';
-import NotificationsPage from './pages/NotificationsPage.jsx';
-import PersonalEntryPage from './pages/PersonalEntryPage.jsx';
-import PersonalPage from './pages/PersonalPage.jsx';
-import PersonalHomeworkDetailPage from './pages/PersonalHomeworkDetailPage.jsx';
-import PersonalNoticeDetailPage from './pages/PersonalNoticeDetailPage.jsx';
-import PandaPage from './pages/PandaPage.jsx';
+const StudentsPage = lazy(() => import('./pages/StudentsPage.jsx'));
+const StudentDetailPage = lazy(() => import('./pages/StudentDetailPage.jsx'));
+const StudentFormPage = lazy(() => import('./pages/StudentFormPage.jsx'));
+const ClassesPage = lazy(() => import('./pages/ClassesPage.jsx'));
+const ClassFormPage = lazy(() => import('./pages/ClassFormPage.jsx'));
+const ClassDetailPage = lazy(() => import('./pages/ClassDetailPage.jsx'));
+const PaymentsPage = lazy(() => import('./pages/PaymentsPage.jsx'));
+const PaymentFormPage = lazy(() => import('./pages/PaymentFormPage.jsx'));
+const PaymentDetailPage = lazy(() => import('./pages/PaymentDetailPage.jsx'));
+const LessonLogsPage = lazy(() => import('./pages/LessonLogsPage.jsx'));
+const LessonLogFormPage = lazy(() => import('./pages/LessonLogFormPage.jsx'));
+const LessonLogDetailPage = lazy(() => import('./pages/LessonLogDetailPage.jsx'));
+const HomePage = lazy(() => import('./pages/HomePage.jsx'));
+const PendingClassesPage = lazy(() => import('./pages/PendingClassesPage.jsx'));
+const TomorrowPrepPage = lazy(() => import('./pages/TomorrowPrepPage.jsx'));
+const SettingsPage = lazy(() => import('./pages/SettingsPage.jsx'));
+const NoticesPage = lazy(() => import('./pages/NoticesPage.jsx'));
+const NotificationsPage = lazy(() => import('./pages/NotificationsPage.jsx'));
+const PersonalEntryPage = lazy(() => import('./pages/PersonalEntryPage.jsx'));
+const PersonalPage = lazy(() => import('./pages/PersonalPage.jsx'));
+const PersonalHomeworkDetailPage = lazy(() => import('./pages/PersonalHomeworkDetailPage.jsx'));
+const PersonalNoticeDetailPage = lazy(() => import('./pages/PersonalNoticeDetailPage.jsx'));
+const PandaPage = lazy(() => import('./pages/PandaPage.jsx'));
 // 성조게임은 앱에서 가장 큰 코드 덩어리 — lazy 분리로 게임 진입 시에만 로드.
 // (게임 단독 앱 빌드(main.game.jsx)는 별도 엔트리라 여기 lazy와 무관하게 정적 import 유지)
 const ToneGamePage = lazy(() => import('./pages/ToneGamePage.jsx'));
@@ -41,23 +41,26 @@ const ToneGamePage = lazy(() => import('./pages/ToneGamePage.jsx'));
 const PrivacyPage = lazy(() => import('./pages/PrivacyPage.jsx'));
 // 팬더 디버그 화면 — DEV 빌드에서만 존재. 운영 번들엔 라우트도 청크도 남지 않는다(2026-09-04).
 const PandaTestPage = import.meta.env.DEV ? lazy(() => import('./pages/PandaTestPage.jsx')) : null;
-import BookingsManagePage from './pages/BookingsManagePage.jsx';
-import ConsultManagePage from './pages/ConsultManagePage.jsx';
-import HomeworkFormPage from './pages/HomeworkFormPage.jsx';
-import HomeworkDetailPage from './pages/HomeworkDetailPage.jsx';
-import StudentHomeworkPage from './pages/StudentHomeworkPage.jsx';
-import StudentClassesPage from './pages/StudentClassesPage.jsx';
-import StudentPaymentsPage from './pages/StudentPaymentsPage.jsx';
-import HomeworkManagePage from './pages/HomeworkManagePage.jsx';
-import LandingPage from './pages/LandingPage.jsx';
+const BookingsManagePage = lazy(() => import('./pages/BookingsManagePage.jsx'));
+const ConsultManagePage = lazy(() => import('./pages/ConsultManagePage.jsx'));
+const HomeworkFormPage = lazy(() => import('./pages/HomeworkFormPage.jsx'));
+const HomeworkDetailPage = lazy(() => import('./pages/HomeworkDetailPage.jsx'));
+const StudentHomeworkPage = lazy(() => import('./pages/StudentHomeworkPage.jsx'));
+const StudentClassesPage = lazy(() => import('./pages/StudentClassesPage.jsx'));
+const StudentPaymentsPage = lazy(() => import('./pages/StudentPaymentsPage.jsx'));
+const HomeworkManagePage = lazy(() => import('./pages/HomeworkManagePage.jsx'));
+const LandingPage = lazy(() => import('./pages/LandingPage.jsx'));
 // 강사가 링크로 공유하는 수강료 안내는 해당 주소를 열 때만 불러온다.
 const PricingPage = lazy(() => import('./pages/PricingPage.jsx'));
-import ConsentPage, { AuthenticatedConsentPage } from './pages/ConsentPage.jsx';
+const ConsentPage = lazy(() => import('./pages/ConsentPage.jsx'));
+const AuthenticatedConsentPage = lazy(() => import('./pages/ConsentPage.jsx').then(module => ({ default: module.AuthenticatedConsentPage })));
 
-import GroupClassPage from './pages/GroupClassPage.jsx';
+const GroupClassPage = lazy(() => import('./pages/GroupClassPage.jsx'));
 import InAppBrowserWarning from './components/ui/InAppBrowserWarning.jsx';
 import DynamicStudentManifest from './components/DynamicStudentManifest.jsx';
 import StudentAuthGate from './components/StudentAuthGate.jsx';
+import LoadingSpinner from './components/ui/LoadingSpinner.jsx';
+import { isPublicHashRoute } from './utils/publicHashRoute.js';
 
 // 앱 초기 로드 / SW 업데이트 중 스플래시 — 시안 "로딩 — 편집본"(755:7, 2026-08-08):
 //   브랜드 레드 전면 + 흰 로고(248×36, y378) + "잠시만 기다려 주세요..." 14/20 (y431 → 간격 17).
@@ -105,8 +108,7 @@ function GatedStudentRoute({ children }) {
 
 // 현재 hash가 공개 페이지인지 확인 (로그인 불필요)
 function isPublicBookingRoute() {
-  const hash = window.location.hash;
-  return hash.startsWith('#/book') || hash.startsWith('#/intro') || hash.startsWith('#/pricing') || hash.startsWith('#/consent') || hash.startsWith('#/privacy') || hash.startsWith('#/group-class') || hash.startsWith('#/bootcamp') || hash.startsWith('#/personal') || (import.meta.env.DEV && hash.startsWith('#/panda-test'));
+  return isPublicHashRoute(window.location.hash, import.meta.env.DEV);
 }
 
 // PWA standalone에서 root hash로 진입 + 강사 미인증 + 저장된 학생 토큰이 있으면 학생 페이지로 자동 이동.
@@ -200,13 +202,16 @@ if (typeof window !== 'undefined') {
 export default function App() {
   const authed = useTeacherAuth();
   const authRevision = useSyncExternalStore(subscribeAuthChanges, getAuthRevision, () => 0);
-  const [swReady, setSwReady] = useState(false);
 
   const [swRegistration, setSwRegistration] = useState(null);
+  const swReload = useRef({ request: null, pending: false });
 
   const { needRefresh: [needRefresh], updateServiceWorker } = useRegisterSW({
+    onNeedReload() {
+      swReload.current.pending = true;
+      swReload.current.request?.();
+    },
     onRegistered(registration) {
-      setSwReady(true);
       if (registration) {
         setSwRegistration(registration);
         // 앱을 열자마자 즉시 새 버전 검사 (60초 폴링 첫 틱을 기다리지 않음).
@@ -214,49 +219,26 @@ export default function App() {
         registration.update().catch(() => {});
       }
     },
-    onRegisterError() { setSwReady(true); },
   });
 
   // 60초마다 새 버전 체크 — 컴포넌트 언마운트 시 정리
   useEffect(() => {
     if (!swRegistration) return;
-    const id = setInterval(() => swRegistration.update(), 60 * 1000);
+    const id = setInterval(() => swRegistration.update().catch(() => {}), 60 * 1000);
     return () => clearInterval(id);
   }, [swRegistration]);
 
   useEffect(() => {
-    if (!needRefresh) {
-      // SW 미지원 환경 대비 최대 2초 후 강제 진행
-      const fallback = setTimeout(() => setSwReady(true), 2000);
-      return () => clearTimeout(fallback);
-    }
-
-    function applyUpdate() {
-      const handleControllerChange = () => window.location.reload();
-      navigator.serviceWorker?.addEventListener('controllerchange', handleControllerChange);
-      updateServiceWorker(true);
-      // controllerchange가 오지 않을 경우 10초 후 강제 리로드
-      setTimeout(() => window.location.reload(), 10000);
-    }
-
-    // 폼 작성 중이면 이탈 후 업데이트
-    if (isOnFormPage()) {
-      const interval = setInterval(() => {
-        if (!isOnFormPage()) {
-          clearInterval(interval);
-          applyUpdate();
-        }
-      }, 500);
-      return () => clearInterval(interval);
-    }
-
-    applyUpdate();
+    if (!needRefresh) return undefined;
+    const controller = startGuardedSwUpdate({ update: () => updateServiceWorker(true) });
+    const reloadState = swReload.current;
+    reloadState.request = controller.requestReload;
+    if (reloadState.pending) controller.requestReload();
+    return () => { reloadState.request = null; controller.dispose(); };
   }, [needRefresh, updateServiceWorker]);
 
-  // SW 준비 전 또는 업데이트 적용 중 (폼 작성 중이면 업데이트 미표시)
-  if (!swReady || (needRefresh && !isOnFormPage())) {
-    return <SplashScreen updating={needRefresh} />;
-  }
+  // 등록은 화면 표시와 병렬로 진행한다. 실제 업데이트 중에만 스플래시를 표시한다.
+  if (needRefresh && !isOnFormPage()) return <SplashScreen updating />;
 
   // Path-based 학생 라우트 — BrowserRouter로 학생 라우트만 렌더.
   // iOS Safari PWA "홈 화면에 추가" 시 URL의 path는 보존되므로 path 기반 라우팅이 안전.
@@ -277,6 +259,7 @@ export default function App() {
         <DynamicStudentManifest />
         <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <ScrollToTop />
+          <Suspense fallback={<LoadingSpinner />}>
           <Routes>
             <Route path="/personal" element={<PersonalEntryPage />} />
             <Route path="/personal/:studentToken" element={<GatedStudentRoute><PersonalPage /></GatedStudentRoute>} />
@@ -288,6 +271,7 @@ export default function App() {
             {/* 게스트 독립 진입 (학생 토큰 없음) — 채널 유입 깔때기. ToneGamePage가 토큰 부재를 게스트로 처리 */}
             <Route path="/game/tone" element={<Suspense fallback={<SplashScreen />}><ToneGamePage /></Suspense>} />
           </Routes>
+          </Suspense>
           <FreshnessIndicator />
         </BrowserRouter>
         </>
@@ -307,6 +291,7 @@ export default function App() {
         <DynamicStudentManifest />
         <HashRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <ScrollToTop />
+          <Suspense fallback={<LoadingSpinner />}>
           <Routes>
             <Route path="/intro" element={<LandingPage />} />
             <Route path="/pricing" element={<Suspense fallback={<SplashScreen />}><PricingPage /></Suspense>} />
@@ -327,6 +312,7 @@ export default function App() {
             <Route path="/personal/:studentToken/game/tone" element={<GatedStudentRoute><Suspense fallback={<SplashScreen />}><ToneGamePage /></Suspense></GatedStudentRoute>} />
             {PandaTestPage && <Route path="/panda-test" element={<Suspense fallback={null}><PandaTestPage /></Suspense>} />}
           </Routes>
+          </Suspense>
           <FreshnessIndicator />
         </HashRouter>
         </>
@@ -337,11 +323,11 @@ export default function App() {
     return (
       <>
         <Toaster position="top-center" />
-        <LoginPage
+        <Suspense fallback={<SplashScreen />}><LoginPage
           onSuccess={() => {
             window.location.hash = '#/home';
           }}
-        />
+        /></Suspense>
       </>
     );
   }
@@ -373,6 +359,7 @@ function TeacherRoutes() {
     <>
         <ScrollToTop />
         <div className="page-container">
+          <Suspense fallback={<LoadingSpinner />}>
           <Routes>
             <Route path="/" element={<Navigate to="/home" replace />} />
             <Route path="/home" element={<HomePage />} />
@@ -419,6 +406,7 @@ function TeacherRoutes() {
                 알 수 없는 hash로 진입해도 흰 화면 대신 홈으로 복구된다. */}
             <Route path="*" element={<Navigate to="/home" replace />} />
           </Routes>
+          </Suspense>
         </div>
         <FreshnessIndicator />
         <BottomNav />

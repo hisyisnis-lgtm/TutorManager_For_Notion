@@ -1,12 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { toast } from 'sonner';
 import PersonalHomeworkDetailPage from './PersonalHomeworkDetailPage.jsx';
-import { fetchMyHomework, submitHomework, uploadStudentFile } from '../api/homework.js';
+import { fetchMyHomework, markFeedbackSeen, submitHomework, uploadStudentFile } from '../api/homework.js';
 import { fixtureSession } from '../api/authFixtures.js';
 import { setStudentSession } from '../api/studentAuth.js';
-import { notifyAuthChange } from '../api/authState.js';
+import { captureAuthScope, notifyAuthChange } from '../api/authState.js';
+import { peekCache, writeCacheValue } from '../hooks/useCachedResource.js';
 
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 vi.mock('../utils/errorReporter.js', () => ({ reportHandledError: vi.fn() }));
@@ -14,6 +15,7 @@ vi.mock('../api/homework.js', async (importOriginal) => ({
   ...await importOriginal(),
   fetchMyHomework: vi.fn(),
   parseHomework: (page) => page,
+  markFeedbackSeen: vi.fn(),
   submitHomework: vi.fn(),
   uploadStudentFile: vi.fn(),
 }));
@@ -53,6 +55,7 @@ beforeEach(() => {
   }]);
   uploadStudentFile.mockReset().mockResolvedValue(uploaded);
   submitHomework.mockReset().mockResolvedValue({ ok: true });
+  markFeedbackSeen.mockReset().mockResolvedValue({ ok: true });
 });
 
 afterEach(() => {
@@ -61,6 +64,63 @@ afterEach(() => {
   sessionStorage.clear();
   notifyAuthChange();
 });
+
+describe('학생 숙제 상세의 목록 캐시 재사용', () => {
+  const cached = { id: homeworkId, title: '바로 표시할 숙제', status: '미제출', submitFiles: [], feedbackFiles: [], assignmentFiles: [] };
+  const write = item => writeCacheValue(`student:homework:${token}`, [item], captureAuthScope(`student:${token}`));
+
+  it('캐시 내용을 즉시 표시하고 최신 조회가 끝나면 갱신한다', async () => {
+    let finish;
+    write(cached);
+    fetchMyHomework.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+    renderPage();
+    expect(screen.getByRole('heading', { name: cached.title })).toBeTruthy();
+    await act(async () => finish([{ ...cached, title: '최신 숙제 제목' }]));
+    expect(screen.getByRole('heading', { name: '최신 숙제 제목' })).toBeTruthy();
+  });
+
+  it('백그라운드 조회 실패 시 이전 내용을 유지하고 오류와 재시도를 보여준다', async () => {
+    write(cached);
+    fetchMyHomework.mockRejectedValueOnce(new Error('최신 숙제 조회 실패')).mockResolvedValueOnce([{ ...cached, title: '복구된 숙제' }]);
+    renderPage();
+    expect(await screen.findByText('최신 숙제 조회 실패')).toBeTruthy();
+    expect(screen.getByRole('heading', { name: cached.title })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: '다시 시도' }));
+    expect(await screen.findByRole('heading', { name: '복구된 숙제' })).toBeTruthy();
+    expect(screen.queryByText('최신 숙제 조회 실패')).toBeNull();
+  });
+
+  it('캐시의 피드백 완료만으로 확인 기록을 보내지 않는다', async () => {
+    let finish;
+    write({ ...cached, status: '피드백완료' });
+    fetchMyHomework.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+    renderPage();
+    expect(screen.getByRole('heading', { name: cached.title })).toBeTruthy();
+    expect(markFeedbackSeen).not.toHaveBeenCalled();
+    await act(async () => finish([cached]));
+    expect(markFeedbackSeen).not.toHaveBeenCalled();
+  });
+
+  it('최신 목록에서 삭제된 숙제는 캐시 내용을 제거하고 오류를 표시한다', async () => {
+    write(cached);
+    fetchMyHomework.mockResolvedValueOnce([]);
+    renderPage();
+    expect(await screen.findByText('숙제를 찾을 수 없습니다.')).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: cached.title })).toBeNull();
+    expect(peekCache(`student:homework:${token}`)).toEqual([]);
+  });
+
+  it('화면을 떠난 뒤 도착한 응답은 목록 캐시를 덮어쓰지 않는다', async () => {
+    let finish;
+    write(cached);
+    fetchMyHomework.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+    const page = renderPage();
+    page.unmount();
+    await act(async () => finish([{ ...cached, title: '늦게 도착한 숙제' }]));
+    expect(peekCache(`student:homework:${token}`)).toEqual([cached]);
+  });
+});
+
 
 describe('학생 PDF 제출의 업로드 파일명과 영수증', () => {
   it('선택한 이름과 서버가 돌려준 이름이 다르면 서버 이름과 영수증으로 제출한다', async () => {

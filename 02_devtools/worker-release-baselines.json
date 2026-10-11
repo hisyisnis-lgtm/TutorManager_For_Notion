@@ -6,6 +6,12 @@
       "scriptEtag": "c30f104fb7b215977adad9ec419856c627f8bb1ff4dcf3c9a1fb285ed49a0a93",
       "bundleSha256": "3f74f73d81061623545d8c1107c2f69be70bbb07b334ed4bc7aa89a184045ba1",
       "evidence": "04_docs/qa/service-project-separation-2026-09-28/worker-deployment-2026-09-28.md"
+    },
+    "2b65074b-cd8c-403c-b321-db5a6441d436": {
+      "evidence": "04_docs/qa/optimized-apps-deploy-2026-10-11/README.md",
+      "commit": "709b5636850063af01141c3ff4b1be6eed49600e",
+      "bundleSha256": "50afef633cb9c67f3a362da94ff700eb6b6bc2df5bd321ad67d9d30170c20964",
+      "scriptEtag": "00ec398c42b95cce8e1987dcfdcedb9f366b31640b86e59e6c85aec09acc02e0"
     }
   }
 }

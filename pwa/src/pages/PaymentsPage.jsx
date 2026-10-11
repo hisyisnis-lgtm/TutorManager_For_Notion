@@ -130,7 +130,7 @@ export default function PaymentsPage() {
       </div>
 
       {/* 수입 현황 (이번 달 결제 수입 · 예상 수익) */}
-      <IncomeSummary ref={incomeRef} />
+      <IncomeSummary ref={incomeRef} paymentsResource={trendRes} />
 
       <div className="px-4 pt-5 space-y-2">
         {/* 학생 검색 필터 */}

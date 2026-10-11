@@ -2,6 +2,7 @@ import { WORKER_URL } from '../config.js';
 import { fetchWithTimeout } from './fetchTimeout.js';
 import { studentBearer, handleStudentAuthExpiry } from './studentAuth.js';
 import { getToken, handleTeacherAuthExpiry } from './authUtils.js';
+import { studentRequest, invalidateStudentReads } from './studentRequest.js';
 
 // 공지 API — 전체 학생 공통 게시판.
 //  · 학생: GET /notice/student/:token (학생 세션 필요)
@@ -28,8 +29,13 @@ function teacherHeaders() {
 }
 
 /** 학생용 공지 목록 — 노출된 것만, 중요 공지가 위. */
-export async function fetchStudentNotices(studentToken) {
-  const bearer = studentBearer(studentToken);
+export function fetchStudentNotices(studentToken) {
+  const path = `/notice/student/${encodeURIComponent(studentToken)}`;
+  return studentRequest(studentToken, 'GET', path, credential => executeStudentNotices(studentToken, credential));
+}
+
+async function executeStudentNotices(studentToken, credential) {
+  const bearer = credential ?? studentBearer(studentToken);
   const res = await fetchWithTimeout(`${WORKER_URL}/notice/student/${encodeURIComponent(studentToken)}`, {
     headers: bearer ? { Authorization: `Bearer ${bearer}` } : {},
     cache: 'no-store',
@@ -51,28 +57,37 @@ export async function fetchNotices() {
 }
 
 export async function createNotice(notice) {
-  const headers = teacherHeaders();
-  return parse(await fetchWithTimeout(`${WORKER_URL}/notice`, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify(notice),
-  }), headers.Authorization?.slice(7));
+  invalidateStudentReads();
+  try {
+    const headers = teacherHeaders();
+    return await parse(await fetchWithTimeout(`${WORKER_URL}/notice`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(notice),
+    }), headers.Authorization?.slice(7));
+  } finally { invalidateStudentReads(); }
 }
 
 export async function updateNotice(id, notice) {
-  const headers = teacherHeaders();
-  return parse(await fetchWithTimeout(`${WORKER_URL}/notice/${encodeURIComponent(id)}`, {
-    method: 'PATCH',
-    headers,
-    body: JSON.stringify(notice),
-  }), headers.Authorization?.slice(7));
+  invalidateStudentReads();
+  try {
+    const headers = teacherHeaders();
+    return await parse(await fetchWithTimeout(`${WORKER_URL}/notice/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify(notice),
+    }), headers.Authorization?.slice(7));
+  } finally { invalidateStudentReads(); }
 }
 
 /** Notion 휴지통으로 보낸다(복구 가능). */
 export async function deleteNotice(id) {
-  const headers = teacherHeaders();
-  return parse(await fetchWithTimeout(`${WORKER_URL}/notice/${encodeURIComponent(id)}`, {
-    method: 'DELETE',
-    headers,
-  }), headers.Authorization?.slice(7));
+  invalidateStudentReads();
+  try {
+    const headers = teacherHeaders();
+    return await parse(await fetchWithTimeout(`${WORKER_URL}/notice/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      headers,
+    }), headers.Authorization?.slice(7));
+  } finally { invalidateStudentReads(); }
 }

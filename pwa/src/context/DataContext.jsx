@@ -9,10 +9,25 @@ import { trackRevalidation, pruneRevalidations } from '../hooks/useCachedResourc
 const DataContext = createContext(null);
 
 const CACHE_KEY = 'tutor_master_cache_v3';
+const MAX_CACHE_BYTES = 1024 * 1024;
+
+// Notion 롤업이 환불을 반영하지 않아 학생·결제를 함께 확인한 뒤 직접 계산한다.
+function remainingMap(students, payments) {
+  const paymentsByStudent = {};
+  for (const payment of payments) {
+    for (const id of payment.studentIds) (paymentsByStudent[id] ??= []).push(payment);
+  }
+  return Object.fromEntries(students.map((student) => [student.id,
+    remainingSessionsOf(student, paymentsByStudent[student.id] ?? [])]));
+}
 
 function loadCache() {
   try {
     const raw = sessionStorage.getItem(CACHE_KEY);
+    if (raw && raw.length * 2 > MAX_CACHE_BYTES) {
+      sessionStorage.removeItem(CACHE_KEY);
+      return null;
+    }
     const cache = raw ? JSON.parse(raw) : null;
     if (!isAuthScopeCurrent(captureAuthScope()) || !Number.isFinite(cache?.savedAt)
       || Date.now() - cache.savedAt > SENSITIVE_CACHE_TTL || cache.savedAt > Date.now()) {
@@ -28,7 +43,12 @@ function loadCache() {
 function saveCache(data, auth) {
   if (!isAuthScopeCurrent(auth)) return;
   try {
-    sessionStorage.setItem(CACHE_KEY, JSON.stringify({ savedAt: Date.now(), data }));
+    const serialized = JSON.stringify({ savedAt: Date.now(), data });
+    if (serialized.length * 2 > MAX_CACHE_BYTES) {
+      sessionStorage.removeItem(CACHE_KEY);
+      return;
+    }
+    sessionStorage.setItem(CACHE_KEY, serialized);
   } catch {}
 }
 
@@ -48,6 +68,8 @@ export function DataProvider({ children }) {
   const [error, setError] = useState(null);
   const [refreshError, setRefreshError] = useState(null);
   const [lastSuccessAt, setLastSuccessAt] = useState(cachedEntry?.savedAt ?? null);
+  const [ready, setReady] = useState({ students: !!cached, classTypes: !!cached, discounts: !!cached, payments: !!cached });
+  const [remainingByStudent, setRemainingByStudent] = useState(() => cached ? remainingMap(cached.students ?? [], cached.payments ?? []) : {});
   const hasData = useRef(!!cached);
 
   const load = useCallback(async () => {
@@ -57,28 +79,37 @@ export function DataProvider({ children }) {
     if (!hasData.current) setLoading(true);
     setError(null);
     try {
-      const [rawStudents, rawClassTypes, rawDiscounts, rawPayments] = await trackRevalidation(() => Promise.all([
-        fetchAllStudents(),
-        fetchAllClassTypes(),
-        fetchAllDiscounts(),
-        fetchAllPayments(),
-      ]), { key: 'master', label: '학생·수강 정보', global: true, lastSuccessAt: loadCache()?.savedAt,
+      const fresh = {};
+      const isCurrent = () => request === requestId.current && isAuthScopeCurrent(auth);
+      const publish = async (key, fetcher, parse, setValue) => {
+        const values = (await fetcher()).map(parse);
+        if (!isCurrent()) return;
+        fresh[key] = values;
+        setValue(values);
+        setReady((previous) => ({ ...previous, [key]: true }));
+        // 새 학생 목록만으로 잔여 시간을 계산하면 아직 조회 중인 결제가 0으로 처리된다.
+        // 학생·결제가 함께 확인되기 전에는 이전 계산값을 유지한다.
+        if ((key === 'students' || key === 'payments') && fresh.students && fresh.payments) {
+          setRemainingByStudent(remainingMap(fresh.students, fresh.payments));
+        }
+      };
+      await trackRevalidation(async () => {
+        const results = await Promise.allSettled([
+          publish('students', fetchAllStudents, parseStudent, setStudents),
+          publish('payments', () => fetchAllPayments(undefined, { ledgerOnly: true }), parsePayment, setPayments),
+          publish('classTypes', fetchAllClassTypes, parseClassType, setClassTypes),
+          publish('discounts', fetchAllDiscounts, parseDiscount, setDiscounts),
+        ]);
+        const failure = results.find((result) => result.status === 'rejected');
+        if (failure) throw failure.reason;
+      }, { key: 'master', label: '학생·수강 정보', global: true, lastSuccessAt: loadCache()?.savedAt,
         retry: () => load(), isCurrent: () => request === requestId.current && isAuthScopeCurrent(auth) });
       if (request !== requestId.current || !isAuthScopeCurrent(auth)) return;
-      const parsedStudents = rawStudents.map(parseStudent);
-      const parsedClassTypes = rawClassTypes.map(parseClassType);
-      const parsedDiscounts = rawDiscounts.map(parseDiscount);
-      const parsedPayments = rawPayments.map(parsePayment);
-
-      setStudents(parsedStudents);
-      setClassTypes(parsedClassTypes);
-      setDiscounts(parsedDiscounts);
-      setPayments(parsedPayments);
       setStale(false);
       hasData.current = true;
       setRefreshError(null);
       setLastSuccessAt(Date.now());
-      saveCache({ students: parsedStudents, classTypes: parsedClassTypes, discounts: parsedDiscounts, payments: parsedPayments }, auth);
+      saveCache(fresh, auth);
     } catch (e) {
       if (request !== requestId.current || !isAuthScopeCurrent(auth)) return;
       if (!hasData.current) setError(e.message);
@@ -92,6 +123,8 @@ export function DataProvider({ children }) {
   useEffect(() => {
     if (dataRevision.current !== revision) {
       setStudents([]); setClassTypes([]); setDiscounts([]); setPayments([]);
+      setReady({ students: false, classTypes: false, discounts: false, payments: false });
+      setRemainingByStudent({});
       setStale(false); setError(null);
       hasData.current = false; setRefreshError(null); setLastSuccessAt(null);
       dataRevision.current = revision;
@@ -104,16 +137,6 @@ export function DataProvider({ children }) {
   const classTypeMap = Object.fromEntries(classTypes.map((ct) => [ct.id, ct]));
   const activeStudents = students.filter((s) => s.status === '🟢 수강중');
 
-  // 학생별 잔여 시간(60분=1) — Notion 롤업이 환불을 반영하지 않아 결제 데이터로 직접 계산한다.
-  // (근거는 payments.js remainingSessionsOf 주석)
-  const paymentsByStudent = {};
-  for (const p of payments) {
-    for (const sid of p.studentIds) (paymentsByStudent[sid] ??= []).push(p);
-  }
-  const remainingByStudent = Object.fromEntries(
-    students.map((s) => [s.id, remainingSessionsOf(s, paymentsByStudent[s.id] ?? [])])
-  );
-
   const current = dataRevision.current === revision && isAuthScopeCurrent(captureAuthScope());
   return (
     <DataContext.Provider
@@ -124,6 +147,9 @@ export function DataProvider({ children }) {
         payments: current ? payments : [],
         remainingByStudent: current ? remainingByStudent : {},
         loading,
+        studentsReady: current && ready.students,
+        classTypesReady: current && ready.classTypes,
+        studentsLoading: loading && !ready.students,
         stale,
         error,
         refreshError,

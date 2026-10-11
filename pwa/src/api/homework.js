@@ -13,6 +13,7 @@ import {
 export const HOMEWORK_DB = '5ce7d5ef-7b80-4795-843f-325f4ca868e2';
 
 import { WORKER_URL } from '../config.js';
+import { studentRequest } from './studentRequest.js';
 import { getToken, handleTeacherAuthExpiry } from './authUtils.js';
 import { captureAuthScope, isAuthScopeCurrent } from './authState.js';
 import { studentBearer,
@@ -202,10 +203,15 @@ export async function notifyHomework(kind, homeworkId) {
 // 단일 요청이 이보다 오래 매달리면 중단 — 무한 스피너 방지(강사앱 notionClient와 동일 정책).
 const STUDENT_REQUEST_TIMEOUT_MS = 25000;
 
-async function studentFetch(method, path, body, studentToken) {
+function studentFetch(method, path, body, studentToken) {
+  return studentRequest(studentToken, method, path, credential =>
+    executeStudentFetch(method, path, body, studentToken, credential));
+}
+
+async function executeStudentFetch(method, path, body, studentToken, credential) {
   const headers = { 'Content-Type': 'application/json' };
   if (studentToken) {
-    const bearer = studentBearer(studentToken);
+    const bearer = credential ?? studentBearer(studentToken);
     if (bearer) headers['Authorization'] = `Bearer ${bearer}`;
   }
   const controller = new AbortController();
@@ -235,8 +241,8 @@ async function studentFetch(method, path, body, studentToken) {
 }
 
 // 학생 파일 업로드·다운로드(FormData/blob)에 붙일 Authorization 헤더.
-function studentAuthHeader(studentToken) {
-  const bearer = studentBearer(studentToken);
+function studentAuthHeader(studentToken, credential) {
+  const bearer = credential ?? studentBearer(studentToken);
   return bearer ? { Authorization: `Bearer ${bearer}` } : {};
 }
 
@@ -286,13 +292,18 @@ function uploadViaXhr(url, formData, headers, { onProgress, timeoutMs }) {
  * @param {(loaded: number, total: number) => void} [opts.onProgress] 주면 XHR로 전송해 진행률을 보고한다.
  * @param {string} [opts.fileName] 저장할 이름. 재포장 대신 이 인자를 쓸 것 — 이유는 uploadTeacherFile 주석 참고.
  */
-export async function uploadStudentFile(studentToken, file, { onProgress, fileName } = {}) {
+export function uploadStudentFile(studentToken, file, options = {}) {
+  return studentRequest(studentToken, 'POST', '/homework/student-upload', credential =>
+    executeStudentUpload(studentToken, file, options, credential));
+}
+
+async function executeStudentUpload(studentToken, file, { onProgress, fileName } = {}, credential) {
   const form = new FormData();
   form.append('file', file, fileName || file.name);
   // 전송 중 잘림 탐지용 — 서버가 실제 수신 크기와 대조한다(worker/lib/upload.js).
   form.append('size', String(file.size));
   const url = `${WORKER_URL}/homework/student-upload/${encodeURIComponent(studentToken)}`;
-  const headers = studentAuthHeader(studentToken);
+  const headers = studentAuthHeader(studentToken, credential);
 
   if (typeof onProgress === 'function' && typeof XMLHttpRequest !== 'undefined') {
     try {
