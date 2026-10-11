@@ -1,0 +1,449 @@
+{
+  "capturedAtUtc": "2026-10-11T06:50:42.67Z",
+  "operationalVersion": "v2.49.2",
+  "candidateVersion": "v2.49.3",
+  "operationalEntry": "/assets/index-CYksEfam.js",
+  "candidateEntry": "assets/index-DKLwIsqG.js",
+  "gzipImplementation": "Node.js zlib.gzipSync default options; sum of each unique decoded public JS file",
+  "scope": "Entry plus home route and all static JS imports; legacy personal home adds PersonalPage + lazy HomeTab. Existing onboarded/authenticated route content assumed. No personal token was accessed.",
+  "excluded": [
+    "CSS",
+    "fonts",
+    "images",
+    "service-worker/precache installation downloads",
+    "optional onboarding",
+    "other lazy tabs/routes",
+    "live API/authentication requests",
+    "cold dynamic dependency/waiting time",
+    "actual measured latency/Core Web Vitals"
+  ],
+  "teacherHome": {
+    "before": {
+      "jsFiles": 2,
+      "rawBytes": 1820043,
+      "gzipBytes": 500773,
+      "files": [
+        {
+          "url": "https://tiantian-chinese.pages.dev/assets/index-CYksEfam.js",
+          "rawBytes": 597812,
+          "gzipBytes": 177105,
+          "sha256": "9cf75663b5b05016a1e91c89591c5d9ec6e169deb05aa7baa56a7d5a71cee655"
+        },
+        {
+          "url": "https://tiantian-chinese.pages.dev/assets/vendor-DKZMJ9uF.js",
+          "rawBytes": 1222231,
+          "gzipBytes": 323668,
+          "sha256": "540d340ba295d4b18ef9d0fab78728da1eaae7eb82f838cc500f2c334299ea38"
+        }
+      ]
+    },
+    "after": {
+      "jsFiles": 32,
+      "rawBytes": 557566,
+      "gzipBytes": 187030,
+      "files": [
+        {
+          "path": "assets/index-DKLwIsqG.js",
+          "rawBytes": 172792,
+          "gzipBytes": 53788,
+          "sha256": "fdb89c1e15425e5eee86c3c6fac145881ecf163141a1c13e84fcce9ba0b33100"
+        },
+        {
+          "path": "assets/vendor-BN4XChPP.js",
+          "rawBytes": 241972,
+          "gzipBytes": 79078,
+          "sha256": "d9a5b152ef420b5042f47d10591d86d0209b1067b19468261b789156e7507a23"
+        },
+        {
+          "path": "assets/HomePage-C5ueY7Y2.js",
+          "rawBytes": 20618,
+          "gzipBytes": 7037,
+          "sha256": "6ac4b729eec612fe346213be11eae9817a060a003df079d2f232a02735da7111"
+        },
+        {
+          "path": "assets/Bell.es-dt4qJft2.js",
+          "rawBytes": 2771,
+          "gzipBytes": 1008,
+          "sha256": "046347b469090b7b67c41b1ad3d0f2555935cd4eff4eed47ca9e4c653f419b65"
+        },
+        {
+          "path": "assets/CalendarPlus.es-CbignETp.js",
+          "rawBytes": 2896,
+          "gzipBytes": 880,
+          "sha256": "bfb1ee8301b9bd6626efb9c1e4694b7763a1b41d2bc02cf177745b69d8baadd7"
+        },
+        {
+          "path": "assets/CaretDown.es-Bi4HjhGy.js",
+          "rawBytes": 1381,
+          "gzipBytes": 560,
+          "sha256": "f57dd11adb232e7bfbdb4b1dbd254b11753f9c6c9023665e84c6d2a6ea5a9fd8"
+        },
+        {
+          "path": "assets/CaretRight.es-CmgiyF2J.js",
+          "rawBytes": 1396,
+          "gzipBytes": 556,
+          "sha256": "b5517f935be6b9c51b759bdfa4d34c243b4e028c08c981f2d6cf66e0df102ae8"
+        },
+        {
+          "path": "assets/CreditCard.es-BhZ76W8e.js",
+          "rawBytes": 2370,
+          "gzipBytes": 755,
+          "sha256": "91a9ceaf35db903d722c68e8efbb5223c1a6483035aafc49dc50f0bb8e1bfcd0"
+        },
+        {
+          "path": "assets/GearSix.es-BnGXIAGe.js",
+          "rawBytes": 8805,
+          "gzipBytes": 2692,
+          "sha256": "3050a5ffe7c1de91aa0297527a967abed1deda2e158cea82769cec74a97c8649"
+        },
+        {
+          "path": "assets/NotePencil.es-CQ0mXR7m.js",
+          "rawBytes": 2758,
+          "gzipBytes": 929,
+          "sha256": "7413a4026c8d48cecd746420b703e6258c91a71cccf98041849a19cf09c091cf"
+        },
+        {
+          "path": "assets/Notebook.es-DnpQO6Zf.js",
+          "rawBytes": 2269,
+          "gzipBytes": 771,
+          "sha256": "761d08d9a77f84d97af093ad37710ea2742ca6ac3be9e09ebc5667bce5c898ee"
+        },
+        {
+          "path": "assets/card-CnV72XCh.js",
+          "rawBytes": 1034,
+          "gzipBytes": 401,
+          "sha256": "a39824b7e07b6ef505bdd62c13e1cd1edf86de626a1c5fd2c357bb4c974cba7f"
+        },
+        {
+          "path": "assets/embla-carousel-react.esm-sV7t-neu.js",
+          "rawBytes": 19777,
+          "gzipBytes": 8108,
+          "sha256": "a7aea7460a53264b45a4943f020881bfc36345026384e94929d5c6cccd9048f6"
+        },
+        {
+          "path": "assets/classes-CClNbqtT.js",
+          "rawBytes": 4778,
+          "gzipBytes": 1963,
+          "sha256": "5d71937cfe702d75725ec752594a8a1c33e011c83983bdd017c9f6b3003750eb"
+        },
+        {
+          "path": "assets/lessonLogs-B-QBU9cw.js",
+          "rawBytes": 2114,
+          "gzipBytes": 1094,
+          "sha256": "bfb80dcd7207a67d49e6c0e7423a4bdcab2873a3eae9fe9336c95b54e12be0b1"
+        },
+        {
+          "path": "assets/homework-D9GiHlvb.js",
+          "rawBytes": 8033,
+          "gzipBytes": 3203,
+          "sha256": "bfe8b4ed3c5f4ce902002d573e2756089db1accce3577cc299259714bb66e062"
+        },
+        {
+          "path": "assets/dateUtils-AcdxAKUU.js",
+          "rawBytes": 2904,
+          "gzipBytes": 1063,
+          "sha256": "6b811c6e10375b04906dcc4e6b1b9d8ffeb23ca4aa193670ea204eb1b8f6b8bb"
+        },
+        {
+          "path": "assets/PullToRefresh-BURMTYdQ.js",
+          "rawBytes": 1834,
+          "gzipBytes": 927,
+          "sha256": "a3ec506453c59bf30a9ba43765a0e508d5a90bd8a0fe9e4396cb59326c1db669"
+        },
+        {
+          "path": "assets/SectionHeading-DFtCr8qd.js",
+          "rawBytes": 189,
+          "gzipBytes": 169,
+          "sha256": "bf24c0f464b673f241e68d2e0a3692b403b3353c9ed2068b6f7479b009463b9f"
+        },
+        {
+          "path": "assets/PendingClassCard-Ci3wQcCH.js",
+          "rawBytes": 3119,
+          "gzipBytes": 1447,
+          "sha256": "239bf5a3bbec5c71b89c4b020f44239af5222ced376cdc7f091e0c76bbf27c38"
+        },
+        {
+          "path": "assets/Check.es-CYMtpa4x.js",
+          "rawBytes": 1552,
+          "gzipBytes": 585,
+          "sha256": "067435d06a153ba12248e7263cf0c595860f2069de936dcb86fb6a5e31c82b41"
+        },
+        {
+          "path": "assets/usePendingClassState-DDGrpwhB.js",
+          "rawBytes": 646,
+          "gzipBytes": 412,
+          "sha256": "5ee15f089d64ec9fba5e675b580551769bf96b3aedee58616a1ee9af12a5c6ee"
+        },
+        {
+          "path": "assets/SettingsPage-DEd19Spk.js",
+          "rawBytes": 6465,
+          "gzipBytes": 2613,
+          "sha256": "2000f588a35c4d722c61cfb7bae94761d09f3fc71bf7228efb743d43f2fe4613"
+        },
+        {
+          "path": "assets/input-CXAnFk0E.js",
+          "rawBytes": 550,
+          "gzipBytes": 361,
+          "sha256": "924146773e257c578831ee6883d8ab1a62fbad4dafeed98b8f8f5ba071453af8"
+        },
+        {
+          "path": "assets/PageHeader-BiiY5Djk.js",
+          "rawBytes": 1315,
+          "gzipBytes": 722,
+          "sha256": "f3f737fd1b51580d4c41762bff940ef13fc66b53f10116616a6f0d09e7551c69"
+        },
+        {
+          "path": "assets/CaretLeft.es-DCnfRh-A.js",
+          "rawBytes": 1321,
+          "gzipBytes": 538,
+          "sha256": "cc4382965963241d4d5063a8d11d3754f488850e7f07af50c40f9aecb72ddfc1"
+        },
+        {
+          "path": "assets/ConfirmDialog-CafSzRYb.js",
+          "rawBytes": 885,
+          "gzipBytes": 564,
+          "sha256": "0386b04a0a5f4006107ec9e2e782f941e4fa9fb8621a06fcd78953206e9a32ab"
+        },
+        {
+          "path": "assets/dialog-Drl_4zGE.js",
+          "rawBytes": 1979,
+          "gzipBytes": 859,
+          "sha256": "b4ad5406738511a28e31ad83bb2193008958dd244fa68dbfe12009ef146caf99"
+        },
+        {
+          "path": "assets/index-Umr2n4kd.js",
+          "rawBytes": 4483,
+          "gzipBytes": 1661,
+          "sha256": "224cfe96cc45ade52007ca0211aa102ad667570ddcb252ffe92241aef83b38f5"
+        },
+        {
+          "path": "assets/index-CbSfHHA6.js",
+          "rawBytes": 31757,
+          "gzipBytes": 11109,
+          "sha256": "40833ddd98c5cb20e68d213a2de1d50077f3a765d0bc6e6805ed16d0c92ae128"
+        },
+        {
+          "path": "assets/X.es-DxEGVNPw.js",
+          "rawBytes": 1944,
+          "gzipBytes": 658,
+          "sha256": "a71ad77ea5cf3e9c73b0a4e297047810016d97a68463524d5e02e849f55ec6cd"
+        },
+        {
+          "path": "assets/ntfy-DTAIgIhw.js",
+          "rawBytes": 859,
+          "gzipBytes": 519,
+          "sha256": "0f4a00e6af46df14f8ff961fbb0bee4da39560fe45b26faf6e9f42112dd702f7"
+        }
+      ]
+    },
+    "gzipReductionPercent": 62.65,
+    "rawReductionPercent": 69.37
+  },
+  "legacyPersonalHome": {
+    "before": {
+      "jsFiles": 2,
+      "rawBytes": 1820043,
+      "gzipBytes": 500773,
+      "files": [
+        {
+          "url": "https://tiantian-chinese.pages.dev/assets/index-CYksEfam.js",
+          "rawBytes": 597812,
+          "gzipBytes": 177105,
+          "sha256": "9cf75663b5b05016a1e91c89591c5d9ec6e169deb05aa7baa56a7d5a71cee655"
+        },
+        {
+          "url": "https://tiantian-chinese.pages.dev/assets/vendor-DKZMJ9uF.js",
+          "rawBytes": 1222231,
+          "gzipBytes": 323668,
+          "sha256": "540d340ba295d4b18ef9d0fab78728da1eaae7eb82f838cc500f2c334299ea38"
+        }
+      ]
+    },
+    "after": {
+      "jsFiles": 26,
+      "rawBytes": 620180,
+      "gzipBytes": 201929,
+      "files": [
+        {
+          "path": "assets/index-DKLwIsqG.js",
+          "rawBytes": 172792,
+          "gzipBytes": 53788,
+          "sha256": "fdb89c1e15425e5eee86c3c6fac145881ecf163141a1c13e84fcce9ba0b33100"
+        },
+        {
+          "path": "assets/vendor-BN4XChPP.js",
+          "rawBytes": 241972,
+          "gzipBytes": 79078,
+          "sha256": "d9a5b152ef420b5042f47d10591d86d0209b1067b19468261b789156e7507a23"
+        },
+        {
+          "path": "assets/PersonalPage-6hXUg5hP.js",
+          "rawBytes": 29021,
+          "gzipBytes": 10606,
+          "sha256": "90b309cd7dfc458304a666dcfe45d359c5bb4a1f411e74acf23156029daddb30"
+        },
+        {
+          "path": "assets/card-CnV72XCh.js",
+          "rawBytes": 1034,
+          "gzipBytes": 401,
+          "sha256": "a39824b7e07b6ef505bdd62c13e1cd1edf86de626a1c5fd2c357bb4c974cba7f"
+        },
+        {
+          "path": "assets/Bell.es-dt4qJft2.js",
+          "rawBytes": 2771,
+          "gzipBytes": 1008,
+          "sha256": "046347b469090b7b67c41b1ad3d0f2555935cd4eff4eed47ca9e4c653f419b65"
+        },
+        {
+          "path": "assets/BookOpen.es-pzyhiTtp.js",
+          "rawBytes": 2589,
+          "gzipBytes": 862,
+          "sha256": "66032654573f4a33f47e28706dad296cd0cf5e05673c9938bc6f0cc21dbc5c8a"
+        },
+        {
+          "path": "assets/GearSix.es-BnGXIAGe.js",
+          "rawBytes": 8805,
+          "gzipBytes": 2692,
+          "sha256": "3050a5ffe7c1de91aa0297527a967abed1deda2e158cea82769cec74a97c8649"
+        },
+        {
+          "path": "assets/usePullToRefresh-8wHvCopr.js",
+          "rawBytes": 1630,
+          "gzipBytes": 813,
+          "sha256": "084b8c37b07ecbdf2423a5e5393f7d80320c926195b6924ec05594451e0e0db9"
+        },
+        {
+          "path": "assets/bookingApi-_RdlIfIr.js",
+          "rawBytes": 2141,
+          "gzipBytes": 1123,
+          "sha256": "076a1f0ecf79fde5b64aeab6ef67d88079f03b7d266b54b24fd5baa344aa5f48"
+        },
+        {
+          "path": "assets/homework-D9GiHlvb.js",
+          "rawBytes": 8033,
+          "gzipBytes": 3203,
+          "sha256": "bfe8b4ed3c5f4ce902002d573e2756089db1accce3577cc299259714bb66e062"
+        },
+        {
+          "path": "assets/notices-hxSSCFZM.js",
+          "rawBytes": 1492,
+          "gzipBytes": 618,
+          "sha256": "380b1dbef8cda0fefcccba4b7298fa160664844dc326a187d4422ee3d36bf4a2"
+        },
+        {
+          "path": "assets/homeworkViewed-tPqaiDtM.js",
+          "rawBytes": 468,
+          "gzipBytes": 302,
+          "sha256": "d324c7176c1d3fb30d917838c0c35c3db199d002aa43eb8b4dfdb1de4acb9e96"
+        },
+        {
+          "path": "assets/index-Umr2n4kd.js",
+          "rawBytes": 4483,
+          "gzipBytes": 1661,
+          "sha256": "224cfe96cc45ade52007ca0211aa102ad667570ddcb252ffe92241aef83b38f5"
+        },
+        {
+          "path": "assets/index-CbSfHHA6.js",
+          "rawBytes": 31757,
+          "gzipBytes": 11109,
+          "sha256": "40833ddd98c5cb20e68d213a2de1d50077f3a765d0bc6e6805ed16d0c92ae128"
+        },
+        {
+          "path": "assets/CaretRight.es-CmgiyF2J.js",
+          "rawBytes": 1396,
+          "gzipBytes": 556,
+          "sha256": "b5517f935be6b9c51b759bdfa4d34c243b4e028c08c981f2d6cf66e0df102ae8"
+        },
+        {
+          "path": "assets/X.es-DxEGVNPw.js",
+          "rawBytes": 1944,
+          "gzipBytes": 658,
+          "sha256": "a71ad77ea5cf3e9c73b0a4e297047810016d97a68463524d5e02e849f55ec6cd"
+        },
+        {
+          "path": "assets/dialog-Drl_4zGE.js",
+          "rawBytes": 1979,
+          "gzipBytes": 859,
+          "sha256": "b4ad5406738511a28e31ad83bb2193008958dd244fa68dbfe12009ef146caf99"
+        },
+        {
+          "path": "assets/PandaFigure-DzFz8nK9.js",
+          "rawBytes": 78129,
+          "gzipBytes": 21458,
+          "sha256": "6818f4773cb7aff655afe136d349279abf2192837d9398ee4b1f3f955b05a8ea"
+        },
+        {
+          "path": "assets/PageHeader-BiiY5Djk.js",
+          "rawBytes": 1315,
+          "gzipBytes": 722,
+          "sha256": "f3f737fd1b51580d4c41762bff940ef13fc66b53f10116616a6f0d09e7551c69"
+        },
+        {
+          "path": "assets/CaretLeft.es-DCnfRh-A.js",
+          "rawBytes": 1321,
+          "gzipBytes": 538,
+          "sha256": "cc4382965963241d4d5063a8d11d3754f488850e7f07af50c40f9aecb72ddfc1"
+        },
+        {
+          "path": "assets/useTabTip-SCpEqDlO.js",
+          "rawBytes": 6206,
+          "gzipBytes": 2529,
+          "sha256": "bdcaa3e105b73ad13977a98edc6278043a0a33509328c778105579bb4a6b641b"
+        },
+        {
+          "path": "assets/HomeTab-B7_jmGOm.js",
+          "rawBytes": 11217,
+          "gzipBytes": 4255,
+          "sha256": "cb8ab833413a2cd7bc8cdb741f6efa9e995e3f50180629335bcd95ccd1a29762"
+        },
+        {
+          "path": "assets/ChatTeardropText.es-Djt3TLqF.js",
+          "rawBytes": 2195,
+          "gzipBytes": 763,
+          "sha256": "8a12a702b990b21e45d8447c5e28f3989f71cae5a4189b41f8810adcc6dbe701"
+        },
+        {
+          "path": "assets/dateUtils-AcdxAKUU.js",
+          "rawBytes": 2904,
+          "gzipBytes": 1063,
+          "sha256": "6b811c6e10375b04906dcc4e6b1b9d8ffeb23ca4aa193670ea204eb1b8f6b8bb"
+        },
+        {
+          "path": "assets/ClassCard-DpgysWae.js",
+          "rawBytes": 2397,
+          "gzipBytes": 1095,
+          "sha256": "5f35b484727acf79f804d24ba0331d3179dcc6ca02df44c93a14ed5b6ec73bf7"
+        },
+        {
+          "path": "assets/SectionHeading-DFtCr8qd.js",
+          "rawBytes": 189,
+          "gzipBytes": 169,
+          "sha256": "bf24c0f464b673f241e68d2e0a3692b403b3353c9ed2068b6f7479b009463b9f"
+        }
+      ]
+    },
+    "gzipReductionPercent": 59.68,
+    "rawReductionPercent": 65.92
+  },
+  "notes": [
+    "The operational eager App compiles both home UIs into the same static entry closure; therefore before bytes are equal for the two homes.",
+    "The candidate preserves operational legacy JWT student routing and latest Panda code. It differs from the prior WIP separate student-app build; earlier bundle-before/final numbers are not used.",
+    "Byte reduction is not a loading-time or operating-cost reduction percentage."
+  ],
+  "nodeVersion": "v24.14.0",
+  "versionLiteralVerified": {
+    "operational": true,
+    "candidate": true,
+    "candidateVersionFiles": [
+      "assets/SettingsPage-DEd19Spk.js"
+    ]
+  },
+  "verifiedDeployment": {
+    "tag": "v2.49.3",
+    "commit": "95cb9a8159f70f2e2e8217b854bbf1310936d5fa",
+    "deploymentId": "e2ceb14a-e8de-4737-8d92-9f5d1fd07327",
+    "verifiedAt": "2026-10-11T06:56:49.562Z",
+    "allHomeClosureFilesMatchDeployedArtifact": true,
+    "publicEntryAndServiceWorkerMatchArtifact": true
+  }
+}
