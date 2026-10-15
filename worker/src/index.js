@@ -27,6 +27,7 @@ import { runSiteRecoveryJobs } from '../lib/siteRecoveryJobs.js';
 import { handleSitePublicReviewRoutes } from '../lib/sitePublicReviews.js';
 import { handleSiteStudentAppRoutes, revalidateSiteStudentAppAccess } from '../lib/siteStudentApp.js';
 import { handleSiteStudentMemberRoutes } from '../lib/siteStudentMembers.js';
+import { handleSiteMemberLifecycleRoutes, runSiteMemberMaintenance } from '../lib/siteMemberLifecycle.js';
 import { requireStudentAppAccess, StudentAppAccessError, normalizeStudentAppId } from '../lib/studentAppAccess.js';
 import { handleSiteMemberReviewRoutes } from '../lib/siteMemberReviews.js';
 import { studentHomeworkPage } from '../lib/homeworkPrivacy.js';
@@ -2631,6 +2632,7 @@ async function handleFetch(request, env, ctx) {
       || await handleSiteAdminReviewRoutes(request, env, ctx, { authorizeTeacher: authorizeAdmin })
       || await handleSiteAdminContentRoutes(request, env, ctx, { authorizeTeacher: authorizeAdmin })
       || await handleSiteShopRoutes(request, env, ctx, { authorizeTeacher: authorizeAdmin })
+      || await handleSiteMemberLifecycleRoutes(request, env, ctx, { authorizeTeacher: authorizeAdmin })
       || await handleSiteStudentMemberRoutes(request, env, ctx, { authorizeTeacher: requireJwt })
       || await handleSiteStudentAppRoutes(request, env, ctx, { authorizeTeacher: requireJwt, dispatch: (req, context, descriptor, execution) => dispatchSiteStudentApp(req, context, descriptor, execution, env) })
       || await handleSiteAuthRoutes(request, env, { sendPhoneSms: (to, text) => sendSms(env, to, text) })
@@ -3063,6 +3065,10 @@ async function recoverSiteServices(env, options = {}) {
 export default {
   // 결제 복구와 수업 일지를 5분 주기로 확인한다. 정각에는 hourly 작업이 복구를 맡는다.
   async scheduled(event, env, ctx) {
+    if (event.cron === '17 * * * *') {
+      if (env.SITE_SESSION_SECRET) ctx.waitUntil(runSiteMemberMaintenance(env));
+      return;
+    }
     if (event.cron === '*/5 * * * *') {
       const hourlyRecovery = typeof event.scheduledTime === 'number' && new Date(event.scheduledTime).getUTCMinutes() === 0;
       if (env.SITE_SESSION_SECRET && !hourlyRecovery) ctx.waitUntil(recoverSiteServices(env));

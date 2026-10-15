@@ -21,7 +21,7 @@ invocation_logs = false
 # (2026-08-27 실측 8~11시간 지연). 어떤 시각에 무엇을 보낼지는 src/index.js DISPATCH_JOBS.
 # 수업 일지는 별도 5분 cron에서 Notion에 직접 생성한다(GitHub 예약 실행 불필요).
 [triggers]
-crons = ["0 * * * *", "*/5 * * * *"]
+crons = ["0 * * * *", "*/5 * * * *", "17 * * * *"]
 
 [vars]
 SITE_SHOP_SALES_MODE = "direct"
