@@ -1,0 +1,53 @@
+name: 학생앱 배포 후보 산출물 만들기
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: student-artifact-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+      VITE_WORKER_URL: https://tutor-manager-proxy.hisyisnis.workers.dev
+      VITE_PANDA_SERVER_PERSISTENCE: 'false'
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: pwa/package-lock.json
+      - name: 로컬 환경 설정 차단
+        shell: bash
+        run: |
+          for file in pwa/.env pwa/.env.local pwa/.env.student pwa/.env.student.local; do
+            if [ -e "$file" ]; then echo '::error::학생앱 후보에 로컬 .env 설정을 사용할 수 없습니다.'; exit 1; fi
+          done
+          for variable in ${!VITE_@}; do
+            case "$variable" in VITE_WORKER_URL|VITE_PANDA_SERVER_PERSISTENCE) ;; *) echo '::error::허용되지 않은 VITE 환경변수입니다.'; exit 1 ;; esac
+          done
+      - run: npm ci
+        working-directory: pwa
+      - name: 학생 인증·권한·승인 회귀 검사
+        run: npm test -- src/components/SiteStudentAuthGate.test.jsx src/pages/StudentAppAccess.test.jsx src/api/studentAppAccess.test.js src/api/siteStudentMembers.test.js src/components/students/PendingStudentMembers.test.jsx --maxWorkers=1 --testTimeout=30000
+        working-directory: pwa
+      - name: 디자인 규칙 검사
+        run: node 02_devtools/design-audit.mjs --quiet
+      - name: 산출물 보호 도구 검사
+        run: node --test 02_devtools/student-release-artifact.test.mjs
+      - name: 학생앱 빌드
+        run: npm run prebuild && npm run build:student
+        working-directory: pwa
+      - name: 파일 해시와 출처 기록
+        run: node 02_devtools/student-release-artifact.mjs pwa/dist-student .tmp_qa/student-release
+      - name: 독립 사이트에 전달할 학생앱 보관
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: student-app-${{ github.sha }}
+          path: .tmp_qa/student-release
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 30
