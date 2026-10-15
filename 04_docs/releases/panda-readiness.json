@@ -2,9 +2,9 @@
   "schema": 1,
   "status": "verified",
   "workerOrigin": "https://tutor-manager-proxy.hisyisnis.workers.dev",
-  "workerVersion": "a7f48e4a-5924-476f-9be1-bef31e1833a5",
-  "contractHash": "9c9c1c8a5fcd0f5b38fdb56c234f55f107dc5c4de7e5bad81f66e75cdc752726",
-  "verifiedAt": "2026-10-04T18:18:42.928Z",
+  "workerVersion": "ac492824-c287-4223-b64e-f0e09ebed40f",
+  "contractHash": "003ef41c8ac368283262f5435c71f4b930c123fc3dfa8ee09d8de1a7413ff5af",
+  "verifiedAt": "2026-10-15T15:11:32.694Z",
   "checks": {
     "d1Migration": true,
     "authenticatedReadWrite": true,
@@ -13,5 +13,14 @@
     "transitionOnce": true,
     "backupRestore": true
   },
-  "evidence": "04_docs/qa/panda-release-2026-10-05/rollout-verification.md"
+  "evidence": "04_docs/qa/site-deployment-preflight-2026-10-15/panda-readiness-incremental.md",
+  "verificationMethod": "incremental-unchanged-ledger-and-new-authorization",
+  "runtimeSourceCommit": "439001ec13d228dd81fef9f7f058ff33323ea228",
+  "remoteStageAuthenticatedPandaCrudReverified": false,
+  "priorVerification": {
+    "workerVersion": "a7f48e4a-5924-476f-9be1-bef31e1833a5",
+    "contractHash": "9c9c1c8a5fcd0f5b38fdb56c234f55f107dc5c4de7e5bad81f66e75cdc752726",
+    "verifiedAt": "2026-10-04T18:18:42.928Z",
+    "evidence": "04_docs/qa/panda-release-2026-10-05/rollout-verification.md"
+  }
 }

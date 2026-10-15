@@ -1,0 +1,159 @@
+{
+  "checkedAt": "2026-10-15T15:11:32.694Z",
+  "sourceCommit": "439001ec13d228dd81fef9f7f058ff33323ea228",
+  "stageVersion": "ac492824-c287-4223-b64e-f0e09ebed40f",
+  "stageUrl": "https://ac492824-tutor-manager-proxy.hisyisnis.workers.dev",
+  "contractHash": "003ef41c8ac368283262f5435c71f4b930c123fc3dfa8ee09d8de1a7413ff5af",
+  "contractFiles": [
+    {
+      "path": "worker/migrations/0005_student_panda.sql",
+      "currentSha256": "17941d8900ac148eb4feca17d6b61a34d780a1ee1236b86ce3443ce87534299d",
+      "previousSha256": "17941d8900ac148eb4feca17d6b61a34d780a1ee1236b86ce3443ce87534299d",
+      "unchanged": true
+    },
+    {
+      "path": "worker/migrations/0006_panda_transition.sql",
+      "currentSha256": "67ca29533e45ab176e2673a9041ed268e6f217d772a18586fb3f9d8d21fcfb79",
+      "previousSha256": "67ca29533e45ab176e2673a9041ed268e6f217d772a18586fb3f9d8d21fcfb79",
+      "unchanged": true
+    },
+    {
+      "path": "worker/lib/pandaRules.js",
+      "currentSha256": "313f29b35770d18ee2b3f6c33355ce89dca81b0f19437c0cb1dd0f409948d5bd",
+      "previousSha256": "313f29b35770d18ee2b3f6c33355ce89dca81b0f19437c0cb1dd0f409948d5bd",
+      "unchanged": true
+    },
+    {
+      "path": "worker/lib/pandaDb.js",
+      "currentSha256": "faa1ea581306dd4c2c1c5df201f3e57855d60d92222eac99bb142394ca2d94ba",
+      "previousSha256": "faa1ea581306dd4c2c1c5df201f3e57855d60d92222eac99bb142394ca2d94ba",
+      "unchanged": true
+    },
+    {
+      "path": "worker/lib/pandaRoutes.js",
+      "currentSha256": "81e17941d0c5a5ca46d5a028638dda6669dd0b1d0bc54f90a846ca9b6b420b2d",
+      "previousSha256": "60bcee4cf68bc2b4bbd2f3620e6a0131082838b987d15fb75b71933a4be98f47",
+      "unchanged": false
+    },
+    {
+      "path": "03_data/panda/wardrobe.json",
+      "currentSha256": "65406bd50fd9b3b301e0b2226f66dbc4170e424e92bc152abfa53e4c2029fbf3",
+      "previousSha256": "65406bd50fd9b3b301e0b2226f66dbc4170e424e92bc152abfa53e4c2029fbf3",
+      "unchanged": true
+    }
+  ],
+  "comparisonBaseline": "9ff670a8166dea3735e86d1d2b923ca63863d2ee",
+  "anonymousRoutes": [
+    {
+      "pathname": "/personal/student/QAABCD123456/panda",
+      "method": "GET",
+      "origin": "https://tiantian-chinese.pages.dev",
+      "status": 401
+    },
+    {
+      "pathname": "/personal/student/QAABCD123456/panda/action",
+      "method": "POST",
+      "origin": "https://tiantian-chinese.pages.dev",
+      "status": 401
+    },
+    {
+      "pathname": "/api/site/student-app/panda",
+      "method": "GET",
+      "origin": "https://tiantianchinese.com",
+      "status": 401
+    },
+    {
+      "pathname": "/api/site/student-app/panda/action",
+      "method": "POST",
+      "origin": "https://tiantianchinese.com",
+      "status": 401
+    }
+  ],
+  "health": {
+    "status": 200,
+    "ok": true,
+    "schema": "ready"
+  },
+  "database": {
+    "readOnly": true,
+    "rowsWritten": 0,
+    "counts": {
+      "grants": 9,
+      "allowed_grants": 9,
+      "ready_grants": 9,
+      "panda_profiles": 7,
+      "panda_actions": 191,
+      "members": 0,
+      "member_links": 0,
+      "withdrawals": 0
+    },
+    "foreignKeyViolations": 0
+  },
+  "authenticatedPandaCrudOnNewRemoteStage": false,
+  "liveVersionUnchanged": "0d4ab8a2-e336-4650-938a-f5d085127014",
+  "customerIdentifiersPublished": false,
+  "remoteMutationsByThisCheck": 0,
+  "existingReadWriteEvidence": "04_docs/qa/panda-release-2026-10-05/rollout-verification.md",
+  "newAuthorizationRegression": "https://github.com/hisyisnis-lgtm/TutorManager_For_Notion/actions/runs/38754759382",
+  "newAuthorizationTestSource": "worker/tests/student-app-access.integration.test.js",
+  "backupRestore": {
+    "checkedAt": "2026-10-15T14:47:48.898Z",
+    "realProductionBackup": true,
+    "privateAclVerified": true,
+    "backupBytes": 255266,
+    "backupSha256": "828460dad2d736567092e8392e21ec062ce36315779a3822579b25828bac3b85",
+    "localRestoreComplete": true,
+    "existingTablesPreserved": 52,
+    "existingRowsAndSchemaPreserved": true,
+    "approvedGrantsAndRevisionsPreserved": true,
+    "integrity": "ok",
+    "foreignKeyViolations": 0,
+    "productionRestorePerformed": false
+  },
+  "migration": {
+    "appliedAt": "2026-10-15T14:52:50.302Z",
+    "pendingMigrations": 0,
+    "approvedGrantsAndSyncPreserved": 9,
+    "existingSchemaObjectsPreserved": true,
+    "newWithdrawals": 0
+  },
+  "authorizationBrowser": {
+    "environment": "isolated local fixture; production messages, Notion changes and PG calls blocked",
+    "passed": [
+      "A pending member is approved and registered as a new student through the teacher UI",
+      "Before approval, the member account contains no student-app tab",
+      "After approval, the student-app tab appears and the open action creates a separate browser tab",
+      "The member student application loads the same synthetic member name and version 2.49.4",
+      "Teacher OFF disables homework management and shows student application access denied after reload",
+      "OFF also removes the student-app tab from the member account",
+      "Teacher ON restores provision without changing member identity",
+      "390x844 member student application: no horizontal overflow or content hidden by bottom navigation"
+    ],
+    "memberWithdrawal": {
+      "testedAt": "2026-10-15T14:51:34.240Z",
+      "syntheticOnly": true,
+      "passed": [
+        "Admin normal login -> members -> scoped detail preview",
+        "Real teacher UI approves synthetic member and student link",
+        "New member login after preview causes CAS conflict; action blocked until fresh preview",
+        "Request verification and exact member UUID required; submit initially disabled",
+        "Fresh preview -> withdrawal completion -> GET confirms same completed result",
+        "Member session previously signed in is denied after reload",
+        "Only linked student app provision is OFF; course student row retained",
+        "Other synthetic member and existing legacy student remain",
+        "390x844 admin navigation and member list; no horizontal overflow"
+      ]
+    },
+    "newRemotePandaAuthenticatedCrudPerformed": false
+  },
+  "workerCi": {
+    "sourceCommit": "439001ec13d228dd81fef9f7f058ff33323ea228",
+    "url": "https://github.com/hisyisnis-lgtm/TutorManager_For_Notion/actions/runs/38754759382",
+    "conclusion": "success",
+    "testSummaries": [
+      "Test Files 91 passed (91)",
+      "Tests 2027 passed (2027)"
+    ]
+  },
+  "evidenceMethod": "Incremental verification: unchanged ledger/economy/migrations/catalog reuse previous authenticated production TEST evidence; changed authorization checked by same-source automated regressions, isolated UI, and live non-serving unauthenticated route checks. No authenticated Panda CRUD on the new remote stage is claimed."
+}
