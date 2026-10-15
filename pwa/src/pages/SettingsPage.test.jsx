@@ -20,6 +20,18 @@ afterEach(() => {
 });
 
 describe('설정의 ntfy 알림 코드 연결', () => {
+  it('홈페이지 관리는 별도 새 탭 바로가기로 열고 기존 네 개의 공유 링크를 유지한다', () => {
+    renderPage();
+    const shortcut = screen.getByRole('link', { name: '홈페이지 관리 (새 탭에서 열림)' });
+    expect(shortcut.getAttribute('href')).toBe('https://tiantianchinese.com/admin/');
+    expect(shortcut.getAttribute('target')).toBe('_blank');
+    expect(shortcut.getAttribute('rel')).toBe('noopener noreferrer');
+    expect(shortcut.classList.contains('h-11')).toBe(true);
+    expect(screen.getAllByRole('button', { name: '복사' })).toHaveLength(4);
+    for (const path of ['https://tiantianchinese.com/', 'https://tiantianchinese.com/lessons/', 'https://tiantianchinese.com/pricing/', 'https://tiantianchinese.com/consent/']) {
+      expect(screen.getByText(path)).toBeTruthy();
+    }
+  });
   it('수강료 안내는 앱 주소와 무관하게 구매 도메인의 공유 링크를 복사한다', async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     const previous = Object.getOwnPropertyDescriptor(navigator, 'clipboard');

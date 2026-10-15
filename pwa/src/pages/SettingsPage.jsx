@@ -1,7 +1,7 @@
 import {
   useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { CaretRightIcon } from '@phosphor-icons/react';
+import { ArrowSquareOutIcon, CaretRightIcon } from '@phosphor-icons/react';
 import { Button } from '../components/shadcn/button';
 import { Input } from '../components/shadcn/input';
 import PageHeader from '../components/layout/PageHeader.jsx';
@@ -177,6 +177,13 @@ export default function SettingsPage() {
             ))}
           </div>
         </div>
+
+        <Button asChild variant="outline" block className="press justify-between">
+          <a href="https://tiantianchinese.com/admin/" target="_blank" rel="noopener noreferrer" aria-label="홈페이지 관리 (새 탭에서 열림)">
+            <span>홈페이지 관리</span>
+            <ArrowSquareOutIcon size={20} aria-hidden="true" />
+          </a>
+        </Button>
 
         <Button
           block
