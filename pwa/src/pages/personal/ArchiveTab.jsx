@@ -1,3 +1,4 @@
+import { studentPagePath } from '../../utils/studentAppPaths.js';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/shadcn/card';
@@ -34,7 +35,7 @@ function ArchiveHwCard({ hw, studentToken }) {
       <CardContent className="p-0">
       <button
         type="button"
-        onClick={() => navigate(`/personal/${studentToken}/homework/${hw.id}`, { state: { tab: '보관함' } })}
+        onClick={() => navigate(studentPagePath(studentToken, `homework/${hw.id}`),  { state: { tab: '보관함' } })}
         className=""
         style={{
           width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between",

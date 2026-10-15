@@ -1,5 +1,6 @@
 import { beforeEach, afterEach, describe, it, expect, vi } from 'vitest';
 import worker from '../src/index.js';
+import { allowSyntheticStudentApps } from './helpers/studentAppFixture.js';
 import { signTypedToken } from '../lib/auth.js';
 import { localD1 } from './helpers/localD1.js';
 
@@ -12,7 +13,7 @@ const send = (auth = token, code = CODE) => worker.fetch(new Request(`https://au
   headers: { Origin: 'http://localhost:5173', ...(auth ? { Authorization: `Bearer ${auth}` } : {}) },
 }), env, ctx);
 beforeEach(async () => {
-  database = localD1(); calls = []; invalid = false;
+  database = localD1(); allowSyntheticStudentApps(database, [STUDENT]); calls = []; invalid = false;
   env = { GAME_DB: database.db, JWT_SECRET: SECRET, NOTION_TOKEN: 'fixture-only' };
   token = await signTypedToken(SECRET, 'student', `personal:${CODE}`, 600);
   payments = [{ id: 'payment', properties: { '시간 회차': { number: 3 }, '유효 시간 회차': { formula: { number: 3 } },
@@ -51,9 +52,10 @@ describe('학생 시간 명세 본인 인증 경계', () => {
     expect(response.headers.get('Cache-Control')).toBe('private, no-store');
     const data = await response.json();
     expect(data).toMatchObject({ paidHours: 3, remainingSessions: -1, remainingHours: 1, completedMinutes: 60 });
-    expect(data).not.toHaveProperty('timeLedger');
+    expect(data.timeLedger.summary).toMatchObject({ completedHours: 2, scheduledHours: 2, availableHours: -1, remainingHours: 1 });
     expect(JSON.stringify(data)).not.toMatch(/phone|010-0000|private-note|actualAmount|refundAmount/);
-    expect(calls).toHaveLength(3);
+    expect(calls).toHaveLength(4); // Fresh grant identity read, student detail, payments, classes.
+    expect(calls[0].path).toBe(`/v1/databases/${STUDENT_DB}/query`);
   });
   it('비로그인·다른 학생·게임 세션은 Notion을 읽기 전에 차단한다', async () => {
     const game = await signTypedToken(SECRET, 'game', 'game-fixture', 600);
@@ -71,8 +73,8 @@ describe('학생 시간 명세 본인 인증 경계', () => {
     classes = Array.from({ length: 101 }, (_, i) => ({ ...classes[0], id: `c${i}` }));
     const data = await (await send()).json();
     expect(data.paidHours).toBe(303);
-    expect(data.remainingHours).toBe(299);
-    expect(data).not.toHaveProperty('timeLedger');
+    expect(data.timeLedger.rows).toHaveLength(202);
+    expect(data.timeLedger.issues).toContain('usage_mismatch');
     expect(calls.filter(call => call.body.start_cursor === '100')).toHaveLength(2);
   });
   it('하위 조회 4xx가 빈 내역이나 0시간 성공으로 보이지 않는다', async () => {
@@ -84,7 +86,7 @@ describe('학생 시간 명세 본인 인증 경계', () => {
   it('학생 조회 실패를 코드 없음 404로 바꿔 기존 학생 캐시를 지우지 않는다', async () => {
     invalid = 'student';
     const response = await send();
-    expect(response.status).toBe(502);
+    expect(response.status).toBe(503); // The fresh authorization lookup failed; never invalidate the student cache as 404.
     expect(calls).toHaveLength(1);
   });
 });

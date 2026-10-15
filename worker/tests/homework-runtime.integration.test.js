@@ -17,7 +17,6 @@ const HOMEWORK_DB = '5ce7d5ef-7b80-4795-843f-325f4ca868e2';
 const NTFY_TOPIC = 'runtime-homework-synthetic-topic';
 const REDIRECT_URL = 'https://blocked.fixture.invalid/do-not-send-files';
 const UPLOAD_PATH = `/v1/file_uploads/${UPLOAD}/send`;
-const RUNTIME_ERROR = 'Invalid redirect value, must be one of "follow" or "manual"';
 let script, formerBugScript, migration, tokens;
 let runtime;
 
@@ -48,7 +47,8 @@ beforeAll(async () => {
     bundle(source),
     bundle(source.replace(uploadOption, "$1'error'")),
   ]);
-  migration = await readFile(new URL('../migrations/0002_security_state.sql', import.meta.url), 'utf8');
+  migration = await readFile(new URL('../migrations/0002_security_state.sql', import.meta.url), 'utf8')
+    + '\n' + await readFile(new URL('../migrations/0011_student_app_access.sql', import.meta.url), 'utf8');
   tokens = {
     student: await signTypedToken(SECRET, 'student', `personal:${CODE}`, 600),
     teacher: await signTypedToken(SECRET, 'teacher', 'teacher', 600, { role: 'teacher' }),
@@ -129,6 +129,11 @@ async function start({ negativeControl = false, uploadStatus = 200 } = {}) {
     : options);
   const database = await runtime.getD1Database('GAME_DB');
   await database.batch(migration.split(';').map(sql => sql.trim()).filter(Boolean).map(sql => database.prepare(sql)));
+  // This isolated workerd student is explicitly allowed; production VIP/link
+  // records never grant access as a side effect.
+  await database.prepare(`INSERT INTO student_app_access(student_id,allowed,revision,granted_at,granted_by,source_batch,last_operation_id)
+    VALUES(?1,1,1,'2026-10-07T00:00:00.000Z','synthetic-runtime-fixture','synthetic-runtime','synthetic-runtime-grant')`)
+    .bind(STUDENT.replaceAll('-', '')).run();
   return { calls, database };
 }
 
@@ -185,7 +190,7 @@ describe('homework uploads in real workerd with isolated D1 and fail-closed outb
     const { calls } = await start({ negativeControl: true });
     const response = await upload('student');
     expect(response.status).toBe(500);
-    expect((await response.json()).error).toContain(RUNTIME_ERROR);
+    expect((await response.json()).error).toBe('파일 업로드를 완료하지 못했습니다. 잠시 후 다시 시도해주세요.');
     expect(calls.some(call => call.path === '/v1/file_uploads')).toBe(true);
     expect(calls.some(call => call.path === UPLOAD_PATH)).toBe(false);
   }, 30_000);

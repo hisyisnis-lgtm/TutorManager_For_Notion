@@ -1,3 +1,4 @@
+import { getStudentAppStorage } from '../api/studentAppMemory.js';
 import { isValidPandaGameProfile, normalizePandaGameProfile } from './pandaGameState.js';
 
 const count = value => Number.isSafeInteger(value) && value >= 0;
@@ -18,7 +19,7 @@ export function isValidPandaSnapshot(data) {
 // Keep it separate from both the old live panda and local-only preview profiles.
 export function readPandaServerCache(storageKey) {
   try {
-    const cached = JSON.parse(localStorage.getItem(getPandaServerCacheKey(storageKey)));
+    const cached = JSON.parse(getStudentAppStorage(storageKey).getItem(getPandaServerCacheKey(storageKey)));
     return isValidPandaSnapshot(cached) ? cached : null;
   } catch { return null; }
 }
@@ -29,5 +30,5 @@ export function persistPandaServerCache(storageKey, snapshot) {
     earnedTotal: snapshot.earnedTotal, availableFood: snapshot.availableFood, transition: snapshot.transition });
   const key = getPandaServerCacheKey(storageKey);
   // Avoid cross-tab refresh loops when both tabs receive the same server state.
-  if (localStorage.getItem(key) !== cached) localStorage.setItem(key, cached);
+  if (getStudentAppStorage(storageKey).getItem(key) !== cached) getStudentAppStorage(storageKey).setItem(key, cached);
 }

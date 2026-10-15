@@ -1,7 +1,7 @@
 import publicTerms from '../../03_data/consent/terms.json' with { type: 'json' };
 import { StudentTokenSchema } from './schemas.js';
 
-// 공개 조항은 공식 사이트와 공유하고, 확인 양식 주소는 인증 API에만 유지한다.
+// 공개 조항은 공식 사이트와 공유한다. 인증 API의 기존 확인 양식 주소·응답은 유지한다.
 const terms = {
   ...publicTerms,
   confirmationUrl: 'https://forms.gle/GSrU2jruYTuFQxwo8',

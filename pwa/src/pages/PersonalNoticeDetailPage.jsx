@@ -1,7 +1,9 @@
+import { studentPagePath } from '../utils/studentAppPaths.js';
 import {
   useParams,
   useNavigate } from 'react-router-dom';
 import { useCachedResource } from '../hooks/useCachedResource.js';
+import { useStudentAppContext } from '../context/StudentAppContext.jsx';
 import { fetchStudentNotices } from '../api/notices.js';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
@@ -23,13 +25,14 @@ import { MegaphoneIcon } from '@phosphor-icons/react';
 // 별도 fetch를 만들지 않고 목록 캐시(student:notices:<token>)를 그대로 재사용한다.
 // 목록을 거치지 않고 주소로 바로 들어와도 캐시가 없으면 알아서 받아온다.
 export default function PersonalNoticeDetailPage() {
-  const { studentToken, noticeId } = useParams();
+  const { noticeId, studentToken: legacyStudentToken } = useParams();
+  const studentToken = useStudentAppContext()?.scope || legacyStudentToken;
   const navigate = useNavigate();
 
   const res = useCachedResource(`student:notices:${studentToken}`, () => fetchStudentNotices(studentToken));
   const notice = (res.data ?? []).find((n) => n.id === noticeId);
 
-  const goList = () => navigate(`/personal/${studentToken}`, { state: { tab: '공지' } });
+  const goList = () => navigate(studentPagePath(studentToken), { state: { tab: '공지' } });
 
   if (res.loading) return <><PageHeader title="공지" back onBack={goList} /><LoadingSpinner /></>;
   if (res.error) return <><PageHeader title="공지" back onBack={goList} /><ErrorMessage message={res.error} onRetry={res.refresh} /></>;

@@ -1,3 +1,4 @@
+import { studentPagePath } from '../../utils/studentAppPaths.js';
 import { useNavigate } from 'react-router-dom';
 import { CaretRightIcon, MegaphoneIcon } from '@phosphor-icons/react';
 import { useCachedResource } from '../../hooks/useCachedResource.js';
@@ -37,7 +38,7 @@ export default function NoticeTab({ studentToken }) {
         <button
           key={n.id}
           type="button"
-          onClick={() => navigate(`/personal/${studentToken}/notice/${n.id}`, { state: { tab: '공지' } })}
+          onClick={() => navigate(studentPagePath(studentToken, `notice/${n.id}`),  { state: { tab: '공지' } })}
           style={{
             width: '100%', textAlign: 'left', cursor: 'pointer', border: 'none',
             background: '#fff', borderRadius: 16, padding: '14px 16px', marginBottom: 10,

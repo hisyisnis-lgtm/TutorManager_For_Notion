@@ -3,10 +3,7 @@ import worker from '../src/index.js';
 import { signTypedToken, verifyTypedToken } from '../lib/auth.js';
 import { pkceChallenge, verifyAuthState } from '../lib/oauth.js';
 import { findOrCreateFinderUser, parseFinderProfile } from '../lib/finderDb.js';
-import { readFileSync } from 'node:fs';
-const profiles = JSON.parse(readFileSync(new URL('./fixtures/finder-profiles.json', import.meta.url), 'utf8'));
-const freshFinderProfile = () => structuredClone(profiles.fresh);
-const resetFinderProgress = () => structuredClone(profiles.reset);
+import { freshFinderProfile, recordFinderResult, resetFinderProgress } from './fixtures/finder-client-store.js';
 import { localD1 } from './helpers/localD1.js';
 
 const ORIGIN = 'http://localhost:5173';
@@ -64,10 +61,12 @@ describe('independent post-office account', () => {
     expect(local.sqlite.prepare('SELECT nickname FROM game_users').get().nickname).toBe('다락방 닉네임');
   });
 
-  it('accepts captured real client profiles without stripping any fields', () => {
-    for (const profile of [profiles.fresh, profiles.progressed, profiles.reset]) {
-      expect(parseFinderProfile(profile)).toEqual(profile);
-    }
+  it('accepts real store results and reset shapes without stripping any fields', () => {
+    const result = { id: 'mail-1', mode: 'normal', reason: 'timeout', completedStages: 2, elapsedMs: 3000, completedAt: new Date().toISOString(), answers: [{ hanzi: '妈', tone: 1, correct: false, assisted: false }] };
+    const progressed = recordFinderResult(freshFinderProfile(), result);
+    expect(parseFinderProfile(progressed)).toEqual(progressed);
+    const reset = resetFinderProgress(progressed);
+    expect(parseFinderProfile(reset)).toEqual(reset);
   });
 
   it('allows only one concurrent save and rejects stale pre-reset progress', async () => {

@@ -32,7 +32,33 @@ jobs:
       - run: npm ci
         working-directory: pwa
       - name: 학생 인증·권한·승인 회귀 검사
-        run: npm test -- src/components/SiteStudentAuthGate.test.jsx src/pages/StudentAppAccess.test.jsx src/api/studentAppAccess.test.js src/api/siteStudentMembers.test.js src/components/students/PendingStudentMembers.test.jsx --maxWorkers=1 --testTimeout=30000
+        run: >
+          npm test --
+          src/components/SiteStudentAuthGate.test.jsx
+          src/components/StudentAuthGate.test.jsx
+          src/pages/StudentAppAccess.test.jsx
+          src/api/studentAppAccess.test.js
+          src/api/siteStudentMembers.test.js
+          src/components/students/PendingStudentMembers.test.jsx
+          src/api/studentApp.test.js
+          src/utils/studentAppPaths.test.js
+          src/utils/studentAppCoexistence.test.js
+          src/api/authState.test.js
+          src/api/studentRequest.test.js
+          src/api/bookingApi.test.js
+          src/api/homework.security.test.js
+          src/api/consent.test.js
+          src/api/notionClient.test.js
+          src/api/pandaApi.test.js
+          src/hooks/swrCacheStorage.test.js
+          src/hooks/useCachedResource.test.jsx
+          src/hooks/usePandaGame.test.jsx
+          src/pages/PersonalEntryPage.test.jsx
+          src/pages/PersonalPage.test.jsx
+          src/pages/PersonalHomeworkDetailPage.test.jsx
+          src/api/payments.test.js
+          src/api/payments.update.test.js
+          --maxWorkers=1 --testTimeout=30000
         working-directory: pwa
       - name: 디자인 규칙 검사
         run: node 02_devtools/design-audit.mjs --quiet

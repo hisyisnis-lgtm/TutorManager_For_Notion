@@ -1,3 +1,5 @@
+import { isStudentAppScope } from './studentAppState.js';
+import { studentAppJson } from './studentApp.js';
 import { WORKER_URL } from '../config.js';
 import { fetchWithTimeout } from './fetchTimeout.js';
 import { studentBearer, handleStudentAuthExpiry } from './studentAuth.js';
@@ -30,6 +32,7 @@ function teacherHeaders() {
 
 /** 학생용 공지 목록 — 노출된 것만, 중요 공지가 위. */
 export function fetchStudentNotices(studentToken) {
+  if (isStudentAppScope(studentToken)) return studentAppJson('/notices', { scope: studentToken });
   const path = `/notice/student/${encodeURIComponent(studentToken)}`;
   return studentRequest(studentToken, 'GET', path, credential => executeStudentNotices(studentToken, credential));
 }

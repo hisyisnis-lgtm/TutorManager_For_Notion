@@ -1,3 +1,4 @@
+import { SITE_ORIGIN } from '../constants.js';
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -6,10 +7,10 @@ import { Alert, AlertDescription } from '../components/shadcn/alert';
 import { Button } from '../components/shadcn/button';
 import { Input } from '../components/shadcn/input';
 import { Textarea } from '../components/shadcn/textarea';
-import { Switch } from '../components/shadcn/switch';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import SubmitButton from '../components/ui/SubmitButton.jsx';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
+import ErrorMessage from '../components/ui/ErrorMessage.jsx';
 import { createStudent, updateStudent, parseStudent, STATUS_OPTIONS, markStudentSharedIfEmpty } from '../api/students.js';
 import { fetchUnlinkedConsults, matchConsults, linkConsultToStudent } from '../api/consults.js';
 import ConfirmDialog from '../components/ui/ConfirmDialog.jsx';
@@ -18,7 +19,6 @@ import { getPage } from '../api/notionClient.js';
 import { useData } from '../context/DataContext.jsx';
 import { PRIMARY, TEXT_PRIMARY, TEXT_SECONDARY } from '../constants/theme.js';
 import { LinkIcon } from '@phosphor-icons/react';
-import { SITE_ORIGIN } from '../constants.js';
 
 // 0/O, 1/I/l 제외 — 혼동 없는 대문자+숫자 32자
 const CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
@@ -34,13 +34,8 @@ function formatApplied(iso) {
   return `${d.getMonth() + 1}월 ${d.getDate()}일`;
 }
 
-export default function StudentFormPage() {
-  const navigate = useNavigate();
-  const { id } = useParams();
-  const isEdit = Boolean(id);
-  const { refresh: refreshAll } = useData();
-
-  const [form, setForm] = useState({
+function emptyStudentForm(isEdit) {
+  return {
     name: '',
     phone: '',
     email: '',
@@ -49,20 +44,48 @@ export default function StudentFormPage() {
     status: '🟢 수강중',
     memo: '',
     bookingCode: isEdit ? '' : generateCode(),
-    vip: false,   // 숙제 관리 대상 — 켜야 숙제 등록/관리 진입 가능
-  });
+  };
+}
+
+export default function StudentFormPage() {
+  const navigate = useNavigate();
+  const { id } = useParams();
+  const isEdit = Boolean(id);
+  const { refresh: refreshAll } = useData();
+
+  const [form, setForm] = useState(() => emptyStudentForm(isEdit));
   const [loading, setLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
-  const [savedCode, setSavedCode] = useState('');
   const [initial, setInitial] = useState(null);
+  const [savedCode, setSavedCode] = useState('');
+  const [loadError, setLoadError] = useState(null);
+  const [loadedId, setLoadedId] = useState(null);
+  const [loadAttempt, setLoadAttempt] = useState(0);
 
   useEffect(() => {
-    if (!isEdit) return;
+    if (!isEdit) {
+      setForm(emptyStudentForm(false));
+      setLoading(false);
+      setLoadError(null);
+      setError(null);
+      setLoadedId(null);
+      setInitial(null);
+      setSavedCode('');
+      return;
+    }
+    let cancelled = false;
+    setLoading(true);
+    setLoadError(null);
+    setError(null);
+    setLoadedId(null);
+    setInitial(null);
     const load = async () => {
       try {
         const page = await getPage(id);
+        if (cancelled) return;
         const s = parseStudent(page);
+        setSavedCode(s.bookingCode || '');
         const loaded = {
           name: s.name,
           phone: s.phone || '',
@@ -72,29 +95,28 @@ export default function StudentFormPage() {
           status: s.status || '🟢 수강중',
           memo: s.memo || '',
           bookingCode: s.bookingCode || generateCode(),
-          vip: !!s.vip,
         };
         setForm(loaded);
         // 저장 버튼 비활성 판정의 기준점. 자동 발급한 코드까지 포함한 "불러온 그대로"라
         // 손대지 않았는데 변경된 것으로 잡히지 않는다.
         setInitial(loaded);
-        // 공유 링크는 **저장된** 코드로만 만든다. 코드가 없던 옛 학생은 위에서 새로 발급해
-        // 폼에 담아뒀다가 저장 시 기록되고, 다음 진입부터 공유 버튼이 나타난다.
-        setSavedCode(s.bookingCode || '');
+        setLoadedId(id);
       } catch (e) {
-        setError(e.message);
+        if (!cancelled) setLoadError(e.message || '학생 정보를 불러오지 못했어요.');
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
     load();
-  }, [id, isEdit]);
+    return () => { cancelled = true; };
+  }, [id, isEdit, loadAttempt]);
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
 
   // 바뀐 값이 없으면 저장할 것도 없다 → 수정 버튼 비활성.
   // 키 순서가 같은 리터럴로 만든 객체끼리 비교라 JSON 문자열 비교로 충분하다.
-  const isDirty = !isEdit || !initial || JSON.stringify(form) !== JSON.stringify(initial);
+  const canEdit = !isEdit || (!loading && loadedId === id && initial !== null);
+  const isDirty = !isEdit || (canEdit && JSON.stringify(form) !== JSON.stringify(initial));
   // 비활성 버튼을 눌렀을 때 무엇이 모자란지 말해주려고 이유를 문자열로 들고 있는다.
   const blockedReason = !form.name.trim() ? '이름을 입력하세요.' : !isDirty ? '변경된 내용이 없어요.' : null;
 
@@ -142,6 +164,7 @@ export default function StudentFormPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!canEdit || saving || (isEdit && !isDirty)) return;
     if (!form.name.trim()) {
       setError('이름을 입력하세요.');
       return;
@@ -168,7 +191,16 @@ export default function StudentFormPage() {
     }
   };
 
-  if (loading) return <><PageHeader title="학생 수정" back /><LoadingSpinner /></>;
+  if (isEdit && loading) return <><PageHeader title="학생 수정" back /><LoadingSpinner /></>;
+  if (!canEdit) return (
+    <>
+      <PageHeader title="학생 수정" back />
+      <ErrorMessage
+        message={loadError || '학생 정보를 불러오지 못했어요.'}
+        onRetry={() => setLoadAttempt((attempt) => attempt + 1)}
+      />
+    </>
+  );
 
   return (
     <>
@@ -271,7 +303,6 @@ export default function StudentFormPage() {
         </div>
 
         {/* ── 분류·액션 ───────────────────────
-            상태와 VIP는 둘 다 "이 학생을 어떻게 분류하나"에 답하는 토글이라 같은 그룹.
             상태는 원래 이름 바로 밑에 있었는데, 신규 등록 시 항상 기본값(수강중)이고
             수정도 드물어 연락처보다 앞설 이유가 없었다(2026-08-26 정리). */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -307,44 +338,53 @@ export default function StudentFormPage() {
           </div>
         </div>
 
-        {/* 숙제 관리 대상(VIP) — 학생 속성이라 수정 폼에 둔다(학생 상세 '설정'에서 옮겨옴) */}
-        <div className="flex items-center justify-between gap-3">
-          <p className="text-sm font-semibold" style={{ color: TEXT_PRIMARY, margin: 0, minWidth: 0 }}>숙제 관리 대상 (VIP)</p>
-          <Switch
-            checked={!!form.vip}
-            onCheckedChange={(checked) => setForm((f) => ({ ...f, vip: checked }))}
-            aria-label="숙제 관리 대상(VIP) 설정"
-          />
-        </div>
+        <p className="text-xs leading-relaxed" style={{ color: TEXT_SECONDARY }}>학생앱 제공은 학생 상세에서 설정할 수 있어요. 켜면 숙제 관리도 함께 시작해요.</p>
 
-        {/* 학생 페이지 공유 — 예약 코드 입력칸은 제거했다(2026-08-26).
-            코드는 학생 생성 시 자동 발급되는 내부 값이고, 강사가 실제로 하는 일은 '링크 공유' 하나다.
-            저장된 코드로 만들어야 하므로 편집 모드 + 코드가 이미 있는 경우에만 노출. */}
-        {isEdit && savedCode && (
+        <p className="text-xs leading-relaxed" style={{ color: TEXT_SECONDARY }}>홈페이지 학생앱은 계정 연결을 마친 학생에게 안내해 주세요.</p>
+        {/* 학생앱은 홈페이지 계정으로 로그인한다. 내부 예약 코드는 전달하지 않는다. */}
+        {isEdit && (
           <Button
+            type="button"
             block
             variant="outline"
-            onClick={() => {
-              // iOS Safari PWA가 "홈 화면에 추가" 시 hash·query를 잘라내므로 path 기반 URL로 공유.
-              // App.jsx 모듈 IIFE가 `/personal/{token}` path 진입 시 hash로 변환해 라우터로 전달.
-              const personalUrl = `${SITE_ORIGIN}/personal/${encodeURIComponent(savedCode)}`;
-              const cleanName = form.name.replace(/[\u200B-\u200D\uFE0F\uFEFF]/g, '').replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, '').trim();
-              const text = `${personalUrl}\n[${cleanName}님 학생코드 - ${savedCode}]`;
-              navigator.clipboard.writeText(text).then(() => toast.success('복사되었습니다.'));
-              // 첫 공유 시점만 기록 — 판다 먹이 계산의 시작점이 됨.
-              markStudentSharedIfEmpty(id).catch((e) => console.warn('공유일 기록 실패:', e?.message));
+            disabled={saving}
+            onClick={async () => {
+              const text = 'https://tiantianchinese.com/personal/\n홈페이지 계정으로 로그인해 주세요. 선생님이 학생앱을 제공한 계정에서 이용할 수 있어요.';
+              try {
+                await navigator.clipboard.writeText(text);
+                toast.success('학생앱 로그인 안내를 복사했어요.');
+                // 첫 안내 공유 시점은 기존과 같이 먹이 계산의 시작점으로 유지한다.
+                markStudentSharedIfEmpty(id).catch(() => toast.warning('로그인 안내는 복사했지만 공유일을 기록하지 못했어요.'));
+              } catch {
+                toast.error('로그인 안내를 복사하지 못했어요.');
+              }
             }}
           >
             {/* antd의 icon prop 대신 children으로 넣는다 — 우리 Button은 gap-2로 간격을 준다.
                 사슬 모양은 획으로 읽히는 구조 아이콘이라 fill이면 뭉갠다 → bold(§19.3).
                 크기는 버튼 안 아이콘 토큰 20px(§19.2, 16은 인라인 메타용). */}
             <LinkIcon weight="bold" size={20} color={PRIMARY} />
-            학생 페이지 공유
+            홈페이지 학생앱 안내 복사
           </Button>
         )}
 
         </div>
 
+
+        {isEdit && savedCode && (
+          <Button type="button" block variant="outline" disabled={saving} onClick={async () => {
+            const personalUrl = SITE_ORIGIN + '/personal/' + encodeURIComponent(savedCode);
+            const cleanName = form.name.replace(/[\u200B-\u200D\uFE0F\uFEFF]/g, '').replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, '').trim();
+            try {
+              await navigator.clipboard.writeText(personalUrl + '\n[' + cleanName + '님 학생코드 - ' + savedCode + ']');
+              toast.success('기존 접속 링크를 복사했어요.');
+              markStudentSharedIfEmpty(id).catch(() => toast.warning('링크는 복사했지만 공유일을 기록하지 못했어요.'));
+            } catch { toast.error('기존 접속 링크를 복사하지 못했어요.'); }
+          }}>
+            <LinkIcon weight="bold" size={20} color={PRIMARY} />
+            기존 접속 링크 복사
+          </Button>
+        )}
         <SubmitButton htmlType="submit" loading={saving} blockedReason={blockedReason}>
           {isEdit ? '수정 완료' : '학생 추가'}
         </SubmitButton>

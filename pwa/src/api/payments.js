@@ -14,7 +14,8 @@ import {
 
 export const PAYMENTS_DB = '314838fa-f2a6-8154-935b-edd3d2fbea83';
 
-// 잔여 시간 원장은 안정적인 학생/유효시간 속성 ID만 요청한다.
+// 03_data/notion_schema/수강료_결제_내역.json의 안정적인 property ID.
+// 잔여 시간 원장에만 적용하며 결제 화면의 전체 속성 조회는 유지한다.
 const LEDGER_PROPERTIES = ['k%3EA%3E', '%7C~~v'];
 
 export const PAYMENT_METHODS = [
@@ -128,8 +129,10 @@ export function parsePayment(page) {
     studentIds: getRelationIds(p['학생']),
     classTypeId: getRelationId(p['수업 종류']),
     discountEventId: getRelationId(p['할인 적용']),
-    unitPrice: getRollupNumber(p['시간당 단가']),
-    discountRate: getRollupNumber(p['적용 할인율(%)']),
+    unitPrice: typeof p['결제 당시 단가']?.number === 'number' ? p['결제 당시 단가'].number : getRollupNumber(p['시간당 단가']),
+    discountRate: typeof p['결제 당시 할인율']?.number === 'number' ? p['결제 당시 할인율'].number : getRollupNumber(p['적용 할인율(%)']),
+    websiteOrderItemId: getRichText(p['웹 주문 항목 ID']),
+    paymentSource: getSelect(p['결제 출처']) || getRichText(p['결제 출처']),
     sessionCount: getNumber(p['시간 회차']),
     actualAmount: getNumber(p['실제 결제 금액']),
     paymentAmount: getFormulaNumber(p['결제 금액']),

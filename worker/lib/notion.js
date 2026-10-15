@@ -4,6 +4,15 @@
 // 학생이 화면 앞에서 대기하는 요청이라 더 길게 끌지 않는다.
 export const NOTION_BACKOFF_MS = [300, 800];
 
+// 공지·예약의 실패를 정상 데이터로 처리하지 않도록 원문 없이 구분한다.
+export class NotionResponseError extends Error {
+  constructor(status) {
+    super('요청을 완료하지 못했습니다. 잠시 후 다시 시도해주세요.');
+    this.name = 'NotionResponseError';
+    this.status = status;
+  }
+}
+
 /**
  * Notion API fetch 헬퍼 팩토리 — 토큰을 한 번만 바인딩
  * 반환된 함수: (method, path, body?) → Promise<JSON>
@@ -18,13 +27,15 @@ export const NOTION_BACKOFF_MS = [300, 800];
  * 이제 일시적 실패는 흡수하고, 끝내 실패하면 실제 상태 코드를 담아 던진다.
  *
  * @param {string} notionToken
- * @param {{ backoffMs?: number[] }} [opts] backoffMs는 테스트에서 대기를 없애기 위한 주입점
+ * @param {{ backoffMs?: number[], strict?: boolean, beforeRequest?: Function }} [opts] backoffMs는 테스트에서 대기를 없애기 위한 주입점
  */
-export function makeNotion(notionToken, { backoffMs = NOTION_BACKOFF_MS } = {}) {
+export function makeNotion(notionToken, { backoffMs = NOTION_BACKOFF_MS, strict = false, beforeRequest } = {}) {
   return async (method, path, body) => {
     for (let attempt = 0; ; attempt++) {
       const isLastAttempt = attempt >= backoffMs.length;
       let res;
+      // Recheck authorization after backoff; a revoked write cannot be retried.
+      await beforeRequest?.();
       try {
         res = await fetch(`https://api.notion.com/v1${path}`, {
           method,
@@ -39,6 +50,7 @@ export function makeNotion(notionToken, { backoffMs = NOTION_BACKOFF_MS } = {}) 
         // 네트워크 계층 실패(연결 끊김·타임아웃) — 응답 자체가 없어 아래 상태 코드
         // 분기를 탈 수 없으므로 여기서 따로 재시도한다.
         if (isLastAttempt) {
+          if (strict) throw new NotionResponseError(0);
           throw new Error(
             `Notion 연결 실패 (${method} ${path}, ${attempt + 1}회 시도): ${e.message}`
           );
@@ -53,23 +65,27 @@ export function makeNotion(notionToken, { backoffMs = NOTION_BACKOFF_MS } = {}) 
           await new Promise(r => setTimeout(r, backoffMs[attempt]));
           continue;
         }
+        if (strict) throw new NotionResponseError(res.status);
         const text = await res.text().catch(() => '');
         throw new Error(
           `Notion ${res.status} (${method} ${path}, ${attempt + 1}회 시도): ${text.slice(0, 200).trim()}`
         );
       }
 
-      // 4xx(429 제외)는 Notion이 정상 JSON 에러 객체를 돌려주고, 기존 호출부가
-      // 그 형태에 의존한다(예: findStudentByToken은 results가 없으면 null 반환).
-      // 그래서 여기서 던지지 않고 파싱 결과를 그대로 넘긴다.
+      // 기본 호출부는 4xx JSON 형태에 의존한다. 공지·예약만 엄격 모드를 사용한다.
+      if (strict && !res.ok) throw new NotionResponseError(res.status);
       const text = await res.text();
+      let data;
       try {
-        return JSON.parse(text);
+        data = JSON.parse(text);
       } catch {
+        if (strict) throw new NotionResponseError(res.status);
         throw new Error(
           `Notion ${res.status} 응답이 JSON이 아님 (${method} ${path}): ${text.slice(0, 200).trim()}`
         );
       }
+      if (strict && data?.object === 'error') throw new NotionResponseError(res.status);
+      return data;
     }
   };
 }

@@ -4,6 +4,7 @@ import { NotionPageIdSchema, StudentTokenSchema } from './schemas.js';
 import { rateLimitCheck } from './securityStore.js';
 import { getPandaProfile, performPandaAction } from './pandaDb.js';
 import { PandaActionSchema, pandaError } from './pandaRules.js';
+import { StudentAppAccessError } from './studentAppAccess.js';
 import catalog from '../../03_data/panda/wardrobe.json';
 
 const upstreamError = cause => Object.assign(pandaError('earnings_unavailable', '먹이 지급 내역을 모두 확인하지 못했어요. 기존 기록은 유지됩니다.', 502), { cause });
@@ -52,7 +53,7 @@ export function computePandaEarnings(properties, classes, now = Date.now()) {
   return foodCount(Math.floor(minutes / catalog.economy.minutesPerFood) + homework);
 }
 
-async function loadEarnings(env, token, { studentDbId, classDbId }) {
+async function loadEarnings(env, token, { studentDbId, classDbId, authorizeIdentity }) {
   const callNotion = makeNotion(env.NOTION_TOKEN);
   const notion = async (...args) => {
     const result = await callNotion(...args);
@@ -66,11 +67,12 @@ async function loadEarnings(env, token, { studentDbId, classDbId }) {
   const student = result.results[0];
   if (!student) throw pandaError('student_not_found', '등록된 학생이 아닙니다.', 404);
   if (!NotionPageIdSchema.safeParse(student.id).success) throw upstreamError();
+  await authorizeIdentity?.(student.id);
   const classes = await queryStudentTimePages(notion, classDbId, student.id);
   return { studentId: student.id.replaceAll('-', '').toLowerCase(), earnedTotal: computePandaEarnings(student.properties, classes) };
 }
 
-export async function handlePandaRoutes(request, env, corsHeaders, { token, actionRoute, authorizeStudent, studentDbId, classDbId }) {
+export async function handlePandaRoutes(request, env, corsHeaders, { token, actionRoute, authorizeStudent, studentDbId, classDbId, authorizeIdentity }) {
   const headers = { ...corsHeaders, 'Cache-Control': 'private, no-store' };
   const reply = (body, status = 200) => Response.json(body, { status, headers });
   if (request.method !== (actionRoute ? 'POST' : 'GET')) return reply({ error: '지원하지 않는 요청입니다.' }, 405);
@@ -91,8 +93,9 @@ export async function handlePandaRoutes(request, env, corsHeaders, { token, acti
   let operation = 'earnings';
   try {
     let identity;
-    try { identity = await loadEarnings(env, token, { studentDbId, classDbId }); }
-    catch (error) { if (error.status === 404) throw error; throw upstreamError(error); }
+    try { identity = await loadEarnings(env, token, { studentDbId, classDbId, authorizeIdentity }); }
+    catch (error) { if (error.status === 404 || error instanceof StudentAppAccessError) throw error; throw upstreamError(error); }
+    await authorizeIdentity?.(identity.studentId);
     operation = actionRoute ? 'action' : 'read';
     const result = actionRoute
       ? await performPandaAction(env.GAME_DB, identity.studentId, identity.earnedTotal, action)

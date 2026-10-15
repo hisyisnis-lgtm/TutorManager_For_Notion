@@ -1,3 +1,5 @@
+import { isStudentAppScope } from './studentAppState.js';
+import { studentAppJson } from './studentApp.js';
 import { WORKER_URL } from '../config.js';
 import { getToken, handleTeacherAuthExpiry } from './authUtils.js';
 import { studentBearer, handleStudentAuthExpiry } from './studentAuth.js';
@@ -68,12 +70,14 @@ export async function fetchTimeSlotsForTeacher(date, excludeId = '') {
 
 /** 학생 예약 코드로 학생 정보 조회 (공개) */
 export async function fetchStudentByToken(token) {
+  if (isStudentAppScope(token)) return studentAppJson('/student', { scope: token });
   return bookingFetch('GET', `/booking/student/${encodeURIComponent(token)}`, undefined, { studentToken: token });
 }
 
 /** 학생 본인 수업 목록 조회 - CLASS_DB 기반 (공개) */
 export async function fetchMyClasses(studentToken, month) {
   const params = month ? `?month=${encodeURIComponent(month)}` : '';
+  if (isStudentAppScope(studentToken)) return studentAppJson(`/classes${params}`, { scope: studentToken });
   return bookingFetch('GET', `/booking/my-classes/${encodeURIComponent(studentToken)}${params}`, undefined, { studentToken });
 }
 

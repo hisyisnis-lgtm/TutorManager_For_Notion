@@ -1,5 +1,6 @@
 import { beforeEach, afterEach, describe, it, expect, vi } from 'vitest';
 import worker from '../src/index.js';
+import { allowSyntheticStudentApps } from './helpers/studentAppFixture.js';
 import { signTypedToken } from '../lib/auth.js';
 import { localD1 } from './helpers/localD1.js';
 const DB = '5ce7d5ef-7b80-4795-843f-325f4ca868e2';
@@ -26,7 +27,7 @@ const send = (path, { token = studentToken, method = 'GET', body, headers = {} }
 }), env, ctx);
 const submit = files => send(`/homework/student/${CODE}/${HOMEWORK}/submit`, { method: 'POST', body: JSON.stringify({ files }) });
 beforeEach(async () => {
-  database = localD1(); calls = [];
+  database = localD1(); allowSyntheticStudentApps(database, [STUDENT]); calls = [];
   uploadResponse = undefined; downloadResponse = undefined;
   env = { GAME_DB: database.db, JWT_SECRET: SECRET, NOTION_TOKEN: 'synthetic-notion' };
   studentToken = await signTypedToken(SECRET, 'student', `personal:${CODE}`, 600);

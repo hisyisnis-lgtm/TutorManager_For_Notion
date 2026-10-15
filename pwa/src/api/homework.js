@@ -1,3 +1,5 @@
+import { isStudentAppScope } from './studentAppState.js';
+import { studentAppJson, studentAppResponse, studentAppUpload } from './studentApp.js';
 import {
   queryPage,
   createPage,
@@ -248,6 +250,7 @@ function studentAuthHeader(studentToken, credential) {
 
 /** 학생 숙제 목록 조회 */
 export async function fetchMyHomework(studentToken) {
+  if (isStudentAppScope(studentToken)) return studentAppJson('/homework', { scope: studentToken });
   return studentFetch('GET', `/homework/student/${encodeURIComponent(studentToken)}`, undefined, studentToken);
 }
 
@@ -293,6 +296,12 @@ function uploadViaXhr(url, formData, headers, { onProgress, timeoutMs }) {
  * @param {string} [opts.fileName] 저장할 이름. 재포장 대신 이 인자를 쓸 것 — 이유는 uploadTeacherFile 주석 참고.
  */
 export function uploadStudentFile(studentToken, file, options = {}) {
+  if (isStudentAppScope(studentToken)) {
+    const form = new FormData();
+    form.append('file', file, options.fileName || file.name);
+    form.append('size', String(file.size));
+    return studentAppUpload(studentToken, form, options.onProgress);
+  }
   return studentRequest(studentToken, 'POST', '/homework/student-upload', credential =>
     executeStudentUpload(studentToken, file, options, credential));
 }
@@ -331,6 +340,7 @@ async function executeStudentUpload(studentToken, file, { onProgress, fileName }
 
 /** 학생 숙제 제출 — files: [{fileUploadId, fileName}], deleteFileNames: [string] */
 export async function submitHomework(studentToken, homeworkId, files, deleteFileNames = []) {
+  if (isStudentAppScope(studentToken)) return studentAppJson(`/homework/${encodeURIComponent(homeworkId)}/submit`, { scope: studentToken, method: 'POST', body: { files, deleteFileNames } });
   return studentFetch('POST', `/homework/student/${encodeURIComponent(studentToken)}/${homeworkId}/submit`, {
     files,
     deleteFileNames,
@@ -342,6 +352,7 @@ export async function submitHomework(studentToken, homeworkId, files, deleteFile
  * Worker가 비어있을 때만 PATCH하므로 두 번째 호출부터는 idempotent — 먹이 중복 지급 방지.
  */
 export async function markFeedbackSeen(studentToken, homeworkId) {
+  if (isStudentAppScope(studentToken)) return studentAppJson('/homework/feedback-seen', { scope: studentToken, method: 'POST', body: { homeworkId } });
   return studentFetch('POST', `/homework/feedback-seen/${encodeURIComponent(studentToken)}`, {
     homeworkId,
   }, studentToken);
@@ -390,8 +401,10 @@ async function fetchOrThrow(url, init, studentToken) {
  */
 export async function downloadHomeworkFileStudent(studentToken, homeworkId, fileName, kind) {
   const auth = captureAuthScope(`student:${studentToken}`);
-  const url = `${WORKER_URL}/homework/student/${encodeURIComponent(studentToken)}/${encodeURIComponent(homeworkId)}/file?name=${encodeURIComponent(fileName)}&kind=${kind}`;
-  const res = await fetchOrThrow(url, { headers: studentAuthHeader(studentToken) }, studentToken);
+  const path = `/homework/${encodeURIComponent(homeworkId)}/file?name=${encodeURIComponent(fileName)}&kind=${encodeURIComponent(kind)}`;
+  const res = isStudentAppScope(studentToken)
+    ? await studentAppResponse(path, { scope: studentToken, timeoutMs: UPLOAD_TIMEOUT_MS })
+    : await fetchOrThrow(`${WORKER_URL}/homework/student/${encodeURIComponent(studentToken)}/${encodeURIComponent(homeworkId)}/file?name=${encodeURIComponent(fileName)}&kind=${kind}`, { headers: studentAuthHeader(studentToken) }, studentToken);
   const blob = await res.blob();
   if (!isAuthScopeCurrent(auth)) return;
   triggerBlobDownload(blob, fileName);
@@ -416,8 +429,10 @@ export async function downloadHomeworkFileTeacher(homeworkId, fileName, kind) {
  */
 export async function fetchHomeworkFileBlobUrlStudent(studentToken, homeworkId, fileName, kind) {
   const auth = captureAuthScope(`student:${studentToken}`);
-  const url = `${WORKER_URL}/homework/student/${encodeURIComponent(studentToken)}/${encodeURIComponent(homeworkId)}/file?name=${encodeURIComponent(fileName)}&kind=${kind}`;
-  const res = await fetchOrThrow(url, { headers: studentAuthHeader(studentToken) }, studentToken);
+  const path = `/homework/${encodeURIComponent(homeworkId)}/file?name=${encodeURIComponent(fileName)}&kind=${encodeURIComponent(kind)}`;
+  const res = isStudentAppScope(studentToken)
+    ? await studentAppResponse(path, { scope: studentToken, timeoutMs: UPLOAD_TIMEOUT_MS })
+    : await fetchOrThrow(`${WORKER_URL}/homework/student/${encodeURIComponent(studentToken)}/${encodeURIComponent(homeworkId)}/file?name=${encodeURIComponent(fileName)}&kind=${kind}`, { headers: studentAuthHeader(studentToken) }, studentToken);
   const blob = await res.blob();
   if (!isAuthScopeCurrent(auth)) throw new Error('인증 상태가 바뀌었습니다. 다시 확인해 주세요.');
   return URL.createObjectURL(blob);

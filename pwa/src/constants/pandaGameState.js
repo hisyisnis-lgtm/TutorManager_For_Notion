@@ -1,3 +1,4 @@
+import { getStudentAppStorage } from '../api/studentAppMemory.js';
 import { EMPTY_PANDA_WARDROBE, PANDA_WARDROBE_SLOTS, getPandaItem, readPandaWardrobe } from './pandaWardrobe.js';
 import catalog from '../../../03_data/panda/wardrobe.json';
 
@@ -47,12 +48,12 @@ export function normalizePandaGameProfile(value = {}) {
 
 export function readPandaGameProfile(feedKey, { strict = false } = {}) {
   try {
-    const stored = JSON.parse(localStorage.getItem(getPandaGameStorageKey(feedKey)));
+    const stored = JSON.parse(getStudentAppStorage(feedKey).getItem(getPandaGameStorageKey(feedKey)));
     if (stored !== null) {
       if (!isValidPandaGameProfile(stored)) throw new Error('저장된 랴오랴오 기록을 확인할 수 없어요. 기존 기록은 변경하지 않았어요.');
       return normalizePandaGameProfile(stored);
     }
-    const fedTotal = Math.max(0, parseInt(localStorage.getItem(feedKey) || '0', 10) || 0);
+    const fedTotal = Math.max(0, parseInt(getStudentAppStorage(feedKey).getItem(feedKey) || '0', 10) || 0);
     const legacy = readPandaWardrobe(feedKey);
     const equipped = Object.fromEntries(PANDA_WARDROBE_SLOTS.map(({ id }) => [id, legacy[id] ? `${legacy[id]}:${id}` : null]));
     const owned = Object.values(equipped).filter(Boolean);
@@ -150,8 +151,8 @@ export async function commitPandaGameAction(feedKey, expected, action, earnedTot
 
 export function persistPandaGameProfile(feedKey, profile) {
   // 이 JSON이 정본이다. 기존 fed 키는 이전 화면/도구와의 호환용이며 별도 경제 계산에 사용하지 않는다.
-  localStorage.setItem(getPandaGameStorageKey(feedKey), JSON.stringify(profile));
-  try { localStorage.setItem(feedKey, String(profile.fedTotal)); } catch { /* 정본 저장은 이미 완료 */ }
+  getStudentAppStorage(feedKey).setItem(getPandaGameStorageKey(feedKey), JSON.stringify(profile));
+  try { getStudentAppStorage(feedKey).setItem(feedKey, String(profile.fedTotal)); } catch { /* 정본 저장은 이미 완료 */ }
 }
 
 export { EMPTY_PANDA_WARDROBE };

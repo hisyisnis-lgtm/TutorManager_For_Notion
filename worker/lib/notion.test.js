@@ -61,6 +61,18 @@ describe('makeNotion', () => {
     expect(spy).toHaveBeenCalledTimes(3);
   });
 
+  it('재시도 대기 중 권한이 회수되면 다음 쓰기를 전송하지 않는다', async () => {
+    let allowed = true;
+    const spy = mockFetch(async () => {
+      allowed = false;
+      return Response.json({ object: 'error' }, { status: 429 });
+    });
+    const denial = new Error('permission revoked');
+    const n = makeNotion('tok', { ...noWait, beforeRequest: async () => { if (!allowed) throw denial; } });
+    await expect(n('PATCH', '/pages/synthetic', {})).rejects.toBe(denial);
+    expect(spy).toHaveBeenCalledTimes(1);
+  });
+
   // 예전엔 "SyntaxError: Unexpected token 'e'"로 둔갑해 원인 추적이 불가능했다.
   it('525가 계속되면 상태 코드와 본문이 드러나는 에러를 던진다', async () => {
     const spy = mockFetch(async () => new Response('error code: 525\n', { status: 525 }));

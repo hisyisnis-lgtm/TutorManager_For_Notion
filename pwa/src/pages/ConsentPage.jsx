@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useStudentAppContext } from '../context/StudentAppContext.jsx';
 import { fetchConsentTerms } from '../api/consent.js';
 import { KAKAO_CHANNEL_CHAT_URL } from '../constants.js';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
@@ -64,7 +65,8 @@ function NoteList({ items }) {
 }
 
 export function AuthenticatedConsentPage() {
-  const { studentToken } = useParams();
+  const { studentToken: legacyStudentToken } = useParams();
+  const studentToken = useStudentAppContext()?.scope || legacyStudentToken;
   const [terms, setTerms] = useState(null);
   const [error, setError] = useState(false);
   const [attempt, setAttempt] = useState(0);

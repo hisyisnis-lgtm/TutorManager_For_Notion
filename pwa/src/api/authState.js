@@ -1,3 +1,4 @@
+import { studentAppCredential } from './studentAppState.js';
 // 인증 변경을 같은 탭과 다른 탭에 전파한다. 서버의 서명 검증을 대체하지 않으며,
 // 클라이언트에서는 만료/용도 확인과 개인정보 화면·캐시의 수명 관리에만 사용한다.
 export const AUTH_CHANGE_EVENT = 'tutor-auth-changed';
@@ -42,6 +43,7 @@ export function cacheScope(key) {
 }
 
 function credentialFor(scope) {
+  if (scope.startsWith('student:app-')) return studentAppCredential(scope.slice(8));
   return scope.startsWith('student:')
     ? teacherSession() || studentSession(scope.slice(8))
     : teacherSession();
@@ -68,6 +70,7 @@ function removeMatching(storage, matches) {
 
 export function clearSensitiveCache(scope = 'teacher') {
   const matches = (key) => {
+    if (scope.startsWith('student:app-') && key.includes(scope.slice(8))) return true;
     if (key.startsWith('swr_')) {
       return scope === 'teacher' || cacheScope(key.slice(4)) === scope;
     }

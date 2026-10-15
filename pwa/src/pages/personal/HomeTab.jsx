@@ -1,3 +1,4 @@
+import { studentPagePath } from '../../utils/studentAppPaths.js';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { captureAuthScope, isAuthScopeCurrent } from '../../api/authState.js';
 import { toast } from 'sonner';
@@ -9,7 +10,7 @@ import { ChatTeardropTextIcon, CaretRightIcon, MusicNotesIcon } from '@phosphor-
 import { peekCache, peekCacheSavedAt, writeCacheValue, trackRevalidation, pruneRevalidations } from '../../hooks/useCachedResource.js';
 import { fetchMyClasses } from '../../api/bookingApi.js';
 import { homeworkStatusColor } from '../../api/homework.js';
-import { getViewedMap, HW_VIEWED_KEY } from '../../utils/homeworkViewed.js';
+import { markViewed } from '../../utils/homeworkViewed.js';
 import { DAY_KR, timeToMin, formatDuration, addMonths, formatDateDot } from '../../utils/dateUtils.js';
 import ClassCard from './ClassCard.jsx';
 import SectionHeading from '../../components/ui/SectionHeading.jsx';
@@ -27,10 +28,7 @@ import {
 
 
 function forceArchive(token, hwId) {
-  const map = getViewedMap(token);
-  // viewedAt = 현재 시점. 학생이 같은 카드를 다시 볼 때마다 갱신 → 강사 피드백일과의 시점 비교가 정확.
-  map[hwId] = Date.now();
-  localStorage.setItem(HW_VIEWED_KEY(token), JSON.stringify(map));
+  markViewed(token, hwId);
 }
 
 function HwCard({ hw, studentToken, onMarkViewed }) {
@@ -53,7 +51,7 @@ function HwCard({ hw, studentToken, onMarkViewed }) {
         type="button"
         onClick={() => {
           onMarkViewed?.();
-          navigate(`/personal/${studentToken}/homework/${hw.id}`);
+          navigate(studentPagePath(studentToken, `homework/${hw.id}`));
         }}
         className=""
         style={{
@@ -220,7 +218,8 @@ export default function HomeTab({ studentToken, studentLoaded, onUpcomingLoaded,
       const months = [thisMonth, addMonths(thisMonth, 1), addMonths(thisMonth, 2)];
       const [curr, next, after] = await trackRevalidation(() => Promise.all(months.map(async month => {
         const classes = await fetchMyClasses(studentToken, month);
-        // 완료된 월별 원본을 일정 탭과 공유한다. 다른 달 실패로 완료된 결과를 버리지 않는다.
+        // 홈에서 받은 월별 원본을 수업 일정 탭도 사용한다. 다른 달이 늦거나 실패해도
+        // 완료된 월은 다시 열 때 전체 스피너 없이 표시할 수 있다.
         if (isCurrent()) writeCacheValue(`student:classes:${studentToken}:${month}`, classes, auth);
         return classes;
       })), { key: CK, label: '다음 수업', lastSuccessAt: upcomingLastSuccess.current,

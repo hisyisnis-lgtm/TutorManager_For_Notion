@@ -1,3 +1,4 @@
+import { getStudentAppStorage } from '../api/studentAppMemory.js';
 import catalog from '../../../03_data/panda/wardrobe.json';
 
 // Only authored sets are enabled. The 30-set concept collection is not the app catalog.
@@ -70,7 +71,7 @@ export function pandaWardrobeForSet(id) {
 
 export function readPandaWardrobe(feedStorageKey) {
   try {
-    return sanitizePandaWardrobe(JSON.parse(localStorage.getItem(getPandaWardrobeStorageKey(feedStorageKey)))?.equipped);
+    return sanitizePandaWardrobe(JSON.parse(getStudentAppStorage(feedStorageKey).getItem(getPandaWardrobeStorageKey(feedStorageKey)))?.equipped);
   } catch {
     return { ...EMPTY_PANDA_WARDROBE };
   }
@@ -78,7 +79,7 @@ export function readPandaWardrobe(feedStorageKey) {
 
 export function savePandaWardrobe(feedStorageKey, wardrobe) {
   try {
-    localStorage.setItem(getPandaWardrobeStorageKey(feedStorageKey), JSON.stringify({ version: 1, equipped: sanitizePandaWardrobe(wardrobe) }));
+    getStudentAppStorage(feedStorageKey).setItem(getPandaWardrobeStorageKey(feedStorageKey), JSON.stringify({ version: 1, equipped: sanitizePandaWardrobe(wardrobe) }));
     return true;
   } catch {
     return false;

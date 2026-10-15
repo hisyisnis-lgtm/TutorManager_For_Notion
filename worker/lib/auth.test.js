@@ -11,11 +11,12 @@ async function signUnchecked(claim, purpose, legacy = false) {
 }
 
 describe('authentication domains', () => {
-  it('teacher/student/game/state/dashboard only pass their own verifier', async () => {
+  it('teacher/student/game/review/state/dashboard only pass their own verifier', async () => {
     const tokens = {
       teacher: await signTypedToken(SECRET, 'teacher', 'teacher', 60, { role: 'teacher' }),
       student: await signTypedToken(SECRET, 'student', 'personal:student-a', 60),
       game: await signTypedToken(SECRET, 'game', 'game-user', 60),
+      review: await signTypedToken(SECRET, 'review', `review:${crypto.randomUUID()}`, 60),
       'oauth-state': await signTypedToken(SECRET, 'oauth-state', 'transaction', 60),
       dashboard: await signTypedToken(SECRET, 'dashboard', 'dashboard', 60),
     };

@@ -1,3 +1,4 @@
+import { isStudentAppScope } from '../api/studentAppState.js';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { fetchPandaProfile, performPandaAction } from '../api/pandaApi.js';
 import { commitPandaGameAction, getPandaFoodBalance, getPandaGameStorageKey, normalizePandaGameProfile, readPandaGameProfile } from '../constants/pandaGameState.js';
@@ -14,7 +15,7 @@ function initialState(storageKey, remote) {
 }
 
 export default function usePandaGame({ storageKey, earnedTotal, studentToken, serverEnabled = import.meta.env.VITE_PANDA_SERVER_PERSISTENCE === 'true' }) {
-  const remote = Boolean(serverEnabled && studentToken);
+  const remote = Boolean(studentToken && (serverEnabled || isStudentAppScope(studentToken)));
   const owner = JSON.stringify([storageKey, studentToken, remote]);
   const [initial] = useState(() => initialState(storageKey, remote));
   const [stateOwner, setStateOwner] = useState(owner);

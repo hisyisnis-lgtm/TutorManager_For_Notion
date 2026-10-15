@@ -4,20 +4,28 @@ export class RequestTooLarge extends Error {
   constructor() { super('요청 용량이 너무 큽니다.'); this.name = 'RequestTooLarge'; }
 }
 
-export function requestByteLimit(path) {
+export function requestByteLimit(path, method = 'POST') {
+  if (path === '/contact' || path === '/api/site/contact') return 16 * 1024;
+  if (path === '/api/site/student-app/homework/upload') return MAX_FILE_BYTES + 64 * 1024;
+  if (method === 'POST' && /^\/api\/site\/admin\/products\/[a-z0-9][a-z0-9-]{0,79}\/file$/.test(path)) return MAX_FILE_BYTES + 64 * 1024;
+  if (method === 'POST' && /^\/api\/site\/admin\/products\/[a-z0-9][a-z0-9-]{0,79}\/(thumbnail|images)$/.test(path)) return 2 * 1024 * 1024 + 64 * 1024;
+  if (method === 'POST' && /^\/api\/site\/admin\/content\/[a-z0-9][a-z0-9-]{0,79}\/thumbnail$/.test(path)) return 2 * 1024 * 1024 + 64 * 1024;
+  if (['POST','PUT'].includes(method) && /^\/api\/site\/admin\/products(?:\/[a-z0-9][a-z0-9-]{0,79})?$/.test(path)) return 64 * 1024;
+  if (path.startsWith('/api/site/')) return 128 * 1024;
+  if (path === '/reviews' || path.startsWith('/reviews/')) return 128 * 1024;
   if (path === '/analytics/event') return 2048;
   if (path === '/game/dashboard') return 4 * 1024;
   if (path === '/homework/upload' || /^\/homework\/student-upload\/[^/]+$/.test(path)) return MAX_FILE_BYTES + 64 * 1024;
   if (path.startsWith('/personal/auth/') || path.startsWith('/game/auth/') || path.startsWith('/finder/auth/') || path === '/auth/login' || path === '/game/event') return 8 * 1024;
   if (path === '/finder/me') return 104 * 1024;
-  if (path === '/consult' || path === '/contact' || path === '/error-log') return 32 * 1024;
+  if (path === '/consult' || path === '/error-log') return 32 * 1024;
   return 512 * 1024;
 }
 
 // Count actual bytes before JSON/multipart parsing; Content-Length alone is not trusted.
 export async function boundedRequest(request) {
   if (!request.body || request.method === 'GET' || request.method === 'HEAD') return request;
-  const limit = requestByteLimit(new URL(request.url).pathname);
+  const limit = requestByteLimit(new URL(request.url).pathname, request.method);
   const declared = Number(request.headers.get('Content-Length'));
   if (Number.isFinite(declared) && declared > limit) throw new RequestTooLarge();
   const reader = request.body.getReader();

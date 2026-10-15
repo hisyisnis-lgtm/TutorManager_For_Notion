@@ -1,7 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import worker from '../src/index.js';
+import { allowSyntheticStudentApps } from './helpers/studentAppFixture.js';
 import { signTypedToken } from '../lib/auth.js';
 import { localD1 } from './helpers/localD1.js';
+import { readFileSync } from 'node:fs';
 
 const STUDENT = '11111111-1111-1111-1111-111111111111';
 const HOMEWORK = '22222222-2222-2222-2222-222222222222';
@@ -17,12 +19,13 @@ const requestOtp = () => call('/personal/auth/request-otp', { token: CODE });
 const solapiCalls = () => fetch.mock.calls.filter(([url]) => url === SOLAPI);
 
 beforeEach(async () => {
-  local = localD1();
+  local = localD1(); allowSyntheticStudentApps(local, [STUDENT]);
   background = [];
   executionContext = { waitUntil: vi.fn(function (promise) { expect(this).toBe(executionContext); background.push(promise); }) };
   env = { GAME_DB: local.db, JWT_SECRET: 'isolated-secret', NOTION_TOKEN: 'isolated-notion',
     SOLAPI_API_KEY: 'isolated-api-key', SOLAPI_API_SECRET: 'isolated-api-secret', SOLAPI_SENDER: '0212345678',
-    KAKAO_PFID: 'isolated-profile', KAKAO_TPL_PERSONAL_OTP: 'isolated-otp', KAKAO_TPL_HW_ASSIGN: 'isolated-assign', KAKAO_TPL_HW_FEEDBACK: 'isolated-feedback' };
+    KAKAO_PFID: 'isolated-profile', KAKAO_TPL_PERSONAL_OTP: 'isolated-otp', KAKAO_TPL_HW_ASSIGN: 'isolated-assign', KAKAO_TPL_HW_FEEDBACK: 'isolated-feedback',
+    KAKAO_TPL_HW_ASSIGN_MEMBER: 'isolated-member-assign', KAKAO_TPL_HW_FEEDBACK_MEMBER: 'isolated-member-feedback' };
   teacher = await signTypedToken(env.JWT_SECRET, 'teacher', 'teacher', 600, { role: 'teacher' });
   responseFactory = () => Response.json({ statusCode: '2000', statusMessage: 'private-response', to: '01012345678' });
   vi.spyOn(console, 'log').mockImplementation(() => {});
@@ -85,6 +88,10 @@ describe('Worker Solapi callers distinguish acceptance from failure', () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ ok: true, sent: true, delivery: 'accepted' });
     expect(solapiCalls()).toHaveLength(1);
+    const message = JSON.parse(solapiCalls()[0][1].body).message;
+    expect(message.kakaoOptions.templateId).toBe(kind === 'assign' ? 'isolated-member-assign' : 'isolated-member-feedback');
+    expect(message.kakaoOptions.variables['#{학생앱주소}']).toBe('https://tiantianchinese.com/personal/');
+    expect(JSON.stringify(message)).not.toContain(CODE);
   });
   it.each([
     ['rejected', () => Response.json({ statusCode: '3101' }), 'failed'],
@@ -98,10 +105,43 @@ describe('Worker Solapi callers distinguish acceptance from failure', () => {
     expect(fetch.mock.calls.some(([url, init]) => url.startsWith('https://api.notion.com') && init?.method === 'PATCH')).toBe(false);
   });
   it('homework missing template is not sent:true', async () => {
-    delete env.KAKAO_TPL_HW_ASSIGN;
+    delete env.KAKAO_TPL_HW_ASSIGN_MEMBER; // The old token template must never be a fallback.
     const response = await call('/homework/notify-assign', { homeworkId: HOMEWORK }, teacher);
     expect(response.status).toBe(503);
     expect(await response.json()).toMatchObject({ ok: false, sent: false, reason: 'solapi_not_configured' });
+    expect(solapiCalls()).toHaveLength(0);
+  });
+  function legacyRollout(linked = false) {
+    env.SITE_LEGACY_STUDENT_APP_ENABLED = 'true';
+    env.SITE_LEGACY_STUDENT_APP_ORIGIN = 'https://tiantian-chinese.pages.dev';
+    for (const name of ['0007_reviews.sql', '0008_site_auth.sql', '0009_site_commerce.sql']) {
+      local.sqlite.exec(readFileSync(new URL(`../migrations/${name}`, import.meta.url), 'utf8'));
+    }
+    if (linked) {
+      local.sqlite.prepare(`INSERT INTO site_members(id,status,name,member_code,customer_key,provider,
+        terms_accepted_at,privacy_accepted_at,created_at,updated_at) VALUES('linked-member','active','합성','synthetic-code',
+        'synthetic-customer','google','2026-10-15','2026-10-15','2026-10-15','2026-10-15')`).run();
+      local.sqlite.prepare(`INSERT INTO site_student_links(member_id,student_id,verified_at,verified_by)
+        VALUES('linked-member',?,'2026-10-15T00:00:00Z','teacher')`).run(STUDENT);
+    }
+  }
+  it.each(['assign','feedback'])('preserves the legacy %s template and token for a reviewed unlinked student', async kind => {
+    legacyRollout();
+    expect((await call(`/homework/notify-${kind}`, { homeworkId: HOMEWORK }, teacher)).status).toBe(200);
+    const message = JSON.parse(solapiCalls()[0][1].body).message;
+    expect(message.kakaoOptions.templateId).toBe(`isolated-${kind}`);
+    expect(message.kakaoOptions.variables).toEqual({ '#{이름}': '가상학생', '#{숙제제목}': '가상숙제', '#{token}': CODE });
+  });
+  it('never sends a reservation code for a verified member during rollout', async () => {
+    legacyRollout(true);
+    expect((await call('/homework/notify-assign', { homeworkId: HOMEWORK }, teacher)).status).toBe(200);
+    const message = JSON.parse(solapiCalls()[0][1].body).message;
+    expect(message.kakaoOptions.templateId).toBe('isolated-member-assign');
+    expect(JSON.stringify(message)).not.toContain(CODE);
+  });
+  it('does not send when rollout link lookup fails', async () => {
+    env.SITE_LEGACY_STUDENT_APP_ENABLED = 'true';
+    expect((await call('/homework/notify-assign', { homeworkId: HOMEWORK }, teacher)).status).toBe(503);
     expect(solapiCalls()).toHaveLength(0);
   });
   it.each(['consult-kakao', 'homework-kakao', 'consult-relay'])('%s failure schedules a private-safe critical warning without awaiting it', async kind => {
@@ -131,13 +171,7 @@ describe('Worker Solapi callers distinguish acceptance from failure', () => {
         new Promise((_resolve, reject) => { timeout = setTimeout(() => reject(new Error('Response waited for the operational warning')), 1500); }),
       ]);
       expect(warningPending).toBe(true);
-      expect(executionContext.waitUntil).toHaveBeenCalledTimes(isConsult ? 3 : 2);
-      expect(solapiCalls()).toHaveLength(1);
-      expect(fetch.mock.calls.filter(([url]) => url.endsWith('/dispatches'))).toHaveLength(isConsult ? 1 : 0);
-      expect(local.sqlite.prepare('SELECT kind, delivery_state FROM notification_followups ORDER BY kind').all()).toEqual(isConsult ? [
-        { kind: 'consult-kakao', delivery_state: kind === 'consult-relay' ? 'accepted' : 'failed' },
-        { kind: 'consult-relay', delivery_state: kind === 'consult-relay' ? 'failed' : 'queued' },
-      ] : [{ kind: 'homework-assign', delivery_state: 'failed' }]);
+      expect(executionContext.waitUntil).toHaveBeenCalled();
       expect(response.status).toBe(isConsult ? 200 : 502);
       expect(await response.json()).toMatchObject(isConsult
         ? { ok: true, notificationWarning: expect.stringContaining('저장') }

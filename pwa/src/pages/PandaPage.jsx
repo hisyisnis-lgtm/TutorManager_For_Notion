@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { studentPagePath } from '../utils/studentAppPaths.js';
 import { Content as DialogSurface } from '@radix-ui/react-dialog';
 import PandaWidget, { PANDA_FEED_KEY, getPandaStorageKey } from '../components/ui/PandaWidget.jsx';
 import PandaFigure from '../components/ui/PandaFigure.jsx';
@@ -7,6 +8,7 @@ import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import { Button } from '../components/shadcn/button.jsx';
 import { Dialog, DialogDescription, DialogOverlay, DialogPortal, DialogTitle } from '../components/shadcn/dialog.jsx';
 import { fetchStudentByToken } from '../api/bookingApi.js';
+import { useStudentAppContext } from '../context/StudentAppContext.jsx';
 import { PANDA_GAME_VARS } from '../constants/pandaGameTheme.js';
 import usePandaDialogFocus from '../hooks/usePandaDialogFocus.js';
 import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion.js';
@@ -15,7 +17,8 @@ import '../components/ui/PandaUiMotion.css';
 import './PandaPage.css';
 
 export default function PandaPage() {
-  const { studentToken } = useParams();
+  const { studentToken: legacyStudentToken } = useParams();
+  const studentToken = useStudentAppContext()?.scope || legacyStudentToken;
   const navigate = useNavigate();
   const [student, setStudent] = useState(null);
   const [error, setError] = useState(false);
@@ -49,7 +52,7 @@ export default function PandaPage() {
   const leave = () => {
     setShowExit(false);
     if (window.history.state?.idx > 0) navigate(-1);
-    else navigate(`/personal/${studentToken}`, { replace: true });
+    else navigate(studentPagePath(studentToken), { replace: true });
   };
   const hasShared = !!student?.sharedAt;
   const foodSources = student ? [

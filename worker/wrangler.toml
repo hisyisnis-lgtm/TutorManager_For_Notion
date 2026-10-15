@@ -19,12 +19,24 @@ invocation_logs = false
 # 정시 알림 스케줄러 — 매시 정각에 깨어나 KST 시각에 맞는 알림만 GitHub Actions로 dispatch.
 # GitHub의 schedule 트리거가 러너 혼잡에 몇 시간씩 밀리는 문제를 피하려는 구조
 # (2026-08-27 실측 8~11시간 지연). 어떤 시각에 무엇을 보낼지는 src/index.js DISPATCH_JOBS.
+# 수업 일지는 별도 5분 cron에서 Notion에 직접 생성한다(GitHub 예약 실행 불필요).
 [triggers]
-crons = ["0 * * * *"]
+crons = ["0 * * * *", "*/5 * * * *"]
 
 [vars]
+SITE_SHOP_SALES_MODE = "direct"
+SITE_SHOP_ENABLED = "false"
+SITE_ORIGIN = "https://tiantianchinese.com"
+SITE_ENVIRONMENT = "production"
+SITE_ADMIN_ENABLED = "true"
+SITE_PHONE_ENABLED = "true"
+SITE_PHONE_DAILY_LIMIT = "100"
+SITE_CONTACT_FROM = "contact@tiantianchinese.com"
+SITE_LEGACY_STUDENT_APP_ENABLED = "true"
+SITE_LEGACY_STUDENT_APP_ORIGIN = "https://tiantian-chinese.pages.dev"
 ALLOWED_ORIGIN = "https://hisyisnis-lgtm.github.io"
 LESSON_TYPE_PAGE_ID = "314838fa-f2a6-8070-82ad-e2494a9d7281"
+LESSON_LOG_AUTOMATION_ENABLED = "true"
 
 # 게임 이벤트 측정(유입 깔때기) — POST /game/event → Analytics Engine.
 # 계정 AE 활성화 완료(2026-07-04). 라우트는 `env.GAME_AE?.writeDataPoint`로 가드(바인딩 없으면 200 no-op).
@@ -40,11 +52,15 @@ binding = "GAME_DB"
 database_name = "tone-game-users"
 database_id = "1cb6265b-95e4-47cc-a0c8-5ac00266b9fa"
 
-# 출강·협업 문의 전용. 운영에서는 도메인 설정과 수신 주소 인증을 먼저 완료한다.
-# 로컬에서는 메일을 실제 발송하는 remote binding을 사용하지 않는다.
+# NOTION_TOKEN은 아래 명령으로 등록 (이 파일에 직접 기입 금지)
+# npx wrangler secret put NOTION_TOKEN
+
+# Preserve the current production contact-email binding during the site release.
 [[send_email]]
 name = "CONTACT_EMAIL"
 destination_address = "tiantianchinese_@naver.com"
 
-# NOTION_TOKEN은 아래 명령으로 등록 (이 파일에 직접 기입 금지)
-# npx wrangler secret put NOTION_TOKEN
+# Private website images and purchase files; no public R2 domain.
+[[r2_buckets]]
+binding = "SITE_SHOP_FILES"
+bucket_name = "tiantian-site-files"

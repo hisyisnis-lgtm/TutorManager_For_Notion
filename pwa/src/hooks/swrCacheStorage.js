@@ -1,13 +1,17 @@
+import { studentAppMemoryStorage } from '../api/studentAppMemory.js';
 import { cacheScope, captureAuthScope, isAuthScopeCurrent, subscribeAuthChanges, SENSITIVE_CACHE_TTL } from '../api/authState.js';
 
 const PREFIX = 'swr_';
 // 저장소별 상한. UTF-16 문자열의 보수적인 크기이며 실제 JS heap 사용량은 아니다.
 export const SWR_CACHE_LIMITS = { entries: 80, bytes: 2 * 1024 * 1024, entryBytes: 512 * 1024 };
-const states = [{ fallback: new Map(), parsed: new Map(), parsedBytes: 0 }];
-const stateFor = () => states[0];
+const states = [
+  { student: false, fallback: new Map(), parsed: new Map(), parsedBytes: 0 },
+  { student: true, fallback: new Map(), parsed: new Map(), parsedBytes: 0 },
+];
+const stateFor = key => states[key.includes(':app-') ? 1 : 0];
 const bytesOf = (key, raw) => (key.length + raw.length) * 2;
-function storageOf() {
-  try { return sessionStorage; } catch { return null; }
+function storageOf(state) {
+  try { return state.student ? studentAppMemoryStorage : sessionStorage; } catch { return null; }
 }
 function forgetParsed(state, key) {
   const previous = state.parsed.get(key);

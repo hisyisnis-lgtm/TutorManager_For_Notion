@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import worker from '../src/index.js';
+import { allowSyntheticStudentApps } from './helpers/studentAppFixture.js';
 import { signTypedToken } from '../lib/auth.js';
 import { pandaD1 } from './helpers/pandaD1.js';
 
@@ -7,12 +8,15 @@ const CODE = 'QAABCD123456', OTHER_CODE = 'QAOTHER12345';
 const STUDENT_ID = '11111111-1111-4111-8111-111111111111', OTHER_ID = '22222222-2222-4222-8222-222222222222';
 const STUDENT_DB = '314838fa-f2a6-8143-a6c7-e59c50f3bbdb', CLASS_DB = '314838fa-f2a6-81bc-8b67-d9e1c8fb7ecb';
 const SECRET = 'isolated-panda-test-secret';
-let local, env, token, calls, classes, props, upstream, sequence, sameStudentForOtherCode;
+let local, env, token, calls, classes, props, upstream, sequence, sameStudentForOtherCode, studentQueries;
 const ctx = { waitUntil: promise => promise.catch(() => {}) };
-const send = ({ code = CODE, auth = token, action, method = action ? 'POST' : 'GET', rawBody } = {}) => worker.fetch(new Request(`https://worker.fixture.invalid/personal/student/${code}/panda${action || rawBody ? '/action' : ''}`, {
+const send = ({ code = CODE, auth = token, action, method = action ? 'POST' : 'GET', rawBody } = {}) => {
+  studentQueries = 0;
+  return worker.fetch(new Request(`https://worker.fixture.invalid/personal/student/${code}/panda${action || rawBody ? '/action' : ''}`, {
   method, headers: { Origin: 'http://localhost:5173', ...(auth ? { Authorization: `Bearer ${auth}` } : {}), ...(action || rawBody ? { 'Content-Type': 'application/json' } : {}) },
   ...(action || rawBody ? { body: rawBody || JSON.stringify(action) } : {}),
 }), env, ctx);
+};
 const action = (type, fields = {}, expectedRevision = 0) => ({ requestId: `integration-${String(++sequence).padStart(12, '0')}`, expectedRevision, type, ...fields });
 const classRow = (id, date = '2026-01-02', duration = 6000, special = null, paid = 1) => ({ id, properties: {
   '특이사항': { select: special ? { name: special } : null }, '무료 수업': { rollup: { number: paid } },
@@ -20,7 +24,7 @@ const classRow = (id, date = '2026-01-02', duration = 6000, special = null, paid
 } });
 
 beforeEach(async () => {
-  local = pandaD1(); calls = []; upstream = null; sequence = 0; sameStudentForOtherCode = false;
+  local = pandaD1(); allowSyntheticStudentApps(local, [STUDENT_ID, OTHER_ID]); calls = []; upstream = null; sequence = 0; sameStudentForOtherCode = false;
   env = { GAME_DB: local.db, JWT_SECRET: SECRET, NOTION_TOKEN: 'fixture-only-notion' };
   token = await signTypedToken(SECRET, 'student', `personal:${CODE}`, 600);
   props = { '공유일': { date: { start: '2026-01-01' } }, '숙제 제출 먹이': { rollup: { number: 0 } }, '피드백 확인 먹이': { rollup: { number: 0 } } };
@@ -30,7 +34,9 @@ beforeEach(async () => {
     if (requestUrl.origin !== 'https://api.notion.com' || init.method !== 'POST' || !requestUrl.pathname.endsWith('/query')) throw new Error('Unexpected external request');
     calls.push({ path: requestUrl.pathname, body });
     if (requestUrl.pathname.includes(STUDENT_DB)) {
-      if (upstream === 'student-error') return Response.json({ object: 'error', status: 400, message: `${CODE} ${SECRET}` }, { status: 400 });
+      // The new first read verifies the current grant; inject this fixture's
+      // data outage only into the subsequent panda earnings read.
+      if (++studentQueries > 1 && upstream === 'student-error') return Response.json({ object: 'error', status: 400, message: `${CODE} ${SECRET}` }, { status: 400 });
       if (upstream === 'missing-student') return Response.json({ results: [], has_more: false });
       const owner = body.filter.rich_text.equals === OTHER_CODE && !sameStudentForOtherCode ? OTHER_ID : STUDENT_ID;
       return Response.json({ results: [{ id: owner, properties: props }], has_more: false });
@@ -181,7 +187,11 @@ describe('학생 판다 API 인증과 서버 원장', () => {
       expect((await send({ action: invalid })).status).toBe(400);
     }
     expect((await send({ method: 'POST', rawBody: JSON.stringify({ pad: 'x'.repeat(9000) }) })).status).toBe(413);
-    expect(fetch).not.toHaveBeenCalled();
+    // Only the fresh authorization lookup occurs for each request. No earnings
+    // query or panda state write may follow rejected input.
+    expect(fetch).toHaveBeenCalledTimes(6);
+    expect(calls.every(call => call.path === `/v1/databases/${STUDENT_DB}/query`)).toBe(true);
+    expect(local.sqlite.prepare('SELECT COUNT(*) AS count FROM student_panda_profiles').get().count).toBe(0);
   });
 
   it('같은 액션을 동시에 보내도 한 번 처리하고 오래된 별도 액션은 409 최신 상태를 반환한다', async () => {

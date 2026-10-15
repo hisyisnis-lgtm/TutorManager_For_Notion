@@ -5,6 +5,7 @@ import {
   useRef } from 'react';
 import { toast } from 'sonner';
 import { captureAuthScope, isAuthScopeCurrent } from '../api/authState.js';
+import { useStudentAppContext } from '../context/StudentAppContext.jsx';
 import { useParams,
   useNavigate } from 'react-router-dom';
 import { CircleNotchIcon } from '@phosphor-icons/react';
@@ -66,7 +67,8 @@ function genStudentName(title, index) {
 }
 
 export default function PersonalHomeworkDetailPage() {
-  const { studentToken, hwId } = useParams();
+  const { hwId, studentToken: legacyStudentToken } = useParams();
+  const studentToken = useStudentAppContext()?.scope || legacyStudentToken;
   const navigate = useNavigate();
 
   const [hw, setHw] = useState(() => peekCache(`student:homework:${studentToken}`)?.find(item => item.id === hwId) ?? null);
@@ -357,7 +359,7 @@ export default function PersonalHomeworkDetailPage() {
     </button>
   );
 
-  if (loading) return (
+  if (loading || (hw && hw.id !== hwId)) return (
     <div style={{ minHeight: '100dvh', background: BG_APP }}>
       <div style={headerStyle}>
         <div style={innerStyle}><BackButton /></div>

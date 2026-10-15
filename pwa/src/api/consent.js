@@ -1,3 +1,5 @@
+import { isStudentAppScope } from './studentAppState.js';
+import { studentAppResponse } from './studentApp.js';
 import { WORKER_URL } from '../config.js';
 import { fetchWithTimeout } from './fetchTimeout.js';
 import { studentBearer, handleStudentAuthExpiry } from './studentAuth.js';
@@ -9,9 +11,11 @@ export async function fetchConsentTerms(studentToken, signal) {
   const revision = getAuthRevision();
   const bearer = studentToken ? studentBearer(studentToken) : getToken();
   const path = studentToken ? `/booking/consent/${encodeURIComponent(studentToken)}` : '/booking/consent';
-  const response = await fetchWithTimeout(`${WORKER_URL}${path}`, {
-    headers: bearer ? { Authorization: `Bearer ${bearer}` } : {}, cache: 'no-store', signal,
-  });
+  const response = isStudentAppScope(studentToken)
+    ? await studentAppResponse('/consent', { scope: studentToken, signal })
+    : await fetchWithTimeout(`${WORKER_URL}${path}`, {
+      headers: bearer ? { Authorization: `Bearer ${bearer}` } : {}, cache: 'no-store', signal,
+    });
   if (response.status === 401) {
     if (studentToken) handleStudentAuthExpiry(studentToken, bearer);
     else handleTeacherAuthExpiry(bearer);

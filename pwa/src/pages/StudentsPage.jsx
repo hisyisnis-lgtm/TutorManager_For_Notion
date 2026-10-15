@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '../components/shadcn/button';
 import { Card, CardContent } from '../components/shadcn/card';
@@ -14,8 +14,9 @@ import { formatSessions } from '../api/payments.js';
 import { stripEmoji } from '../utils/stringUtils.js';
 import PullToRefresh from '../components/ui/PullToRefresh.jsx';
 import { useData } from '../context/DataContext.jsx';
-import { TEXT_PRIMARY, TEXT_INACTIVE, TEXT_TERTIARY, BORDER_NEUTRAL, STATUS_SUCCESS_DARK, STATUS_WARNING_TEXT, STATUS_ERROR_TEXT } from '../constants/theme.js';
+import { TEXT_PRIMARY, TEXT_INACTIVE, TEXT_TERTIARY, TEXT_SECONDARY, BG_CARD, GRAY_100, PRIMARY, PRIMARY_BG, BORDER_NEUTRAL, STATUS_SUCCESS_DARK, STATUS_WARNING_TEXT, STATUS_ERROR_TEXT } from '../constants/theme.js';
 import { SECTION_HEADING, ABOVE_BOTTOM_NAV, FAB_EXTRA_PB } from '../constants/styles.js';
+import PendingStudentMembers from '../components/students/PendingStudentMembers.jsx';
 
 // 섹션 헤더 아이콘 — 노션 상태값의 이모지(🟢🟡⚫) 대신 phosphor 아이콘을 쓴다(§19.1).
 // 같은 원형 계열로 묶어 "하나의 상태 스케일"로 읽히게 하고, 색은 의미색 토큰.
@@ -30,9 +31,16 @@ export default function StudentsPage() {
   // DataContext의 학생 데이터를 그대로 사용 → 다른 페이지가 학생 추가/수정해도 자동 반영
   // stale 캐시가 있으면 즉시 표시하고 백그라운드에서 새로고침되는 패턴
   const { students, remainingByStudent, loading, error, refresh } = useData();
-  const [search, setSearch] = useState('');
+  const [view, setView] = useState('students');
+  const [studentSearch, setStudentSearch] = useState('');
+  const [memberSearch, setMemberSearch] = useState('');
+  const [pendingSummary, setPendingSummary] = useState(null);
+  const search = view === 'students' ? studentSearch : memberSearch;
+  const pendingMembers = useRef(null);
   // 수강중은 늘 펼쳐 둔다(이 화면에 오는 주 목적). 나머지는 접었다 펼친다.
   const [openStatus, setOpenStatus] = useState({});
+
+  const refreshStudents = () => Promise.allSettled([refresh(), pendingMembers.current?.refresh()]);
 
   const searching = Boolean(search.trim());
   const filtered = students.filter((s) => !searching || s.name.includes(search));
@@ -49,19 +57,46 @@ export default function StudentsPage() {
   if (others.length) groups.push({ status: '상태 미지정', items: others });
 
   return (
-    <PullToRefresh onRefresh={refresh}>
+    <PullToRefresh onRefresh={refreshStudents}>
       <PageHeader title="학생 관리" />
 
       <div className="px-4 pt-4">
+        <div role="tablist" aria-label="학생 관리 목록" className="mb-4 flex gap-1 rounded-xl p-1" style={{ background: GRAY_100 }}>
+          {[['students', '수강생'], ['pending', '승인 대기']].map(([value, label], index, tabs) => (
+            <Button key={value} id={`students-tab-${value}`} role="tab" variant="ghost"
+              aria-selected={view === value} aria-controls={`students-panel-${value}`} tabIndex={view === value ? 0 : -1}
+              className="flex-1" style={{ background: view === value ? BG_CARD : undefined, color: view === value ? PRIMARY : TEXT_SECONDARY }}
+              onClick={() => setView(value)} onKeyDown={event => {
+                const direction = { ArrowRight: 1, ArrowLeft: -1, Home: -index, End: tabs.length - 1 - index }[event.key];
+                if (direction === undefined) return;
+                event.preventDefault();
+                const next = tabs[(index + direction + tabs.length) % tabs.length][0];
+                setView(next); document.getElementById(`students-tab-${next}`)?.focus();
+              }}>
+              {label}
+              {value === 'pending' && pendingSummary?.count > 0 && <span className="rounded-full px-2 py-0.5 text-xs tabular-nums" style={{ background: PRIMARY_BG, color: PRIMARY }}>
+                {pendingSummary.count}{pendingSummary.hasMore ? '+' : ''}<span className="sr-only">명</span>
+              </span>}
+            </Button>
+          ))}
+        </div>
         <SearchInput
-          placeholder="이름으로 검색"
+          placeholder={view === 'students' ? '학생 이름으로 검색' : '이름 또는 가입 연락처로 검색'}
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => (view === 'students' ? setStudentSearch : setMemberSearch)(e.target.value)}
         />
       </div>
 
+      <div id="students-panel-pending" role="tabpanel" aria-labelledby="students-tab-pending" hidden={view !== 'pending'} className="pb-24">
+        <PendingStudentMembers ref={pendingMembers} search={memberSearch} students={students} onApproved={refresh} active={view === 'pending'} onSummaryChange={setPendingSummary} />
+      </div>
+
+      <div id="students-panel-students" role="tabpanel" aria-labelledby="students-tab-students" hidden={view !== 'students'}>
       {loading && students.length === 0 && <LoadingSpinner />}
       {error && students.length === 0 && <ErrorMessage message={error} onRetry={refresh} />}
+      {!loading && !error && students.length === 0 && <div className="pb-24">
+        <EmptyState icon={<UsersThreeIcon size={44} weight="thin" style={{ color: BORDER_NEUTRAL }} />} title="등록된 수강 학생이 없어요" description="승인 대기 탭에서 가입한 학생을 확인하거나 학생을 직접 추가해 주세요." />
+      </div>}
 
       {students.length > 0 && (
         <>
@@ -117,7 +152,7 @@ export default function StudentsPage() {
                       <div style={{ marginInline: -8, paddingInline: 8 }}>
                         <ul className="space-y-3 pt-3 pb-2">
                           {items.map((student) => (
-                            <StudentCard key={student.id} student={student} remaining={remainingByStudent[student.id] ?? 0} />
+                            <StudentCard key={student.id} student={student} remaining={remainingByStudent[student.id]} loading={loading} />
                           ))}
                         </ul>
                       </div>
@@ -129,10 +164,12 @@ export default function StudentsPage() {
           )}
         </>
       )}
+      </div>
 
       {/* 학생 추가 — 수업 캘린더·결제 내역·숙제 관리와 같은 원형 FAB(브랜드 채움).
           ⛔ 헤더 '+ 학생 추가' 채움 버튼으로 되돌리지 말 것(2026-08-27 사용자 지시) */}
       <div
+        hidden={view !== 'students'}
         style={{
           position: 'fixed', right: 16,
           bottom: `calc(${ABOVE_BOTTOM_NAV} + 16px)`,
@@ -152,7 +189,7 @@ export default function StudentsPage() {
   );
 }
 
-function StudentCard({ student, remaining }) {
+function StudentCard({ student, remaining, loading }) {
   return (
     <li>
       <Link
@@ -169,7 +206,7 @@ function StudentCard({ student, remaining }) {
               {/* ⛔ 잔여가 적다고 색을 바꾸지 않는다 — Tailwind 빨강도 경고색(주황)도 둘 다 거절됐다(2026-08-27).
                   목록이 이미 예약 가능 시간 적은 순으로 정렬돼 있어 **순서가 위계를 맡는다**([[design_system]] §18). */}
               <span className="font-semibold tabular-nums" style={{ color: TEXT_PRIMARY }}>
-                {formatSessions(remaining)}시간
+                {remaining == null ? (loading ? '확인 중' : '확인 필요') : `${formatSessions(remaining)}시간`}
               </span>
             </div>
             {student.unpaidAmount > 0 && (

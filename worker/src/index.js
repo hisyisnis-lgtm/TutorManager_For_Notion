@@ -2,7 +2,8 @@
 // 새 순수 함수 추가 시 lib/ 안에 두고 여기서 import.
 import { stripEmoji, normalizeId, normalizePhone } from '../lib/string.js';
 import { dashboardAccess } from '../lib/gameDashboardAccess.js';
-import { makeNotion } from '../lib/notion.js';
+import { makeNotion, NotionResponseError } from '../lib/notion.js';
+import { runLessonLogAutomation, handleLessonLogRequest } from '../lib/lessonLogs.js';
 import { collectBusinessEvent, queryBusinessAnalytics } from '../lib/businessAnalytics.js';
 import { isSafeExternalUrl, maskPhone, maskToken, sanitizePath } from '../lib/security.js';
 import { validateFileUpload, validateFileContent, isNotionUploadUrl, resolveFileMime, dedupeFileNames } from '../lib/upload.js';
@@ -10,7 +11,24 @@ import { boundedRequest, RequestTooLarge, secureResponse } from '../lib/httpSecu
 import { authorizeNotionRequest, pageInDatabase } from '../lib/notionScope.js';
 import { handleConsentTerms } from '../lib/consentTerms.js';
 import { handlePandaRoutes } from '../lib/pandaRoutes.js';
+import { handleReviewRoutes, isGuestReviewPath } from '../lib/reviews.js';
+import { handleSiteAuthRoutes, siteOrigin, cleanupSiteAuthState } from '../lib/siteAuth.js';
+import { studentHomeworkNotification } from '../lib/studentAppNotifications.js';
+import { handleSiteCommerceRoutes } from '../lib/siteCommerce.js';
+import { handleSiteShopRoutes } from '../lib/siteShop.js';
+import { handleSiteAdminAuthRoutes, authorizeSiteAdminRequest } from '../lib/siteAdminAuth.js';
+import { handleSiteAdminContentRoutes } from '../lib/siteAdminContent.js';
+import { handleSiteAdminReviewRoutes } from '../lib/siteAdminReviews.js';
+import { handleSiteAdminOverviewRoutes } from '../lib/siteAdminOverview.js';
+import { handleSiteContactRoutes } from '../lib/siteContact.js';
 import { handleContactRequest } from '../lib/contact.js';
+import { handleSiteHealthRoutes } from '../lib/siteHealth.js';
+import { runSiteRecoveryJobs } from '../lib/siteRecoveryJobs.js';
+import { handleSitePublicReviewRoutes } from '../lib/sitePublicReviews.js';
+import { handleSiteStudentAppRoutes, revalidateSiteStudentAppAccess } from '../lib/siteStudentApp.js';
+import { handleSiteStudentMemberRoutes } from '../lib/siteStudentMembers.js';
+import { requireStudentAppAccess, StudentAppAccessError, normalizeStudentAppId } from '../lib/studentAppAccess.js';
+import { handleSiteMemberReviewRoutes } from '../lib/siteMemberReviews.js';
 import { studentHomeworkPage } from '../lib/homeworkPrivacy.js';
 import { buildStudentLedger, queryStudentTimePages, studentSessionTotals } from '../lib/studentLedger.js';
 import { teacherNotifications } from '../lib/notifications.js';
@@ -170,17 +188,6 @@ const ALLOWED_ORIGINS = new Set([
   'http://localhost:5173',
   'http://localhost:4173',
 ]);
-const OFFICIAL_SITE_ORIGINS = new Set([
-  'https://tiantianchinese.com',
-  'https://www.tiantianchinese.com',
-  'https://tiantianchinese.pages.dev',
-]);
-
-function isOfficialFormRequest(request, origin) {
-  return OFFICIAL_SITE_ORIGINS.has(origin) && ['/consult', '/contact'].includes(new URL(request.url).pathname)
-    && (request.method === 'POST' || (request.method === 'OPTIONS'
-      && request.headers.get('Access-Control-Request-Method') === 'POST'));
-}
 
 // ===== Notion 프록시 화이트리스트 =====
 // /v1/databases/:id 또는 /v1/pages/:id 경로에 들어올 수 있는 ID 집합.
@@ -413,12 +420,57 @@ async function loadSessionCounts(n, studentPageId, studentProps) {
   return { ...studentSessionTotals(payments, studentProps), payments };
 }
 
+// Only the member router can attach this per-request, server-verified context.
+const memberStudentContexts = new WeakMap();
+const authorizedStudentContexts = new WeakMap();
+
+function assertStudentIdentity(request, studentId) {
+  const context = memberStudentContexts.get(request) || authorizedStudentContexts.get(request);
+  if (context && normalizeStudentAppId(studentId) !== context.studentId) {
+    throw new StudentAppAccessError(403, 'student_identity_changed', '허용되지 않은 학생 정보입니다.');
+  }
+}
+async function requireCurrentStudentAccess(request, env, studentId) {
+  if (studentId !== undefined) assertStudentIdentity(request, studentId);
+  const member = memberStudentContexts.get(request);
+  if (member) {
+    const denied = await revalidateSiteStudentAppAccess(env, member);
+    if (denied) {
+      const body = await denied.json();
+      throw new StudentAppAccessError(denied.status, body.code, body.error);
+    }
+  } else {
+    const context = authorizedStudentContexts.get(request);
+    if (!context) return; // Authenticated teacher preview keeps its existing scope.
+    const access = await requireStudentAppAccess(env, context.studentId);
+    if (access.revision !== context.revision) {
+      throw new StudentAppAccessError(403, 'student_app_access_changed', '학생앱 이용 상태가 변경되었습니다. 새로고침 후 다시 확인해주세요.');
+    }
+  }
+}
+function studentNotion(request, env, { strict = false } = {}) {
+  const notion = makeNotion(env.NOTION_TOKEN, { strict, beforeRequest: () => requireCurrentStudentAccess(request, env) });
+  return async (method, path, body) => {
+    // makeNotion rechecks access immediately before the first fetch and every retry.
+    const result = await notion(method, path, body);
+    const context = memberStudentContexts.get(request) || authorizedStudentContexts.get(request);
+    if (context && result?.object === 'error') throw new NotionResponseError(result.status);
+    if (context && path === `/databases/${STUDENT_DB_ID}/query`) {
+      if (!Array.isArray(result?.results) || result.results.length > 1 || result.has_more === true) throw new NotionResponseError(502);
+      if (result.results[0]) assertStudentIdentity(request, result.results[0].id);
+    }
+    await requireCurrentStudentAccess(request, env);
+    return result;
+  };
+}
+
 // 예약 코드로 학생 조회 → 인증에 필요한 최소 정보(전화번호)만. 없으면 null.
 async function findStudentForAuth(n, token) {
   const q = await n('POST', `/databases/${STUDENT_DB_ID}/query`, {
-    filter: { property: '예약 코드', rich_text: { equals: token } }, page_size: 1,
+    filter: { property: '예약 코드', rich_text: { equals: token } }, page_size: 2,
   });
-  const page = q.results?.[0];
+  if (!Array.isArray(q?.results) || q.results.length > 1 || q.has_more === true) throw new NotionResponseError(502);
+  const page = q.results[0];
   if (!page) return null;
   const p = page.properties || {};
   return { id: page.id, phone: p['전화번호']?.phone_number || null };
@@ -439,12 +491,74 @@ async function studentSessionValid(request, env, token) {
 //  - 유효한 학생 세션 OR 강사 JWT(미리보기·공유) → 통과(null).
 //  - 인증 설정이 누락되어도 무효 세션은 항상 401. 환경변수로 해제하지 않는다.
 async function enforceStudentSession(request, env, corsHeaders, token, routeTag) {
-  if (await studentSessionValid(request, env, token)) return null;
-  // 강사 기기 우회 — 강사가 학생 페이지를 열면 강사 JWT를 보냄.
+  const memberContext = memberStudentContexts.get(request);
+  if (memberContext) {
+    if (memberContext.token !== token) return errRes(corsHeaders, 403, '허용되지 않은 학생 정보입니다.');
+    try {
+      const student = await findStudentForAuth(makeNotion(env.NOTION_TOKEN, { strict: true }), token);
+      if (!student || normalizeStudentAppId(student.id) !== memberContext.studentId) return errRes(corsHeaders, 403, '허용되지 않은 학생 정보입니다.');
+      await requireCurrentStudentAccess(request, env); return null;
+    } catch (error) {
+      if (error instanceof StudentAppAccessError) return errRes(corsHeaders, error.status, error.message);
+      return errRes(corsHeaders, 503, '학생앱 이용 권한을 확인하지 못했습니다. 잠시 후 다시 시도해주세요.');
+    }
+  }
+  // 강사 미리보기는 기존 강사 인증을 유지한다.
   const auth = (request.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
   if (auth && env.JWT_SECRET && await verifyToken(auth, env.JWT_SECRET)) return null;
-  return errRes(corsHeaders, 401, '휴대폰 인증이 필요합니다. 다시 로그인해주세요.');
+  if (!await studentSessionValid(request, env, token)) return errRes(corsHeaders, 401, '로그인 후 학생앱을 이용해주세요.');
+  try {
+    const student = await findStudentForAuth(makeNotion(env.NOTION_TOKEN, { strict: true }), token);
+    if (!student) return errRes(corsHeaders, 403, '학생앱 이용 대상이 아닙니다. 선생님에게 문의해주세요.');
+    const access = await requireStudentAppAccess(env, student.id);
+    authorizedStudentContexts.set(request, { studentId: access.studentId, token, revision: access.revision });
+    return null;
+  } catch (error) {
+    if (error instanceof StudentAppAccessError) return errRes(corsHeaders, error.status, error.message);
+    return errRes(corsHeaders, 503, '학생앱 이용 권한을 확인하지 못했습니다. 잠시 후 다시 시도해주세요.');
+  }
 }
+
+async function studentAppGrantDenial(env, headers, studentId) {
+  try { await requireStudentAppAccess(env, studentId); return null; }
+  catch (error) {
+    if (error instanceof StudentAppAccessError) return errRes(headers, error.status, error.message);
+    return errRes(headers, 503, '학생앱 이용 권한을 확인하지 못했습니다. 잠시 후 다시 시도해주세요.');
+  }
+}
+
+async function dispatchSiteStudentApp(request, context, descriptor, ctx, env) {
+  const token = encodeURIComponent(context.token), url = new URL(request.url);
+  const routes = {
+    student: '/booking/student/' + token,
+    classes: '/booking/my-classes/' + token,
+    homework: '/homework/student/' + token,
+    'homework-upload': '/homework/student-upload/' + token,
+    'homework-submit': '/homework/student/' + token + '/' + encodeURIComponent(descriptor.resourceId || '') + '/submit',
+    'homework-file': '/homework/student/' + token + '/' + encodeURIComponent(descriptor.resourceId || '') + '/file',
+    'feedback-seen': '/homework/feedback-seen/' + token,
+    notices: '/notice/student/' + token,
+    consent: '/booking/consent/' + token,
+    panda: '/personal/student/' + token + '/panda',
+    'panda-action': '/personal/student/' + token + '/panda/action',
+  };
+  const pathname = routes[descriptor.operation];
+  if (!pathname) return errRes({}, 404, '요청한 학생앱 항목을 찾을 수 없습니다.');
+  url.pathname = pathname;
+  const internalRequest = new Request(url, request);
+  memberStudentContexts.set(internalRequest, context);
+  const headers = { 'Cache-Control': 'private, no-store' };
+  if (descriptor.operation === 'notices') return handleNoticeRoutes(internalRequest, env, headers, url);
+  if (['student', 'classes'].includes(descriptor.operation)) return handleBookingRoutes(internalRequest, env, headers, url);
+  if (descriptor.operation === 'consent') return handleConsentTerms(internalRequest, env, headers, { token: context.token, authorizeStudent: enforceStudentSession, authorizeTeacher: requireJwt });
+  if (['panda', 'panda-action'].includes(descriptor.operation)) return handlePandaRoutes(internalRequest, env, headers, {
+    token: context.token, actionRoute: descriptor.operation === 'panda-action', authorizeStudent: enforceStudentSession,
+    studentDbId: STUDENT_DB_ID, classDbId: CLASS_DB_ID,
+    authorizeIdentity: id => requireCurrentStudentAccess(internalRequest, env, id),
+  });
+  return handleHomeworkRoutes(internalRequest, env, headers, url, ctx);
+}
+
 
 // 솔라피 SMS 발송 — 학생 OTP용. 사전등록 발신번호가 없으면 명시적 실패.
 async function sendSms(env, to, text) {
@@ -991,7 +1105,9 @@ async function handleStudentAuthRoutes(request, env, corsHeaders, url) {
       return errRes(corsHeaders, 429, '잠시 후 다시 시도해주세요.');
     }
     const student = await findStudentForAuth(n, token);
-    if (!student) return errRes(corsHeaders, 404, '학생 코드를 확인해주세요.');
+    if (!student) return errRes(corsHeaders, 404, '학생 연결을 확인해주세요. 선생님에게 문의해주세요.');
+    const grantDenied = await studentAppGrantDenial(env, corsHeaders, student.id);
+    if (grantDenied) return grantDenied;
     if (!student.phone) {
       // 전화 미등록 → 강사 우회코드 경로로 안내 (락아웃 방지)
       return new Response(JSON.stringify({ ok: false, reason: 'no_phone' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
@@ -1032,6 +1148,10 @@ async function handleStudentAuthRoutes(request, env, corsHeaders, url) {
     if (!(await rateLimitCheck(env, `pauth:vf:tk:${token}`, 5, 180)) || !(await rateLimitCheck(env, `pauth:vf:ip:${ip}`, 20, 180))) {
       return errRes(corsHeaders, 429, '잠시 후 다시 시도해주세요.');
     }
+    const student = await findStudentForAuth(n, token);
+    if (!student) return errRes(corsHeaders, 403, '학생앱 이용 대상이 아닙니다. 선생님에게 문의해주세요.');
+    const grantDenied = await studentAppGrantDenial(env, corsHeaders, student.id);
+    if (grantDenied) return grantDenied;
     const saved = await consumeChallenge(env, 'student-otp', token, code);
     if (!saved) return errRes(corsHeaders, 401, '인증번호가 일치하지 않거나 만료되었습니다.');
     const session = await signTypedToken(env.JWT_SECRET, 'student', studentSessionSub(token), STUDENT_SESSION_TTL);
@@ -1050,7 +1170,7 @@ async function handleNoticeRoutes(request, env, corsHeaders, url) {
     return errRes(corsHeaders, 429, '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.');
   }
 
-  const n = makeNotion(env.NOTION_TOKEN);
+  const n = studentNotion(request, env, { strict: true });
 
   // Notion 페이지 → 앱이 쓰는 최소 형태. 학생·강사 공통.
   const parseNotice = (page) => {
@@ -1169,7 +1289,7 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
     return errRes(corsHeaders, 429, '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.');
   }
 
-  const n = makeNotion(env.NOTION_TOKEN);
+  const n = studentNotion(request, env, { strict: true });
 
   // 시간 관련 유틸
   const timeToMin = (t) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
@@ -1383,7 +1503,7 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
     if (gate) return gate;
     const res = await n('POST', `/databases/${STUDENT_DB_ID}/query`, {
       filter: { property: '예약 코드', rich_text: { equals: token } },
-      page_size: 1,
+      page_size: 2,
     });
     if (!Array.isArray(res?.results)) return errRes(corsHeaders, 502, '학생 정보를 확인하지 못했습니다. 다시 시도해주세요.');
     const page = res.results?.[0];
@@ -1434,6 +1554,7 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
       totalSessions: props?.['총 수업 횟수']?.rollup?.number ?? 0,
       remainingHours,
       paidHours,
+      timeLedger,
       completedMinutes,
       sharedAt,
       // 앱 숙제는 VIP(숙제 관리 대상) 전용(정책 확정 2026-09-04). 비VIP 학생앱은 숙제 섹션·보관함을 숨긴다.
@@ -1461,7 +1582,7 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
 
     const studentRes = await n('POST', `/databases/${STUDENT_DB_ID}/query`, {
       filter: { property: '예약 코드', rich_text: { equals: token } },
-      page_size: 1,
+      page_size: 2,
     });
     const studentPage = studentRes.results?.[0];
     if (!studentPage) {
@@ -1643,7 +1764,7 @@ async function handleBookingRoutes(request, env, corsHeaders, url) {
 }
 
 // ===== 숙제 파일 업로드 공통 헬퍼 =====
-async function uploadFileToNotion(file, notionToken) {
+async function uploadFileToNotion(file, notionToken, authorize = async () => {}) {
   const fileName = file.name || 'file';
   // Notion이 받는 Content-Type은 표준 MIME이어야 한다.
   // MediaRecorder의 `audio/webm;codecs=opus` 처럼 codec 파라미터가 붙으면 Notion이 거부하고,
@@ -1653,7 +1774,9 @@ async function uploadFileToNotion(file, notionToken) {
   const arrayBuffer = await file.arrayBuffer();
 
   // 1. Notion file_upload 세션 생성 (일시적 실패는 재시도로 흡수)
-  const session = await makeNotion(notionToken)('POST', '/file_uploads', { mode: 'single_part' });
+  await authorize();
+  const session = await makeNotion(notionToken, { beforeRequest: authorize })('POST', '/file_uploads', { mode: 'single_part' });
+  await authorize();
   const { id: fileUploadId, upload_url } = session ?? {};
   if (!fileUploadId || !upload_url) {
     throw new Error(session?.message || 'Notion 파일 업로드 세션 생성 실패');
@@ -1687,6 +1810,7 @@ async function uploadFileToNotion(file, notionToken) {
   }
 
   await uploadRes.body?.cancel().catch(() => {});
+  await authorize();
   return { fileUploadId, fileName };
 }
 
@@ -1708,13 +1832,13 @@ async function handleHomeworkRoutes(request, env, corsHeaders, url, ctx) {
     if (gate) return gate;
   }
 
-  const n = makeNotion(env.NOTION_TOKEN);
+  const n = studentNotion(request, env);
 
   // 학생 토큰으로 학생 페이지 조회 (공통)
   async function findStudentByToken(token) {
     const res = await n('POST', `/databases/${STUDENT_DB_ID}/query`, {
       filter: { property: '예약 코드', rich_text: { equals: token } },
-      page_size: 1,
+      page_size: 2,
     });
     return res.results?.[0] ?? null;
   }
@@ -1723,7 +1847,10 @@ async function handleHomeworkRoutes(request, env, corsHeaders, url, ctx) {
   // Notion 임시 URL을 노출하지 않고 항상 Worker proxy를 통해 다운로드한다.
   async function streamNotionFile(sourceUrl, fileName) {
     if (!isSafeExternalUrl(sourceUrl) || new URL(sourceUrl).protocol !== 'https:') return errRes(corsHeaders, 403, '허용되지 않은 파일 주소입니다.');
+    await requireCurrentStudentAccess(request, env);
     const upstream = await fetch(sourceUrl, { redirect: 'manual' });
+    try { await requireCurrentStudentAccess(request, env); }
+    catch (error) { await upstream.body?.cancel().catch(() => {}); throw error; }
     // 3xx도 실패로 처리한다. 검증되지 않은 Location을 따라가지 않는다.
     if (!upstream.ok || !upstream.body) {
       await upstream.body?.cancel().catch(() => {});
@@ -1839,7 +1966,6 @@ async function handleHomeworkRoutes(request, env, corsHeaders, url, ctx) {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-    const templateId = notifyAssign ? env.KAKAO_TPL_HW_ASSIGN : env.KAKAO_TPL_HW_FEEDBACK;
     try {
       const hwPage = await n('GET', `/pages/${homeworkId}`);
       if (!pageInDatabase(hwPage, new Set([normalizeId(HOMEWORK_DB_ID)]))) return errRes(corsHeaders, 403, '허용되지 않은 숙제입니다.');
@@ -1853,27 +1979,30 @@ async function handleHomeworkRoutes(request, env, corsHeaders, url, ctx) {
       const studentPage = await n('GET', `/pages/${studentId}`);
       const name = stripEmoji(studentPage.properties?.['이름']?.title?.[0]?.plain_text ?? '');
       const phone = (studentPage.properties?.['전화번호']?.phone_number ?? '').replace(/-/g, '');
-      const studentToken = studentPage.properties?.['예약 코드']?.rich_text?.[0]?.plain_text ?? '';
+      const appDenied = await studentAppGrantDenial(env, corsHeaders, studentId);
+      if (appDenied) return new Response(JSON.stringify({ ok: false, sent: false, delivery: 'failed', reason: 'student_app_not_provided' }), { status: appDenied.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       if (!phone) {
         void queueNotificationRecord(env, ctx, { kind: notifyAssign ? 'homework-assign' : 'homework-feedback', referenceId: homeworkId }, { state: 'failed', reason: 'no_phone' });
         return new Response(JSON.stringify({ ok: false, reason: 'no_phone' }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
-      if (!studentToken) {
-        // 버튼 URL 변수가 비면 Kakao 발송 실패 위험 → 예약 코드 없으면 skip
-        void queueNotificationRecord(env, ctx, { kind: notifyAssign ? 'homework-assign' : 'homework-feedback', referenceId: homeworkId }, { state: 'failed', reason: 'no_token' });
-        return new Response(JSON.stringify({ ok: false, reason: 'no_token' }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+      let notice;
+      try {
+        const token = (studentPage.properties?.['예약 코드']?.rich_text || []).map(part => part.plain_text ?? part.text?.content ?? '').join('');
+        notice = await studentHomeworkNotification(env, { studentId, token, kind: notifyAssign ? 'assign' : 'feedback' });
+      } catch {
+        return new Response(JSON.stringify({ ok: false, sent: false, delivery: 'failed', reason: 'student_notice_not_configured',
+          error: '숙제는 저장되었지만 학생앱 알림 연결을 확인하지 못했습니다. 연결 설정을 확인해 주세요.' }),
+        { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
       const delivery = await sendKakaoAlert(env, {
         to: phone,
-        templateId,
+        templateId: notice.templateId,
         variables: {
           '#{이름}': name,
           '#{숙제제목}': title,
-          '#{token}': studentToken,
+          ...notice.variables,
         },
       });
       void queueNotificationRecord(env, ctx, { kind: notifyAssign ? 'homework-assign' : 'homework-feedback', referenceId: homeworkId }, delivery);
@@ -1922,7 +2051,7 @@ async function handleHomeworkRoutes(request, env, corsHeaders, url, ctx) {
       }
       const content = await validateFileContent(file);
       if (!content.ok) return errRes(corsHeaders, content.status, content.error);
-      const result = await uploadFileToNotion(file, env.NOTION_TOKEN);
+      const result = await uploadFileToNotion(file, env.NOTION_TOKEN, () => requireCurrentStudentAccess(request, env));
       const uploadReceipt = await signTypedToken(env.JWT_SECRET, 'homework-upload', studentPage.id, 3600, {
         uploadId: result.fileUploadId, fileName: result.fileName,
       });
@@ -1930,8 +2059,12 @@ async function handleHomeworkRoutes(request, env, corsHeaders, url, ctx) {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     } catch (e) {
+      if (e instanceof StudentAppAccessError) throw e;
       await alertHomeworkFailure({ studentPage, file, stage: 'Notion 업로드', reason: e.message });
-      return new Response(JSON.stringify({ error: e.message }), {
+      const error = e.message === '파일 업로드 중 허용되지 않은 주소 이동이 감지되었습니다.'
+        ? '파일 업로드 중 허용되지 않은 주소 이동이 감지되었습니다.'
+        : '파일 업로드를 완료하지 못했습니다. 잠시 후 다시 시도해주세요.';
+      return new Response(JSON.stringify({ error }), {
         status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -2056,6 +2189,7 @@ async function handleHomeworkRoutes(request, env, corsHeaders, url, ctx) {
         updateStatus = updateData.status || 400;
       }
     } catch (e) {
+      if (e instanceof StudentAppAccessError) throw e;
       updateOk = false;
       updateStatus = 502;
       updateData = { object: 'error', message: e.message };
@@ -2134,7 +2268,8 @@ async function handleHomeworkRoutes(request, env, corsHeaders, url, ctx) {
       if (!sourceUrl) return errRes(corsHeaders, 500, '파일 URL을 얻을 수 없습니다.');
       return await streamNotionFile(sourceUrl, fileName);
     } catch (e) {
-      return errRes(corsHeaders, 500, e.message);
+      if (e instanceof StudentAppAccessError) throw e;
+      return errRes(corsHeaders, 502, '파일을 가져오지 못했습니다. 잠시 후 다시 시도해주세요.');
     }
   }
 
@@ -2456,6 +2591,56 @@ async function handleErrorLog(request, env, corsHeaders) {
 // 모든 라우팅 로직을 여기 위임. throw된 unhandled exception은 default.fetch에서 캡처.
 async function handleFetch(request, env, ctx) {
   const url = new URL(request.url);
+  const contactResponse = url.pathname === '/api/site/contact' ? await handleSiteContactRoutes(request, env) : null;
+  if (contactResponse) return contactResponse;
+
+  // Website cookies are confined to their own namespace. Existing app bearer
+  // domains and /personal permissions are never promoted to website members.
+  if (url.pathname.startsWith('/api/site/')) {
+    const origin = request.headers.get('Origin') || '';
+    const admin = url.pathname.startsWith('/api/site/admin/');
+    const teacherOrigin = ALLOWED_ORIGINS.has(origin) || (env.ALLOWED_ORIGIN && origin === env.ALLOWED_ORIGIN)
+      || /^https:\/\/[a-z0-9-]+\.tiantian-chinese\.pages\.dev$/.test(origin)
+      || /^https?:\/\/localhost(:\d+)?$/.test(origin) || origin === 'capacitor://localhost';
+    const websiteOrigin = origin === siteOrigin(env);
+    const accepted = admin ? teacherOrigin || websiteOrigin : !origin || websiteOrigin;
+    const cors = { 'Vary': 'Origin', 'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': admin || url.pathname === '/api/site/public-reviews' || url.pathname.startsWith('/api/site/public-reviews/')
+        ? 'Content-Type, Authorization, X-CSRF-Token' : 'Content-Type, X-CSRF-Token',
+      'Access-Control-Expose-Headers': 'Retry-After', 'Cache-Control': 'private, no-store',
+      ...(origin && accepted ? { 'Access-Control-Allow-Origin': origin, ...(websiteOrigin ? { 'Access-Control-Allow-Credentials': 'true' } : {}) } : {}) };
+    if (request.method === 'OPTIONS') return new Response(null, { status: accepted ? 204 : 403, headers: cors });
+    const paymentProviderPost = request.method === 'POST' && ['/api/site/payments/nicepay/return', '/api/site/webhooks/nicepay', '/api/site/webhooks/payssam'].includes(url.pathname);
+    if (!accepted && !paymentProviderPost) return errRes(cors, 403, '허용되지 않은 출처입니다.');
+    const authorizeAdmin = (req, context) => authorizeSiteAdminRequest(req, context, { authorizeTeacher: requireJwt });
+    // Reject unauthenticated admin requests before buffering private multipart files.
+    if (admin && !['/api/site/admin/session', '/api/site/admin/auth/login', '/api/site/admin/auth/logout'].includes(url.pathname)) {
+      const denial = await authorizeAdmin(request, env);
+      if (denial) {
+        const headers = new Headers(denial.headers);
+        for (const [key, value] of Object.entries(cors)) headers.set(key, value);
+        return new Response(denial.body, { status: denial.status, headers });
+      }
+    }
+    try { request = await boundedRequest(request); }
+    catch (error) { if (error instanceof RequestTooLarge) return errRes(cors, 413, error.message); throw error; }
+    const response = await handleSiteAdminAuthRoutes(request, env)
+      || await handleSiteHealthRoutes(request, env)
+      || await handleSiteAdminOverviewRoutes(request, env, ctx, { authorizeTeacher: authorizeAdmin })
+      || await handleSitePublicReviewRoutes(request, env)
+      || await handleSiteAdminReviewRoutes(request, env, ctx, { authorizeTeacher: authorizeAdmin })
+      || await handleSiteAdminContentRoutes(request, env, ctx, { authorizeTeacher: authorizeAdmin })
+      || await handleSiteShopRoutes(request, env, ctx, { authorizeTeacher: authorizeAdmin })
+      || await handleSiteStudentMemberRoutes(request, env, ctx, { authorizeTeacher: requireJwt })
+      || await handleSiteStudentAppRoutes(request, env, ctx, { authorizeTeacher: requireJwt, dispatch: (req, context, descriptor, execution) => dispatchSiteStudentApp(req, context, descriptor, execution, env) })
+      || await handleSiteAuthRoutes(request, env, { sendPhoneSms: (to, text) => sendSms(env, to, text) })
+      || await handleSiteMemberReviewRoutes(request, env)
+      || await handleSiteCommerceRoutes(request, env, ctx, { authorizeTeacher: authorizeAdmin })
+      || errRes({}, 404, '요청한 항목을 찾을 수 없습니다.');
+    const headers = new Headers(response.headers);
+    for (const [key, value] of Object.entries(cors)) headers.set(key, value);
+    return new Response(response.body, { status: response.status, headers });
+  }
 
     // Notion 웹훅은 CORS/인증 체크 없이 별도 처리
     if (url.pathname === '/notion-webhook' && request.method === 'POST') {
@@ -2510,12 +2695,13 @@ async function handleFetch(request, env, ctx) {
     const origin = request.headers.get('Origin') || '';
     // localhost: 로컬 dev(http, 포트有) + Capacitor 네이티브 앱 웹뷰(안드로이드=https://localhost, iOS=capacitor://localhost).
     // 게임 단독 앱이 /game/* API를 CORS로 호출하려면 이 스킴들이 허용돼야 함(민감 라우트는 JWT로 별도 게이팅).
-    const officialSite = OFFICIAL_SITE_ORIGINS.has(origin);
+    const officialSite = ['https://tiantianchinese.com', 'https://www.tiantianchinese.com', 'https://tiantianchinese.pages.dev'].includes(origin);
     const analyticsSite = officialSite && url.pathname === '/analytics/event';
     const gameSite = officialSite && (url.pathname.startsWith('/game/') || url.pathname.startsWith('/finder/') || url.pathname === '/error-log');
-    const formSite = isOfficialFormRequest(request, origin);
+    const reviewsSite = officialSite && isGuestReviewPath(url.pathname);
+    const formSite = officialSite && ['/consult', '/contact'].includes(url.pathname) && (request.method === 'POST' || (request.method === 'OPTIONS' && request.headers.get('Access-Control-Request-Method') === 'POST'));
     const insightsSite = origin === 'https://hanul-insights.pages.dev' && ['/auth/login', '/analytics/report'].includes(url.pathname);
-    const allowed = insightsSite || analyticsSite || gameSite || formSite || ALLOWED_ORIGINS.has(origin) || (env.ALLOWED_ORIGIN && origin === env.ALLOWED_ORIGIN) || /^https:\/\/[a-z0-9-]+\.tiantian-chinese\.pages\.dev$/.test(origin) || /^https?:\/\/localhost(:\d+)?$/.test(origin) || origin === 'capacitor://localhost';
+    const allowed = insightsSite || analyticsSite || gameSite || reviewsSite || formSite || ALLOWED_ORIGINS.has(origin) || (env.ALLOWED_ORIGIN && origin === env.ALLOWED_ORIGIN) || /^https:\/\/[a-z0-9-]+\.tiantian-chinese\.pages\.dev$/.test(origin) || /^https?:\/\/localhost(:\d+)?$/.test(origin) || origin === 'capacitor://localhost';
 
     const corsHeaders = {
       'Access-Control-Allow-Origin': allowed ? origin : '',
@@ -2544,6 +2730,10 @@ async function handleFetch(request, env, ctx) {
 
     try { request = await boundedRequest(request); }
     catch (error) { if (error instanceof RequestTooLarge) return errRes(corsHeaders, 413, error.message); throw error; }
+
+    if (url.pathname === '/reviews' || url.pathname.startsWith('/reviews/')) {
+      return handleReviewRoutes(request, env, corsHeaders, { authorizeTeacher: requireJwt });
+    }
 
     if (url.pathname === '/analytics/event' && request.method === 'POST') {
       if (!env.GAME_AE) return errRes(corsHeaders, 503, '측정 연결이 필요합니다.');
@@ -2608,6 +2798,7 @@ async function handleFetch(request, env, ctx) {
       return handlePandaRoutes(request, env, corsHeaders, {
         token: pandaRoute[1], actionRoute: !!pandaRoute[2], authorizeStudent: enforceStudentSession,
         studentDbId: STUDENT_DB_ID, classDbId: CLASS_DB_ID,
+        authorizeIdentity: id => requireCurrentStudentAccess(request, env, id),
       });
     }
 
@@ -2621,14 +2812,14 @@ async function handleFetch(request, env, ctx) {
       return handleNoticeRoutes(request, env, corsHeaders, url);
     }
 
+    // Preserve the existing business-mail contract for older website clients.
+    if (url.pathname === '/contact' && request.method === 'POST') {
+      return handleContactRequest(request, env, corsHeaders);
+    }
+
     // 무료상담 신청 (공개, 인증 불필요)
     if (url.pathname === '/consult' && request.method === 'POST') {
       return handleConsultRequest(request, env, corsHeaders, ctx);
-    }
-
-    // 출강·협업 문의는 학생 상담 DB와 분리하여 고정 업무용 이메일로만 전달한다.
-    if (url.pathname === '/contact' && request.method === 'POST') {
-      return handleContactRequest(request, env, corsHeaders);
     }
 
     // OG 메타태그 파싱 프록시 — GET /og-proxy?url=<encoded>
@@ -2791,6 +2982,28 @@ async function handleFetch(request, env, ctx) {
     const scope = await authorizeNotionRequest(request, url, makeNotion(env.NOTION_TOKEN), ALLOWED_NOTION_DB_IDS);
     if (!scope.ok) return errRes(corsHeaders, scope.status, scope.error);
     if (scope.page) return new Response(JSON.stringify(scope.page), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    if (env.LESSON_LOG_AUTOMATION_ENABLED === 'true' && ['POST', 'PATCH'].includes(request.method)) {
+      const lessonLogResult = await handleLessonLogRequest(env, {
+        method: request.method,
+        body: scope.body,
+        page: scope.currentPage,
+      });
+      if (lessonLogResult) {
+        const responseHeaders = {
+          ...corsHeaders,
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-store',
+          ...lessonLogResult.headers,
+        };
+        if (lessonLogResult.headers?.['Retry-After']) {
+          responseHeaders['Access-Control-Expose-Headers'] = 'Retry-After';
+        }
+        return new Response(JSON.stringify(lessonLogResult.body), {
+          status: lessonLogResult.status,
+          headers: responseHeaders,
+        });
+      }
+    }
     const notionUrl = `https://api.notion.com${url.pathname}${url.search}`;
     const body = scope.body ? JSON.stringify(scope.body) : undefined;
 
@@ -2841,10 +3054,42 @@ async function handleFetch(request, env, ctx) {
     });
 }
 
+async function recoverSiteServices(env, options = {}) {
+  const result = await runSiteRecoveryJobs(env, { ...options, notify: alert => sendAlert(env, alert) });
+  if (!result.ok) throw new Error('통합웹 복구 작업 확인이 필요합니다.');
+  return result;
+}
+
 export default {
-  // Cron Trigger — 매시 정각. 실제 발송 대상 선택은 runScheduledJobs가 한다.
+  // 결제 복구와 수업 일지를 5분 주기로 확인한다. 정각에는 hourly 작업이 복구를 맡는다.
   async scheduled(event, env, ctx) {
+    if (event.cron === '*/5 * * * *') {
+      const hourlyRecovery = typeof event.scheduledTime === 'number' && new Date(event.scheduledTime).getUTCMinutes() === 0;
+      if (env.SITE_SESSION_SECRET && !hourlyRecovery) ctx.waitUntil(recoverSiteServices(env));
+      if (env.LESSON_LOG_AUTOMATION_ENABLED !== 'true') return;
+      ctx.waitUntil(
+        runLessonLogAutomation(env).then((result) => {
+          console.log('[lesson-logs]', JSON.stringify(result));
+        }).catch(async (err) => {
+          console.error('[lesson-logs] 자동 생성 실패');
+          await sendAlert(env, {
+            level: 'critical',
+            title: '🚨 수업 일지 자동 생성 실패',
+            message: '종료된 수업의 일지를 만들지 못했습니다. 다음 5분 주기에 다시 확인합니다.',
+            tags: ['rotating_light', 'cron'],
+            dedupKey: 'lesson-log-automation',
+            ttlSeconds: 3600,
+          }).catch(() => {});
+          throw err;
+        })
+      );
+      return;
+    }
     ctx.waitUntil(cleanupSecurityState(env).catch(() => console.error('[security] expired state cleanup failed')));
+    if (env.SITE_SESSION_SECRET) {
+      ctx.waitUntil(cleanupSiteAuthState(env));
+      ctx.waitUntil(recoverSiteServices(env, { includeRecentPaid: true }));
+    }
     ctx.waitUntil(
       runScheduledJobs(env).catch((err) => {
         console.error('[cron] 실패', err?.stack || err);
@@ -2866,14 +3111,20 @@ export default {
     } catch (err) {
       // unhandled exception → critical 알림 (dedup으로 폭주 방지)
       // ctx.waitUntil로 알림 발송이 응답을 막지 않도록 처리
-      ctx.waitUntil(captureWorkerError(err, env, request).catch(() => {}));
-      console.error('[unhandled]', err?.stack || err);
+      const notionFailure = err instanceof NotionResponseError;
+      const accessFailure = err instanceof StudentAppAccessError;
+      if (!notionFailure && !accessFailure) {
+        ctx.waitUntil(captureWorkerError(err, env, request).catch(() => {}));
+        console.error('[unhandled]', err?.stack || err);
+      }
       const origin = request.headers.get('Origin') || '';
-      const allowed = isOfficialFormRequest(request, origin) || ALLOWED_ORIGINS.has(origin) || (env.ALLOWED_ORIGIN && origin === env.ALLOWED_ORIGIN)
+      const reviewsSite = ['https://tiantianchinese.com', 'https://www.tiantianchinese.com', 'https://tiantianchinese.pages.dev'].includes(origin)
+        && isGuestReviewPath(new URL(request.url).pathname);
+      const allowed = reviewsSite || ALLOWED_ORIGINS.has(origin) || (env.ALLOWED_ORIGIN && origin === env.ALLOWED_ORIGIN)
         || /^https:\/\/[a-z0-9-]+\.tiantian-chinese\.pages\.dev$/.test(origin) || /^https?:\/\/localhost(:\d+)?$/.test(origin) || origin === 'capacitor://localhost';
       const unavailable = err instanceof SecurityStoreUnavailable;
-      return secureResponse(new Response(JSON.stringify({ error: unavailable ? '인증 서비스를 잠시 사용할 수 없습니다. 다시 시도해주세요.' : 'Internal Server Error' }), {
-        status: unavailable ? 503 : 500,
+      return secureResponse(new Response(JSON.stringify({ error: notionFailure || accessFailure ? err.message : unavailable ? '인증 서비스를 잠시 사용할 수 없습니다. 다시 시도해주세요.' : 'Internal Server Error' }), {
+        status: accessFailure ? err.status : notionFailure ? 502 : unavailable ? 503 : 500,
         headers: { 'Content-Type': 'application/json', 'Vary': 'Origin', ...(allowed ? { 'Access-Control-Allow-Origin': origin } : {}) },
       }));
     }

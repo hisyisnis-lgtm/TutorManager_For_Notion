@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useSyncExternalStore } from 'react';
 import { toast } from 'sonner';
 import { useParams, useNavigate } from 'react-router-dom';
 import { stripEmoji } from '../utils/stringUtils.js';
 import { Button } from '../components/shadcn/button';
 import { Card, CardContent } from '../components/shadcn/card';
+import { Switch } from '../components/shadcn/switch';
 import { FileTextIcon, CalendarBlankIcon, CaretRightIcon, CaretDownIcon, PhoneIcon } from '@phosphor-icons/react';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import Badge from '../components/ui/Badge.jsx';
@@ -18,6 +19,9 @@ import { fetchUpcomingClasses, parseClass, bookedHoursOf } from '../api/classes.
 import { fetchAllPayments, parsePayment, paymentStatusColor, refundSessions, formatSessions, remainingSessionsOf } from '../api/payments.js';
 import { formatKRW } from '../utils/dateUtils.js';
 import { useData } from '../context/DataContext.jsx';
+import { getToken } from '../api/authUtils.js';
+import { getStudentAppAccess, updateStudentAppAccess } from '../api/studentAppAccess.js';
+import { getAuthRevision, subscribeAuthChanges } from '../api/authState.js';
 
 export default function StudentDetailPage() {
   const { id } = useParams();
@@ -25,6 +29,7 @@ export default function StudentDetailPage() {
   const { refresh: refreshAll } = useData();
 
   const [student, setStudent] = useState(null);
+  const [studentAppProvided, setStudentAppProvided] = useState(false);
   const [payments, setPayments] = useState([]);
   const [remaining, setRemaining] = useState(0);
   const [bookedHours, setBookedHours] = useState(0);
@@ -40,8 +45,7 @@ export default function StudentDetailPage() {
     const load = async () => {
       setLoading(true);
       try {
-        // 학생 1명당 Notion 3회 왕복. 상태·VIP 토글은 아래에서 낙관적으로 반영하므로
-        // 캐시로 먼저 띄워도 어긋나지 않는다. 화면에 쓰는 만큼만(각 5건) 담는다.
+        // 학생 1명당 Notion 3회 왕복. 화면에 쓰는 만큼만(각 5건) 담는다.
         // 캐시 키에 v3 — 최근 수업 대신 예정 수업(예약된 시간)을 담게 되어 저장 형태가 달라졌다.
         await swrLoad(`student:detail:v3:${id}`, async () => {
           const [page, upcoming, allPayments] = await Promise.all([
@@ -155,15 +159,14 @@ export default function StudentDetailPage() {
           </CardContent>
         </Card>
 
-        {/* ② 수업·숙제 — 학생 관리의 메인 기능이라 가로 2열 타일로 볼륨을 준다.
-            숙제는 VIP(숙제 관리 대상)만 진입 가능하므로 비VIP면 수업 타일이 전체 폭을 쓴다. */}
-        <div style={{ display: 'grid', gridTemplateColumns: student.vip ? '1fr 1fr' : '1fr', gap: 12 }}>
+        {/* 제공 권한을 확인한 학생만 숙제 관리를 표시한다. */}
+        <div style={{ display: 'grid', gridTemplateColumns: studentAppProvided ? '1fr 1fr' : '1fr', gap: 12 }}>
           <ActionTile
             icon={<CalendarBlankIcon weight="fill" size={24} />}
             label="수업 관리"
             onClick={() => navigate(`/students/${id}/classes`)}
           />
-          {student.vip && (
+          {studentAppProvided && (
             <ActionTile
               icon={<FileTextIcon weight="fill" size={24} />}
               label="숙제 관리"
@@ -171,6 +174,8 @@ export default function StudentDetailPage() {
             />
           )}
         </div>
+
+        <StudentAppAccess key={id} studentId={id} onResolved={access => setStudentAppProvided(access?.allowed === true && access.sync?.ready === true && access.sync.homeworkEnabled === true)} onChanged={refreshAll} />
 
         {/* ③ 학생 정보 — 이름·연락처·레벨·목표·메모. 전부 "필요할 때 찾아보는" 참고 정보라 접어 둔다 */}
         <Card>
@@ -282,6 +287,98 @@ export default function StudentDetailPage() {
       )}
     </>
   );
+}
+
+function StudentAppAccess({ studentId, onResolved, onChanged }) {
+  const authRevision = useSyncExternalStore(subscribeAuthChanges, getAuthRevision, () => 0);
+  const [access, setAccess] = useState(null);
+  const [verified, setVerified] = useState(false);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+  const active = useRef(false);
+  const updateController = useRef(null);
+  const callbacks = useRef({ onResolved, onChanged });
+  callbacks.current = { onResolved, onChanged };
+  const busy = useRef(false);
+
+  useEffect(() => {
+    active.current = true;
+    return () => { active.current = false; updateController.current?.abort(); };
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const bearer = getToken();
+    const current = () => active.current && !controller.signal.aborted && bearer === getToken() && authRevision === getAuthRevision();
+    updateController.current?.abort(); busy.current = false; setSaving(false);
+    setLoading(true); setError(''); setVerified(false); callbacks.current.onResolved?.(null);
+    getStudentAppAccess(studentId, { signal: controller.signal })
+      .then(result => { if (current()) { setAccess(result); setVerified(true); callbacks.current.onResolved?.(result); } })
+      .catch(cause => {
+        if (!current()) return;
+        if (cause.currentAccess) { setAccess(cause.currentAccess); setVerified(true); callbacks.current.onResolved?.(cause.currentAccess); }
+        setError(cause.message || '학생앱 제공 상태를 확인하지 못했어요.');
+      })
+      .finally(() => { if (current()) setLoading(false); });
+    return () => controller.abort();
+  }, [studentId, attempt, authRevision]);
+
+  async function saveAccess(update) {
+    if (!access || !verified || loading || busy.current) return;
+    busy.current = true;
+    const bearer = getToken();
+    const controller = new AbortController();
+    updateController.current = controller;
+    setSaving(true); setError('');
+    try {
+      const result = await updateStudentAppAccess(studentId, update, { signal: controller.signal });
+      if (!active.current || controller.signal.aborted || bearer !== getToken() || authRevision !== getAuthRevision()) return;
+      setAccess(result); setVerified(true); callbacks.current.onResolved?.(result);
+      if (result.sync.ready) {
+        toast.success(result.allowed ? '학생앱과 숙제 관리를 켰어요.' : '학생앱과 숙제 관리를 껐어요.');
+        await callbacks.current.onChanged?.();
+      } else setError('숙제 관리 설정을 아직 확인하지 못했어요. 아래에서 변경 결과를 확인해 주세요.');
+    } catch (cause) {
+      if (!active.current || controller.signal.aborted || bearer !== getToken() || authRevision !== getAuthRevision()) return;
+      if (cause.currentAccess) {
+        setAccess(cause.currentAccess); setVerified(true); callbacks.current.onResolved?.(cause.currentAccess);
+      } else { setVerified(false); callbacks.current.onResolved?.(null); }
+      if (cause.status === 409) {
+        setError('제공 상태를 다시 확인해야 해요. 최신 상태를 확인한 뒤 변경해 주세요.');
+      } else setError(cause.message || '제공 상태를 변경하지 못했어요. 최신 상태를 다시 확인해 주세요.');
+    } finally {
+      busy.current = false;
+      if (active.current && !controller.signal.aborted && bearer === getToken() && authRevision === getAuthRevision()) setSaving(false);
+    }
+  }
+
+  function changeAccess(allowed) {
+    if (!access || allowed === access.allowed || (allowed && !access.sync.ready)) return;
+    saveAccess({ allowed, expectedRevision: access.revision });
+  }
+
+  const pending = access && ['processing', 'unknown'].includes(access.sync.state);
+  const canRecover = verified && access && !access.sync.ready && (pending
+    ? typeof access.sync.pendingAllowed === 'boolean' && Number.isSafeInteger(access.sync.expectedRevision)
+    : ['failed', 'out_of_sync'].includes(access.sync.state));
+  function recoverAccess() {
+    if (!canRecover) return;
+    saveAccess(pending ? { allowed: access.sync.pendingAllowed, expectedRevision: access.sync.expectedRevision }
+      : { allowed: access.allowed, expectedRevision: access.revision });
+  }
+
+  return <Card><CardContent className="p-4 space-y-3">
+    <div className="flex min-h-11 items-center justify-between gap-3">
+      <label htmlFor={`student-app-provision-${studentId}`} className="flex min-h-11 flex-1 items-center text-sm font-semibold" style={{ color: TEXT_PRIMARY }}>학생앱 제공</label>
+      <Switch id={`student-app-provision-${studentId}`} aria-label="학생앱 제공" aria-describedby={`student-app-provision-${studentId}-description`} checked={access?.allowed === true} disabled={loading || saving || !verified || (!access?.sync.ready && !access?.allowed)} onCheckedChange={changeAccess} />
+    </div>
+    <p id={`student-app-provision-${studentId}-description`} className="text-xs leading-relaxed" style={{ color: TEXT_SECONDARY }}>학생앱 제공과 숙제 관리를 함께 켜고 꺼요. 기존 숙제 기록은 유지돼요.</p>
+    <p className="text-sm min-h-5" role="status" style={{ color: TEXT_SECONDARY }}>{loading ? '제공 상태 확인 중…' : saving ? '변경 사항 저장 중…' : !verified ? '최신 상태 확인 필요' : !access?.sync.ready ? '숙제 관리 설정 확인 필요' : access?.allowed ? '제공 중' : '제공 안 함'}</p>
+    {canRecover && <Button variant="outline" loading={saving} onClick={recoverAccess}>{pending ? '변경 결과 확인' : '설정 다시 시도'}</Button>}
+    {error && <ErrorMessage message={error} onRetry={() => setAttempt(value => value + 1)} />}
+  </CardContent></Card>;
 }
 
 function InfoRow({ label, value }) {

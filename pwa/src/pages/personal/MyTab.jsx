@@ -1,3 +1,4 @@
+import { studentPagePath } from '../../utils/studentAppPaths.js';
 import '@fontsource/jua/korean-400.css';
 import { CaretRightIcon, ChatTeardropTextIcon, ChatCircleDotsIcon, ArrowSquareOutIcon } from '@phosphor-icons/react';
 import { Button } from '../../components/shadcn/button.jsx';
@@ -10,7 +11,8 @@ import usePandaGame from '../../hooks/usePandaGame.js';
 import { PANDA_GAME_THEME } from '../../constants/pandaGameTheme.js';
 import { formatDuration } from '../../utils/dateUtils.js';
 import { PRIMARY, TEXT_PRIMARY, TEXT_TERTIARY, TEXT_INACTIVE, BG_DARK } from '../../constants/theme.js';
-import { KAKAO_CHANNEL_CHAT_URL } from '../../constants.js';
+import { KAKAO_CHANNEL_CHAT_URL, SITE_ORIGIN } from '../../constants.js';
+import { isStudentAppScope } from '../../api/studentAppState.js';
 import './MyTab.css';
 
 // 설정 패널 '피드백 남기기'와 같은 구글 폼(서비스 개선의견) — 별도 폼이 생기면 여기만 바꾼다
@@ -63,7 +65,7 @@ export default function MyTab({ student, studentToken, onOpenPanda, serverEnable
         <PandaEntryBanner key={studentToken} studentToken={studentToken} onOpenPanda={onOpenPanda} serverEnabled={serverEnabled} />
       </div>
 
-      {/* 선생님께 문의 — 변경·취소·전화번호 변경·코드 분실 등 모든 문의의 단일 진입점(2026-09-04).
+      {/* 선생님께 문의 — 변경·취소·연락처 변경 등 모든 문의의 단일 진입점(2026-09-04).
           화면마다 "문의하세요"만 있고 갈 곳이 없던 막다른 길을 여기로 모은다. */}
       <div style={{ marginBottom: 12 }}>
         <a
@@ -118,9 +120,9 @@ export default function MyTab({ student, studentToken, onOpenPanda, serverEnable
 
       {/* 법정 고지 — 지금까지 앱 어디에서도 못 가던 페이지(2026-09-04). 새 탭으로 열어 앱 상태를 잃지 않게. */}
       <p style={{ fontSize: 12, color: TEXT_TERTIARY, textAlign: 'center', margin: '0 0 24px' }}>
-        <a href="/#/privacy" target="_blank" rel="noopener noreferrer" style={{ color: TEXT_TERTIARY, textDecoration: 'underline', textUnderlineOffset: 3 }}>개인정보처리방침</a>
+        <a href={isStudentAppScope(studentToken) ? `${SITE_ORIGIN}/#/privacy` : '/#/privacy'} target="_blank" rel="noopener noreferrer" style={{ color: TEXT_TERTIARY, textDecoration: 'underline', textUnderlineOffset: 3 }}>개인정보처리방침</a>
         {' · '}
-        <a href={`/personal/${encodeURIComponent(studentToken)}/consent`} target="_blank" rel="noopener noreferrer" style={{ color: TEXT_TERTIARY, textDecoration: 'underline', textUnderlineOffset: 3 }}>수업 동의서</a>
+        <a href={studentPagePath(studentToken, 'consent')} target="_blank" rel="noopener noreferrer" style={{ color: TEXT_TERTIARY, textDecoration: 'underline', textUnderlineOffset: 3 }}>수업 동의서</a>
       </p>
     </div>
   );
