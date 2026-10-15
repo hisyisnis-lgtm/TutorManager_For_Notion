@@ -1,0 +1,10 @@
+{
+  "checkedAt": "2026-10-15T18:09:25.638Z",
+  "version": "ac492824-c287-4223-b64e-f0e09ebed40f",
+  "deploymentId": "557f9d48-eb2a-4c72-a3a7-9cc16d1eb509",
+  "runtimeCommit": "439001ec13d228dd81fef9f7f058ff33323ea228",
+  "sourceEvidence": "04_docs/qa/site-deployment-preflight-2026-10-15/worker-stage-lifecycle.json",
+  "bundleSha256": "ba5b10d0223090efba41b01f3e6c0aa97c73502ec4221c5a75a786e457dc4a4c",
+  "bundleBytes": 1105367,
+  "scriptEtag": "ad454ff628d7b32534b577da21f331d7d606091755bbfdac524338d296c9343c"
+}

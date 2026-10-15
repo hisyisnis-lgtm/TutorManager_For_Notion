@@ -12,6 +12,12 @@
       "commit": "709b5636850063af01141c3ff4b1be6eed49600e",
       "bundleSha256": "50afef633cb9c67f3a362da94ff700eb6b6bc2df5bd321ad67d9d30170c20964",
       "scriptEtag": "00ec398c42b95cce8e1987dcfdcedb9f366b31640b86e59e6c85aec09acc02e0"
+    },
+    "ac492824-c287-4223-b64e-f0e09ebed40f": {
+      "commit": "439001ec13d228dd81fef9f7f058ff33323ea228",
+      "scriptEtag": "ad454ff628d7b32534b577da21f331d7d606091755bbfdac524338d296c9343c",
+      "bundleSha256": "ba5b10d0223090efba41b01f3e6c0aa97c73502ec4221c5a75a786e457dc4a4c",
+      "evidence": "04_docs/qa/admin-deploy-2026-10-16/worker-baseline.json"
     }
   }
 }

@@ -39,6 +39,13 @@ it('fails closed for missing recovery schema without exposing SQL, table names o
   expect(failed.status).toBe(503); expect(await failed.text()).not.toContain('private');
   expect((await handleSiteHealthRoutes(request(), {})).status).toBe(503);
 });
+it('requires the staff OTP schema when the private feature is configured', async () => {
+  env.SITE_ADMIN_PHONE_ALLOWLIST = 'synthetic-private-config';
+  expect((await handleSiteHealthRoutes(request(), env)).status).toBe(503);
+  local.sqlite.exec(readFileSync(new URL('../migrations/0031_site_admin_phone_auth.sql', import.meta.url), 'utf8'));
+  const ready = await handleSiteHealthRoutes(request(), env); expect(ready.status).toBe(200);
+  expect(await ready.text()).not.toContain('synthetic-private-config'); expect(fetch).not.toHaveBeenCalled();
+});
 it('does not query the database for another route or a mutation method', async () => {
   const prepare = vi.fn(() => { throw new Error('must_not_query'); });
   expect(await handleSiteHealthRoutes(request('GET', '/api/site/not-health'), { GAME_DB: { prepare } })).toBeNull();

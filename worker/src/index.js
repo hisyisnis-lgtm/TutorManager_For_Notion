@@ -16,7 +16,7 @@ import { handleSiteAuthRoutes, siteOrigin, cleanupSiteAuthState } from '../lib/s
 import { studentHomeworkNotification } from '../lib/studentAppNotifications.js';
 import { handleSiteCommerceRoutes } from '../lib/siteCommerce.js';
 import { handleSiteShopRoutes } from '../lib/siteShop.js';
-import { handleSiteAdminAuthRoutes, authorizeSiteAdminRequest } from '../lib/siteAdminAuth.js';
+import { handleSiteAdminAuthRoutes, authorizeSiteAdminRequest, cleanupSiteAdminAuthState } from '../lib/siteAdminAuth.js';
 import { handleSiteAdminContentRoutes } from '../lib/siteAdminContent.js';
 import { handleSiteAdminReviewRoutes } from '../lib/siteAdminReviews.js';
 import { handleSiteAdminOverviewRoutes } from '../lib/siteAdminOverview.js';
@@ -2615,7 +2615,8 @@ async function handleFetch(request, env, ctx) {
     if (!accepted && !paymentProviderPost) return errRes(cors, 403, '허용되지 않은 출처입니다.');
     const authorizeAdmin = (req, context) => authorizeSiteAdminRequest(req, context, { authorizeTeacher: requireJwt });
     // Reject unauthenticated admin requests before buffering private multipart files.
-    if (admin && !['/api/site/admin/session', '/api/site/admin/auth/login', '/api/site/admin/auth/logout'].includes(url.pathname)) {
+    if (admin && !['/api/site/admin/session', '/api/site/admin/auth/login', '/api/site/admin/auth/logout',
+      '/api/site/admin/auth/phone/request', '/api/site/admin/auth/phone/verify'].includes(url.pathname)) {
       const denial = await authorizeAdmin(request, env);
       if (denial) {
         const headers = new Headers(denial.headers);
@@ -2625,7 +2626,7 @@ async function handleFetch(request, env, ctx) {
     }
     try { request = await boundedRequest(request); }
     catch (error) { if (error instanceof RequestTooLarge) return errRes(cors, 413, error.message); throw error; }
-    const response = await handleSiteAdminAuthRoutes(request, env)
+    const response = await handleSiteAdminAuthRoutes(request, env, { sendPhoneSms: (to, text) => sendSms(env, to, text) })
       || await handleSiteHealthRoutes(request, env)
       || await handleSiteAdminOverviewRoutes(request, env, ctx, { authorizeTeacher: authorizeAdmin })
       || await handleSitePublicReviewRoutes(request, env)
@@ -3094,6 +3095,7 @@ export default {
     ctx.waitUntil(cleanupSecurityState(env).catch(() => console.error('[security] expired state cleanup failed')));
     if (env.SITE_SESSION_SECRET) {
       ctx.waitUntil(cleanupSiteAuthState(env));
+      ctx.waitUntil(cleanupSiteAdminAuthState(env));
       ctx.waitUntil(recoverSiteServices(env, { includeRecentPaid: true }));
     }
     ctx.waitUntil(

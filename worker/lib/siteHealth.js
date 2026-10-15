@@ -26,6 +26,8 @@ export async function handleSiteHealthRoutes(request, env) {
   try {
     if (typeof env.GAME_DB?.prepare !== 'function') throw new Error('database_unavailable');
     for (const sql of SCHEMA_PROBES) await env.GAME_DB.prepare(sql).all();
+    if (env.SITE_ADMIN_PHONE_ALLOWLIST) await env.GAME_DB.prepare(`SELECT c.principal_hash,c.consumption_id,s.auth_method
+      FROM site_admin_phone_challenges c,site_admin_phone_sessions s LIMIT 0`).all();
     return response({ ok: true, schema: 'ready' });
   } catch {
     return response({ ok: false, schema: 'unavailable' }, 503);

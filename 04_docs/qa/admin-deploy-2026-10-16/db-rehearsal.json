@@ -1,0 +1,13 @@
+{
+  "checkedAt": "2026-10-15T18:09:19.338Z",
+  "backupBytes": 265134,
+  "backupSha256": "d13ceb65494fd6dd26b12b9b4b426f104d48b4c4465010cb22586e061423e045",
+  "restoredLocally": true,
+  "existingTablesPreserved": 54,
+  "existingRowsAndSchemaPreserved": true,
+  "approvedStudentGrants": 9,
+  "foreignKeyViolations": 0,
+  "newAdminTablesEmpty": true,
+  "migration": "0031_site_admin_phone_auth.sql",
+  "actualMessagesSent": 0
+}

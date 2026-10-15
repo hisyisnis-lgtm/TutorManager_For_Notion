@@ -1,6 +1,7 @@
 import { base64url } from './auth.js';
 import { siteJson, siteOrigin } from './siteAuth.js';
 import { rateLimitCheck } from './securityStore.js';
+import { handleSiteAdminPhoneAuth, siteAdminPhoneAllowlist, siteAdminPhoneReady } from './siteAdminPhoneAuth.js';
 
 const encoder = new TextEncoder();
 const TOKEN = /^[A-Za-z0-9_-]{43}$/;
@@ -59,7 +60,10 @@ async function matchesHash(secret, domain, value, expected) {
   return crypto.subtle.verify('HMAC', await hmacKey(secret, ['verify']), decode(expected), encoder.encode(`site-admin/v1/${domain}/${value}`));
 }
 async function fingerprint(env) {
-  return hash(env.SITE_SESSION_SECRET, 'credentials', JSON.stringify([env.AUTH_PASSWORD, env.JWT_SECRET]));
+  // Include the private staff configuration so removing a number or rotating
+  // credentials immediately invalidates both in-flight OTPs and admin cookies.
+  return hash(env.SITE_SESSION_SECRET, 'credentials', JSON.stringify([env.AUTH_PASSWORD, env.JWT_SECRET,
+    env.SITE_ADMIN_PHONE_ALLOWLIST === undefined ? null : siteAdminPhoneAllowlist(env) || env.SITE_ADMIN_PHONE_ALLOWLIST]));
 }
 async function passwordMatches(password, expected) {
   const supplied = new Uint8Array(await crypto.subtle.digest('SHA-256', encoder.encode(password)));
@@ -81,7 +85,7 @@ async function session(request, env, requireCsrf = false) {
     if (!csrf || !TOKEN.test(csrf) || !await matchesHash(env.SITE_SESSION_SECRET, 'csrf-store', csrf, row.csrf_hash)) return csrfDenied();
     // Recheck after async CSRF verification; revocation must not survive this await.
     const live = await env.GAME_DB.prepare(`SELECT id FROM site_admin_sessions WHERE id=?1 AND token_hash=?2
-      AND credential_fingerprint=?3 AND revoked_at IS NULL AND expires_at>?4`).bind(row.id, tokenHash, credential, seconds()).first();
+      AND credential_fingerprint=?3 AND revoked_at IS NULL AND expires_at>?4`).bind(row.id, tokenHash, await fingerprint(env), seconds()).first();
     if (!live) return null;
   }
   return { row, token };
@@ -108,12 +112,12 @@ async function rotate(env, previous, role) {
       AND EXISTS(SELECT 1 FROM site_admin_sessions WHERE id=?3)`).bind(seconds(), previous.row.id, next.id)]);
   return await env.GAME_DB.prepare('SELECT id FROM site_admin_sessions WHERE id=?1').bind(next.id).first() ? next : null;
 }
-function dto(role, csrf, expires) {
+function dto(env, role, csrf, expires) {
   return { authenticated: role === 'teacher', admin: role === 'teacher' ? { role: 'teacher' } : null,
-    csrfToken: csrf, expiresAt: new Date(expires * 1000).toISOString() };
+    csrfToken: csrf, expiresAt: new Date(expires * 1000).toISOString(), phoneLoginAvailable: siteAdminPhoneReady(env) };
 }
 function freshResponse(env, value) {
-  return siteJson(dto(value.role, value.csrf, value.expires), { headers: { 'Set-Cookie': cookie(env, value.token, value.ttl) } });
+  return siteJson(dto(env, value.role, value.csrf, value.expires), { headers: { 'Set-Cookie': cookie(env, value.token, value.ttl) } });
 }
 async function body(request, login) {
   if (!/^application\/json(?:\s*;|$)/i.test(request.headers.get('Content-Type') || '')) return null;
@@ -128,6 +132,7 @@ async function body(request, login) {
   try {
     const value = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
     if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+    if (login === null) return value;
     const keys = Object.keys(value);
     return login ? keys.length === 1 && keys[0] === 'password' && typeof value.password === 'string'
       && value.password.length > 0 && value.password.length <= 1024 ? value : null : keys.length === 0 ? value : null;
@@ -144,10 +149,11 @@ async function limited(env, label, limit, ttl) {
     ? fail(429, '로그인 시도가 너무 많습니다. 잠시 후 다시 시도해주세요.', 'admin_rate_limited') : unavailable();
 }
 
-export async function handleSiteAdminAuthRoutes(request, env) {
+export async function handleSiteAdminAuthRoutes(request, env, { sendPhoneSms } = {}) {
   const path = new URL(request.url).pathname;
   const isSession = path === '/api/site/admin/session', isLogin = path === '/api/site/admin/auth/login', isLogout = path === '/api/site/admin/auth/logout';
-  if (!isSession && !isLogin && !isLogout) return null;
+  const phoneAction = path === '/api/site/admin/auth/phone/request' ? 'request' : path === '/api/site/admin/auth/phone/verify' ? 'verify' : null;
+  if (!isSession && !isLogin && !isLogout && !phoneAction) return null;
   if (!siteAdminReady(env)) return unavailable();
   try {
     const denial = sourceDenied(request, env); if (denial) return denial;
@@ -155,7 +161,7 @@ export async function handleSiteAdminAuthRoutes(request, env) {
     const access = await session(request, env, !isSession);
     if (access instanceof Response) return access;
     if (isSession) {
-      if (access) return siteJson(dto(access.row.role, await hash(env.SITE_SESSION_SECRET, 'csrf-token', access.token), access.row.expires_at));
+      if (access) return siteJson(dto(env, access.row.role, await hash(env.SITE_SESSION_SECRET, 'csrf-token', access.token), access.row.expires_at));
       const throttle = await limited(env, `site-admin-bootstrap:${request.headers.get('CF-Connecting-IP') || '0.0.0.0'}`, 60, 60);
       if (throttle) return throttle;
       const fresh = await newSession(env);
@@ -165,6 +171,12 @@ export async function handleSiteAdminAuthRoutes(request, env) {
       return freshResponse(env, fresh);
     }
     if (!access) return expired();
+    if (phoneAction) return await handleSiteAdminPhoneAuth(request, env, access, phoneAction, {
+      sendPhoneSms, readBody: value => body(value, null), fingerprint: () => fingerprint(env),
+      hash: (domain, value) => hash(env.SITE_SESSION_SECRET, domain, value),
+      matchesHash: (domain, value, expected) => matchesHash(env.SITE_SESSION_SECRET, domain, value, expected),
+      newSession: role => newSession(env, role), freshResponse: value => freshResponse(env, value),
+    });
     if (isLogin) {
       const throttle = await limited(env, `login:${request.headers.get('CF-Connecting-IP') || '0.0.0.0'}`, 10, 300)
         || await limited(env, 'login:teacher', 30, 300);
@@ -176,6 +188,20 @@ export async function handleSiteAdminAuthRoutes(request, env) {
     const next = await rotate(env, access, isLogin ? 'teacher' : null);
     return next ? freshResponse(env, next) : expired();
   } catch { return unavailable(); }
+}
+
+export async function cleanupSiteAdminAuthState(env) {
+  if (!env.GAME_DB || !env.SITE_SESSION_SECRET) return { cleaned: 0 };
+  try {
+    const db = env.GAME_DB, at = seconds();
+    const phoneSchema = await db.prepare("SELECT name FROM sqlite_schema WHERE type='table' AND name='site_admin_phone_challenges'").first();
+    const statements = phoneSchema ? [db.prepare(`DELETE FROM site_admin_phone_challenges WHERE id IN
+      (SELECT id FROM site_admin_phone_challenges WHERE expires_at<=?1 LIMIT 500)`).bind(at)] : [];
+    statements.push(db.prepare(`DELETE FROM site_admin_sessions WHERE id IN
+      (SELECT id FROM site_admin_sessions WHERE expires_at<=?1 OR revoked_at IS NOT NULL LIMIT 500)`).bind(at));
+    const results = await db.batch(statements);
+    return { cleaned: results.reduce((sum, result) => sum + Number(result.meta?.changes || 0), 0) };
+  } catch { return { cleaned: 0, unavailable: true }; }
 }
 
 export async function authorizeSiteAdminRequest(request, env, { authorizeTeacher } = {}) {

@@ -3,10 +3,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 vi.mock('../lib/siteRecoveryJobs.js', () => ({ runSiteRecoveryJobs: vi.fn() }));
 vi.mock('../lib/lessonLogs.js', () => ({ runLessonLogAutomation: vi.fn(), handleLessonLogRequest: vi.fn() }));
 vi.mock('../lib/siteAuth.js', async importOriginal => ({ ...(await importOriginal()), cleanupSiteAuthState: vi.fn() }));
+vi.mock('../lib/siteAdminAuth.js', async importOriginal => ({ ...(await importOriginal()), cleanupSiteAdminAuthState: vi.fn() }));
 vi.mock('../lib/securityStore.js', async importOriginal => ({ ...(await importOriginal()), cleanupSecurityState: vi.fn() }));
 import { runSiteRecoveryJobs } from '../lib/siteRecoveryJobs.js';
 import { runLessonLogAutomation } from '../lib/lessonLogs.js';
 import { cleanupSiteAuthState } from '../lib/siteAuth.js';
+import { cleanupSiteAdminAuthState } from '../lib/siteAdminAuth.js';
 import { cleanupSecurityState } from '../lib/securityStore.js';
 import worker from '../src/index.js';
 
@@ -21,6 +23,7 @@ beforeEach(() => {
   runSiteRecoveryJobs.mockReset().mockResolvedValue({ ok: true, jobs: {}, backlog: {}, notified: 0 });
   runLessonLogAutomation.mockReset().mockResolvedValue({ created: 0 });
   cleanupSiteAuthState.mockReset().mockResolvedValue(undefined);
+  cleanupSiteAdminAuthState.mockReset().mockResolvedValue(undefined);
   cleanupSecurityState.mockReset().mockResolvedValue(undefined);
   vi.spyOn(console, 'log').mockImplementation(() => {});
   vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -42,6 +45,7 @@ describe('실제 Worker scheduled 진입점에 연결된 통합웹 복구', () =
     expect(results).toHaveLength(1); expect(results[0].status).toBe('fulfilled');
     expect(runLessonLogAutomation).not.toHaveBeenCalled();
     expect(cleanupSecurityState).not.toHaveBeenCalled(); expect(cleanupSiteAuthState).not.toHaveBeenCalled();
+    expect(cleanupSiteAdminAuthState).not.toHaveBeenCalled();
     expect(fetch).not.toHaveBeenCalled();
   });
 
@@ -59,8 +63,9 @@ describe('실제 Worker scheduled 진입점에 연결된 통합웹 복구', () =
     expect(runSiteRecoveryJobs).toHaveBeenCalledExactlyOnceWith(env, { includeRecentPaid: true, notify: expect.any(Function) });
     expect(cleanupSecurityState).toHaveBeenCalledExactlyOnceWith(env);
     expect(cleanupSiteAuthState).toHaveBeenCalledExactlyOnceWith(env);
+    expect(cleanupSiteAdminAuthState).toHaveBeenCalledExactlyOnceWith(env);
     expect(runLessonLogAutomation).not.toHaveBeenCalled();
-    expect(results).toHaveLength(4); expect(results.every(result => result.status === 'fulfilled')).toBe(true);
+    expect(results).toHaveLength(5); expect(results.every(result => result.status === 'fulfilled')).toBe(true);
     expect(fetch).not.toHaveBeenCalled();
   });
 
@@ -92,6 +97,7 @@ describe('실제 Worker scheduled 진입점에 연결된 통합웹 복구', () =
     const env = { LESSON_LOG_AUTOMATION_ENABLED: 'false' };
     await invoke(regular, env); await invoke(hourly, env);
     expect(runSiteRecoveryJobs).not.toHaveBeenCalled(); expect(cleanupSiteAuthState).not.toHaveBeenCalled();
+    expect(cleanupSiteAdminAuthState).not.toHaveBeenCalled();
     expect(cleanupSecurityState).toHaveBeenCalledOnce(); expect(fetch).not.toHaveBeenCalled();
   });
 

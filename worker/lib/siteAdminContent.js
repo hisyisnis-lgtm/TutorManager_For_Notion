@@ -23,6 +23,9 @@ const contentShape = { slug, title: text(120, 1).refine(value => !/[\x00-\x1f\x7
 const createSchema = z.object(contentShape).strict();
 const updateSchema = z.object({ ...contentShape, version }).strict();
 const archiveSchema = z.object({ version }).strict();
+const reorderSchema = z.object({ placement: z.enum(['learn', 'home']),
+  items: z.array(z.object({ slug, version }).strict()).min(1).max(1000)
+    .refine(items => new Set(items.map(item => item.slug)).size === items.length) }).strict();
 const fail = (code, message, identifier) => siteJson({ error: message, ...(identifier ? { code: identifier } : {}) }, { status: code });
 
 async function readBody(request, schema) {
@@ -147,6 +150,34 @@ async function archiveContent(request, env, pathSlug, authorizeTeacher) {
   if (!row) { await recordSiteAdminAction(env, 'content.archive', `content:${pathSlug}`, 'conflict'); return fail(409, '글이 변경됐어요. 최신 내용을 확인해주세요.', 'version_conflict'); }
   return siteJson({ content: contentDto(row, { admin: true }) });
 }
+async function reorderContent(request, env, authorizeTeacher) {
+  const parsed = await readBody(request, reorderSchema); if (parsed.response) return parsed.response;
+  const denied = await authorizeTeacher(request, env, {}); if (denied) return denied;
+  const { placement, items } = parsed.value, db = env.GAME_DB, at = stamp();
+  const scope = `category='learn' AND status<>'archived'${placement === 'home' ? ' AND show_on_home=1' : ''}`;
+  const column = placement === 'home' ? 'home_sort_order' : 'sort_order';
+  // Materialize the complete membership/version check before the first row changes.
+  // Otherwise a correlated version check can observe earlier rows of this UPDATE.
+  const mutation = db.prepare(`WITH incoming AS MATERIALIZED (
+      SELECT json_extract(value,'$.slug') AS slug,json_extract(value,'$.version') AS version,CAST(key AS INTEGER) AS position
+      FROM json_each(?1)
+    ), permitted AS MATERIALIZED (
+      SELECT (SELECT COUNT(*) FROM site_content WHERE ${scope})=(SELECT COUNT(*) FROM incoming)
+        AND NOT EXISTS(SELECT 1 FROM incoming i LEFT JOIN site_content c ON c.slug=i.slug
+          WHERE c.slug IS NULL OR c.category<>'learn' OR c.status='archived'${placement === 'home' ? ' OR c.show_on_home<>1' : ''} OR c.version<>i.version) AS ok
+    ) UPDATE site_content SET ${column}=(SELECT position FROM incoming WHERE incoming.slug=site_content.slug),
+      version=version+1,updated_at=?2
+    WHERE ${scope} AND (SELECT ok FROM permitted)=1 RETURNING *`).bind(JSON.stringify(items), at);
+  const results = await db.batch([mutation,
+    siteAdminAuditStatement(db, 'content.reorder', `content:${placement}`, 'success', { conditional: true, at })]);
+  const rows = results[0].results;
+  if (!rows.length) {
+    await recordSiteAdminAction(env, 'content.reorder', `content:${placement}`, 'conflict');
+    return fail(409, '콘텐츠 목록이 변경됐어요. 최신 목록을 확인한 뒤 순서를 바꿔 주세요.', 'version_conflict');
+  }
+  rows.sort((first, second) => first[column] - second[column]);
+  return siteJson({ contents: rows.map(row => contentDto(row, { admin: true })), placement });
+}
 async function readContentImageUpload(request) {
   const type = request.headers.get('Content-Type') || '';
   if (!type.startsWith('multipart/form-data')) return { response: fail(400, '이미지 업로드 형식을 확인해주세요.') };
@@ -253,6 +284,7 @@ export async function handleSiteAdminContentRoutes(request, env, ctx, { authoriz
       if (!authorizeTeacher) return fail(403, '관리자 권한이 필요합니다.');
       const denied = await authorizeTeacher(request, env, {}); if (denied) return denied;
       if (audit) return method === 'GET' ? await listAudit(env, url) : fail(405, '지원하지 않는 요청 방식입니다.');
+      if (admin[1] === 'reorder' && !admin[2] && method === 'POST') return await reorderContent(request, env, authorizeTeacher);
       if (admin[1] && !slug.safeParse(admin[1]).success) return fail(400, '글 식별자를 확인해주세요.');
       if (admin[2]) {
         if (method === 'GET') return await contentThumbnail(env, admin[1], true);
