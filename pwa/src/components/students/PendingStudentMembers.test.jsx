@@ -73,7 +73,7 @@ describe('학생 관리의 홈페이지 가입 학생 승인', () => {
     expect(approveSiteStudentMember).not.toHaveBeenCalled();
     fireEvent.click(dialog.getByRole('button', { name: '사용 허용' }));
     await waitFor(() => expect(refresh).toHaveBeenCalledTimes(1));
-    expect(approveSiteStudentMember).toHaveBeenCalledWith(MEMBER, { mode: 'new', idempotencyKey: expect.any(String) }, expect.objectContaining({ signal: expect.any(AbortSignal) }));
+    expect(approveSiteStudentMember).toHaveBeenCalledWith(MEMBER, { mode: 'new', idempotencyKey: expect.any(String) }, expect.objectContaining({ signal: expect.any(globalThis.AbortSignal) }));
     expect(getSiteStudentMembers).toHaveBeenCalledTimes(2);
     expect(toast.success).toHaveBeenCalledWith('김학생 학생의 학생앱 사용을 허용했어요.');
   });
