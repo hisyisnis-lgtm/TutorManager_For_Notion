@@ -10,6 +10,7 @@ import {
   PRIMARY,
   PRIMARY_ALPHA_35,
   TEXT_PRIMARY,
+  TEXT_SECONDARY,
   TEXT_TERTIARY,
   TEXT_DISABLED,
   BORDER_NEUTRAL,
@@ -23,7 +24,7 @@ import {
  * - fileName: 표시할 파일명
  * - onGetFreshUrl: URL 만료 시 호출할 async 함수 → 새 URL 반환
  */
-export default function AudioPlayer({ url, fileName, onGetFreshUrl, fetchInlineBlobUrl, onDelete, deleteDisabled, onDownload }) {
+export default function AudioPlayer({ url, fileName, onGetFreshUrl, fetchInlineBlobUrl, onDelete, deleteDisabled, onDownload, neutral = false, plain = false }) {
   const [downloading, setDownloading] = useState(false);
   const handleDownload = async () => {
     if (!onDownload || downloading) return;
@@ -166,10 +167,10 @@ export default function AudioPlayer({ url, fileName, onGetFreshUrl, fetchInlineB
   return (
     <div style={{
       display: 'flex', alignItems: 'center', gap: 12,
-      background: '#ffffff',
-      borderRadius: 16,
-      padding: '12px 14px',
-      boxShadow: 'var(--shadow-border)',
+      background: plain ? 'transparent' : '#ffffff',
+      borderRadius: plain ? 0 : 16,
+      padding: plain ? '12px 0' : '12px 14px',
+      boxShadow: plain ? 'none' : 'var(--shadow-border)',
     }}>
       <audio
         ref={audioRef}
@@ -208,8 +209,8 @@ export default function AudioPlayer({ url, fileName, onGetFreshUrl, fetchInlineB
         disabled={loading || (!src && !fetchInlineBlobUrl)}
         aria-label={playing ? '일시정지' : '재생'}
         style={{
-          width: 40, height: 40, borderRadius: '50%',
-          border: 'none', background: PRIMARY,
+          width: plain ? 44 : 40, height: plain ? 44 : 40, borderRadius: '50%',
+          border: 'none', background: neutral ? TEXT_SECONDARY : PRIMARY,
           color: '#ffffff',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           cursor: loading || (!src && !fetchInlineBlobUrl) ? 'not-allowed' : 'pointer',
@@ -287,15 +288,15 @@ export default function AudioPlayer({ url, fileName, onGetFreshUrl, fetchInlineB
           >
             <div style={{
               height: '100%', width: `${progress * 100}%`,
-              background: PRIMARY, borderRadius: 4,
+              background: neutral ? TEXT_SECONDARY : PRIMARY, borderRadius: 4,
               transition: 'width 0.1s linear',
               position: 'relative',
             }}>
               {/* thumb: opacity 트랜지션으로 부드럽게 등장 */}
               <div style={{
                 position: 'absolute', right: -5, top: '50%', transform: 'translateY(-50%)',
-                width: 10, height: 10, borderRadius: '50%', background: PRIMARY,
-                boxShadow: `0 1px 4px ${PRIMARY_ALPHA_35}`,
+                width: 10, height: 10, borderRadius: '50%', background: neutral ? TEXT_SECONDARY : PRIMARY,
+                boxShadow: neutral ? 'none' : `0 1px 4px ${PRIMARY_ALPHA_35}`,
                 opacity: progress > 0 ? 1 : 0,
                 transition: 'opacity 200ms ease-out',
               }} />
@@ -304,7 +305,9 @@ export default function AudioPlayer({ url, fileName, onGetFreshUrl, fetchInlineB
         )}
       </div>
 
-      {/* 다운로드 버튼 — 36×36 히트 영역 */}
+      {/* 파일 조작은 문서·이미지 행과 같은 간격으로 묶어 열을 맞춘다. */}
+      {(onDownload || onDelete) && <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+      {/* 다운로드 버튼 — 카드 36px, plain 44px 히트 영역 */}
       {onDownload && (
         <button
           type="button"
@@ -314,10 +317,10 @@ export default function AudioPlayer({ url, fileName, onGetFreshUrl, fetchInlineB
           style={{
             flexShrink: 0, background: 'none', border: 'none',
             cursor: downloading ? 'wait' : 'pointer',
-            color: PRIMARY,
+            color: neutral ? TEXT_SECONDARY : PRIMARY,
             opacity: downloading ? 0.5 : 1,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            width: 36, height: 36, borderRadius: 8,
+            width: plain ? 44 : 36, height: plain ? 44 : 36, borderRadius: 8,
             WebkitTapHighlightColor: 'transparent',
           }}
         >
@@ -325,7 +328,7 @@ export default function AudioPlayer({ url, fileName, onGetFreshUrl, fetchInlineB
         </button>
       )}
 
-      {/* 삭제 버튼 — 40×40px 히트 영역 */}
+      {/* 삭제 버튼 — 카드 40px, plain 44px 히트 영역 */}
       {onDelete && (
         <button
           type="button"
@@ -335,18 +338,19 @@ export default function AudioPlayer({ url, fileName, onGetFreshUrl, fetchInlineB
           style={{
             flexShrink: 0, background: 'none', border: 'none',
             cursor: deleteDisabled ? 'not-allowed' : 'pointer',
-            color: deleteDisabled ? BORDER_NEUTRAL : TEXT_DISABLED,
+            color: deleteDisabled ? BORDER_NEUTRAL : (neutral ? TEXT_TERTIARY : TEXT_DISABLED),
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            width: 40, height: 40, borderRadius: 8,
+            width: plain ? 44 : 40, height: plain ? 44 : 40, borderRadius: 8,
             transition: 'color 150ms ease-out',
             WebkitTapHighlightColor: 'transparent',
           }}
-          onMouseEnter={(e) => { if (!deleteDisabled) e.currentTarget.style.color = STATUS_ERROR; }}
-          onMouseLeave={(e) => { e.currentTarget.style.color = deleteDisabled ? BORDER_NEUTRAL : TEXT_DISABLED; }}
+          onMouseEnter={(e) => { if (!deleteDisabled) e.currentTarget.style.color = neutral ? TEXT_SECONDARY : STATUS_ERROR; }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = deleteDisabled ? BORDER_NEUTRAL : (neutral ? TEXT_TERTIARY : TEXT_DISABLED); }}
         >
-          <TrashIcon size={16} weight="bold" />
+          <TrashIcon size={20} />
         </button>
       )}
+      </div>}
     </div>
   );
 }

@@ -6,7 +6,7 @@ import { makeNotion, NotionResponseError } from '../lib/notion.js';
 import { runLessonLogAutomation, handleLessonLogRequest } from '../lib/lessonLogs.js';
 import { collectBusinessEvent, queryBusinessAnalytics } from '../lib/businessAnalytics.js';
 import { isSafeExternalUrl, maskPhone, maskToken, sanitizePath } from '../lib/security.js';
-import { validateFileUpload, validateFileContent, isNotionUploadUrl, resolveFileMime, dedupeFileNames } from '../lib/upload.js';
+import { validateFileUpload, validateFileContent, isNotionUploadUrl, resolveFileMime, dedupeFileNames, MAX_HOMEWORK_FILES, HomeworkFileLimitError, readHomeworkFileSizes, validateHomeworkFileTotals, validateHomeworkPropertyFiles } from '../lib/upload.js';
 import { boundedRequest, RequestTooLarge, secureResponse } from '../lib/httpSecurity.js';
 import { authorizeNotionRequest, pageInDatabase } from '../lib/notionScope.js';
 import { handleConsentTerms } from '../lib/consentTerms.js';
@@ -537,6 +537,7 @@ async function dispatchSiteStudentApp(request, context, descriptor, ctx, env) {
     'homework-upload': '/homework/student-upload/' + token,
     'homework-submit': '/homework/student/' + token + '/' + encodeURIComponent(descriptor.resourceId || '') + '/submit',
     'homework-file': '/homework/student/' + token + '/' + encodeURIComponent(descriptor.resourceId || '') + '/file',
+    'homework-file-sizes': '/homework/student/' + token + '/' + encodeURIComponent(descriptor.resourceId || '') + '/file-sizes',
     'feedback-seen': '/homework/feedback-seen/' + token,
     notices: '/notice/student/' + token,
     consent: '/booking/consent/' + token,
@@ -1812,7 +1813,7 @@ async function uploadFileToNotion(file, notionToken, authorize = async () => {})
 
   await uploadRes.body?.cancel().catch(() => {});
   await authorize();
-  return { fileUploadId, fileName };
+  return { fileUploadId, fileName, size: file.size };
 }
 
 // ===== 숙제 라우트 핸들러 =====
@@ -1953,6 +1954,45 @@ async function handleHomeworkRoutes(request, env, corsHeaders, url, ctx) {
     }
   }
 
+  // Return only names and byte counts; signed Notion URLs stay on the server.
+  const teacherSizes = url.pathname.match(/^\/homework\/([^/]+)\/file-sizes$/);
+  const studentSizes = url.pathname.match(/^\/homework\/student\/([^/]+)\/([^/]+)\/file-sizes$/);
+  if ((teacherSizes || studentSizes) && request.method === 'GET') {
+    if (teacherSizes) {
+      const denial = await requireJwt(request, env, corsHeaders);
+      if (denial) return denial;
+    }
+    const homeworkId = teacherSizes ? teacherSizes[1] : studentSizes[2];
+    const validation = validatePathToken(NotionPageIdSchema, homeworkId, corsHeaders, '숙제 ID');
+    if (!validation.ok) return validation.response;
+    const kind = url.searchParams.get('kind') || (teacherSizes ? 'feedback' : 'submit');
+    const properties = { submit: '학생 제출 파일', feedback: '피드백 파일', assignment: '과제 파일' };
+    if (!Object.hasOwn(properties, kind)) return errRes(corsHeaders, 400, '올바른 파일 종류를 선택해주세요.');
+    let student;
+    if (studentSizes) {
+      const token = decodeURIComponent(studentSizes[1]);
+      const tv = validatePathToken(StudentTokenSchema, token, corsHeaders, '학생 토큰');
+      if (!tv.ok) return tv.response;
+      student = await findStudentByToken(token);
+      if (!student) return errRes(corsHeaders, 404, '등록된 학생이 아닙니다.');
+    }
+    const page = await n('GET', '/pages/' + homeworkId);
+    if (!pageInDatabase(page, new Set([normalizeId(HOMEWORK_DB_ID)]))) return errRes(corsHeaders, 403, '허용되지 않은 숙제입니다.');
+    if (student && !(page.properties?.['학생']?.relation || []).some(item => normalizeId(item.id) === normalizeId(student.id))) {
+      return errRes(corsHeaders, 403, '이 숙제에 접근할 권한이 없습니다.');
+    }
+    try {
+      const files = await readHomeworkFileSizes(page.properties?.[properties[kind]]?.files || [], {
+        notion: n, authorize: () => requireCurrentStudentAccess(request, env),
+      });
+      await requireCurrentStudentAccess(request, env);
+      return new Response(JSON.stringify({ files }), { headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Cache-Control': 'private, no-store' } });
+    } catch (error) {
+      if (error instanceof HomeworkFileLimitError) return errRes(corsHeaders, error.status, error.message);
+      throw error;
+    }
+  }
+
   // POST /homework/notify-assign, /homework/notify-feedback — 학생에게 카카오 알림톡 발송 (JWT 인증)
   // 템플릿 ID 또는 Solapi Secret 미설정 시 no-op, 학생 전화번호 없으면 skip
   const notifyAssign = url.pathname === '/homework/notify-assign' && request.method === 'POST';
@@ -2054,7 +2094,7 @@ async function handleHomeworkRoutes(request, env, corsHeaders, url, ctx) {
       if (!content.ok) return errRes(corsHeaders, content.status, content.error);
       const result = await uploadFileToNotion(file, env.NOTION_TOKEN, () => requireCurrentStudentAccess(request, env));
       const uploadReceipt = await signTypedToken(env.JWT_SECRET, 'homework-upload', studentPage.id, 3600, {
-        uploadId: result.fileUploadId, fileName: result.fileName,
+        uploadId: result.fileUploadId, fileName: result.fileName, fileSize: file.size,
       });
       return new Response(JSON.stringify({ ...result, uploadReceipt }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -2112,15 +2152,19 @@ async function handleHomeworkRoutes(request, env, corsHeaders, url, ctx) {
     const bv = validateBody(HomeworkSubmitSchema, rawBody, corsHeaders);
     if (!bv.ok) return bv.response;
     const body = bv.data;
-    // files: [{fileUploadId, fileName}] — 새로 추가할 파일 (0~20개)
+    // files: [{fileUploadId, fileName}] — 새로 추가할 파일 (최대 10개)
     // deleteFileNames: [string] — 삭제할 기존 파일 이름 목록
     const newFiles = Array.isArray(body.files) ? body.files : [];
+    const newFileSizes = [];
     for (const file of newFiles) {
       const receipt = await verifyTypedToken(env.JWT_SECRET, file.uploadReceipt, 'homework-upload');
       if (!receipt || normalizeId(receipt.sub) !== normalizeId(studentPage.id)
         || receipt.uploadId !== file.fileUploadId || receipt.fileName !== file.fileName) {
         return errRes(corsHeaders, 403, '직접 업로드한 파일만 제출할 수 있습니다. 파일을 다시 선택해주세요.');
       }
+      // Older receipts did not contain a signed size. Resolve their trusted upload ID.
+      if (Number.isSafeInteger(receipt.fileSize) && receipt.fileSize > 0) newFileSizes.push({ name: file.fileName, size: receipt.fileSize });
+      else newFileSizes.push({ name: file.fileName, uploadId: file.fileUploadId });
     }
     const deleteFileNamesSet = new Set(Array.isArray(body.deleteFileNames) ? body.deleteFileNames : []);
 
@@ -2136,18 +2180,33 @@ async function handleHomeworkRoutes(request, env, corsHeaders, url, ctx) {
     // 피드백완료 후에는 학생 수정 차단 — 파일 추가·삭제 모두 거부.
     const currentStatus = currentPage.properties?.['제출 상태']?.select?.name;
     if (currentStatus === '피드백완료') {
-      return new Response(JSON.stringify({ error: '강사 피드백이 완료되어 더 이상 수정할 수 없습니다.' }), {
-        status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      return new Response(JSON.stringify({ error: '강사 피드백이 완료되어 더 이상 수정할 수 없습니다.', code: 'homework_feedback_locked' }), {
+        status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
     const keptFiles = (currentPage.properties?.['학생 제출 파일']?.files ?? [])
       .filter(f => !deleteFileNamesSet.has(f.name));
 
     const totalCount = keptFiles.length + newFiles.length;
-    if (totalCount > 5) {
-      return new Response(JSON.stringify({ error: '파일은 최대 5개까지 가능합니다.' }), {
+    if (newFiles.length > 0 && totalCount > MAX_HOMEWORK_FILES) {
+      return new Response(JSON.stringify({ error: `파일은 최대 ${MAX_HOMEWORK_FILES}개까지 가능합니다.` }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
+    }
+    if (newFiles.length > 0) {
+      try {
+        const options = { notion: n, authorize: () => requireCurrentStudentAccess(request, env) };
+        const keptSizes = await readHomeworkFileSizes(keptFiles, options);
+        const addedSizes = [];
+        for (const file of newFileSizes) {
+          if (file.size) addedSizes.push(file);
+          else addedSizes.push(...await readHomeworkFileSizes([{ name: file.name, type: 'file_upload', file_upload: { id: file.uploadId } }], options));
+        }
+        validateHomeworkFileTotals([...keptSizes, ...addedSizes]);
+      } catch (error) {
+        if (error instanceof HomeworkFileLimitError) return errRes(corsHeaders, error.status, error.message);
+        throw error;
+      }
     }
     const nowIso = new Date().toISOString();
     // 파일이 0개이면 제출 취소 (미제출로 복귀)
@@ -2985,6 +3044,14 @@ async function handleFetch(request, env, ctx) {
     const scope = await authorizeNotionRequest(request, url, makeNotion(env.NOTION_TOKEN), ALLOWED_NOTION_DB_IDS);
     if (!scope.ok) return errRes(corsHeaders, scope.status, scope.error);
     if (scope.page) return new Response(JSON.stringify(scope.page), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    const fileDb = scope.currentPage?.parent?.database_id || scope.body?.parent?.database_id;
+    if (['POST', 'PATCH'].includes(request.method) && normalizeId(fileDb || '') === normalizeId(HOMEWORK_DB_ID)) {
+      try { await validateHomeworkPropertyFiles(scope.body?.properties, scope.currentPage?.properties, { notion: makeNotion(env.NOTION_TOKEN, { strict: true }) }); }
+      catch (error) {
+        if (error instanceof HomeworkFileLimitError) return errRes(corsHeaders, error.status, error.message);
+        throw error;
+      }
+    }
     if (env.LESSON_LOG_AUTOMATION_ENABLED === 'true' && ['POST', 'PATCH'].includes(request.method)) {
       const lessonLogResult = await handleLessonLogRequest(env, {
         method: request.method,

@@ -175,6 +175,41 @@ afterEach(async () => {
   local.close(); vi.unstubAllGlobals(); vi.restoreAllMocks();
 });
 
+describe('feedback completion business lock stays separate from student authorization', () => {
+  it.each(['legacy', 'member'])('%s rejects combined add/delete with 409 and performs no PATCH after feedback', async route => {
+    const { session } = await permitted();
+    homework.get(HOMEWORK).properties['제출 상태'] = { select: { name: '피드백완료' } };
+    const uploadReceipt = await signTypedToken(env.JWT_SECRET, 'homework-upload', STUDENT, 600, {
+      uploadId: UPLOAD, fileName: 'new.pdf', fileSize: 123,
+    });
+    const body = { files: [{ fileUploadId: UPLOAD, fileName: 'new.pdf', uploadReceipt }], deleteFileNames: ['fixture.pdf'] };
+    const response = route === 'legacy'
+      ? await send(`/homework/student/${CODE}/${HOMEWORK}/submit`, { method: 'POST', body, origin: TEACHER_ORIGIN, headers: { Authorization: `Bearer ${legacy}` } })
+      : await app(`/homework/${HOMEWORK}/submit`, session, { method: 'POST', body });
+    expect(response.status).toBe(409);
+    expect(await response.json()).toEqual({ error: '강사 피드백이 완료되어 더 이상 수정할 수 없습니다.', code: 'homework_feedback_locked' });
+    expect(calls.some(call => call.method === 'PATCH')).toBe(false);
+    expect(homework.get(HOMEWORK).properties['학생 제출 파일'].files).toEqual([{ name: 'fixture.pdf', file: { url: FILE_URL } }]);
+    if (route === 'member') {
+      const context = await app('/context', session);
+      expect(context.status).toBe(200);
+      expect(await context.json()).toMatchObject({ allowed: true });
+    }
+  });
+
+  it.each(['legacy', 'member'])('%s still rejects another student homework with 403 before exposing its lock', async route => {
+    const { session } = await permitted();
+    homework.get(OTHER_HOMEWORK).properties['제출 상태'] = { select: { name: '피드백완료' } };
+    const body = { files: [], deleteFileNames: ['fixture.pdf'] };
+    const response = route === 'legacy'
+      ? await send(`/homework/student/${CODE}/${OTHER_HOMEWORK}/submit`, { method: 'POST', body, origin: TEACHER_ORIGIN, headers: { Authorization: `Bearer ${legacy}` } })
+      : await app(`/homework/${OTHER_HOMEWORK}/submit`, session, { method: 'POST', body });
+    expect(response.status).toBe(403);
+    expect(await response.json()).not.toHaveProperty('code', 'homework_feedback_locked');
+    expect(calls.some(call => call.method === 'PATCH')).toBe(false);
+  });
+});
+
 describe('student app uses explicit access separate from website membership', () => {
   it('requires an actual member session rather than a guest or a bearer token', async () => {
     const guestResponse = await site('/session'), guest = { cookie: cookie(guestResponse), ...(await guestResponse.json()) };
@@ -450,6 +485,29 @@ describe('student authorization is rechecked across upstream awaits', () => {
 });
 
 describe('member resources retain CSRF and homework file safeguards', () => {
+  it('dispatches member file-size reads through the same ownership and fresh-access checks', async () => {
+    const { session } = await permitted();
+    homework.get(HOMEWORK).properties['학생 제출 파일'] = { files: [{ name: 'fixture.pdf', type: 'file_upload', file_upload: { id: UPLOAD } }] };
+    notionHook = call => call.path === `/v1/file_uploads/${UPLOAD}`
+      ? Response.json({ status: 'uploaded', content_length: '3000' }) : null;
+    const response = await app(`/homework/${HOMEWORK}/file-sizes?kind=submit`, session);
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ files: [{ name: 'fixture.pdf', size: 3000 }] });
+    expect((await app(`/homework/${OTHER_HOMEWORK}/file-sizes?kind=submit`, session)).status).toBe(403);
+    await setAccess(false, 1);
+    expect((await app(`/homework/${HOMEWORK}/file-sizes?kind=submit`, session)).status).toBe(403);
+  });
+  it('rejects signed member submissions above 50 MiB before any write', async () => {
+    const { session } = await permitted();
+    homework.get(HOMEWORK).properties['학생 제출 파일'] = { files: [] };
+    const uploadReceipt = await signTypedToken(env.JWT_SECRET, 'homework-upload', STUDENT, 3600, {
+      uploadId: UPLOAD, fileName: 'fixture.pdf', fileSize: 20 * 1024 * 1024,
+    });
+    const file = { fileUploadId: UPLOAD, fileName: 'fixture.pdf', uploadReceipt, size: 1 };
+    const response = await app(`/homework/${HOMEWORK}/submit`, session, { method: 'POST', body: { files: [file, file, file] } });
+    expect(response.status).toBe(413);
+    expect(calls.some(call => call.method === 'PATCH')).toBe(false);
+  });
   it('requires exact site origin and the member CSRF token on every write', async () => {
     const { session } = await permitted(); calls = [];
     for (const [route, body] of writes) {

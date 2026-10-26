@@ -1,4 +1,5 @@
 import { isStudentAppScope } from './studentAppState.js';
+import { homeworkFileSize } from '../utils/homeworkLimits.js';
 import { studentAppJson, studentAppResponse, studentAppUpload } from './studentApp.js';
 import {
   queryPage,
@@ -35,7 +36,11 @@ import {
 export function parseHomework(page) {
   const p = page.properties;
   const parseFiles = (files) =>
-    (files ?? []).map((f) => ({ name: f.name, url: f.file?.url ?? f.external?.url ?? null }));
+    (files ?? []).map((f) => ({
+      name: f.name,
+      url: f.file?.url ?? f.external?.url ?? null,
+      ...(homeworkFileSize(f) !== null ? { size: homeworkFileSize(f) } : {}),
+    }));
   const submitFiles = parseFiles(p['학생 제출 파일']?.files);
   const feedbackFiles = parseFiles(p['피드백 파일']?.files);
   const assignmentFiles = parseFiles(p['과제 파일']?.files);
@@ -252,6 +257,19 @@ function studentAuthHeader(studentToken, credential) {
 export async function fetchMyHomework(studentToken) {
   if (isStudentAppScope(studentToken)) return studentAppJson('/homework', { scope: studentToken });
   return studentFetch('GET', `/homework/student/${encodeURIComponent(studentToken)}`, undefined, studentToken);
+}
+
+/** 기존 파일 전체를 내려받지 않고 합계 용량 확인에 필요한 크기만 조회한다. */
+export async function fetchHomeworkFileSizesTeacher(homeworkId, kind = 'feedback') {
+  const url = `${WORKER_URL}/homework/${encodeURIComponent(homeworkId)}/file-sizes?kind=${encodeURIComponent(kind)}`;
+  const res = await fetchOrThrow(url, { headers: { Authorization: `Bearer ${getToken()}` } });
+  return res.json();
+}
+
+export async function fetchHomeworkFileSizesStudent(studentToken, homeworkId, kind = 'submit') {
+  const path = `/homework/${encodeURIComponent(homeworkId)}/file-sizes?kind=${encodeURIComponent(kind)}`;
+  if (isStudentAppScope(studentToken)) return studentAppJson(path, { scope: studentToken });
+  return studentFetch('GET', `/homework/student/${encodeURIComponent(studentToken)}/${encodeURIComponent(homeworkId)}/file-sizes?kind=${encodeURIComponent(kind)}`, undefined, studentToken);
 }
 
 /**

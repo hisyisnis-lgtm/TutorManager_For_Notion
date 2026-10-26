@@ -20,9 +20,10 @@ function describeRoute(path, method) {
   ]);
   let match = fixed.get(path), resourceId;
   if (!match) {
-    const resource = path.match(/^\/homework\/([^/]+)\/(submit|file)$/);
+    const resource = path.match(/^\/homework\/([^/]+)\/(submit|file|file-sizes)$/);
     if (resource && NotionPageIdSchema.safeParse(resource[1]).success) {
-      resourceId = resource[1]; match = resource[2] === 'submit' ? ['POST', 'homework-submit'] : ['GET', 'homework-file'];
+      resourceId = resource[1]; match = resource[2] === 'submit' ? ['POST', 'homework-submit']
+        : ['GET', resource[2] === 'file-sizes' ? 'homework-file-sizes' : 'homework-file'];
     }
   }
   if (!match) return null;

@@ -1,7 +1,7 @@
 {
   "name": "tutor-manager-pwa",
   "private": true,
-  "version": "2.49.6",
+  "version": "2.49.7",
   "type": "module",
   "scripts": {
     "predev": "node ../02_devtools/tone-words-build.mjs && node ../02_devtools/tone-tts-build.mjs",
@@ -21,6 +21,7 @@
     "generate-icons": "pwa-assets-generator --preset minimal-2023 public/symbol-red.png"
   },
   "dependencies": {
+    "@breezystack/lamejs": "1.2.7",
     "@capacitor/android": "^8.4.1",
     "@capacitor/core": "^8.4.1",
     "@fontsource/baloo-2": "^5.2.7",
@@ -40,6 +41,7 @@
     "dayjs": "^1.11.0",
     "embla-carousel-react": "^8.6.0",
     "modern-screenshot": "^4.7.0",
+    "pdf-lib": "1.17.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^7.18.3",

@@ -190,9 +190,10 @@ describe('HomeworkSubmitSchema', () => {
     expect(HomeworkSubmitSchema.safeParse({}).success).toBe(true);
   });
 
-  it('파일 6개 거부 (상한 5)', () => {
-    const files = Array(6).fill({ fileUploadId: 'a', fileName: 'b.pdf' });
-    expect(HomeworkSubmitSchema.safeParse({ files }).success).toBe(false);
+  it('파일 10개 허용, 11개 거부', () => {
+    const file = { fileUploadId: 'a', fileName: 'b.pdf', uploadReceipt: 'test-receipt' };
+    expect(HomeworkSubmitSchema.safeParse({ files: Array(10).fill(file) }).success).toBe(true);
+    expect(HomeworkSubmitSchema.safeParse({ files: Array(11).fill(file) }).success).toBe(false);
   });
 
   it('파일명 256자 거부', () => {

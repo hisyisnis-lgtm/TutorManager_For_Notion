@@ -2,7 +2,7 @@ import { useRef } from 'react';
 import { Button } from '../shadcn/button';
 import { Input } from '../shadcn/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../shadcn/dialog';
-import { CaretLeftIcon } from '@phosphor-icons/react';
+import { CaretLeftIcon, PlusIcon } from '@phosphor-icons/react';
 import AudioRecorder from '../ui/AudioRecorder.jsx';
 import {
   TEXT_PRIMARY,
@@ -12,6 +12,8 @@ import {
   STATUS_SUCCESS_BG,
   STATUS_SUCCESS_BORDER } from '../../constants/theme.js';
 import { ACCEPT_AUDIO, ACCEPT_DOCUMENT } from '../../utils/audioFile.js';
+import { MAX_FILE_MB } from '../../utils/audioFile.js';
+import { MAX_TOTAL_FILE_MB, formatHomeworkBytes } from '../../utils/homeworkLimits.js';
 
 /**
  * 숙제 파일 첨부 모달 — useFileAttach 훅과 짝으로 쓴다.
@@ -21,33 +23,68 @@ import { ACCEPT_AUDIO, ACCEPT_DOCUMENT } from '../../utils/audioFile.js';
  * @param {Object} props.attach - useFileAttach() 반환값 전체
  * @param {{ audio: string, document: string, fallback: string }} props.titles - list 뷰 모달 제목 (페이지별 문구)
  * @param {{ audio: string, document: string }} props.hints - 빈 목록 안내 문구 (페이지별 문구)
+ * @param {boolean} [props.compact=false] - 학생용 간단한 첨부 안내
  */
-export default function FileAttachModal({ attach, titles, hints }) {
+export default function FileAttachModal({ attach, titles, hints, compact = false }) {
   const {
-    modalKind, modalView, sessionFiles, namingFile, namingInput, setNamingInput,
-    audioInputRef, docInputRef, recorderDefaultName, handleRecorderFile, preparing,
+    modalKind, modalView, sessionFiles, namingFile, namingInput, setNamingInput, directSelection,
+    audioInputRef, docInputRef, fileInputRef, recorderDefaultName, handleRecorderFile, preparing,
     closeModal, backToList, removeSessionFile,
     tryOpenAudioPicker, tryOpenDocPicker, tryOpenRecord,
-    handleAudioPickChange, handleDocPickChange,
+    handleAudioPickChange, handleDocPickChange, handleFilePickChange,
     handleNamingConfirm, handleSessionConfirm,
+    totalCount, totalBytes, unknownSizeCount, maxFiles,
   } = attach;
 
   // 닫힘 애니메이션 동안 modalKind는 이미 null인데 Dialog는 화면에 남아 있어
   // 제목·버튼이 fallback으로 번쩍 바뀌었다("파일 제출" 플래시, 2026-08-31).
-  // 렌더링용 kind는 마지막 값을 유지한다 — 로직 판정은 여전히 modalKind 기준.
+  // 렌더링용 kind·view는 마지막 값을 유지한다 — 닫힘 중 목록 화면으로 바뀌지 않게 한다.
   const lastKindRef = useRef(null);
-  if (modalKind !== null) lastKindRef.current = modalKind;
+  const lastViewRef = useRef(modalView);
+  if (modalKind !== null) {
+    lastKindRef.current = modalKind;
+    lastViewRef.current = modalView;
+  }
   const displayKind = modalKind ?? lastKindRef.current;
+  const displayView = modalKind !== null ? modalView : lastViewRef.current;
+  const hasSessionFiles = sessionFiles.length > 0;
 
   const modalTitle = (() => {
-    if (modalView === 'record') return '음성 녹음';
-    if (modalView === 'naming') return '파일 이름 입력';
+    if (displayView === 'record') return '음성 녹음';
+    if (displayView === 'naming') return compact ? '파일 이름' : '파일 이름 입력';
     if (displayKind === 'audio') return titles.audio;
     if (displayKind === 'document') return titles.document;
     return titles.fallback;
   })();
 
   return (
+    <>
+    {/* Dialog가 닫힌 상태에서도 직접 파일 선택 버튼의 ref를 유지한다. */}
+    <input
+      ref={fileInputRef}
+      type="file"
+      aria-label="첨부할 파일 선택"
+      accept={`${ACCEPT_AUDIO},${ACCEPT_DOCUMENT}`}
+      multiple
+      style={{ display: 'none' }}
+      onChange={handleFilePickChange}
+    />
+    <input
+      ref={audioInputRef}
+      type="file"
+      accept={ACCEPT_AUDIO}
+      multiple
+      style={{ display: 'none' }}
+      onChange={handleAudioPickChange}
+    />
+    <input
+      ref={docInputRef}
+      type="file"
+      accept={ACCEPT_DOCUMENT}
+      multiple
+      style={{ display: 'none' }}
+      onChange={handleDocPickChange}
+    />
     <Dialog open={modalKind !== null} onOpenChange={(next) => { if (!next) closeModal(); }}>
       {/* antd의 closable=false·mask.closable=false·keyboard=false를 그대로 옮긴 것:
           업로드 중 실수로 닫혀 파일이 날아가지 않도록 **명시적 동작으로만** 닫는다. */}
@@ -58,17 +95,18 @@ export default function FileAttachModal({ attach, titles, hints }) {
         onPointerDownOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
         onInteractOutside={(e) => e.preventDefault()}
-        className="pt-4"
+        className="max-h-[calc(100dvh-32px)] overflow-y-auto pt-4"
       >
       <DialogHeader>
         <DialogTitle asChild>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          {modalView !== 'list' && (
+          {displayView !== 'list' && (
             <button
               type="button"
-              onClick={backToList}
-              className="transition-[color] duration-150 ease-out"
-              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: TEXT_SECONDARY, padding: '0 4px 0 0', display: 'flex', alignItems: 'center' }}
+              onClick={directSelection ? closeModal : backToList}
+              disabled={preparing}
+              className="h-11 w-11 shrink-0 justify-center rounded-xl transition-[color,transform] duration-150 ease-out active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring"
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: TEXT_SECONDARY, padding: 0, display: 'flex', alignItems: 'center' }}
               aria-label="뒤로"
             >
               <CaretLeftIcon size={20} weight="bold" />
@@ -79,28 +117,20 @@ export default function FileAttachModal({ attach, titles, hints }) {
         </DialogTitle>
         <DialogDescription className="sr-only">숙제에 첨부할 파일을 고르세요.</DialogDescription>
       </DialogHeader>
-      {/* 카테고리별 input — accept 속성으로 OS picker 단계에서 필터 */}
-      <input
-        ref={audioInputRef}
-        type="file"
-        accept={ACCEPT_AUDIO}
-        multiple
-        style={{ display: 'none' }}
-        onChange={handleAudioPickChange}
-      />
-      <input
-        ref={docInputRef}
-        type="file"
-        accept={ACCEPT_DOCUMENT}
-        multiple
-        style={{ display: 'none' }}
-        onChange={handleDocPickChange}
-      />
-
-      {modalView === 'list' && (
+      {displayView === 'list' && (
         <div>
-          {sessionFiles.length > 0 ? (
-            <div style={{ marginBottom: 12 }}>
+          <p className="mb-3 text-xs leading-relaxed text-muted-foreground" aria-live="polite">
+            {compact ? (
+              <>최대 {maxFiles}개 · 파일당 {MAX_FILE_MB}MB · 총 {MAX_TOTAL_FILE_MB}MB</>
+            ) : (
+              <>
+                전체 {totalCount}/{maxFiles}개 · {unknownSizeCount ? '기존 파일 용량은 제출 시 확인' : `현재 ${formatHomeworkBytes(totalBytes)}`}
+                <br />파일당 {MAX_FILE_MB}MB · 전체 {MAX_TOTAL_FILE_MB}MB · 최종 제출할 때 압축 후 용량 확인
+              </>
+            )}
+          </p>
+          {hasSessionFiles ? (
+            <div style={{ marginBottom: 12, maxHeight: 'min(40dvh, 320px)', overflowY: 'auto' }}>
               <p style={{ fontSize: 12, fontWeight: 600, color: TEXT_SECONDARY, margin: '0 0 6px' }}>
                 추가된 파일 ({sessionFiles.length}개)
               </p>
@@ -116,13 +146,15 @@ export default function FileAttachModal({ attach, titles, hints }) {
                   <button
                     type="button"
                     onClick={() => removeSessionFile(pf.tempId)}
+                    disabled={preparing}
+                    className="h-11 w-11 rounded-xl transition-transform active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring"
                     style={{ marginLeft: 10, background: 'none', border: 'none', cursor: 'pointer', color: TEXT_DISABLED, fontSize: 18, flexShrink: 0, padding: 0, lineHeight: 1 }}
-                    aria-label="삭제"
+                    aria-label={`${pf.baseName + pf.ext} 삭제`}
                   >×</button>
                 </div>
               ))}
             </div>
-          ) : (
+          ) : !compact && (
             <p style={{
               fontSize: 13, color: TEXT_INACTIVE, textAlign: 'center',
               // DialogContent 그리드 gap(16px)이 제목과의 간격을 이미 주므로 위 패딩은 살짝만.
@@ -135,53 +167,58 @@ export default function FileAttachModal({ attach, titles, hints }) {
 
           {displayKind === 'audio' ? (
             <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-              <Button type="button" variant="outline" onClick={tryOpenAudioPicker} className="flex-1 text-muted-foreground">
-                파일 추가
+              <Button type="button" variant="outline" onClick={tryOpenAudioPicker} disabled={preparing} className={compact ? 'flex-1' : 'flex-1 text-muted-foreground'}>
+                {compact && hasSessionFiles && <PlusIcon size={20} aria-hidden />}
+                {compact ? (hasSessionFiles ? '파일 더 고르기' : '녹음 파일 고르기') : '파일 추가'}
               </Button>
-              <Button type="button" variant="outline" onClick={tryOpenRecord} className="flex-1 text-muted-foreground">
-                바로 녹음
+              <Button type="button" variant="outline" onClick={tryOpenRecord} disabled={preparing} className={compact ? 'flex-1' : 'flex-1 text-muted-foreground'}>
+                녹음하기
               </Button>
             </div>
           ) : (
             <div style={{ marginBottom: 12 }}>
-              {/* 고른 사진을 줄이는 동안(여러 장이면 몇 초) 버튼을 잠그고 상태를 보여준다 —
-                  아무 반응이 없으면 학생이 같은 버튼을 다시 누르게 된다 */}
               <Button
                 type="button"
-                variant="outline"
+                variant={compact && !hasSessionFiles ? 'default' : 'outline'}
                 block
                 onClick={tryOpenDocPicker}
                 disabled={preparing}
-                className="text-muted-foreground"
+                className={compact ? undefined : 'text-muted-foreground'}
               >
-                {preparing ? '사진 준비 중…' : '파일 추가'}
+                {compact && hasSessionFiles && <PlusIcon size={20} aria-hidden />}
+                {compact ? (hasSessionFiles ? '파일 더 고르기' : '파일 고르기') : '파일 추가'}
               </Button>
             </div>
           )}
 
           <Button
             block
-            onClick={handleSessionConfirm}
+            variant={compact && !hasSessionFiles ? 'ghost' : 'default'}
+            onClick={compact && !hasSessionFiles ? closeModal : handleSessionConfirm}
             disabled={preparing}
-            style={{ height: 48, borderRadius: 12, fontWeight: 700, fontSize: 15 }}
+            style={{ height: 48, borderRadius: 12, fontWeight: compact ? 600 : 700, fontSize: 15 }}
           >
-            확인{sessionFiles.length > 0 ? ` (${sessionFiles.length}개 추가)` : ''}
+            {compact
+              ? (hasSessionFiles ? `선택 완료 · ${sessionFiles.length}개` : '닫기')
+              : `확인${hasSessionFiles ? ` (${sessionFiles.length}개 추가)` : ''}`}
           </Button>
         </div>
       )}
 
-      {modalView === 'record' && displayKind === 'audio' && (
+      {displayView === 'record' && displayKind === 'audio' && (
         <AudioRecorder
           defaultName={recorderDefaultName}
           onFile={handleRecorderFile}
-          onCancel={backToList}
+          onCancel={directSelection ? closeModal : backToList}
+          previewConfirmLabel={directSelection ? '녹음 사용하기' : undefined}
+          embedded={compact && directSelection}
           hideCancel
         />
       )}
 
-      {modalView === 'naming' && namingFile && (
+      {displayView === 'naming' && namingFile && (
         <div>
-          <p style={{ fontSize: 13, color: TEXT_SECONDARY, margin: '0 0 8px' }}>파일 이름을 입력하세요</p>
+          <p style={{ fontSize: 13, color: TEXT_SECONDARY, margin: '0 0 8px' }}>{compact ? '파일 이름' : '파일 이름을 입력하세요'}</p>
           <div style={{ position: 'relative', marginBottom: 8 }}>
             <Input
               type="text"
@@ -214,5 +251,6 @@ export default function FileAttachModal({ attach, titles, hints }) {
       )}
       </DialogContent>
     </Dialog>
+    </>
   );
 }

@@ -12,6 +12,8 @@
 // 5~20 MiB 파일이 Notion 업로드 단계에서 거부됨). 2026-08-02 플러스 전환으로 해소.
 // **무료 플랜으로 되돌아가면 5 * 1024 * 1024로 낮출 것** — pwa/src/utils/audioFile.js와 함께.
 export const MAX_FILE_BYTES = 20 * 1024 * 1024;
+export const MAX_HOMEWORK_FILES = 10;
+export const MAX_HOMEWORK_TOTAL_BYTES = 50 * 1024 * 1024;
 // 호환을 위해 옛 이름도 유지 (외부 import 가능성)
 export const MAX_AUDIO_BYTES = MAX_FILE_BYTES;
 
@@ -288,4 +290,127 @@ export function dedupeFileNames(names) {
     out.push(candidate);
   }
   return out;
+}
+
+
+export class HomeworkFileLimitError extends Error {
+  constructor(status, message) { super(message); this.status = status; }
+}
+const sizeUnavailable = () => new HomeworkFileLimitError(502, '파일 용량을 확인하지 못했습니다. 잠시 후 다시 시도해주세요.');
+const validSize = value => Number.isSafeInteger(value) && value > 0;
+const metadataSize = value => typeof value === 'number' ? value
+  : typeof value === 'string' && /^\d+$/.test(value) ? Number(value) : NaN;
+const validUploadId = value => typeof value === 'string' && /^[a-f0-9]{8}-?[a-f0-9]{4}-?[a-f0-9]{4}-?[a-f0-9]{4}-?[a-f0-9]{12}$/i.test(value);
+
+// Only URLs read from an authorized Notion page reach this function. Never send
+// the Notion API token to file hosts, or follow redirects to a different host.
+export function isNotionFileSizeUrl(raw) {
+  try {
+    const url = new URL(raw);
+    if (url.protocol !== 'https:' || url.username || url.password || url.port || url.hash) return false;
+    return url.hostname === 'prod-files-secure.s3.us-west-2.amazonaws.com'
+      || url.hostname === 's3.us-west-2.amazonaws.com' && url.pathname.startsWith('/secure.notion-static.com/')
+      || url.hostname === 's3-us-west-2.amazonaws.com' && url.pathname.startsWith('/secure.notion-static.com/');
+  } catch { return false; }
+}
+
+async function hostedFileSize(url, { fetchImpl, authorize }) {
+  if (!isNotionFileSizeUrl(url)) throw sizeUnavailable();
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 5000);
+  let response;
+  try {
+    await authorize();
+    // Presigned GET URLs need not permit HEAD. Read only size headers, then
+    // cancel immediately even if the host ignores Range and returns 200.
+    try { response = await fetchImpl(url, { headers: { Range: 'bytes=0-0' }, redirect: 'manual', signal: controller.signal }); }
+    catch { throw sizeUnavailable(); }
+    await authorize();
+    let size;
+    if (response.status === 206) {
+      const range = response.headers.get('Content-Range')?.match(/^bytes 0-0\/(\d+)$/i);
+      if (range) size = Number(range[1]);
+    } else if (response.status === 200) {
+      const length = response.headers.get('Content-Length');
+      if (length && /^\d+$/.test(length)) size = Number(length);
+    }
+    if (!validSize(size)) throw sizeUnavailable();
+    return size;
+  } finally {
+    await response?.body?.cancel().catch(() => {});
+    clearTimeout(timer);
+  }
+}
+
+export async function readHomeworkFileSizes(files, { notion, authorize = async () => {}, fetchImpl = fetch } = {}) {
+  if (!Array.isArray(files) || files.length > MAX_HOMEWORK_FILES) {
+    throw new HomeworkFileLimitError(400, '파일은 최대 ' + MAX_HOMEWORK_FILES + '개까지 가능합니다.');
+  }
+  const result = new Array(files.length);
+  let cursor = 0;
+  // Bound open connections and upstream work independently of client behavior.
+  await Promise.all(Array.from({ length: Math.min(2, files.length) }, async () => {
+    while (cursor < files.length) {
+      const index = cursor++, file = files[index];
+      let size;
+      if (file?.type === 'file_upload' && validUploadId(file.file_upload?.id)) {
+        await authorize();
+        const metadata = await notion('GET', '/file_uploads/' + file.file_upload.id);
+        await authorize();
+        size = metadataSize(metadata?.content_length);
+        if (metadata?.status !== 'uploaded' || !validSize(size)) throw sizeUnavailable();
+      } else if (file?.file?.url && (!file.type || file.type === 'file')) {
+        size = await hostedFileSize(file.file.url, { fetchImpl, authorize });
+      } else throw sizeUnavailable();
+      result[index] = { name: file.name, size };
+    }
+  }));
+  return result;
+}
+
+export function validateHomeworkFileTotals(files) {
+  if (files.length > MAX_HOMEWORK_FILES) throw new HomeworkFileLimitError(400, '파일은 최대 ' + MAX_HOMEWORK_FILES + '개까지 가능합니다.');
+  if (files.some(file => !validSize(file.size))) throw sizeUnavailable();
+  if (files.some(file => file.size > MAX_FILE_BYTES)) throw new HomeworkFileLimitError(413, '파일은 개당 20 MiB까지 첨부할 수 있어요.');
+  if (files.reduce((total, file) => total + file.size, 0) > MAX_HOMEWORK_TOTAL_BYTES) {
+    throw new HomeworkFileLimitError(413, '파일의 전체 용량은 50 MiB까지 첨부할 수 있어요.');
+  }
+}
+
+// Ignore expiring query signatures when matching a retained file, but always
+// measure the current server-side URL. Client-supplied URLs are never fetched.
+function sameStoredFile(requested, current) {
+  if (!requested || !current || requested.name !== current.name) return false;
+  if (requested.file_upload?.id && current.file_upload?.id) return requested.file_upload.id === current.file_upload.id;
+  const first = requested.file?.url || requested.external?.url;
+  const second = current.file?.url || current.external?.url;
+  if (typeof first !== 'string' || typeof second !== 'string') return false;
+  try { const a = new URL(first), b = new URL(second); return a.origin === b.origin && a.pathname === b.pathname; }
+  catch { return false; }
+}
+
+export async function validateHomeworkPropertyFiles(properties, currentProperties, options) {
+  for (const [key, property] of Object.entries(properties || {})) {
+    if (!property || !Object.hasOwn(property, 'files')) continue;
+    if (!Array.isArray(property.files)) throw new HomeworkFileLimitError(400, '파일 목록 형식이 올바르지 않습니다.');
+    const decode = value => { try { return decodeURIComponent(value); } catch { return value; } };
+    const previous = currentProperties?.[key] || Object.values(currentProperties || {}).find(value => value?.id && decode(value.id) === decode(key));
+    const current = previous?.files || [];
+    const remaining = [...current];
+    let onlyRetained = true;
+    const trusted = property.files.map(file => {
+      const index = remaining.findIndex(existing => sameStoredFile(file, existing));
+      if (index >= 0) return remaining.splice(index, 1)[0];
+      onlyRetained = false;
+      if (file?.type !== 'file_upload' || !validUploadId(file.file_upload?.id)) {
+        throw new HomeworkFileLimitError(400, '새 파일을 업로드한 뒤 다시 저장해주세요.');
+      }
+      return file;
+    });
+    property.files = trusted;
+    // Removing/no-op retaining existing files must remain possible for legacy
+    // oversized attachments, unknown old sizes, or files added in Notion UI.
+    if (onlyRetained) continue;
+    validateHomeworkFileTotals(await readHomeworkFileSizes(trusted, options));
+  }
 }

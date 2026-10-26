@@ -226,7 +226,7 @@ describe('homework uploads in real workerd with isolated D1 and fail-closed outb
     const { calls } = await start();
     const response = await upload('teacher');
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ fileUploadId: UPLOAD, fileName: 'lesson.pdf' });
+    expect(await response.json()).toMatchObject({ fileUploadId: UPLOAD, fileName: 'lesson.pdf', size: expect.any(Number) });
     expect(calls.find(call => call.path === UPLOAD_PATH)).toMatchObject({
       method: 'POST', authorization: 'Bearer synthetic-notion',
       file: { name: 'lesson.pdf', type: 'application/pdf', text: '%PDF-1.7 synthetic' },

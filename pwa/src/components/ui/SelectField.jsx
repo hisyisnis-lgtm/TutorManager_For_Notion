@@ -76,7 +76,7 @@ export default function SelectField({
                   onKeyDown={(e) => e.stopPropagation()}
                   placeholder={searchPlaceholder}
                   aria-label={searchPlaceholder}
-                  className="h-9 w-full rounded-md border border-input bg-background pl-8 pr-2 text-sm placeholder:text-muted-foreground focus-visible:border-primary focus-visible:outline-none"
+                  className="h-9 w-full rounded-md border border-input bg-background pl-8 pr-2 text-sm placeholder:text-muted-foreground focus-visible:border-ring focus-visible:shadow-[inset_0_0_0_1px_hsl(var(--ring))] focus-visible:outline-none"
                 />
               </div>
             </div>

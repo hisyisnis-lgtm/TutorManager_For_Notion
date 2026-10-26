@@ -1,0 +1,47 @@
+.homework-progress-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: max(24px, env(safe-area-inset-top)) 20px max(24px, env(safe-area-inset-bottom));
+  color: var(--homework-progress-ink);
+}
+
+.homework-progress-glyph {
+  display: flex;
+  flex: 0 0 72px;
+  width: 112px;
+  height: 72px;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
+.homework-progress-glyph > svg { display: block; overflow: visible; }
+.homework-progress-copy { max-width: 100%; text-align: center; }
+.homework-progress-overlay .homework-progress-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.6;
+  letter-spacing: normal;
+  word-break: keep-all;
+}
+.homework-progress-overlay .homework-progress-detail {
+  margin: 6px 0 0;
+  color: inherit;
+  font-size: 12px;
+  line-height: 1.5;
+  opacity: 0.8;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 380px) {
+  .homework-progress-overlay .homework-progress-title { font-size: 14px; }
+}

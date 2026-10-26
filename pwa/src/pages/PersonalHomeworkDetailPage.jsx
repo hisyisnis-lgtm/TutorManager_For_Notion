@@ -8,36 +8,41 @@ import { captureAuthScope, isAuthScopeCurrent } from '../api/authState.js';
 import { useStudentAppContext } from '../context/StudentAppContext.jsx';
 import { useParams,
   useNavigate } from 'react-router-dom';
-import { CircleNotchIcon } from '@phosphor-icons/react';
 import { Button } from '../components/shadcn/button';
 import { CaretLeftIcon,
   MicrophoneIcon,
-  ImageSquareIcon,
-  ClipboardTextIcon,
+  PlusIcon,
+  PaperclipIcon,
+  XIcon,
+  ArrowCounterClockwiseIcon,
   PaperPlaneTiltIcon,
+  CheckIcon,
   ChatTeardropTextIcon } from '@phosphor-icons/react';
 import LoadingSpinner from '../components/ui/LoadingSpinner.jsx';
 import ErrorMessage from '../components/ui/ErrorMessage.jsx';
 import FilePreview from '../components/ui/FilePreview.jsx';
 import AutoLink from '../components/ui/AutoLink.jsx';
 import FileAttachModal from '../components/homework/FileAttachModal.jsx';
+import HomeworkProgressOverlay from '../components/homework/HomeworkProgressOverlay.jsx';
 import SectionHeading from '../components/ui/SectionHeading.jsx';
 import ConfirmDialog from '../components/ui/ConfirmDialog.jsx';
 import SectionEntryButton from '../components/ui/SectionEntryButton.jsx';
+import './PersonalHomeworkDetailPage.css';
 import {
   fetchMyHomework,
   parseHomework,
   submitHomework,
   uploadStudentFile,
-  homeworkStatusColor,
   markFeedbackSeen,
   downloadHomeworkFileStudent,
   fetchHomeworkFileBlobUrlStudent,
+  fetchHomeworkFileSizesStudent,
   } from '../api/homework.js';
 import { retryTransient } from '../api/fetchTimeout.js';
 import { reportHandledError } from '../utils/errorReporter.js';
 import { formatDateTimeCompact } from '../utils/dateUtils.js';
 import { markViewed } from '../utils/homeworkViewed.js';
+import { ABOVE_BOTTOM_NAV } from '../constants/styles.js';
 import { peekCache, peekCacheSavedAt, writeCacheValue, trackRevalidation, pruneRevalidations } from '../hooks/useCachedResource.js';
 import useFileAttach,
   { MAX_FILES } from '../hooks/useFileAttach.js';
@@ -47,15 +52,15 @@ import {
   TEXT_TERTIARY,
   TEXT_INACTIVE,
   BG_APP,
-  STATUS_SUCCESS_BG,
   INK_900,
-  STATUS_SUCCESS_BORDER,
-  TEXT_DISABLED } from '../constants/theme.js';
+  } from '../constants/theme.js';
 import {
   dedupeFileNames,
   isImageByName,
   isPdfByName,
+  MAX_FILE_MB,
 } from '../utils/audioFile.js';
+import { MAX_TOTAL_FILE_MB } from '../utils/homeworkLimits.js';
 
 // Notion file_upload는 생성 후 1시간 안에 첨부해야 만료되지 않는다 — 여유를 두고 50분까지만 재사용.
 const REUSE_WINDOW_MS = 50 * 60 * 1000;
@@ -83,12 +88,35 @@ export default function PersonalHomeworkDetailPage() {
   // 항목: { tempId, file, baseName, ext } — ext는 점 포함(`.mp3`) 또는 빈 문자열
   const [pendingAudio, setPendingAudio] = useState([]);
   const [pendingDocs, setPendingDocs] = useState([]);
+  const [view, setView] = useState('detail');
+  const completionHeadingRef = useRef(null);
+  const pageHeadingRef = useRef(null);
+  const [deletedFileNames, setDeletedFileNames] = useState([]);
+  const viewRef = useRef(view);
+  viewRef.current = view;
+
+  useEffect(() => {
+    if (view !== 'submit' && view !== 'detail') return;
+    window.scrollTo?.({ top: 0, behavior: 'instant' });
+    pageHeadingRef.current?.focus({ preventScroll: true });
+  }, [view]);
+
+  useEffect(() => {
+    if (view !== 'submitted' && view !== 'updated') return undefined;
+    // 진행 딤이 닫히며 포커스를 돌려놓은 다음 새 화면의 완료 제목을 읽는다.
+    const timer = window.setTimeout(() => completionHeadingRef.current?.focus(), 0);
+    return () => window.clearTimeout(timer);
+  }, [view]);
 
   const [uploading, setUploading] = useState(false);
+  const [operationStage, setOperationStage] = useState(null);
+  const [preparationProgress, setPreparationProgress] = useState(null);
   // 업로드 진행 표시 — { done, total }. 스피너만 돌면 학생이 "멈췄다"고 판단해 앱을 닫는다.
   const [progress, setProgress] = useState(null);
-  const [deletingFileName, setDeletingFileName] = useState(null);
-  const [deleteConfirmFile, setDeleteConfirmFile] = useState(null);
+  const uploadingRef = useRef(uploading);
+  uploadingRef.current = uploading;
+  const operationIdRef = useRef(0);
+  const cancelPreparationRef = useRef(null);
 
   // 이번 화면에서 이미 Notion에 올라간 파일 — tempId → { fileUploadId, fileName, uploadReceipt, requestedFileName, at }.
   // 중간에 실패해도 성공한 파일은 다시 올리지 않는다(Notion file_upload는 1시간 유효).
@@ -96,12 +124,28 @@ export default function PersonalHomeworkDetailPage() {
 
   // 저장 전 이탈 차단 — pending 파일이 하나라도 있으면 dirty.
   // 강사 페이지(HomeworkDetailPage)와 동일 패턴: handleBack 가드 + popstate 가드 + ConfirmDialog.
-  const isDirty = pendingAudio.length + pendingDocs.length > 0;
+  const isDirty = pendingAudio.length + pendingDocs.length + deletedFileNames.length > 0;
   const isDirtyRef = useRef(isDirty);
   useEffect(() => { isDirtyRef.current = isDirty; }, [isDirty]);
 
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const pendingNavRef = useRef(null);
+  const resetDraft = useCallback(() => {
+    operationIdRef.current += 1;
+    cancelPreparationRef.current?.();
+    uploadedRef.current.clear();
+    setPendingAudio([]);
+    setPendingDocs([]);
+    setDeletedFileNames([]);
+    setUploading(false);
+    setOperationStage(null);
+    setPreparationProgress(null);
+    setProgress(null);
+    setShowLeaveConfirm(false);
+    setView('detail');
+    viewRef.current = 'detail';
+    isDirtyRef.current = false;
+  }, []);
 
   // 브라우저 뒤로가기(swipe·Android back) 차단 — HashRouter 는 useBlocker 미지원이라
   // history.pushState 더미 entry + popstate 리스너로 가드.
@@ -113,6 +157,19 @@ export default function PersonalHomeworkDetailPage() {
   //  · leavingRef — 이탈 pop이 만드는 popstate는 무시
   const leavingRef = useRef(false);
   const pushedRef = useRef(0);
+  const returningHomeRef = useRef(false);
+  const navigateHome = useCallback(() => {
+    navigate(legacyStudentToken ? `/personal/${encodeURIComponent(legacyStudentToken)}` : '/personal/', { replace: true, state: { tab: '홈' } });
+  }, [navigate, legacyStudentToken]);
+  const finish = useCallback(() => {
+    if (leavingRef.current) return;
+    leavingRef.current = true;
+    // 이탈 가드용 더미와 현재 상세를 접어 완료 화면이 뒤로가기에 다시 나타나지 않게 한다.
+    if (pushedRef.current > 0) {
+      returningHomeRef.current = true;
+      window.history.go(-pushedRef.current);
+    } else navigateHome();
+  }, [navigateHome]);
   const leave = useCallback(() => {
     leavingRef.current = true;
     navigate(-(pushedRef.current + 1));
@@ -121,9 +178,26 @@ export default function PersonalHomeworkDetailPage() {
     window.history.pushState(null, '', window.location.href);
     pushedRef.current += 1;
     const onPopState = () => {
+      if (returningHomeRef.current) {
+        returningHomeRef.current = false;
+        pushedRef.current = 0;
+        navigateHome();
+        return;
+      }
       if (leavingRef.current) return;
       pushedRef.current -= 1; // 방금 pop으로 더미 하나 소진
-      if (isDirtyRef.current) {
+      if (viewRef.current === 'submitted' || viewRef.current === 'updated') {
+        finish();
+      } else if (viewRef.current === 'submit') {
+        // 상세에서 숙제 내용을 다시 읽고 돌아와도 파일 초안은 유지한다.
+        window.history.pushState(null, '', window.location.href);
+        pushedRef.current += 1;
+        if (uploadingRef.current) {
+          setShowLeaveConfirm(true);
+          pendingNavRef.current = resetDraft;
+        } else setView('detail');
+      } else if (isDirtyRef.current) {
+        // 상세에서 실제로 숙제를 떠날 때만 초안 폐기를 확인한다.
         window.history.pushState(null, '', window.location.href);
         pushedRef.current += 1;
         setShowLeaveConfirm(true);
@@ -134,16 +208,26 @@ export default function PersonalHomeworkDetailPage() {
     };
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
-  }, [navigate, leave]);
+  }, [navigate, leave, resetDraft, finish, navigateHome]);
 
   const handleBack = () => {
-    if (isDirtyRef.current) {
+    if (viewRef.current === 'submitted' || viewRef.current === 'updated') { finish(); return; }
+    if (uploadingRef.current) {
+      setShowLeaveConfirm(true);
+      pendingNavRef.current = resetDraft;
+    } else if (viewRef.current === 'submit') setView('detail');
+    else if (isDirtyRef.current) {
       setShowLeaveConfirm(true);
       pendingNavRef.current = leave;
-    } else {
-      leave();
-    }
+    } else leave();
   };
+
+  useEffect(() => {
+    if (!isDirty) return undefined;
+    const beforeUnload = (event) => { event.preventDefault(); event.returnValue = ''; };
+    window.addEventListener('beforeunload', beforeUnload);
+    return () => window.removeEventListener('beforeunload', beforeUnload);
+  }, [isDirty]);
 
   // 업로드 중 뒤로가기를 눌러 확인창이 떠 있는 동안 제출이 끝나는 경우가 있다.
   // 그 시점엔 경고할 내용("저장하지 않은 파일이 있어요")이 더 이상 사실이 아니므로 창을 닫는다.
@@ -181,6 +265,7 @@ export default function PersonalHomeworkDetailPage() {
       setHw(found);
       setVerifiedHwId(hwId);
       markViewed(studentToken, hwId);
+      return found;
     } catch (e) {
       if (!isCurrent()) return;
       if (e.status === 404) setHw(null);
@@ -191,10 +276,15 @@ export default function PersonalHomeworkDetailPage() {
   }, [studentToken, hwId]);
 
   useEffect(() => {
+    if ((view === 'submit' || isDirty) && !uploading && hw && !['미제출', '제출완료'].includes(hw.status)) resetDraft();
+  }, [view, hw, uploading, isDirty, resetDraft]);
+
+  useEffect(() => {
+    resetDraft();
     setVerifiedHwId(null);
     load();
-    return () => { requestId.current += 1; pruneRevalidations(); };
-  }, [load]);
+    return () => { requestId.current += 1; operationIdRef.current += 1; pruneRevalidations(); };
+  }, [load, resetDraft]);
 
   // 학생이 피드백완료 숙제를 처음 열어본 시점 기록 — Worker가 비어있을 때만 PATCH(idempotent).
   useEffect(() => {
@@ -218,13 +308,17 @@ export default function PersonalHomeworkDetailPage() {
     return list.find((h) => h.id === hwId) ?? null;
   }, [studentToken, hwId]);
 
-  // 외부 페이지·기존 저장본 합산 — 5개 제한 판정에 쓰인다.
-  const fixedCount = (hw?.submitFiles?.length ?? 0) + pendingAudio.length + pendingDocs.length;
+  // 외부 페이지·기존 저장본을 합산해 개수와 총용량을 판정한다.
+  const retainedFiles = (hw?.submitFiles ?? []).filter((file) => !deletedFileNames.includes(file.name));
+  const fixedCount = retainedFiles.length + pendingAudio.length + pendingDocs.length;
 
   // 파일 첨부 모달 로직 — 공용 훅 (state·picker·검증·이름 짓기)
   const attach = useFileAttach({
+    directSelection: true,
     genName: (index) => genStudentName(hw?.title ?? '숙제', index),
-    fixedCount,
+    fixedFiles: [...retainedFiles, ...pendingAudio, ...pendingDocs],
+    loadFileSizes: () => fetchHomeworkFileSizesStudent(studentToken, hwId, 'submit'),
+    attachmentScope: `${studentToken}:${hwId}:submit`,
     onConfirm: (kind, files) => {
       if (kind === 'audio') {
         setPendingAudio((prev) => [...prev, ...files]);
@@ -233,41 +327,59 @@ export default function PersonalHomeworkDetailPage() {
       }
     },
   });
-  const { openModal } = attach;
+  const { tryOpenFilePicker, tryOpenRecord } = attach;
+  cancelPreparationRef.current = attach.cancelPreparation;
 
-  const removePendingAudio = (tempId) => setPendingAudio((prev) => prev.filter((f) => f.tempId !== tempId));
-  const removePendingDoc = (tempId) => setPendingDocs((prev) => prev.filter((f) => f.tempId !== tempId));
+  const removePendingAudio = (tempId) => { if (!uploading) setPendingAudio((prev) => prev.filter((f) => f.tempId !== tempId)); };
+  const removePendingDoc = (tempId) => { if (!uploading) setPendingDocs((prev) => prev.filter((f) => f.tempId !== tempId)); };
 
   // 저장 — 양쪽 카테고리 pending 합쳐서 한 번에 업로드 + Notion PATCH.
   const handleSaveSubmit = async () => {
     const auth = captureAuthScope(`student:${studentToken}`);
     if (!isAuthScopeCurrent(auth)) return;
-    const all = [...pendingAudio, ...pendingDocs];
-    if (all.length === 0) return;
+    let all = [...pendingAudio, ...pendingDocs];
+    if (!isDirty || !['미제출', '제출완료'].includes(hw?.status)) return;
+    if (uploading) return;
+    const operation = ++operationIdRef.current;
+    const isCurrent = () => operation === operationIdRef.current && isAuthScopeCurrent(auth);
+    const deletedNames = [...deletedFileNames];
     const isFirstSubmit = !hw?.submitMark;
-    // 진행률은 파일 개수가 아니라 실제 전송 바이트 기준 — 큰 파일 하나를 올릴 때도 숫자가 움직인다.
-    const totalBytes = all.reduce((sum, pf) => sum + (pf.file?.size || 0), 0) || 1;
-    let bytesDone = 0;
-    // 마지막 제출 요청이 남아 있으므로 업로드만으로 100%를 보여주지 않는다.
-    const pct = (bytes) => Math.min(99, Math.round((bytes / totalBytes) * 100));
+    const completedView = hw.status === '미제출' ? 'submitted' : 'updated';
     setUploading(true);
+    setOperationStage(all.length ? 'checking' : 'saving');
+    setPreparationProgress(null);
     setProgress({ done: 0, total: all.length, percent: 0 });
     try {
+      const prepared = all.length > 0 ? await attach.prepareForSubmit(all, {
+        onStage: (state) => {
+          if (!isCurrent()) return;
+          setOperationStage(state.stage);
+          setPreparationProgress(state);
+        },
+      }) : [];
+      if (prepared === null || !isCurrent()) return;
+      all = prepared;
+      // 실제 압축 결과의 바이트로 계산해야 압축 전 용량 때문에 전송률이 낮게 보이지 않는다.
+      const totalBytes = all.reduce((sum, pf) => sum + (pf.file?.size || 0), 0) || 1;
+      let bytesDone = 0;
+      // 마지막 제출 요청이 남아 있으므로 업로드만으로 100%를 보여주지 않는다.
+      const pct = (bytes) => Math.min(99, Math.round((bytes / totalBytes) * 100));
+      setPreparationProgress(null);
       // 동명 파일 충돌 방지 — 기존 제출본 + 이번 pending 이름을 합쳐 유일화한다.
       // (다운로드/미리보기가 파일을 이름으로 찾으므로 같은 이름이면 전부 첫 번째로만 조회됨)
       // 기존 이름은 보존되고 새 파일에만 ` (2)` 접미사가 붙는다. 서버도 한 번 더 dedup.
-      const existingNames = (hw?.submitFiles ?? []).map((f) => f.name);
+      const existingNames = retainedFiles.map((f) => f.name);
       const allNames = dedupeFileNames([...existingNames, ...all.map((pf) => pf.baseName + pf.ext)]);
       const newNames = allNames.slice(existingNames.length);
       const uploaded = [];
       for (let i = 0; i < all.length; i += 1) {
-        if (!isAuthScopeCurrent(auth)) return;
+        if (!isCurrent()) return;
         const pf = all[i];
         const fullName = newNames[i];
         // 앞선 시도에서 이미 올라간 파일은 건너뛴다 — 3개 중 2개를 올리고 실패했을 때
         // 처음부터 다시 올리느라 또 오래 기다리는 일을 막는다.
         const done = uploadedRef.current.get(pf.tempId);
-        if (done && done.requestedFileName === fullName && Date.now() - done.at < REUSE_WINDOW_MS) {
+        if (done && isAuthScopeCurrent(done.auth) && done.requestedFileName === fullName && Date.now() - done.at < REUSE_WINDOW_MS) {
           bytesDone += pf.file?.size || 0;
           uploaded.push({ fileUploadId: done.fileUploadId, fileName: done.fileName, uploadReceipt: done.uploadReceipt });
           setProgress({ done: i + 1, total: all.length, percent: pct(bytesDone) });
@@ -277,31 +389,57 @@ export default function PersonalHomeworkDetailPage() {
         // 재시도가 오히려 중복 첨부 오류를 부를 수 있다. 실패해도 여기 캐시가 남아 재시도가 빠르다.
         // 재시도로 같은 파일을 다시 올려도 bytesDone은 그대로라 진행률이 뒤로 가지 않는다.
         // 원본 File 그대로 전달하고 이름만 지정 — 재포장하면 안드로이드에서 뒤가 잘린다.
+        setOperationStage('uploading');
         const { fileUploadId, fileName, uploadReceipt } = await retryTransient(() => uploadStudentFile(studentToken, pf.file, {
           fileName: fullName,
-          onProgress: (loaded) => setProgress({ done: i, total: all.length, percent: pct(bytesDone + loaded) }),
+          onProgress: (loaded) => { if (isCurrent()) setProgress({ done: i, total: all.length, percent: pct(bytesDone + loaded) }); },
         }));
-        if (!isAuthScopeCurrent(auth)) return;
+        if (!isCurrent()) return;
         bytesDone += pf.file?.size || 0;
         // multipart 전송에서 따옴표 등이 바뀔 수 있으므로 영수증에 서명된 서버 파일명을 그대로 쓴다.
         // 재사용 여부는 사용자가 요청한 이름으로 따로 비교한다.
-        uploadedRef.current.set(pf.tempId, { fileUploadId, fileName, uploadReceipt, requestedFileName: fullName, at: Date.now() });
+        uploadedRef.current.set(pf.tempId, { auth, fileUploadId, fileName, uploadReceipt, requestedFileName: fullName, at: Date.now() });
         uploaded.push({ fileUploadId, fileName, uploadReceipt });
         setProgress({ done: i + 1, total: all.length, percent: pct(bytesDone) });
       }
-      if (!isAuthScopeCurrent(auth)) return;
-      await submitHomework(studentToken, hwId, uploaded);
-      if (!isAuthScopeCurrent(auth)) return;
-      uploadedRef.current.clear();
-      setPendingAudio([]);
-      setPendingDocs([]);
-      await load();
-      if (isFirstSubmit) {
-        toast.success('숙제 제출 완료 · 먹이 +1');
-      } else {
-        toast.success('숙제가 제출되었어요');
+      if (!isCurrent()) return;
+      setOperationStage('saving');
+      const saved = await submitHomework(studentToken, hwId, uploaded, deletedNames);
+      if (!isCurrent()) return;
+      if (saved?.id === hwId && saved.properties) {
+        // 저장 응답이 확정한 페이지를 즉시 반영한다. 직후 GET의 이전 값으로 덮지 않는다.
+        const parsed = parseHomework(saved);
+        requestId.current += 1;
+        setError(null);
+        setHw(parsed);
+        homeworkRef.current = parsed;
+        setVerifiedHwId(hwId);
+        const key = `student:homework:${studentToken}`;
+        const cached = peekCache(key) ?? [];
+        const next = cached.some((item) => item.id === hwId)
+          ? cached.map((item) => item.id === hwId ? parsed : item) : [parsed, ...cached];
+        writeCacheValue(key, next, auth);
+        markViewed(studentToken, hwId);
+      } else await load();
+      if (!isCurrent()) return;
+      resetDraft();
+      setView(completedView);
+      viewRef.current = completedView;
+      window.scrollTo?.({ top: 0, behavior: 'instant' });
+      if (isFirstSubmit && uploaded.length > 0) {
+        toast.success('먹이 +1');
       }
     } catch (err) {
+      if (!isCurrent()) return;
+      if (err.status === 409) {
+        const latest = await load();
+        if (!isCurrent()) return;
+        if (latest && !['미제출', '제출완료'].includes(latest.status)) {
+          resetDraft();
+          toast.error('피드백이 완료되어 제출을 수정할 수 없어요.');
+          return;
+        }
+      }
       toast.error(`제출 실패: ${err.message}`);
       // 토스트는 화면을 나가면 사라진다 — 강사가 볼 수 있게 원인을 원격에도 남긴다.
       // 파일 크기를 함께 보내야 "무슨 파일을 올리다 막혔는지"를 추측 없이 알 수 있다.
@@ -313,21 +451,12 @@ export default function PersonalHomeworkDetailPage() {
         ].join('\n'),
       });
     } finally {
-      setUploading(false);
-      setProgress(null);
-    }
-  };
-
-  const handleDeleteFile = async (fileName) => {
-    setDeleteConfirmFile(null);
-    setDeletingFileName(fileName);
-    try {
-      await submitHomework(studentToken, hwId, [], [fileName]);
-      await load();
-    } catch (err) {
-      toast.error(`삭제 실패: ${err.message}`);
-    } finally {
-      setDeletingFileName(null);
+      if (operation === operationIdRef.current) {
+        setUploading(false);
+        setOperationStage(null);
+        setPreparationProgress(null);
+        setProgress(null);
+      }
     }
   };
 
@@ -382,19 +511,45 @@ export default function PersonalHomeworkDetailPage() {
 
   if (!hw) return null;
 
-  const { bg, text } = homeworkStatusColor(hw.status);
+  if (view === 'submitted' || view === 'updated') return (
+    <div className="homework-complete" style={{ background: BG_APP }}>
+      <div style={headerStyle}>
+        <div style={innerStyle}><BackButton /></div>
+      </div>
+      <div className="homework-complete-body" style={{ paddingBottom: `calc(${ABOVE_BOTTOM_NAV} + 72px)` }}>
+        <div className="homework-complete-message">
+          <div className="homework-complete-icon text-foreground" aria-hidden>
+            <span className="homework-complete-disc bg-muted" />
+            <CheckIcon className="homework-complete-check" size={44} weight="bold" />
+          </div>
+          <h1 ref={completionHeadingRef} tabIndex={-1} className="homework-complete-title" style={{ color: TEXT_PRIMARY }}>
+            {view === 'submitted' ? '숙제를 제출했어요' : '숙제를 수정했어요'}
+          </h1>
+          <p className="homework-complete-name" style={{ color: TEXT_SECONDARY }}>{hw.title}</p>
+        </div>
+      </div>
+      <div className="homework-actions" style={{ bottom: ABOVE_BOTTOM_NAV, background: BG_APP }}>
+        <div style={{ maxWidth: 448, margin: '0 auto' }}>
+          <Button block size="lg" onClick={finish}>
+            확인
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+
   // 피드백완료 후에는 학생이 파일 추가·삭제 불가 — 강사가 피드백을 단 결과물을 보존.
   const canEdit = hw.status === '미제출' || hw.status === '제출완료';
+  const editing = view === 'submit' && canEdit;
 
   // 저장본을 카테고리별로 분리 — PDF/이미지가 아닌 모든 파일은 녹음 섹션으로.
   // 옛 데이터(확장자 누락 등)도 누락 없이 표시되도록 명시적 document 만 분리하고 나머지는 audio.
   const isDoc = (f) => isImageByName(f.name) || isPdfByName(f.name);
-  const submitAudio = (hw.submitFiles ?? []).filter((f) => !isDoc(f));
-  const submitDocs = (hw.submitFiles ?? []).filter(isDoc);
+  const shownSubmitFiles = editing ? retainedFiles : (hw.submitFiles ?? []);
+  const submitAudio = shownSubmitFiles.filter((f) => !isDoc(f));
+  const submitDocs = shownSubmitFiles.filter(isDoc);
   const feedbackAudio = (hw.feedbackFiles ?? []).filter((f) => !isDoc(f));
   const feedbackDocs = (hw.feedbackFiles ?? []).filter(isDoc);
-
-  const pendingTotal = pendingAudio.length + pendingDocs.length;
 
   // 학생이 저장한 파일 한 행 — FilePreview wrapper.
   // kind: 'submit' | 'feedback' | 'assignment'
@@ -402,6 +557,8 @@ export default function PersonalHomeworkDetailPage() {
     <FilePreview
       key={`${kind}-${idx}-${f.name}`}
       file={f}
+      neutral
+      plain={kind === 'submit' && editing}
       onGetFreshUrl={async () => {
         const h = await getFreshHw();
         const arr = kind === 'submit' ? h?.submitFiles
@@ -411,62 +568,70 @@ export default function PersonalHomeworkDetailPage() {
       }}
       onDownload={() => downloadHomeworkFileStudent(studentToken, hwId, f.name, kind)}
       fetchInlineBlobUrl={() => fetchHomeworkFileBlobUrlStudent(studentToken, hwId, f.name, kind)}
-      onDelete={kind === 'submit' && canEdit ? () => setDeleteConfirmFile(f.name) : undefined}
-      deleteDisabled={deletingFileName !== null}
+      onDelete={kind === 'submit' && editing ? () => {
+        if (!uploading) setDeletedFileNames((prev) => prev.includes(f.name) ? prev : [...prev, f.name]);
+      } : undefined}
+      deleteDisabled={uploading}
     />
   );
 
   return (
     <>
       {/* 헤더 */}
-      <div style={{ ...headerStyle, position: 'sticky', top: 0, zIndex: 100 }}>
+      <div style={{ ...headerStyle, position: 'sticky', top: 0, zIndex: 40 }}>
         <div style={innerStyle}>
           <BackButton />
-          <h1 style={{ flex: 1, fontSize: 17, fontWeight: 700, color: TEXT_PRIMARY, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {hw.title}
+          <h1 ref={pageHeadingRef} tabIndex={-1} className="outline-none" style={{ flex: 1, fontSize: 17, fontWeight: 700, color: TEXT_PRIMARY, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {editing ? hw.status === '미제출' ? '숙제 제출' : '숙제 수정' : hw.title}
           </h1>
-          <span style={{ flexShrink: 0, fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: bg, color: text }}>
-            {hw.status}
+          <span className="bg-muted text-muted-foreground"
+            style={{ flexShrink: 0, fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 20 }}>
+            {editing && isDirty ? hw.status === '미제출' ? '제출 전' : '수정 중' : hw.status}
           </span>
         </div>
       </div>
 
       <div style={{ background: BG_APP, minHeight: 'calc(100dvh - 56px)' }}>
-        <div style={{ maxWidth: 480, margin: '0 auto', padding: '20px 16px 80px' }}>
+        <div style={{ maxWidth: 480, margin: '0 auto', padding: '20px 16px', paddingBottom: canEdit ? `calc(${ABOVE_BOTTOM_NAV} + 72px)` : 80 }}>
 
         {error && <ErrorMessage message={error} onRetry={load} />}
 
-        {/* ===== 1. 이번 숙제 ===== */}
-        {/* "부여한 숙제"는 선생님 시점 워딩(2026-08-31 지적) — 학생 화면은 학생 시점으로 */}
-        <AreaHeading icon={<ClipboardTextIcon size={20} weight="fill" />} label="이번 숙제" first />
-        {/* 등록일은 제출·피드백 이후에도 계속 보여준다(2026-09-01 요청) — 내용 카드는 optional이라 헤딩 바로 아래 고정 */}
+        {/* ===== 1. 숙제 내용 ===== */}
+        {editing ? (
+          <p className="mb-6 text-base font-semibold leading-6">{hw.title}</p>
+        ) : (
+          <>
+        {/* 등록일은 제출·피드백 이후에도 계속 보여준다(2026-09-01 요청). */}
         {hw.createdTime && (
-          <p style={{ fontSize: 12, color: TEXT_INACTIVE, margin: '-4px 0 10px' }}>
+          <p style={{ fontSize: 12, color: TEXT_INACTIVE, margin: '0 0 10px' }}>
             등록일: <span className="tabular-nums">{formatDateTimeCompact(hw.createdTime)}</span>
           </p>
         )}
         {hw.content && (
-          // 바로 위 AreaHeading이 이미 "부여한 숙제"라고 말한다 — 카드 안 "숙제 내용" 제목은 이중 라벨(2026-08-31 평가)
-          <SectionCard label={null}>
+          <ContentSection label={null}>
             <p style={{ fontSize: 14, color: INK_900, lineHeight: 1.7, whiteSpace: 'pre-wrap', margin: 0 }}><AutoLink text={hw.content} /></p>
-          </SectionCard>
+          </ContentSection>
         )}
         {hw.assignmentFiles?.length > 0 && (
-          <SectionCard label="숙제 파일">
+          <ContentSection label="선생님이 보낸 파일">
             {hw.assignmentFiles.map((f, i) => (
-              <div key={`assignment-${i}-${f.name}`} style={{ marginBottom: 8 }}>
+              <div key={`assignment-${i}-${f.name}`} className="mb-2 last:mb-0">
                 {renderStoredFile(f, 'assignment', i)}
               </div>
             ))}
-          </SectionCard>
+          </ContentSection>
+        )}
+          </>
         )}
 
-        {/* ===== 2. 내 제출 ===== */}
-        <AreaHeading icon={<PaperPlaneTiltIcon size={20} weight="fill" />} label="내 제출" />
-        {(submitAudio.length > 0 || submitDocs.length > 0) && (
-          <SectionCard label="제출한 파일">
+        {/* ===== 2. 제출 파일 ===== */}
+        {view === 'detail' && shownSubmitFiles.length > 0 && (
+          <AreaHeading icon={<PaperPlaneTiltIcon size={20} weight="fill" />} label="제출한 파일" />
+        )}
+        {view === 'detail' && (submitAudio.length > 0 || submitDocs.length > 0) && (
+          <ContentSection label={null}>
             {[...submitAudio, ...submitDocs].map((f, i) => (
-              <div key={`submit-${i}-${f.name}`} style={{ marginBottom: 8 }}>
+              <div key={`submit-${i}-${f.name}`} className="mb-2 last:mb-0">
                 {renderStoredFile(f, 'submit', i)}
               </div>
             ))}
@@ -475,68 +640,77 @@ export default function PersonalHomeworkDetailPage() {
                 제출일: <span className="tabular-nums">{formatDateTimeCompact(hw.submitDate)}</span>
               </p>
             )}
-          </SectionCard>
+          </ContentSection>
         )}
-        {/* 업로드 영역 — 미제출/제출완료 시. 학생이 더 올리거나 수정할 수 있도록.
-            바로 위 AreaHeading이 이미 "내 제출"이라 카드 제목은 이중 라벨 — 안내문만 남긴다(2026-08-31). */}
-        {canEdit && (
-          <SectionCard label={null}>
-            <p style={{ fontSize: 13, color: TEXT_INACTIVE, lineHeight: 1.6, margin: '-2px 0 14px' }}>
-              {hw.status === '미제출'
-                ? '공부한 내용을 녹음·사진·PDF로 올려주세요'
-                : '더 올리거나 수정할 수 있어요'}
-            </p>
-
-            {pendingAudio.length > 0 && (
-              <PendingInline
-                label={`새 녹음 파일 (${pendingAudio.length}/${MAX_FILES})`}
-                items={pendingAudio}
-                onRemove={removePendingAudio}
-                disabled={uploading}
-              />
-            )}
-            {fixedCount < MAX_FILES && (
+        {editing && (
+          <section aria-label="제출할 파일">
+          <ContentSection label={
+            <span className="flex items-center justify-between gap-3">
+              <span>제출할 파일</span>
+              <span className="text-sm tabular-nums text-muted-foreground" role={uploading ? undefined : 'status'} aria-live={uploading ? undefined : 'polite'} aria-atomic="true"
+                aria-label={`제출할 파일 ${fixedCount}개, 최대 ${MAX_FILES}개`}>{fixedCount}/{MAX_FILES}</span>
+            </span>
+          }>
+            <p className="mb-3 text-xs text-muted-foreground">최대 {MAX_FILES}개 · 파일당 {MAX_FILE_MB}MB · 총 {MAX_TOTAL_FILE_MB}MB</p>
+            <div className="space-y-3">
               <SectionEntryButton
-                icon={<MicrophoneIcon size={20} weight="fill" />}
-                label="녹음 올리기"
-                onClick={() => openModal('audio')}
-                disabled={uploading}
+                icon={<MicrophoneIcon size={24} className="text-muted-foreground" aria-hidden />}
+                label={<><span className="flex-1 text-left">녹음하기</span><PlusIcon size={20} className="text-muted-foreground" aria-hidden /></>}
+                onClick={tryOpenRecord}
+                disabled={uploading || fixedCount >= MAX_FILES}
+                className="mb-0 h-14 justify-start gap-3 border-input bg-card px-4 text-foreground hover:bg-accent"
               />
-            )}
-
-            <div style={{ height: 8 }} />
-
-            {pendingDocs.length > 0 && (
-              <PendingInline
-                label={`새 이미지·PDF (${pendingDocs.length}/${MAX_FILES})`}
-                items={pendingDocs}
-                onRemove={removePendingDoc}
-                disabled={uploading}
-              />
-            )}
-            {fixedCount < MAX_FILES && (
               <SectionEntryButton
-                icon={<ImageSquareIcon size={20} weight="fill" />}
-                label="사진·문서 올리기"
-                onClick={() => openModal('document')}
-                disabled={uploading}
+                icon={<PaperclipIcon size={24} className="text-muted-foreground" aria-hidden />}
+                label={<><span className="flex-1 text-left">파일 추가</span><PlusIcon size={20} className="text-muted-foreground" aria-hidden /></>}
+                onClick={tryOpenFilePicker}
+                disabled={uploading || fixedCount >= MAX_FILES}
+                className="mb-0 h-14 justify-start gap-3 border-input bg-card px-4 text-foreground hover:bg-accent"
               />
+            </div>
+            {((hw.submitFiles?.length ?? 0) + pendingAudio.length + pendingDocs.length) > 0 && (
+              <ul className="mt-6 border-t border-border" aria-label="제출할 파일 목록">
+                {(hw.submitFiles ?? []).map((file, index) => (
+                  <li key={`draft-${index}-${file.name}`} className="border-b border-border last:border-b-0">
+                    {deletedFileNames.includes(file.name) ? (
+                      <div className="flex min-h-14 items-center justify-between gap-3 py-1">
+                        <span className="min-w-0 flex-1 truncate text-sm text-muted-foreground line-through">
+                          <span className="sr-only">삭제 예정: </span>{file.name}
+                        </span>
+                        <Button variant="link" className="shrink-0 px-2 text-muted-foreground hover:text-foreground" onClick={() => {
+                          if (fixedCount >= MAX_FILES) { toast.error(`파일은 최대 ${MAX_FILES}개까지 첨부할 수 있어요`); return; }
+                          setDeletedFileNames((prev) => prev.filter((name) => name !== file.name));
+                        }} disabled={uploading} aria-label={`${file.name} 삭제 취소`}>
+                          <ArrowCounterClockwiseIcon size={16} aria-hidden />되돌리기
+                        </Button>
+                      </div>
+                    ) : renderStoredFile(file, 'submit', index)}
+                  </li>
+                ))}
+                {[...pendingAudio, ...pendingDocs].map(file => (
+                  <PendingFileRow key={file.tempId} file={file} disabled={uploading} onRemove={tempId => {
+                    if (pendingAudio.some(item => item.tempId === tempId)) removePendingAudio(tempId);
+                    else removePendingDoc(tempId);
+                  }} />
+                ))}
+              </ul>
             )}
-          </SectionCard>
+          </ContentSection>
+          </section>
         )}
 
         {/* ===== 3. 선생님 피드백 ===== */}
-        {(hw.feedbackText || feedbackAudio.length > 0 || feedbackDocs.length > 0) && (
+        {view === 'detail' && (hw.feedbackText || feedbackAudio.length > 0 || feedbackDocs.length > 0) && (
           <>
             <AreaHeading icon={<ChatTeardropTextIcon size={20} weight="fill" />} label="선생님 피드백" />
-            <SectionCard label={null}>
+            <ContentSection label={null}>
               {hw.feedbackText && (
                 <p style={{ fontSize: 14, color: INK_900, lineHeight: 1.7, whiteSpace: 'pre-wrap', margin: (feedbackAudio.length + feedbackDocs.length) > 0 ? '0 0 12px' : 0 }}>
                   <AutoLink text={hw.feedbackText} />
                 </p>
               )}
               {[...feedbackAudio, ...feedbackDocs].map((f, i) => (
-                <div key={`feedback-${i}-${f.name}`} style={{ marginBottom: 8 }}>
+                <div key={`feedback-${i}-${f.name}`} className="mb-2 last:mb-0">
                   {renderStoredFile(f, 'feedback', i)}
                 </div>
               ))}
@@ -545,103 +719,51 @@ export default function PersonalHomeworkDetailPage() {
                   피드백일: <span className="tabular-nums">{formatDateTimeCompact(hw.feedbackDate)}</span>
                 </p>
               )}
-            </SectionCard>
+            </ContentSection>
           </>
-        )}
-
-        {/* 숙제 제출 — 두 카테고리 pending 을 한 번에 업로드 (카드 외부에 둬서 액션 강조) */}
-        {canEdit && pendingTotal > 0 && (
-          <Button
-            block
-            size="lg"
-            onClick={handleSaveSubmit}
-            loading={uploading}
-            className="mt-1 text-[15px] font-bold"
-          >
-            숙제 제출하기 ({pendingTotal}개 파일)
-          </Button>
         )}
 
         </div>
       </div>
 
-      {/* ===== 파일 추가 팝업 — 공용 모달 (modalKind 에 따라 audio/document 분기) ===== */}
-      <FileAttachModal
-        attach={attach}
-        titles={{ audio: '녹음 제출', document: '사진·문서 제출', fallback: '파일 제출' }}
-        hints={{
-          audio: '선생님께 보낼 녹음을 선택하거나 직접 녹음해주세요',
-          document: '선생님께 보낼 사진이나 PDF를 선택해주세요',
-        }}
-      />
-
-      {/* 파일 삭제 확인 — 같은 파일 아래쪽 '이탈 확인'과 함께 공용 ConfirmDialog를 쓴다.
-          예전엔 여기만 자체 Dialog + raw button이라 삭제 버튼이 STATUS_ERROR(형광 빨강)를 써서,
-          다른 12곳의 삭제 확인(STATUS_ERROR_TEXT)과 색이 달랐다(2026-08-29 통일).
-          ⚠️ 주석에 헥사값을 적으면 design-audit color-literal 이 잡는다(§L1191). 색 이름으로 적을 것. */}
-      {deleteConfirmFile !== null && (
-        <ConfirmDialog
-          title="파일 삭제"
-          message={`${deleteConfirmFile.replace(/\.[^/.]+$/, '')} 파일을 삭제할까요?\n삭제 후에는 복구할 수 없어요.`}
-          confirmLabel="삭제"
-          onConfirm={() => handleDeleteFile(deleteConfirmFile)}
-          onCancel={() => setDeleteConfirmFile(null)}
-        />
-      )}
-
-      {/* 업로드/삭제 중 딤 오버레이
-          zIndex는 antd Modal(기본 1000)보다 낮아야 한다 — 예전 9999에서는 업로드 중 뒤로가기를
-          눌렀을 때 이탈 확인창이 이 딤 뒤에 깔려 보이지도 눌리지도 않았다. 학생 눈엔 화면이
-          멈춘 것처럼 보여 앱을 강제 종료하게 만들던 경로다. (BottomNav는 50이라 여전히 위) */}
-      {(uploading || deletingFileName !== null) && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 900, padding: '0 32px' }}>
-          {/* 문구는 어두운 패널 안에 — 반투명 딤 위에 흰 글씨만 얹으면 뒤 카드와 겹쳐 읽히지 않는다 */}
-          <div style={{
-            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14,
-            background: 'rgba(0,0,0,0.78)', borderRadius: 16, padding: uploading ? '24px 28px' : 20,
-          }}>
-            {/* 스피너는 진행률이 잠시 멈춰도 "살아 있다"는 신호를 준다 — 막대와 함께 둔다 */}
-            <CircleNotchIcon size={24} weight="bold" className="animate-spin" color="#fff" aria-hidden />
-            {uploading && (
-              <>
-                <p aria-live="polite" style={{ margin: 0, color: '#fff', fontSize: 14, fontWeight: 600, textAlign: 'center', lineHeight: 1.7 }}>
-                  {/* 지금 올리는 중인 파일 번호(1-base) — 0/2로 시작하면 멈춘 것처럼 보인다 */}
-                  {progress && progress.total > 1
-                    ? `${Math.min(progress.done + 1, progress.total)}/${progress.total} 파일 올리는 중이에요`
-                    : '파일 올리는 중이에요'}
-                  <br />
-                  <span style={{ fontWeight: 400, opacity: 0.85 }}>화면을 닫지 말고 잠시만 기다려주세요</span>
-                </p>
-                {/* 실제 전송량 기준 막대 — 큰 파일 하나를 올리는 동안에도 눈에 보이게 움직인다 */}
-                <div
-                  role="progressbar"
-                  aria-valuenow={progress?.percent ?? 0}
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                  style={{ width: 200, height: 6, borderRadius: 999, background: 'rgba(255,255,255,0.25)', overflow: 'hidden' }}
-                >
-                  <div
-                    className="transition-[width] duration-200 ease-out"
-                    style={{ width: `${progress?.percent ?? 0}%`, height: '100%', borderRadius: 999, background: '#fff' }}
-                  />
-                </div>
-                <span style={{ color: '#fff', fontSize: 13, fontWeight: 700, fontVariantNumeric: 'tabular-nums', marginTop: -4 }}>
-                  {progress?.percent ?? 0}%
-                </span>
-              </>
-            )}
+      {canEdit && (
+        <div className="homework-actions" style={{ bottom: ABOVE_BOTTOM_NAV, background: BG_APP }}>
+          <div style={{ maxWidth: 448, margin: '0 auto' }}>
+            <Button block size="lg"
+              className="disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100" loading={uploading} disabled={editing && !isDirty}
+              onClick={editing ? handleSaveSubmit : () => setView('submit')}>
+              {editing ? hw.status === '미제출' ? `파일 제출하기 · ${fixedCount}개` : '수정 내용 저장하기'
+                : hw.status === '미제출' ? '숙제 제출하기' : '숙제 수정하기'}
+            </Button>
           </div>
         </div>
       )}
 
+      {/* 파일 선택 input은 항상 준비하고, 직접 녹음할 때만 녹음창을 연다. */}
+      <FileAttachModal
+        attach={attach}
+        compact
+        titles={{ audio: '녹음 파일 추가', document: '이미지·PDF 추가', fallback: '파일 추가' }}
+      />
+
+      {/* 이탈 확인이 열리면 진행 딤을 숨겨 확인창의 포커스·클릭을 보존한다. */}
+      <HomeworkProgressOverlay
+        stage={showLeaveConfirm ? null : uploading ? operationStage : null}
+        message={operationStage === 'saving' ? '제출을 마무리하고 있어요'
+          : operationStage === 'uploading' ? '숙제 파일을 올리고 있어요' : preparationProgress?.message}
+        detail={operationStage === 'uploading' && progress
+          ? `${Math.min(progress.done + 1, progress.total)}/${progress.total}개 파일 · 전송 ${progress.percent}%`
+          : operationStage === 'saving' ? undefined : preparationProgress?.detail}
+      />
+
       {/* 저장 전 이탈 확인 — pending 파일이 있는 상태에서 뒤로가기 시도 시 */}
       {showLeaveConfirm && (
         <ConfirmDialog
-          title={uploading ? '제출 중이에요' : '페이지를 나가시겠습니까?'}
+          title={uploading ? '제출 중이에요' : '변경 내용을 버릴까요?'}
           message={uploading
             ? '지금 나가면 제출이 중단될 수 있어요. 잠시만 기다려주세요.'
-            : '저장하지 않은 파일이 있어요. 지금 나가면 추가한 파일이 사라집니다.'}
-          confirmLabel={uploading ? '그래도 나가기' : '나가기'}
+            : '추가한 파일과 삭제 변경이 사라져요. 저장된 제출 파일은 그대로 유지돼요.'}
+          confirmLabel={uploading ? '그래도 나가기' : '변경 버리기'}
           cancelLabel={uploading ? '기다리기' : '계속 작성'}
           onConfirm={handleLeaveConfirm}
           onCancel={() => setShowLeaveConfirm(false)}
@@ -653,22 +775,22 @@ export default function PersonalHomeworkDetailPage() {
 
 // ===== 보조 컴포넌트 =====
 
-function SectionCard({ label, children }) {
+function ContentSection({ label, children }) {
   return (
-    <div style={{ background: '#fff', borderRadius: 12, padding: '16px', marginBottom: 12, boxShadow: 'var(--shadow-border)' }}>
-      {label && <SectionHeading style={{ marginBottom: 12 }}>{label}</SectionHeading>}
+    <div className="mb-6 last:mb-0">
+      {label && <SectionHeading as="h2" style={{ marginTop: 0, marginBottom: 12 }}>{label}</SectionHeading>}
       {children}
     </div>
   );
 }
 
-// 3영역(이번 숙제 / 내 제출 / 선생님 피드백) 시각 구분용 헤더.
-function AreaHeading({ icon, label, first }) {
+// 제출 파일과 선생님 피드백의 시각 구분용 헤더.
+function AreaHeading({ icon, label }) {
   return (
     <div style={{
       display: 'flex', alignItems: 'center', gap: 8,
-      marginTop: first ? 0 : 24,
-      marginBottom: 10,
+      marginTop: 24,
+      marginBottom: 12,
       color: TEXT_SECONDARY,
     }}>
       {icon}
@@ -677,30 +799,23 @@ function AreaHeading({ icon, label, first }) {
   );
 }
 
-// SectionCard 내부에서 쓰는 인라인 버전 — 카드 중첩 방지 (boxShadow·padding 없음)
-function PendingInline({ label, items, onRemove, disabled }) {
+// 선택 파일은 정보 행으로 표시하고, 행 끝의 삭제 버튼만 조작 대상으로 구분한다.
+function PendingFileRow({ file, onRemove, disabled }) {
   return (
-    <div style={{ marginBottom: 8 }}>
-      <p style={{ fontSize: 12, fontWeight: 600, color: TEXT_INACTIVE, margin: '0 0 6px' }}>{label}</p>
-      {items.map((pf) => (
-        <div key={pf.tempId} style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '8px 12px', background: STATUS_SUCCESS_BG, border: `1px solid ${STATUS_SUCCESS_BORDER}`,
-          borderRadius: 12, marginBottom: 6,
-        }}>
-          <span style={{ fontSize: 13, color: TEXT_PRIMARY, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {pf.baseName + pf.ext}
-          </span>
-          <button
-            type="button"
-            onClick={() => onRemove(pf.tempId)}
-            style={{ marginLeft: 10, background: 'none', border: 'none', cursor: 'pointer', color: TEXT_DISABLED, fontSize: 18, flexShrink: 0, padding: 0, lineHeight: 1 }}
-            aria-label="삭제"
-            disabled={disabled}
-          >×</button>
-        </div>
-      ))}
-    </div>
+    <li className="flex min-h-14 items-center gap-3 border-b border-border py-1 last:border-b-0">
+      <PaperclipIcon size={20} className="shrink-0 text-muted-foreground" aria-hidden />
+      <span style={{ fontSize: 13, color: TEXT_PRIMARY, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        {file.baseName + file.ext}
+      </span>
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => onRemove(file.tempId)}
+        className="shrink-0 text-muted-foreground"
+        aria-label="삭제"
+        disabled={disabled}
+      ><XIcon size={16} aria-hidden /></Button>
+    </li>
   );
 }
 

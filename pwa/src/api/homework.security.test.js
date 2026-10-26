@@ -1,5 +1,5 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
-import { fetchHomeworkFileBlobUrlStudent, uploadStudentFile, submitHomework, notifyHomework } from './homework.js';
+import { fetchHomeworkFileBlobUrlStudent, uploadStudentFile, submitHomework, notifyHomework, fetchHomeworkFileSizesTeacher, fetchHomeworkFileSizesStudent, parseHomework } from './homework.js';
 import { getToken, setAuth } from './authUtils.js';
 import { setStudentSession, clearStudentSession, getStudentSession } from './studentAuth.js';
 import { notifyAuthChange } from './authState.js';
@@ -9,6 +9,25 @@ beforeEach(() => { localStorage.clear(); sessionStorage.clear(); setStudentSessi
 afterEach(() => { localStorage.clear(); sessionStorage.clear(); notifyAuthChange(); vi.unstubAllGlobals(); });
 
 describe('학생 파일 인증 수명·업로드 영수증', () => {
+  it('숙제 파일 파싱에서 서버 크기 메타데이터를 보존하고 누락은 0으로 바꾸지 않는다', () => {
+    const parsed = parseHomework({ properties: { '학생 제출 파일': { files: [
+      { name: '녹음.mp3', fileSize: 123 }, { name: '기존.pdf', file: { url: 'https://example.test/existing' } },
+    ] } } });
+    expect(parsed.submitFiles).toEqual([
+      { name: '녹음.mp3', size: 123, url: null }, { name: '기존.pdf', url: 'https://example.test/existing' },
+    ]);
+  });
+  it('학생·강사 용량 조회에 기존 인증을 전달한다', async () => {
+    setAuth(fixtureSession());
+    const fetch = vi.fn().mockImplementation(async () => new Response(JSON.stringify({ files: [{ name: '기존.pdf', size: 123 }] })));
+    vi.stubGlobal('fetch', fetch);
+    await fetchHomeworkFileSizesTeacher('homework-1', 'feedback');
+    await fetchHomeworkFileSizesStudent('STUDENT_A', 'homework-1', 'submit');
+    expect(fetch.mock.calls[0][0]).toContain('/homework/homework-1/file-sizes?kind=feedback');
+    expect(fetch.mock.calls[0][1].headers.Authorization).toMatch(/^Bearer /);
+    expect(fetch.mock.calls[1][0]).toContain('/homework/student/STUDENT_A/homework-1/file-sizes?kind=submit');
+    expect(fetch.mock.calls[1][1].headers.Authorization).toMatch(/^Bearer /);
+  });
   it('강사 숙제 알림의 401도 강사 세션을 지운다', async () => {
     setAuth(fixtureSession());
     vi.stubGlobal('fetch', vi.fn(async () => new Response('', { status: 401 })));

@@ -12,6 +12,8 @@ import { cn } from "@/lib/utils"
  *    maxRows를 넘으면 스크롤로 전환한다.
  *  · `showCount` — `maxLength`와 함께 "현재/최대" 글자수를 아래에 보여준다(2곳).
  *    ⚠️ showCount를 쓰면 textarea가 래퍼 div 안으로 들어간다. 부모가 flex로 높이를 잡고 있으면 확인할 것.
+ *
+ * 포커스는 Input과 같은 중립 보더·안쪽 1px 선으로 표시해 크기를 바꾸지 않는다.
  */
 const Textarea = React.forwardRef(({ className, autoSize, showCount, maxLength, value, ...props }, ref) => {
   const innerRef = React.useRef(null);
@@ -43,7 +45,7 @@ const Textarea = React.forwardRef(({ className, autoSize, showCount, maxLength, 
   const field = (
     <textarea
       className={cn(
-        "flex min-h-[80px] w-full rounded-lg border border-input bg-background px-3 py-2 text-base placeholder:text-muted-foreground focus-visible:outline-none focus-visible:border-primary disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
+        "flex min-h-[80px] w-full resize-none overflow-y-auto rounded-lg border border-input bg-background px-3 py-2 text-base placeholder:text-muted-foreground focus-visible:outline-none focus-visible:border-ring focus-visible:shadow-[inset_0_0_0_1px_hsl(var(--ring))] disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
         className
       )}
       ref={setRefs}

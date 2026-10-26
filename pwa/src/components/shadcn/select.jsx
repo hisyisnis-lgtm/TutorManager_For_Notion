@@ -7,8 +7,8 @@ import { cn } from "@/lib/utils"
 /**
  * shadcn Select (공식 소스 기반). 상류에서 바꾼 것 — 되돌리지 말 것:
  *  1. Trigger h-10 → h-11(44px), rounded-md → rounded-lg (input.jsx 1·2번과 동일 근거).
- *  2. focus ring(ring-2·ring-offset) 제거 → focus:border-primary.
- *     이미 있는 보더의 색을 바꿔 포커스를 표시한다(button.jsx 3번과 동일 근거).
+ *  2. 외곽 focus ring(ring-2·ring-offset) 대신 중립 보더와 안쪽 1px 선으로 표시한다.
+ *     클릭·키보드 모두 크기를 바꾸지 않는 2px 테두리를 사용한다(button.jsx 3번과 동일 근거).
  *  3. 아이콘 lucide → Phosphor(CaretDownIcon·CaretUpIcon·CheckIcon + weight="bold") — §19 아이콘 규범.
  *  4. SelectLabel 웨이트 500 유틸 → font-semibold(600). KimjungchulGothic에 500이 없다(§3.3).
  */
@@ -22,7 +22,7 @@ const SelectTrigger = React.forwardRef(({ className, children, ...props }, ref) 
   <SelectPrimitive.Trigger
     ref={ref}
     className={cn(
-      "flex h-11 w-full items-center justify-between rounded-lg border border-input bg-background px-3 py-2 text-sm data-[placeholder]:text-muted-foreground focus:outline-none focus:border-primary disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1",
+      "flex h-11 w-full items-center justify-between rounded-lg border border-input bg-background px-3 py-2 text-sm data-[placeholder]:text-muted-foreground focus:outline-none focus:border-ring focus:shadow-[inset_0_0_0_1px_hsl(var(--ring))] disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1",
       className
     )}
     {...props}>

@@ -17,9 +17,9 @@ import { cn } from "@/lib/utils"
  *  2. `rounded-md` → `rounded-lg`. 우리 기본 radius는 12(= --radius).
  *  3. focus ring 제거(`ring-2`·`ring-offset`). 브랜드색 보더 바깥에 링이 하나 더 생겨
  *     "선이 두 겹"으로 보인다(2026-08-26 → antdTheme.controlOutlineWidth: 0).
- *     대신 **이미 있는 보더의 색을 바꿔** 포커스를 표시한다 — 선이 한 겹으로 끝난다.
+ *     대신 중립 보더와 안쪽 1px 선을 붙여 하나의 2px 테두리로 표시한다.
  *     ⚠️ 링만 지우고 끝내면 안 된다. 2026-08-28 실측에서 채운 변형은 보더도 transparent라
- *     키보드 포커스 표시가 전혀 없었다(WCAG 2.4.7 위반). 전 변형에 focus-visible 보더색을 준다.
+ *     키보드 포커스 표시가 전혀 없었다(WCAG 2.4.7 위반). 채운 변형은 흰색 테두리를 유지한다.
  *  4. transition에 `scale` 포함. 전역 CSS가 `button { transition-property: scale }`로
  *     누름 피드백(§7.2-bis)을 주는데, 유틸 클래스가 특이도로 이겨 그 전환을 덮어쓴다.
  *  5. 크기 44px 기준(§L730·878, WCAG 2.1 AA). 상류 기본 40px는 우리 터치 규범에 미달.
@@ -49,17 +49,17 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "border border-transparent bg-primary text-primary-foreground hover:bg-primary-dark focus-visible:border-primary-foreground",
+          "border border-transparent bg-primary text-primary-foreground hover:bg-primary-dark focus-visible:border-primary-foreground focus-visible:shadow-[inset_0_0_0_1px_hsl(var(--primary-foreground))]",
         destructive:
-          "border border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/90 focus-visible:border-destructive-foreground",
+          "border border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/90 focus-visible:border-destructive-foreground focus-visible:shadow-[inset_0_0_0_1px_hsl(var(--destructive-foreground))]",
         destructiveOutline:
-          "border border-destructive/40 bg-card text-destructive hover:border-destructive focus-visible:border-destructive",
+          "border border-destructive/40 bg-card text-destructive hover:border-destructive focus-visible:border-ring focus-visible:shadow-[inset_0_0_0_1px_hsl(var(--ring))]",
         outline:
-          "border border-input bg-background hover:bg-accent hover:text-accent-foreground focus-visible:border-primary",
+          "border border-input bg-background hover:bg-accent hover:text-accent-foreground focus-visible:border-ring focus-visible:shadow-[inset_0_0_0_1px_hsl(var(--ring))]",
         secondary:
-          "border border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80 focus-visible:border-primary",
-        ghost: "border border-transparent hover:bg-accent hover:text-accent-foreground focus-visible:border-primary",
-        link: "border border-transparent text-primary underline-offset-4 hover:underline focus-visible:border-primary",
+          "border border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80 focus-visible:border-ring focus-visible:shadow-[inset_0_0_0_1px_hsl(var(--ring))]",
+        ghost: "border border-transparent hover:bg-accent hover:text-accent-foreground focus-visible:border-ring focus-visible:shadow-[inset_0_0_0_1px_hsl(var(--ring))]",
+        link: "border border-transparent text-primary underline-offset-4 hover:underline focus-visible:border-ring focus-visible:shadow-[inset_0_0_0_1px_hsl(var(--ring))]",
       },
       size: {
         default: "h-11 px-4 py-2",

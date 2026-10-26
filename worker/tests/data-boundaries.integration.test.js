@@ -9,7 +9,7 @@ const HOMEWORK = '22222222-2222-2222-2222-222222222222';
 const UPLOAD = '33333333-3333-3333-3333-333333333333';
 const CODE = 'ABCDEF123456';
 const SECRET = 'isolated-security-test-secret';
-const FILE_URL = 'https://files.fixture.invalid/lesson.pdf';
+const FILE_URL = 'https://prod-files-secure.s3.us-west-2.amazonaws.com/fixture/lesson.pdf?signature=fixture';
 const REDIRECT_URL = 'https://redirect.fixture.invalid/credential-trap';
 let database, env, studentToken, teacherToken, page, calls, uploadResponse, downloadResponse;
 const pdfForm = () => {
@@ -42,6 +42,7 @@ beforeEach(async () => {
     if (url.pathname.includes('/databases/') && url.pathname.endsWith('/query')) return Response.json({ results: url.pathname.includes(DB) ? [page] : [{ id: STUDENT }], has_more: false });
     if (url.pathname === '/v1/file_uploads') return Response.json({ id: UPLOAD, upload_url: `https://api.notion.com/v1/file_uploads/${UPLOAD}/send` });
     if (url.pathname.endsWith('/send')) return uploadResponse || Response.json({ id: UPLOAD });
+    if (url.pathname === `/v1/file_uploads/${UPLOAD}`) return Response.json({ status: 'uploaded', content_length: '1024' });
     if (url.pathname === `/v1/pages/${HOMEWORK}`) return Response.json(page);
     throw new Error('Unexpected mock URL');
   }));
@@ -49,6 +50,63 @@ beforeEach(async () => {
 afterEach(() => { database.close(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
 describe('production data handlers with isolated Notion and SQLite', () => {
+  it('accepts ten signed uploads and rejects eleven before writing', async () => {
+    const uploadReceipt = await signTypedToken(SECRET, 'homework-upload', STUDENT, 600, { uploadId: UPLOAD, fileName: 'a.pdf', fileSize: 1024 });
+    const files = Array.from({ length: 10 }, () => ({ fileUploadId: UPLOAD, fileName: 'a.pdf', uploadReceipt, size: 1 }));
+    expect((await submit(files)).status).toBe(200);
+    calls = [];
+    expect((await submit([...files, files[0]])).status).toBe(400);
+    expect(calls.some(call => call.method === 'PATCH')).toBe(false);
+  });
+  it('measures retained files and signed new sizes together, ignoring forged client sizes', async () => {
+    page.properties['학생 제출 파일'] = { files: [{ name: 'old.pdf', file: { url: FILE_URL } }] };
+    downloadResponse = new Response(null, { headers: { 'Content-Length': String(20 * 1024 * 1024) } });
+    const uploadReceipt = await signTypedToken(SECRET, 'homework-upload', STUDENT, 600, { uploadId: UPLOAD, fileName: 'a.pdf', fileSize: 20 * 1024 * 1024 });
+    const file = { fileUploadId: UPLOAD, fileName: 'a.pdf', uploadReceipt, size: 1 };
+    const response = await submit([file, file]);
+    expect(response.status).toBe(413);
+    expect(await response.json()).toMatchObject({ error: expect.stringContaining('50 MiB') });
+    expect(calls.some(call => call.method === 'PATCH')).toBe(false);
+  });
+  it('retains support for genuine old receipts by retrieving upload metadata', async () => {
+    const uploadReceipt = await signTypedToken(SECRET, 'homework-upload', STUDENT, 600, { uploadId: UPLOAD, fileName: 'a.pdf' });
+    expect((await submit([{ fileUploadId: UPLOAD, fileName: 'a.pdf', uploadReceipt }])).status).toBe(200);
+    expect(calls.some(call => call.url === `/v1/file_uploads/${UPLOAD}`)).toBe(true);
+  });
+  it.each(['student', 'teacher'])('%s file-size API returns only names and sizes after ownership checks', async role => {
+    page.properties['학생 제출 파일'] = { files: [{ name: 'old.pdf', file: { url: FILE_URL } }] };
+    downloadResponse = new Response(null, { status: 206, headers: { 'Content-Range': 'bytes 0-0/3000', 'Content-Length': '1' } });
+    const path = role === 'student' ? `/homework/student/${CODE}/${HOMEWORK}/file-sizes` : `/homework/${HOMEWORK}/file-sizes`;
+    const response = await send(`${path}?kind=submit`, { token: role === 'student' ? studentToken : teacherToken });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ files: [{ name: 'old.pdf', size: 3000 }] });
+    const call = calls.find(call => call.origin === new URL(FILE_URL).origin);
+    expect(call.headers).toEqual({ Range: 'bytes=0-0' });
+    expect(call.redirect).toBe('manual');
+  });
+  it('size lookup rejects another student and unknown sizes; deletion can reduce legacy unknown attachments', async () => {
+    page.properties['학생 제출 파일'] = { files: [{ name: 'old.pdf', file: { url: FILE_URL } }] };
+    page.properties['학생'] = { relation: [{ id: UPLOAD }] };
+    expect((await send(`/homework/student/${CODE}/${HOMEWORK}/file-sizes?kind=submit`)).status).toBe(403);
+    expect(calls.some(call => call.origin === new URL(FILE_URL).origin)).toBe(false);
+    page.properties['학생'] = { relation: [{ id: STUDENT }] };
+    expect((await send(`/homework/student/${CODE}/${HOMEWORK}/file-sizes?kind=submit`)).status).toBe(502);
+    const response = await send(`/homework/student/${CODE}/${HOMEWORK}/submit`, {
+      method: 'POST', body: JSON.stringify({ files: [], deleteFileNames: ['old.pdf'] }),
+    });
+    expect(response.status).toBe(200);
+  });
+  it('teacher generic homework writes also enforce aggregate metadata sizes', async () => {
+    const normalFetch = fetch.getMockImplementation();
+    fetch.mockImplementation((url, init) => url === `https://api.notion.com/v1/file_uploads/${UPLOAD}`
+      ? Response.json({ status: 'uploaded', content_length: '20971520' }) : normalFetch(url, init));
+    const file = { name: 'a.pdf', type: 'file_upload', file_upload: { id: UPLOAD } };
+    const response = await send(`/v1/pages/${HOMEWORK}`, { token: teacherToken, method: 'PATCH',
+      body: JSON.stringify({ properties: { '피드백 파일': { files: [file, file, file] } } }),
+    });
+    expect(response.status).toBe(413);
+    expect(calls.some(call => call.method === 'PATCH')).toBe(false);
+  });
   it('does not report a rejected feedback-seen write as recorded', async () => {
     page.properties['제출 상태'] = { select: { name: '피드백완료' } };
     const normalFetch = fetch.getMockImplementation();
@@ -101,7 +159,7 @@ describe('production data handlers with isolated Notion and SQLite', () => {
   it('accepts a teacher PDF upload with manual redirects and the upstream credential', async () => {
     const response = await send('/homework/upload', { token: teacherToken, method: 'POST', body: pdfForm() });
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ fileUploadId: UPLOAD, fileName: 'lesson.pdf' });
+    expect(await response.json()).toEqual({ fileUploadId: UPLOAD, fileName: 'lesson.pdf', size: 18 });
     expect(calls.filter(call => call.url.endsWith('/send'))).toHaveLength(1);
     expect(calls.find(call => call.url.endsWith('/send'))).toMatchObject({ method: 'POST', redirect: 'manual',
       headers: { Authorization: 'Bearer synthetic-notion' } });

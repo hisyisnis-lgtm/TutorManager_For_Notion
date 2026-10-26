@@ -1,5 +1,6 @@
 import { Button } from '../shadcn/button';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 import { GRAY_100, GRAY_300, TEXT_DISABLED } from '../../constants/theme.js';
 
 /**
@@ -12,7 +13,7 @@ import { GRAY_100, GRAY_300, TEXT_DISABLED } from '../../constants/theme.js';
  *
  * @param blockedReason 채워야 할 게 남았을 때의 안내 문구. 없으면(`null`) 정상 제출.
  */
-export default function SubmitButton({ blockedReason, loading, onClick, style, children, htmlType, type, ...rest }) {
+export default function SubmitButton({ blockedReason, loading, onClick, style, className, children, htmlType, type, ...rest }) {
   const blocked = Boolean(blockedReason) && !loading;
   // antd는 `htmlType`을 네이티브 `type`으로 번역해줬다. 우리 Button은 native button이라
   // 그대로 넘기면 DOM에 알 수 없는 속성으로 새어나간다(React 경고).
@@ -25,6 +26,8 @@ export default function SubmitButton({ blockedReason, loading, onClick, style, c
       type={nativeType}
       loading={loading}
       aria-disabled={blocked || undefined}
+      // blocked의 인라인 보더·그림자는 평소 모양만 담당하고, 키보드 초점은 중립 테두리로 보강한다.
+      className={cn(className, blocked && 'focus-visible:!border-ring focus-visible:!shadow-[inset_0_0_0_1px_hsl(var(--ring))]')}
       onClick={(e) => {
         if (blocked) {
           // htmlType="submit"이어도 여기서 막는다 — 폼이 그냥 넘어가지 않게.

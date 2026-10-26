@@ -11,6 +11,7 @@ import AudioPlayer from './AudioPlayer.jsx';
 import {
   PRIMARY,
   TEXT_PRIMARY,
+  TEXT_SECONDARY,
   TEXT_TERTIARY,
   TEXT_DISABLED,
   BORDER_NEUTRAL,
@@ -30,6 +31,8 @@ import { isImageByName, isPdfByName } from '../../utils/audioFile.js';
  * - fetchInlineBlobUrl: async () => string    (이미지·URL 없는 오디오의 인증된 Worker blob URL)
  * - onDelete: () => void                       (있을 때만 삭제 버튼 표시)
  * - deleteDisabled: boolean
+ * - neutral: boolean                       (보조 조작 버튼에 중립색 적용, 기본값 false)
+ * - plain: boolean                         (배경 없는 첨부 파일 정보행, 기본값 false)
  */
 export default function FilePreview({
   file,
@@ -38,6 +41,8 @@ export default function FilePreview({
   fetchInlineBlobUrl,
   onDelete,
   deleteDisabled,
+  neutral = false,
+  plain = false,
 }) {
   // 카테고리 분류는 명확한 PDF/이미지가 아니면 audio 폴백.
   // 이유: 옛 데이터(확장자 없는 파일 등)는 모두 음성이었고, 모르는 확장자도 일단 재생 UI 가 가장 안전.
@@ -49,6 +54,8 @@ export default function FilePreview({
         onDownload={onDownload}
         onDelete={onDelete}
         deleteDisabled={deleteDisabled}
+        neutral={neutral}
+        plain={plain}
       />
     );
   }
@@ -58,10 +65,12 @@ export default function FilePreview({
       <DocumentRow
         fileName={file.name}
         // design-audit-ignore: color-literal — PDF 파일타입 식별색(Adobe 레드). 우리 팔레트가 아니다
-        icon={<FilePdfIcon size={24} weight="fill" color="#d32f2f" />}
+        icon={<FilePdfIcon size={24} weight="fill" color={neutral ? TEXT_SECONDARY : '#d32f2f'} />}
         onDownload={onDownload}
         onDelete={onDelete}
         deleteDisabled={deleteDisabled}
+        neutral={neutral}
+        plain={plain}
       />
     );
   }
@@ -75,13 +84,15 @@ export default function FilePreview({
       onDelete={onDelete}
       deleteDisabled={deleteDisabled}
       onDownload={onDownload}
+      neutral={neutral}
+      plain={plain}
     />
   );
 }
 
 // ===== 이미지 인라인 미리보기 =====
 
-function ImagePreview({ fileName, fetchInlineBlobUrl, onDownload, onDelete, deleteDisabled }) {
+function ImagePreview({ fileName, fetchInlineBlobUrl, onDownload, onDelete, deleteDisabled, neutral, plain }) {
   const [blobUrl, setBlobUrl] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -132,9 +143,9 @@ function ImagePreview({ fileName, fetchInlineBlobUrl, onDownload, onDelete, dele
     <>
       <div style={{
         display: 'flex', alignItems: 'center', gap: 12,
-        padding: '10px 12px',
-        background: '#fff', borderRadius: 12,
-        boxShadow: 'var(--shadow-border)',
+        padding: plain ? '10px 0' : '10px 12px',
+        background: plain ? 'transparent' : '#fff', borderRadius: plain ? 0 : 12,
+        boxShadow: plain ? 'none' : 'var(--shadow-border)',
       }}>
         <button
           type="button"
@@ -181,17 +192,19 @@ function ImagePreview({ fileName, fetchInlineBlobUrl, onDownload, onDelete, dele
           onDownload={onDownload}
           onDelete={onDelete}
           deleteDisabled={deleteDisabled}
+          neutral={neutral}
+          plain={plain}
         />
       </div>
 
       {fullscreen && blobUrl && (
-        <FullscreenImage url={blobUrl} fileName={fileName} onClose={() => setFullscreen(false)} />
+        <FullscreenImage url={blobUrl} fileName={fileName} onClose={() => setFullscreen(false)} plain={plain} />
       )}
     </>
   );
 }
 
-function FullscreenImage({ url, fileName, onClose }) {
+function FullscreenImage({ url, fileName, onClose, plain }) {
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') onClose(); };
     document.addEventListener('keydown', onKey);
@@ -217,7 +230,7 @@ function FullscreenImage({ url, fileName, onClose }) {
         aria-label="닫기"
         style={{
           position: 'absolute', top: 'max(env(safe-area-inset-top), 16px)', right: 16,
-          width: 40, height: 40, borderRadius: 20,
+          width: plain ? 44 : 40, height: plain ? 44 : 40, borderRadius: plain ? 22 : 20,
           background: 'rgba(255,255,255,0.15)', border: 'none', color: '#fff',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           cursor: 'pointer', WebkitTapHighlightColor: 'transparent', zIndex: 1,
@@ -243,17 +256,17 @@ function FullscreenImage({ url, fileName, onClose }) {
 
 // ===== PDF/기타 문서 행 =====
 
-function DocumentRow({ fileName, icon, onDownload, onDelete, deleteDisabled }) {
+function DocumentRow({ fileName, icon, onDownload, onDelete, deleteDisabled, neutral, plain }) {
   return (
     <div style={{
       display: 'flex', alignItems: 'center', gap: 12,
-      padding: '12px 14px',
-      background: '#fff', borderRadius: 12,
-      boxShadow: 'var(--shadow-border)',
+      padding: plain ? '12px 0' : '12px 14px',
+      background: plain ? 'transparent' : '#fff', borderRadius: plain ? 0 : 12,
+      boxShadow: plain ? 'none' : 'var(--shadow-border)',
     }}>
       <div style={{
-        width: 36, height: 36, borderRadius: 8,
-        background: GRAY_50, display: 'flex',
+        width: 36, height: 36, borderRadius: plain ? 0 : 8,
+        background: plain ? 'transparent' : GRAY_50, display: 'flex',
         alignItems: 'center', justifyContent: 'center', flexShrink: 0,
       }}>
         {icon}
@@ -270,6 +283,8 @@ function DocumentRow({ fileName, icon, onDownload, onDelete, deleteDisabled }) {
         onDownload={onDownload}
         onDelete={onDelete}
         deleteDisabled={deleteDisabled}
+        neutral={neutral}
+        plain={plain}
       />
     </div>
   );
@@ -277,7 +292,7 @@ function DocumentRow({ fileName, icon, onDownload, onDelete, deleteDisabled }) {
 
 // ===== 공통 액션 버튼 =====
 
-function ActionButtons({ onDownload, onDelete, deleteDisabled }) {
+function ActionButtons({ onDownload, onDelete, deleteDisabled, neutral, plain }) {
   const [downloading, setDownloading] = useState(false);
   const handleDownload = async () => {
     if (!onDownload || downloading) return;
@@ -301,12 +316,12 @@ function ActionButtons({ onDownload, onDelete, deleteDisabled }) {
           disabled={downloading}
           aria-label="다운로드"
           style={{
-            width: 36, height: 36, borderRadius: 8,
+            width: plain ? 44 : 36, height: plain ? 44 : 36, borderRadius: 8,
             background: 'transparent', border: 'none',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             cursor: downloading ? 'wait' : 'pointer',
             opacity: downloading ? 0.5 : 1,
-            color: PRIMARY,
+            color: neutral ? TEXT_SECONDARY : PRIMARY,
             WebkitTapHighlightColor: 'transparent',
           }}
         >
@@ -320,12 +335,12 @@ function ActionButtons({ onDownload, onDelete, deleteDisabled }) {
           disabled={deleteDisabled}
           aria-label="삭제"
           style={{
-            width: 36, height: 36, borderRadius: 8,
+            width: plain ? 44 : 36, height: plain ? 44 : 36, borderRadius: 8,
             background: 'transparent', border: 'none',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             cursor: deleteDisabled ? 'not-allowed' : 'pointer',
             opacity: deleteDisabled ? 0.4 : 1,
-            color: STATUS_ERROR_TEXT,
+            color: neutral ? TEXT_TERTIARY : STATUS_ERROR_TEXT,
             WebkitTapHighlightColor: 'transparent',
           }}
         >

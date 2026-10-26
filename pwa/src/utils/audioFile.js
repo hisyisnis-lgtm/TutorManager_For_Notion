@@ -129,7 +129,7 @@ export function isPdfByName(name) {
  * 카테고리(audio/document)가 한정된 모달에서 호출할 때는 expectedCategory로 추가 제약 가능.
  *
  * @param {File} file
- * @param {{ expectedCategory?: 'audio'|'document' }} [opts]
+ * @param {{ expectedCategory?: 'audio'|'document', skipSizeCheck?: boolean }} [opts]
  * @returns {{ ok: true, category: 'audio'|'document' } | { ok: false, error: string }}
  */
 export function validateFile(file, opts = {}) {
@@ -159,13 +159,14 @@ export function validateFile(file, opts = {}) {
 
   // 크기 검사는 카테고리를 안 뒤에 — 녹음이면 "짧게 나눠 올리기", 그 외엔 "줄여서 올리기"로
   // 학생이 바로 실행할 수 있는 안내를 준다. (예전엔 카테고리 무관 한 문장이라 대처법이 없었음)
-  if (size > MAX_FILE_BYTES) {
+  // 선택 단계는 압축 전 원본 크기로 거절하지 않는다. 업로드 직전에는 기본 상한을 적용한다.
+  if (!opts.skipSizeCheck && size > MAX_FILE_BYTES) {
     const mb = (size / (1024 * 1024)).toFixed(1);
     const limit = `${MAX_FILE_MB}MB`;
     return {
       ok: false,
       error: category === 'audio'
-        ? `녹음이 너무 커요 (${mb}MB). ${limit}까지만 올릴 수 있어요 — 앱에서 '바로 녹음'으로 녹음하면 훨씬 길게 담을 수 있고, 이미 있는 파일이면 나눠서 올려주세요.`
+        ? `녹음이 너무 커요 (${mb}MB). ${limit}까지만 올릴 수 있어요 — 앱에서 '녹음하기'로 녹음하면 훨씬 길게 담을 수 있고, 이미 있는 파일이면 나눠서 올려주세요.`
         : `파일이 너무 커요 (${mb}MB). ${limit} 이하로 줄여서 올려주세요.`,
     };
   }

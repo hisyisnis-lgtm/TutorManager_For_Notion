@@ -69,7 +69,7 @@ export default function OtpInput({ length = 6, value = '', onChange, autoFocus =
           onFocus={(e) => e.target.select()}
           autoFocus={autoFocus && i === 0}
           aria-label={`인증번호 ${i + 1}번째 자리`}
-          className="min-w-0 flex-1 rounded-lg border border-input bg-background text-center focus-visible:border-primary focus-visible:outline-none"
+          className="min-w-0 flex-1 rounded-lg border border-input bg-background text-center focus-visible:border-ring focus-visible:shadow-[inset_0_0_0_1px_hsl(var(--ring))] focus-visible:outline-none"
         />
       ))}
     </div>

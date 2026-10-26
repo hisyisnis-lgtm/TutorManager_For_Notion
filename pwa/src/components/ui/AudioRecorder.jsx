@@ -3,6 +3,7 @@ import {
   useRef,
   useEffect } from 'react';
 import { toast } from 'sonner';
+import { Input } from '../shadcn/input';
 
 import {
   PRIMARY,
@@ -86,8 +87,10 @@ function micBlockedDetail() {
  *   onFile(file: File)  — 이름 확정 후 파일 전달 (file.name = 사용자 지정 이름)
  *   onCancel()          — 취소
  *   defaultName: string — 이름 입력 기본값
+ *   previewConfirmLabel: string — 녹음 미리보기 확인 버튼 문구
+ *   embedded: boolean — 부모가 여백을 제공할 때 내부 표면·패딩을 생략
  */
-export default function AudioRecorder({ onFile, onCancel, defaultName = 'recording', hideCancel = false }) {
+export default function AudioRecorder({ onFile, onCancel, defaultName = 'recording', hideCancel = false, previewConfirmLabel = '제출하기', embedded = false }) {
   // ios-non-safari → idle → recording → preview → naming
   const [phase, setPhase] = useState(() => {
     const { os, browser } = detectEnv();
@@ -229,7 +232,7 @@ export default function AudioRecorder({ onFile, onCancel, defaultName = 'recordi
     `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 
   return (
-    <div style={{ background: GRAY_50, borderRadius: 12, padding: 16, marginTop: 10 }}>
+    <div style={{ background: embedded ? 'transparent' : GRAY_50, borderRadius: 12, padding: embedded ? 0 : 16, marginTop: embedded ? 0 : 10 }}>
 
       {/* ios-non-safari (iOS Chrome/Firefox 등) — Apple 정책으로 마이크 접근 제한 안내 */}
       {phase === 'ios-non-safari' && (
@@ -375,7 +378,7 @@ export default function AudioRecorder({ onFile, onCancel, defaultName = 'recordi
                 WebkitTapHighlightColor: 'transparent',
               }}
             >
-              제출하기
+              {previewConfirmLabel}
             </button>
           </div>
         </div>
@@ -385,17 +388,13 @@ export default function AudioRecorder({ onFile, onCancel, defaultName = 'recordi
       {phase === 'naming' && (
         <div>
           <p style={{ fontSize: 12, fontWeight: 600, color: TEXT_SECONDARY, margin: '0 0 6px' }}>파일 이름</p>
-          <input
+          <Input
             type="text"
             aria-label="파일 이름"
             value={inputName}
             onChange={(e) => setInputName(e.target.value)}
             maxLength={50}
-            style={{
-              width: '100%', height: 42, borderRadius: 12, border: `1px solid ${BORDER_NEUTRAL}`,
-              padding: '0 12px', fontSize: 14, color: TEXT_PRIMARY,
-              boxSizing: 'border-box', outline: 'none', marginBottom: 10,
-            }}
+            style={{ color: TEXT_PRIMARY, marginBottom: 10 }}
             onFocus={(e) => e.target.select()}
           />
           <div style={{ display: 'flex', gap: 8 }}>

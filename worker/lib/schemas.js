@@ -2,6 +2,7 @@
 // 새 공개 라우트 추가 시 여기에 schema 정의 후 validation.js 헬퍼로 검증.
 
 import { z } from 'zod';
+import { MAX_HOMEWORK_FILES } from './upload.js';
 
 // ===== 공통 =====
 
@@ -77,7 +78,7 @@ export const HomeworkSubmitSchema = z.object({
     fileUploadId: z.string().min(1, 'fileUploadId는 필수입니다'),
     fileName: z.string().min(1).max(255, '파일명은 255자 이내'),
     uploadReceipt: z.string().min(1, '업로드 확인 정보가 필요합니다').max(2048),
-  })).max(5, '파일은 최대 5개까지 제출할 수 있어요').optional(),  // 서버 제출 룰(총 5개)과 동일
+  })).max(MAX_HOMEWORK_FILES, `파일은 최대 ${MAX_HOMEWORK_FILES}개까지 제출할 수 있어요`).optional(),
   deleteFileNames: z.array(z.string().max(255)).max(50).optional(),
 }).strip();
 
