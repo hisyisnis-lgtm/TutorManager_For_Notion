@@ -134,6 +134,8 @@ function clonePaidOrder(template, overrides = {}) {
 
 describe('bounded payment recovery and refund request closure', () => {
   it('reconciles a new unresolved payment before 200 historical paid orders and keeps the hourly paid sweep finite', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-10-12T00:00:00.000Z'));
     const session = await member(), selected = await product(), template = await started(session, selected); await paid(session, template);
     const old = '2020-01-01T00:00:00.000Z';
     local.sqlite.prepare('UPDATE site_shop_orders SET approved_at=?,updated_at=? WHERE id=?').run(old, old, template.order.id);
