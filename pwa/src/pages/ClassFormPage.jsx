@@ -501,7 +501,12 @@ export default function ClassFormPage() {
               setRecurMode(''); // 수업 종류 바뀌면 반복/단일 선택 초기화
             }}
             placeholder="선택하세요"
-            options={visibleClassTypes.map((ct) => ({ value: ct.id, label: ct.title }))}
+            options={visibleClassTypes.map((ct) => ({
+              value: ct.id,
+              label: ct.unitPrice > 0 && !isFixedPriceTitle(ct.title) && !isOnlineGroupTitle(ct.title)
+                ? `${ct.title} (시간당 ${ct.unitPrice.toLocaleString('ko-KR')}원)`
+                : ct.title,
+            }))}
           />
         </div>
 
