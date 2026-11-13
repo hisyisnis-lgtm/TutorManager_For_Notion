@@ -27,6 +27,7 @@ const HomePage = lazy(() => import('./pages/HomePage.jsx'));
 const PendingClassesPage = lazy(() => import('./pages/PendingClassesPage.jsx'));
 const TomorrowPrepPage = lazy(() => import('./pages/TomorrowPrepPage.jsx'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage.jsx'));
+const ReviewsManagePage = lazy(() => import('./pages/ReviewsManagePage.jsx'));
 const NoticesPage = lazy(() => import('./pages/NoticesPage.jsx'));
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage.jsx'));
 const PersonalEntryPage = lazy(() => import('./pages/PersonalEntryPage.jsx'));
@@ -398,6 +399,7 @@ function TeacherRoutes() {
             <Route path="/homework/:id" element={<HomeworkDetailPage />} />
 
             <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/reviews-manage" element={<ReviewsManagePage />} />
             <Route path="/agreement" element={<AuthenticatedConsentPage />} />
             <Route path="/notices" element={<NoticesPage />} />
             <Route path="/notifications" element={<NotificationsPage />} />

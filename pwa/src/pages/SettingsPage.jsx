@@ -185,6 +185,12 @@ export default function SettingsPage() {
           </a>
         </Button>
 
+        <Link to="/reviews-manage" className="flex min-h-11 items-center justify-between rounded-xl px-4 py-3 text-sm font-semibold"
+          style={{ color: TEXT_SECONDARY, boxShadow: 'var(--shadow-border)' }}>
+          수업·활동 후기 관리
+          <CaretRightIcon size={20} aria-hidden="true" />
+        </Link>
+
         <Button
           block
           onClick={handleSave}
