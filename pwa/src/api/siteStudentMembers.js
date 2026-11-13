@@ -26,6 +26,15 @@ export async function getSiteStudentMembers({ query = '', cursor = '', signal } 
   return { members: data.members, nextCursor: data.nextCursor || '' };
 }
 
+export async function linkSiteStudentMember(memberId, studentId, { signal } = {}) {
+  if (!UUID.test(memberId || '') || !studentIdValid(studentId)) throw unavailable();
+  const id = studentId.replaceAll('-', '').toLowerCase().replace(/^(.{8})(.{4})(.{4})(.{4})(.{12})$/, '$1-$2-$3-$4-$5');
+  const data = await siteAdmin(`/members/${encodeURIComponent(memberId)}/student-link`, {
+    method: 'POST', body: { studentId: id }, signal,
+  });
+  if (data?.ok !== true) throw unavailable();
+}
+
 export async function approveSiteStudentMember(memberId, approval, { signal } = {}) {
   if (!UUID.test(memberId || '') || !UUID.test(approval?.idempotencyKey || '')
     || !['new', 'existing'].includes(approval?.mode)

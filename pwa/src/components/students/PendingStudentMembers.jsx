@@ -4,12 +4,13 @@ import { Button } from '../shadcn/button';
 import { Card, CardContent } from '../shadcn/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../shadcn/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../shadcn/select';
-import { getSiteStudentMembers, approveSiteStudentMember } from '../../api/siteStudentMembers.js';
+import { getSiteStudentMembers, approveSiteStudentMember, linkSiteStudentMember } from '../../api/siteStudentMembers.js';
 import { getToken } from '../../api/authUtils.js';
 import { captureAuthScope, getAuthRevision, isAuthScopeCurrent, subscribeAuthChanges } from '../../api/authState.js';
 import { GRAY_100, PRIMARY, TEXT_PRIMARY, TEXT_SECONDARY } from '../../constants/theme.js';
 import { SECTION_HEADING } from '../../constants/styles.js';
 
+const ACCOUNT_LINK_LABEL = '기존 학생에 계정만 연결';
 const joinDate = value => {
   const date = new Date(value);
   return Number.isNaN(date.valueOf()) ? '' : `${date.toLocaleDateString('ko-KR')} 가입`;
@@ -91,7 +92,7 @@ const PendingStudentMembers = forwardRef(function PendingStudentMembers({ search
 
   return <section className="px-4 pt-5" aria-labelledby="student-members-heading">
     <h2 id="student-members-heading" style={{ ...SECTION_HEADING, marginBottom: 4 }}>학생앱 승인 대기</h2>
-    <p className="text-xs leading-relaxed mb-3" style={{ color: TEXT_SECONDARY }}>홈페이지에 가입한 학생이에요. 사용을 허용하면 학생앱에서 숙제를 받고 제출할 수 있어요.</p>
+    <p className="text-xs leading-relaxed mb-3" style={{ color: TEXT_SECONDARY }}>홈페이지 가입 계정을 기존 학생에 연결하거나 학생앱 사용을 허용할 수 있어요.</p>
     {error ? <div role="alert" className="rounded-lg p-4 space-y-2" style={{ background: GRAY_100 }}>
       <p className="text-sm" style={{ color: TEXT_SECONDARY }}>{error}</p>
       <Button variant="outline" onClick={() => load()}>다시 시도</Button>
@@ -109,12 +110,15 @@ const PendingStudentMembers = forwardRef(function PendingStudentMembers({ search
           <Button block variant={['creating', 'created', 'unknown'].includes(member.enrollment?.state) ? 'outline' : 'default'} onClick={() => setSelected({ member, auth: captureAuthScope() })}>
             {['creating', 'created', 'unknown'].includes(member.enrollment?.state) ? '학생 등록 상태 확인' : '학생앱 사용 허용'}
           </Button>
+          {!member.enrollment && !attempts.current.has(member.id) && <Button block variant="outline" onClick={() => setSelected({ member, accountOnly: true, auth: captureAuthScope() })}>
+            {ACCOUNT_LINK_LABEL}
+          </Button>}
         </CardContent></Card></li>)}
       </ul>
       {current && data.nextCursor && <Button block variant="ghost" className="mt-2" loading={loading} onClick={() => load(data.nextCursor)}>더 보기</Button>}
     </>}
     {selected && isAuthScopeCurrent(selected.auth) && <ApproveStudentMemberDialog
-      key={selected.member.id} member={selected.member} students={students} auth={selected.auth}
+      key={selected.member.id} member={selected.member} students={students} auth={selected.auth} accountOnly={selected.accountOnly}
       priorAttempt={attempts.current.get(selected.member.id) || enrollmentAttempt(selected.member)}
       onAttempt={attempt => { if (attempt) attempts.current.set(selected.member.id, attempt); else attempts.current.delete(selected.member.id); }}
       onCancel={() => setSelected(null)} onApproved={approved} onFailed={() => Promise.allSettled([load(), onApproved?.()])}
@@ -123,11 +127,12 @@ const PendingStudentMembers = forwardRef(function PendingStudentMembers({ search
 });
 export default PendingStudentMembers;
 
-function ApproveStudentMemberDialog({ member, students, auth, priorAttempt, onAttempt, onCancel, onApproved, onFailed }) {
-  const [mode, setMode] = useState(priorAttempt?.mode || 'new');
+function ApproveStudentMemberDialog({ member, students, auth, accountOnly = false, priorAttempt, onAttempt, onCancel, onApproved, onFailed }) {
+  const [mode, setMode] = useState(accountOnly ? 'existing' : priorAttempt?.mode || 'new');
   const [studentId, setStudentId] = useState(priorAttempt?.studentId || '');
   const [confirmed, setConfirmed] = useState(false);
   const [attempt, setAttempt] = useState(priorAttempt);
+  const [linkPending, setLinkPending] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const busy = useRef(false);
@@ -141,16 +146,28 @@ function ApproveStudentMemberDialog({ member, students, auth, priorAttempt, onAt
   async function approve() {
     if (busy.current || !isAuthScopeCurrent(auth) || (!attempt && mode === 'existing' && (!studentId || !confirmed))) return;
     busy.current = true; setSaving(true); setError('');
-    const body = attempt || { mode, idempotencyKey: crypto.randomUUID(), ...(mode === 'existing' ? { studentId } : {}) };
-    setAttempt(body); onAttempt(body);
     const requestController = new AbortController(); controller.current = requestController;
     try {
-      await approveSiteStudentMember(member.id, body, { signal: requestController.signal });
+      if (accountOnly) {
+        setLinkPending(true);
+        await linkSiteStudentMember(member.id, studentId, { signal: requestController.signal });
+      } else {
+        const body = attempt || { mode, idempotencyKey: crypto.randomUUID(), ...(mode === 'existing' ? { studentId } : {}) };
+        setAttempt(body); onAttempt(body);
+        await approveSiteStudentMember(member.id, body, { signal: requestController.signal });
+      }
       if (!active.current || requestController.signal.aborted || !isAuthScopeCurrent(auth)) return;
-      toast.success(`${member.name} 학생의 학생앱 사용을 허용했어요.`);
+      toast.success(accountOnly ? `${member.name} 회원의 계정을 학생 명단에 연결했어요.` : `${member.name} 학생의 학생앱 사용을 허용했어요.`);
       await onApproved();
     } catch (cause) {
       if (!active.current || requestController.signal.aborted || !isAuthScopeCurrent(auth)) return;
+      if (accountOnly) {
+        const rejected = cause.status >= 400 && cause.status < 500 && cause.status !== 408;
+        if (rejected) setLinkPending(false);
+        setError(rejected ? cause.message : '연결 결과를 확인하지 못했어요. 같은 학생으로 다시 확인해 주세요.');
+        void onFailed?.();
+        return;
+      }
       // 확정 거절이면서 서버가 등록 작업 미생성을 확인한 경우에만 다른 학생을 선택한다.
       if (cause.canChangeSelection === true) {
         setAttempt(null); onAttempt(null); setStudentId(''); setConfirmed(false);
@@ -169,14 +186,14 @@ function ApproveStudentMemberDialog({ member, students, auth, priorAttempt, onAt
   return <Dialog open onOpenChange={open => { if (!open && !saving) onCancel(); }}>
     <DialogContent showClose={false} className="max-h-[calc(100dvh-2rem)] overflow-y-auto"
       onPointerDownOutside={event => { if (saving) event.preventDefault(); }} onEscapeKeyDown={event => { if (saving) event.preventDefault(); }}>
-      <DialogHeader><DialogTitle>학생앱 사용 허용</DialogTitle>
-        <DialogDescription>{member.name} 학생의 학생앱과 숙제 관리를 함께 시작해요.</DialogDescription>
+      <DialogHeader><DialogTitle>{accountOnly ? ACCOUNT_LINK_LABEL : '학생앱 사용 허용'}</DialogTitle>
+        <DialogDescription>{accountOnly ? '웹 계정을 학생 명단에 연결합니다. 학생앱 사용 권한은 부여하지 않아요.' : `${member.name} 학생의 학생앱과 숙제 관리를 함께 시작해요.`}</DialogDescription>
       </DialogHeader>
       <div className="rounded-lg p-3 text-sm space-y-1" style={{ background: GRAY_100 }}>
         <p className="font-semibold" style={{ color: TEXT_PRIMARY }}>{member.name}</p>
         <p className="break-words" style={{ color: TEXT_SECONDARY }}>{[member.phone, member.email].filter(Boolean).join(' · ') || '연락처 미등록'}</p>
       </div>
-      <fieldset disabled={saving || !!attempt} className="space-y-2">
+      {!accountOnly && <fieldset disabled={saving || !!attempt} className="space-y-2">
         <legend className="sr-only">학생 등록 방법</legend>
         <label className="flex min-h-11 items-center gap-3 text-sm cursor-pointer">
           <input type="radio" name="student-member-mode" value="new" checked={mode === 'new'} onChange={() => { setMode('new'); setConfirmed(false); }} style={{ accentColor: PRIMARY }} />새 학생으로 등록
@@ -184,22 +201,22 @@ function ApproveStudentMemberDialog({ member, students, auth, priorAttempt, onAt
         <label className="flex min-h-11 items-center gap-3 text-sm cursor-pointer">
           <input type="radio" name="student-member-mode" value="existing" checked={mode === 'existing'} onChange={() => { setMode('existing'); setConfirmed(false); }} style={{ accentColor: PRIMARY }} />기존 학생과 연결
         </label>
-      </fieldset>
+      </fieldset>}
       {mode === 'existing' ? <div className="space-y-3">
-        <Select value={studentId} onValueChange={value => { setStudentId(value); setConfirmed(false); }} disabled={saving || !!attempt || !students.length}>
+        <Select value={studentId} onValueChange={value => { setStudentId(value); setConfirmed(false); }} disabled={saving || !!attempt || linkPending || !students.length}>
           <SelectTrigger aria-label="연결할 기존 학생"><SelectValue placeholder="학생을 선택해 주세요" /></SelectTrigger>
           <SelectContent>{students.map(student => <SelectItem key={student.id} value={student.id}>{student.name}{student.phone ? ` · ${student.phone}` : ''}</SelectItem>)}</SelectContent>
         </Select>
         {!students.length && <p className="text-xs" style={{ color: TEXT_SECONDARY }}>등록된 기존 학생이 없어요.</p>}
         <label className="flex min-h-11 items-center gap-3 text-sm leading-relaxed cursor-pointer">
-          <input type="checkbox" checked={confirmed} disabled={saving || !!attempt} onChange={event => setConfirmed(event.target.checked)} style={{ accentColor: PRIMARY }} />회원과 기존 학생이 같은 사람임을 확인했어요
+          <input type="checkbox" checked={confirmed} disabled={saving || !!attempt || linkPending} onChange={event => setConfirmed(event.target.checked)} style={{ accentColor: PRIMARY }} />회원과 기존 학생이 같은 사람임을 확인했어요
         </label>
       </div> : <p className="text-sm leading-relaxed" style={{ color: TEXT_SECONDARY }}>가입한 이름과 연락처로 학생 목록에 등록해요. 이미 등록한 학생이라면 기존 학생과 연결해 주세요.</p>}
       {attempt && <p className="text-xs leading-relaxed" style={{ color: TEXT_SECONDARY }}>앞서 요청한 등록 결과를 확인해요. 학생을 새로 중복 등록하지 않아요.</p>}
       {error && <p role="alert" className="text-sm leading-relaxed" style={{ color: TEXT_SECONDARY }}>{error}</p>}
       <div className="flex gap-3">
         <Button block variant="outline" disabled={saving} onClick={onCancel}>취소</Button>
-        <Button block loading={saving} disabled={!attempt && mode === 'existing' && (!studentId || !confirmed)} onClick={approve}>{attempt ? '등록 상태 확인' : '사용 허용'}</Button>
+        <Button block loading={saving} disabled={!attempt && mode === 'existing' && (!studentId || !confirmed)} onClick={approve}>{accountOnly ? (linkPending ? '연결 다시 확인' : '계정 연결') : (attempt ? '등록 상태 확인' : '사용 허용')}</Button>
       </div>
     </DialogContent>
   </Dialog>;

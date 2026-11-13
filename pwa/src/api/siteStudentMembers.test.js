@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { siteAdmin } from './siteCommerce.js';
-import { approveSiteStudentMember, getSiteStudentMembers } from './siteStudentMembers.js';
+import { approveSiteStudentMember, getSiteStudentMembers, linkSiteStudentMember } from './siteStudentMembers.js';
 
 vi.mock('./siteCommerce.js', () => ({ siteAdmin: vi.fn() }));
 const MEMBER = '10000000-0000-4000-8000-000000000001';
@@ -32,6 +32,15 @@ describe('가입 학생 승인 API', () => {
     expect(siteAdmin).toHaveBeenCalledWith(`/student-members/${MEMBER}/approve`, {
       method: 'POST', body: { mode: 'existing', studentId: STUDENT, idempotencyKey: KEY }, signal: undefined,
     });
+  });
+  it('기존 학생에 계정만 연결할 때는 학생앱 승인 경로를 호출하지 않는다', async () => {
+    siteAdmin.mockResolvedValueOnce({ ok: true }).mockResolvedValueOnce({ ok: false });
+    const signal = new AbortController().signal;
+    await linkSiteStudentMember(MEMBER, STUDENT.replaceAll('-', ''), { signal });
+    expect(siteAdmin).toHaveBeenCalledExactlyOnceWith(`/members/${MEMBER}/student-link`, {
+      method: 'POST', body: { studentId: STUDENT }, signal,
+    });
+    await expect(linkSiteStudentMember(MEMBER, STUDENT)).rejects.toThrow('가입한 학생 정보를 확인하지 못했어요');
   });
   it.each([{ mode: 'existing', idempotencyKey: KEY }, { mode: 'new' }, { mode: 'automatic', idempotencyKey: KEY }])('승인 정보가 부족하면 요청하지 않는다', async approval => {
     await expect(approveSiteStudentMember(MEMBER, approval)).rejects.toThrow();

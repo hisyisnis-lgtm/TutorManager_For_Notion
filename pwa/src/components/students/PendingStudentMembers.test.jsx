@@ -3,13 +3,13 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testi
 import { MemoryRouter } from 'react-router-dom';
 import PendingStudentMembers from './PendingStudentMembers.jsx';
 import StudentsPage from '../../pages/StudentsPage.jsx';
-import { approveSiteStudentMember, getSiteStudentMembers } from '../../api/siteStudentMembers.js';
+import { approveSiteStudentMember, getSiteStudentMembers, linkSiteStudentMember } from '../../api/siteStudentMembers.js';
 import { toast } from 'sonner';
 
 const session = vi.hoisted(() => ({ token: 'teacher-one' }));
 const refresh = vi.hoisted(() => vi.fn());
 const studentData = vi.hoisted(() => ({ students: [] }));
-vi.mock('../../api/siteStudentMembers.js', () => ({ approveSiteStudentMember: vi.fn(), getSiteStudentMembers: vi.fn() }));
+vi.mock('../../api/siteStudentMembers.js', () => ({ approveSiteStudentMember: vi.fn(), getSiteStudentMembers: vi.fn(), linkSiteStudentMember: vi.fn() }));
 vi.mock('../../api/authUtils.js', () => ({ getToken: () => session.token }));
 vi.mock('../../api/authState.js', () => ({
   subscribeAuthChanges: () => () => {}, getAuthRevision: () => 0,
@@ -89,6 +89,24 @@ describe('학생 관리의 홈페이지 가입 학생 승인', () => {
     await waitFor(() => expect(approveSiteStudentMember).toHaveBeenCalledTimes(1));
     expect(approveSiteStudentMember.mock.calls[0][1]).toMatchObject({ mode: 'existing', studentId: STUDENT });
   });
+  it('계정만 연결은 기존 학생과 동일인 확인을 요구하며 승인 없이 대기 목록에서 제거한다', async () => {
+    getSiteStudentMembers.mockResolvedValueOnce({ members: [member], nextCursor: '' })
+      .mockResolvedValue({ members: [], nextCursor: '' });
+    renderPending();
+    fireEvent.click(await screen.findByRole('button', { name: '기존 학생에 계정만 연결' }));
+    const dialog = within(screen.getByRole('dialog', { name: '기존 학생에 계정만 연결' }));
+    expect(dialog.queryByRole('radio', { name: '새 학생으로 등록' })).toBeNull();
+    expect(dialog.getByRole('button', { name: '계정 연결' }).disabled).toBe(true);
+    fireEvent.keyDown(dialog.getByRole('combobox', { name: '연결할 기존 학생' }), { key: ' ' });
+    fireEvent.click(await screen.findByRole('option', { name: '김학생 · 010-1234-5678' }));
+    expect(dialog.getByRole('button', { name: '계정 연결' }).disabled).toBe(true);
+    fireEvent.click(dialog.getByRole('checkbox', { name: '회원과 기존 학생이 같은 사람임을 확인했어요' }));
+    fireEvent.click(dialog.getByRole('button', { name: '계정 연결' }));
+    await screen.findByText('승인을 기다리는 학생이 없어요.');
+    expect(linkSiteStudentMember).toHaveBeenCalledExactlyOnceWith(MEMBER, STUDENT, { signal: expect.any(globalThis.AbortSignal) });
+    expect(approveSiteStudentMember).not.toHaveBeenCalled();
+    expect(toast.success).toHaveBeenCalledWith('김학생 회원의 계정을 학생 명단에 연결했어요.');
+  });
   it('처리 중 중복 클릭을 막고 결과 불명확 시 같은 key와 등록 방법으로 다시 확인한다', async () => {
     let reject;
     approveSiteStudentMember.mockImplementationOnce(() => new Promise((_resolve, fail) => { reject = fail; }));
@@ -108,6 +126,7 @@ describe('학생 관리의 홈페이지 가입 학생 승인', () => {
     getSiteStudentMembers.mockResolvedValue({ members: [{ ...member, enrollment: { ...stored, state: 'unknown', studentId: null } }], nextCursor: '' });
     renderPending();
     fireEvent.click(await screen.findByRole('button', { name: '학생 등록 상태 확인' }));
+    expect(screen.queryByRole('button', { name: '기존 학생에 계정만 연결' })).toBeNull();
     const dialog = within(screen.getByRole('dialog'));
     expect(dialog.getByRole('radio', { name: '새 학생으로 등록' }).closest('fieldset').disabled).toBe(true);
     fireEvent.click(dialog.getByRole('button', { name: '등록 상태 확인' }));
