@@ -92,15 +92,25 @@ describe('학생 관리의 홈페이지 가입 학생 승인', () => {
   it('계정만 연결은 기존 학생과 동일인 확인을 요구하며 승인 없이 대기 목록에서 제거한다', async () => {
     getSiteStudentMembers.mockResolvedValueOnce({ members: [member], nextCursor: '' })
       .mockResolvedValue({ members: [], nextCursor: '' });
-    renderPending();
+    const sameNameStudent = { id: '20000000-0000-4000-8000-000000000003', name: '김학생', phone: '010-7777-8888', email: 'other@example.invalid' };
+    renderPending({ students: [sameNameStudent, ...students] });
     fireEvent.click(await screen.findByRole('button', { name: '기존 학생에 계정만 연결' }));
     const dialog = within(screen.getByRole('dialog', { name: '기존 학생에 계정만 연결' }));
+    const webIdentity = within(dialog.getByRole('region', { name: '홈페이지 가입 회원' }));
+    const rosterIdentity = within(dialog.getByRole('region', { name: '선택한 기존 학생' }));
+    const confirmation = dialog.getByRole('checkbox', { name: '회원과 기존 학생이 같은 사람임을 확인했어요' });
     expect(dialog.queryByRole('radio', { name: '새 학생으로 등록' })).toBeNull();
+    expect(webIdentity.getAllByRole('term').map(element => element.textContent)).toEqual(['이름', '전화번호', '이메일']);
+    expect(webIdentity.getAllByRole('definition').map(element => element.textContent)).toEqual([member.name, member.phone, member.email]);
+    expect(rosterIdentity.getByText('명단에서 학생을 선택해 주세요.')).toBeTruthy();
+    expect(confirmation.disabled).toBe(true);
     expect(dialog.getByRole('button', { name: '계정 연결' }).disabled).toBe(true);
     fireEvent.keyDown(dialog.getByRole('combobox', { name: '연결할 기존 학생' }), { key: ' ' });
-    fireEvent.click(await screen.findByRole('option', { name: '김학생 · 010-1234-5678' }));
+    expect(await screen.findByRole('option', { name: /김학생.*010-7777-8888.*other@example\.invalid/ })).toBeTruthy();
+    fireEvent.click(await screen.findByRole('option', { name: /김학생.*010-1234-5678/ }));
+    expect(rosterIdentity.getAllByRole('definition').map(element => element.textContent)).toEqual([students[0].name, students[0].phone, '미등록']);
     expect(dialog.getByRole('button', { name: '계정 연결' }).disabled).toBe(true);
-    fireEvent.click(dialog.getByRole('checkbox', { name: '회원과 기존 학생이 같은 사람임을 확인했어요' }));
+    fireEvent.click(confirmation);
     fireEvent.click(dialog.getByRole('button', { name: '계정 연결' }));
     await screen.findByText('승인을 기다리는 학생이 없어요.');
     expect(linkSiteStudentMember).toHaveBeenCalledExactlyOnceWith(MEMBER, STUDENT, { signal: expect.any(globalThis.AbortSignal) });
